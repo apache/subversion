@@ -480,13 +480,8 @@ typedef struct {
 
 typedef struct {
   void *edit_baton;
-  void *wrapped_dir_baton;
-} dir_baton_t;
-
-typedef struct {
-  void *edit_baton;
-  void *wrapped_file_baton;
-} file_baton_t;
+  void *wrapped_node_baton;
+} node_baton_t;
 
 static svn_error_t *
 set_target_revision(void *edit_baton,
@@ -494,11 +489,8 @@ set_target_revision(void *edit_baton,
                     apr_pool_t *pool)
 {
   edit_baton_t *eb = edit_baton;
-
-  SVN_ERR(eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
-                                                  target_revision, pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
+                                                 target_revision, pool);
 }
 
 static svn_error_t *
@@ -508,16 +500,14 @@ open_root(void *edit_baton,
           void **root_baton)
 {
   edit_baton_t *eb = edit_baton;
-  dir_baton_t *dir_baton = apr_palloc(pool, sizeof(*dir_baton));
+  node_baton_t *dir_baton = apr_palloc(pool, sizeof(*dir_baton));
 
   SVN_ERR(eb->wrapped_editor->open_root(eb->wrapped_edit_baton,
                                         base_revision, pool,
-                                        &dir_baton->wrapped_dir_baton));
+                                        &dir_baton->wrapped_node_baton));
 
   eb->called_open_root = TRUE;
-
   dir_baton->edit_baton = edit_baton;
-
   *root_baton = dir_baton;
 
   return SVN_NO_ERROR;
@@ -529,13 +519,11 @@ delete_entry(const char *path,
              void *parent_baton,
              apr_pool_t *pool)
 {
-  dir_baton_t *pb = parent_baton;
+  node_baton_t *pb = parent_baton;
   edit_baton_t *eb = pb->edit_baton;
 
-  SVN_ERR(eb->wrapped_editor->delete_entry(path, base_revision,
-                                           pb->wrapped_dir_baton, pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->delete_entry(path, base_revision,
+                                          pb->wrapped_node_baton, pool);
 }
 
 static svn_error_t *
@@ -546,20 +534,17 @@ add_directory(const char *path,
               apr_pool_t *pool,
               void **child_baton)
 {
-  dir_baton_t *pb = parent_baton;
+  node_baton_t *pb = parent_baton;
   edit_baton_t *eb = pb->edit_baton;
-  dir_baton_t *b = apr_palloc(pool, sizeof(*b));
+  node_baton_t *b = apr_palloc(pool, sizeof(*b));
 
   if (copyfrom_path)
-    {
-      copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url,
-                                   copyfrom_path);
-    }
+    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url, copyfrom_path);
 
-  SVN_ERR(eb->wrapped_editor->add_directory(path, pb->wrapped_dir_baton,
+  SVN_ERR(eb->wrapped_editor->add_directory(path, pb->wrapped_node_baton,
                                             copyfrom_path,
                                             copyfrom_rev, pool,
-                                            &b->wrapped_dir_baton));
+                                            &b->wrapped_node_baton));
 
   b->edit_baton = eb;
   *child_baton = b;
@@ -574,13 +559,13 @@ open_directory(const char *path,
                apr_pool_t *pool,
                void **child_baton)
 {
-  dir_baton_t *pb = parent_baton;
+  node_baton_t *pb = parent_baton;
   edit_baton_t *eb = pb->edit_baton;
-  dir_baton_t *db = apr_palloc(pool, sizeof(*db));
+  node_baton_t *db = apr_palloc(pool, sizeof(*db));
 
-  SVN_ERR(eb->wrapped_editor->open_directory(path, pb->wrapped_dir_baton,
+  SVN_ERR(eb->wrapped_editor->open_directory(path, pb->wrapped_node_baton,
                                              base_revision, pool,
-                                             &db->wrapped_dir_baton));
+                                             &db->wrapped_node_baton));
 
   db->edit_baton = eb;
   *child_baton = db;
@@ -596,22 +581,18 @@ add_file(const char *path,
          apr_pool_t *pool,
          void **file_baton)
 {
-  dir_baton_t *pb = parent_baton;
+  node_baton_t *pb = parent_baton;
   edit_baton_t *eb = pb->edit_baton;
-  file_baton_t *fb = apr_palloc(pool, sizeof(*fb));
+  node_baton_t *fb = apr_palloc(pool, sizeof(*fb));
 
   if (copyfrom_path)
-    {
-      copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url,
-                                   copyfrom_path);
-    }
+    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url, copyfrom_path);
 
-  SVN_ERR(eb->wrapped_editor->add_file(path, pb->wrapped_dir_baton,
+  SVN_ERR(eb->wrapped_editor->add_file(path, pb->wrapped_node_baton,
                                        copyfrom_path, copyfrom_rev,
-                                       pool, &fb->wrapped_file_baton));
+                                       pool, &fb->wrapped_node_baton));
 
   fb->edit_baton = eb;
-
   *file_baton = fb;
 
   return SVN_NO_ERROR;
@@ -624,16 +605,15 @@ open_file(const char *path,
           apr_pool_t *pool,
           void **file_baton)
 {
-  dir_baton_t *pb = parent_baton;
+  node_baton_t *pb = parent_baton;
   edit_baton_t *eb = pb->edit_baton;
-  file_baton_t *fb = apr_palloc(pool, sizeof(*fb));
+  node_baton_t *fb = apr_palloc(pool, sizeof(*fb));
 
-  SVN_ERR(eb->wrapped_editor->open_file(path, pb->wrapped_dir_baton,
+  SVN_ERR(eb->wrapped_editor->open_file(path, pb->wrapped_node_baton,
                                         base_revision, pool,
-                                        &fb->wrapped_file_baton));
+                                        &fb->wrapped_node_baton));
 
   fb->edit_baton = eb;
-
   *file_baton = fb;
 
   return SVN_NO_ERROR;
@@ -646,13 +626,11 @@ apply_textdelta(void *file_baton,
                 svn_txdelta_window_handler_t *handler,
                 void **handler_baton)
 {
-  file_baton_t *fb = file_baton;
+  node_baton_t *fb = file_baton;
   edit_baton_t *eb = fb->edit_baton;
-
-  SVN_ERR(eb->wrapped_editor->apply_textdelta(fb->wrapped_file_baton,
-                                              base_checksum, pool,
-                                              handler, handler_baton));
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->apply_textdelta(fb->wrapped_node_baton,
+                                             base_checksum, pool,
+                                             handler, handler_baton);
 }
 
 static svn_error_t *
@@ -660,13 +638,10 @@ close_file(void *file_baton,
            const char *text_checksum,
            apr_pool_t *pool)
 {
-  file_baton_t *fb = file_baton;
+  node_baton_t *fb = file_baton;
   edit_baton_t *eb = fb->edit_baton;
-
-  SVN_ERR(eb->wrapped_editor->close_file(fb->wrapped_file_baton,
-                                         text_checksum, pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->close_file(fb->wrapped_node_baton, 
+                                        text_checksum, pool);
 }
 
 static svn_error_t *
@@ -674,26 +649,18 @@ absent_file(const char *path,
             void *file_baton,
             apr_pool_t *pool)
 {
-  file_baton_t *fb = file_baton;
+  node_baton_t *fb = file_baton;
   edit_baton_t *eb = fb->edit_baton;
-
-  SVN_ERR(eb->wrapped_editor->absent_file(path, fb->wrapped_file_baton,
-                                          pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->absent_file(path, fb->wrapped_node_baton, pool);
 }
 
 static svn_error_t *
 close_directory(void *dir_baton,
                 apr_pool_t *pool)
 {
-  dir_baton_t *db = dir_baton;
+  node_baton_t *db = dir_baton;
   edit_baton_t *eb = db->edit_baton;
-
-  SVN_ERR(eb->wrapped_editor->close_directory(db->wrapped_dir_baton,
-                                              pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->close_directory(db->wrapped_node_baton, pool);
 }
 
 static svn_error_t *
@@ -701,13 +668,10 @@ absent_directory(const char *path,
                  void *dir_baton,
                  apr_pool_t *pool)
 {
-  dir_baton_t *db = dir_baton;
+  node_baton_t *db = dir_baton;
   edit_baton_t *eb = db->edit_baton;
-
-  SVN_ERR(eb->wrapped_editor->absent_directory(path, db->wrapped_dir_baton,
-                                               pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->absent_directory(path, db->wrapped_node_baton, 
+                                              pool);
 }
 
 static svn_error_t *
@@ -716,17 +680,15 @@ change_file_prop(void *file_baton,
                  const svn_string_t *value,
                  apr_pool_t *pool)
 {
-  file_baton_t *fb = file_baton;
+  node_baton_t *fb = file_baton;
   edit_baton_t *eb = fb->edit_baton;
 
   /* only regular properties can pass over libsvn_ra */
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
-  SVN_ERR(eb->wrapped_editor->change_file_prop(fb->wrapped_file_baton,
-                                               name, value, pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->change_file_prop(fb->wrapped_node_baton,
+                                              name, value, pool);
 }
 
 static svn_error_t *
@@ -735,17 +697,15 @@ change_dir_prop(void *dir_baton,
                 const svn_string_t *value,
                 apr_pool_t *pool)
 {
-  dir_baton_t *db = dir_baton;
+  node_baton_t *db = dir_baton;
   edit_baton_t *eb = db->edit_baton;
 
   /* only regular properties can pass over libsvn_ra */
   if (svn_property_kind(NULL, name) != svn_prop_regular_kind)
     return SVN_NO_ERROR;
 
-  SVN_ERR(eb->wrapped_editor->change_dir_prop(db->wrapped_dir_baton,
-                                              name, value, pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->change_dir_prop(db->wrapped_node_baton,
+                                             name, value, pool);
 }
 
 static svn_error_t *
@@ -762,15 +722,12 @@ close_edit(void *edit_baton,
   if (! eb->called_open_root)
     {
       void *baton;
-
       SVN_ERR(eb->wrapped_editor->open_root(eb->wrapped_edit_baton,
                                             eb->base_revision, pool,
                                             &baton));
     }
 
-  SVN_ERR(eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool));
-
-  return SVN_NO_ERROR;
+  return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
 }
 
 /* Create a wrapper editor that holds our commit editor.  This takes care
