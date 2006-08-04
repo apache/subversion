@@ -1189,7 +1189,7 @@ do_copy_revprops(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 }
 
 
-/* SUBCOMMAND: sync */
+/* SUBCOMMAND: copy-revprops */
 static svn_error_t *
 copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 {
