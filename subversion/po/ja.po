@@ -169,8 +169,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-04 02:41+0900\n"
-"PO-Revision-Date: 2006-08-04 02:41+0900\n"
+"POT-Creation-Date: 2006-08-04 20:57+0900\n"
+"PO-Revision-Date: 2006-08-04 20:57+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5585,7 +5585,7 @@ msgstr ""
 "Subversion はバージョン管理用のツールです。\n"
 "さらに詳しい情報は、http://subversion.tigris.org/ をご覧ください。\n"
 
-#: svn/help-cmd.c:65 svnsync/main.c:1178
+#: svn/help-cmd.c:65 svnsync/main.c:1258
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -5850,7 +5850,7 @@ msgstr ""
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:63 svn/main.c:64 svnadmin/main.c:227 svnadmin/main.c:230
 #: svndumpfilter/main.c:780 svndumpfilter/main.c:783 svnlook/main.c:90
-#: svnlook/main.c:93 svnsync/main.c:109 svnsync/main.c:111
+#: svnlook/main.c:93 svnsync/main.c:103 svnsync/main.c:105
 msgid "show help on a subcommand"
 msgstr "サブコマンドに関するヘルプを表示します"
 
@@ -5946,7 +5946,7 @@ msgstr ""
 # * Description for 'svn{,admin,dumpfilter,look,serve,sync,version} --version'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:92 svnadmin/main.c:233 svndumpfilter/main.c:786
-#: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:107
+#: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:101
 #: svnversion/main.c:125
 msgid "show program version information"
 msgstr "プログラムのバージョン情報を表示します"
@@ -5965,13 +5965,13 @@ msgstr "更新情報を表示します"
 
 # * Description for 'svn{,sync} --username'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:96 svnsync/main.c:99
+#: svn/main.c:96 svnsync/main.c:95
 msgid "specify a username ARG"
 msgstr "ユーザ名を <引数> と指定します"
 
 # * Description for 'svn{,sync} --password'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:98 svnsync/main.c:101
+#: svn/main.c:98 svnsync/main.c:97
 msgid "specify a password ARG"
 msgstr "パスワードを <引数> と指定します"
 
@@ -6053,13 +6053,13 @@ msgstr ""
 
 # * Description for 'svn{,sync} --no-auth-cache'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:138 svnsync/main.c:97
+#: svn/main.c:138 svnsync/main.c:93
 msgid "do not cache authentication tokens"
 msgstr "認証情報をキャッシュしません"
 
 # * Description for 'svn{,sync} --non-interactive'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:140 svnsync/main.c:95
+#: svn/main.c:140 svnsync/main.c:91
 msgid "do no interactive prompting"
 msgstr "対話式の認証用プロンプト表示をしません"
 
@@ -6137,7 +6137,7 @@ msgstr "URL を書き換え、参照するリポジトリを変更します"
 
 # * Description for 'svn{,sync} --config-dir'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:103
+#: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:99
 msgid "read user configuration files from directory ARG"
 msgstr ""
 "ディレクトリ <引数> からユーザ設定ファイルを読み\n"
@@ -7477,7 +7477,7 @@ msgstr ""
 "と\n"
 "  なったパスは 1 列目でコード 'E' を用いて報告されます。\n"
 
-#: svn/main.c:856 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:142
+#: svn/main.c:856 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:168
 msgid "Caught signal"
 msgstr "シグナルを受け取りました"
 
@@ -8605,7 +8605,7 @@ msgstr "リビジョン %ld は %ld としてコミットされました。\n"
 #: svndumpfilter/main.c:412
 #, c-format
 msgid "Revision %ld skipped.\n"
-msgstr "リビジョン %ld は飛ばされました。\n"
+msgstr "リビジョン %ld を飛ばしました。\n"
 
 #: svndumpfilter/main.c:514
 #, c-format
@@ -8767,7 +8767,7 @@ msgstr ""
 
 # * Description for 'svnlook --revision'.
 # * 29 half-size characters are displayed on the left.
-#: svnlook/main.c:99 svnsync/main.c:105
+#: svnlook/main.c:99
 msgid "specify revision number ARG"
 msgstr "リビジョン番号を <引数> と指定します"
 
@@ -9402,16 +9402,21 @@ msgstr ""
 
 # * Description for 'svnsync initialize'.
 # * "initialize (init): " is displayed at the head of the first line.
-#: svnsync/main.c:64
+#: svnsync/main.c:55
 msgid ""
-"usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
+"usage: svnsync initialize DEST_URL SOURCE_URL\n"
+"\n"
 "Initialize a destination repository for synchronization from\n"
 "another repository.\n"
 "\n"
 "The destination URL must point to the root of a repository with\n"
 "no committed revisions.  The destination repository must allow\n"
-"revision property changes, and you should not commit to it by\n"
-"any method other than 'svnsync'.\n"
+"revision property changes.\n"
+"\n"
+"You should not commit to, or make revision property changes in,\n"
+"the destination repository by any method other than 'svnsync'.\n"
+"In other words, the destination repository should be a read-only\n"
+"mirror of the source repository.\n"
 msgstr ""
 "使用方法: svnsync initialize <同期先 URL> --source-url <同期元 URL>\n"
 "<同期先 URL> のリポジトリを、他のリポジトリから同期するために初期化します。\n"
@@ -9420,133 +9425,143 @@ msgstr ""
 "ト\n"
 "でなければいけません。同期先リポジトリではリビジョン属性変更が許可されてい"
 "な\n"
-"ければならず、そのリポジトリには 'svnsync' 以外の方法でコミットすべきではあ"
-"り\n"
-"ません。\n"
+"ければなりません。\n"
+"\n"
+"同期先リポジトリには、'svnsync' 以外の手段でコミットやリビジョン属性変更を"
+"す\n"
+"べきではありません。すなわち、同期先リポジトリは同期元リポジトリの読み取り"
+"専\n"
+"用のミラーとすべきです。\n"
+
+# * Description for 'svnsync synchronize'.
+# * "synchronize (sync): " is displayed at the head of the first line.
+#: svnsync/main.c:70
+msgid ""
+"usage: svnsync synchronize DEST_URL\n"
+"\n"
+"Transfer all pending revisions from source to destination.\n"
+msgstr ""
+"使用方法: svnsync synchronize <同期先 URL>\n"
+"\n"
+"同期元から同期先へ、未同期のリビジョンを転送します。\n"
 
 # * Description for 'svnsync synchronize'.
 # * "synchronize (sync): " is displayed at the head of the first line.
 #: svnsync/main.c:75
 msgid ""
-"usage: svnsync synchronize DEST_URL\n"
-"Transfer all pending revisions from source to destination.\n"
-msgstr ""
-"使用方法: svnsync synchronize <同期先 URL>\n"
-"同期元から同期先へ、未同期のリビジョンを転送します。\n"
-
-# * Description for 'svnsync synchronize'.
-# * "synchronize (sync): " is displayed at the head of the first line.
-#: svnsync/main.c:79
-msgid ""
-"usage: svnsync copy-revprops DEST_URL --revision REV\n"
+"usage: svnsync copy-revprops DEST_URL REV\n"
+"\n"
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
-"使用方法: svnsync copy-revprops <同期先 URL> --revision <REV>\n"
+"使用方法: svnsync copy-revprops <同期先 URL> <REV>\n"
+"\n"
 "同期元から同期先へ、リビジョン <REV> のリビジョン属性をすべてコピーします。\n"
 
-# * Description for 'svnsync --source-url'.
+# * Description for 'svnsync help'.
 # * "help: " is displayed at the head of the first line.
-#: svnsync/main.c:84
+#: svnsync/main.c:81
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
+"\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
 "使用方法: svnsync help [<サブコマンド>...]\n"
 "\n"
 "このプログラムやそのサブコマンドの使用方法を説明します。\n"
 
-# * Description for 'svnsync --source-url'.
-# * 29 half-size characters are displayed on the left.
-#: svnsync/main.c:93
-msgid "The url to synchronize from"
-msgstr "同期元の URL"
-
-#: svnsync/main.c:174
+#: svnsync/main.c:206
 #, c-format
 msgid "Can't get local hostname"
 msgstr "ローカルのホスト名を取得できません"
 
-#: svnsync/main.c:197
+#: svnsync/main.c:228
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
 msgstr ""
 "同期先リポジトリのロックを取得できませんでした。現在 '%s' が所持しています\n"
 
-#: svnsync/main.c:280
+#: svnsync/main.c:323
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
 msgstr "セッションのルートは '%s' ですが、リポジトリのルートは '%s' です"
 
-#: svnsync/main.c:310
-msgid "Cannot initialize a repository with content in it"
-msgstr "内容を含んだリポジトリは初期化できません"
-
-#: svnsync/main.c:320
+#: svnsync/main.c:362
 #, c-format
-msgid "Destination repository is already synchronizing from '%s'"
-msgstr "同期先リポジトリは既に '%s' から同期中です"
+msgid "Copied properties for revision %ld (%s* properties skipped).\n"
+msgstr "リビジョン %ld の属性をコピーしました (属性 %s* は飛ばしました)。\n"
 
-#: svnsync/main.c:396
-msgid "You must supply a source URL; try 'svnsync help' for more info"
-msgstr ""
-"同期元 URL を与えなければいけません。より詳しく知りたいときは 'svnsync help' "
-"を試してみてください"
-
-#: svnsync/main.c:404 svnsync/main.c:407 svnsync/main.c:1070
-#: svnsync/main.c:1136
-#, c-format
-msgid "Path '%s' is not a URL"
-msgstr "パス '%s' は URL ではありません"
-
-#: svnsync/main.c:447
-#, c-format
-msgid "Committed revision %ld.\n"
-msgstr "リビジョン %ld をコミットしました。\n"
-
-#: svnsync/main.c:851
+#: svnsync/main.c:367
 #, c-format
 msgid "Copied properties for revision %ld.\n"
 msgstr "リビジョン %ld の属性をコピーしました。\n"
 
-#: svnsync/main.c:878
+#: svnsync/main.c:408
+msgid "Cannot initialize a repository with content in it"
+msgstr "内容を含んだリポジトリは初期化できません"
+
+#: svnsync/main.c:418
+#, c-format
+msgid "Destination repository is already synchronizing from '%s'"
+msgstr "同期先リポジトリは既に '%s' から同期中です"
+
+#: svnsync/main.c:475 svnsync/main.c:478 svnsync/main.c:1128
+#: svnsync/main.c:1212
+#, c-format
+msgid "Path '%s' is not a URL"
+msgstr "パス '%s' は URL ではありません"
+
+#: svnsync/main.c:858
+#, c-format
+msgid "Committed revision %ld.\n"
+msgstr "リビジョン %ld をコミットしました。\n"
+
+#: svnsync/main.c:895
 msgid "Destination repository has not been initialized"
 msgstr "同期先リポジトリは初期化されていません"
 
-#: svnsync/main.c:893
+#: svnsync/main.c:910
 #, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
 msgstr "同期元リポジトリの UUID (%s) が予想される UUID (%s) と一致しません"
 
-#: svnsync/main.c:954
+#: svnsync/main.c:972
 #, c-format
 msgid ""
-"Currently copying rev %ld in source is less than latest rev in destination (%"
-"ld)"
+"Revision being currently copied (%ld), last merged revision (%ld), and "
+"destination HEAD (%ld) are inconsistent; have you committed to the "
+"destination without using svnsync?"
 msgstr ""
-"現在コピー中の同期元リビジョン %ld は、同期先の最新リビジョン (%ld) よりも若"
-"いです"
+"現在コピー中のリビジョン (%ld)、最後にマージされたリビジョン (%ld)、同期先の "
+"HEAD (%ld) が食い違っています。svnsync を用いずに同期先リポジトリにコミットし"
+"たのではありませんか?"
 
-#: svnsync/main.c:1026
+#: svnsync/main.c:1008
+#, c-format
+msgid ""
+"Destination HEAD (%ld) is not the last merged revision (%ld); have you "
+"committed to the destination without using svnsync?"
+msgstr ""
+"同期先の HEAD (%ld) が最後にマージされたリビジョン (%ld) ではありません。"
+"svnsync を用いずに同期先リポジトリにコミットしたのではありませんか?"
+
+#: svnsync/main.c:1082
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr ""
 "コミットでリビジョン %ld が作成されましたが、作成されるべきだったのは %ld で"
 "す"
 
-#: svnsync/main.c:1112
+#: svnsync/main.c:1183
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
 msgstr "まだ同期されていないリビジョンのリビジョン属性はコピーできません"
 
-#: svnsync/main.c:1140
-msgid ""
-"You must supply a valid revision number; try 'svnsync help' for more info"
-msgstr ""
-"有効なリビジョン番号を与えなければいけません。より詳しく知りたいときは "
-"'svnsync help' を試してみてください"
+#: svnsync/main.c:1215
+msgid "Invalid revision number"
+msgstr "リビジョン番号が不正です"
 
 # * Description for svnsync.
-#: svnsync/main.c:1171
+#: svnsync/main.c:1251
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -9565,11 +9580,7 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svnsync/main.c:1303
-msgid "Invalid revision number"
-msgstr "リビジョン番号が不正です"
-
-#: svnsync/main.c:1381
+#: svnsync/main.c:1441
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -9577,6 +9588,12 @@ msgid ""
 msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
 "使用方法を知りたいときは 'svnsync help %s' と打ってください。\n"
+
+#: svnsync/main.c:1502
+msgid "Not enough arguments provided; try 'svnsync help' for more info"
+msgstr ""
+"与える引数が不十分です。より詳しく知りたいときは 'svnsync help' を試してみて"
+"ください。"
 
 #: svnversion/main.c:39
 #, c-format
@@ -9677,6 +9694,83 @@ msgstr "エクスポートされたものです%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
+
+# * Description for 'svnsync initialize'.
+# * "initialize (init): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
+#~ "Initialize a destination repository for synchronization from\n"
+#~ "another repository.\n"
+#~ "\n"
+#~ "The destination URL must point to the root of a repository with\n"
+#~ "no committed revisions.  The destination repository must allow\n"
+#~ "revision property changes, and you should not commit to it by\n"
+#~ "any method other than 'svnsync'.\n"
+#~ msgstr ""
+#~ "使用方法: svnsync initialize <同期先 URL> --source-url <同期元 URL>\n"
+#~ "<同期先 URL> のリポジトリを、他のリポジトリから同期するために初期化しま"
+#~ "す。\n"
+#~ "\n"
+#~ "<同期先 URL> が指すのは、コミットされたリビジョンをもたないリポジトリの"
+#~ "ルート\n"
+#~ "でなければいけません。同期先リポジトリではリビジョン属性変更が許可されてい"
+#~ "な\n"
+#~ "ければならず、そのリポジトリには 'svnsync' 以外の方法でコミットすべきでは"
+#~ "あり\n"
+#~ "ません。\n"
+
+# * Description for 'svnsync synchronize'.
+# * "synchronize (sync): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "usage: svnsync synchronize DEST_URL\n"
+#~ "Transfer all pending revisions from source to destination.\n"
+#~ msgstr ""
+#~ "使用方法: svnsync synchronize <同期先 URL>\n"
+#~ "同期元から同期先へ、未同期のリビジョンを転送します。\n"
+
+# * Description for 'svnsync synchronize'.
+# * "synchronize (sync): " is displayed at the head of the first line.
+#~ msgid ""
+#~ "usage: svnsync copy-revprops DEST_URL --revision REV\n"
+#~ "Copy all revision properties for revision REV from source to\n"
+#~ "destination.\n"
+#~ msgstr ""
+#~ "使用方法: svnsync copy-revprops <同期先 URL> --revision <REV>\n"
+#~ "同期元から同期先へ、リビジョン <REV> のリビジョン属性をすべてコピーしま"
+#~ "す。\n"
+
+# * Description for 'svnsync help'.
+# * "help: " is displayed at the head of the first line.
+#~ msgid ""
+#~ "usage: svnsync help [SUBCOMMAND...]\n"
+#~ "Describe the usage of this program or its subcommands.\n"
+#~ msgstr ""
+#~ "使用方法: svnsync help [<サブコマンド>...]\n"
+#~ "\n"
+#~ "このプログラムやそのサブコマンドの使用方法を説明します。\n"
+
+# * Description for 'svnsync --source-url'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "The url to synchronize from"
+#~ msgstr "同期元の URL"
+
+#~ msgid "You must supply a source URL; try 'svnsync help' for more info"
+#~ msgstr ""
+#~ "同期元 URL を与えなければいけません。より詳しく知りたいときは 'svnsync "
+#~ "help' を試してみてください"
+
+#~ msgid ""
+#~ "Currently copying rev %ld in source is less than latest rev in "
+#~ "destination (%ld)"
+#~ msgstr ""
+#~ "現在コピー中の同期元リビジョン %ld は、同期先の最新リビジョン (%ld) よりも"
+#~ "若いです"
+
+#~ msgid ""
+#~ "You must supply a valid revision number; try 'svnsync help' for more info"
+#~ msgstr ""
+#~ "有効なリビジョン番号を与えなければいけません。より詳しく知りたいときは "
+#~ "'svnsync help' を試してみてください"
 
 # * Description for 'svn checkout'.
 # * "checkout (co): " is displayed at the head of the first line.
