@@ -64,7 +64,7 @@ def run_init(dst_url, src_url):
     "initialize", dst_url, src_url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
-  if output:
+  if output != ['Copied properties for revision 0.\n']:
     raise svntest.actions.SVNUnexpectedStdout(output)
   if errput:
     raise svntest.actions.SVNUnexpectedStderr(errput)
@@ -195,6 +195,7 @@ def copy_parent_modify_prop(sbox):
   "copy parent and modify prop"
   run_test(sbox, "copy-parent-modify-prop.dump")
 
+#----------------------------------------------------------------------
 
 def basic_authz(sbox):
   "verify that unreadable content is not synced"
@@ -235,6 +236,8 @@ def basic_authz(sbox):
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      lambda_url)
+
+#----------------------------------------------------------------------
 
 def copy_from_unreadable_dir(sbox):
   "verify that copies from unreadable dirs work"
