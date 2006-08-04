@@ -158,8 +158,8 @@ check_lib_versions(void)
 }
 
 
-/* Acquire a lock (of sorts) on the repository located at the other
- * side of the given RA SESSION.
+/* Acquire a lock (of sorts) on the repository associated with the
+ * given RA SESSION.
  */
 static svn_error_t *
 get_lock(svn_ra_session_t *session, apr_pool_t *pool)
@@ -219,9 +219,9 @@ typedef svn_error_t *(*with_locked_func_t)(svn_ra_session_t *session,
                                            apr_pool_t *pool);
 
 
-/* Lock the repository on the other side of the RA SESSION, then
- * execute the given FUNC/BATON pair while holding the lock.  Finally,
- * drop the lock once it finishes.
+/* Lock the repository associated with RA SESSION, then execute the
+ * given FUNC/BATON pair while holding the lock.  Finally, drop the
+ * lock once it finishes.
  */
 static svn_error_t *
 with_locked(svn_ra_session_t *session,
@@ -273,7 +273,7 @@ open_tmp_file(apr_file_t **fp, void *callback_baton, apr_pool_t *pool)
 
 
 /* Return SVN_NO_ERROR iff URL identifies the root directory of the
- * repository on the other side of RA session SESS.
+ * repository associated with RA session SESS.
  */
 static svn_error_t *
 check_if_session_is_at_repos_root(svn_ra_session_t *sess,
