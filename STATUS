@@ -105,8 +105,7 @@ Candidate changes:
       of original dev-testing, but needing these improvements to prevent
       user confusion and embarrassment.
     Votes:
-      +1: cmpilato (except for r20967, r20971)
-      +1: rooneg
+      +1: rooneg, cmpilato
 
 Approved changes:
 
