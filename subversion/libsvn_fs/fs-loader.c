@@ -50,10 +50,6 @@ static apr_pool_t *common_pool;
 static apr_thread_mutex_t *common_pool_lock;
 #endif
 
-/* A global cache of dso objects, used to prevent us from wasting memory
-   by calling apr_dso_load more than once. */
-static apr_hash_t *dso_cache;
-
 
 /* --- Utility functions for the loader --- */
 
@@ -96,46 +92,12 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
                            name, SVN_VER_MAJOR);
     funcname = apr_psprintf(pool, "svn_fs_%s__init", name);
 
-#if APR_HAS_THREADS
-    status = apr_thread_mutex_lock(common_pool_lock);
+    /* Find/load the specified library.  If we get an error, assume
+       the library doesn't exist.  The library will be unloaded when
+       pool is destroyed. */
+    status = apr_dso_load(&dso, libname, pool);
     if (status)
-      return svn_error_wrap_apr(status, _("Can't grab FS mutex"));
-#endif
-
-    dso = apr_hash_get(dso_cache, libname, APR_HASH_KEY_STRING);
-    if (! dso)
-      {
-        /* Find/load the specified library.  If we get an error, assume
-           the library doesn't exist.
-
-           We allocate all the libraries we load in a global pool, which
-           means they won't go away until apr_terminate is called.  This
-           might be considered a leak, but honestly it's not a big deal,
-           since we only have a handful of libraries here, and each one
-           is only loaded once.  If it becomes more of a problem we can
-           revisit this later on. */
-        status = apr_dso_load(&dso, libname, common_pool);
-        if (status)
-          {
-#if APR_HAS_THREADS
-            status = apr_thread_mutex_unlock(common_pool_lock);
-            if (status)
-              return svn_error_wrap_apr(status, _("Can't ungrab FS mutex"));
-#endif
-            return SVN_NO_ERROR;
-          }
-
-        apr_hash_set(dso_cache,
-                     apr_pstrdup(common_pool, libname),
-                     APR_HASH_KEY_STRING,
-                     dso);
-      }
-
-#if APR_HAS_THREADS
-    status = apr_thread_mutex_unlock(common_pool_lock);
-    if (status)
-      return svn_error_wrap_apr(status, _("Can't ungrab FS mutex"));
-#endif
+      return SVN_NO_ERROR;
 
     /* find the initialization routine */
     status = apr_dso_sym(&symbol, dso, funcname);
@@ -263,6 +225,15 @@ write_fs_type(const char *path, const char *fs_type, apr_pool_t *pool)
 
 /* --- Functions for operating on filesystems by pathname --- */
 
+static apr_status_t uninit(void *data)
+{
+  common_pool = NULL;
+#if APR_HAS_THREADS
+  common_pool_lock = NULL;
+#endif
+  return APR_SUCCESS;
+}
+
 svn_error_t *
 svn_fs_initialize(apr_pool_t *pool)
 {
@@ -274,8 +245,7 @@ svn_fs_initialize(apr_pool_t *pool)
   if (common_pool)
     return SVN_NO_ERROR;
 
-  common_pool = svn_pool_create(NULL);
-  dso_cache = apr_hash_make(common_pool);
+  common_pool = svn_pool_create(pool);
 #if APR_HAS_THREADS
   status = apr_thread_mutex_create(&common_pool_lock,
                                    APR_THREAD_MUTEX_DEFAULT, common_pool);
@@ -283,17 +253,13 @@ svn_fs_initialize(apr_pool_t *pool)
     return svn_error_wrap_apr(status, _("Can't allocate FS mutex"));
 #endif
 
-  /* Note: We used to set up a cleanup callback here that would NULL out
-           the common_pool and its mutex when the pool was cleared.  This
-           has been removed now that common_pool is global, mostly because
-           it screws things up when libsvn_fs is loaded as a result of a
-           DSO load of libsvn_ra_local.  By the time we get to global pool
-           destruction time libsvn_ra_local has been unloaded, and thus
-           libsvn_fs goes with it.  This would result in trying to call a
-           function that no longer exists.  Now we take the more pragmatic
-           approach of simply saying that anyone who calls into libsvn_fs
-           during global pool destruction time deserves what they get. */
-
+  /* ### This won't work if POOL is NULL and libsvn_fs is loaded as a DSO
+     ### (via libsvn_ra_local say) since the global common_pool will live
+     ### longer than the DSO, which gets unloaded when the pool used to
+     ### load it is cleared, and so when the handler runs it will refer to
+     ### a function that no longer exists.  libsvn_ra_local attempts to
+     ### work around this by explicitly calling svn_fs_initialize. */
+  apr_pool_cleanup_register(common_pool, NULL, uninit, apr_pool_cleanup_null);
   return SVN_NO_ERROR;
 }
 
