@@ -116,13 +116,6 @@ Approved changes:
     Votes:
       +1: rooneg, dlr, cmpilato
     
-  * r20939
-    Fix svnsync error message.
-    Justification:
-      Low risk, correct error messages are nice to have.
-    Votes:
-      +1: rooneg, nori, dlr
-
 
 Status of 1.4.1:
 ================

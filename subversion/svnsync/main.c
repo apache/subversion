@@ -890,7 +890,7 @@ open_source_session(svn_ra_session_t **from_session,
 
   if (strcmp(uuid, from_uuid->data) != 0)
     return svn_error_createf(APR_EINVAL, NULL,
-                             _("UUID of destination repository (%s) does not "
+                             _("UUID of source repository (%s) does not "
                                "match expected UUID (%s)"),
                              uuid, from_uuid->data);
 
