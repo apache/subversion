@@ -84,6 +84,8 @@ Candidate changes:
     Votes:
       +1: nori, dlr
 
+Approved changes:
+
   * r20971, r20967, r20965, r20964, r20961, r20960, r20958, r20956
     Tons of bugfixes, UI and usages improvements, error detection and
     reporting enhancements, and so on -- all in svnsync.
@@ -98,9 +100,7 @@ Candidate changes:
       of original dev-testing, but needing these improvements to prevent
       user confusion and embarrassment.
     Votes:
-      +1: rooneg, cmpilato
-
-Approved changes:
+      +1: rooneg, cmpilato, dlr
 
 
 Status of 1.4.1:
