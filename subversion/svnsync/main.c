@@ -725,6 +725,7 @@ close_edit(void *edit_baton,
       SVN_ERR(eb->wrapped_editor->open_root(eb->wrapped_edit_baton,
                                             eb->base_revision, pool,
                                             &baton));
+      SVN_ERR(eb->wrapped_editor->close_directory(baton, pool));
     }
 
   return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
