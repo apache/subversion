@@ -61,25 +61,33 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
   {
     { "initialize", initialize_cmd, { "init" },
       N_("usage: svnsync initialize DEST_URL SOURCE_URL\n"
+         "\n"
          "Initialize a destination repository for synchronization from\n"
          "another repository.\n"
          "\n"
          "The destination URL must point to the root of a repository with\n"
          "no committed revisions.  The destination repository must allow\n"
-         "revision property changes, and you should not commit to it by\n"
-         "any method other than 'svnsync'.\n"),
+         "revision property changes.\n"
+         "\n"
+         "You should not commit to, or make revision property changes in,\n"
+         "the destination repository by any method other than 'svnsync'.\n"
+         "In other words, the destination repository should be a read-only\n"
+         "mirror of the source repository.\n"),
       { SVNSYNC_OPTS_DEFAULT } },
     { "synchronize", synchronize_cmd, { "sync" },
-      N_("usage: svnsync synchronize DEST_URL\n"
+      N_("usage: svnsync synchronize DEST_URL\n\n"
+         "\n"
          "Transfer all pending revisions from source to destination.\n"),
       { SVNSYNC_OPTS_DEFAULT } },
     { "copy-revprops", copy_revprops_cmd, { 0 },
       N_("usage: svnsync copy-revprops DEST_URL REV\n"
+         "\n"
          "Copy all revision properties for revision REV from source to\n"
          "destination.\n"),
       { SVNSYNC_OPTS_DEFAULT } },
     { "help", help_cmd, { "?", "h" },
       N_("usage: svnsync help [SUBCOMMAND...]\n"
+         "\n"
          "Describe the usage of this program or its subcommands.\n"),
       { 0 } },
     { NULL, NULL, { 0 }, NULL, { 0 } } 
