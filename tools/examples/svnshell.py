@@ -146,8 +146,8 @@ class SVNShell(Cmd):
       else:
         date = self._format_date(date)
      
-      print "%6s %8s <%10s> %8s %12s %s" % (created_rev, author[:8],
-                                            node_id, size, date, name)
+      print "%6s %8s %12s %8s %12s %s" % (created_rev, author[:8],
+                                          node_id, size, date, name)
   
   def do_lstxns(self, arg):
     """list the transactions available for browsing"""
@@ -184,10 +184,13 @@ class SVNShell(Cmd):
   def do_setrev(self, arg):
     """set the current revision to view"""
     try:
-      rev = int(arg)
+      if arg.lower() == 'head':
+        rev = fs.youngest_rev(self.fs_ptr)
+      else:
+        rev = int(arg)
       newroot = fs.revision_root(self.fs_ptr, rev)
     except:
-      print "Error setting the revision to '" + str(rev) + "'."
+      print "Error setting the revision to '" + arg + "'."
       return
     fs.close_root(self.root)
     self.root = newroot
