@@ -43,6 +43,18 @@ Options:
                         svnlook must be on the PATH.
 """
 
+# TODO:
+# --item-url should support arbitrary formatting of the revision number,
+#   to be useful with web viewers other than ViewVC.
+# Actual commit date information should be placed into the feed metadata,
+#   not the item bodies.
+# Actual commit author information should be placed into the feed metadata,
+#   not the item bodies.
+# Rather more than intended is being cached in the pickle file. Instead of
+#   only old items being drawn from the pickle, all the global feed metadata
+#   is actually set only on initial feed creation, and thereafter simply
+#   re-used from the pickle each time.
+
 import sys
 
 # Python 2.3 is required for datetime
