@@ -209,18 +209,15 @@ class Svn2Atom(Svn2Feed):
 
         total = 0
         for childNode in self.feed.childNodes:
-            # author is the last non-entry element. We insert the new
-            # element before its next sibling because it is obviously an
-            # 'entry' element. If there is no such element, then next
-            # sibling will be None and the element will be inserted
-            # after the 'author' element
-            if(childNode.nodeName == 'author'):
-                self.feed.insertBefore(item, childNode.nextSibling)
-            elif(childNode.nodeName == 'entry'):
+            if childNode.nodeName == 'entry':
+                if total == 0:
+                    self.feed.insertBefore(item, childNode)
+                    total += 1
                 total += 1
-
-        if (total > self.max_items):
-            self.feed.removeChild(self.feed.lastChild)
+                if total > self.max_items:
+                    self.feed.removeChild(childNode)
+        if total == 0:
+            self.feed.appendChild(item)
 
     def write_output(self):
         s = pickle.dumps(self.document)
