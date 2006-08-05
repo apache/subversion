@@ -365,6 +365,8 @@ module Svn
     Config = SWIG::TYPE_p_svn_config_t
     
     class Config
+      include Enumerable
+
       class << self
         def config(path)
           Core.config_get_config(path)
@@ -403,9 +405,20 @@ module Svn
       def set(section, option, value)
         Core.config_set(self, section, option, value)
       end
+      alias_method :[]=, :set
       
       def set_bool(section, option, value)
         Core.config_set_bool(self, section, option, value)
+      end
+
+      def each
+        each_section do |section|
+          each_option(section) do |name, value|
+            yield(section, name, value)
+            true
+          end
+          true
+        end
       end
 
       def each_option(section)
@@ -432,6 +445,36 @@ module Svn
 
       def get_server_setting_int(group, name, default)
         Core.config_get_server_setting_int(self, group, name, default)
+      end
+
+      alias_method :_to_s, :to_s
+      def to_s
+        result = ""
+        each_section do |section|
+          result << "[#{section}]\n"
+          each_option(section) do |name, value|
+            result << "#{name} = #{value}\n"
+          end
+          result << "\n"
+        end
+        result
+      end
+
+      def inspect
+        "#{_to_s}#{to_hash.inspect}"
+      end
+
+      def to_hash
+        sections = {}
+        each do |section, name, value|
+          sections[section] ||= {}
+          sections[section][name] = value
+        end
+        sections
+      end
+
+      def ==(other)
+        other.is_a?(self.class) and to_hash == other.to_hash
       end
     end
 
