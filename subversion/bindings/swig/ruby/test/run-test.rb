@@ -15,7 +15,11 @@ $LOAD_PATH.unshift(Dir.pwd)
 
 begin
   require "gettext"
-  Locale.setlocale(Locale::ALL, nil)
+  if Locale.respond_to?(:set)
+    Locale.set(nil)
+  else
+    Locale.setlocale(Locale::ALL, nil)
+  end
 rescue LoadError
 end
 
