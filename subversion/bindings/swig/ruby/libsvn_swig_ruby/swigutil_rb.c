@@ -766,7 +766,12 @@ c2r_hash_with_key_convert(apr_hash_t *hash,
                           void *value_ctx)
 {
   apr_hash_index_t *hi;
-  VALUE r_hash = rb_hash_new();
+  VALUE r_hash;
+
+  if (!hash)
+    return Qnil;
+
+  r_hash = rb_hash_new();
 
   for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi)) {
     const void *key;
