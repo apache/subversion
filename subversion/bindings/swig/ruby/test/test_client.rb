@@ -1808,4 +1808,32 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.commit(@wc_path)
     end
   end
+
+  def test_set_config
+    log = "sample log"
+    ctx = make_context(log)
+    options = {
+      "groups" => {"collabnet" => "svn.collab.net"},
+      "collabnet" => {
+        "http-proxy-host" => "proxy",
+        "http-proxy-port" => "8080",
+      },
+    }
+    servers_config_file = File.join(@config_path,
+                                    Svn::Core::CONFIG_CATEGORY_SERVERS)
+    File.open(servers_config_file, "w") do |file|
+      options.each do |section, values|
+        file.puts("[#{section}]")
+        values.each do |key, value|
+          file.puts("#{key} = #{value}")
+        end
+      end
+    end
+    config = Svn::Core::Config.config(@config_path)
+    assert_nil(ctx.config)
+    assert_equal(options, config[Svn::Core::CONFIG_CATEGORY_SERVERS].to_hash)
+    ctx.config = config
+    assert_equal(options,
+                 ctx.config[Svn::Core::CONFIG_CATEGORY_SERVERS].to_hash)
+  end
 end
