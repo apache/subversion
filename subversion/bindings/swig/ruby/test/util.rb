@@ -43,7 +43,9 @@ module SvnTestUtil
       puts
       puts "before pools: #{before_pools}"
     end
-    GC.start
+    gc_enable do
+      GC.start
+    end
     if $DEBUG
       after_pools = Svn::Core::Pool.number_of_pools
       puts "after pools: #{after_pools}"
