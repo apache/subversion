@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-07-31 22:04-0300\n"
+"POT-Creation-Date: 2006-08-05 21:27-0300\n"
 "PO-Revision-Date: 2004-07-26 19:19-300\n"
 "Last-Translator: dev@subversion.tigris.org\n"
 "Language-Team: Brazilian Portuguese <dev@subversion.tigris.org>\n"
@@ -857,26 +857,26 @@ msgstr "'%s' refere-se a um diretório"
 msgid "(local)"
 msgstr "(local)"
 
-#: libsvn_client/checkout.c:91
+#: libsvn_client/checkout.c:92
 #, c-format
 msgid "URL '%s' doesn't exist"
 msgstr "URL '%s' não existe"
 
-#: libsvn_client/checkout.c:95
+#: libsvn_client/checkout.c:96
 #, c-format
 msgid "URL '%s' refers to a file, not a directory"
 msgstr "URL '%s' se refere a um arquivo, não a um diretório"
 
-#: libsvn_client/checkout.c:163
+#: libsvn_client/checkout.c:167
 #, c-format
 msgid "'%s' is already a working copy for a different URL"
 msgstr "'%s' já é uma cópia de trabalho para uma URL diferente"
 
-#: libsvn_client/checkout.c:167
+#: libsvn_client/checkout.c:171
 msgid "; run 'svn update' to complete it"
 msgstr "; rode 'svn update' para completar"
 
-#: libsvn_client/checkout.c:177
+#: libsvn_client/checkout.c:181
 #, c-format
 msgid "'%s' already exists and is not a directory"
 msgstr "'%s' já existe e não é um diretório"
@@ -977,16 +977,16 @@ msgstr "item de commit '%s' possui flag de cópia mas não copyfrom URL"
 #: libsvn_client/prop_commands.c:213 libsvn_client/prop_commands.c:446
 #: libsvn_client/prop_commands.c:609 libsvn_client/prop_commands.c:950
 #: libsvn_client/ra.c:181 libsvn_client/revisions.c:89
-#: libsvn_client/status.c:256 libsvn_client/switch.c:106
+#: libsvn_client/status.c:256 libsvn_client/switch.c:107
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
 #: libsvn_wc/adm_crawler.c:770 libsvn_wc/adm_ops.c:1044
 #: libsvn_wc/adm_ops.c:2329 libsvn_wc/adm_ops.c:2355 libsvn_wc/adm_ops.c:2391
 #: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:86 libsvn_wc/copy.c:442
 #: libsvn_wc/copy.c:564 libsvn_wc/copy.c:571 libsvn_wc/diff.c:1793
 #: libsvn_wc/entries.c:2256 libsvn_wc/entries.c:2813 libsvn_wc/props.c:479
-#: libsvn_wc/props.c:1088 libsvn_wc/props.c:1506 libsvn_wc/questions.c:182
-#: libsvn_wc/questions.c:291 libsvn_wc/status.c:726 libsvn_wc/translate.c:199
-#: libsvn_wc/update_editor.c:2065 libsvn_wc/update_editor.c:2841
+#: libsvn_wc/props.c:1088 libsvn_wc/props.c:1506 libsvn_wc/questions.c:186
+#: libsvn_wc/questions.c:295 libsvn_wc/status.c:726 libsvn_wc/translate.c:199
+#: libsvn_wc/update_editor.c:2167 libsvn_wc/update_editor.c:3006
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' não está sobre controle de versão"
@@ -1203,7 +1203,7 @@ msgstr ""
 "Somente diferenças entre um caminho de texto-base e seus arquivos de "
 "trabalho são suportados neste momento"
 
-#: libsvn_client/diff.c:2144 libsvn_client/switch.c:110
+#: libsvn_client/diff.c:2144 libsvn_client/switch.c:111
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "Diretório '%s' não possui URL"
@@ -1239,8 +1239,8 @@ msgstr "'%s' existe e não é um diretório"
 msgid "'%s' already exists"
 msgstr "'%s' já existe"
 
-#: libsvn_client/export.c:687 libsvn_wc/update_editor.c:1601
-#: libsvn_wc/update_editor.c:2194
+#: libsvn_client/export.c:687 libsvn_wc/update_editor.c:1679
+#: libsvn_wc/update_editor.c:2297
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Checksum não bate para '%s'; esperado: '%s', obtido: '%s'"
@@ -1293,7 +1293,7 @@ msgid "Revision type requires a working copy path, not a URL"
 msgstr "Tipo de revisão requer uma cópia de trabalho, não uma URL"
 
 #: libsvn_client/log.c:139 libsvn_client/status.c:261
-#: libsvn_client/update.c:86
+#: libsvn_client/update.c:87
 #, c-format
 msgid "Entry '%s' has no URL"
 msgstr "Entrada '%s' não possui URL"
@@ -2882,7 +2882,7 @@ msgid "%s request failed on '%s'"
 msgstr "Requisição %s falhou em '%s'"
 
 #: libsvn_ra_local/ra_plugin.c:103 libsvn_ra_local/ra_plugin.c:587
-#: libsvn_wc/update_editor.c:2355
+#: libsvn_wc/update_editor.c:2464
 #, c-format
 msgid ""
 "'%s'\n"
@@ -4507,12 +4507,13 @@ msgid "'%s' is already under version control"
 msgstr "'%s' já está sobre controle de versão"
 
 #: libsvn_wc/adm_ops.c:1128
+#, c-format
 msgid ""
 "Can't replace '%s' with a node of a differing type; the deletion must be "
 "committed and the parent updated before adding '%s'"
 msgstr ""
-"Não é possível substituir '%s' com um nó de diferente tipo; deve haver commit "
-"da remoção e o pai atualizado antes de adicionar '%s'"
+"Não é possível substituir '%s' com um nó de diferente tipo; deve haver "
+"commit da remoção e o pai atualizado antes de adicionar '%s'"
 
 #: libsvn_wc/adm_ops.c:1145
 #, c-format
@@ -5106,7 +5107,7 @@ msgstr ""
 "Este cliente é muito velho para trablhar com a cópia de trabalho '%s'; por "
 "favor obtenha um novo cliente Subversion"
 
-#: libsvn_wc/questions.c:337
+#: libsvn_wc/questions.c:341
 #, c-format
 msgid ""
 "Checksum mismatch indicates corrupt text base: '%s'\n"
@@ -5121,27 +5122,45 @@ msgstr ""
 msgid "Relocate can only change the repository part of an URL"
 msgstr "Relocação só pode mudar a parte repositório de uma URL"
 
-#: libsvn_wc/update_editor.c:387
+#: libsvn_wc/update_editor.c:390
 #, c-format
 msgid "No '.' entry in: '%s'"
 msgstr "Não há entrada '.' em: '%s'"
 
-#: libsvn_wc/update_editor.c:888
+#: libsvn_wc/update_editor.c:896
 #, c-format
 msgid "Won't delete locally modified directory '%s'"
 msgstr "Diretório localmente modificado '%s' não será apagado"
 
-#: libsvn_wc/update_editor.c:962
+#: libsvn_wc/update_editor.c:970
 #, c-format
 msgid "Error writing log file for '%s'"
 msgstr "Erro gravando arquivo de log para '%s'"
 
-#: libsvn_wc/update_editor.c:1065
+#: libsvn_wc/update_editor.c:1078
+#, c-format
+msgid ""
+"Failed to add directory '%s': a non-directory object of the same name "
+"already exists"
+msgstr ""
+"Falhou ao adicionar diretório '%s': objeto não-diretório com o mesmo nome já "
+"existe"
+
+#: libsvn_wc/update_editor.c:1108
+#, c-format
+msgid ""
+"Failed to forcibly add directory '%s': a versioned directory of the same "
+"name already exists"
+msgstr ""
+"Falhou ao forçosamente adicionar diretório '%s': um diretório versionado com "
+"o mesmo nome já existe"
+
+#: libsvn_wc/update_editor.c:1121
 #, c-format
 msgid "Failed to add directory '%s': object of the same name already exists"
 msgstr "Falhou ao adicionar diretório '%s': objeto com o mesmo nome já existe"
 
-#: libsvn_wc/update_editor.c:1073
+#: libsvn_wc/update_editor.c:1130
 #, c-format
 msgid ""
 "Failed to add directory '%s': object of the same name as the administrative "
@@ -5150,13 +5169,13 @@ msgstr ""
 "Falhou ao adicionar o diretório '%s': objeto do mesmo nome como diretório "
 "administrativo"
 
-#: libsvn_wc/update_editor.c:1087
+#: libsvn_wc/update_editor.c:1144
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr ""
 "Falhou ao adicionar diretório '%s': argumentos copyfrom ainda não suportados"
 
-#: libsvn_wc/update_editor.c:1108
+#: libsvn_wc/update_editor.c:1165
 #, c-format
 msgid ""
 "Failed to add directory '%s': object of the same name is already scheduled "
@@ -5165,11 +5184,11 @@ msgstr ""
 "Falhou ao adicionar diretório '%s': objeto com o mesmo nome já agendado para "
 "inclusão"
 
-#: libsvn_wc/update_editor.c:1312
+#: libsvn_wc/update_editor.c:1370
 msgid "Couldn't do property merge"
 msgstr "Não foi possível mesclar propriedades"
 
-#: libsvn_wc/update_editor.c:1376
+#: libsvn_wc/update_editor.c:1434
 #, c-format
 msgid ""
 "Failed to mark '%s' absent: item of the same name is already scheduled for "
@@ -5178,12 +5197,20 @@ msgstr ""
 "Falhou ao marcar '%s' ausente: item com o mesmo nome está agendado para "
 "inclusão"
 
-#: libsvn_wc/update_editor.c:1468
+#: libsvn_wc/update_editor.c:1534
+#, c-format
+msgid ""
+"Failed to add file '%s': a non-file object of the same name already exists"
+msgstr ""
+"Falhou ao adicionar arquivo '%s': um objeto não-arquivo com o mesmo nome já "
+"existe"
+
+#: libsvn_wc/update_editor.c:1545
 #, c-format
 msgid "Failed to add file '%s': object of the same name already exists"
 msgstr "Falhou ao adicionar arquivo '%s': objeto com o mesmo nome já existe"
 
-#: libsvn_wc/update_editor.c:1489
+#: libsvn_wc/update_editor.c:1567
 #, c-format
 msgid ""
 "Failed to add file '%s': object of the same name is already scheduled for "
@@ -5192,22 +5219,22 @@ msgstr ""
 "Falhou ao adicionar arquivo '%s': objeto com o mesmo nome já agendado para "
 "inclusão"
 
-#: libsvn_wc/update_editor.c:1497
+#: libsvn_wc/update_editor.c:1575
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "Arquivo '%s' no diretório '%s' não é um recurso versionado"
 
-#: libsvn_wc/update_editor.c:1609
+#: libsvn_wc/update_editor.c:1687
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "Checksum não bate para '%s'; gravado: '%s', obtido: '%s'"
 
-#: libsvn_wc/update_editor.c:2686
+#: libsvn_wc/update_editor.c:2851
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "'%s' não possui informação de ancestral"
 
-#: libsvn_wc/update_editor.c:2849
+#: libsvn_wc/update_editor.c:3014
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "Copyfrom-url '%s' possui raiz de repositório diferente de '%s'"
@@ -5304,7 +5331,7 @@ msgstr ""
 "Subversion é uma ferramenta para controle de versão.\n"
 "Para mais informações, veja http://subversion.tigris.org/\n"
 
-#: svn/help-cmd.c:65 svnsync/main.c:1172
+#: svn/help-cmd.c:65 svnsync/main.c:1258
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -5637,107 +5664,139 @@ msgstr "mostra informações extras"
 msgid "display update information"
 msgstr "mostra informações de atualização"
 
-#: svn/main.c:96 svnsync/main.c:93
+#: svn/main.c:96 svnsync/main.c:95
 msgid "specify a username ARG"
 msgstr "especifica um nome de usuário ARG"
 
-#: svn/main.c:98 svnsync/main.c:95
+#: svn/main.c:98 svnsync/main.c:97
 msgid "specify a password ARG"
 msgstr "especifica uma senha ARG"
 
 #: svn/main.c:101
-msgid "pass ARG to --diff-cmd as options (default: '-u')"
-msgstr "passa ARG para --diff-cmd como opções (padrão: '-u')"
+msgid ""
+"Default: '-u'. When Subversion is invoking an\n"
+"                             external diff program, ARG is simply passed "
+"along\n"
+"                             to the program. But when Subversion is using "
+"its\n"
+"                             default internal diff implementation, or when\n"
+"                             Subversion is displaying blame annotations, "
+"ARG\n"
+"                             could be any of the following:\n"
+"                                -u (--unified):\n"
+"                                   Output 3 lines of unified context.\n"
+"                                -b (--ignore-space-change):\n"
+"                                   Ignore changes in the amount of white "
+"space.\n"
+"                                -w (--ignore-all-space):\n"
+"                                   Ignore all white space.\n"
+"                                --ignore-eol-style:\n"
+"                                   Ignore changes in EOL style"
+msgstr ""
+"Padrão: '-u'. Quando Subversion está invocando um programa diff externo,\n"
+"                             ARG é simplesmente passado ao programa. Mas\n"
+"                             quando Subversion está usando sua implementação\n"
+"                             interna de diff, ou quando Subversion está\n"
+"                             mostrando anotações blame, ARG pode ser quaquer\n"
+"                             um dos seguintes:\n"
+"                                -u (--unified):\n"
+"                                   Mostra três linhas do contexto unificado.\n"
+"                                -b (--ignore-space-change):\n"
+"                                   Ignora mudanças na quantidade de espaços.\n"
+"                                -w (--ignore-all-space):\n"
+"                                   Ignora todos espaços em branco.\n"
+"                                --ignore-eol-style:\n"
+"                                   Ignora mudanças no estilo de fim de linha"
 
-#: svn/main.c:104
+#: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
 msgstr "passa o conteúdo do arquivo ARG como argumentos adicionais"
 
-#: svn/main.c:105
+#: svn/main.c:131
 msgid "output in XML"
 msgstr "saída em XML"
 
-#: svn/main.c:106
+#: svn/main.c:132
 msgid "use strict semantics"
 msgstr "usa semântica estrita"
 
-#: svn/main.c:108
+#: svn/main.c:134
 msgid "do not cross copies while traversing history"
 msgstr "não cruzar cópias ao percorrer o histórico"
 
-#: svn/main.c:110
+#: svn/main.c:136
 msgid "disregard default and svn:ignore property ignores"
 msgstr "desconsidera o ignorar padrão e a propriedade svn:ignore"
 
-#: svn/main.c:112 svnsync/main.c:91
+#: svn/main.c:138 svnsync/main.c:93
 msgid "do not cache authentication tokens"
 msgstr "não guarda tokens de autenticação em cache"
 
-#: svn/main.c:114 svnsync/main.c:89
+#: svn/main.c:140 svnsync/main.c:91
 msgid "do no interactive prompting"
 msgstr "não usa prompt interativo"
 
-#: svn/main.c:116
+#: svn/main.c:142
 msgid "try operation but make no changes"
 msgstr "tenta a operação mas não faz mudanças"
 
-#: svn/main.c:118 svnlook/main.c:111
+#: svn/main.c:144 svnlook/main.c:111
 msgid "do not print differences for deleted files"
 msgstr "não imprime diferenças para arquivos apagados"
 
-#: svn/main.c:120
+#: svn/main.c:146
 msgid "notice ancestry when calculating differences"
 msgstr "considera ancestral ao calcular diferenças"
 
-#: svn/main.c:122
+#: svn/main.c:148
 msgid "ignore ancestry when calculating merges"
 msgstr "ignora ancestral ao calcular mesclagem"
 
-#: svn/main.c:124
+#: svn/main.c:150
 msgid "ignore externals definitions"
 msgstr "ignora definições externas"
 
-#: svn/main.c:127
+#: svn/main.c:153
 msgid "use ARG as diff command"
 msgstr "usa ARG como comando diff"
 
-#: svn/main.c:129
+#: svn/main.c:155
 msgid "use ARG as merge command"
 msgstr "usa ARG como comando merge"
 
-#: svn/main.c:131
+#: svn/main.c:157
 msgid "use ARG as external editor"
 msgstr "usa ARG como editor externo"
 
-#: svn/main.c:134
+#: svn/main.c:160
 msgid "use ARG as the older target"
 msgstr "usa ARG como alvo antigo"
 
-#: svn/main.c:136
+#: svn/main.c:162
 msgid "use ARG as the newer target"
 msgstr "usa ARG como novo alvo"
 
-#: svn/main.c:138
+#: svn/main.c:164
 msgid "operate on a revision property (use with -r)"
 msgstr "opera em uma propriedade de revisão (use com -r)"
 
-#: svn/main.c:140
+#: svn/main.c:166
 msgid "relocate via URL-rewriting"
 msgstr "relocar via regravação de URL"
 
-#: svn/main.c:142 svnadmin/main.c:269 svnsync/main.c:97
+#: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:99
 msgid "read user configuration files from directory ARG"
 msgstr "lê arquivos de configuração do usuário do diretório ARG"
 
-#: svn/main.c:144
+#: svn/main.c:170
 msgid "enable automatic properties"
 msgstr "habilita propriedades automáticas"
 
-#: svn/main.c:146
+#: svn/main.c:172
 msgid "disable automatic properties"
 msgstr "desabilita propriedades automáticas"
 
-#: svn/main.c:148
+#: svn/main.c:174
 msgid ""
 "use a different EOL marker than the standard\n"
 "                             system marker for files with the svn:eol-style\n"
@@ -5749,31 +5808,31 @@ msgstr ""
 "propriedade svn:eol-style setada para 'nativa'.\n"
 "                             ARG pode ser um entre 'LF', 'CR', 'CRLF'"
 
-#: svn/main.c:156
+#: svn/main.c:182
 msgid "maximum number of log entries"
 msgstr "número máximos de entrada de log"
 
-#: svn/main.c:158
+#: svn/main.c:184
 msgid "don't unlock the targets"
 msgstr "não destrava os alvos"
 
-#: svn/main.c:160
+#: svn/main.c:186
 msgid "show a summary of the results"
 msgstr "mostra um sumário dos resultados"
 
-#: svn/main.c:162
+#: svn/main.c:188
 msgid "remove changelist association"
 msgstr "remove associação de lista de mudanças"
 
-#: svn/main.c:164
+#: svn/main.c:190
 msgid "operate only on members of changelist ARG"
 msgstr "opera somente em membros da lista de mudanças ARG"
 
-#: svn/main.c:166
+#: svn/main.c:192
 msgid "don't delete changelist after commit"
 msgstr "não apaga lista de mudanças após commit"
 
-#: svn/main.c:205
+#: svn/main.c:231
 msgid ""
 "Put files and directories under version control, scheduling\n"
 "them for addition to repository.  They will be added in next commit.\n"
@@ -5782,7 +5841,7 @@ msgstr ""
 "Coloca arquivos e diretórios sobre controle de versão, agendando-os para\n"
 "serem incluídos no repositório.  Estes serão incluídos no próximo commit.\n"
 
-#: svn/main.c:213
+#: svn/main.c:239
 msgid ""
 "Output the content of specified files or\n"
 "URLs with revision and author information in-line.\n"
@@ -5798,7 +5857,7 @@ msgstr ""
 "  Se especificado, REV determina qual revisão o alvo é primeiramente\n"
 "  considerada.\n"
 
-#: svn/main.c:223
+#: svn/main.c:249
 msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET[@REV]...\n"
@@ -5812,7 +5871,7 @@ msgstr ""
 "  Se especificado, REV determina qual revisão o alvo é primeiramente\n"
 "  considerada.\n"
 
-#: svn/main.c:231
+#: svn/main.c:257
 msgid ""
 "Associate (or deassociate) local paths with changelist CLNAME.\n"
 "usage: 1. changelist CLNAME TARGET...\n"
@@ -5822,7 +5881,7 @@ msgstr ""
 "uso: 1. changelist NOMELM ALVO...\n"
 "     2. changelist --clear ALVO...\n"
 
-#: svn/main.c:237
+#: svn/main.c:263
 msgid ""
 "Check out a working copy from a repository.\n"
 "usage: checkout URL[@REV]... [PATH]\n"
@@ -5834,19 +5893,41 @@ msgid ""
 "  the destination. If multiple URLs are given each will be checked\n"
 "  out into a sub-directory of PATH, with the name of the sub-directory\n"
 "  being the basename of the URL.\n"
-msgstr ""
-"Gera cópia de trabalho a partir de um repositório.\n"
-"uso: checkout URL... [CAMINHO]\n"
 "\n"
-"  Se especificado, REV determina qual revisão o alvo é primeiramente\n"
-"  considerada.\n"
+"  If --force is used, unversioned obstructing paths in the working\n"
+"  copy destination do not automatically cause the check out to fail.\n"
+"  If the obstructing path is the same type (file or directory) as the\n"
+"  corresponding path in the repository it becomes versioned but its\n"
+"  contents are left 'as-is' in the working copy.  This means that an\n"
+"  obstructing directory's unversioned children may also obstruct and\n"
+"  become versioned.  For files, any content differences between the\n"
+"  obstruction and the repository are treated like a local modification\n"
+"  to the working copy.  All properties from the repository are applied\n"
+"  to the obstructing path.\n"
+msgstr ""
+"Extrai um cópia de trabalho de um repositório.\n"
+"uso: checkout URL[@REV]... [CAMINHO]\n"
+"\n"
+"  Se especificado, REV determina em qual revisão a URL é primeiro "
+"  procurada.\n"
 "\n"
 "  Se CAMINHO é omitido, o nome base da URL será usado como destino.\n"
-"  Se múltiplas URLs são fornecidas cada uma será extraída em um sub-"
-"diretório\n"
-"  de CAMINHO, com o nome do sub-diretório sendo o nome base da URL.\n"
+"  Se múltiplas URLs são fornecidas cada uma será extraída em um sub-\n"
+"  diretório de CAMINHO, com o nome do sub-diretório sendo o nome base\n"
+"  da URL.\n"
+"\n"
+"  Se --force é usado, caminhos não versionados obstruídos na cópia de\n"
+"  trabalho destino não causam automaticamente a extração a falhar.\n"
+"  Se o caminho obstruído é do mesmo tipo (arquivo ou diretório) do\n"
+"  caminho correspondente no repositório, este se torna versionado mas\n"
+"  seus conteúdos são deixados 'como estão' na cópia de trabalho.  Isto\n"
+"  significa que os filhos não versionados de um diretório que causava\n"
+"  obstrução pode também causar obstrução e se tornar versionado.  Para\n"
+"  arquivos, qualquer diferença de conteúdo entre a obstrução e o\n"
+"  repositório são tratados como modificações locais na cópia de trabalho.\n"
+"  Todas as propriedades de um repositório são aplicadas ao caminho obstruído.\n"
 
-#: svn/main.c:251
+#: svn/main.c:288
 msgid ""
 "Recursively clean up the working copy, removing locks, resuming\n"
 "unfinished operations, etc.\n"
@@ -5856,7 +5937,7 @@ msgstr ""
 "operações não terminadas, etc.\n"
 "uso: cleanup [CAMINHO...]\n"
 
-#: svn/main.c:258
+#: svn/main.c:295
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -5874,7 +5955,7 @@ msgstr ""
 "  Se qualquer alvo estão (ou contém) itens travados, estes serão\n"
 "  destravados após um commit com sucesso.\n"
 
-#: svn/main.c:266
+#: svn/main.c:303
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -5893,7 +5974,7 @@ msgstr ""
 "  deve ser usado. Se qualquer alvo estão (ou contém) itens travados,\n"
 "  estes serão destravados após um commit com sucesso.\n"
 
-#: svn/main.c:281
+#: svn/main.c:318
 msgid ""
 "Duplicate something in working copy or repository, remembering history.\n"
 "usage: copy SRC DST\n"
@@ -5915,7 +5996,7 @@ msgstr ""
 "    URL -> URL:  cópia completa no lado-servidor;  usado para criar branch & "
 "tag\n"
 
-#: svn/main.c:293
+#: svn/main.c:330
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -5944,7 +6025,7 @@ msgstr ""
 "  2. Cada item especificado por uma URL é apagado do repositório via commit\n"
 "    imediato.\n"
 
-#: svn/main.c:309
+#: svn/main.c:346
 msgid ""
 "Display the differences between two revisions or paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -6005,7 +6086,7 @@ msgstr ""
 "  Use simplesmente 'svn diff' para mostrar modificações locais na sua \n"
 "  cópia de trabalho.\n"
 
-#: svn/main.c:339
+#: svn/main.c:376
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -6045,7 +6126,7 @@ msgstr ""
 "  Se especificado, PEGREV determina qual revisão o alvo é primeiramente\n"
 "  considerada.\n"
 
-#: svn/main.c:362
+#: svn/main.c:399
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: help [SUBCOMMAND...]\n"
@@ -6053,7 +6134,7 @@ msgstr ""
 "Descreve o uso deste programa ou seus sub-comandos.\n"
 "uso: help [SUB-COMANDO...]\n"
 
-#: svn/main.c:368
+#: svn/main.c:405
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -6073,7 +6154,7 @@ msgstr ""
 "  Se CAMINHO é um diretório, seu conteúdo será adicionado diretamente\n"
 "  abaixo de URL.\n"
 
-#: svn/main.c:381
+#: svn/main.c:418
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET[@REV]...]\n"
@@ -6090,7 +6171,7 @@ msgstr ""
 "  fornecida, URL determina em qual revisão o alvo é primeiramente\n"
 "  considerada.\n"
 
-#: svn/main.c:391
+#: svn/main.c:428
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -6130,7 +6211,7 @@ msgstr ""
 "    Tamanho (em bytes)\n"
 "    Data e hora do último commit\n"
 
-#: svn/main.c:413
+#: svn/main.c:450
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -6144,15 +6225,15 @@ msgstr ""
 "\n"
 "  Use --force para roubar a trava de outro usuário ou cópia de trabalho.\n"
 
-#: svn/main.c:421
+#: svn/main.c:458
 msgid "read lock comment from file ARG"
 msgstr "ler comentários de trava do arquivo ARG"
 
-#: svn/main.c:422
+#: svn/main.c:459
 msgid "specify lock comment ARG"
 msgstr "especifica comentário de trava ARG"
 
-#: svn/main.c:425
+#: svn/main.c:462
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -6209,7 +6290,7 @@ msgstr ""
 "    svn log http://www.example.com/repo/project/foo.c\n"
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
-#: svn/main.c:455
+#: svn/main.c:492
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6261,7 +6342,7 @@ msgstr ""
 "  as fontes tenham nomes-base idênticos que batam com um arquivo dentro\n"
 "  de '.': neste caso, as diferenças serão aplicadas ao arquivo.\n"
 
-#: svn/main.c:484
+#: svn/main.c:521
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -6291,7 +6372,7 @@ msgstr ""
 "\n"
 "  Em ambos os casos, todos os diretórios intermediários devem já existir.\n"
 
-#: svn/main.c:501
+#: svn/main.c:538
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC DST\n"
@@ -6314,7 +6395,7 @@ msgstr ""
 "    CT  -> CT:   move e agenda para inclusão (com histórico)\n"
 "    URL -> URL:  renomeação completa no lado-servidor.\n"
 
-#: svn/main.c:514
+#: svn/main.c:551
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -6332,7 +6413,7 @@ msgstr ""
 "  2. Remove propriedades não versionadas remotas da revisão do repositório.\n"
 "     ALVO só determina qual repositório a acessar.\n"
 
-#: svn/main.c:526
+#: svn/main.c:563
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME PATH...\n"
@@ -6350,7 +6431,7 @@ msgstr ""
 "  2. Edita propriedades não versionadas remotas da revisão do repositório.\n"
 "     ALVO só determina qual repositório a acessar.\n"
 
-#: svn/main.c:539
+#: svn/main.c:576
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -6384,7 +6465,7 @@ msgstr ""
 "  opção --strict para desabilitar estas modificações (útil, por exemplo,\n"
 "  quando redirecionando valores binários de propriedades para um arquivo).\n"
 
-#: svn/main.c:558
+#: svn/main.c:595
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -6404,7 +6485,7 @@ msgstr ""
 "  2. Lista propriedades não versionadas remotas da revisão do repositório.\n"
 "     ALVO só determina qual repositório a acessar.\n"
 
-#: svn/main.c:570
+#: svn/main.c:607
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -6492,11 +6573,11 @@ msgstr ""
 "  tentativa não recursiva irá falhar, e uma tentativa recursiva setará a\n"
 "  propriedade somente nos arquivos filhos do diretório.\n"
 
-#: svn/main.c:612
+#: svn/main.c:649
 msgid "read property value from file ARG"
 msgstr "ler valor de propriedade do arquivo ARG"
 
-#: svn/main.c:615
+#: svn/main.c:652
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -6513,7 +6594,7 @@ msgstr ""
 "relacionados\n"
 "  ao conflito e permite executar commit de CAMINHO novamente.\n"
 
-#: svn/main.c:624
+#: svn/main.c:661
 msgid ""
 "Restore pristine working copy file (undo most local edits).\n"
 "usage: revert PATH...\n"
@@ -6528,7 +6609,7 @@ msgstr ""
 "  Nota:  este sub-comando não requer acesso à rede, e resolve qualquer\n"
 "  estado de conflito.  Entretanto, não restaura diretórios removidos.\n"
 
-#: svn/main.c:632
+#: svn/main.c:669
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -6681,7 +6762,7 @@ msgstr ""
 "                 965       687 joe          ct/zig.c\n"
 "    Status contra revisão:   981\n"
 
-#: svn/main.c:708
+#: svn/main.c:745
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -6695,6 +6776,17 @@ msgid ""
 "     This is used when repository's root URL changes (such as a scheme\n"
 "     or hostname change) but your working copy still reflects the same\n"
 "     directory within the same repository.\n"
+"\n"
+"  If --force is used, unversioned obstructing paths in the working\n"
+"  copy do not automatically cause a failure if the switch attempts to\n"
+"  add the same path.  If the obstructing path is the same type (file\n"
+"  or directory) as the corresponding path in the repository it becomes\n"
+"  versioned but its contents are left 'as-is' in the working copy.\n"
+"  This means that an obstructing directory's unversioned children may\n"
+"  also obstruct and become versioned.  For files, any content differences\n"
+"  between the obstruction and the repository are treated like a local\n"
+"  modification to the working copy.  All properties from the repository\n"
+"  are applied to the obstructing path.\n"
 msgstr ""
 "Atualiza a cópia de trabalho para uma URL diferente.\n"
 "uso: 1. switch URL [CAMINHO]\n"
@@ -6709,8 +6801,19 @@ msgstr ""
 "     uma mudança sintática.  É usado quando a URL raiz do repositório muda\n"
 "     (como uma mudança de esquema ou de servidor) mas sua cópia de trabalho\n"
 "     ainda reflete o mesmo diretório dentro do mesmo repositório.\n"
+"\n"
+"  Se --force é usado, caminhos não versionados obstruídos na cópia de\n"
+"  trabalho destino não causam automaticamente a extração a falhar.\n"
+"  Se o caminho obstruído é do mesmo tipo (arquivo ou diretório) do\n"
+"  caminho correspondente no repositório, este se torna versionado mas\n"
+"  seus conteúdos são deixados 'como estão' na cópia de trabalho.  Isto\n"
+"  significa que os filhos não versionados de um diretório que causava\n"
+"  obstrução pode também causar obstrução e se tornar versionado.  Para\n"
+"  arquivos, qualquer diferença de conteúdo entre a obstrução e o\n"
+"  repositório são tratados como modificações locais na cópia de trabalho.\n"
+"  Todas as propriedades de um repositório são aplicadas ao caminho obstruído.\n"
 
-#: svn/main.c:724
+#: svn/main.c:772
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -6722,7 +6825,7 @@ msgstr ""
 "\n"
 "  Use --force para quebrar a trava.\n"
 
-#: svn/main.c:732
+#: svn/main.c:780
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -6738,11 +6841,24 @@ msgid ""
 "    U  Updated\n"
 "    C  Conflict\n"
 "    G  Merged\n"
+"    E  Existed\n"
 "\n"
 "  A character in the first column signifies an update to the actual file,\n"
 "  while updates to the file's properties are shown in the second column.\n"
 "  A 'B' in the third column signifies that the lock for the file has\n"
 "  been broken or stolen.\n"
+"\n"
+"  If --force is used, unversioned obstructing paths in the working\n"
+"  copy do not automatically cause a failure if the update attempts to\n"
+"  add the same path.  If the obstructing path is the same type (file\n"
+"  or directory) as the corresponding path in the repository it becomes\n"
+"  versioned but its contents are left 'as-is' in the working copy.\n"
+"  This means that an obstructing directory's unversioned children may\n"
+"  also obstruct and become versioned.  For files, any content differences\n"
+"  between the obstruction and the repository are treated like a local\n"
+"  modification to the working copy.  All properties from the repository\n"
+"  are applied to the obstructing path.  Obstructing paths are reported\n"
+"  in the first column with code 'E'.\n"
 msgstr ""
 "Traz mudanças do repositório para a cópia de trabalho.\n"
 "uso: update [CAMINHO...]\n"
@@ -6761,25 +6877,38 @@ msgstr ""
 "    U  Atualizado\n"
 "    C  Conflitante\n"
 "    G  Mesclado\n"
+"    E  Existente\n"
 "\n"
 "  Um caracter na primeira coluna significa uma atualização no conteúdo do\n"
 "  arquivo, enquanto que atualizações nas propriedades do arquivo são\n"
 "  mostradas na segunda coluna.  Um 'B' na terceira coluna significa que\n"
 "  a trava para este arquivo foi quebrada ou roubada.\n"
+"\n"
+"  Se --force é usado, caminhos não versionados obstruídos na cópia de\n"
+"  trabalho destino não causam automaticamente a extração a falhar.\n"
+"  Se o caminho obstruído é do mesmo tipo (arquivo ou diretório) do\n"
+"  caminho correspondente no repositório, este se torna versionado mas\n"
+"  seus conteúdos são deixados 'como estão' na cópia de trabalho.  Isto\n"
+"  significa que os filhos não versionados de um diretório que causava\n"
+"  obstrução pode também causar obstrução e se tornar versionado.  Para\n"
+"  arquivos, qualquer diferença de conteúdo entre a obstrução e o\n"
+"  repositório são tratados como modificações locais na cópia de trabalho.\n"
+"  Todas as propriedades de um repositório são aplicadas ao caminho obstruído.\n"
+"  Caminhos obstruídos são reportados na primeira coluna com o código 'E'.\n"
 
-#: svn/main.c:794 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:136
+#: svn/main.c:856 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:168
 msgid "Caught signal"
 msgstr "Sinal pego"
 
-#: svn/main.c:906
+#: svn/main.c:968
 msgid "Non-numeric limit argument given"
 msgstr "Argumento limite não numérico fornecido"
 
-#: svn/main.c:912
+#: svn/main.c:974
 msgid "Argument to --limit must be positive"
 msgstr "Argumento para --limit deve ser positivo"
 
-#: svn/main.c:932
+#: svn/main.c:994
 msgid ""
 "Multiple revision arguments encountered; can't specify -c twice, or both -c "
 "and -r"
@@ -6787,19 +6916,19 @@ msgstr ""
 "Múltiplos argumentos de revisão encontrados; não é possível especificar -c "
 "duas vezes, ou ambos -c e -r"
 
-#: svn/main.c:940 svn/main.c:1131
+#: svn/main.c:1002 svn/main.c:1193
 msgid "Can't specify -c with --old"
 msgstr "Não é possível especificar -c com --old"
 
-#: svn/main.c:947
+#: svn/main.c:1009
 msgid "Non-numeric change argument given to -c"
 msgstr "Argumento de mudança não numérico fornecido para -c"
 
-#: svn/main.c:953
+#: svn/main.c:1015
 msgid "There is no change 0"
 msgstr "Não há mudança 0"
 
-#: svn/main.c:980
+#: svn/main.c:1042
 msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "N:M' instead of '-r N -r M'"
@@ -6807,32 +6936,32 @@ msgstr ""
 "Múltiplos argumentos de revisão encontrados; não é possível especificar -r e "
 "-c, ou tente '-r M:N' ao invés de '-r M -r N'"
 
-#: svn/main.c:993 svnadmin/main.c:1244
+#: svn/main.c:1055 svnadmin/main.c:1244
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Erro de sintaxe no argumento de revisão '%s'"
 
-#: svn/main.c:1147 svn/main.c:1157
+#: svn/main.c:1209 svn/main.c:1219
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props e --no-auto-props são mutualmente exclusivos"
 
-#: svn/main.c:1173
+#: svn/main.c:1235
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Erro de sintaxe no argumento de fim de linha nativo '%s'"
 
-#: svn/main.c:1246 svndumpfilter/main.c:1207 svnlook/main.c:2037
+#: svn/main.c:1308 svndumpfilter/main.c:1207 svnlook/main.c:2037
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "Argumento do sub-comando requerido\n"
 
-#: svn/main.c:1265 svnadmin/main.c:1367 svndumpfilter/main.c:1226
+#: svn/main.c:1327 svnadmin/main.c:1367 svndumpfilter/main.c:1226
 #: svnlook/main.c:2056
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Comando desconhecido: '%s'\n"
 
-#: svn/main.c:1298
+#: svn/main.c:1360
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -6841,19 +6970,19 @@ msgstr ""
 "Sub-comando '%s' não aceita a opção '%s'\n"
 "Digite 'svn help %s' para uso.\n"
 
-#: svn/main.c:1335
+#: svn/main.c:1397
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Arquivo de mensagem de log é um arquivo versionado; use '--force-log' para "
 "sobrescrever"
 
-#: svn/main.c:1342
+#: svn/main.c:1404
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Arquivo de comentário de trava é um arquivo versionado; use '--force-log' "
 "para sobrescrever"
 
-#: svn/main.c:1363
+#: svn/main.c:1425
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -6861,7 +6990,7 @@ msgstr ""
 "A mensagem de log é um caminho de arquivo (a intenção era -F?); use '--force-"
 "log' para sobrescrever"
 
-#: svn/main.c:1370
+#: svn/main.c:1432
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -6869,7 +6998,7 @@ msgstr ""
 "O comentário da trava é um caminho de arquivo (a intenção era -F?); use '--"
 "force-log' para sobrescrever"
 
-#: svn/main.c:1495
+#: svn/main.c:1557
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -6905,27 +7034,27 @@ msgstr "Pulando alvo perdido: '%s'\n"
 msgid "Skipped '%s'\n"
 msgstr "Pulou '%s'\n"
 
-#: svn/notify.c:94
+#: svn/notify.c:100
 #, c-format
 msgid "Restored '%s'\n"
 msgstr "Restaurado '%s'\n"
 
-#: svn/notify.c:100
+#: svn/notify.c:106
 #, c-format
 msgid "Reverted '%s'\n"
 msgstr "Revertido '%s'\n"
 
-#: svn/notify.c:106
+#: svn/notify.c:112
 #, c-format
 msgid "Failed to revert '%s' -- try updating instead.\n"
 msgstr "Falhou ao reverter '%s' -- tente atualizar ao invés.\n"
 
-#: svn/notify.c:114
+#: svn/notify.c:120
 #, c-format
 msgid "Resolved conflicted state of '%s'\n"
 msgstr "Estado de conflito resolvido para '%s'\n"
 
-#: svn/notify.c:195
+#: svn/notify.c:201
 #, c-format
 msgid ""
 "\n"
@@ -6934,77 +7063,77 @@ msgstr ""
 "\n"
 "Buscando item externo em '%s'\n"
 
-#: svn/notify.c:210
+#: svn/notify.c:216
 #, c-format
 msgid "Exported external at revision %ld.\n"
 msgstr "Externo exportado na revisão %ld.\n"
 
-#: svn/notify.c:211
+#: svn/notify.c:217
 #, c-format
 msgid "Exported revision %ld.\n"
 msgstr "Exportada revisão %ld.\n"
 
-#: svn/notify.c:219
+#: svn/notify.c:225
 #, c-format
 msgid "Checked out external at revision %ld.\n"
 msgstr "Gerado externo para cópia de trabalho na revisão %ld.\n"
 
-#: svn/notify.c:220
+#: svn/notify.c:226
 #, c-format
 msgid "Checked out revision %ld.\n"
 msgstr "Gerado cópia de trabalho para revisão %ld.\n"
 
-#: svn/notify.c:230
+#: svn/notify.c:236
 #, c-format
 msgid "Updated external to revision %ld.\n"
 msgstr "Externo atualizado para revisão %ld.\n"
 
-#: svn/notify.c:231
+#: svn/notify.c:237
 #, c-format
 msgid "Updated to revision %ld.\n"
 msgstr "Atualizado para revisão %ld.\n"
 
-#: svn/notify.c:239
+#: svn/notify.c:245
 #, c-format
 msgid "External at revision %ld.\n"
 msgstr "Externo na revisão %ld.\n"
 
-#: svn/notify.c:240
+#: svn/notify.c:246
 #, c-format
 msgid "At revision %ld.\n"
 msgstr "Na revisão %ld.\n"
 
-#: svn/notify.c:252
+#: svn/notify.c:258
 #, c-format
 msgid "External export complete.\n"
 msgstr "Exportação de externo completa.\n"
 
-#: svn/notify.c:253
+#: svn/notify.c:259
 #, c-format
 msgid "Export complete.\n"
 msgstr "Exportação completa.\n"
 
-#: svn/notify.c:260
+#: svn/notify.c:266
 #, c-format
 msgid "External checkout complete.\n"
 msgstr "Geração de cópia de trabalho de externo completa.\n"
 
-#: svn/notify.c:261
+#: svn/notify.c:267
 #, c-format
 msgid "Checkout complete.\n"
 msgstr "Geração de cópia de trabalho completa.\n"
 
-#: svn/notify.c:268
+#: svn/notify.c:274
 #, c-format
 msgid "External update complete.\n"
 msgstr "Atualização de externo completa.\n"
 
-#: svn/notify.c:269
+#: svn/notify.c:275
 #, c-format
 msgid "Update complete.\n"
 msgstr "Atualização compelta.\n"
 
-#: svn/notify.c:285
+#: svn/notify.c:291
 #, c-format
 msgid ""
 "\n"
@@ -7013,47 +7142,47 @@ msgstr ""
 "\n"
 "Executando status em item externo em '%s'\n"
 
-#: svn/notify.c:293
+#: svn/notify.c:299
 #, c-format
 msgid "Status against revision: %6ld\n"
 msgstr "Status contra revisão: %6ld\n"
 
-#: svn/notify.c:301
+#: svn/notify.c:307
 #, c-format
 msgid "Sending        %s\n"
 msgstr "Enviando       %s\n"
 
-#: svn/notify.c:310
+#: svn/notify.c:316
 #, c-format
 msgid "Adding  (bin)  %s\n"
 msgstr "Adic.    (bin) %s\n"
 
-#: svn/notify.c:317
+#: svn/notify.c:323
 #, c-format
 msgid "Adding         %s\n"
 msgstr "Adicionando    %s\n"
 
-#: svn/notify.c:324
+#: svn/notify.c:330
 #, c-format
 msgid "Deleting       %s\n"
 msgstr "Apagando       %s\n"
 
-#: svn/notify.c:331
+#: svn/notify.c:337
 #, c-format
 msgid "Replacing      %s\n"
 msgstr "Substituíndo   %s\n"
 
-#: svn/notify.c:341
+#: svn/notify.c:347
 #, c-format
 msgid "Transmitting file data "
 msgstr "Transmitindo dados do arquivo "
 
-#: svn/notify.c:350
+#: svn/notify.c:356
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
 msgstr "'%s' travado pelo usuário '%s'.\n"
 
-#: svn/notify.c:356
+#: svn/notify.c:362
 #, c-format
 msgid "'%s' unlocked.\n"
 msgstr "'%s' destravado.\n"
@@ -7928,7 +8057,7 @@ msgstr ""
 "Sub-comando '%s' não aceita opção '%s'\n"
 "Digite 'svndumpfilter help %s' para uso.\n"
 
-#: svnlook/main.c:99 svnsync/main.c:99
+#: svnlook/main.c:99
 msgid "specify revision number ARG"
 msgstr "especifica revisão número ARG"
 
@@ -8449,121 +8578,158 @@ msgid ""
 msgstr ""
 "O serviço falhou ao iniciar; um erro interno ocorreu ao iniciar o serviço"
 
-#: svnsync/main.c:64
+#: svnsync/main.c:55
 msgid ""
-"usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-"Initialize a destination repository.\n"
+"usage: svnsync initialize DEST_URL SOURCE_URL\n"
+"\n"
+"Initialize a destination repository for synchronization from\n"
+"another repository.\n"
+"\n"
+"The destination URL must point to the root of a repository with\n"
+"no committed revisions.  The destination repository must allow\n"
+"revision property changes.\n"
+"\n"
+"You should not commit to, or make revision property changes in,\n"
+"the destination repository by any method other than 'svnsync'.\n"
+"In other words, the destination repository should be a read-only\n"
+"mirror of the source repository.\n"
 msgstr ""
-"uso: svnsync initialize URL_DESC --source-url URL_FONTE\n"
-"Inicializa um repositório destino.\n"
+"uso: svnsync initialize URL_DEST URL_FONTE\n"
+"\n"
+"Inicializa um repositório destino para sincronização a partir de outro\n"
+"repositório.\n"
+"\n"
+"A URL destino deve apontar para a raiz de um repositório sem revisõs com\n"
+"commit.  O repositório destino deve permitir mudanças de propriedade de\n"
+"revisão.\n"
+"\n"
+"Você não deve executar commit ou fazer mudanças de propriedades de\n"
+"revisão no repositório destino por qualquer método a não ser 'svnsync'.\n"
+"Em outras palavras, o repositório destino deve ser uma cópia espelhada\n"
+"somente para leitura do repositório fonte.\n"
 
-#: svnsync/main.c:69
+#: svnsync/main.c:70
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
+"\n"
 "Transfer all pending revisions from source to destination.\n"
 msgstr ""
 "uso: svnsync synchronize URL_DEST\n"
+"\n"
 "Transfere todas as revisões pendentes de origem para destino.\n"
 
-#: svnsync/main.c:73
+#: svnsync/main.c:75
 msgid ""
-"usage: svnsync copy-revprops DEST_URL --revision REV\n"
+"usage: svnsync copy-revprops DEST_URL REV\n"
+"\n"
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
-"uso: svnsync copy-revprops URL_DEST --revision REV\n"
+"uso: svnsync copy-revprops URL_DEST REV\n"
+"\n"
 "Copia todas as propriedades de revisão da revisão REV de origem para "
 "destino.\n"
 
-#: svnsync/main.c:78
+#: svnsync/main.c:81
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
+"\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
 "uso: svnsync help [SUB-COMANDO...]\n"
+"\n"
 "Descreve o uso deste programa ou seus sub-comandos.\n"
 
-#: svnsync/main.c:87
-msgid "The url to synchronize from"
-msgstr "A url para se sincronizar de"
-
-#: svnsync/main.c:168
+#: svnsync/main.c:206
 #, c-format
 msgid "Can't get local hostname"
 msgstr "Não foi possível obter o nome do servidor local"
 
-#: svnsync/main.c:191
+#: svnsync/main.c:228
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
 msgstr "Falha ao obter trava no repositório destino, atualmente de '%s'\n"
 
-#: svnsync/main.c:274
+#: svnsync/main.c:323
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
 msgstr "Sessão tem raiz em '%s' mas a raiz do repositório é '%s'"
 
-#: svnsync/main.c:304
+#: svnsync/main.c:362
+#, c-format
+msgid "Copied properties for revision %ld (%s* properties skipped).\n"
+msgstr "Propriedades copiadas para revisão %ld (%s* propriedades omitidas).\n"
+
+#: svnsync/main.c:367
+#, c-format
+msgid "Copied properties for revision %ld.\n"
+msgstr "Propriedades copiadas para revisão %ld.\n"
+
+#: svnsync/main.c:408
 msgid "Cannot initialize a repository with content in it"
 msgstr "Não foi possível inicializar um repositório com conteúdo"
 
-#: svnsync/main.c:314
+#: svnsync/main.c:418
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "Repositório destino já está sincronizado de '%s'"
 
-#: svnsync/main.c:390
-msgid "You must supply a source URL; try 'svnsync help' for more info"
-msgstr "Você deve fornecer uma URL fonte; tente 'svnsync help' para mais informações"
-
-#: svnsync/main.c:398 svnsync/main.c:401 svnsync/main.c:1064
-#: svnsync/main.c:1130
+#: svnsync/main.c:475 svnsync/main.c:478 svnsync/main.c:1128
+#: svnsync/main.c:1212
+#, c-format
 msgid "Path '%s' is not a URL"
 msgstr "Caminho '%s' não é uma URL"
 
-#: svnsync/main.c:441
+#: svnsync/main.c:858
+#, c-format
 msgid "Committed revision %ld.\n"
 msgstr "Commit da revisão %ld.\n"
 
-#: svnsync/main.c:845
-msgid "Copied properties for revision %ld.\n"
-msgstr "Propriedades copiadas para revisão %ld.\n"
-
-#: svnsync/main.c:872
+#: svnsync/main.c:895
 msgid "Destination repository has not been initialized"
 msgstr "Repositório destino não foi inicializado"
 
-#: svnsync/main.c:887
+#: svnsync/main.c:910
 #, c-format
-msgid "UUID of destination repository (%s) does not match expected UUID (%s)"
-msgstr "UUID de repositório destino (%s) não bate com UUID esperado (%s)"
+msgid "UUID of source repository (%s) does not match expected UUID (%s)"
+msgstr "UUID de repositório origem (%s) não bate com UUID esperado (%s)"
 
-#: svnsync/main.c:948
+#: svnsync/main.c:972
 #, c-format
 msgid ""
-"Currently copying rev %ld in source is less than latest rev in destination (%"
-"ld)"
+"Revision being currently copied (%ld), last merged revision (%ld), and "
+"destination HEAD (%ld) are inconsistent; have you committed to the "
+"destination without using svnsync?"
 msgstr ""
-"Revisão sendo copiada %ld de fonte é menos que a mais nova revisão de "
-"destino (%ld)"
+"Revisão sendo atualmente copiada (%ld), última versão com merge (%ld), "
+"e destino HEAD (%ld) são inconsistentes; você fez commit para o destino "
+"sem usar svnsync?"
 
-#: svnsync/main.c:1020
+#: svnsync/main.c:1008
+#, c-format
+msgid ""
+"Destination HEAD (%ld) is not the last merged revision (%ld); have you "
+"committed to the destination without using svnsync?"
+msgstr ""
+"Destino HEAD (%ld) não é a última revisão com merge (%ld); você fez "
+"commit para o destino sem usar svnsync?"
+
+#: svnsync/main.c:1082
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr "Commit criou revisão %ld mas deveria ter criado %ld"
 
-#: svnsync/main.c:1106
+#: svnsync/main.c:1183
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
 msgstr ""
 "Não é possível copiar revprops para uma revisão que não foi sincronizada "
 "ainda"
 
-#: svnsync/main.c:1134
-msgid ""
-"You must supply a valid revision number; try 'svnsync help' for more info"
-msgstr "Você deve fornecer um número de revisão válido; tente 'svnsync help' "
-"para mais informações"
+#: svnsync/main.c:1215
+msgid "Invalid revision number"
+msgstr "Número de revisão inválido"
 
-#: svnsync/main.c:1165
+#: svnsync/main.c:1251
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -8578,11 +8744,7 @@ msgstr ""
 "\n"
 "Sub-comandos disponíveis:\n"
 
-#: svnsync/main.c:1297
-msgid "Invalid revision number"
-msgstr "Número de revisão inválido"
-
-#: svnsync/main.c:1375
+#: svnsync/main.c:1441
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -8590,6 +8752,11 @@ msgid ""
 msgstr ""
 "Sub-comando '%s' não aceita a opção '%s'\n"
 "Digite 'svnsync help %s' para uso.\n"
+
+#: svnsync/main.c:1502
+msgid "Not enough arguments provided; try 'svnsync help' for more info"
+msgstr ""
+"Poucos argumentos fornecidos; tente 'svnsync help' para mais informações"
 
 #: svnversion/main.c:39
 #, c-format
@@ -8670,6 +8837,53 @@ msgstr "exportado%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' não versionado, e não exportado\n"
+
+#~ msgid ""
+#~ "You must supply a valid revision number; try 'svnsync help' for more info"
+#~ msgstr ""
+#~ "Você deve fornecer um número de revisão válido; tente 'svnsync help' para "
+#~ "mais informações"
+
+#~ msgid ""
+#~ "Currently copying rev %ld in source is less than latest rev in "
+#~ "destination (%ld)"
+#~ msgstr ""
+#~ "Revisão sendo copiada %ld de fonte é menos que a mais nova revisão de "
+#~ "destino (%ld)"
+
+#~ msgid "You must supply a source URL; try 'svnsync help' for more info"
+#~ msgstr ""
+#~ "Você deve fornecer uma URL fonte; tente 'svnsync help' para mais "
+#~ "informações"
+
+#~ msgid "The url to synchronize from"
+#~ msgstr "A url para se sincronizar de"
+
+#~ msgid ""
+#~ "Check out a working copy from a repository.\n"
+#~ "usage: checkout URL[@REV]... [PATH]\n"
+#~ "\n"
+#~ "  If specified, REV determines in which revision the URL is first\n"
+#~ "  looked up.\n"
+#~ "\n"
+#~ "  If PATH is omitted, the basename of the URL will be used as\n"
+#~ "  the destination. If multiple URLs are given each will be checked\n"
+#~ "  out into a sub-directory of PATH, with the name of the sub-directory\n"
+#~ "  being the basename of the URL.\n"
+#~ msgstr ""
+#~ "Gera cópia de trabalho a partir de um repositório.\n"
+#~ "uso: checkout URL... [CAMINHO]\n"
+#~ "\n"
+#~ "  Se especificado, REV determina qual revisão o alvo é primeiramente\n"
+#~ "  considerada.\n"
+#~ "\n"
+#~ "  Se CAMINHO é omitido, o nome base da URL será usado como destino.\n"
+#~ "  Se múltiplas URLs são fornecidas cada uma será extraída em um sub-"
+#~ "diretório\n"
+#~ "  de CAMINHO, com o nome do sub-diretório sendo o nome base da URL.\n"
+
+#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
+#~ msgstr "passa ARG para --diff-cmd como opções (padrão: '-u')"
 
 #~ msgid "Committing rev %ld\n"
 #~ msgstr "Executando commit de rev %ld\n"
