@@ -86,13 +86,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20172, r20828
-    Update the Windows build instructions.
-    Justification:
-      Documentation that more closely matches the reality is good.
-    Votes:
-      +1: djh, dlr, rooneg
-
   * r20971, r20967, r20965, r20964, r20961, r20960, r20958, r20956
     Tons of bugfixes, UI and usages improvements, error detection and
     reporting enhancements, and so on -- all in svnsync.
