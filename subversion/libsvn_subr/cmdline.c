@@ -34,6 +34,7 @@
 #include <apr_pools.h>
 
 #include "svn_cmdline.h"
+#include "svn_dso.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -151,6 +152,9 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
         }
       return EXIT_FAILURE;
     }
+
+  /* This has to happen before any pools are created. */
+  svn_dso_initialize();
 
   if (0 > atexit(apr_terminate))
     {
