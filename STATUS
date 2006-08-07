@@ -37,6 +37,7 @@ Candidate changes:
       uses -N exclusively I suspect this will impact the TSVN 1.4 release.
     Votes:
       +0: lgo
+      +1: rooneg
 
   * r20833, r20836 (depends on r20190 group above)
     Provide named, separate debug information files for clients building
