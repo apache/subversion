@@ -84,6 +84,13 @@ Candidate changes:
     Votes:
       +1: nori, dlr
 
+  * r20996
+    Fix --enable-dso in the face of global bdb environment caching.
+    Justification:
+      It would be nice if --enable-dso worked.  Fairly isolated change.
+    Votes:
+      +1: rooneg
+
 Approved changes:
 
   * r20971, r20967, r20965, r20964, r20961, r20960, r20958, r20956
