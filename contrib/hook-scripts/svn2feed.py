@@ -246,7 +246,6 @@ class Svn2Atom(Svn2Feed):
 
         doc = self.document
         entry = doc.createElement("entry")
-        entry.appendChild(doc.createTextNode("\n  "))
 
         id = doc.createElement("id")
         entry.appendChild(id)
@@ -280,8 +279,7 @@ class Svn2Atom(Svn2Feed):
 
         title = doc.createElement("title")
         feed.appendChild(title)
-        title.appendChild(doc.createTextNode("%s Subversion Commits Feed" %
-            os.path.basename(self.repos_path)))
+        title.appendChild(doc.createTextNode(self.feed_title))
 
         id = doc.createElement("id")
         feed.appendChild(id)
