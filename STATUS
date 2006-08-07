@@ -29,13 +29,6 @@ Candidate changes:
           pburba (r20190, r20444, r20826)
       +0: dlr, pburba (r20250)
 
-  * r20172, r20828
-    Update the Windows build instructions.
-    Justification:
-      Documentation that more closely matches the reality is good.
-    Votes:
-      +1: djh, dlr
-
   * r20276
     Fixing an issue where non-recursive commit crashes/hangs svn (regression
     compared to 1.3).
@@ -92,6 +85,13 @@ Candidate changes:
       +1: rooneg, dlr
 
 Approved changes:
+
+  * r20172, r20828
+    Update the Windows build instructions.
+    Justification:
+      Documentation that more closely matches the reality is good.
+    Votes:
+      +1: djh, dlr, rooneg
 
   * r20971, r20967, r20965, r20964, r20961, r20960, r20958, r20956
     Tons of bugfixes, UI and usages improvements, error detection and
