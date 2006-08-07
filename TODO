@@ -16,8 +16,14 @@ for repos dump/load, including the merge history index.
     make it all the way through to the FS and into the merge info
     index in a meaningful fashion yet.
 
+* Assure that 'propdel' sets empty range lists for any inherited merge
+  info.
+
 * Make 'propedit' pull down merge info from the repository and combine
   it with any WC-local merge info.
+
+  * Alter code as low-level as svn_fs_node_proplist(), or stay
+    higher-level, near svn_client_propget2()?
 
 * Handle notifications resulting from a merge.  (dlr)
 
@@ -70,16 +76,33 @@ for repos dump/load, including the merge history index.
   differing merge info, lookup of the merge info for this child must
   reflect that of the parent (except for where they differ).  (dberlin)
 
-* Treat all revisions from a 'copy' source like merge info for the
-  destination.  This may equate to turning all those revs into actual
-  merge info (target merge info = source revs + source merge info
-  ... simpler?), or deriving that info on an as-needed basis.
+* Treat all revisions from a 'copy' source as merge info for the
+  destination.  This equates to turning all those revs into actual
+  merge info (target merge info = source revs + source merge info).
 
   * Update design spec.  (dberlin?)
 
-  * Update code.  (madanus)
+  * Handle all 'copy' operation types.  (madanus)
 
-  * Anything similar necessary for moves?
+    * WC -> WC: While a typical operation for refactoring tools
+      (e.g. IDEs like Eclipse), this complicates offline operation.  A
+      RA call to determine the oldest "appeared rev" for a copy source
+      is necessary to calculate the portion of the the merge info for
+      the destination which represents the copy source.  Some type of
+      delayed lookup marker could be written to the WC to preserve
+      offline operation.
+
+    * WC -> URL
+
+    * URL -> WC
+
+    * URL -> URL
+
+  * Handle all 'move' operation types.  (madanus?)
+
+    * WC -> WC: Same problems as for 'copy'.
+
+    * URL -> URL
 
 * Handle three-way merges (e.g. 'svn merge URL1 URL2 WC_TARGET').
   We'll likely need to use a different method of calculating the set
@@ -103,12 +126,17 @@ for repos dump/load, including the merge history index.
     merges to keep the complexity of the 'merge' logic from getting
     out of hand.
 
-  * Later, come up with a better solution.
+  * A better solution requires that either the client or server know
+    the merge info for both the WC and repos.  This would be
+    implemented by transfering the merge info for the versioned
+    sub-tree(s) involved in the merge to or from the repository via a
+    (new?) RA operation, allowing the calculation of which merges
+    remain.
 
 * Refactor merge info index-related code into a module, and use this
   from libsvn_fs_fs.  (kamesh)
 
-  * Need libsvn_fs_subr to avoid cyclic dependency.  (kamesh)
+  * Need libsvn_fs_util to avoid cyclic dependency.  (kamesh)
 
 * Handle merge info in the BerkeleyDB FS backend using the modularized
   merge info index API.  (kamesh/cmpilato?)
