@@ -169,8 +169,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-04 20:57+0900\n"
-"PO-Revision-Date: 2006-08-04 20:57+0900\n"
+"POT-Creation-Date: 2006-08-08 03:57+0900\n"
+"PO-Revision-Date: 2006-08-08 03:55+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -245,8 +245,8 @@ msgstr "パイププロトコルのフレーミングエラーです"
 msgid "Read error in pipe"
 msgstr "パイプの読み込みエラーです"
 
-#: include/svn_error_codes.h:231 libsvn_subr/cmdline.c:287
-#: libsvn_subr/cmdline.c:304 svn/util.c:716
+#: include/svn_error_codes.h:231 libsvn_subr/cmdline.c:291
+#: libsvn_subr/cmdline.c:308 svn/util.c:716
 #, c-format
 msgid "Write error"
 msgstr "書き込みエラーです"
@@ -1465,8 +1465,8 @@ msgstr "'%s' はこの作業コピーでロックされていません"
 msgid "'%s' is not locked"
 msgstr "'%s' はロックされていません"
 
-#: libsvn_client/locking_commands.c:409 libsvn_fs/fs-loader.c:929
-#: libsvn_ra/ra_loader.c:636
+#: libsvn_client/locking_commands.c:409 libsvn_fs/fs-loader.c:895
+#: libsvn_ra/ra_loader.c:625
 msgid "Lock comment has illegal characters"
 msgstr "ロックについてのコメントに不正な文字が含まれています"
 
@@ -1686,29 +1686,18 @@ msgstr "%s\\ ファイルの末尾に改行がありません%s"
 msgid "Failed to delete mmap '%s'"
 msgstr "メモリへのマップ '%s' を削除できませんでした"
 
-#: libsvn_fs/fs-loader.c:102 libsvn_fs/fs-loader.c:323
-#, c-format
-msgid "Can't grab FS mutex"
-msgstr "ファイルシステム相互排除ロックを奪えません"
-
-#: libsvn_fs/fs-loader.c:123 libsvn_fs/fs-loader.c:137
-#: libsvn_fs/fs-loader.c:329
-#, c-format
-msgid "Can't ungrab FS mutex"
-msgstr "ファイルシステム相互排除ロックを手放せません"
-
-#: libsvn_fs/fs-loader.c:143 libsvn_ra/ra_loader.c:169
-#: libsvn_ra/ra_loader.c:182
+#: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:158
+#: libsvn_ra/ra_loader.c:171
 #, c-format
 msgid "'%s' does not define '%s()'"
 msgstr "'%s' は '%s()' を定義しません"
 
-#: libsvn_fs/fs-loader.c:169
+#: libsvn_fs/fs-loader.c:131
 #, c-format
 msgid "Failed to load module for FS type '%s'"
 msgstr "ファイルシステム形式 '%s' のモジュールをロードできませんでした"
 
-#: libsvn_fs/fs-loader.c:176
+#: libsvn_fs/fs-loader.c:138
 #, c-format
 msgid ""
 "Mismatched FS module version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
@@ -1716,17 +1705,27 @@ msgstr ""
 "ファイルシステムモジュール '%s' のバージョンが一致しません: 実際 %d.%d.%d%s, "
 "予想 %d.%d.%d%s"
 
-#: libsvn_fs/fs-loader.c:201
+#: libsvn_fs/fs-loader.c:163
 #, c-format
 msgid "Unknown FS type '%s'"
 msgstr "未知のファイルシステム形式 '%s' です"
 
-#: libsvn_fs/fs-loader.c:283
+#: libsvn_fs/fs-loader.c:253
 #, c-format
 msgid "Can't allocate FS mutex"
 msgstr "ファイルシステム相互排除ロックを割り当てられません"
 
-#: libsvn_fs/fs-loader.c:935
+#: libsvn_fs/fs-loader.c:289
+#, c-format
+msgid "Can't grab FS mutex"
+msgstr "ファイルシステム相互排除ロックを奪えません"
+
+#: libsvn_fs/fs-loader.c:295
+#, c-format
+msgid "Can't ungrab FS mutex"
+msgstr "ファイルシステム相互排除ロックを手放せません"
+
+#: libsvn_fs/fs-loader.c:901
 msgid "Negative expiration date passed to svn_fs_lock"
 msgstr "svn_fs_lock に渡された有効期限の値が負です"
 
@@ -2652,28 +2651,28 @@ msgstr "パス '%s' は HEAD リビジョンに存在しません"
 msgid "Lock failed: newer version of '%s' exists"
 msgstr "ロックが失敗しました: '%s' の新しいバージョンが存在します"
 
-#: libsvn_ra/ra_loader.c:224
+#: libsvn_ra/ra_loader.c:213
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr ""
 "'%s' 用 RA のバージョンが一致しません: 実際 %d.%d.%d%s, 予想 %d.%d.%d%s"
 
-#: libsvn_ra/ra_loader.c:296
+#: libsvn_ra/ra_loader.c:285
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "'%s' 用の URL スキームを認識できません"
 
-#: libsvn_ra/ra_loader.c:347
+#: libsvn_ra/ra_loader.c:336
 #, c-format
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr "'%s' は '%s' と同じリポジトリにありません"
 
-#: libsvn_ra/ra_loader.c:718
+#: libsvn_ra/ra_loader.c:707
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - '%s' スキームを操作します\n"
 
-#: libsvn_ra/ra_loader.c:804
+#: libsvn_ra/ra_loader.c:793
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "URL スキーム '%s' を認識できません"
@@ -3908,7 +3907,7 @@ msgstr "終了リビジョン '%ld' が不正です"
 msgid "Unreadable path encountered; access denied"
 msgstr "読み込み不可能なパスが見つかりました。アクセスを拒否されました"
 
-#: libsvn_subr/cmdline.c:477
+#: libsvn_subr/cmdline.c:481
 #, c-format
 msgid "Error initializing command line arguments"
 msgstr "コマンドライン引数の初期化中にエラーが発生しました"
@@ -3961,6 +3960,16 @@ msgstr "要求された日時を計算できません"
 #, c-format
 msgid "Can't expand time"
 msgstr "時刻を人間の読める形に変換できません"
+
+#: libsvn_subr/dso.c:70
+#, c-format
+msgid "Can't grab DSO mutex"
+msgstr "動的共有オブジェクト (DSO) 相互排除ロックを奪えません"
+
+#: libsvn_subr/dso.c:84 libsvn_subr/dso.c:106 libsvn_subr/dso.c:121
+#, c-format
+msgid "Can't ungrab DSO mutex"
+msgstr "動的共有オブジェクト (DSO) 相互排除ロックを手放せません"
 
 #: libsvn_subr/error.c:326
 msgid "Can't recode error string from APR"
