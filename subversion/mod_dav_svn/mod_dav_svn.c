@@ -29,6 +29,7 @@
 #include "svn_version.h"
 #include "svn_fs.h"
 #include "svn_utf.h"
+#include "svn_dso.h"
 #include "mod_dav_svn.h"
 
 #include "dav_svn.h"
@@ -95,6 +96,18 @@ init(apr_pool_t *p, apr_pool_t *plog, apr_pool_t *ptemp, server_rec *s)
   return OK;
 }
 
+static int
+init_dso(apr_pool_t *pconf, apr_pool_t *plog, apr_pool_t *ptemp)
+{
+  /* This isn't ideal, we're not actually being called before any
+     pool is created, but we are being called before the server or
+     request pools are created, which is probably good enough for
+     98% of cases. */
+
+  svn_dso_initialize();
+
+  return OK;
+}
 
 static void *
 create_server_config(apr_pool_t *p, server_rec *s)
@@ -582,6 +595,7 @@ static dav_provider provider =
 static void
 register_hooks(apr_pool_t *pconf)
 {
+  ap_hook_pre_config(init_dso, NULL, NULL, APR_HOOK_REALLY_FIRST);
   ap_hook_post_config(init, NULL, NULL, APR_HOOK_MIDDLE);
 
   /* our provider */
