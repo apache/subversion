@@ -39,7 +39,7 @@ static int not_there_sentinel;
    library wasn't found.  This keeps us from allocating extra memory
    from dso_pool when trying to find libraries we already know aren't
    there.  */
-#define NOT_THERE (&not_there_sentinel)
+#define NOT_THERE ((void *) &not_there_sentinel)
 
 void
 svn_dso_initialize()
