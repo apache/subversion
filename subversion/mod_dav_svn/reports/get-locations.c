@@ -99,7 +99,7 @@ dav_svn__get_locations_report(const dav_resource *resource,
                                       sizeof(svn_revnum_t));
 
   /* Sanity check. */
-  ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
       return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
@@ -161,8 +161,8 @@ dav_svn__get_locations_report(const dav_resource *resource,
 
   if (serr)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 serr->message, resource->pool);
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  serr->message, resource->pool);
     }
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
@@ -170,18 +170,18 @@ dav_svn__get_locations_report(const dav_resource *resource,
   apr_err = send_get_locations_report(output, bb, resource, fs_locations);
 
   if (apr_err)
-    derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error writing REPORT response.",
-                               resource->pool);
+    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error writing REPORT response.",
+                                resource->pool);
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
   if (((apr_err = ap_fflush(output, bb))) && (! derr))
-    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error flushing brigade.",
-                               resource->pool);
+    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error flushing brigade.",
+                                resource->pool);
 
   return derr;
 }

@@ -55,7 +55,7 @@ dav_svn__dated_rev_report(const dav_resource *resource,
   dav_error *derr = NULL;
 
   /* Find the DAV:creationdate element and get the requested time from it. */
-  ns = dav_svn_find_ns(doc->namespaces, "DAV:");
+  ns = dav_svn__find_ns(doc->namespaces, "DAV:");
   if (ns != -1)
     {
       for (child = doc->root->first_child; child != NULL; child = child->next)
@@ -94,18 +94,18 @@ dav_svn__dated_rev_report(const dav_resource *resource,
                        "<D:version-name>%ld</D:version-name>"
                        "</S:dated-rev-report>", rev);
   if (apr_err)
-    derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error writing REPORT response.",
-                               resource->pool);
+    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error writing REPORT response.",
+                                resource->pool);
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
   if (((apr_err = ap_fflush(output, bb))) && (! derr))
-    derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error flushing brigade.",
-                               resource->pool);
+    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error flushing brigade.",
+                                resource->pool);
 
   return derr;
 }

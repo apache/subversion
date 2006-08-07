@@ -386,9 +386,9 @@ create_lock(dav_lockdb *lockdb, const dav_resource *resource, dav_lock **lock)
                                     resource->info->repos->fs,
                                     resource->pool);
   if (serr)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Failed to generate a lock token.",
-                               resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Failed to generate a lock token.",
+                                resource->pool);
   dlock->locktoken = token;
 
   /* allowing mod_dav to fill in dlock->timeout, owner, auth_user. */
@@ -461,9 +461,9 @@ get_locks(dav_lockdb *lockdb,
                          resource->info->repos_path,
                          resource->pool);
   if (serr)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Failed to check path for a lock.",
-                               resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Failed to check path for a lock.",
+                                resource->pool);
 
   if (slock != NULL)
     {
@@ -521,9 +521,9 @@ find_lock(dav_lockdb *lockdb,
                          resource->info->repos_path,
                          resource->pool);
   if (serr)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Failed to look up lock by path.",
-                               resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Failed to look up lock by path.",
+                                resource->pool);
 
   if (slock != NULL)
     {
@@ -599,9 +599,9 @@ has_locks(dav_lockdb *lockdb, const dav_resource *resource, int *locks_present)
                          resource->info->repos_path,
                          resource->pool);
   if (serr)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Failed to check path for a lock.",
-                               resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Failed to check path for a lock.",
+                                resource->pool);
 
   *locks_present = slock ? 1 : 0;
   return 0;
@@ -668,44 +668,44 @@ append_locks(dav_lockdb *lockdb,
       /* Commit a 0-byte file: */
 
       if ((serr = svn_fs_youngest_rev(&rev, repos->fs, resource->pool)))
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not determine youngest revision", 
-                                   resource->pool);
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not determine youngest revision", 
+                                    resource->pool);
       
       if ((serr = svn_repos_fs_begin_txn_for_commit(&txn, repos->repos, rev,
                                                     repos->username, NULL, 
                                                     resource->pool)))
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not begin a transaction", 
-                                   resource->pool);
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not begin a transaction", 
+                                    resource->pool);
 
       if ((serr = svn_fs_txn_root(&txn_root, txn, resource->pool)))
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not begin a transaction", 
-                                   resource->pool);
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not begin a transaction", 
+                                    resource->pool);
 
       if ((serr = svn_fs_make_file(txn_root, resource->info->repos_path,
                                    resource->pool)))
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not create empty file.",
-                                   resource->pool);
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not create empty file.",
+                                    resource->pool);
       
       if ((serr = dav_svn__attach_auto_revprops(txn,
                                                 resource->info->repos_path,
                                                 resource->pool)))
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not create empty file.",
-                                   resource->pool);
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not create empty file.",
+                                    resource->pool);
       
       if ((serr = svn_repos_fs_commit_txn(&conflict_msg, repos->repos,
                                           &new_rev, txn, resource->pool)))
         {
           svn_error_clear(svn_fs_abort_txn(txn, resource->pool));
-          return dav_svn_convert_err(serr, HTTP_CONFLICT, 
-                                     apr_psprintf(resource->pool,
-                                                  "Conflict when committing "
-                                                  "'%s'.", conflict_msg),
-                                     resource->pool);
+          return dav_svn__convert_err(serr, HTTP_CONFLICT, 
+                                      apr_psprintf(resource->pool,
+                                                   "Conflict when committing "
+                                                   "'%s'.", conflict_msg),
+                                      resource->pool);
         }
     }
 
@@ -736,9 +736,9 @@ append_locks(dav_lockdb *lockdb,
                            "Anonymous lock creation is not allowed.");
     }
   else if (serr)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Failed to create new lock.",
-                               resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Failed to create new lock.",
+                                resource->pool);
 
 
   /* A standard webdav LOCK response doesn't include any information
@@ -810,9 +810,9 @@ remove_lock(dav_lockdb *lockdb,
                              resource->info->repos_path,
                              resource->pool);
       if (serr)
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Failed to check path for a lock.",
-                                   resource->pool);
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Failed to check path for a lock.",
+                                    resource->pool);
       if (slock)
         token = slock->token;
     }
@@ -840,9 +840,9 @@ remove_lock(dav_lockdb *lockdb,
                                "Anonymous lock removal is not allowed.");
         }
       else if (serr)
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Failed to remove a lock.",
-                                   resource->pool);
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Failed to remove a lock.",
+                                    resource->pool);
     }
 
   /* Log the unlocking as a 'high-level' action. */
@@ -893,9 +893,9 @@ refresh_locks(dav_lockdb *lockdb,
                          resource->info->repos_path,
                          resource->pool);
   if (serr)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Token doesn't point to a lock.",
-                               resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Token doesn't point to a lock.",
+                                resource->pool);
 
   /* Sanity check: does the incoming token actually represent the
      current lock on the incoming resource? */
@@ -926,9 +926,9 @@ refresh_locks(dav_lockdb *lockdb,
                            "Anonymous lock refreshing is not allowed.");
     }
   else if (serr)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Failed to refresh existing lock.",
-                               resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Failed to refresh existing lock.",
+                                resource->pool);
 
   /* Convert the refreshed lock into a dav_lock and return it. */
   svn_lock_to_dav_lock(&dlock, slock, FALSE, resource->exists, resource->pool);

@@ -460,7 +460,7 @@ dav_svn__replay_report(const dav_resource *resource,
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
 
-  ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
                                   "The request does not contain the 'svn:' "
@@ -517,9 +517,9 @@ dav_svn__replay_report(const dav_resource *resource,
 
   if ((err = svn_fs_revision_root(&root, resource->info->repos->fs, rev,
                                   resource->pool)))
-    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                               "Couldn't retrieve revision root",
-                               resource->pool);
+    return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                "Couldn't retrieve revision root",
+                                resource->pool);
 
   make_editor(&editor, &edit_baton, bb, output, resource->pool);;
 
@@ -527,14 +527,14 @@ dav_svn__replay_report(const dav_resource *resource,
                                send_deltas, editor, edit_baton,
                                dav_svn__authz_read_func(&arb), &arb,
                                resource->pool)))
-    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                               "Problem replaying revision",
-                               resource->pool);
+    return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                "Problem replaying revision",
+                                resource->pool);
 
   if ((err = editor->close_edit(edit_baton, resource->pool)))
-    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                               "Problem closing editor drive",
-                               resource->pool);
+    return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                "Problem closing editor drive",
+                                resource->pool);
 
   {
     const char *action;

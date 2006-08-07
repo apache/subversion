@@ -67,8 +67,8 @@ dav_svn__get_locks_report(const dav_resource *resource,
                                     resource->info->repos_path,
                                     dav_svn__authz_read_func(&arb), &arb,
                                     resource->pool)) != SVN_NO_ERROR)
-    return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
-                               err->message, resource->pool);      
+    return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
+                                err->message, resource->pool);      
 
   bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
 
@@ -78,10 +78,10 @@ dav_svn__get_locks_report(const dav_resource *resource,
                        "<S:get-locks-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                        "xmlns:D=\"DAV:\">" DEBUG_CR);
   if (apr_err)
-    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error writing REPORT response.",
-                               resource->pool);
+    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error writing REPORT response.",
+                                resource->pool);
 
   /* stream the locks */
   subpool = svn_pool_create(resource->pool);
@@ -110,10 +110,10 @@ dav_svn__get_locks_report(const dav_resource *resource,
                            "<S:creationdate>%s</S:creationdate>" DEBUG_CR,
                            path_quoted, token_quoted, creation_str);
       if (apr_err)
-        return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                                   HTTP_INTERNAL_SERVER_ERROR,
-                                   "Error writing REPORT response.",
-                                   resource->pool);
+        return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                    HTTP_INTERNAL_SERVER_ERROR,
+                                    "Error writing REPORT response.",
+                                    resource->pool);
       
       if (lock->expiration_date)
         {
@@ -122,10 +122,10 @@ dav_svn__get_locks_report(const dav_resource *resource,
                                "<S:expirationdate>%s</S:expirationdate>"
                                DEBUG_CR, expiration_str);
           if (apr_err)
-            return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                                       HTTP_INTERNAL_SERVER_ERROR,
-                                       "Error writing REPORT response.",
-                                       resource->pool);
+            return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                        HTTP_INTERNAL_SERVER_ERROR,
+                                        "Error writing REPORT response.",
+                                        resource->pool);
         }
 
       if (svn_xml_is_xml_safe(lock->owner, strlen(lock->owner)))
@@ -149,10 +149,10 @@ dav_svn__get_locks_report(const dav_resource *resource,
                            owner_base64 ? "encoding=\"base64\"" : "",
                            owner_to_send);
       if (apr_err)
-        return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                                   HTTP_INTERNAL_SERVER_ERROR,
-                                   "Error writing REPORT response.",
-                                   resource->pool);          
+        return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                    HTTP_INTERNAL_SERVER_ERROR,
+                                    "Error writing REPORT response.",
+                                    resource->pool);          
 
       if (lock->comment)
         {
@@ -179,36 +179,36 @@ dav_svn__get_locks_report(const dav_resource *resource,
                                comment_base64 ? "encoding=\"base64\"" : "",
                                comment_to_send);
           if (apr_err)
-            return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                                       HTTP_INTERNAL_SERVER_ERROR,
-                                       "Error writing REPORT response.",
-                                       resource->pool);
+            return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                        HTTP_INTERNAL_SERVER_ERROR,
+                                        "Error writing REPORT response.",
+                                        resource->pool);
         }
           
       apr_err = ap_fprintf(output, bb, "</S:lock>" DEBUG_CR);
       if (apr_err)
-        return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                                   HTTP_INTERNAL_SERVER_ERROR,
-                                   "Error writing REPORT response.",
-                                   resource->pool);
+        return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                    HTTP_INTERNAL_SERVER_ERROR,
+                                    "Error writing REPORT response.",
+                                    resource->pool);
     } /* end of hash loop */
   svn_pool_destroy(subpool);
 
   /* finish the report */
   apr_err = ap_fprintf(output, bb, "</S:get-locks-report>" DEBUG_CR);
   if (apr_err)
-    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error writing REPORT response.",
-                               resource->pool);
+    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error writing REPORT response.",
+                                resource->pool);
 
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
   if ((apr_err = ap_fflush(output, bb)))
-    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error flushing brigade.",
-                               resource->pool);
+    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error flushing brigade.",
+                                resource->pool);
 
   return NULL;
 }

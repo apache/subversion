@@ -229,7 +229,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   arb.repos = resource->info->repos;
 
   /* Sanity check. */
-  ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   /* ### This is done on other places, but the document element is
      in this namespace, so is this necessary at all? */
   if (ns == -1)
@@ -283,27 +283,27 @@ dav_svn__file_revs_report(const dav_resource *resource,
       /* We don't 'goto cleanup' because ap_fflush() tells httpd
          to write the HTTP headers out, and that includes whatever
          r->status is at that particular time.  When we call
-         dav_svn_convert_err(), we don't immediately set r->status
+         dav_svn__convert_err(), we don't immediately set r->status
          right then, so r->status remains 0, hence HTTP status 200
          would be misleadingly returned. */
-      return (dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  serr->message, resource->pool));
+      return (dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   serr->message, resource->pool));
     }
-  
+
   if ((serr = maybe_send_header(&frb)))
     {
-      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error beginning REPORT reponse",
-                                 resource->pool);
+      derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Error beginning REPORT reponse",
+                                  resource->pool);
       goto cleanup;
     }
-    
+
   if ((serr = dav_svn__send_xml(frb.bb, frb.output,
                                 "</S:file-revs-report>" DEBUG_CR)))
     {
-      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error ending REPORT reponse",
-                                 resource->pool);
+      derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Error ending REPORT reponse",
+                                  resource->pool);
       goto cleanup;
     }
 
@@ -317,9 +317,9 @@ dav_svn__file_revs_report(const dav_resource *resource,
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
   if (((apr_err = ap_fflush(output, frb.bb))) && (! derr))
-    derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error flushing brigade",
-                               resource->pool);
+    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error flushing brigade",
+                                resource->pool);
   return derr;
 }

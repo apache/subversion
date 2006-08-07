@@ -96,10 +96,10 @@ set_auto_revprops(dav_resource *resource)
   if ((serr = dav_svn__attach_auto_revprops(resource->info->root.txn,
                                             resource->info->repos_path,
                                             resource->pool)))
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Error setting a revision property "
-                               " on auto-checked-out resource's txn. ",
-                               resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Error setting a revision property "
+                                " on auto-checked-out resource's txn. ",
+                                resource->pool);
   return NULL;
 }
 
@@ -118,18 +118,18 @@ open_txn(svn_fs_txn_t **ptxn,
       if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
         {
           /* ### correct HTTP error? */
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "The transaction specified by the "
-                                     "activity does not exist",
-                                     pool);
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "The transaction specified by the "
+                                      "activity does not exist",
+                                      pool);
         }
 
       /* ### correct HTTP error? */
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "There was a problem opening the "
-                                 "transaction specified by this "
-                                 "activity.",
-                                 pool);
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "There was a problem opening the "
+                                  "transaction specified by this "
+                                  "activity.",
+                                  pool);
     }
 
   return NULL;
@@ -165,10 +165,11 @@ get_option(const dav_resource *resource,
           apr_text_append(resource->pool, option,
                           "<D:activity-collection-set>");
           apr_text_append(resource->pool, option,
-                          dav_svn_build_uri(resource->info->repos,
-                                            DAV_SVN_BUILD_URI_ACT_COLLECTION,
-                                            SVN_INVALID_REVNUM, NULL,
-                                            1 /* add_href */, resource->pool));
+                          dav_svn__build_uri(resource->info->repos,
+                                             DAV_SVN_BUILD_URI_ACT_COLLECTION,
+                                             SVN_INVALID_REVNUM, NULL,
+                                             1 /* add_href */,
+                                             resource->pool));
           apr_text_append(resource->pool, option,
                           "</D:activity-collection-set>");
         }
@@ -258,7 +259,7 @@ dav_svn__checkout(dav_resource *resource,
   svn_error_t *serr;
   apr_status_t apr_err;
   dav_error *derr;
-  dav_svn_uri_info parse;
+  dav_svn__uri_info parse;
 
   /* Auto-Versioning Stuff */
   if (auto_checkout)
@@ -301,10 +302,10 @@ dav_svn__checkout(dav_resource *resource,
                                       DAV_SVN_AUTOVERSIONING_ACTIVITY,
                                       resource->info->r->pool);
       if (apr_err)
-        return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                                   HTTP_INTERNAL_SERVER_ERROR,
-                                   "Error fetching pool userdata.",
-                                   resource->pool);
+        return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                    HTTP_INTERNAL_SERVER_ERROR,
+                                    "Error fetching pool userdata.",
+                                    resource->pool);
       shared_activity = data;
 
       if (! shared_activity)
@@ -327,10 +328,10 @@ dav_svn__checkout(dav_resource *resource,
                                           DAV_SVN_AUTOVERSIONING_ACTIVITY,
                                           NULL, resource->info->r->pool);
           if (apr_err)
-            return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                                       HTTP_INTERNAL_SERVER_ERROR,
-                                       "Error setting pool userdata.",
-                                       resource->pool);
+            return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                        HTTP_INTERNAL_SERVER_ERROR,
+                                        "Error setting pool userdata.",
+                                        resource->pool);
         }
 
       if (! shared_txn_name)
@@ -366,10 +367,10 @@ dav_svn__checkout(dav_resource *resource,
       serr = svn_fs_txn_root(&resource->info->root.root,
                              resource->info->root.txn, resource->pool);
       if (serr != NULL)
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Could not open a (transaction) root "
-                                   "in the repository",
-                                   resource->pool);
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not open a (transaction) root "
+                                    "in the repository",
+                                    resource->pool);
       return NULL;
     }
   /* end of Auto-Versioning Stuff */
@@ -423,16 +424,16 @@ dav_svn__checkout(dav_resource *resource,
                                     SVN_DAV_ERROR_TAG);
     }
 
-  serr = dav_svn_simple_parse_uri(&parse, resource,
-                                  APR_ARRAY_IDX(activities, 0, const char *),
-                                  resource->pool);
+  serr = dav_svn__simple_parse_uri(&parse, resource,
+                                   APR_ARRAY_IDX(activities, 0, const char *),
+                                   resource->pool);
   if (serr != NULL)
     {
       /* ### is BAD_REQUEST proper? */
-      return dav_svn_convert_err(serr, HTTP_CONFLICT,
-                                 "The activity href could not be parsed "
-                                 "properly.",
-                                 resource->pool);
+      return dav_svn__convert_err(serr, HTTP_CONFLICT,
+                                  "The activity href could not be parsed "
+                                  "properly.",
+                                  resource->pool);
     }
   if (parse.activity_id == NULL)
     {
@@ -469,11 +470,11 @@ dav_svn__checkout(dav_resource *resource,
       if (serr != NULL)
         {
           /* ### correct HTTP error? */
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not determine the youngest "
-                                     "revision for verification against "
-                                     "the baseline being checked out.",
-                                     resource->pool);
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Could not determine the youngest "
+                                      "revision for verification against "
+                                      "the baseline being checked out.",
+                                      resource->pool);
         }
 
       if (resource->info->root.rev != youngest)
@@ -514,7 +515,7 @@ dav_svn__checkout(dav_resource *resource,
       if (serr != NULL)
         {
           /* ### correct HTTP error? */
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                      "Could not open the transaction tree.",
                                      resource->pool);
         }
@@ -531,10 +532,10 @@ dav_svn__checkout(dav_resource *resource,
       if (serr != NULL)
         {
           /* ### correct HTTP error? */
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not get created-rev of "
-                                     "transaction node.",
-                                     resource->pool);
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Could not get created-rev of "
+                                      "transaction node.",
+                                      resource->pool);
         }
 
       /* If txn_created_rev is invalid, that means it's already
@@ -818,10 +819,10 @@ dav_svn__checkin(dav_resource *resource,
                                   DAV_SVN_AUTOVERSIONING_ACTIVITY,
                                   resource->info->r->pool);
   if (apr_err)
-    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error fetching pool userdata.",
-                               resource->pool);
+    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error fetching pool userdata.",
+                                resource->pool);
   shared_activity = data;
 
   /* Try to commit the txn if it exists. */
@@ -883,8 +884,8 @@ dav_svn__checkin(dav_resource *resource,
           apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
                                 NULL, resource->info->r->pool);
           
-          return dav_svn_convert_err(serr, HTTP_CONFLICT, msg,
-                                     resource->pool);
+          return dav_svn__convert_err(serr, HTTP_CONFLICT, msg,
+                                      resource->pool);
         }
 
       /* Attempt to destroy the shared activity. */
@@ -901,10 +902,10 @@ dav_svn__checkin(dav_resource *resource,
          the checkin. */
       if (version_resource)
         {
-          uri = dav_svn_build_uri(resource->info->repos,
-                                  DAV_SVN_BUILD_URI_VERSION,
-                                  new_rev, resource->info->repos_path,
-                                  0, resource->pool);
+          uri = dav_svn__build_uri(resource->info->repos,
+                                   DAV_SVN_BUILD_URI_VERSION,
+                                   new_rev, resource->info->repos_path,
+                                   0, resource->pool);
           
           err = dav_svn__create_version_resource(version_resource, uri,
                                                  resource->pool);
@@ -957,7 +958,7 @@ deliver_report(request_rec *r,
                const apr_xml_doc *doc,
                ap_filter_t *output)
 {
-  int ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  int ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
 
   if (doc->root->ns == ns)
     {
@@ -1072,10 +1073,10 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
      input filter. */
   apr_err = apr_pool_userdata_get(&data, "svn-request-body", r->pool);
   if (apr_err)
-    return dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error fetching pool userdata.",
-                               pool);
+    return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error fetching pool userdata.",
+                                pool);
   doc = data;
   if (! doc)
     {
@@ -1084,7 +1085,7 @@ dav_svn__build_lock_hash(apr_hash_t **locks,
     }
   
   /* Sanity check. */
-  ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
       /* If there's no svn: namespace in the body, then there are
@@ -1195,9 +1196,9 @@ dav_svn__push_locks(dav_resource *resource,
       
       serr = svn_fs_access_add_lock_token(fsaccess, token);
       if (serr)
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "Error pushing token into filesystem.",
-                                   pool);
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Error pushing token into filesystem.",
+                                    pool);
     }
 
   return NULL;
@@ -1333,7 +1334,7 @@ merge(dav_resource *target,
       else
         msg = "An error occurred while committing the transaction.";
 
-      return dav_svn_convert_err(serr, HTTP_CONFLICT, msg, pool);
+      return dav_svn__convert_err(serr, HTTP_CONFLICT, msg, pool);
     }
   else if (serr)
     {
@@ -1374,8 +1375,8 @@ merge(dav_resource *target,
           serr = release_locks(locks, source->info->repos->repos, 
                                source->info->r, pool);
           if (serr != NULL)
-            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "Error releasing locks", pool);
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "Error releasing locks", pool);
         }
 
       /* The client might want us to disable the merge response altogether. */
