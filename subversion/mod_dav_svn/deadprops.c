@@ -120,9 +120,9 @@ get_value(dav_db *db, const dav_prop_name *name, svn_string_t **pvalue)
                             get_repos_path(db->resource->info),
                             propname, db->p);
   if (serr != NULL)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "could not fetch a property",
-                               db->resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "could not fetch a property",
+                                db->resource->pool);
 
   return NULL;
 }
@@ -182,9 +182,9 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
                                          get_repos_path(db->resource->info),
                                          propname, value, db->resource->pool);
   if (serr != NULL)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               NULL,
-                               db->resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                NULL,
+                                db->resource->pool);
 
   /* a change to the props was made; make sure our cached copy is gone */
   db->props = NULL;
@@ -425,9 +425,9 @@ db_remove(dav_db *db, const dav_prop_name *name)
                                          get_repos_path(db->resource->info),
                                          propname, NULL, db->resource->pool);
   if (serr != NULL)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "could not remove a property",
-                               db->resource->pool);
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "could not remove a property",
+                                db->resource->pool);
 
   /* a change to the props was made; make sure our cached copy is gone */
   db->props = NULL;
@@ -535,10 +535,10 @@ db_first_name(dav_db *db, dav_prop_name *pname)
                                       db->p);
         }
       if (serr != NULL)
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "could not begin sequencing through "
-                                   "properties",
-                                   db->resource->pool);
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "could not begin sequencing through "
+                                    "properties",
+                                    db->resource->pool);
     }
 
   /* begin the iteration over the hash */

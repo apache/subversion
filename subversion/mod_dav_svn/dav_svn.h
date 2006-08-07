@@ -321,41 +321,6 @@ const char *dav_svn__get_repo_name(request_rec *r);
 /* Return the URI of an XSL transform stylesheet */
 const char *dav_svn__get_xslt_uri(request_rec *r);
 
-/* Convert an svn_error_t into a dav_error, pushing another error based on
-   MESSAGE if MESSAGE is not NULL.  Use the provided HTTP status for the
-   DAV errors.  Allocate new DAV errors from POOL.
-
-   NOTE: this function destroys (cleanly, of course) SERR after it has
-   copied/converted its data to the new DAV error.
-
-   NOTE: MESSAGE needs to hang around for the lifetime of the error since
-   the current implementation doesn't copy it!  Lots of callers pass static
-   string constant. */
-dav_error *
-dav_svn_convert_err(svn_error_t *serr,
-                    int status,
-                    const char *message,
-                    apr_pool_t *pool);
-
-/* A wrapper around mod_dav's dav_new_error_tag, mod_dav_svn uses this
-   instead of the mod_dav function to enable special mod_dav_svn specific
-   processing.  See dav_new_error_tag for parameter documentation.
-   Note that DESC may be null (it's hard to track this down from
-   dav_new_error_tag()'s documentation, but see the dav_error type,
-   which says that its desc field may be NULL). */
-dav_error *
-dav_svn__new_error_tag(apr_pool_t *pool,
-                       int status,
-                       int errno_id,
-                       const char *desc,
-                       const char *namespace,
-                       const char *tagname);
-
-/* Test PATH for canonicalness (defined as "what won't make the
-   svn_path_* functions immediately explode"), returning an
-   HTTP_BAD_REQUEST error tag if the test fails. */
-dav_error *dav_svn__test_canonical(const char *path, apr_pool_t *pool);
-
 
 /*** activity.c ***/
 
@@ -459,68 +424,6 @@ enum dav_svn_build_what {
   DAV_SVN_BUILD_URI_VCC         /* a Version Controlled Configuration */
 };
 
-/*
-  Construct various kinds of URIs.
-
-  REPOS is always required, as all URIs will be built to refer to elements
-  within that repository. WHAT specifies the type of URI to build. The
-  ADD_HREF flag determines whether the URI is to be wrapped inside of
-  <D:href>uri</D:href> elements (for inclusion in a response).
-
-  Different pieces of information are required for the various URI types:
-
-  ACT_COLLECTION: no additional params required
-  BASELINE:       REVISION should be specified
-  BC:             REVISION should be specified
-  PUBLIC:         PATH should be specified with a leading slash
-  VERSION:        REVISION and PATH should be specified
-  VCC:            no additional params required
-*/
-const char *
-dav_svn_build_uri(const dav_svn_repos *repos,
-                  enum dav_svn_build_what what,
-                  svn_revnum_t revision,
-                  const char *path,
-                  int add_href,
-                  apr_pool_t *pool);
-
-
-/* Compare (PATH in ROOT) to (PATH in ROOT/PATH's created_rev).
-
-   If these nodes are identical, then return the created_rev.
-
-   If the nodes aren't identical, or if PATH simply doesn't exist in
-   the created_rev, then return the revision represented by ROOT.
-
-   (This is a helper to functions that want to build version-urls and
-    use the CR if possible.)
-*/
-svn_revnum_t
-dav_svn_get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool);
-
-/*
-** Simple parsing of a URI. This is used for URIs which appear within a
-** request body. It enables us to verify and break out the necessary pieces
-** to figure out what is being referred to.
-**
-** ### this is horribly duplicative with the parsing functions in repos.c
-** ### for now, this implements only a minor subset of the full range of
-** ### URIs which we may need to parse. it also ignores any scheme, host,
-** ### and port in the URI and simply assumes it refers to the same server.
-*/
-typedef struct {
-  svn_revnum_t rev;
-  const char *repos_path;
-  const char *activity_id;
-} dav_svn_uri_info;
-
-svn_error_t *
-dav_svn_simple_parse_uri(dav_svn_uri_info *info,
-                         const dav_resource *relative,
-                         const char *uri,
-                         apr_pool_t *pool);
-
-
 /* Generate the HTTP response body for a successful MERGE. */
 /* ### more docco */
 dav_error *
@@ -564,16 +467,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
                           ap_filter_t *output);
 
 
-int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
 
-/* Output XML data to OUTPUT using BB.  Use FMT as format string for the
-   output. */
-svn_error_t *
-dav_svn__send_xml(apr_bucket_brigade *bb,
-                  ap_filter_t *output,
-                  const char *fmt,
-                  ...)
-       __attribute__((format(printf, 3, 4)));
 
 
 enum dav_svn_time_format {
@@ -650,10 +544,123 @@ dav_svn__push_locks(dav_resource *resource,
                     apr_pool_t *pool);
 
 
+/*** util.c ***/
+
+/* A wrapper around mod_dav's dav_new_error_tag, mod_dav_svn uses this
+   instead of the mod_dav function to enable special mod_dav_svn specific
+   processing.  See dav_new_error_tag for parameter documentation.
+   Note that DESC may be null (it's hard to track this down from
+   dav_new_error_tag()'s documentation, but see the dav_error type,
+   which says that its desc field may be NULL). */
+dav_error *
+dav_svn__new_error_tag(apr_pool_t *pool,
+                       int status,
+                       int errno_id,
+                       const char *desc,
+                       const char *namespace,
+                       const char *tagname);
+
+
+/* Convert an svn_error_t into a dav_error, pushing another error based on
+   MESSAGE if MESSAGE is not NULL.  Use the provided HTTP status for the
+   DAV errors.  Allocate new DAV errors from POOL.
+
+   NOTE: this function destroys (cleanly, of course) SERR after it has
+   copied/converted its data to the new DAV error.
+
+   NOTE: MESSAGE needs to hang around for the lifetime of the error since
+   the current implementation doesn't copy it!  Lots of callers pass static
+   string constant. */
+dav_error *
+dav_svn__convert_err(svn_error_t *serr,
+                    int status,
+                    const char *message,
+                    apr_pool_t *pool);
+
+
+/* Compare (PATH in ROOT) to (PATH in ROOT/PATH's created_rev).
+
+   If these nodes are identical, then return the created_rev.
+
+   If the nodes aren't identical, or if PATH simply doesn't exist in
+   the created_rev, then return the revision represented by ROOT.
+
+   (This is a helper to functions that want to build version-urls and
+    use the CR if possible.) */
+svn_revnum_t
+dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool);
+
+
+/* Construct various kinds of URIs.
+
+   REPOS is always required, as all URIs will be built to refer to elements
+   within that repository. WHAT specifies the type of URI to build. The
+   ADD_HREF flag determines whether the URI is to be wrapped inside of
+   <D:href>uri</D:href> elements (for inclusion in a response).
+
+   Different pieces of information are required for the various URI types:
+
+   ACT_COLLECTION: no additional params required
+   BASELINE:       REVISION should be specified
+   BC:             REVISION should be specified
+   PUBLIC:         PATH should be specified with a leading slash
+   VERSION:        REVISION and PATH should be specified
+   VCC:            no additional params required
+*/
+const char *
+dav_svn__build_uri(const dav_svn_repos *repos,
+                   enum dav_svn_build_what what,
+                   svn_revnum_t revision,
+                   const char *path,
+                   int add_href,
+                   apr_pool_t *pool);
+
+
+/* Simple parsing of a URI. This is used for URIs which appear within a
+   request body. It enables us to verify and break out the necessary pieces
+   to figure out what is being referred to.
+  
+   ### this is horribly duplicative with the parsing functions in repos.c
+   ### for now, this implements only a minor subset of the full range of
+   ### URIs which we may need to parse. it also ignores any scheme, host,
+   ### and port in the URI and simply assumes it refers to the same server.
+*/
+typedef struct {
+  svn_revnum_t rev;
+  const char *repos_path;
+  const char *activity_id;
+} dav_svn__uri_info;
+
+svn_error_t *
+dav_svn__simple_parse_uri(dav_svn__uri_info *info,
+                          const dav_resource *relative,
+                          const char *uri,
+                          apr_pool_t *pool);
+
+
+int dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri);
+
+
+/* Output XML data to OUTPUT using BB.  Use FMT as format string for the
+   output. */
+svn_error_t *
+dav_svn__send_xml(apr_bucket_brigade *bb,
+                  ap_filter_t *output,
+                  const char *fmt,
+                  ...)
+       __attribute__((format(printf, 3, 4)));
+
+
+/* Test PATH for canonicalness (defined as "what won't make the
+   svn_path_* functions immediately explode"), returning an
+   HTTP_BAD_REQUEST error tag if the test fails. */
+dav_error *dav_svn__test_canonical(const char *path, apr_pool_t *pool);
+
+
 /* Convert @a serr into a dav_error.  If @a new_msg is non-NULL, use
    @a new_msg in the returned error, and write the original
    @a serr->message to httpd's log.  Destroy the passed-in @a serr,
-   similarly to dav_svn_convert_err().
+   similarly to dav_svn__convert_err().
 
    @a new_msg is usually a "sanitized" version of @a serr->message.
    That is, if @a serr->message contains security-sensitive data,
@@ -671,6 +678,7 @@ dav_svn__sanitize_error(svn_error_t *serr,
                         const char *new_msg,
                         int http_status,
                         request_rec *r);
+
 
 #ifdef __cplusplus
 }

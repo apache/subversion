@@ -56,7 +56,7 @@ allow_read(request_rec *r,
     uri_type = DAV_SVN_BUILD_URI_PUBLIC;
 
   /* Build a Version Resource uri representing (rev, path). */
-  uri = dav_svn_build_uri(repos, uri_type, rev, path, FALSE, pool);
+  uri = dav_svn__build_uri(repos, uri_type, rev, path, FALSE, pool);
 
   /* Check if GET would work against this uri. */
   subreq = ap_sub_req_method_uri("GET", uri, r, r->output_filters);

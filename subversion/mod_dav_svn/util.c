@@ -67,10 +67,10 @@ build_error_chain(apr_pool_t *pool, svn_error_t *err, int status)
 
 
 dav_error *
-dav_svn_convert_err(svn_error_t *serr,
-                    int status,
-                    const char *message,
-                    apr_pool_t *pool)
+dav_svn__convert_err(svn_error_t *serr,
+                     int status,
+                     const char *message,
+                     apr_pool_t *pool)
 {
     dav_error *derr;
 
@@ -132,7 +132,7 @@ get_last_history_rev(svn_revnum_t *revision,
 
 
 svn_revnum_t
-dav_svn_get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
+dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
   svn_revnum_t revision = svn_fs_revision_root_revision(root);    
   svn_revnum_t history_rev;
@@ -175,12 +175,12 @@ dav_svn_get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
                                    
 
 const char *
-dav_svn_build_uri(const dav_svn_repos *repos,
-                  enum dav_svn_build_what what,
-                  svn_revnum_t revision,
-                  const char *path,
-                  int add_href,
-                  apr_pool_t *pool)
+dav_svn__build_uri(const dav_svn_repos *repos,
+                   enum dav_svn_build_what what,
+                   svn_revnum_t revision,
+                   const char *path,
+                   int add_href,
+                   apr_pool_t *pool)
 {
   const char *root_path = repos->root_path;
   const char *special_uri = repos->special_uri;
@@ -232,10 +232,10 @@ dav_svn_build_uri(const dav_svn_repos *repos,
 
 
 svn_error_t *
-dav_svn_simple_parse_uri(dav_svn_uri_info *info,
-                         const dav_resource *relative,
-                         const char *uri,
-                         apr_pool_t *pool)
+dav_svn__simple_parse_uri(dav_svn__uri_info *info,
+                          const dav_resource *relative,
+                          const char *uri,
+                          apr_pool_t *pool)
 {
   apr_uri_t comp;
   const char *path;
@@ -368,7 +368,7 @@ dav_svn_simple_parse_uri(dav_svn_uri_info *info,
 
 /* ### move this into apr_xml */
 int
-dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri)
+dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri)
 {
   int i;
 
@@ -434,9 +434,9 @@ dav_svn__sanitize_error(svn_error_t *serr,
                       "%s", serr->message);
         svn_error_clear(serr);
       }
-    return dav_svn_convert_err(safe_err, http_status,
-                               apr_psprintf(r->pool, safe_err->message),
-                               r->pool);
+    return dav_svn__convert_err(safe_err, http_status,
+                                apr_psprintf(r->pool, safe_err->message),
+                                r->pool);
 }
 
 
