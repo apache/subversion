@@ -47,7 +47,7 @@ extern "C" {
  *
  * @since New in 1.4.0.
  */
-void svn_dso_initialize();
+void svn_dso_initialize(void);
 
 /**
  * Attempt to load @a libname, returning it in @a dso.
