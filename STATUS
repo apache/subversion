@@ -89,7 +89,7 @@ Candidate changes:
     Justification:
       It would be nice if --enable-dso worked.  Fairly isolated change.
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
 Approved changes:
 
