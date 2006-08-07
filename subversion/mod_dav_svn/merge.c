@@ -74,10 +74,10 @@ send_response(const dav_svn_repos *repos,
   apr_status_t status;
   svn_revnum_t rev_to_use;
 
-  href = dav_svn__build_uri(repos, DAV_SVN_BUILD_URI_PUBLIC,
+  href = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_PUBLIC,
                             SVN_IGNORED_REVNUM, path, 0 /* add_href */, pool);
   rev_to_use = dav_svn__get_safe_cr(root, path, pool);
-  vsn_url = dav_svn__build_uri(repos, DAV_SVN_BUILD_URI_VERSION,
+  vsn_url = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_VERSION,
                                rev_to_use, path, 0 /* add_href */, pool);
   status = ap_fputstrs(output, bb,
                        "<D:response>" DEBUG_CR
@@ -232,7 +232,7 @@ dav_svn__merge_response(ap_filter_t *output,
   /* prep some strings */
   
   /* the HREF for the baseline is actually the VCC */
-  vcc = dav_svn__build_uri(repos, DAV_SVN_BUILD_URI_VCC, SVN_IGNORED_REVNUM,
+  vcc = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_VCC, SVN_IGNORED_REVNUM,
                            NULL, 0 /* add_href */, pool);
 
   /* the version-name of the baseline is the revision number */

@@ -37,10 +37,10 @@ extern "C" {
 
 
 /* what the one VCC is called */
-#define DAV_SVN_DEFAULT_VCC_NAME        "default"
+#define DAV_SVN__DEFAULT_VCC_NAME        "default"
 
 /* a pool-key for the shared dav_svn_root used by autoversioning  */
-#define DAV_SVN_AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
+#define DAV_SVN__AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
 
 
 /* dav_svn_repos
@@ -233,42 +233,13 @@ struct dav_resource_private {
 };
 
 
-/*
-  LIVE PROPERTY HOOKS
+/* Every provider needs to define an opaque locktoken type. */
+struct dav_locktoken
+{
+  /* This is identical to the 'token' field of an svn_lock_t. */
+  const char *uuid_str;
+};
 
-  These are standard hooks defined by mod_dav. We implement them to expose
-  various live properties on the resources under our control.
-
-  gather_propsets: appends URIs into the array; the property set URIs are
-                   used to specify which sets of custom properties we
-                   define/expose.
-  find_liveprop: given a namespace and name, return the hooks for the
-                 provider who defines that property.
-  insert_all_liveprops: for a given resource, insert all of the live
-                        properties defined on that resource. The properties
-                        are inserted according to the WHAT parameter.
-*/
-void dav_svn__gather_propsets(apr_array_header_t *uris);
-
-int
-dav_svn__find_liveprop(const dav_resource *resource,
-                       const char *ns_uri,
-                       const char *name,
-                       const dav_hooks_liveprop **hooks);
-
-void
-dav_svn__insert_all_liveprops(request_rec *r,
-                              const dav_resource *resource,
-                              dav_prop_insert what,
-                              apr_text_header *phdr);
-
-/* our hooks structures; these are gathered into a dav_provider */
-extern const dav_hooks_repository dav_svn__hooks_repository;
-extern const dav_hooks_propdb dav_svn__hooks_propdb;
-extern const dav_hooks_vsn dav_svn__hooks_vsn;
-extern const dav_hooks_locks dav_svn__hooks_locks;
-
-extern const dav_liveprop_group dav_svn__liveprop_group;
 
 /* for the repository referred to by this request, where is the SVN FS? */
 const char *dav_svn__get_fs_path(request_rec *r);
@@ -385,12 +356,30 @@ dav_svn__create_version_resource(dav_resource **version_res,
                                  const char *uri,
                                  apr_pool_t *pool);
 
-/*** liveprops.c ***/
+extern const dav_hooks_repository dav_svn__hooks_repository;
 
-/* 
-   Hook function of types 'checkout' and 'checkin', as defined in
-   mod_dav.h's versioning provider hooks table (see dav_hooks_vsn).
-*/
+
+/*** deadprops.c ***/
+extern const dav_hooks_propdb dav_svn__hooks_propdb;
+
+
+/*** lock.c ***/
+extern const dav_hooks_locks dav_svn__hooks_locks;
+
+
+/*** version.c ***/
+
+/* For an autoversioning commit, a helper function which attaches an
+   auto-generated 'svn:log' property to a txn, as well as a property
+   that indicates the revision was made via autoversioning. */
+svn_error_t *
+dav_svn__attach_auto_revprops(svn_fs_txn_t *txn,
+                              const char *fs_path,
+                              apr_pool_t *pool);
+
+
+/* Hook function of types 'checkout' and 'checkin', as defined in
+   mod_dav.h's versioning provider hooks table (see dav_hooks_vsn).  */
 dav_error *
 dav_svn__checkout(dav_resource *resource,
                   int auto_checkout,
@@ -405,24 +394,67 @@ dav_svn__checkin(dav_resource *resource,
                  int keep_checked_out,
                  dav_resource **version_resource);
 
-/*** ***/
 
-/* For an autoversioning commit, a helper function which attaches an
-   auto-generated 'svn:log' property to a txn, as well as a property
-   that indicates the revision was made via autoversioning. */
-svn_error_t *
-dav_svn__attach_auto_revprops(svn_fs_txn_t *txn,
-                              const char *fs_path,
-                              apr_pool_t *pool);
+/* Helper for reading lock-tokens out of request bodies, by looking
+   for cached body in R->pool's userdata.
 
-enum dav_svn_build_what {
-  DAV_SVN_BUILD_URI_ACT_COLLECTION, /* the collection of activities */
-  DAV_SVN_BUILD_URI_BASELINE,   /* a Baseline */
-  DAV_SVN_BUILD_URI_BC,         /* a Baseline Collection */
-  DAV_SVN_BUILD_URI_PUBLIC,     /* the "public" VCR */
-  DAV_SVN_BUILD_URI_VERSION,    /* a Version Resource */
-  DAV_SVN_BUILD_URI_VCC         /* a Version Controlled Configuration */
-};
+   Return a hash that maps (const char *) absolute fs paths to (const
+   char *) locktokens.  Allocate the hash and all keys/vals in POOL.
+   PATH_PREFIX is the prefix we need to prepend to each relative
+   'lock-path' in the xml in order to create an absolute fs-path.  */
+dav_error *
+dav_svn__build_lock_hash(apr_hash_t **locks,
+                         request_rec *r,
+                         const char *path_prefix,
+                         apr_pool_t *pool);
+
+
+/* Helper: push all of the lock-tokens (hash values) in LOCKS into
+   RESOURCE's already-open svn_fs_t. */
+dav_error *
+dav_svn__push_locks(dav_resource *resource,
+                    apr_hash_t *locks,
+                    apr_pool_t *pool);
+
+
+extern const dav_hooks_vsn dav_svn__hooks_vsn;
+
+
+/*** liveprops.c ***/
+
+extern const dav_liveprop_group dav_svn__liveprop_group;
+
+/*
+  LIVE PROPERTY HOOKS
+
+  These are standard hooks defined by mod_dav. We implement them to expose
+  various live properties on the resources under our control.
+
+  gather_propsets: appends URIs into the array; the property set URIs are
+                   used to specify which sets of custom properties we
+                   define/expose.
+  find_liveprop: given a namespace and name, return the hooks for the
+                 provider who defines that property.
+  insert_all_liveprops: for a given resource, insert all of the live
+                        properties defined on that resource. The properties
+                        are inserted according to the WHAT parameter.
+*/
+void dav_svn__gather_propsets(apr_array_header_t *uris);
+
+int
+dav_svn__find_liveprop(const dav_resource *resource,
+                       const char *ns_uri,
+                       const char *name,
+                       const dav_hooks_liveprop **hooks);
+
+void
+dav_svn__insert_all_liveprops(request_rec *r,
+                              const dav_resource *resource,
+                              dav_prop_insert what,
+                              apr_text_header *phdr);
+
+
+/*** merge.c ***/
 
 /* Generate the HTTP response body for a successful MERGE. */
 /* ### more docco */
@@ -435,6 +467,8 @@ dav_svn__merge_response(ap_filter_t *output,
                         svn_boolean_t disable_merge_response,
                         apr_pool_t *pool);
 
+
+/*** reports/ ***/
 
 /* The various report handlers, defined in reports/, and used by version.c.  */
 dav_error *
@@ -467,22 +501,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
                           ap_filter_t *output);
 
 
-
-
-
-enum dav_svn_time_format {
-  dav_svn_time_format_iso8601,
-  dav_svn_time_format_rfc1123
-};
-
-/* Return a writable generic stream that will encode its output to base64
-   and send it to the Apache filter OUTPUT using BB.  Allocate the stream in
-   POOL. */
-svn_stream_t *
-dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
-                                   ap_filter_t *output,
-                                   apr_pool_t *pool);
-
+/*** authz.c ***/
 
 /* A baton needed by dav_svn__authz_read_func(). */
 typedef struct 
@@ -512,36 +531,6 @@ dav_svn__allow_read(const dav_resource *resource,
    function. Otherwise, return NULL. */
 svn_repos_authz_func_t
 dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
-
-/* Every provider needs to define an opaque locktoken type. */
-struct dav_locktoken
-{
-  /* This is identical to the 'token' field of an svn_lock_t. */
-  const char *uuid_str;
-};
-
-
-/* Helper for reading lock-tokens out of request bodies, by looking
-   for cached body in R->pool's userdata.
-
-   Return a hash that maps (const char *) absolute fs paths to (const
-   char *) locktokens.  Allocate the hash and all keys/vals in POOL.
-   PATH_PREFIX is the prefix we need to prepend to each relative
-   'lock-path' in the xml in order to create an absolute fs-path.
-   */
-dav_error *
-dav_svn__build_lock_hash(apr_hash_t **locks,
-                         request_rec *r,
-                         const char *path_prefix,
-                         apr_pool_t *pool);
-
-
-/* Helper: push all of the lock-tokens (hash values) in LOCKS into
-   RESOURCE's already-open svn_fs_t. */
-dav_error *
-dav_svn__push_locks(dav_resource *resource,
-                    apr_hash_t *locks,
-                    apr_pool_t *pool);
 
 
 /*** util.c ***/
@@ -607,9 +596,18 @@ dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool);
    VERSION:        REVISION and PATH should be specified
    VCC:            no additional params required
 */
+enum dav_svn__build_what {
+  DAV_SVN__BUILD_URI_ACT_COLLECTION, /* the collection of activities */
+  DAV_SVN__BUILD_URI_BASELINE,   /* a Baseline */
+  DAV_SVN__BUILD_URI_BC,         /* a Baseline Collection */
+  DAV_SVN__BUILD_URI_PUBLIC,     /* the "public" VCR */
+  DAV_SVN__BUILD_URI_VERSION,    /* a Version Resource */
+  DAV_SVN__BUILD_URI_VCC         /* a Version Controlled Configuration */
+};
+
 const char *
 dav_svn__build_uri(const dav_svn_repos *repos,
-                   enum dav_svn_build_what what,
+                   enum dav_svn__build_what what,
                    svn_revnum_t revision,
                    const char *path,
                    int add_href,
@@ -678,6 +676,15 @@ dav_svn__sanitize_error(svn_error_t *serr,
                         const char *new_msg,
                         int http_status,
                         request_rec *r);
+
+
+/* Return a writable generic stream that will encode its output to base64
+   and send it to the Apache filter OUTPUT using BB.  Allocate the stream in
+   POOL. */
+svn_stream_t *
+dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
+                                   ap_filter_t *output,
+                                   apr_pool_t *pool);
 
 
 #ifdef __cplusplus

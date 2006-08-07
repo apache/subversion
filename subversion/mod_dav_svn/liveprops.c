@@ -150,6 +150,12 @@ get_path_revprop(svn_string_t **propval,
 }
 
 
+enum time_format {
+  time_format_iso8601,
+  time_format_rfc1123
+};
+
+
 /* Given a mod_dav_svn @a resource, set @a *timeval and @a *datestring
    to the last-modified-time of the resource.  The datestring will be
    formatted according to @a format.  Use @a pool for both
@@ -162,7 +168,7 @@ static int
 get_last_modified_time(const char **datestring,
                        apr_time_t *timeval,
                        const dav_resource *resource,
-                       enum dav_svn_time_format format,
+                       enum time_format format,
                        apr_pool_t *pool)
 {
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
@@ -225,11 +231,11 @@ get_last_modified_time(const char **datestring,
   if (! datestring)
     return 0;
 
-  if (format == dav_svn_time_format_iso8601)
+  if (format == time_format_iso8601)
     {
       *datestring = committed_date->data;
     }
-  else if (format == dav_svn_time_format_rfc1123)
+  else if (format == time_format_rfc1123)
     {
       apr_time_exp_t tms;
       apr_status_t status;
@@ -303,7 +309,7 @@ insert_prop(const dav_resource *resource,
            as 'last modified date'?  */
         const char *datestring;
         apr_time_t timeval;
-        enum dav_svn_time_format format;
+        enum time_format format;
 
         /* ### for now, our global VCC has no such property. */
         if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
@@ -316,11 +322,11 @@ insert_prop(const dav_resource *resource,
           {
             /* Return an ISO8601 date; this is what the svn client
                expects, and rfc2518 demands it. */
-            format = dav_svn_time_format_iso8601;
+            format = time_format_iso8601;
           }
         else /* propid == DAV_PROPID_getlastmodified */
           {
-            format = dav_svn_time_format_rfc1123;
+            format = time_format_rfc1123;
           }
 
         if (0 != get_last_modified_time(&datestring, &timeval,
@@ -500,7 +506,7 @@ insert_prop(const dav_resource *resource,
       /* ### whoops. also defined for a VCC. deal with it later. */
       if (resource->type != DAV_RESOURCE_TYPE_VERSION || !resource->baselined)
         return DAV_PROP_INSERT_NOTSUPP;
-      value = dav_svn__build_uri(resource->info->repos, DAV_SVN_BUILD_URI_BC,
+      value = dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_BC,
                                  resource->info->root.rev, NULL,
                                  1 /* add_href */, p);
       break;
@@ -522,7 +528,7 @@ insert_prop(const dav_resource *resource,
               break;
             }
           s = dav_svn__build_uri(resource->info->repos,
-                                 DAV_SVN_BUILD_URI_BASELINE, 
+                                 DAV_SVN__BUILD_URI_BASELINE, 
                                  revnum, NULL, 0 /* add_href */, p);
           value = apr_psprintf(p, "<D:href>%s</D:href>", 
                                apr_xml_quote_string(p, s, 1));
@@ -539,7 +545,7 @@ insert_prop(const dav_resource *resource,
                                  resource->info->repos_path, p);
 
           s = dav_svn__build_uri(resource->info->repos,
-                                 DAV_SVN_BUILD_URI_VERSION,
+                                 DAV_SVN__BUILD_URI_VERSION,
                                  rev_to_use, resource->info->repos_path,
                                 0 /* add_href */, p);
           value = apr_psprintf(p, "<D:href>%s</D:href>", 
@@ -553,7 +559,7 @@ insert_prop(const dav_resource *resource,
       /* ### note that a VCC (a special VCR) is defined as _PRIVATE for now */
       if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
         return DAV_PROP_INSERT_NOTSUPP;
-      value = dav_svn__build_uri(resource->info->repos, DAV_SVN_BUILD_URI_VCC,
+      value = dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_VCC,
                                  SVN_IGNORED_REVNUM, NULL, 
                                  1 /* add_href */, p);
       break;
