@@ -98,7 +98,33 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("specify a password ARG")},
 #ifndef AS400
   {"extensions",    'x', 1,
-                    N_("pass ARG to --diff-cmd as options (default: '-u')")},
+                    N_("Default: '-u'. When Subversion is invoking an\n"
+                       "                            "
+                       " external diff program, ARG is simply passed along\n"
+                       "                            "
+                       " to the program. But when Subversion is using its\n"
+                       "                            "
+                       " default internal diff implementation, or when\n"
+                       "                            "
+                       " Subversion is displaying blame annotations, ARG\n"
+                       "                            "
+                       " could be any of the following:\n"
+                       "                            "
+                       "    -u (--unified):\n"
+                       "                            "
+                       "       Output 3 lines of unified context.\n"
+                       "                            "
+                       "    -b (--ignore-space-change):\n"
+                       "                            "
+                       "       Ignore changes in the amount of white space.\n"
+                       "                            "
+                       "    -w (--ignore-all-space):\n"
+                       "                            "
+                       "       Ignore all white space.\n"
+                       "                            "
+                       "    --ignore-eol-style:\n"
+                       "                            "
+                       "       Ignore changes in EOL style")},
 #endif
   {"targets",       svn_cl__targets_opt, 1,
                     N_("pass contents of file ARG as additional args")},

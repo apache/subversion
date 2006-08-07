@@ -69,14 +69,6 @@ Candidate changes:
     Votes:
       +1: djh, dlr
 
-  * r20926
-    Add the help text for the new extensions added in 1.4.
-    Justification:
-      Help message improvement to provide users with enough explanations
-      about what is available in 1.4.
-    Votes:
-      +1: nori, dlr, rooneg
-
   * r20996, r20999
     Fix --enable-dso in the face of global bdb environment caching.
     Justification:
