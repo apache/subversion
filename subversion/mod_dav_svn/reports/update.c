@@ -220,7 +220,7 @@ send_vsn_url(item_baton_t *baton, apr_pool_t *pool)
   revision = dav_svn__get_safe_cr(baton->uc->rev_root, path, pool);
     
   href = dav_svn__build_uri(baton->uc->resource->info->repos,
-                            DAV_SVN_BUILD_URI_VERSION,
+                            DAV_SVN__BUILD_URI_VERSION,
                             revision, path, 0 /* add_href */, pool);
   
   return dav_svn__send_xml(baton->uc->bb, baton->uc->output,
@@ -311,7 +311,7 @@ add_helper(svn_boolean_t is_dir,
           revision = dav_svn__get_safe_cr(child->uc->rev_root, real_path,
                                           pool);
           bc_url = dav_svn__build_uri(child->uc->resource->info->repos,
-                                      DAV_SVN_BUILD_URI_BC,
+                                      DAV_SVN__BUILD_URI_BC,
                                       revision, real_path,
                                       0 /* add_href */, pool);
 

@@ -166,7 +166,7 @@ get_option(const dav_resource *resource,
                           "<D:activity-collection-set>");
           apr_text_append(resource->pool, option,
                           dav_svn__build_uri(resource->info->repos,
-                                             DAV_SVN_BUILD_URI_ACT_COLLECTION,
+                                             DAV_SVN__BUILD_URI_ACT_COLLECTION,
                                              SVN_INVALID_REVNUM, NULL,
                                              1 /* add_href */,
                                              resource->pool));
@@ -299,7 +299,7 @@ dav_svn__checkout(dav_resource *resource,
 
       /* See if the shared activity already exists. */
       apr_err = apr_pool_userdata_get(&data,
-                                      DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                      DAV_SVN__AUTOVERSIONING_ACTIVITY,
                                       resource->info->r->pool);
       if (apr_err)
         return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
@@ -325,7 +325,7 @@ dav_svn__checkout(dav_resource *resource,
 
           /* Save the shared activity in r->pool for others to use. */         
           apr_err = apr_pool_userdata_set(shared_activity,
-                                          DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                          DAV_SVN__AUTOVERSIONING_ACTIVITY,
                                           NULL, resource->info->r->pool);
           if (apr_err)
             return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
@@ -680,7 +680,7 @@ uncheckout(dav_resource *resource)
     {
       dav_svn__delete_activity(resource->info->repos,
                                resource->info->root.activity_id);
-      apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
+      apr_pool_userdata_set(NULL, DAV_SVN__AUTOVERSIONING_ACTIVITY,
                             NULL, resource->info->r->pool);
     }
 
@@ -816,7 +816,7 @@ dav_svn__checkin(dav_resource *resource,
   /* If the global autoversioning activity still exists, that means
      nobody's committed it yet. */
   apr_err = apr_pool_userdata_get(&data,
-                                  DAV_SVN_AUTOVERSIONING_ACTIVITY,
+                                  DAV_SVN__AUTOVERSIONING_ACTIVITY,
                                   resource->info->r->pool);
   if (apr_err)
     return dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
@@ -881,7 +881,7 @@ dav_svn__checkin(dav_resource *resource,
 
           /* Attempt to destroy the shared activity. */
           dav_svn__delete_activity(resource->info->repos, shared_activity);
-          apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
+          apr_pool_userdata_set(NULL, DAV_SVN__AUTOVERSIONING_ACTIVITY,
                                 NULL, resource->info->r->pool);
           
           return dav_svn__convert_err(serr, HTTP_CONFLICT, msg,
@@ -890,7 +890,7 @@ dav_svn__checkin(dav_resource *resource,
 
       /* Attempt to destroy the shared activity. */
       dav_svn__delete_activity(resource->info->repos, shared_activity);
-      apr_pool_userdata_set(NULL, DAV_SVN_AUTOVERSIONING_ACTIVITY,
+      apr_pool_userdata_set(NULL, DAV_SVN__AUTOVERSIONING_ACTIVITY,
                             NULL, resource->info->r->pool);
             
       /* Commit was successful, so schedule deltification. */
@@ -903,7 +903,7 @@ dav_svn__checkin(dav_resource *resource,
       if (version_resource)
         {
           uri = dav_svn__build_uri(resource->info->repos,
-                                   DAV_SVN_BUILD_URI_VERSION,
+                                   DAV_SVN__BUILD_URI_VERSION,
                                    new_rev, resource->info->repos_path,
                                    0, resource->pool);
           

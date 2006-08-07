@@ -243,7 +243,7 @@ parse_vcc_uri(dav_resource_combined *comb,
 {
   /* format: "default" (a singleton) */
 
-  if (strcmp(path, DAV_SVN_DEFAULT_VCC_NAME) != 0)
+  if (strcmp(path, DAV_SVN__DEFAULT_VCC_NAME) != 0)
     return TRUE;
 
   if (label == NULL && !use_checked_in)
@@ -656,7 +656,7 @@ prep_version(dav_resource_combined *comb)
      so the URI will be incorrect. Set the canonical form. */
   /* ### assuming a baseline */
   comb->res.uri = dav_svn__build_uri(comb->priv.repos,
-                                     DAV_SVN_BUILD_URI_BASELINE,
+                                     DAV_SVN__BUILD_URI_BASELINE,
                                      comb->priv.root.rev, NULL,
                                      0 /* add_href */,
                                      pool);
@@ -3583,7 +3583,7 @@ dav_svn__working_to_regular_resource(dav_resource *resource)
   else
     {
       /* if rev was specific, create baseline-collection URL */
-      path = dav_svn__build_uri(repos, DAV_SVN_BUILD_URI_BC,
+      path = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_BC,
                                 priv->root.rev, priv->repos_path,
                                 0, resource->pool);
     }

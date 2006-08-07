@@ -39,7 +39,7 @@ allow_read(request_rec *r,
 {
   const char *uri;
   request_rec *subreq;
-  enum dav_svn_build_what uri_type;
+  enum dav_svn__build_what uri_type;
   svn_boolean_t allowed = FALSE;
 
   /* Easy out:  if the admin has explicitly set 'SVNPathAuthz Off',
@@ -51,9 +51,9 @@ allow_read(request_rec *r,
 
   /* If no revnum is specified, assume HEAD. */
   if (SVN_IS_VALID_REVNUM(rev))
-    uri_type = DAV_SVN_BUILD_URI_VERSION;
+    uri_type = DAV_SVN__BUILD_URI_VERSION;
   else
-    uri_type = DAV_SVN_BUILD_URI_PUBLIC;
+    uri_type = DAV_SVN__BUILD_URI_PUBLIC;
 
   /* Build a Version Resource uri representing (rev, path). */
   uri = dav_svn__build_uri(repos, uri_type, rev, path, FALSE, pool);
