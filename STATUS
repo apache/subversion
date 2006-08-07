@@ -82,7 +82,7 @@ Candidate changes:
       Help message improvement to provide users with enough explanations
       about what is available in 1.4.
     Votes:
-      +1: nori, dlr
+      +1: nori, dlr, rooneg
 
   * r20996, r20999
     Fix --enable-dso in the face of global bdb environment caching.
