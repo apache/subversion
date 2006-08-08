@@ -66,6 +66,14 @@ Candidate changes:
     Votes:
       +1: rooneg, dlr
 
+  * r21022
+    Fix a syntax error that prevents some Inno Setup versions from
+    using the debug version of the install script.
+    Justification:
+      Debug versions of Subversion should be installable on Windows.
+    Votes:
+      +1: dlr
+
 Approved changes:
 
   * r20971, r20967, r20965, r20964, r20961, r20960, r20958, r20956
