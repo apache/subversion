@@ -864,18 +864,6 @@ def _path_endswith(path, subpath):
                or (subpath[0] == os.sep and path[-subpath_len] == os.sep)
                or path[-subpath_len - 1] == os.sep))
 
-def _path_endswith(path, subpath):
-  """Check if SUBPATH is a true path suffix of PATH.
-  """
-  path_len = len(path)
-  subpath_len = len(subpath)
-
-  return (subpath_len > 0 and path_len >= subpath_len
-          and path[-subpath_len:] == subpath
-          and (path_len == subpath_len
-               or (subpath[0] == os.sep and path[-subpath_len] == os.sep)
-               or path[-subpath_len - 1] == os.sep))
-
 class IncludeDependencyInfo:
   """Finds all dependencies between a named set of headers, and computes
   closure, so that individual C and SWIG source files can then be scanned, and
