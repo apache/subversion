@@ -70,7 +70,7 @@ Candidate changes:
     Fix a syntax error that prevents some Inno Setup versions from
     using the debug Component of the install script.
     Justification:
-      Debug versions of Subversion should be installable on Windows.
+      The installer should work on Windows.
     Votes:
       +1: dlr
 
