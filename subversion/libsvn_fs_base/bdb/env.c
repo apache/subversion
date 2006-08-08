@@ -357,12 +357,15 @@ static volatile svn_atomic_t bdb_cache_state;
 svn_error_t *
 svn_fs_bdb__init_cb(void)
 {
+#if APR_HAS_THREADS
+  apr_status_t apr_err;
+#endif
   bdb_cache_pool = svn_pool_create(NULL);
   bdb_cache = apr_hash_make(bdb_cache_pool);
 #if APR_HAS_THREADS
-  apr_status_t apr_err = apr_thread_mutex_create(&bdb_cache_lock,
-                                                 APR_THREAD_MUTEX_DEFAULT,
-                                                 bdb_cache_pool);
+  apr_err = apr_thread_mutex_create(&bdb_cache_lock,
+                                    APR_THREAD_MUTEX_DEFAULT,
+                                    bdb_cache_pool);
   if (apr_err)
     {
       return svn_error_create(apr_err, NULL,
