@@ -28,7 +28,7 @@ Candidate changes:
       +1: rooneg, nori
       +0: lgo
 
-  * r20833, r20836 (depends on r20190 group above)
+  * r20833, r20836
     Provide named, separate debug information files for clients building
     against Subversion libraries.
     Justification:
