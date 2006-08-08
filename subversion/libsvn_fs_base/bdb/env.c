@@ -354,8 +354,8 @@ clear_cache(void *data)
 
 static volatile svn_atomic_t bdb_cache_state;
 
-svn_error_t *
-svn_fs_bdb__init_cb(void)
+static svn_error_t *
+bdb_init_cb(void)
 {
 #if APR_HAS_THREADS
   apr_status_t apr_err;
@@ -382,7 +382,7 @@ svn_fs_bdb__init_cb(void)
 svn_error_t *
 svn_fs_bdb__init(void)
 {
-  SVN_ERR(svn_atomic_init_once(&bdb_cache_state, svn_fs_bdb__init_cb));
+  SVN_ERR(svn_atomic_init_once(&bdb_cache_state, bdb_init_cb));
   return SVN_NO_ERROR;
 }
 
