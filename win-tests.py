@@ -94,6 +94,10 @@ if len(args) == 0:
 else:
   abs_builddir = os.path.abspath(args[0])
   create_dirs = 1
+  
+# Don't run bdb tests if they want to test fsfs
+if fs_type == 'fsfs':
+  all_tests = gen_obj.test_progs + gen_obj.scripts
 
 if run_httpd:
   if not httpd_port:

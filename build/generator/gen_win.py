@@ -151,7 +151,7 @@ class WinGeneratorBase(GeneratorBase):
     # Check for gen_uri_delims project in apr-util
     gen_uri_path = os.path.join(self.apr_util_path, 'uri',
                                 'gen_uri_delims.dsp')
-    if (os.path.exists(gen_uri_path)):
+    if os.path.exists(gen_uri_path):
       self.have_gen_uri = 1
 
     # Run apr-util's w32locatedb.pl script
@@ -239,10 +239,24 @@ class WinGeneratorBase(GeneratorBase):
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
                              install_targets)
 
+    # Drop the serf target if we don't have it
+    if not self.serf_path:
+      install_targets = filter(lambda x: x.name != 'serf', install_targets)
+
+    # Drop the gen_uri_delims target unless we're on an old apr-util
+    if not self.have_gen_uri:
+      install_targets = filter(lambda x: x.name != 'gen_uri_delims',
+                               install_targets)
+      
+    # Drop the libsvn_fs_base target and tests if we don't have BDB
+    if not self.bdb_lib:
+      install_targets = filter(lambda x: x.name != 'libsvn_fs_base',
+                               install_targets)
+      install_targets = filter(lambda x: not (isinstance(x, gen_base.TargetExe)
+                                              and x.install == 'bdb-test'),
+                               install_targets)
+
     for target in install_targets:
-      # drop the gen_uri_delims target unless we're on an old apr-util
-      if not self.have_gen_uri and target.name == 'gen_uri_delims':
-        install_targets.remove(target)
       if isinstance(target, gen_base.TargetLib) and target.msvc_fake:
         install_targets.append(self.create_fake_target(target))
 
@@ -587,6 +601,7 @@ class WinGeneratorBase(GeneratorBase):
     # XXX: know these things for itself.
     if self.bdb_lib:
       fakedefines.append("APU_HAVE_DB=1")
+      fakedefines.append("SVN_LIBSVN_FS_LINKS_FS_BASE=1")
 
     # check if they wanted nls
     if self.enable_nls:
@@ -619,6 +634,7 @@ class WinGeneratorBase(GeneratorBase):
                        self.path("subversion/bindings/swig/proxy"),
                        self.path("subversion/bindings/swig/include"),
                        self.path("subversion/include"),
+                       self.path("subversion"),
                        self.path(util_includes),
                        self.apath(self.apr_path, "include"),
                        self.apath(self.apr_util_path, "include") ]
@@ -667,7 +683,9 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
 
-    dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
+    dblib = None
+    if self.bdb_lib:
+      dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
 
@@ -836,9 +854,8 @@ class WinGeneratorBase(GeneratorBase):
         self.bdb_lib = lib
         break
     else:
-      sys.stderr.write("DB not found; assuming db-4.2.x in db4-win32 "
-                       "by default\n")
-      self.bdb_lib = "libdb42"
+      sys.stderr.write("BDB not found, BDB fs will not be built\n")
+      self.bdb_lib = None
 
   def _find_perl(self):
     "Find the right perl library name to link swig bindings with"
@@ -874,13 +891,13 @@ class WinGeneratorBase(GeneratorBase):
     infp.close()
     try:
       txt = outfp.read()
-      if (txt):
+      if txt:
         vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
                    .search(txt)
       else:
         vermatch = None
 
-      if (vermatch):
+      if vermatch:
         version = (int(vermatch.group(1)),
                    int(vermatch.group(2)),
                    int(vermatch.group(3)))
@@ -940,7 +957,7 @@ class WinGeneratorBase(GeneratorBase):
       vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
                    .search(txt)
   
-      if (vermatch):
+      if vermatch:
         version = (int(vermatch.group(1)),
                    int(vermatch.group(2)),
                    int(vermatch.group(3)))
