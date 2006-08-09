@@ -59,13 +59,6 @@ Candidate changes:
     Votes:
       +1: djh, dlr
 
-  * r20996, r20999
-    Fix --enable-dso in the face of global bdb environment caching.
-    Justification:
-      It would be nice if --enable-dso worked.  Fairly isolated change.
-    Votes:
-      +1: rooneg, dlr
-
   * r21022
     Fix a syntax error that prevents some Inno Setup versions from
     using the debug Component of the install script.
@@ -91,6 +84,13 @@ Approved changes:
       user confusion and embarrassment.
     Votes:
       +1: rooneg, cmpilato, dlr
+
+  * r20996, r20999
+    Fix --enable-dso in the face of global bdb environment caching.
+    Justification:
+      It would be nice if --enable-dso worked.  Fairly isolated change.
+    Votes:
+      +1: rooneg, dlr, cmpilato
 
 Status of 1.4.1:
 ================
