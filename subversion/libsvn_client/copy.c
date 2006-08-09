@@ -762,8 +762,7 @@ repos_to_wc_copy(const char *src_url,
   /* Make sure the destination parent is a directory and produce a clear
      error message if it is not. */
   dst_parent = svn_path_dirname(dst_path, pool);
-  SVN_ERR(svn_io_check_path(svn_path_dirname(dst_path, pool),
-                            &dst_parent_kind, pool));
+  SVN_ERR(svn_io_check_path(dst_parent, &dst_parent_kind, pool));
   if (dst_parent_kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                              _("Path '%s' is not a directory"),
