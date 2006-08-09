@@ -230,6 +230,10 @@ def detect_meddling(sbox):
                                      None,
                                      [],
                                      'up',
+                                     '--username',
+                                     svntest.main.wc_author,
+                                     '--password',
+                                     svntest.main.wc_passwd,
                                      dest_sbox.wc_dir)
 
   # Commit some change to the destination, which should be detected by svnsync
@@ -240,6 +244,10 @@ def detect_meddling(sbox):
                                      [],
                                      'ci',
                                      '-m', 'msg',
+                                     '--username',
+                                     svntest.main.wc_author,
+                                     '--password',
+                                     svntest.main.wc_passwd,
                                      dest_sbox.wc_dir)
 
   run_sync(dest_sbox.repo_url,
