@@ -1187,8 +1187,9 @@ typedef enum svn_wc_schedule_t
  */
 typedef struct svn_wc_entry_t
 {
-  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
-     if you need to extend that as well. */
+  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup()
+     and alloc_entry() in libsvn_wc/entries.c, to see if you need to
+     extend one or both of them as well. */
 
   /* General Attributes */
 
@@ -1323,8 +1324,20 @@ typedef struct svn_wc_entry_t
    */
   const char *changelist;
 
-  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
-     if you need to extend that as well. */
+  /** The depth of this entry.
+   *
+   * ### It's a bit annoying that we only use this on this_dir
+   * ### entries, yet it will exist (with value svn_depth_infinity) on
+   * ### all entries.  Maybe some future extensibility would make this
+   * ### field meaningful on entries besides this_dir.
+   *
+   * @since New in 1.5.
+   */
+  svn_depth_t depth;
+
+  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup()
+     and alloc_entry() in libsvn_wc/entries.c, to see if you need to
+     extend one or both of them as well. */
 } svn_wc_entry_t;
 
 
@@ -1573,14 +1586,10 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
  * for getting the status of exactly one thing, and another for
  * getting the statuses of (potentially) multiple things.
  * 
- * The WebDAV concept of "depth" may be useful in understanding the
- * motivation behind this.  Suppose we're getting the status of
- * directory D.  The three depth levels would mean
- * 
- *    depth 0:         D itself (just the named directory)
- *    depth 1:         D and its immediate children (D + its entries)
- *    depth Infinity:  D and all its descendants (full recursion)
- * 
+ * The WebDAV concept of depth, as explained in the documentation for
+ * svn_depth_t, may be useful in understanding this.  Suppose we're
+ * getting the status of directory D:
+ *
  * To offer all three levels, we could have one unified function,
  * taking a `depth' parameter.  Unfortunately, because this function
  * would have to handle multiple return values as well as the single

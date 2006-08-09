@@ -199,6 +199,18 @@ enum svn_recurse_kind
   svn_recursive
 };
 
+/** The WebDAV concept of "depth".
+ * @since New in 1.5.
+ */
+typedef enum
+{
+  svn_depth_exclude  = -1, /* Exclude (remove, whatever) directory D. */
+  svn_depth_zero     =  0, /* Just the named directory D, no entries. */
+  svn_depth_one      =  1, /* D + immediate children (D and its entries) */
+  svn_depth_infinity =  2, /* D + all descendants (full recursion from D) */
+} svn_depth_t;
+
+
 /**
  * It is sometimes convenient to indicate which parts of an @c svn_dirent_t
  * object you are actually interested in, so that calculating and sending
