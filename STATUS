@@ -57,13 +57,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r19937, r19940, 20975, 21034
-    Bring svnsync and its tests up to what we've got in trunk.
-    Justification:
-      Minor tweaks, will improve ability to backport, and fixes svn:// tests.
-    Votes:
-      +1: rooneg, dlr
-
 Approved changes:
 
   * r20971, r20967, r20965, r20964, r20961, r20960, r20958, r20956
@@ -81,6 +74,13 @@ Approved changes:
       user confusion and embarrassment.
     Votes:
       +1: rooneg, cmpilato, dlr
+
+  * r19937, r19940, 20975, 21034
+    Bring svnsync and its tests up to what we've got in trunk.
+    Justification:
+      Minor tweaks, will improve ability to backport, and fixes svn:// tests.
+    Votes:
+      +1: rooneg, dlr, cmpilato
 
 
 Status of 1.4.1:
