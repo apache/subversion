@@ -18,16 +18,6 @@ Candidate changes:
       +1: maxb
       -1: cmpilato (this is a very odd place to do this.  dist.sh, perhaps?)
 
-  * r20276, r21028
-    Fixing an issue where non-recursive commit crashes/hangs svn (regression
-    compared to 1.3).
-    Justification:
-      Medium impact on code, but regression compared to 1.3. Since TortoiseSVN
-      uses -N exclusively I suspect this will impact the TSVN 1.4 release.
-    Votes:
-      +1: rooneg, nori, cmpilato
-      +0: lgo
-
   * r20833, r20836
     Provide named, separate debug information files for clients building
     against Subversion libraries.
