@@ -59,30 +59,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20971, r20967, r20965, r20964, r20961, r20960, r20958, r20956
-    Tons of bugfixes, UI and usages improvements, error detection and
-    reporting enhancements, and so on -- all in svnsync.
-    Notes:
-      Probably wanna grab the revisions which comprise sweeping code
-      formatting changes, too, for merge and maintenance simplicity
-      (r20963, r20962, r20959).  In fact, I think we basically want
-      -r20955:20967 of the trunk, here, plus r20971.  That contains all
-      -- and only -- these changes.
-    Justification:
-      Brand new code, admittedly getting a late start on testing outside
-      of original dev-testing, but needing these improvements to prevent
-      user confusion and embarrassment.
-    Votes:
-      +1: rooneg, cmpilato, dlr
-
-  * r19937, r19940, 20975, 21034
-    Bring svnsync and its tests up to what we've got in trunk.
-    Justification:
-      Minor tweaks, will improve ability to backport, and fixes svn:// tests.
-    Votes:
-      +1: rooneg, dlr, cmpilato
-
-
 Status of 1.4.1:
 ================
 

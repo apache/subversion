@@ -198,6 +198,28 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
   return out, err
 
 
+def run_and_verify_load(repo_dir, dump_file_content):
+  "Runs 'svnadmin load' and reports any errors."
+  expected_stderr = []
+  output, errput = \
+          main.run_command_stdin(
+    "%s load --force-uuid --quiet %s" % (main.svnadmin_binary, repo_dir),
+    expected_stderr, 1, dump_file_content)
+  if expected_stderr:
+    actions.compare_and_display_lines(
+      "Standard error output", "STDERR", expected_stderr, errput)
+
+
+def run_and_verify_dump(repo_dir):
+  "Runs 'svnadmin dump' and reports any errors, returning the dump content."
+  output, errput = main.run_svnadmin('dump', repo_dir)
+  if not output:
+    raise svntest.actions.SVNUnexpectedStdout("Missing stdout")
+  if not errput:
+    raise svntest.actions.SVNUnexpectedStderr("Missing stderr")
+
+  return output
+
 ######################################################################
 # Subversion Actions
 #
