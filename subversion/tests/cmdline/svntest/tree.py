@@ -431,7 +431,7 @@ def compare_trees(a, b,
   def display_nodes(a, b):
     'Display two nodes, expected and actual.'
     print "============================================================="
-    print "Expected", b.name, "and actual", a.name, "are different!"
+    print "Expected '%s' and actual '%s' are different!" % (b.name, a.name)
     print "============================================================="
     print "EXPECTED NODE TO BE:"
     print "============================================================="
