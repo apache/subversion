@@ -2754,8 +2754,7 @@ def merge_dir_branches(sbox):
 
 #----------------------------------------------------------------------
 
-# Helper for safe_property_merge() and property_merge_from_branch() --
-# a custom singleton handler.
+# A test helper function implementing the singleton_handler_a API.
 def detect_conflict_files(node, extra_files):
   """NODE has been discovered an extra file on disk.  Verify that it
   matches one of the regular expressions in the EXTRA_FILES list.  If
@@ -2769,6 +2768,7 @@ def detect_conflict_files(node, extra_files):
       break
   else:
     print "Found unexpected disk object:", node.name
+    node.pprint()
     raise svntest.tree.SVNTreeUnequal
 
 
