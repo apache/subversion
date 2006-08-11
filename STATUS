@@ -28,6 +28,13 @@ Candidate changes:
       +1: djh, rooneg
       +0: dlr, cmpilato
 
+  * r21037
+    Add missing APIs for adding a provider.
+    Justification:
+      Improves usability by only adding some methods.
+    Votes:
+      +1: nori
+
 Approved changes:
 
   * r21022
