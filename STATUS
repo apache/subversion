@@ -28,20 +28,6 @@ Candidate changes:
       +1: djh, rooneg
       +0: dlr, cmpilato
 
-  * r20883
-    Fix an l10n encoding bug: correctly encode an error message showing
-    invalid options passed to svn.
-    Justification:
-      Inability to display a correct error message due to an encoding issue
-      is not good and confuses users using locales with many multibyte
-      characters.  The change has low impact.
-    Notes:
-      An entry for CHANGES may be something like
-      "fixed: a wrongly-encoded error message on invalid options for svn 
-      (r20883)".
-    Votes:
-      +1: nori, rooneg
-
 Approved changes:
 
   * r21022
@@ -58,6 +44,20 @@ Approved changes:
       Low impact and allows javahl to build on VC Express.
     Votes:
       +1: djh, dlr, rooneg
+
+  * r20883
+    Fix an l10n encoding bug: correctly encode an error message showing
+    invalid options passed to svn.
+    Justification:
+      Inability to display a correct error message due to an encoding issue
+      is not good and confuses users using locales with many multibyte
+      characters.  The change has low impact.
+    Notes:
+      An entry for CHANGES may be something like
+      "fixed: a wrongly-encoded error message on invalid options for svn 
+      (r20883)".
+    Votes:
+      +1: nori, rooneg, djh
 
 
 Status of 1.4.1:
