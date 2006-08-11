@@ -40,7 +40,7 @@ Candidate changes:
       "fixed: a wrongly-encoded error message on invalid options for svn 
       (r20883)".
     Votes:
-      +1: nori
+      +1: nori, rooneg
 
   * r21022
     Fix a syntax error that prevents some Inno Setup versions from
