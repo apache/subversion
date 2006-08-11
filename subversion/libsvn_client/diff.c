@@ -1963,6 +1963,7 @@ update_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
       void *value;
       const char *path;
       apr_array_header_t *ranges, *rangelist;
+      int len;
 
       svn_pool_clear(subpool);
 
@@ -1979,7 +1980,7 @@ update_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
 
       /* ASSUMPTION: "target_wcpath" is always both a parent and
          prefix of "path". */
-      int len = strlen(target_wcpath);
+      len = strlen(target_wcpath);
       if (len < strlen(path))
         rel_path = apr_pstrcat(subpool, repos_rel_path, "/", path + len);
       else
