@@ -25,7 +25,7 @@ Candidate changes:
       Very low impact and silences hundreds of warnings about missing debug
       information when linking to Subversion libraries.
     Votes:
-      +1: djh
+      +1: djh, rooneg
       +0: dlr, cmpilato
 
   * r20883
@@ -42,13 +42,6 @@ Candidate changes:
     Votes:
       +1: nori
 
-  * r20886 (depends on r20833 group above)
-    Allow javahl to build with VC Express and fix its debug symbol files.
-    Justification:
-      Low impact and allows javahl to build on VC Express.
-    Votes:
-      +1: djh, dlr
-
   * r21022
     Fix a syntax error that prevents some Inno Setup versions from
     using the debug Component of the install script.
@@ -58,6 +51,14 @@ Candidate changes:
       +1: dlr
 
 Approved changes:
+
+  * r20886 (depends on r20833 group above)
+    Allow javahl to build with VC Express and fix its debug symbol files.
+    Justification:
+      Low impact and allows javahl to build on VC Express.
+    Votes:
+      +1: djh, dlr, rooneg
+
 
 Status of 1.4.1:
 ================
