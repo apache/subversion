@@ -29,7 +29,7 @@ Candidate changes:
       +0: dlr, cmpilato
 
   * r21037
-    Add missing APIs for adding a provider.
+    Add missing APIs for adding a provider to the SWIG/Ruby bindings.
     Justification:
       Improves usability by only adding some methods.
     Votes:
