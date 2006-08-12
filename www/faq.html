@@ -153,6 +153,8 @@ to FSFS or from FSFS to BDB?</a></li>
     corrupt?</a></li>
 <li><a href="#wc-out-of-date">I'm trying to commit, but Subversion says my
     working copy is out of date?</a></li>
+<li><a href="#obstructed-add">I've contributed a patch to a project and the patch added a new file.
+Now <tt>svn update</tt> does not work.</a></li>
 <li><a href="#unrecognized-url-error">I just built the distribution
     binary, and when I try to check out Subversion, I get an error
     about an "Unrecognized URL scheme."  What's up with that?</a></li>
@@ -2406,6 +2408,31 @@ working copy is out of date?</h3>
     Again, 'svn update' is the way to fix this.</p>
 </li>
 </ol>
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="obstructed-add" title="obstructed-add">
+<h3>I've contributed a patch to a project and the patch added a new file.
+Now <tt>svn update</tt> does not work.</h3>
+
+<p>In order to include your new file in the patch you likely ran the <tt>svn add</tt>
+command so that the <tt>svn diff</tt> command would include the new file in the patch.
+If your patch is committed to the code base and you run an <tt>svn update</tt>, then
+you might receive an error message of: "svn: Failed to add file 'my.new.file':
+object of the same name already exists".</p>
+
+<p>The reason that you recieved this error is that you still have your local copy of
+the file in your working copy.  The steps to correct this problem are:</p>
+
+<ol>
+	<li>Run the <tt>svn revert</tt> command to remove the scheduled add within
+	Subversion.</li>
+	<li>Delete the file or move it to a location outside your working copy.</li>
+	<li>Now you should be able to run the <tt>svn update</tt> command.</li>
+</ol>
+
+<p>You might want to compare the new file from the repository with your original file.</p>
 </div>
 
 <![CDATA[-----------------------------------------------------------]]>
