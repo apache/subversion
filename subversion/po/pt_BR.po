@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-05 21:27-0300\n"
+"POT-Creation-Date: 2006-08-13 10:57-0300\n"
 "PO-Revision-Date: 2004-07-26 19:19-300\n"
 "Last-Translator: dev@subversion.tigris.org\n"
 "Language-Team: Brazilian Portuguese <dev@subversion.tigris.org>\n"
@@ -82,8 +82,8 @@ msgstr "Erro de framing no protocolo pipe"
 msgid "Read error in pipe"
 msgstr "Erro de leitura em pipe"
 
-#: include/svn_error_codes.h:231 libsvn_subr/cmdline.c:287
-#: libsvn_subr/cmdline.c:304 svn/util.c:716
+#: include/svn_error_codes.h:231 libsvn_subr/cmdline.c:291
+#: libsvn_subr/cmdline.c:308 svn/util.c:716
 #, c-format
 msgid "Write error"
 msgstr "Erro de escrita"
@@ -970,7 +970,7 @@ msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "item de commit '%s' possui flag de cópia mas não copyfrom URL"
 
 #: libsvn_client/commit_util.c:704 libsvn_client/commit_util.c:835
-#: libsvn_client/copy.c:1002 libsvn_client/delete.c:67
+#: libsvn_client/copy.c:1001 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1410 libsvn_client/diff.c:2140
 #: libsvn_client/diff.c:2735 libsvn_client/diff.c:2862
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
@@ -1034,7 +1034,7 @@ msgstr ""
 msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "item de commit '%s' possui flag de cópia mas uma revisão inválida"
 
-#: libsvn_client/copy.c:95 libsvn_client/copy.c:769
+#: libsvn_client/copy.c:95 libsvn_client/copy.c:768
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "Caminho '%s' não é um diretório"
@@ -1072,39 +1072,39 @@ msgstr "Caminho '%s' não encontrado na revisão %ld"
 msgid "Path '%s' not found in head revision"
 msgstr "Caminho '%s' não encontrado na revisão head"
 
-#: libsvn_client/copy.c:787
+#: libsvn_client/copy.c:786
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr ""
 "Entrada para '%s' existe (embora o arquivo de trabalho esteja faltando)"
 
-#: libsvn_client/copy.c:878
+#: libsvn_client/copy.c:877
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr ""
 "URL fonte '%s' é de um repositório estrangeiro; deixando-o como uma cópia de "
 "trabalho disjunta"
 
-#: libsvn_client/copy.c:957
+#: libsvn_client/copy.c:956
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "Não é possível copiar caimho '%s' para seu próprio filho '%s'"
 
-#: libsvn_client/copy.c:968
+#: libsvn_client/copy.c:967
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "Não se pode mover '%s' para si mesmo"
 
-#: libsvn_client/copy.c:976
+#: libsvn_client/copy.c:975
 msgid "No support for repos <--> working copy moves"
 msgstr "Sem suporte para mudanças repositório <--> cópia de trabalho"
 
-#: libsvn_client/copy.c:1008
+#: libsvn_client/copy.c:1007
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' não parece ter uma URL associada consigo"
 
-#: libsvn_client/copy.c:1205 svn/move-cmd.c:72
+#: libsvn_client/copy.c:1204 svn/move-cmd.c:72
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr ""
 "Não é possível especificar revisões (exceto HEAD) com operações de mudança"
@@ -1280,7 +1280,7 @@ msgid "'%s' is not locked"
 msgstr "'%s' não está travado"
 
 #: libsvn_client/locking_commands.c:409 libsvn_fs/fs-loader.c:895
-#: libsvn_ra/ra_loader.c:636
+#: libsvn_ra/ra_loader.c:625
 msgid "Lock comment has illegal characters"
 msgstr "Comentário de trava possui caracteres ilegais"
 
@@ -1494,8 +1494,8 @@ msgstr "%s\\ Sem nova-linha ao fim do arquivo%s"
 msgid "Failed to delete mmap '%s'"
 msgstr "Falhou ao apagar mmap '%s'"
 
-#: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:169
-#: libsvn_ra/ra_loader.c:182
+#: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:158
+#: libsvn_ra/ra_loader.c:171
 #, c-format
 msgid "'%s' does not define '%s()'"
 msgstr "'%s' não define '%s()'"
@@ -2441,28 +2441,28 @@ msgstr "caminho '%s' não existe na revisão HEAD"
 msgid "Lock failed: newer version of '%s' exists"
 msgstr "Trava falhou: nova versão de '%s' existe"
 
-#: libsvn_ra/ra_loader.c:224
+#: libsvn_ra/ra_loader.c:213
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr ""
 "Versão de RA não bate para '%s': encontrado %d.%d.%d%s, esperado %d.%d.%d%s"
 
-#: libsvn_ra/ra_loader.c:296
+#: libsvn_ra/ra_loader.c:285
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "Esquema URL não reconhecido para '%s'"
 
-#: libsvn_ra/ra_loader.c:347
+#: libsvn_ra/ra_loader.c:336
 #, c-format
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr "'%s' não está no mesmo repositório de '%s'"
 
-#: libsvn_ra/ra_loader.c:718
+#: libsvn_ra/ra_loader.c:707
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - trata esquema '%s'\n"
 
-#: libsvn_ra/ra_loader.c:804
+#: libsvn_ra/ra_loader.c:793
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "Esquema URL não reconhecido '%s'"
@@ -3673,7 +3673,7 @@ msgstr "Revisão final inválida %ld"
 msgid "Unreadable path encountered; access denied"
 msgstr "Caminho ilegível encontrado; acesso negado"
 
-#: libsvn_subr/cmdline.c:477
+#: libsvn_subr/cmdline.c:481
 #, c-format
 msgid "Error initializing command line arguments"
 msgstr "Erro inicializando argumentos de linha de comando"
@@ -3724,6 +3724,16 @@ msgstr "Não é possível calcular a data da requisição"
 #, c-format
 msgid "Can't expand time"
 msgstr "Não foi possível expandir a hora"
+
+#: libsvn_subr/dso.c:70
+#, c-format
+msgid "Can't grab DSO mutex"
+msgstr "Não foi possível obter mutex DSO"
+
+#: libsvn_subr/dso.c:84 libsvn_subr/dso.c:106 libsvn_subr/dso.c:121
+#, c-format
+msgid "Can't ungrab DSO mutex"
+msgstr "Não foi possível disponibilizar mutex DSO"
 
 #: libsvn_subr/error.c:326
 msgid "Can't recode error string from APR"
@@ -5695,14 +5705,18 @@ msgid ""
 msgstr ""
 "Padrão: '-u'. Quando Subversion está invocando um programa diff externo,\n"
 "                             ARG é simplesmente passado ao programa. Mas\n"
-"                             quando Subversion está usando sua implementação\n"
+"                             quando Subversion está usando sua "
+"implementação\n"
 "                             interna de diff, ou quando Subversion está\n"
-"                             mostrando anotações blame, ARG pode ser quaquer\n"
+"                             mostrando anotações blame, ARG pode ser "
+"quaquer\n"
 "                             um dos seguintes:\n"
 "                                -u (--unified):\n"
-"                                   Mostra três linhas do contexto unificado.\n"
+"                                   Mostra três linhas do contexto "
+"unificado.\n"
 "                                -b (--ignore-space-change):\n"
-"                                   Ignora mudanças na quantidade de espaços.\n"
+"                                   Ignora mudanças na quantidade de "
+"espaços.\n"
 "                                -w (--ignore-all-space):\n"
 "                                   Ignora todos espaços em branco.\n"
 "                                --ignore-eol-style:\n"
@@ -5908,8 +5922,8 @@ msgstr ""
 "Extrai um cópia de trabalho de um repositório.\n"
 "uso: checkout URL[@REV]... [CAMINHO]\n"
 "\n"
-"  Se especificado, REV determina em qual revisão a URL é primeiro "
-"  procurada.\n"
+"  Se especificado, REV determina em qual revisão a URL é primeiro   "
+"procurada.\n"
 "\n"
 "  Se CAMINHO é omitido, o nome base da URL será usado como destino.\n"
 "  Se múltiplas URLs são fornecidas cada uma será extraída em um sub-\n"
@@ -5925,7 +5939,8 @@ msgstr ""
 "  obstrução pode também causar obstrução e se tornar versionado.  Para\n"
 "  arquivos, qualquer diferença de conteúdo entre a obstrução e o\n"
 "  repositório são tratados como modificações locais na cópia de trabalho.\n"
-"  Todas as propriedades de um repositório são aplicadas ao caminho obstruído.\n"
+"  Todas as propriedades de um repositório são aplicadas ao caminho "
+"obstruído.\n"
 
 #: svn/main.c:288
 msgid ""
@@ -6811,7 +6826,8 @@ msgstr ""
 "  obstrução pode também causar obstrução e se tornar versionado.  Para\n"
 "  arquivos, qualquer diferença de conteúdo entre a obstrução e o\n"
 "  repositório são tratados como modificações locais na cópia de trabalho.\n"
-"  Todas as propriedades de um repositório são aplicadas ao caminho obstruído.\n"
+"  Todas as propriedades de um repositório são aplicadas ao caminho "
+"obstruído.\n"
 
 #: svn/main.c:772
 msgid ""
@@ -6893,7 +6909,8 @@ msgstr ""
 "  obstrução pode também causar obstrução e se tornar versionado.  Para\n"
 "  arquivos, qualquer diferença de conteúdo entre a obstrução e o\n"
 "  repositório são tratados como modificações locais na cópia de trabalho.\n"
-"  Todas as propriedades de um repositório são aplicadas ao caminho obstruído.\n"
+"  Todas as propriedades de um repositório são aplicadas ao caminho "
+"obstruído.\n"
 "  Caminhos obstruídos são reportados na primeira coluna com o código 'E'.\n"
 
 #: svn/main.c:856 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:168
@@ -8701,9 +8718,9 @@ msgid ""
 "destination HEAD (%ld) are inconsistent; have you committed to the "
 "destination without using svnsync?"
 msgstr ""
-"Revisão sendo atualmente copiada (%ld), última versão com merge (%ld), "
-"e destino HEAD (%ld) são inconsistentes; você fez commit para o destino "
-"sem usar svnsync?"
+"Revisão sendo atualmente copiada (%ld), última versão com merge (%ld), e "
+"destino HEAD (%ld) são inconsistentes; você fez commit para o destino sem "
+"usar svnsync?"
 
 #: svnsync/main.c:1008
 #, c-format
@@ -8711,8 +8728,8 @@ msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
 "committed to the destination without using svnsync?"
 msgstr ""
-"Destino HEAD (%ld) não é a última revisão com merge (%ld); você fez "
-"commit para o destino sem usar svnsync?"
+"Destino HEAD (%ld) não é a última revisão com merge (%ld); você fez commit "
+"para o destino sem usar svnsync?"
 
 #: svnsync/main.c:1082
 #, c-format
@@ -8839,25 +8856,28 @@ msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' não versionado, e não exportado\n"
 
 #~ msgid ""
-#~ "You must supply a valid revision number; try 'svnsync help' for more info"
+#~ "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+#~ "               svndumpfilter --version\n"
+#~ "Type 'svndumpfilter help <subcommand>' for help on a specific "
+#~ "subcommand.\n"
+#~ "\n"
+#~ "Available subcommands:\n"
 #~ msgstr ""
-#~ "Você deve fornecer um número de revisão válido; tente 'svnsync help' para "
-#~ "mais informações"
+#~ "uso geral: svndumpfilter SUB-COMANDO [ARGS & OPÇÕES ...]\n"
+#~ "           svndumpfilter --version\n"
+#~ "Digite 'svndumpfilter help <sub-comando>' para ajuda em um sub-comando "
+#~ "específico.\n"
+#~ "\n"
+#~ "Sub-comandos disponíveis:\n"
 
-#~ msgid ""
-#~ "Currently copying rev %ld in source is less than latest rev in "
-#~ "destination (%ld)"
-#~ msgstr ""
-#~ "Revisão sendo copiada %ld de fonte é menos que a mais nova revisão de "
-#~ "destino (%ld)"
+#~ msgid "print client version info"
+#~ msgstr "mostra informação de versão do cliente"
 
-#~ msgid "You must supply a source URL; try 'svnsync help' for more info"
-#~ msgstr ""
-#~ "Você deve fornecer uma URL fonte; tente 'svnsync help' para mais "
-#~ "informações"
+#~ msgid "Committing rev %ld\n"
+#~ msgstr "Executando commit de rev %ld\n"
 
-#~ msgid "The url to synchronize from"
-#~ msgstr "A url para se sincronizar de"
+#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
+#~ msgstr "passa ARG para --diff-cmd como opções (padrão: '-u')"
 
 #~ msgid ""
 #~ "Check out a working copy from a repository.\n"
@@ -8882,26 +8902,23 @@ msgstr "'%s' não versionado, e não exportado\n"
 #~ "diretório\n"
 #~ "  de CAMINHO, com o nome do sub-diretório sendo o nome base da URL.\n"
 
-#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
-#~ msgstr "passa ARG para --diff-cmd como opções (padrão: '-u')"
+#~ msgid "The url to synchronize from"
+#~ msgstr "A url para se sincronizar de"
 
-#~ msgid "Committing rev %ld\n"
-#~ msgstr "Executando commit de rev %ld\n"
-
-#~ msgid "print client version info"
-#~ msgstr "mostra informação de versão do cliente"
+#~ msgid "You must supply a source URL; try 'svnsync help' for more info"
+#~ msgstr ""
+#~ "Você deve fornecer uma URL fonte; tente 'svnsync help' para mais "
+#~ "informações"
 
 #~ msgid ""
-#~ "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-#~ "               svndumpfilter --version\n"
-#~ "Type 'svndumpfilter help <subcommand>' for help on a specific "
-#~ "subcommand.\n"
-#~ "\n"
-#~ "Available subcommands:\n"
+#~ "Currently copying rev %ld in source is less than latest rev in "
+#~ "destination (%ld)"
 #~ msgstr ""
-#~ "uso geral: svndumpfilter SUB-COMANDO [ARGS & OPÇÕES ...]\n"
-#~ "           svndumpfilter --version\n"
-#~ "Digite 'svndumpfilter help <sub-comando>' para ajuda em um sub-comando "
-#~ "específico.\n"
-#~ "\n"
-#~ "Sub-comandos disponíveis:\n"
+#~ "Revisão sendo copiada %ld de fonte é menos que a mais nova revisão de "
+#~ "destino (%ld)"
+
+#~ msgid ""
+#~ "You must supply a valid revision number; try 'svnsync help' for more info"
+#~ msgstr ""
+#~ "Você deve fornecer um número de revisão válido; tente 'svnsync help' para "
+#~ "mais informações"
