@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-13 20:49+0200\n"
-"PO-Revision-Date: 2006-08-13 20:01+0200\n"
+"PO-Revision-Date: 2006-08-13 20:54+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3753,14 +3753,14 @@ msgid "Can't expand time"
 msgstr "Kan ikke ekspandere tid"
 
 #: libsvn_subr/dso.c:70
-#, fuzzy, c-format
+#, c-format
 msgid "Can't grab DSO mutex"
-msgstr "Kan ikke overta filsystem-mutex"
+msgstr "Kan ikke overta DSO-mutex"
 
 #: libsvn_subr/dso.c:84 libsvn_subr/dso.c:106 libsvn_subr/dso.c:121
-#, fuzzy, c-format
+#, c-format
 msgid "Can't ungrab DSO mutex"
-msgstr "Kan ikke slippe filsystem-mutex"
+msgstr "Kan ikke slippe DSO-mutex"
 
 #: libsvn_subr/error.c:326
 msgid "Can't recode error string from APR"
@@ -8870,50 +8870,3 @@ msgstr "eksportert%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
-
-#~ msgid ""
-#~ "Currently copying rev %ld in source is less than latest rev in "
-#~ "destination (%ld)"
-#~ msgstr ""
-#~ "Kilderevisjonen %ld som kopieres er mindre enn den seneste revisjonen i "
-#~ "målet (%ld)"
-
-#~ msgid "Committing rev %ld\n"
-#~ msgstr "Legger inn revisjon %ld\n"
-
-#~ msgid "The url to synchronize from"
-#~ msgstr "URL som det skal synkroniseres fra"
-
-#~ msgid ""
-#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-#~ "Initialize a destination repository.\n"
-#~ msgstr ""
-#~ "bruk: svnsync initialize MÅLURL --source-url KILDEURL\n"
-#~ "Initialiser et måldepot.\n"
-
-#~ msgid ""
-#~ "Check out a working copy from a repository.\n"
-#~ "usage: checkout URL[@REV]... [PATH]\n"
-#~ "\n"
-#~ "  If specified, REV determines in which revision the URL is first\n"
-#~ "  looked up.\n"
-#~ "\n"
-#~ "  If PATH is omitted, the basename of the URL will be used as\n"
-#~ "  the destination. If multiple URLs are given each will be checked\n"
-#~ "  out into a sub-directory of PATH, with the name of the sub-directory\n"
-#~ "  being the basename of the URL.\n"
-#~ msgstr ""
-#~ "Hent ut en arbeidskopi fra et depot.\n"
-#~ "bruk: checkout URL[@REV]... [STI]\n"
-#~ "\n"
-#~ "  Hvis REV er spesifisert, bestemmer dette revisjonen URLen først blir\n"
-#~ "  lett opp.\n"
-#~ "\n"
-#~ "  Nettadressens basenavn blir brukt som målkatalog hvis STI er utelatt.\n"
-#~ "  Hvis flere nettadresser oppgis, blir hver nettadresse hentet ut i en "
-#~ "under-\n"
-#~ "  katalog under STI hvor underkatalogen får samme navn som nettadressens\n"
-#~ "  basenavn.\n"
-
-#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
-#~ msgstr "levér ARG til --diff-cmd som valg (standard: «-u»)"
