@@ -59,7 +59,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-04 18:38+0200\n"
+"POT-Creation-Date: 2006-08-13 20:49+0200\n"
 "PO-Revision-Date: 2006-08-13 20:01+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -135,8 +135,8 @@ msgstr "Rammefeil i rørprotokollen"
 msgid "Read error in pipe"
 msgstr "Lesefeil i rør"
 
-#: include/svn_error_codes.h:231 libsvn_subr/cmdline.c:287
-#: libsvn_subr/cmdline.c:304 svn/util.c:716
+#: include/svn_error_codes.h:231 libsvn_subr/cmdline.c:291
+#: libsvn_subr/cmdline.c:308 svn/util.c:716
 #, c-format
 msgid "Write error"
 msgstr "Feil ved skriving"
@@ -1024,7 +1024,7 @@ msgid "Commit item '%s' has copy flag but no copyfrom URL"
 msgstr "Objekt «%s» for innsending har kopimerke satt, men ingen copyfrom-URL"
 
 #: libsvn_client/commit_util.c:704 libsvn_client/commit_util.c:835
-#: libsvn_client/copy.c:1002 libsvn_client/delete.c:67
+#: libsvn_client/copy.c:1001 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1410 libsvn_client/diff.c:2140
 #: libsvn_client/diff.c:2735 libsvn_client/diff.c:2862
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
@@ -1086,7 +1086,7 @@ msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr ""
 "Objekt «%s» for innsending har kopimerke satt, men har en ugyldig revisjon"
 
-#: libsvn_client/copy.c:95 libsvn_client/copy.c:769
+#: libsvn_client/copy.c:95 libsvn_client/copy.c:768
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "Stien «%s» er ikke en katalog"
@@ -1123,37 +1123,37 @@ msgstr "Filstien «%s» ble ikke funnet i revisjon %ld"
 msgid "Path '%s' not found in head revision"
 msgstr "Filstien «%s» ble ikke funnet i hode-revisjonen"
 
-#: libsvn_client/copy.c:787
+#: libsvn_client/copy.c:786
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "Innslag for «%s» finnes (men arbeidskopi-filen mangler)"
 
-#: libsvn_client/copy.c:878
+#: libsvn_client/copy.c:877
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr ""
 "Kilde-URL «%s» er fra et fremmed depot; beholder det som adskilt arbeidskopi"
 
-#: libsvn_client/copy.c:957
+#: libsvn_client/copy.c:956
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "Kan ikke kopiere filsti «%s» inn i dens eget barn «%s»"
 
-#: libsvn_client/copy.c:968
+#: libsvn_client/copy.c:967
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "Kan ikke flytte «%s» inn i seg selv"
 
-#: libsvn_client/copy.c:976
+#: libsvn_client/copy.c:975
 msgid "No support for repos <--> working copy moves"
 msgstr "Ingen støtte for flytting mellom et depot og en arbeidskopi"
 
-#: libsvn_client/copy.c:1008
+#: libsvn_client/copy.c:1007
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "«%s» ser ikke ut til å ha en URL tilknyttet seg"
 
-#: libsvn_client/copy.c:1205 svn/move-cmd.c:72
+#: libsvn_client/copy.c:1204 svn/move-cmd.c:72
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "Kan ikke angi revisjoner (unntatt HEAD) ved flytteoperasjoner"
 
@@ -1326,7 +1326,7 @@ msgid "'%s' is not locked"
 msgstr "«%s» er ikke låst"
 
 #: libsvn_client/locking_commands.c:409 libsvn_fs/fs-loader.c:895
-#: libsvn_ra/ra_loader.c:636
+#: libsvn_ra/ra_loader.c:625
 msgid "Lock comment has illegal characters"
 msgstr "Låsekommentaren inneholder ulovlige tegn"
 
@@ -1541,8 +1541,8 @@ msgstr "%s\\ Ingen linjeslutt på slutten av filen%s"
 msgid "Failed to delete mmap '%s'"
 msgstr "Klarte ikke å slette mmap «%s»"
 
-#: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:169
-#: libsvn_ra/ra_loader.c:182
+#: libsvn_fs/fs-loader.c:105 libsvn_ra/ra_loader.c:158
+#: libsvn_ra/ra_loader.c:171
 #, c-format
 msgid "'%s' does not define '%s()'"
 msgstr "«%s» definerer ikke «%s()»"
@@ -2465,28 +2465,28 @@ msgstr "Stien «%s» finnes ikke i HEAD-revisjonen"
 msgid "Lock failed: newer version of '%s' exists"
 msgstr "Låsing feilet: En nyere versjon av «%s» finnes"
 
-#: libsvn_ra/ra_loader.c:224
+#: libsvn_ra/ra_loader.c:213
 #, c-format
 msgid "Mismatched RA version for '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
 msgstr ""
 "Usamsvarende RA-versjon for «%s»: Fant %d.%d.%d%s, forventet %d.%d.%d%s"
 
-#: libsvn_ra/ra_loader.c:296
+#: libsvn_ra/ra_loader.c:285
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
 msgstr "Ukjent URL-skjema for «%s»"
 
-#: libsvn_ra/ra_loader.c:347
+#: libsvn_ra/ra_loader.c:336
 #, c-format
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr "«%s» er ikke det samme depotet som «%s»"
 
-#: libsvn_ra/ra_loader.c:718
+#: libsvn_ra/ra_loader.c:707
 #, c-format
 msgid "  - handles '%s' scheme\n"
 msgstr "  - håndterer skjemaet «%s»\n"
 
-#: libsvn_ra/ra_loader.c:804
+#: libsvn_ra/ra_loader.c:793
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
 msgstr "Adresseskjemaet «%s» er ukjent"
@@ -3700,7 +3700,7 @@ msgstr "Ugyldig sluttrevisjon %ld"
 msgid "Unreadable path encountered; access denied"
 msgstr "Uleselig sti funnet; tilgang nektes"
 
-#: libsvn_subr/cmdline.c:477
+#: libsvn_subr/cmdline.c:481
 #, c-format
 msgid "Error initializing command line arguments"
 msgstr "Feil under initialisering av kommandolinjeargumenter"
@@ -3751,6 +3751,16 @@ msgstr "Kan ikke beregne forespurt dato"
 #, c-format
 msgid "Can't expand time"
 msgstr "Kan ikke ekspandere tid"
+
+#: libsvn_subr/dso.c:70
+#, fuzzy, c-format
+msgid "Can't grab DSO mutex"
+msgstr "Kan ikke overta filsystem-mutex"
+
+#: libsvn_subr/dso.c:84 libsvn_subr/dso.c:106 libsvn_subr/dso.c:121
+#, fuzzy, c-format
+msgid "Can't ungrab DSO mutex"
+msgstr "Kan ikke slippe filsystem-mutex"
 
 #: libsvn_subr/error.c:326
 msgid "Can't recode error string from APR"
@@ -4530,8 +4540,8 @@ msgid ""
 "Can't replace '%s' with a node of a differing type; the deletion must be "
 "committed and the parent updated before adding '%s'"
 msgstr ""
-"Kan ikke erstatte «%s» med en annen nodetype; slettingen må sendes inn "
-"og forelderen må oppdateres før «%s» legges til"
+"Kan ikke erstatte «%s» med en annen nodetype; slettingen må sendes inn og "
+"forelderen må oppdateres før «%s» legges til"
 
 #: libsvn_wc/adm_ops.c:1145
 #, c-format
@@ -5173,8 +5183,8 @@ msgid ""
 "Failed to forcibly add directory '%s': a versioned directory of the same "
 "name already exists"
 msgstr ""
-"Klarte ikke å legge til katalogen «%s» med makt: En versjonert katalog med samme "
-"navn finnes allerede"
+"Klarte ikke å legge til katalogen «%s» med makt: En versjonert katalog med "
+"samme navn finnes allerede"
 
 #: libsvn_wc/update_editor.c:1121
 #, c-format
@@ -5226,8 +5236,8 @@ msgstr ""
 msgid ""
 "Failed to add file '%s': a non-file object of the same name already exists"
 msgstr ""
-"Klarte ikke å legge til filen «%s»: Et objekt som ikke er en fil finnes allerede "
-"med det samme navnet"
+"Klarte ikke å legge til filen «%s»: Et objekt som ikke er en fil finnes "
+"allerede med det samme navnet"
 
 #: libsvn_wc/update_editor.c:1545
 #, c-format
@@ -5722,12 +5732,14 @@ msgid ""
 "                                   Ignore changes in EOL style"
 msgstr ""
 "Standardverdi: «-u». Når Subversion kjører et ekstern diff-program,\n"
-"                             kjøres dette programmet med parametrene ARG."
-"                             Men når Subversion bruker den interne diff-\n"
+"                             kjøres dette programmet med parametrene "
+"ARG.                             Men når Subversion bruker den interne "
+"diff-\n"
 "                             implementasjonen, eller når Subversion viser\n"
 "                             «blame»-informasjon, kan ARG være følgende:\n"
 "                                -u (--unified):\n"
-"                                   Vis tre linjer med omkringliggende tekst.\n"
+"                                   Vis tre linjer med omkringliggende "
+"tekst.\n"
 "                                -b (--ignore-space-change):\n"
 "                                   Ignorer forandringer i antall blanktegn.\n"
 "                                -w (--ignore-all-space):\n"
@@ -5945,14 +5957,16 @@ msgstr ""
 "  lett opp.\n"
 "\n"
 "  Nettadressens basenavn blir brukt som målkatalog hvis STI utelates.\n"
-"  Hvis flere nettadresser oppgis, blir hver nettadresse hentet ut i en under-\n"
+"  Hvis flere nettadresser oppgis, blir hver nettadresse hentet ut i en "
+"under-\n"
 "  katalog under STI hvor underkatalogen får samme navn som nettadressens\n"
 "  basenavn.\n"
 "\n"
 "Hvis --force brukes, vil uversjonerte stier som ligger i veien i\n"
 "målkatalogen ikke føre til at uthentingen automatisk vil feile. Hvis stien\n"
 "som ligger i veien er av samme type (fil eller katalog) som den tilsvarende\n"
-"stien i depotet vil den bli versjonert, men innholdet vil ikke bli forandret.\n"
+"stien i depotet vil den bli versjonert, men innholdet vil ikke bli "
+"forandret.\n"
 "Dette betyr at underelementene i en katalog som ligger i veien også kan\n"
 "sperre for elementer og dermed bli versjonert. For filer vil forandringer i\n"
 "innhold mellom depotet og elementet som sperrer bli behandlet som lokale\n"
@@ -6820,13 +6834,20 @@ msgstr ""
 "     en plan- eller tjenernavnsendring), men arbeidskopien din\n"
 "     fortsatt gjenspeiler samme katalog i det samme depotet.\n"
 "\n"
-"Hvis --force brukes, vil uversjonerte stier som ligger i veien i arbeidskopien\n"
-"ikke føre til at oppdateringen automatisk vil feile. Hvis stien som ligger i\n"
-"veien er av samme type (fil eller katalog) som den tilsvarende stien i depotet\n"
-"vil den bli versjonert, men innholdet vil ikke bli forandret. Dette betyr at\n"
-"underelementene i en katalog som ligger i veien også kan sperre for elementer\n"
-"og dermed bli versjonert. For filer vil forandringer i innhold mellom depotet\n"
-"og elementet som sperrer bli behandlet som lokale forandringer i arbeidskopien.\n"
+"Hvis --force brukes, vil uversjonerte stier som ligger i veien i "
+"arbeidskopien\n"
+"ikke føre til at oppdateringen automatisk vil feile. Hvis stien som ligger "
+"i\n"
+"veien er av samme type (fil eller katalog) som den tilsvarende stien i "
+"depotet\n"
+"vil den bli versjonert, men innholdet vil ikke bli forandret. Dette betyr "
+"at\n"
+"underelementene i en katalog som ligger i veien også kan sperre for "
+"elementer\n"
+"og dermed bli versjonert. For filer vil forandringer i innhold mellom "
+"depotet\n"
+"og elementet som sperrer bli behandlet som lokale forandringer i "
+"arbeidskopien.\n"
 "Alle egenskaper fra depotet blir lagt til stien som sperrer.\n"
 
 #: svn/main.c:772
@@ -6897,13 +6918,20 @@ msgstr ""
 "  En «B» i den tredje kolonnen indikerer at låsen for filen er blitt\n"
 "  brutt eller stjålet.\n"
 "\n"
-"Hvis --force brukes, vil uversjonerte stier som ligger i veien i arbeidskopien\n"
-"ikke føre til at oppdateringen automatisk vil feile. Hvis stien som ligger i\n"
-"veien er av samme type (fil eller katalog) som den tilsvarende stien i depotet\n"
-"vil den bli versjonert, men innholdet vil ikke bli forandret. Dette betyr at\n"
-"underelementene i en katalog som ligger i veien også kan sperre for elementer\n"
-"og dermed bli versjonert. For filer vil forandringer i innhold mellom depotet\n"
-"og elementet som sperrer bli behandlet som lokale forandringer i arbeidskopien.\n"
+"Hvis --force brukes, vil uversjonerte stier som ligger i veien i "
+"arbeidskopien\n"
+"ikke føre til at oppdateringen automatisk vil feile. Hvis stien som ligger "
+"i\n"
+"veien er av samme type (fil eller katalog) som den tilsvarende stien i "
+"depotet\n"
+"vil den bli versjonert, men innholdet vil ikke bli forandret. Dette betyr "
+"at\n"
+"underelementene i en katalog som ligger i veien også kan sperre for "
+"elementer\n"
+"og dermed bli versjonert. For filer vil forandringer i innhold mellom "
+"depotet\n"
+"og elementet som sperrer bli behandlet som lokale forandringer i "
+"arbeidskopien.\n"
 "Alle egenskaper fra depotet blir lagt til stien som sperrer. Stier som\n"
 "allerede eksisterte merkes med en «E» i den første kolonnen.\n"
 
@@ -8608,7 +8636,8 @@ msgstr ""
 "Mål-URLen må peke til roten av et depot som ikke inneholder noen innlagte\n"
 "revisjoner. Måldepotet må tillate forandringer i egenskaper.\n"
 "\n"
-"Du skal ikke legge inn revisjoner eller gjøre forandringer i måldepotet på noen\n"
+"Du skal ikke legge inn revisjoner eller gjøre forandringer i måldepotet på "
+"noen\n"
 "annen måte enn via «svnsync». Med andre ord, måldepotet skal være et\n"
 "skrivebeskyttet speil av kildepotet.\n"
 
@@ -8687,8 +8716,7 @@ msgstr "Filstien «%s» er ikke en URL"
 #: svnsync/main.c:858
 #, c-format
 msgid "Committed revision %ld.\n"
-msgstr ""
-"La inn revisjon %ld.\n"
+msgstr "La inn revisjon %ld.\n"
 
 #: svnsync/main.c:895
 msgid "Destination repository has not been initialized"
@@ -8706,9 +8734,9 @@ msgid ""
 "destination HEAD (%ld) are inconsistent; have you committed to the "
 "destination without using svnsync?"
 msgstr ""
-"Revisjonen som for øyeblikket blir kopiert (%ld), siste flettede revisjon (%ld) "
-"og HEAD for måldepotet (%ld) samsvarer ikke. Har du foretatt innlegginger i "
-"måldepotet uten å bruke svnsync?"
+"Revisjonen som for øyeblikket blir kopiert (%ld), siste flettede revisjon (%"
+"ld) og HEAD for måldepotet (%ld) samsvarer ikke. Har du foretatt "
+"innlegginger i måldepotet uten å bruke svnsync?"
 
 #: svnsync/main.c:1008
 #, c-format
@@ -8716,8 +8744,8 @@ msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
 "committed to the destination without using svnsync?"
 msgstr ""
-"HEAD i måldepotet (%ld) er ikke den siste flettede revisjonen (%ld). "
-"Har du foretatt innlegginger i måldepotet uten å bruke svnsync?"
+"HEAD i måldepotet (%ld) er ikke den siste flettede revisjonen (%ld). Har du "
+"foretatt innlegginger i måldepotet uten å bruke svnsync?"
 
 #: svnsync/main.c:1082
 #, c-format
@@ -8843,8 +8871,25 @@ msgstr "eksportert%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
 
-#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
-#~ msgstr "levér ARG til --diff-cmd som valg (standard: «-u»)"
+#~ msgid ""
+#~ "Currently copying rev %ld in source is less than latest rev in "
+#~ "destination (%ld)"
+#~ msgstr ""
+#~ "Kilderevisjonen %ld som kopieres er mindre enn den seneste revisjonen i "
+#~ "målet (%ld)"
+
+#~ msgid "Committing rev %ld\n"
+#~ msgstr "Legger inn revisjon %ld\n"
+
+#~ msgid "The url to synchronize from"
+#~ msgstr "URL som det skal synkroniseres fra"
+
+#~ msgid ""
+#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
+#~ "Initialize a destination repository.\n"
+#~ msgstr ""
+#~ "bruk: svnsync initialize MÅLURL --source-url KILDEURL\n"
+#~ "Initialiser et måldepot.\n"
 
 #~ msgid ""
 #~ "Check out a working copy from a repository.\n"
@@ -8870,22 +8915,5 @@ msgstr "«%s» er verken versjonert eller eksportert\n"
 #~ "  katalog under STI hvor underkatalogen får samme navn som nettadressens\n"
 #~ "  basenavn.\n"
 
-#~ msgid ""
-#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-#~ "Initialize a destination repository.\n"
-#~ msgstr ""
-#~ "bruk: svnsync initialize MÅLURL --source-url KILDEURL\n"
-#~ "Initialiser et måldepot.\n"
-
-#~ msgid "The url to synchronize from"
-#~ msgstr "URL som det skal synkroniseres fra"
-
-#~ msgid "Committing rev %ld\n"
-#~ msgstr "Legger inn revisjon %ld\n"
-
-#~ msgid ""
-#~ "Currently copying rev %ld in source is less than latest rev in "
-#~ "destination (%ld)"
-#~ msgstr ""
-#~ "Kilderevisjonen %ld som kopieres er mindre enn den seneste revisjonen i "
-#~ "målet (%ld)"
+#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
+#~ msgstr "levér ARG til --diff-cmd som valg (standard: «-u»)"
