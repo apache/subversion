@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-13 21:26+0200\n"
-"PO-Revision-Date: 2006-07-19 01:57+0200\n"
+"PO-Revision-Date: 2006-08-13 21:31+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3751,14 +3751,14 @@ msgid "Can't expand time"
 msgstr "Kan ikke ekspandere tid"
 
 #: libsvn_subr/dso.c:70
-#, fuzzy, c-format
+#, c-format
 msgid "Can't grab DSO mutex"
-msgstr "Kan ikke overta filsystem-mutex"
+msgstr "Kan ikke overta DSO-mutex"
 
 #: libsvn_subr/dso.c:84 libsvn_subr/dso.c:106 libsvn_subr/dso.c:121
-#, fuzzy, c-format
+#, c-format
 msgid "Can't ungrab DSO mutex"
-msgstr "Kan ikke slippe filsystem-mutex"
+msgstr "Kan ikke slippe DSO-mutex"
 
 #: libsvn_subr/error.c:326
 msgid "Can't recode error string from APR"
@@ -4533,13 +4533,13 @@ msgid "'%s' is already under version control"
 msgstr "«%s» er allerede under versjonskontroll"
 
 #: libsvn_wc/adm_ops.c:1105
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Can't replace '%s' with a node of a differing type; the deletion must be "
 "committed and the parent updated before adding '%s'"
 msgstr ""
-"Kan ikke erstatte «%s» med en annen nodetype. Send inn slettingen, oppdater "
-"forelderen og legg deretter til «%s»"
+"Kan ikke erstatte «%s» med en annen nodetype; slettingen må sendes inn og "
+"forelderen må oppdateres før «%s» legges til"
 
 #: libsvn_wc/adm_ops.c:1122
 #, c-format
@@ -5687,6 +5687,21 @@ msgid ""
 "                                --ignore-eol-style:\n"
 "                                   Ignore changes in EOL style"
 msgstr ""
+"Standardverdi: «-u». Når Subversion kjører et ekstern diff-program,\n"
+"                             kjøres dette programmet med parametrene "
+"ARG.                             Men når Subversion bruker den interne "
+"diff-\n"
+"                             implementasjonen, eller når Subversion viser\n"
+"                             «blame»-informasjon, kan ARG være følgende:\n"
+"                                -u (--unified):\n"
+"                                   Vis tre linjer med omkringliggende "
+"tekst.\n"
+"                                -b (--ignore-space-change):\n"
+"                                   Ignorer forandringer i antall blanktegn.\n"
+"                                -w (--ignore-all-space):\n"
+"                                   Ignorer alle blanktegn.\n"
+"                                --ignore-eol-style:\n"
+"                                   Ignorer forandringer i linjeslutt-stil."
 
 #: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
@@ -8458,31 +8473,41 @@ msgid ""
 "In other words, the destination repository should be a read-only\n"
 "mirror of the source repository.\n"
 msgstr ""
+"bruk: svnsync initialize MÅLURL KILDEURL\n"
+"\n"
+"Initialiser et måldepot for synkronisering fra et annet depot.\n"
+"\n"
+"Mål-URLen må peke til roten av et depot som ikke inneholder noen innlagte\n"
+"revisjoner. Måldepotet må tillate forandringer i egenskaper.\n"
+"\n"
+"Du skal ikke legge inn revisjoner eller gjøre forandringer i måldepotet på "
+"noen\n"
+"annen måte enn via «svnsync». Med andre ord, måldepotet skal være et\n"
+"skrivebeskyttet speil av kildepotet.\n"
 
 #: svnsync/main.c:70
-#, fuzzy
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
 "Transfer all pending revisions from source to destination.\n"
 msgstr ""
 "bruk: svnsync synchronize MÅLURL\n"
+"\n"
 "Overfør alle utestående revisjoner fra kilde til mål.\n"
 
 #: svnsync/main.c:75
-#, fuzzy
 msgid ""
 "usage: svnsync copy-revprops DEST_URL REV\n"
 "\n"
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
-"bruk: svnsync copy-revprops MÅLURL --revision REV\n"
+"bruk: svnsync copy-revprops MÅLURL REV\n"
+"\n"
 "Kopier alle revisjonsegenskaper for revisjon REV fra kilde\n"
 "til mål.\n"
 
 #: svnsync/main.c:81
-#, fuzzy
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "\n"
@@ -8510,12 +8535,12 @@ msgstr "Økten har roten på «%s», men depotroten er «%s»"
 #: svnsync/main.c:362
 #, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
-msgstr ""
+msgstr "Kopierte egenskaper for revisjon %ld («%s*»-egenskaper droppet).\n"
 
 #: svnsync/main.c:367
-#, fuzzy, c-format
+#, c-format
 msgid "Copied properties for revision %ld.\n"
-msgstr "Ikke-versjonerte egenskaper på revisjon %ld:\n"
+msgstr "Kopierte egenskaper for revisjon %ld.\n"
 
 #: svnsync/main.c:408
 msgid "Cannot initialize a repository with content in it"
@@ -8528,25 +8553,23 @@ msgstr "Måldepotet synkroniserer allerede fra «%s»"
 
 #: svnsync/main.c:475 svnsync/main.c:478 svnsync/main.c:1128
 #: svnsync/main.c:1212
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not a URL"
-msgstr "Filstien «%s» er ingen fil"
+msgstr "Filstien «%s» er ikke en URL"
 
 #: svnsync/main.c:858
-#, fuzzy, c-format
+#, c-format
 msgid "Committed revision %ld.\n"
-msgstr ""
-"\n"
-"La inn revisjon %ld.\n"
+msgstr "La inn revisjon %ld.\n"
 
 #: svnsync/main.c:895
 msgid "Destination repository has not been initialized"
 msgstr "Måldepotet er ikke blitt initialisert"
 
 #: svnsync/main.c:910
-#, fuzzy, c-format
+#, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
-msgstr "UUID for måldepotet (%s) samsvarer ikke med forventet UUID (%s)"
+msgstr "UUID for kildedepotet (%s) samsvarer ikke med forventet UUID (%s)"
 
 #: svnsync/main.c:972
 #, c-format
@@ -8555,6 +8578,9 @@ msgid ""
 "destination HEAD (%ld) are inconsistent; have you committed to the "
 "destination without using svnsync?"
 msgstr ""
+"Revisjonen som for øyeblikket blir kopiert (%ld), siste flettede revisjon (%"
+"ld) og HEAD for måldepotet (%ld) samsvarer ikke. Har du foretatt "
+"innlegginger i måldepotet uten å bruke svnsync?"
 
 #: svnsync/main.c:1008
 #, c-format
@@ -8562,6 +8588,8 @@ msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
 "committed to the destination without using svnsync?"
 msgstr ""
+"HEAD i måldepotet (%ld) er ikke den siste flettede revisjonen (%ld). Har du "
+"foretatt innlegginger i måldepotet uten å bruke svnsync?"
 
 #: svnsync/main.c:1082
 #, c-format
@@ -8575,9 +8603,8 @@ msgstr ""
 "blitt synkronisert enda"
 
 #: svnsync/main.c:1215
-#, fuzzy
 msgid "Invalid revision number"
-msgstr "Det er angitt ugyldig revisjonsnummer"
+msgstr "Ugyldig revisjonsnummer"
 
 #: svnsync/main.c:1251
 msgid ""
@@ -8603,9 +8630,8 @@ msgstr ""
 "Skriv «svnsync help %s» for bruksanvisning.\n"
 
 #: svnsync/main.c:1502
-#, fuzzy
 msgid "Not enough arguments provided; try 'svnsync help' for more info"
-msgstr "Ikke nok argumenter angitt; prøv «svn help» for mer informasjon"
+msgstr "Ikke nok argumenter angitt; prøv «svnsync help» for mer informasjon"
 
 #: svnversion/main.c:39
 #, c-format
@@ -8688,26 +8714,3 @@ msgstr "eksportert%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
-
-#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
-#~ msgstr "levér ARG til --diff-cmd som valg (standard: «-u»)"
-
-#~ msgid ""
-#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-#~ "Initialize a destination repository.\n"
-#~ msgstr ""
-#~ "bruk: svnsync initialize MÅLURL --source-url KILDEURL\n"
-#~ "Initialiser et måldepot.\n"
-
-#~ msgid "The url to synchronize from"
-#~ msgstr "URL som det skal synkroniseres fra"
-
-#~ msgid "Committing rev %ld\n"
-#~ msgstr "Legger inn revisjon %ld\n"
-
-#~ msgid ""
-#~ "Currently copying rev %ld in source is less than latest rev in "
-#~ "destination (%ld)"
-#~ msgstr ""
-#~ "Kilderevisjonen %ld som kopieres er mindre enn den seneste revisjonen i "
-#~ "målet (%ld)"
