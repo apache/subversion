@@ -242,17 +242,26 @@ msgstr "L'entrée a un attribut invalide"
 msgid "Obstructed update"
 msgstr "Actualisation bloquée"
 
+# Deprecated and unused, will be removed in the next major release.
+# Retranscrit en dessous pour que `msgfmt --check-format` ne dise plus que ce
+# n'est pas traduit
 #: include/svn_error_codes.h:290
 msgid "Mismatch popping the WC unwind stack"
-msgstr ""
+msgstr "Mismatch popping the WC unwind stack"
 
+# Deprecated and unused, will be removed in the next major release.
+# Retranscrit en dessous pour que `msgfmt --check-format` ne dise plus que ce
+# n'est pas traduit
 #: include/svn_error_codes.h:295
 msgid "Attempt to pop empty WC unwind stack"
-msgstr ""
+msgstr "Attempt to pop empty WC unwind stack"
 
+# Deprecated and unused, will be removed in the next major release.
+# Retranscrit en dessous pour que `msgfmt --check-format` ne dise plus que ce
+# n'est pas traduit
 #: include/svn_error_codes.h:300
 msgid "Attempt to unlock with non-empty unwind stack"
-msgstr ""
+msgstr "Attempt to unlock with non-empty unwind stack"
 
 #: include/svn_error_codes.h:304
 msgid "Attempted to lock an already-locked dir"
