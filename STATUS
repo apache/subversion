@@ -37,14 +37,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r21022
-    Fix a syntax error that prevents some Inno Setup versions from
-    using the debug Component of the install script.
-    Justification:
-      The installer should work on Windows.
-    Votes:
-      +1: dlr, rooneg
-
   * r20886 (depends on r20833 group above)
     Allow javahl to build with VC Express and fix its debug symbol files.
     Justification:
