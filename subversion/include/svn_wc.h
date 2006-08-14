@@ -1327,7 +1327,7 @@ typedef struct svn_wc_entry_t
   /** The depth of this entry.
    *
    * ### It's a bit annoying that we only use this on this_dir
-   * ### entries, yet it will exist (with value svn_depth_infinity) on
+   * ### entries, yet it will exist (with value svn_depth_subtree) on
    * ### all entries.  Maybe some future extensibility would make this
    * ### field meaningful on entries besides this_dir.
    *
@@ -1586,7 +1586,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
  * for getting the status of exactly one thing, and another for
  * getting the statuses of (potentially) multiple things.
  * 
- * The WebDAV concept of depth, as explained in the documentation for
+ * The concept of depth, as explained in the documentation for
  * svn_depth_t, may be useful in understanding this.  Suppose we're
  * getting the status of directory D:
  *
