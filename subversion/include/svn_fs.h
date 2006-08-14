@@ -543,6 +543,15 @@ svn_string_t *svn_fs_unparse_id(const svn_fs_id_t *id,
  * transaction you already have open.  You can also list all the
  * transactions currently present in the database.
  *
+ * You may assign properties to transactions; these are name/value
+ * pairs.  When you commit a transaction, all of its properties become
+ * unversioned revision properties of the new revision.  (There is one
+ * exception: the svn:date property will be automatically set on new
+ * transactions to the date that the transaction was created, and will
+ * be overwritten when the transaction is committed by the current
+ * time; changes to a transaction's svn:date property will not affect
+ * its committed value.)
+ * 
  * Transaction names are guaranteed to contain only letters (upper-
  * and lower-case), digits, `-', and `.', from the ASCII character
  * set.
