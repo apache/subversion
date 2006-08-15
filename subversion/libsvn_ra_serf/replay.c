@@ -406,7 +406,6 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
   if (state == REPORT &&
       strcmp(name.name, "editor-report") == 0)
     {
-      SVN_ERR(ctx->editor->close_edit(ctx->editor_baton, parser->state->pool));
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == OPEN_DIR && strcmp(name.name, "open-directory") == 0)

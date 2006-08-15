@@ -63,6 +63,15 @@ maybe_start_report(edit_baton_t *eb)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+end_report(edit_baton_t *eb)
+{
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                            "</S:editor-report>" DEBUG_CR));
+
+  return SVN_NO_ERROR;
+}
+
 
 static svn_error_t *
 maybe_close_textdelta(edit_baton_t *eb)
@@ -379,11 +388,6 @@ close_directory(void *dir_baton, apr_pool_t *pool)
 static svn_error_t *
 close_edit(void *edit_baton, apr_pool_t *pool)
 {
-  edit_baton_t *eb = edit_baton;
-
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "</S:editor-report>" DEBUG_CR));
-
   return SVN_NO_ERROR;
 }
 
@@ -531,7 +535,7 @@ dav_svn__replay_report(const dav_resource *resource,
                                 "Problem replaying revision",
                                 resource->pool);
 
-  if ((err = editor->close_edit(edit_baton, resource->pool)))
+  if ((err = end_report(edit_baton)))
     return dav_svn__convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                 "Problem closing editor drive",
                                 resource->pool);
