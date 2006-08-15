@@ -346,7 +346,17 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 
 /** Receive edit commands over the network and use them to drive @a editor
  * with @a edit_baton.  On return, @a *aborted will be set if the edit was
- * aborted.
+ * aborted.  The drive can be terminated with a finish-replay command only
+ * if @a for_replay is true.
+ */
+svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const svn_delta_editor_t *editor,
+                                      void *edit_baton,
+                                      svn_boolean_t *aborted,
+                                      svn_boolean_t for_replay);
+
+/** Like svn_ra_svn_drive_editor2, but with @a for_replay always FALSE.
  */
 svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const svn_delta_editor_t *editor,

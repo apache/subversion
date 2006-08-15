@@ -389,7 +389,7 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
       if (rb->dirs->nelts)
         svn_pool_destroy(APR_ARRAY_IDX(rb->dirs, 0, dir_item_t).pool);
 
-      rb->err = rb->editor->close_edit(rb->edit_baton, rb->pool);
+      rb->err = SVN_NO_ERROR;
       break;
 
     case ELEM_apply_textdelta:
