@@ -28,13 +28,6 @@ Candidate changes:
       +1: djh, rooneg
       +0: dlr, cmpilato
 
-  * r21037
-    Add missing APIs for adding a provider to the SWIG/Ruby bindings.
-    Justification:
-      Improves usability by only adding some methods.
-    Votes:
-      +1: nori
-
   * Suppress the "Specifying the language name in %typemap is deprecated
       - use #ifdef SWIG<LANG> instead." warnings.
     Patch:
