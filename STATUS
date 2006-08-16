@@ -56,14 +56,6 @@ Candidate changes:
     Votes:
       +1: rooneg
 
-  * r21081
-    The Ruby bindings: Fix a bug that using unintialized value.
-    Justification:
-      This bug may cause segmentation fault.
-    Votes:
-      +1: kou
-      +0: blair
-
 Approved changes:
 
   * r20886 (depends on r20833 group above)
