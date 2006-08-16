@@ -50,9 +50,7 @@ Candidate changes:
     Justification:
       Consistency is good, and this may become important with the work
       that's being done for modifying revprops during a commit.
-    Branch:
-      None yet, but one is needed because of refactoring of mod_dav_svn
-      on trunk.
+    Branch: 1.4.x-r21075
     Votes:
       +1: rooneg
 
