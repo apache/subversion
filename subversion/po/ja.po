@@ -169,8 +169,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-08 03:57+0900\n"
-"PO-Revision-Date: 2006-08-08 03:55+0900\n"
+"POT-Creation-Date: 2006-08-16 07:32+0900\n"
+"PO-Revision-Date: 2006-08-16 15:59+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1148,7 +1148,7 @@ msgstr ""
 "りません"
 
 #: libsvn_client/commit_util.c:704 libsvn_client/commit_util.c:835
-#: libsvn_client/copy.c:1002 libsvn_client/delete.c:67
+#: libsvn_client/copy.c:1001 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1410 libsvn_client/diff.c:2140
 #: libsvn_client/diff.c:2735 libsvn_client/diff.c:2862
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
@@ -1216,7 +1216,7 @@ msgstr ""
 "コミット対象の項目 '%s' にはコピーフラグがついていますが、リビジョンが不正で"
 "す"
 
-#: libsvn_client/copy.c:95 libsvn_client/copy.c:769
+#: libsvn_client/copy.c:95 libsvn_client/copy.c:768
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "パス '%s' はディレクトリではありません"
@@ -1254,38 +1254,38 @@ msgstr "パス '%s' がリビジョン %ld に見つかりません"
 msgid "Path '%s' not found in head revision"
 msgstr "パス '%s' が HEAD リビジョンに見つかりません"
 
-#: libsvn_client/copy.c:787
+#: libsvn_client/copy.c:786
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "'%s' のエントリが存在します (それなのに作業ファイルがありません)"
 
-#: libsvn_client/copy.c:878
+#: libsvn_client/copy.c:877
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr ""
 "コピー元 (もしくは移動元) の URL '%s' は別のリポジトリに由来しています。一緒"
 "に扱えない作業コピーのままにしておきます"
 
-#: libsvn_client/copy.c:957
+#: libsvn_client/copy.c:956
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "パス '%s' は自身の子ノード '%s' にはコピーできません"
 
-#: libsvn_client/copy.c:968
+#: libsvn_client/copy.c:967
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "パス '%s' は自身には移動できません"
 
-#: libsvn_client/copy.c:976
+#: libsvn_client/copy.c:975
 msgid "No support for repos <--> working copy moves"
 msgstr "リポジトリ <--> 作業コピーの移動操作はサポートされていません"
 
-#: libsvn_client/copy.c:1008
+#: libsvn_client/copy.c:1007
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' に該当する URL は存在しないようです"
 
-#: libsvn_client/copy.c:1205 svn/move-cmd.c:72
+#: libsvn_client/copy.c:1204 svn/move-cmd.c:72
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "移動操作に (HEAD 以外の) リビジョンは指定できません"
 
@@ -2954,7 +2954,7 @@ msgstr ""
 msgid "Got close-directory element without ever opening a directory"
 msgstr "ディレクトリを開かずに close-directory 要素を使っています"
 
-#: libsvn_ra_dav/replay.c:456 libsvn_ra_serf/replay.c:492
+#: libsvn_ra_dav/replay.c:456 libsvn_ra_serf/replay.c:491
 #, c-format
 msgid "Error writing stream: unexpected EOF"
 msgstr "ストリームへの書き込み中にエラーが発生しました: 予想外の EOF です"
@@ -3123,7 +3123,7 @@ msgstr "ローカルディスク上のリポジトリにアクセスするモジ
 msgid "Unable to open an ra_local session to URL"
 msgstr "URL に対し ra_local セッションを開始できません"
 
-#: libsvn_ra_local/ra_plugin.c:1342
+#: libsvn_ra_local/ra_plugin.c:1340
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr ""
@@ -3402,27 +3402,32 @@ msgstr ""
 msgid "Unexpected server response to authentication"
 msgstr "認証に対する予想外のサーバのレスポンスです"
 
-#: libsvn_ra_svn/editor.c:386 libsvn_ra_svn/editorp.c:455
+#: libsvn_ra_svn/editor.c:387 libsvn_ra_svn/editorp.c:456
 msgid "Invalid file or dir token during edit"
 msgstr "編集中に不正なファイルまたはディレクトリのトークンがありました"
 
-#: libsvn_ra_svn/editor.c:620
+#: libsvn_ra_svn/editor.c:621
 msgid "Non-string as part of text delta"
 msgstr "テキスト差分の一部に文字列以外が含まれています"
 
-#: libsvn_ra_svn/editorp.c:128
+#: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
+#, c-format
+msgid "Command 'finish-replay' invalid outside of replays"
+msgstr "コマンド 'finish-replay' が一連の replay の外にあり不正です"
+
+#: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
 msgstr "編集成功ステータスが返ってくるのが早すぎます"
 
-#: libsvn_ra_svn/editorp.c:664
+#: libsvn_ra_svn/editorp.c:665
 msgid "Apply-textdelta already active"
 msgstr "apply-textdelta は既に使えるようになっています"
 
-#: libsvn_ra_svn/editorp.c:686 libsvn_ra_svn/editorp.c:704
+#: libsvn_ra_svn/editorp.c:687 libsvn_ra_svn/editorp.c:705
 msgid "Apply-textdelta not active"
 msgstr "apply-textdelta は使えません"
 
-#: libsvn_ra_svn/editorp.c:872 libsvn_ra_svn/marshal.c:842
+#: libsvn_ra_svn/editorp.c:891 libsvn_ra_svn/marshal.c:842
 #, c-format
 msgid "Unknown command '%s'"
 msgstr "'%s' は未知のコマンドです"
@@ -5594,7 +5599,7 @@ msgstr ""
 "Subversion はバージョン管理用のツールです。\n"
 "さらに詳しい情報は、http://subversion.tigris.org/ をご覧ください。\n"
 
-#: svn/help-cmd.c:65 svnsync/main.c:1258
+#: svn/help-cmd.c:65 svnsync/main.c:1260
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -9514,8 +9519,8 @@ msgstr "内容を含んだリポジトリは初期化できません"
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "同期先リポジトリは既に '%s' から同期中です"
 
-#: svnsync/main.c:475 svnsync/main.c:478 svnsync/main.c:1128
-#: svnsync/main.c:1212
+#: svnsync/main.c:475 svnsync/main.c:478 svnsync/main.c:1130
+#: svnsync/main.c:1214
 #, c-format
 msgid "Path '%s' is not a URL"
 msgstr "パス '%s' は URL ではありません"
@@ -9554,23 +9559,23 @@ msgstr ""
 "同期先の HEAD (%ld) が最後にマージされたリビジョン (%ld) ではありません。"
 "svnsync を用いずに同期先リポジトリにコミットしたのではありませんか?"
 
-#: svnsync/main.c:1082
+#: svnsync/main.c:1084
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr ""
 "コミットでリビジョン %ld が作成されましたが、作成されるべきだったのは %ld で"
 "す"
 
-#: svnsync/main.c:1183
+#: svnsync/main.c:1185
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
 msgstr "まだ同期されていないリビジョンのリビジョン属性はコピーできません"
 
-#: svnsync/main.c:1215
+#: svnsync/main.c:1217
 msgid "Invalid revision number"
 msgstr "リビジョン番号が不正です"
 
 # * Description for svnsync.
-#: svnsync/main.c:1251
+#: svnsync/main.c:1253
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -9589,7 +9594,7 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svnsync/main.c:1441
+#: svnsync/main.c:1443
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -9598,7 +9603,7 @@ msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
 "使用方法を知りたいときは 'svnsync help %s' と打ってください。\n"
 
-#: svnsync/main.c:1502
+#: svnsync/main.c:1504
 msgid "Not enough arguments provided; try 'svnsync help' for more info"
 msgstr ""
 "与える引数が不十分です。より詳しく知りたいときは 'svnsync help' を試してみて"
