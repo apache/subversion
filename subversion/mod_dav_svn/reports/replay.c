@@ -46,6 +46,9 @@ typedef struct {
 } edit_baton_t;
 
 
+
+/*** Helper Functions ***/
+
 static svn_error_t *
 maybe_start_report(edit_baton_t *eb)
 {
@@ -88,19 +91,97 @@ maybe_close_textdelta(edit_baton_t *eb)
 
 
 static svn_error_t *
+add_file_or_directory(const char *file_or_directory,
+                      const char *path,
+                      edit_baton_t *eb,
+                      const char *copyfrom_path,
+                      svn_revnum_t copyfrom_rev,
+                      apr_pool_t *pool,
+                      void **added_baton)
+{
+  const char *qname = apr_xml_quote_string(pool, path, 1);
+  const char *qcopy = 
+    copyfrom_path ? apr_xml_quote_string(pool, copyfrom_path, 1) : NULL;
+
+  SVN_ERR(maybe_close_textdelta(eb));
+
+  *added_baton = (void *)eb;
+
+  if (! copyfrom_path)
+    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                              "<S:add-%s name=\"%s\"/>" DEBUG_CR,
+                              file_or_directory, qname));
+  else
+    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                              "<S:add-%s name=\"%s\" copyfrom-path=\"%s\" "
+                                        "copyfrom-rev=\"%ld\"/>" DEBUG_CR,
+                              file_or_directory, qname, qcopy, copyfrom_rev));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+open_file_or_directory(const char *file_or_directory,
+                       const char *path,
+                       edit_baton_t *eb,
+                       svn_revnum_t base_revision,
+                       apr_pool_t *pool,
+                       void **opened_baton)
+{
+  const char *qname = apr_xml_quote_string(pool, path, 1);
+  SVN_ERR(maybe_close_textdelta(eb));
+  *opened_baton = (void *)eb;
+  return dav_svn__send_xml(eb->bb, eb->output,
+                           "<S:open-%s name=\"%s\" rev=\"%ld\"/>" DEBUG_CR, 
+                           file_or_directory, qname, base_revision);
+}
+
+
+static svn_error_t *
+change_file_or_dir_prop(const char *file_or_dir,
+                        edit_baton_t *eb,
+                        const char *name,
+                        const svn_string_t *value,
+                        apr_pool_t *pool)
+{
+  const char *qname = apr_xml_quote_string(pool, name, 1);
+
+  SVN_ERR(maybe_close_textdelta(eb));
+
+  if (value)
+    {
+      const svn_string_t *enc_value = svn_base64_encode_string(value, pool);
+
+      SVN_ERR(dav_svn__send_xml
+                (eb->bb, eb->output,
+                 "<S:change-%s-prop name=\"%s\">%s</S:change-%s-prop>" DEBUG_CR,
+                 file_or_dir, qname, enc_value->data, file_or_dir));
+    }
+  else
+    {
+      SVN_ERR(dav_svn__send_xml
+                (eb->bb, eb->output,
+                 "<S:change-%s-prop name=\"%s\" del=\"true\"/>" DEBUG_CR,
+                 file_or_dir, qname));
+    }
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Editor Implementation ***/
+
+
+static svn_error_t *
 set_target_revision(void *edit_baton,
                     svn_revnum_t target_revision,
                     apr_pool_t *pool)
 {
   edit_baton_t *eb = edit_baton;
-
   SVN_ERR(maybe_start_report(eb));
-
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "<S:target-revision rev=\"%ld\"/>" DEBUG_CR,
-                            target_revision));
-
-  return SVN_NO_ERROR;
+  return dav_svn__send_xml(eb->bb, eb->output,
+                           "<S:target-revision rev=\"%ld\"/>" DEBUG_CR,
+                           target_revision);
 }
 
 
@@ -111,16 +192,11 @@ open_root(void *edit_baton,
           void **root_baton)
 {
   edit_baton_t *eb = edit_baton;
-
   *root_baton = edit_baton;
-
   SVN_ERR(maybe_start_report(eb));
-
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "<S:open-root rev=\"%ld\"/>" DEBUG_CR,
-                            base_revision));
-
-  return SVN_NO_ERROR;
+  return dav_svn__send_xml(eb->bb, eb->output,
+                           "<S:open-root rev=\"%ld\"/>" DEBUG_CR,
+                           base_revision);
 }
 
 
@@ -131,17 +207,11 @@ delete_entry(const char *path,
              apr_pool_t *pool)
 {
   edit_baton_t *eb = parent_baton;
-
   const char *qname = apr_xml_quote_string(pool, path, 1);
-
   SVN_ERR(maybe_close_textdelta(eb));
-
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "<S:delete-entry name=\"%s\" rev=\"%ld\"/>"
-                            DEBUG_CR,
-                            qname, revision));
-
-  return SVN_NO_ERROR;
+  return dav_svn__send_xml(eb->bb, eb->output,
+                           "<S:delete-entry name=\"%s\" rev=\"%ld\"/>" DEBUG_CR,
+                            qname, revision);
 }
 
 
@@ -153,32 +223,8 @@ add_directory(const char *path,
               apr_pool_t *pool,
               void **child_baton)
 {
-  edit_baton_t *eb = parent_baton;
-
-  const char *qpath = apr_xml_quote_string(pool, path, 1);
-
-  const char *qcopy = copyfrom_path ? apr_xml_quote_string(pool,
-                                                           copyfrom_path,
-                                                           1)
-                                    : NULL;
-
-  SVN_ERR(maybe_close_textdelta(eb));
-
-  *child_baton = parent_baton;
-
-  if (! copyfrom_path)
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-directory name=\"%s\"/>" DEBUG_CR,
-                              qpath));
-  else
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-directory name=\"%s\" "
-                                               "copyfrom-path=\"%s\" "
-                                               "copyfrom-rev=\"%ld\"/>"
-                              DEBUG_CR,
-                              qpath, qcopy, copyfrom_rev));
-
-  return SVN_NO_ERROR;
+  return add_file_or_directory("directory", path, parent_baton, 
+                               copyfrom_path, copyfrom_rev, pool, child_baton);
 }
 
 
@@ -189,19 +235,8 @@ open_directory(const char *path,
                apr_pool_t *pool,
                void **child_baton)
 {
-  edit_baton_t *eb = parent_baton;
-
-  const char *qpath = apr_xml_quote_string(pool, path, 1);
-
-  SVN_ERR(maybe_close_textdelta(eb));
-
-  *child_baton = parent_baton;
-
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "<S:open-directory name=\"%s\" rev=\"%ld\"/>"
-                            DEBUG_CR, qpath, base_revision));
-
-  return SVN_NO_ERROR;
+  return open_file_or_directory("directory", path, parent_baton,
+                                base_revision, pool, child_baton);
 }
 
 
@@ -211,31 +246,7 @@ change_dir_prop(void *baton,
                 const svn_string_t *value,
                 apr_pool_t *pool)
 {
-  edit_baton_t *eb = baton;
-  const char *qname;
-
-  SVN_ERR(maybe_close_textdelta(eb));
-
-  qname = apr_xml_quote_string(pool, name, 1);
-
-  if (value)
-    {
-      const svn_string_t *enc_value = svn_base64_encode_string(value, pool);
-
-      SVN_ERR(dav_svn__send_xml
-                (eb->bb, eb->output,
-                 "<S:change-dir-prop name=\"%s\">%s</S:change-dir-prop>"
-                 DEBUG_CR, qname, enc_value->data));
-    }
-  else
-    {
-      SVN_ERR(dav_svn__send_xml
-                (eb->bb, eb->output,
-                 "<S:change-dir-prop name=\"%s\" del=\"true\"/>" DEBUG_CR,
-                 qname));
-    }
-
-  return SVN_NO_ERROR;
+  return change_file_or_dir_prop("dir", baton, name, value, pool);
 }
 
 
@@ -247,32 +258,8 @@ add_file(const char *path,
          apr_pool_t *pool,
          void **file_baton)
 {
-  edit_baton_t *eb = parent_baton;
-
-  const char *qname = apr_xml_quote_string(pool, path, 1);
-
-  const char *qcopy = copyfrom_path ? apr_xml_quote_string(pool,
-                                                           copyfrom_path,
-                                                           1)
-                                    : NULL;
-
-  SVN_ERR(maybe_close_textdelta(eb));
-
-  *file_baton = parent_baton;
-
-  if (! copyfrom_path)
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-file name=\"%s\"/>" DEBUG_CR,
-                              qname));
-  else
-    SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-file name=\"%s\" "
-                                          "copyfrom-path=\"%s\" "
-                                          "copyfrom-rev=\"%ld\"/>"
-                              DEBUG_CR,
-                              qname, qcopy, copyfrom_rev));
-
-  return SVN_NO_ERROR;
+  return add_file_or_directory("file", path, parent_baton, 
+                               copyfrom_path, copyfrom_rev, pool, file_baton);
 }
 
 
@@ -283,19 +270,18 @@ open_file(const char *path,
           apr_pool_t *pool,
           void **file_baton)
 {
-  edit_baton_t *eb = parent_baton;
+  return open_file_or_directory("file", path, parent_baton,
+                                base_revision, pool, file_baton);
+}
 
-  const char *qname = apr_xml_quote_string(pool, path, 1);
 
-  SVN_ERR(maybe_close_textdelta(eb));
-
-  *file_baton = parent_baton;
-
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "<S:open-file name=\"%s\" rev=\"%ld\"/>"
-                            DEBUG_CR, qname, base_revision));
-
-  return SVN_NO_ERROR;
+static svn_error_t *
+change_file_prop(void *baton,
+                 const char *name,
+                 const svn_string_t *value,
+                 apr_pool_t *pool)
+{
+  return change_file_or_dir_prop("file", baton, name, value, pool);
 }
 
 
@@ -307,7 +293,6 @@ apply_textdelta(void *file_baton,
                 void **handler_baton)
 {
   edit_baton_t *eb = file_baton;
-  svn_stream_t *stream;
 
   SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:apply-textdelta"));
 
@@ -317,9 +302,9 @@ apply_textdelta(void *file_baton,
   else
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, ">"));
 
-  stream = dav_svn__make_base64_output_stream(eb->bb, eb->output, pool);
-
-  svn_txdelta_to_svndiff(stream, pool, handler, handler_baton);
+  svn_txdelta_to_svndiff(dav_svn__make_base64_output_stream(eb->bb, eb->output,
+                                                            pool), 
+                         pool, handler, handler_baton);
 
   eb->sending_textdelta = TRUE;
 
@@ -328,48 +313,11 @@ apply_textdelta(void *file_baton,
 
 
 static svn_error_t *
-change_file_prop(void *baton,
-                 const char *name,
-                 const svn_string_t *value,
-                 apr_pool_t *pool)
-{
-  edit_baton_t *eb = baton;
-  const char *qname;
-
-  SVN_ERR(maybe_close_textdelta(eb));
-
-  qname = apr_xml_quote_string(pool, name, 1);
-
-  if (value)
-    {
-      const svn_string_t *enc_value = svn_base64_encode_string(value, pool);
-
-      SVN_ERR(dav_svn__send_xml
-                (eb->bb, eb->output,
-                 "<S:change-file-prop name=\"%s\">%s</S:change-file-prop>"
-                 DEBUG_CR, qname, enc_value->data));
-    }
-  else
-    {
-      SVN_ERR(dav_svn__send_xml
-                (eb->bb, eb->output,
-                 "<S:change-file-prop name=\"%s\" del=\"true\"/>" DEBUG_CR,
-                 qname));
-    }
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
 close_file(void *file_baton, const char *text_checksum, apr_pool_t *pool)
 {
   edit_baton_t *eb = file_baton;
-
   SVN_ERR(maybe_close_textdelta(eb));
-
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output, "<S:close-file/>" DEBUG_CR));
-
-  return SVN_NO_ERROR;
+  return dav_svn__send_xml(eb->bb, eb->output, "<S:close-file/>" DEBUG_CR);
 }
 
 
@@ -377,18 +325,7 @@ static svn_error_t *
 close_directory(void *dir_baton, apr_pool_t *pool)
 {
   edit_baton_t *eb = dir_baton;
-
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "<S:close-directory/>" DEBUG_CR));
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-close_edit(void *edit_baton, apr_pool_t *pool)
-{
-  return SVN_NO_ERROR;
+  return dav_svn__send_xml(eb->bb, eb->output, "<S:close-directory/>" DEBUG_CR);
 }
 
 
@@ -419,7 +356,6 @@ make_editor(const svn_delta_editor_t **editor,
   e->change_file_prop = change_file_prop;
   e->close_file = close_file;
   e->close_directory = close_directory;
-  e->close_edit = close_edit;
 
   *editor = e;
   *edit_baton = eb;
