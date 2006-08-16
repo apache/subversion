@@ -168,11 +168,11 @@ add_directory(const char *path,
 
   if (! copyfrom_path)
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-directory path=\"%s\"/>" DEBUG_CR,
+                              "<S:add-directory name=\"%s\"/>" DEBUG_CR,
                               qpath));
   else
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-directory path=\"%s\" "
+                              "<S:add-directory name=\"%s\" "
                                                "copyfrom-path=\"%s\" "
                                                "copyfrom-rev=\"%ld\"/>"
                               DEBUG_CR,
@@ -198,7 +198,7 @@ open_directory(const char *path,
   *child_baton = parent_baton;
 
   SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "<S:open-directory path=\"%s\" rev=\"%ld\"/>"
+                            "<S:open-directory name=\"%s\" rev=\"%ld\"/>"
                             DEBUG_CR, qpath, base_revision));
 
   return SVN_NO_ERROR;

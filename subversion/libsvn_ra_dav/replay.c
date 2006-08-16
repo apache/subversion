@@ -188,7 +188,7 @@ start_element(void *baton, int parent_state, const char *nspace,
     case ELEM_add_directory:
       {
         const char *crev = svn_xml_get_attr_value("rev", atts);
-        const char *path = svn_xml_get_attr_value("path", atts);
+        const char *path = svn_xml_get_attr_value("name", atts);
 
         if (! path)
           rb->err = svn_error_create
