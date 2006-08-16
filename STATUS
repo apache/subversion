@@ -9,6 +9,13 @@ Status of 1.4.0:
 
 Candidate changes:
 
+  * r20616
+    Now that the RPMS can build on i386 and x86_64 we need to have the RPM
+    files branded with the correct architecture.
+    Justification: Currently it is branded as i386 no matter what.
+    Votes:
+      +1: dws
+
   * r20781
     autogen.sh: Purge *.pyc files from the build/ hierarchy after using the
     build generator, so that we do not ship them in tarballs.
