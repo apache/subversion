@@ -188,9 +188,9 @@ start_element(void *baton, int parent_state, const char *nspace,
     case ELEM_add_directory:
       {
         const char *crev = svn_xml_get_attr_value("rev", atts);
-        const char *path = svn_xml_get_attr_value("name", atts);
+        const char *name = svn_xml_get_attr_value("name", atts);
 
-        if (! path)
+        if (! name)
           rb->err = svn_error_create
                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                       _("Missing name attr in open-directory element"));
@@ -207,7 +207,7 @@ start_element(void *baton, int parent_state, const char *nspace,
               rev = SVN_INVALID_REVNUM;
 
             if (elm->id == ELEM_open_directory)
-              rb->err = rb->editor->open_directory(path, parent->baton,
+              rb->err = rb->editor->open_directory(name, parent->baton,
                                                    rev, subpool, &dir_baton);
             else if (elm->id == ELEM_add_directory)
               {
@@ -221,14 +221,14 @@ start_element(void *baton, int parent_state, const char *nspace,
                 else
                   rev = SVN_INVALID_REVNUM;
 
-                rb->err = rb->editor->add_directory(path, parent->baton,
+                rb->err = rb->editor->add_directory(name, parent->baton,
                                                     cpath, rev, subpool,
                                                     &dir_baton);
               }
             else
               abort();
 
-            push_dir(rb, dir_baton, path, subpool);
+            push_dir(rb, dir_baton, name, subpool);
           }
       }
       break;
