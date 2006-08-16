@@ -169,7 +169,8 @@ svn_swig_rb_txdelta_apply_instructions(svn_txdelta_window_t *window,
   char *tbuf;
   apr_size_t tlen;
 
-  tbuf = ALLOCA_N(char, (window->tview_len + 1));
+  tlen = window->tview_len + 1;
+  tbuf = ALLOCA_N(char, tlen);
   svn_txdelta_apply_instructions(window, sbuf, tbuf, &tlen);
 
   return rb_str_new(tbuf, tlen);
