@@ -1929,6 +1929,10 @@ svn_ra_svn__init(const svn_version_t *loader_version,
 
   *vtable = &ra_svn_vtable;
 
+#ifdef SVN_HAVE_SASL
+  SVN_ERR(svn_ra_svn__sasl_init());
+#endif
+
   return SVN_NO_ERROR;
 }
 
