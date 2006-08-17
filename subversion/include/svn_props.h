@@ -105,14 +105,14 @@ svn_prop_kind_t svn_property_kind(int *prefix_len,
 svn_boolean_t svn_prop_is_svn_prop(const char *prop_name);
 
 
-/** If @a propname requires that its value be stored as UTF8/LF in the
+/** If @a prop_name requires that its value be stored as UTF8/LF in the
  * repository, then return @c TRUE.  Else return @c FALSE.  This is for
  * users of libsvn_client or libsvn_fs, since it their responsibility
  * to do this translation in both directions.  (See
  * svn_subst_translate_string()/svn_subst_detranslate_string() for
  * help with this task.)
  */
-svn_boolean_t svn_prop_needs_translation(const char *propname);
+svn_boolean_t svn_prop_needs_translation(const char *prop_name);
 
 
 /** Given a @a proplist array of @c svn_prop_t structures, allocate
@@ -238,7 +238,7 @@ svn_error_t *svn_prop_diffs(apr_array_header_t **propdiffs,
  * @{
  */
 
-/** The propname *prefix* that makes a propname a "WC property". 
+/** The property name *prefix* that makes a property a "WC property". 
  *
  * For example, ra_dav might store a versioned-resource url as a WC
  * prop like this:
