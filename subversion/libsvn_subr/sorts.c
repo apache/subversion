@@ -21,13 +21,10 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>
-#include <string.h>       /* for strncmp() */
 #include <stdlib.h>       /* for qsort()   */
 #include <assert.h>
-#include "svn_string.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
-#include "svn_props.h"
 #include "svn_error.h"
 
 
