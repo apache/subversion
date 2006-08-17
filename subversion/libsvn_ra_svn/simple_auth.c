@@ -17,6 +17,9 @@
  * ====================================================================
  */
 
+#include "svn_private_config.h"
+#ifndef SVN_HAVE_SASL
+
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
@@ -25,7 +28,6 @@
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_error.h"
-#include "svn_private_config.h"
 #include "svn_ra.h"
 #include "svn_ra_svn.h"
 
@@ -114,3 +116,5 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             _("Cannot negotiate authentication mechanism"));
 }
+
+#endif /* SVN_HAVE_SASL */
