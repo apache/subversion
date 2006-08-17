@@ -1123,7 +1123,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
                              "SELECT mergedfrom, mergedrevstart,"
                              "mergedrevend from mergeinfo "
                              "where mergedto = ? and revision = ? "
-                             "group by mergedfrom;",
+                             "order by mergedfrom;",
                              -1, &stmt, NULL), db);
   SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
   SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastchanged_rev), db);
