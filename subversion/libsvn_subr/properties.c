@@ -26,6 +26,7 @@
 #include "svn_string.h"
 #include "svn_props.h"
 #include "svn_error.h"
+#include "svn_ctype.h"
 
 
 svn_boolean_t
@@ -205,4 +206,33 @@ svn_prop_needs_translation(const char *propname)
      props need it.  */
 
   return svn_prop_is_svn_prop(propname);
+}
+
+
+svn_boolean_t
+svn_prop_name_is_valid(const char *prop_name)
+{
+  const char *p = prop_name;
+
+  /* The characters we allow use identical representations in UTF8
+     and ASCII, so we can just test for the appropriate ASCII codes.
+     But we can't use standard C character notation ('A', 'B', etc)
+     because there's no guarantee that this C environment is using
+     ASCII. */
+
+  if (!(svn_ctype_isalpha(*p)
+        || *p == SVN_CTYPE_ASCII_COLON
+        || *p == SVN_CTYPE_ASCII_UNDERSCORE))
+    return FALSE;
+  p++;
+  for (; *p; p++)
+    {
+      if (!(svn_ctype_isalnum(*p)
+            || *p == SVN_CTYPE_ASCII_MINUS
+            || *p == SVN_CTYPE_ASCII_DOT
+            || *p == SVN_CTYPE_ASCII_COLON
+            || *p == SVN_CTYPE_ASCII_UNDERSCORE))
+        return FALSE;
+    }
+  return TRUE;
 }
