@@ -615,10 +615,10 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
       or 'yes'
 
   # figure out the lists of changes outside the selected path-space
-  other_added_data = other_removed_data = other_modified_data = [ ]
+  other_added_data = other_deleted_data = other_modified_data = [ ]
   if len(paths) != len(changelist) and show_nonmatching_paths != 'no':
     other_added_data = generate_list('A', changelist, paths, False)
-    other_removed_data = generate_list('R', changelist, paths, False)
+    other_deleted_data = generate_list('D', changelist, paths, False)
     other_modified_data = generate_list('M', changelist, paths, False)
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
@@ -633,11 +633,11 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     rev=repos.rev,
     log=repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or '',
     added_data=generate_list('A', changelist, paths, True),
-    removed_data=generate_list('R', changelist, paths, True),
+    deleted_data=generate_list('D', changelist, paths, True),
     modified_data=generate_list('M', changelist, paths, True),
     show_nonmatching_paths=show_nonmatching_paths,
     other_added_data=other_added_data,
-    other_removed_data=other_removed_data,
+    other_deleted_data=other_deleted_data,
     other_modified_data=other_modified_data,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
                         params, diffsels, diffurls, pool),
@@ -649,7 +649,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 def generate_list(changekind, changelist, paths, in_paths):
   if changekind == 'A':
     selection = lambda change: change.added
-  elif changekind == 'R':
+  elif changekind == 'D':
     selection = lambda change: change.path is None
   elif changekind == 'M':
     selection = lambda change: not change.added and change.path is not None
@@ -893,15 +893,15 @@ class TextCommitRenderer:
 
     # print summary sections
     self._render_list('Added', data.added_data)
-    self._render_list('Removed', data.removed_data)
+    self._render_list('Deleted', data.deleted_data)
     self._render_list('Modified', data.modified_data)
 
-    if data.other_added_data or data.other_removed_data \
+    if data.other_added_data or data.other_deleted_data \
            or data.other_modified_data:
       if data.show_nonmatching_paths:
         w('\nChanges in other areas also in this revision:\n')
         self._render_list('Added', data.other_added_data)
-        self._render_list('Removed', data.other_removed_data)
+        self._render_list('Deleted', data.other_deleted_data)
         self._render_list('Modified', data.other_modified_data)
       else:
         w('and changes in other areas\n')
