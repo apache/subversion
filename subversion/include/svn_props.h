@@ -158,6 +158,17 @@ svn_error_t *svn_prop_diffs(apr_array_header_t **propdiffs,
                             apr_pool_t *pool);
 
 
+/**
+ * Return @c TRUE iff @a prop_name is a valid property name.
+ *
+ * For now, "valid" means the ASCII subset of an XML "Name".
+ * XML "Name" is defined at http://www.w3.org/TR/REC-xml#sec-common-syn
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
+
+
 
 /* Defines for reserved ("svn:") property names.  */
 
