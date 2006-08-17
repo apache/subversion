@@ -663,7 +663,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Note:  this subcommand does not require network access, and resolves\n"
      "  any conflicted states.  However, it does not restore removed directories.\n"),
-    {svn_cl__targets_opt, 'R', 'q', svn_cl__config_dir_opt} },
+    {svn_cl__targets_opt, 'R', 'q', svn_cl__changelist_opt,
+     svn_cl__config_dir_opt} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
     ("Print the status of working copy files and directories.\n"
