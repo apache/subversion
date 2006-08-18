@@ -192,7 +192,7 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
     {
       svn_pool_clear(subpool);
 
-      SVN_ERR(svn_ra_rev_prop(session, 0, SVNSYNC_LOCK_PROP, &reposlocktoken,
+      SVN_ERR(svn_ra_rev_prop(session, 0, SVNSYNC_PROP_LOCK, &reposlocktoken,
                               subpool));
 
       if (reposlocktoken)
@@ -212,7 +212,7 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
         }
       else
         {
-          SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNSYNC_LOCK_PROP,
+          SVN_ERR(svn_ra_change_rev_prop(session, 0, SVNSYNC_PROP_LOCK,
                                          mylocktoken, subpool));
         }
     }
@@ -244,7 +244,7 @@ with_locked(svn_ra_session_t *session,
 
   err = func(session, baton, pool);
 
-  err2 = svn_ra_change_rev_prop(session, 0, SVNSYNC_LOCK_PROP, NULL, pool);
+  err2 = svn_ra_change_rev_prop(session, 0, SVNSYNC_PROP_LOCK, NULL, pool);
   if (err2 && err)
     {
       svn_error_clear(err2); /* XXX what to do here? */
@@ -389,7 +389,7 @@ do_initialize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   /* And check to see if anyone's run initialize on it before...  We
      may want a --force option to override this check. */
 
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_FROM_URL_PROP,
+  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                           &from_url, pool));
 
   if (from_url)
@@ -406,16 +406,16 @@ do_initialize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   SVN_ERR(check_if_session_is_at_repos_root(from_session, baton->from_url,
                                             pool));
 
-  SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_FROM_URL_PROP,
+  SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                                  svn_string_create(baton->from_url, pool),
                                  pool));
 
   SVN_ERR(svn_ra_get_uuid(from_session, &uuid, pool));
 
-  SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_FROM_UUID_PROP,
+  SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
                                  svn_string_create(uuid, pool), pool));
 
-  SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_LAST_MERGED_REV_PROP,
+  SVN_ERR(svn_ra_change_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
                                  svn_string_create("0", pool), pool));
 
   /* Finally, copy all non-svnsync revprops from rev 0 of the source
@@ -865,11 +865,11 @@ open_source_session(svn_ra_session_t **from_session,
   svn_string_t *from_url, *from_uuid;
   const char *uuid;
 
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_FROM_URL_PROP,
+  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_URL,
                           &from_url, pool));
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_FROM_UUID_PROP,
+  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_FROM_UUID,
                           &from_uuid, pool));
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_LAST_MERGED_REV_PROP,
+  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_LAST_MERGED_REV,
                           last_merged_rev, pool));
 
   if (! from_url || ! from_uuid || ! *last_merged_rev)
@@ -934,7 +934,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
      with the destination without using svnsync.
   */
 
-  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_CURRENTLY_COPYING_PROP,
+  SVN_ERR(svn_ra_rev_prop(to_session, 0, SVNSYNC_PROP_CURRENTLY_COPYING,
                           &currently_copying, pool));
 
   SVN_ERR(svn_ra_get_latest_revnum(to_session, &to_latest, pool));
@@ -974,10 +974,10 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
              (i.e. non-svnsync) commits to the dest repository. */
 
           SVN_ERR(svn_ra_change_rev_prop(to_session, 0,
-                                         SVNSYNC_LAST_MERGED_REV_PROP,
+                                         SVNSYNC_PROP_LAST_MERGED_REV,
                                          last_merged_rev, pool));
           SVN_ERR(svn_ra_change_rev_prop(to_session, 0,
-                                         SVNSYNC_CURRENTLY_COPYING_PROP,
+                                         SVNSYNC_PROP_CURRENTLY_COPYING,
                                          NULL, pool));
         }
       /* If copying > to_latest, then we just fall through to
@@ -1030,7 +1030,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
          because ra_svn doesn't let you change rev props during a
          commit. */
       SVN_ERR(svn_ra_change_rev_prop(to_session, 0,
-                                     SVNSYNC_CURRENTLY_COPYING_PROP,
+                                     SVNSYNC_PROP_CURRENTLY_COPYING,
                                      svn_string_createf(subpool, "%ld",
                                                         current),
                                      subpool));
@@ -1079,7 +1079,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       SVN_ERR(svn_ra_change_rev_prop
               (to_session,
                0,
-               SVNSYNC_LAST_MERGED_REV_PROP,
+               SVNSYNC_PROP_LAST_MERGED_REV,
                svn_string_create(apr_psprintf(subpool, "%ld", current),
                                  subpool),
                subpool));
@@ -1088,7 +1088,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
          with this revision. */
 
       SVN_ERR(svn_ra_change_rev_prop(to_session, 0,
-                                     SVNSYNC_CURRENTLY_COPYING_PROP,
+                                     SVNSYNC_PROP_CURRENTLY_COPYING,
                                      NULL, subpool));
     }
 
