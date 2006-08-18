@@ -28,18 +28,6 @@ Candidate changes:
       +1: djh, rooneg
       +0: dlr, cmpilato
 
-  * r21075, r21093, r21095, r21097
-    Makes svn_ra_replay consistent with svn_repos_replay2 with regard to
-    closing the editor drive, and self-consistent in terms of the protocol
-    bits for "file" versus "directory" directives.
-    Justification:
-      Consistency is good, and this may become important with the work
-      that's being done for modifying revprops during a commit.  Also,
-      if we don't change the protocol now, we're stuck with it.
-    Branch: 1.4.x-r21075
-    Votes:
-      +1: cmpilato, rooneg
-
   * r21114
     Cease pointless running of "gen-make.py -t dsp" in release mode.
     Justification:
@@ -71,6 +59,18 @@ Approved changes:
       construct that is already no longer used on trunk.
     Votes:
       +1: maxb, cmpilato
+
+  * r21075, r21093, r21095, r21097
+    Makes svn_ra_replay consistent with svn_repos_replay2 with regard to
+    closing the editor drive, and self-consistent in terms of the protocol
+    bits for "file" versus "directory" directives.
+    Justification:
+      Consistency is good, and this may become important with the work
+      that's being done for modifying revprops during a commit.  Also,
+      if we don't change the protocol now, we're stuck with it.
+    Branch: 1.4.x-r21075
+    Votes:
+      +1: cmpilato, rooneg, glasser
 
 Status of 1.4.1:
 ================
