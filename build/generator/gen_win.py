@@ -59,6 +59,7 @@ class WinGeneratorBase(GeneratorBase):
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
     self.have_gen_uri = None
+    self.sasl_path = None
 
     # NLS options
     self.enable_nls = None
@@ -90,6 +91,8 @@ class WinGeneratorBase(GeneratorBase):
         self.zlib_path = val
       elif opt == '--with-swig':
         self.swig_path = val
+      elif opt == '--with-sasl':
+        self.sasl_path = val
       elif opt == '--with-openssl':
         self.openssl_path = val
       elif opt == '--enable-purify':
@@ -618,6 +621,10 @@ class WinGeneratorBase(GeneratorBase):
     if self.neon_ver >= 25000:
       fakedefines.append("SVN_NEON_0_25=1")
 
+    # check we have sasl
+    if self.sasl_path:
+      fakedefines.append("SVN_HAVE_SASL")
+
     return fakedefines
 
   def get_win_includes(self, target):
@@ -650,7 +657,7 @@ class WinGeneratorBase(GeneratorBase):
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
     
     if self.serf_path:
-       fakeincludes.append(self.apath(self.serf_path, ""))
+      fakeincludes.append(self.apath(self.serf_path, ""))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -658,6 +665,9 @@ class WinGeneratorBase(GeneratorBase):
       fakeincludes.append(self.swig_libdir)
 
     fakeincludes.append(self.apath(self.zlib_path))
+
+    if self.sasl_path:
+      fakeincludes.append(self.apath(self.sasl_path, 'include'))
     
     return fakeincludes
 
@@ -670,6 +680,8 @@ class WinGeneratorBase(GeneratorBase):
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path) ]
+    if self.sasl_path:
+      fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -686,6 +698,9 @@ class WinGeneratorBase(GeneratorBase):
       dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
+    sasllib = None
+    if self.sasl_path:
+      sasllib = 'libsasl.lib'
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -718,6 +733,9 @@ class WinGeneratorBase(GeneratorBase):
 
       if dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)
+        
+      if dep.external_lib == '$(SVN_SASL_LIBS)':
+        nondeplibs.append(sasllib)
         
     return gen_base.unique(nondeplibs)
 
