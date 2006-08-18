@@ -16,6 +16,8 @@
  * ====================================================================
  */
 
+#pragma SWIG nowarn=124
+
 #ifdef SWIGPYTHON
 
 %feature("autodoc",1);

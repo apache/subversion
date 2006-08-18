@@ -44,22 +44,6 @@ Approved changes:
     Votes:
       +1: djh, dlr, rooneg
 
-  * Suppress the "Specifying the language name in %typemap is deprecated
-      - use #ifdef SWIG<LANG> instead." warnings.
-    Patch:
-      --- subversion/bindings/swig/include/svn_global.swg     (revision 21074)
-      +++ subversion/bindings/swig/include/svn_global.swg     (working copy)
-      @@ -18,2 +18,4 @@
-
-      +#pragma SWIG nowarn=124
-      +
-       #ifdef SWIGPYTHON
-    Justification:
-      Avoid very noisy deprecation warnings in 1.4.x, regarding a deprecated
-      construct that is already no longer used on trunk.
-    Votes:
-      +1: maxb, cmpilato
-
   * r21075, r21093, r21095, r21097
     Makes svn_ra_replay consistent with svn_repos_replay2 with regard to
     closing the editor drive, and self-consistent in terms of the protocol
