@@ -169,8 +169,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-17 23:02+0900\n"
-"PO-Revision-Date: 2006-08-17 23:02+0900\n"
+"POT-Creation-Date: 2006-08-18 10:10+0900\n"
+"PO-Revision-Date: 2006-08-18 10:07+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3394,7 +3394,8 @@ msgstr ""
 "ra_svn 用のリポジトリアクセスローダバージョン (%d) はサポートされていません"
 
 #: libsvn_ra_svn/cram.c:194 libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/simple_auth.c:59
+#: libsvn_ra_svn/sasl_auth.c:302 libsvn_ra_svn/sasl_auth.c:357
+#: libsvn_ra_svn/simple_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "認証に対する予想外のサーバのレスポンスです"
 
@@ -3471,17 +3472,26 @@ msgstr "エラーリストが不正です"
 msgid "Unknown status '%s' in command response"
 msgstr "コマンドへのレスポンス内に未知のステータス '%s' があります"
 
-#: libsvn_ra_svn/simple_auth.c:56 libsvn_ra_svn/simple_auth.c:108
+#: libsvn_ra_svn/sasl_auth.c:155
+msgid "Could not initialize the SASL library"
+msgstr "SASL ライブラリを初期化できませんでした"
+
+#: libsvn_ra_svn/sasl_auth.c:215 libsvn_ra_svn/simple_auth.c:58
+#: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "サーバの認証エラーです: %s"
 
-#: libsvn_ra_svn/simple_auth.c:95 libsvn_subr/prompt.c:156
+#: libsvn_ra_svn/sasl_auth.c:232
+msgid "Unhandled SASL interaction"
+msgstr "SASL 相互作用の扱いをやめました"
+
+#: libsvn_ra_svn/simple_auth.c:97 libsvn_subr/prompt.c:156
 #, c-format
 msgid "Can't get password"
 msgstr "パスワードを取得できません"
 
-#: libsvn_ra_svn/simple_auth.c:115
+#: libsvn_ra_svn/simple_auth.c:117
 msgid "Cannot negotiate authentication mechanism"
 msgstr "認証機構と交渉できません"
 
