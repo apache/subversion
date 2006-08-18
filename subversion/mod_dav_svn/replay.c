@@ -61,6 +61,16 @@ maybe_start_report(dav_svn_edit_baton_t *eb)
 }
 
 static svn_error_t *
+end_report(dav_svn_edit_baton_t *eb)
+{
+  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
+                            "</S:editor-report>" DEBUG_CR));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
 maybe_close_textdelta(dav_svn_edit_baton_t *eb)
 {
   if (eb->sending_textdelta)
@@ -149,11 +159,11 @@ static svn_error_t *add_directory(const char *path,
 
   if (! copyfrom_path)
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-directory path=\"%s\"/>" DEBUG_CR,
+                              "<S:add-directory name=\"%s\"/>" DEBUG_CR,
                               qpath));
   else
     SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                              "<S:add-directory path=\"%s\" "
+                              "<S:add-directory name=\"%s\" "
                                                "copyfrom-path=\"%s\" "
                                                "copyfrom-rev=\"%ld\"/>"
                               DEBUG_CR,
@@ -177,7 +187,7 @@ static svn_error_t *open_directory(const char *path,
   *child_baton = parent_baton;
 
   SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "<S:open-directory path=\"%s\" rev=\"%ld\"/>"
+                            "<S:open-directory name=\"%s\" rev=\"%ld\"/>"
                             DEBUG_CR, qpath, base_revision));
 
   return SVN_NO_ERROR;
@@ -355,11 +365,6 @@ static svn_error_t *close_directory(void *dir_baton,
 static svn_error_t *close_edit(void *edit_baton,
                                apr_pool_t *pool)
 {
-  dav_svn_edit_baton_t *eb = edit_baton;
-
-  SVN_ERR(dav_svn__send_xml(eb->bb, eb->output,
-                            "</S:editor-report>" DEBUG_CR));
-
   return SVN_NO_ERROR;
 }
 
@@ -503,7 +508,7 @@ dav_svn__replay_report(const dav_resource *resource,
                                "Problem replaying revision",
                                resource->pool);
 
-  if ((err = editor->close_edit(edit_baton, resource->pool)))
+  if ((err = end_report(edit_baton)))
     return dav_svn_convert_err(err, HTTP_INTERNAL_SERVER_ERROR,
                                "Problem closing editor drive",
                                resource->pool);

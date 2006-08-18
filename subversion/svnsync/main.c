@@ -1060,6 +1060,8 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       SVN_ERR(svn_ra_replay(from_session, current, 0, TRUE,
                             cancel_editor, cancel_baton, subpool));
 
+      SVN_ERR(cancel_editor->close_edit(cancel_baton, subpool));
+
       /* Sanity check that we actually committed the revision we meant to. */
       if (baton->committed_rev != current)
         return svn_error_createf
