@@ -294,7 +294,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
 /**
  * These are reserved properties attached to a "revision" object in
  * the repository filesystem.  They can be queried by using
- * svn_fs_revision_prop().  They are invisible to svn clients.
+ * svn_fs_revision_prop().
  *
  * @defgroup svn_props_revision_props Revision properties
  * @{
