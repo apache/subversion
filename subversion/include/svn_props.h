@@ -328,6 +328,31 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  */
 #define SVN_PROP_REVISION_AUTOVERSIONED  SVN_PROP_PREFIX "autoversioned"
 
+
+/** More reserved revision props in the 'svn:' namespace, used by the
+    svnsync tool:   */
+
+/* Prefix for all svnsync custom properties. */
+#define SVNSYNC_PROP_PREFIX             SVN_PROP_PREFIX "sync-"
+
+/* The following revision properties are set on revision 0 of
+ * destination repositories by svnsync:
+ */
+
+/* Used to enforce mutually exclusive destination repository access. */
+#define SVNSYNC_LOCK_PROP               SVNSYNC_PROP_PREFIX "lock"
+
+/* Identifies the repository's source. */
+#define SVNSYNC_FROM_URL_PROP           SVNSYNC_PROP_PREFIX "from-url"
+#define SVNSYNC_FROM_UUID_PROP          SVNSYNC_PROP_PREFIX "from-uuid"
+
+/* Identifies the last completely mirrored revision. */
+#define SVNSYNC_LAST_MERGED_REV_PROP    SVNSYNC_PROP_PREFIX "last-merged-rev"
+
+/* Identifies the revision currently being copied. */
+#define SVNSYNC_CURRENTLY_COPYING_PROP  SVNSYNC_PROP_PREFIX "currently-copying"
+
+
 /**
  * This is a list of all revision properties.
  */ 
@@ -335,7 +360,12 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
                                     SVN_PROP_REVISION_LOG, \
                                     SVN_PROP_REVISION_DATE, \
                                     SVN_PROP_REVISION_AUTOVERSIONED, \
-                                    SVN_PROP_REVISION_ORIG_DATE,
+                                    SVN_PROP_REVISION_ORIG_DATE, \
+                                    SVNSYNC_LOCK_PROP, \
+                                    SVNSYNC_FROM_URL_PROP, \
+                                    SVNSYNC_FROM_UUID_PROP, \
+                                    SVNSYNC_LAST_MERGED_REV_PROP, \
+                                    SVNSYNC_CURRENTLY_COPYING_PROP,
 
 /** @} */
 
