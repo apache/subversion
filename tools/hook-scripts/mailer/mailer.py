@@ -445,7 +445,7 @@ def get_commondir(dirlist):
   a commondir is found, the dirlist returned is rooted in that
   commondir.  If no commondir is found, dirlist is returned unchanged,
   and commondir is the empty string."""
-  if len(dirlist) == 1 or '/' in dirlist:
+  if len(dirlist) < 2 or '/' in dirlist:
     commondir = ''
     newdirs = dirlist
   else:
