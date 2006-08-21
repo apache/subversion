@@ -169,8 +169,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-18 10:10+0900\n"
-"PO-Revision-Date: 2006-08-18 10:07+0900\n"
+"POT-Creation-Date: 2006-08-22 03:49+0900\n"
+"PO-Revision-Date: 2006-08-22 03:51+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -983,7 +983,7 @@ msgstr "必要ないのにログメッセージが指定されました"
 msgid "Error during recursive add of '%s'"
 msgstr "'%s' を再帰的に追加する際にエラーが発生しました"
 
-#: libsvn_client/add.c:388
+#: libsvn_client/add.c:388 libsvn_wc/copy.c:253
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "ディレクトリ '%s' を閉じることができません"
@@ -1159,8 +1159,8 @@ msgstr ""
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
 #: libsvn_wc/adm_crawler.c:770 libsvn_wc/adm_ops.c:1044
 #: libsvn_wc/adm_ops.c:2329 libsvn_wc/adm_ops.c:2355 libsvn_wc/adm_ops.c:2391
-#: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:86 libsvn_wc/copy.c:442
-#: libsvn_wc/copy.c:564 libsvn_wc/copy.c:571 libsvn_wc/diff.c:1793
+#: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:308 libsvn_wc/copy.c:664
+#: libsvn_wc/copy.c:786 libsvn_wc/copy.c:793 libsvn_wc/diff.c:1793
 #: libsvn_wc/entries.c:2256 libsvn_wc/entries.c:2813 libsvn_wc/props.c:479
 #: libsvn_wc/props.c:1088 libsvn_wc/props.c:1506 libsvn_wc/questions.c:186
 #: libsvn_wc/questions.c:295 libsvn_wc/status.c:726 libsvn_wc/translate.c:199
@@ -3394,7 +3394,7 @@ msgstr ""
 "ra_svn 用のリポジトリアクセスローダバージョン (%d) はサポートされていません"
 
 #: libsvn_ra_svn/cram.c:194 libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/sasl_auth.c:302 libsvn_ra_svn/sasl_auth.c:357
+#: libsvn_ra_svn/sasl_auth.c:311 libsvn_ra_svn/sasl_auth.c:366
 #: libsvn_ra_svn/simple_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "認証に対する予想外のサーバのレスポンスです"
@@ -3476,13 +3476,13 @@ msgstr "コマンドへのレスポンス内に未知のステータス '%s' が
 msgid "Could not initialize the SASL library"
 msgstr "SASL ライブラリを初期化できませんでした"
 
-#: libsvn_ra_svn/sasl_auth.c:215 libsvn_ra_svn/simple_auth.c:58
+#: libsvn_ra_svn/sasl_auth.c:224 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "サーバの認証エラーです: %s"
 
-#: libsvn_ra_svn/sasl_auth.c:232
+#: libsvn_ra_svn/sasl_auth.c:241
 msgid "Unhandled SASL interaction"
 msgstr "SASL 相互作用の扱いをやめました"
 
@@ -4327,7 +4327,7 @@ msgstr "'%s' から '%s' にファイル名を変更できません"
 msgid "Can't create directory '%s'"
 msgstr "ディレクトリ '%s' を作成できません"
 
-#: libsvn_subr/io.c:2779 libsvn_wc/copy.c:298
+#: libsvn_subr/io.c:2779 libsvn_wc/copy.c:520
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "ディレクトリ '%s' を隠せません"
@@ -4832,23 +4832,28 @@ msgstr "パス '%s' の種別が不明または予想外です"
 msgid "File '%s' has local modifications"
 msgstr "ファイル '%s' にはローカルでの変更が加えられています"
 
-#: libsvn_wc/copy.c:141
+#: libsvn_wc/copy.c:241
+#, c-format
+msgid "Error during recursive copy of '%s'"
+msgstr "'%s' を再帰的にコピーする際にエラーが発生しました"
+
+#: libsvn_wc/copy.c:363
 #, c-format
 msgid "'%s' already exists and is in the way"
 msgstr "'%s' が既に存在しており、妨害しています"
 
-#: libsvn_wc/copy.c:153
+#: libsvn_wc/copy.c:375
 #, c-format
 msgid "There is already a versioned item '%s'"
 msgstr "既にバージョン管理下にある項目 '%s' があります"
 
-#: libsvn_wc/copy.c:163
+#: libsvn_wc/copy.c:385
 #, c-format
 msgid "Cannot copy or move '%s': it's not under version control"
 msgstr ""
 "'%s' のコピーや移動はできません: それはまだバージョン管理下にありません"
 
-#: libsvn_wc/copy.c:172
+#: libsvn_wc/copy.c:394
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
@@ -4857,7 +4862,7 @@ msgstr ""
 "'%s' のコピーや移動はできません: それはまだリポジトリに入っていないので、最初"
 "にコミットしてみてください"
 
-#: libsvn_wc/copy.c:451
+#: libsvn_wc/copy.c:673
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
@@ -4866,14 +4871,14 @@ msgstr ""
 "'%s' のコピーや移動はできません: それはまだリポジトリに入っていないので、最初"
 "にコミットしてみてください"
 
-#: libsvn_wc/copy.c:578
+#: libsvn_wc/copy.c:800
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
 msgstr ""
 "'%s' へのコピーはできません。それはリポジトリ '%s' ではなく '%s' に由来してい"
 "ます。"
 
-#: libsvn_wc/copy.c:585
+#: libsvn_wc/copy.c:807
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "削除準備中のディレクトリ '%s' にはコピーできません"
@@ -5605,7 +5610,7 @@ msgstr ""
 "Subversion はバージョン管理用のツールです。\n"
 "さらに詳しい情報は、http://subversion.tigris.org/ をご覧ください。\n"
 
-#: svn/help-cmd.c:65 svnsync/main.c:1260
+#: svn/help-cmd.c:65 svnsync/main.c:1246
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -5870,7 +5875,7 @@ msgstr ""
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:63 svn/main.c:64 svnadmin/main.c:227 svnadmin/main.c:230
 #: svndumpfilter/main.c:780 svndumpfilter/main.c:783 svnlook/main.c:90
-#: svnlook/main.c:93 svnsync/main.c:103 svnsync/main.c:105
+#: svnlook/main.c:93 svnsync/main.c:104 svnsync/main.c:106
 msgid "show help on a subcommand"
 msgstr "サブコマンドに関するヘルプを表示します"
 
@@ -5966,7 +5971,7 @@ msgstr ""
 # * Description for 'svn{,admin,dumpfilter,look,serve,sync,version} --version'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:92 svnadmin/main.c:233 svndumpfilter/main.c:786
-#: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:101
+#: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:102
 #: svnversion/main.c:125
 msgid "show program version information"
 msgstr "プログラムのバージョン情報を表示します"
@@ -5985,13 +5990,13 @@ msgstr "更新情報を表示します"
 
 # * Description for 'svn{,sync} --username'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:96 svnsync/main.c:95
+#: svn/main.c:96 svnsync/main.c:96
 msgid "specify a username ARG"
 msgstr "ユーザ名を <引数> と指定します"
 
 # * Description for 'svn{,sync} --password'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:98 svnsync/main.c:97
+#: svn/main.c:98 svnsync/main.c:98
 msgid "specify a password ARG"
 msgstr "パスワードを <引数> と指定します"
 
@@ -6073,13 +6078,13 @@ msgstr ""
 
 # * Description for 'svn{,sync} --no-auth-cache'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:138 svnsync/main.c:93
+#: svn/main.c:138 svnsync/main.c:94
 msgid "do not cache authentication tokens"
 msgstr "認証情報をキャッシュしません"
 
 # * Description for 'svn{,sync} --non-interactive'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:140 svnsync/main.c:91
+#: svn/main.c:140 svnsync/main.c:92
 msgid "do no interactive prompting"
 msgstr "対話式の認証用プロンプト表示をしません"
 
@@ -6157,7 +6162,7 @@ msgstr "URL を書き換え、参照するリポジトリを変更します"
 
 # * Description for 'svn{,sync} --config-dir'.
 # * 29 half-size characters are displayed on the left.
-#: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:99
+#: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:100
 msgid "read user configuration files from directory ARG"
 msgstr ""
 "ディレクトリ <引数> からユーザ設定ファイルを読み\n"
@@ -7497,7 +7502,7 @@ msgstr ""
 "と\n"
 "  なったパスは 1 列目でコード 'E' を用いて報告されます。\n"
 
-#: svn/main.c:857 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:168
+#: svn/main.c:857 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:146
 msgid "Caught signal"
 msgstr "シグナルを受け取りました"
 
@@ -9427,7 +9432,7 @@ msgstr ""
 
 # * Description for 'svnsync initialize'.
 # * "initialize (init): " is displayed at the head of the first line.
-#: svnsync/main.c:55
+#: svnsync/main.c:56
 msgid ""
 "usage: svnsync initialize DEST_URL SOURCE_URL\n"
 "\n"
@@ -9460,7 +9465,7 @@ msgstr ""
 
 # * Description for 'svnsync synchronize'.
 # * "synchronize (sync): " is displayed at the head of the first line.
-#: svnsync/main.c:70
+#: svnsync/main.c:71
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
@@ -9472,7 +9477,7 @@ msgstr ""
 
 # * Description for 'svnsync synchronize'.
 # * "synchronize (sync): " is displayed at the head of the first line.
-#: svnsync/main.c:75
+#: svnsync/main.c:76
 msgid ""
 "usage: svnsync copy-revprops DEST_URL REV\n"
 "\n"
@@ -9485,7 +9490,7 @@ msgstr ""
 
 # * Description for 'svnsync help'.
 # * "help: " is displayed at the head of the first line.
-#: svnsync/main.c:81
+#: svnsync/main.c:82
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "\n"
@@ -9495,62 +9500,62 @@ msgstr ""
 "\n"
 "このプログラムやそのサブコマンドの使用方法を説明します。\n"
 
-#: svnsync/main.c:206
+#: svnsync/main.c:184
 #, c-format
 msgid "Can't get local hostname"
 msgstr "ローカルのホスト名を取得できません"
 
-#: svnsync/main.c:228
+#: svnsync/main.c:206
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
 msgstr ""
 "同期先リポジトリのロックを取得できませんでした。現在 '%s' が所持しています\n"
 
-#: svnsync/main.c:323
+#: svnsync/main.c:301
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
 msgstr "セッションのルートは '%s' ですが、リポジトリのルートは '%s' です"
 
-#: svnsync/main.c:362
+#: svnsync/main.c:341
 #, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
 msgstr "リビジョン %ld の属性をコピーしました (属性 %s* は飛ばしました)。\n"
 
-#: svnsync/main.c:367
+#: svnsync/main.c:346
 #, c-format
 msgid "Copied properties for revision %ld.\n"
 msgstr "リビジョン %ld の属性をコピーしました。\n"
 
-#: svnsync/main.c:408
+#: svnsync/main.c:387
 msgid "Cannot initialize a repository with content in it"
 msgstr "内容を含んだリポジトリは初期化できません"
 
-#: svnsync/main.c:418
+#: svnsync/main.c:398
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "同期先リポジトリは既に '%s' から同期中です"
 
-#: svnsync/main.c:475 svnsync/main.c:478 svnsync/main.c:1130
-#: svnsync/main.c:1214
+#: svnsync/main.c:455 svnsync/main.c:458 svnsync/main.c:1116
+#: svnsync/main.c:1200
 #, c-format
 msgid "Path '%s' is not a URL"
 msgstr "パス '%s' は URL ではありません"
 
-#: svnsync/main.c:858
+#: svnsync/main.c:838
 #, c-format
 msgid "Committed revision %ld.\n"
 msgstr "リビジョン %ld をコミットしました。\n"
 
-#: svnsync/main.c:895
+#: svnsync/main.c:877
 msgid "Destination repository has not been initialized"
 msgstr "同期先リポジトリは初期化されていません"
 
-#: svnsync/main.c:910
+#: svnsync/main.c:892
 #, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
 msgstr "同期元リポジトリの UUID (%s) が予想される UUID (%s) と一致しません"
 
-#: svnsync/main.c:972
+#: svnsync/main.c:954
 #, c-format
 msgid ""
 "Revision being currently copied (%ld), last merged revision (%ld), and "
@@ -9561,7 +9566,7 @@ msgstr ""
 "HEAD (%ld) が食い違っています。svnsync を用いずに同期先リポジトリにコミットし"
 "たのではありませんか?"
 
-#: svnsync/main.c:1008
+#: svnsync/main.c:992
 #, c-format
 msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
@@ -9570,23 +9575,23 @@ msgstr ""
 "同期先の HEAD (%ld) が最後にマージされたリビジョン (%ld) ではありません。"
 "svnsync を用いずに同期先リポジトリにコミットしたのではありませんか?"
 
-#: svnsync/main.c:1084
+#: svnsync/main.c:1069
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr ""
 "コミットでリビジョン %ld が作成されましたが、作成されるべきだったのは %ld で"
 "す"
 
-#: svnsync/main.c:1185
+#: svnsync/main.c:1171
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
 msgstr "まだ同期されていないリビジョンのリビジョン属性はコピーできません"
 
-#: svnsync/main.c:1217
+#: svnsync/main.c:1203
 msgid "Invalid revision number"
 msgstr "リビジョン番号が不正です"
 
 # * Description for svnsync.
-#: svnsync/main.c:1253
+#: svnsync/main.c:1239
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -9605,7 +9610,7 @@ msgstr ""
 "\n"
 "利用可能なサブコマンド:\n"
 
-#: svnsync/main.c:1443
+#: svnsync/main.c:1429
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -9614,7 +9619,7 @@ msgstr ""
 "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
 "使用方法を知りたいときは 'svnsync help %s' と打ってください。\n"
 
-#: svnsync/main.c:1504
+#: svnsync/main.c:1490
 msgid "Not enough arguments provided; try 'svnsync help' for more info"
 msgstr ""
 "与える引数が不十分です。より詳しく知りたいときは 'svnsync help' を試してみて"
