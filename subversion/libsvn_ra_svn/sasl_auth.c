@@ -162,6 +162,13 @@ svn_error_t *svn_ra_svn__sasl_init(void)
   return SVN_NO_ERROR;
 }
 
+static apr_status_t sasl_dispose_cb(void *data)
+{
+  sasl_conn_t *sasl_ctx = data;
+  sasl_dispose(&sasl_ctx);
+  return APR_SUCCESS;
+}
+
 /* Create a new SASL context. */
 static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                                  svn_boolean_t is_tunneled,
@@ -180,6 +187,8 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             sasl_errstring(result, NULL, NULL));
 
+  apr_pool_cleanup_register(pool, *sasl_ctx, sasl_dispose_cb,
+                            apr_pool_cleanup_null);
 
   if (is_tunneled)
     {
@@ -482,9 +491,6 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
                        mechstring,
                        compat,
                        subpool));
-
-      /* Dispose of this SASL context before creating a new one. */
-      sasl_dispose(&sasl_ctx);
 
       if (!success && need_creds)
         SVN_ERR(svn_auth_next_credentials((void**) &creds, iterstate, pool)); 
