@@ -37,13 +37,6 @@ Approved changes:
     Votes:
       +1: djh, dlr, rooneg
 
-  * r21114
-    Cease pointless running of "gen-make.py -t dsp" in release mode.
-    Justification:
-      Creates useless litter in release tarballs.
-    Votes:
-      +1: maxb, djh, rooneg
-
 Status of 1.4.1:
 ================
 
