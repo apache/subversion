@@ -18,6 +18,8 @@ Candidate changes:
       +1: maxb
       -1: cmpilato (this is a very odd place to do this.  dist.sh, perhaps?)
 
+Approved changes:
+
   * r20833, r20836
     Provide named, separate debug information files for clients building
     against Subversion libraries.
@@ -27,8 +29,6 @@ Candidate changes:
     Votes:
       +1: djh, rooneg, jerenkrantz
       +0: dlr, cmpilato
-
-Approved changes:
 
   * r20886 (depends on r20833 group above)
     Allow javahl to build with VC Express and fix its debug symbol files.
