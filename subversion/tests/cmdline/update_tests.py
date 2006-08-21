@@ -1640,40 +1640,6 @@ def update_xml_unsafe_dir(sbox):
     os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
-# Issue #2529.
-def checkout_broken_eol(sbox):
-  "checkout file with broken eol style"
-
-  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                          'update_tests_data')
-  dump_str = file(os.path.join(data_dir,
-                               "checkout_broken_eol.dump"), "rb").read()
-
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
-
-  URL = svntest.main.current_repo_url
-
-  # Load the dumpfile into the repos.
-  output, errput = \
-    svntest.main.run_command_stdin(
-    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
-    None, 1, [dump_str])
-
-  expected_output = svntest.wc.State(sbox.wc_dir, {
-    'file': Item(status='A '),
-    })
-                                     
-  expected_wc = svntest.wc.State('', {
-    'file': Item(contents='line\nline2\n'),
-    })
-  svntest.actions.run_and_verify_checkout(URL,
-                                          sbox.wc_dir,
-                                          expected_output,
-                                          expected_wc)
-
 # eol-style handling during update with conflicts, scenario 1:
 # when update creates a conflict on a file, make sure the file and files 
 # r<left>, r<right> and .mine are in the eol-style defined for that file.
@@ -2258,7 +2224,6 @@ test_list = [ None,
               nested_in_read_only,
               obstructed_update_alters_wc_props,
               update_xml_unsafe_dir,
-              checkout_broken_eol,
               conflict_markers_matching_eol,
               update_eolstyle_handling,
               XFail(update_copy_of_old_rev),
