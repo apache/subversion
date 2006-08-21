@@ -36,13 +36,8 @@ I.    BUILD REQUIREMENTS
       ==================
 
       Subversion depends on a number of third party tools and libraries.
-      If you are bootstrapping from a tarball, zipfile or an RPM then
-      you will already have everything you require to get a Subversion
-      client.  So long as you don't plan to build a new client from the
-      latest source or to build a Subversion server, you can go directly
-      to section II.A.
-
-      Otherwise, you need to read the following so that you can determine
+      Some of them are only required to run a Subversion server; others
+      are necessary just for a Subversion client.  This section explains
       what other tools and libraries will be required so that Subversion
       can be built with the set of features you want.
 
@@ -51,6 +46,28 @@ I.    BUILD REQUIREMENTS
       tools, so if you are in a real hurry to get building, you can skip
       straight to section II.  If you want to gather the pieces you will
       need before starting out, however, you should read the following.
+
+      If you're just installing a Subversion client, the Subversion
+      team has created a package containing the minimal prerequisite
+      libraries (Apache Portable Runtime, Neon, and Zlib) called the
+      "dependency package" tarball or zipfile.  You should be able to
+      find it at the same place that you downloaded the Subversion
+      tarball itself from. (Note that this is new as of Subversion
+      1.4.0; previous releases packaged the dependencies in the same
+      tarball as Subversion itself.)  If you don't have these
+      libraries installed already, you can simply unpack the
+      dependency package "on top of" the Subversion package; for
+      example, if you are using a .tar.gz bundle on Unix, you could
+      type:
+
+          $ tar xzvf subversion-1.x.x.tar.gz
+          $ tar xzvf subversion-deps-1.x.x.tar.gz
+          $ cd subversion-1.x.x
+
+      This will place 'apr', 'apr-util', 'neon', and 'zlib'
+      directories directly into your unpacked Subversion distribution,
+      where they will be automatically configured and built by
+      Subversion's build process.
 
       Note: Because previous builds of Subversion may have installed older
       versions of these libraries, you may want to run some of the cleanup
@@ -61,12 +78,14 @@ I.    BUILD REQUIREMENTS
 
       Whenever you want to build any part of Subversion, you need the
       Apache Portable Runtime (APR) and the APR Utility (APR-util)
-      libraries. These are included in Subversion source tarball releases -
-      if you are building from a source tarball, and wish to use the
-      included versions, you may skip ahead to the next requirement.
+      libraries. These are included in the Subversion dependency package -
+      if you are building from a source tarball and wish to use the versions
+      of APR and APR-util included there, just unpack the dependency package
+      and skip ahead to the next requirement.
 
-      If you are not building from a tarball, you will need to get these
-      yourself. Visit this page, and be sure to download the 0.9.x version:
+      If you are not building from a tarball with the dependency
+      package, you will need to get these yourself. Visit this page,
+      and be sure to download the 0.9.x version:
 
           http://apr.apache.org/download.cgi
 
@@ -155,7 +174,7 @@ I.    BUILD REQUIREMENTS
       want to use Subversion to connect to a server over ra_dav (via a
       http:// or https:// url), you will require Neon.
 
-      The source code is included with the latest Subversion tarball,
+      The source code is included with the Subversion dependencies package,
       and it can also be obtained from:
 
           http://www.webdav.org/neon/neon-0.24.7.tar.gz
@@ -164,12 +183,13 @@ I.    BUILD REQUIREMENTS
 
       Building Neon inside the subversion build:
 
-      The Neon library source code can be installed in "./neon" if you
+      The Neon library source code can be placed in "./neon" if you
       want Subversion to build it as part of the Subversion build process.
 
       Unpack the archive using tar/gunzip.  Rename the resulting
       directory from ./neon-0.XX.Y to just "./neon", inside the top
-      level of your Subversion source tree.
+      level of your Subversion source tree.  (This is what unpacking the
+      Subversion dependencies package does, too.)
 
       Using Neon as an external library:
 
@@ -310,7 +330,8 @@ I.    BUILD REQUIREMENTS
       "--with-libs=/path/to/lib" in addition.  In particular, on Red Hat
       (but not Fedora Core) it is necessary to specify
       "--with-libs=/usr/kerberos" for OpenSSL to be found.  The zlib library
-      is included in Neon by default, but you can also specify a path to the
+      is included in the Subversion dependencies package, but if you are compiling
+      Neon from a different source you can also specify a path to the
       library using "--with-libs".  Consult the Neon documentation for more
       information on how to use these parameters and versions of libraries
       you need.
@@ -461,8 +482,8 @@ II.   INSTALLATION
       the ./configure script.  This enables debugging symbols in your
       binaries (among other things) and most Subversion developers use it.)
 
-      Unlike the pre-packaged tarball (which includes apr, apr-util,
-      and neon subdirectories), ./configure will fail if it cannot
+      Unless you've gone out of your way to unpack a Subversion dependency
+      package onto your checkout, ./configure will fail if it cannot
       find apr, apr-util, and neon libraries already installed on your
       system.
 
@@ -482,9 +503,10 @@ II.   INSTALLATION
       It probably means that the dynamic loader/linker can't find all
       of the libsvn_* libraries.
 
-      Note that if you commonly build with the -jN option to make, the
-      make step above may fail, because we don't ensure that third
-      party libraries in our source tree will finish building before
+      Note that if you commonly build with the -jN option to make and
+      have unpacked a dependency tarball into your checkout, the make
+      step above may fail, because we don't ensure that third party
+      libraries in our source tree will finish building before
       subversion itself.  If you want to use -jN, use the following
       instead:
 
