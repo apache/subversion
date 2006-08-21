@@ -35,6 +35,14 @@ Candidate changes:
     Votes:
       +1: maxb, djh
 
+  * r21133-21136
+    Updates to INSTALL about deps tarball and ra_serf.
+    Justification:
+      We changed how we do deps and have support for a new library;
+      this should be documented.
+    Votes:
+      +1: glasser
+
 Approved changes:
 
   * r20886 (depends on r20833 group above)
