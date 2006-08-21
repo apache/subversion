@@ -167,7 +167,10 @@ unlock_subject_prefix =
 from_addr = invalid@example.com
 
 # The default To: addresses for message.  One or more addresses,
-# separated by whitespace (no commas):
+# separated by whitespace (no commas).
+# NOTE: If you want to use a different character for separating the
+#       addresses put it in front of the addresses included in square
+#       brackets '[ ]'.
 to_addr = invalid@example.com
 
 # If this is set, then a Reply-To: will be inserted into the message.

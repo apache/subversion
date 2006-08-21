@@ -183,9 +183,17 @@ class MailedOutput(OutputBase):
     OutputBase.__init__(self, cfg, repos, prefix_param)
 
   def start(self, group, params):
-    # whitespace-separated list of addresses; split into a clean list:
-    self.to_addrs = \
-        filter(None, string.split(self.cfg.get('to_addr', group, params)))
+    # whitespace (or another character) separated list of addresses;
+    # split into a clean list:
+    to_addr_in = self.cfg.get('to_addr', group, params)
+    # if list of addresses starts with '[.]'
+    # use the character between the square brackets as split char
+    if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
+                            and to_addr_in[2] == ']':
+      self.to_addrs = \
+        filter(None, string.split(to_addr_in[3:], to_addr_in[1]))
+    else:
+      self.to_addrs = filter(None, string.split(to_addr_in))
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
     self.reply_to = self.cfg.get('reply_to', group, params)
