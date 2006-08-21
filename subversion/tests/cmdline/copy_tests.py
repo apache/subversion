@@ -2431,6 +2431,280 @@ def move_dir_back_and_forth(sbox):
       return
   raise svntest.Failure("mv failed but not in the expected way")
 
+
+def copy_move_added_paths(sbox):
+  "copy and move added paths without commits"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new file and schedule it for addition
+  upsilon_path = os.path.join(wc_dir, 'A', 'D', 'upsilon')
+  svntest.main.file_write(upsilon_path, "This is the file 'upsilon'\n")
+  svntest.actions.run_and_verify_svn(None,
+                                     ["A         " + upsilon_path + "\n"],
+                                     [], 'add', upsilon_path)
+
+  # Create a dir with children and schedule it for addition
+  I_path = os.path.join(wc_dir, 'A', 'D', 'I')
+  J_path = os.path.join(I_path, 'J')
+  eta_path = os.path.join(I_path, 'eta')
+  theta_path = os.path.join(I_path, 'theta')
+  kappa_path = os.path.join(J_path, 'kappa')
+  os.mkdir(I_path)
+  os.mkdir(J_path)
+  svntest.main.file_write(eta_path, "This is the file 'eta'\n")
+  svntest.main.file_write(theta_path, "This is the file 'theta'\n")
+  svntest.main.file_write(kappa_path, "This is the file 'kappa'\n")
+  svntest.actions.run_and_verify_svn(None,
+                                     ["A         " + I_path + "\n",
+                                      "A         " + eta_path + "\n",
+                                      "A         " + J_path + "\n",
+                                      "A         " + kappa_path + "\n",
+                                      "A         " + theta_path + "\n"],
+                                     [], 'add', I_path)
+
+  # Create another dir and schedule it for addition
+  K_path = os.path.join(wc_dir, 'K')
+  os.mkdir(K_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     ["A         " + K_path + "\n"],
+                                     [], 'add', K_path)
+
+  # Scatter some unversioned files and an unversioned dir within
+  # in the added dir L.
+  unversioned_path_1 = os.path.join(I_path, 'unversioned1')
+  unversioned_path_2 = os.path.join(J_path, 'unversioned2')
+  L_path = os.path.join(I_path, "L_UNVERSIONED")
+  unversioned_path_3 = os.path.join(L_path, 'unversioned3')
+  svntest.main.file_write(unversioned_path_1, "An unversioned file\n")
+  svntest.main.file_write(unversioned_path_2, "An unversioned file\n")
+  os.mkdir(L_path)
+  svntest.main.file_write(unversioned_path_3, "An unversioned file\n")
+
+  # Copy added dir A/D/I to added dir K/I
+  I_copy_path = os.path.join(K_path, 'I')
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     I_path, I_copy_path)
+
+  # Copy added file A/D/upsilon into added dir K
+  upsilon_copy_path = os.path.join(K_path, 'upsilon')
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     upsilon_path, upsilon_copy_path)
+
+  # Move added file A/D/upsilon to upsilon,
+  # then move it again to A/upsilon
+  upsilon_move_path = os.path.join(wc_dir, 'upsilon')
+  upsilon_move_path_2 = os.path.join(wc_dir, 'A', 'upsilon')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     upsilon_path, upsilon_move_path,
+                                     '--force')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     upsilon_move_path, upsilon_move_path_2,
+                                     '--force')
+
+  # Move added dir A/D/I to A/B/I,
+  # then move it again to A/D/H/I
+  I_move_path = os.path.join(wc_dir, 'A', 'B', 'I')
+  I_move_path_2 = os.path.join(wc_dir, 'A', 'D', 'H', 'I')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     I_path, I_move_path,
+                                     '--force')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     I_move_path, I_move_path_2,
+                                     '--force')
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/I'         : Item(verb='Adding'),
+    'A/D/H/I/J'       : Item(verb='Adding'),
+    'A/D/H/I/J/kappa' : Item(verb='Adding'),
+    'A/D/H/I/eta'     : Item(verb='Adding'),
+    'A/D/H/I/theta'   : Item(verb='Adding'),
+    'A/upsilon'       : Item(verb='Adding'),
+    'K'               : Item(verb='Adding'),
+    'K/I'             : Item(verb='Adding'),
+    'K/I/J'           : Item(verb='Adding'),
+    'K/I/J/kappa'     : Item(verb='Adding'),
+    'K/I/eta'         : Item(verb='Adding'),
+    'K/I/theta'       : Item(verb='Adding'),
+    'K/upsilon'       : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/D/H/I'         : Item(status='  ', wc_rev=2),
+    'A/D/H/I/J'       : Item(status='  ', wc_rev=2),
+    'A/D/H/I/J/kappa' : Item(status='  ', wc_rev=2),
+    'A/D/H/I/eta'     : Item(status='  ', wc_rev=2),
+    'A/D/H/I/theta'   : Item(status='  ', wc_rev=2),
+    'A/upsilon'       : Item(status='  ', wc_rev=2),
+    'K'               : Item(status='  ', wc_rev=2),
+    'K/I'             : Item(status='  ', wc_rev=2),
+    'K/I/J'           : Item(status='  ', wc_rev=2),
+    'K/I/J/kappa'     : Item(status='  ', wc_rev=2),
+    'K/I/eta'         : Item(status='  ', wc_rev=2),
+    'K/I/theta'       : Item(status='  ', wc_rev=2),
+    'K/upsilon'       : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Confirm unversioned paths got copied and moved too.
+  unversioned_paths = [
+    os.path.join(wc_dir, 'A', 'D', 'H', 'I', 'unversioned1'),
+    os.path.join(wc_dir, 'A', 'D', 'H', 'I', 'L_UNVERSIONED'),
+    os.path.join(wc_dir, 'A', 'D', 'H', 'I', 'L_UNVERSIONED',
+                 'unversioned3'),
+    os.path.join(wc_dir, 'A', 'D', 'H', 'I', 'J', 'unversioned2'),
+    os.path.join(wc_dir, 'K', 'I', 'unversioned1'),
+    os.path.join(wc_dir, 'K', 'I', 'L_UNVERSIONED'),
+    os.path.join(wc_dir, 'K', 'I', 'L_UNVERSIONED', 'unversioned3'),
+    os.path.join(wc_dir, 'K', 'I', 'J', 'unversioned2')]
+  for path in unversioned_paths:
+    if not os.path.exists(path):
+      raise svntest.Failure("Unversioned path '%s' not found." % path)
+
+
+def copy_added_paths_to_URL(sbox):
+  "copy added path to URL"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new file and schedule it for addition
+  upsilon_path = os.path.join(wc_dir, 'A', 'D', 'upsilon')
+  svntest.main.file_write(upsilon_path, "This is the file 'upsilon'\n")
+  svntest.actions.run_and_verify_svn(None,
+                                     ["A         " + upsilon_path + "\n"],
+                                     [], 'add', upsilon_path)
+
+  # Create a dir with children and schedule it for addition
+  I_path = os.path.join(wc_dir, 'A', 'D', 'I')
+  J_path = os.path.join(I_path, 'J')
+  eta_path = os.path.join(I_path, 'eta')
+  theta_path = os.path.join(I_path, 'theta')
+  kappa_path = os.path.join(J_path, 'kappa')
+  os.mkdir(I_path)
+  os.mkdir(J_path)
+  svntest.main.file_write(eta_path, "This is the file 'eta'\n")
+  svntest.main.file_write(theta_path, "This is the file 'theta'\n")
+  svntest.main.file_write(kappa_path, "This is the file 'kappa'\n")
+  svntest.actions.run_and_verify_svn(None,
+                                     ["A         " + I_path + "\n",
+                                      "A         " + eta_path + "\n",
+                                      "A         " + J_path + "\n",
+                                      "A         " + kappa_path + "\n",
+                                      "A         " + theta_path + "\n"],
+                                     [], 'add', I_path)
+
+  # Add various unversioned files and dirs.  These don't get copied
+  # in a WC->URL copy obviously.
+  unversioned_path_1 = os.path.join(I_path, 'unversioned1')
+  unversioned_path_2 = os.path.join(J_path, 'unversioned2')
+  svntest.main.file_write(unversioned_path_1, "An unversioned file\n")
+  svntest.main.file_write(unversioned_path_2, "An unversioned file\n")
+  os.mkdir(os.path.join(I_path, 'L'))
+  unversioned_path_3 = os.path.join(wc_dir, 'unversioned3')
+  svntest.main.file_write(unversioned_path_3, "An unversioned file\n")
+
+  # Copy added file A/D/upsilon to URL://A/C/upsilon
+  upsilon_copy_URL = sbox.repo_url + '/A/C/upsilon'
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-m', '',
+                                     upsilon_path, upsilon_copy_URL)
+
+  # Copy added dir A/D/I to URL://A/D/G/I
+  I_copy_URL = sbox.repo_url + '/A/D/G/I'
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-m', '',
+                                     I_path, I_copy_URL)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/I'         : Item(verb='Adding'),
+    'A/D/I/J'       : Item(verb='Adding'),
+    'A/D/I/J/kappa' : Item(verb='Adding'),
+    'A/D/I/eta'     : Item(verb='Adding'),
+    'A/D/I/theta'   : Item(verb='Adding'),
+    'A/D/upsilon'   : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/I'         : Item(status='  ', wc_rev=4),
+    'A/D/I/J'       : Item(status='  ', wc_rev=4),
+    'A/D/I/J/kappa' : Item(status='  ', wc_rev=4),
+    'A/D/I/eta'     : Item(status='  ', wc_rev=4),
+    'A/D/I/theta'   : Item(status='  ', wc_rev=4),
+    'A/D/upsilon'   : Item(status='  ', wc_rev=4),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Created expected output for update
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/I'         : Item(status='A '),
+    'A/D/G/I/theta'   : Item(status='A '),
+    'A/D/G/I/J'       : Item(status='A '),
+    'A/D/G/I/J/kappa' : Item(status='A '),
+    'A/D/G/I/eta'     : Item(status='A '),
+    'A/C/upsilon'     : Item(status='A '),
+    })
+
+  # Created expected disk for update
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/D/G/I'              : Item(),
+    'A/D/G/I/theta'        : Item("This is the file 'theta'\n"),
+    'A/D/G/I/J'            : Item(),
+    'A/D/G/I/J/kappa'      : Item("This is the file 'kappa'\n"),
+    'A/D/G/I/eta'          : Item("This is the file 'eta'\n"),
+    'A/C/upsilon'          : Item("This is the file 'upsilon'\n"),
+    'A/D/I'                : Item(),
+    'A/D/I/J'              : Item(),
+    'A/D/I/J/kappa'        : Item("This is the file 'kappa'\n"),
+    'A/D/I/eta'            : Item("This is the file 'eta'\n"),
+    'A/D/I/theta'          : Item("This is the file 'theta'\n"),
+    'A/D/upsilon'          : Item("This is the file 'upsilon'\n"),
+    'unversioned3'         : Item("An unversioned file\n"), #unversioned
+    'A/D/I/L'              : Item(),                        #unversioned
+    'A/D/I/unversioned1'   : Item("An unversioned file\n"), #unversioned
+    'A/D/I/J/unversioned2' : Item("An unversioned file\n"), #unversioned
+    })
+
+  # Some more changes to the expected_status to reflect post update WC
+  expected_status.tweak(wc_rev=4)
+  expected_status.add({
+    'A/C'             : Item(status='  ', wc_rev=4),
+    'A/C/upsilon'     : Item(status='  ', wc_rev=4),
+    'A/D/G'           : Item(status='  ', wc_rev=4),
+    'A/D/G/I'         : Item(status='  ', wc_rev=4),
+    'A/D/G/I/theta'   : Item(status='  ', wc_rev=4),
+    'A/D/G/I/J'       : Item(status='  ', wc_rev=4),
+    'A/D/G/I/J/kappa' : Item(status='  ', wc_rev=4),
+    'A/D/G/I/eta'     : Item(status='  ', wc_rev=4),
+    })
+
+  # Update WC, the WC->URL copies above should be added
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -2483,6 +2757,8 @@ test_list = [ None,
               move_dir_out_of_moved_dir,
               move_file_back_and_forth,
               move_dir_back_and_forth,
+              copy_move_added_paths,
+              copy_added_paths_to_URL,
              ]
 
 if __name__ == '__main__':
