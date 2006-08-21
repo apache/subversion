@@ -463,7 +463,10 @@ II.   INSTALLATION
 
       These instructions assume you have already installed Subversion
       and checked out a working copy of Subversion's own code --
-      either the latest /trunk code, or some branch or tag.
+      either the latest /trunk code, or some branch or tag.  You also
+      need to have already installed whatever prerequisites that
+      version of Subversion requires (if you haven't, the ./configure
+      step should complain).
 
       You can discard the directory created by the tarball; you're
       about to build the latest, greatest Subversion client.  This is
@@ -508,11 +511,6 @@ II.   INSTALLATION
       (Optionally, you might want to pass --enable-maintainer-mode to
       the ./configure script.  This enables debugging symbols in your
       binaries (among other things) and most Subversion developers use it.)
-
-      Unless you've gone out of your way to unpack a Subversion dependency
-      package onto your checkout, ./configure will fail if it cannot
-      find apr, apr-util, and neon libraries already installed on your
-      system.
 
       Since the resulting binary depends on shared libraries, the
       destination library directory must be identified in your
