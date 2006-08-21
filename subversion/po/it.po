@@ -39,6 +39,7 @@
 # feature: caratteristica, funzionalità
 # filesystem: filesystem
 # grab: ottenere (meno fedele alla traduzione ortodossa ma forse più adatta al contesto)
+# handle: controllare, gestire
 # hash: hash
 # hook: aggancio
 # item: oggetto, elemento
@@ -87,8 +88,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-10 05:00+0200\n"
-"PO-Revision-Date: 2006-08-14 10:13+0200\n"
+"POT-Creation-Date: 2006-08-21 05:00+0200\n"
+"PO-Revision-Date: 2006-08-21 09:48+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1076,8 +1077,8 @@ msgstr ""
 #: libsvn_client/diff.c:1410 libsvn_client/diff.c:2140
 #: libsvn_client/diff.c:2735 libsvn_client/diff.c:2862
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
-#: libsvn_client/prop_commands.c:213 libsvn_client/prop_commands.c:446
-#: libsvn_client/prop_commands.c:609 libsvn_client/prop_commands.c:950
+#: libsvn_client/prop_commands.c:180 libsvn_client/prop_commands.c:413
+#: libsvn_client/prop_commands.c:576 libsvn_client/prop_commands.c:917
 #: libsvn_client/ra.c:181 libsvn_client/revisions.c:89
 #: libsvn_client/status.c:256 libsvn_client/switch.c:107
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
@@ -1411,39 +1412,39 @@ msgstr "L'elemento '%s' non ha URL"
 msgid "No commits in repository"
 msgstr "Non vi sono commit nel repository."
 
-#: libsvn_client/prop_commands.c:104
+#: libsvn_client/prop_commands.c:71
 #, c-format
 msgid "'%s' is a wcprop, thus not accessible to clients"
 msgstr ""
 "'%s' è una proprietà della copia di lavoro, per cui non è accessibile ai "
 "client"
 
-#: libsvn_client/prop_commands.c:183
+#: libsvn_client/prop_commands.c:150
 #, c-format
 msgid "Revision property '%s' not allowed in this context"
 msgstr "Proprietà di revisione '%s' non permessa in questo contesto"
 
-#: libsvn_client/prop_commands.c:199
+#: libsvn_client/prop_commands.c:166
 #, c-format
 msgid "Setting property on non-local target '%s' is not supported"
 msgstr ""
 "L'impostazione di una proprietà su un target non locale '%s' non è supportata"
 
-#: libsvn_client/prop_commands.c:205 libsvn_client/prop_commands.c:280
+#: libsvn_client/prop_commands.c:172 libsvn_client/prop_commands.c:247
 #, c-format
 msgid "Bad property name: '%s'"
 msgstr "Nome di proprietà non valido: '%s'"
 
-#: libsvn_client/prop_commands.c:276
+#: libsvn_client/prop_commands.c:243
 msgid "Value will not be set unless forced"
 msgstr "Il valore non sarà impostato se non forzato"
 
-#: libsvn_client/prop_commands.c:499
+#: libsvn_client/prop_commands.c:466
 #, c-format
 msgid "'%s' does not exist in revision %ld"
 msgstr "'%s' non esiste nella revisione %ld"
 
-#: libsvn_client/prop_commands.c:506 libsvn_client/prop_commands.c:757
+#: libsvn_client/prop_commands.c:473 libsvn_client/prop_commands.c:724
 #, c-format
 msgid "Unknown node kind for '%s'"
 msgstr "Tipo di nodo sconosciuto per '%s'"
@@ -2833,7 +2834,7 @@ msgstr "Attributo 'name' mancante nell'elemento delete-entry"
 msgid "Missing rev attr in delete-entry element"
 msgstr "Attributo 'rev' mancante nell'elemento delete-entry"
 
-#: libsvn_ra_dav/replay.c:196
+#: libsvn_ra_dav/replay.c:196 libsvn_ra_serf/replay.c:224
 msgid "Missing name attr in open-directory element"
 msgstr "Atttributo 'name' mancante nell'elemento 'open-directory'"
 
@@ -2859,7 +2860,7 @@ msgstr ""
 msgid "Got close-directory element without ever opening a directory"
 msgstr "Ricevuto elemento close-directory senza aver mai aperto una directory"
 
-#: libsvn_ra_dav/replay.c:456 libsvn_ra_serf/replay.c:492
+#: libsvn_ra_dav/replay.c:456 libsvn_ra_serf/replay.c:491
 msgid "Error writing stream: unexpected EOF"
 msgstr "Errore in scrittura: EOF inatteso"
 
@@ -3023,7 +3024,7 @@ msgstr "Modulo per accedere ad un repository sul disco locale."
 msgid "Unable to open an ra_local session to URL"
 msgstr "Non posso aprire una sessione ra_local su una URL"
 
-#: libsvn_ra_local/ra_plugin.c:1342
+#: libsvn_ra_local/ra_plugin.c:1340
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
 msgstr "Versione del lettore (%d) per ra_local non supportata"
@@ -3076,17 +3077,13 @@ msgstr "La richiesta di sblocco è fallita: %d %s"
 msgid "Missing revision attr in delete-entry element"
 msgstr "Attributo di revisione mancante nell'elemento delete-entry"
 
-#: libsvn_ra_serf/replay.c:224
-msgid "Missing path attr in open-directory element"
-msgstr "Atttributo di percorso mancante nell'elemento'open-directory"
-
 #: libsvn_ra_serf/replay.c:230
 msgid "Missing revision attr in open-directory element"
 msgstr "Attributo di revision  mancante per l'elemento open-directory"
 
 #: libsvn_ra_serf/replay.c:250
-msgid "Missing path attr in add-directory element"
-msgstr "Atttributo di percorso mancante nell'elemento open-directory"
+msgid "Missing name attr in add-directory element"
+msgstr "Atttributo di nome mancante nell'elemento add-directory"
 
 #: libsvn_ra_serf/replay.c:285
 msgid "Missing name attr in open-file element"
@@ -3293,31 +3290,36 @@ msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versione %d del lettore per ra_svn non supportata"
 
 #: libsvn_ra_svn/cram.c:194 libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/simple_auth.c:59
+#: libsvn_ra_svn/sasl_auth.c:302 libsvn_ra_svn/sasl_auth.c:357
+#: libsvn_ra_svn/simple_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "Risposta del server inattesa all'autenticazione"
 
-#: libsvn_ra_svn/editor.c:386 libsvn_ra_svn/editorp.c:455
+#: libsvn_ra_svn/editor.c:387 libsvn_ra_svn/editorp.c:456
 msgid "Invalid file or dir token during edit"
 msgstr "Elemento di file o directory non valido durante una modifica"
 
-#: libsvn_ra_svn/editor.c:620
+#: libsvn_ra_svn/editor.c:621
 msgid "Non-string as part of text delta"
 msgstr "Non-stringa come parte del delta di un testo"
 
-#: libsvn_ra_svn/editorp.c:128
+#: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
+msgid "Command 'finish-replay' invalid outside of replays"
+msgstr "Il comando 'finish-replay' non è valido al di fuori dei replay"
+
+#: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
 msgstr "Stato di modifica riuscita restituito troppo presto"
 
-#: libsvn_ra_svn/editorp.c:664
+#: libsvn_ra_svn/editorp.c:665
 msgid "Apply-textdelta already active"
 msgstr "Apply-textdelta già attivo"
 
-#: libsvn_ra_svn/editorp.c:686 libsvn_ra_svn/editorp.c:704
+#: libsvn_ra_svn/editorp.c:687 libsvn_ra_svn/editorp.c:705
 msgid "Apply-textdelta not active"
 msgstr "Apply-textdelta non attivo"
 
-#: libsvn_ra_svn/editorp.c:872 libsvn_ra_svn/marshal.c:842
+#: libsvn_ra_svn/editorp.c:891 libsvn_ra_svn/marshal.c:842
 #, c-format
 msgid "Unknown command '%s'"
 msgstr "Comando socnosciuto '%s'"
@@ -3363,16 +3365,25 @@ msgstr "Lista degli errori non conformi"
 msgid "Unknown status '%s' in command response"
 msgstr "Status sconosciuto '%s' nella risposta del comando"
 
-#: libsvn_ra_svn/simple_auth.c:56 libsvn_ra_svn/simple_auth.c:108
+#: libsvn_ra_svn/sasl_auth.c:155
+msgid "Could not initialize the SASL library"
+msgstr "Non riesco ad inizializzare la libreria SASL"
+
+#: libsvn_ra_svn/sasl_auth.c:215 libsvn_ra_svn/simple_auth.c:58
+#: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "Errore di autenticazione dal server: %s"
 
-#: libsvn_ra_svn/simple_auth.c:95 libsvn_subr/prompt.c:156
+#: libsvn_ra_svn/sasl_auth.c:232
+msgid "Unhandled SASL interaction"
+msgstr "Interazione con SASL non gestita"
+
+#: libsvn_ra_svn/simple_auth.c:97 libsvn_subr/prompt.c:156
 msgid "Can't get password"
 msgstr "Non riesco a leggere la password"
 
-#: libsvn_ra_svn/simple_auth.c:115
+#: libsvn_ra_svn/simple_auth.c:117
 msgid "Cannot negotiate authentication mechanism"
 msgstr "Non riesco a negoziare un meccanismo di autenticazione"
 
@@ -5463,7 +5474,7 @@ msgstr ""
 "Per ulteriori informazioni, vedi http://subversion.tigris.org/\n"
 "\n"
 
-#: svn/help-cmd.c:65 svnsync/main.c:1258
+#: svn/help-cmd.c:65 svnsync/main.c:1246
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -5650,7 +5661,7 @@ msgstr ""
 msgid "Changelist: %s\n"
 msgstr "Changelist: %s\n"
 
-#: svn/info-cmd.c:477
+#: svn/info-cmd.c:477 svn/revert-cmd.c:59
 #, c-format
 msgid "no such changelist '%s'"
 msgstr "nessuna changelist come: '%s'"
@@ -5714,7 +5725,7 @@ msgstr "forza la validità della sorgente di un messaggio di log"
 
 #: svn/main.c:63 svn/main.c:64 svnadmin/main.c:227 svnadmin/main.c:230
 #: svndumpfilter/main.c:780 svndumpfilter/main.c:783 svnlook/main.c:90
-#: svnlook/main.c:93 svnsync/main.c:103 svnsync/main.c:105
+#: svnlook/main.c:93 svnsync/main.c:104 svnsync/main.c:106
 msgid "show help on a subcommand"
 msgstr "mostra le informazioni su un comando"
 
@@ -5782,7 +5793,7 @@ msgid "treat value as being in charset encoding ARG"
 msgstr "tratta il valore come se fosse codificato in ARG"
 
 #: svn/main.c:92 svnadmin/main.c:233 svndumpfilter/main.c:786
-#: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:101
+#: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:102
 #: svnversion/main.c:125
 msgid "show program version information"
 msgstr "mostra le informazioni sulla versione del programma"
@@ -5795,11 +5806,11 @@ msgstr "restituisce le informazioni addizionali"
 msgid "display update information"
 msgstr "mostra le informazioni di aggiornamento"
 
-#: svn/main.c:96 svnsync/main.c:95
+#: svn/main.c:96 svnsync/main.c:96
 msgid "specify a username ARG"
 msgstr "specifica un nome utente ARG"
 
-#: svn/main.c:98 svnsync/main.c:97
+#: svn/main.c:98 svnsync/main.c:98
 msgid "specify a password ARG"
 msgstr "specifica una password ARG"
 
@@ -5860,11 +5871,11 @@ msgstr ""
 "non considerare il comportamento di default o quello specificato tramite svn:"
 "ignore"
 
-#: svn/main.c:138 svnsync/main.c:93
+#: svn/main.c:138 svnsync/main.c:94
 msgid "do not cache authentication tokens"
 msgstr "non conservare in cache i token di autenticazione"
 
-#: svn/main.c:140 svnsync/main.c:91
+#: svn/main.c:140 svnsync/main.c:92
 msgid "do no interactive prompting"
 msgstr "non eseguire richieste interattive"
 
@@ -5916,7 +5927,7 @@ msgstr "opera su una proprietà di revisione (usare con -r)"
 msgid "relocate via URL-rewriting"
 msgstr "riloca tramite la riscrittura delle URL"
 
-#: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:99
+#: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:100
 msgid "read user configuration files from directory ARG"
 msgstr "leggi i file di configurazione personali dalla directory ARG"
 
@@ -6759,7 +6770,7 @@ msgstr ""
 "  Nota: questo comando non richiede accesso al repository e risolve\n"
 "  ogni stato di conflito. Tuttavia non ripristina le directory rimosse.\n"
 
-#: svn/main.c:669
+#: svn/main.c:670
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -6914,7 +6925,7 @@ msgstr ""
 "                 965       687 joe          wc/zig.c\n"
 "    Revisione head:   981\n"
 
-#: svn/main.c:745
+#: svn/main.c:746
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -6970,7 +6981,7 @@ msgstr ""
 "I files risulteranno invece modificati localmente.\n"
 "Tutte le proprietà vengono applicate dal repository al percorso bloccante.\n"
 
-#: svn/main.c:772
+#: svn/main.c:773
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -6982,7 +6993,7 @@ msgstr ""
 "\n"
 "Usa --force per forzare il blocco.\n"
 
-#: svn/main.c:780
+#: svn/main.c:781
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -7051,19 +7062,19 @@ msgstr ""
 "  I percorsi bloccanti sono indicati con 'E'.\n"
 "\n"
 
-#: svn/main.c:856 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:168
+#: svn/main.c:857 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:146
 msgid "Caught signal"
 msgstr "Catturato il segnale"
 
-#: svn/main.c:968
+#: svn/main.c:969
 msgid "Non-numeric limit argument given"
 msgstr "Fornito un argumento di limite non numerico"
 
-#: svn/main.c:974
+#: svn/main.c:975
 msgid "Argument to --limit must be positive"
 msgstr "L'argomento per --limit dev'essere positivo"
 
-#: svn/main.c:994
+#: svn/main.c:995
 msgid ""
 "Multiple revision arguments encountered; can't specify -c twice, or both -c "
 "and -r"
@@ -7072,19 +7083,19 @@ msgstr ""
 "volte,\n"
 "o sia -c che -r"
 
-#: svn/main.c:1002 svn/main.c:1193
+#: svn/main.c:1003 svn/main.c:1194
 msgid "Can't specify -c with --old"
 msgstr "Non puoi specificare -c insieme a --old"
 
-#: svn/main.c:1009
+#: svn/main.c:1010
 msgid "Non-numeric change argument given to -c"
 msgstr "Assegnato a -c un argumento non numerico"
 
-#: svn/main.c:1015
+#: svn/main.c:1016
 msgid "There is no change 0"
 msgstr "Non esiste una modifica 0"
 
-#: svn/main.c:1042
+#: svn/main.c:1043
 msgid ""
 "Multiple revision arguments encountered; can't specify -r and -c, or try '-r "
 "N:M' instead of '-r N -r M'"
@@ -7093,31 +7104,31 @@ msgstr ""
 "c,\n"
 "prova '-r N:M' invece di '-r N -r M'"
 
-#: svn/main.c:1055 svnadmin/main.c:1244
+#: svn/main.c:1056 svnadmin/main.c:1244
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Errore di sintassi nell'argomento di revisione '%s'"
 
-#: svn/main.c:1209 svn/main.c:1219
+#: svn/main.c:1210 svn/main.c:1220
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props e --no-auto-props sono mutualmente esclusivi"
 
-#: svn/main.c:1235
+#: svn/main.c:1236
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Errore di sintassi nell'argomento native-eol '%s'"
 
-#: svn/main.c:1308 svndumpfilter/main.c:1207 svnlook/main.c:2037
+#: svn/main.c:1309 svndumpfilter/main.c:1207 svnlook/main.c:2037
 msgid "Subcommand argument required\n"
 msgstr "È necessario specificare un argomento per il comando\n"
 
-#: svn/main.c:1327 svnadmin/main.c:1367 svndumpfilter/main.c:1226
+#: svn/main.c:1328 svnadmin/main.c:1367 svndumpfilter/main.c:1226
 #: svnlook/main.c:2056
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "Comando sconosciuto: '%s'\n"
 
-#: svn/main.c:1360
+#: svn/main.c:1361
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7126,19 +7137,19 @@ msgstr ""
 "Il comando '%s' non accetta l'opzione '%s'\n"
 "Digita 'svn help %s' per le istruzioni.\n"
 
-#: svn/main.c:1397
+#: svn/main.c:1398
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Il file contenente il messaggio di log è sotto controllo di versione;\n"
 "usa --force-log per proseguire comunque"
 
-#: svn/main.c:1404
+#: svn/main.c:1405
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr ""
 "Il file contenente il commento di blocco è sotto controllo di versione;\n"
 "usa --force-log per proseguire comunque"
 
-#: svn/main.c:1425
+#: svn/main.c:1426
 msgid ""
 "The log message is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -7146,7 +7157,7 @@ msgstr ""
 "Il messaggio di log è il nome di un percorso (volevi usare -F?);\n"
 "usa '--force-log' per proseguire comunque"
 
-#: svn/main.c:1432
+#: svn/main.c:1433
 msgid ""
 "The lock comment is a pathname (was -F intended?); use '--force-log' to "
 "override"
@@ -7154,7 +7165,7 @@ msgstr ""
 "Il commento di blocco è il nome di un percorso (volevi usare -F?);\n"
 "usa '--force-log' per proseguire comunque"
 
-#: svn/main.c:1557
+#: svn/main.c:1558
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
@@ -7358,49 +7369,54 @@ msgstr "la proprietà '%s' è stata cancellata (ricorsivamente) da '%s'.\n"
 msgid "property '%s' deleted from '%s'.\n"
 msgstr "la proprietà '%s' è stata cancellata da '%s'.\n"
 
-#: svn/propedit-cmd.c:101 svn/propedit-cmd.c:225 svn/propset-cmd.c:85
+#: svn/propedit-cmd.c:60
+#, c-format
+msgid "'%s' is not a valid Subversion property name"
+msgstr "'%s' non è un nome valido per una proprietà di Subversion"
+
+#: svn/propedit-cmd.c:105 svn/propedit-cmd.c:229 svn/propset-cmd.c:85
 msgid "Bad encoding option: prop value not stored as UTF8"
 msgstr "Errore di codifica: il valore della proprietà non è in UTF8"
 
-#: svn/propedit-cmd.c:110
+#: svn/propedit-cmd.c:114
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
 msgstr ""
 "Impostazione di un nuovo volore per la proprietà '%s' nella revisione %ld\n"
 
-#: svn/propedit-cmd.c:116
+#: svn/propedit-cmd.c:120
 #, c-format
 msgid "No changes to property '%s' on revision %ld\n"
 msgstr "Nessun cambiamento per la proprietà '%s' nella revisione %ld\n"
 
-#: svn/propedit-cmd.c:124
+#: svn/propedit-cmd.c:128
 #, c-format
 msgid "Cannot specify revision for editing versioned property '%s'"
 msgstr ""
 "Non è possibile specificare una revisione per modificare la proprietà sotto "
 "controllo di versione '%s'"
 
-#: svn/propedit-cmd.c:150 svn/propset-cmd.c:158
+#: svn/propedit-cmd.c:154 svn/propset-cmd.c:158
 msgid "Explicit target argument required"
 msgstr "È richiesto un argomento per un obiettivo esplicito"
 
-#: svn/propedit-cmd.c:173
+#: svn/propedit-cmd.c:177
 #, c-format
 msgid "Editing property on non-local target '%s' not yet supported"
 msgstr ""
 "La modifica di proprietà sull'oggetto non locale '%s' non è ancora supportata"
 
-#: svn/propedit-cmd.c:200 svn/switch-cmd.c:140
+#: svn/propedit-cmd.c:204 svn/switch-cmd.c:140
 #, c-format
 msgid "'%s' does not appear to be a working copy path"
 msgstr "'%s' non sembra essere un percorso della copia locale"
 
-#: svn/propedit-cmd.c:232
+#: svn/propedit-cmd.c:236
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
 msgstr "Imposta un nuovo valore per la proprietà '%s' in '%s'\n"
 
-#: svn/propedit-cmd.c:239
+#: svn/propedit-cmd.c:243
 #, c-format
 msgid "No changes to property '%s' on '%s'\n"
 msgstr "Nessun cambiamento alla proprietà '%s' in '%s'\n"
@@ -7461,7 +7477,7 @@ msgstr "proprietà '%s' impostata (ricorsivamente) su '%s'\n"
 msgid "property '%s' set on '%s'\n"
 msgstr "proprietà '%s' impostata su '%s'\n"
 
-#: svn/revert-cmd.c:61
+#: svn/revert-cmd.c:86
 msgid "Try 'svn revert --recursive' instead?"
 msgstr "Prova 'svn revert' o 'svn revert --non-recursive'"
 
@@ -8710,7 +8726,7 @@ msgid ""
 "service"
 msgstr "Impossibile avviare il servizio; si è verificato un errore interno"
 
-#: svnsync/main.c:55
+#: svnsync/main.c:56
 msgid ""
 "usage: svnsync initialize DEST_URL SOURCE_URL\n"
 "\n"
@@ -8739,7 +8755,7 @@ msgstr ""
 "In altre parole, il repository di destinazione è come una copia\n"
 "di sola lettura del repository di origine.\n"
 
-#: svnsync/main.c:70
+#: svnsync/main.c:71
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
@@ -8749,7 +8765,7 @@ msgstr ""
 "\n"
 "Trasferisce tutte le revisioni pendenti dalla sorgente alla destinazione.\n"
 
-#: svnsync/main.c:75
+#: svnsync/main.c:76
 msgid ""
 "usage: svnsync copy-revprops DEST_URL REV\n"
 "\n"
@@ -8761,7 +8777,7 @@ msgstr ""
 "Copia tutte le revisioni pendenti per la revisione REV\n"
 "dalla sorgente alla destinazione.\n"
 
-#: svnsync/main.c:81
+#: svnsync/main.c:82
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "\n"
@@ -8771,63 +8787,64 @@ msgstr ""
 "\n"
 "Descrive l'uso di questo programma o di uno dei suoi sottocomandi.\n"
 
-#: svnsync/main.c:206
+#: svnsync/main.c:184
 msgid "Can't get local hostname"
 msgstr "Non riesco ad ottenere il nome dell'host locale"
 
-#: svnsync/main.c:228
+#: svnsync/main.c:206
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
 msgstr ""
 "Non è stato possibile ottenere un blocco nel repository di destinazione.\n"
 "Attualmente è tenuto da '%s'\n"
 
-#: svnsync/main.c:323
+#: svnsync/main.c:301
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
 msgstr "La root della sessione è '%s' ma la root del repository è '%s'"
 
-#: svnsync/main.c:362
+#: svnsync/main.c:341
 #, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
-msgstr "Copiate le proprietà per la revisione %ld (saltate le proprietà %s*).\n"
+msgstr ""
+"Copiate le proprietà per la revisione %ld (saltate le proprietà %s*).\n"
 
-#: svnsync/main.c:367
+#: svnsync/main.c:346
 #, c-format
 msgid "Copied properties for revision %ld.\n"
 msgstr "Copia delle proprietà per la revisione %ld eseguita.\n"
 
-#: svnsync/main.c:408
+#: svnsync/main.c:387
 msgid "Cannot initialize a repository with content in it"
 msgstr "Non posso inizializzare un repository con del contenuto"
 
-#: svnsync/main.c:418
+#: svnsync/main.c:398
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "Il repository di destinazione si sta già sincronizzando con '%s'"
 
-#: svnsync/main.c:475 svnsync/main.c:478 svnsync/main.c:1128
-#: svnsync/main.c:1212
+#: svnsync/main.c:455 svnsync/main.c:458 svnsync/main.c:1116
+#: svnsync/main.c:1200
 #, c-format
 msgid "Path '%s' is not a URL"
 msgstr "Il percorso '%s' non è un'URL"
 
-#: svnsync/main.c:858
+#: svnsync/main.c:838
 #, c-format
 msgid "Committed revision %ld.\n"
 msgstr "Commit della revisione %ld eseguito.\n"
 
-#: svnsync/main.c:895
+#: svnsync/main.c:877
 msgid "Destination repository has not been initialized"
 msgstr "Il repository di destinazione non è stato inizializzato"
 
-#: svnsync/main.c:910
+#: svnsync/main.c:892
 #, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
 msgstr ""
 "L'UUID del repository di origine (%s) non corrisponde all'UUID atteso (%s)"
 
-#: svnsync/main.c:972
+#: svnsync/main.c:954
 #, c-format
 msgid ""
 "Revision being currently copied (%ld), last merged revision (%ld), and "
@@ -8839,7 +8856,7 @@ msgstr ""
 "loro; hai eseguito il commit verso la destinazione senza usare\n"
 "svnsync?"
 
-#: svnsync/main.c:1008
+#: svnsync/main.c:992
 #, c-format
 msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
@@ -8849,22 +8866,22 @@ msgstr ""
 "hai eseguito il commit alla verso la destinazione senza usare \n"
 "svnsync?"
 
-#: svnsync/main.c:1082
+#: svnsync/main.c:1069
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr "Il commit ha creato la revisione %ld ma avrebbe dovuto creare %ld"
 
-#: svnsync/main.c:1183
+#: svnsync/main.c:1171
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
 msgstr ""
 "Non posso copiare revprops per una revisione che non è stata ancora "
 "sincronizzata"
 
-#: svnsync/main.c:1215
+#: svnsync/main.c:1203
 msgid "Invalid revision number"
 msgstr "Numero di revisione non valido"
 
-#: svnsync/main.c:1251
+#: svnsync/main.c:1239
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -8879,7 +8896,7 @@ msgstr ""
 "\n"
 "Commandi disponibili:\n"
 
-#: svnsync/main.c:1441
+#: svnsync/main.c:1429
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
@@ -8888,7 +8905,7 @@ msgstr ""
 "Il comando '%s' non accetta l'opzione '%s'\n"
 "Digita 'svnsync help %s' per le istruzioni.\n"
 
-#: svnsync/main.c:1502
+#: svnsync/main.c:1490
 msgid "Not enough arguments provided; try 'svnsync help' for more info"
 msgstr ""
 "Numero insufficiente di argomenti; prova 'svnsync help' per maggiori\n"
