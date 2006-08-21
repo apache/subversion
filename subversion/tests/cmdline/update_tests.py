@@ -2157,6 +2157,75 @@ def forced_update_failures(sbox):
                                         None, None, None, None, 0, C_Path,
                                         '--force')
 
+#----------------------------------------------------------------------
+# Test for issue #2556. The tests maps a virtual drive to a working copy
+# and tries some basic update, commit and status actions on the virtual 
+# drive.
+def update_wc_on_windows_drive(sbox):
+  "update wc on the root of a Windows (virtual) drive"
+  
+  def find_the_next_available_drive_letter():
+    "find the first available drive"
+
+    # get the list of used drive letters, use some Windows specific function.
+    import win32api
+
+    drives=win32api.GetLogicalDriveStrings()
+    drives=string.splitfields(drives,'\000')
+
+    for d in range(ord('G'), ord('Z')+1):
+      drive = chr(d)
+      if not drive + ':\\' in drives:
+        return drive
+
+    return ''
+
+  # skip this test on non-Windows platforms.
+  if not os.name == 'nt':
+    raise svntest.Skip
+
+  sbox.build()
+
+  # create a virtual drive to the working copy folder
+  drive = find_the_next_available_drive_letter()
+  if drive == '':
+    raise svntest.Skip
+
+  os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
+  wc_dir = drive + ':\\\\'
+
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+
+  try:
+    expected_disk = svntest.main.greek_state.copy()
+    
+    # Make some local modifications
+    mu_path = os.path.join(wc_dir, 'A', 'mu')
+    svntest.main.file_append (mu_path, '\nAppended text for mu')
+    zeta_path = os.path.join(wc_dir, 'zeta')
+    svntest.main.file_append(zeta_path, "This is the file 'zeta'.\n")
+    svntest.main.run_svn(None, 'add', zeta_path)
+
+    # Commit.
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/mu' : Item(verb='Sending'),
+      'zeta' : Item(verb='Adding'),
+      })
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    expected_status.tweak('', 'A/mu', wc_rev=2)
+    expected_status.add({
+    'zeta' : Item(status='A ', wc_rev=0),
+    })
+    svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                          expected_status, None,
+                                          None, None, None, None, 
+                                          wc_dir, zeta_path)
+  finally:
+    os.chdir(was_cwd)
+    # cleanup the virtual drive
+    os.popen3('subst /D ' + drive +': ', 't')
+
 ########################################################################
 # Run the tests
 
@@ -2194,7 +2263,8 @@ test_list = [ None,
               update_eolstyle_handling,
               XFail(update_copy_of_old_rev),
               forced_update,
-              forced_update_failures
+              forced_update_failures,
+              XFail(update_wc_on_windows_drive),
              ]
 
 if __name__ == '__main__':
