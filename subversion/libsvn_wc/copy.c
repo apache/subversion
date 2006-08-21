@@ -117,24 +117,18 @@ copy_added_dir_administratively(const char *src_path,
                                 void *notify_baton,
                                 apr_pool_t *pool)
 {
-  /* The 'dst_path' is simply dst_parent/dst_basename */
-  const char *dst_path
-    = svn_path_join(svn_wc_adm_access_path(dst_parent_access),
-                    dst_basename, pool);
+  const char *dst_parent = svn_wc_adm_access_path(dst_parent_access);
 
   if (! src_is_added)
     {
       /* src_path is the top of an unversioned tree, just copy
          the whole thing and we are done. */
-      SVN_ERR(svn_io_copy_dir_recursively(src_path,
-                                          svn_wc_adm_access_path(dst_parent_access),
-                                          dst_basename,
+      SVN_ERR(svn_io_copy_dir_recursively(src_path, dst_parent, dst_basename,
                                           TRUE, cancel_func, cancel_baton,
                                           pool));
     }
   else
     {
-      char *src_parent, *dst_parent;
       const svn_wc_entry_t *entry;
       svn_wc_adm_access_t *dst_child_dir_access;
       svn_wc_adm_access_t *src_child_dir_access;
@@ -143,13 +137,12 @@ copy_added_dir_administratively(const char *src_path,
       svn_error_t *err;
       apr_pool_t *subpool;
       apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
+      /* The 'dst_path' is simply dst_parent/dst_basename */
+      const char *dst_path = svn_path_join(dst_parent, dst_basename, pool);
 
       /* Check cancellation; note that this catches recursive calls too. */
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
-
-      src_parent = svn_path_dirname(src_path, pool);
-      dst_parent = svn_path_dirname(dst_path, pool);
 
       /* "Copy" the dir dst_path and schedule it, and possibly
          it's children, for addition. */
@@ -177,7 +170,7 @@ copy_added_dir_administratively(const char *src_path,
            err == SVN_NO_ERROR;
            err = svn_io_dir_read(&this_entry, flags, dir, subpool))
         {
-          const char *src_fullpath, *dst_fullpath;
+          const char *src_fullpath;
 
           /* Skip entries for this dir and its parent.  */
           if (this_entry.name[0] == '.'
@@ -197,7 +190,6 @@ copy_added_dir_administratively(const char *src_path,
 
           /* Construct the full path of the entry. */
           src_fullpath = svn_path_join(src_path, this_entry.name, subpool);
-          dst_fullpath = svn_path_join(dst_path, this_entry.name, subpool);
 
           SVN_ERR(svn_wc_entry(&entry, src_fullpath, src_child_dir_access,
                                TRUE, subpool));
