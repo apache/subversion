@@ -28,13 +28,6 @@ Candidate changes:
       +1: djh, rooneg
       +0: dlr, cmpilato
 
-  * r21114
-    Cease pointless running of "gen-make.py -t dsp" in release mode.
-    Justification:
-      Creates useless litter in release tarballs.
-    Votes:
-      +1: maxb, djh
-
   * r21133-21136
     Updates to INSTALL about deps tarball and ra_serf.
     Justification:
@@ -51,6 +44,13 @@ Approved changes:
       Low impact and allows javahl to build on VC Express.
     Votes:
       +1: djh, dlr, rooneg
+
+  * r21114
+    Cease pointless running of "gen-make.py -t dsp" in release mode.
+    Justification:
+      Creates useless litter in release tarballs.
+    Votes:
+      +1: maxb, djh, rooneg
 
 Status of 1.4.1:
 ================
