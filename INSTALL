@@ -350,7 +350,7 @@ I.    BUILD REQUIREMENTS
       The Windows build scripts will compile the ZLib sources.
 
 
-      11. Documentation
+      12. Documentation
 
       The primary documentation for Subversion is the free book
       "Version Control with Subversion", a.k.a. "The Subversion Book",
