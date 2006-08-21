@@ -162,8 +162,6 @@ Now <tt>svn update</tt> does not work.</a></li>
     but I know my repository URL is correct.  What's wrong?</a></li> 
 <li><a href="#configure-sed-error">When I run `<tt>configure</tt>', I
     get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
-<li><a href="#windows-mod_dav_svn-build">I'm getting errors trying to build
-    Subversion 1.2 on Windows &mdash; mod_dav_svn won't build.</a></li>
 <li><a href="#windows-msvc-build">I'm having trouble building
     Subversion under Windows with MSVC++ 6.0.  What should I do?</a></li>
 <li><a href="#windows-drive-letter">How can I specify a Windows drive letter in
@@ -2495,29 +2493,6 @@ building with are completely up-to-date, and try again.
 </div>
 
 <![CDATA[-----------------------------------------------------------]]>
-
-<div class="h3" id="windows-mod_dav_svn-build"
-  title="windows-mod_dav_svn-build">
-<h3>I'm getting errors trying to build
-    Subversion 1.2 on Windows &mdash; mod_dav_svn won't build.</h3>
-
-<p>It turns out that there's a small build-bug Apache httpd: not all
-of <tt>mod_dav</tt>'s public APIs were properly declared "exportable"
-on Windows.  And Subversion 1.2's <tt>mod_dav_svn</tt> is now using
-these APIs.  This means that out-of-the-box, Subversion 1.2 will not
-compile on Windows against any released httpd sourceball.</p>
-
-<p>This problem is already fixed on httpd's /trunk, and has been
-backported to the httpd 2.0.x branch.  If you're using a released
-httpd source tree, you're out of luck.  Until httpd-2.0.54 is
-released, you will need to manually apply <a
-href="httpd-win32.patch.txt">the same patch</a> to your httpd tree.
-(It's r155345 of httpd's trunk, for reference.)</p>
-
-</div>
-
-
-<![CDATA[-----------------------------------------------------------]]>
  
 <div class="h3" id="windows-msvc-build" title="windows-msvc-build">
 <h3>I'm having trouble building Subversion
@@ -3505,7 +3480,8 @@ quite a bit.</p>
 <h3>What do you mean when you say that
     repository is 'wedged'?</h3>
 
-wedged repository: 
+<p>wedged repository:</p>
+
 <blockquote>
 <p>A Subversion repository consists of two different internal parts, a
 working compartment and a storage compartment.  A wedged repository is
@@ -3517,7 +3493,7 @@ repository. See <a href="#stuck-bdb-repos">this</a> entry for details
 how to do that.</p>
 </blockquote>
 
-corrupted repository: 
+<p>corrupted repository:</p>
 
 <blockquote>
 <p>A corrupted Subversion repository is a repository where the storage
