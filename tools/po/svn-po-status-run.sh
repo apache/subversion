@@ -1,79 +1,54 @@
 #!/bin/sh
+set -e
 
-export PATH=/usr/local/bin:/usr/bin:/bin
+MAIL_FROM=${MAIL_FROM:-e.huelsmann@gmx.net}
+MAIL_TO=${MAIL_TO:-dev@subversion.tigris.org}
+SENDMAIL=${SENDMAIL:-sendmail}
 
-BIN=/bin
-USRBIN=/usr/bin
+cd "`dirname \"$0\"`"/../..
+branch_name=`svn info | sed -n '/^URL:/s@.*/svn/\(.*\)@\1@p'`
+wc_version=`svnversion subversion/po | sed -e 's/[MS]//g'`
 
-DIRNAME=$USRBIN/dirname
-PWD=$BIN/pwd
-RM=$BIN/rm
-SED=$BIN/sed
-MAKE=$USRBIN/make
+output_log="po-status-stdout-log"
+error_log="po-status-stderr-log"
 
+rm "$output_log" "$error_log"
 
-SVNDIR=/usr/local/bin
-SENDMAIL=/usr/sbin/sendmail
-SVN=$SVNDIR/svn
-SVNVERSION=$SVNDIR/svnversion
-REVISION_PREFIX='r'
-
-
-
-EXEC_PATH="`$DIRNAME $0`"
-cd $EXEC_PATH/../..
-
-root_path="$PWD"
-ROOT_PARENT_PATH="`$DIRNAME $root_path`"
-branch_name="`echo $root_path | $SED -e "s@$ROOT_PARENT_PATH/@@"`"
-
-mail_from='e.huelsmann@gmx.net'
-mail_to='dev@subversion.tigris.org'
-output_log="$root_path/po-status-stdout-log"
-error_log="$root_path/po-status-stderr-log"
-
-$RM $output_log 2>/dev/null
-$RM $error_log 2>/dev/null
-
-
-if test -e "$root_path/config.po" ; then
-    CONFIGURE="$root_path/config.po"
-elif test -e "$root_path/config.nice" ; then
-    CONFIGURE="$root_path/config.nice"
+if test -e "config.po" ; then
+    configure="./config.po"
+elif test -e "config.nice" ; then
+    configure="./config.nice"
 else
-    CONFIGURE="$root_path/configure"
+    configure="./configure"
 fi
 
 # prevent conflicts
-$SVN revert --recursive subversion/po 2>>$error_log >>$output_log || \
+svn revert --recursive subversion/po 2>>$error_log >>$output_log || \
 {
     ###TODO: mail your output!
     exit 1
 }
-revision="`$SVNVERSION subversion/po`"
 
-if test -e "$root_path/Makefile" ; then
+if test -e "Makefile" ; then
     # prevent switches or anything from breaking the update
-    $MAKE clean 2>>$error_log >>$output_log
+    make clean 2>>$error_log >>$output_log
 fi
 
 # update && initialize
-$SVN update 2>>$error_log >>$output_log && \
+svn update 2>>$error_log >>$output_log && \
 ./autogen.sh 2>>$error_log >>$output_log && \
-$CONFIGURE 2>>$error_log >>$output_log && \
-$MAKE locale-gnu-po-update 2>>$error_log >>$output_log || \
+$configure 2>>$error_log >>$output_log && \
+make locale-gnu-po-update 2>>$error_log >>$output_log || \
 {
     # mail your output
     echo "Unable to successfully complete; check error log."
     exit 1
 }
 
-
-
 $SENDMAIL -t <<EOF
-From: $mail_from
-To: $mail_to
-Subject: [l10n] Translation status for $branch_name $REVISION_PREFIX$revision
+From: $MAIL_FROM
+To: $MAIL_TO
+Subject: [l10n] Translation status for $branch_name r$revision
 
 `tools/po/svn-po-status-report.sh`
 EOF
