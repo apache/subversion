@@ -51,7 +51,7 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->repos_root_URL       = repos_root;
   tmpinfo->last_changed_rev     = dirent->created_rev;
   tmpinfo->last_changed_date    = dirent->time;
-  tmpinfo->last_changed_author  = dirent->last_author;;
+  tmpinfo->last_changed_author  = dirent->last_author;
   tmpinfo->lock                 = lock;
 
   *info = tmpinfo;
