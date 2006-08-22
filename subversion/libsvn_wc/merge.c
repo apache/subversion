@@ -175,7 +175,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
           /* Preserve the three pre-merge files, and modify the
              entry (mark as conflicted, track the preserved files). */ 
           const char *left_copy, *right_copy, *target_copy;
-          const char *tmp_left, *tmp_right;
+          const char *xtmp_left, *xtmp_right;
           const char *parentt, *left_base, *right_base, *target_base;
           svn_wc_adm_access_t *parent_access;
           svn_wc_entry_t tmp_entry;
@@ -221,24 +221,24 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
              relative to the adm_access path they are executed in.
 
              Make our LEFT and RIGHT files 'local' if they aren't... */
-          tmp_left = svn_path_is_child(adm_path, left, pool);
-          if (! tmp_left)
+          xtmp_left = svn_path_is_child(adm_path, left, pool);
+          if (! xtmp_left)
             {
               SVN_ERR(svn_wc_create_tmp_file2
-                      (NULL, &tmp_left,
+                      (NULL, &xtmp_left,
                        adm_path, svn_io_file_del_none, pool));
-              SVN_ERR(svn_io_copy_file(left, tmp_left, TRUE, pool));
-              tmp_left = svn_path_is_child(adm_path, tmp_left, pool);
+              SVN_ERR(svn_io_copy_file(left, xtmp_left, TRUE, pool));
+              xtmp_left = svn_path_is_child(adm_path, xtmp_left, pool);
             }
 
-          tmp_right = svn_path_is_child(adm_path, right, pool);
-          if (! tmp_right)
+          xtmp_right = svn_path_is_child(adm_path, right, pool);
+          if (! xtmp_right)
             {
               SVN_ERR(svn_wc_create_tmp_file2
-                      (NULL, &tmp_right,
+                      (NULL, &xtmp_right,
                        adm_path, svn_io_file_del_none, pool));
-              SVN_ERR(svn_io_copy_file(right, tmp_right, TRUE, pool));
-              tmp_right = svn_path_is_child(adm_path, tmp_right, pool);
+              SVN_ERR(svn_io_copy_file(right, xtmp_right, TRUE, pool));
+              xtmp_right = svn_path_is_child(adm_path, xtmp_right, pool);
             }
 
           /* NOTE: Callers must ensure that the svn:eol-style and
@@ -261,11 +261,11 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
 
           SVN_ERR(svn_wc__loggy_translated_file(log_accum,
                                                 adm_access,
-                                                left_base, tmp_left,
+                                                left_base, xtmp_left,
                                                 log_merge_target, pool));
           SVN_ERR(svn_wc__loggy_translated_file(log_accum,
                                                 adm_access,
-                                                right_base, tmp_right,
+                                                right_base, xtmp_right,
                                                 log_merge_target, pool));
 
           /* Back up MERGE_TARGET verbatim (it's already in expanded form.) */
