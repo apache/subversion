@@ -38,6 +38,13 @@ Candidate changes:
       svn merge -r 21183:head $rs/branches/1.4.x-fixwarn
     Votes:
       +1: maxb, rooneg
+  
+  * r21190
+    Bump repos format number, to protect against 1.0 and 1.1 ignoring the FS
+    format number.
+    Votes:
+      +1: maxb
+
 
 Approved changes:
 
