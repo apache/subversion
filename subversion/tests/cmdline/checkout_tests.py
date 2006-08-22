@@ -351,6 +351,24 @@ def import_and_checkout(sbox):
                                           '--force')
 
 #----------------------------------------------------------------------
+# Ensure that 'checkout -N' results in a depth 1 working directory.
+def depth_zero_checkout(sbox):
+  "non-recursive (depth zero) checkout"
+
+  sbox.build(create_wc = False)
+  if os.path.exists(sbox.wc_dir):
+    svntest.main.safe_rmtree(sbox.wc_dir)
+
+  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
+                                     SVNAnyOutput, [], "co", "-N",
+                                     svntest.main.current_repo_url,
+                                     sbox.wc_dir)
+
+  if os.path.exists(os.path.join(sbox.wc_dir, "A")):
+    raise svntest.Failure("non-recursive checkout checked out too much")
+                    
+
+#----------------------------------------------------------------------
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -362,6 +380,7 @@ test_list = [ None,
               forced_checkout_with_real_obstructions_and_unversioned_files,
               forced_checkout_with_versioned_obstruction,
               import_and_checkout,
+              depth_zero_checkout,
             ]
 
 if __name__ == "__main__":
