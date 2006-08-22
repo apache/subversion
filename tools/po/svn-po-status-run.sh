@@ -48,7 +48,7 @@ make locale-gnu-po-update 2>>$error_log >>$output_log || \
 $SENDMAIL -t <<EOF
 From: $MAIL_FROM
 To: $MAIL_TO
-Subject: [l10n] Translation status for $branch_name r$revision
+Subject: [l10n] Translation status for $branch_name r$wc_version
 
 `tools/po/svn-po-status-report.sh`
 EOF
