@@ -194,3 +194,47 @@ svn up --depth 1 Awc
     Awc/B/.svn/entries              this_dir    depth:0
     Awc/C/.svn/entries              this_dir    depth:0
     ...
+
+Implementation
+==============
+
+It would be nice if all this could be accomplished with just simple
+tweaks to how we drive the update reporter (svn_ra_reporter2_t).
+However, it looks like it's not going to be that easy.
+
+Handling 'checkout --depth=0' would be easy.  It should get us an
+empty directory at depth 0, with no files and no subdirs, and if we
+just report it as at HEAD every time, the server will never send
+updates down (hmmm, this could be a problem for getting dir property
+updates, though).  Then any files or subdirs we have explicitly
+included we can just report at their respective revisions, and get
+proper updates; at least that'll work for the depth infinity ones.
+
+But consider 'checkout -N'.  The desired state is a depth 1 directory
+D, with all files up-to-date, and with skeleton subdirs at depth 0.
+Plain updates should preserve this state of affairs.
+
+If we report D as at its BASE revision, files at their BASE revisions,
+and subdirs at HEAD, then:
+
+   - When new files appear in the repos, they'll get sent down (good)
+   - When new subdirs appear, they'll get sent down in full (bad)
+
+But if we don't report subdirs as at HEAD, then the server will try to
+update them (bad).  And if we report D at HEAD, then the working copy
+won't receive new files that have appeared in the repository since D's
+BASE revision (note that we *can* get updates for files we already
+have, though, by continuing to report them at their respective BASEs).
+
+The same logic applies to subdirectories at depth 1.
+
+So, I think this means that for efficient depth handling, we'll need
+to have the client directly reporting the desired depth to the server;
+i.e., extending the RA protocol.
+
+Meanwhile, legacy servers will send back a bunch of information the
+client doesn't want, and the client will just ignore it, and
+everything will be slower than it needs to be, and people will
+complain on the users@ list, and we'll tell them to upgrade their
+servers, and they'll say they can't because they don't have control
+over the server, and we'll say "So?  This ain't no Grand Hotel!"
