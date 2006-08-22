@@ -9,12 +9,6 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r21190
-    Bump repos format number, to protect against 1.0 and 1.1 ignoring the FS
-    format number.
-    Votes:
-      +1: maxb, rooneg
-
 
 Approved changes:
 
