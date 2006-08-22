@@ -410,6 +410,23 @@ class WinGeneratorBase(GeneratorBase):
     elif isinstance(target, gen_base.TargetI18N):
       return target.name
 
+  def get_output_pdb(self, target):
+    if isinstance(target, gen_base.TargetExe):
+      return target.name + '.pdb'
+    elif isinstance(target, gen_base.TargetJava):
+      return None
+    elif isinstance(target, gen_base.TargetApacheMod):
+      return target.name + '.pdb'
+    elif isinstance(target, gen_base.TargetLib):
+      if target.msvc_static:
+        return '%s-%d.pdb' % (target.name, self.version)
+      else:
+        return os.path.basename(target.filename) + '.pdb'
+    elif isinstance(target, gen_base.TargetProject):
+      return target.name + '.pdb'
+    elif isinstance(target, gen_base.TargetI18N):
+      return target.name + '.pdb'
+
   def get_output_dir(self, target):
     if isinstance(target, gen_base.TargetJavaHeaders):
       return msvc_path("../" + target.headers)
@@ -615,38 +632,29 @@ class WinGeneratorBase(GeneratorBase):
 
   def get_win_includes(self, target):
     "Return the list of include directories for target"
+    
+    fakeincludes = [ self.path("subversion/include"),
+                     self.path("subversion"),
+                     self.apath(self.apr_path, "include"),
+                     self.apath(self.apr_util_path, "include") ]
 
     if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes = [ self.path("subversion/include"),
-                       self.apath(self.bdb_path, "include"),
-                       self.path("subversion") ]
-      fakeincludes.extend([
-        self.apath(self.apr_path, "include"),
-        self.apath(self.apr_util_path, "include"),
-        self.apath(self.apr_util_path, "xml/expat/lib"),
-        self.apath(self.httpd_path, "include")
-        ])
+      fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
+                            self.apath(self.httpd_path, "include"),
+                            self.apath(self.bdb_path, "include") ])
     elif isinstance(target, gen_base.TargetSWIG):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
-      fakeincludes = [ self.path("subversion/bindings/swig"),
-                       self.path("subversion/bindings/swig/proxy"),
-                       self.path("subversion/bindings/swig/include"),
-                       self.path("subversion/include"),
-                       self.path("subversion"),
-                       self.path(util_includes),
-                       self.apath(self.apr_path, "include"),
-                       self.apath(self.apr_util_path, "include") ]
+      fakeincludes.extend([ self.path("subversion/bindings/swig"),
+                            self.path("subversion/bindings/swig/proxy"),
+                            self.path("subversion/bindings/swig/include"),
+                            self.path(util_includes) ])
     else:
-      fakeincludes = [ self.path("subversion/include"),
-                       self.apath(self.apr_path, "include"),
-                       self.apath(self.apr_util_path, "include"),
-                       self.apath(self.apr_util_path, "xml/expat/lib"),
-                       self.apath(self.neon_path, "src"),
-                       self.apath(self.bdb_path, "include"),
-                       self.path("subversion/bindings/swig/proxy"),
-                       self.path("subversion") ]
+      fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
+                            self.apath(self.neon_path, "src"),
+                            self.path("subversion/bindings/swig/proxy"),
+                            self.apath(self.bdb_path, "include") ])
 
     if self.libintl_path:
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))

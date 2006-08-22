@@ -20,16 +20,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r20833, r20836
-    Provide named, separate debug information files for clients building
-    against Subversion libraries.
-    Justification:
-      Very low impact and silences hundreds of warnings about missing debug
-      information when linking to Subversion libraries.
-    Votes:
-      +1: djh, rooneg, jerenkrantz
-      +0: dlr, cmpilato
-
   * r20886 (depends on r20833 group above)
     Allow javahl to build with VC Express and fix its debug symbol files.
     Justification:
