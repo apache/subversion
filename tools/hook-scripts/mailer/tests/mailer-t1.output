@@ -167,7 +167,7 @@ adds, deletes, and a change
 Added:
    dir1/file10
    dir3/dir5/
-Removed:
+Deleted:
    dir2/
    file2
 Modified:

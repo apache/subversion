@@ -1862,8 +1862,8 @@ static svn_error_t *ra_svn_replay(svn_ra_session_t *session,
                                  _("Server doesn't support the replay "
                                    "command")));
 
-  SVN_ERR(svn_ra_svn_drive_editor(sess->conn, pool, editor, edit_baton,
-                                  NULL));
+  SVN_ERR(svn_ra_svn_drive_editor2(sess->conn, pool, editor, edit_baton,
+                                   NULL, TRUE));
 
   SVN_ERR(svn_ra_svn_read_cmd_response(sess->conn, pool, ""));
 
@@ -1928,6 +1928,10 @@ svn_ra_svn__init(const svn_version_t *loader_version,
     }
 
   *vtable = &ra_svn_vtable;
+
+#ifdef SVN_HAVE_SASL
+  SVN_ERR(svn_ra_svn__sasl_init());
+#endif
 
   return SVN_NO_ERROR;
 }

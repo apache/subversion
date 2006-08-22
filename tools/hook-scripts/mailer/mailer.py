@@ -183,9 +183,17 @@ class MailedOutput(OutputBase):
     OutputBase.__init__(self, cfg, repos, prefix_param)
 
   def start(self, group, params):
-    # whitespace-separated list of addresses; split into a clean list:
-    self.to_addrs = \
-        filter(None, string.split(self.cfg.get('to_addr', group, params)))
+    # whitespace (or another character) separated list of addresses;
+    # split into a clean list:
+    to_addr_in = self.cfg.get('to_addr', group, params)
+    # if list of addresses starts with '[.]'
+    # use the character between the square brackets as split char
+    if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
+                            and to_addr_in[2] == ']':
+      self.to_addrs = \
+        filter(None, string.split(to_addr_in[3:], to_addr_in[1]))
+    else:
+      self.to_addrs = filter(None, string.split(to_addr_in))
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
     self.reply_to = self.cfg.get('reply_to', group, params)
@@ -445,7 +453,7 @@ def get_commondir(dirlist):
   a commondir is found, the dirlist returned is rooted in that
   commondir.  If no commondir is found, dirlist is returned unchanged,
   and commondir is the empty string."""
-  if len(dirlist) == 1 or '/' in dirlist:
+  if len(dirlist) < 2 or '/' in dirlist:
     commondir = ''
     newdirs = dirlist
   else:
@@ -615,10 +623,10 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
       or 'yes'
 
   # figure out the lists of changes outside the selected path-space
-  other_added_data = other_removed_data = other_modified_data = [ ]
+  other_added_data = other_deleted_data = other_modified_data = [ ]
   if len(paths) != len(changelist) and show_nonmatching_paths != 'no':
     other_added_data = generate_list('A', changelist, paths, False)
-    other_removed_data = generate_list('R', changelist, paths, False)
+    other_deleted_data = generate_list('D', changelist, paths, False)
     other_modified_data = generate_list('M', changelist, paths, False)
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
@@ -633,11 +641,11 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     rev=repos.rev,
     log=repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or '',
     added_data=generate_list('A', changelist, paths, True),
-    removed_data=generate_list('R', changelist, paths, True),
+    deleted_data=generate_list('D', changelist, paths, True),
     modified_data=generate_list('M', changelist, paths, True),
     show_nonmatching_paths=show_nonmatching_paths,
     other_added_data=other_added_data,
-    other_removed_data=other_removed_data,
+    other_deleted_data=other_deleted_data,
     other_modified_data=other_modified_data,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
                         params, diffsels, diffurls, pool),
@@ -649,7 +657,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 def generate_list(changekind, changelist, paths, in_paths):
   if changekind == 'A':
     selection = lambda change: change.added
-  elif changekind == 'R':
+  elif changekind == 'D':
     selection = lambda change: change.path is None
   elif changekind == 'M':
     selection = lambda change: not change.added and change.path is not None
@@ -893,15 +901,15 @@ class TextCommitRenderer:
 
     # print summary sections
     self._render_list('Added', data.added_data)
-    self._render_list('Removed', data.removed_data)
+    self._render_list('Deleted', data.deleted_data)
     self._render_list('Modified', data.modified_data)
 
-    if data.other_added_data or data.other_removed_data \
+    if data.other_added_data or data.other_deleted_data \
            or data.other_modified_data:
       if data.show_nonmatching_paths:
         w('\nChanges in other areas also in this revision:\n')
         self._render_list('Added', data.other_added_data)
-        self._render_list('Removed', data.other_removed_data)
+        self._render_list('Deleted', data.other_deleted_data)
         self._render_list('Modified', data.other_modified_data)
       else:
         w('and changes in other areas\n')

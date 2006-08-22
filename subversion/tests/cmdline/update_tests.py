@@ -1640,40 +1640,6 @@ def update_xml_unsafe_dir(sbox):
     os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
-# Issue #2529.
-def checkout_broken_eol(sbox):
-  "checkout file with broken eol style"
-
-  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                          'update_tests_data')
-  dump_str = file(os.path.join(data_dir,
-                               "checkout_broken_eol.dump"), "rb").read()
-
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
-
-  URL = svntest.main.current_repo_url
-
-  # Load the dumpfile into the repos.
-  output, errput = \
-    svntest.main.run_command_stdin(
-    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
-    None, 1, [dump_str])
-
-  expected_output = svntest.wc.State(sbox.wc_dir, {
-    'file': Item(status='A '),
-    })
-                                     
-  expected_wc = svntest.wc.State('', {
-    'file': Item(contents='line\nline2\n'),
-    })
-  svntest.actions.run_and_verify_checkout(URL,
-                                          sbox.wc_dir,
-                                          expected_output,
-                                          expected_wc)
-
 # eol-style handling during update with conflicts, scenario 1:
 # when update creates a conflict on a file, make sure the file and files 
 # r<left>, r<right> and .mine are in the eol-style defined for that file.
@@ -2157,6 +2123,75 @@ def forced_update_failures(sbox):
                                         None, None, None, None, 0, C_Path,
                                         '--force')
 
+#----------------------------------------------------------------------
+# Test for issue #2556. The tests maps a virtual drive to a working copy
+# and tries some basic update, commit and status actions on the virtual 
+# drive.
+def update_wc_on_windows_drive(sbox):
+  "update wc on the root of a Windows (virtual) drive"
+  
+  def find_the_next_available_drive_letter():
+    "find the first available drive"
+
+    # get the list of used drive letters, use some Windows specific function.
+    import win32api
+
+    drives=win32api.GetLogicalDriveStrings()
+    drives=string.splitfields(drives,'\000')
+
+    for d in range(ord('G'), ord('Z')+1):
+      drive = chr(d)
+      if not drive + ':\\' in drives:
+        return drive
+
+    return ''
+
+  # skip this test on non-Windows platforms.
+  if not os.name == 'nt':
+    raise svntest.Skip
+
+  sbox.build()
+
+  # create a virtual drive to the working copy folder
+  drive = find_the_next_available_drive_letter()
+  if drive == '':
+    raise svntest.Skip
+
+  os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
+  wc_dir = drive + ':\\\\'
+
+  was_cwd = os.getcwd()
+  os.chdir(wc_dir)
+
+  try:
+    expected_disk = svntest.main.greek_state.copy()
+    
+    # Make some local modifications
+    mu_path = os.path.join(wc_dir, 'A', 'mu')
+    svntest.main.file_append (mu_path, '\nAppended text for mu')
+    zeta_path = os.path.join(wc_dir, 'zeta')
+    svntest.main.file_append(zeta_path, "This is the file 'zeta'.\n")
+    svntest.main.run_svn(None, 'add', zeta_path)
+
+    # Commit.
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/mu' : Item(verb='Sending'),
+      'zeta' : Item(verb='Adding'),
+      })
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    expected_status.tweak('', 'A/mu', wc_rev=2)
+    expected_status.add({
+    'zeta' : Item(status='A ', wc_rev=0),
+    })
+    svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                          expected_status, None,
+                                          None, None, None, None, 
+                                          wc_dir, zeta_path)
+  finally:
+    os.chdir(was_cwd)
+    # cleanup the virtual drive
+    os.popen3('subst /D ' + drive +': ', 't')
+
 ########################################################################
 # Run the tests
 
@@ -2189,12 +2224,12 @@ test_list = [ None,
               nested_in_read_only,
               obstructed_update_alters_wc_props,
               update_xml_unsafe_dir,
-              checkout_broken_eol,
               conflict_markers_matching_eol,
               update_eolstyle_handling,
               XFail(update_copy_of_old_rev),
               forced_update,
-              forced_update_failures
+              forced_update_failures,
+              XFail(update_wc_on_windows_drive),
              ]
 
 if __name__ == '__main__':

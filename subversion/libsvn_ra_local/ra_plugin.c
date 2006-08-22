@@ -1266,8 +1266,6 @@ svn_ra_local__replay(svn_ra_session_t *session,
                             send_deltas, editor, edit_baton, NULL, NULL,
                             pool));
 
-  SVN_ERR(editor->close_edit(edit_baton, pool));
-
   return SVN_NO_ERROR;
 }
 

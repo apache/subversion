@@ -201,7 +201,7 @@
                           PythonThunk, PerlThunk, RubyThunk)
 %typemap(in) (CallbackFunction, CallbackBaton) {
   $1 = RubyThunk;
-  $2 = svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
 %enddef
 %define %callback_typemap_maybenull(CallbackFunction, CallbackBaton,
@@ -212,7 +212,7 @@
     $2 = NULL;
   } else {
     $1 = RubyThunk;
-    $2 = svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
+    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
   }
 }
 %enddef

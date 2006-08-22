@@ -478,7 +478,19 @@ module Svn
       def add_username_provider
         add_provider(Core.auth_get_username_provider)
       end
-      
+
+      def add_ssl_client_cert_file_provider
+        add_provider(Core.auth_get_ssl_client_cert_file_provider)
+      end
+
+      def add_ssl_client_cert_pw_file_provider
+        add_provider(Core.auth_get_ssl_client_cert_pw_file_provider)
+      end
+
+      def add_ssl_server_trust_file_provider
+        add_provider(Core.auth_get_ssl_server_trust_file_provider)
+      end
+
       def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
         args = [retry_limit]
         klass = Core::AuthCredSimple
