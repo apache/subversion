@@ -67,11 +67,12 @@ typedef struct svn_fs_t svn_fs_t;
 /** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
 
-/** Don't allow svndiff1 to be used in the on-disk storage 
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.4.
  * 
  *  @since New in 1.4. 
  */
-#define SVN_FS_CONFIG_NO_SVNDIFF1                       "no-svndiff1"
+#define SVN_FS_CONFIG_PRE_1_4_COMPATIBLE        "pre-1.4-compatible"
 /** @} */
 
 
