@@ -94,6 +94,27 @@ schedule_str(svn_wc_schedule_t schedule)
 }
 
 
+/* Return string representation of DEPTH */
+static const char *
+depth_str(svn_depth_t depth)
+{
+  switch (depth)
+    {
+    case svn_depth_unknown:
+      return "unknown";
+    case svn_depth_zero:
+      return "zero";
+    case svn_depth_one:
+      return "one";
+    case svn_depth_infinity:
+      return "infinity";
+    default:
+      /* Remember that svn_depth_exclude should never happen here. */
+      return "INVALID";
+    }
+}
+
+
 /* prints svn info in xml mode to standard out */
 static svn_error_t *
 print_info_xml(const char *target,
@@ -143,6 +164,10 @@ print_info_xml(const char *target,
       /* "<schedule> xx </schedule>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "schedule",
                                schedule_str(info->schedule));
+
+      /* "<depth> xx </depth>" */
+      svn_cl__xml_tagged_cdata(&sb, pool, "depth",
+                               depth_str(info->depth));
 
       /* "<copy-from-url> xx </copy-from-url>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "copy-from-url",
@@ -331,6 +356,33 @@ print_info(const char *target,
           break;
         }
       
+      switch (info->depth) 
+        {
+        case svn_depth_unknown:
+          /* Unknown depth is the norm for remote directories anyway
+             (although infinity would be equally appropriate).  Let's
+             not bother to print it. */
+          break;
+      
+        case svn_depth_zero:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: zero\n")));
+          break;
+      
+        case svn_depth_one:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: one\n")));
+          break;
+      
+        case svn_depth_infinity:
+          /* Infinity is the default depth for working copy
+             directories.  Let's not print it, it's not special enough
+             to be worth mentioning.  */
+          break;
+
+        default:
+          /* Remember that svn_depth_exclude should never happen here. */
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: INVALID\n")));
+        }
+
       if (info->copyfrom_url) 
         SVN_ERR(svn_cmdline_printf(pool, _("Copied From URL: %s\n"),
                                    info->copyfrom_url));

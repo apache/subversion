@@ -2731,8 +2731,10 @@ typedef struct svn_info_t
   const char *conflict_new;
   const char *conflict_wrk;
   const char *prejfile;
+
   /* @since New in 1.5. */
   const char *changelist;
+  svn_depth_t depth;
   /** @} */
 
 } svn_info_t;
