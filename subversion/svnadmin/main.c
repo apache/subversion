@@ -214,7 +214,7 @@ enum
     svnadmin__use_post_commit_hook,
     svnadmin__clean_logs,
     svnadmin__wait,
-    svnadmin__no_svndiff1
+    svnadmin__pre_1_4_compatible
   };
 
 /* Option codes and descriptions.
@@ -282,9 +282,9 @@ static const apr_getopt_option_t options_table[] =
      N_("wait instead of exit if the repository is in\n"
         "                             use by another process")},
 
-    {"no-svndiff1",     svnadmin__no_svndiff1, 0,
-     N_("disallow use of SVNDIFF1 in on-disk storage,\n"
-        "                             for backwards compatibility")},
+    {"pre-1.4-compatible",     svnadmin__pre_1_4_compatible, 0,
+     N_("use format compatible with Subversion versions\n"
+        "                             earlier than 1.4")},
 
     {NULL}
   };
@@ -305,7 +305,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
    ("usage: svnadmin create REPOS_PATH\n\n"
     "Create a new, empty repository at REPOS_PATH.\n"),
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
-    svnadmin__config_dir, svnadmin__fs_type, svnadmin__no_svndiff1} },
+    svnadmin__config_dir, svnadmin__fs_type, svnadmin__pre_1_4_compatible} },
 
   {"deltify", subcommand_deltify, {0}, N_
    ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -413,7 +413,7 @@ struct svnadmin_opt_state
   const char *repository_path;
   const char *new_repository_path;                  /* hotcopy dest. path */
   const char *fs_type;                              /* --fs-type */
-  svn_boolean_t no_svndiff1;                        /* --no-svndiff1 */
+  svn_boolean_t pre_1_4_compatible;                 /* --pre-1.4-compatible */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
@@ -487,8 +487,8 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                  APR_HASH_KEY_STRING,
                  opt_state->fs_type);
 
-  if (opt_state->no_svndiff1)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_NO_SVNDIFF1,
+  if (opt_state->pre_1_4_compatible)
+    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
                  APR_HASH_KEY_STRING,
                  "1");
 
@@ -1269,8 +1269,8 @@ main(int argc, const char *argv[])
       case svnadmin__force_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_force;
         break;
-      case svnadmin__no_svndiff1:
-        opt_state.no_svndiff1 = TRUE;
+      case svnadmin__pre_1_4_compatible:
+        opt_state.pre_1_4_compatible = TRUE;
         break;        
       case svnadmin__fs_type:
         err = svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool);
