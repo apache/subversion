@@ -37,7 +37,7 @@ Candidate changes:
       rs=http://svn.collab.net/repos/svn
       svn merge -r 21183:head $rs/branches/1.4.x-fixwarn
     Votes:
-      +1: maxb
+      +1: maxb, rooneg
 
 Approved changes:
 
