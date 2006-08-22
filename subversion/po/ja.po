@@ -169,8 +169,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-23 03:43+0900\n"
-"PO-Revision-Date: 2006-08-23 03:40+0900\n"
+"POT-Creation-Date: 2006-08-23 06:34+0900\n"
+"PO-Revision-Date: 2006-08-23 06:33+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -8172,15 +8172,15 @@ msgstr ""
 "リポジトリを他のプロセスが利用中の場合、終了する\n"
 "                             代わりに待ちます"
 
-# * Description for 'svnadmin --no-svndiff1'
-# * 29 half-size characters are displayed on the left.
+# # * Description for 'svnadmin --pre-1.4-compatible'
+# # * 29 half-size characters are displayed on the left.
 #: svnadmin/main.c:286
 msgid ""
-"disallow use of SVNDIFF1 in on-disk storage,\n"
-"                             for backwards compatibility"
+"use format compatible with Subversion versions\n"
+"                             earlier than 1.4"
 msgstr ""
-"後方互換性のため、on-disk ストレージの SVNDIFF1\n"
-"                             を不使用にします"
+"Subversion バージョン 1.4 以前と互換性のある形式\n"
+"                             を使用します"
 
 # * Description for 'svnadmin crashtest'.
 # * "crashtest: " is displayed at the head of the first line.
@@ -9733,6 +9733,15 @@ msgstr "エクスポートされたものです%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
+
+# * Description for 'svnadmin --no-svndiff1'
+# * 29 half-size characters are displayed on the left.
+#~ msgid ""
+#~ "disallow use of SVNDIFF1 in on-disk storage,\n"
+#~ "                             for backwards compatibility"
+#~ msgstr ""
+#~ "後方互換性のため、on-disk ストレージの SVNDIFF1\n"
+#~ "                             を不使用にします"
 
 #~ msgid "Expected format '%d' of repository; found format '%d'"
 #~ msgstr "期待されるリポジトリ形式は '%d' ですが、実際の形式は '%d' です"
