@@ -1580,7 +1580,7 @@ write_entry(svn_stringbuf_t *buf,
            ### ease debugging while implementing the depth feature. */
         val = "depth-infinity";
       }
-    write_val(buf, val, 1);
+    write_val(buf, val, strlen(val));
   }
 
   /* Remove redundant separators at the end of the entry. */
