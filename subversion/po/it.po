@@ -88,8 +88,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-21 05:00+0200\n"
-"PO-Revision-Date: 2006-08-21 09:48+0200\n"
+"POT-Creation-Date: 2006-08-22 05:00+0200\n"
+"PO-Revision-Date: 2006-08-22 09:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -909,7 +909,7 @@ msgstr "È stato fornito un messaggio di log che non era necessario"
 msgid "Error during recursive add of '%s'"
 msgstr "Errore durante l'aggiunta ricorsiva di '%s'"
 
-#: libsvn_client/add.c:388
+#: libsvn_client/add.c:388 libsvn_wc/copy.c:245
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "Non riesco a chiudere la directory '%s'"
@@ -1084,8 +1084,8 @@ msgstr ""
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
 #: libsvn_wc/adm_crawler.c:770 libsvn_wc/adm_ops.c:1044
 #: libsvn_wc/adm_ops.c:2329 libsvn_wc/adm_ops.c:2355 libsvn_wc/adm_ops.c:2391
-#: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:86 libsvn_wc/copy.c:442
-#: libsvn_wc/copy.c:564 libsvn_wc/copy.c:571 libsvn_wc/diff.c:1793
+#: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:300 libsvn_wc/copy.c:656
+#: libsvn_wc/copy.c:778 libsvn_wc/copy.c:785 libsvn_wc/diff.c:1793
 #: libsvn_wc/entries.c:2256 libsvn_wc/entries.c:2813 libsvn_wc/props.c:479
 #: libsvn_wc/props.c:1088 libsvn_wc/props.c:1506 libsvn_wc/questions.c:186
 #: libsvn_wc/questions.c:295 libsvn_wc/status.c:726 libsvn_wc/translate.c:199
@@ -3290,7 +3290,7 @@ msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versione %d del lettore per ra_svn non supportata"
 
 #: libsvn_ra_svn/cram.c:194 libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/sasl_auth.c:302 libsvn_ra_svn/sasl_auth.c:357
+#: libsvn_ra_svn/sasl_auth.c:311 libsvn_ra_svn/sasl_auth.c:366
 #: libsvn_ra_svn/simple_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "Risposta del server inattesa all'autenticazione"
@@ -3369,13 +3369,13 @@ msgstr "Status sconosciuto '%s' nella risposta del comando"
 msgid "Could not initialize the SASL library"
 msgstr "Non riesco ad inizializzare la libreria SASL"
 
-#: libsvn_ra_svn/sasl_auth.c:215 libsvn_ra_svn/simple_auth.c:58
+#: libsvn_ra_svn/sasl_auth.c:224 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "Errore di autenticazione dal server: %s"
 
-#: libsvn_ra_svn/sasl_auth.c:232
+#: libsvn_ra_svn/sasl_auth.c:241
 msgid "Unhandled SASL interaction"
 msgstr "Interazione con SASL non gestita"
 
@@ -4201,7 +4201,7 @@ msgstr "Non riesco a spostare '%s' in '%s'"
 msgid "Can't create directory '%s'"
 msgstr "Non riesco a creare la directory '%s'"
 
-#: libsvn_subr/io.c:2779 libsvn_wc/copy.c:298
+#: libsvn_subr/io.c:2779 libsvn_wc/copy.c:512
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "Non riesco a nascondere la directory '%s'"
@@ -4706,22 +4706,27 @@ msgstr "Tipo sconosciuto o inatteso per il percorso '%s'"
 msgid "File '%s' has local modifications"
 msgstr "Il file '%s' ha modifiche locali"
 
-#: libsvn_wc/copy.c:141
+#: libsvn_wc/copy.c:233
+#, fuzzy, c-format
+msgid "Error during recursive copy of '%s'"
+msgstr "Errore durante la copia ricorsiva di '%s'"
+
+#: libsvn_wc/copy.c:355
 #, c-format
 msgid "'%s' already exists and is in the way"
 msgstr "'%s' esiste già ed occupa lo stesso posto"
 
-#: libsvn_wc/copy.c:153
+#: libsvn_wc/copy.c:367
 #, c-format
 msgid "There is already a versioned item '%s'"
 msgstr "Esiste già un elemento sotto controllo di versione '%s'"
 
-#: libsvn_wc/copy.c:163
+#: libsvn_wc/copy.c:377
 #, c-format
 msgid "Cannot copy or move '%s': it's not under version control"
 msgstr "Non posso copiare o spostare '%s': non è sotto controllo di versione"
 
-#: libsvn_wc/copy.c:172
+#: libsvn_wc/copy.c:386
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
@@ -4730,7 +4735,7 @@ msgstr ""
 "Non posso copiare o spostare '%s': non è ancora nel repository; prova ad "
 "effettuare il commit, prima"
 
-#: libsvn_wc/copy.c:451
+#: libsvn_wc/copy.c:665
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
@@ -4739,13 +4744,13 @@ msgstr ""
 "Non posso copiare o spostare '%s': non è ancora nel repository; prova ad "
 "effettuare il commit, prima"
 
-#: libsvn_wc/copy.c:578
+#: libsvn_wc/copy.c:792
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
 msgstr ""
 "Non posso copiare in '%s', non essendo nel repository '%s'; proviene da '%s'"
 
-#: libsvn_wc/copy.c:585
+#: libsvn_wc/copy.c:799
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "Non posso copiare in '%s' essendone programmata la sua cancellazione"
