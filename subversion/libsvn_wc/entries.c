@@ -63,7 +63,7 @@ alloc_entry(apr_pool_t *pool)
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->cmt_rev = SVN_INVALID_REVNUM;
   entry->kind = svn_node_none;
-  entry->depth = svn_depth_subtree;
+  entry->depth = svn_depth_infinity;
   return entry;
 }
 
@@ -457,12 +457,12 @@ read_entry(svn_wc_entry_t **new_entry,
     const char *result;
     SVN_ERR(read_val(&result, buf, end));
     if (result[0] == '0' && result[1] == '\0')
-      entry->depth = svn_depth_base;
+      entry->depth = svn_depth_zero;
     if (result[0] == '1' && result[1] == '\0')
-      entry->depth = svn_depth_onelevel;
+      entry->depth = svn_depth_one;
     else
-      /* svn_depth_exclude "can't happen" here, so assume subtree. */
-      entry->depth = svn_depth_subtree;
+      /* svn_depth_exclude "can't happen" here, so assume infinity. */
+      entry->depth = svn_depth_infinity;
   }
 
  done:
@@ -1568,13 +1568,13 @@ write_entry(svn_stringbuf_t *buf,
     const char *val;
     switch (entry->depth)
       {
-      case svn_depth_base:
+      case svn_depth_zero:
         val = "0";
         break;
-      case svn_depth_onelevel:
+      case svn_depth_one:
         val = "1";
       default:
-        /* Else assume 2 (svn_depth_subtree), which we represent as "",
+        /* Else assume 2 (svn_depth_infinity), which we represent as "",
            which write_val() will emit if handed NULL. */
         val = NULL;
       }

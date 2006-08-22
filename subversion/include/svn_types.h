@@ -199,26 +199,25 @@ enum svn_recurse_kind
   svn_recursive
 };
 
-/** The LDAP / WebDAV concept of depth for directory operations.
+/** The WebDAV / LDAP concept of depth for directory operations.
  *
- * In LDAP, these depths are called "base", "onelevel", and "subtree".
- * In WebDAV, they are called "zero", "one", and "infinity", but they
- * mean the same thing as in LDAP.
+ * In WebDAV, these depths are called "zero", "one", and "infinity".
+ * In LDAP, they are called "base", "onelevel", and "subtree", but
+ * they mean the same thing as in WebDAV.
  *
- * @note LDAP's "exact" depth is just a synonym for "base", but we
- * always use the latter term in Subversion.  Also, Subversion does
- * not implement the LDAP "children" depth, which means "subtree minus
- * exact", that is, the children of a directory but not the directory
- * itself.
+ * @note LDAP sometimes uses "exact" as a synonym for "base".  Also,
+ * Subversion does not implement the LDAP "children" depth, which
+ * means "subtree minus exact", that is, the children of a directory
+ * but not the directory itself.
  *
  * @since New in 1.5.
  */
 typedef enum
 {
   svn_depth_exclude  = -1, /* Exclude (remove, whatever) directory D. */
-  svn_depth_base     =  0, /* Just the named directory D, no entries. */
-  svn_depth_onelevel =  1, /* D + immediate children (D and its entries) */
-  svn_depth_subtree  =  2, /* D + all descendants (full recursion from D) */
+  svn_depth_zero     =  0, /* Just the named directory D, no entries. */
+  svn_depth_one      =  1, /* D + immediate children (D and its entries) */
+  svn_depth_infinity =  2, /* D + all descendants (full recursion from D) */
 } svn_depth_t;
 
 
