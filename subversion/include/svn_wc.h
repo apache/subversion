@@ -1327,7 +1327,7 @@ typedef struct svn_wc_entry_t
   /** The depth of this entry.
    *
    * ### It's a bit annoying that we only use this on this_dir
-   * ### entries, yet it will exist (with value svn_depth_subtree) on
+   * ### entries, yet it will exist (with value svn_depth_infinity) on
    * ### all entries.  Maybe some future extensibility would make this
    * ### field meaningful on entries besides this_dir.
    *
