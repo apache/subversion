@@ -394,7 +394,9 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetExe):
       return target.name + '.exe'
     elif isinstance(target, gen_base.TargetJava):
-      return None
+      ### This target file is not actually built, but we need it to keep
+      ### the VC Express build happy.
+      return target.name
     elif isinstance(target, gen_base.TargetApacheMod):
       return target.name + '.so'
     elif isinstance(target, gen_base.TargetLib):
@@ -411,21 +413,9 @@ class WinGeneratorBase(GeneratorBase):
       return target.name
 
   def get_output_pdb(self, target):
-    if isinstance(target, gen_base.TargetExe):
-      return target.name + '.pdb'
-    elif isinstance(target, gen_base.TargetJava):
-      return None
-    elif isinstance(target, gen_base.TargetApacheMod):
-      return target.name + '.pdb'
-    elif isinstance(target, gen_base.TargetLib):
-      if target.msvc_static:
-        return '%s-%d.pdb' % (target.name, self.version)
-      else:
-        return os.path.basename(target.filename) + '.pdb'
-    elif isinstance(target, gen_base.TargetProject):
-      return target.name + '.pdb'
-    elif isinstance(target, gen_base.TargetI18N):
-      return target.name + '.pdb'
+    name = self.get_output_name(target)
+    name = os.path.splitext(name)
+    return name[0] + '.pdb'
 
   def get_output_dir(self, target):
     if isinstance(target, gen_base.TargetJavaHeaders):
