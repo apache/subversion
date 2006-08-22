@@ -9,14 +9,6 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r20781, r21192
-    autogen.sh: Purge *.pyc files from the build/ hierarchy after using the
-    build generator, so that we do not ship them in tarballs.
-    Justification:
-      Shipping detritus like .pyc files in release tarballs is sloppy.
-    Votes:
-      +1: maxb, cmpilato
-
   * r21190
     Bump repos format number, to protect against 1.0 and 1.1 ignoring the FS
     format number.
@@ -25,6 +17,14 @@ Candidate changes:
 
 
 Approved changes:
+
+  * r20781, r21192
+    autogen.sh: Purge *.pyc files from the build/ hierarchy after using the
+    build generator, so that we do not ship them in tarballs.
+    Justification:
+      Shipping detritus like .pyc files in release tarballs is sloppy.
+    Votes:
+      +1: maxb, cmpilato, rooneg
 
   * /branches/1.4.x-fixwarn, no corresponding trunk revision
     Fix GCC warnings in libsvn_wc/merge.c:
