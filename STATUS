@@ -18,6 +18,27 @@ Candidate changes:
       +1: maxb
       -1: cmpilato (this is a very odd place to do this.  dist.sh, perhaps?)
 
+  * /branches/1.4.x-fixwarn, no corresponding trunk revision
+    Fix GCC warnings in libsvn_wc/merge.c:
+    merge.c: In function 'svn_wc__merge_internal':
+    merge.c:178: warning: declaration of 'tmp_left' shadows a previous local
+    merge.c:50: warning: shadowed declaration is here
+    merge.c:178: warning: declaration of 'tmp_right' shadows a previous local
+    merge.c:50: warning: shadowed declaration is here
+    The problem is that the variable names tmp_left and tmp_right were removed
+    on trunk, and then later re-introduced for a different purpose.  The
+    re-introduction was then backported to 1.4.x branch, on which the initial
+    removal never took place.  Therefore, the same variable names are being
+    used for two different purposes in the same function.  Badness.
+    Justification:
+      We usually build OK with -Werror -Wall -Wno-uninitialized, but this
+      issue breaks that.
+    Notes:
+      rs=http://svn.collab.net/repos/svn
+      svn merge -r 21183:head $rs/branches/1.4.x-fixwarn
+    Votes:
+      +1: maxb
+
 Approved changes:
 
 Status of 1.4.1:
