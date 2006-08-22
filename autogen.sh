@@ -94,6 +94,10 @@ else
   "$PYTHON" ./gen-make.py $RELEASE_ARGS build.conf || gen_failed=1
 fi
 
+if test -n "$RELEASE_MODE"; then
+  find build/ -name '*.pyc' -exec rm {} \;
+fi
+
 rm autogen-standalone.mk
 
 if test -n "$gen_failed"; then
