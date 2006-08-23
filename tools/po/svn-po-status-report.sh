@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Subversion po file translation status report generator
 # To ensure the script produces accurate statisticks, make sure that
 # you have run 'make locale-gnu-po-update'
@@ -13,6 +13,8 @@ Translation status report for revision $wc_version ($branch_name/)
 
 ============================================================================"
 
+printf "%8s %7s %7s %7s %7s\n" lang untrans fuzzy trans obs
+
 cd subversion/po
 for i in *.po ; do
   translated=`msgattrib --translated $i \
@@ -24,26 +26,15 @@ for i in *.po ; do
   obsolete=`msgattrib --only-obsolete $i \
     | grep -E '^msgid *"' | sed 1d | wc -l`
 
-  echo
   if test -z "`svn status $i | grep -E '^\?'`" ; then
-      echo "Status for '$i': in repository"
+      repo=Y
   else
-      echo "Status for '$i': NOT in repository"
-      echo " (See the issue tracker 'translations' subcomponent)"
+      repo=N
   fi
 
-  echo
   if ! msgfmt --check-format -o /dev/null $i ; then
-      echo "   FAILS GNU msgfmt --check-format"
+      printf "%8s %s\n" $i "FAILS GNU msgfmt --check-format"
   else
-      echo "   Passes GNU msgfmt --check-format"
-      echo
-      echo "   Statistics:"
-      echo "    $obsolete obsolete"
-      echo "    $untranslated untranslated"
-      echo "    $translated translated, of which"
-      echo "       $fuzzy fuzzy"
+      printf "%8s %7d %7d %7d %7d\n" $i $untranslated $fuzzy $translated $obsolete
   fi
-  echo "
-----------------------------------------------------------------------------"
 done
