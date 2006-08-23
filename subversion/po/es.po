@@ -3022,9 +3022,8 @@ msgid "Missing revision attr in open-directory element"
 msgstr "Falta el atributo 'revision' en el elemento 'open-directory'"
 
 #: libsvn_ra_serf/replay.c:250
-#, fuzzy
 msgid "Missing name attr in add-directory element"
-msgstr "Falta el atributo 'path' en el elemento 'add-directory'"
+msgstr "Falta el atributo 'name' en el elemento 'add-directory'"
 
 #: libsvn_ra_serf/replay.c:285
 msgid "Missing name attr in open-file element"
@@ -3798,14 +3797,14 @@ msgid "Can't expand time"
 msgstr "No se pudo expandir la fecha"
 
 #: libsvn_subr/dso.c:70
-#, fuzzy, c-format
+#, c-format
 msgid "Can't grab DSO mutex"
-msgstr "No se pudo tomar el mutex FS"
+msgstr "No se pudo tomar el mutex DSO"
 
 #: libsvn_subr/dso.c:84 libsvn_subr/dso.c:106 libsvn_subr/dso.c:121
-#, fuzzy, c-format
+#, c-format
 msgid "Can't ungrab DSO mutex"
-msgstr "No se pudo soltar el mutex FS"
+msgstr "No se pudo soltar el mutex DSO"
 
 #: libsvn_subr/error.c:326
 msgid "Can't recode error string from APR"
@@ -4592,13 +4591,13 @@ msgid "'%s' is already under version control"
 msgstr "'%s' ya está bajo control de versiones"
 
 #: libsvn_wc/adm_ops.c:1105
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Can't replace '%s' with a node of a differing type; the deletion must be "
 "committed and the parent updated before adding '%s'"
 msgstr ""
-"No se puede reemplazar '%s' con un nodo de un tipo diferente; Ejecute commit "
-"de la eliminación, actualice el padre y luego agregue '%s'"
+"No se puede reemplazar '%s' con un nodo de un tipo diferente; haga commit de "
+"la eliminación y actualice el padre antes de agregar '%s'"
 
 #: libsvn_wc/adm_ops.c:1122
 #, c-format
@@ -8578,28 +8577,27 @@ msgid ""
 msgstr ""
 
 #: svnsync/main.c:71
-#, fuzzy
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
 "Transfer all pending revisions from source to destination.\n"
 msgstr ""
 "uso: svnsync synchronize URL_DEST\n"
+"\n"
 "Transfiere todas las revisiones pendientes del origen al destino.\n"
 
 #: svnsync/main.c:76
-#, fuzzy
 msgid ""
 "usage: svnsync copy-revprops DEST_URL REV\n"
 "\n"
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
-"uso: svnsync copy-revprops URL_DEST --revision REV\n"
-"Copia todas las propiedades de revisión de la fuente al destino.\n"
+"uso: svnsync copy-revprops URL_DEST REV\n"
+"\n"
+"Copia todas las propiedades de la revisión REV de la fuente al destino.\n"
 
 #: svnsync/main.c:82
-#, fuzzy
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "\n"
@@ -8629,12 +8627,12 @@ msgstr "La sesión tiene raíz en '%s', pero la raíz del repos es '%s'"
 #: svnsync/main.c:341
 #, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
-msgstr ""
+msgstr "Propiedades copiadas para revisión %ld (%s* propiedades omitidas).\n"
 
 #: svnsync/main.c:346
-#, fuzzy, c-format
+#, c-format
 msgid "Copied properties for revision %ld.\n"
-msgstr "Propiedades no versionadas en revisión %ld:\n"
+msgstr "Propiedades copiadas para revisión %ld.\n"
 
 #: svnsync/main.c:387
 msgid "Cannot initialize a repository with content in it"
@@ -8647,25 +8645,23 @@ msgstr "El repositorio destino ya está sincronizándose desde '%s'"
 
 #: svnsync/main.c:455 svnsync/main.c:458 svnsync/main.c:1116
 #: svnsync/main.c:1200
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not a URL"
-msgstr "La ruta '%s' no es un archivo"
+msgstr "La ruta '%s' no es un URL"
 
 #: svnsync/main.c:838
-#, fuzzy, c-format
+#, c-format
 msgid "Committed revision %ld.\n"
-msgstr ""
-"\n"
-"Commit de la revisión %ld.\n"
+msgstr "Commit de la revisión %ld.\n"
 
 #: svnsync/main.c:877
 msgid "Destination repository has not been initialized"
 msgstr "El repositorio destino no fue inicializado"
 
 #: svnsync/main.c:892
-#, fuzzy, c-format
+#, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
-msgstr "El UUID del repsitorio destino (%s) no coincide con el esperado (%s)"
+msgstr "El UUID del repsitorio fuente (%s) no coincide con el esperado (%s)"
 
 #: svnsync/main.c:954
 #, c-format
@@ -8693,9 +8689,8 @@ msgstr ""
 "No se puede copiar revprops de una revisión que no todavía no se sincronizó"
 
 #: svnsync/main.c:1203
-#, fuzzy
 msgid "Invalid revision number"
-msgstr "Se especificó un número de revisión inválido"
+msgstr "Número de revisión inválido"
 
 #: svnsync/main.c:1239
 msgid ""
@@ -8721,9 +8716,8 @@ msgstr ""
 "Tipee 'svn help %s' para ver modo de uso.\n"
 
 #: svnsync/main.c:1490
-#, fuzzy
 msgid "Not enough arguments provided; try 'svnsync help' for more info"
-msgstr "Parámetros insuficientes; pruebe 'svn help' para más información"
+msgstr "Parámetros insuficientes; pruebe 'svnsync help' para más información"
 
 #: svnversion/main.c:39
 #, c-format

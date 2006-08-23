@@ -3860,9 +3860,9 @@ msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "Kan inte erhålla rättigheter för filen \"%s\" (fel vid stat)"
 
 #: libsvn_subr/io.c:1235 libsvn_subr/io.c:1330
-#, fuzzy, c-format
+#, c-format
 msgid "Can't change perms of file '%s'"
-msgstr "Kan inte ändra skrivskyddet på filen \"%s\""
+msgstr "Kan inte ändra rättigheter på filen \"%s\""
 
 #: libsvn_subr/io.c:1370
 #, c-format

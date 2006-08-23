@@ -731,7 +731,7 @@ msgstr "Format einer svn:externals Eigenschaft war ungültig"
 #: include/svn_error_codes.h:892
 msgid "Attempting restricted operation for modified resource"
 msgstr ""
-"Versuch, eine beschränkte Operation für veränderte Resource auszuführen"
+"Versuch, eine beschränkte Operation für veränderte Ressource auszuführen"
 
 #: include/svn_error_codes.h:896
 msgid "Operation does not apply to directory"
@@ -755,7 +755,7 @@ msgstr "Falscher Eigenschaftsname"
 
 #: include/svn_error_codes.h:917
 msgid "Two versioned resources are unrelated"
-msgstr "Zwei versionierte Resourcen sind nicht verwandt"
+msgstr "Zwei versionierte Ressourcen sind nicht verwandt"
 
 #: include/svn_error_codes.h:922
 msgid "Path has no lock token"
@@ -785,7 +785,7 @@ msgstr "Inkorrekte Parameter übergeben"
 #: include/svn_error_codes.h:948
 msgid "Tried a versioning operation on an unversioned resource"
 msgstr ""
-"Versuch, eine Versionsoperation auf nicht versionierter Resource auszuführen"
+"Versuch, eine Versionsoperation auf nicht versionierter Ressource auszuführen"
 
 #: include/svn_error_codes.h:952
 msgid "Test failed"
@@ -1701,7 +1701,7 @@ msgstr "Allokiere neue Knoten ID (hole 'next-key')"
 
 #: libsvn_fs_base/bdb/nodes-table.c:115
 msgid "bumping next node ID key"
-msgstr "Erzeuge nächste Knoten ID"
+msgstr "Erzeuge nächste Knoten-ID"
 
 #: libsvn_fs_base/bdb/nodes-table.c:152
 #, c-format
@@ -2358,7 +2358,7 @@ msgstr "Versuch, in eine Nicht-Transaktion zu schreiben"
 
 #: libsvn_fs_fs/fs_fs.c:967
 msgid "Malformed representation header"
-msgstr "Fehlerhafter Darstellungskopf."
+msgstr "Fehlerhafter Darstellungskopf"
 
 #: libsvn_fs_fs/fs_fs.c:991
 msgid "Missing node-id in node-rev"
@@ -2390,11 +2390,11 @@ msgstr "Keine Revision %ld"
 
 #: libsvn_fs_fs/fs_fs.c:1216
 msgid "Malformed svndiff data in representation"
-msgstr "Fehlerhafte svndiff Daten in Darstellung"
+msgstr "Fehlerhafte svndiff-Daten in Darstellung"
 
 #: libsvn_fs_fs/fs_fs.c:1359 libsvn_fs_fs/fs_fs.c:1372
 msgid "Reading one svndiff window read beyond the end of the representation"
-msgstr "Lesen eines svndiff Fensters las über Ende der Darstellung hinaus"
+msgstr "Lesen eines svndiff-Fensters las über Ende der Darstellung hinaus"
 
 #: libsvn_fs_fs/fs_fs.c:1508
 msgid "svndiff data requested non-existent source"
@@ -2697,8 +2697,8 @@ msgid ""
 "Protocol error: we told the server not to auto-merge any resources, but it "
 "said that '%s' was merged"
 msgstr ""
-"Protokollfehler: wir haben dem Server mitgeteilt, Resourcen nicht "
-"automatisch zusammenzuführen, aber dieser behauptet, das '%s' "
+"Protokollfehler: Wir haben dem Server mitgeteilt, Ressourcen nicht "
+"automatisch zusammenzuführen, aber dieser behauptet, dass '%s' "
 "zusammengeführt wurde"
 
 #: libsvn_ra_dav/merge.c:229
@@ -2735,7 +2735,7 @@ msgid ""
 "this often means that the URL is not WebDAV-enabled"
 msgstr ""
 "Die OPTIONS-Antwort enthielt nicht das angeforderte 'activity-collection-"
-"set'; dies heißt oft, das die URL nicht WebDAV-fähig ist"
+"set'; dies heißt oft, dass die URL nicht WebDAV-fähig ist"
 
 #: libsvn_ra_dav/props.c:588
 #, c-format
@@ -2772,11 +2772,11 @@ msgstr "Die 'relative-path' Eigenschaft wurde in der Ressource nicht gefunden"
 #: libsvn_ra_dav/props.c:919
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
 msgstr ""
-"'DAV:baseline-collection' ist nicht in der Grundlinienresource enthalten"
+"'DAV:baseline-collection' ist nicht in der Grundlinienressource enthalten"
 
 #: libsvn_ra_dav/props.c:938
 msgid "'DAV:version-name' was not present on the baseline resource"
-msgstr "'DAV:version-name' ist nicht in der Grundlinienresource enthalten"
+msgstr "'DAV:version-name' ist nicht in der Grundlinienressource enthalten"
 
 #: libsvn_ra_dav/props.c:1106 libsvn_ra_serf/commit.c:719
 msgid "At least one property change failed; repository is unchanged"
@@ -3699,23 +3699,23 @@ msgstr "Lege Verzeichnis für Aktionen an"
 
 #: libsvn_repos/repos.c:413
 msgid "Creating start-commit hook"
-msgstr "Erzeuge 'start-commit' Aktion"
+msgstr "Erzeuge Aktion 'start-commit'"
 
 #: libsvn_repos/repos.c:550
 msgid "Creating pre-commit hook"
-msgstr "Erzeuge 'pre-commit' Aktion"
+msgstr "Erzeuge Aktion 'pre-commit'"
 
 #: libsvn_repos/repos.c:682
 msgid "Creating pre-revprop-change hook"
-msgstr "Erzeuge 'pre-revprop-change' Aktion"
+msgstr "Erzeuge Aktion 'pre-revprop-change'"
 
 #: libsvn_repos/repos.c:1057
 msgid "Creating post-commit hook"
-msgstr "Erzeuge 'post-commit' Aktion"
+msgstr "Erzeuge Aktion 'post-commit'"
 
 #: libsvn_repos/repos.c:1377
 msgid "Creating post-revprop-change hook"
-msgstr "Erzeuge 'post-revprop-change' Aktion"
+msgstr "Erzeuge Aktion 'post-revprop-change'"
 
 #: libsvn_repos/repos.c:1387
 msgid "Creating conf directory"
@@ -3723,15 +3723,15 @@ msgstr "Erzeuge Konfigurationsverzeichnis"
 
 #: libsvn_repos/repos.c:1453
 msgid "Creating svnserve.conf file"
-msgstr "Erzeuge 'svnserve.conf' Datei"
+msgstr "Erzeuge Datei 'svnserve.conf'"
 
 #: libsvn_repos/repos.c:1478
 msgid "Creating passwd file"
-msgstr "Erzeuge 'passwd' Datei"
+msgstr "Erzeuge Datei 'passwd'"
 
 #: libsvn_repos/repos.c:1527
 msgid "Creating authz file"
-msgstr "Erzeuge authz Datei"
+msgstr "Erzeuge Datei 'authz'"
 
 #: libsvn_repos/repos.c:1560
 msgid "Could not create top-level directory"
@@ -3739,7 +3739,7 @@ msgstr "Konnte oberstes Verzeichnis nicht erzeugen"
 
 #: libsvn_repos/repos.c:1564
 msgid "Creating DAV sandbox dir"
-msgstr "Erzeuge Verzeichnis für DAV Sandkasten"
+msgstr "Erzeuge Verzeichnis für DAV-Sandkasten"
 
 #: libsvn_repos/repos.c:1645
 msgid "Error opening db lockfile"
@@ -4199,7 +4199,7 @@ msgstr "Kann Verzeichnis nicht lesen"
 #: libsvn_subr/io.c:2938
 #, c-format
 msgid "Can't read directory entry in '%s'"
-msgstr "Kann Verzeichniseintrang in '%s' nicht lesen"
+msgstr "Kann Verzeichniseintrag in '%s' nicht lesen"
 
 #: libsvn_subr/io.c:3063
 #, c-format
@@ -4586,7 +4586,7 @@ msgstr "Kein Eintrag für '%s'"
 #: libsvn_wc/adm_files.c:968
 #, c-format
 msgid "Revision %ld doesn't match existing revision %ld in '%s'"
-msgstr "Revision %ld paßt nicht zur existierenden Revision %ld in '%s'"
+msgstr "Revision %ld passt nicht zur existierenden Revision %ld in '%s'"
 
 #: libsvn_wc/adm_files.c:976
 #, c-format
@@ -4941,7 +4941,7 @@ msgstr ""
 #: libsvn_wc/lock.c:944
 #, c-format
 msgid "Expected '%s' to be a file but found a directory"
-msgstr "Erwartet dass '%s' eine Datei ist, aber Verzeichnis gefunden"
+msgstr "Erwartete, dass '%s' eine Datei ist, aber Verzeichnis gefunden"
 
 #: libsvn_wc/lock.c:963
 #, c-format
@@ -5322,7 +5322,7 @@ msgstr ""
 #: libsvn_wc/update_editor.c:1497
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
-msgstr "Datei '%s' im Verzeichnis '%s' ist keine versionierte Resource"
+msgstr "Datei '%s' im Verzeichnis '%s' ist keine versionierte Ressource"
 
 #: libsvn_wc/update_editor.c:1609
 #, c-format
@@ -6408,7 +6408,7 @@ msgstr ""
 "Aufruf: 1. mkdir PFAD...\n"
 "        2. mkdir URL...\n"
 "\n"
-"  Erzeuge Verzeichnisse unter Versionskontrolle.\n"
+"  Erzeugt Verzeichnisse unter Versionskontrolle.\n"
 "\n"
 "  1. Jedes durch den PFAD einer Arbeitskopie spezifizierte Verzeichnis wird\n"
 "     lokal erzeugt und zum Hinzufügen bei der nächsten Übertragung "
@@ -7568,7 +7568,7 @@ msgstr ""
 "Aufruf: svnadmin deltify [-r VON[:BIS]] ARCHIV_PFAD\n"
 "\n"
 "Führt Vorgängerdeltifizierung auf den geänderten Pfaden innerhalb der\n"
-"Revisionsspanne VON:BIS durch. Kurz gefaßt komprimiert die Deltifizierung\n"
+"Revisionsspanne VON:BIS durch. Kurz gefasst komprimiert die Deltifizierung\n"
 "das Projektarchiv, indem nur die Unterschiede oder Deltas zur vorigen\n"
 "Revision gespeichert werden.  Falls keine Revisionen angegeben wurden, wird\n"
 "nur die HEAD-Revision deltifiziert.\n"
@@ -8467,15 +8467,15 @@ msgstr ""
 
 #: svnserve/main.c:140
 msgid "daemon mode"
-msgstr "Dämonenmodus"
+msgstr "Daemonmodus"
 
 #: svnserve/main.c:142
 msgid "listen port (for daemon mode)"
-msgstr "Horche auf Port (als Dämon)"
+msgstr "Horche auf Port (als Daemon)"
 
 #: svnserve/main.c:144
 msgid "listen hostname or IP address (for daemon mode)"
-msgstr "Horche auf Hostnamen oder IP Adresse (als Dämon)"
+msgstr "Horche auf Hostnamen oder IP-Adresse (als Daemon)"
 
 #: svnserve/main.c:146
 msgid "run in foreground (useful for debugging)"
@@ -8487,7 +8487,7 @@ msgstr "Hilfe anzeigen"
 
 #: svnserve/main.c:150
 msgid "inetd mode"
-msgstr "Inetd Modus"
+msgstr "Inetd-Modus"
 
 #: svnserve/main.c:151
 msgid "root of directory to serve"
@@ -8497,7 +8497,7 @@ msgstr "Basis des bereitzustellenden Verzeichnisses"
 msgid "force read only, overriding repository config file"
 msgstr ""
 "Erzwinge Schreibschutz. Setze Einstellung in der\n"
-"Projektarchivkonfiguration ausser Kraft."
+"Projektarchivkonfiguration außer Kraft."
 
 #: svnserve/main.c:154
 msgid "tunnel mode"
@@ -8806,8 +8806,8 @@ msgid ""
 msgstr ""
 "Aufruf: svnversion [OPTIONEN] [AK_PFAD [ANGEH_URL]]\n"
 "\n"
-"  Erzeuge eine kompakte 'Versionsnummer' für den Pfad AK_PFAD der\n"
-"  Arbeitskopie.  ANGEH_URL ist der angehängte Teil der URL, welcher\n"
+"  Erzeugt eine kompakte 'Versionsnummer' für den Pfad AK_PFAD der\n"
+"  Arbeitskopie. ANGEH_URL ist der angehängte Teil der URL, welcher\n"
 "  benutzt wird, um festzustellen, ob AK_PFAD selbst umgestellt wurde\n"
 "  (Die Erkennung von Umstellungen selbst innerhalb von AK_PFAD hängt\n"
 "  nicht von ANGEH_URL ab). Die Versionsnummer wird auf die\n"
@@ -8818,7 +8818,7 @@ msgstr ""
 "\n"
 "  Die Versionsnummer ist eine einzelne Nummer, falls die Arbeitskopie\n"
 "  eine einzelne Revision besitzt, die nicht modifiziert, nicht umgeschaltet\n"
-"  ist und eine URL, welche mit ANGEH_URL übereinstimmt.  Falls die\n"
+"  ist und eine URL, welche mit ANGEH_URL übereinstimmt. Falls die\n"
 "  Arbeitskopie ungewöhnlich ist, ist die Versionsnummer komplexer:\n"
 "\n"
 "   4123:4168     Arbeitskopie aus verschiedenen Revisionen\n"

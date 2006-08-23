@@ -3867,9 +3867,9 @@ msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "無法於 '%s' 取得檔案的權限 (檔案 stat 錯誤)"
 
 #: libsvn_subr/io.c:1235 libsvn_subr/io.c:1330
-#, fuzzy, c-format
+#, c-format
 msgid "Can't change perms of file '%s'"
-msgstr "無法變更檔案 '%s' 的讀寫權限"
+msgstr "無法變更檔案 '%s' 的權限"
 
 #: libsvn_subr/io.c:1370
 #, c-format

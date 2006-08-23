@@ -1511,7 +1511,7 @@ msgstr "Nieoczekiwany koniec danych wejściowych svndiff"
 #: libsvn_diff/diff_file.c:593
 #, c-format
 msgid "The file '%s' changed unexpectedly during diff"
-msgstr ""
+msgstr "Plik '%s' został zmieniony podczas wykonywania diff"
 
 #: libsvn_diff/diff_file.c:714
 #, fuzzy, c-format
@@ -1521,7 +1521,7 @@ msgstr "Błąd parsowania '%s'"
 #: libsvn_diff/diff_file.c:737
 #, c-format
 msgid "Invalid argument '%s' in diff options"
-msgstr ""
+msgstr "Niewłaściwy argument '%s' w opcjach diff"
 
 #: libsvn_diff/diff_file.c:1019
 #, c-format
@@ -2996,7 +2996,7 @@ msgstr "Ścieżka '%s' nie istnieje"
 #: libsvn_ra_serf/commit.c:910
 #, c-format
 msgid "Failed writing updated file"
-msgstr ""
+msgstr "Zapis zaktualizowanego pliku nie powiódł się"
 
 #: libsvn_ra_serf/getlocations.c:289
 #, fuzzy
@@ -3053,7 +3053,7 @@ msgstr ""
 #: libsvn_ra_serf/serf.c:155
 #, c-format
 msgid "Could not lookup hostname: %s://%s"
-msgstr ""
+msgstr "Nie można odszukać hosta: %s://%s"
 
 #: libsvn_ra_serf/serf.c:741
 #, c-format
@@ -3067,7 +3067,7 @@ msgstr "Błąd podczas odbierania RAPORTU"
 
 #: libsvn_ra_serf/util.c:743
 msgid "Premature EOF seen from server"
-msgstr ""
+msgstr "Serwer za wcześnie wysłał EOF"
 
 #: libsvn_ra_svn/client.c:127
 #, c-format
@@ -3756,7 +3756,7 @@ msgstr "Nie można odczytać ścieżki; dostęp zabroniony"
 #: libsvn_subr/cmdline.c:481
 #, c-format
 msgid "Error initializing command line arguments"
-msgstr ""
+msgstr "Błąd podczas inicjalizacji argumentów linii poleceń"
 
 #: libsvn_subr/config.c:630
 #, c-format
@@ -4734,7 +4734,7 @@ msgstr "Nieoczekiwany koniec danych wejściowych svndiff"
 #: libsvn_wc/entries.c:225
 #, c-format
 msgid "Invalid value for field '%s'"
-msgstr ""
+msgstr "Niewłaściwa wartość dla pola '%s'"
 
 #: libsvn_wc/entries.c:307 libsvn_wc/entries.c:533
 #, c-format
@@ -4930,9 +4930,10 @@ msgid "Directory '%s' is missing"
 msgstr "Katalog '%s' nie ma URL"
 
 #: libsvn_wc/lock.c:968
-#, c-format
+#, fuzzy, c-format
 msgid "Directory '%s' containing working copy admin area is missing"
 msgstr ""
+"W katalog '%s' zawierającym kopię roboczą brakuje plików administracyjnych"
 
 #: libsvn_wc/lock.c:973
 #, fuzzy, c-format
@@ -6956,7 +6957,7 @@ msgstr ""
 
 #: svn/main.c:952 svn/main.c:1143
 msgid "Can't specify -c with --old"
-msgstr ""
+msgstr "Nie można wyspecyfikować opcji -c wraz z opcją --old"
 
 #: svn/main.c:959
 #, fuzzy
@@ -8515,7 +8516,7 @@ msgstr "zapisz ID procesu serwera do pliku arg"
 
 #: svnserve/main.c:165
 msgid "run as a windows service (SCM only)"
-msgstr ""
+msgstr "uruchom jako serwis Windows (tylko SCM)"
 
 #: svnserve/main.c:177
 #, c-format
@@ -8587,24 +8588,24 @@ msgstr "Nie udało się utworzyć wątku: %s\n"
 #: svnserve/winservice.c:341
 #, c-format
 msgid "Failed to create winservice_start_event"
-msgstr ""
+msgstr "Nie powiodło się utworzenie winservice_start_event"
 
 #: svnserve/winservice.c:352
 #, c-format
 msgid "The service failed to start"
-msgstr ""
+msgstr "Nie powiodło się uruchomienie usługi"
 
 #: svnserve/winservice.c:400
 #, c-format
 msgid "Failed to connect to Service Control Manager"
-msgstr ""
+msgstr "Nie powiodła się próba podłączenie do Menadżera Usług"
 
 #: svnserve/winservice.c:411
 #, c-format
 msgid ""
 "The service failed to start; an internal error occurred while starting the "
 "service"
-msgstr ""
+msgstr "Uruchomienie usługi nie powiodło się; wystapił błąd wewnętrzny"
 
 #: svnsync/main.c:56
 msgid ""

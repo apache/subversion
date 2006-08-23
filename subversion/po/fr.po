@@ -244,15 +244,15 @@ msgstr "Actualisation bloquée"
 
 #: include/svn_error_codes.h:290
 msgid "Mismatch popping the WC unwind stack"
-msgstr ""
+msgstr "Mismatch popping the WC unwind stack"
 
 #: include/svn_error_codes.h:295
 msgid "Attempt to pop empty WC unwind stack"
-msgstr ""
+msgstr "Attempt to pop empty WC unwind stack"
 
 #: include/svn_error_codes.h:300
 msgid "Attempt to unlock with non-empty unwind stack"
-msgstr ""
+msgstr "Attempt to unlock with non-empty unwind stack"
 
 #: include/svn_error_codes.h:304
 msgid "Attempted to lock an already-locked dir"
@@ -942,7 +942,7 @@ msgstr "Blame non calculable sur le fichier binaire '%s'"
 
 #: libsvn_client/blame.c:522
 msgid "blame of the WORKING revision is not supported"
-msgstr ""
+msgstr "blame de la révision courante non supporté"
 
 #: libsvn_client/blame.c:535
 msgid "Start revision must precede end revision"
@@ -1407,6 +1407,7 @@ msgstr "Précision de la révision obligatoire"
 #: libsvn_client/log.c:86
 msgid "Revision type requires a working copy path, not a URL"
 msgstr ""
+"Type de révision qui requiert un chemin dans une copie locale, pas une URL"
 
 #: libsvn_client/log.c:139 libsvn_client/status.c:261
 #: libsvn_client/update.c:86
@@ -2841,11 +2842,11 @@ msgstr ""
 
 #: libsvn_ra_dav/props.c:919
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
-msgstr ""
+msgstr "'DAV:baseline-collection' non présente dans la ressource initiale"
 
 #: libsvn_ra_dav/props.c:938
 msgid "'DAV:version-name' was not present on the baseline resource"
-msgstr ""
+msgstr "DAV:version-name non présente dans la ressource initiale"
 
 #: libsvn_ra_dav/props.c:1106 libsvn_ra_serf/commit.c:719
 msgid "At least one property change failed; repository is unchanged"
@@ -3114,9 +3115,8 @@ msgid "Missing revision attr in open-directory element"
 msgstr "Attribut révision 'revision' manquant dans un élément 'open-directory'"
 
 #: libsvn_ra_serf/replay.c:250
-#, fuzzy
 msgid "Missing name attr in add-directory element"
-msgstr "Attribut chemin 'path manquant dans un élément 'add-directory'"
+msgstr "Attribut nom 'name' manquant dans un élément 'add-directory'"
 
 #: libsvn_ra_serf/replay.c:285
 msgid "Missing name attr in open-file element"
@@ -3351,7 +3351,7 @@ msgstr "Partie non chaîne dans une différence de texte"
 #: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
 #, c-format
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr ""
+msgstr "La commande 'finish-replay' est invalide hors des rejous (replay)"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -3904,14 +3904,14 @@ msgid "Can't expand time"
 msgstr "Impossible de dilater le temps"
 
 #: libsvn_subr/dso.c:70
-#, fuzzy, c-format
+#, c-format
 msgid "Can't grab DSO mutex"
-msgstr "Impossible d'obtenir l'exclusivité (mutex) du FS"
+msgstr "Impossible d'obtenir l'exclusivité (mutex) du DSO"
 
 #: libsvn_subr/dso.c:84 libsvn_subr/dso.c:106 libsvn_subr/dso.c:121
-#, fuzzy, c-format
+#, c-format
 msgid "Can't ungrab DSO mutex"
-msgstr "Impossible de rendre l'exclusivité (mutex) du FS"
+msgstr "Impossible de rendre l'exclusivité (mutex) du DSO"
 
 #: libsvn_subr/error.c:326
 msgid "Can't recode error string from APR"
@@ -4023,11 +4023,9 @@ msgstr ""
 "de stat sur le fichier)"
 
 #: libsvn_subr/io.c:1235 libsvn_subr/io.c:1330
-#, fuzzy, c-format
+#, c-format
 msgid "Can't change perms of file '%s'"
-msgstr ""
-"Impossible de changer les permissions de lecture-écriture pour le fichier '%"
-"s'"
+msgstr "Impossible de changer les permissions du fichier '%s'"
 
 #: libsvn_subr/io.c:1370
 #, c-format
@@ -4700,7 +4698,7 @@ msgid "'%s' is already under version control"
 msgstr "'%s' est déjà sous gestionnaire de version"
 
 #: libsvn_wc/adm_ops.c:1105
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Can't replace '%s' with a node of a differing type; the deletion must be "
 "committed and the parent updated before adding '%s'"
@@ -5466,7 +5464,7 @@ msgstr ""
 "force pour l'écraser"
 
 #: svn/help-cmd.c:45
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
 "Subversion command-line client, version %s.\n"
@@ -5482,7 +5480,9 @@ msgid ""
 msgstr ""
 "usage : svn <sous-commande> [options] [paramètres]\n"
 "Client texte interactif de Subversion, version %s.\n"
-"Entrer \"svn help <sous-commande>\" pour l'aide sur une sous-commande.\n"
+"Entrer 'svn help <sous-commande>' pour l'aide sur une sous-commande.\n"
+"Entrer 'svn --version' pour avoir la version et les modules d'accès (RA)\n"
+"    ou 'svn --version --quiet' pour la version seule.\n"
 "\n"
 "La plupart des sous-commandes prennent en argument des répertoires et/ou\n"
 "des fichiers, et s'appliquent récursivement sur les répertoires.\n"
@@ -5810,9 +5810,8 @@ msgstr "interprète les caractères comme encodés en ARG"
 #: svn/main.c:92 svnadmin/main.c:233 svndumpfilter/main.c:786
 #: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:102
 #: svnversion/main.c:125
-#, fuzzy
 msgid "show program version information"
-msgstr "affiche la version"
+msgstr "affiche la version du programme"
 
 #: svn/main.c:93
 msgid "print extra information"
@@ -5851,6 +5850,19 @@ msgid ""
 "                                --ignore-eol-style:\n"
 "                                   Ignore changes in EOL style"
 msgstr ""
+"Défaut : '-u'. \n"
+"  Quand subversion invoque un programme diff externe, ARG est \n"
+"  simplement passé au programme. Mais quand subversion utilise\n"
+"  l'implémentation interne par défaut, ou quand il affiche une\n"
+"  version annotée (blame), ARG peut être :\n"
+"          -u (--unified) : \n"
+"             affiche 3 lignes de contexte unifié.\n"
+"          -b (--ignore-space-change) :\n"
+"             ignore les modifications liées aux espaces.\n"
+"          -w (--ignore-all-space) :\n"
+"             ignore tous les espaces.\n"
+"          --ignore-eol-style : \n"
+"            ignore les changements de style de fin de ligne (eol)."
 
 #: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
@@ -6251,7 +6263,6 @@ msgstr ""
 "l'URL.\n"
 
 #: svn/main.c:393
-#, fuzzy
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET[@REV]...]\n"
@@ -6261,10 +6272,11 @@ msgid ""
 "  determines in which revision the target is first looked up.\n"
 msgstr ""
 "Affiche les informations sur des éléments locaux ou distants.\n"
-"usage : info [CIBLE...]\n"
+"usage : info [CIBLE[@REV]...]\n"
 "\n"
 "  Affiche des informations sur chaque CIBLE (par défaut '.')\n"
 "  CIBLE peut être un chemin dans une copie de travail ou une URL.\n"
+"  Si REV est spécifié, cette révision est d'abord regardée.\n"
 
 #: svn/main.c:403
 msgid ""
@@ -6326,7 +6338,6 @@ msgid "specify lock comment ARG"
 msgstr "précise le commentaire de verrouillage ARG"
 
 #: svn/main.c:437
-#, fuzzy
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -6357,12 +6368,13 @@ msgstr ""
 "Affiche les entrées du journal pour un ensemble de révisions ou de "
 "fichiers.\n"
 "usage : 1. log [CHEMIN]\n"
-"        3. log URL [CHEMIN...]\n"
+"        3. log URL[@REV] [CHEMIN...]\n"
 "\n"
 "  1. Affiche les entrées du journal pour un chemin local ('.' par défaut).\n"
 "     Les révisions BASE:1 sont prises par défaut.\n"
 "\n"
 "  2. Affiche les entrées du journal pour les CHEMINs sous l'URL.\n"
+"     Si présente, REV détermine la révision d'abord prise en compte.\n"
 "     Les révisions HEAD:1 sont prises par défaut.\n"
 "\n"
 "  Avec -v, affiche également les chemins concernés par le message.\n"
@@ -6921,7 +6933,7 @@ msgstr "L'argument de l'option limit doit être numérique"
 
 #: svn/main.c:924
 msgid "Argument to --limit must be positive"
-msgstr ""
+msgstr "L'argument de --limit doit être positif"
 
 #: svn/main.c:944
 msgid ""
@@ -7758,7 +7770,6 @@ msgid "done.\n"
 msgstr "fait.\n"
 
 #: svnadmin/main.c:654
-#, fuzzy
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -7767,7 +7778,9 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "usage général : svnadmin SOUS_COMMANDE DÉPÔT [ARGS & OPTIONS ...]\n"
-"Entrez 'svnadmin help <sous-commande>' pour une aide spécifique.\n"
+"Entrer 'svnadmin help <sous-commande>' pour une aide spécifique.\n"
+"Entrer 'svnadmin --version' pour avoir la version et les modules de "
+"stockages.\n"
 "\n"
 "Sous-commandes disponibles :\n"
 
@@ -7976,7 +7989,6 @@ msgstr ""
 "usage : svndumpfilter help [SOUS_COMMANDES...]\n"
 
 #: svndumpfilter/main.c:888
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -7985,7 +7997,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "usage général : svndumpfilter SOUS_COMMANDE [ARGS & OPTIONS ...]\n"
-"Entre 'svndumpfilter help <sous-commande>' pour l'aide spécifique.\n"
+"Entrer 'svndumpfilter help <sous-commande>' pour l'aide spécifique.\n"
+"Entrer 'svndumpfilter --version' pour avoir le numéro de version.\n"
 "\n"
 "Sous-commandes disponibles :\n"
 
@@ -8337,7 +8350,6 @@ msgid "Missing repository path argument"
 msgstr "Chemin du dépôt manquant"
 
 #: svnlook/main.c:1653
-#, fuzzy
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -8352,6 +8364,8 @@ msgstr ""
 "Note : Quand --revision ou --transaction ne sont pas précisées, les sous-\n"
 "       commandes qui en ont besoin utilisent la révision la plus réçente.\n"
 "Entrer 'svnlook help <sous-commande>' pour une aide spécifique.\n"
+"Entrer 'svnlook --version' pour avoir la version et les modules de "
+"stockage.\n"
 "\n"
 "Sous-commandes disponibles :\n"
 
@@ -8581,30 +8595,41 @@ msgid ""
 "In other words, the destination repository should be a read-only\n"
 "mirror of the source repository.\n"
 msgstr ""
+"usage : svnsync initialize DEST_URL SOURCE_URL\n"
+"\n"
+"Initialise un dépôt destination pour être synchronisé à partir\n"
+"d'un autre dépôt.\n"
+"\n"
+"L'URL destination doit pointer sur la racine d'un dépôt vierge de\n"
+"toute révision. Le dépôt destination doit autoriser les modifications\n"
+"des propriétés de révisions.\n"
+"\n"
+"Vous ne devez propager vers ou modifier des propriétés de révisions\n"
+"du dépôt destination qu'avec 'svnsync'. Autrement dit, le dépôt\n"
+"destination doit être un mirroir en lecture seule du dépôt source.\n"
 
 #: svnsync/main.c:71
-#, fuzzy
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
 "Transfer all pending revisions from source to destination.\n"
 msgstr ""
 "usage : svnsync synchronize URL_DEST\n"
+"\n"
 "Transfère toutes les révisions en attente de la source à la destination.\n"
 
 #: svnsync/main.c:76
-#, fuzzy
 msgid ""
 "usage: svnsync copy-revprops DEST_URL REV\n"
 "\n"
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
-"usage : svnsync copy-revprops URL_DEST --revision REV\n"
+"usage : svnsync copy-revprops URL_DEST REV\n"
+"\n"
 "Copie les propriétés de la révision REV de la source à la destination.\n"
 
 #: svnsync/main.c:82
-#, fuzzy
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "\n"
@@ -8632,12 +8657,12 @@ msgstr "La session est enracinée à '%s', mais la racine du dépôt est '%s'"
 #: svnsync/main.c:341
 #, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
-msgstr ""
+msgstr "Propriétés copiées pour la révision %ld (%s* propriétés ignorées).\n"
 
 #: svnsync/main.c:346
-#, fuzzy, c-format
+#, c-format
 msgid "Copied properties for revision %ld.\n"
-msgstr "Propriétés non versionnées de la révision %ld :\n"
+msgstr "Propriétés copiées pour la révision %ld.\n"
 
 #: svnsync/main.c:387
 msgid "Cannot initialize a repository with content in it"
@@ -8650,25 +8675,23 @@ msgstr "Le dépôt destination est déjà synchronisé à partir de '%s'"
 
 #: svnsync/main.c:455 svnsync/main.c:458 svnsync/main.c:1116
 #: svnsync/main.c:1200
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not a URL"
-msgstr "Le chemin '%s' n'est pas un fichier"
+msgstr "Le chemin '%s' n'est pas une URL"
 
 #: svnsync/main.c:838
-#, fuzzy, c-format
+#, c-format
 msgid "Committed revision %ld.\n"
-msgstr ""
-"\n"
-"Révision %ld propagée.\n"
+msgstr "Révision %ld propagée.\n"
 
 #: svnsync/main.c:877
 msgid "Destination repository has not been initialized"
 msgstr "Le dépôt destination n'a pas été initialisé"
 
 #: svnsync/main.c:892
-#, fuzzy, c-format
+#, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
-msgstr "UUID du dépôt destination (%s) différent de celui attendu (%s)"
+msgstr "UUID du dépôt source (%s) différent de celui attendu (%s)"
 
 #: svnsync/main.c:954
 #, c-format
@@ -8677,6 +8700,9 @@ msgid ""
 "destination HEAD (%ld) are inconsistent; have you committed to the "
 "destination without using svnsync?"
 msgstr ""
+"La révision en cours de copie (%ld), la dernière révision fusionnée (%ld), "
+"et la révision de tête de la destination (%ld) sont incohérentes. Auriez-"
+"vous propagé vers la destination sans utiliser 'svnsync' ?"
 
 #: svnsync/main.c:992
 #, c-format
@@ -8684,6 +8710,9 @@ msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
 "committed to the destination without using svnsync?"
 msgstr ""
+"La révisions de tête (HEAD) de la destination (%ld) n'est pas la même que la "
+"dernière révision fusionnée (%ld). Auriez-vous propagé vers la destination "
+"sans utiliser 'svnsync' ?"
 
 #: svnsync/main.c:1069
 #, c-format
@@ -8697,12 +8726,10 @@ msgstr ""
 "synchronisée"
 
 #: svnsync/main.c:1203
-#, fuzzy
 msgid "Invalid revision number"
 msgstr "Numéro de révision invalide"
 
 #: svnsync/main.c:1239
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -8711,7 +8738,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "usage général : svnsync SOUS_COMMANDE DÉPÔT [ARGS & OPTIONS ...]\n"
-"Entrez 'svnsync help <sous-commande>' pour une aide spécifique.\n"
+"Entrer 'svnsync help <sous-commande>' pour une aide spécifique.\n"
+"Entrer 'svnsync --version' pour la version et les modules d'accès (RA).\n"
 "\n"
 "Sous-commandes disponibles :\n"
 
@@ -8725,9 +8753,8 @@ msgstr ""
 "Entrer 'svnsync help %s' pour l'aide.\n"
 
 #: svnsync/main.c:1490
-#, fuzzy
 msgid "Not enough arguments provided; try 'svnsync help' for more info"
-msgstr "Nombre d'arguments insuffisant ; Essayer 'svn help' pour voir"
+msgstr "Nombre d'arguments insuffisant ; Essayer 'svnsync help' pour voir"
 
 #: svnversion/main.c:39
 #, c-format

@@ -825,7 +825,7 @@ msgstr "'%s' 바이너리 파일에 대하여 '수정한 사람 보기'를 수�
 
 #: libsvn_client/blame.c:522
 msgid "blame of the WORKING revision is not supported"
-msgstr ""
+msgstr "작업 중인 사본에 대해서는 수정한 사람을 확인할 수 없습니다."
 
 #: libsvn_client/blame.c:535
 msgid "Start revision must precede end revision"
@@ -1276,7 +1276,7 @@ msgstr "필요한 리비전 지정이 생략됨"
 
 #: libsvn_client/log.c:86
 msgid "Revision type requires a working copy path, not a URL"
-msgstr ""
+msgstr "리비번 형식은 URL대신 작업 사본 경로를 필요로합니다."
 
 #: libsvn_client/log.c:139 libsvn_client/status.c:261
 #: libsvn_client/update.c:86
@@ -2923,34 +2923,29 @@ msgid "Missing revision attr in delete-entry element"
 msgstr "delete-entry 요소에서 attr 리비젼이 빠졌습니다"
 
 #: libsvn_ra_serf/replay.c:230
-#, fuzzy
 msgid "Missing revision attr in open-directory element"
-msgstr "open-root 요소에서 revision 속성이 빠졌습니다"
+msgstr "open-directory 요소에서 revision 속성이 빠졌습니다"
 
 #: libsvn_ra_serf/replay.c:250
 #, fuzzy
 msgid "Missing name attr in add-directory element"
-msgstr "open-directory 요소에서 name 속성이 빠졌습니다."
+msgstr "add-directory 요소에서 path 속성이 빠졌습니다."
 
 #: libsvn_ra_serf/replay.c:285
-#, fuzzy
 msgid "Missing name attr in open-file element"
-msgstr "open-directory 요소에서 name 속성이 빠졌습니다."
+msgstr "open-file 요소에서 name 속성이 빠졌습니다."
 
 #: libsvn_ra_serf/replay.c:291
-#, fuzzy
 msgid "Missing revision attr in open-file element"
-msgstr "open-root 요소에서 revision 속성이 빠졌습니다"
+msgstr "open-file 요소에서 revision 속성이 빠졌습니다"
 
 #: libsvn_ra_serf/replay.c:311
-#, fuzzy
 msgid "Missing name attr in add-file element"
-msgstr "%s 요소에서 name 속성이 빠졌습니다."
+msgstr "add-file 요소에서 name 속성이 빠졌습니다."
 
 #: libsvn_ra_serf/serf.c:52
-#, fuzzy
 msgid "Access repository via WebDAV protocol through serf."
-msgstr "WebDAV (DeltaV) 프로토콜을 통해 저장소에 접근하는 모듈"
+msgstr "저장소를 serf를 통해 WebDAV 프로토콜로 접근합니다."
 
 #: libsvn_ra_serf/serf.c:155
 #, c-format
@@ -2958,9 +2953,9 @@ msgid "Could not lookup hostname: %s://%s"
 msgstr "호스트명을 찾을 수 없습니다: %s://%s"
 
 #: libsvn_ra_serf/serf.c:741
-#, fuzzy, c-format
+#, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
-msgstr "ra_svn에 대한 지원하지 않는 RA 로더 버전(%d)입니다."
+msgstr "ra_serf에 대한 지원하지 않는 RA 로더 버전(%d)입니다."
 
 #: libsvn_ra_serf/update.c:2112
 #, c-format
@@ -3340,14 +3335,14 @@ msgid "Can't create pipe for hook '%s'"
 msgstr "훅 '%s'에 대한 파이프를 생성할 수 없습니다."
 
 #: libsvn_repos/hooks.c:83
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe read handle non-inherited for hook '%s'"
-msgstr "훅 '%s'에 대한 파이프를 생성할 수 없습니다."
+msgstr "훅 '%s'에 대한 상속되지 않은 읽기 파이프를 생성할 수 없습니다."
 
 #: libsvn_repos/hooks.c:89
-#, fuzzy, c-format
+#, c-format
 msgid "Can't make pipe write handle non-inherited for hook '%s'"
-msgstr "훅 '%s'에 대한 파이프를 생성할 수 없습니다."
+msgstr "훅 '%s'에 대한 상속되지 않은 쓰기 파이프를 생성할 수 없습니다."
 
 #: libsvn_repos/hooks.c:98
 #, c-format
@@ -3813,9 +3808,9 @@ msgid "Can't get file perms for file at '%s' (file stat error)"
 msgstr "파일 권한을 얻을 수 없습니다. '%s' (파일 상태얻기(stat) 오류)"
 
 #: libsvn_subr/io.c:1235 libsvn_subr/io.c:1330
-#, fuzzy, c-format
+#, c-format
 msgid "Can't change perms of file '%s'"
-msgstr "파일 '%s'에 대해 읽기/쓰기 속성 변경을 할 수 없습니다"
+msgstr "파일 '%s'에 대해 권한을 변경할 수 없습니다"
 
 #: libsvn_subr/io.c:1370
 #, c-format
@@ -4282,9 +4277,9 @@ msgid "Passphrase for '%s': "
 msgstr "패스프레이즈 '%s':"
 
 #: libsvn_subr/subst.c:1559
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' has unsupported special file type '%s'"
-msgstr "'%s'는 파일이 아닙니다.  파일시스템 '%s'"
+msgstr "'%s'은 특수 파일 타입 '%s'를 지원하지 않습니다."
 
 #: libsvn_subr/subst.c:1660 libsvn_wc/props.c:1467
 #, c-format
@@ -4480,13 +4475,13 @@ msgid "'%s' is already under version control"
 msgstr "'%s'는 이미 버젼 관리 대상입니다"
 
 #: libsvn_wc/adm_ops.c:1105
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Can't replace '%s' with a node of a differing type; the deletion must be "
 "committed and the parent updated before adding '%s'"
 msgstr ""
-"'%s'는 다른 타입의 노드와 교체할 수 없습니다; 삭제하여 커밋하고, 상위를 업데"
-"이트 한 뒤, '%s'를 추가하십시오 "
+"'%s'를 다른 타입의 노드와 교체할 수 없습니다; 삭제하여 커밋하고, 상위 디렉토"
+"리를업데이트 한 뒤, '%s'를 추가하십시오 "
 
 #: libsvn_wc/adm_ops.c:1122
 #, c-format
@@ -4590,20 +4585,17 @@ msgid "Entry '%s' has invalid '%s' value"
 msgstr "엔트리 '%s'는 유효하지 않은 값 '%s'를 갖고 있습니다"
 
 #: libsvn_wc/entries.c:111
-#, fuzzy
 msgid "Invalid escape sequence"
-msgstr "예약이 잘못됨"
+msgstr "잘못된 이스케이프 시퀀스"
 
 #: libsvn_wc/entries.c:118
-#, fuzzy
 msgid "Invalid escaped character"
-msgstr "변경 형식이 잘못됨"
+msgstr "잘못 이스케이프된 문자"
 
 #: libsvn_wc/entries.c:136 libsvn_wc/entries.c:165 libsvn_wc/entries.c:191
 #: libsvn_wc/entries.c:203
-#, fuzzy
 msgid "Unexpected end of entry"
-msgstr "svndiff의 입력이 알 수 없는 이유로 중단되었습니다."
+msgstr "기대하지 않은 entry의 끝을 만남"
 
 #: libsvn_wc/entries.c:225
 #, c-format
@@ -4638,19 +4630,17 @@ msgid "Default entry is missing URL"
 msgstr "기본 엔트리게 URL 이 없습니다"
 
 #: libsvn_wc/entries.c:1076
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid version line in entries file of '%s'"
-msgstr "'%s'에 대한 엔트리 파일 쓰기 오류"
+msgstr "'%s'의 엔트리에 잘못된 버전이 들어 있는 행이 있습니다."
 
 #: libsvn_wc/entries.c:1093
-#, fuzzy
 msgid "Missing entry terminator"
-msgstr "기본 엔트리가 빠졌습니다"
+msgstr "엔트리 종결 태그가 빠졌습니다"
 
 #: libsvn_wc/entries.c:1096
-#, fuzzy
 msgid "Invalid entry terminator"
-msgstr "잘못된 URL 전환"
+msgstr "엔트리 종결 태그가 잘못되었습니다"
 
 #: libsvn_wc/entries.c:1100
 #, c-format
@@ -4915,9 +4905,8 @@ msgid "Error modifying entry of '%s'"
 msgstr "'%s'의 엔트리 수정 중 오류 발생"
 
 #: libsvn_wc/log.c:1486
-#, fuzzy
 msgid "Invalid 'format' attribute"
-msgstr "잘못된 설정 값"
+msgstr "잘못된 'format' 속성"
 
 #: libsvn_wc/log.c:1521
 #, c-format
@@ -5003,9 +4992,9 @@ msgstr ""
 "이미 값 '%s'에 속성이 존재합니다. "
 
 #: libsvn_wc/props.c:880
-#, fuzzy, c-format
+#, c-format
 msgid "Missing end of line in wcprops file for '%s'"
-msgstr "'%s'에 대한 'revision' 속성이 빠졌습니다"
+msgstr "작업사본의 속성 파일 '%s'의 마지막 행이 없습니다."
 
 #: libsvn_wc/props.c:1064 libsvn_wc/props.c:1100 libsvn_wc/props.c:1370
 #: libsvn_wc/props.c:1626
@@ -5214,9 +5203,8 @@ msgid "Can't open stderr"
 msgstr "표준 에러(stderr)를 열 수 없습니다."
 
 #: svn/diff-cmd.c:184
-#, fuzzy
 msgid "'--new' option only valid with '--old' option"
-msgstr "'incremental' 옵션은 XML 모드에서만 가능합니다"
+msgstr "'--new' 옵션은 '--old' 옵션하고 같이 사용하여야합니다."
 
 #: svn/diff-cmd.c:214
 #, c-format
@@ -5232,7 +5220,7 @@ msgstr ""
 "어 쓰십시오."
 
 #: svn/help-cmd.c:45
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
 "Subversion command-line client, version %s.\n"
@@ -5249,6 +5237,8 @@ msgstr ""
 "사용법: svn <subcommand> [options] [args]\n"
 "Subversion 명령행 클라이언트 버전 %s.\n"
 "'svn help <subcommand>'를 사용하여 특정 명령에 대하여 도움말을 얻으십시오.\n"
+"'svn --version'를 사용하여 버전과 원격접속 모듈에 대한 정보를 얻으십시오.\n"
+" 또는 'svn --version --quiet'를 사용하여 버전 정보만 얻으십시오.\n"
 "\n"
 "대부분의 하위 명령들은 재귀적으로 수행하면서 파일이나 디렉토리를 인자로 취합"
 "니다.\n"
@@ -5518,7 +5508,6 @@ msgid "show help on a subcommand"
 msgstr "명령에 대한 도움말 보기"
 
 #: svn/main.c:65
-#, fuzzy
 msgid "specify log message ARG"
 msgstr "커밋 로그 메시지를 지정합니다."
 
@@ -5565,9 +5554,8 @@ msgstr ""
 "                                'PREV'       COMMITTED 의 직전 리비전"
 
 #: svn/main.c:84
-#, fuzzy
 msgid "read log message from file ARG"
-msgstr "arg에서 데이터를 읽습니다."
+msgstr "arg에서 로그 메시지를 읽습니다."
 
 #: svn/main.c:86
 msgid "give output suitable for concatenation"
@@ -5580,9 +5568,8 @@ msgstr "값을 arg에 해당하는 문자코드로 취급합니다."
 #: svn/main.c:92 svnadmin/main.c:233 svndumpfilter/main.c:786
 #: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:102
 #: svnversion/main.c:125
-#, fuzzy
 msgid "show program version information"
-msgstr "버젼 정보를 보여줍니다"
+msgstr "프로그램 버젼 정보를 보여줍니다"
 
 #: svn/main.c:93
 msgid "print extra information"
@@ -5828,7 +5815,6 @@ msgstr ""
 "  성공적으로 커밋이 되면 잠금이 해제가 됩니다.\n"
 
 #: svn/main.c:280
-#, fuzzy
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -5843,7 +5829,8 @@ msgstr ""
 "사용법: commit [PATH...]\n"
 "\n"
 "  로그 메시지는 반드시 넘겨져야 하며, 빈 메시지를 넘길 수도 있습니다.\n"
-"  만약 --message 나 --file 옵션을 사용하지 않았다면, 편집기가 수행됩니다.\n"
+"  OS4000은 에디터를 시작하는 방법을 제공하지 않습니다. 따라서,\n"
+"  --message 나 --file 이 반드시 사용되어야 합니다.\n"
 "  잠긴 파일이 있거나, 잠긴 파일이 들어 있는 디렉토리는\n"
 "  성공적으로 커밋이 되면 잠금이 해제가 됩니다.\n"
 
@@ -5896,7 +5883,6 @@ msgstr ""
 "\n"
 
 #: svn/main.c:321
-#, fuzzy
 msgid ""
 "Display the differences between two revisions or paths.\n"
 "usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
@@ -5925,21 +5911,23 @@ msgid ""
 "  Use just 'svn diff' to display local modifications in a working copy.\n"
 msgstr ""
 "두 경로상의 차이점을 출력합니다.\n"
-"사용법: 1. diff [-r N[:M]] [TARGET[@REV]...]\n"
+"사용법: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
 "       2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] "
 "\\\n"
 "               [PATH...]\n"
 "       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
 "\n"
-"  1. REV 리비전의 TARGET(들)의 내용이 M,N 두 리비전에서의 어떤 변경이 있는"
+"  1. REV 리비전에 있는 TARGET들이 N,M 두 리비전에서의 어떤 내용 변경이 있는"
 "지\n"
-"     보여줍니다. TARGET은 작업 사본내의 경로이거나 URL일 수 있습니다.\n"
+"     보여줍니다. TARGET들은 모두가 작업사본 경로이거나 모두가 URL일 수 있습니"
+"다.\n"
 "\n"
 "     TARGET 중에 작업사본내의 경로이면서 N이 생략되면 BASE가 사용되고,\n"
 "     경로가 아니면 N은 반드시 명시되어야합니다. 또한 작업사본내의 경로이면"
 "서,\n"
 "     M이 생략되면 작업중인 파일이 사용되고, URL의 경우 HEAD가 사용됩니다.\n"
 "     '-c M' 옵션은 N = M-1 인 '-r N:M' 옵션과 같습니다.\n"
+"     '-c -M' 은 반대로 수행됩니다. 즉 '-r M:N, (N=M-1)'로 수행합니다.\n"
 "\n"
 "  2. OLDREV 리비전의 OLD-TGT와 NEWREV 리비전의  NEW-TGT의 차이를 보여줍니"
 "다.\n"
@@ -6027,7 +6015,6 @@ msgstr ""
 "  \n"
 
 #: svn/main.c:393
-#, fuzzy
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET[@REV]...]\n"
@@ -6097,17 +6084,14 @@ msgstr ""
 "다.\n"
 
 #: svn/main.c:433
-#, fuzzy
 msgid "read lock comment from file ARG"
-msgstr "arg에서 데이터를 읽습니다."
+msgstr "arg에서 잠금 메시지를 읽습니다."
 
 #: svn/main.c:434
-#, fuzzy
 msgid "specify lock comment ARG"
-msgstr "커밋 로그 메시지를 지정합니다."
+msgstr "arg에 잠금 메시지를 지정합니다."
 
 #: svn/main.c:437
-#, fuzzy
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
 "usage: 1. log [PATH]\n"
@@ -6137,12 +6121,13 @@ msgid ""
 msgstr ""
 "파일에 대한 커밋 로그 메시지들을 보여줍니다.\n"
 "사용법: 1. log [PATH]\n"
-"        2. log URL [PATH...]\n"
+"        2. log URL[@REV] [PATH...]\n"
 "\n"
 "  1. PATH(생략시, '.') 에 해당하는 로그 메시지들을 보여줍니다.\n"
 "     리비전 범위는 BASE:1 입니다. (BASE: 변경전 리비전)\n"
 "\n"
 "  2. URL 하의 PATH에 해당하는 로그 메시지들을 보여줍니다.\n"
+"     REV는 어떤 리비전부터 로그를 찾을지 명시하게 됩니다.\n"
 "     리비전 범위는 HEAD:1 입니다. (HEAD: URL의 최신 리비전)\n"
 "\n"
 "  -v를 사용하면, 해당 로그에 영향을 받은 경로들을 출력합니다.\n"
@@ -6161,7 +6146,6 @@ msgstr ""
 "    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
 #: svn/main.c:467
-#, fuzzy
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
 "usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
@@ -6208,6 +6192,7 @@ msgstr ""
 "     내용을 리비전 N과 M의 내용과 비교하게 됩니다. REV가 누락되면 HEAD로\n"
 "     가정합니다.\n"
 "     '-c M' 옵션은 N = M-1 인 '-r N:M' 옵션과 같습니다.\n"
+"     '-c -M' 옵션은 N = M-1 인 '-r M:N' 옵션과 같습니다.\n"
 "\n"
 "  WCPATH는 작업사본의 경로이며 병합되는 내용이 반영되는 곳입니다.\n"
 "  WCPATH를 생략하면, SOURCE의 마지막 요소인 파일과 같은 이름이 현재\n"
@@ -6448,9 +6433,8 @@ msgstr ""
 "  설정됩니다.\n"
 
 #: svn/main.c:624
-#, fuzzy
 msgid "read property value from file ARG"
-msgstr "arg에서 데이터를 읽습니다."
+msgstr "arg에서 속성 값을 읽습니다."
 
 #: svn/main.c:627
 msgid ""
@@ -6725,7 +6709,7 @@ msgstr "숫자를 입력해야 합니다."
 
 #: svn/main.c:924
 msgid "Argument to --limit must be positive"
-msgstr ""
+msgstr "--limit의 인자는 반드시 양수여야합니다."
 
 #: svn/main.c:944
 msgid ""
@@ -7195,13 +7179,12 @@ msgid "--This line, and those below, will be ignored--"
 msgstr "--이 줄 이하는 자동으로 제거됩니다--"
 
 #: svn/util.c:510
-#, fuzzy
 msgid ""
 "Use of an external editor to fetch log message is not supported on OS400; "
 "consider using the --message (-m) or --file (-F) options"
 msgstr ""
-"로그 메시지를 구하기 위해 외부 프로그램을 사용할 수 없습니다. SVN_EDITOR 환경"
-"변수를 설정하시거나 --message (-m) 또는 --file (-F) 옵션을 사용하세요."
+"OS400에서는 외부 에디터를 사용할 수 없습니다. 변수를 설정하시거나; --message "
+"(-m) 또는 --file (-F) 옵션을 사용하세요."
 
 #: svn/util.c:592
 msgid "Cannot invoke editor to get log message when non-interactive"
@@ -7289,11 +7272,12 @@ msgid "disable automatic log file removal [Berkeley DB]"
 msgstr "자동 로그 파일 삭제를 비활성화 합니다 [Berkeley DB]"
 
 #: svnadmin/main.c:272
-#, fuzzy
 msgid ""
 "remove redundant Berkeley DB log files\n"
 "                             from source repository [Berkeley DB]"
-msgstr "원본 저장소로 부터 중복된 로그 파일을 제거합니다"
+msgstr ""
+"소스 저장소[Berkeley DB]의 오래된 Berkeley DB \n"
+"                             로그 파일을 지웁니다."
 
 #: svnadmin/main.c:276
 msgid "call pre-commit hook before committing revisions"
@@ -7556,7 +7540,6 @@ msgid "done.\n"
 msgstr "처리되었습니다.\n"
 
 #: svnadmin/main.c:654
-#, fuzzy
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -7567,6 +7550,7 @@ msgstr ""
 "일반적인 사용법: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "특정 하위명령의 사용법을 위해서는 'svnadmin help <subcommand>' 를 참조하십시"
 "오.\n"
+"'svnlook --version'으로 버전과 파일시스템 모듈을 볼 수가 있습니다.\n"
 "\n"
 "가능한 하위 명령 목록:\n"
 
@@ -7777,7 +7761,6 @@ msgstr ""
 "사용법: svndumpfilter help [SUBCOMMAND...]\n"
 
 #: svndumpfilter/main.c:888
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -7788,6 +7771,7 @@ msgstr ""
 "일반적인 사용법: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "특정 하위명령의 사용법을 위해서는 'svndumpfilter help <subcommand>'를 참조하"
 "십시오.\n"
+"'svndumpfilter --version'으로 버전을 볼 수가 있습니다.\n"
 "\n"
 "가능한 하위 명령 목록:\n"
 
@@ -8140,7 +8124,6 @@ msgid "Missing repository path argument"
 msgstr "저장소 경로가 지정되지 않았습니다."
 
 #: svnlook/main.c:1653
-#, fuzzy
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -8156,6 +8139,7 @@ msgstr ""
 "      실행될 수 있습니다. 이 경우 가장 최신의 리비전에 대하여 명령을 수행합니"
 "다.\n"
 "'svnlook help <subcommand>'와 같은 형식으로 각각의 도움말을 볼 수 있습니다.\n"
+"'svnlook --version'으로 버전과 파일시스템 모듈을 볼 수가 있습니다.\n"
 "\n"
 "가능한 하위 명령 목록:\n"
 
@@ -8286,13 +8270,12 @@ msgid "Type '%s --help' for usage.\n"
 msgstr "사용법은 보시려면, '%s --help' 을 이용하세요.\n"
 
 #: svnserve/main.c:186
-#, fuzzy
 msgid ""
 "usage: svnserve [options]\n"
 "\n"
 "Valid options:\n"
 msgstr ""
-"Usage: svnserve [options]\n"
+"사용법: svnserve [options]\n"
 "\n"
 "옵션 목록:\n"
 
@@ -8408,8 +8391,9 @@ msgid ""
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
-"사용법: svnsync synchronize DEST_URL\n"
-"대기중인 모든 요청사항을 대상 저장소로 이동함.\n"
+"사용법: svnsync copy-revprops DEST_URL --revision REV\n"
+"REV의 리비전 속성을 모두 원본에서 사본으로 복사합니다\n"
+"\n"
 
 #: svnsync/main.c:82
 #, fuzzy
@@ -8438,14 +8422,14 @@ msgid "Session is rooted at '%s' but the repos root is '%s'"
 msgstr "세션은 '%s'에 있습니다, 그러나 저장소의 루트는 '%s'에 있습니다."
 
 #: svnsync/main.c:341
-#, c-format
+#, fuzzy, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
-msgstr ""
+msgstr "리비전 %ld의 복사된 속성\n"
 
 #: svnsync/main.c:346
-#, fuzzy, c-format
+#, c-format
 msgid "Copied properties for revision %ld.\n"
-msgstr "리비전 속성(%ld):\n"
+msgstr "리비전 %ld의 복사된 속성\n"
 
 #: svnsync/main.c:387
 msgid "Cannot initialize a repository with content in it"
@@ -8458,16 +8442,14 @@ msgstr "대상 저장소는 이미 '%s'(으)로부터 동기화를 하고 있습
 
 #: svnsync/main.c:455 svnsync/main.c:458 svnsync/main.c:1116
 #: svnsync/main.c:1200
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not a URL"
-msgstr "'%s' 경로는 파일이 아닙니다."
+msgstr "'%s' 경로는 URL이 아닙니다."
 
 #: svnsync/main.c:838
-#, fuzzy, c-format
+#, c-format
 msgid "Committed revision %ld.\n"
-msgstr ""
-"\n"
-"커밋된 리비전 %ld.\n"
+msgstr "커밋된 리비전 %ld.\n"
 
 #: svnsync/main.c:877
 msgid "Destination repository has not been initialized"
@@ -8503,12 +8485,10 @@ msgid "Cannot copy revprops for a revision that has not been synchronized yet"
 msgstr "아직 동기화되지 않은 리비젼에 대해 revprops를 복사할 수 없습니다"
 
 #: svnsync/main.c:1203
-#, fuzzy
 msgid "Invalid revision number"
 msgstr "잘못된 리비전 번호가 지정되었습니다."
 
 #: svnsync/main.c:1239
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -8519,6 +8499,7 @@ msgstr ""
 "일반적인 사용법: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "특정 하위명령의 사용법을 위해서는 'svnsync help <subcommand>' 를 참조하십시"
 "오.\n"
+"'svnsync --version'을 이용하면 버전과 접근 모듈 목록을 볼 수 있습니다.\n"
 "\n"
 "가능한 하위 명령 목록:\n"
 
