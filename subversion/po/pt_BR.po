@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-19 12:32-0300\n"
+"POT-Creation-Date: 2006-08-23 13:50-0500\n"
 "PO-Revision-Date: 2004-07-26 19:19-300\n"
 "Last-Translator: dev@subversion.tigris.org\n"
 "Language-Team: Brazilian Portuguese <dev@subversion.tigris.org>\n"
@@ -83,7 +83,7 @@ msgid "Read error in pipe"
 msgstr "Erro de leitura em pipe"
 
 #: include/svn_error_codes.h:231 libsvn_subr/cmdline.c:291
-#: libsvn_subr/cmdline.c:308 svn/util.c:716
+#: libsvn_subr/cmdline.c:308 svn/util.c:722
 #, c-format
 msgid "Write error"
 msgstr "Erro de escrita"
@@ -814,7 +814,7 @@ msgstr "Uma mensagem de log foi fornecida onde nenhuma é necessária"
 msgid "Error during recursive add of '%s'"
 msgstr "Erro durante inclusão recursiva de '%s'"
 
-#: libsvn_client/add.c:388
+#: libsvn_client/add.c:388 libsvn_wc/copy.c:245
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "Não foi possível fechar o diretório '%s'"
@@ -981,8 +981,8 @@ msgstr "item de commit '%s' possui flag de cópia mas não copyfrom URL"
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
 #: libsvn_wc/adm_crawler.c:770 libsvn_wc/adm_ops.c:1044
 #: libsvn_wc/adm_ops.c:2329 libsvn_wc/adm_ops.c:2355 libsvn_wc/adm_ops.c:2391
-#: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:86 libsvn_wc/copy.c:442
-#: libsvn_wc/copy.c:564 libsvn_wc/copy.c:571 libsvn_wc/diff.c:1793
+#: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:300 libsvn_wc/copy.c:656
+#: libsvn_wc/copy.c:778 libsvn_wc/copy.c:785 libsvn_wc/diff.c:1793
 #: libsvn_wc/entries.c:2256 libsvn_wc/entries.c:2813 libsvn_wc/props.c:479
 #: libsvn_wc/props.c:1088 libsvn_wc/props.c:1506 libsvn_wc/questions.c:186
 #: libsvn_wc/questions.c:295 libsvn_wc/status.c:726 libsvn_wc/translate.c:199
@@ -3169,7 +3169,7 @@ msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versão (%d) de RA loader não suportada para ra_svn"
 
 #: libsvn_ra_svn/cram.c:194 libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/sasl_auth.c:302 libsvn_ra_svn/sasl_auth.c:357
+#: libsvn_ra_svn/sasl_auth.c:311 libsvn_ra_svn/sasl_auth.c:366
 #: libsvn_ra_svn/simple_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "Resposta do servidor não esperada para autenticação"
@@ -3251,13 +3251,13 @@ msgstr "Status '%s' desconhecido em resposta de comando"
 msgid "Could not initialize the SASL library"
 msgstr "Não foi possível inicializar a biblioteca SASL"
 
-#: libsvn_ra_svn/sasl_auth.c:215 libsvn_ra_svn/simple_auth.c:58
+#: libsvn_ra_svn/sasl_auth.c:224 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "Erro de autenticação do servidor: %s"
 
-#: libsvn_ra_svn/sasl_auth.c:232
+#: libsvn_ra_svn/sasl_auth.c:241
 msgid "Unhandled SASL interaction"
 msgstr "Iteração SASL não tratada"
 
@@ -3656,14 +3656,14 @@ msgstr "Criando diretório sandbox DAV"
 msgid "Error opening db lockfile"
 msgstr "Erro abrindo arquivo de trava de bd"
 
-#: libsvn_repos/repos.c:1676
+#: libsvn_repos/repos.c:1682
 msgid "Repository creation failed"
 msgstr "Falhou a criação do repostitório"
 
-#: libsvn_repos/repos.c:1756
-#, c-format
-msgid "Expected format '%d' of repository; found format '%d'"
-msgstr "Esparado formato '%d' de repositório; encontrado formato '%d'"
+#: libsvn_repos/repos.c:1763
+#, fuzzy, c-format
+msgid "Expected repository format '%d' or '%d'; found format '%d'"
+msgstr "Esperado formato de SA '%d'; encontrado formato '%d'"
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
@@ -4088,7 +4088,7 @@ msgstr "Não é possível mover '%s' para '%s'"
 msgid "Can't create directory '%s'"
 msgstr "Não foi possível criar diretório '%s'"
 
-#: libsvn_subr/io.c:2779 libsvn_wc/copy.c:298
+#: libsvn_subr/io.c:2779 libsvn_wc/copy.c:512
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "Não foi possível esconder o diretório '%s'"
@@ -4591,22 +4591,27 @@ msgstr "Tipo para o caminho '%s' desconhecido ou inesperado"
 msgid "File '%s' has local modifications"
 msgstr "Arquivo '%s' possui modificações locais"
 
-#: libsvn_wc/copy.c:141
+#: libsvn_wc/copy.c:233
+#, fuzzy, c-format
+msgid "Error during recursive copy of '%s'"
+msgstr "Erro durante inclusão recursiva de '%s'"
+
+#: libsvn_wc/copy.c:355
 #, c-format
 msgid "'%s' already exists and is in the way"
 msgstr "'%s' já existe e está no caminho"
 
-#: libsvn_wc/copy.c:153
+#: libsvn_wc/copy.c:367
 #, c-format
 msgid "There is already a versioned item '%s'"
 msgstr "Já existe um item versionado '%s'"
 
-#: libsvn_wc/copy.c:163
+#: libsvn_wc/copy.c:377
 #, c-format
 msgid "Cannot copy or move '%s': it's not under version control"
 msgstr "Não é possível copiar ou mover '%s': não está sobre controle de versão"
 
-#: libsvn_wc/copy.c:172
+#: libsvn_wc/copy.c:386
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
@@ -4615,7 +4620,7 @@ msgstr ""
 "Não é possível copiar ou mover '%s': ainda não está no repositório; tente "
 "commit primeiro"
 
-#: libsvn_wc/copy.c:451
+#: libsvn_wc/copy.c:665
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
@@ -4624,13 +4629,13 @@ msgstr ""
 "Não é possível copiar ou mover '%s': ainda não está no repositório; tente "
 "commit primeiro"
 
-#: libsvn_wc/copy.c:578
+#: libsvn_wc/copy.c:792
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
 msgstr ""
 "Não é possível copiar para '%s', pois não é do repositório '%s'; é de '%s'"
 
-#: libsvn_wc/copy.c:585
+#: libsvn_wc/copy.c:799
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "Não é possível copiar para '%s' por estar agendado para remoção"
@@ -7407,24 +7412,32 @@ msgstr "Não é possível escrever em '%s'"
 msgid "system('%s') returned %d"
 msgstr "system('%s') retornou %d"
 
-#: svn/util.c:318
+#: svn/util.c:292
+msgid "Error normalizing edited contents to internal format"
+msgstr ""
+
+#: svn/util.c:323
 #, c-format
 msgid "Can't restore working directory"
 msgstr "Não é possível restaurar diretório de trabalho"
 
-#: svn/util.c:358
+#: svn/util.c:363
 msgid "Log message contains a zero byte"
 msgstr "Mensagem de log contém um byte zero"
 
-#: svn/util.c:418
+#: svn/util.c:423
 msgid "Your commit message was left in a temporary file:"
 msgstr "Sua mensagem de commit foi deixada em um arquivo temporário:"
 
-#: svn/util.c:470
+#: svn/util.c:475
 msgid "--This line, and those below, will be ignored--"
 msgstr "--Esta linha, e as abaixo, serão ignoradas--"
 
-#: svn/util.c:510
+#: svn/util.c:501
+msgid "Error normalizing log message to internal format"
+msgstr ""
+
+#: svn/util.c:516
 msgid ""
 "Use of an external editor to fetch log message is not supported on OS400; "
 "consider using the --message (-m) or --file (-F) options"
@@ -7432,13 +7445,13 @@ msgstr ""
 "O uso de um editor externo para buscar mensagens de log não suportado em "
 "OS400; considere usar as opções --message (-m) ou --file (-F)"
 
-#: svn/util.c:592
+#: svn/util.c:598
 msgid "Cannot invoke editor to get log message when non-interactive"
 msgstr ""
 "Não foi possível chamar o editor para obter a mensagem de log estando em "
 "modo não-interativo"
 
-#: svn/util.c:605
+#: svn/util.c:611
 msgid ""
 "Could not use external editor to fetch log message; consider setting the "
 "$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
@@ -7448,7 +7461,7 @@ msgstr ""
 "considere setar a variável de ambiente $SVN_EDITOR ou usar as opções --"
 "message (-m) ou --file (-F)"
 
-#: svn/util.c:641
+#: svn/util.c:647
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -7458,7 +7471,7 @@ msgstr ""
 "Mensagem de log não modificada ou não especificada\n"
 "a)bortar, c)ontinuar, e)ditar\n"
 
-#: svn/util.c:694
+#: svn/util.c:700
 msgid "Use --force to override this restriction"
 msgstr "Use --force para sobrescrever esta restrição"
 
@@ -7546,11 +7559,9 @@ msgstr ""
 
 #: svnadmin/main.c:286
 msgid ""
-"disallow use of SVNDIFF1 in on-disk storage,\n"
-"                             for backwards compatibility"
+"use format compatible with Subversion versions\n"
+"                             earlier than 1.4"
 msgstr ""
-"desabilita o uso de SVNDIFF1 em armazenamento em disco,\n"
-"                             para compatibilidade retroativa"
 
 #: svnadmin/main.c:299
 msgid ""
@@ -8870,3 +8881,13 @@ msgstr "exportado%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' não versionado, e não exportado\n"
+
+#~ msgid "Expected format '%d' of repository; found format '%d'"
+#~ msgstr "Esparado formato '%d' de repositório; encontrado formato '%d'"
+
+#~ msgid ""
+#~ "disallow use of SVNDIFF1 in on-disk storage,\n"
+#~ "                             for backwards compatibility"
+#~ msgstr ""
+#~ "desabilita o uso de SVNDIFF1 em armazenamento em disco,\n"
+#~ "                             para compatibilidade retroativa"

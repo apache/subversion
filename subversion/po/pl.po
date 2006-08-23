@@ -34,7 +34,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-22 16:48+0200\n"
+"POT-Creation-Date: 2006-08-23 13:50-0500\n"
 "PO-Revision-Date: 2006-08-22 17:03+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
@@ -113,7 +113,7 @@ msgid "Read error in pipe"
 msgstr "Błąd odczytu IPC"
 
 #: include/svn_error_codes.h:231 libsvn_subr/cmdline.c:291
-#: libsvn_subr/cmdline.c:308 svn/util.c:716
+#: libsvn_subr/cmdline.c:308 svn/util.c:722
 #, c-format
 msgid "Write error"
 msgstr "Błąd zapisu"
@@ -3737,14 +3737,14 @@ msgstr "Tworzenie katalogu roboczego DAV"
 msgid "Error opening db lockfile"
 msgstr "Błąd otwierania pliku blokady dla db"
 
-#: libsvn_repos/repos.c:1676
+#: libsvn_repos/repos.c:1682
 msgid "Repository creation failed"
 msgstr "Tworzenie repozytorium nie powiodło się"
 
-#: libsvn_repos/repos.c:1756
-#, c-format
-msgid "Expected format '%d' of repository; found format '%d'"
-msgstr "Oczekiwana wersja repozytorium to '%d', ale znaleziono wersję '%d'"
+#: libsvn_repos/repos.c:1763
+#, fuzzy, c-format
+msgid "Expected repository format '%d' or '%d'; found format '%d'"
+msgstr "Oczekiwany format systemu plików '%d'; znaleziony format '%d'"
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
@@ -4947,9 +4947,10 @@ msgid "Directory '%s' is missing"
 msgstr "Katalog '%s' nie ma URL"
 
 #: libsvn_wc/lock.c:968
-#, c-format, fuzzy
+#, fuzzy, c-format
 msgid "Directory '%s' containing working copy admin area is missing"
-msgstr "W katalog '%s' zawierającym kopię roboczą brakuje plików administracyjnych"
+msgstr ""
+"W katalog '%s' zawierającym kopię roboczą brakuje plików administracyjnych"
 
 #: libsvn_wc/lock.c:973
 #, fuzzy, c-format
@@ -7507,24 +7508,32 @@ msgstr "Nie można pisać do '%s'"
 msgid "system('%s') returned %d"
 msgstr "Polecenie system('%s') zwróciło %d"
 
-#: svn/util.c:318
+#: svn/util.c:292
+msgid "Error normalizing edited contents to internal format"
+msgstr ""
+
+#: svn/util.c:323
 #, c-format
 msgid "Can't restore working directory"
 msgstr "Nie można odtworzyć katalogu bieżącego"
 
-#: svn/util.c:358
+#: svn/util.c:363
 msgid "Log message contains a zero byte"
 msgstr "Opis zmian zawiera bajt zerowy"
 
-#: svn/util.c:418
+#: svn/util.c:423
 msgid "Your commit message was left in a temporary file:"
 msgstr "Opis zmian pozostawiono w pliku tymczasowym:"
 
-#: svn/util.c:470
+#: svn/util.c:475
 msgid "--This line, and those below, will be ignored--"
 msgstr "--Ta linia i następne zostaną zignorowane--"
 
-#: svn/util.c:510
+#: svn/util.c:501
+msgid "Error normalizing log message to internal format"
+msgstr ""
+
+#: svn/util.c:516
 #, fuzzy
 msgid ""
 "Use of an external editor to fetch log message is not supported on OS400; "
@@ -7534,13 +7543,13 @@ msgstr ""
 "odpowiednio zmienną środowiskową SVN_EDITOR albo skorzystaj z odpowiedniej "
 "spośród opcji: --message (-m) bądź --file (-F)"
 
-#: svn/util.c:592
+#: svn/util.c:598
 msgid "Cannot invoke editor to get log message when non-interactive"
 msgstr ""
 "Nie można wywołać edytora do wyświetlenia opisu zmian w trybie "
 "nieinteraktywnym."
 
-#: svn/util.c:605
+#: svn/util.c:611
 msgid ""
 "Could not use external editor to fetch log message; consider setting the "
 "$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
@@ -7550,7 +7559,7 @@ msgstr ""
 "odpowiednio zmienną środowiskową SVN_EDITOR albo skorzystaj z odpowiedniej "
 "spośród opcji: --message (-m) bądź --file (-F)"
 
-#: svn/util.c:641
+#: svn/util.c:647
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -7560,7 +7569,7 @@ msgstr ""
 "Nie podano opisu zmian.\n"
 "Przerwij (a), kontynuuj (c), edytuj (e)?\n"
 
-#: svn/util.c:694
+#: svn/util.c:700
 msgid "Use --force to override this restriction"
 msgstr "Użyj opcji --force aby obejść to ograniczenie"
 
@@ -7649,8 +7658,8 @@ msgstr ""
 
 #: svnadmin/main.c:286
 msgid ""
-"disallow use of SVNDIFF1 in on-disk storage,\n"
-"                             for backwards compatibility"
+"use format compatible with Subversion versions\n"
+"                             earlier than 1.4"
 msgstr ""
 
 #: svnadmin/main.c:299
@@ -8959,206 +8968,20 @@ msgid "'%s' not versioned, and not exported\n"
 msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 
 #, fuzzy
-#~ msgid "specifiy revision number ARG"
-#~ msgstr "podaj numer wersji"
-
-#~ msgid "Can't create temporary directory"
-#~ msgstr "Nie można stworzyć katalogu tymczasowego"
-
-#~ msgid "Error creating dir '%s' (path exists)"
-#~ msgstr "Błąd tworzenia katalogu '%s' (ścieżka już istnieje)"
-
-#~ msgid "the change made by revision ARG (like -r ARG-1:ARG)"
-#~ msgstr "zmiana zrobiona w wersji o numerze ARG (tak jak -r ARG-1:ARG)"
-
-#~ msgid "Error checking path '%s'"
-#~ msgstr "Błąd przy weryfikacji ścieżki '%s'"
-
-#~ msgid "'%s' is not supported"
-#~ msgstr "'%s' nie jest obsługiwane"
-
-#~ msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
+#~ msgid "Committing rev %ld\n"
 #~ msgstr ""
-#~ "Obiekt '%s' jest zaznaczony do skopiowania, lecz nie podano źródłowego "
-#~ "URL\n"
+#~ "\n"
+#~ "Zatwierdzona wersja %ld.\n"
+
+#~ msgid "The url to synchronize from"
+#~ msgstr "URL do synchronizacji z"
 
 #~ msgid ""
-#~ "Warning: -R is deprecated.\n"
-#~ "Anonymous access is now read-only by default.\n"
-#~ "To change, use conf/svnserve.conf in repos:\n"
-#~ "  [general]\n"
-#~ "  anon-access = read|write|none (default read)\n"
-#~ "  auth-access = read|write|none (default write)\n"
-#~ "Forcing all access to read-only for now\n"
+#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
+#~ "Initialize a destination repository.\n"
 #~ msgstr ""
-#~ "Ostrzeżenie: opcja -R jest przestarzała.\n"
-#~ "Domyślnie dostęp anonimowy jest tylko do odczytu. Aby to zmienić \n"
-#~ "należy dokonać modyfikacji w pliku conf/svnserve.conf znajdującym \n"
-#~ "się w  repozytorium:\n"
-#~ "  [general]\n"
-#~ "  anon-access = read|write|none (domyślnie read)\n"
-#~ "  auth-access = read|write|none (domyślnie write)\n"
-#~ "Wymusza dla wszystkich użytkowników dostęp tylko do odczytu\n"
-
-#~ msgid "Unknown node kind: '%s'"
-#~ msgstr "Nie znany rodzaj obiektu: '%s'"
-
-#~ msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
-#~ msgstr ""
-#~ "Wartość atrybutu '%s' jest lokalnie zmieniona na '%s', tymczasem\n"
-#~ "aktualizacja przypisuje mu wartość '%s'\n"
-
-#~ msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
-#~ msgstr ""
-#~ "Atrybut '%s' jest lokalnie skasowany, tymczasem aktualizacja\n"
-#~ "przypisuje mu wartość '%s'\n"
-
-#~ msgid "Property '%s' locally changed to '%s', but update deletes it\n"
-#~ msgstr ""
-#~ "Wartość atrybutu '%s' została lokalnie zmieniona na '%s', tymczasem\n"
-#~ "aktualizacja powoduje skasowanie atrybutu\n"
-
-#~ msgid "Working copy '%s' is missing or not locked"
-#~ msgstr "Brakuje kopii roboczej '%s' lub nie została zablokowana"
-
-#~ msgid ""
-#~ "The entry '%s' is no longer a directory; remove the entry before updating"
-#~ msgstr ""
-#~ "Element '%s' nie jest (już) katalogiem, musi zostać usunięty przed "
-#~ "aktualizacją kopii roboczej"
-
-#~ msgid "Can't stat new directory '%s'"
-#~ msgstr "Nie można pobrać informacji o nowym katalogu '%s'"
-
-#~ msgid "Can't find config file '%s'"
-#~ msgstr "Nie można znaleźć pliku konfiguracyjnego '%s'"
-
-#~ msgid "Can't open config file '%s'"
-#~ msgstr "Nie można otworzyć pliku konfiguracyjnego '%s'"
-
-#, fuzzy
-#~ msgid "Can't set timeout"
-#~ msgstr "Błąd otwarcia standardowego wyjścia"
-
-#~ msgid "Error writing file '%s'"
-#~ msgstr "Błąd podczas zapisu pliku '%s'"
-
-#~ msgid "Error reading file '%s'"
-#~ msgstr "Błąd podczas czytania pliku '%s'"
-
-#~ msgid "Can't open file '%s' for writing"
-#~ msgstr "Nie można otworzyć do zapisu pliku '%s'"
-
-#~ msgid "Can't open file '%s' for reading"
-#~ msgstr "Nie można otworzyć do czytania pliku '%s'"
-
-#~ msgid "Can't seek in '%s'"
-#~ msgstr "Nie można sparsować '%s'"
-
-#~ msgid "Node with dropped parent sneaked in"
-#~ msgstr "Wkradł się obiekt, którego przodek został wcześniej opuszczony"
-
-#~ msgid "Move failed"
-#~ msgstr "Przesunięcie nie powiodło się"
-
-#~ msgid ""
-#~ "'%s' is scheduled for deletion; it must be committed before being "
-#~ "overwritten"
-#~ msgstr ""
-#~ "'%s' ma zostać skasowany; operacja ta musi zostać zatwierdzona zanim\n"
-#~ "zostanie nadpisany"
-
-#~ msgid "Error removing props for '%s'"
-#~ msgstr "Błąd podczas usuwania atrybutów '%s'"
-
-#~ msgid "Error restoring props for '%s'"
-#~ msgstr "Błąd podczas odtwarzania atrybutów '%s'"
-
-#~ msgid "Creating readme file"
-#~ msgstr "Tworzenie pliku readme"
-
-#~ msgid "Asking props changed in two different filesystems"
-#~ msgstr ""
-#~ "Nie można porównać wartości atrybutów w dwóch różnych systemach plików"
-
-#~ msgid "Asking contents changed in two different filesystems"
-#~ msgstr ""
-#~ "Nie można porównać wartości atrybutów w dwóch różnych systemach plików"
-
-#~ msgid "'%s' is already a file/something else"
-#~ msgstr "'%s' już podlega zarządzaniu wersjami"
-
-#~ msgid "Can't get default file perms for file at '%s' (file close error)"
-#~ msgstr "Nie można odczytać domyślnych praw dla pliku '%s' (błąd close)"
-
-#~ msgid "Finished"
-#~ msgstr "Zakończone"
-
-#~ msgid "No URL target available"
-#~ msgstr "Brak docelowego URL"
-
-#~ msgid ""
-#~ "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
-#~ msgstr ""
-#~ "Brak zmian typu usunięcie dla ścieżki '%s' w transakcji '%s' w systemie "
-#~ "plików '%s'"
-
-#~ msgid "Wrong number of paths given"
-#~ msgstr "Podano niewłaściwą ilość ścieżek"
-
-#~ msgid "Not enough args provided"
-#~ msgstr "Zbyt mało parametrów"
-
-#~ msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
-#~ msgstr ""
-#~ "Uszkodzony zapis kopii '%s' w transakcji '%s' w systemie plików '%s'"
-
-#~ msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
-#~ msgstr "Błędny ID jako klucz w tabeli 'nodes' w systemie plików '%s'"
-
-#~ msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
-#~ msgstr ""
-#~ "Błędna wartość klucza 'next-id' w tabeli '%s' w systemie plików '%s'"
-
-#~ msgid "Search for malformed path '%s' in filesystem '%s'"
-#~ msgstr "Próba wyszukania błędnej ścieżki '%s' w systemie plików '%s'"
-
-#~ msgid "Corrupt node revision for node '%s' in filesystem '%s'"
-#~ msgstr "Uszkodzona wersja obiektu '%s' w systemie plików '%s'"
-
-#~ msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
-#~ msgstr "Uszkodzona wersja obiektu id '%s' wystąpiła w systemie plików '%s'"
-
-#~ msgid "Too few arguments"
-#~ msgstr "Zbyt mało parametrów"
-
-#~ msgid "Unable to delete temporary file"
-#~ msgstr "Usunięcie pliku tymczasowego nie powiodło się"
-
-#~ msgid "'%s' has unknown value for svn:eol-style property"
-#~ msgstr "Atrybut svn:eol-style dla '%s' ma niedopuszczalną wartość"
-
-#~ msgid "Unrecognized node kind of '%s'"
-#~ msgstr "Nieznany rodzaj obiektu: '%s'"
-
-#~ msgid "'%s' is in the way"
-#~ msgstr "'%s' już istnieje i znajduje się w wskazanym miejscu"
-
-#~ msgid "Found malformed header block in dumpfile stream"
-#~ msgstr "Błędny nagłówek w strumieniu pliku zrzutu"
-
-#, fuzzy
-#~ msgid "Missing path attr in open-directory element"
-#~ msgstr "Brak nazwy atrybutu i ścieżki obiektu w repozytorium."
-
-#~ msgid "Can't change executability of file '%s'"
-#~ msgstr "Nie można zmienić atrybutu wykonywalności pliku '%s'"
-
-#~ msgid "print client version info"
-#~ msgstr "podaj wersję klienta"
-
-#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
-#~ msgstr "przekaż ARG jako zbiór opcji dla --diff-cmd (domyślnie: '-u')"
+#~ "użycie: svnsync initialize DOCELOWY_URL --source-url ŹRÓDŁOWY_URL\n"
+#~ "Inicjuje docelowe repozytorium.\n"
 
 #~ msgid ""
 #~ "Check out a working copy from a repository.\n"
@@ -9184,18 +9007,207 @@ msgstr "%s' nie podlegające zarządzaniu wersjami i nie eksportowane\n"
 #~ "  parametrem ŚCIEŻKA, przy czym nazwy podkatalogów zostaną ustalone na\n"
 #~ "  podstawie URLa.\n"
 
-#~ msgid ""
-#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-#~ "Initialize a destination repository.\n"
-#~ msgstr ""
-#~ "użycie: svnsync initialize DOCELOWY_URL --source-url ŹRÓDŁOWY_URL\n"
-#~ "Inicjuje docelowe repozytorium.\n"
+#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
+#~ msgstr "przekaż ARG jako zbiór opcji dla --diff-cmd (domyślnie: '-u')"
 
-#~ msgid "The url to synchronize from"
-#~ msgstr "URL do synchronizacji z"
+#~ msgid "print client version info"
+#~ msgstr "podaj wersję klienta"
+
+#~ msgid "Can't change executability of file '%s'"
+#~ msgstr "Nie można zmienić atrybutu wykonywalności pliku '%s'"
 
 #, fuzzy
-#~ msgid "Committing rev %ld\n"
+#~ msgid "Missing path attr in open-directory element"
+#~ msgstr "Brak nazwy atrybutu i ścieżki obiektu w repozytorium."
+
+#~ msgid "Found malformed header block in dumpfile stream"
+#~ msgstr "Błędny nagłówek w strumieniu pliku zrzutu"
+
+#~ msgid "'%s' is in the way"
+#~ msgstr "'%s' już istnieje i znajduje się w wskazanym miejscu"
+
+#~ msgid "Unrecognized node kind of '%s'"
+#~ msgstr "Nieznany rodzaj obiektu: '%s'"
+
+#~ msgid "'%s' has unknown value for svn:eol-style property"
+#~ msgstr "Atrybut svn:eol-style dla '%s' ma niedopuszczalną wartość"
+
+#~ msgid "Unable to delete temporary file"
+#~ msgstr "Usunięcie pliku tymczasowego nie powiodło się"
+
+#~ msgid "Too few arguments"
+#~ msgstr "Zbyt mało parametrów"
+
+#~ msgid "Corrupt node revision id '%s' appears in filesystem '%s'"
+#~ msgstr "Uszkodzona wersja obiektu id '%s' wystąpiła w systemie plików '%s'"
+
+#~ msgid "Corrupt node revision for node '%s' in filesystem '%s'"
+#~ msgstr "Uszkodzona wersja obiektu '%s' w systemie plików '%s'"
+
+#~ msgid "Search for malformed path '%s' in filesystem '%s'"
+#~ msgstr "Próba wyszukania błędnej ścieżki '%s' w systemie plików '%s'"
+
+#~ msgid "Corrupt value for 'next-id' key in '%s' table of filesystem '%s'"
 #~ msgstr ""
-#~ "\n"
-#~ "Zatwierdzona wersja %ld.\n"
+#~ "Błędna wartość klucza 'next-id' w tabeli '%s' w systemie plików '%s'"
+
+#~ msgid "Malformed ID as key in 'nodes' table of filesystem '%s'"
+#~ msgstr "Błędny ID jako klucz w tabeli 'nodes' w systemie plików '%s'"
+
+#~ msgid "Corrupt clone record for '%s' in transaction '%s' in filesystem '%s'"
+#~ msgstr ""
+#~ "Uszkodzony zapis kopii '%s' w transakcji '%s' w systemie plików '%s'"
+
+#~ msgid "Not enough args provided"
+#~ msgstr "Zbyt mało parametrów"
+
+#~ msgid "Wrong number of paths given"
+#~ msgstr "Podano niewłaściwą ilość ścieżek"
+
+#~ msgid ""
+#~ "No deletion changes for path '%s' in transaction '%s' of filesystem '%s'"
+#~ msgstr ""
+#~ "Brak zmian typu usunięcie dla ścieżki '%s' w transakcji '%s' w systemie "
+#~ "plików '%s'"
+
+#~ msgid "No URL target available"
+#~ msgstr "Brak docelowego URL"
+
+#~ msgid "Finished"
+#~ msgstr "Zakończone"
+
+#~ msgid "Can't get default file perms for file at '%s' (file close error)"
+#~ msgstr "Nie można odczytać domyślnych praw dla pliku '%s' (błąd close)"
+
+#~ msgid "'%s' is already a file/something else"
+#~ msgstr "'%s' już podlega zarządzaniu wersjami"
+
+#~ msgid "Asking contents changed in two different filesystems"
+#~ msgstr ""
+#~ "Nie można porównać wartości atrybutów w dwóch różnych systemach plików"
+
+#~ msgid "Asking props changed in two different filesystems"
+#~ msgstr ""
+#~ "Nie można porównać wartości atrybutów w dwóch różnych systemach plików"
+
+#~ msgid "Creating readme file"
+#~ msgstr "Tworzenie pliku readme"
+
+#~ msgid "Error restoring props for '%s'"
+#~ msgstr "Błąd podczas odtwarzania atrybutów '%s'"
+
+#~ msgid "Error removing props for '%s'"
+#~ msgstr "Błąd podczas usuwania atrybutów '%s'"
+
+#~ msgid ""
+#~ "'%s' is scheduled for deletion; it must be committed before being "
+#~ "overwritten"
+#~ msgstr ""
+#~ "'%s' ma zostać skasowany; operacja ta musi zostać zatwierdzona zanim\n"
+#~ "zostanie nadpisany"
+
+#~ msgid "Move failed"
+#~ msgstr "Przesunięcie nie powiodło się"
+
+#~ msgid "Node with dropped parent sneaked in"
+#~ msgstr "Wkradł się obiekt, którego przodek został wcześniej opuszczony"
+
+#~ msgid "Can't seek in '%s'"
+#~ msgstr "Nie można sparsować '%s'"
+
+#~ msgid "Can't open file '%s' for reading"
+#~ msgstr "Nie można otworzyć do czytania pliku '%s'"
+
+#~ msgid "Can't open file '%s' for writing"
+#~ msgstr "Nie można otworzyć do zapisu pliku '%s'"
+
+#~ msgid "Error reading file '%s'"
+#~ msgstr "Błąd podczas czytania pliku '%s'"
+
+#~ msgid "Error writing file '%s'"
+#~ msgstr "Błąd podczas zapisu pliku '%s'"
+
+#, fuzzy
+#~ msgid "Can't set timeout"
+#~ msgstr "Błąd otwarcia standardowego wyjścia"
+
+#~ msgid "Can't open config file '%s'"
+#~ msgstr "Nie można otworzyć pliku konfiguracyjnego '%s'"
+
+#~ msgid "Can't find config file '%s'"
+#~ msgstr "Nie można znaleźć pliku konfiguracyjnego '%s'"
+
+#~ msgid "Can't stat new directory '%s'"
+#~ msgstr "Nie można pobrać informacji o nowym katalogu '%s'"
+
+#~ msgid ""
+#~ "The entry '%s' is no longer a directory; remove the entry before updating"
+#~ msgstr ""
+#~ "Element '%s' nie jest (już) katalogiem, musi zostać usunięty przed "
+#~ "aktualizacją kopii roboczej"
+
+#~ msgid "Working copy '%s' is missing or not locked"
+#~ msgstr "Brakuje kopii roboczej '%s' lub nie została zablokowana"
+
+#~ msgid "Property '%s' locally changed to '%s', but update deletes it\n"
+#~ msgstr ""
+#~ "Wartość atrybutu '%s' została lokalnie zmieniona na '%s', tymczasem\n"
+#~ "aktualizacja powoduje skasowanie atrybutu\n"
+
+#~ msgid "Property '%s' locally deleted, but update sets it to '%s'\n"
+#~ msgstr ""
+#~ "Atrybut '%s' jest lokalnie skasowany, tymczasem aktualizacja\n"
+#~ "przypisuje mu wartość '%s'\n"
+
+#~ msgid "Property '%s' locally changed to '%s', but update sets it to '%s'\n"
+#~ msgstr ""
+#~ "Wartość atrybutu '%s' jest lokalnie zmieniona na '%s', tymczasem\n"
+#~ "aktualizacja przypisuje mu wartość '%s'\n"
+
+#~ msgid "Unknown node kind: '%s'"
+#~ msgstr "Nie znany rodzaj obiektu: '%s'"
+
+#~ msgid ""
+#~ "Warning: -R is deprecated.\n"
+#~ "Anonymous access is now read-only by default.\n"
+#~ "To change, use conf/svnserve.conf in repos:\n"
+#~ "  [general]\n"
+#~ "  anon-access = read|write|none (default read)\n"
+#~ "  auth-access = read|write|none (default write)\n"
+#~ "Forcing all access to read-only for now\n"
+#~ msgstr ""
+#~ "Ostrzeżenie: opcja -R jest przestarzała.\n"
+#~ "Domyślnie dostęp anonimowy jest tylko do odczytu. Aby to zmienić \n"
+#~ "należy dokonać modyfikacji w pliku conf/svnserve.conf znajdującym \n"
+#~ "się w  repozytorium:\n"
+#~ "  [general]\n"
+#~ "  anon-access = read|write|none (domyślnie read)\n"
+#~ "  auth-access = read|write|none (domyślnie write)\n"
+#~ "Wymusza dla wszystkich użytkowników dostęp tylko do odczytu\n"
+
+#~ msgid "Commit item '%s' has copy flag but no copyfrom URL\n"
+#~ msgstr ""
+#~ "Obiekt '%s' jest zaznaczony do skopiowania, lecz nie podano źródłowego "
+#~ "URL\n"
+
+#~ msgid "'%s' is not supported"
+#~ msgstr "'%s' nie jest obsługiwane"
+
+#~ msgid "Error checking path '%s'"
+#~ msgstr "Błąd przy weryfikacji ścieżki '%s'"
+
+#~ msgid "the change made by revision ARG (like -r ARG-1:ARG)"
+#~ msgstr "zmiana zrobiona w wersji o numerze ARG (tak jak -r ARG-1:ARG)"
+
+#~ msgid "Error creating dir '%s' (path exists)"
+#~ msgstr "Błąd tworzenia katalogu '%s' (ścieżka już istnieje)"
+
+#~ msgid "Can't create temporary directory"
+#~ msgstr "Nie można stworzyć katalogu tymczasowego"
+
+#, fuzzy
+#~ msgid "specifiy revision number ARG"
+#~ msgstr "podaj numer wersji"
+
+#~ msgid "Expected format '%d' of repository; found format '%d'"
+#~ msgstr "Oczekiwana wersja repozytorium to '%d', ale znaleziono wersję '%d'"
