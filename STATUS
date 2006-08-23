@@ -9,14 +9,14 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * r21204, r21205, r21212, r21213, r21218
-    Makes the po-status tools run with less tweaking.
+  * r21204, r21205, r21212, r21213, r21216, r21218, r21221, r21222, r21224
+    Make the po-status tools run with less tweaking.
     Justification:
       Useful for checking po status on the branch without having to
       manually copy the new versions from trunk. (Please don't block
       an rc on this though!)
     Votes:
-      +1: glasser
+      +1: glasser, maxb
 
 Approved changes:
 
