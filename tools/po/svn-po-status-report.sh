@@ -16,13 +16,13 @@ Translation status report for revision $wc_version ($branch_name/)
 cd subversion/po
 for i in *.po ; do
   translated=`msgattrib --translated $i \
-    | grep -E '^msgid *"' | sed -n '2~1p' | wc -l`
+    | grep -E '^msgid *"' | sed 1d | wc -l`
   untranslated=`msgattrib --untranslated $i \
-    | grep -E '^msgid *"' | sed -n '2~1p' | wc -l`
+    | grep -E '^msgid *"' | sed 1d | wc -l`
   fuzzy=`msgattrib --only-fuzzy $i \
-    | grep -E '^msgid *"' | sed -n '2~1p' | wc -l`
+    | grep -E '^msgid *"' | sed 1d | wc -l`
   obsolete=`msgattrib --only-obsolete $i \
-    | grep -E '^msgid *"' | sed -n '2~1p' | wc -l`
+    | grep -E '^msgid *"' | sed 1d | wc -l`
 
   echo
   if test -z "`svn status $i | grep -E '^\?'`" ; then
