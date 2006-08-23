@@ -1,7 +1,7 @@
 #!/bin/sh
 # Subversion po file translation status report generator
-# To ensure the script produces accurate statisticks, make sure that
-# you have run 'make locale-gnu-po-update'
+# To ensure the script produces accurate statistics, make sure that
+# you have run './po-update.sh' first
 
 set -e
 cd "`dirname \"$0\"`"/../..
@@ -9,7 +9,7 @@ branch_name=`svn info | sed -n '/^URL:/s@.*/svn/\(.*\)@\1@p'`
 wc_version=`svnversion subversion/po | sed -e 's/[MS]//g'`
 
 echo "
-Translation status report for revision $wc_version ($branch_name/)
+Translation status report for revision $wc_version ($branch_name)
 
 ============================================================================"
 

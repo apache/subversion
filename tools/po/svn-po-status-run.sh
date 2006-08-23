@@ -14,14 +14,6 @@ error_log="po-status-stderr-log"
 
 rm "$output_log" "$error_log"
 
-if test -e "config.po" ; then
-    configure="./config.po"
-elif test -e "config.nice" ; then
-    configure="./config.nice"
-else
-    configure="./configure"
-fi
-
 # prevent conflicts
 svn revert --recursive subversion/po 2>>$error_log >>$output_log || \
 {
@@ -29,16 +21,9 @@ svn revert --recursive subversion/po 2>>$error_log >>$output_log || \
     exit 1
 }
 
-if test -e "Makefile" ; then
-    # prevent switches or anything from breaking the update
-    make clean 2>>$error_log >>$output_log
-fi
-
 # update && initialize
 svn update 2>>$error_log >>$output_log && \
-./autogen.sh 2>>$error_log >>$output_log && \
-$configure 2>>$error_log >>$output_log && \
-make locale-gnu-po-update 2>>$error_log >>$output_log || \
+tools/po/po-update.sh 2>>$error_log >>$output_log || \
 {
     # mail your output
     echo "Unable to successfully complete; check error log."
