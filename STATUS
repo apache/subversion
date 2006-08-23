@@ -9,7 +9,14 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  none
+  * 21204, 21205, 21212, 21213
+    Makes the po-status tools run with less tweaking.
+    Justification:
+      Useful for checking po status on the branch without having to
+      manually copy the new versions from trunk. (Please don't block
+      an rc on this though!)
+    Votes:
+      +1: glasser
 
 Approved changes:
 
