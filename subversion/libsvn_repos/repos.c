@@ -1669,7 +1669,7 @@ svn_repos_create(svn_repos_t **repos_p,
     {
       repos->fs_type = apr_hash_get(fs_config, SVN_FS_CONFIG_FS_TYPE,
                                     APR_HASH_KEY_STRING);
-      if (apr_hash_get(fs_config, SVN_FS_CONFIG_NO_SVNDIFF1,
+      if (apr_hash_get(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
                        APR_HASH_KEY_STRING))
         repos->format = SVN_REPOS__FORMAT_NUMBER_LEGACY;
     }
