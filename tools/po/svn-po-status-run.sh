@@ -12,7 +12,7 @@ wc_version=`svnversion subversion/po | sed -e 's/[MS]//g'`
 output_log="po-status-stdout-log"
 error_log="po-status-stderr-log"
 
-rm "$output_log" "$error_log"
+rm -f "$output_log" "$error_log"
 
 # prevent conflicts
 svn revert --recursive subversion/po 2>>$error_log >>$output_log || \
