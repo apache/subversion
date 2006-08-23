@@ -24,7 +24,7 @@ for i in *.po ; do
   fuzzy=`msgattrib --only-fuzzy $i \
     | grep -E '^msgid *"' | sed 1d | wc -l`
   obsolete=`msgattrib --only-obsolete $i \
-    | grep -E '^msgid *"' | sed 1d | wc -l`
+    | grep -E '^#~ msgid *"' | wc -l`
 
   if ! msgfmt --check-format -o /dev/null $i ; then
       printf "%8s %s\n" $i "FAILS GNU msgfmt --check-format"
