@@ -9,7 +9,7 @@ Status of 1.4.0:
 
 Candidate changes:
 
-  * 21204, 21205, 21212, 21213, 21218
+  * r21204, r21205, r21212, r21213, r21218
     Makes the po-status tools run with less tweaking.
     Justification:
       Useful for checking po status on the branch without having to
