@@ -26,15 +26,15 @@ for i in *.po ; do
   obsolete=`msgattrib --only-obsolete $i \
     | grep -E '^msgid *"' | sed 1d | wc -l`
 
-  if test -z "`svn status $i | grep -E '^\?'`" ; then
-      repo=Y
-  else
-      repo=N
-  fi
-
   if ! msgfmt --check-format -o /dev/null $i ; then
       printf "%8s %s\n" $i "FAILS GNU msgfmt --check-format"
   else
-      printf "%8s %7d %7d %7d %7d\n" $i $untranslated $fuzzy $translated $obsolete
+      printf "%8s %7d %7d %7d %7d" $i $untranslated $fuzzy $translated $obsolete
+  fi
+
+  if test -z "`svn status $i | grep -E '^\?'`" ; then
+      echo
+  else
+      echo ' (not in repository)'
   fi
 done
