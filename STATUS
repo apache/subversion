@@ -9,14 +9,16 @@ Status of 1.4.0:
 
 Candidate changes:
 
+  none
+
+Approved changes:
+
   * r21207
     Rename svnadmin create's '--no-svndiff1' to '--pre-1.4-compatible'.
     Justification:
       --no-svndiff1 is poor user interface.
     Votes:
-      +1: maxb, danderson
-
-Approved changes:
+      +1: maxb, danderson, malcolm
 
 
 Status of 1.4.1:
