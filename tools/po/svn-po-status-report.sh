@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Subversion po file translation status report generator
 # To ensure the script produces accurate statisticks, make sure that
 # you have run 'make locale-gnu-po-update'
