@@ -13,23 +13,19 @@ Translation status report for revision $wc_version ($branch_name)
 
 ============================================================================"
 
-printf "%8s %7s %7s %7s %7s\n" lang untrans fuzzy trans obs
+printf "%6s %7s %7s %7s %7s\n" lang untrans fuzzy trans obs
 
 cd subversion/po
 for i in *.po ; do
-  translated=`msgattrib --translated $i \
-    | grep -E '^msgid *"' | sed 1d | wc -l`
-  untranslated=`msgattrib --untranslated $i \
-    | grep -E '^msgid *"' | sed 1d | wc -l`
-  fuzzy=`msgattrib --only-fuzzy $i \
-    | grep -E '^msgid *"' | sed 1d | wc -l`
-  obsolete=`msgattrib --only-obsolete $i \
-    | grep -E '^#~ msgid *"' | wc -l`
+  trans=`msgattrib --translated $i | grep -E '^msgid *"' | sed 1d | wc -l`
+  untrans=`msgattrib --untranslated $i | grep -E '^msgid *"' | sed 1d | wc -l`
+  fuzzy=`msgattrib --only-fuzzy $i | grep -E '^msgid *"' | sed 1d | wc -l`
+  obsolete=`msgattrib --only-obsolete $i | grep -E '^#~ msgid *"' | wc -l`
 
   if ! msgfmt --check-format -o /dev/null $i ; then
-      printf "%8s %s\n" $i "FAILS GNU msgfmt --check-format"
+      printf "%6s %s\n" ${i%.po} "FAILS GNU msgfmt --check-format"
   else
-      printf "%8s %7d %7d %7d %7d" $i $untranslated $fuzzy $translated $obsolete
+      printf "%6s %7d %7d %7d %7d" ${i%.po} $untrans $fuzzy $trans $obsolete
   fi
 
   if test -z "`svn status $i | grep -E '^\?'`" ; then
