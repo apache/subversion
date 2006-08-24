@@ -46,10 +46,6 @@ Options:
 # TODO:
 # --item-url should support arbitrary formatting of the revision number,
 #   to be useful with web viewers other than ViewVC.
-# Actual commit date information should be placed into the feed metadata,
-#   not the item bodies.
-# Actual commit author information should be placed into the feed metadata,
-#   not the item bodies.
 # Rather more than intended is being cached in the pickle file. Instead of
 #   only old items being drawn from the pickle, all the global feed metadata
 #   is actually set only on initial feed creation, and thereafter simply
@@ -67,6 +63,7 @@ import os
 import popen2
 import cPickle as pickle
 import datetime
+import time
 
 def usage_and_exit(errmsg=None):
     """Print a usage message, plus an ERRMSG (if provided), then exit.
@@ -125,18 +122,26 @@ class Svn2Feed:
         child_in.close()
         child_err.close()
 
-        desc = ("\nAuthor: %sDate: %sRevision: %s\nLog: %sModified: \n%s"
-                % (info_lines[0], info_lines[1], revision, info_lines[3],
-                   changed_data))
+        desc = ("\nRevision: %s\nLog: %sModified: \n%s"
+                % (revision, info_lines[3], changed_data))
 
         item_dict = {
+            'author': info_lines[0].strip('\n'),
             'title': "Revision %s" % revision,
             'link': self.item_url and "%s?rev=%s" % (self.item_url, revision),
-            'date': datetime.datetime.now(),
+            'date': self._format_updated_ts(info_lines[1]),
             'description': desc,
             }
 
         return item_dict
+
+    def _format_updated_ts(self, revision_ts):
+
+        # Get "2006-08-10 20:17:08" from 
+        # "2006-07-28 20:17:18 +0530 (Fri, 28 Jul 2006)
+        date = revision_ts[0:19]
+        epoch = time.mktime(time.strptime(date, "%Y-%m-%d %H:%M:%S"))
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(epoch))
 
 
 class Svn2RSS(Svn2Feed):
@@ -193,6 +198,7 @@ module from:
         info = self._get_item_dict(revision)
 
         rss_item = self.PyRSS2Gen.RSSItem(
+                author = info['author'],
                 title = info['title'],
                 link = info['link'],
                 description = info['description'],
@@ -261,8 +267,7 @@ class Svn2Atom(Svn2Feed):
 
         updated = doc.createElement("updated")
         entry.appendChild(updated)
-        updated.appendChild(
-            doc.createTextNode(self._format_date(info['date'])))
+        updated.appendChild(doc.createTextNode(info['date']))
 
         link = doc.createElement("link")
         entry.appendChild(link)
@@ -271,6 +276,12 @@ class Svn2Atom(Svn2Feed):
         summary = doc.createElement("summary")
         entry.appendChild(summary)
         summary.appendChild(doc.createTextNode(info['description']))
+
+        author = doc.createElement("author")
+        entry.appendChild(author)
+        aname = doc.createElement("name")
+        author.appendChild(aname)
+        aname.appendChild(doc.createTextNode(info['author']))
 
         return entry
 
