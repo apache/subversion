@@ -4458,6 +4458,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(check_related),
     SVN_TEST_PASS(branch_test),
     SVN_TEST_PASS(verify_checksum),
-    SVN_TEST_XFAIL(closest_copy_test),
+    SVN_TEST_PASS(closest_copy_test),
     SVN_TEST_NULL
   };
