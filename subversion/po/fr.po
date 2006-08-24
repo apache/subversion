@@ -7562,7 +7562,7 @@ msgstr "system('%s') a retourné %d"
 
 #: svn/util.c:292
 msgid "Error normalizing edited contents to internal format"
-msgstr ""
+msgstr "Erreur de normalisation du contenu édité vers le format interne"
 
 #: svn/util.c:323
 #, c-format
@@ -7583,7 +7583,7 @@ msgstr "--Cette ligne, et les suivantes ci-dessous, seront ignorées--"
 
 #: svn/util.c:501
 msgid "Error normalizing log message to internal format"
-msgstr ""
+msgstr "Erreur de normalisation de l'entrée du journal vers le format interne"
 
 #: svn/util.c:516
 msgid ""
@@ -7713,6 +7713,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"utilise un format compatible avec les versions\n"
+"                             de Subversion antérieures à 1.4"
 
 #: svnadmin/main.c:299
 msgid ""
