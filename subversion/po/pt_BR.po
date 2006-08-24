@@ -8028,17 +8028,18 @@ msgstr ""
 "uso: svndumpfilter help [SUB-COMANDO...]\n"
 
 #: svndumpfilter/main.c:888
+#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
-"Type 'svndumpfilter --version' to see the program version number.\n"
+"Type 'svndumpfilter --version' to see the program version.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"uso geral: svnadmin SUB-COMANDO CAMINHO_REPOS  [ARGS & OPÇÕES ...]\n"
-"Digite 'svnadmin help <sub-comando>' para ajuda em um sub-comando "
+"uso geral: svndumpfilter SUB-COMANDO [ARGS & OPÇÕES ...]\n"
+"Digite 'svndumpfilter help <sub-comando>' para ajuda em um sub-comando "
 "específico.\n"
-"Digite 'svnadmin --version' para ver a versão do programa e dos módulos FS.\n"
+"Digite 'svndumpfilter --version' para ver a versão do programa.\n"
 "\n"
 "Sub-comandos disponíveis:\n"
 
