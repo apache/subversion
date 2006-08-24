@@ -2804,11 +2804,11 @@ static svn_error_t *fs_closest_copy(svn_fs_root_t **root_p,
                                     apr_pool_t *pool)
 {
   svn_fs_t *fs = root->fs;
-  parent_path_t *parent_path;
+  parent_path_t *parent_path, *copy_dst_parent_path;
   svn_revnum_t copy_dst_rev, created_rev;
   const char *copy_dst_path;
   svn_fs_root_t *copy_dst_root;
-  const svn_fs_id_t *id, *copy_id;
+  dag_node_t *copy_dst_node;
   svn_node_kind_t kind;
 
   /* Initialize return values. */
@@ -2832,9 +2832,11 @@ static svn_error_t *fs_closest_copy(svn_fs_root_t **root_p,
   SVN_ERR(svn_fs_fs__check_path(&kind, copy_dst_root, path, pool));
   if (kind == svn_node_none)
     return SVN_NO_ERROR;
-  SVN_ERR(fs_node_id(&copy_id, copy_dst_root, path, pool));
-  id = svn_fs_fs__dag_get_id(parent_path->node);
-  if (! svn_fs_fs__id_check_related(id, copy_id))
+  SVN_ERR(open_path(&copy_dst_parent_path, copy_dst_root, path, 
+                    0, NULL, pool));
+  copy_dst_node = copy_dst_parent_path->node;
+  if (! svn_fs_fs__id_check_related(svn_fs_fs__dag_get_id(copy_dst_node),
+                                    svn_fs_fs__dag_get_id(parent_path->node)))
     return SVN_NO_ERROR;
 
   /* One final check must be done here.  If you copy a directory and
@@ -2851,14 +2853,12 @@ static svn_error_t *fs_closest_copy(svn_fs_root_t **root_p,
      created-rev is COPY_DST_REV, and that node-revision has no
      predecessors, then there is no relevant closest copy.
   */
-  SVN_ERR(svn_fs_fs__dag_get_revision(&created_rev, 
-                                      parent_path->node, pool));
+  SVN_ERR(svn_fs_fs__dag_get_revision(&created_rev, copy_dst_node, pool));
   if (created_rev == copy_dst_rev)
     {
-      const svn_fs_id_t *pred_id;
-      SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred_id, 
-                                                parent_path->node, pool));
-      if (! pred_id)
+      const svn_fs_id_t *pred;
+      SVN_ERR(svn_fs_fs__dag_get_predecessor_id(&pred, copy_dst_node, pool));
+      if (! pred)
         return SVN_NO_ERROR;
     }
 

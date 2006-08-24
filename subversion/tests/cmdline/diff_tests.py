@@ -2723,7 +2723,7 @@ test_list = [ None,
               diff_weird_author,
               diff_ignore_whitespace,
               diff_ignore_eolstyle,
-              XFail(diff_in_renamed_folder),
+              diff_in_renamed_folder,
               ]
 
 if __name__ == '__main__':
