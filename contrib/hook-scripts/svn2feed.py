@@ -147,9 +147,13 @@ class Svn2RSS(Svn2Feed):
         try:
             import PyRSS2Gen
         except ImportError:
-            sys.stderr.write("Error: Required PyRSS2Gen module not found.\n"
-                    "PyRSS2Gen can be downloaded from:\n"
-                    "http://www.dalkescientific.com/Python/PyRSS2Gen.html\n\n")
+            sys.stderr.write("""
+Error: Required PyRSS2Gen module not found.  You can download the PyRSS2Gen
+module from:
+
+    http://www.dalkescientific.com/Python/PyRSS2Gen.html
+
+""")
             sys.exit(1)
         self.PyRSS2Gen = PyRSS2Gen
 
@@ -287,8 +291,8 @@ class Svn2Atom(Svn2Feed):
 
         updated = doc.createElement("updated")
         feed.appendChild(updated)
-        updated.appendChild(
-                doc.createTextNode(self._format_date(datetime.datetime.now())))
+        now = datetime.datetime.now()
+        updated.appendChild(doc.createTextNode(self._format_date(now)))
 
         link = doc.createElement("link")
         feed.appendChild(link)
@@ -354,7 +358,8 @@ def main():
             except ValueError, msg:
                usage_and_exit("Invalid value '%s' for --max-items." % (arg))
             if max_items < 1:
-               usage_and_exit("Value for --max-items must be a positive integer.")
+               usage_and_exit("Value for --max-items must be a positive "
+                              "integer.")
         elif opt in ("-U", "--feed-url"):
             feed_url = arg
             check_url(feed_url, opt)
