@@ -7,10 +7,10 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.2.0\n"
+"Project-Id-Version: subversion 1.4.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-23 13:49-0500\n"
-"PO-Revision-Date: 2006-04-28 15:38+0200\n"
+"PO-Revision-Date: 2006-08-24 09:04+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3828,9 +3828,9 @@ msgid "Repository creation failed"
 msgstr "Échec de la création du dépôt"
 
 #: libsvn_repos/repos.c:1763
-#, fuzzy, c-format
+#, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
-msgstr "Format de stockage attendu '%d' ; format trouvé '%d'"
+msgstr "Format de stockage attendu '%d' ou '%d' ; format trouvé '%d'"
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
@@ -7532,6 +7532,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"utilise un format compatible avec des versions de Subversion\n"
+"                                  antérieures à 1.4"
 
 #: svnadmin/main.c:299
 msgid ""
