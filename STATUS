@@ -4,6 +4,10 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
+NOTE:  This branch uses svnmerge.py for merge tracking.  Please familiarize
+yourself with that tool if you plan to actually merge changes here.
+
+
 Status of 1.4.0:
 ================
 
