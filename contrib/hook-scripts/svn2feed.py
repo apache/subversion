@@ -51,6 +51,11 @@ Options:
 #   is actually set only on initial feed creation, and thereafter simply
 #   re-used from the pickle each time.
 
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 import sys
 
 # Python 2.3 is required for datetime
