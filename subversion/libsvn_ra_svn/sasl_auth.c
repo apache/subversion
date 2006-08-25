@@ -42,7 +42,10 @@
 
 static volatile svn_atomic_t sasl_status;
 
+static volatile svn_atomic_t sasl_ctx_count;
+
 static apr_pool_t *sasl_pool = NULL;
+
 
 /* Pool cleanup called when sasl_pool is destroyed. */
 static apr_status_t sasl_done_cb(void *data)
@@ -50,7 +53,8 @@ static apr_status_t sasl_done_cb(void *data)
   /* Reset sasl_status, in case the client calls 
      apr_initialize()/apr_terminate() more than once. */
   sasl_status = 0;
-  sasl_done();
+  if (svn_atomic_dec(&sasl_ctx_count) == 0)
+    sasl_done();
   return APR_SUCCESS;
 }
 
@@ -76,6 +80,9 @@ static void *sasl_mutex_alloc_cb(void)
   apr_thread_mutex_t *mutex;
   apr_status_t apr_err;
 
+  if (!sasl_status)
+    return NULL;
+
   apr_err = apr_thread_mutex_lock(array_mutex);
   if (apr_err != APR_SUCCESS)
     return NULL;
@@ -100,21 +107,28 @@ static void *sasl_mutex_alloc_cb(void)
 
 static int sasl_mutex_lock_cb(void *mutex)
 {
+  if (!sasl_status)
+    return 0;
   return (apr_thread_mutex_lock(mutex) == APR_SUCCESS) ? 0 : -1;
 }
 
 static int sasl_mutex_unlock_cb(void *mutex)
 {
+  if (!sasl_status)
+    return 0;
   return (apr_thread_mutex_unlock(mutex) == APR_SUCCESS) ? 0 : -1;
 }
 
 static void sasl_mutex_free_cb(void *mutex)
 {
-  apr_status_t apr_err = apr_thread_mutex_lock(array_mutex);
-  if (apr_err == APR_SUCCESS)
+  if (sasl_status)
     {
-      APR_ARRAY_PUSH(free_mutexes, apr_thread_mutex_t*) = mutex;
-      apr_thread_mutex_unlock(array_mutex);
+      apr_status_t apr_err = apr_thread_mutex_lock(array_mutex);
+      if (apr_err == APR_SUCCESS)
+        {
+          APR_ARRAY_PUSH(free_mutexes, apr_thread_mutex_t*) = mutex;
+          apr_thread_mutex_unlock(array_mutex);
+        }
     }
 }
 #endif /* APR_HAS_THREADS */
@@ -124,6 +138,7 @@ apr_status_t svn_ra_svn__sasl_common_init(void)
   apr_status_t apr_err = APR_SUCCESS;
 
   sasl_pool = svn_pool_create(NULL);
+  sasl_ctx_count = 1;
   apr_pool_cleanup_register(sasl_pool, NULL, sasl_done_cb, 
                             apr_pool_cleanup_null);
 #ifdef APR_HAS_THREADS
@@ -166,6 +181,8 @@ static apr_status_t sasl_dispose_cb(void *data)
 {
   sasl_conn_t *sasl_ctx = data;
   sasl_dispose(&sasl_ctx);
+  if (svn_atomic_dec(&sasl_ctx_count) == 0)
+    sasl_done();
   return APR_SUCCESS;
 }
 
@@ -187,6 +204,7 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             sasl_errstring(result, NULL, NULL));
 
+  svn_atomic_inc(&sasl_ctx_count);
   apr_pool_cleanup_register(pool, *sasl_ctx, sasl_dispose_cb,
                             apr_pool_cleanup_null);
 
