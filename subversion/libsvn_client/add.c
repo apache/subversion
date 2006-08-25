@@ -322,11 +322,41 @@ add_dir_recursive(const char *dirname,
   /* Read the directory entries one by one and add those things to
      revision control. */
   SVN_ERR(svn_io_dir_open(&dir, dirname, pool));
-  for (err = svn_io_dir_read(&this_entry, flags, dir, subpool);
-       err == SVN_NO_ERROR;
-       err = svn_io_dir_read(&this_entry, flags, dir, subpool))
+
+  while (1)
     {
       const char *fullpath;
+
+      /* Clean out the per-iteration pool. */
+      svn_pool_clear(subpool);
+
+      err = svn_io_dir_read(&this_entry, flags, dir, subpool);
+
+      if (err)
+        {
+          /* Check if we're done reading the dir's entries. */
+          if (APR_STATUS_IS_ENOENT(err->apr_err))
+            {
+              /* No more entries, close the dir and exit the loop. */
+              apr_status_t apr_err;
+
+              svn_error_clear(err);
+              apr_err = apr_dir_close(dir);
+              if (apr_err)
+                return svn_error_wrap_apr
+                  (apr_err, _("Can't close directory '%s'"),
+                   svn_path_local_style(dirname, subpool));
+              break;
+            }
+          else
+            {
+              /* Some unexpected error reading the dir's entries. */
+              return svn_error_createf
+                (err->apr_err, err,
+                 _("Error during recursive add of '%s'"),
+                 svn_path_local_style(dirname, subpool));
+            }
+        }
 
       /* Skip entries for this dir and its parent.  */
       if (this_entry.name[0] == '.'
@@ -364,29 +394,6 @@ add_dir_recursive(const char *dirname,
           else if (err)
             return err;
         }
-
-      /* Clean out the per-iteration pool. */
-      svn_pool_clear(subpool);
-    }
-
-  /* Check that the loop exited cleanly. */
-  if (! (APR_STATUS_IS_ENOENT(err->apr_err)))
-    {
-      return svn_error_createf
-        (err->apr_err, err,
-         _("Error during recursive add of '%s'"),
-         svn_path_local_style(dirname, subpool));
-    }
-  else  /* Yes, it exited cleanly, so close the dir. */
-    {
-      apr_status_t apr_err;
-
-      svn_error_clear(err);
-      apr_err = apr_dir_close(dir);
-      if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Can't close directory '%s'"),
-           svn_path_local_style(dirname, subpool));
     }
 
   /* Opened by svn_wc_add */
