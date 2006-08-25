@@ -60,7 +60,6 @@ if SVNLIB_DIR:
   sys.path.insert(0, SVNLIB_DIR)
 
 import os.path
-import string
 from svn import fs, core, repos, delta
 
 # Set this True for debug output.
@@ -183,7 +182,7 @@ class Editor(delta.Editor):
 
 
   def add_directory(self, path, *args):
-    lpath = string.lower(path.decode("utf-8"))
+    lpath = path.decode("utf-8").lower()
     if self.paths.has_key(lpath):
       self.paths[lpath] += 1
     else:
@@ -193,7 +192,7 @@ class Editor(delta.Editor):
   open_directory = add_directory
 
   def add_file(self, path, *args):
-    lpath = string.lower(path.decode("utf-8"))
+    lpath = path.decode("utf-8").lower()
     if self.paths.has_key(lpath):
       self.paths[lpath] += 1
     else:
@@ -288,10 +287,10 @@ class CheckCase:
     else:
       changedpath = changedroot + '/' + path
     for added in changed.added:
-      if (string.lower(added) == string.lower(changedpath)):
+      if (added.lower() == changedpath.lower()):
         return added
     for added in changed.addeddir:
-      if (string.lower(added) == string.lower(changedpath)):
+      if (added.lower() == changedpath.lower()):
         return added
     return ''
 
