@@ -4116,8 +4116,8 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, svn_uuid_generate(pool), pool));
 
-  /* See if we had an explicitly requested no svndiff1.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_NO_SVNDIFF1,
+  /* See if we had an explicitly requested pre 1.4 compatible.  */
+  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
                                  APR_HASH_KEY_STRING))
     format = 1;
   

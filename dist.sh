@@ -286,16 +286,6 @@ fi
 echo "Removing any autom4te.cache directories that might exist..."
 find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
 
-cat > "$DISTPATH/ChangeLog.CVS" <<EOF
-The old CVS ChangeLog is kept at 
-
-     http://subversion.tigris.org/
-
-If you want to see changes since Subversion went self-hosting,
-you probably want to use the "svn log" command -- and if it 
-does not do what you need, please send in a patch!
-EOF
-
 # Now that the dependencies have been configured/cleaned properly,
 # move them into their separate tree for packaging.
 move_dependency apr

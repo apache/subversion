@@ -634,8 +634,8 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
   svn_err = svn_fs_base__dag_init_fs(fs);
   if (svn_err) goto error;
 
-  /* See if we had an explicitly specified no svndiff1.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_NO_SVNDIFF1,
+  /* See if we had an explicitly specified pre 1.4 compatible.  */
+  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
                                  APR_HASH_KEY_STRING))
     format = 1;
 

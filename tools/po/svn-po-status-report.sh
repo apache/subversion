@@ -1,85 +1,54 @@
 #!/bin/sh
-
 # Subversion po file translation status report generator
+# To ensure the script produces accurate statistics, make sure that
+# you have run './po-update.sh' first
 
-# This file is based on the GNU gettext msgattrib tool
-#  for message file filtering
+set -e
 
-# To make the script work, make sure that:
+MAIL_FROM=${MAIL_FROM:-e.huelsmann@gmx.net}
+MAIL_TO=${MAIL_TO:-dev@subversion.tigris.org}
 
-# 1) the script knows where to find msgattrib
-# 2) you have checked out the required revision
-# 2) you have run autogen.sh and configure for that revision
-# 3) you have run 'make locale-gnu-po-update'
+cd "`dirname \"$0\"`"/../..
+branch_name=`svn info | sed -n '/^URL:/s@.*/svn/\(.*\)@\1@p'`
+wc_version=`svnversion subversion/po | sed -e 's/[MS]//g'`
 
-
-BIN=/bin
-USRBIN=/usr/bin
-
-DIRNAME=$USRBIN/dirname
-GREP=$BIN/grep
-MAKE=$USRBIN/make
-RM=$BIN/rm
-SED=$BIN/sed
-MSGATTRIB=/usr/local/bin/msgattrib
-MSGFMT=/usr/local/bin/msgfmt
-
-
-SVNDIR=/usr/local/bin
-SENDMAIL=/usr/sbin/sendmail
-SVN=$SVNDIR/svn
-SVNVERSION=$SVNDIR/svnversion
-REVISION_PREFIX='r'
-
-
-
-EXEC_PATH=`$DIRNAME "$0"`
-WC_L='/usr/bin/wc -l'
-
-cd $EXEC_PATH/../..
-
-root_path="$PWD"
-ROOT_PARENT_PATH="`$DIRNAME $root_path`"
-branch_name="`echo $root_path | $SED -e "s@$ROOT_PARENT_PATH/@@"`"
-
-wc_version=`$SVNVERSION subversion/po | $SED -e 's/[MS]//g'`
-cd subversion/po
-
-echo "
-
-Translation status report for revision $wc_version ($branch_name/)
-
-============================================================================"
-
-
-for i in *.po ; do
-  translated=`$MSGATTRIB --translated $i | $GREP -E '^msgid *"' | $SED -n '2~1p' | $WC_L`
-  untranslated=`$MSGATTRIB --untranslated $i | $GREP -E '^msgid *"' | $SED -n '2~1p' | $WC_L`
-  fuzzy=`$MSGATTRIB --only-fuzzy $i | $GREP -E '^msgid *"' | $SED -n '2~1p' | $WC_L`
-  obsolete=`$MSGATTRIB --only-obsolete $i | $GREP -E '^msgid *"' | $SED -n '2~1p' | $WC_L`
-
-  echo
-  if test -z "`$SVN status $i | $GREP -E '^\?'`" ; then
-      echo "Status for '$i': in repository"
-  else
-      echo "Status for '$i': NOT in repository"
-      echo " (See the issue tracker 'translations' subcomponent)"
-  fi
-
-  echo
-  if ! $MSGFMT --check-format -o /dev/null $i ; then
-      echo "   FAILS GNU msgfmt --check-format"
-  else
-      echo "   Passes GNU msgfmt --check-format"
-      echo
-      echo "   Statistics:"
-      echo "    $obsolete obsolete"
-      echo "    $untranslated untranslated"
-      echo "    $translated translated, of which"
-      echo "       $fuzzy fuzzy"
-  fi
-  echo "
-----------------------------------------------------------------------------"
+mail=
+while [ $# -ge 1 ]; do
+  case $1 in
+    -mail) mail=yes ;;
+    *) echo "E: Unknown argument: '$1'" >&2; exit 1 ;;
+  esac
+  shift
 done
 
+if [ -n "$mail" ]; then
+  echo "From: $MAIL_FROM"
+  echo "To: $MAIL_TO"
+  echo "Subject: [l10n] Translation status for $branch_name r$wc_version"
+  echo
+fi
 
+echo "Translation status report for revision $wc_version ($branch_name)"
+echo
+printf "%6s %7s %7s %7s %7s\n" lang untrans fuzzy trans obs
+echo "--------------------------------------"
+
+cd subversion/po
+for i in *.po ; do
+  trans=`msgattrib --translated $i | grep -E '^msgid *"' | sed 1d | wc -l`
+  untrans=`msgattrib --untranslated $i | grep -E '^msgid *"' | sed 1d | wc -l`
+  fuzzy=`msgattrib --only-fuzzy $i | grep -E '^msgid *"' | sed 1d | wc -l`
+  obsolete=`msgattrib --only-obsolete $i | grep -E '^#~ msgid *"' | wc -l`
+
+  if ! msgfmt --check-format -o /dev/null $i ; then
+      printf "%6s %s\n" ${i%.po} "FAILS GNU msgfmt --check-format"
+  else
+      printf "%6s %7d %7d %7d %7d" ${i%.po} $untrans $fuzzy $trans $obsolete
+  fi
+
+  if test -z "`svn status $i | grep -E '^\?'`" ; then
+      echo
+  else
+      echo ' (not in repository)'
+  fi
+done

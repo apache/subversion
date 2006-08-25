@@ -431,7 +431,7 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
   const char *local_addrport = NULL, *remote_addrport = NULL;
   char *hostname = NULL;
   svn_auth_iterstate_t *iterstate = NULL;
-  svn_auth_cred_simple_t *creds;
+  void *creds;
   svn_boolean_t success, compat = (realm == NULL), need_creds = TRUE;
   int i;
 
@@ -469,7 +469,7 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
       realmstring = realm ? 
                     apr_psprintf(pool, "%s %s", sess->realm_prefix, realm)
                     : sess->realm_prefix;
-      SVN_ERR(svn_auth_first_credentials((void**) &creds, &iterstate,
+      SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
                                          SVN_AUTH_CRED_SIMPLE, 
                                          realmstring,
                                          sess->auth_baton, pool));
@@ -493,7 +493,7 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
                        subpool));
 
       if (!success && need_creds)
-        SVN_ERR(svn_auth_next_credentials((void**) &creds, iterstate, pool)); 
+        SVN_ERR(svn_auth_next_credentials(&creds, iterstate, pool));
     }
   while (!success);
   svn_pool_destroy(subpool);

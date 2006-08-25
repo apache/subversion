@@ -810,6 +810,73 @@ node_locations(const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+node_locations2(const char **msg, 
+                svn_boolean_t msg_only, 
+                svn_test_opts_t *opts,
+                apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *root;
+  svn_revnum_t youngest_rev = 0;
+
+  *msg = "test svn_repos_node_locations some more";
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Create the repository. */
+  SVN_ERR(svn_test__create_repos(&repos, "test-repo-node-locations2", 
+                                 opts->fs_type, pool));
+  fs = svn_repos_fs(repos);
+
+  /* Revision 1:  Add a directory /foo  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/foo", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 2: Move /foo to /bar, and add /bar/baz  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_revision_root(&root, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_copy(root, "/foo", txn_root, "/bar", subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "/bar/baz", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 3: Modify /bar/baz  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "/bar/baz", "brrt", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Revision 4: Modify /bar/baz again  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "/bar/baz", "bzzz", subpool));
+  SVN_ERR(svn_repos_fs_commit_txn(NULL, repos, &youngest_rev, txn, subpool));
+  svn_pool_clear(subpool);
+
+  /* Now, check locations. */
+  {
+    struct locations_info info[] =
+      {
+        { 3, "/bar/baz" },
+        { 2, "/bar/baz" },
+        { 0 }
+      };
+    SVN_ERR(check_locations(fs, info, "/bar/baz", youngest_rev, pool));
+  }
+  
+  return SVN_NO_ERROR;
+}
+
 
 
 /* Testing the reporter. */
@@ -1693,6 +1760,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(node_tree_delete_under_copy),
     SVN_TEST_PASS(revisions_changed),
     SVN_TEST_PASS(node_locations),
+    SVN_TEST_PASS(node_locations2),
     SVN_TEST_PASS(rmlocks),
     SVN_TEST_PASS(authz),
     SVN_TEST_PASS(commit_editor_authz),
