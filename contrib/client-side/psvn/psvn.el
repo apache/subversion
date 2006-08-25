@@ -231,6 +231,15 @@ of the *svn-log-edit* buffer."
 This variable takes effect only when psvn.el is being loaded."
   :type 'boolean
   :group 'psvn)
+(defcustom svn-log-edit-paragraph-start
+  "$\|[ 	]*$\|##.*$\|\*.*:.*$\|[ 	]+(.+):.*$"
+  "*Value used for `paragraph-start' in *svn-log-edit* buffer."
+  :type 'regexp
+  :group 'psvn)
+(defcustom svn-log-edit-paragraph-separate "$\|##.*$"
+  "*Value used for `paragraph-separate' in *svn-log-edit* buffer."
+  :type 'regexp
+  :group 'psvn)
 (defcustom svn-status-hide-unknown nil
   "*Hide unknown files in `svn-status-buffer-name' buffer.
 This can be toggled with \\[svn-status-toggle-hide-unknown]."
@@ -3956,6 +3965,8 @@ Commands:
     (easy-menu-add svn-log-edit-mode-menu)
     (setq major-mode 'svn-log-edit-mode)
     (setq mode-name "svn-log-edit")
+    (set (make-local-variable 'paragraph-start) svn-log-edit-paragraph-start)
+    (set (make-local-variable 'paragraph-separate) svn-log-edit-paragraph-separate)
     (setq svn-log-edit-update-log-entry nil)
     (run-hooks 'svn-log-edit-mode-hook)))
 
