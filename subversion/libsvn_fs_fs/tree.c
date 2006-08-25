@@ -1268,6 +1268,8 @@ get_merge_info_for_path(sqlite3 *db,
             apr_hash_set(result, path, APR_HASH_KEY_STRING, pathresult);
           apr_hash_set(cache, path, APR_HASH_KEY_STRING, pathresult);
         }
+      else
+        has_no_mergeinfo = TRUE;
     }
 
   /* If this path has no mergeinfo, and we are asked to, check our parent */
