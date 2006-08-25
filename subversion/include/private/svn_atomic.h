@@ -60,6 +60,20 @@ extern "C" {
 #define svn_atomic_set(mem, val) apr_atomic_set((mem), (val))
 #endif /* APR_MAJOR_VERSION */
 
+/** Atomically increment an #svn_atomic_t. */
+#if APR_MAJOR_VERSION > 0
+#define svn_atomic_inc(mem) apr_atomic_inc32(mem)
+#else
+#define svn_atomic_inc(mem) apr_atomic_inc(mem)
+#endif /* APR_MAJOR_VERSION */
+
+/** Atomically decrement an #svn_atomic_t. */
+#if APR_MAJOR_VERSION > 0
+#define svn_atomic_dec(mem) apr_atomic_dec32(mem)
+#else
+#define svn_atomic_dec(mem) apr_atomic_dec(mem)
+#endif /* APR_MAJOR_VERSION */
+
 /** 
  * Atomic compare-and-swap.
  *
