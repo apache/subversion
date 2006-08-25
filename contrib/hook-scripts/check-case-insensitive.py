@@ -287,10 +287,10 @@ class CheckCase:
     else:
       changedpath = changedroot + '/' + path
     for added in changed.added:
-      if (added.lower() == changedpath.lower()):
+      if added.lower() == changedpath.lower():
         return added
     for added in changed.addeddir:
-      if (added.lower() == changedpath.lower()):
+      if added.lower() == changedpath.lower():
         return added
     return ''
 
