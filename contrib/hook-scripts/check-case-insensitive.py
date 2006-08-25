@@ -298,7 +298,7 @@ class CheckCase:
 if __name__ == "__main__":
   # Check for sane usage.
   if len(sys.argv) != 3:
-    sys.stderr.write("Usage: REPOS TXN\n"
+    sys.stderr.write("Usage: %s REPOS TXN\n"
                      % (os.path.basename(sys.argv[0])))
     sys.exit(1)
 
