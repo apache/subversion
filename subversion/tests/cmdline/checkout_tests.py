@@ -26,6 +26,7 @@ from svntest import wc, SVNAnyOutput
 
 # (abbreviation)
 Item = wc.StateItem
+XFail = svntest.testcase.XFail
 
 #----------------------------------------------------------------------
 # Helper function to set up an existing local tree that has paths which
@@ -436,6 +437,37 @@ def checkout_peg_rev(sbox):
                                           expected_wc)
 
 #----------------------------------------------------------------------
+# Issue 2601: Test that peg revision dates are correctly supported. 
+def checkout_peg_rev_date(sbox):
+  "checkout with peg revision date"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  # create a new revision
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append (mu_path, 'appended mu text')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'ci', '-m', 'changed file mu', wc_dir)
+
+  # now checkout the repo@1 in another folder, this should create our initial
+  # wc without the change in mu.
+  checkout_target = sbox.add_wc_path('checkout')
+  os.mkdir(checkout_target)
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = checkout_target
+  expected_output.tweak(status='A ', contents=None)
+  
+  expected_wc = svntest.main.greek_state.copy()
+  
+  # use an old date to checkout, that way we're sure we get the first revision
+  svntest.actions.run_and_verify_checkout(sbox.repo_url + '@{1980-01-01}',
+                                          checkout_target, 
+                                          expected_output,
+                                          expected_wc)
+
+#----------------------------------------------------------------------
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -450,6 +482,7 @@ test_list = [ None,
               checkout_broken_eol,
               checkout_creates_intermediate_folders,
               checkout_peg_rev,
+              XFail(checkout_peg_rev_date),
             ]
 
 if __name__ == "__main__":
