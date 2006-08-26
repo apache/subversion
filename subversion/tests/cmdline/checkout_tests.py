@@ -449,7 +449,7 @@ test_list = [ None,
               import_and_checkout,
               checkout_broken_eol,
               checkout_creates_intermediate_folders,
-              checkout_peg_rev,              
+              checkout_peg_rev,
             ]
 
 if __name__ == "__main__":
