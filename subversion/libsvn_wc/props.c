@@ -969,7 +969,7 @@ svn_wc__wcprops_write(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
       svn_pool_clear(subpool);
 
-      svn_stream_printf(stream, subpool, "%s\n", name);
+      SVN_ERR(svn_stream_printf(stream, subpool, "%s\n", name));
       SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, subpool));
     }
 
