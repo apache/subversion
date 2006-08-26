@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-23 13:49-0500\n"
+"POT-Creation-Date: 2006-08-26 15:15-0300\n"
 "PO-Revision-Date: 2004-07-26 19:19-300\n"
 "Last-Translator: dev@subversion.tigris.org\n"
 "Language-Team: Brazilian Portuguese <dev@subversion.tigris.org>\n"
@@ -3649,9 +3649,9 @@ msgid "Repository creation failed"
 msgstr "Falhou a criação do repostitório"
 
 #: libsvn_repos/repos.c:1763
-#, fuzzy, c-format
+#, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
-msgstr "Esperado formato de SA '%d'; encontrado formato '%d'"
+msgstr "Esperado formato de repositório '%d' ou '%d'; encontrado formato '%d'"
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
@@ -7387,6 +7387,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"use formato compatível com Subversion versão\n"
+"                             anterior à 1.4"
 
 #: svnadmin/main.c:299
 msgid ""
@@ -7853,7 +7855,6 @@ msgstr ""
 "uso: svndumpfilter help [SUB-COMANDO...]\n"
 
 #: svndumpfilter/main.c:888
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -7864,6 +7865,7 @@ msgstr ""
 "uso geral: svndumpfilter SUB-COMANDO [ARGS & OPÇÕES ...]\n"
 "Digite 'svndumpfilter help <sub-comando>' para ajuda em um sub-comando "
 "específico.\n"
+"Digite 'svndumpfilter --version' para ver o número de versão do programa.\n"
 "\n"
 "Sub-comandos disponíveis:\n"
 
@@ -8706,46 +8708,3 @@ msgstr "exportado%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' não versionado, e não exportado\n"
-
-#~ msgid "Missing path attr in open-directory element"
-#~ msgstr "Faltando atributo path em elemento open-directory"
-
-#~ msgid "Expected format '%d' of repository; found format '%d'"
-#~ msgstr "Esparado formato '%d' de repositório; encontrado formato '%d'"
-
-#~ msgid "Can't change executability of file '%s'"
-#~ msgstr ""
-#~ "Não foi possível modificar o indicador de executável do arquivo '%s'"
-
-#~ msgid "print client version info"
-#~ msgstr "mostra informação de versão do cliente"
-
-#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
-#~ msgstr "passa ARG para --diff-cmd como opções (padrão: '-u')"
-
-#~ msgid ""
-#~ "disallow use of SVNDIFF1 in on-disk storage,\n"
-#~ "                             for backwards compatibility"
-#~ msgstr ""
-#~ "desabilita o uso de SVNDIFF1 em armazenamento em disco,\n"
-#~ "                             para compatibilidade retroativa"
-
-#~ msgid ""
-#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-#~ "Initialize a destination repository.\n"
-#~ msgstr ""
-#~ "uso: svnsync initialize URL_DESC --source-url URL_FONTE\n"
-#~ "Inicializa um repositório destino.\n"
-
-#~ msgid "The url to synchronize from"
-#~ msgstr "A url para se sincronizar de"
-
-#~ msgid "Committing rev %ld\n"
-#~ msgstr "Executando commit de rev %ld\n"
-
-#~ msgid ""
-#~ "Currently copying rev %ld in source is less than latest rev in "
-#~ "destination (%ld)"
-#~ msgstr ""
-#~ "Revisão sendo copiada %ld de fonte é menos que a mais nova revisão de "
-#~ "destino (%ld)"
