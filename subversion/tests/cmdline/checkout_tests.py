@@ -437,7 +437,7 @@ def checkout_peg_rev(sbox):
                                           expected_wc)
 
 #----------------------------------------------------------------------
-# Issue 2601: Test that peg revision dates are correctly supported. 
+# Issue 2602: Test that peg revision dates are correctly supported. 
 def checkout_peg_rev_date(sbox):
   "checkout with peg revision date"
 
