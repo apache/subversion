@@ -18,7 +18,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os, shutil
+import sys, os, shutil
 
 # Our testing module
 import svntest
