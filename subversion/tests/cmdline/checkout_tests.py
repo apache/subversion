@@ -18,7 +18,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os
+import sys, re, os, time
 
 # Our testing module
 import svntest
@@ -443,6 +443,14 @@ def checkout_peg_rev_date(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  # note the current time to use it as peg revision date.
+  current_time = time.strftime("%Y-%m-%dT%H:%M:%S")
+  
+  # sleep till the next minute.
+  current_sec = time.localtime().tm_sec
+  time.sleep(62-current_sec)
+
   # create a new revision
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append (mu_path, 'appended mu text')
@@ -450,8 +458,8 @@ def checkout_peg_rev_date(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                     'ci', '-m', 'changed file mu', wc_dir)
 
-  # now checkout the repo@1 in another folder, this should create our initial
-  # wc without the change in mu.
+  # now checkout the repo@current_time in another folder, this should create our 
+  # initial wc without the change in mu.
   checkout_target = sbox.add_wc_path('checkout')
   os.mkdir(checkout_target)
 
@@ -460,9 +468,10 @@ def checkout_peg_rev_date(sbox):
   expected_output.tweak(status='A ', contents=None)
   
   expected_wc = svntest.main.greek_state.copy()
-  
+
   # use an old date to checkout, that way we're sure we get the first revision
-  svntest.actions.run_and_verify_checkout(sbox.repo_url + '@{1980-01-01}',
+  svntest.actions.run_and_verify_checkout(sbox.repo_url + 
+                                          '@{' + current_time + '}',
                                           checkout_target, 
                                           expected_output,
                                           expected_wc)
