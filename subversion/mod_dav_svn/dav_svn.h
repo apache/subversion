@@ -255,6 +255,12 @@ svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
    SVNParentPath allowed? */
 svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
 
+/* for the repository referred to by this request, is native authz active? */
+svn_boolean_t dav_svn__get_native_authz_flag(request_rec *r);
+
+/* for the repository referred to by this request, where is the access
+   file for native authz */
+const char *dav_svn__get_native_authz_file(request_rec *r);
 
 /* SPECIAL URI
 
@@ -677,7 +683,6 @@ dav_svn__sanitize_error(svn_error_t *serr,
                         int http_status,
                         request_rec *r);
 
-
 /* Return a writable generic stream that will encode its output to base64
    and send it to the Apache filter OUTPUT using BB.  Allocate the stream in
    POOL. */
@@ -686,7 +691,29 @@ dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
                                    ap_filter_t *output,
                                    apr_pool_t *pool);
 
+/* Native path-based authorization */
+dav_error *
+dav_svn__check_access(const char *repos_name,
+                      const char *repos_path,
+                      request_rec *r,
+                      svn_repos_authz_access_t required_access);
 
+/* Helpers for path-based authorization */
+dav_error *
+dav_svn__check_resource_access(const dav_resource *resource,
+                               const svn_repos_authz_access_t required_access);
+
+dav_error *
+dav_svn__check_parent_access(const dav_resource *resource,
+                             const svn_repos_authz_access_t required_access);
+
+dav_error *
+dav_svn__check_global_access(const dav_resource *resource,
+                             const svn_repos_authz_access_t required_access);
+
+/* Helper to get parent directory path */
+const char *dav_svn__get_parent_path(const char *path,
+                                     apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
