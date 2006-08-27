@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-27 16:37+0200\n"
-"PO-Revision-Date: 2006-08-13 22:00+0200\n"
+"PO-Revision-Date: 2006-08-27 23:21+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2988,9 +2988,8 @@ msgid "Missing revision attr in open-directory element"
 msgstr "Mangler revisjonsattributt i «open-directory»-element"
 
 #: libsvn_ra_serf/replay.c:250
-#, fuzzy
 msgid "Missing name attr in add-directory element"
-msgstr "Mangler stiattributt i «add-directory»-element"
+msgstr "Mangler navnattributt i «add-directory»-element"
 
 #: libsvn_ra_serf/replay.c:285
 msgid "Missing name attr in open-file element"
@@ -3209,10 +3208,11 @@ msgstr "Ugyldig fil eller katalogsymbol under redigering"
 msgid "Non-string as part of text delta"
 msgstr "Ikke-streng som del av tekst-delta"
 
+# ### FIXME
 #: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
-#, c-format
+#, fuzzy, c-format
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr ""
+msgstr "Kommandoen «finish-replay» ugyldig utenfor avspilling"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -3276,7 +3276,7 @@ msgstr "Ukjent status «%s» i kommandorespons"
 
 #: libsvn_ra_svn/sasl_auth.c:170
 msgid "Could not initialize the SASL library"
-msgstr ""
+msgstr "Klarte ikke å initialisere SASL-biblioteket"
 
 #: libsvn_ra_svn/sasl_auth.c:242 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
@@ -3284,9 +3284,11 @@ msgstr ""
 msgid "Authentication error from server: %s"
 msgstr "Autentiseringsfeil fra tjener: %s"
 
+# ### FIXME
+#, fuzzy
 #: libsvn_ra_svn/sasl_auth.c:259
 msgid "Unhandled SASL interaction"
-msgstr ""
+msgstr "Uhåndtert SASL-utveksling"
 
 #: libsvn_ra_svn/simple_auth.c:97 libsvn_subr/prompt.c:156
 #, c-format
@@ -3689,9 +3691,9 @@ msgid "Repository creation failed"
 msgstr "Opprettelse av depot feilet"
 
 #: libsvn_repos/repos.c:1763
-#, fuzzy, c-format
+#, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
-msgstr "Forventet filsystemformat «%d»; fant format «%d»"
+msgstr "Forventet depotformat «%d» eller «%d»; fant format «%d»"
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
@@ -4610,9 +4612,9 @@ msgid "File '%s' has local modifications"
 msgstr "Filen «%s» har lokale endringer"
 
 #: libsvn_wc/copy.c:201
-#, fuzzy, c-format
+#, c-format
 msgid "Error during recursive copy of '%s'"
-msgstr "Feil under rekursiv tillegging av «%s»"
+msgstr "Feil under rekursiv kopiering av «%s»"
 
 #: libsvn_wc/copy.c:366
 #, c-format
@@ -7260,9 +7262,9 @@ msgid "property '%s' deleted from '%s'.\n"
 msgstr "Egenskapen «%s» slettet fra «%s».\n"
 
 #: svn/propedit-cmd.c:60
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid Subversion property name"
-msgstr "«%s» er ikke et gyldig administrativt katalognavn"
+msgstr "«%s» er ikke et gyldig Subversion-egenskapsnavn"
 
 #: svn/propedit-cmd.c:105 svn/propedit-cmd.c:229 svn/propset-cmd.c:85
 msgid "Bad encoding option: prop value not stored as UTF8"
@@ -7430,7 +7432,7 @@ msgstr "system(«%s») returnerte %d"
 
 #: svn/util.c:292
 msgid "Error normalizing edited contents to internal format"
-msgstr ""
+msgstr "Feil under normalisering av redigert innhold til intert format"
 
 #: svn/util.c:323
 #, c-format
@@ -7451,7 +7453,7 @@ msgstr "--Denne linjen og de som er under vil bli ignorert--"
 
 #: svn/util.c:501
 msgid "Error normalizing log message to internal format"
-msgstr ""
+msgstr "Feil under normalisering av loggmelding til internt format"
 
 #: svn/util.c:516
 msgid ""
@@ -7585,6 +7587,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"bruk format som er kompatibelt med Subversionversjoner\n"
+"                             tidligere enn 1.4"
 
 #: svnadmin/main.c:299
 msgid ""
@@ -8045,7 +8049,6 @@ msgstr ""
 "bruk: svndumpfilter help [DELKOMMANDO...]\n"
 
 #: svndumpfilter/main.c:888
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -8056,7 +8059,7 @@ msgstr ""
 "generell bruk: svndumpfilter DELKOMMANDO [ARGUMENTER & VALG ...]\n"
 "Skriv «svndumpfilter help <delkommando>» for hjelp til en spesifikk\n"
 "delkommando.\n"
-"Skriv «svndumpfilter --version» for å se programversjonsnummeret.\n"
+"Skriv «svndumpfilter --version» for å se programversjonen.\n"
 "\n"
 "Tilgjengelige delkommandoer:\n"
 
