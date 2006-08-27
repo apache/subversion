@@ -427,10 +427,10 @@ svn_path_is_empty(const char *path)
 svn_boolean_t
 svn_path_is_root(const char *path, apr_size_t len, apr_pool_t *pool)
 {
-  char *root_path = NULL;
+  const char *root_path = NULL;
   apr_status_t status;
   apr_pool_t *strpool = (pool) ? pool : svn_pool_create(NULL);
-  char *rel_path = apr_pstrmemdup(strpool, path, len);
+  const char *rel_path = apr_pstrmemdup(strpool, path, len);
   const char *rel_path_apr;
   svn_boolean_t result = FALSE;
 
