@@ -3618,6 +3618,9 @@ def merge_add_over_versioned_file_conflicts(sbox):
 # eol-style handling during merge with conflicts, scenario 1:
 # when a merge creates a conflict on a file, make sure the file and files
 # r<left>, r<right> and .mine are in the eol-style defined for that file.
+#
+# This test for 'svn update' can be found in update_tests.py as 
+# conflict_markers_matching_eol.
 def merge_conflict_markers_matching_eol(sbox):
   "conflict markers should match the file's eol style"
 
@@ -3746,6 +3749,9 @@ def merge_conflict_markers_matching_eol(sbox):
 # if part of that merge is a propchange (add, change, delete) of
 # svn:eol-style, make sure the correct eol-style is applied before
 # calculating the merge (and conflicts if any)
+#
+# This test for 'svn update' can be found in update_tests.py as 
+# update_eolstyle_handling.
 def merge_eolstyle_handling(sbox):
   "handle eol-style propchange during merge"
 
