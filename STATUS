@@ -35,6 +35,11 @@ Candidate changes:
     Votes:
       +1: maxb
 
+  * r21293
+    Neon 0.26.x compatibility for Windows build.
+    Votes:
+      +1: djh
+
 
 Approved changes:
 
