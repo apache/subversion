@@ -2235,7 +2235,7 @@ test_list = [ None,
               XFail(update_copy_of_old_rev),
               forced_update,
               forced_update_failures,
-              XFail(update_wc_on_windows_drive),
+              update_wc_on_windows_drive,
              ]
 
 if __name__ == '__main__':
