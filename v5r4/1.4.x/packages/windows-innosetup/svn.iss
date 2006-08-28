@@ -157,7 +157,7 @@ Name: main; Description: Subversion application files; Types: standard custom fu
 ;or
 ;Name: main; Description: Subversion application files; Types: standard custom full; flags: fixed
 
-Name: pdb; Description: Debug Symbol Files; Types: full custom flags: disablenouninstallwarning
+Name: pdb; Description: Debug Symbol Files; Types: full custom; flags: disablenouninstallwarning
 
 [InstallDelete]
 

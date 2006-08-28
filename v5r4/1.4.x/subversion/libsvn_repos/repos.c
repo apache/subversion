@@ -793,7 +793,7 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# happen:"
       APR_EOL_STR
-      "if [ \"$LOCK_OWNER\" == \"\" ]; then"
+      "if [ \"$LOCK_OWNER\" = \"\" ]; then"
       APR_EOL_STR
       "  exit 0"
       APR_EOL_STR
@@ -804,7 +804,7 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# happen:"
       APR_EOL_STR
-      "if [ \"$LOCK_OWNER\" == \"$USER\" ]; then"
+      "if [ \"$LOCK_OWNER\" = \"$USER\" ]; then"
       APR_EOL_STR
       "  exit 0"
       APR_EOL_STR
@@ -929,7 +929,7 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# If we get no result from svnlook, there's no lock, return success:"
       APR_EOL_STR
-      "if [ \"$LOCK_OWNER\" == \"\" ]; then"
+      "if [ \"$LOCK_OWNER\" = \"\" ]; then"
       APR_EOL_STR
       "  exit 0"
       APR_EOL_STR
@@ -937,7 +937,7 @@ create_hooks(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "# If the person unlocking matches the lock's owner, return success:"
       APR_EOL_STR
-      "if [ \"$LOCK_OWNER\" == \"$USER\" ]; then"
+      "if [ \"$LOCK_OWNER\" = \"$USER\" ]; then"
       APR_EOL_STR
       "  exit 0"
       APR_EOL_STR
@@ -1666,8 +1666,14 @@ svn_repos_create(svn_repos_t **repos_p,
 
   /* Discover the type of the filesystem we are about to create. */
   if (fs_config)
-    repos->fs_type = apr_hash_get(fs_config, SVN_FS_CONFIG_FS_TYPE,
-                                  APR_HASH_KEY_STRING);
+    {
+      repos->fs_type = apr_hash_get(fs_config, SVN_FS_CONFIG_FS_TYPE,
+                                    APR_HASH_KEY_STRING);
+      if (apr_hash_get(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
+                       APR_HASH_KEY_STRING))
+        repos->format = SVN_REPOS__FORMAT_NUMBER_LEGACY;
+    }
+
   if (! repos->fs_type)
     repos->fs_type = DEFAULT_FS_TYPE;
 
@@ -1692,7 +1698,7 @@ svn_repos_create(svn_repos_t **repos_p,
   /* This repository is ready.  Stamp it with a format number. */
   SVN_ERR(svn_io_write_version_file 
           (svn_path_join(path, SVN_REPOS__FORMAT, pool),
-           SVN_REPOS__FORMAT_NUMBER, pool));
+           repos->format, pool));
 
   *repos_p = repos;
   return SVN_NO_ERROR;
@@ -1749,12 +1755,14 @@ check_repos_format(svn_repos_t *repos,
   format_path = svn_path_join(repos->path, SVN_REPOS__FORMAT, pool);
   SVN_ERR(svn_io_read_version_file(&format, format_path, pool));
 
-  if (format != SVN_REPOS__FORMAT_NUMBER)
+  if (format != SVN_REPOS__FORMAT_NUMBER &&
+      format != SVN_REPOS__FORMAT_NUMBER_LEGACY)
     {
       return svn_error_createf 
         (SVN_ERR_REPOS_UNSUPPORTED_VERSION, NULL,
-         _("Expected format '%d' of repository; found format '%d'"), 
-         SVN_REPOS__FORMAT_NUMBER, format);
+         _("Expected repository format '%d' or '%d'; found format '%d'"), 
+         SVN_REPOS__FORMAT_NUMBER_LEGACY, SVN_REPOS__FORMAT_NUMBER,
+         format);
     }
 
   repos->format = format;

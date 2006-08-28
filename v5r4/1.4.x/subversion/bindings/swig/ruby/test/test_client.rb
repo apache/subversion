@@ -1787,7 +1787,16 @@ class SvnClientTest < Test::Unit::TestCase
                       repos_uri, info.revision)
     end
   end
-  
+
+  def test_add_providers
+    ctx = Svn::Client::Context.new
+    assert_nothing_raised do
+      ctx.add_ssl_client_cert_file_provider
+      ctx.add_ssl_client_cert_pw_file_provider
+      ctx.add_ssl_server_trust_file_provider
+    end
+  end
+
   def test_not_new
     assert_raise(NoMethodError) do
       Svn::Client::CommitItem.new

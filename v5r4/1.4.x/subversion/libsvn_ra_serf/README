@@ -3,8 +3,11 @@ ra_serf status
 
 This library is an RA-layer implementation of a WebDAV client that uses Serf.
 
+Serf's homepage is at:
+  http://code.google.com/p/serf/
+
 The latest serf sources can be fetched via SVN at:
-  http://svn.webdav.org/repos/projects/serf/trunk
+  http://serf.googlecode.com/svn/trunk/
 
 ra_serf can be enabled with the following configure flags:
  "--without-neon --with-serf=/path/to/serf/install"

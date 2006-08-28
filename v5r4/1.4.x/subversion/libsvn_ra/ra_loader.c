@@ -26,7 +26,6 @@
 #include <apr_strings.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_dso.h>
 
 #include "svn_version.h"
 #include "svn_types.h"
@@ -35,6 +34,7 @@
 #include "svn_ra.h"
 #include "svn_xml.h"
 #include "svn_path.h"
+#include "svn_dso.h"
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
@@ -144,20 +144,9 @@ load_ra_module(svn_ra__init_func_t *func,
     compat_funcname = apr_psprintf(pool, "svn_ra_%s_init", ra_name);
 
     /* find/load the specified library */
-    status = apr_dso_load(&dso, libname, pool);
-    if (status)
-      {
-#if 0
-        char errbuf[200];
-        apr_dso_error(dso, errbuf, sizeof(errbuf));
-
-        fprintf(stderr, "DSO error: %s\n", errbuf);
-#endif
-
-        /* Just ignore the error. Assume the library isn't present */
-        return SVN_NO_ERROR;
-      }
-    /* note: the library will be unloaded at pool cleanup */
+    SVN_ERR(svn_dso_load(&dso, libname));
+    if (! dso)
+      return SVN_NO_ERROR;
 
     /* find the initialization routines */
     if (func)

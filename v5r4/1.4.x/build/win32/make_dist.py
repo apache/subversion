@@ -166,8 +166,8 @@ class InstallMoFiles(Action):
 # This is the distribution tree
 _disttree = {'': OptFile('%(readme)s', 'README.txt'),
 
-             'bin': (File('%(blddir)s/svn.exe'),
-                     File('%(blddir)s/svn.pdb'),
+             'bin': (File('%(blddir)s/svn/svn.exe'),
+                     File('%(blddir)s/svn/svn.pdb'),
                      File('%(blddir)s/svnadmin/svnadmin.exe'),
                      File('%(blddir)s/svnadmin/svnadmin.pdb'),
                      File('%(blddir)s/svnlook/svnlook.exe'),
@@ -208,7 +208,8 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
              'include/apr-iconv': FileGlob('%(@apr-iconv)s/include/*.h'),
              'include/apr-util': FileGlob('%(@apr-util)s/include/*.h'),
 
-             'lib': FileGlob('%(blddir)s/libsvn_*/*.lib'),
+             'lib': (FileGlob('%(blddir)s/libsvn_*/*.lib'),
+                     FileGlob('%(blddir)s/libsvn_*/*.pdb')),
              'lib/apr': File('%(@apr)s/%(aprrel)s/libapr.lib'),
              'lib/apr-iconv': File('%(@apr-iconv)s/%(aprrel)s/libapriconv.lib'),
              'lib/apr-util': (File('%(@apr-util)s/%(aprrel)s/libaprutil.lib'),
