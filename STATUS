@@ -13,17 +13,28 @@ Status of 1.4.0:
 
 Candidate changes:
 
+
 Approved changes:
+
 
 Status of 1.4.1:
 ================
 
 Candidate changes:
 
- * r21249, r21251, r21253, r21254
-   Fix a bug in the svn_fs_closest_copy() implementations that caused
-   confusing errors when tracing certain node locations.  See issue #2600.
-   Notes:
-     The bugfix is in r21254 -- all the others just add regression tests.
-   Votes:
-     +1: cmpilato
+  * r21249, r21251, r21253, r21254
+    Fix a bug in the svn_fs_closest_copy() implementations that caused
+    confusing errors when tracing certain node locations.  See issue #2600.
+    Notes:
+      The bugfix is in r21254 -- all the others just add regression tests.
+    Votes:
+      +1: cmpilato
+
+  * r21289
+    Neon 0.26.x compatibility for Unix build.
+    Votes:
+      +1: maxb
+
+
+Approved changes:
+
