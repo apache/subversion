@@ -316,18 +316,16 @@ add_dir_recursive(const char *dirname,
   if (!no_ignore)
     SVN_ERR(svn_wc_get_ignores(&ignores, ctx->config, dir_access, pool));
 
-  /* Create a subpool for iterative memory control. */
   subpool = svn_pool_create(pool);
 
-  /* Read the directory entries one by one and add those things to
-     revision control. */
   SVN_ERR(svn_io_dir_open(&dir, dirname, pool));
 
+  /* Read the directory entries one by one and add those things to
+     version control. */
   while (1)
     {
       const char *fullpath;
 
-      /* Clean out the per-iteration pool. */
       svn_pool_clear(subpool);
 
       err = svn_io_dir_read(&this_entry, flags, dir, subpool);
@@ -337,7 +335,6 @@ add_dir_recursive(const char *dirname,
           /* Check if we're done reading the dir's entries. */
           if (APR_STATUS_IS_ENOENT(err->apr_err))
             {
-              /* No more entries, close the dir and exit the loop. */
               apr_status_t apr_err;
 
               svn_error_clear(err);
@@ -350,7 +347,6 @@ add_dir_recursive(const char *dirname,
             }
           else
             {
-              /* Some unexpected error reading the dir's entries. */
               return svn_error_createf
                 (err->apr_err, err,
                  _("Error during recursive add of '%s'"),
