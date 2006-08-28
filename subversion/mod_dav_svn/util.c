@@ -439,29 +439,6 @@ dav_svn__sanitize_error(svn_error_t *serr,
                                 r->pool);
 }
 
-const char *
-dav_svn__get_parent_path(const char *path, apr_pool_t *pool)
-{
-  apr_size_t len;
-  const char *parentpath, *base_name;
-  char *tmp = apr_pstrdup(pool, path);
-
-  len = strlen(tmp);
-
-  if (len > 0)
-    {
-      /* Remove any trailing slash; else svn_path_split() asserts. */
-      if (tmp[len-1] == '/')
-        tmp[len-1] = '\0';      
-      svn_path_split(tmp, &parentpath, &base_name, pool);
-
-      return parentpath;
-    }  
-
-  return path;
-}
-
-
 struct brigade_write_baton
 {
   apr_bucket_brigade *bb;

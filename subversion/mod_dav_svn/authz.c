@@ -387,20 +387,6 @@ dav_svn__check_resource_access(const dav_resource *resource,
 
 
 dav_error *
-dav_svn__check_parent_access(const dav_resource *resource,
-                             const svn_repos_authz_access_t required_access)
-{
-  const char *path = dav_svn__get_parent_path(resource->info->repos_path,
-                                              resource->pool);
-
-  return dav_svn__check_access(resource->info->repos->repo_name,
-                               path,
-                               resource->info->r,
-                               required_access);
-}
-
-
-dav_error *
 dav_svn__check_global_access(const dav_resource *resource,
                              const svn_repos_authz_access_t required_access)
 {

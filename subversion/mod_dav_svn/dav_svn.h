@@ -548,10 +548,6 @@ dav_svn__check_resource_access(const dav_resource *resource,
                                const svn_repos_authz_access_t required_access);
 
 dav_error *
-dav_svn__check_parent_access(const dav_resource *resource,
-                             const svn_repos_authz_access_t required_access);
-
-dav_error *
 dav_svn__check_global_access(const dav_resource *resource,
                              const svn_repos_authz_access_t required_access);
 
@@ -699,11 +695,6 @@ dav_svn__sanitize_error(svn_error_t *serr,
                         const char *new_msg,
                         int http_status,
                         request_rec *r);
-
-
-/* Helper to get parent directory path */
-const char *dav_svn__get_parent_path(const char *path,
-                                     apr_pool_t *pool);
 
 
 /* Return a writable generic stream that will encode its output to base64

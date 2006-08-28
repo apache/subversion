@@ -1786,6 +1786,31 @@ get_resource(request_rec *r,
                        "software.");
 }
 
+
+/* Helper func:  return the parent of PATH, allocated in POOL. */
+static const char *
+get_parent_path(const char *path, apr_pool_t *pool)
+{
+  apr_size_t len;
+  const char *parentpath, *base_name;
+  char *tmp = apr_pstrdup(pool, path);
+
+  len = strlen(tmp);
+
+  if (len > 0)
+    {
+      /* Remove any trailing slash; else svn_path_split() asserts. */
+      if (tmp[len-1] == '/')
+        tmp[len-1] = '\0';      
+      svn_path_split(tmp, &parentpath, &base_name, pool);
+
+      return parentpath;
+    }  
+
+  return path;
+}
+
+
 static dav_error *
 get_parent_resource(const dav_resource *resource,
                     dav_resource **parent_resource)
@@ -1794,7 +1819,6 @@ get_parent_resource(const dav_resource *resource,
   dav_resource_private *parentinfo;
 
   svn_stringbuf_t *uri_path = resource->info->uri_path;
-  const char *repos_path = resource->info->repos_path;
 
   /* the root of the repository has no parent */
   if (uri_path->len == 1 && *uri_path->data == '/')
@@ -1816,20 +1840,19 @@ get_parent_resource(const dav_resource *resource,
       parent->versioned = 1;
       parent->hooks = resource->hooks;
       parent->pool = resource->pool;
-      parent->uri = dav_svn__get_parent_path(resource->uri, resource->pool);
+      parent->uri = get_parent_path(resource->uri, resource->pool);
       parent->info = parentinfo;
 
       parentinfo->pool = resource->info->pool;
       parentinfo->uri_path = 
-        svn_stringbuf_create(dav_svn__get_parent_path(uri_path->data,
-                                                      resource->pool),
-                             resource->pool);
+        svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
+                                             resource->pool), resource->pool);
       parentinfo->repos = resource->info->repos;
       parentinfo->root = resource->info->root;
       parentinfo->r = resource->info->r;
       parentinfo->svn_client_options = resource->info->svn_client_options;
-      parentinfo->repos_path = dav_svn__get_parent_path(repos_path,
-                                                        resource->pool);
+      parentinfo->repos_path = get_parent_path(resource->info->repos_path,
+                                               resource->pool);
 
       *parent_resource = parent;
       break;
