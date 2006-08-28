@@ -40,6 +40,15 @@
 #include "ra_svn.h"
 #include "ra_svn_sasl.h"
 
+/* Note: In addition to being used via svn_atomic_init_once to control
+ *       initialization of the SASL code this will also be referenced in
+ *       the various functions that work with sasl mutexes to determine
+ *       if the sasl pool has been destroyed.  This should be safe, since
+ *       it is only set back to zero in the sasl pool's cleanups, which
+ *       only happens during apr_terminate, which we assume is occurring
+ *       in atexit processing, at which point we are already running in
+ *       single threaded mode.
+ */
 static volatile svn_atomic_t sasl_status;
 
 static volatile svn_atomic_t sasl_ctx_count;
