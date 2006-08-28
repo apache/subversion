@@ -18,6 +18,7 @@
 
 #include <http_request.h>
 #include <http_log.h>
+#include <http_protocol.h>
 
 #include "svn_pools.h"
 #include "svn_path.h"
@@ -215,7 +216,6 @@ check_access(const char *repos_name,
   const char *authz_file = NULL;
   svn_authz_t *access_conf = NULL;
   svn_error_t *svn_err;
-  dav_error *dav_err;
   const char *cache_key;
   void *user_data;
   svn_boolean_t access_granted;
