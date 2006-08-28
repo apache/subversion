@@ -439,6 +439,7 @@ dav_svn__sanitize_error(svn_error_t *serr,
                                 r->pool);
 }
 
+
 struct brigade_write_baton
 {
   apr_bucket_brigade *bb;
