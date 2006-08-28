@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-24 09:49+0200\n"
-"PO-Revision-Date: 2006-08-24 09:52+0200\n"
+"POT-Creation-Date: 2006-08-28 09:59+0200\n"
+"PO-Revision-Date: 2006-08-28 10:32+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: French <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -934,15 +934,15 @@ msgstr "Quelque chose ne va pas dans l'entrée du journal"
 msgid "A log message was given where none was necessary"
 msgstr "Message de journal fourni alors qu'aucun n'était nécessaire"
 
-#: libsvn_client/add.c:377
-#, c-format
-msgid "Error during recursive add of '%s'"
-msgstr "Erreur lors de l'ajout récursif de '%s'"
-
-#: libsvn_client/add.c:388 libsvn_wc/copy.c:245
+#: libsvn_client/add.c:347 libsvn_wc/copy.c:191
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "Le répertoire '%s' ne peut être fermé"
+
+#: libsvn_client/add.c:356
+#, c-format
+msgid "Error during recursive add of '%s'"
+msgstr "Erreur lors de l'ajout récursif de '%s'"
 
 #: libsvn_client/blame.c:368 libsvn_client/blame.c:838
 #, c-format
@@ -1064,11 +1064,11 @@ msgstr "Erreur lors du nettoyage d'après-propagation (post-commit), détails :"
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "Une URL '%s' ne peut être la cible d'une propagation (commit)"
 
-#: libsvn_client/commit.c:1407
+#: libsvn_client/commit.c:1408
 msgid "Are all the targets part of the same working copy?"
 msgstr "Les cibles font-elles parties de la même copie de travail ?"
 
-#: libsvn_client/commit.c:1422
+#: libsvn_client/commit.c:1423
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr "Propagation non récursive de la suppression d'un répertoire impossible"
 
@@ -1110,11 +1110,11 @@ msgstr ""
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
 #: libsvn_wc/adm_crawler.c:770 libsvn_wc/adm_ops.c:1044
 #: libsvn_wc/adm_ops.c:2329 libsvn_wc/adm_ops.c:2355 libsvn_wc/adm_ops.c:2391
-#: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:300 libsvn_wc/copy.c:656
-#: libsvn_wc/copy.c:778 libsvn_wc/copy.c:785 libsvn_wc/diff.c:1793
+#: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:311 libsvn_wc/copy.c:667
+#: libsvn_wc/copy.c:789 libsvn_wc/copy.c:796 libsvn_wc/diff.c:1793
 #: libsvn_wc/entries.c:2256 libsvn_wc/entries.c:2813 libsvn_wc/props.c:479
 #: libsvn_wc/props.c:1088 libsvn_wc/props.c:1506 libsvn_wc/questions.c:186
-#: libsvn_wc/questions.c:295 libsvn_wc/status.c:726 libsvn_wc/translate.c:199
+#: libsvn_wc/questions.c:295 libsvn_wc/status.c:729 libsvn_wc/translate.c:199
 #: libsvn_wc/update_editor.c:2167 libsvn_wc/update_editor.c:3006
 #, c-format
 msgid "'%s' is not under version control"
@@ -3333,7 +3333,7 @@ msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Version %d du chargeur RA (accès dépôt) non supporté pour ra_svn"
 
 #: libsvn_ra_svn/cram.c:194 libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/sasl_auth.c:311 libsvn_ra_svn/sasl_auth.c:366
+#: libsvn_ra_svn/sasl_auth.c:329 libsvn_ra_svn/sasl_auth.c:384
 #: libsvn_ra_svn/simple_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "Réponse inattendue du serveur lors de l'authentification"
@@ -3411,17 +3411,17 @@ msgstr "Liste d'erreurs malformée"
 msgid "Unknown status '%s' in command response"
 msgstr "Statut '%s' inconnu dans la réponse"
 
-#: libsvn_ra_svn/sasl_auth.c:155
+#: libsvn_ra_svn/sasl_auth.c:170
 msgid "Could not initialize the SASL library"
 msgstr "Impossible d'initialiser la librairie SASL"
 
-#: libsvn_ra_svn/sasl_auth.c:224 libsvn_ra_svn/simple_auth.c:58
+#: libsvn_ra_svn/sasl_auth.c:242 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "Erreur d'authentification du serveur : %s"
 
-#: libsvn_ra_svn/sasl_auth.c:241
+#: libsvn_ra_svn/sasl_auth.c:259
 msgid "Unhandled SASL interaction"
 msgstr "Interaction SASL non gérée"
 
@@ -4280,7 +4280,7 @@ msgstr "Impossible de déplacer '%s' vers '%s'"
 msgid "Can't create directory '%s'"
 msgstr "Impossible de créer le répertoire '%s'"
 
-#: libsvn_subr/io.c:2779 libsvn_wc/copy.c:512
+#: libsvn_subr/io.c:2779 libsvn_wc/copy.c:523
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "Impossible de cacher le répertoire '%s'"
@@ -4409,22 +4409,22 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "Entrer '%s help' pour l'aide.\n"
 
-#: libsvn_subr/path.c:1054
+#: libsvn_subr/path.c:1101
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "Impossible de déterminer le chemin absolu de '%s'"
 
-#: libsvn_subr/path.c:1093
+#: libsvn_subr/path.c:1140
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "'%s' n'est ni un fichier ni un répertoire"
 
-#: libsvn_subr/path.c:1199
+#: libsvn_subr/path.c:1255
 #, c-format
 msgid "Can't determine the native path encoding"
 msgstr "Impossible de déterminer l'encodage natif du chemin"
 
-#: libsvn_subr/path.c:1253
+#: libsvn_subr/path.c:1309
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Caractère de contrôle invalide '0x%02x' dans le chemin '%s'"
@@ -4783,29 +4783,29 @@ msgstr "Type inconnu ou inattendu pour le chemin '%s'"
 msgid "File '%s' has local modifications"
 msgstr "Le fichier '%s' a été localement modifié"
 
-#: libsvn_wc/copy.c:233
+#: libsvn_wc/copy.c:201
 #, c-format
 msgid "Error during recursive copy of '%s'"
 msgstr "Erreur lors de la copie récursive de '%s'"
 
-#: libsvn_wc/copy.c:355
+#: libsvn_wc/copy.c:366
 #, c-format
 msgid "'%s' already exists and is in the way"
 msgstr "'%s' existe déjà et est dans le chemin"
 
-#: libsvn_wc/copy.c:367
+#: libsvn_wc/copy.c:378
 #, c-format
 msgid "There is already a versioned item '%s'"
 msgstr "Il y a déjà un objet versionné '%s'"
 
-#: libsvn_wc/copy.c:377
+#: libsvn_wc/copy.c:388
 #, c-format
 msgid "Cannot copy or move '%s': it's not under version control"
 msgstr ""
 "Copie ou déplacement de '%s' impossible : il n'est pas sous gestionnaire de "
 "version"
 
-#: libsvn_wc/copy.c:386
+#: libsvn_wc/copy.c:397
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
@@ -4814,7 +4814,7 @@ msgstr ""
 "Copie ou déplacement de '%s' impossible : il n'est pas encore dans le dépôt ;"
 "essayer de propager d'abord"
 
-#: libsvn_wc/copy.c:665
+#: libsvn_wc/copy.c:676
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
@@ -4823,14 +4823,14 @@ msgstr ""
 "Copie ou déplacement de '%s' impossible : il n'est pas encore dans le dépôt ;"
 "essayer de propager d'abord"
 
-#: libsvn_wc/copy.c:792
+#: libsvn_wc/copy.c:803
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
 msgstr ""
 "Copie vers '%s' impossible : il n'est pas dans le dépôt '%s' ; il est dans "
 "le dépôt '%s'"
 
-#: libsvn_wc/copy.c:799
+#: libsvn_wc/copy.c:810
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "Copie de '%s' impossible car il doit être supprimé"
@@ -8175,13 +8175,13 @@ msgstr ""
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
-"Type 'svndumpfilter --version' to see the program version number.\n"
+"Type 'svndumpfilter --version' to see the program version.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
 "usage général : svndumpfilter SOUS_COMMANDE [ARGS & OPTIONS ...]\n"
 "Entrer 'svndumpfilter help <sous-commande>' pour l'aide spécifique.\n"
-"Entrer 'svndumpfilter --version' pour avoir le numéro de version.\n"
+"Entrer 'svndumpfilter --version' pour avoir le numéro de version du programme.\n"
 "\n"
 "Sous-commandes disponibles :\n"
 
@@ -9019,4 +9019,3 @@ msgstr "exporté%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' non versionné et non exporté\n"
-
