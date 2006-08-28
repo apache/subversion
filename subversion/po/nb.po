@@ -59,7 +59,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-23 13:49-0500\n"
+"POT-Creation-Date: 2006-08-28 14:31+0200\n"
 "PO-Revision-Date: 2006-08-13 21:31+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
@@ -2986,9 +2986,8 @@ msgid "Missing revision attr in open-directory element"
 msgstr "Mangler revisjonsattributt i «open-directory»-element"
 
 #: libsvn_ra_serf/replay.c:250
-#, fuzzy
 msgid "Missing name attr in add-directory element"
-msgstr "Mangler stiattributt i «add-directory»-element"
+msgstr "Mangler navnattributt i «add-directory»-element"
 
 #: libsvn_ra_serf/replay.c:285
 msgid "Missing name attr in open-file element"
@@ -3221,9 +3220,9 @@ msgid "Non-string as part of text delta"
 msgstr "Ikke-streng som del av tekst-delta"
 
 #: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
-#, c-format
+#, fuzzy, c-format
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr ""
+msgstr "Kommandoen «finish-replay» ugyldig utenfor avspilling"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -3677,9 +3676,9 @@ msgid "Repository creation failed"
 msgstr "Opprettelse av depot feilet"
 
 #: libsvn_repos/repos.c:1763
-#, fuzzy, c-format
+#, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
-msgstr "Forventet filsystemformat «%d»; fant format «%d»"
+msgstr "Forventet depotformat «%d» eller «%d»; fant format «%d»"
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
@@ -7401,6 +7400,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"bruk format som er kompatibelt med Subversionversjoner\n"
+"                             tidligere enn 1.4"
 
 #: svnadmin/main.c:299
 msgid ""
