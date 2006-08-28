@@ -503,9 +503,7 @@ svn_path_compare_paths(const char *path1,
 
 /* Return the string length of the longest common ancestor of PATH1 and PATH2.  
  *
- * This function handles everything except the URL-handling logic 
- * of svn_path_get_longest_ancestor, and assumes that PATH1 and 
- * PATH2 are *not* URLs.  
+ * If PATH1 and PATH2 are URLs, set the URLS parameter to TRUE.
  *
  * If the two paths do not share a common ancestor, return 0. 
  *
@@ -514,6 +512,7 @@ svn_path_compare_paths(const char *path1,
 static apr_size_t
 get_path_ancestor_length(const char *path1,
                          const char *path2,
+                         svn_boolean_t urls,
                          apr_pool_t *pool)
 {
   apr_size_t path1_len, path2_len;
@@ -541,11 +540,14 @@ get_path_ancestor_length(const char *path1,
 
   /* last_dirsep is now the offset of the last directory separator we
      crossed before reaching a non-matching byte.  i is the offset of
-     that non-matching byte. */
+     that non-matching byte. 
+     
+     If these are folders, return their common root folder '/' or 'H:/'
+     if they have that. */
   if (((i == path1_len) && (path2[i] == '/'))
            || ((i == path2_len) && (path1[i] == '/'))
            || ((i == path1_len) && (i == path2_len))
-           || svn_path_is_root(path1, i, pool))
+           || (! urls && svn_path_is_root(path1, i, pool)))
     return i;
   else
     return last_dirsep;
@@ -586,6 +588,7 @@ svn_path_get_longest_ancestor(const char *path1,
       i += 3;  /* Advance past '://' */
 
       path_ancestor_len = get_path_ancestor_length(path1 + i, path2 + i, 
+                                                   TRUE,
                                                    pool);
 
       if (path_ancestor_len == 0)
@@ -597,7 +600,8 @@ svn_path_get_longest_ancestor(const char *path1,
   else if ((! path1_is_url) && (! path2_is_url))
     { 
       return apr_pstrndup(pool, path1, 
-                          get_path_ancestor_length(path1, path2, pool));
+                          get_path_ancestor_length(path1, path2, 
+                                                   FALSE, pool));
     }
 
   else
