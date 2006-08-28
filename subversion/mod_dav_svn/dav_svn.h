@@ -255,9 +255,6 @@ svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
    SVNParentPath allowed? */
 svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
 
-/* for the repository referred to by this request, is native authz active? */
-svn_boolean_t dav_svn__get_native_authz_flag(request_rec *r);
-
 /* for the repository referred to by this request, where is the access
    file for native authz */
 const char *dav_svn__get_native_authz_file(request_rec *r);

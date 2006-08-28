@@ -638,7 +638,7 @@ append_locks(dav_lockdb *lockdb,
    * is turned off, we resort to the old way of requiring read access
    * on the resource.
    */
-  if (dav_svn__get_native_authz_flag(resource->info->r))
+  if (dav_svn__get_native_authz_file(resource->info->r))
     {
       /* Path-based authorization: LOCK needs write access to resource */
       derr = dav_svn__check_resource_access(resource, svn_authz_write);
@@ -813,7 +813,7 @@ remove_lock(dav_lockdb *lockdb,
   if (info->keep_locks)
     return 0;
 
-  if (dav_svn__get_native_authz_flag(resource->info->r))
+  if (dav_svn__get_native_authz_file(resource->info->r))
     {
       /* Path-based authorization: UNLOCK needs write access to resource */
       dav_error *derr;

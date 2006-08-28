@@ -65,7 +65,6 @@ typedef struct {
   enum conf_flag autoversioning;  /* whether autoversioning is active */
   enum conf_flag do_path_authz;   /* whether GET subrequests are active */
   enum conf_flag list_parentpath; /* whether to allow GET of parentpath */
-  enum conf_flag do_native_authz; /* whether native authz is active */
   const char *native_authz_file;     /* rule file for native authz */
 } dir_conf_t;
 
@@ -159,7 +158,6 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->do_path_authz = INHERIT_VALUE(parent, child, do_path_authz);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
-  newconf->do_native_authz = INHERIT_VALUE(parent, child, do_native_authz);
   newconf->native_authz_file = INHERIT_VALUE(parent, child, native_authz_file);
 
   return newconf;
@@ -290,20 +288,6 @@ SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
 
   return NULL;
 }
-
-static const char *
-SVNNativeAuthz_cmd(cmd_parms *cmd, void *config, int arg)
-{
-  dir_conf_t *conf = config;
-
-  if (arg)
-    conf->do_native_authz = CONF_FLAG_ON;
-  else
-    conf->do_native_authz = CONF_FLAG_OFF;
-
-  return NULL;
-}
-
 
 static const char *
 SVNNativeAuthzFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
@@ -442,16 +426,6 @@ dav_svn__get_list_parentpath_flag(request_rec *r)
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
   return conf->list_parentpath == CONF_FLAG_ON;
-}
-
-
-svn_boolean_t
-dav_svn__get_native_authz_flag(request_rec *r)
-{
-    dir_conf_t *conf;
-
-    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-    return conf->do_native_authz == CONF_FLAG_ON;
 }
 
 
@@ -625,11 +599,6 @@ static const command_rec cmds[] =
   /* per directory/location */
   AP_INIT_FLAG("SVNListParentPath", SVNListParentPath_cmd, NULL,
                ACCESS_CONF|RSRC_CONF, "allow GET of SVNParentPath."),
-
-  /* per directory/location */
-  AP_INIT_FLAG("SVNNativeAuthz", SVNNativeAuthz_cmd, NULL,
-               ACCESS_CONF|RSRC_CONF,
-               "use mod_dav_svn native path-based authorization"),
 
   /* per directory/location */
   AP_INIT_TAKE1("SVNNativeAuthzFile", SVNNativeAuthzFile_cmd, NULL,

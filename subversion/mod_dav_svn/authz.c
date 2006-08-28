@@ -59,7 +59,7 @@ allow_read(request_rec *r,
   /* Build a Version Resource uri representing (rev, path). */
   uri = dav_svn__build_uri(repos, uri_type, rev, path, FALSE, pool);
 
-  if (dav_svn__get_native_authz_flag(r))
+  if (dav_svn__get_native_authz_file(r))
     {
       /* Do native auhorization lookup - read access */
       dav_error *err = dav_svn__check_access(repos->repo_name,
@@ -224,7 +224,7 @@ check_access(const char *repos_name,
   /* If native authz is off, there's nothing to do. Return DONE
    * instead of OK to indicate that no checks have really been done.
    */
-  if (! dav_svn__get_native_authz_flag(r))
+  if (! dav_svn__get_native_authz_file(r))
     return DONE;
 
   authz_file = dav_svn__get_native_authz_file(r);
