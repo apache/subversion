@@ -538,6 +538,26 @@ dav_svn__allow_read(const dav_resource *resource,
 svn_repos_authz_func_t
 dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
 
+/* Native path-based authorization */
+dav_error *
+dav_svn__check_access(const char *repos_name,
+                      const char *repos_path,
+                      request_rec *r,
+                      svn_repos_authz_access_t required_access);
+
+/* Helpers for path-based authorization */
+dav_error *
+dav_svn__check_resource_access(const dav_resource *resource,
+                               const svn_repos_authz_access_t required_access);
+
+dav_error *
+dav_svn__check_parent_access(const dav_resource *resource,
+                             const svn_repos_authz_access_t required_access);
+
+dav_error *
+dav_svn__check_global_access(const dav_resource *resource,
+                             const svn_repos_authz_access_t required_access);
+
 
 /*** util.c ***/
 
@@ -683,6 +703,12 @@ dav_svn__sanitize_error(svn_error_t *serr,
                         int http_status,
                         request_rec *r);
 
+
+/* Helper to get parent directory path */
+const char *dav_svn__get_parent_path(const char *path,
+                                     apr_pool_t *pool);
+
+
 /* Return a writable generic stream that will encode its output to base64
    and send it to the Apache filter OUTPUT using BB.  Allocate the stream in
    POOL. */
@@ -691,29 +717,7 @@ dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
                                    ap_filter_t *output,
                                    apr_pool_t *pool);
 
-/* Native path-based authorization */
-dav_error *
-dav_svn__check_access(const char *repos_name,
-                      const char *repos_path,
-                      request_rec *r,
-                      svn_repos_authz_access_t required_access);
 
-/* Helpers for path-based authorization */
-dav_error *
-dav_svn__check_resource_access(const dav_resource *resource,
-                               const svn_repos_authz_access_t required_access);
-
-dav_error *
-dav_svn__check_parent_access(const dav_resource *resource,
-                             const svn_repos_authz_access_t required_access);
-
-dav_error *
-dav_svn__check_global_access(const dav_resource *resource,
-                             const svn_repos_authz_access_t required_access);
-
-/* Helper to get parent directory path */
-const char *dav_svn__get_parent_path(const char *path,
-                                     apr_pool_t *pool);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

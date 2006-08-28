@@ -439,8 +439,8 @@ dav_svn__sanitize_error(svn_error_t *serr,
                                 r->pool);
 }
 
-const char *dav_svn__get_parent_path(const char *path,
-                                     apr_pool_t *pool)
+const char *
+dav_svn__get_parent_path(const char *path, apr_pool_t *pool)
 {
   apr_size_t len;
   const char *parentpath, *base_name;

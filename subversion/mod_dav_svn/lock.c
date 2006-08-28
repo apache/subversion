@@ -630,8 +630,8 @@ append_locks(dav_lockdb *lockdb,
   svn_error_t *serr;
   dav_error *derr;
 
-  /* This whole if(...) is a hack untill we get rid of mod_authz_svn
-   * completely. During the times of mod_dav_svn, there was not 
+  /* This whole if statement is a hack until we get rid of mod_authz_svn
+   * completely.  During the times of mod_dav_svn, there was no
    * equivalent of dav_svn__allow_read() for writing.
    *
    * LOCK command needs write access to resource. If native authz

@@ -1486,10 +1486,9 @@ get_resource(request_rec *r,
     return err;
 
 #ifdef SVN_DEBUG
-  ap_log_rerror (APLOG_MARK, APLOG_INFO, 0, r,
-                 "dav_svn_get_resource(): %s %s %s (%s)",
-		 (r->user ? r->user : "-"),
-		 r->method, repos_path, r->uri);
+  ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
+                "dav_svn_get_resource(): %s %s %s (%s)",
+                (r->user ? r->user : "-"), r->method, repos_path, r->uri);
 #endif
 
   /* A special case of path-based authorization for methods
@@ -1499,7 +1498,7 @@ get_resource(request_rec *r,
    * OPTIONS:
    *   A general check, if access is allowed to this resouce,
    *   then OPTIONS will return a valid response. Otherwise
-   *   an "Isufficient rights ..." will be returned.
+   *   an "Insufficient rights ..." will be returned.
    *
    * PROPFIND, PROPPATCH:
    *   An initial check. If the user is not allowed to access
@@ -1508,16 +1507,16 @@ get_resource(request_rec *r,
    *   header, there will be separate authz checks for every
    *   child of this resource.
    */
-  if( r->method_number == M_OPTIONS
+  if (r->method_number == M_OPTIONS
       || r->method_number == M_PROPFIND
-      || r->method_number == M_PROPPATCH )
+      || r->method_number == M_PROPPATCH)
     {
-      /* NOTE: We cannot use "repos_path" or "relative" straigh away,
+      /* NOTE: We cannot use "repos_path" or "relative" straight away,
        * need to add a slash at the beginning...
        */ 
-      char* path = NULL;
+      char *path = NULL;
 
-      if( repos_path )
+      if (repos_path)
         path = svn_path_join("/", repos_path, r->pool);
 
       err = dav_svn__check_access(repos_name, path, r, svn_authz_read);
@@ -2087,7 +2086,7 @@ open_stream(const dav_resource *resource,
 
       /* Path-based authorization: PUT requires write access to resource. */
       derr = dav_svn__check_resource_access(resource, svn_authz_write);
-      if (derr != NULL)
+      if (derr)
         return derr;
     }
 
@@ -2398,10 +2397,10 @@ set_headers(request_rec *r, const dav_resource *resource)
   svn_filesize_t length;
   const char *mimetype = NULL;
   apr_time_t last_modified;
-
+  
   if (!resource->exists)
     return NULL;
-
+  
   /* Path-based authorization: if the user doesn't have access
    * to this resource, no information about it should be revealed. 
    *
@@ -2588,7 +2587,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
       return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
                            "Cannot GET this type of resource.");
     }
-
+  
   if (resource->collection)
     {
       const int gen_html = !resource->info->repos->xslt_uri;
@@ -2761,8 +2760,8 @@ deliver(const dav_resource *resource, ap_filter_t *output)
            * on the entry - if not, hide it.
            */
             {
-              dav_error* derr = NULL;
-              const char *path = NULL;
+              dav_error *derr;
+              const char *path;
               const char *repos_path = resource->info->repos_path;
 
               svn_pool_clear(entry_pool);
@@ -2782,7 +2781,7 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                                            path,
                                            resource->info->r,
                                            svn_authz_read);
-              if(derr)
+              if (derr)
                 continue;
             }
 
@@ -3106,7 +3105,7 @@ copy_resource(const dav_resource *src,
    * XXX: recursive write access?
    */
   err = dav_svn__check_resource_access(src,
-                                       svn_authz_read|svn_authz_recursive);
+                                       svn_authz_read | svn_authz_recursive);
   if (err)
     return err;
 
@@ -3196,8 +3195,8 @@ remove_resource(dav_resource *resource, dav_response **response)
        */
       err = dav_svn__check_global_access(resource, svn_authz_write);
       if (err)
-	return err;
-		  
+        return err;
+
       return dav_svn__delete_activity(resource->info->repos,
                                       resource->info->root.activity_id);
     }
@@ -3206,7 +3205,7 @@ remove_resource(dav_resource *resource, dav_response **response)
    * to the resource.
    */
   err = dav_svn__check_resource_access(resource,
-                                       svn_authz_write|svn_authz_recursive);
+                                       svn_authz_write | svn_authz_recursive);
   if (err)
     return err;
 
@@ -3332,7 +3331,7 @@ move_resource(dav_resource *src,
    * XXX: recursive write access?
    */
   err = dav_svn__check_resource_access(src,
-                                       svn_authz_write|svn_authz_recursive);
+                                       svn_authz_write | svn_authz_recursive);
   if (err)
     return err;
 

@@ -25,6 +25,7 @@
 #include "svn_dav.h"
 #include "dav_svn.h"
 
+
 /* Convert incoming REV and PATH from request R into a version-resource URI
    for REPOS and perform a GET subrequest on it.  This will invoke any authz
    modules loaded into apache.  Return TRUE if the subrequest succeeds, FALSE
@@ -202,6 +203,7 @@ dav_svn__allow_read(const dav_resource *resource,
                     resource->info->repos_path, rev, pool);
 }
 
+
 /* Native path-based authorization */
 
 static int
@@ -222,43 +224,45 @@ check_access(const char *repos_name,
   /* If native authz is off, there's nothing to do. Return DONE
    * instead of OK to indicate that no checks have really been done.
    */
-  if (!dav_svn__get_native_authz_flag(r))
+  if (! dav_svn__get_native_authz_flag(r))
     return DONE;
 
   authz_file = dav_svn__get_native_authz_file(r);
   /* If access file had not been specified, the default
      behavior is to allow access. 
      XXX: is this right? */
-  if(authz_file == NULL)
+  if (authz_file == NULL)
     return OK;
 
   /* Retrieve/cache authorization file */
   cache_key = apr_pstrcat(r->pool, "mod_dav_svn:", authz_file, NULL);
   apr_pool_userdata_get(&user_data, cache_key, r->connection->pool);
   access_conf = user_data;
-  if (access_conf == NULL) {
-    svn_err = svn_repos_authz_read(&access_conf, authz_file,
-                                   TRUE, r->connection->pool);
-    if (svn_err) {
-      ap_log_rerror(APLOG_MARK, APLOG_ERR,
-                    /* If it is an error code that APR can make sense
-                       of, then show it, otherwise, pass zero to avoid
-                       putting "APR does not understand this error code"
-                       in the error log. */
-                    ((svn_err->apr_err >= APR_OS_START_USERERR &&
-                      svn_err->apr_err < APR_OS_START_CANONERR) ?
-                     0 : svn_err->apr_err),
-                    r, "Failed to load the SVNNativeAuthzFile: %s",
-                    svn_err_best_message(svn_err,
-                                         errbuf, sizeof(errbuf)));
-      svn_error_clear(svn_err);
+  if (access_conf == NULL)
+    {
+      svn_err = svn_repos_authz_read(&access_conf, authz_file,
+                                     TRUE, r->connection->pool);
+      if (svn_err)
+        {
+          ap_log_rerror(APLOG_MARK, APLOG_ERR,
+                        /* If it is an error code that APR can make sense
+                           of, then show it, otherwise, pass zero to avoid
+                           putting "APR does not understand this error code"
+                           in the error log. */
+                        ((svn_err->apr_err >= APR_OS_START_USERERR &&
+                          svn_err->apr_err < APR_OS_START_CANONERR) ?
+                         0 : svn_err->apr_err),
+                        r, "Failed to load the SVNNativeAuthzFile: %s",
+                        svn_err_best_message(svn_err,
+                                             errbuf, sizeof(errbuf)));
+          svn_error_clear(svn_err);
 
-      return DECLINED;
-    }
+          return DECLINED;
+        }
 
-    /* Cache the open repos for the next request on this connection */
-    apr_pool_userdata_set(access_conf, cache_key,
-                          NULL, r->connection->pool);
+      /* Cache the open repos for the next request on this connection */
+      apr_pool_userdata_set(access_conf, cache_key,
+                            NULL, r->connection->pool);
   }
 
   /* Perform authz access control. */
@@ -268,33 +272,35 @@ check_access(const char *repos_name,
                                          &access_granted,
                                          r->pool);
 
-  if (svn_err) {
-    ap_log_rerror(APLOG_MARK, APLOG_ERR,
-                  /* If it is an error code that APR can make
-                     sense of, then show it, otherwise, pass
-                     zero to avoid putting "APR does not
-                     understand this error code" in the error
-                     log. */
-                  ((svn_err->apr_err >= APR_OS_START_USERERR &&
-                    svn_err->apr_err < APR_OS_START_CANONERR) ?
-                   0 : svn_err->apr_err),
-                  r, "Failed to perform access control: %s",
-                  svn_err_best_message(svn_err, errbuf, sizeof(errbuf)));
-    svn_error_clear(svn_err);
+  if (svn_err)
+    {
+      ap_log_rerror(APLOG_MARK, APLOG_ERR,
+                    /* If it is an error code that APR can make
+                       sense of, then show it, otherwise, pass
+                       zero to avoid putting "APR does not
+                       understand this error code" in the error
+                       log. */
+                    ((svn_err->apr_err >= APR_OS_START_USERERR &&
+                      svn_err->apr_err < APR_OS_START_CANONERR) ?
+                     0 : svn_err->apr_err),
+                    r, "Failed to perform access control: %s",
+                    svn_err_best_message(svn_err, errbuf, sizeof(errbuf)));
+      svn_error_clear(svn_err);
 
-    return DECLINED;
-  }
+      return DECLINED;
+    }
 
-  if (!access_granted)
+  if (! access_granted)
     return DECLINED;
 
   return OK;
 }
 
+
 /* Log a message indicating the access control decision made about a
- * request.  FILE and LINE should be supplied via the APLOG_MARK macro.
- * ALLOWED is boolean.  REPOS_PATH and DEST_REPOS_PATH are information
- * about the request.  DEST_REPOS_PATH may be NULL. */
+   request.  FILE and LINE should be supplied via the APLOG_MARK macro.
+   ALLOWED is boolean.  REPOS_PATH and DEST_REPOS_PATH are information
+   about the request.  DEST_REPOS_PATH may be NULL. */
 static void
 log_access_verdict(const char *file, int line,
                    const request_rec *r,
@@ -334,6 +340,7 @@ log_access_verdict(const char *file, int line,
   }
 }
 
+
 dav_error *
 dav_svn__check_access(const char *repos_name,
                       const char *repos_path,
@@ -367,6 +374,7 @@ dav_svn__check_access(const char *repos_name,
   return NULL;
 }
 
+
 dav_error *
 dav_svn__check_resource_access(const dav_resource *resource,
                                const svn_repos_authz_access_t required_access)
@@ -376,6 +384,7 @@ dav_svn__check_resource_access(const dav_resource *resource,
                                resource->info->r,
                                required_access);
 }
+
 
 dav_error *
 dav_svn__check_parent_access(const dav_resource *resource,
@@ -389,6 +398,7 @@ dav_svn__check_parent_access(const dav_resource *resource,
                                resource->info->r,
                                required_access);
 }
+
 
 dav_error *
 dav_svn__check_global_access(const dav_resource *resource,

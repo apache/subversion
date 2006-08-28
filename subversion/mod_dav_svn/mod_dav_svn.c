@@ -69,6 +69,7 @@ typedef struct {
   const char *native_authz_file;     /* rule file for native authz */
 } dir_conf_t;
 
+
 #define INHERIT_VALUE(parent, child, field) \
                 ((child)->field ? (child)->field : (parent)->field)
 
@@ -158,9 +159,8 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->do_path_authz = INHERIT_VALUE(parent, child, do_path_authz);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
-    newconf->do_native_authz = INHERIT_VALUE(parent, child, do_native_authz);
-    newconf->native_authz_file = INHERIT_VALUE(parent, child,
-                                               native_authz_file);
+  newconf->do_native_authz = INHERIT_VALUE(parent, child, do_native_authz);
+  newconf->native_authz_file = INHERIT_VALUE(parent, child, native_authz_file);
 
   return newconf;
 }
@@ -215,6 +215,7 @@ SVNPathAuthz_cmd(cmd_parms *cmd, void *config, int arg)
   return NULL;
 }
 
+
 static const char *
 SVNListParentPath_cmd(cmd_parms *cmd, void *config, int arg)
 {
@@ -227,6 +228,7 @@ SVNListParentPath_cmd(cmd_parms *cmd, void *config, int arg)
 
   return NULL;
 }
+
 
 static const char *
 SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
@@ -241,6 +243,7 @@ SVNPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
 
   return NULL;
 }
+
 
 static const char *
 SVNParentPath_cmd(cmd_parms *cmd, void *config, const char *arg1)
@@ -300,6 +303,8 @@ SVNNativeAuthz_cmd(cmd_parms *cmd, void *config, int arg)
 
   return NULL;
 }
+
+
 static const char *
 SVNNativeAuthzFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
@@ -439,6 +444,7 @@ dav_svn__get_list_parentpath_flag(request_rec *r)
   return conf->list_parentpath == CONF_FLAG_ON;
 }
 
+
 svn_boolean_t
 dav_svn__get_native_authz_flag(request_rec *r)
 {
@@ -448,6 +454,7 @@ dav_svn__get_native_authz_flag(request_rec *r)
     return conf->do_native_authz == CONF_FLAG_ON;
 }
 
+
 const char *
 dav_svn__get_native_authz_file(request_rec *r)
 {
@@ -456,6 +463,7 @@ dav_svn__get_native_authz_file(request_rec *r)
     conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
     return conf->native_authz_file;
 }
+
 
 static void
 merge_xml_filter_insert(request_rec *r)
