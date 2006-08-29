@@ -773,6 +773,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
 (put 'svn-global-keymap 'risky-local-variable t)
 (when (not svn-global-keymap)
   (setq svn-global-keymap (make-sparse-keymap))
+  (define-key svn-global-keymap (kbd "v") 'svn-status-version)
   (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
@@ -984,7 +985,9 @@ for example: '(\"revert\" \"file1\"\)
 ARGLIST is flattened and any every nil value is discarded.
 
 If the variable `svn-status-edit-svn-command' is non-nil then the user
-can edit ARGLIST before running svn."
+can edit ARGLIST before running svn.
+
+The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
   (setq arglist (svn-status-flatten-list arglist))
   (if (eq (process-status "svn") nil)
       (progn
@@ -998,6 +1001,7 @@ can edit ARGLIST before running svn."
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-run %s: %S" cmdtype arglist))
+        (run-hooks 'svn-pre-run-hook)
         (unless (eq mode-line-process 'svn-status-mode-line-process)
           (setq svn-pre-run-mode-line-process mode-line-process)
           (setq mode-line-process 'svn-status-mode-line-process))
@@ -1651,6 +1655,7 @@ A and B must be line-info's."
      :style toggle :selected svn-status-hide-unknown]
     ["Hide Unmodified" svn-status-toggle-hide-unmodified
      :style toggle :selected svn-status-hide-unmodified]
+    ["Show Client versions" svn-status-version t]
     ))
 
 
@@ -2961,6 +2966,15 @@ See `svn-status-marked-files' for what counts as selected."
     (save-excursion
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
+
+(defun svn-status-version ()
+  "Show the version numbers for the svn command line client and for psvn.el"
+  (interactive)
+  (svn-run nil t 'version "--version")
+  (svn-status-show-process-output 'info t)
+  (with-current-buffer svn-status-last-output-buffer-name
+    (goto-char (point-min))
+    (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision))))
 
 (defun svn-status-info ()
   "Run `svn info' on all selected files.
