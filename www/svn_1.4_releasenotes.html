@@ -183,6 +183,14 @@ recover it.  In theory (and in our testing), this new feature makes
 BerkeleyDB-based repositories just as wedge-proof as FSFS
 repositories.</p>
 
+<p><b>WARNING:</b> While upgrading to a new version of Berkeley DB
+will not require you to dump and reload your repository, you
+<em>will</em> still need to follow the Berkeley DB upgrade regimen to
+ensure that your repository is accessible by the new version of those
+libraries.  Please see <a
+href="http://sleepycat.com/docs/ref/upgrade/process.html">http://sleepycat.com/docs/ref/upgrade/process.html</a>
+for instructions on upgrading Berkeley DB environments.</p>
+
 </div>  <!-- bdb-4.4 -->
 
 <div class="h3" id="svndiff1" title="svndiff1">
