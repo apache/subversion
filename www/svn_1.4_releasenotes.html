@@ -33,7 +33,7 @@ that will mean 1.4.0 is released.</p>
 <h2>What's New in Subversion 1.4</h2>
 
 <ul>
-  <li><strong>svnsync</strong>, a new repository mirroring tool</li>
+  <li><tt>svnsync</tt>, a new repository mirroring tool</li>
   <li>Huge working-copy performance improvements</li>
   <li>Support for BerkeleyDB 4.4 and its "auto recovery" feature</li>
   <li>Size improvements to the binary delta algorithm</li>
@@ -77,7 +77,7 @@ against older libraries.</p>
 <p>Due to certain improvements and bugfixes made to the working copy
 library, the version number of the working copy format has been
 incremented. This means that Subversion clients earlier than 1.4 will
-<i>not</i> be able to work with working copies produced by Subversion
+<em>not</em> be able to work with working copies produced by Subversion
 1.4.  Similarly, the repository format has changed as well, meaning
 that pre-1.4 Subversion tools that normally access a repository
 directly
@@ -85,8 +85,8 @@ directly
 won't be able to read a repository originally created by Subversion
 1.4. </p>
 
-<p><b>WARNING:</b> if a Subversion 1.4 client encounters a pre-1.4
-working copy, it will <i>automatically</i> upgrade the working copy
+<p><strong>WARNING:</strong> if a Subversion 1.4 client encounters a pre-1.4
+working copy, it will <em>automatically</em> upgrade the working copy
 format as soon as it touches it, making it unreadable by older
 Subversion clients.  If you are using several versions of Subversion
 on your machine, you need to be careful about which version you use in
@@ -121,7 +121,7 @@ made to the output:</p>
 <div class="h3" id="svnsync" title="svnsync">
 <h3>svnsync (<em>some features require a 1.4 server</em>)</h3>
 
-<p>A new tool &mdash; <strong>svnsync</strong> &mdash; is now
+<p>A new tool &mdash; <tt>svnsync</tt> &mdash; is now
 installed as part of the standard distribution.  This tool provides
 the ability to replicate history from one repository to another.  The
 replication can happen all at once, or can be done incrementally
@@ -157,7 +157,7 @@ deal with large files.  The overall disk footprint is smaller as well,
 with fewer inodes being used.  Additionally, a number of long standing
 bugs related to merging and copying have been fixed.</p>
 
-<p><b>WARNING:</b> A Subversion 1.4 client will silently upgrade older
+<p><strong>WARNING:</strong> A Subversion 1.4 client will silently upgrade older
 working copies to the new format, rendering them unreadable by older
 Subersion clients.  See the section above, titled 'Working Copy Format
 Changes'.</p>
@@ -183,7 +183,7 @@ recover it.  In theory (and in our testing), this new feature makes
 BerkeleyDB-based repositories just as wedge-proof as FSFS
 repositories.</p>
 
-<p><b>WARNING:</b> While upgrading to a new version of Berkeley DB
+<p><strong>WARNING:</strong> While upgrading to a new version of Berkeley DB
 will not require you to dump and reload your repository, you
 <em>will</em> still need to follow the Berkeley DB upgrade regimen to
 ensure that your repository is accessible by the new version of those
@@ -211,7 +211,7 @@ to <tt>svnadmin create</tt> the new repository using svnadmin 1.4.)
 Additionally, if a client and server are both version 1.4 , then
 network traffic becomes smaller and faster.</p>
 
-<p><b>WARNING:</b> A repository created by svnadmin 1.4 will not be
+<p><strong>WARNING:</strong> A repository created by svnadmin 1.4 will not be
 readable by earlier Subversion libraries or tools.  However, in order
 to experience the smaller data format, you'll have to dump and reload
 your data.  If you <em>don't</em> recreate your repository with
