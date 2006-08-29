@@ -18,7 +18,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os
+import sys, re, os, time
 
 # Our testing module
 import svntest
@@ -28,6 +28,7 @@ from svntest import wc, SVNAnyOutput
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = wc.StateItem
+XFail = svntest.testcase.XFail
 
 #----------------------------------------------------------------------
 # Helper function to set up an existing local tree that has paths which
@@ -416,6 +417,96 @@ def checkout_broken_eol(sbox):
                                           expected_output,
                                           expected_wc)
 
+def checkout_creates_intermediate_folders(sbox):
+  "checkout and create some intermediate folders"
+
+  sbox.build(create_wc = False)
+
+  checkout_target = os.path.join(sbox.wc_dir, 'a', 'b', 'c')
+  
+  # checkout a working copy in a/b/c, should create these intermediate 
+  # folders
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = checkout_target
+  expected_output.tweak(status='A ', contents=None)
+
+  expected_wc = svntest.main.greek_state
+  
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          checkout_target,
+                                          expected_output,
+                                          expected_wc)
+
+# Test that, if a peg revision is provided without an explicit revision, 
+# svn will checkout the directory as it was at rPEG, rather than at HEAD.
+def checkout_peg_rev(sbox):
+  "checkout with peg revision"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  # create a new revision
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append (mu_path, 'appended mu text')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'ci', '-m', 'changed file mu', wc_dir)
+
+  # now checkout the repo@1 in another folder, this should create our initial
+  # wc without the change in mu.
+  checkout_target = sbox.add_wc_path('checkout')
+  os.mkdir(checkout_target)
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = checkout_target
+  expected_output.tweak(status='A ', contents=None)
+  
+  expected_wc = svntest.main.greek_state.copy()
+  
+  svntest.actions.run_and_verify_checkout(sbox.repo_url + '@1',
+                                          checkout_target, 
+                                          expected_output,
+                                          expected_wc)
+
+#----------------------------------------------------------------------
+# Issue 2602: Test that peg revision dates are correctly supported. 
+def checkout_peg_rev_date(sbox):
+  "checkout with peg revision date"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # note the current time to use it as peg revision date.
+  current_time = time.strftime("%Y-%m-%dT%H:%M:%S")
+  
+  # sleep till the next minute.
+  current_sec = time.localtime().tm_sec
+  time.sleep(62-current_sec)
+
+  # create a new revision
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append (mu_path, 'appended mu text')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'ci', '-m', 'changed file mu', wc_dir)
+
+  # now checkout the repo@current_time in another folder, this should create our 
+  # initial wc without the change in mu.
+  checkout_target = sbox.add_wc_path('checkout')
+  os.mkdir(checkout_target)
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = checkout_target
+  expected_output.tweak(status='A ', contents=None)
+  
+  expected_wc = svntest.main.greek_state.copy()
+
+  # use an old date to checkout, that way we're sure we get the first revision
+  svntest.actions.run_and_verify_checkout(sbox.repo_url + 
+                                          '@{' + current_time + '}',
+                                          checkout_target, 
+                                          expected_output,
+                                          expected_wc)
+
 #----------------------------------------------------------------------
 
 # list all tests here, starting with None:
@@ -429,6 +520,9 @@ test_list = [ None,
               forced_checkout_with_versioned_obstruction,
               import_and_checkout,
               checkout_broken_eol,
+              checkout_creates_intermediate_folders,
+              checkout_peg_rev,
+              XFail(checkout_peg_rev_date),
               XFail(depth_one_checkout),
             ]
 

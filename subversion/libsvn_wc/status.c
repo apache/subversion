@@ -324,8 +324,11 @@ assemble_status(svn_wc_status2_t **status,
     }
 
   /* Is this item switched?  Well, to be switched it must have both an URL
-     and a parent with an URL, at the very least. */
-  if (entry->url && parent_entry && parent_entry->url)
+     and a parent with an URL, at the very least. 
+     If this is the root folder on the (virtual) disk, entry and parent_entry 
+     will be equal. */
+  if (entry->url && parent_entry && parent_entry->url &&
+      entry != parent_entry)
     {
       /* An item is switched if its working copy basename differs from the
          basename of its URL. */

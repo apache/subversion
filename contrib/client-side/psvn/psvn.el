@@ -231,6 +231,15 @@ of the *svn-log-edit* buffer."
 This variable takes effect only when psvn.el is being loaded."
   :type 'boolean
   :group 'psvn)
+(defcustom svn-log-edit-paragraph-start
+  "$\\|[ \t]*$\\|##.*$\\|\\*.*:.*$\\|[ \t]+(.+):.*$"
+  "*Value used for `paragraph-start' in *svn-log-edit* buffer."
+  :type 'regexp
+  :group 'psvn)
+(defcustom svn-log-edit-paragraph-separate "$\\|##.*$"
+  "*Value used for `paragraph-separate' in *svn-log-edit* buffer."
+  :type 'regexp
+  :group 'psvn)
 (defcustom svn-status-hide-unknown nil
   "*Hide unknown files in `svn-status-buffer-name' buffer.
 This can be toggled with \\[svn-status-toggle-hide-unknown]."
@@ -3935,6 +3944,10 @@ Commands:
 
 (defvar svn-log-edit-mode-menu) ;really defined with `easy-menu-define' below.
 
+(defun svn-log-edit-common-setup ()
+  (set (make-local-variable 'paragraph-start) svn-log-edit-paragraph-start)
+  (set (make-local-variable 'paragraph-separate) svn-log-edit-paragraph-separate))
+
 (if svn-log-edit-use-log-edit-mode
     (define-derived-mode svn-log-edit-mode log-edit-mode "svn-log-edit"
       "Wrapper around `log-edit-mode' for psvn.el"
@@ -3943,6 +3956,7 @@ Commands:
       (set (make-local-variable 'log-edit-callback) 'svn-log-edit-done)
       (set (make-local-variable 'log-edit-listfun) 'svn-log-edit-files-to-commit)
       (set (make-local-variable 'log-edit-initial-files) (log-edit-files))
+      (svn-log-edit-common-setup)
       (message "Press %s when you are done editing."
                (substitute-command-keys "\\[log-edit-done]"))
       )
@@ -3957,6 +3971,7 @@ Commands:
     (setq major-mode 'svn-log-edit-mode)
     (setq mode-name "svn-log-edit")
     (setq svn-log-edit-update-log-entry nil)
+    (svn-log-edit-common-setup)
     (run-hooks 'svn-log-edit-mode-hook)))
 
 (when (not svn-log-edit-mode-map)

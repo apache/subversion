@@ -1448,7 +1448,11 @@ struct receiver_baton
 static void
 lock_receiver(void *userdata,
               const struct ne_lock *lock,
+#ifdef SVN_NEON_0_26
+              const ne_uri *uri,
+#else
               const char *uri,
+#endif
               const ne_status *status)
 {
   struct receiver_baton *rb = userdata;

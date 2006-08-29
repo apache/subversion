@@ -1643,6 +1643,9 @@ def update_xml_unsafe_dir(sbox):
 # eol-style handling during update with conflicts, scenario 1:
 # when update creates a conflict on a file, make sure the file and files 
 # r<left>, r<right> and .mine are in the eol-style defined for that file.
+#
+# This test for 'svn merge' can be found in merge_tests.py as 
+# merge_conflict_markers_matching_eol.
 def conflict_markers_matching_eol(sbox):
   "conflict markers should match the file's eol style"
 
@@ -1771,6 +1774,9 @@ def conflict_markers_matching_eol(sbox):
 # if part of that update is a propchange (add, change, delete) of
 # svn:eol-style, make sure the correct eol-style is applied before
 # calculating the merge (and conflicts if any)
+#
+# This test for 'svn merge' can be found in merge_tests.py as 
+# merge_eolstyle_handling.
 def update_eolstyle_handling(sbox):
   "handle eol-style propchange during update"
 
@@ -2229,7 +2235,7 @@ test_list = [ None,
               XFail(update_copy_of_old_rev),
               forced_update,
               forced_update_failures,
-              XFail(update_wc_on_windows_drive),
+              update_wc_on_windows_drive,
              ]
 
 if __name__ == '__main__':
