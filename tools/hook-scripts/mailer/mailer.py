@@ -750,21 +750,30 @@ class DiffGenerator:
 
       elif change.added:
         if change.base_path and (change.base_rev != -1):
-          # this file was copied.
-          kind = 'C'
 
           # any diff of interest?
           if change.text_changed:
+            # this file was copied and modified.
+            kind = 'W'
 
             # get the diff url, if any is specified
             diff_url = self.diffurls.get_copy_url(self.repos.rev, change)
 
             # show the diff?
-            if self.diffsels.copy:
+            if self.diffsels.modify:
               diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
                                      change.base_path,
                                      self.repos.root_this, change.path,
                                      self.pool)
+              label1 = change.base_path + '\t(original)'
+              label2 = '%s\t%s' % (change.path, self.date)
+              singular = False
+          else:
+            # this file was copied.
+            kind = 'C'
+            if self.diffsels.copy:
+              diff = svn.fs.FileDiff(None, None, self.repos.root_this,
+                                     change.path, self.pool)
               label1 = change.base_path + '\t(original)'
               label2 = '%s\t%s' % (change.path, self.date)
               singular = False
@@ -963,11 +972,14 @@ class TextCommitRenderer:
         section_header_printed = True
       if diff.kind == 'D':
         w('\nDeleted: %s\n' % diff.base_path)
+      elif diff.kind == 'A':
+        w('\nAdded: %s\n' % diff.path)
       elif diff.kind == 'C':
         w('\nCopied: %s (from r%d, %s)\n'
           % (diff.path, diff.base_rev, diff.base_path))
-      elif diff.kind == 'A':
-        w('\nAdded: %s\n' % diff.path)
+      elif diff.kind == 'W':
+        w('\nCopied and modified: %s (from r%d, %s)\n'
+          % (diff.path, diff.base_rev, diff.base_path))
       else:
         # kind == 'M'
         w('\nModified: %s\n' % diff.path)
