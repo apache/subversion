@@ -40,6 +40,11 @@ Candidate changes:
     Votes:
       +1: djh
 
+  * r21316 (depends on r21289 above)
+    JavaHL crash when using pre-1.4 native libraries.
+    Votes:
+      +1: markphip
+
 
 Approved changes:
 
