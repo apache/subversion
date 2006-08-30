@@ -1202,10 +1202,10 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
         ;(svn-status-show-process-buffer)
         (let ((passwd (read-passwd
                        (format "Enter svn password for %s: " (match-string 1)))))
-          (svn-process-send-string (concat passwd "\n") t)))
+          (svn-process-send-string-and-newline passwd t)))
       (when (looking-at "Username: ")
         (let ((user-name (read-string "Username for svn operation: ")))
-          (svn-process-send-string (concat user-name "\n")))))))
+          (svn-process-send-string-and-newline user-name))))))
 
 (defun svn-parse-rev-num (str)
   (if (and str (stringp str)
@@ -3625,6 +3625,17 @@ Note: use C-q C-j to send a line termination character."
     (set-marker (process-mark (get-process "svn")) (point)))
   (process-send-string "svn" string))
 
+(defun svn-process-send-string-and-newline (string &optional send-passwd)
+  "Send a string to the running svn process.
+Just call `svn-process-send-string' with STRING and an end of line termination.
+When called with a prefix argument, read the data from user as password."
+  (interactive (let* ((use-passwd current-prefix-arg)
+                      (s (if use-passwd
+                             (read-passwd "Send secret line to svn process: ")
+                           (read-string "Send line to svn process: "))))
+                 (list s use-passwd)))
+  (svn-process-send-string (concat string "\n") send-passwd))
+
 ;; --------------------------------------------------------------------------------
 ;; Property List stuff
 ;; --------------------------------------------------------------------------------
@@ -4248,13 +4259,26 @@ When called with a prefix argument, ask the user for the revision."
 
 (when (not svn-process-mode-map)
   (setq svn-process-mode-map (make-sparse-keymap))
+  (define-key svn-process-mode-map (kbd "RET") 'svn-process-send-string-and-newline)
+  (define-key svn-process-mode-map [?s] 'svn-process-send-string)
   (define-key svn-process-mode-map [?q] 'bury-buffer))
 
+(easy-menu-define svn-process-mode-menu svn-process-mode-map
+"'svn-process-mode' menu"
+                  '("SvnProcess"
+                    ["Send line to process" svn-process-send-string-and-newline t]
+                    ["Send raw string to process" svn-process-send-string t]
+                    ["Bury process buffer" bury-buffer t]))
+
 (defun svn-process-mode ()
-  "Major Mode to view process output from svn."
+  "Major Mode to view process output from svn.
+
+You can send a new line terminated string to the process via \\[svn-process-send-string-and-newline]
+You can send raw data to the process via \\[svn-process-send-string]."
   (interactive)
   (kill-all-local-variables)
   (use-local-map svn-process-mode-map)
+  (easy-menu-add svn-log-view-mode-menu)
   (setq major-mode 'svn-process-mode)
   (setq mode-name "svn-process"))
 
