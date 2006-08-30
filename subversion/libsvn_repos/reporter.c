@@ -46,6 +46,9 @@
        +/-                    '+' indicates presence of revnum
        If previous is +:
          <revnum>:            Revnum of set_path or link_path
+       +/-                    '+' indicates depth other than svn_depth_infinity
+       If previous is +:
+         <depth>:             "0" is svn_depth_zero, "1" is svn_depth_one
        +/-                    '+' indicates start_empty field set
        +/-                    '+' indicates presence of lock_token field.
        If previous is +:
@@ -65,6 +68,7 @@ typedef struct path_info_t
   const char *path;            /* path, munged to be anchor-relative */
   const char *link_path;       /* NULL for set_path or delete_path */
   svn_revnum_t rev;            /* SVN_INVALID_REVNUM for delete_path */
+  svn_depth_t depth;           /* Depth of this path, meaningless for files */
   svn_boolean_t start_empty;   /* Meaningless for delete_path */
   const char *lock_token;      /* NULL if no token */
   apr_pool_t *pool;            /* Container pool */
@@ -185,6 +189,34 @@ read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
   else
     (*pi)->link_path = NULL;
   SVN_ERR(read_rev(&(*pi)->rev, temp, pool));
+  SVN_ERR(svn_io_file_getc(&c, temp, pool));
+  if (c == '+')
+    {
+      /* Could just read directly into &(*pi)->rev, but that would be
+         bad form and perhaps also vulnerable to weird type promotion
+         failures. */
+      apr_uint64_t num;
+      SVN_ERR(read_number(&num, temp, pool));
+      switch (num)
+        {
+        case 0:
+          (*pi)->depth = svn_depth_zero;
+          break;
+        case 1:
+          (*pi)->depth = svn_depth_one;
+          break;
+        default:
+          return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
+                                   _("Invalid depth (%"
+                                     APR_UINT64_T_FMT
+                                     ") for path '%s'"),
+                                   num, (*pi)->path);
+        }
+    }
+  else
+    {
+      (*pi)->depth = svn_depth_infinity;
+    }
   SVN_ERR(svn_io_file_getc(&c, temp, pool));
   (*pi)->start_empty = (c == '+');
   SVN_ERR(svn_io_file_getc(&c, temp, pool));
@@ -922,10 +954,11 @@ finish_report(report_baton_t *b, apr_pool_t *pool)
 /* Record a report operation into the temporary file. */
 static svn_error_t *
 write_path_info(report_baton_t *b, const char *path, const char *lpath,
-                svn_revnum_t rev, svn_boolean_t start_empty,
+                svn_revnum_t rev, svn_depth_t depth,
+                svn_boolean_t start_empty,
                 const char *lock_token, apr_pool_t *pool)
 {
-  const char *lrep, *rrep, *ltrep, *rep;
+  const char *lrep, *rrep, *drep, *ltrep, *rep;
 
   /* Munge the path to be anchor-relative, so that we can use edit paths
      as report paths. */
@@ -935,12 +968,23 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
                               strlen(lpath), lpath) : "-";
   rrep = (SVN_IS_VALID_REVNUM(rev)) ?
     apr_psprintf(pool, "+%ld:", rev) : "-";
+  drep = (depth == svn_depth_infinity) ? "-"
+    : ((depth == svn_depth_zero) ? "0:" : "1:");
   ltrep = lock_token ? apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s",
                                     strlen(lock_token), lock_token) : "-";
-  rep = apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s%s%s%c%s",
-                     strlen(path), path, lrep, rrep, start_empty ? '+' : '-',
-                     ltrep);
+  rep = apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s%s%s%s%c%s",
+                     strlen(path), path, lrep, rrep, drep,
+                     start_empty ? '+' : '-', ltrep);
   return svn_io_file_write_full(b->tempfile, rep, strlen(rep), NULL, pool);
+}
+
+svn_error_t *
+svn_repos_set_path3(void *baton, const char *path, svn_revnum_t rev,
+                    svn_depth_t depth, svn_boolean_t start_empty,
+                    const char *lock_token, apr_pool_t *pool)
+{
+  return write_path_info(baton, path, NULL, rev, depth, start_empty,
+                         lock_token, pool);
 }
 
 svn_error_t *
@@ -948,15 +992,26 @@ svn_repos_set_path2(void *baton, const char *path, svn_revnum_t rev,
                     svn_boolean_t start_empty, const char *lock_token,
                     apr_pool_t *pool)
 {
-  return write_path_info(baton, path, NULL, rev, start_empty,
-                         lock_token, pool);
+  return svn_repos_set_path3(baton, path, rev, svn_depth_infinity,
+                             start_empty, lock_token, pool);
 }
 
 svn_error_t *
 svn_repos_set_path(void *baton, const char *path, svn_revnum_t rev,
                    svn_boolean_t start_empty, apr_pool_t *pool)
 {
-  return svn_repos_set_path2(baton, path, rev, start_empty, NULL, pool);
+  return svn_repos_set_path3(baton, path, rev, svn_depth_infinity,
+                             start_empty, NULL, pool);
+}
+
+svn_error_t *
+svn_repos_link_path3(void *baton, const char *path, const char *link_path,
+                     svn_revnum_t rev, svn_depth_t depth,
+                     svn_boolean_t start_empty,
+                     const char *lock_token, apr_pool_t *pool)
+{
+  return write_path_info(baton, path, link_path, rev, depth,
+                         start_empty, lock_token, pool);
 }
 
 svn_error_t *
@@ -964,8 +1019,9 @@ svn_repos_link_path2(void *baton, const char *path, const char *link_path,
                      svn_revnum_t rev, svn_boolean_t start_empty,
                      const char *lock_token, apr_pool_t *pool)
 {
-  return write_path_info(baton, path, link_path, rev, start_empty, lock_token,
-                         pool);
+  return svn_repos_link_path3(baton, path, link_path,
+                              rev, svn_depth_infinity, start_empty,
+                              lock_token, pool);
 }
 
 svn_error_t *
@@ -973,15 +1029,16 @@ svn_repos_link_path(void *baton, const char *path, const char *link_path,
                     svn_revnum_t rev, svn_boolean_t start_empty,
                     apr_pool_t *pool)
 {
-  return svn_repos_link_path2(baton, path, link_path, rev, start_empty,
+  return svn_repos_link_path3(baton, path, link_path, rev,
+                              svn_depth_infinity, start_empty,
                               NULL, pool);
 }
 
 svn_error_t *
 svn_repos_delete_path(void *baton, const char *path, apr_pool_t *pool)
 {
-  return write_path_info(baton, path, NULL, SVN_INVALID_REVNUM, FALSE, NULL,
-                         pool);
+  return write_path_info(baton, path, NULL, SVN_INVALID_REVNUM,
+                         svn_depth_unknown, FALSE, NULL, pool);
 }
 
 svn_error_t *

@@ -2414,9 +2414,9 @@ svn_error_t *svn_wc_process_committed(const char *path,
 /**
  * Do a depth-first crawl in a working copy, beginning at @a path.
  *
- * Communicate the `state' of the working copy's revisions to
- * @a reporter/@a report_baton.  Obviously, if @a path is a file instead 
- * of a directory, this depth-first crawl will be a short one.
+ * Communicate the `state' of the working copy's revisions and depths
+ * to @a reporter/@a report_baton.  Obviously, if @a path is a file
+ * instead of a directory, this depth-first crawl will be a short one.
  *
  * No locks are or logs are created, nor are any animals harmed in the
  * process.  No cleanup is necessary.  @a adm_access must be an access 
@@ -2439,7 +2439,27 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * state in it.  (Caller should obtain @a traversal_info from
  * svn_wc_init_traversal_info().)
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_crawl_revisions3(const char *path,
+                        svn_wc_adm_access_t *adm_access,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_boolean_t recurse,
+                        svn_boolean_t use_commit_times,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        svn_wc_traversal_info_t *traversal_info,
+                        apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_crawl_revisions3, but taking svn_ra_reporter2_t
+ * instead of svn_ra_reporter3_t, and therefore only able to report
+ * svn_depth_infinity for depths.
+ *
+ * @deprecated Provided for compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_wc_crawl_revisions2(const char *path,

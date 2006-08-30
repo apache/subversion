@@ -2905,6 +2905,7 @@ static int end_element(void *userdata, int state,
 static svn_error_t * reporter_set_path(void *report_baton,
                                        const char *path,
                                        svn_revnum_t revision,
+                                       svn_depth_t depth,
                                        svn_boolean_t start_empty,
                                        const char *lock_token,
                                        apr_pool_t *pool)
@@ -2918,6 +2919,7 @@ static svn_error_t * reporter_set_path(void *report_baton,
     tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
 
   svn_xml_escape_cdata_cstring(&qpath, path, pool);
+  /* ### TODO: send depth here */
   if (start_empty)
     entry = apr_psprintf(pool,
                          "<S:entry rev=\"%ld\" %s"
@@ -2937,6 +2939,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
                                         const char *path,
                                         const char *url,
                                         svn_revnum_t revision,
+                                        svn_depth_t depth,
                                         svn_boolean_t start_empty,
                                         const char *lock_token,
                                         apr_pool_t *pool)
@@ -2961,6 +2964,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
   
   svn_xml_escape_cdata_cstring(&qpath, path, pool);
   svn_xml_escape_attr_cstring(&qlinkpath, bc_relative.data, pool);
+  /* ### TODO: send depth here */
   if (start_empty)
     entry = apr_psprintf(pool,
                          "<S:entry rev=\"%ld\" %s"
@@ -3081,7 +3085,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   return SVN_NO_ERROR;
 }
 
-static const svn_ra_reporter2_t ra_dav_reporter = {
+static const svn_ra_reporter3_t ra_dav_reporter = {
   reporter_set_path,
   reporter_delete_path,
   reporter_link_path,
@@ -3126,7 +3130,7 @@ static const svn_ra_reporter2_t ra_dav_reporter = {
    Oh, and do all this junk in POOL.  */
 static svn_error_t *
 make_reporter(svn_ra_session_t *session,
-              const svn_ra_reporter2_t **reporter,
+              const svn_ra_reporter3_t **reporter,
               void **report_baton,
               svn_revnum_t revision,
               const char *target,
@@ -3276,7 +3280,7 @@ make_reporter(svn_ra_session_t *session,
 
 
 svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
-                                    const svn_ra_reporter2_t **reporter,
+                                    const svn_ra_reporter3_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
@@ -3304,7 +3308,7 @@ svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
 
 
 svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
-                                    const svn_ra_reporter2_t **reporter,
+                                    const svn_ra_reporter3_t **reporter,
                                     void **report_baton,
                                     const char *status_target,
                                     svn_revnum_t revision,
@@ -3332,7 +3336,7 @@ svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
 
 
 svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
-                                    const svn_ra_reporter2_t **reporter,
+                                    const svn_ra_reporter3_t **reporter,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
@@ -3362,7 +3366,7 @@ svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
 
 
 svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
-                                  const svn_ra_reporter2_t **reporter,
+                                  const svn_ra_reporter3_t **reporter,
                                   void **report_baton,
                                   svn_revnum_t revision,
                                   const char *diff_target,

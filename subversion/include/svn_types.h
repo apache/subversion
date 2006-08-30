@@ -214,7 +214,7 @@ enum svn_recurse_kind
  */
 typedef enum
 {
-  svn_depth_unknown  = -2, /* Depth undetermined. */
+  svn_depth_unknown  = -2, /* Depth undetermined or ignored. */
   svn_depth_exclude  = -1, /* Exclude (remove, whatever) directory D. */
   svn_depth_zero     =  0, /* Just the named directory D, no entries. */
   svn_depth_one      =  1, /* D + immediate children (D and its entries) */

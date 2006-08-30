@@ -1662,7 +1662,7 @@ do_merge(const char *initial_URL1,
 {
   svn_revnum_t start_revnum, end_revnum;
   svn_ra_session_t *ra_session, *ra_session2;
-  const svn_ra_reporter2_t *reporter;
+  const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -1746,7 +1746,7 @@ do_merge(const char *initial_URL1,
                                       &diff_edit_baton,
                                       pool));
 
-  SVN_ERR(svn_ra_do_diff2(ra_session,
+  SVN_ERR(svn_ra_do_diff3(ra_session,
                           &reporter, &report_baton,
                           end_revnum,
                           "",
@@ -1756,7 +1756,10 @@ do_merge(const char *initial_URL1,
                           URL2,
                           diff_editor, diff_edit_baton, pool));
 
-  SVN_ERR(reporter->set_path(report_baton, "", start_revnum, FALSE, NULL,
+  SVN_ERR(reporter->set_path(report_baton, "",
+                             /* ### TODO: dynamic depth here */
+                             svn_depth_infinity,
+                             start_revnum, FALSE, NULL,
                              pool));
   
   SVN_ERR(reporter->finish_report(report_baton, pool));
@@ -2034,7 +2037,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
 {
   svn_ra_session_t *extra_ra_session;
 
-  const svn_ra_reporter2_t *reporter;
+  const svn_ra_reporter3_t *reporter;
   void *report_baton;
 
   const svn_delta_editor_t *diff_editor;
@@ -2071,13 +2074,16 @@ diff_repos_repos(const struct diff_parameters *diff_param,
            &diff_editor, &diff_edit_baton, pool));
   
   /* We want to switch our txn into URL2 */
-  SVN_ERR(svn_ra_do_diff2
+  SVN_ERR(svn_ra_do_diff3
           (drr.ra_session, &reporter, &report_baton, drr.rev2, drr.target1,
            diff_param->recurse, diff_param->ignore_ancestry, TRUE,
            drr.url2, diff_editor, diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
-  SVN_ERR(reporter->set_path(report_baton, "", drr.rev1, FALSE, NULL,
+  SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
+                             /* ### TODO: dynamic depth here */
+                             svn_depth_infinity,
+                             FALSE, NULL,
                              pool));
   SVN_ERR(reporter->finish_report(report_baton, pool));
 
@@ -2115,7 +2121,7 @@ diff_repos_wc(const apr_array_header_t *options,
   const svn_wc_entry_t *entry;
   svn_revnum_t rev;
   svn_ra_session_t *ra_session;
-  const svn_ra_reporter2_t *reporter;
+  const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
@@ -2199,7 +2205,7 @@ diff_repos_wc(const apr_array_header_t *options,
   else
     callback_baton->revnum2 = rev;
 
-  SVN_ERR(svn_ra_do_diff2(ra_session,
+  SVN_ERR(svn_ra_do_diff3(ra_session,
                           &reporter, &report_baton,
                           rev,
                           target ? svn_path_uri_decode(target, pool) : NULL,
@@ -2211,7 +2217,7 @@ diff_repos_wc(const apr_array_header_t *options,
 
   /* Create a txn mirror of path2;  the diff editor will print
      diffs in reverse.  :-)  */
-  SVN_ERR(svn_wc_crawl_revisions2(path2, dir_access,
+  SVN_ERR(svn_wc_crawl_revisions3(path2, dir_access,
                                   reporter, report_baton,
                                   FALSE, recurse, FALSE,
                                   NULL, NULL, /* notification is N/A */
@@ -2289,7 +2295,7 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
 {
   svn_ra_session_t *extra_ra_session;
 
-  const svn_ra_reporter2_t *reporter;
+  const svn_ra_reporter3_t *reporter;
   void *report_baton;
 
   const svn_delta_editor_t *diff_editor;
@@ -2314,15 +2320,17 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
            ctx->cancel_baton, &diff_editor, &diff_edit_baton, pool));
   
   /* We want to switch our txn into URL2 */
-  SVN_ERR(svn_ra_do_diff2
+  SVN_ERR(svn_ra_do_diff3
           (drr.ra_session, &reporter, &report_baton, drr.rev2, drr.target1,
            diff_param->recurse, diff_param->ignore_ancestry,
            FALSE /* do not create text delta */, drr.url2, diff_editor,
            diff_edit_baton, pool));
 
   /* Drive the reporter; do the diff. */
-  SVN_ERR(reporter->set_path(report_baton, "", drr.rev1, FALSE, NULL,
-                             pool));
+  SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
+                             /* ### TODO: dynamic depth here */
+                             svn_depth_infinity,
+                             FALSE, NULL, pool));
   SVN_ERR(reporter->finish_report(report_baton, pool));
 
   return SVN_NO_ERROR;

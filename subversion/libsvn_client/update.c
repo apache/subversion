@@ -51,7 +51,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
-  const svn_ra_reporter2_t *reporter;
+  const svn_ra_reporter3_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *anchor, *target;
@@ -138,17 +138,17 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision.  */
-  SVN_ERR(svn_ra_do_update(ra_session,
-                           &reporter, &report_baton,
-                           revnum,
-                           target,
-                           recurse,
-                           update_editor, update_edit_baton, pool));
+  SVN_ERR(svn_ra_do_update2(ra_session,
+                            &reporter, &report_baton,
+                            revnum,
+                            target,
+                            recurse,
+                            update_editor, update_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta. */
-  err = svn_wc_crawl_revisions2(path, dir_access, reporter, report_baton,
+  err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
                                 TRUE, recurse, use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 traversal_info, pool);

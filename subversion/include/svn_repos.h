@@ -415,7 +415,8 @@ svn_repos_begin_report(void **report_baton,
 
 /**
  * Given a @a report_baton constructed by svn_repos_begin_report(),
- * record the presence of @a path at @a revision in the current tree.
+ * record the presence of @a path, at @a revision with depth @a depth,
+ * in the current tree.
  *
  * @a path is relative to the anchor/target used in the creation of the
  * @a report_baton.
@@ -437,7 +438,21 @@ svn_repos_begin_report(void **report_baton,
  *
  * All temporary allocations are done in @a pool.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_set_path3(void *report_baton,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 svn_depth_t depth,
+                                 svn_boolean_t start_empty,
+                                 const char *lock_token,
+                                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_set_path3(), but with @a depth set to
+ * @c svn_depth_infinity.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_repos_set_path2(void *report_baton,
                                  const char *path,
@@ -447,7 +462,8 @@ svn_error_t *svn_repos_set_path2(void *report_baton,
                                  apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_set_path2(), but with @a lock_token set to @c NULL.
+ * Similar to svn_repos_set_path3(), but with @a lock_token set to
+ * @c NULL and @a depth set to @c svn_depth_infinity.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -460,7 +476,7 @@ svn_error_t *svn_repos_set_path(void *report_baton,
 /**
  * Given a @a report_baton constructed by svn_repos_begin_report(), 
  * record the presence of @a path in the current tree, containing the contents
- * of @a link_path at @a revision.
+ * of @a link_path at @a revision with depth @a depth.
  *
  * Note that while @a path is relative to the anchor/target used in the
  * creation of the @a report_baton, @a link_path is an absolute filesystem
@@ -476,7 +492,22 @@ svn_error_t *svn_repos_set_path(void *report_baton,
  *
  * All temporary allocations are done in @a pool.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_link_path3(void *report_baton,
+                                  const char *path,
+                                  const char *link_path,
+                                  svn_revnum_t revision,
+                                  svn_depth_t depth,
+                                  svn_boolean_t start_empty,
+                                  const char *lock_token,
+                                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_link_path3(), but with @a depth set to
+ * @c svn_depth_infinity.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_repos_link_path2(void *report_baton,
                                   const char *path,
@@ -487,7 +518,8 @@ svn_error_t *svn_repos_link_path2(void *report_baton,
                                   apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_link_path2(), but with @a lock_token set to @c NULL.
+ * Similar to svn_repos_link_path2(), but with @a lock_token set to
+ * @c NULL and @a depth set to @c svn_depth_infinity.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
