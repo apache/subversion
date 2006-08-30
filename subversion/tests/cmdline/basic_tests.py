@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, stat, string, sys, re, os.path
+import shutil, stat, sys, re, os.path
 
 # Our testing module
 import svntest
@@ -1222,7 +1222,7 @@ def basic_import(sbox):
     '--password', svntest.main.wc_passwd,
     '-m', 'Log message for new import', new_path, url)
 
-  lastline = string.strip(output.pop())
+  lastline = output.pop().strip()
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")
   match = cm.search (lastline)
   if not match:
@@ -1513,7 +1513,7 @@ def uri_syntax(sbox):
 
   # Revision 6638 made 'svn co http://host' seg fault, this tests the fix.
   url = svntest.main.current_repo_url
-  scheme = url[:string.find(url, ":")]
+  scheme = url[:url.find(":")]
   url = scheme + "://some_nonexistent_host_with_no_trailing_slash"
   svntest.actions.run_and_verify_svn("No error where one expected",
                                      None, SVNAnyOutput,
@@ -1534,7 +1534,7 @@ def basic_checkout_file(sbox):
   output, errput = svntest.main.run_svn(1, 'co', iota_url)
 
   for line in errput:
-    if string.find(line, "refers to a file") != -1:
+    if line.find("refers to a file") != -1:
       break
   else:
     raise svntest.Failure
