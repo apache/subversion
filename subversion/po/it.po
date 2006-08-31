@@ -86,7 +86,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-23 13:49-0500\n"
-"PO-Revision-Date: 2006-04-20 09:08+0200\n"
+"PO-Revision-Date: 2006-08-31 09:25+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3811,10 +3811,9 @@ msgid "Repository creation failed"
 msgstr "La creazione del repository è fallito"
 
 #: libsvn_repos/repos.c:1763
-#, fuzzy, c-format
+#, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
-msgstr ""
-"Il formato atteso per il filesystem era '%d'; il formato trovato è '%d'"
+msgstr "Il formato atteso per il repository era '%d' o '%d'; ma quello trovato è '%d'"
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
@@ -7606,6 +7605,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"usa un formato compatibile con di Subversion\n"
+"precedenti alla 1.4"
 
 #: svnadmin/main.c:299
 msgid ""
@@ -8938,45 +8939,3 @@ msgstr "esportato%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' non sotto controllo di versione e non esportato\n"
-
-#~ msgid "Missing path attr in open-directory element"
-#~ msgstr "Atttributo di percorso mancante nell'elemento'open-directory"
-
-#~ msgid "Expected format '%d' of repository; found format '%d'"
-#~ msgstr "Il formato atteso per il repository era '%d'; quello trovato è '%d'"
-
-#~ msgid "Can't change executability of file '%s'"
-#~ msgstr "Non riesco a cambiare l'eseguibilità del file '%s'"
-
-#~ msgid "print client version info"
-#~ msgstr "restituisce la versione del client"
-
-#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
-#~ msgstr "passa ARG a --diff-cmd come opzioni (il default è: '-u')"
-
-#~ msgid ""
-#~ "disallow use of SVNDIFF1 in on-disk storage,\n"
-#~ "                             for backwards compatibility"
-#~ msgstr ""
-#~ "disabilita l'uso di SVNDIFF1 nell'archiviazione su disco,\n"
-#~ "                             per preservare la compatibilità all'indietro"
-
-#~ msgid ""
-#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-#~ "Initialize a destination repository.\n"
-#~ msgstr ""
-#~ "utilizzo: svnsync inizializza URL_DEST --source-url URL_SRG\n"
-#~ "Inizializza una repository di destinazione.\n"
-
-#~ msgid "The url to synchronize from"
-#~ msgstr "L'URL da cui sincronizzare"
-
-#~ msgid "Committing rev %ld\n"
-#~ msgstr "Commit della revisione %ld.\n"
-
-#~ msgid ""
-#~ "Currently copying rev %ld in source is less than latest rev in "
-#~ "destination (%ld)"
-#~ msgstr ""
-#~ "La revisione %ld in copia dalla sorgente è inferiore all'ultima revisione "
-#~ "della destinazione (%ld)"
