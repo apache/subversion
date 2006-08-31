@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.4\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-23 13:49-0500\n"
-"PO-Revision-Date: 2006-06-19 00:26-0300\n"
+"POT-Creation-Date: 2006-08-31 16:16-0300\n"
+"PO-Revision-Date: 2006-08-31 16:14-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -948,11 +948,11 @@ msgstr "Error en la limpieza post-commit (detalles a continuación):"
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "'%s' es un URL, pero los URLS no pueden ser objetivos de commit"
 
-#: libsvn_client/commit.c:1404
+#: libsvn_client/commit.c:1407
 msgid "Are all the targets part of the same working copy?"
 msgstr "¿Son todos los objetivos parte de la misma copia de trabajo?"
 
-#: libsvn_client/commit.c:1419
+#: libsvn_client/commit.c:1422
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr ""
 "No se puede hacer commit no recursivo de una eliminación de un directorio"
@@ -3259,7 +3259,7 @@ msgstr "Parte del delta de texto no es una cadena"
 #: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
 #, c-format
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr ""
+msgstr "El comando 'finish-replay' es inválido fuera de un 'replay'"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -5752,6 +5752,24 @@ msgid ""
 "                                --ignore-eol-style:\n"
 "                                   Ignore changes in EOL style"
 msgstr ""
+"Por omisión: '-u'. Cuando Subversion usa un\n"
+"                             programa diff externo, simplemente PAR se le "
+"pasa\n"
+"                             a ese programa. Pero cuando Subversion usa su\n"
+"                             implementación interna, o cuando se muestra el\n"
+"                             resultado de 'blame', PAR debe ser uno de los\n"
+"                             siguientes:\n"
+"                                -u (--unified):\n"
+"                                   Mostrar 3 líneas de contexto unificado.\n"
+"                                -b (--ignore-space-change):\n"
+"                                   Ignorar cambios en la cantidad de "
+"espacio\n"
+"                                   en blanco.\n"
+"                                -w (--ignore-all-space):\n"
+"                                   Ignorar todo espacio en blanco.\n"
+"                                --ignore-eol-style:\n"
+"                                   Ignorar cambios en estilos de final\n"
+"                                   de línea."
 
 #: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
@@ -7499,6 +7517,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"usar formato compatible con versiones de Subversion\n"
+"                             anteriores a 1.4"
 
 #: svnadmin/main.c:299
 msgid ""
@@ -8575,6 +8595,19 @@ msgid ""
 "In other words, the destination repository should be a read-only\n"
 "mirror of the source repository.\n"
 msgstr ""
+"uso: svnsync initialize URL_DESTINO URL_ORIGEN\n"
+"\n"
+"Inicializa un repositorio destino para sincronización desde\n"
+"otro repositorio.\n"
+"\n"
+"El URL de destino debe apuntar a la raíz de un repositorio en el que\n"
+"no se haya hecho commit de ninguna revisión.  El repositorio destinodebe "
+"permitir el cambio de propiedades de revisión.\n"
+"\n"
+"No se debe hacer commit ni hacer cambios en propedades revisión en el\n"
+"repositorio destino que no sea mediante el uso de 'svnsync'.\n"
+"En otras palabras, el repositorio destino debe ser un espejo de\n"
+"sólo-lectura del repositorio origen.\n"
 
 #: svnsync/main.c:71
 msgid ""
@@ -8670,6 +8703,9 @@ msgid ""
 "destination HEAD (%ld) are inconsistent; have you committed to the "
 "destination without using svnsync?"
 msgstr ""
+"La revisión que se está copiando (%ld), la última incorporada (%ld), y la "
+"HEAD del destino (%ld) son inconsistentes; ¿hizo usted commit en el "
+"repositorio destino sin usar svnsync?"
 
 #: svnsync/main.c:992
 #, c-format
@@ -8677,6 +8713,8 @@ msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
 "committed to the destination without using svnsync?"
 msgstr ""
+"La revisión HEAD del destino (%ld) no es la última incorporada (%ld); ¿hizo "
+"usted commit en el repositorio destino sin usar svnsync?"
 
 #: svnsync/main.c:1069
 #, c-format
