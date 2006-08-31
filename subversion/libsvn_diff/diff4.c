@@ -102,8 +102,8 @@
 */
 
 
-static APR_INLINE void
-svn_diff__adjust(svn_diff_t *diff, svn_diff_t *adjust)
+static void
+adjust_diff(svn_diff_t *diff, svn_diff_t *adjust)
 {
   svn_diff_t *hunk;
   apr_off_t range_start;
@@ -240,7 +240,7 @@ svn_diff_diff4(svn_diff_t **diff,
    */
   lcs_adjust = svn_diff__lcs(position_list[3], position_list[2], subpool3);
   diff_adjust = svn_diff__diff(lcs_adjust, 1, 1, FALSE, subpool3);
-  svn_diff__adjust(diff_ol, diff_adjust);
+  adjust_diff(diff_ol, diff_adjust);
 
   svn_pool_clear(subpool3);
 
@@ -249,7 +249,7 @@ svn_diff_diff4(svn_diff_t **diff,
    */
   lcs_adjust = svn_diff__lcs(position_list[1], position_list[3], subpool3);
   diff_adjust = svn_diff__diff(lcs_adjust, 1, 1, FALSE, subpool3);
-  svn_diff__adjust(diff_ol, diff_adjust);
+  adjust_diff(diff_ol, diff_adjust);
 
   /* Get rid of the position lists for original and ancestor, and delete
    * our scratchpool.
