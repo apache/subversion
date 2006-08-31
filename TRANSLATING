@@ -13,6 +13,7 @@ $LastChangedDate$
 * Software version requirements
 * Starting a new translation
 * Verifying your po file
+* Submitting your po file
 * Updating existing po files
 * Maintenance on branches
 * Requirements for po and mo files
@@ -125,6 +126,22 @@ steps (on Makefile based systems):
 The autogen.sh step is important, since it adds new po files as
 dependencies of the 'locale' build target.  Note however that steps 1
 and 2 are only needed once after you have added a new translation.
+
+
+
+Submitting your po file
+=======================
+
+Please don't mail large po files to the mailing lists.  There are many
+subscribers on dev@subversion.tigris.org who are on slow links and do
+not want to receive a large file by email.  Instead, place the po file
+somewhere on the Internet for download, and just post the URL.  If you
+do not have a site available, please ask on dev@ and someone will help
+you find a location.
+
+Of course, if you have commit access to the Subversion repository, you
+can just commit the po file there, assuming all other requirements
+have been satisfied.
 
 
 
