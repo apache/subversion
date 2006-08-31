@@ -588,19 +588,16 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
 /* ### TODO: Merge implementation with
    ### libsvn_subr/sorts.c:svn_prop_diffs().  Factor out a generic
    ### hash diffing function for addition to APR's apr_hash.h API. */
-svn_error_t *
-svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
-                   apr_hash_t *from, apr_hash_t *to, apr_pool_t *pool)
+static svn_error_t *
+walk_mergeinfo_hash_for_diff(apr_hash_t *from, apr_hash_t *to, 
+                             apr_hash_t *deleted, apr_hash_t *added,
+                             apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-
   const void *key;
   void *val;
   const char *path;
   apr_array_header_t *from_rangelist, *to_rangelist;
-
-  *deleted = apr_hash_make(pool);
-  *added = apr_hash_make(pool);
 
   /* Handle path deletions and differences. */
   for (hi = apr_hash_first(pool, from); hi; hi = apr_hash_next(hi))
@@ -619,19 +616,22 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
           apr_array_header_t *deleted_rangelist, *added_rangelist;
           svn_rangelist_diff(&deleted_rangelist, &added_rangelist,
                              from_rangelist, to_rangelist, pool);
-          if (deleted_rangelist->nelts > 0)
-            apr_hash_set(*deleted, apr_pstrdup(pool, path),
+          if (deleted && deleted_rangelist->nelts > 0)
+            apr_hash_set(deleted, apr_pstrdup(pool, path),
                          APR_HASH_KEY_STRING, deleted_rangelist);
-          if (added_rangelist->nelts > 0)
-            apr_hash_set(*added, apr_pstrdup(pool, path),
+          if (added && added_rangelist->nelts > 0)
+            apr_hash_set(added, apr_pstrdup(pool, path),
                          APR_HASH_KEY_STRING, added_rangelist);
         }
-      else
-        apr_hash_set(*deleted, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
+      else if (deleted)
+        apr_hash_set(deleted, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
                      svn_rangelist_dup(from_rangelist, pool));
     }
 
   /* Handle path additions. */
+  if (!added)
+    return SVN_NO_ERROR;
+
   for (hi = apr_hash_first(pool, to); hi; hi = apr_hash_next(hi))
     {
       apr_hash_this(hi, &key, NULL, &val);
@@ -641,10 +641,20 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
       /* If the path is not present in the "from" hash, the entire
          "to" rangelist is an addition. */
       if (apr_hash_get(from, path, APR_HASH_KEY_STRING) == NULL)
-        apr_hash_set(*added, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
+        apr_hash_set(added, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
                      svn_rangelist_dup(to_rangelist, pool));
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
+                   apr_hash_t *from, apr_hash_t *to, apr_pool_t *pool)
+{
+  *deleted = apr_hash_make(pool);
+  *added = apr_hash_make(pool);
+  SVN_ERR(walk_mergeinfo_hash_for_diff(from, to, *deleted, *added, pool));
   return SVN_NO_ERROR;
 }
 
@@ -717,44 +727,13 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
   return SVN_NO_ERROR;
 }
 
-/* ### This function's internal structure largely overlaps with
-   ### svn_mergeinfo_diff().  Can they share code? */
 svn_error_t *
 svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
                      apr_hash_t *whiteboard, apr_pool_t *pool)
 {
-  apr_hash_index_t *hi;
-
-  const void *key;
-  void *val;
-  const char *path;
-  apr_array_header_t *whiteboard_rangelist, *eraser_rangelist;
-
   *output = apr_hash_make(pool);
-
-  /* Handle path deletions and differences. */
-  for (hi = apr_hash_first(pool, whiteboard); hi; hi = apr_hash_next(hi))
-    {
-      apr_array_header_t *output_rangelist = NULL;
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      whiteboard_rangelist = val;
-
-      /* If the path is not present at all in the "eraser" hash, put
-         the entire "whiteboard" rangelist in OUTPUT.  Paths which are
-         present in the "eraser" hash require closer scrutiny. */
-      eraser_rangelist = apr_hash_get(eraser, path, APR_HASH_KEY_STRING);
-      if (eraser_rangelist)
-        svn_rangelist_remove(&output_rangelist, eraser_rangelist,
-                             whiteboard_rangelist, pool);
-      else if (whiteboard_rangelist->nelts > 0)
-        output_rangelist = svn_rangelist_dup(whiteboard_rangelist, pool);
-
-      if (output_rangelist && output_rangelist->nelts > 0)
-        apr_hash_set(*output, apr_pstrdup(pool, path), APR_HASH_KEY_STRING,
-                     output_rangelist);
-    }
-
+  SVN_ERR(walk_mergeinfo_hash_for_diff(whiteboard, eraser, *output, NULL, 
+                                       pool));
   return SVN_NO_ERROR;
 }
 
