@@ -4022,20 +4022,19 @@ index_path_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev,
       if (from && revlist)
         {
           int i;
+          SQLITE_ERR(sqlite3_prepare(ftd->mtd,
+                                     "INSERT INTO mergeinfo (revision, mergedto, mergedfrom, mergedrevstart, mergedrevend) VALUES (?, ?, ?, ?, ?);",
+                                     -1, &stmt, NULL), ftd->mtd);
+          SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), ftd->mtd);
+          SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
+                     ftd->mtd);
+          SQLITE_ERR(sqlite3_bind_text(stmt, 3, from, -1, SQLITE_TRANSIENT),
+                     ftd->mtd);
           for (i = 0; i < revlist->nelts; i++)
             {
               svn_merge_range_t *range;
               
               range = APR_ARRAY_IDX(revlist, i, svn_merge_range_t *);
-              SQLITE_ERR(sqlite3_prepare(ftd->mtd,
-                                         "INSERT INTO mergeinfo (revision, mergedto, mergedfrom, mergedrevstart, mergedrevend) VALUES (?, ?, ?, ?, ?);",
-                                         -1, &stmt, NULL), ftd->mtd);
-              SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev),
-                         ftd->mtd);
-              SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
-                         ftd->mtd);
-              SQLITE_ERR(sqlite3_bind_text(stmt, 3, from, -1, SQLITE_TRANSIENT),
-                         ftd->mtd);
               SQLITE_ERR(sqlite3_bind_int64(stmt, 4, range->start),
                          ftd->mtd);
               SQLITE_ERR(sqlite3_bind_int64(stmt, 5, range->end),
@@ -4043,9 +4042,10 @@ index_path_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev,
               if (sqlite3_step(stmt) != SQLITE_DONE)
                 return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                                         sqlite3_errmsg(ftd->mtd));
-              
-              SQLITE_ERR(sqlite3_finalize(stmt), ftd->mtd);
+
+              SQLITE_ERR(sqlite3_reset(stmt), ftd->mtd);
             }
+          SQLITE_ERR(sqlite3_finalize(stmt), ftd->mtd);
         }      
     }
   SQLITE_ERR (sqlite3_prepare(ftd->mtd, 
