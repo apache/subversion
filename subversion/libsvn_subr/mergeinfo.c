@@ -127,6 +127,23 @@ parse_pathname(const char **input, const char *end,
   return SVN_NO_ERROR;
 }
 
+/*push to revlist and set lastrange, if could not combine mrange
+  with *lastrange or *lastrange is NULL.
+*/
+static APR_INLINE void
+combine_with_lastrange(svn_merge_range_t** lastrange, 
+                       svn_merge_range_t *mrange, svn_boolean_t dup_mrange, 
+                       apr_array_header_t *revlist, apr_pool_t *pool)
+{
+  svn_merge_range_t *pushed_mrange = mrange;
+  if (!(*lastrange) || !combine_ranges(lastrange, *lastrange, mrange))
+    {
+      if (dup_mrange)
+        pushed_mrange = svn_range_dup(mrange, pool);
+      APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = pushed_mrange;
+      *lastrange = pushed_mrange;
+    }
+}
 
 /* revisionlist -> (revisionelement)(COMMA revisionelement)*
    revisionrange -> REVISION "-" REVISION
@@ -167,21 +184,13 @@ parse_revlist(const char **input, const char *end,
       /* XXX: Watch empty revision list problem */
       if (*curr == '\n' || curr == end)
         {
-          if (!lastrange || !combine_ranges(&lastrange, lastrange, mrange))
-            {
-              APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
-              lastrange = mrange;
-            }
+          combine_with_lastrange(&lastrange, mrange, FALSE, revlist, pool);
           *input = curr;
           return SVN_NO_ERROR;
         }
       else if (*curr == ',')
         {
-          if (!lastrange || !combine_ranges(&lastrange, lastrange, mrange))
-            {
-              APR_ARRAY_PUSH(revlist, svn_merge_range_t *) = mrange;
-              lastrange = mrange;
-            }
+          combine_with_lastrange(&lastrange, mrange, FALSE, revlist, pool);
           curr++;
         }
       else
@@ -277,36 +286,18 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
       res = svn_sort_compare_ranges(&elt1, &elt2);
       if (res == 0)
         {
-          if (!lastrange || !combine_ranges(&lastrange, lastrange, elt1))
-            {
-              newrange = svn_range_dup(elt1, pool);
-              APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-              lastrange = newrange;
-            }
-
+          combine_with_lastrange(&lastrange, elt1, TRUE, *output, pool);
           i++;
           j++;
         }
       else if (res < 0)
         {
-          if (!lastrange || !combine_ranges(&lastrange, lastrange, elt1))
-            {
-              newrange = svn_range_dup(elt1, pool);
-              APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-              lastrange = newrange;
-            }
-
+          combine_with_lastrange(&lastrange, elt1, TRUE, *output, pool);
           i++;
         }
       else
         {
-          if (!lastrange || !combine_ranges(&lastrange, lastrange, elt2))
-            {
-              newrange = svn_range_dup(elt2, pool);
-              APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-              lastrange = newrange;
-            }
-
+          combine_with_lastrange(&lastrange, elt2, TRUE, *output, pool);
           j++;
         }
     }
@@ -318,26 +309,14 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
   for (; i < in1->nelts; i++)
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(in1, i, svn_merge_range_t *);
-
-      if (!lastrange || !combine_ranges(&lastrange, lastrange, elt))
-        {
-          newrange = svn_range_dup(elt, pool);
-          APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-          lastrange = newrange;
-        }
+      combine_with_lastrange(&lastrange, elt, TRUE, *output, pool);
     }
 
 
   for (; j < in2->nelts; j++)
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(in2, j, svn_merge_range_t *);
-
-      if (!lastrange || !combine_ranges(&lastrange, lastrange, elt))
-        {
-          newrange = svn_range_dup(elt, pool);
-          APR_ARRAY_PUSH(*output, svn_merge_range_t *) = newrange;
-          lastrange = newrange;
-        }
+      combine_with_lastrange(&lastrange, elt, TRUE, *output, pool);
     }
   return SVN_NO_ERROR;
 }
@@ -438,13 +417,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
       if (range_contains(elt2, elt1))
         {
           if (!do_remove)
-            {
-              if (!lastrange || !combine_ranges(&lastrange, lastrange, elt1))
-                {
-                  lastrange = svn_range_dup(elt1, pool);
-                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
-                }
-            }
+              combine_with_lastrange(&lastrange, elt1, TRUE, *output, pool);
           
           i++;
 
@@ -471,12 +444,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.end = elt1->end;
                 }
 
-              if (!lastrange || !combine_ranges(&lastrange, lastrange,
-                                                &tmp_range))
-                {
-                  lastrange = svn_range_dup(&tmp_range, pool);
-                  APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
-                }
+              combine_with_lastrange(&lastrange, &tmp_range, TRUE, *output, pool);
             }
 
           /* Set up the rest of the whiteboard range for further
@@ -491,12 +459,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
                   tmp_range.start = elt1->start;
                   tmp_range.end = elt2->end;
                   
-                  if (!lastrange || !combine_ranges(&lastrange, lastrange,
-                                                    &tmp_range))
-                    {
-                      lastrange = svn_range_dup(&tmp_range, pool);
-                      APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
-                    }
+                  combine_with_lastrange(&lastrange, &tmp_range, TRUE, *output, pool);
                 }
 
               wboardelt.start = elt2->end + 1;
@@ -540,11 +503,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
          the whiteboard element. */
       if (i == lasti && i < whiteboard->nelts)
         {
-          if (!lastrange || !combine_ranges(&lastrange, lastrange, &wboardelt))
-            {
-              lastrange = svn_range_dup(&wboardelt, pool);
-              APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
-            }
+          combine_with_lastrange(&lastrange, &wboardelt, TRUE, *output, pool);
           i++;
         }
 
@@ -554,11 +513,7 @@ rangelist_intersect_or_remove(apr_array_header_t **output,
           svn_merge_range_t *elt = APR_ARRAY_IDX(whiteboard, i,
                                                  svn_merge_range_t *);
 
-          if (!lastrange || !combine_ranges(&lastrange, lastrange, elt))
-            {
-              lastrange = svn_range_dup(elt, pool);
-              APR_ARRAY_PUSH(*output, svn_merge_range_t *) = lastrange;
-            }
+          combine_with_lastrange(&lastrange, elt, TRUE, *output, pool);
         }
     }
 
