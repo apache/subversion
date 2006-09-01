@@ -1387,7 +1387,7 @@ def nonexistent_repository(sbox):
 def basic_auth_cache(sbox):
   "basic auth caching"
 
-  sbox.build()
+  sbox.build(create_wc = False)
   wc_dir         = sbox.wc_dir
   
   repo_dir       = sbox.repo_dir
