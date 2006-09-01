@@ -269,7 +269,6 @@ svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
 {
   int i, j;
   svn_merge_range_t *lastrange = NULL;
-  svn_merge_range_t *newrange;
 
   *output = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
