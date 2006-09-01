@@ -930,7 +930,8 @@ svn_client_switch(svn_revnum_t *result_rev,
  * If @a no_ignore is @c FALSE, don't add files or directories that match
  * ignore patterns.
  *
- * Important:  this is a *scheduling* operation.  No changes will
+ * @par Important:
+ * This is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
  * can be removed with svn_client_revert().
  *
@@ -1310,7 +1311,8 @@ svn_client_status(svn_revnum_t *result_rev,
  *
  * Use @a pool for any temporary allocation.
  *
- * IMPORTANT: A special case for the revision range HEAD:1, which was present
+ * @par Important:
+ * A special case for the revision range HEAD:1, which was present
  * in svn_client_log(), has been removed from svn_client_log2().  Instead, it
  * is expected that callers will specify the range HEAD:0, to avoid a 
  * SVN_ERR_FS_NO_SUCH_REVISION error when invoked against an empty repository
@@ -2566,7 +2568,7 @@ svn_client_cat(svn_stream_t *out,
  * more than one changelist.)  If @a changelist is NULL, then
  * deassociate any existing changelist from @a path.
  *
- * Note: this metadata is purely a client-side "bookkeeping"
+ * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
  *
  * @since New in 1.5.
