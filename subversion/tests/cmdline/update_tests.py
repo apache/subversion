@@ -1285,7 +1285,7 @@ def checkout_empty_dir(sbox):
   "check out an empty dir"
   # See issue #1472 -- checked out empty dir should not be marked as
   # incomplete ("!" in status).
-  sbox.build()
+  sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   
   C_url = svntest.main.current_repo_url + '/A/C'
