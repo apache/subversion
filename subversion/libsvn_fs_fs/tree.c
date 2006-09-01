@@ -1421,13 +1421,10 @@ fs_change_node_prop(svn_fs_root_t *root,
   parent_path_t *parent_path;
   apr_hash_t *proplist;
   const char *txn_id;
-  fs_fs_data_t *ffd;
   
   if (! root->is_txn_root)
     return not_txn(root);
   txn_id = root->txn;
-
-  ffd = root->fs->fsap_data;
 
   SVN_ERR(open_path(&parent_path, root, path, 0, txn_id, pool));
 
