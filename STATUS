@@ -39,6 +39,7 @@ Candidate changes:
     Neon 0.26.x compatibility for Windows build.
     Votes:
       +1: djh
+      +0: dlr (concept, see concerns mailed to dev list)
 
   * r21316 (depends on r21289 above)
     JavaHL crash when using pre-1.4 native libraries.
