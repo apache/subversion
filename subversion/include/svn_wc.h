@@ -3579,7 +3579,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * overwrite any existing value of the attribute.  If @a changelist is
  * NULL, then remove any 'changelist' attribute in @a path's entry.
  *
- * Note: this metadata is purely a client-side "bookkeeping"
+ * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
  *
  * @since New in 1.5.
