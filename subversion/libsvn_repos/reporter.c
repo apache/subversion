@@ -969,7 +969,7 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
   rrep = (SVN_IS_VALID_REVNUM(rev)) ?
     apr_psprintf(pool, "+%ld:", rev) : "-";
   drep = (depth == svn_depth_infinity) ? "-"
-    : ((depth == svn_depth_zero) ? "0:" : "1:");
+    : ((depth == svn_depth_zero) ? "+0:" : "+1:");
   ltrep = lock_token ? apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s",
                                     strlen(lock_token), lock_token) : "-";
   rep = apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s%s%s%s%c%s",
@@ -1037,8 +1037,10 @@ svn_repos_link_path(void *baton, const char *path, const char *link_path,
 svn_error_t *
 svn_repos_delete_path(void *baton, const char *path, apr_pool_t *pool)
 {
+  /* We pass svn_depth_infinity because deletion of a path always
+     deletes everything underneath it. */
   return write_path_info(baton, path, NULL, SVN_INVALID_REVNUM,
-                         svn_depth_unknown, FALSE, NULL, pool);
+                         svn_depth_infinity, FALSE, NULL, pool);
 }
 
 svn_error_t *
