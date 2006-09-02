@@ -32,6 +32,8 @@ Candidate changes:
       See above about automatic recovery of wedged databases.
     Votes:
       +1: brane
+      -1: djames (This list of revisions isn't complete. See
+                  http://svn.haxx.se/dev/archive-2006-07/0227.shtml)
 
  * r19915
    Require APR 0.9.7
