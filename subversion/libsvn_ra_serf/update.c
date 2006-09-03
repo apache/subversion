@@ -1821,6 +1821,7 @@ static svn_error_t *
 set_path(void *report_baton,
          const char *path,
          svn_revnum_t revision,
+         svn_depth_t depth,
          svn_boolean_t start_empty,
          const char *lock_token,
          apr_pool_t *pool)
@@ -1829,6 +1830,7 @@ set_path(void *report_baton,
   serf_bucket_t *tmp;
   svn_stringbuf_t *path_buf;
 
+  /* ### TODO: send depth here */
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
                                       sizeof("<S:entry rev=\"")-1,
                                       report->sess->bkt_alloc);
@@ -1925,6 +1927,7 @@ link_path(void *report_baton,
           const char *path,
           const char *url,
           svn_revnum_t revision,
+          svn_depth_t depth,
           svn_boolean_t start_empty,
           const char *lock_token,
           apr_pool_t *pool)
@@ -1934,6 +1937,7 @@ link_path(void *report_baton,
   const char *path_copy, *link_copy, *vcc_url;
   apr_uri_t uri;
 
+  /* ### TODO: send depth here */
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
                                       sizeof("<S:entry rev=\"")-1,
                                       report->sess->bkt_alloc);
@@ -2250,7 +2254,7 @@ abort_report(void *report_baton,
   abort();
 }
 
-static const svn_ra_reporter2_t ra_serf_reporter = {
+static const svn_ra_reporter3_t ra_serf_reporter = {
   set_path,
   delete_path,
   link_path,
@@ -2263,7 +2267,7 @@ static const svn_ra_reporter2_t ra_serf_reporter = {
 
 static svn_error_t *
 make_update_reporter(svn_ra_session_t *ra_session,
-                     const svn_ra_reporter2_t **reporter,
+                     const svn_ra_reporter3_t **reporter,
                      void **report_baton,
                      svn_revnum_t revision,
                      const char *src_path,
@@ -2381,7 +2385,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
 
 svn_error_t *
 svn_ra_serf__do_update(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        svn_revnum_t revision_to_update_to,
                        const char *update_target,
@@ -2401,7 +2405,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
 
 svn_error_t *
 svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
-                     const svn_ra_reporter2_t **reporter,
+                     const svn_ra_reporter3_t **reporter,
                      void **report_baton,
                      svn_revnum_t revision,
                      const char *diff_target,
@@ -2424,7 +2428,7 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
 
 svn_error_t *
 svn_ra_serf__do_status(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        const char *status_target,
                        svn_revnum_t revision,
@@ -2444,7 +2448,7 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
 
 svn_error_t *
 svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        svn_revnum_t revision_to_switch_to,
                        const char *switch_target,

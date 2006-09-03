@@ -1204,10 +1204,14 @@ dav_svn__update_report(const dav_resource *resource,
             path = dav_xml_get_cdata(child, subpool, 0);
             
             if (! linkpath)
-              serr = svn_repos_set_path2(rbaton, path, rev,
+              serr = svn_repos_set_path3(rbaton, path, rev,
+                                         /* ### TODO: dynamic depth here */
+                                         svn_depth_infinity,
                                          start_empty, locktoken, subpool);
             else
-              serr = svn_repos_link_path2(rbaton, path, linkpath, rev,
+              serr = svn_repos_link_path3(rbaton, path, linkpath, rev,
+                                          /* ### TODO: dynamic depth here */
+                                          svn_depth_infinity,
                                           start_empty, locktoken, subpool);
             if (serr != NULL)
               {

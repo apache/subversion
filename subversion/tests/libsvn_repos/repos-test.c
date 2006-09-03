@@ -1082,14 +1082,18 @@ rmlocks(const char **msg,
     SVN_ERR(svn_repos_begin_report(&report_baton, 1, "user1", repos, "/", "",
                                    NULL, FALSE, TRUE, FALSE, editor,
                                    edit_baton, NULL, NULL, subpool));
-    SVN_ERR(svn_repos_set_path2(report_baton, "", 1, FALSE, NULL,
-                                subpool));
-    SVN_ERR(svn_repos_set_path2(report_baton, "iota", 1, FALSE, l1->token,
-                                subpool));
-    SVN_ERR(svn_repos_set_path2(report_baton, "A/mu", 1, FALSE, l2->token,
-                                subpool));
-    SVN_ERR(svn_repos_set_path2(report_baton, "A/D/gamma", 1, FALSE,
-                                l3->token, subpool));
+    SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
+                                svn_depth_infinity,
+                                FALSE, NULL, subpool));
+    SVN_ERR(svn_repos_set_path3(report_baton, "iota", 1,
+                                svn_depth_infinity,
+                                FALSE, l1->token, subpool));
+    SVN_ERR(svn_repos_set_path3(report_baton, "A/mu", 1,
+                                svn_depth_infinity,
+                                FALSE, l2->token, subpool));
+    SVN_ERR(svn_repos_set_path3(report_baton, "A/D/gamma", 1,
+                                svn_depth_infinity,
+                                FALSE, l3->token, subpool));
     
     /* End the report. */
     SVN_ERR(svn_repos_finish_report(report_baton, pool));

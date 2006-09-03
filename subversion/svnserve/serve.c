@@ -472,8 +472,10 @@ static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                  &path, &rev, &start_empty, &lock_token));
   path = svn_path_canonicalize(path, pool);
   if (!b->err)
-    b->err = svn_repos_set_path2(b->report_baton, path, rev, start_empty,
-                                 lock_token, pool);
+    b->err = svn_repos_set_path3(b->report_baton, path, rev,
+                                 /* ### TODO: dynamic depth here */
+                                 svn_depth_infinity,
+                                 start_empty, lock_token, pool);
   return SVN_NO_ERROR;
 }
 
@@ -506,7 +508,9 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (!b->err)
     b->err = get_fs_path(b->repos_url, url, &fs_path, pool);
   if (!b->err)
-    b->err = svn_repos_link_path2(b->report_baton, path, fs_path, rev,
+    b->err = svn_repos_link_path3(b->report_baton, path, fs_path, rev,
+                                  /* ### TODO: dynamic depth here */
+                                  svn_depth_infinity,
                                   start_empty, lock_token, pool);
   return SVN_NO_ERROR;
 }

@@ -832,7 +832,7 @@ svn_client_export3(svn_revnum_t *result_rev,
         {
           void *edit_baton;
           const svn_delta_editor_t *export_editor;
-          const svn_ra_reporter2_t *reporter;
+          const svn_ra_reporter3_t *reporter;
           void *report_baton;
           svn_delta_editor_t *editor = svn_delta_default_editor(pool);
           svn_boolean_t use_sleep = FALSE;
@@ -856,14 +856,16 @@ svn_client_export3(svn_revnum_t *result_rev,
       
       
           /* Manufacture a basic 'report' to the update reporter. */
-          SVN_ERR(svn_ra_do_update(ra_session,
-                                   &reporter, &report_baton,
-                                   revnum,
-                                   "", /* no sub-target */
-                                   recurse,
-                                   export_editor, edit_baton, pool));
+          SVN_ERR(svn_ra_do_update2(ra_session,
+                                    &reporter, &report_baton,
+                                    revnum,
+                                    "", /* no sub-target */
+                                    recurse,
+                                    export_editor, edit_baton, pool));
 
           SVN_ERR(reporter->set_path(report_baton, "", revnum,
+                                     /* ### TODO: dynamic depth here */
+                                     svn_depth_infinity,
                                      TRUE, /* "help, my dir is empty!" */
                                      NULL, pool));
 
