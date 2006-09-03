@@ -178,8 +178,8 @@ void svn_path_split(const char *path,
 int svn_path_is_empty(const char *path);
 
 /** Return TRUE if @a path is considered a root path on the platform at 
- * hand, amongst which '/' on all platforms or 'X:/', '\\?\X:/', 
- * '\\.\..', '\\server\share' on Windows.
+ * hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/', 
+ * '\\\\.\\..', '\\\\server\\share' on Windows.
  */
 svn_boolean_t svn_path_is_root(const char *path, apr_size_t len, 
                                apr_pool_t *pool);

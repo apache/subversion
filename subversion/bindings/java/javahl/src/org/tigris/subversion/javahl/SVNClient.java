@@ -45,7 +45,9 @@ public class SVNClient implements SVNClientInterface
         // Ensure that Subversion's config file area and templates exist.
         try
         {
-            setConfigDirectory(null);
+            // passing empty string instead of null prevents earlier
+            // versions of library from crashing
+            setConfigDirectory("");
         }
         catch (ClientException suppressed)
         {

@@ -29,8 +29,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.4\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-23 13:50-0500\n"
-"PO-Revision-Date: 2006-08-21 23:01-0300\n"
+"POT-Creation-Date: 2006-08-31 15:52-0300\n"
+"PO-Revision-Date: 2006-08-31 16:14-0300\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Spanish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -839,15 +839,15 @@ msgstr "Algo está mal con el contenido del mensaje de log"
 msgid "A log message was given where none was necessary"
 msgstr "Se dio un mensaje de log cuando no era necesario"
 
-#: libsvn_client/add.c:377
-#, c-format
-msgid "Error during recursive add of '%s'"
-msgstr "Error durante la adición recursiva de '%s'"
-
-#: libsvn_client/add.c:388 libsvn_wc/copy.c:245
+#: libsvn_client/add.c:344 libsvn_wc/copy.c:188
 #, c-format
 msgid "Can't close directory '%s'"
 msgstr "No se puede cerrar el directorio '%s'"
+
+#: libsvn_client/add.c:352
+#, c-format
+msgid "Error during recursive add of '%s'"
+msgstr "Error durante la adición recursiva de '%s'"
 
 #: libsvn_client/blame.c:368 libsvn_client/blame.c:838
 #, c-format
@@ -970,11 +970,11 @@ msgstr "Error en la limpieza post-commit (detalles a continuación):"
 msgid "'%s' is a URL, but URLs cannot be commit targets"
 msgstr "'%s' es un URL, pero los URLS no pueden ser objetivos de commit"
 
-#: libsvn_client/commit.c:1407
+#: libsvn_client/commit.c:1408
 msgid "Are all the targets part of the same working copy?"
 msgstr "¿Son todos los objetivos parte de la misma copia de trabajo?"
 
-#: libsvn_client/commit.c:1422
+#: libsvn_client/commit.c:1423
 msgid "Cannot non-recursively commit a directory deletion"
 msgstr ""
 "No se puede hacer commit no recursivo de una eliminación de un directorio"
@@ -1017,11 +1017,11 @@ msgstr ""
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
 #: libsvn_wc/adm_crawler.c:770 libsvn_wc/adm_ops.c:1044
 #: libsvn_wc/adm_ops.c:2329 libsvn_wc/adm_ops.c:2355 libsvn_wc/adm_ops.c:2391
-#: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:300 libsvn_wc/copy.c:656
-#: libsvn_wc/copy.c:778 libsvn_wc/copy.c:785 libsvn_wc/diff.c:1793
+#: libsvn_wc/adm_ops.c:2433 libsvn_wc/copy.c:307 libsvn_wc/copy.c:663
+#: libsvn_wc/copy.c:785 libsvn_wc/copy.c:792 libsvn_wc/diff.c:1793
 #: libsvn_wc/entries.c:2256 libsvn_wc/entries.c:2813 libsvn_wc/props.c:479
 #: libsvn_wc/props.c:1088 libsvn_wc/props.c:1506 libsvn_wc/questions.c:186
-#: libsvn_wc/questions.c:295 libsvn_wc/status.c:726 libsvn_wc/translate.c:199
+#: libsvn_wc/questions.c:295 libsvn_wc/status.c:729 libsvn_wc/translate.c:199
 #: libsvn_wc/update_editor.c:2167 libsvn_wc/update_editor.c:3006
 #, c-format
 msgid "'%s' is not under version control"
@@ -2651,7 +2651,7 @@ msgid "'get-locations' REPORT not implemented"
 msgstr "el REPORT 'get-locations' no está implementado"
 
 #: libsvn_ra_dav/fetch.c:1643 libsvn_ra_dav/session.c:1188
-#: libsvn_ra_dav/session.c:1474
+#: libsvn_ra_dav/session.c:1478
 msgid "Incomplete lock data returned"
 msgstr "Se devolvieron datos de bloqueo incompletos"
 
@@ -2907,11 +2907,11 @@ msgstr "'%s' no está bloqueado en el repositorio"
 msgid "Unlock request failed"
 msgstr "El pedido de desbloquear falló"
 
-#: libsvn_ra_dav/session.c:1560
+#: libsvn_ra_dav/session.c:1564
 msgid "Failed to fetch lock information"
 msgstr "El pedido de información de bloqueos falló"
 
-#: libsvn_ra_dav/session.c:1633
+#: libsvn_ra_dav/session.c:1637
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "Versión de cargador RA (%d) no soportada para ra_dav"
@@ -3254,7 +3254,7 @@ msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versión de cargador RA (%d) no soportada para ra_svn"
 
 #: libsvn_ra_svn/cram.c:194 libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/sasl_auth.c:311 libsvn_ra_svn/sasl_auth.c:366
+#: libsvn_ra_svn/sasl_auth.c:338 libsvn_ra_svn/sasl_auth.c:393
 #: libsvn_ra_svn/simple_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "Respuesta del servidor inesperada ante autenticación"
@@ -3270,7 +3270,7 @@ msgstr "Parte del delta de texto no es una cadena"
 #: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
 #, c-format
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr ""
+msgstr "El comando 'finish-replay' es inválido fuera de un 'replay'"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -3332,17 +3332,17 @@ msgstr "Lista de errores malformada"
 msgid "Unknown status '%s' in command response"
 msgstr "Estatus desconocido '%s' en la respuesta del comando"
 
-#: libsvn_ra_svn/sasl_auth.c:155
+#: libsvn_ra_svn/sasl_auth.c:179
 msgid "Could not initialize the SASL library"
 msgstr "No se pudo incializar la biblioteca SASL"
 
-#: libsvn_ra_svn/sasl_auth.c:224 libsvn_ra_svn/simple_auth.c:58
+#: libsvn_ra_svn/sasl_auth.c:251 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "Error de autentificación del servidor: %s"
 
-#: libsvn_ra_svn/sasl_auth.c:241
+#: libsvn_ra_svn/sasl_auth.c:268
 msgid "Unhandled SASL interaction"
 msgstr "Interacción SASL no manejada"
 
@@ -4184,7 +4184,7 @@ msgstr "No se pudo mover '%s' a '%s'"
 msgid "Can't create directory '%s'"
 msgstr "No se puede crear el directorio '%s'"
 
-#: libsvn_subr/io.c:2779 libsvn_wc/copy.c:512
+#: libsvn_subr/io.c:2779 libsvn_wc/copy.c:519
 #, c-format
 msgid "Can't hide directory '%s'"
 msgstr "No se pudo ocultar el directorio '%s'"
@@ -4314,22 +4314,22 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "Tipee '%s help' para ver el modo de uso.\n"
 
-#: libsvn_subr/path.c:1054
+#: libsvn_subr/path.c:1105
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "No se pudo determinar la ruta absoluta de '%s'"
 
-#: libsvn_subr/path.c:1093
+#: libsvn_subr/path.c:1144
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "'%s' no es un nombre ni de archivo ni de directorio"
 
-#: libsvn_subr/path.c:1199
+#: libsvn_subr/path.c:1259
 #, c-format
 msgid "Can't determine the native path encoding"
 msgstr "No se pudo determinar la codificación nativa usada en las rutas"
 
-#: libsvn_subr/path.c:1253
+#: libsvn_subr/path.c:1313
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Carácter de control '0x%02x' inválido en la ruta '%s'"
@@ -4692,27 +4692,27 @@ msgstr "Tipo desconocido o inesperado para la ruta '%s'"
 msgid "File '%s' has local modifications"
 msgstr "El archivo '%s' está modificado localmente"
 
-#: libsvn_wc/copy.c:233
+#: libsvn_wc/copy.c:197
 #, c-format
 msgid "Error during recursive copy of '%s'"
 msgstr "Error durante la copia recursiva de '%s'"
 
-#: libsvn_wc/copy.c:355
+#: libsvn_wc/copy.c:362
 #, c-format
 msgid "'%s' already exists and is in the way"
 msgstr "'%s' ya existe y obstaculiza el camino"
 
-#: libsvn_wc/copy.c:367
+#: libsvn_wc/copy.c:374
 #, c-format
 msgid "There is already a versioned item '%s'"
 msgstr "Ya hay un ítem versionado '%s'"
 
-#: libsvn_wc/copy.c:377
+#: libsvn_wc/copy.c:384
 #, c-format
 msgid "Cannot copy or move '%s': it's not under version control"
 msgstr "No se puede copiar o mover '%s': no está bajo control de versiones"
 
-#: libsvn_wc/copy.c:386
+#: libsvn_wc/copy.c:393
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it's not in the repository yet; try committing "
@@ -4721,7 +4721,7 @@ msgstr ""
 "No se puede copiar o mover '%s': no está en el repositorio todavía; intente "
 "primero hacer commit"
 
-#: libsvn_wc/copy.c:665
+#: libsvn_wc/copy.c:672
 #, c-format
 msgid ""
 "Cannot copy or move '%s': it is not in the repository yet; try committing "
@@ -4730,13 +4730,13 @@ msgstr ""
 "No se puede copiar o mover '%s': no está en el repositorio todavía; intente "
 "primero hacer commit"
 
-#: libsvn_wc/copy.c:792
+#: libsvn_wc/copy.c:799
 #, c-format
 msgid "Cannot copy to '%s', as it is not from repository '%s'; it is from '%s'"
 msgstr ""
 "No se puede copiar a '%s' ya que no es del repositorio '%s'; es de '%s'"
 
-#: libsvn_wc/copy.c:799
+#: libsvn_wc/copy.c:806
 #, c-format
 msgid "Cannot copy to '%s' as it is scheduled for deletion"
 msgstr "No se puede copiar a '%s' ya que está agendado para ser borrado"
@@ -5832,6 +5832,22 @@ msgid ""
 "                                --ignore-eol-style:\n"
 "                                   Ignore changes in EOL style"
 msgstr ""
+"Por omisión: '-u'. Cuando Subversion usa un\n"
+"                             programa diff externo, simplemente PAR se le pasa\n"
+"                             a ese programa. Pero cuando Subversion usa su\n"
+"                             implementación interna, o cuando se muestra el\n"
+"                             resultado de 'blame', PAR debe ser uno de los\n"
+"                             siguientes:\n"
+"                                -u (--unified):\n"
+"                                   Mostrar 3 líneas de contexto unificado.\n"
+"                                -b (--ignore-space-change):\n"
+"                                   Ignorar cambios en la cantidad de espacio\n"
+"                                   en blanco.\n"
+"                                -w (--ignore-all-space):\n"
+"                                   Ignorar todo espacio en blanco.\n"
+"                                --ignore-eol-style:\n"
+"                                   Ignorar cambios en estilos de final\n"
+"                                   de línea."
 
 #: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
@@ -7692,6 +7708,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"usar formato compatible con versiones de Subversion\n"
+"                             anteriores a 1.4"
 
 #: svnadmin/main.c:299
 msgid ""
@@ -8154,10 +8172,11 @@ msgstr ""
 "uso: svndumpfilter help [SUBCOMANDO...]\n"
 
 #: svndumpfilter/main.c:888
+#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
-"Type 'svndumpfilter --version' to see the program version number.\n"
+"Type 'svndumpfilter --version' to see the program version.\n"
 "\n"
 "Available subcommands:\n"
 msgstr ""
@@ -8768,6 +8787,19 @@ msgid ""
 "In other words, the destination repository should be a read-only\n"
 "mirror of the source repository.\n"
 msgstr ""
+"uso: svnsync initialize URL_DESTINO URL_ORIGEN\n"
+"\n"
+"Inicializa un repositorio destino para sincronización desde\n"
+"otro repositorio.\n"
+"\n"
+"El URL de destino debe apuntar a la raíz de un repositorio en el que\n"
+"no se haya hecho commit de ninguna revisión.  El repositorio destino"
+"debe permitir el cambio de propiedades de revisión.\n"
+"\n"
+"No se debe hacer commit ni hacer cambios en propedades revisión en el\n"
+"repositorio destino que no sea mediante el uso de 'svnsync'.\n"
+"En otras palabras, el repositorio destino debe ser un espejo de\n"
+"sólo-lectura del repositorio origen.\n"
 
 #: svnsync/main.c:71
 msgid ""
@@ -8863,6 +8895,9 @@ msgid ""
 "destination HEAD (%ld) are inconsistent; have you committed to the "
 "destination without using svnsync?"
 msgstr ""
+"La revisión que se está copiando (%ld), la última incorporada (%ld), y "
+"la HEAD del destino (%ld) son inconsistentes; ¿hizo usted commit en "
+"el repositorio destino sin usar svnsync?"
 
 #: svnsync/main.c:992
 #, c-format
@@ -8870,6 +8905,8 @@ msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
 "committed to the destination without using svnsync?"
 msgstr ""
+"La revisión HEAD del destino (%ld) no es la última incorporada (%ld); "
+"¿hizo usted commit en el repositorio destino sin usar svnsync?"
 
 #: svnsync/main.c:1069
 #, c-format

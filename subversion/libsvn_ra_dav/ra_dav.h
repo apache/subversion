@@ -542,14 +542,41 @@ svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
                             const char *name);
 
 
+/* Our equivalent of ne_xml_startelm_cb, the difference being that it
+ * returns errors in a svn_error_t, and returns the element type via
+ * ELEM.  To ignore the element *ELEM should be set to NE_XML_DECLINE
+ * and SVN_NO_ERROR should be returned.
+ */
+typedef svn_error_t * (*svn_ra_dav__startelm_cb_t)(int *elem,
+                                                   void *baton,
+                                                   int parent,
+                                                   const char *nspace,
+                                                   const char *name,
+                                                   const char **atts);
+
+/* Our equivalent of ne_xml_cdata_cb, the difference being that it returns
+ * errors in a svn_error_t.
+ */
+typedef svn_error_t * (*svn_ra_dav__cdata_cb_t)(void *baton,
+                                                int state,
+                                                const char *cdata,
+                                                size_t len);
+
+/* Our equivalent of ne_xml_endelm_cb, the difference being that it returns
+ * errors in a svn_error_t.
+ */
+typedef svn_error_t * (*svn_ra_dav__endelm_cb_t)(void *baton,
+                                                 int state,
+                                                 const char *nspace,
+                                                 const char *name);
+
 /* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
  * in session SESS, and parse the response.  If BODY is non-null, it is
  * the body of the request, else use the contents of file BODY_FILE
  * as the body.
  *
- * VALIDATE_CB, STARTELM_CB, and ENDELM_CB are Neon validation, start
- * element, and end element handlers, respectively, from Neon > 0.24.
- * BATON is passed to each as userdata.
+ * STARTELM_CB, CDATA_CB and ENDELM_CB are start element, cdata and end
+ * element handlers, respectively.  BATON is passed to each as userdata.
  *
  * SET_PARSER is a callback function which, if non-NULL, is called
  * with the XML parser and BATON.  This is useful for providers of
@@ -578,9 +605,9 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            apr_file_t *body_file,
                            void set_parser(ne_xml_parser *parser,
                                            void *baton),
-                           ne_xml_startelm_cb *startelm_cb,
-                           ne_xml_cdata_cb *cdata_cb,
-                           ne_xml_endelm_cb *endelm_cb,
+                           svn_ra_dav__startelm_cb_t startelm_cb,
+                           svn_ra_dav__cdata_cb_t cdata_cb,
+                           svn_ra_dav__endelm_cb_t endelm_cb,
                            void *baton,
                            apr_hash_t *extra_headers,
                            int *status_code,

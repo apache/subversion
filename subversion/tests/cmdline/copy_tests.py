@@ -1087,7 +1087,7 @@ def url_copy_parent_into_child(sbox):
 def wc_copy_parent_into_child(sbox):
   "copy WC URL/subdir"
 
-  sbox.build()
+  sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   
   B_url = svntest.main.current_repo_url + "/A/B"
