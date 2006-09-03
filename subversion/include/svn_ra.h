@@ -937,7 +937,7 @@ svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
 
 
 /**
- * Similar to svn_ra_do_status2, but taking svn_ra_reporter2_t 
+ * Similar to svn_ra_do_status2(), but taking svn_ra_reporter2_t 
  * instead of svn_ra_reporter3_t, and therefore only able to report
  * svn_depth_infinity for depths.
  *
@@ -955,10 +955,10 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
 
 /**
  * Ask the RA layer to 'diff' a working copy against @a versus_url;
- * it's another form of svn_ra_do_update().
+ * it's another form of svn_ra_do_update2().
  *
  * @note This function cannot be used to diff a single file, only a
- * working copy directory.  See the svn_ra_do_switch() function 
+ * working copy directory.  See the svn_ra_do_switch2() function 
  * for more details.
  *
  * The client initially provides a @a diff_editor/@a diff_baton to the RA
@@ -1022,7 +1022,7 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              apr_pool_t *pool);
 
 /**
- * Similar to svn_ra_do_diff3, but taking svn_ra_reporter2_t instead
+ * Similar to svn_ra_do_diff3(), but taking svn_ra_reporter2_t instead
  * of svn_ra_reporter3_t, and therefore only able to report
  * svn_depth_infinity for depths.
  *

@@ -2475,7 +2475,7 @@ svn_wc_crawl_revisions2(const char *path,
                         apr_pool_t *pool);
 
 /**
- * Similar to svn_wc_crawl_revisions2(), but takes an svn_wc_notify_func_t
+ * Similar to svn_wc_crawl_revisions3(), but takes an svn_wc_notify_func_t
  * and a @c svn_reporter_t instead.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
