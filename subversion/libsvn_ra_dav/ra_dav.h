@@ -794,6 +794,19 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                        apr_pool_t *pool);
 
 
+/* Create an error of type SVN_ERR_RA_DAV_MALFORMED_DATA for cases where
+   we recieve an element we didn't expect to see. */
+#define UNEXPECTED_ELEMENT(ns, elem)                               \
+        (ns ? svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,     \
+                                NULL,                              \
+                                _("Got unexpected element %s:%s"), \
+                                ns,                                \
+                                elem)                              \
+            : svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,     \
+                                NULL,                              \
+                                _("Got unexpected element %s"),    \
+                                elem))
+
 /* Callback to get data from a Neon request after it has been sent.
 
    REQUEST is the request, DISPATCH_RETURN_VAL is the value that
