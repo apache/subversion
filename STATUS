@@ -50,12 +50,18 @@ Candidate changes:
       +1: djh
       +0: dlr (concept, see concerns mailed to dev list)
 
-  * r21316 (depends on r21289 above)
+  * r21357
+    Python/SWIG crash when apr_hash_t typemap is used.
+    Votes:
+      +1: djames
+
+Approved changes:
+
+  * r21316
     JavaHL crash when using pre-1.4 native libraries.
     Votes:
       +1: markphip
-
-Approved changes:
+      +0: djames
 
   * r21333
     For mailer.py, if the 'commit_url' option is set, then add the URL
