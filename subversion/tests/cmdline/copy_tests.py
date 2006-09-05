@@ -293,7 +293,7 @@ def basic_copy_and_move_files(sbox):
                                      alpha_path, alpha2_path)
 
   # Move mu to H -- local mods
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '--force',
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      mu_path, H_path)
 
   # Move iota to F -- no local mods
@@ -1816,11 +1816,11 @@ def mv_unversioned_file(sbox):
   # Try to forcibly move an unversioned file.
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*unversioned2.* is not under version control.*",
-                                     'mv', '--force',
+                                     'mv',
                                      unver_path_2, dest_path_2)
 
 def force_move(sbox):
-  "'move --force' should not lose local mods"
+  "'move' should not lose local mods"
   # Issue #2435: 'svn move' / 'svn mv' can lose local modifications.
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1851,7 +1851,7 @@ def force_move(sbox):
   try:
     svntest.actions.run_and_verify_svn(None, move_output,
                                        [],
-                                       'move', '--force', 
+                                       'move',
                                        file_name, "dest")
   finally:
     os.chdir(was_cwd)
@@ -1862,7 +1862,7 @@ def force_move(sbox):
   file_handle.close()
   # Error if we dont find the modified contents...
   if modified_file_content != expected_file_content:
-    raise svntest.Failure("File modifications were lost on 'move --force'")
+    raise svntest.Failure("File modifications were lost on 'move'")
 
   # Commit the move and make sure the new content actually reaches
   # the repository.
@@ -1964,16 +1964,8 @@ def move_copied_file_and_dir(sbox):
                                      rho_path, rho_copy_path)
 
   # Move the copied file: A/D/rho_copy to A/B/F/rho_copy_moved
-  #
-  # The --force option is required we get this error without it:
-  #
-  #   svn: Use --force to override this restriction
-  #   svn: Move will not be attempted unless forced
-  #   svn: 'svn-test-work\working_copies\copy_tests-1\A\D\rho_copy_1'
-  #        has local modifications
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     rho_copy_path, rho_copy_move_path,
-                                     '--force')
+                                     rho_copy_path, rho_copy_move_path)
 
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   E_path_copy = os.path.join(wc_dir, 'A', 'B', 'F', 'E_copy')
@@ -1985,8 +1977,7 @@ def move_copied_file_and_dir(sbox):
 
   # Move the copied file: A/B/F/E_copy to A/D/G/E_copy_moved
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     E_path_copy, E_path_copy_move,
-                                     '--force')
+                                     E_path_copy, E_path_copy_move)
 
   # Created expected output tree for 'svn ci':
   # Since we are moving items that were only *scheduled* for addition
@@ -2032,8 +2023,7 @@ def move_moved_file_and_dir(sbox):
 
   # Move the moved file: A/D/rho_moved to A/B/F/rho_move_moved
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     rho_move_path, rho_move_moved_path,
-                                     '--force')
+                                     rho_move_path, rho_move_moved_path)
 
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   E_path_moved = os.path.join(wc_dir, 'A', 'B', 'F', 'E_moved')
@@ -2045,8 +2035,7 @@ def move_moved_file_and_dir(sbox):
 
   # Move the moved file: A/B/F/E_moved to A/D/G/E_move_moved
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     E_path_moved, E_path_move_moved,
-                                     '--force')
+                                     E_path_moved, E_path_move_moved)
 
   # Created expected output tree for 'svn ci':
   expected_output = svntest.wc.State(wc_dir, {
@@ -2105,8 +2094,7 @@ def move_file_within_moved_dir(sbox):
                                      chi_path, chi_moved_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      chi_moved_path,
-                                     chi_moved_again_path,
-                                     '--force')
+                                     chi_moved_again_path)
 
   # Created expected output tree for 'svn ci':
   expected_output = svntest.wc.State(wc_dir, {
@@ -2177,8 +2165,7 @@ def move_file_out_of_moved_dir(sbox):
                                      chi_path, chi_moved_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      chi_moved_path,
-                                     chi_moved_again_path,
-                                     '--force')
+                                     chi_moved_again_path)
 
   # Created expected output tree for 'svn ci':
   expected_output = svntest.wc.State(wc_dir, {
@@ -2249,8 +2236,7 @@ def move_dir_within_moved_dir(sbox):
                                      H_path, H_moved_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      H_moved_path,
-                                     H_moved_again_path,
-                                     '--force')
+                                     H_moved_again_path)
 
   # Created expected output tree for 'svn ci':
   expected_output = svntest.wc.State(wc_dir, {
@@ -2320,8 +2306,7 @@ def move_dir_out_of_moved_dir(sbox):
                                      H_path, H_moved_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      H_moved_path,
-                                     H_moved_again_path,
-                                     '--force')
+                                     H_moved_again_path)
 
   # Created expected output tree for 'svn ci':
   expected_output = svntest.wc.State(wc_dir, {
@@ -2382,8 +2367,7 @@ def move_file_back_and_forth(sbox):
 
   # Move the moved file: A/D/rho_moved to A/B/F/rho_move_moved
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     rho_move_path, rho_path,
-                                     '--force')
+                                     rho_move_path, rho_path)
 
   # Created expected output tree for 'svn ci':
   expected_output = svntest.wc.State(wc_dir, {
@@ -2423,7 +2407,7 @@ def move_dir_back_and_forth(sbox):
   # location at A/D.
   out, err = svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                                 'mv', D_move_path,
-                                                D_path, '--force')
+                                                D_path)
 
   for line in err:
     if re.match('.*Cannot copy to .*as it is scheduled for deletion',
@@ -2499,22 +2483,18 @@ def copy_move_added_paths(sbox):
   upsilon_move_path = os.path.join(wc_dir, 'upsilon')
   upsilon_move_path_2 = os.path.join(wc_dir, 'A', 'upsilon')
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     upsilon_path, upsilon_move_path,
-                                     '--force')
+                                     upsilon_path, upsilon_move_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     upsilon_move_path, upsilon_move_path_2,
-                                     '--force')
+                                     upsilon_move_path, upsilon_move_path_2)
 
   # Move added dir A/D/I to A/B/I,
   # then move it again to A/D/H/I
   I_move_path = os.path.join(wc_dir, 'A', 'B', 'I')
   I_move_path_2 = os.path.join(wc_dir, 'A', 'D', 'H', 'I')
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     I_path, I_move_path,
-                                     '--force')
+                                     I_path, I_move_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
-                                     I_move_path, I_move_path_2,
-                                     '--force')
+                                     I_move_path, I_move_path_2)
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
