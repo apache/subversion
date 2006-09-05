@@ -1,5 +1,6 @@
 import unittest
 
+import os
 from svn import core, repos, fs, delta
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
@@ -27,6 +28,14 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
     self.rev = fs.youngest_rev(self.fs)
+
+  def test_create(self):
+    """Make sure that repos.create doesn't segfault when we set fs-type
+       using a config hash"""
+    fs_config = { "fs-type": "fsfs" }
+    for i in range(5):
+      path = os.path.join(REPOS_PATH, "test" + str(i))
+      repos.create(path, "", "", None, fs_config)
    
   def test_get_logs(self):
     """Test scope of get_logs callbacks"""
