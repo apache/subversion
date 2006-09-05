@@ -60,7 +60,6 @@ static svn_error_t *
 wc_to_wc_copy(const char *src_path,
               const char *dst_path,
               svn_boolean_t is_move,
-              svn_boolean_t force,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool)
 {
@@ -132,10 +131,6 @@ wc_to_wc_copy(const char *src_path,
             }
         }
 
-      if (!force)
-        /* Ensure there are no "awkward" files. */
-        SVN_ERR_W(svn_client__can_delete(src_path, ctx, pool),
-                  _("Move will not be attempted unless forced"));
     }
   else 
     {
@@ -1017,7 +1012,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
   if ((! src_is_url) && (! dst_is_url))
     {
       SVN_ERR(wc_to_wc_copy(src_path, dst_path,
-                            is_move, force,
+                            is_move,
                             ctx,
                             pool));
     }
