@@ -130,9 +130,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
       {
         const char *crev = svn_xml_get_attr_value("rev", atts);
         if (! crev)
-          return svn_error_create
-                     (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                      _("Missing revision attr in target-revision element"));
+          return MISSING_ATTR(nspace, elt_name, "rev");
         else
           return rb->editor->set_target_revision(rb->edit_baton,
                                                  SVN_STR_TO_REV(crev),
@@ -145,9 +143,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
         const char *crev = svn_xml_get_attr_value("rev", atts);
 
         if (! crev)
-          return svn_error_create
-                     (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                      _("Missing revision attr in open-root element"));
+          return MISSING_ATTR(nspace, elt_name, "rev");
         else
           {
             apr_pool_t *subpool = svn_pool_create(rb->pool);
@@ -166,13 +162,9 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
         const char *crev = svn_xml_get_attr_value("rev", atts);
 
         if (! path)
-          return svn_error_create
-                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                       _("Missing name attr in delete-entry element"));
+          return MISSING_ATTR(nspace, elt_name, "name");
         else if (! crev)
-          return svn_error_create
-                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                       _("Missing rev attr in delete-entry element"));
+          return MISSING_ATTR(nspace, elt_name, "rev");
         else
           {
             dir_item_t *di = &TOP_DIR(rb);
@@ -190,9 +182,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
         const char *name = svn_xml_get_attr_value("name", atts);
 
         if (! name)
-          return svn_error_create
-                   (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                    _("Missing name attr in open-directory element"));
+          return MISSING_ATTR(nspace, elt_name, "name");
         else
           {
             dir_item_t *parent = &TOP_DIR(rb);
@@ -241,13 +231,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
         dir_item_t *parent = &TOP_DIR(rb);
 
         if (! path)
-          {
-            return svn_error_createf
-                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                       _("Missing name attr in %s element"),
-                       elm->id == ELEM_open_file ? "open-file" : "add-file");
-            break;
-          }
+          return MISSING_ATTR(nspace, elt_name, "name");
 
         svn_pool_clear(parent->file_pool);
 
@@ -343,11 +327,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
         const char *name = svn_xml_get_attr_value("name", atts);
 
         if (! name)
-          return svn_error_createf
-                    (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                     _("Missing name attr in %s element"),
-                     elm->id == ELEM_change_file_prop ? "change-file-prop"
-                                                      : "change-dir-prop");
+          return MISSING_ATTR(nspace, elt_name, "name");
         else
           {
             svn_pool_clear(rb->prop_pool);

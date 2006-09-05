@@ -133,13 +133,11 @@ start_element(int *elem, void *userdata, int parent_state, const char *ns,
           reset_file_rev(rb);
           att = svn_xml_get_attr_value("rev", atts);
           if (!att)
-            return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                    _("file-rev element is missing rev attr"));
+            return MISSING_ATTR(ns, ln, "rev");
           rb->revnum = SVN_STR_TO_REV(att);
           att = svn_xml_get_attr_value("path", atts);
           if (!att)
-            return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                    _("file-rev element is missing path attr"));
+            return MISSING_ATTR(ns, ln, "path");
           rb->path = apr_pstrdup(rb->subpool, att);
         }
       else
@@ -156,8 +154,7 @@ start_element(int *elem, void *userdata, int parent_state, const char *ns,
         case ELEM_set_prop:
           att = svn_xml_get_attr_value("name", atts);
           if (!att)
-            return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                    _("Element is missing name attr"));
+            return MISSING_ATTR(ns, ln, "name");
           rb->prop_name = apr_pstrdup(rb->subpool, att);
           att = svn_xml_get_attr_value("encoding", atts);
           if (att && strcmp(att, "base64") == 0)
@@ -170,8 +167,7 @@ start_element(int *elem, void *userdata, int parent_state, const char *ns,
             svn_prop_t *prop = apr_array_push(rb->prop_diffs);
             att = svn_xml_get_attr_value("name", atts);
             if (!att || *att == '\0')
-              return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                      _("Element is missing name attr"));
+              return MISSING_ATTR(ns, ln, "name");
             prop->name = apr_pstrdup(rb->subpool, att);
             prop->value = NULL;
           }
