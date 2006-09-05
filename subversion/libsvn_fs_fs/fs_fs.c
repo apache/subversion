@@ -4073,29 +4073,26 @@ index_txn_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev,
                      apr_pool_t *pool)
 {
   apr_hash_t *minfoprops;
+  apr_hash_index_t *hi;
 
   SVN_ERR(svn_fs_fs__txn_mergeinfo(&minfoprops, txn, pool));
-  if (minfoprops)
+
+  for (hi = apr_hash_first(pool, minfoprops);
+       hi != NULL;
+       hi = apr_hash_next(hi))
     {
-      apr_hash_index_t *hi;
-      
-      for (hi = apr_hash_first(pool, minfoprops); 
-           hi != NULL;
-           hi = apr_hash_next(hi))
-        {
-          const char *minfopath;
-          svn_string_t *minfostring;
-          const void *key;
-          void *val;
-          
-          apr_hash_this(hi, &key, NULL, &val);
+      const char *minfopath;
+      svn_string_t *minfostring;
+      const void *key;
+      void *val;
 
-          minfopath = key;
-          minfostring = val;
+      apr_hash_this(hi, &key, NULL, &val);
 
-          SVN_ERR(index_path_merge_info(txn, new_rev, minfopath, minfostring,
-                                        pool));
-        }
+      minfopath = key;
+      minfostring = val;
+
+      SVN_ERR(index_path_merge_info(txn, new_rev, minfopath, minfostring,
+                                    pool));
     }
 
   return SVN_NO_ERROR; 
@@ -4565,7 +4562,6 @@ svn_fs_fs__txn_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
-/* Place the mergeinfo for TXN into TABLE_P */
 svn_error_t *
 svn_fs_fs__txn_mergeinfo(apr_hash_t **table_p,
                          svn_fs_txn_t *txn,
