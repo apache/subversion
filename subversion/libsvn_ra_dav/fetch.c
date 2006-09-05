@@ -1567,7 +1567,7 @@ getlocks_start_element(int *elem, void *userdata, int parent_state,
   if (elm->id == ELEM_lock)
     {
       if (parent_state != ELEM_get_locks_report)
-        return UNEXPECTED_LOCATION(ns, ln);
+        return UNEXPECTED_ELEMENT(ns, ln);
       else
         /* allocate a new svn_lock_t in the permanent pool */
         baton->current_lock = svn_lock_create(baton->pool);
