@@ -807,6 +807,21 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                 _("Got unexpected element %s"),    \
                                 elem))
 
+/* Create an error of type SVN_ERR_RA_DAV_MALFORMED_DATA for cases where
+   we don't receive a necessary attribute. */
+#define MISSING_ATTR(ns, elem, attr) \
+        (ns ? svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, \
+                                NULL, \
+                                _("Missing attribute '%s' on element %s:%s"), \
+                                attr, \
+                                ns, \
+                                elem) \
+           : svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, \
+                               NULL, \
+                               _("Missing attribute '%s' on element %s"), \
+                               attr, \
+                               elem))
+
 /* Callback to get data from a Neon request after it has been sent.
 
    REQUEST is the request, DISPATCH_RETURN_VAL is the value that
