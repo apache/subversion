@@ -975,7 +975,7 @@ check_adm_exists(svn_boolean_t *exists,
               (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                _("URL '%s' doesn't match existing URL '%s' in '%s'"),
                url, entry->url, path);
-	}
+        }
     }
 
   *exists = wc_exists;
