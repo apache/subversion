@@ -124,8 +124,7 @@ start_element(int *elem, void *userdata, int parent_state, const char *ns,
     {
     case ELEM_root:
       if (elm->id != ELEM_file_revs_report)
-        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                _("Got unexpected element"));
+        return UNEXPECTED_ELEMENT(ns, ln);
       break;
 
     case ELEM_file_revs_report:
@@ -144,15 +143,13 @@ start_element(int *elem, void *userdata, int parent_state, const char *ns,
           rb->path = apr_pstrdup(rb->subpool, att);
         }
       else
-        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                _("Got unexpected element"));
+        return UNEXPECTED_ELEMENT(ns, ln);
       break;
 
     case ELEM_file_rev:
       /* txdelta must be the last elem in file-rev. */
       if (rb->had_txdelta)
-        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                _("Got unexpected element"));
+        return UNEXPECTED_ELEMENT(ns, ln);
       switch (elm->id)
         {
         case ELEM_rev_prop:
@@ -194,13 +191,11 @@ start_element(int *elem, void *userdata, int parent_state, const char *ns,
           }
           break;
         default:
-          return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                  _("Got unexpected element"));
+          return UNEXPECTED_ELEMENT(ns, ln);
         }
       break;
     default:
-      return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                              _("Got unexpected element"));
+      return UNEXPECTED_ELEMENT(ns, ln);
     }
 
   *elem = elm->id;

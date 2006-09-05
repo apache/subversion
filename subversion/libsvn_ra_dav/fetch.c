@@ -1567,8 +1567,7 @@ getlocks_start_element(int *elem, void *userdata, int parent_state,
   if (elm->id == ELEM_lock)
     {
       if (parent_state != ELEM_get_locks_report)
-        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                _("Got lock element in the wrong location"));
+        return UNEXPECTED_LOCATION(ns, ln);
       else
         /* allocate a new svn_lock_t in the permanent pool */
         baton->current_lock = svn_lock_create(baton->pool);
@@ -1584,8 +1583,7 @@ getlocks_start_element(int *elem, void *userdata, int parent_state,
       const char *encoding;
 
       if (parent_state != ELEM_lock)
-        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                _("Got element at an unexpected location"));
+        return UNEXPECTED_ELEMENT(ns, ln);
 
       /* look for any incoming encodings on these elements. */
       encoding = svn_xml_get_attr_value("encoding", atts);
@@ -2145,9 +2143,7 @@ start_element(int *elem, void *userdata, int parent_state, const char *nspace,
           return SVN_NO_ERROR;
         }
       else
-        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                 _("Got unexpected element '%s:%s'"),
-                                 nspace, elt_name);
+        return UNEXPECTED_ELEMENT(nspace, elt_name);
     }
 
   switch (elm->id)

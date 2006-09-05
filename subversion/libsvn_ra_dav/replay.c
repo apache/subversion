@@ -115,15 +115,13 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
       /* If we're at the root of the tree, the element has to be the editor
        * report itself. */
       if (elm->id != ELEM_editor_report)
-        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                _("Got unexpected XML element"));
+        return UNEXPECTED_ELEMENT(nspace, elt_name);
     }
   else if (parent_state != ELEM_editor_report)
     {
       /* If we're not at the root, our parent has to be the editor report,
        * since we don't actually nest any elements. */
-      return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                              _("Got unexpected XML element"));
+      return UNEXPECTED_ELEMENT(nspace, elt_name);
     }
 
   switch (elm->id)
