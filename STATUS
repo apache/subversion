@@ -69,3 +69,11 @@ Approved changes:
       ViewVC or other view of the commit.
     Votes:
       +1: blair, dlr
+
+  * r21367
+    Correct documentation on the default filesystem type created by
+    svn_fs_create().
+    Justification:
+      Doc string was clearly wrong.
+    Votes:
+      +1: dlr
