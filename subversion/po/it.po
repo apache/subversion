@@ -88,8 +88,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-30 05:00+0200\n"
-"PO-Revision-Date: 2006-08-30 09:06+0200\n"
+"POT-Creation-Date: 2006-09-06 05:00+0200\n"
+"PO-Revision-Date: 2006-09-06 09:53+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -994,13 +994,13 @@ msgstr "È richiesto il nome di un nuovo elemento quando si importa un file"
 msgid "'%s' does not exist"
 msgstr "'%s' non esiste"
 
-#: libsvn_client/commit.c:606 libsvn_client/copy.c:76 svnlook/main.c:1206
+#: libsvn_client/commit.c:606 libsvn_client/copy.c:75 svnlook/main.c:1206
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "Il percorso '%s' non esiste"
 
-#: libsvn_client/commit.c:736 libsvn_client/copy.c:85 libsvn_client/copy.c:399
-#: libsvn_client/copy.c:608 libsvn_client/copy.c:758
+#: libsvn_client/commit.c:736 libsvn_client/copy.c:84 libsvn_client/copy.c:394
+#: libsvn_client/copy.c:603 libsvn_client/copy.c:753
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "Il percorso '%s' esiste già"
@@ -1010,15 +1010,15 @@ msgstr "Il percorso '%s' esiste già"
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "'%s' è un nome riservato e non può essere importato"
 
-#: libsvn_client/commit.c:867 libsvn_client/copy.c:524
+#: libsvn_client/commit.c:867 libsvn_client/copy.c:519
 msgid "Commit failed (details follow):"
 msgstr "Commit fallito (seguono dettagli):"
 
-#: libsvn_client/commit.c:875 libsvn_client/copy.c:532
+#: libsvn_client/commit.c:875 libsvn_client/copy.c:527
 msgid "Commit succeeded, but other errors follow:"
 msgstr "Commit eseguito, ma seguono altri errori:"
 
-#: libsvn_client/commit.c:882 libsvn_client/copy.c:539
+#: libsvn_client/commit.c:882 libsvn_client/copy.c:534
 msgid "Error unlocking locked dirs (details follow):"
 msgstr "Errore nello sbloccare le directory bloccate (seguono dettagli):"
 
@@ -1027,7 +1027,7 @@ msgid "Error bumping revisions post-commit (details follow):"
 msgstr ""
 "Errore nell'incrementare di 1 le revisioni dopo il commit (seguono dettagli):"
 
-#: libsvn_client/commit.c:904 libsvn_client/copy.c:550
+#: libsvn_client/commit.c:904 libsvn_client/copy.c:545
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "Errore nella pulizia dopo il commit (seguono dettagli):"
 
@@ -1073,7 +1073,7 @@ msgstr ""
 "L'elemento in trasmissione '%s' ha un flag copy ma non una URL copyfrom"
 
 #: libsvn_client/commit_util.c:704 libsvn_client/commit_util.c:835
-#: libsvn_client/copy.c:1001 libsvn_client/delete.c:67
+#: libsvn_client/copy.c:996 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1410 libsvn_client/diff.c:2140
 #: libsvn_client/diff.c:2735 libsvn_client/diff.c:2862
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
@@ -1140,16 +1140,12 @@ msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr ""
 "L'elemento in trasmissione '%s' ha un flag copy ma una revisione non valida"
 
-#: libsvn_client/copy.c:95 libsvn_client/copy.c:768
+#: libsvn_client/copy.c:94 libsvn_client/copy.c:763
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "Il percorso '%s' non è una directory"
 
-#: libsvn_client/copy.c:138
-msgid "Move will not be attempted unless forced"
-msgstr "Lo spostamento non verrà eseguito se non forzato"
-
-#: libsvn_client/copy.c:334
+#: libsvn_client/copy.c:329
 #, c-format
 msgid ""
 "Source and dest appear not to be in the same repository (src: '%s'; dst: '%"
@@ -1158,58 +1154,58 @@ msgstr ""
 "Sorgente e destinazione sembrano non essere nello stesso repository "
 "(sorgente: '%s'; destinazione: '%s')"
 
-#: libsvn_client/copy.c:370
+#: libsvn_client/copy.c:365
 #, c-format
 msgid "Cannot move URL '%s' into itself"
 msgstr "Non posso spostare l'URL '%s' su se stessa"
 
-#: libsvn_client/copy.c:390
+#: libsvn_client/copy.c:385
 #, c-format
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "Il percorso '%s' non esiste nella revisione %ld"
 
-#: libsvn_client/copy.c:745
+#: libsvn_client/copy.c:740
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "Percorso '%s' non trovato nella revisione %ld"
 
-#: libsvn_client/copy.c:750
+#: libsvn_client/copy.c:745
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "Percorso '%s' non trovato nella revisione head"
 
-#: libsvn_client/copy.c:786
+#: libsvn_client/copy.c:781
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "L'elemento per '%s' esiste già (anche se manca il file locale)"
 
-#: libsvn_client/copy.c:877
+#: libsvn_client/copy.c:872
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr ""
 "L'URL sorgente '%s' è di un altro repository; la lascio come copia locale "
 "disgiunta"
 
-#: libsvn_client/copy.c:956
+#: libsvn_client/copy.c:951
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "Non posso copiare il percorso '%s' in un suo elemento '%s'"
 
-#: libsvn_client/copy.c:967
+#: libsvn_client/copy.c:962
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "Non posso spostare il percorso '%s' in se stesso"
 
-#: libsvn_client/copy.c:975
+#: libsvn_client/copy.c:970
 msgid "No support for repos <--> working copy moves"
 msgstr "Spostamenti fra repository e copia locale non sono supportati"
 
-#: libsvn_client/copy.c:1007
+#: libsvn_client/copy.c:1002
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' non sembra avere una URL associata"
 
-#: libsvn_client/copy.c:1204 svn/move-cmd.c:72
+#: libsvn_client/copy.c:1199 svn/move-cmd.c:72
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr ""
 "Non si possono specificare revisioni (eccetto HEAD) con il comando move"
@@ -2385,7 +2381,7 @@ msgstr "Linea copyroot non conforme nel nodo di revisione"
 msgid "Malformed copyfrom line in node-rev"
 msgstr "Linea copyfrom non conforme nel nodo di revisione"
 
-#: libsvn_fs_fs/fs_fs.c:891 libsvn_fs_fs/fs_fs.c:3252
+#: libsvn_fs_fs/fs_fs.c:891 libsvn_fs_fs/fs_fs.c:3253
 msgid "Attempted to write to non-transaction"
 msgstr "Tentativo di scrittura in una non-transazione"
 
@@ -2497,39 +2493,39 @@ msgstr "Ripulitura della transazione fallita"
 msgid "Invalid change type"
 msgstr "Tipo di cambiamento non valido"
 
-#: libsvn_fs_fs/fs_fs.c:3271
+#: libsvn_fs_fs/fs_fs.c:3272
 msgid "Can't set text contents of a directory"
 msgstr "Non è possibile impostare il contenuto testuale di una directory"
 
-#: libsvn_fs_fs/fs_fs.c:3361 libsvn_fs_fs/fs_fs.c:3366
-#: libsvn_fs_fs/fs_fs.c:3373
+#: libsvn_fs_fs/fs_fs.c:3362 libsvn_fs_fs/fs_fs.c:3367
+#: libsvn_fs_fs/fs_fs.c:3374
 msgid "Corrupt current file"
 msgstr "File corrente corrotto"
 
-#: libsvn_fs_fs/fs_fs.c:3663 libsvn_subr/io.c:2662 svn/util.c:236
+#: libsvn_fs_fs/fs_fs.c:3664 libsvn_subr/io.c:2662 svn/util.c:236
 #: svn/util.c:260
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Non riesco a eseguire stat() su '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3667
+#: libsvn_fs_fs/fs_fs.c:3668
 #, c-format
 msgid "Can't chmod '%s'"
 msgstr "Non riesco ad eseguire chmod su '%s'"
 
-#: libsvn_fs_fs/fs_fs.c:3806
+#: libsvn_fs_fs/fs_fs.c:3807
 msgid "Can't grab FSFS repository mutex"
 msgstr "Non riesco a prendere il mutex per il filesystem"
 
-#: libsvn_fs_fs/fs_fs.c:3820
+#: libsvn_fs_fs/fs_fs.c:3821
 msgid "Can't ungrab FSFS repository mutex"
 msgstr "Non posso abbandonare il mutex per il filesystem"
 
-#: libsvn_fs_fs/fs_fs.c:3937
+#: libsvn_fs_fs/fs_fs.c:3938
 msgid "Transaction out of date"
 msgstr "Transazione scaduta"
 
-#: libsvn_fs_fs/fs_fs.c:4234
+#: libsvn_fs_fs/fs_fs.c:4235
 msgid "No such transaction"
 msgstr "Transazione inesistente"
 
@@ -2633,30 +2629,30 @@ msgstr "Non sono riuscito a creare una richiesta PUT (%s)"
 msgid "applying log message to %s"
 msgstr "applicazione del messaggio di log su %s"
 
-#: libsvn_ra_dav/fetch.c:285
+#: libsvn_ra_dav/fetch.c:279
 msgid "Could not save the URL of the version resource"
 msgstr "Non ho potuto salvare l'URL della risorsa di versione"
 
-#: libsvn_ra_dav/fetch.c:406
+#: libsvn_ra_dav/fetch.c:400
 msgid "Could not get content-type from response"
 msgstr ""
 "Non è stato possibile ottenere il valore di content-type dalla risposta"
 
-#: libsvn_ra_dav/fetch.c:451
+#: libsvn_ra_dav/fetch.c:445
 #, c-format
 msgid "Could not create a GET request for '%s'"
 msgstr "Non sono riuscito a creare una richiesta GET per '%s'"
 
-#: libsvn_ra_dav/fetch.c:526
+#: libsvn_ra_dav/fetch.c:520
 #, c-format
 msgid "GET request failed for '%s'"
 msgstr "La richiesta GET è fallita per '%s'"
 
-#: libsvn_ra_dav/fetch.c:665
+#: libsvn_ra_dav/fetch.c:659
 msgid "Could not save file"
 msgstr "Non ho potuto salvare il file"
 
-#: libsvn_ra_dav/fetch.c:906 libsvn_ra_svn/client.c:900
+#: libsvn_ra_dav/fetch.c:900 libsvn_ra_svn/client.c:900
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -2667,34 +2663,43 @@ msgstr ""
 "   checksum atteso:   %s\n"
 "   checksum effettivo:  %s\n"
 
-#: libsvn_ra_dav/fetch.c:1151
+#: libsvn_ra_dav/fetch.c:1145
 msgid "Server response missing the expected deadprop-count property"
 msgstr ""
 "L'attesa proprietà deadprop-count non è presente nella risposta del server"
 
-#: libsvn_ra_dav/fetch.c:1324
+#: libsvn_ra_dav/fetch.c:1318
 msgid "Server does not support date-based operations"
 msgstr "Il server non supporta operazioni basate sulla data"
 
-#: libsvn_ra_dav/fetch.c:1331
+#: libsvn_ra_dav/fetch.c:1325
 msgid "Invalid server response to dated-rev request"
 msgstr "Risposta del server non valida ad una richiesta di revisione con data"
 
-#: libsvn_ra_dav/fetch.c:1470
+#: libsvn_ra_dav/fetch.c:1389
+msgid "Expected a valid revnum and path"
+msgstr "Atteso un numero di revisione valido e un percorso"
+
+#: libsvn_ra_dav/fetch.c:1471
 msgid "'get-locations' REPORT not implemented"
 msgstr "REPORT di 'get-locations' non implementato"
 
-#: libsvn_ra_dav/fetch.c:1643 libsvn_ra_dav/session.c:1188
+#: libsvn_ra_dav/fetch.c:1649 libsvn_ra_dav/session.c:1188
 #: libsvn_ra_dav/session.c:1478
 msgid "Incomplete lock data returned"
 msgstr "Restituiti dati di blocco incompleti"
 
-#: libsvn_ra_dav/fetch.c:1819 libsvn_ra_dav/fetch.c:1827
-#: libsvn_ra_dav/fetch.c:1831 libsvn_ra_serf/locks.c:512
+#: libsvn_ra_dav/fetch.c:1715
+#, c-format
+msgid "Got unrecognized encoding '%s'"
+msgstr "Codifica non riconosciuta: '%s'"
+
+#: libsvn_ra_dav/fetch.c:1815 libsvn_ra_dav/fetch.c:1823
+#: libsvn_ra_dav/fetch.c:1827 libsvn_ra_serf/locks.c:512
 msgid "Server does not support locking features"
 msgstr "Il server non supporta le funazionalità di blocco"
 
-#: libsvn_ra_dav/fetch.c:1908
+#: libsvn_ra_dav/fetch.c:1904
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
@@ -2702,27 +2707,31 @@ msgstr ""
 "Richiesta DAV fallita; è possibile che l'hook pre-revprop-change del "
 "repository abbia fallito o non esista"
 
-#: libsvn_ra_dav/fetch.c:2643
+#: libsvn_ra_dav/fetch.c:2651
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "Errore nella scrittura di '%s': EOF inatteso"
 
-#: libsvn_ra_dav/fetch.c:2788
+#: libsvn_ra_dav/fetch.c:2798
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "Codifica XML sconosciuta: '%s'"
 
-#: libsvn_ra_dav/fetch.c:3075
+#: libsvn_ra_dav/fetch.c:3085
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr ""
 "Il gestore delle risposte di REPORT non è riuscito a completare la guida "
 "dell'editor"
 
-#: libsvn_ra_dav/file_revs.c:363
+#: libsvn_ra_dav/file_revs.c:279
+msgid "Failed to write full amount to stream"
+msgstr "Non riesco a completare la scrittura nel flusso"
+
+#: libsvn_ra_dav/file_revs.c:357
 msgid "'get-file-revs' REPORT not implemented"
 msgstr "REPORT di 'get-file-revs' non implementato"
 
-#: libsvn_ra_dav/file_revs.c:379
+#: libsvn_ra_dav/file_revs.c:364
 msgid "The file-revs report didn't contain any revisions"
 msgstr "Il report di file-revs non conteneva alcuna revisione"
 
@@ -2818,53 +2827,27 @@ msgid "At least one property change failed; repository is unchanged"
 msgstr ""
 "Almeno una modifica di proprietà è fallita; il repository è rimaso immutato"
 
-#: libsvn_ra_dav/replay.c:136 libsvn_ra_serf/replay.c:161
-msgid "Missing revision attr in target-revision element"
-msgstr "Attributo 'revision' mancante nell'elemento target-revision"
-
-#: libsvn_ra_dav/replay.c:151 libsvn_ra_serf/replay.c:179
-msgid "Missing revision attr in open-root element"
-msgstr "Attributo 'revision' mancante per l'elemento open-root"
-
-#: libsvn_ra_dav/replay.c:172 libsvn_ra_serf/replay.c:198
-msgid "Missing name attr in delete-entry element"
-msgstr "Attributo 'name' mancante nell'elemento delete-entry"
-
-#: libsvn_ra_dav/replay.c:176
-msgid "Missing rev attr in delete-entry element"
-msgstr "Attributo 'rev' mancante nell'elemento delete-entry"
-
-#: libsvn_ra_dav/replay.c:196 libsvn_ra_serf/replay.c:224
-msgid "Missing name attr in open-directory element"
-msgstr "Atttributo 'name' mancante nell'elemento 'open-directory'"
-
-#: libsvn_ra_dav/replay.c:248 libsvn_ra_dav/replay.c:351
-#: libsvn_ra_serf/replay.c:371
-#, c-format
-msgid "Missing name attr in %s element"
-msgstr "Attributo 'name' mancante nell'elemento %s"
-
-#: libsvn_ra_dav/replay.c:288
+#: libsvn_ra_dav/replay.c:271
 msgid "Got apply-textdelta element without preceding add-file or open-file"
 msgstr ""
 "Ricevuto elemento apply-textdelta senza che fosse preceduto da add-file o "
 "open-file"
 
-#: libsvn_ra_dav/replay.c:314
+#: libsvn_ra_dav/replay.c:295
 msgid "Got close-file element without preceding add-file or open-file"
 msgstr ""
 "Ricevuto elemento close-file senza che fosse preceduto da add-file o open-"
 "file"
 
-#: libsvn_ra_dav/replay.c:329
+#: libsvn_ra_dav/replay.c:310
 msgid "Got close-directory element without ever opening a directory"
 msgstr "Ricevuto elemento close-directory senza aver mai aperto una directory"
 
-#: libsvn_ra_dav/replay.c:456 libsvn_ra_serf/replay.c:491
+#: libsvn_ra_dav/replay.c:429 libsvn_ra_serf/replay.c:491
 msgid "Error writing stream: unexpected EOF"
 msgstr "Errore in scrittura: EOF inatteso"
 
-#: libsvn_ra_dav/replay.c:463
+#: libsvn_ra_dav/replay.c:436
 msgid "Got cdata content for a prop delete"
 msgstr "Ricevuto un contenuto cdata per la cancellazione di una proprieta'"
 
@@ -2970,34 +2953,34 @@ msgstr "timeout della connessione al server"
 msgid "Can't calculate the request body size"
 msgstr "Non posso calcolare la dimensione del corpo della richiesta"
 
-#: libsvn_ra_dav/util.c:726
+#: libsvn_ra_dav/util.c:800
 #, c-format
 msgid "Error spooling the %s request response to disk"
 msgstr "Errore nello spool della risposta alla richiesta %s su disco"
 
-#: libsvn_ra_dav/util.c:774
+#: libsvn_ra_dav/util.c:848
 #, c-format
 msgid "'%s' path not found"
 msgstr "'%s' percorso non trovato"
 
 #. We either have a neon error, or some other error
 #. that we didn't expect.
-#: libsvn_ra_dav/util.c:779 libsvn_ra_dav/util.c:1014
+#: libsvn_ra_dav/util.c:853 libsvn_ra_dav/util.c:1091
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s di '%s'"
 
-#: libsvn_ra_dav/util.c:797
+#: libsvn_ra_dav/util.c:874
 #, c-format
 msgid "Error reading spooled %s request response"
 msgstr "Errore nella lettura dello spool di risposta alla richiesta %s"
 
-#: libsvn_ra_dav/util.c:808
+#: libsvn_ra_dav/util.c:885
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "La richiesta %s ha restituito XML non valido nella risposta: %s (%s)"
 
-#: libsvn_ra_dav/util.c:828
+#: libsvn_ra_dav/util.c:905
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "richiesta %s fallita su '%s'"
@@ -3073,9 +3056,25 @@ msgstr "La richiesta di blocco è fallita: %d %s"
 msgid "Unlock request failed: %d %s"
 msgstr "La richiesta di sblocco è fallita: %d %s"
 
+#: libsvn_ra_serf/replay.c:161
+msgid "Missing revision attr in target-revision element"
+msgstr "Attributo 'revision' mancante nell'elemento target-revision"
+
+#: libsvn_ra_serf/replay.c:179
+msgid "Missing revision attr in open-root element"
+msgstr "Attributo 'revision' mancante per l'elemento open-root"
+
+#: libsvn_ra_serf/replay.c:198
+msgid "Missing name attr in delete-entry element"
+msgstr "Attributo 'name' mancante nell'elemento delete-entry"
+
 #: libsvn_ra_serf/replay.c:204
 msgid "Missing revision attr in delete-entry element"
 msgstr "Attributo di revisione mancante nell'elemento delete-entry"
+
+#: libsvn_ra_serf/replay.c:224
+msgid "Missing name attr in open-directory element"
+msgstr "Atttributo 'name' mancante nell'elemento 'open-directory'"
 
 #: libsvn_ra_serf/replay.c:230
 msgid "Missing revision attr in open-directory element"
@@ -3096,6 +3095,11 @@ msgstr "Attributo di revisione mancante per l'elemento open-file"
 #: libsvn_ra_serf/replay.c:311
 msgid "Missing name attr in add-file element"
 msgstr "Attributo di nome mancante nell'elemento add-file"
+
+#: libsvn_ra_serf/replay.c:371
+#, c-format
+msgid "Missing name attr in %s element"
+msgstr "Attributo 'name' mancante nell'elemento %s"
 
 #: libsvn_ra_serf/serf.c:52
 msgid "Access repository via WebDAV protocol through serf."
@@ -3792,7 +3796,9 @@ msgstr "La creazione del repository è fallito"
 #: libsvn_repos/repos.c:1763
 #, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
-msgstr "Il formato atteso per il repository era '%d' o '%d', mentre quello trovato è '%d'"
+msgstr ""
+"Il formato atteso per il repository era '%d' o '%d', mentre quello trovato è "
+"'%d'"
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
