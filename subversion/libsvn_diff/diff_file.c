@@ -104,7 +104,7 @@ find_eol_start(char *buf, apr_size_t len)
 }
       
 static int
-svn_diff__file_datasource_to_index(svn_diff_datasource_e datasource)
+datasource_to_index(svn_diff_datasource_e datasource)
 {
   switch (datasource)
     {
@@ -218,8 +218,7 @@ map_or_read_file(apr_file_t **file,
 
 /* Implements svn_diff_fns_t::datasource_open */
 static svn_error_t *
-svn_diff__file_datasource_open(void *baton,
-                               svn_diff_datasource_e datasource)
+datasource_open(void *baton, svn_diff_datasource_e datasource)
 {
   svn_diff__file_baton_t *file_baton = baton;
   int idx;
@@ -228,7 +227,7 @@ svn_diff__file_datasource_open(void *baton,
   char *curp;
   char *endp;
 
-  idx = svn_diff__file_datasource_to_index(datasource);
+  idx = datasource_to_index(datasource);
 
   SVN_ERR(svn_io_file_open(&file_baton->file[idx], file_baton->path[idx],
                            APR_READ, APR_OS_DEFAULT, file_baton->pool));
@@ -257,8 +256,7 @@ svn_diff__file_datasource_open(void *baton,
 
 /* Implements svn_diff_fns_t::datasource_close */
 static svn_error_t *
-svn_diff__file_datasource_close(void *baton,
-                                svn_diff_datasource_e datasource)
+datasource_close(void *baton, svn_diff_datasource_e datasource)
 {
   /* Do nothing.  The compare_token function needs previous datasources
    * to stay available until all datasources are processed.
@@ -387,9 +385,8 @@ normalize(char *buf, apr_off_t *lengthp, normalize_state_t *statep,
 
 /* Implements svn_diff_fns_t::datasource_get_next_token */
 static svn_error_t *
-svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
-                                         void *baton,
-                                         svn_diff_datasource_e datasource)
+datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
+                          svn_diff_datasource_e datasource)
 {
   svn_diff__file_baton_t *file_baton = baton;
   svn_diff__file_token_t *file_token;
@@ -405,7 +402,7 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
 
   *token = NULL;
 
-  idx = svn_diff__file_datasource_to_index(datasource);
+  idx = datasource_to_index(datasource);
 
   curp = file_baton->curp[idx];
   endp = file_baton->endp[idx];
@@ -512,10 +509,7 @@ svn_diff__file_datasource_get_next_token(apr_uint32_t *hash, void **token,
 
 /* Implements svn_diff_fns_t::token_compare */
 static svn_error_t *
-svn_diff__file_token_compare(void *baton,
-                             void *token1,
-                             void *token2,
-                             int *compare)
+token_compare(void *baton, void *token1, void *token2, int *compare)
 {
   svn_diff__file_baton_t *file_baton = baton;
   svn_diff__file_token_t *file_token[2];
@@ -554,7 +548,7 @@ svn_diff__file_token_compare(void *baton,
 
   for (i = 0; i < 2; ++i)
     {
-      idx[i] = svn_diff__file_datasource_to_index(file_token[i]->datasource);
+      idx[i] = datasource_to_index(file_token[i]->datasource);
       offset[i] = file_token[i]->offset;
       chunk[i] = file_baton->chunk[idx[i]];
       state[i] = state_normal;
@@ -633,8 +627,7 @@ svn_diff__file_token_compare(void *baton,
 
 /* Implements svn_diff_fns_t::token_discard */
 static void
-svn_diff__file_token_discard(void *baton,
-                             void *token)
+token_discard(void *baton, void *token)
 {
   svn_diff__file_baton_t *file_baton = baton;
   svn_diff__file_token_t *file_token = token;
@@ -646,7 +639,7 @@ svn_diff__file_token_discard(void *baton,
 
 /* Implements svn_diff_fns_t::token_discard_all */
 static void
-svn_diff__file_token_discard_all(void *baton)
+token_discard_all(void *baton)
 {
   svn_diff__file_baton_t *file_baton = baton;
 
@@ -657,12 +650,12 @@ svn_diff__file_token_discard_all(void *baton)
 
 static const svn_diff_fns_t svn_diff__file_vtable =
 {
-  svn_diff__file_datasource_open,
-  svn_diff__file_datasource_close,
-  svn_diff__file_datasource_get_next_token,
-  svn_diff__file_token_compare,
-  svn_diff__file_token_discard,
-  svn_diff__file_token_discard_all
+  datasource_open,
+  datasource_close,
+  datasource_get_next_token,
+  token_compare,
+  token_discard,
+  token_discard_all
 };
 
 /* Id for the --ignore-eol-style option, which doesn't have a short name. */
@@ -882,9 +875,8 @@ typedef enum svn_diff__file_output_unified_type_e
 
 
 static svn_error_t *
-svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
-                                   svn_diff__file_output_unified_type_e type,
-                                   int idx)
+output_unified_line(svn_diff__file_output_baton_t *baton,
+                    svn_diff__file_output_unified_type_e type, int idx)
 {
   char *curp;
   char *eol;
@@ -1029,7 +1021,7 @@ svn_diff__file_output_unified_line(svn_diff__file_output_baton_t *baton,
 }
 
 static svn_error_t *
-svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
+output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 {
   apr_off_t target_line;
   apr_size_t hunk_len;
@@ -1047,7 +1039,7 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   /* Add trailing context to the hunk */
   while (baton->current_line[0] < target_line)
     {
-      SVN_ERR(svn_diff__file_output_unified_line
+      SVN_ERR(output_unified_line
               (baton, svn_diff__file_output_unified_context, 0));
     }
 
@@ -1106,7 +1098,7 @@ svn_diff__file_output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 }
 
 static svn_error_t *
-svn_diff__file_output_unified_diff_modified(void *baton,
+output_unified_diff_modified(void *baton,
   apr_off_t original_start, apr_off_t original_length,
   apr_off_t modified_start, apr_off_t modified_length,
   apr_off_t latest_start, apr_off_t latest_length)
@@ -1128,7 +1120,7 @@ svn_diff__file_output_unified_diff_modified(void *baton,
           + SVN_DIFF__UNIFIED_CONTEXT_SIZE < target_line[0]
           || output_baton->hunk_length[0] == 0))
     {
-      SVN_ERR(svn_diff__file_output_unified_flush_hunk(output_baton));
+      SVN_ERR(output_unified_flush_hunk(output_baton));
 
       output_baton->hunk_start[0] = target_line[0];
       output_baton->hunk_start[1] = target_line[1] + target_line[0]
@@ -1138,24 +1130,23 @@ svn_diff__file_output_unified_diff_modified(void *baton,
          display */
       while (output_baton->current_line[0] < target_line[0])
         {
-          SVN_ERR(svn_diff__file_output_unified_line
-                  (output_baton,
-                   svn_diff__file_output_unified_skip, 0));
+          SVN_ERR(output_unified_line(output_baton,
+                                      svn_diff__file_output_unified_skip, 0));
         }
     }
 
   /* Skip lines until we are at the start of the changed range */
   while (output_baton->current_line[1] < target_line[1])
     {
-      SVN_ERR(svn_diff__file_output_unified_line
-              (output_baton, svn_diff__file_output_unified_skip, 1));
+      SVN_ERR(output_unified_line(output_baton, 
+                                  svn_diff__file_output_unified_skip, 1));
     }
 
   /* Output the context preceding the changed range */
   while (output_baton->current_line[0] < original_start)
     {
-      SVN_ERR(svn_diff__file_output_unified_line
-              (output_baton, svn_diff__file_output_unified_context, 0));
+      SVN_ERR(output_unified_line(output_baton, 
+                                  svn_diff__file_output_unified_context, 0));
     }
 
   target_line[0] = original_start + original_length;
@@ -1166,10 +1157,10 @@ svn_diff__file_output_unified_diff_modified(void *baton,
     {
       while (output_baton->current_line[i] < target_line[i])
         {
-          SVN_ERR(svn_diff__file_output_unified_line
-                  (output_baton, i == 0
-                   ? svn_diff__file_output_unified_delete
-                   : svn_diff__file_output_unified_insert, i));
+          SVN_ERR(output_unified_line
+                          (output_baton, 
+                           i == 0 ? svn_diff__file_output_unified_delete
+                                  : svn_diff__file_output_unified_insert, i));
         }
     }
 
@@ -1178,9 +1169,8 @@ svn_diff__file_output_unified_diff_modified(void *baton,
 
 /* Set *HEADER to a new string consisting of PATH, a tab, and PATH's mtime. */
 static svn_error_t *
-svn_diff__file_output_unified_default_hdr(const char **header,
-                                          const char *path,
-                                          apr_pool_t *pool)
+output_unified_default_hdr(const char **header, const char *path,
+                           apr_pool_t *pool)
 {
   apr_finfo_t file_info;
   apr_time_exp_t exploded_time;
@@ -1201,7 +1191,7 @@ svn_diff__file_output_unified_default_hdr(const char **header,
 static const svn_diff_output_fns_t svn_diff__file_output_unified_vtable =
 {
   NULL, /* output_common */
-  svn_diff__file_output_unified_diff_modified,
+  output_unified_diff_modified,
   NULL, /* output_diff_latest */
   NULL, /* output_diff_common */
   NULL  /* output_conflict */
@@ -1245,13 +1235,13 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
 
       if (original_header == NULL)
         {
-          SVN_ERR(svn_diff__file_output_unified_default_hdr
+          SVN_ERR(output_unified_default_hdr
                   (&original_header, original_path, pool));
         }
 
       if (modified_header == NULL)
         {
-          SVN_ERR(svn_diff__file_output_unified_default_hdr
+          SVN_ERR(output_unified_default_hdr
                   (&modified_header, modified_path, pool));
         }
 
@@ -1262,7 +1252,7 @@ svn_diff_file_output_unified2(svn_stream_t *output_stream,
 
       SVN_ERR(svn_diff_output(diff, &baton,
                               &svn_diff__file_output_unified_vtable));
-      SVN_ERR(svn_diff__file_output_unified_flush_hunk(&baton));
+      SVN_ERR(output_unified_flush_hunk(&baton));
 
       for (i = 0; i < 2; i++)
         {
@@ -1323,9 +1313,8 @@ typedef enum svn_diff3__file_output_type_e
 
 
 static svn_error_t *
-svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
-                            svn_diff3__file_output_type_e type,
-                            int idx)
+output_line(svn_diff3__file_output_baton_t *baton,
+            svn_diff3__file_output_type_e type, int idx)
 {
   char *curp;
   char *endp;
@@ -1365,82 +1354,75 @@ svn_diff3__file_output_line(svn_diff3__file_output_baton_t *baton,
 }
 
 static svn_error_t *
-svn_diff3__file_output_hunk(void *baton,
-  int idx,
-  apr_off_t target_line, apr_off_t target_length)
+output_hunk(void *baton, int idx, apr_off_t target_line, 
+            apr_off_t target_length)
 {
   svn_diff3__file_output_baton_t *output_baton = baton;
 
   /* Skip lines until we are at the start of the changed range */
   while (output_baton->current_line[idx] < target_line)
     {
-      SVN_ERR(svn_diff3__file_output_line(output_baton,
-                                          svn_diff3__file_output_skip, idx));
+      SVN_ERR(output_line(output_baton, svn_diff3__file_output_skip, idx));
     }
 
   target_line += target_length;
 
   while (output_baton->current_line[idx] < target_line)
     {
-      SVN_ERR(svn_diff3__file_output_line(output_baton,
-                                          svn_diff3__file_output_normal, idx));
+      SVN_ERR(output_line(output_baton, svn_diff3__file_output_normal, idx));
     }
 
   return SVN_NO_ERROR;
 }
 
 static svn_error_t *
-svn_diff3__file_output_common(void *baton,
-  apr_off_t original_start, apr_off_t original_length,
-  apr_off_t modified_start, apr_off_t modified_length,
-  apr_off_t latest_start, apr_off_t latest_length)
+output_common(void *baton, apr_off_t original_start, apr_off_t original_length,
+              apr_off_t modified_start, apr_off_t modified_length, 
+              apr_off_t latest_start, apr_off_t latest_length)
 {
-  return svn_diff3__file_output_hunk(baton, 1,
-                                     modified_start, modified_length);
+  return output_hunk(baton, 1, modified_start, modified_length);
 }
 
 static svn_error_t *
-svn_diff3__file_output_diff_modified(void *baton,
-  apr_off_t original_start, apr_off_t original_length,
-  apr_off_t modified_start, apr_off_t modified_length,
-  apr_off_t latest_start, apr_off_t latest_length)
+output_diff_modified(void *baton,
+                     apr_off_t original_start, apr_off_t original_length,
+                     apr_off_t modified_start, apr_off_t modified_length,
+                     apr_off_t latest_start, apr_off_t latest_length)
 {
-  return svn_diff3__file_output_hunk(baton, 1,
-                                     modified_start, modified_length);
+  return output_hunk(baton, 1, modified_start, modified_length);
 }
 
 static svn_error_t *
-svn_diff3__file_output_diff_latest(void *baton,
-  apr_off_t original_start, apr_off_t original_length,
-  apr_off_t modified_start, apr_off_t modified_length,
-  apr_off_t latest_start, apr_off_t latest_length)
+output_diff_latest(void *baton,
+                   apr_off_t original_start, apr_off_t original_length,
+                   apr_off_t modified_start, apr_off_t modified_length,
+                   apr_off_t latest_start, apr_off_t latest_length)
 {
-  return svn_diff3__file_output_hunk(baton, 2,
-                                     latest_start, latest_length);
+  return output_hunk(baton, 2, latest_start, latest_length);
 }
 
 static svn_error_t *
-svn_diff3__file_output_conflict(void *baton,
-  apr_off_t original_start, apr_off_t original_length,
-  apr_off_t modified_start, apr_off_t modified_length,
-  apr_off_t latest_start, apr_off_t latest_length,
-  svn_diff_t *diff);
+output_conflict(void *baton,
+                apr_off_t original_start, apr_off_t original_length,
+                apr_off_t modified_start, apr_off_t modified_length,
+                apr_off_t latest_start, apr_off_t latest_length,
+                svn_diff_t *diff);
 
 static const svn_diff_output_fns_t svn_diff3__file_output_vtable =
 {
-  svn_diff3__file_output_common,
-  svn_diff3__file_output_diff_modified,
-  svn_diff3__file_output_diff_latest,
-  svn_diff3__file_output_diff_modified, /* output_diff_common */
-  svn_diff3__file_output_conflict
+  output_common,
+  output_diff_modified,
+  output_diff_latest,
+  output_diff_modified, /* output_diff_common */
+  output_conflict
 };
 
 static svn_error_t *
-svn_diff3__file_output_conflict(void *baton,
-  apr_off_t original_start, apr_off_t original_length,
-  apr_off_t modified_start, apr_off_t modified_length,
-  apr_off_t latest_start, apr_off_t latest_length,
-  svn_diff_t *diff)
+output_conflict(void *baton,
+                apr_off_t original_start, apr_off_t original_length,
+                apr_off_t modified_start, apr_off_t modified_length,
+                apr_off_t latest_start, apr_off_t latest_length,
+                svn_diff_t *diff)
 {
   svn_diff3__file_output_baton_t *file_baton = baton;
   apr_size_t len;
@@ -1456,8 +1438,7 @@ svn_diff3__file_output_conflict(void *baton,
                            file_baton->conflict_modified,
                            &len));
 
-  SVN_ERR(svn_diff3__file_output_hunk(baton, 1,
-                                      modified_start, modified_length));
+  SVN_ERR(output_hunk(baton, 1, modified_start, modified_length));
 
   if (file_baton->display_original_in_conflict)
     {
@@ -1465,16 +1446,14 @@ svn_diff3__file_output_conflict(void *baton,
       SVN_ERR(svn_stream_write(file_baton->output_stream,
                                file_baton->conflict_original, &len));
 
-      SVN_ERR(svn_diff3__file_output_hunk(baton, 0,
-                                          original_start, original_length));
+      SVN_ERR(output_hunk(baton, 0, original_start, original_length));
     }
 
   len = strlen(file_baton->conflict_separator);
   SVN_ERR(svn_stream_write(file_baton->output_stream,
                            file_baton->conflict_separator, &len));
 
-  SVN_ERR(svn_diff3__file_output_hunk(baton, 2,
-                                      latest_start, latest_length));
+  SVN_ERR(output_hunk(baton, 2, latest_start, latest_length));
 
   len = strlen(file_baton->conflict_latest);
   SVN_ERR(svn_stream_write(file_baton->output_stream,
