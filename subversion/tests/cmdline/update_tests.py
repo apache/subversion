@@ -2156,8 +2156,11 @@ def update_wc_on_windows_drive(sbox):
   if not os.name == 'nt':
     raise svntest.Skip
 
-  sbox.build()
-
+  # just create an empty folder, we'll checkout later.
+  sbox.build(create_wc = False)
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  os.mkdir(sbox.wc_dir)
+  
   # create a virtual drive to the working copy folder
   drive = find_the_next_available_drive_letter()
   if drive == '':
@@ -2165,13 +2168,15 @@ def update_wc_on_windows_drive(sbox):
 
   os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
   wc_dir = drive + ':\\\\'
-
   was_cwd = os.getcwd()
-  os.chdir(wc_dir)
 
   try:
-    expected_disk = svntest.main.greek_state.copy()
-    
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'checkout',
+                                       '--username', svntest.main.wc_author,
+                                       '--password', svntest.main.wc_passwd,
+                                       sbox.repo_url, wc_dir)
+
     # Make some local modifications
     mu_path = os.path.join(wc_dir, 'A', 'mu')
     svntest.main.file_append (mu_path, '\nAppended text for mu')
@@ -2185,14 +2190,56 @@ def update_wc_on_windows_drive(sbox):
       'zeta' : Item(verb='Adding'),
       })
     expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-    expected_status.tweak('', 'A/mu', wc_rev=2)
+    expected_status.tweak('A/mu', wc_rev=2)
     expected_status.add({
-    'zeta' : Item(status='A ', wc_rev=0),
+    'zeta' : Item(status='  ', wc_rev=2),
     })
     svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                           expected_status, None,
                                           None, None, None, None, 
                                           wc_dir, zeta_path)
+
+    # Non recursive commit
+    dir1_path = os.path.join(wc_dir, 'dir1')
+    os.mkdir(dir1_path)
+    svntest.main.run_svn(None, 'add', '-N', dir1_path)
+    file1_path = os.path.join(dir1_path, 'file1')
+    svntest.main.file_append(file1_path, "This is the file 'file1'.\n")
+    svntest.main.run_svn(None, 'add', '-N', file1_path)
+
+    expected_output = svntest.wc.State(wc_dir, {
+      'dir1' : Item(verb='Adding'),
+      'dir1/file1' : Item(verb='Adding'),
+      })
+    expected_status.add({
+    'dir1' : Item(status='  ', wc_rev=3),
+    'dir1/file1' : Item(status='  ', wc_rev=3),
+    })
+    svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                          expected_status, None,
+                                          None, None, None, None, 
+                                          '-N',
+                                          wc_dir,
+                                          dir1_path, file1_path)
+
+    # revert to previous revision to test update
+    os.chdir(wc_dir)
+
+    expected_disk = svntest.main.greek_state.copy()
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/mu' : Item(status='U '),
+      'zeta' : Item(status='D '),
+      'dir1' : Item(status='D '),
+      })
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+    svntest.actions.run_and_verify_update(wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          None, None, None, None, None, 0,
+                                          '-r', '1', wc_dir)
+
+    svntest.main.run_svn(None, 'update', wc_dir)
   finally:
     os.chdir(was_cwd)
     # cleanup the virtual drive
