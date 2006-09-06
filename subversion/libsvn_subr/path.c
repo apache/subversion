@@ -118,7 +118,7 @@ char *svn_path_join(const char *base,
   assert(is_canonical(component, clen));
 
   /* If the component is absolute, then return it.  */
-  if (*component == '/')
+  if (svn_path_is_absolute(component, clen, pool))
     return apr_pmemdup(pool, component, clen + 1);
 
   /* If either is empty return the other */
@@ -185,7 +185,7 @@ char *svn_path_join_many(apr_pool_t *pool, const char *base, ...)
       if (nargs++ < MAX_SAVED_LENGTHS)
         saved_lengths[nargs] = len;
 
-      if (*s == '/')
+      if (svn_path_is_absolute(s, strlen(s), pool))
         {
           /* an absolute path. skip all components to this point and reset
              the total length. */
@@ -447,11 +447,11 @@ svn_path_is_root(const char *path, apr_size_t len, apr_pool_t *pool)
       goto cleanup;
     }
 
-  status = apr_filepath_root(&root_path, &rel_path, 0, strpool);
+  status = apr_filepath_root(&root_path, &rel_path_apr, 0, strpool);
 
   if ((status == APR_SUCCESS ||
        status == APR_EINCOMPLETE) &&
-      rel_path[0] == '\0')
+      rel_path_apr[0] == '\0')
     {
       result = TRUE;
       goto cleanup;
@@ -461,6 +461,33 @@ svn_path_is_root(const char *path, apr_size_t len, apr_pool_t *pool)
   if (!pool)
     apr_pool_destroy(strpool);
   return result;
+}
+
+
+svn_boolean_t
+svn_path_is_absolute(const char *path, apr_size_t len, apr_pool_t *pool)
+{
+  const char *root_path = NULL;
+  const char *rel_path = apr_pstrmemdup(pool, path, len);
+  const char *rel_path_apr;
+
+  /* svn_path_cstring_from_utf8 will create a copy of path.
+    
+     It should be safe to convert this error to a false return value. An error
+     in this case would indicate that the path isn't encoded in UTF-8, which 
+     will cause problems elsewhere, anyway. */  
+  svn_error_t *err = svn_path_cstring_from_utf8(&rel_path_apr, rel_path, 
+                                                pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+
+  if (apr_filepath_root(&root_path, &rel_path_apr, 0, pool) != APR_ERELATIVE)
+    return TRUE;
+
+  return FALSE;
 }
 
 
@@ -622,11 +649,14 @@ svn_path_is_child(const char *path1,
   /* assert (is_canonical (path1, strlen (path1)));  ### Expensive strlen */
   /* assert (is_canonical (path2, strlen (path2)));  ### Expensive strlen */
 
-  /* Allow "" and "foo" to be parent/child */
+  /* Allow "" and "foo" or "H:foo" to be parent/child */
   if (SVN_PATH_IS_EMPTY(path1))               /* "" is the parent  */
     {
-      if (SVN_PATH_IS_EMPTY(path2)            /* "" not a child    */
-          || path2[0] == '/')                  /* "/foo" not a child */
+      if (SVN_PATH_IS_EMPTY(path2))            /* "" not a child    */
+        return NULL;
+      
+      /* check if this is an absolute path */
+      if (svn_path_is_absolute(path2, strlen(path2), pool))
         return NULL;
       else
         return apr_pstrdup(pool, path2);      /* everything else is child */
@@ -646,13 +676,17 @@ svn_path_is_child(const char *path1,
       or
           /        path1[i] == '\0'
           /foo     path2[i] != '/'
+    
+     Other root paths (like X:/) fall under the former case:
+          X:/        path1[i] == '\0'
+          X:/foo     path2[i] != '/'
   */
   if (path1[i] == '\0' && path2[i])
     {
       if (path2[i] == '/')
         return apr_pstrdup(pool, path2 + i + 1);
-      else if (i == 1 && path1[0] == '/')
-        return apr_pstrdup(pool, path2 + 1);
+      else if (svn_path_is_root(path1, i, pool))
+        return apr_pstrdup(pool, path2 + i);
     }
 
   /* Otherwise, path2 isn't a child. */
