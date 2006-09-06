@@ -2923,23 +2923,26 @@ static svn_error_t * reporter_set_path(void *report_baton,
   report_baton_t *rb = report_baton;
   const char *entry;
   svn_stringbuf_t *qpath = NULL;
+  const char *depthstring = "";
   const char *tokenstring = "";
 
+  if (depth != svn_depth_infinity)
+    depthstring = apr_psprintf(pool, "depth=\"%d\"", depth);
+    
   if (lock_token)
     tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
 
   svn_xml_escape_cdata_cstring(&qpath, path, pool);
-  /* ### TODO: send depth here */
   if (start_empty)
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\" %s"
+                         "<S:entry rev=\"%ld\" %s %s"
                          " start-empty=\"true\">%s</S:entry>" DEBUG_CR,
-                         revision, tokenstring, qpath->data);
+                         revision, depthstring, tokenstring, qpath->data);
   else
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\" %s>"
+                         "<S:entry rev=\"%ld\" %s %s>"
                          "%s</S:entry>" DEBUG_CR,
-                         revision, tokenstring, qpath->data);
+                         revision, depthstring, tokenstring, qpath->data);
 
   return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
 }
@@ -2958,8 +2961,12 @@ static svn_error_t * reporter_link_path(void *report_baton,
   const char *entry;
   svn_stringbuf_t *qpath = NULL, *qlinkpath = NULL;
   svn_string_t bc_relative;
+  const char *depthstring = "";
   const char *tokenstring = "";
 
+  if (depth != svn_depth_infinity)
+    depthstring = apr_psprintf(pool, "depth=\"%d\"", depth);
+    
   if (lock_token)
     tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
 
@@ -2974,18 +2981,19 @@ static svn_error_t * reporter_link_path(void *report_baton,
   
   svn_xml_escape_cdata_cstring(&qpath, path, pool);
   svn_xml_escape_attr_cstring(&qlinkpath, bc_relative.data, pool);
-  /* ### TODO: send depth here */
   if (start_empty)
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\" %s"
+                         "<S:entry rev=\"%ld\" %s %s"
                          " linkpath=\"/%s\" start-empty=\"true\""
                          ">%s</S:entry>" DEBUG_CR,
-                         revision, tokenstring, qlinkpath->data, qpath->data);
+                         revision, depthstring, tokenstring,
+                         qlinkpath->data, qpath->data);
   else
     entry = apr_psprintf(pool,
-                         "<S:entry rev=\"%ld\" %s"
+                         "<S:entry rev=\"%ld\" %s %s"
                          " linkpath=\"/%s\">%s</S:entry>" DEBUG_CR,
-                         revision, tokenstring,  qlinkpath->data, qpath->data);
+                         revision, depthstring, tokenstring,
+                         qlinkpath->data, qpath->data);
 
   return svn_io_file_write_full(rb->tmpfile, entry, strlen(entry), NULL, pool);
 }

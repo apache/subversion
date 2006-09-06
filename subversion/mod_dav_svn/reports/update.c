@@ -1166,6 +1166,7 @@ dav_svn__update_report(const dav_resource *resource,
           {
             const char *path;
             svn_revnum_t rev = SVN_INVALID_REVNUM;
+            svn_depth_t depth = svn_depth_infinity;
             const char *linkpath = NULL;
             const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
@@ -1177,6 +1178,11 @@ dav_svn__update_report(const dav_resource *resource,
               {
                 if (! strcmp(this_attr->name, "rev"))
                   rev = SVN_STR_TO_REV(this_attr->value);
+                else if (! strcmp(this_attr->name, "depth"))
+                  /* ### TODO: is this an abuse of SVN_STR_TO_REV()?
+                     ### Should we make a new macro, or just convert
+                     ### by hand? */
+                  depth = SVN_STR_TO_REV(this_attr->value);
                 else if (! strcmp(this_attr->name, "linkpath"))
                   linkpath = this_attr->value;
                 else if (! strcmp(this_attr->name, "start-empty"))
@@ -1204,14 +1210,10 @@ dav_svn__update_report(const dav_resource *resource,
             path = dav_xml_get_cdata(child, subpool, 0);
             
             if (! linkpath)
-              serr = svn_repos_set_path3(rbaton, path, rev,
-                                         /* ### TODO: dynamic depth here */
-                                         svn_depth_infinity,
+              serr = svn_repos_set_path3(rbaton, path, rev, depth,
                                          start_empty, locktoken, subpool);
             else
-              serr = svn_repos_link_path3(rbaton, path, linkpath, rev,
-                                          /* ### TODO: dynamic depth here */
-                                          svn_depth_infinity,
+              serr = svn_repos_link_path3(rbaton, path, linkpath, rev, depth,
                                           start_empty, locktoken, subpool);
             if (serr != NULL)
               {

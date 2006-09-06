@@ -466,15 +466,17 @@ static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   report_driver_baton_t *b = baton;
   const char *path, *lock_token;
   svn_revnum_t rev;
+  /* Default to infinity, for old clients that don't send depth. */
+  apr_uint64_t depth = svn_depth_infinity;
   svn_boolean_t start_empty;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "crb?(?c)",
-                                 &path, &rev, &start_empty, &lock_token));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "crb?(?c)n",
+                                 &path, &rev, &start_empty, &lock_token,
+                                 &depth));
   path = svn_path_canonicalize(path, pool);
   if (!b->err)
     b->err = svn_repos_set_path3(b->report_baton, path, rev,
-                                 /* ### TODO: dynamic depth here */
-                                 svn_depth_infinity,
+                                 (svn_depth_t) depth,
                                  start_empty, lock_token, pool);
   return SVN_NO_ERROR;
 }
@@ -499,19 +501,20 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *path, *url, *lock_token, *fs_path;
   svn_revnum_t rev;
   svn_boolean_t start_empty;
+  /* Default to infinity, for old clients that don't send depth. */
+  apr_uint64_t depth = svn_depth_infinity;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrb?(?c)",
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrb?(?c)n",
                                  &path, &url, &rev, &start_empty,
-                                 &lock_token));
+                                 &lock_token, &depth));
   path = svn_path_canonicalize(path, pool);
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   if (!b->err)
     b->err = get_fs_path(b->repos_url, url, &fs_path, pool);
   if (!b->err)
     b->err = svn_repos_link_path3(b->report_baton, path, fs_path, rev,
-                                  /* ### TODO: dynamic depth here */
-                                  svn_depth_infinity,
-                                  start_empty, lock_token, pool);
+                                  (svn_depth_t) depth, start_empty,
+                                  lock_token, pool);
   return SVN_NO_ERROR;
 }
 

@@ -1868,6 +1868,28 @@ set_path(void *report_baton,
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
+  if (depth != svn_depth_infinity)
+    {
+      switch (depth) {
+      case svn_depth_zero:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"0\"",
+                                            sizeof(" depth=\"0\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      case svn_depth_one:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"1\"",
+                                            sizeof(" depth=\"1\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      default:
+        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+                                 _("Invalid depth (%d) for path '%s'"),
+                                 depth, path);
+      }
+
+      serf_bucket_aggregate_append(report->buckets, tmp);
+    }
+
   if (start_empty)
     {
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" start-empty=\"true\"",
@@ -1937,7 +1959,6 @@ link_path(void *report_baton,
   const char *path_copy, *link_copy, *vcc_url;
   apr_uri_t uri;
 
-  /* ### TODO: send depth here */
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
                                       sizeof("<S:entry rev=\"")-1,
                                       report->sess->bkt_alloc);
@@ -1972,6 +1993,28 @@ link_path(void *report_baton,
 
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
                                           report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+    }
+
+  if (depth != svn_depth_infinity)
+    {
+      switch (depth) {
+      case svn_depth_zero:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"0\"",
+                                            sizeof(" depth=\"0\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      case svn_depth_one:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"1\"",
+                                            sizeof(" depth=\"1\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      default:
+        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+                                 _("Invalid depth (%d) for path '%s'"),
+                                 depth, path);
+      }
+
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
