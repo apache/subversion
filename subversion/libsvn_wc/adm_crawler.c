@@ -264,6 +264,12 @@ report_revisions(svn_wc_adm_access_t *adm_access,
       /*** Files ***/
       if (current_entry->kind == svn_node_file) 
         {
+          /* ### TODO: Depth is irrelevant for files, but below we get
+           * ### it from the entry anyway.  Should we bother?  Should
+           * ### we always use svn_depth_zero for files instead?
+           * ### Maybe a special svn_depth_file?  Mull on this.
+           */
+
           /* If the item is missing from disk, and we're supposed to
              restore missing things, and it isn't missing as a result
              of a scheduling operation, then ... */
@@ -294,15 +300,13 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                 SVN_ERR(reporter->link_path(report_baton, this_path,
                                             current_entry->url,
                                             current_entry->revision,
-                                            /* ### TODO: dynamic depth here */
-                                            svn_depth_infinity,
+                                            current_entry->depth,
                                             FALSE, current_entry->lock_token,
                                             iterpool));
               else
                 SVN_ERR(reporter->set_path(report_baton, this_path,
                                            current_entry->revision,
-                                           /* ### TODO: dynamic depth here */
-                                           svn_depth_infinity,
+                                           current_entry->depth,
                                            FALSE, current_entry->lock_token,
                                            iterpool));              
             }
@@ -315,8 +319,7 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                                         this_path,
                                         current_entry->url,
                                         current_entry->revision,
-                                        /* ### TODO: dynamic depth here */
-                                        svn_depth_infinity,
+                                        current_entry->depth,
                                         FALSE,
                                         current_entry->lock_token,
                                         iterpool));
@@ -326,8 +329,7 @@ report_revisions(svn_wc_adm_access_t *adm_access,
             SVN_ERR(reporter->set_path(report_baton,
                                        this_path,
                                        current_entry->revision,
-                                       /* ### TODO: dynamic depth here */
-                                       svn_depth_infinity,
+                                       current_entry->depth,
                                        FALSE,
                                        current_entry->lock_token,
                                        iterpool));
@@ -365,16 +367,14 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                 SVN_ERR(reporter->link_path(report_baton, this_path,
                                             subdir_entry->url,
                                             subdir_entry->revision,
-                                            /* ### TODO: dynamic depth here */
-                                            svn_depth_infinity,
+                                            subdir_entry->depth,
                                             subdir_entry->incomplete,
                                             subdir_entry->lock_token,
                                             iterpool));
               else
                 SVN_ERR(reporter->set_path(report_baton, this_path,
                                            subdir_entry->revision,
-                                           /* ### TODO: dynamic depth here */
-                                           svn_depth_infinity,
+                                           subdir_entry->depth,
                                            subdir_entry->incomplete,
                                            subdir_entry->lock_token,
                                            iterpool));              
@@ -386,8 +386,7 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                                         this_path,
                                         subdir_entry->url,
                                         subdir_entry->revision,
-                                        /* ### TODO: dynamic depth here */
-                                        svn_depth_infinity,
+                                        subdir_entry->depth,
                                         subdir_entry->incomplete,
                                         subdir_entry->lock_token,
                                         iterpool));
@@ -399,8 +398,7 @@ report_revisions(svn_wc_adm_access_t *adm_access,
             SVN_ERR(reporter->set_path(report_baton,
                                        this_path,
                                        subdir_entry->revision,
-                                       /* ### TODO: dynamic depth here */
-                                       svn_depth_infinity,
+                                       subdir_entry->depth,
                                        subdir_entry->incomplete,
                                        subdir_entry->lock_token,
                                        iterpool));
@@ -469,8 +467,7 @@ svn_wc_crawl_revisions3(const char *path,
 
       base_rev = parent_entry->revision;
       SVN_ERR(reporter->set_path(report_baton, "", base_rev,
-                                 /* ### TODO: dynamic depth here*/
-                                 svn_depth_infinity,
+                                 parent_entry->depth,
                                  entry ? entry->incomplete : TRUE, 
                                  NULL, pool));
       SVN_ERR(reporter->delete_path(report_baton, "", pool)); 
@@ -499,9 +496,7 @@ svn_wc_crawl_revisions3(const char *path,
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
-  SVN_ERR(reporter->set_path(report_baton, "", base_rev,
-                             /* ### TODO: dynamic depth here */
-                             svn_depth_infinity,
+  SVN_ERR(reporter->set_path(report_baton, "", base_rev, entry->depth,
                              entry->incomplete , /* start_empty ? */
                              NULL, pool));
 
@@ -593,8 +588,7 @@ svn_wc_crawl_revisions3(const char *path,
                                     "",
                                     entry->url,
                                     entry->revision,
-                                    /* ### TODO: dynamic depth here */
-                                    svn_depth_infinity,
+                                    entry->depth,
                                     FALSE,
                                     entry->lock_token,
                                     pool);
@@ -608,9 +602,7 @@ svn_wc_crawl_revisions3(const char *path,
              of the report (not some file in a subdirectory of a target
              directory), and that target is a file, we need to pass an
              empty string to set_path. */
-          err = reporter->set_path(report_baton, "", base_rev,
-                                   /* ### TODO: dynamic depth here */
-                                   svn_depth_infinity,
+          err = reporter->set_path(report_baton, "", base_rev, entry->depth,
                                    FALSE,
                                    entry->lock_token, pool);
           if (err)
