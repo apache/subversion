@@ -1565,19 +1565,26 @@ write_handler_pyio(void *baton, const char *data, apr_size_t *len)
   return err;
 }
 
+static svn_error_t *
+close_handler_pyio(void *baton)
+{
+  PyObject *py_io = baton;
+  svn_swig_py_acquire_py_lock();
+  Py_DECREF(py_io);
+  svn_swig_py_release_py_lock();
+  return SVN_NO_ERROR;
+}
+
 svn_stream_t *
 svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
 {
   svn_stream_t *stream;
 
-  /* Borrow the caller's reference to py_io - this is safe only because the
-   * caller must have a reference in order to pass the object into the
-   * bindings, and we will be finished with the py_io object before we return
-   * to python. I.e. DO NOT STORE AWAY THE RESULTING svn_stream_t * for use
-   * over multiple calls into the bindings. */
   stream = svn_stream_create(py_io, pool);
   svn_stream_set_read(stream, read_handler_pyio);
   svn_stream_set_write(stream, write_handler_pyio);
+  svn_stream_set_close(stream, close_handler_pyio);
+  Py_INCREF(py_io);
 
   return stream;
 }
