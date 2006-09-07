@@ -67,6 +67,30 @@ class Generator(generator.swig.Generator):
     if base_fname not in self._ignores:
       self.ofile.write('%%include %s\n' % base_fname)
 
+
+  def _write_callback(self, type, return_type, module, function, params,
+                      callee):
+    """Write out an individual callback"""
+
+    # Get rid of any extra spaces or newlines
+    return_type = string.join(string.split(return_type))
+    params = string.join(string.split(params))
+
+    # Calculate parameters
+    if params == "void":
+      param_names = ""
+      params = "%s _obj" % type
+    else:
+      param_names = string.join(self._re_param_names.findall(params), ", ")
+      params = "%s _obj, %s" % (type, params)
+
+    # Write out the declaration
+    self.ofile.write(
+      "static %s %s_invoke_%s(\n" % (return_type, module, function) +
+      "  %s) {\n" % params +
+      "  return %s(%s);\n" % (callee, param_names) +
+      "}\n\n")
+
   def _write_callbacks(self, callbacks):
     """Write invoker functions for callbacks"""
     self.ofile.write('\n/* Callbacks */\n')
@@ -78,39 +102,21 @@ class Generator(generator.swig.Generator):
       if match[0] and not match[1]:
         # Struct definitions
         struct = match[0]
-      elif not match[0]:
+      elif not match[0] and struct not in self._ignores:
         # Struct member callbacks
-        name, params = match[1:]
+        return_type, name, params = match[1:]
+        type = "%s *" % struct
 
-        if struct in self._ignores:
-          continue
+        self._write_callback(type, return_type, struct[:-2], name, params,
+                             "_obj->%s" % name)
 
-        if params == "void":
-          param_names = ""
-        else:
-          param_names = string.join(self._re_param_names.findall(params), ", ")
-
-        params = string.join(string.split(params))
-        self.ofile.write(
-          "static svn_error_t *%s_invoke_%s(\n" % (struct[:-2], name) +
-          "  %s *_obj, %s) {\n" % (struct, params) +
-          "  return _obj->%s(%s);\n" % (name, param_names) +
-          "}\n\n")
       elif match[0] and match[1]:
         # Callbacks declared as a typedef
-        module, function, params = match
+        return_type, module, function, params = match
+        type = "%s_%s_t" % (module, function)
 
-        if params == "void":
-          param_names = ""
-        else:
-          param_names = string.join(self._re_param_names.findall(params), ", ")
-
-        params = string.join(string.split(params))
-        self.ofile.write(
-          "static svn_error_t *%s_invoke_%s(\n" % (module, function) +
-          "  %s_%s_t _callback, %s) {\n" % (module, function, params) +
-          "  return _callback(%s);\n" % (param_names) +
-          "}\n\n")
+        self._write_callback(type, return_type, module, function, params,
+                             "_obj")
 
 
     self.ofile.write("%}\n")
@@ -137,13 +143,15 @@ class Generator(generator.swig.Generator):
      from a C header file"""
   _re_struct_callbacks = re.compile(r'\btypedef\s+(?:struct|union)\s+'
                                     r'(svn_[a-z_0-9]+)\b|'
-                                    r'\n\s*svn_error_t\s*\*\(\*(\w+)\)\s*\(([^)]+)\);')
+                                    r'\n[ \t]+((?!typedef)[a-z_0-9\s*]+)'
+                                    r'\(\*(\w+)\)'
+                                    r'\s*\(([^)]+)\);')
 
 
   """Regular expression for parsing callbacks declared as a typedef
      from a C header file"""
-  _re_typed_callbacks = re.compile(r'typedef\s+svn_error_t\s+'
-                                   r'\*\(\*(svn_[a-z]+)_([a-z_0-9]+)_t\)\s*'
+  _re_typed_callbacks = re.compile(r'typedef\s+([a-z_0-9\s*]+)'
+                                   r'\(\*(svn_[a-z]+)_([a-z_0-9]+)_t\)\s*'
                                    r'\(([^)]+)\);');
 
   """Regular expression for parsing parameter names from a parameter list"""
