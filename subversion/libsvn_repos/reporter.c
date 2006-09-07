@@ -85,7 +85,7 @@ typedef struct report_baton_t
   svn_revnum_t t_rev;          /* Revnum which the edit will bring the wc to */
   const char *t_path;          /* FS path the edit will bring the wc to */
   svn_boolean_t text_deltas;   /* Whether to report text deltas */
-  svn_boolean_t recurse;
+  svn_boolean_t recurse;       /* ### TODO: may be obsoleted by depth? */
   svn_boolean_t ignore_ancestry;
   svn_boolean_t is_switch;
   const svn_delta_editor_t *editor;
@@ -634,8 +634,36 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                              _("Working copy path '%s' does not exist in "
                                "repository"), e_path);
 
+  /* ### TODO: Fake the path_info->depth check just to see. */
+  if (info)
+    {
+      FILE *f = fopen("/tmp/kff.tmp", "a");
+      fprintf(f, "KFF: with recurse %d, and path_info '%ld:%s':\n",
+              recurse, info->rev, info->path);
+      fprintf(f, "   depth: %d\n", info->depth);
+      fclose(f);
+    }
   if (!recurse && ((s_entry && s_entry->kind == svn_node_dir)
                    || (t_entry && t_entry->kind == svn_node_dir)))
+    /* ### TODO: This should handle depth now.  Aha, and I think I
+     * ### know how to do it:
+     * ###
+     * ### The problem is that we can't just stop recursing if we hit
+     * ### a non-infinity depth, because there might still be some
+     * ### subpaths beneath here explicitly reported by the client.
+     * ### The non-infinity depth just tells us that the client
+     * ### doesn't want to receive any server news about anything
+     * ### beneath here that's not in those explicitly-reported
+     * ### paths.
+     * ###
+     * ### So we need to set some new param here that says "from here
+     * ### on down, depth is X, until someone deeper overrides it".  
+     * ### But should that flag be a param, or a setting inside
+     * ### path_info_t, or inside the report baton?  Not sure yet.
+     * ### It needs to have the right shadowing properties, and be
+     * ### accessible to delta_dirs(), which is mutually recursive
+     * ### with update_entry(), so they'd both need the param...
+     */
     return skip_path_info(b, e_path);
 
   /* If the source and target both exist and are of the same kind,
