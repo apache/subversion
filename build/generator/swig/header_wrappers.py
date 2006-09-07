@@ -75,10 +75,15 @@ class Generator(generator.swig.Generator):
     struct = None
     for match in callbacks:
 
-      if match[0]:
+      if match[0] and not match[1]:
+        # Struct definitions
         struct = match[0]
-      elif struct not in self._ignores:
+      elif not match[0]:
+        # Struct member callbacks
         name, params = match[1:]
+
+        if struct in self._ignores:
+          continue
 
         if params == "void":
           param_names = ""
@@ -91,6 +96,22 @@ class Generator(generator.swig.Generator):
           "  %s *_obj, %s) {\n" % (struct, params) +
           "  return _obj->%s(%s);\n" % (name, param_names) +
           "}\n\n")
+      elif match[0] and match[1]:
+        # Callbacks declared as a typedef
+        module, function, params = match
+
+        if params == "void":
+          param_names = ""
+        else:
+          param_names = string.join(self._re_param_names.findall(params), ", ")
+
+        params = string.join(string.split(params))
+        self.ofile.write(
+          "static svn_error_t *%s_invoke_%s(\n" % (module, function) +
+          "  %s_%s_t _callback, %s) {\n" % (module, function, params) +
+          "  return _callback(%s);\n" % (param_names) +
+          "}\n\n")
+
 
     self.ofile.write("%}\n")
 
@@ -112,10 +133,18 @@ class Generator(generator.swig.Generator):
   _re_structs = re.compile(r'\btypedef\s+(?:struct|union)\s+'
                            r'(svn_[a-z_0-9]+)\b\s*(\{?)')
 
-  """Regular expression for parsing callbacks from a C header file"""
-  _re_callbacks = re.compile(r'\btypedef\s+(?:struct|union)\s+'
-                             r'(svn_[a-z_0-9]+)\b|'
-                             r'\n\s*svn_error_t\s*\*\(\*(\w+)\)\s*\(([^)]+)\);')
+  """Regular expression for parsing callbacks declared inside structs
+     from a C header file"""
+  _re_struct_callbacks = re.compile(r'\btypedef\s+(?:struct|union)\s+'
+                                    r'(svn_[a-z_0-9]+)\b|'
+                                    r'\n\s*svn_error_t\s*\*\(\*(\w+)\)\s*\(([^)]+)\);')
+
+
+  """Regular expression for parsing callbacks declared as a typedef
+     from a C header file"""
+  _re_typed_callbacks = re.compile(r'typedef\s+svn_error_t\s+'
+                                   r'\*\(\*(svn_[a-z]+)_([a-z_0-9]+)_t\)\s*'
+                                   r'\(([^)]+)\);');
 
   """Regular expression for parsing parameter names from a parameter list"""
   _re_param_names = re.compile(r'\b(\w+)\s*\)*\s*(?:,|$)')
@@ -124,7 +153,7 @@ class Generator(generator.swig.Generator):
   _re_comments = re.compile(r'/\*.*?\*/')
 
   def _write_swig_interface_file(self, base_fname, includes, structs,
-      callbacks):
+                                 callbacks):
     """Convert a header file into a SWIG header file"""
 
     # Calculate output filename from base filename
@@ -168,7 +197,8 @@ class Generator(generator.swig.Generator):
     structs = unique(self._re_structs.findall(contents))
 
     # Get list of callbacks
-    callbacks = self._re_callbacks.findall(contents)
+    callbacks = (self._re_struct_callbacks.findall(contents) +
+                 self._re_typed_callbacks.findall(contents))
 
     # Get the location of the output file
     base_fname = os.path.basename(fname)

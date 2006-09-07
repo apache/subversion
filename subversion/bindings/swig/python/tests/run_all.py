@@ -5,6 +5,7 @@ import unittest
 import setup_path
 
 import client
+import delta
 import pool
 import ra
 import wc
@@ -17,6 +18,7 @@ def suite():
   """Run all tests"""
   suite = unittest.TestSuite()
   suite.addTest(client.suite())
+  suite.addTest(delta.suite())
   suite.addTest(pool.suite())
   suite.addTest(ra.suite())
   suite.addTest(wc.suite())
