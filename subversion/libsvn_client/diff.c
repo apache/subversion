@@ -1086,7 +1086,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
                                   subpool));
       {
         /* Passing NULL for the notify_func and notify_baton because
-         * repos_diff.c:delete_item will do it for us. */
+         * repos_diff.c:delete_entry() will do it for us. */
         err = svn_client__wc_delete(mine, parent_access, merge_b->force,
                                     merge_b->dry_run, 
                                     NULL, NULL,
