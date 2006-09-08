@@ -1041,7 +1041,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
         const svn_wc_entry_t *entry;
         SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
 
-        /* If it's an unversioned file, don't touch it.  If its scheduled
+        /* If it's an unversioned file, don't touch it.  If it's scheduled
            for deletion, then rm removed it from the working copy and the
            user must have recreated it, don't touch it */
         if (!entry || entry->schedule == svn_wc_schedule_delete)
@@ -1228,7 +1228,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
     case svn_node_dir:
       /* Adding an unversioned directory doesn't destroy data */
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
-      if (! entry || (entry && entry->schedule == svn_wc_schedule_delete))
+      if (! entry || entry->schedule == svn_wc_schedule_delete)
         {
           if (!merge_b->dry_run)
             SVN_ERR(svn_wc_add2(path, adm_access,
