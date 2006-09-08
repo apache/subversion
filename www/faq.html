@@ -240,6 +240,9 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#dynamic-exe-debugging">How do I run a debugger on
     dynamic Subversion binaries without having to install
     them?</a></li>
+<li><a href="#avoiding-compiler-inlining">How do I run a debugger on
+    Subversion binaries without compiler inlining obfuscating the
+    source?</a></li>
 </ul>
 
 <h4>References:</h4>
@@ -3430,6 +3433,35 @@ amounts to replacing <code>exec "$progdir/$progname"</code> with
 
 <p>This trick is also very useful when applied to the
 libtool-generated shell scripts for the white box tests.</p>
+
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="avoiding-compiler-inlining"
+title="avoiding-compiler-inlining">
+
+<h3>How do I run a debugger on Subversion binaries without compiler
+    inlining obfuscating the source?</h3>
+
+<p>By default, gcc will often optimize away private variables and
+functions, inlining the associated operations.  This can complicate
+stepping through the code in a debugger.</p>
+
+<p>Work around this by turning off optimization.  Before the
+<code>make</code> step on unix-y systems, do the following:</p>
+
+<blockquote>
+<div><code>subversion$ perl -pi -e 's/-O2//g' config.status</code></div>
+<div><code>subversion$ ./config.status</code></div>
+</blockquote>
+
+<p>Alternately, you can explicitly set <code>CFLAGS</code> before
+running <code>configure</code>.</p>
+
+<p>Remember to undo this operation before installing Subversion from
+source, regenerating config.status, or unsetting <code>CFLAGS</code>
+before running <code>configure</code>.</p>
 
 </div>
 
