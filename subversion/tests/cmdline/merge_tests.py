@@ -3881,7 +3881,7 @@ test_list = [ None,
               merge_added_dir_to_deleted_in_target,
               merge_ignore_whitespace,
               merge_ignore_eolstyle,
-              XFail(merge_add_over_versioned_file_conflicts),
+              merge_add_over_versioned_file_conflicts,
               merge_conflict_markers_matching_eol,
               XFail(merge_eolstyle_handling),
              ]
