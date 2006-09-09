@@ -59,6 +59,13 @@ Candidate changes:
     Votes:
       +1: djh
 
+  * r21392
+    Fix the Python bindings tests so that they use URLs which work
+    on Windows.
+    Branch: 1.4.x-r21392
+    Votes:
+      +1: djames
+
 Approved changes:
 
   * r21316
