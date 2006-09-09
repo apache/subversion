@@ -18,7 +18,7 @@ from distutils.core import setup
 
 setup (name = "svn-python",
        description = "Subversion Python Bindings",
-       maintainer = "Subversion Developers <dev@subversion.tigris.org>"
+       maintainer = "Subversion Developers <dev@subversion.tigris.org>",
        url = "http://subversion.tigris.org",
        version = "1.4.0",
        packages = ["libsvn", "svn"],
