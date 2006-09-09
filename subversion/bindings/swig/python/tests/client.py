@@ -4,8 +4,7 @@ from svn import core, repos, fs, delta, client, wc
 from libsvn.core import SubversionException
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH
-from urllib import pathname2url
+  REPOS_PATH, REPOS_URL
 from urlparse import urljoin
 
 class SubversionClientTestCase(unittest.TestCase):
@@ -38,7 +37,6 @@ class SubversionClientTestCase(unittest.TestCase):
     ]
 
     self.client_ctx.auth_baton = core.svn_auth_open(providers)
-    self.repos_url = "file://" + pathname2url(REPOS_PATH)
 
   def info_receiver(self, path, info, pool):
     """Squirrel away the output from 'svn info' so that the unit tests
@@ -85,10 +83,10 @@ class SubversionClientTestCase(unittest.TestCase):
     path = os.path.join(tempfile.gettempdir(), 'checkout')
 
     self.assertRaises(ValueError, client.checkout2, 
-                      self.repos_url, path, None, None, True, True, 
+                      REPOS_URL, path, None, None, True, True, 
                       self.client_ctx)
 
-    client.checkout2(self.repos_url, path, rev, rev, True, True, 
+    client.checkout2(REPOS_URL, path, rev, rev, True, True, 
             self.client_ctx)
 
   def test_info(self):
@@ -97,19 +95,19 @@ class SubversionClientTestCase(unittest.TestCase):
     # Run info
     revt = core.svn_opt_revision_t()
     revt.kind = core.svn_opt_revision_head
-    client.info(self.repos_url, revt, revt, self.info_receiver,
+    client.info(REPOS_URL, revt, revt, self.info_receiver,
                 False, self.client_ctx)
 
     # Check output from running info. This also serves to verify that
     # the internal 'info' object is still valid
     self.assertEqual(self.path, os.path.basename(REPOS_PATH))
     self.info.assert_valid()
-    self.assertEqual(self.info.URL, self.repos_url)
-    self.assertEqual(self.info.repos_root_URL, self.repos_url)
+    self.assertEqual(self.info.URL, REPOS_URL)
+    self.assertEqual(self.info.repos_root_URL, REPOS_URL)
 
   def test_mkdir_url(self):
     """Test svn_client_mkdir2 on a file:// URL"""
-    dir = urljoin(self.repos_url+"/", "dir1")
+    dir = urljoin(REPOS_URL+"/", "dir1")
     
     commit_info = client.mkdir2((dir,), self.client_ctx)
     self.assertEqual(commit_info.revision, 13)
@@ -117,7 +115,7 @@ class SubversionClientTestCase(unittest.TestCase):
 
   def test_log3_url(self):
     """Test svn_client_log3 on a file:// URL"""
-    dir = urljoin(self.repos_url+"/", "trunk/dir1")
+    dir = urljoin(REPOS_URL+"/", "trunk/dir1")
 
     start = core.svn_opt_revision_t()
     end = core.svn_opt_revision_t()
@@ -134,22 +132,22 @@ class SubversionClientTestCase(unittest.TestCase):
   def test_uuid_from_url(self):
     """Test svn_client_uuid_from_url on a file:// URL"""
     self.assert_(isinstance(
-                 client.uuid_from_url(self.repos_url, self.client_ctx),
+                 client.uuid_from_url(REPOS_URL, self.client_ctx),
                  types.StringTypes))
 
   def test_url_from_path(self):
     """Test svn_client_url_from_path for a file:// URL"""
-    self.assertEquals(client.url_from_path(self.repos_url), self.repos_url)
+    self.assertEquals(client.url_from_path(REPOS_URL), REPOS_URL)
 
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
     path = os.path.join(tempfile.gettempdir(), 'url_from_path')
 
-    client.checkout2(self.repos_url, path, rev, rev, True, True, 
+    client.checkout2(REPOS_URL, path, rev, rev, True, True, 
                      self.client_ctx)
 
-    self.assertEquals(client.url_from_path(path), self.repos_url)
+    self.assertEquals(client.url_from_path(path), REPOS_URL)
 
   def test_uuid_from_path(self):
     """Test svn_client_uuid_from_path."""
@@ -158,20 +156,20 @@ class SubversionClientTestCase(unittest.TestCase):
 
     path = os.path.join(tempfile.gettempdir(), 'uuid_from_path')
 
-    client.checkout2(self.repos_url, path, rev, rev, True, True, 
+    client.checkout2(REPOS_URL, path, rev, rev, True, True, 
                      self.client_ctx)
 
     wc_adm = wc.adm_open3(None, path, False, 0, None)
 
     self.assertEquals(client.uuid_from_path(path, wc_adm, self.client_ctx), 
-                      client.uuid_from_url(self.repos_url, self.client_ctx))
+                      client.uuid_from_url(REPOS_URL, self.client_ctx))
 
     self.assert_(isinstance(client.uuid_from_path(path, wc_adm, 
                             self.client_ctx), types.StringTypes))
 
   def test_open_ra_session(self):
       """Test svn_client_open_ra_session()."""
-      client.open_ra_session(self.repos_url, self.client_ctx)
+      client.open_ra_session(REPOS_URL, self.client_ctx)
 
 def suite():
     return unittest.makeSuite(SubversionClientTestCase, 'test',

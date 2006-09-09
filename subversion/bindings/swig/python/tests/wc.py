@@ -6,7 +6,7 @@ from libsvn.core import SubversionException
 import types
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH
+  REPOS_PATH, REPOS_URL
 from urllib import pathname2url
 
 class SubversionWorkingCopyTestCase(unittest.TestCase):
@@ -15,8 +15,6 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def setUp(self):
     """Load a Subversion repository"""
 
-    self.repos_url = "file://" + pathname2url(REPOS_PATH)
-    
     # Open repository directly for cross-checking
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
@@ -28,7 +26,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    client.checkout2(self.repos_url, self.path, rev, rev, True, True, 
+    client.checkout2(REPOS_URL, self.path, rev, rev, True, True, 
             client_ctx)
 
     self.wc = wc.adm_open3(None, self.path, True, -1, None)
@@ -126,7 +124,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.assert_(wc.check_wc(self.path) > 0)
 
   def test_get_ancestry(self):
-      self.assertEqual([self.repos_url, 12], 
+      self.assertEqual([REPOS_URL, 12], 
                        wc.get_ancestry(self.path, self.wc))
 
   def test_status(self):
