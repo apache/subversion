@@ -3,7 +3,7 @@ import unittest, os
 from svn import core, repos, fs, delta, client, ra
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH
+  REPOS_PATH, REPOS_URL
 from urllib import pathname2url
 
 class SubversionRepositoryAccessTestCase(unittest.TestCase):
@@ -14,19 +14,17 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
 
     ra.initialize()
 
-    self.repos_url = "file://" + pathname2url(REPOS_PATH)
-    
     # Open repository directly for cross-checking
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
 
     callbacks = ra.callbacks2_t()
 
-    self.ra_ctx = ra.open2(self.repos_url, callbacks, None, None)
+    self.ra_ctx = ra.open2(REPOS_URL, callbacks, None, None)
 
   def test_get_repos_root(self):
     root = ra.get_repos_root(self.ra_ctx)
-    self.assertEqual(root,self.repos_url)
+    self.assertEqual(root,REPOS_URL)
 
   def test_get_uuid(self):
     ra_uuid = ra.get_uuid(self.ra_ctx)
