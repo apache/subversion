@@ -107,7 +107,7 @@ made to the output:</p>
 
 <ul>
 
-<li><p>TODO</p></li>
+<li><p>Conflict markers in files now match the file's defined eol-style.</p></li>\
 
 </ul>
 
@@ -157,10 +157,10 @@ deal with large files.  The overall disk footprint is smaller as well,
 with fewer inodes being used.  Additionally, a number of long standing
 bugs related to merging and copying have been fixed.</p>
 
-<p><strong>WARNING:</strong> A Subversion 1.4 client will silently upgrade older
-working copies to the new format, rendering them unreadable by older
-Subersion clients.  See the section above, titled 'Working Copy Format
-Changes'.</p>
+<p><strong>WARNING:</strong> A Subversion 1.4 client will upgrade
+older working copies to the new format WITHOUT WARNING, rendering them
+unreadable by older Subersion clients.  See the section above, titled
+'Working Copy Format Changes'.</p>
 
 </div> <!-- wc-improvements -->
 
@@ -224,14 +224,31 @@ format, and will still be readable by older Subversion tools.</p>
 <div class="h3" id="new-switches" title="new-switches">
 <h3>New subcommand switches</h3>
 
-TODO:  EXPLAIN THESE:
+This release of Subversion adds a few new switches and options to the
+command line client. These are:
 
    <dl>
       <dt><tt>svn blame --force</tt></dt>
+      <dd>Displays the output of blame, even if the file is binary.</dd>
+
       <dt><tt>svn merge/blame -x</tt></dt>
+      <dd>Merge and blame commands can now pass options to an external
+      diff3 program.</dd>
+
       <dt><tt>svn diff/merge -c/--change</tt></dt>
+      <dd>You can now simply write -c N to view or merge a single
+      revision, instead of the cumbersome -r N-1:N.</dd>
+
       <dt><tt>svn diff --summarize</tt></dt>
+      <dd>Prints only the list of changed files, in the output format
+      of 'svn status'. This lets you retrieve summaries of changes
+      directly from a repository, whereas 'svn status' operates only
+      on the local changes of your working copy.</dd>
+
       <dt><tt>svn diff -x [-u | -b | -w | --ignore-eol-style]</tt></dt>
+      <dd>The diff engine internal to Subversion can now ignore
+      whitespace and eol-style when computing the diff.</dd>
+
    </dl>
 
 </div>  <!-- new-switches -->
@@ -244,7 +261,12 @@ TODO:  EXPLAIN THESE:
 <div class="h3" id="svnserve" title="svnserve">
 <h3>svnserve as native Windows service (<em>server</em>)</h3>
 
-blah blah
+The <tt>svnserve</tt> server can now be run as a Windows service. This
+allows svnserve to start automatically, at system boot time, without
+having a user logged in and without the need for an external service
+'wrapper' program. See <a
+href="http://svn.collab.net/repos/svn/tags/1.4.0/notes/windows-service.txt"><tt>notes/windows-service.txt</tt></a>
+for information on setting up <tt>svnserve</tt> as a Windows service.
 
 </div>  <!-- svnserve -->
 
@@ -263,7 +285,10 @@ rather than in <tt>~/.subversion/auth/</tt>.
   APIs, you may want to take notice of some new APIs:</p>
 
 <ul>
-  <li>TODO</li>
+  <li>The RA replay API, used by <tt>svnsync</tt>, lets you retrieve
+  all the data associated with a set of revisions in a single
+  operation.</li>
+
   <li>Many APIs have been revised to newer versions.</li>
 </ul>
 
