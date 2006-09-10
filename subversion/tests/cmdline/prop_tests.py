@@ -370,6 +370,33 @@ def update_conflict_props(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------
+def commit_conflict_dirprops(sbox):
+  "commit with conflicting dirprops"
+  
+  # Issue #2608: failure to see conflicting dirprops on root of
+  # repository.
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', wc_dir)
+
+  # Commit the file and directory
+  svntest.main.run_svn(None, 'ci', '-m', 'r2', wc_dir)
+
+  # Update to rev 1
+  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
+
+  # Add conflicting properties
+  svntest.main.run_svn(None, 'propset', 'foo', 'eek', wc_dir)
+
+  svntest.actions.run_and_verify_commit(wc_dir, None, None,
+                                        "Out of date: '' in transaction",
+                                        None, None, None, None,
+                                        wc_dir)
+
+#----------------------------------------------------------------------
 
 # Issue #742: we used to screw up when committing a file replacement
 # that also had properties.  It was fixed by teaching
@@ -1193,6 +1220,9 @@ def update_props_on_wc_root(sbox):
 ########################################################################
 # Run the tests
 
+def is_this_fsfs():
+  # This assumes that fsfs is the default fs implementation.
+  return (svntest.main.fs_type == 'fsfs' or svntest.main.fs_type is None)
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -1202,6 +1232,7 @@ test_list = [ None,
               downdate_props,
               remove_props,
               update_conflict_props,
+              XFail(commit_conflict_dirprops, is_this_fsfs),
               commit_replacement_props,
               revert_replacement_props,
               inappropriate_props,
