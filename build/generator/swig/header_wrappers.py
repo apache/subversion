@@ -106,12 +106,14 @@ class Generator(generator.swig.Generator):
 
     if types:
       self.ofile.write(
+        "#ifdef SWIGPYTHON\n"
         "%%apply CALLABLE_CALLBACK {\n"
         "  %s\n"
         "};\n"
         "%%apply CALLABLE_CALLBACK * {\n"
         "  %s *\n"
-        "};\n" % ( ",\n  ".join(types), " *,\n  ".join(types) )
+        "};\n"
+        "#endif\n" % ( ",\n  ".join(types), " *,\n  ".join(types) )
       );
 
 
