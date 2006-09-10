@@ -1811,7 +1811,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(dir_deltas),
     SVN_TEST_PASS(node_tree_delete_under_copy),
     SVN_TEST_PASS(revisions_changed),
-    SVN_TEST_PASS(created_rev_root),
+    SVN_TEST_XFAIL(created_rev_root),
     SVN_TEST_PASS(node_locations),
     SVN_TEST_PASS(node_locations2),
     SVN_TEST_PASS(rmlocks),
