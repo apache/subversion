@@ -91,6 +91,30 @@ class Generator(generator.swig.Generator):
       "  return %s(%s);\n" % (callee, param_names) +
       "}\n\n")
 
+
+  def _write_callback_typemaps(self, callbacks):
+    """Apply the CALLABLE_CALLBACK typemap to all callbacks"""
+
+    self.ofile.write('\n/* Callback typemaps */\n')
+    types = [];
+    for match in callbacks:
+      if match[0] and match[1]:
+        # Callbacks declared as a typedef
+        return_type, module, function, params = match
+        type = "%s_%s_t" % (module, function)
+        types.append(type)
+
+    if types:
+      self.ofile.write(
+        "%%apply CALLABLE_CALLBACK {\n"
+        "  %s\n"
+        "};\n"
+        "%%apply CALLABLE_CALLBACK * {\n"
+        "  %s *\n"
+        "};\n" % ( ",\n  ".join(types), " *,\n  ".join(types) )
+      );
+
+
   def _write_callbacks(self, callbacks):
     """Write invoker functions for callbacks"""
     self.ofile.write('\n/* Callbacks */\n')
@@ -120,6 +144,28 @@ class Generator(generator.swig.Generator):
 
 
     self.ofile.write("%}\n")
+
+    self.ofile.write("\n#ifdef SWIGPYTHON\n")
+    for match in callbacks:
+
+      if match[0] and not match[1]:
+        # Struct definitions
+        struct = match[0]
+      elif not match[0] and struct not in self._ignores:
+        # Using funcptr_member_proxy, add proxy methods to anonymous
+        # struct member callbacks, so that they can be invoked directly.
+        return_type, name, params = match[1:]
+        self.ofile.write('%%funcptr_member_proxy(%s, %s, %s_invoke_%s);\n'
+          % (struct, name, struct[:-2], name))
+      elif match[0] and match[1]:
+        # Using funcptr_proxy, create wrapper objects for each typedef'd
+        # callback, so that they can be invoked directly. The
+        # CALLABLE_CALLBACK typemap (used in _write_callback_typemaps)
+        # ensures that these wrapper objects are actually used.
+        return_type, module, function, params = match
+        self.ofile.write('%%funcptr_proxy(%s_%s_t, %s_invoke_%s);\n'
+          % (module, function, module, function))
+    self.ofile.write("\n#endif\n")
 
   def _write_proxy_definitions(self, structs):
     """Write proxy definitions to a SWIG interface file"""
@@ -176,6 +222,9 @@ class Generator(generator.swig.Generator):
     # Write list of structs for which we shouldn't define constructors
     # by default
     self._write_nodefault_calls(structs)
+
+    # Write typemaps for the callbacks
+    self._write_callback_typemaps(callbacks)
 
     # Write includes into the SWIG interface file
     self._write_includes(includes, base_fname)
