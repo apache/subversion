@@ -124,7 +124,7 @@ module Svn
       attr_accessor :baton
 
       def call(window)
-        Delta.txdelta_invoke_window_handler(self, window)
+        Delta.txdelta_invoke_window_handler(self, window, @baton)
       end
       
       def send(string_or_stream)
