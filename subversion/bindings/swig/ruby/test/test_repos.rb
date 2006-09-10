@@ -364,7 +364,37 @@ class SvnReposTest < Test::Unit::TestCase
                  ].sort,
                  @repos.proplist.keys.sort)
   end
-  
+
+  def test_dump
+    file = "file"
+    path = File.join(@wc_path, file)
+    source = "sample source"
+    log = "sample log"
+    ctx = make_context(log)
+
+    File.open(path, "w") {|f| f.print(source)}
+    ctx.add(path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    File.open(path, "a") {|f| f.print(source)}
+    rev2 = ctx.ci(@wc_path).revision
+
+    assert_nothing_raised do
+      @repos.dump_fs(nil, nil, rev1, rev2)
+    end
+
+    dump = StringIO.new("")
+    feedback = StringIO.new("")
+    @repos.dump_fs(dump, feedback, rev1, rev2)
+
+    dump_unless_feedback = StringIO.new("")
+    @repos.dump_fs(dump_unless_feedback, nil, rev1, rev2)
+
+    dump.rewind
+    dump_unless_feedback.rewind
+    assert_equal(dump.read, dump_unless_feedback.read)
+  end
+
   def test_load
     file = "file"
     path = File.join(@wc_path, file)
@@ -380,15 +410,13 @@ class SvnReposTest < Test::Unit::TestCase
     rev2 = ctx.ci(@wc_path).revision
 
     dump = StringIO.new("")
-    feedback = StringIO.new("")
-    @repos.dump_fs(dump, feedback, rev1, rev2)
+    @repos.dump_fs(dump, nil, rev1, rev2)
 
-    dump_unless_feedback = StringIO.new("")
-    @repos.dump_fs(dump_unless_feedback, nil, rev1, rev2)
-
-    dump.rewind
-    dump_unless_feedback.rewind
-    assert_equal(dump.read, dump_unless_feedback.read)
+    dest_path = File.join(@tmp_path, "dest")
+    repos = Svn::Repos.create(dest_path)
+    assert_raises(NoMethodError) do
+      repos.load_fs(nil)
+    end
 
     [
      [StringIO.new(""), Svn::Repos::LOAD_UUID_DEFAULT, "/"],
