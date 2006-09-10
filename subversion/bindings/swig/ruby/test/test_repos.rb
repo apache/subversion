@@ -379,32 +379,31 @@ class SvnReposTest < Test::Unit::TestCase
     File.open(path, "a") {|f| f.print(source)}
     rev2 = ctx.ci(@wc_path).revision
 
-    dest_path = File.join(@tmp_path, "dest")
-    dest_path2 = File.join(@tmp_path, "dest2")
-
     dump = StringIO.new("")
     feedback = StringIO.new("")
     @repos.dump_fs(dump, feedback, rev1, rev2)
 
+    dump_unless_feedback = StringIO.new("")
+    @repos.dump_fs(dump_unless_feedback, nil, rev1, rev2)
 
-    repos = Svn::Repos.create(dest_path)
-    assert_not_equal(@repos.fs.root.committed_info("/"),
-                     repos.fs.root.committed_info("/"))
     dump.rewind
-    feedback.rewind
-    repos.load_fs(dump, feedback, Svn::Repos::LOAD_UUID_DEFAULT, "/")
-    assert_equal(@repos.fs.root.committed_info("/"),
-                 repos.fs.root.committed_info("/"))
+    dump_unless_feedback.rewind
+    assert_equal(dump.read, dump_unless_feedback.read)
 
-
-    repos = Svn::Repos.create(dest_path2)
-    assert_not_equal(@repos.fs.root.committed_info("/"),
-                     repos.fs.root.committed_info("/"))
-    dump.rewind
-    feedback.rewind
-    repos.load_fs(dump, feedback)
-    assert_equal(@repos.fs.root.committed_info("/"),
-                 repos.fs.root.committed_info("/"))
+    [
+     [StringIO.new(""), Svn::Repos::LOAD_UUID_DEFAULT, "/"],
+     [StringIO.new("")],
+     [],
+    ].each_with_index do |args, i|
+      dest_path = File.join(@tmp_path, "dest#{i}")
+      repos = Svn::Repos.create(dest_path)
+      assert_not_equal(@repos.fs.root.committed_info("/"),
+                       repos.fs.root.committed_info("/"))
+      dump.rewind
+      repos.load_fs(dump, *args)
+      assert_equal(@repos.fs.root.committed_info("/"),
+                   repos.fs.root.committed_info("/"))
+    end
   end
 
   def test_node_editor

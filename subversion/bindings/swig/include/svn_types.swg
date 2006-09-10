@@ -710,6 +710,14 @@
 %typemap(in) svn_stream_t * {
   $1 = svn_swig_rb_make_stream($input);
 }
+
+%typemap(in) svn_stream_t *MAY_BE_NULL {
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = svn_swig_rb_make_stream($input);
+  }
+}
 #endif
 
 /* -----------------------------------------------------------------------

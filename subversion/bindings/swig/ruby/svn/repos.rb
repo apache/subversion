@@ -264,7 +264,7 @@ module Svn
                        use_deltas, cancel_func)
       end
 
-      def load_fs(dumpstream, feedback_stream, uuid_action=nil,
+      def load_fs(dumpstream, feedback_stream=nil, uuid_action=nil,
                   parent_dir=nil, use_pre_commit_hook=true,
                   use_post_commit_hook=true, &cancel_func)
         uuid_action ||= Svn::Repos::LOAD_UUID_DEFAULT

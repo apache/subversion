@@ -47,6 +47,12 @@
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
 
+#ifdef SWIGRUBY
+%apply svn_stream_t *MAY_BE_NULL {
+    svn_stream_t *feedback_stream
+};
+#endif
+
 %callback_typemap(svn_repos_history_func_t history_func, void *history_baton,
                   svn_swig_py_repos_history_func,
                   svn_swig_pl_thunk_history_func,
