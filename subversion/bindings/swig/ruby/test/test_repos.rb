@@ -380,22 +380,29 @@ class SvnReposTest < Test::Unit::TestCase
     rev2 = ctx.ci(@wc_path).revision
 
     dest_path = File.join(@tmp_path, "dest")
-    repos = Svn::Repos.create(dest_path)
+    dest_path2 = File.join(@tmp_path, "dest2")
 
+    dump = StringIO.new("")
+    feedback = StringIO.new("")
+    @repos.dump_fs(dump, feedback, rev1, rev2)
+
+
+    repos = Svn::Repos.create(dest_path)
     assert_not_equal(@repos.fs.root.committed_info("/"),
                      repos.fs.root.committed_info("/"))
-
-    dump = Tempfile.new("dump")
-    feedback = Tempfile.new("feedback")
-    dump.open
-    feedback.open
-    @repos.dump_fs(dump, feedback, rev1, rev2)
-    dump.close
-    feedback.close
-    dump.open
-    feedback.open
+    dump.rewind
+    feedback.rewind
     repos.load_fs(dump, feedback, Svn::Repos::LOAD_UUID_DEFAULT, "/")
+    assert_equal(@repos.fs.root.committed_info("/"),
+                 repos.fs.root.committed_info("/"))
 
+
+    repos = Svn::Repos.create(dest_path2)
+    assert_not_equal(@repos.fs.root.committed_info("/"),
+                     repos.fs.root.committed_info("/"))
+    dump.rewind
+    feedback.rewind
+    repos.load_fs(dump, feedback)
     assert_equal(@repos.fs.root.committed_info("/"),
                  repos.fs.root.committed_info("/"))
   end
