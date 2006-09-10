@@ -36,6 +36,16 @@
 #endif
 
 
+/* %set_constant(name, value) */
+#if SWIG_VERSION <= 0x010327
+#ifdef SWIGPYTHON
+%define %set_constant(name, value)
+PyDict_SetItemString(d, name, value);
+%enddef
+#endif
+#endif
+
+
 #ifdef SWIGPERL
 #if SWIG_VERSION == 0x010324
 %typemap(varin) apr_pool_t * {
