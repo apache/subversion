@@ -1,0 +1,188 @@
+                             -*- text -*-
+
+This file documents what users should expect from path-based authz,
+and the responsibilities of the implementor of said feature.
+
+
+============================================================================
+WHAT USERS SHOULD EXPECT FROM PATH-BASED AUTHZ
+============================================================================
+
+1. CHECKOUTS
+
+   Unreadable paths will not be downloaded into a working copy.
+   However, 'svn update' may cause working paths to disappear or
+   re-appear based on changing server authorization policies.
+   
+   (Note: the .svn/entries file may still leak the name of the
+   unreadable path; see the 'Known Leakage' section below.)
+
+
+2. LOG MESSAGES
+
+   Log information may be restricted, based on readability of
+   changed-paths.
+   
+     * If the target of 'svn log' wanders into unreadable territory,
+       then log output will simply stop at the last readable revision.
+       If the log is tracing backwards through time, as the plain
+       "svn log" command does, the target will appear to be added
+       (without history) in that revision.
+   
+     * If a revision returned by 'svn log' contains a mixture of
+       readable/unreadable changed-paths, then the log message is
+       suppressed, along with the unreadable changed-paths.  Only the
+       revision number, author, date, and readable paths are
+       displayed.
+   
+     * If a revision returned by 'svn log' contains only unreadable
+       changed-paths, then only the revision number is displayed.
+   
+   It's an official recommendation ("best practice") to avoid the
+   "mixed" changed-path situation; users should avoid making a single
+   commit that includes changes to files in both readable and
+   unreadable areas.  This scenario is quite annoying for people who
+   can't read all the changed-paths.
+
+
+3. COPIES (BRANCHING AND TAGGING)
+
+   Subversion does O(1) copies of entire trees, but unfortunately,
+   this isn't completely compatible with path-based access control.
+   In order to copy an entire tree, every path in the tree must be
+   checked for readability: this is an O(N) operation.
+   
+   Depending on the specific path-based authz module being used,
+   however, there are sometimes solutions that aren't quite so
+   expensive as O(N).
+
+
+4. TRACING PATH CHANGES
+
+   If a Subversion 1.1 client attempts to fetch an older version of a
+   file or directory, e.g.:
+   
+       svn cat -r5 foo.c
+       svn diff -r10:28 bar.c
+   
+   ...then there is a potential for failure, should older versions of
+   the file exist at unreadable paths.  In other words, the tracing of
+   copies/renames is subject to readabliity checks.
+   
+   If history-tracing wanders into unreadable territory, the process
+   halts; no further information is retrieved.
+   
+      Example 1: while 'bar.c' might be perfectly readable in both
+      revisions 10 and 28, the 'svn diff' command (above) will return
+      error if the file has an unreadable ancestor somewhere between
+      those two revisions.
+   
+      Example 2: 'svn blame bar.c' will not be able to retrieve
+      unauthorized versions of a file, or any ancestors that precede
+      it.  So it will appear that 'bar.c' was wholly added -- without
+      history -- in the first public version *after* the unreadable
+      version.
+   
+   So again, an official recommendation ("best practice") is to avoid
+   renaming or copying files between public and private areas.  For
+   users without omnipotent read permissions, this will make renames
+   difficult to follow, and client commands which attempt to trace
+   history are likely to fail.
+
+
+5. REVISION PROPERTIES
+
+   Users are allowed to attach arbitrary, unversioned properties to
+   revisions.  Additionally, most revisions also have "standard"
+   revision props (revprops), such as svn:author, svn:date, and
+   svn:log.  Access to revprops may be restricted, based on
+   readability of changed-paths.
+   
+     * If a revision contains nothing but unreadable changed-paths,
+       then all revprops are unreadable and unwritable.
+   
+     * If a revision has a mixture of readable/unreadable
+       changed-paths, then all revprops are unreadable, except for
+       svn:author and svn:date.  All revprops are unwritable.
+   
+   It's an official recommendation ("best practice") to avoid the
+   latter situation; users should avoid making a single commit that
+   includes changes to files in both readable and unreadable areas.
+   This situation is quite annoying for people who can't read all the
+   changed-paths.
+
+
+6. KNOWN LEAKAGE OF UNREADABLE PATHS
+
+   Subversion may (occasionally) leak knowledge of the existence of an
+   unreadable path.  However, the *contents* of an unreadable file or
+   directory will never be leaked.
+   
+   Here are the known times when this happens:
+   
+     * 'svn ls directory-URL': an unreadable directory entry is still
+       listed along with other entries.
+   
+     * 'svn checkout/update': an unreadable child doesn't appear in
+       the working copy, but the .svn/entries file still contains an
+       entry for it (marked 'absent').
+
+7. LOCKING
+
+   If a client attempts to lock or unlock an unreadable path, the
+   command will fail.  If a client attempts to retrieve a lock on one
+   path, or a list of all locks "below" a directory, only readable
+   paths will ever be returned; unreadable locked paths remain
+   unknown.
+
+
+============================================================================
+HOW TO IMPLEMENT PATH-BASED AUTHZ
+============================================================================
+
+If an RA server implementation wants to implement path-based authz,
+here are its responsibilities:
+
+   1. Implement a read-authz callback (see svn_repos_authz_read_func_t), 
+      and pass it to the following svn_repos.h functions:
+   
+           svn_repos_begin_report()
+           svn_repos_dir_delta()
+           svn_repos_history2()
+           svn_repos_get_logs3()
+           svn_repos_trace_node_locations()
+           svn_repos_get_file_revs()
+           svn_repos_fs_get_locks()
+           svn_repos_fs_change_rev_prop2()
+           svn_repos_fs_revision_prop()
+           svn_repos_fs_revision_proplist()
+           svn_repos_get_commit_editor3()
+           svn_repos_replay2()
+   
+   2. Manually implement authz for incoming network requests that
+      represent calls to:
+   
+           RA->get_file()
+           RA->get_dir()
+           RA->check_path()
+           RA->stat()
+           RA->lock()
+           RA->lock_many()
+           RA->unlock()
+           RA->unlock_many()
+           RA->get_lock()
+   
+      (These concepts aren't wrapped by libsvn_repos because it's just
+      as easy to call an authz func directly on a single path, rather
+      than pass it to a repos wrapper.)
+   
+   3. Manually implement authz when receiving network requests that
+      represent calls to a commit editor:
+   
+          - do write checks for most editor operations
+          - do read *and* write checks for copy operations.
+   
+      (Note that doing full-out authz on whole trees fundamentally
+      contradicts Subversion's O(1) copy philosophy; in practice,
+      however, specific authz implementations are able to get the same
+      effect while being less expensive than O(N).)

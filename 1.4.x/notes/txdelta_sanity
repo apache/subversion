@@ -1,0 +1,61 @@
+
+General Guide to Textdeltas.... basic use of interfaces.
+
+(Yes, the interfaces are a bit simplified.  :)  )
+
+
+To SEND textdeltas
+------------------
+ 
+ 1. txdelta_stream = svn_txdelta (source_stream, target_stream);
+
+ 2. Get window handler to do something with delta.  If using an
+    "editor" to transmit information:
+
+      window_consumer_func = editor->apply_textdelta (file_baton);
+
+    If you want raw vcdiff data for embedding in XML or HTTP
+    transactions:
+
+      window_consumer_func = svn_txdelta_to_vcdiff (txdelta_stream);
+
+ 3. Loop until there are no more windows:
+
+      txdelta_window = svn_txdelta_next_window (txdelta_stream);
+      window_consumer_func (txdelta_window);
+      svn_txdelta_free_window (txdelta_window);
+
+    Be sure to call window_consumer_func with a NULL window when there
+    are no more windows to consume.
+
+ 4. svn_txdelta_free (txdelta_stream);
+
+
+
+To RECEIVE textdeltas
+---------------------
+If implementing "apply_textdelta" within an editor:
+
+ 1. Get window handler to apply the text delta:
+
+      apply_handler = svn_txdelta_apply (read_func, write_func)
+
+    where read_func reads from the delta source and write_func writes
+    to the target.
+
+ 2. If you don't need to do any special cleanup, you can return
+    apply_handler to the caller directly.  If you do need to do
+    cleanup, write your own window_consumer_func which invokes
+    apply_handler.  In this case, your window handler will receive a
+    NULL window argument when there are no more windows to consume,
+    and you can do cleanup then.  Be sure to pass a NULL window to
+    apply_handler when that happens so that it can clean up its own
+    stuff.
+
+If you want to receive raw vcdiff data from XML or HTTP transactions,
+get or write a window consumer function and call:
+
+      vcdiff_parser = svn_make_vcdiff_parser (window_consumer_func);
+
+      Loop over vcdiff data:
+          svn_vcdiff_parse (vcdiff_parser, data);

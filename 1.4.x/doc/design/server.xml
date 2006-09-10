@@ -1,0 +1,715 @@
+<chapter id="server">
+  <title>Server &mdash; How the server works</title>
+
+  <simplesect>
+    <para>The term &ldquo;server&rdquo; is ambiguous, because it has at least
+      two different meanings: it can refer to a powerful computer which offers
+      services to users on a network, or it can refer to a CPU process designed
+      to receive network requests.</para>
+
+    <para>In Subversion, however, the <firstterm>server</firstterm> is just a
+      set of libraries that implements <firstterm>repositories</firstterm> and
+      makes them available to other programs.  No networking is
+      required.</para>
+
+    <para>There are two main libraries: the <firstterm>Subversion
+        Filesystem</firstterm> library, and the <firstterm>Subversion
+        Repository</firstterm> library.</para>
+  </simplesect>
+
+  <sect1 id="server.fs">
+    <title>Filesystem</title>
+
+    <sect2 id="server.fs.overview">
+      <title>Filesystem Overview</title>
+      <itemizedlist mark="bullet">
+        <listitem><para><emphasis role="bold">Requires:</emphasis>  
+          <itemizedlist mark="minus">
+            <listitem><para>some writable disk space</para></listitem>
+            <listitem><para>(for now) Berkeley DB library</para></listitem>
+          </itemizedlist>
+        </para></listitem>
+        <listitem><para><emphasis role="bold">Provides:</emphasis>  
+          <itemizedlist mark="minus">
+            <listitem><para>a repository for storing files</para></listitem>
+            <listitem><para>concurrent client transactions</para></listitem>
+            <listitem><para>enforcement of user &amp; group permissions
+                [someday, not yet]</para></listitem>
+          </itemizedlist>
+        </para></listitem>
+      </itemizedlist>
+      <para>This library implements a hierarchical filesystem which supports
+        atomic changes to directory trees, and records a complete history of
+        the changes.  In addition to recording changes to file and directory
+        contents, the Subversion Filesystem records changes to file meta-data
+        (see discussion of <firstterm>properties</firstterm> in <xref
+          linkend="model"/>).</para>
+    </sect2>
+
+    <sect2 id="server.fs.api">
+      <title>API</title>
+
+      <para> There are two main files that describe the Subversion
+        filesystem.</para>
+
+      <para>First, read the section below (<xref linkend="server.fs.struct"/>)
+        for a general overview of how the filesystem works.</para>
+
+      <para>Once you've done this, read Jim Blandy's own structural overview,
+        which explains how nodes and revisions are organized (among other
+        things) in the filesystem implementation:
+        <filename>subversion/libsvn_fs/structure</filename>.</para>
+
+      <para>Finally, read the well-documented API in
+        <filename>subversion/include/svn_fs.h</filename>.</para>
+    </sect2>
+
+    <sect2 id="server.fs.struct">
+      <title>Repository Structure</title>
+
+      <sect3 id="server.fs.struct.schema">
+        <title>Schema</title>
+
+        <para>
+          To begin, please be sure that you're already casually familiar with
+          Subversion's ideas of files, directories, and revision histories.  If
+          not, see <xref linkend="model"/>.  We can now offer precise,
+          technical descriptions of the terms introduced there.</para>
+
+        <!-- This is taken from jimb's very first Subversion spec! -->
+
+        <screen>
+A <firstterm>text string</firstterm> is a string of Unicode characters which is
+canonically decomposed and ordered, according to the rules described in the
+Unicode standard.
+
+A <firstterm>string of bytes</firstterm> is what you'd expect.
+
+A <firstterm>property list</firstterm> is an unordered list of properties.  A
+<firstterm>property</firstterm> is a pair
+<literal>(<replaceable>name</replaceable>,
+  <replaceable>value</replaceable>)</literal>, where
+<replaceable>name</replaceable> is a text string, and
+<replaceable>value</replaceable> is a string of bytes.  No two properties in a
+property list have the same name.
+
+A <firstterm>file</firstterm> is a property list and a string of bytes.
+
+A <firstterm>node</firstterm> is either a file or a directory.  (We define a
+directory below.)  Nodes are distinguished unions &mdash; you can always tell
+whether a node is a file or a directory.
+
+A <firstterm>node table</firstterm> is an array mapping some set of positive
+integers, called <firstterm>node numbers</firstterm>, onto
+<firstterm>nodes</firstterm>.  If a node table maps some number
+<replaceable>i</replaceable> to some node <replaceable>n</replaceable>, then
+<replaceable>i</replaceable> is a <firstterm>valid node number</firstterm> in
+that table, and <firstterm>node</firstterm> <replaceable>i</replaceable>is
+<replaceable>n</replaceable>.  Otherwise, <replaceable>i</replaceable> is an
+<firstterm>invalid node number</firstterm> in that table.
+
+A <firstterm>directory entry</firstterm> is a triple
+<literal>(<replaceable>name</replaceable>, <replaceable>props</replaceable>,
+  <replaceable>node</replaceable>)</literal>, where
+<replaceable>name</replaceable> is a text string,
+<replaceable>props</replaceable> is a property list, and
+<replaceable>node</replaceable> is a node number.
+
+A <firstterm>directory</firstterm> is an unordered list of directory entries,
+and a property list.
+
+A <firstterm>revision</firstterm> is a node number and a property list.
+
+A <firstterm>history</firstterm> is an array of revisions, indexed by a
+contiguous range of non-negative integers containing 0.
+
+A <firstterm>repository</firstterm> consists of node table and a history.
+
+</screen>
+
+        <!-- Some definitions: we say that a node @var{n} is a @dfn{direct
+        child} of a directory @var{d} iff @var{d} contains a directory entry
+        whose node number is @var{n}. A node @var{n} is a @dfn{child} of a
+        directory @var{d} iff @var{n} is a direct child of @var{d}, or if there
+        exists some directory @var{e} which is a direct child of @var{d}, and
+        @var{n} is a child of @var{e}. Given this definition of ``direct
+        child'' and ``child,'' the obvious definitions of ``direct parent'' and
+        ``parent'' hold.
+
+        In these restrictions, let @var{r} be any repository.  When we refer,
+        implicitly or explicitly, to a node table without further
+        clarification, we mean @var{r}'s node table.  Thus, if we refer to ``a
+        valid node number'' without specifying the node table in which it is
+        valid, we mean ``a valid node number in @var{r}'s node table''.
+        Similarly for @var{r}'s history. -->
+
+        <para>Now that we've explained the form of the data, we make some
+          restrictions on that form.</para>
+
+        <para><emphasis role="bold">Every revision has a root
+            directory.</emphasis>  Every revision's node number is a valid node
+          number, and the node it refers to is always a directory.  We call
+          this the revision's <firstterm>root directory</firstterm>.</para>
+
+        <para><emphasis role="bold">Revision 0 always contains an empty root
+            directory.</emphasis>  This baseline makes it easy to check out
+          whole projects from the repository.</para>
+
+        <para><emphasis role="bold">Directories contain only valid
+            links.</emphasis> Every directory entry's
+          <replaceable>node</replaceable> is a valid node number.</para>
+
+        <para><emphasis role="bold">Directory entries can be identified by
+            name.</emphasis> For any directory <replaceable>d</replaceable>,
+          every directory entry in <replaceable>d</replaceable> has a distinct
+          name.</para>
+
+        <para><emphasis role="bold">There are no cycles of
+            directories.</emphasis>  No node is its own child.</para>
+
+        <para><emphasis role="bold">Directories can have more than one
+            parent.</emphasis>  The Unix file system does not allow more than
+          one hard link to a directory, but Subversion does allow the analogous
+          situation.  Thus, the directories in a Subversion repository form a
+          directed acyclic graph (<firstterm>DAG</firstterm>), not a tree.
+          However, it would be distracting and unhelpful to replace the
+          familiar term &ldquo;directory tree&rdquo; with the unfamiliar term
+          &ldquo;directory DAG&rdquo;, so we still call it a &ldquo;directory
+          tree&rdquo; here.</para>
+
+        <para><emphasis role="bold">There are no dead nodes.</emphasis>  Every
+          node is a child of some revision's root directory.</para>
+
+        <!-- </jimb> -->
+      </sect3>
+
+      <sect3 id="server.fs.bubble-up">
+        <title>Bubble-Up Method</title>
+
+        <para>This section provides a conversational explanation of how the
+          repository actually stores and revisions file trees.  It's not
+          critical knowledge for a programmer using the Subversion Filesystem
+          API, but most people probably still want to know what's going on
+          &ldquo;under the hood&rdquo; of the repository.</para>
+
+        <para>Suppose we have a new project, at revision 1, looking like this
+          (using CVS syntax):</para>
+
+        <programlisting>
+prompt$ svn checkout myproj
+U myproj/
+U myproj/B
+U myproj/A
+U myproj/A/fish
+U myproj/A/fish/tuna
+prompt$
+</programlisting>
+
+        <para>Only the file <filename>tuna</filename> is a regular file,
+          everything else in myproj is a directory.</para>
+
+        <para>Let's see what this looks like as an abstract data structure in
+          the repository, and how that structure works in various operations
+          (such as update, commit, and branch).</para>
+
+        <para>In the diagrams that follow, lines represent parent-to-child
+          connections in a directory hierarchy.  Boxes are "nodes".  A node is
+          either a file or a directory &ndash; a letter in the upper left
+          indicates which kind.  A file node has a byte-string for its content,
+          whereas directory nodes have a list of dir_entries, each pointing to
+          another node.</para>
+
+        <para>Parent-child links go both ways (i.e., a child knows who all its
+          parents are), but a node's name is stored only in its parent, because
+          a node with multiple parents may have different names in different
+          parents.</para>
+
+        <para>At the top of the repository is an array of revision numbers,
+          stretching off to infinity.  Since the project is at revision 1, only
+          index 1 points to anything; it points to the root node of revision 1
+          of the project:</para>
+
+        <programlisting>
+                    ( myproj's revision array )
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |
+          |
+       ___|_____
+      |D        |
+      |         |
+      |   A     |      /* Two dir_entries, `A' and `B'. */
+      |    \    |
+      |   B \   |
+      |__/___\__|
+        /     \
+       |       \
+       |        \
+    ___|___   ___\____
+   |D      | |D       |
+   |       | |        |
+   |       | | fish   |   /* One dir_entry, `fish'. */
+   |_______| |___\____|
+                  \
+                   \
+                 ___\____
+                |D       |
+                |        |
+                | tuna   |  /* One dir_entry, `tuna'. */
+                |___\____|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |        |   /* (Contents of tuna not shown.) */
+                   |________|
+
+</programlisting>
+
+        <para>What happens when we modify <filename>tuna</filename> and commit?
+          First, we make a new <filename>tuna</filename> node, containing the
+          latest text.  The new node is not connected to anything yet, it's
+          just hanging out there in space:</para>
+
+        <programlisting>
+                         ________
+                        |F       |
+                        |        |
+                        |        |
+                        |________|
+</programlisting>
+
+        <para>Next, we create a <emphasis>new</emphasis> revision of its parent
+          directory:</para>
+
+        <programlisting>
+                 ________
+                |D       |
+                |        |
+                | tuna   |
+                |___\____|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |        |
+                   |________|
+</programlisting>
+
+        <para>We continue up the line, creating a new revision of the next
+          parent directory:</para>
+
+        <programlisting>
+              ________
+             |D       |
+             |        |
+             | fish   |
+             |___\____|
+                  \
+                   \
+                 ___\____
+                |D       |
+                |        |
+                | tuna   |
+                |___\____|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |        |
+                   |________|
+</programlisting>
+
+        <para>Now it gets more tricky: we need to create a new revision of the
+          root directory.  This new root directory needs an entry to point to
+          the &ldquo;new&rdquo; directory A, but directory B hasn't changed at
+          all.  Therefore, our new root directory also has an entry that still
+          points to the <emphasis>old</emphasis> directory B node!</para>
+
+        <programlisting>
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |
+          |
+       ___|_____             ________
+      |D        |           |D       |
+      |         |           |        |
+      |   A     |           |   A    |
+      |    \    |           |    \   |
+      |   B \   |           |   B \  |
+      |__/___\__|           |__/___\_|
+        /     \               /     \
+       |    ___\_____________/       \
+       |   /    \                     \
+    ___|__/   ___\____              ___\____
+   |D      | |D       |            |D       |
+   |       | |        |            |        |
+   |       | | fish   |            | fish   |
+   |_______| |___\____|            |___\____|
+                  \                     \
+                   \                     \
+                 ___\____              ___\____
+                |D       |            |D       |
+                |        |            |        |
+                | tuna   |            | tuna   |
+                |___\____|            |___\____|
+                     \                     \
+                      \                     \
+                    ___\____              ___\____
+                   |F       |            |F       |
+                   |        |            |        |
+                   |        |            |        |
+                   |________|            |________|
+
+</programlisting>
+
+        <para>Finally, after all our new nodes are written, we finish the
+          &ldquo;bubble up&rdquo; process by linking this new tree to the next
+          available revision in the history array.  In this case, the new tree
+          becomes revision 2 in the repository.</para>
+
+        <programlisting>
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \
+          |         \__________
+       ___|_____             __\_____
+      |D        |           |D       |
+      |         |           |        |
+      |   A     |           |   A    |
+      |    \    |           |    \   |
+      |   B \   |           |   B \  |
+      |__/___\__|           |__/___\_|
+        /     \               /     \
+       |    ___\_____________/       \
+       |   /    \                     \
+    ___|__/   ___\____              ___\____
+   |D      | |D       |            |D       |
+   |       | |        |            |        |
+   |       | | fish   |            | fish   |
+   |_______| |___\____|            |___\____|
+                  \                     \
+                   \                     \
+                 ___\____              ___\____
+                |D       |            |D       |
+                |        |            |        |
+                | tuna   |            | tuna   |
+                |___\____|            |___\____|
+                     \                     \
+                      \                     \
+                    ___\____              ___\____
+                   |F       |            |F       |
+                   |        |            |        |
+                   |        |            |        |
+                   |________|            |________|
+
+</programlisting>
+
+        <para>Generalizing on this example, you can now see that each
+          &ldquo;revision&rdquo; in the repository history represents a root
+          node of a unique tree (and an atomic commit to the whole filesystem.)
+          There are many trees in the repository, and many of them share
+          nodes.</para>
+
+        <para>Many nice behaviors come from this model:</para>
+
+        <orderedlist numeration="arabic">
+          <listitem><para><emphasis role="bold">Easy reads.</emphasis>  If a
+              filesystem reader wants to locate revision
+              <replaceable>X</replaceable> of file <filename>foo.c</filename>,
+              it need only traverse the repository's history, locate revision
+              <replaceable>X</replaceable>'s root node, then walk down the tree
+              to <filename>foo.c</filename>.</para></listitem>
+
+          <listitem><para><emphasis role="bold">Writers don't interfere with
+                readers.</emphasis>  Writers can continue to create new nodes,
+              bubbling their way up to the top, and concurrent readers cannot
+              see the work in progress.  The new tree only becomes visible to
+              readers after the writer makes its final &ldquo;link&rdquo; to
+              the repository's history.</para></listitem>
+
+          <listitem><para><emphasis role="bold">File structure is
+                versioned.</emphasis>  Unlike CVS, the very structure of each
+              tree is being saved from revision to revision.  File and
+              directory renames, additions, and deletions are part of the
+              repository's history.</para></listitem>
+        </orderedlist>
+
+        <para>Let's demonstrate the last point by renaming the
+          <filename>tuna</filename> to <filename>book</filename>.</para>
+
+        <para>We start by creating a new parent &ldquo;fish&rdquo; directory,
+          except that this parent directory has a different dir_entry, one
+          which points the <emphasis>same</emphasis> old file node, but has a
+          different name:</para>
+
+        <programlisting>
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \
+          |         \__________
+       ___|_____             __\_____
+      |D        |           |D       |
+      |         |           |        |
+      |   A     |           |   A    |
+      |    \    |           |    \   |
+      |   B \   |           |   B \  |
+      |__/___\__|           |__/___\_|
+        /     \               /     \
+       |    ___\_____________/       \
+       |   /    \                     \
+    ___|__/   ___\____              ___\____
+   |D      | |D       |            |D       |
+   |       | |        |            |        |
+   |       | | fish   |            | fish   |
+   |_______| |___\____|            |___\____|
+                  \                     \
+                   \                     \
+                 ___\____              ___\____      ________
+                |D       |            |D       |    |D       |
+                |        |            |        |    |        |
+                | tuna   |            | tuna   |    | book   |
+                |___\____|            |___\____|    |_/______|
+                     \                     \         /
+                      \                     \       /
+                    ___\____              ___\____ /
+                   |F       |            |F       |
+                   |        |            |        |
+                   |        |            |        |
+                   |________|            |________|
+</programlisting>
+
+        <para>From here, we finish with the bubble-up process.  We make new
+          parent directories up to the top, culminating in a new root directory
+          with two dir_entries (one points to the old &ldquo;B&rdquo; directory
+          node we've had all along, the other to the new revision of
+          &ldquo;A&rdquo;), and finally link the new tree to the history as
+          revision 3:</para>
+
+        <programlisting>
+       ______________________________________________________
+      |___1_______2________3________4________5_________6_____...
+          |        \        \_________________
+          |         \__________               \
+       ___|_____             __\_____        __\_____
+      |D        |           |D       |      |D       |
+      |         |           |        |      |        |
+      |   A     |           |   A    |      |   A    |
+      |    \    |           |    \   |      |    \   |
+      |   B \   |           |   B \  |      |   B \  |
+      |__/___\__|           |__/___\_|      |__/___\_|
+        /  ___________________/_____\_________/     \
+       |  / ___\_____________/       \               \
+       | / /    \                     \               \
+    ___|/_/   ___\____              ___\____      _____\__
+   |D      | |D       |            |D       |    |D       |
+   |       | |        |            |        |    |        |
+   |       | | fish   |            | fish   |    | fish   |
+   |_______| |___\____|            |___\____|    |___\____|
+                  \                     \             \
+                   \                     \             \
+                 ___\____              ___\____      ___\____
+                |D       |            |D       |    |D       |
+                |        |            |        |    |        |
+                | tuna   |            | tuna   |    | book   |
+                |___\____|            |___\____|    |_/______|
+                     \                     \         /
+                      \                     \       /
+                    ___\____              ___\____ /
+                   |F       |            |F       |
+                   |        |            |        |
+                   |        |            |        |
+                   |________|            |________|
+
+</programlisting>
+
+        <para>For our last example, we'll demonstrate the way
+          &ldquo;tags&rdquo; and &ldquo;branches&rdquo; are implemented in the
+          repository.</para>
+
+        <para>In a nutshell, they're one and the same thing.  Because nodes are
+          so easily shared, we simply create a <emphasis>new</emphasis>
+          directory entry that points to an existing directory node.  It's an
+          extremely cheap way of copying a tree; we call this new entry a
+          <firstterm>clone</firstterm>, or more colloquially, a &ldquo;cheap
+          copy&rdquo;.</para>
+
+        <para>Let's go back to our original tree, assuming that we're at
+          revision 6 to begin with:</para>
+
+        <programlisting>
+       ______________________________________________________
+    ...___6_______7________8________9________10_________11_____...
+          |
+          |
+       ___|_____
+      |D        |
+      |         |
+      |   A     |
+      |    \    |
+      |   B \   |
+      |__/___\__|
+        /     \
+       |       \
+       |        \
+    ___|___   ___\____
+   |D      | |D       |
+   |       | |        |
+   |       | | fish   |
+   |_______| |___\____|
+                  \
+                   \
+                 ___\____
+                |D       |
+                |        |
+                | tuna   |
+                |___\____|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |        |
+                   |________|
+
+</programlisting>
+
+        <para>Let's &ldquo;tag&rdquo; directory A.  To make the clone, we
+          create a new dir_entry <emphasis role="bold">T</emphasis> in our
+          root, pointing to A's node:</para>
+
+        <programlisting>
+       ______________________________________________________
+      |___6_______7________8________9________10_________11_____...
+          |        \
+          |         \
+       ___|_____   __\______
+      |D        | |D        |
+      |         | |         |
+      |   A     | |    A    |
+      |    \    | |    |    |
+      |   B \   | |  B |  T |
+      |__/___\__| |_/__|__|_|
+        /     \    /   |  |
+       |    ___\__/   /  /
+       |   /    \    /  /
+    ___|__/   ___\__/_ /
+   |D      | |D       |
+   |       | |        |
+   |       | | fish   |
+   |_______| |___\____|
+                  \
+                   \
+                 ___\____
+                |D       |
+                |        |
+                | tuna   |
+                |___\____|
+                     \
+                      \
+                    ___\____
+                   |F       |
+                   |        |
+                   |        |
+                   |________|
+
+</programlisting>
+
+        <para>Now we're all set.  In the future, the contents of directories A
+          and B may change quite a lot.  However, assuming we never make any
+          changes to directory T, it will <emphasis>always</emphasis> point to
+          a particular pristine revision of directory A at some point in time.
+          Thus, T is a tag.</para>
+
+        <para>(In theory, we can use some kind of authorization system to
+          prevent anyone from writing to directory T.  In practice, a well-laid
+          out repository should encourage &ldquo;tag directories&rdquo; to live
+          in one place, so that it's clear to all users that they're not meant
+          to change.)</para>
+
+        <para>However, if we <emphasis>do</emphasis> decide to allow commits in
+          directory T, and now our repository tree increments to revision 8,
+          then T becomes a branch.  Specifically, it's a branch of directory A
+          which shares history with A up to a certain point, and then
+          &ldquo;broke off&rdquo; from the main line at revision 8.</para>
+      </sect3>
+
+      <sect3 id="server.fs.struct.diffy-storage">
+        <title>Diffy Storage</title>
+          
+        <para>You may have been thinking, &ldquo;Gee, this bubble up method
+          seems nice, but it sure wastes a lot of space.  Every commit to the
+          repository creates an entire line of new directory
+          nodes!&rdquo;</para>
+
+        <para>Like many other revision control systems, Subversion stores
+          changes as differences.  It doesn't make complete copies of nodes;
+          instead, it stores the <emphasis>latest</emphasis> revision as a full
+          text, and previous revisions as a succession of reverse diffs (the
+          word "diff" is used loosely here &ndash; for files, it means vdeltas,
+          for directories, it means a format that expresses changes to
+          directories).</para>
+      </sect3>
+    </sect2>
+
+    <sect2 id="Implementation">
+      <title>Implementation</title>
+
+      <para>For the initial release of Subversion,</para>
+
+      <itemizedlist mark="bullet">
+        <listitem><para>The filesystem will be implemented as a library on
+            Unix.</para></listitem>
+
+        <listitem><para>The filesystem's data will probably be stored in a
+            collection of .db files, using the Berkeley Database library.
+            <footnote><para>In the future, ofcourse, contributors are free
+                modify the Subversion filesystem tooperate with more powerful
+                SQL database.</para></footnote> (For more information, see
+            <ulink url="http://www.sleepycat.com">Sleepycat
+              Software</ulink>.)</para></listitem>
+      </itemizedlist>
+    </sect2>
+  </sect1>
+
+  <sect1 id="server.libsvn_repos">
+    <title>Repository Library</title>
+
+    <!-- Jimb, Karl:  Maybe we should turn this into a discussion about how the
+    filesystem will use non-historical properties for internal ACLs, and how
+    people can add "external" ACL systems via historical properties...? -->
+
+    <para>A subversion <firstterm>repository</firstterm> is a directory that
+      contains a number of components:</para>
+
+    <itemizedlist mark="bullet">
+      <listitem><para>a versioned filesystem (typically a collection of .db
+          files)</para></listitem>
+      <listitem><para>some hook scripts (for executing before or after
+          commits)</para></listitem>
+      <listitem><para>a locking area (used by Berkeley DB or other
+          processes)</para></listitem>
+      <listitem><para>a configuration area (for changing global
+          behaviors)</para></listitem>
+    </itemizedlist>
+
+    <para>The Subversion filesystem is just that: a filesystem.  But it's also
+      useful to provide an API that acts at the level of the repository.  The
+      repository library (<filename>libsvn_repos</filename>) does this.</para>
+
+    <para>In particular, it wraps a few <filename>libsvn_fs</filename>
+      routines, such as those for beginning and ending commits, so that
+      hook-scripts can run.  A pre-commit-hook script might check for a valid
+      log message, and a post-commit-hook script might send an email to a
+      mailing list.</para>
+
+    <para>Additionally, the repository library provides convenience routines
+      for examining and manipulating the filesystem.  For example, a routine to
+      generate a tree-delta by comparing two revisions, routines for
+      constructing new transactions, routines for querying log messages, and
+      routines for exporting and importing filesystem data.</para>
+  </sect1>
+</chapter>

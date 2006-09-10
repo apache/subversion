@@ -1,0 +1,80 @@
+# XML RELAX NG schema for Subversion command-line client output
+# For "svn info"
+
+include "common.rnc"
+
+start = info
+
+info = element info { entry* }
+
+entry =
+  element entry {
+    attlist.entry, url?, repository?, wc-info?, commit?, lock?
+  }
+attlist.entry &=
+  ## Local path.
+  attribute path { string },
+  ## Path type.
+  attribute kind { "file" | "dir" },
+  ## Revision number of path/URL.
+  attribute revision { revnum.type }
+
+## URL of this item in the repository.
+url = element url { xsd:anyURI }
+
+## Information of this item's repository.
+repository = element repository { root?, uuid? }
+
+## URL of the repository.
+root = element root { xsd:anyURI }
+
+## UUID of the repository.
+uuid = element uuid { uuid.type }
+
+## Info in the working copy entry.
+wc-info =
+  element wc-info {
+    schedule?,
+    copy-from-url?,
+    copy-from-rev?,
+    text-updated?,
+    prop-updated?,
+    checksum?,
+    conflict?
+  }
+
+schedule =
+  element schedule { "normal" | "add" | "delete" | "replace" | "none" }
+
+copy-from-url = element copy-from-url { xsd:anyURI }
+
+copy-from-rev = element copy-from-rev { revnum.type }
+
+# Date when text was last updated.
+text-updated = element text-updated { xsd:dateTime }
+
+# Date when properties were last updated.
+prop-updated = element prop-updated { xsd:dateTime }
+
+checksum = element checksum { md5sum.type }
+
+conflict =
+  element conflict {
+    prev-base-file,
+    prev-wc-file?,
+    cur-base-file,
+    prop-file?
+  }
+
+## Previous base file.
+prev-base-file = element prev-base-file { string }
+
+## Previous WC file.
+prev-wc-file = element prev-wc-file { string }
+
+## Current base file.
+cur-base-file = element cur-base-file { string }
+
+## Current properties file.
+prop-file = element prop-file { string }
+

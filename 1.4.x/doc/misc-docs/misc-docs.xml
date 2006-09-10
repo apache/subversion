@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!DOCTYPE book SYSTEM "../tools/dtd/dblite.dtd"
+[
+<!ENTITY % vers SYSTEM "version.xml">
+%vers;
+<!ENTITY best_practices           SYSTEM "best_practices.xml">
+<!ENTITY directory_versioning     SYSTEM "directory_versioning.xml">
+<!ENTITY quick_walkthrough        SYSTEM "quick_walkthrough.xml">
+]>
+
+  <book id="svn">
+  <title>Subversion: Miscellaneous Documentation</title>
+  <subtitle>(compiled from &svn.version;)</subtitle>
+
+  <!-- External entity refs -->
+  &quick_walkthrough; 
+  &best_practices;
+  &directory_versioning;
+
+  </book>

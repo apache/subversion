@@ -1,0 +1,50 @@
+# XML RELAX NG schema for Subversion command-line client output
+# Common declarations
+
+# Data types.
+
+## A revision number.
+revnum.type = xsd:nonNegativeInteger
+
+## A user name.
+username.type = string
+
+## A path or URL.
+target.type = string | xsd:anyURI
+
+## An UUID.
+uuid.type = string
+
+## An MD5 checksum.
+md5sum.type = xsd:hexBinary { length = "16" }
+
+# Common elements
+
+## Commit info.
+commit = element commit { attlist.commit, author?, date? }
+attlist.commit &= attribute revision { revnum.type }
+
+author = element author { username.type }
+
+date = element date { xsd:dateTime }
+
+## Lock info stored in repository or working copy.
+lock =
+  element lock {
+    \token, owner, comment?, created, expires?
+  }
+
+## Lock token.
+\token = element token { xsd:anyURI }
+
+## Lock owner.
+owner = element owner { username.type }
+
+## Lock comment.
+comment = element comment { text }
+
+## Creation date.
+created = element created { xsd:dateTime }
+
+## Expiration date.
+expires = element expires { xsd:dateTime }

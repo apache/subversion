@@ -1,0 +1,297 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Debunking BitMover's Subversion Comparison</title>
+</head>
+
+<body>
+<div class="app">
+
+<h2>Debunking BitMover's Subversion Comparison</h2>
+
+<h3>Summary</h3>
+
+<p>BitMover, Inc. offers a comparison between BitKeeper (their main
+product) and Subversion, at</p>
+
+<blockquote>
+<p><a href="http://www.bitkeeper.com/Comparisons.Subversion.html"
+           >http://www.bitkeeper.com/Comparisons.Subversion.html</a></p>
+</blockquote>
+
+<p>BitMover's comparison contains various false statements about
+Subversion, and some misleading statements.  Below, we analyze
+BitMover's page and set the record straight about Subversion.  The
+entire relevant content of the BitMover page is quoted below, as it
+looked on 2 July 2004.  We've omitted only extraneous things like
+navigation links and the endorsement quote at the the top of the
+page.</p>
+
+<p>Please note that this response is strictly about Subversion.  We
+have no complaints about BitKeeper as a piece of software; we've heard
+mainly good things about it, though we can't try it ourselves because
+of its <a href="#licensing">license situation</a>.</p>
+
+<p>BitMover's text below is quoted in red italics where we feel it's
+in error, and green italics otherwise.  Our annotations are in regular
+black text.</p>
+
+<h3>The Response</h3>
+
+   <blockquote>
+   <p style="color: red"><i>Subversion is a new system
+   which is supposed to replace CVS. Unfortunately, Subversion shares
+   many of CVS' problems and introduced some of its own
+   problems:</i></p>
+   </blockquote>
+
+<!-- Commenting out this minor complaint for now:
+
+<p>I like how they subtly imply that Subversion <i>only</i> adds new
+problems on top of CVS's, without solving any problems.  It solved
+many, of course, and while this quote doesn't explicitly deny that,
+it's worded in a very misleading way.</p>
+
+<p>Moving on to more substantive stuff:</p>
+
+-->
+
+   <blockquote>
+   <p style="color: red"><i>Subversion uses a binary file format for
+   your revision control data and metadata and if that format gets
+   corrupted you are out of luck, your whole team comes to a
+   halt.</i></p>
+   </blockquote>
+
+<p>That bit about the binary format is classic <a
+href="http://www.catb.org/~esr/jargon/html/F/FUD.html">FUD</a>.  It's
+quite true that Subversion uses a binary file format, but think about
+it: BitMover is basically saying that databases are a bad idea, since
+virtually all modern databases use a binary format.  Sure, if anything
+happens to those files, you're out of luck, assuming you have no
+backup.  So, does this mean no one should ever use a database?</p>
+
+<p>Anyone who runs, say, Oracle, MySQL, Postgres, or another database
+system should be able to see the silliness here right away.
+Furthermore, it's clearly the case that if BitKeeper's data storage
+format got corrupted severely enough, your whole team would come to a
+halt too, at least for as long as it took to get everything fixed,
+restored from backup, whatever.  Not so different from Subversion,
+really.</p>
+
+<p>There are database management issues to administering a Subversion
+repository, of course, issues which CVS does not have.  If this is
+BitMover's complaint, then they should say so, rather than making a
+meaninglessly broad generalization.  (Note that Subversion now offers
+a non-database back end, for those who don't want the overhead of
+administering a database.  This is a fairly recent development, and
+it's likely that BitMover simply hadn't heard about it yet when they
+wrote their page.)</p>
+
+   <blockquote>
+   <p style="color: green"><i>Subversion has a single repository model,
+   i.e., client/server. Each work area is clear text only which means
+   no revision control in the work area during
+   development.</i></p>
+   </blockquote>
+
+<p>This is basically true, though note that this way seems to work
+fine for a lot of people.  Strictly speaking, Subversion has exactly
+one level of revision control in the working copy, since there are
+pristine base texts of every file present.  One can locally view one's
+changes, revert them, or save them and then revert, all without a
+network connection.</p>
+
+   <blockquote>
+   <p style="color: red"><i>No staging areas to protect the main source
+   tree. With Subversion, everyone checks into the same place and if
+   someone breaks the tree, it's broken for everyone. With BitKeeper,
+   you can put a staging area between each group of developers and the
+   main integration tree, thereby protecting the main tree from bad
+   checkins. Anyone who has lived through a change that broke the
+   build can see the value of staging areas.</i></p>
+   </blockquote>
+
+<p>False and FUD.</p>
+
+<p>Having a staging area is a matter of how the project organizes its
+repository and moderates its commits.  The fact that some projects
+choose to use their main development trunk <i>as</i> their staging
+area, and release from branches, is a matter of policy, not of
+technical limitations.  If you want to insert an extra level of
+staging area, Subversion supports that just fine.</p>
+
+<p>Now, there might be a kernel of a real complaint here, which is
+that Subversion doesn't have first-class changeset swapping, and
+therefore merges from one branch to another (say, from staging to
+live) don't preserve as much history as they could.  However,
+BitMover's text goes far beyond that simple, circumscribed complaint.
+And since they make the merge complaint separately later anyway, they
+either thought they were saying something different here, or they're
+making the same claim twice, for the sake of inflating their page.</p>
+
+   <blockquote>
+   <p style="color: green"><i>Subversion loses information every time
+   there is parallel development because you are forced to merge
+   before you check in if someone else checked in first. The state of
+   your workspace before the merge is lost forever. Another way to say
+   this is that if there is N-way parallel development, Subversion
+   loses N-1 events.</i></p>
+   </blockquote>
+
+<p>As worded, this is not quite true.  But probably what they meant to
+say was "you are forced to merge before you check in if someone else
+checked in changes <i>to the same files</i> first."  Then it would be
+true.</p>
+
+<p>So how important is it?  It depends whom you ask.  BitMover
+probably has in mind the "star merge" work style that has developed in
+the Linux family of OSs, where there is never any expectation that all
+workspaces will converge onto a single canonical form.  It's not about
+how far behind you are, but about how different you wish to remain;
+less about merging than about cherry-picking.  There are Subversion
+users who ask for this.  We usually point them to <a
+href="http://svk.elixus.org/">SVK</a>, which is based on Subversion
+and supports this style of development, or to <a
+href="http://www.gnuarch.org/">Arch</a>, an open-source revision
+control system unrelated to Subversion.  But some others do not find
+this a compelling feature; see <a
+href="http://web.mit.edu/ghudson/thoughts/bitkeeper.whynot" >Greg
+Hudson's explanation</a> why not.</p>
+
+   <blockquote>
+   <p style="color: green"><i>Merging in Subversion is no better than
+   CVS, i.e., primitive at best.</i></p>
+   </blockquote>
+
+<p>This is basically true.  Subversion's merging <i>interface</i> is
+better than CVS's, but the underlying operation leads to the same
+result as in CVS.  Better merge support is on Subversion's long-term
+todo list.</p>
+
+   <blockquote>
+   <p style="color: red"><i>Branch management in Subversion is a
+   nightmare.</i></p>
+   </blockquote>
+
+<p>This is false, at least insofar as it means anything at all.
+Without more technical substance to respond to, it's hard to know what
+to do with such a claim; they don't say anything more concrete than
+"nightmare", unfortunately.</p>
+
+<p>Branch management is actually one of Subversion's strengths.  In
+Subversion, branches are first class, versioned objects, just like
+regular paths.  They can be copied, renamed, deleted, and
+resurrected&nbsp;&mdash;&nbsp;and people do these things all the time.
+Perhaps BitMover was really talking about merging?  But again, they
+make the merging complaint elsewhere, so this item must presumably be
+about something else.</p>
+
+   <blockquote>
+   <p style="color: red"><i>Subversion has no integrity checker which
+   means files can be silently corrupted and you will never know until
+   you try and roll backwards.</i></p>
+   </blockquote>
+
+<p>False.  Subversion ships with an integrity checker
+(<tt>svnadmin&nbsp;verify</tt>).  It also attaches a checksum to every
+revision of every file.  It verifies these checksums automatically at
+every opportunity where it wouldn't have a serious impact on
+performance; furthermore, it offers you the ability to paranoidly
+check integrity even <i>more</i> often, if you want to, via the
+abovementioned command.  So we really don't know what they're trying
+to say here.</p>
+
+   <blockquote>
+   <p style="color: red"><i>Subversion has only weak rename support,
+   that's something that is inherent in all centralized
+   systems.</i></p>
+   </blockquote>
+
+<p>It's true that Subversion has weak rename support (work is under
+way to fix this).  We don't see any reason why this is inherent in
+centralized systems, or even why it has anything to do with
+centralization or lack of same.  It sounds as if BitMover is trying to
+imply that Subversion, due to its design, simply <i>can't</i> have
+good rename support.  That's the more serious charge here, and we
+believe it's totally bogus.</p>
+
+<h3>Conclusion:</h3>
+
+<p>What's really going on is that BitKeeper has just one or two solid
+complaints to make: "Subversion has only primitive merge capability",
+and possibly "Subversion doesn't do decentralized versioning."</p>
+
+<p>While these are true, it seems like BitMover is attempting to say
+each one multiple times, to have a longer itemized list of
+deficiencies in Subversion.  If we ever write up our own comparison
+between Subversion and BitKeeper, we'll avoid that sort of inflation.
+Unfortunately, we can't easily make such a comparison, because
+BitMover, Inc changed its license to prevent free software developers
+who work on competing products (such as Subversion) from using
+BitKeeper.</p>
+
+<a name="licensing"></a>
+<h3>BitKeeper's Licensing Situation:</h3>
+
+<p>Before they changed their license, anyone could use BitKeeper for a
+free software project (with a few minor caveats).  Although BitKeeper
+was not "free" or "open source" in any important sense, since BitMover
+still retained strong intellectual property rights over the code, it
+did mean that free software developers could try it out and learn from
+it.</p>
+
+<p>Then BitMover added a clause to their license, ending this
+availability for Subversion developers and others:</p>
+
+<pre>
+    (d)  Notwithstanding any other terms in this License, this
+         License is not available to You if You and/or your
+         employer develop, produce, sell, and/or resell a
+         product which contains substantially similar capabil-
+         ities of the BitKeeper Software, or, in the reason-
+         able opinion of BitMover, competes with the BitKeeper
+         Software.
+</pre>
+
+<p>(We'd include a reference to the full license here, but it appears
+one must fill out a download form even to get to the license's
+<i>text</i>, and that's a little more trouble than we're willing to go
+through.)</p>
+
+<p>Larry McVoy, founder of BitMover, <a
+href="http://marc.theaimsgroup.com/?l=linux-kernel&amp;m=103384262016750&amp;w=2"
+>confirmed</a> that the new clause prohibits Subversion developers
+from trying BitKeeper at no charge.  Of course, Subversion developers
+are free to purchase a license, but that is not a realistic option for
+most of them.</p>
+
+You can read more about the BitKeeper license controversy at these links:
+
+<ul>
+<li><a href="http://www.oreillynet.com/pub/wlg/2107"
+            >http://www.oreillynet.com/pub/wlg/2107</a>
+</li>
+<li><a href="http://better-scm.berlios.de/bk/bk_suitability.html"
+            >http://better-scm.berlios.de/bk/bk_suitability.html</a>
+</li>
+<li><a href="http://better-scm.berlios.de/bk/relicensing_bk.html"
+            >http://better-scm.berlios.de/bk/relicensing_bk.html</a>
+</li>
+</ul>
+
+<p>This is why we cannot make our own page comparing Subversion and
+BitKeeper.  Of course, BitMover employees are free to download and
+install Subversion any time, and we encourage them to do so.</p>
+
+</div>
+</body>
+</html>

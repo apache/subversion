@@ -1,0 +1,16 @@
+#!/bin/sh
+    
+CURR_WD="`pwd`"
+cd ../httpd-2.0
+
+"./buildconf" "--with-apr=/home/YOUR_USERNAME/svn/apr-0.9" \
+              "--with-apr-util=/home/YOUR_USERNAME/svn/apr-util-0.9"
+
+cd "$CURR_WD"
+
+"../httpd-2.0/configure"                                                     \
+  "--prefix=/home/YOUR_USERNAME/svn/inst/httpd-2.0"                          \
+  "--with-apr=/home/YOUR_USERNAME/svn/inst/apr-0.9/bin/apr-config"           \
+  "--with-apr-util=/home/YOUR_USERNAME/svn/inst/apr-util-0.9/bin/apu-config" \
+  "--enable-dav"                                                             \
+  "$@"

@@ -1,0 +1,51 @@
+This is a template for offering people commit access in the contrib/
+area.  Just replace "J. Random" with the offeree, "XXXXX" with the
+name of their contribution, and "{AT}" with "@".  Thanks to Garrett
+Rooney for his original mail to Ray Miller regarding p42svn, on which
+this template is based.
+
+--------------------8-<-------cut-here---------8-<-----------------------
+
+To: J. Random <jrandom@remember_to_fix_the_recipient_please.com>
+CC: svn-full-committers@red-bean.com
+Subject: Subversion commit access for XXXXX
+
+J. Random,
+
+I discussed it with the rest of the Subversion Committers, and we'd
+like to offer you limited commit access to the Subversion repository
+for your work on XXXXX.  All of us think that having it in the tree
+would give it a wider audience, which is always a good thing, both for
+finding bugs and for finding new developers to help out.
+
+Assuming you accept, you'll be able to create a XXXXX directory in the
+contrib/ subdirectory of the Subversion tree, and maintain XXXXX there
+from now on.  Your commit access to the repository would be limited to
+that subdirectory, so for any changes outside of that area you would
+have to have the patches reviewed by someone with full commit access.
+This limitation isn't actually enforced by any technical means (we've
+always been too lazy to set up hook scripts or mod_authz_svn).  It's
+enforced only by social convention, so please be careful not to
+inadvertantly commit any changes outside the XXXXX subdirectory.
+
+Note that we decided to put XXXXX in contrib/ simply because at the
+moment you would be its only active maintainer -- whereas placing it
+in the tools/ subdirectory would imply some level of official support,
+and we prefer to have multiple active maintainers before doing that.
+In the future, if more people get involved with XXXXX, we can look at
+moving it into tools/.
+
+You can accept this offer by forwarding a copy of this mail to
+svnadmin{AT}svn.collab.net, and including in that message your
+tigris.org username and, optionally, an htpasswd-crypted password.
+(If you don't provide a password, a temporary one will be chosen for
+you -- in either case, you can change your password yourself later
+<https://svn.collab.net/wpct/>.)  Once you are notified that your
+account has been activated, you are encouraged to add yourself to the
+COMMITTERS file appropriately (under the 'XXXXXXXXXXX' section,
+describing your commit area as '(XXXXXXX)'), which also serves as a
+test of your new username and password.  Then create contrib/XXXXX/
+and start committing!
+
+Thanks,
+-Your Name Here
