@@ -61,18 +61,20 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         self.assertEqual(info.revision, fs.youngest_rev(self.fs))
 
     editor, edit_baton = ra.get_commit_editor2(self.ra_ctx, "foobar", my_callback, None, False)
-    root = delta.editor_invoke_open_root(editor, edit_baton, 4)
-    child = delta.editor_invoke_add_directory(editor, "bla", root, None, 0)
-    delta.editor_invoke_close_edit(editor, edit_baton)
+    root = editor.open_root(edit_baton, 4)
+    self.assertNotEqual(root, None)
+    child = editor.add_directory("bla", root, None, 0)
+    self.assertNotEqual(child, None)
+    editor.close_edit(edit_baton)
 
   def test_commit(self):
     def my_callback(revision, date, author):
         self.assertEqual(revision, fs.youngest_rev(self.fs))
 
     editor, edit_baton = ra.get_commit_editor(self.ra_ctx, "foobar", my_callback, None, False)
-    root = delta.editor_invoke_open_root(editor, edit_baton, 4)
-    child = delta.editor_invoke_add_directory(editor, "blah", root, None, 0)
-    delta.editor_invoke_close_edit(editor, edit_baton)
+    root = editor.open_root(edit_baton, 4)
+    child = editor.add_directory("blah", root, None, 0)
+    editor.close_edit(edit_baton)
 
   def test_get_locations(self):
     locations = ra.get_locations(self.ra_ctx, "/trunk/README.txt", 2, range(1,5))
@@ -112,9 +114,9 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     
     reporter, reporter_baton = ra.do_update(self.ra_ctx, 10, "", True, e_ptr, e_baton)
 
-    ra.reporter2_invoke_set_path(reporter, reporter_baton, "", 0, True, None)
+    reporter.set_path(reporter_baton, "", 0, True, None)
 
-    ra.reporter2_invoke_finish_report(reporter, reporter_baton)
+    reporter.finish_report(reporter_baton)
 
 def suite():
     return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test',

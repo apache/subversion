@@ -87,11 +87,17 @@
   void **callback2_baton,
   /* core */
   svn_auth_baton_t **,
+  svn_auth_cred_simple_t **cred,
+  svn_auth_cred_username_t **cred,
+  svn_auth_cred_ssl_client_cert_pw_t **cred,
+  svn_auth_cred_ssl_client_cert_t **cred,
+  svn_auth_cred_ssl_server_trust_t **cred,
   svn_auth_iterstate_t **,
   svn_auth_provider_object_t **,
   svn_config_t **,
   svn_diff_t **,
   void **credentials,
+  void **iter_baton,
   void **token,
   /* svn_client */
   svn_client_commit_info_t **,
@@ -100,12 +106,16 @@
   const svn_delta_editor_t **,
   svn_txdelta_stream_t **,
   svn_txdelta_window_t **,
+#ifndef SWIGPYTHON
+  /* Python wraps this as a CALLABLE_CALLBACK instead */
   svn_txdelta_window_handler_t *,
+#endif
   void **handler_baton,
   void **root_baton,
   void **child_baton,
   void **file_baton,
   void **edit_baton,
+  void **dir_baton,
   /* svn_fs */
   svn_fs_t **,
   svn_fs_access_t **,
@@ -120,6 +130,7 @@
   const svn_ra_reporter_t **,
   const svn_ra_reporter2_t **,
   svn_ra_session_t **,
+  void **delta_baton,
   void **report_baton,
   void **ra_baton,
   void **session_baton,
@@ -529,6 +540,90 @@
 };
 #endif
 
+/* -----------------------------------------------------------------------
+ * The CALLABLE_CALLBACK typemap wraps callback types as objects which
+ * can be called directly from Python. header_wrappers.py automatically
+ * tags all callback types (in Python) with this callback.
+ *
+ * header_wrappers.py also generates a '__call__' function for the
+ * callback objects, using the funcptr_proxy macro. See proxy.swg
+ */
+
+#ifdef SWIGPYTHON
+
+/* Allocate memory for a pointer to the function pointer. */
+
+%typemap(in, numinputs=0) CALLABLE_CALLBACK *
+  "$1 = ($ltype) apr_pcalloc(_global_pool, sizeof($*ltype));
+   if ($1 == NULL) SWIG_fail; ";
+
+
+/* Return a pointer to the function pointer.
+ * This level of indirection makes it easier for SWIG to treat
+ * this callback like an object (which can be extended using SWIG).
+ */
+
+%typemap(argout) CALLABLE_CALLBACK * {
+  %append_output(svn_swig_NewPointerObj($1, $descriptor,
+                                        _global_svn_swig_py_pool));
+}
+
+/* Convert the pointer to a function pointer back into a regular
+ * function pointer
+ */
+
+%typemap(in) CALLABLE_CALLBACK {
+  $&ltype tmp =
+    svn_swig_MustGetPtr($input, $&descriptor, $svn_argnum,
+      _global_pool_is_application_pool ? &_global_svn_swig_py_pool : NULL);
+  if (tmp == NULL || PyErr_Occurred()) {
+    SWIG_fail;
+  }
+  $1 = *tmp;
+}
+
+/* Ensure that return values use a level of indirection.
+ *
+ * Allocate space on the heap for a pointer to the callback.
+ * The memory gets freed when the return value itself is
+ * freed.
+ */
+
+%typemap(out) CALLABLE_CALLBACK {
+  if ($1 == NULL) {
+    $result = Py_None;
+    Py_INCREF($result);
+  } else {
+    $&ltype tmp = apr_palloc(_global_pool, sizeof($ltype));
+    if (tmp == NULL) {
+      SWIG_fail;
+    }
+    *tmp = ($ltype) $1;
+    $result = svn_swig_NewPointerObj(tmp, $&1_descriptor,
+                                     _global_svn_swig_py_pool);
+  }
+}
+
+
+/* Ensure that constant callbacks use a level of indirection.
+ *
+ * Allocate space on the heap for a pointer to the callback.
+ * Since this constant is always in scope, we don't need to
+ * worry about ever freeing the memory.
+ */
+
+%typemap(constcode) CALLABLE_CALLBACK {
+
+  $&ltype tmp = malloc(sizeof($ltype));
+  *tmp = ($ltype) $value;
+
+  %set_constant("$symname",
+    svn_swig_NewPointerObj(tmp, $&descriptor, _global_svn_swig_py_pool)
+  );
+
+}
+
+#endif
 
 /* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
@@ -755,6 +850,19 @@
 
   /* Copy the new input value into the struct */
   $1 = ($1_ltype) $input;
+}
+
+
+/* PY_AS_VOID batons actually just hold a Python object internally,
+ * so we can return that directly. We don't need any SWIG wrappers.
+ */
+
+%typemap(out) void *PY_AS_VOID {
+  $result = (PyObject *) $1;
+  if (result == NULL) {
+    $result = Py_None;
+  }
+  Py_INCREF($result);
 }
 
 #endif
