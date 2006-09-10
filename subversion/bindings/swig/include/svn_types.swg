@@ -821,12 +821,10 @@
 
 #ifdef SWIGPYTHON
 
-%typemap(in) void *PY_AS_VOID (PyObject *newRef) {
-  newRef = $input;
+%typemap(in) void *PY_AS_VOID {
   if ($input == Py_None) {
-    $1 = newRef = NULL;
+    $1 = NULL;
   } else {
-    newRef = $input;
     $1 = (void *)$input;
   }
 }
