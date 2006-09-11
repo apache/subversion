@@ -1220,10 +1220,6 @@ def update_props_on_wc_root(sbox):
 ########################################################################
 # Run the tests
 
-def is_this_fsfs():
-  # This assumes that fsfs is the default fs implementation.
-  return (svntest.main.fs_type == 'fsfs' or svntest.main.fs_type is None)
-
 # list all tests here, starting with None:
 test_list = [ None,
               make_local_props,
@@ -1232,7 +1228,7 @@ test_list = [ None,
               downdate_props,
               remove_props,
               update_conflict_props,
-              XFail(commit_conflict_dirprops, is_this_fsfs),
+              XFail(commit_conflict_dirprops, svntest.main.is_fs_type_fsfs),
               commit_replacement_props,
               revert_replacement_props,
               inappropriate_props,

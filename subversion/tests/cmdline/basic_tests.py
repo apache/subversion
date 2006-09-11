@@ -1740,9 +1740,6 @@ def move_relative_paths(sbox):
 ########################################################################
 # Run the tests
 
-def is_this_windows():
-  return (os.name == 'nt')
-
 # list all tests here, starting with None:
 test_list = [ None,
               basic_checkout,
@@ -1775,7 +1772,7 @@ test_list = [ None,
               info_nonhead,
               ls_nonhead,
               cat_added_PREV,
-              XFail(move_relative_paths, is_this_windows),
+              XFail(move_relative_paths, svntest.main.is_os_windows),
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
