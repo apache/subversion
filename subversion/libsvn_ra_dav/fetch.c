@@ -204,8 +204,6 @@ typedef struct {
      otherwise, it stays false (i.e., it's not a modern server). */
   svn_boolean_t receiving_all;
 
-  svn_error_t *err;
-
 } report_baton_t;
 
 static const svn_ra_dav__xml_elm_t report_elements[] =
@@ -3057,17 +3055,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
 
-  /* rb->err contains the relevant error if the response was aborted
-   * by a callback returning NE_XML_ABORT; always return that error if
-   * present. */
-  if (rb->err != NULL)
-    {
-      if (err)
-        svn_error_clear(err);
-      return rb->err;
-    }
-  if (err != NULL)
-    return err;
+  SVN_ERR(err);
 
   /* We got the whole HTTP response thing done.  *Whew*.  Our edit
      baton should have been closed by now, so return a failure if it

@@ -556,6 +556,14 @@ parse_spool_file(const char *spool_file_name,
 }
 
 
+/* A baton that is used along with a set of Neon ne_startelm_cb,
+ * ne_cdata_cb, and ne_endelm_cb callbacks to handle conversion
+ * from Subversion style errors to Neon style errors.
+ *
+ * The underlying Subversion callbacks are called, and if errors
+ * are returned they are stored in this baton and a Neon level
+ * error code is returned to the parser.
+ */
 typedef struct {
   svn_error_t *err;
 
