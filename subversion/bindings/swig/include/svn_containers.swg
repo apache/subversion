@@ -24,23 +24,23 @@
 */
 
 #ifdef SWIGPYTHON
-%define %hash_argout_typemap(ParamName, ValueType, PythonPool)
+%define %hash_argout_typemap(ParamName, ValueType)
 %typemap(argout) apr_hash_t **ParamName {
   %append_output(svn_swig_py_convert_hash(*$1,
                                           $descriptor(ValueType),
-                                          PythonPool));
+                                          _global_svn_swig_py_pool));
 }
 %enddef
 #endif
 #ifdef SWIGPERL
-%define %hash_argout_typemap(ParamName, ValueType, PythonPool)
+%define %hash_argout_typemap(ParamName, ValueType)
 %typemap(argout) apr_hash_t **ParamName {
   %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(ValueType)));
 }
 %enddef
 #endif
 #ifdef SWIGRUBY
-%define %hash_argout_typemap(ParamName, ValueType, PythonPool)
+%define %hash_argout_typemap(ParamName, ValueType)
 %typemap(argout) apr_hash_t **ParamName {
   %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
                                                         #ValueType));
@@ -48,9 +48,8 @@
 %enddef
 #endif
 
-%hash_argout_typemap(DIRENTHASH, svn_dirent_t *, NULL)
-%hash_argout_typemap(dirents, svn_dirent_t *, _global_svn_swig_py_pool)
-%hash_argout_typemap(locks, svn_lock_t *, _global_svn_swig_py_pool)
+%hash_argout_typemap(dirents, svn_dirent_t *)
+%hash_argout_typemap(locks, svn_lock_t *)
 #ifdef SWIGPYTHON
 /* FIXME: We are effectively treating this hash as an opaque blob...
    this is because we currently do not have suitable typemaps to convert
@@ -60,7 +59,7 @@
                                         _global_svn_swig_py_pool));
 }
 #else
-%hash_argout_typemap(cfg_hash, svn_config_t *, )
+%hash_argout_typemap(cfg_hash, svn_config_t *)
 #endif
 
 /* -----------------------------------------------------------------------

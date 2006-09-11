@@ -67,9 +67,8 @@
 }
 
 
-%hash_argout_typemap(entries, svn_wc_entry_t *, _global_svn_swig_py_pool)
-%hash_argout_typemap(externals_p, svn_wc_external_item_t *,
-                     _global_svn_swig_py_pool)
+%hash_argout_typemap(entries, svn_wc_entry_t *)
+%hash_argout_typemap(externals_p, svn_wc_external_item_t *)
 
 #ifdef SWIGPYTHON
 %callback_typemap(svn_wc_notify_func_t notify_func, void *notify_baton,
