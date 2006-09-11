@@ -730,16 +730,9 @@ created_rev_root(const char **msg,
                                  opts->fs_type, pool));
   fs = svn_repos_fs(repos);
 
-  /* Created the greek tree in revision 1. */
-  SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, spool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
-  SVN_ERR(svn_test__create_greek_tree(txn_root, spool));
-  SVN_ERR(svn_fs_commit_txn(NULL, &youngest_rev, txn, spool));
-  svn_pool_clear(spool);
-
   SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn,
                                             repos,
-                                            1,
+                                            0,
                                             "someuser", "log",
                                             spool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
