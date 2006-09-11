@@ -3587,6 +3587,81 @@ def merge_ignore_eolstyle(sbox):
                                        0, 0,
                                        '-x', '--ignore-eol-style')
 
+#----------------------------------------------------------------------
+# Issue 2584
+def merge_add_over_versioned_file_conflicts(sbox):
+  "conflict from merge of add over versioned file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E');
+  alpha_path = os.path.join(E_path, 'alpha')
+  new_alpha_path = os.path.join(wc_dir, 'A', 'C', 'alpha')
+  
+  # Create a new "alpha" file, with enough differences to cause a conflict.
+  fp = open(new_alpha_path, 'w')
+  fp.write('new alpha content\n')
+  fp.close()
+
+  # Add and commit the new "alpha" file, creating revision 2.
+  svntest.main.run_svn(None, "add", new_alpha_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/alpha' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/C/alpha' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_E_path = shorten_path_kludge(E_path)
+
+  # Merge changes from r1:2 into our pre-existing "alpha" file,
+  # causing a conflict.
+  expected_output = wc.State(short_E_path, {
+    'alpha'   : Item(status='C '),
+    })
+  expected_disk = wc.State('', {
+    'alpha'    : Item("<<<<<<< .working\n" +
+                    "This is the file 'alpha'.\n" +
+                    "=======\n" +
+                    "new alpha content\n" +
+                    ">>>>>>> .merge-right.r2\n"),
+    'beta'    : Item("This is the file 'beta'.\n"),
+    })
+  expected_status = wc.State(short_E_path, {
+    ''       : Item(status='  ', wc_rev=1),
+    'alpha'  : Item(status='C ', wc_rev=1),
+    'beta'   : Item(status='  ', wc_rev=1),
+    })
+  expected_skip = wc.State(short_E_path, { })
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_E_path, '1', '2',
+                                         svntest.main.current_repo_url + \
+                                         '/A/C',
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip,
+                                         None,
+                                         detect_conflict_files,
+                                         ["alpha\.working",
+                                          "alpha\.merge-right\.r2",
+                                          "alpha\.merge-left\.r0"])
+  finally:
+    os.chdir(saved_cwd)
+
+
 ########################################################################
 # Run the tests
 
@@ -3626,7 +3701,8 @@ test_list = [ None,
               merge_file_replace_to_mixed_rev_wc,
               merge_added_dir_to_deleted_in_target,
               merge_ignore_whitespace,
-              merge_ignore_eolstyle
+              merge_ignore_eolstyle,
+              merge_add_over_versioned_file_conflicts,
              ]
 
 if __name__ == '__main__':
