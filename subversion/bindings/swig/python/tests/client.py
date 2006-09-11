@@ -1,4 +1,4 @@
-import unittest, os, weakref, tempfile, types
+import unittest, os, weakref, tempfile, types, setup_path
 
 from svn import core, repos, fs, delta, client, wc
 from libsvn.core import SubversionException

@@ -1,13 +1,9 @@
-import unittest, os, tempfile
-import shutil
-
+import unittest, os, tempfile, shutil, types, setup_path
 from svn import core, repos, wc, client
 from libsvn.core import SubversionException
-import types
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL
-from urllib import pathname2url
 
 class SubversionWorkingCopyTestCase(unittest.TestCase):
   """Test cases for the Subversion working copy layer"""

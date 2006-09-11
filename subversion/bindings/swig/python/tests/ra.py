@@ -1,10 +1,9 @@
-import unittest, os
+import unittest, os, setup_path
 
 from svn import core, repos, fs, delta, client, ra
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL
-from urllib import pathname2url
 
 class SubversionRepositoryAccessTestCase(unittest.TestCase):
   """Test cases for the Subversion repository layer"""
