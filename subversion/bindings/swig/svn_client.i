@@ -45,16 +45,6 @@
 
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
-
-/* members of svn_client_ctx_t */
-%apply void *PY_AS_VOID {
-    void *notify_baton,
-    void *log_msg_baton,
-    void *cancel_baton,
-    void *notify_baton2,
-    void *log_msg_baton2,
-    void *progress_baton
-};
 #endif
 
 /* -----------------------------------------------------------------------

@@ -117,6 +117,21 @@ class Generator(generator.swig.Generator):
       );
 
 
+  def _write_baton_typemaps(self, batons):
+    """Apply the PY_AS_VOID typemap to all batons"""
+
+    self.ofile.write('\n/* Baton typemaps */\n')
+
+    if batons:
+      self.ofile.write(
+        "#ifdef SWIGPYTHON\n"
+        "%%apply void *PY_AS_VOID {\n"
+        "  void *%s\n"
+        "};\n"
+        "#endif\n" % ( ",\n  void *".join(batons) )
+      )
+
+
   def _write_callbacks(self, callbacks):
     """Write invoker functions for callbacks"""
     self.ofile.write('\n/* Callbacks */\n')
@@ -202,13 +217,16 @@ class Generator(generator.swig.Generator):
                                    r'\(\*(svn_[a-z]+)_([a-z_0-9]+)_t\)\s*'
                                    r'\(([^)]+)\);');
 
+  """Regular expression for parsing batons"""
+  _re_batons = re.compile(r'void\s*\*\s*(\w*baton\w*)');
+
   """Regular expression for parsing parameter names from a parameter list"""
   _re_param_names = re.compile(r'\b(\w+)\s*\)*\s*(?:,|$)')
 
   """Regular expression for parsing comments"""
   _re_comments = re.compile(r'/\*.*?\*/')
 
-  def _write_swig_interface_file(self, base_fname, includes, structs,
+  def _write_swig_interface_file(self, base_fname, batons, includes, structs,
                                  callbacks):
     """Convert a header file into a SWIG header file"""
 
@@ -227,6 +245,9 @@ class Generator(generator.swig.Generator):
 
     # Write typemaps for the callbacks
     self._write_callback_typemaps(callbacks)
+
+    # Write typemaps for the batons
+    self._write_baton_typemaps(batons)
 
     # Write includes into the SWIG interface file
     self._write_includes(includes, base_fname)
@@ -255,6 +276,9 @@ class Generator(generator.swig.Generator):
     # Get list of structs
     structs = unique(self._re_structs.findall(contents))
 
+    # Get list of batons
+    batons = unique(self._re_batons.findall(contents))
+
     # Get list of callbacks
     callbacks = (self._re_struct_callbacks.findall(contents) +
                  self._re_typed_callbacks.findall(contents))
@@ -263,7 +287,8 @@ class Generator(generator.swig.Generator):
     base_fname = os.path.basename(fname)
 
     # Write the SWIG interface file
-    self._write_swig_interface_file(base_fname, includes, structs, callbacks)
+    self._write_swig_interface_file(base_fname, batons, includes, structs,
+                                    callbacks)
 
   def write(self):
     """Generate wrappers for all header files"""
