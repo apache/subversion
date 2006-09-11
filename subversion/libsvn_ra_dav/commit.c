@@ -487,8 +487,8 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                                      "CHECKOUT", vsn_url,
                                      201 /* Created */,
                                      allow_404 ? 404 /* Not Found */ : 0,
-                                     interrogate_for_location, locn,
-                                     pool);
+                                     svn_ra_dav__interrogate_for_location,
+                                     locn, pool);
 
   return err;
 }

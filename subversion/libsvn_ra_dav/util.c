@@ -860,7 +860,7 @@ parsed_request(ne_session *sess,
       else if (code == 301 || code == 302)
         {
           char *location;
-          SVN_ERR(interrogate_for_location(req, rv, &location));
+          SVN_ERR(svn_ra_dav__interrogate_for_location(req, rv, &location));
           msg = apr_psprintf(pool,
                              (code == 301
                               ? _("Repository moved permanently to '%s';"
@@ -1111,9 +1111,9 @@ svn_ra_dav__request_dispatch(int *code_p,
 
 
 svn_error_t *
-interrogate_for_location(ne_request *request,
-                         int dispatch_return_val,
-                         void *userdata)
+svn_ra_dav__interrogate_for_location(ne_request *request,
+                                     int dispatch_return_val,
+                                     void *userdata)
 {
   char **location = userdata;
 
