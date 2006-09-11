@@ -28,7 +28,7 @@
 %typemap(argout) apr_hash_t **ParamName {
   %append_output(svn_swig_py_convert_hash(*$1,
                                           $descriptor(ValueType),
-                                          _global_svn_swig_py_pool));
+                                          _global_py_pool));
 }
 %enddef
 #endif
@@ -56,7 +56,7 @@
    it back to an apr_hash_t * for use. */
 %typemap(argout) apr_hash_t **cfg_hash {
   %append_output(svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
-                                        _global_svn_swig_py_pool));
+                                        _global_py_pool, args));
 }
 #else
 %hash_argout_typemap(cfg_hash, svn_config_t *)
@@ -377,7 +377,7 @@
     ($1)->nelts = targlen;
     while (targlen--) {
         provider = svn_swig_MustGetPtr(PySequence_GetItem($input, targlen),
-          $descriptor(svn_auth_provider_object_t *), $svn_argnum, NULL);
+          $descriptor(svn_auth_provider_object_t *), $svn_argnum);
         if (PyErr_Occurred()) {
           SWIG_fail;
         }

@@ -105,6 +105,7 @@ void svn_swig_py_acquire_py_lock(void)
 static apr_pool_t *_global_pool = NULL;
 static PyObject *_global_svn_swig_py_pool = NULL;
 static char assertValid[] = "assert_valid";
+static char markValid[] = "_mark_valid";
 static char parentPool[] = "_parent_pool";
 static char wrap[] = "_wrap";
 static char unwrap[] = "_unwrap";
@@ -124,6 +125,62 @@ apr_status_t svn_swig_py_initialize(void)
   return APR_SUCCESS;
 }
 
+int svn_swig_py_get_pool_arg(PyObject *args, swig_type_info *type,
+    PyObject **py_pool, apr_pool_t **pool)
+{
+  int argnum = PyTuple_GET_SIZE(args) - 1;
+
+  if (argnum >= 0)
+    {
+      PyObject *input = PyTuple_GET_ITEM(args, argnum);
+      if (input != Py_None && PyObject_HasAttrString(input, markValid))
+        {
+          *pool = svn_swig_MustGetPtr(input, type, argnum+1);
+          if (*pool == NULL)
+            return 1;
+          *py_pool = input;
+          Py_INCREF(input);
+          return 0;
+        }
+    }
+
+  /* We couldn't find a pool argument, so we'll create a subpool */
+  *pool = svn_pool_create(_global_pool);
+  *py_pool = svn_swig_NewPointerObj(*pool, type, _global_svn_swig_py_pool,
+                                    NULL);
+  if (*py_pool == NULL)
+    return 1;
+
+  return 0;
+}
+
+int svn_swig_py_get_parent_pool(PyObject *args, swig_type_info *type,
+    PyObject **py_pool, apr_pool_t **pool)
+{
+  PyObject *proxy = PyTuple_GetItem(args, 0);
+
+  if (proxy == NULL)
+    return 1;
+  
+  *py_pool = PyObject_GetAttrString(proxy, parentPool);
+
+  if (*py_pool == NULL)
+    {
+      PyErr_SetString(PyExc_TypeError,
+             "Unexpected NULL parent pool on proxy object");
+      return 1;
+    }
+
+  Py_DECREF(*py_pool);
+
+  *pool = svn_swig_MustGetPtr(*py_pool, type, 1);
+
+  if (*pool == NULL)
+    return 1;
+
+  return 0;
+}
+
 /* Set the application pool */
 void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool)
 {
@@ -136,13 +193,6 @@ void svn_swig_py_clear_application_pool()
 {
   _global_pool = NULL;
   _global_svn_swig_py_pool = NULL;
-}
-
-/* Get the application pool */
-void svn_swig_get_application_pool(PyObject **py_pool, apr_pool_t **pool)
-{
-  *pool = _global_pool;
-  *py_pool = _global_svn_swig_py_pool;
 }
 
 /* Set the parent pool of a proxy object */
@@ -173,36 +223,27 @@ static int proxy_set_pool(PyObject **proxy, PyObject *pool)
   return 0;
 }
 
-/* Get the parent pool of a proxy object, or return the global application
- * pool if one is not set.  Returns a BORROWED reference! */
-static PyObject *proxy_get_pool(PyObject *proxy)
-{
-  PyObject *result;
-  if (PyObject_HasAttrString(proxy, parentPool))
-    {
-      result = PyObject_GetAttrString(proxy, parentPool);
-      Py_DECREF(result);
-    }
-  else
-    {
-      result = _global_svn_swig_py_pool;
-    }
-  return result;
-}
-
 
 /* Wrapper for SWIG_TypeQuery */
 #define svn_swig_TypeQuery(x) SWIG_TypeQuery(x)
 
 /** Wrapper for SWIG_NewPointerObj */
 PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type,
-                                 PyObject *pool)
+                                 PyObject *pool, PyObject *args)
 {
   PyObject *proxy = SWIG_NewPointerObj(obj, type, 0);
 
   if (proxy == NULL)
     return NULL;
 
+  if (pool == NULL && args != NULL)
+    {
+      apr_pool_t *tmp;
+      if (svn_swig_py_get_parent_pool(args,
+            svn_swig_TypeQuery("apr_pool_t *"), &pool, &tmp))
+        PyErr_Clear();
+    }
+  
   if (proxy_set_pool(&proxy, pool))
     {
       Py_DECREF(proxy);
@@ -224,7 +265,7 @@ static PyObject *svn_swig_NewPointerObjString(void *ptr, const char *type,
     }
 
   /* ### cache the swig_type_info at some point? */
-  return svn_swig_NewPointerObj(ptr, typeinfo, py_pool);
+  return svn_swig_NewPointerObj(ptr, typeinfo, py_pool, NULL);
 }
 
 /** Wrapper for SWIG_ConvertPtr */
@@ -256,8 +297,7 @@ static int svn_swig_ConvertPtrString(PyObject *input,
 }
 
 /** Wrapper for SWIG_MustGetPtr */
-void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
-                          PyObject **py_pool)
+void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum)
 {
   if (PyObject_HasAttrString(input, assertValid))
     {
@@ -266,9 +306,6 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
         return NULL;
       Py_DECREF(result);
     }
-
-  if (py_pool != NULL)
-    *py_pool = proxy_get_pool((PyObject *) input);
 
   if (PyObject_HasAttrString(input, unwrap))
     {
@@ -280,6 +317,7 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
 
   return SWIG_MustGetPtr(input, type, argnum, SWIG_POINTER_EXCEPTION | 0);
 }
+
 
 
 /*** Custom SubversionException stuffs. ***/
@@ -358,7 +396,7 @@ static PyObject *make_ob_pool(void *pool)
    * with Subversion 1.2. */
   apr_pool_t *new_pool = svn_pool_create(_global_pool);
   PyObject *new_py_pool = svn_swig_NewPointerObj(new_pool,
-    svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool);
+    svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool, NULL);
   (void) pool; /* Silence compiler warnings about unused parameter. */
   return new_py_pool;
 }
@@ -437,7 +475,7 @@ static PyObject *convert_hash(apr_hash_t *hash,
 static PyObject *convert_to_swigtype(void *value, void *ctx, PyObject *py_pool)
 {
   /* ctx is a 'swig_type_info *' */
-  return svn_swig_NewPointerObj(value, ctx, py_pool);
+  return svn_swig_NewPointerObj(value, ctx, py_pool, NULL);
 }
 
 static PyObject *convert_svn_string_t(void *value, void *ctx,
@@ -615,7 +653,7 @@ static PyObject *make_ob_##type(void *value) \
 { \
   apr_pool_t *new_pool = svn_pool_create(_global_pool); \
   PyObject *new_py_pool = svn_swig_NewPointerObj(new_pool, \
-    svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool); \
+    svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool, NULL); \
   svn_##type##_t *new_value = dup(value, new_pool); \
   return svn_swig_NewPointerObjString(new_value, "svn_" #type "_t *", \
       new_py_pool); \
