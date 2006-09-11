@@ -870,7 +870,9 @@
 
    Function Parameters (Category 1):
 
-   'unsigned char digest[]':
+   'unsigned char digest[]'
+   'unsigned char *digest':
+
      Output parameter in: svn_fs_file_md5_checksum(), svn_io_file_checksum(),
                           svn_wc_transmit_text_deltas2()
      
@@ -878,12 +880,6 @@
      practically, this means that svn_base64_from_md5 is in error, and
      should be using 'const unsigned char digest[]', but fortunately, we
      do not wrap the svn_base64_* APIs, so do not have to care here.
-
-   'unsigned char *digest' (also, 'result_digest'):
-     Output parameter in: svn_txdelta_send_stream(), svn_txdelta_apply()
-     essentially the same as 'unsigned char digest[]' - the difference
-     between [] and * is gratuitous inconsistency, as the types are
-     equivalent and can share the same typemaps.
 
 
    (Category 2):
@@ -898,20 +894,24 @@
      Would be quite complex to wrap, so this function is %ignore-d in the
      svn_io.h cherrypicking section.
      
+   'unsigned char *result_digest'
+     This parameter serves as a buffer for the digest results of
+     svn_txdelta_apply. As you supply data to this function via
+     the handler callback, this digest gets filled. Since
+     filling of this buffer is delayed, it is quite difficult
+     to wrap.
+
+    FIXME: Both Ruby and Perl have broken typemaps for result_digest.
+    The Python bindings ignore this parameter altogether.
    
    Function Parameters (Category 3):
 
    'const unsigned char digest[]' (also, 'd1', 'd2'):
+   'const unsigned char *digest':
      Input parameters in:
      svn_md5_digest_to_cstring_display()
      svn_md5_digest_to_cstring()
      svn_md5_digests_match()
-
-   'const unsigned char *digest':
-     Input paramater in: svn_wc_process_committed3() {and later revs}
-     Again, the difference between [] and * is gratuitous inconsistency,
-     and typemaps can be shared.
-
 
    Function return values (Category 4):
 
@@ -930,6 +930,7 @@
                                                                _global_pool)));
 }
 #endif
+
 #ifdef SWIGPERL
 %typemap(argout) unsigned char digest[ANY] {
   %append_output(sv_2mortal(newSVpv(svn_md5_digest_to_cstring($1,
@@ -946,11 +947,24 @@
 
 %apply unsigned char digest[ANY] { unsigned char *digest };
 
-/* FIXME: It would be nice for it to be documented why Perl is doing
-   something different and bizarre here. */
-#ifndef SWIGPERL
+#ifdef SWIGRUBY
+/* FIXME: This typemap doesn't work, because svn_txdelta_apply saves
+ *        away this local pointer to be used later. When the pointer
+ *        is finally used, we get memory corruption / segfaults.
+ */
 %apply unsigned char digest[ANY] { unsigned char *result_digest };
-#else
+#endif
+
+#ifdef SWIGPYTHON
+/*
+ * Skip the md5sum
+ * FIXME: Wrap the md5sum
+ */
+%typemap(in, numinputs=0) unsigned char *result_digest
+  ($*1_type temp[APR_MD5_DIGESTSIZE]) "$1 = NULL;";
+#endif
+
+#ifdef SWIGPERL
 %typemap(in, numinputs=0) unsigned char *result_digest {
     $1 = (unsigned char *)apr_palloc(_global_pool, APR_MD5_DIGESTSIZE);
 }

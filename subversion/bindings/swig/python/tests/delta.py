@@ -12,12 +12,12 @@ class DeltaTestCase(unittest.TestCase):
     target_stream = StringIO("bye world");
 
     # Invoke the window_handler using a helper function
-    sum, window_handler, baton = \
+    window_handler, baton = \
        svn.delta.tx_apply(src_stream, target_stream, None)
     svn.delta.tx_invoke_window_handler(window_handler, None, baton)
 
     # Invoke the window_handler directly (easier!)
-    sum, window_handler, baton = \
+    window_handler, baton = \
        svn.delta.tx_apply(src_stream, target_stream, None)
     window_handler(None, baton)
 
