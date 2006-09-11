@@ -824,43 +824,37 @@
 %typemap(in) void *PY_AS_VOID {
   if ($input == Py_None) {
     $1 = NULL;
-  } else {
-    $1 = (void *)$input;
+  } else if (SWIG_ConvertPtr($input, (void **) &$1, 0, 0) == -1) {
+    $1 = (void *) $input;
+    PyErr_Clear();
   }
 }
 
-
-%typemap(memberin) void *PY_AS_VOID {
-
-  PyObject *ownerObj = obj0,
-           *prevRef = (PyObject *) $1,
-           *newRef = $input;
-
-  /*
-   * Mark the new input value as owned by the current pool, and mark
-   * any previous values as unowned. We look in 'ownerObj' for the
-   * current pool to work around a bug in our automatic memory management
-   * implementation where _global_svn_swig_py_pool is not set correctly.
-   */
-  if (svn_swig_py_pool_set_owned_ref(ownerObj, prevRef, newRef)) {
-    SWIG_fail;
-  }
-
-  /* Copy the new input value into the struct */
-  $1 = ($1_ltype) $input;
-}
-
-
-/* PY_AS_VOID batons actually just hold a Python object internally,
- * so we can return that directly. We don't need any SWIG wrappers.
- */
 
 %typemap(out) void *PY_AS_VOID {
-  $result = (PyObject *) $1;
-  if (result == NULL) {
-    $result = Py_None;
+  PyObject *ownerObj = obj0;
+  PyObject *members = PyObject_GetAttrString(ownerObj, "_members");
+
+  $result = NULL;
+  if (members != NULL) {
+    $result = PyDict_GetItemString(members, "$1_name");
+    Py_XINCREF($result);
+    Py_DECREF(members);
   }
-  Py_INCREF($result);
+
+  if ($result == NULL) {
+    if ($1 == NULL) {
+      $result = Py_None;
+      Py_INCREF($result);
+    } else {
+      /* We don't know the type of this reference, so we'll have to
+       * treat it as an opaque void pointer.
+       */
+      $result = svn_swig_NewPointerObj($1, $descriptor,
+        _global_svn_swig_py_pool);
+    }
+  }
+
 }
 
 #endif

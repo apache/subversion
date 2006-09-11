@@ -79,10 +79,6 @@ void svn_swig_py_clear_application_pool(void);
 SVN_SWIG_SWIGUTIL_EXPORT
 void svn_swig_get_application_pool(PyObject **py_pool, apr_pool_t **pool);
 
-/* Set a Python 'owned' reference on the pool of the given proxy object */
-SVN_SWIG_SWIGUTIL_EXPORT
-int svn_swig_py_pool_set_owned_ref(PyObject *proxy, PyObject *oldRef, PyObject *newRef);
-
 
 /*** SWIG Wrappers ***/
 

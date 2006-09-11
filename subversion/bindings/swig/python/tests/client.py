@@ -40,6 +40,17 @@ class SubversionClientTestCase(unittest.TestCase):
 
     self.client_ctx.auth_baton = core.svn_auth_open(providers)
 
+  def testBatonPlay(self):
+    """Test playing with C batons"""
+    self.client_ctx.log_msg_baton2 = self.client_ctx.auth_baton
+    self.assertEquals(str(self.client_ctx.log_msg_baton2),
+                      str(self.client_ctx.auth_baton))
+    self.client_ctx.log_msg_baton2 = self.client_ctx.log_msg_baton2
+    self.assertEquals(str(self.client_ctx.log_msg_baton2),
+                      str(self.client_ctx.auth_baton))
+    self.client_ctx.log_msg_baton2 = None
+    self.assertEquals(self.client_ctx.log_msg_baton2, None)
+
   def testMethodCalls(self):
     """Test direct method calls to callbacks"""
 
@@ -87,8 +98,8 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertNotEqual(test_object2(), None)
 
     # Verify that the reference count of test_object2 is decremented when
-    # the pool containing temp_client_context is destroyed.
-    pool.destroy()
+    # test_client_ctx is destroyed.
+    temp_client_ctx = None
     self.assertEqual(test_object2(), None)
 
   def test_checkout(self):

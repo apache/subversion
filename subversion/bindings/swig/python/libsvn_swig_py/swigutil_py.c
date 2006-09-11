@@ -106,8 +106,6 @@ static apr_pool_t *_global_pool = NULL;
 static PyObject *_global_svn_swig_py_pool = NULL;
 static char assertValid[] = "assert_valid";
 static char parentPool[] = "_parent_pool";
-static char addOwnedRef[] = "_add_owned_ref";
-static char removeOwnedRef[] = "_remove_owned_ref";
 static char wrap[] = "_wrap";
 static char unwrap[] = "_unwrap";
 static char setParentPool[] = "set_parent_pool";
@@ -192,33 +190,6 @@ static PyObject *proxy_get_pool(PyObject *proxy)
   return result;
 }
 
-/* Change an 'owned reference' allocated in a pool from oldRef to newRef.
- * If oldRef is non-NULL and present in the parent pool of proxy, it is removed.
- */
-int svn_swig_py_pool_set_owned_ref(PyObject *proxy, PyObject *oldRef,
-                                   PyObject *newRef)
-{
-  PyObject *temp;
-  PyObject *py_pool = proxy_get_pool(proxy);
-
-  if (oldRef != NULL)
-    {
-      temp = PyObject_CallMethod(py_pool, removeOwnedRef, objectTuple, oldRef);
-      if (temp == NULL)
-        return 1;
-      else
-        Py_DECREF(temp);
-    }
-  if (newRef != NULL)
-    {
-      temp = PyObject_CallMethod(py_pool, addOwnedRef, objectTuple, newRef);
-      if (temp == NULL)
-        return 1;
-      else
-        Py_DECREF(temp);
-    }
-  return 0;
-}
 
 /* Wrapper for SWIG_TypeQuery */
 #define svn_swig_TypeQuery(x) SWIG_TypeQuery(x)
