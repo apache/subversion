@@ -100,13 +100,13 @@ two copies
 
 Added:
    dir2/file7
-      - copied unchanged from r1, /file1
+      - copied unchanged from r1, file1
    dir3/
-      - copied from r1, /dir1/
+      - copied from r1, dir1/
 
-Copied: dir2/file7 (from r1, /file1)
+Copied: dir2/file7 (from r1, file1)
 ==============================================================================
---- /file1	(original)
+--- file1	(original)
 +++ dir2/file7	Sun Sep  9 07:20:00 2001
 @@ -0,0 +1 @@
 +file1
@@ -122,11 +122,11 @@ copied and changed
 
 Added:
    dir3/file8
-      - copied, changed from r1, /file1
+      - copied, changed from r1, file1
 
-Copied and modified: dir3/file8 (from r1, /file1)
+Copied and modified: dir3/file8 (from r1, file1)
 ==============================================================================
---- /file1	(original)
+--- file1	(original)
 +++ dir3/file8	Sun Sep  9 10:06:40 2001
 @@ -1 +1,2 @@
  file1
@@ -214,17 +214,17 @@ copy dir, then make a change
 
 Added:
    dir6/
-      - copied from r5, /dir3/
+      - copied from r5, dir3/
    dir6/dir5/
-      - copied from r6, /dir3/dir5/
+      - copied from r6, dir3/dir5/
    dir6/file3
-      - copied unchanged from r6, /dir3/file3
+      - copied unchanged from r6, dir3/file3
 Modified:
    dir6/file4
 
-Copied: dir6/file3 (from r6, /dir3/file3)
+Copied: dir6/file3 (from r6, dir3/file3)
 ==============================================================================
---- /dir3/file3	(original)
+--- dir3/file3	(original)
 +++ dir6/file3	Sun Sep  9 18:26:40 2001
 @@ -0,0 +1,2 @@
 +file3
@@ -232,7 +232,7 @@ Copied: dir6/file3 (from r6, /dir3/file3)
 
 Modified: dir6/file4
 ==============================================================================
---- /dir3/file4	(original)
+--- dir3/file4	(original)
 +++ dir6/file4	Sun Sep  9 18:26:40 2001
 @@ -1 +1,2 @@
  file4

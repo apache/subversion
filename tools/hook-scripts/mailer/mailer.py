@@ -112,6 +112,11 @@ except AttributeError:
       rv = self.tochild.close() or rv
       return rv
 
+def remove_leading_slashes(path):
+  while path and path[0] == '/':
+    path = path[1:]
+  return path
+
 
 class OutputBase:
   "Abstract base class to formalize the inteface of output methods"
@@ -676,7 +681,7 @@ def generate_list(changekind, changelist, paths, in_paths):
         props_changed=change.prop_changes,
         text_changed=change.text_changed,
         copied=change.added and change.base_path,
-        base_path=change.base_path,
+        base_path=remove_leading_slashes(change.base_path),
         base_rev=change.base_rev,
         )
       items.append(item)
@@ -737,6 +742,7 @@ class DiffGenerator:
 
       # figure out if/how to generate a diff
 
+      base_path = remove_leading_slashes(change.base_path)
       if not change.path:
         # it was delete.
         kind = 'D'
@@ -747,14 +753,14 @@ class DiffGenerator:
         # show the diff?
         if self.diffsels.delete:
           diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                                 change.base_path, None, None, self.pool)
+                                 base_path, None, None, self.pool)
 
-          label1 = '%s\t%s' % (change.base_path, self.date)
+          label1 = '%s\t%s' % (base_path, self.date)
           label2 = '(empty file)'
           singular = True
 
       elif change.added:
-        if change.base_path and (change.base_rev != -1):
+        if base_path and (change.base_rev != -1):
 
           # any diff of interest?
           if change.text_changed:
@@ -767,10 +773,10 @@ class DiffGenerator:
             # show the diff?
             if self.diffsels.modify:
               diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                                     change.base_path,
+                                     base_path,
                                      self.repos.root_this, change.path,
                                      self.pool)
-              label1 = change.base_path + '\t(original)'
+              label1 = base_path + '\t(original)'
               label2 = '%s\t%s' % (change.path, self.date)
               singular = False
           else:
@@ -779,7 +785,7 @@ class DiffGenerator:
             if self.diffsels.copy:
               diff = svn.fs.FileDiff(None, None, self.repos.root_this,
                                      change.path, self.pool)
-              label1 = change.base_path + '\t(original)'
+              label1 = base_path + '\t(original)'
               label2 = '%s\t%s' % (change.path, self.date)
               singular = False
         else:
@@ -810,10 +816,10 @@ class DiffGenerator:
         # show the diff?
         if self.diffsels.modify:
           diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                                 change.base_path,
+                                 base_path,
                                  self.repos.root_this, change.path,
                                  self.pool)
-          label1 = change.base_path + '\t(original)'
+          label1 = base_path + '\t(original)'
           label2 = '%s\t%s' % (change.path, self.date)
           singular = False
 
@@ -833,7 +839,7 @@ class DiffGenerator:
       # return a data item for this diff
       return _data(
         path=change.path,
-        base_path=change.base_path,
+        base_path=base_path,
         base_rev=change.base_rev,
         diff=diff,
         diff_url=diff_url,
