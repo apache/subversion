@@ -1,4 +1,4 @@
-import unittest
+import unittest, setup_path
 import svn.delta
 import svn.core
 from cStringIO import StringIO

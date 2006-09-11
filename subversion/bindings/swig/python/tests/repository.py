@@ -1,6 +1,4 @@
-import unittest
-
-import os
+import unittest, os, setup_path
 from svn import core, repos, fs, delta
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \

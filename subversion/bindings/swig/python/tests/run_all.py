@@ -1,16 +1,5 @@
-import sys
-import os
-import unittest
-
-import setup_path
-
-import client
-import delta
-import pool
-import ra
-import wc
-import repository
-import trac.versioncontrol.tests
+import sys, os, unittest, setup_path
+import client, delta, pool, ra, wc, repository, trac.versioncontrol.tests
 
 # Run all tests
 
