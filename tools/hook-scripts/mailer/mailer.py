@@ -936,7 +936,7 @@ class TextCommitRenderer:
     else:
       w('\n')
 
-    w('Log:\n%s\n\n' % data.log)
+    w('Log:\n%s\n\n' % data.log.strip())
 
     # print summary sections
     self._render_list('Added', data.added_data)
