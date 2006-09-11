@@ -705,51 +705,6 @@ revisions_changed(const char **msg,
   return SVN_NO_ERROR;
 }
 
-/* See Issue #2608. */
-
-static svn_error_t *
-created_rev_root(const char **msg,
-                 svn_boolean_t msg_only,
-                 svn_test_opts_t *opts,
-                 apr_pool_t *pool)
-{ 
-  apr_pool_t *spool = svn_pool_create(pool);
-  svn_repos_t *repos;
-  svn_fs_t *fs;
-  svn_fs_txn_t *txn;
-  svn_fs_root_t *txn_root;
-  svn_revnum_t youngest_rev = 0, rev;
-  
-  *msg = "test svn_fs_node_created_rev on root";
-
-  if (msg_only)
-    return SVN_NO_ERROR;
-
-  /* Create a filesystem and repository. */
-  SVN_ERR(svn_test__create_repos(&repos, "test-repo-created-rev-root", 
-                                 opts->fs_type, pool));
-  fs = svn_repos_fs(repos);
-
-  SVN_ERR(svn_repos_fs_begin_txn_for_commit(&txn,
-                                            repos,
-                                            0,
-                                            "someuser", "log",
-                                            spool));
-  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
-  SVN_ERR(svn_fs_node_created_rev(&rev, txn_root, "", spool));
-  svn_pool_clear(spool);
-
-  if (rev == SVN_INVALID_REVNUM)
-    return svn_error_createf
-      (SVN_ERR_FS_GENERAL, NULL, "Root has invalid created revnum");
-
-  /* Destroy the subpool. */
-  svn_pool_destroy(spool);
-
-  return SVN_NO_ERROR;
-}
-
-
 
 
 struct locations_info
@@ -1804,7 +1759,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(dir_deltas),
     SVN_TEST_PASS(node_tree_delete_under_copy),
     SVN_TEST_PASS(revisions_changed),
-    SVN_TEST_XFAIL(created_rev_root),
     SVN_TEST_PASS(node_locations),
     SVN_TEST_PASS(node_locations2),
     SVN_TEST_PASS(rmlocks),
