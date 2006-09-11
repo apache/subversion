@@ -90,7 +90,7 @@ for repos dump/load, including the merge history index.
       is necessary to calculate the portion of the the merge info for
       the destination which represents the copy source.  Some type of
       delayed lookup marker could be written to the WC to preserve
-      offline operation.
+      offline operation (help!).
 
     * WC -> URL
 
@@ -131,7 +131,10 @@ for repos dump/load, including the merge history index.
     implemented by transfering the merge info for the versioned
     sub-tree(s) involved in the merge to or from the repository via a
     (new?) RA operation, allowing the calculation of which merges
-    remain.
+    remain.  The plan is to do this processing on the server-side, an
+    unfortunate difference from the more typical 'merge -rX:Y' style
+    of operation (which will be kept client-side to offload more
+    processing from the server).
 
 * Refactor merge info index-related code into a module, and use this
   from libsvn_fs_fs.  (kamesh)
