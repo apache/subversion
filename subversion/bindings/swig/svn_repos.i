@@ -47,6 +47,13 @@
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
 
+#ifdef SWIGRUBY
+%apply svn_stream_t *MAY_BE_NULL {
+    svn_stream_t *dumpstream_may_be_null,
+    svn_stream_t *feedback_stream
+};
+#endif
+
 %callback_typemap(svn_repos_history_func_t history_func, void *history_baton,
                   svn_swig_py_repos_history_func,
                   svn_swig_pl_thunk_history_func,
@@ -108,5 +115,19 @@ svn_repos_fs_wrapper(svn_repos_t *fs, apr_pool_t *pool)
 #endif
 
 /* ----------------------------------------------------------------------- */
+
+#ifdef SWIGRUBY
+svn_error_t *svn_repos_dump_fs2(svn_repos_t *repos,
+                                svn_stream_t *dumpstream_may_be_null,
+                                svn_stream_t *feedback_stream,
+                                svn_revnum_t start_rev,
+                                svn_revnum_t end_rev,
+                                svn_boolean_t incremental,
+                                svn_boolean_t use_deltas,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                apr_pool_t *pool);
+%ignore svn_repos_dump_fs2;
+#endif
 
 %include svn_repos_h.swg

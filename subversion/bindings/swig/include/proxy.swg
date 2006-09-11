@@ -26,7 +26,7 @@
 
 /* Default code for all wrapped proxy classes in Python */
 %define %proxy_pythoncode(TYPE)
-%pythoncode %{
+%pythoncode {
   def set_parent_pool(self, parent_pool=None):
     """Create a new proxy object for TYPE"""
     import libsvn.core, weakref
@@ -44,26 +44,38 @@
   def __getattr__(self, name):
     """Get an attribute from this object"""
     self.assert_valid()
+
     value = _swig_getattr(self, self.__class__, name)
-    try:
-      old_dict = self.__dict__["_member_dicts"][name]
-      value.__dict__["_parent_pool"] = old_dict.get("_parent_pool")
-      value.__dict__["_member_dicts"] = old_dict.get("_member_dicts")
-      value.__dict__["_is_valid"] = old_dict.get("_is_valid")
+
+    # Now, if this item has changed, SWIG must have generated a new object.
+    # Copy the pool metadata from the old object over to the new one.
+    members = self.__dict__.get("_members")
+    if members is not None:
+      old_value = members.get(name)
+      if (old_value is not None and value is not None and
+          value is not old_value):
+        try:
+          value.__dict__.update(old_value.__dict__)
+        except AttributeError:
+          pass
+
+    # Verify that the new object is good
+    if hasattr(value, "assert_valid"):
       value.assert_valid()
-    except KeyError:
-      pass
+
     return value
 
   def __setattr__(self, name, value):
     """Set an attribute on this object"""
     self.assert_valid()
-    try:
-      self.__dict__.setdefault("_member_dicts",{})[name] = value.__dict__
-    except AttributeError:
-      pass
+
+    # Save a copy of the object, so that the garbage
+    # collector won't kill the object while it's in
+    # SWIG-land
+    self.__dict__.setdefault("_members",{})[name] = value
+
     return _swig_setattr(self, self.__class__, name, value)
-%}
+}
 %enddef
 
 /* Define a proxy for wrapping an existing struct */
@@ -81,5 +93,39 @@ struct TYPE {
 }
 }
 %enddef
+
+/* Treat typemapped function pointers as objects, which have a bound
+ * __call__ method. This mapping depends on the function pointer being
+ * typemapped as a CALLABLE_CALLBACK. */
+%define %funcptr_proxy(TYPE, INVOKE)
+%nodefault TYPE;
+struct TYPE {
+%extend {
+%proxy_pythoncode(TYPE);
+%pythoncode %{
+  def __call__(self, *args):
+    return INVOKE(self, *args)
+%}
+}
+};
+
+%enddef
+
+/* Add member functions to objects so that their function pointers can
+ * be invoked.
+ *
+ * Unlike the CALLABLE_CALLBACKS, these member functions don't have or
+ * need typemaps, because the underlying C/SWIG object for the callback
+ * is hidden.
+ */
+%define %funcptr_member_proxy(TYPE, MEMBER, INVOKE)
+%extend TYPE {
+%pythoncode %{
+  def MEMBER(self, *args):
+    return INVOKE(self, *args)
+%}
+}
+%enddef
+
 
 #endif

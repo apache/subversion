@@ -775,10 +775,11 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (setq svn-global-keymap (make-sparse-keymap))
   (define-key svn-global-keymap (kbd "v") 'svn-status-version)
   (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
-  (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
+  (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
-  (define-key svn-global-keymap (kbd "b") 'svn-status-blame)
+  (define-key svn-global-keymap (kbd "f =") 'svn-file-show-svn-diff)
+  (define-key svn-global-keymap (kbd "f b") 'svn-status-blame)
   (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
   (define-key svn-global-keymap (kbd "S") 'svn-status-switch-to-status-buffer)
   (define-key svn-global-keymap (kbd "o") 'svn-status-pop-to-status-buffer))
@@ -3005,6 +3006,15 @@ If ARG then prompt for revision to diff against."
   (svn-status-show-svn-diff-internal (list (svn-status-get-line-information)) t
                                      (if arg :ask :auto)))
 
+(defun svn-file-show-svn-diff (arg)
+  "Run `svn diff' on the current file.
+If there is a newer revision in the repository, the diff is done against HEAD,
+otherwise compare the working copy with BASE.
+If ARG then prompt for revision to diff against."
+  (interactive "P")
+  (svn-status-show-svn-diff-internal (list (svn-status-make-line-info buffer-file-name)) nil
+                                     (if arg :ask :auto)))
+
 (defun svn-status-show-svn-diff-for-marked-files (arg)
   "Run `svn diff' on all selected files.
 If some files have been marked, compare those non-recursively;
@@ -4241,6 +4251,8 @@ When called with a prefix argument, ask the user for the revision."
 
 (when (not svn-info-mode-map)
   (setq svn-info-mode-map (make-sparse-keymap))
+  (define-key svn-info-mode-map [?s] 'svn-status-pop-to-status-buffer)
+  (define-key svn-info-mode-map (kbd "RET") 'svn-info-show-context)
   (define-key svn-info-mode-map [?q] 'bury-buffer))
 
 (defun svn-info-mode ()
@@ -4249,7 +4261,26 @@ When called with a prefix argument, ask the user for the revision."
   (kill-all-local-variables)
   (use-local-map svn-info-mode-map)
   (setq major-mode 'svn-info-mode)
-  (setq mode-name "svn-info"))
+  (setq mode-name "svn-info")
+  (toggle-read-only 1))
+
+(defun svn-info-show-context ()
+  "Show the context for a line in the info buffer.
+Currently is the output from the svn update command known."
+  (interactive)
+  (cond ((save-excursion
+           (goto-char (point-max))
+           (forward-line -1)
+           (beginning-of-line)
+           (looking-at "Updated to revision"))
+         ;; svn-info contains info from an svn update
+         (let ((file-name (buffer-substring-no-properties (+ 3 (line-beginning-position)) (line-end-position)))
+               (pos))
+           (with-current-buffer svn-status-buffer-name
+             (setq pos (svn-status-get-file-name-buffer-position file-name)))
+           (when pos
+             (pop-to-buffer svn-status-buffer-name)
+             (goto-char pos))))))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-process-mode

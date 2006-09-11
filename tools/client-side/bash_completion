@@ -644,7 +644,8 @@ _svnadmin ()
 	cmdOpts=
 	case ${COMP_WORDS[1]} in
 	create)
-		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir --fs-type"
+		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir \
+                         --fs-type --pre-1.4-compatible"
 		;;
 	deltify)
 		cmdOpts="-r --revision -q --quiet"

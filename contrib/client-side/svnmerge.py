@@ -232,7 +232,17 @@ def launch(cmd, split_lines=True):
 
 def launchsvn(s, show=False, pretend=False, **kwargs):
     """Launch SVN and grab its output."""
-    cmd = opts["svn"] + " " + s
+    username = opts.get("username", None)
+    password = opts.get("password", None)
+    if username:
+        username = " --username=" + username
+    else:
+        username = ""
+    if password:
+        password = " --password=" + password
+    else:
+        password = ""
+    cmd = opts["svn"] + username + password + " " + s
     if show or opts["verbose"] >= 2:
         print cmd
     if pretend:
@@ -1643,6 +1653,12 @@ global_opts = [
            help="show subversion commands that make changes"),
     Option("-v", "--verbose",
            help="verbose mode: output more information about progress"),
+    OptionArg("-u", "--username",
+              default=None,
+              help="invoke subversion commands with the supplied username"),
+    OptionArg("-p", "--password",
+              default=None,
+              help="invoke subversion commands with the supplied password"),
 ]
 
 common_opts = [

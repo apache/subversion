@@ -229,6 +229,8 @@ a <tt>file:</tt> URL?</a></li>
     stage.  What's wrong?</a></li>
 <li><a href="#freebsd-listen-host">I'm using FreeBSD, and I've started
   svnserve, but it doesn't seem to be listening on port 3690.</a></li>
+<li><a href="#already-under-version-control">I can't add a directory
+    because Subversion says it's "already under version control".</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -238,6 +240,9 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#dynamic-exe-debugging">How do I run a debugger on
     dynamic Subversion binaries without having to install
     them?</a></li>
+<li><a href="#avoiding-compiler-inlining">How do I run a debugger on
+    Subversion binaries without compiler inlining obfuscating the
+    source?</a></li>
 </ul>
 
 <h4>References:</h4>
@@ -3330,6 +3335,27 @@ solution described here was not mentioned in that thread.</p>
   default; that option tells them to also listen on tcp4.</p>
 </div>
 
+<div class="h3" id="already-under-version-control" title="already-under-version-control">
+<h3>I can't add a directory
+    because Subversion says it's "already under version control".</h3>
+<p>The directory you're trying to add already contains
+  a <tt>.svn</tt> subdirectory, but it's from a different repository
+  than the directory to which you're trying to add it.  This probably
+  happened because you used your operating system's "copy" command to
+  copy one working copy into the current one.</p>
+<p>
+  The quick and dirty solution is to delete all <tt>.svn</tt>
+  directories contained in the directory you're trying to add; this
+  will let the "add" command complete.  If you're using Unix, this
+  command will delete <tt>.svn</tt> directories
+  under <tt>dir</tt>:</p>
+<pre>
+  find dir -type d -name .svn -exec rm -rf {} \;
+</pre>
+<p>However, you should ask yourself <em>why</em> you made this copy;
+  and you should ensure that by adding this directory, you won't be
+  making an unwanted copy of it in your repository.
+</p>
 <![CDATA[=========================================================]]>
 
 </div>
@@ -3407,6 +3433,35 @@ amounts to replacing <code>exec "$progdir/$progname"</code> with
 
 <p>This trick is also very useful when applied to the
 libtool-generated shell scripts for the white box tests.</p>
+
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="avoiding-compiler-inlining"
+title="avoiding-compiler-inlining">
+
+<h3>How do I run a debugger on Subversion binaries without compiler
+    inlining obfuscating the source?</h3>
+
+<p>By default, gcc will often optimize away private variables and
+functions, inlining the associated operations.  This can complicate
+stepping through the code in a debugger.</p>
+
+<p>Work around this by turning off optimization.  Before the
+<code>make</code> step on unix-y systems, do the following:</p>
+
+<blockquote>
+<div><code>subversion$ perl -pi -e 's/-O2//g' config.status</code></div>
+<div><code>subversion$ ./config.status</code></div>
+</blockquote>
+
+<p>Alternately, you can explicitly set <code>CFLAGS</code> before
+running <code>configure</code>.</p>
+
+<p>Remember to undo this operation before installing Subversion from
+source, by regenerating config.status, or unsetting
+<code>CFLAGS</code> before running <code>configure</code>.</p>
 
 </div>
 

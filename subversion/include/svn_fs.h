@@ -143,9 +143,11 @@ void svn_fs_set_warning_func(svn_fs_t *fs,
  *   SVN_FS_TYPE_BDB   Berkeley-DB implementation
  *   SVN_FS_TYPE_FSFS  Native-filesystem implementation
  *
- * Otherwise, the BDB filesystem type is assumed.  Once the filesystem
- * is created, its type will be recorded so that other functions will
- * know how to operate on it.
+ * If @a fs_config is @c NULL or does not contain a value for
+ * @c SVN_FS_CONFIG_FS_TYPE then the default filesystem type will be used.
+ * This will typically be BDB for version 1.1 and FSFS for later versions,
+ * though the caller should not rely upon any particular default if they
+ * wish to ensure that a filesystem of a specific type is created.
  *
  * @since New in 1.1.
  */

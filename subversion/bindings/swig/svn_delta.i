@@ -197,15 +197,6 @@ svn_txdelta_apply_wrapper(svn_stream_t *source,
 }
 
 static svn_error_t *
-svn_txdelta_invoke_window_handler(VALUE window_handler,
-                                  svn_txdelta_window_t *window,
-                                  apr_pool_t *pool)
-{
-  return svn_swig_rb_invoke_txdelta_window_handler(window_handler,
-                                                   window, pool);
-}
-
-static svn_error_t *
 svn_txdelta_invoke_window_handler_wrapper(VALUE obj,
                                           svn_txdelta_window_t *window,
                                           apr_pool_t *pool)

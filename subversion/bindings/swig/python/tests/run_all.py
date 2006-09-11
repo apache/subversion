@@ -1,15 +1,5 @@
-import sys
-import os
-import unittest
-
-import setup_path
-
-import client
-import pool
-import ra
-import wc
-import repository
-import trac.versioncontrol.tests
+import sys, os, unittest, setup_path
+import client, delta, pool, ra, wc, repository, trac.versioncontrol.tests
 
 # Run all tests
 
@@ -17,6 +7,7 @@ def suite():
   """Run all tests"""
   suite = unittest.TestSuite()
   suite.addTest(client.suite())
+  suite.addTest(delta.suite())
   suite.addTest(pool.suite())
   suite.addTest(ra.suite())
   suite.addTest(wc.suite())

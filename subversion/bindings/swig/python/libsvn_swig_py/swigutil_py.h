@@ -75,13 +75,22 @@ void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool);
 SVN_SWIG_SWIGUTIL_EXPORT
 void svn_swig_py_clear_application_pool(void);
 
-/* Get the application pool */
+/* Get the pool argument from the last element of tuple args.
+ * If the last element of args is not a pool, create a new
+ * subpool. Return 0 if successful. Return 1 if an error
+ * occurs.
+ */
 SVN_SWIG_SWIGUTIL_EXPORT
-void svn_swig_get_application_pool(PyObject **py_pool, apr_pool_t **pool);
+int svn_swig_py_get_pool_arg(PyObject *args, swig_type_info *type,
+    PyObject **py_pool, apr_pool_t **pool);
 
-/* Set a Python 'owned' reference on the pool of the given proxy object */
+/* Get the parent pool of the first argument in the specified
+ * argument list. Return 0 if successful. Return 1 if an error
+ * occurs.
+ */
 SVN_SWIG_SWIGUTIL_EXPORT
-int svn_swig_py_pool_set_owned_ref(PyObject *proxy, PyObject *oldRef, PyObject *newRef);
+int svn_swig_py_get_parent_pool(PyObject *args, swig_type_info *type,
+    PyObject **py_pool, apr_pool_t **pool);
 
 
 /*** SWIG Wrappers ***/
@@ -89,7 +98,7 @@ int svn_swig_py_pool_set_owned_ref(PyObject *proxy, PyObject *oldRef, PyObject *
 /* Wrapper for SWIG_NewPointerObj */
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type, 
-                                 PyObject *pool);
+                                 PyObject *pool, PyObject *args);
 
 /* Wrapper for SWIG_ConvertPtr */
 SVN_SWIG_SWIGUTIL_EXPORT
@@ -97,8 +106,7 @@ int svn_swig_ConvertPtr(PyObject *input, void **obj, swig_type_info *type);
 
 /* Wrapper for SWIG_MustGetPtr */
 SVN_SWIG_SWIGUTIL_EXPORT
-void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
-                          PyObject **py_pool);
+void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum);
 
 /*** Functions to expose a custom SubversionException ***/
 

@@ -1,9 +1,6 @@
+import unittest, weakref, setup_path
+import svn.core, svn.client, libsvn.core
 from svn.core import *
-import svn.core
-import svn.client
-import libsvn.core
-import unittest
-import weakref
 from libsvn.core import application_pool, GenericSWIGWrapper
 
 # Test case for the new automatic pool management infrastructure

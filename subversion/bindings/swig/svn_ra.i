@@ -40,8 +40,6 @@
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
-%apply apr_hash_t **DIRENTHASH { apr_hash_t **dirents };
-
 %apply const char *MAY_BE_NULL {
     const char *comment,
     const char *lock_token
