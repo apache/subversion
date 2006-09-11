@@ -141,6 +141,7 @@ Dynamic build data
   path_setup_in       Contains misc. files to include in the setup
   path_is             Path to the Inno Setup executable's directory
   path_svnclient      svn.exe
+  path_svnsync        svnsync.exe
   path_svnadmin       svnadmin.exe
   path_svnlook        svnlook.exe
   path_svnserve       svnserve.exe
