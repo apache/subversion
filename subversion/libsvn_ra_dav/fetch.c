@@ -385,7 +385,6 @@ static svn_error_t *add_props(apr_hash_t *props,
 }
                       
 
-#ifdef SVN_NEON_0_25
 /* This implements the svn_ra_dav__request_interrogator() interface.
    USERDATA is 'ne_content_type *'. */
 static svn_error_t *interrogate_for_content_type(ne_request *request,
@@ -394,14 +393,18 @@ static svn_error_t *interrogate_for_content_type(ne_request *request,
 {
   ne_content_type *ctype = userdata;
 
+#ifdef SVN_NEON_0_25
   if (ne_get_content_type(request, ctype) != 0)
     return svn_error_createf
       (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
        _("Could not get content-type from response"));
+#else /* ! SVN_NEON_0_25 */
+  ne_add_response_header_handler(req, "Content-Type", ne_content_type_handler,
+                                 ctype);
+#endif /* SVN_NEON_0_25 */
 
   return SVN_NO_ERROR;
 }
-#endif /* SVN_NEON_0_25 */
 
 
 static svn_error_t *custom_get_request(ne_session *sess,
@@ -446,13 +449,6 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                url);
     }
 
-#ifndef SVN_NEON_0_25
-  /* we want to get the Content-Type so that we can figure out whether
-     this is an svndiff or a fulltext */
-  ne_add_response_header_handler(req, "Content-Type", ne_content_type_handler,
-                                 &cgc.ctype);
-#endif /* ! SVN_NEON_0_25 */
-
   if (delta_base)
     {
       /* The HTTP delta draft uses an If-None-Match header holding an
@@ -484,9 +480,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   err = svn_ra_dav__request_dispatch(NULL, req, sess, "GET", url,
                                      200 /* OK */,
                                      226 /* IM Used */,
-#ifdef SVN_NEON_0_25
                                      interrogate_for_content_type, &cgc.ctype,
-#endif /* SVN_NEON_0_25 */
                                      pool);
 
 #ifdef SVN_NEON_0_25
