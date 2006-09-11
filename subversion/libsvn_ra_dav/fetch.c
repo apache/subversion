@@ -387,14 +387,14 @@ static svn_error_t *add_props(apr_hash_t *props,
 
 /* This implements the svn_ra_dav__request_interrogator() interface.
    USERDATA is 'ne_content_type *'. */
-static svn_error_t *interrogate_for_content_type(ne_request *request,
+static svn_error_t *interrogate_for_content_type(ne_request *req,
                                                  int dispatch_return_val,
                                                  void *userdata)
 {
   ne_content_type *ctype = userdata;
 
 #ifdef SVN_NEON_0_25
-  if (ne_get_content_type(request, ctype) != 0)
+  if (ne_get_content_type(req, ctype) != 0)
     return svn_error_createf
       (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
        _("Could not get content-type from response"));
