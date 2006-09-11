@@ -4251,6 +4251,8 @@ When called with a prefix argument, ask the user for the revision."
 
 (when (not svn-info-mode-map)
   (setq svn-info-mode-map (make-sparse-keymap))
+  (define-key svn-info-mode-map [?s] 'svn-status-pop-to-status-buffer)
+  (define-key svn-info-mode-map (kbd "RET") 'svn-info-show-context)
   (define-key svn-info-mode-map [?q] 'bury-buffer))
 
 (defun svn-info-mode ()
@@ -4259,7 +4261,26 @@ When called with a prefix argument, ask the user for the revision."
   (kill-all-local-variables)
   (use-local-map svn-info-mode-map)
   (setq major-mode 'svn-info-mode)
-  (setq mode-name "svn-info"))
+  (setq mode-name "svn-info")
+  (toggle-read-only 1))
+
+(defun svn-info-show-context ()
+  "Show the context for a line in the info buffer.
+Currently is the output from the svn update command known."
+  (interactive)
+  (cond ((save-excursion
+           (goto-char (point-max))
+           (forward-line -1)
+           (beginning-of-line)
+           (looking-at "Updated to revision"))
+         ;; svn-info contains info from an svn update
+         (let ((file-name (buffer-substring-no-properties (+ 3 (line-beginning-position)) (line-end-position)))
+               (pos))
+           (with-current-buffer svn-status-buffer-name
+             (setq pos (svn-status-get-file-name-buffer-position file-name)))
+           (when pos
+             (pop-to-buffer svn-status-buffer-name)
+             (goto-char pos))))))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-process-mode
