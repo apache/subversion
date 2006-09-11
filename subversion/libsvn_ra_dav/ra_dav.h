@@ -876,9 +876,9 @@ svn_ra_dav__request_dispatch(int *code_p,
    Implements the svn_ra_dav__request_interrogator interface (ignoring
    the DISPATCH_RETURN_VAL parameter). */
 svn_error_t *
-interrogate_for_location(ne_request *request,
-                         int dispatch_return_val,
-                         void *location);
+svn_ra_dav__interrogate_for_location(ne_request *request,
+                                     int dispatch_return_val,
+                                     void *location);
 
 /* Give PARSER the ability to parse a mod_dav_svn <D:error> response
    body in the case of a non-2XX response to REQUEST.  If a <D:error>
