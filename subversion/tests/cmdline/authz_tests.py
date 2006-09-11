@@ -651,13 +651,10 @@ def authz_log_and_tracing_test(sbox):
 ########################################################################
 # Run the tests
 
-def is_this_dav():
-  return svntest.main.test_area_url.startswith('http')
-
 # list all tests here, starting with None:
 test_list = [ None,
               authz_open_root,
-              XFail(authz_open_directory, is_this_dav),
+              XFail(authz_open_directory, svntest.main.is_ra_type_dav),
               broken_authz_file,
               authz_read_access,
               authz_write_access,

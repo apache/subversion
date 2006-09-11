@@ -1292,9 +1292,6 @@ def forced_switch_failures(sbox):
 ########################################################################
 # Run the tests
 
-def is_this_dav():
-  return svntest.main.test_area_url.startswith('http')
-
 # list all tests here, starting with None:
 test_list = [ None,
               routine_switching,
@@ -1315,7 +1312,7 @@ test_list = [ None,
               relocate_beyond_repos_root,
               refresh_read_only_attribute,
               switch_change_repos_root,
-              XFail(relocate_and_propset, is_this_dav),
+              XFail(relocate_and_propset, svntest.main.is_ra_type_dav),
               forced_switch,
               forced_switch_failures,
              ]
