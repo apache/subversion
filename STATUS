@@ -72,11 +72,3 @@ Candidate changes:
       +1: dlr
 
 Approved changes:
-
-  * r21367
-    Correct documentation on the default filesystem type created by
-    svn_fs_create().
-    Justification:
-      Doc string was clearly wrong.
-    Votes:
-      +1: dlr
