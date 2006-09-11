@@ -77,7 +77,7 @@ Approved changes:
     JavaHL crash when using pre-1.4 native libraries.
     Votes:
       +1: markphip
-      +0: djames
+      +0: djames, dlr
 
   * r21333
     For mailer.py, if the 'commit_url' option is set, then add the URL
