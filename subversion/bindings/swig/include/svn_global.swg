@@ -59,7 +59,7 @@
 %feature("autodoc",1);
 
 %{
-static PyObject * _global_svn_swig_py_pool = NULL;
+static PyObject * _global_py_pool = NULL;
 %}
 
 /* The SWIG $argnum variable reports the current argument number

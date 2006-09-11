@@ -67,7 +67,7 @@
 #ifdef SWIGPYTHON
 %typemap(argout) SWIGTYPE **OUTPARAM {
   %append_output(svn_swig_NewPointerObj(*$1, $*1_descriptor,
-                                        _global_svn_swig_py_pool));
+                                        _global_py_pool, args));
 }
 #else
 %typemap(argout) SWIGTYPE **OUTPARAM {
@@ -408,34 +408,10 @@
 */
 
 #ifdef SWIGPYTHON
-%define svn_swig_py_pool_check(pool)
-  if (pool != NULL && !PyObject_HasAttrString(pool, (char *)"_mark_valid"))
-  {
-    int argnum = PyTuple_GET_SIZE(args);
-    SWIG_Python_TypeError(SWIG_TypePrettyName($descriptor), pool);
-    SWIG_arg_fail(argnum);
-    SWIG_fail;
-  }
-%enddef
-%define svn_swig_py_pool_create_subpool(py_pool, pool)
-  if (py_pool != NULL) {
-    pool = svn_pool_create(pool);
-    py_pool = svn_swig_NewPointerObj(pool, $descriptor, py_pool);
-  }
-%enddef
-
-%typemap(arginit) POINTER_TYPES (PyObject *_global_svn_swig_py_pool,
-                                 apr_pool_t *_global_pool,
-                                 int _global_pool_is_application_pool)
-{
-  _global_pool_is_application_pool = 1;
-  svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool);
-}
 
 %typemap(in) POINTER_TYPES
 {
-  $1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $svn_argnum,
-    _global_pool_is_application_pool ? &_global_svn_swig_py_pool : NULL);
+  $1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $svn_argnum);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
@@ -443,47 +419,30 @@
 
 %typemap(out) POINTER_TYPES
     "$result = svn_swig_NewPointerObj((void*)($1), $descriptor,
-                                      _global_svn_swig_py_pool);";
+                                      _global_py_pool, args);";
 
 %apply POINTER_TYPES { void *, SWIGTYPE *, SWIGTYPE [] };
 
-%typemap(default) apr_pool_t *(apr_pool_t *_global_pool,
-  PyObject *_global_svn_swig_py_pool)
+%typemap(default, noblock=1) apr_pool_t
+  *(apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
 {
-  int argnum = PyTuple_GET_SIZE(args) - 1;
-  _global_pool_is_application_pool = 0;
-  if (argnum >= 0) {
-    PyObject *input = PyTuple_GET_ITEM(args, argnum);
-    if (input != Py_None &&
-        PyObject_HasAttrString(input, (char *)"_mark_valid")) {
-      _global_pool = svn_swig_MustGetPtr(input, $1_descriptor, argnum+1, NULL);
-      if (PyErr_Occurred()) {
-        _global_svn_swig_py_pool = NULL;
-        SWIG_fail;
-      }
-      _global_svn_swig_py_pool = input;
-      Py_XINCREF(_global_svn_swig_py_pool);
-    } else {
-      svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool);
-      svn_swig_py_pool_create_subpool(_global_svn_swig_py_pool, _global_pool);
-    }
-  } else {
-    svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool);
-    svn_swig_py_pool_create_subpool(_global_svn_swig_py_pool, _global_pool);
-  }
+  if (svn_swig_py_get_pool_arg(args, $descriptor,
+      &_global_py_pool, &_global_pool))
+    SWIG_fail;
   $1 = _global_pool;
-  svn_swig_py_pool_check(_global_svn_swig_py_pool)
 }
 
-%typemap(in) apr_pool_t * {
+%typemap(in, noblock=1) apr_pool_t * {
   /* Verify that the user supplied a valid pool */
-  if ($input != Py_None) {
-    svn_swig_py_pool_check($input);
+  if ($input != Py_None && $input != _global_py_pool) {
+    SWIG_Python_TypeError(SWIG_TypePrettyName($descriptor), $input);
+    SWIG_arg_fail($svn_argnum);
+    SWIG_fail;
   }
 }
 
 %typemap(freearg) apr_pool_t * {
-  Py_XDECREF(_global_svn_swig_py_pool);
+  Py_XDECREF(_global_py_pool);
 }
 #endif
 
@@ -552,10 +511,18 @@
 #ifdef SWIGPYTHON
 
 /* Allocate memory for a pointer to the function pointer. */
-
 %typemap(in, numinputs=0) CALLABLE_CALLBACK *
-  "$1 = ($ltype) apr_pcalloc(_global_pool, sizeof($*ltype));
-   if ($1 == NULL) SWIG_fail; ";
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
+{
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+  $1 = ($ltype) apr_pcalloc(_global_pool, sizeof($*ltype));
+  if ($1 == NULL) SWIG_fail;
+}
 
 
 /* Return a pointer to the function pointer.
@@ -565,7 +532,7 @@
 
 %typemap(argout) CALLABLE_CALLBACK * {
   %append_output(svn_swig_NewPointerObj($1, $descriptor,
-                                        _global_svn_swig_py_pool));
+                                        _global_py_pool, args));
 }
 
 /* Convert the pointer to a function pointer back into a regular
@@ -574,8 +541,7 @@
 
 %typemap(in) CALLABLE_CALLBACK {
   $&ltype tmp =
-    svn_swig_MustGetPtr($input, $&descriptor, $svn_argnum,
-      _global_pool_is_application_pool ? &_global_svn_swig_py_pool : NULL);
+    svn_swig_MustGetPtr($input, $&descriptor, $svn_argnum);
   if (tmp == NULL || PyErr_Occurred()) {
     SWIG_fail;
   }
@@ -590,17 +556,23 @@
  */
 
 %typemap(out) CALLABLE_CALLBACK {
+  PyObject *py_pool = NULL;
+  apr_pool_t *pool = NULL;
+
+  if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                  &py_pool, &pool))
+    SWIG_fail;
   if ($1 == NULL) {
     $result = Py_None;
     Py_INCREF($result);
   } else {
-    $&ltype tmp = apr_palloc(_global_pool, sizeof($ltype));
+    $&ltype tmp = apr_palloc(pool, sizeof($ltype));
     if (tmp == NULL) {
       SWIG_fail;
     }
     *tmp = ($ltype) $1;
     $result = svn_swig_NewPointerObj(tmp, $&1_descriptor,
-                                     _global_svn_swig_py_pool);
+                                     py_pool, args);
   }
 }
 
@@ -618,7 +590,7 @@
   *tmp = ($ltype) $value;
 
   %set_constant("$symname",
-    svn_swig_NewPointerObj(tmp, $&descriptor, _global_svn_swig_py_pool)
+    svn_swig_NewPointerObj(tmp, $&descriptor, NULL, NULL)
   );
 
 }
@@ -851,7 +823,7 @@
        * treat it as an opaque void pointer.
        */
       $result = svn_swig_NewPointerObj($1, $descriptor,
-        _global_svn_swig_py_pool);
+        _global_py_pool, args);
     }
   }
 
