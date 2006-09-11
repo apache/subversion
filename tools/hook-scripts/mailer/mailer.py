@@ -614,6 +614,10 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
       or 'yes'
 
+  params_with_rev = params.copy()
+  params_with_rev['rev'] = repos.rev
+  commit_url = cfg.get('commit_url', group, params_with_rev)
+
   # figure out the lists of changes outside the selected path-space
   other_added_data = other_removed_data = other_modified_data = [ ]
   if len(paths) != len(changelist) and show_nonmatching_paths != 'no':
@@ -632,6 +636,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     date=date,
     rev=repos.rev,
     log=repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or '',
+    commit_url=commit_url,
     added_data=generate_list('A', changelist, paths, True),
     removed_data=generate_list('R', changelist, paths, True),
     modified_data=generate_list('M', changelist, paths, True),
@@ -888,8 +893,16 @@ class TextCommitRenderer:
 
     w = self.output.write
 
-    w('Author: %s\nDate: %s\nNew Revision: %s\n\nLog:\n%s\n\n'
-      % (data.author, data.date, data.rev, data.log))
+    w('Author: %s\nDate: %s\nNew Revision: %s\n' % (data.author,
+                                                      data.date,
+                                                      data.rev))
+
+    if data.commit_url:
+      w('URL: %s\n\n' % data.commit_url)
+    else:
+      w('\n')
+
+    w('Log:\n%s\n\n' % data.log)
 
     # print summary sections
     self._render_list('Added', data.added_data)

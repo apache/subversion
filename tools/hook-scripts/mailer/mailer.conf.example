@@ -183,6 +183,13 @@ reply_to =
 # regardless of this option's value.
 generate_diffs = add copy modify
 
+# Commit URL construction.  This adds a URL to the top of the message
+# that can lead the reader to a Trac, ViewVC or other view of the
+# commit as a whole.
+#
+# The available substitution variable is: rev
+#commit_url = http://diffs.server.com/trac/software/changeset/%(rev)s
+
 # Diff URL construction.  For the configured diff URL types, the diff
 # section (which follows the message header) will include the URL
 # relevant to the change type, even if actual diff generation for that

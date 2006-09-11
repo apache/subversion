@@ -73,13 +73,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r21333
-    For mailer.py, if the 'commit_url' option is set, then add the URL
-      to the top of the message that can lead the reader to a Trac,
-      ViewVC or other view of the commit.
-    Votes:
-      +1: blair, dlr
-
   * r21367
     Correct documentation on the default filesystem type created by
     svn_fs_create().
