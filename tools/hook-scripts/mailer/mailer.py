@@ -188,11 +188,12 @@ class MailedOutput(OutputBase):
     OutputBase.__init__(self, cfg, repos, prefix_param)
 
   def start(self, group, params):
-    # whitespace (or another character) separated list of addresses;
-    # split into a clean list:
+    # whitespace (or another character) separated list of addresses
+    # which must be split into a clean list
     to_addr_in = self.cfg.get('to_addr', group, params)
     # if list of addresses starts with '[.]'
     # use the character between the square brackets as split char
+    # else use whitespaces
     if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
                             and to_addr_in[2] == ']':
       self.to_addrs = \
@@ -201,7 +202,17 @@ class MailedOutput(OutputBase):
       self.to_addrs = filter(None, string.split(to_addr_in))
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
+    # if the from_addr (also) starts with '[.]' (may happen if one
+    # map is used for both to_addr and from_addr) remove '[.]'
+    if len(self.from_addr) >= 3 and self.from_addr[0] == '[' \
+                                and self.from_addr[2] == ']':
+      self.from_addr = self.from_addr[3:]
     self.reply_to = self.cfg.get('reply_to', group, params)
+    # if the reply_to (also) starts with '[.]' (may happen if one
+    # map is used for both to_addr and reply_to) remove '[.]'
+    if len(self.reply_to) >= 3 and self.reply_to[0] == '[' \
+                               and self.reply_to[2] == ']':
+      self.reply_to = self.reply_to[3:]
 
   def mail_headers(self, group, params):
     subject = self.make_subject(group, params)
