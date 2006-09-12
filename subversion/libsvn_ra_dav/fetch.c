@@ -2663,7 +2663,7 @@ end_element(void *userdata, int state,
   elm = svn_ra_dav__lookup_xml_elem(report_elements, nspace, elt_name);
 
   if (elm == NULL)
-    return NE_XML_DECLINE;
+    return SVN_NO_ERROR;
 
   switch (elm->id)
     {
