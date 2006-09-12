@@ -29,6 +29,17 @@ Item = wc.StateItem
 XFail = svntest.testcase.XFail
 
 #----------------------------------------------------------------------
+# Helper function for testing stderr from co.
+# If none of the strings in STDERR list matches the regular expression
+# RE_STRING raise an error.
+def test_stderr(re_string, stderr):
+  exp_err_re = re.compile(re_string)
+  for line in stderr:
+    if exp_err_re.search(line):
+      return
+  raise svntest.Failure("Checkout failed but not in the expected way")
+
+#----------------------------------------------------------------------
 # Helper function to set up an existing local tree that has paths which
 # obstruct with the incoming WC.
 #
@@ -155,13 +166,8 @@ def forced_checkout_of_file_with_dir_obstructions(sbox):
                                                   "--force", sbox.repo_url,
                                                   other_wc)
 
-  exp_err_re = re.compile(".*Failed to add file.*a non-file object of " + \
-                          "the same name already exists")
-
-  for line in serr:
-    if exp_err_re.search(line):
-      return
-  raise svntest.Failure("forced co failed but not in the expected way")
+  test_stderr(".*Failed to add file.*a non-file object of the same name " \
+              "already exists", serr)
 
 #----------------------------------------------------------------------
 
@@ -182,12 +188,8 @@ def forced_checkout_of_dir_with_file_obstructions(sbox):
                                                   "--force", sbox.repo_url,
                                                   other_wc)
 
-  exp_err_re = re.compile(".*Failed to add directory.*a non-directory " + \
-                          "object of the same name already exists")
-  for line in serr:
-    if exp_err_re.search(line):
-      return
-  raise svntest.Failure("forced co failed but not in the expected way")
+  test_stderr(".*Failed to add directory.*a non-directory object of the " \
+              "same name already exists", serr)
 
 #----------------------------------------------------------------------
 
@@ -281,13 +283,8 @@ def forced_checkout_with_versioned_obstruction(sbox):
                                                   "--force", sbox.repo_url,
                                                   other_wc_dir)
 
-  exp_err_re = re.compile(".*Failed to forcibly add directory.*a " + \
-                          "versioned directory of the same name " + \
-                          "already exists")
-  for line in serr:
-    if exp_err_re.search(line):
-      return
-  raise svntest.Failure("forced co failed but not in the expected way")
+  test_stderr(".*Failed to add directory.*a versioned directory of the " \
+              "same name already exists", serr)
 
 #----------------------------------------------------------------------
 # Ensure that an import followed by a checkout in place works correctly.
