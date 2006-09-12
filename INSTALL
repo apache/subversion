@@ -604,6 +604,14 @@ II.   INSTALLATION
       client, the SVNADMIN administration tool, and the SVNLOOK
       reporting tool.
 
+      Note that if you need support for non-english locales you'll have
+      to set the APR_ICONV_PATH environment variable to the path of the
+      iconv directory in the folder that contains the Subversion install.
+
+      You may also want to add the bin directory in the Subversion folder
+      to your PATH environment variable so as to not have to use the full
+      path when running Subversion commands.
+
       To test the installation, open a DOS box (run either "cmd" or
       "command" from the Start menu's "Run..." menu option), change to
       the directory you installed the executables into, and run:
@@ -615,7 +623,6 @@ II.   INSTALLATION
 
       If using a self-extracting .exe file, just run it instead of
       unzipping it, to install Subversion.
-
 
   E.  Building the Latest Source under Windows
       ----------------------------------------
