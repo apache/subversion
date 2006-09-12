@@ -643,9 +643,11 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   commit_url = cfg.get('commit_url', group, params_with_rev)
 
   # figure out the lists of changes outside the selected path-space
-  other_added_data = other_deleted_data = other_modified_data = [ ]
+  other_added_data = other_replaced_data = other_deleted_data = \
+      other_modified_data = [ ]
   if len(paths) != len(changelist) and show_nonmatching_paths != 'no':
     other_added_data = generate_list('A', changelist, paths, False)
+    other_replaced_data = generate_list('R', changelist, paths, False)
     other_deleted_data = generate_list('D', changelist, paths, False)
     other_modified_data = generate_list('M', changelist, paths, False)
 
@@ -662,10 +664,12 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     log=repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or '',
     commit_url=commit_url,
     added_data=generate_list('A', changelist, paths, True),
+    replaced_data=generate_list('R', changelist, paths, True),
     deleted_data=generate_list('D', changelist, paths, True),
     modified_data=generate_list('M', changelist, paths, True),
     show_nonmatching_paths=show_nonmatching_paths,
     other_added_data=other_added_data,
+    other_replaced_data=other_replaced_data,
     other_deleted_data=other_deleted_data,
     other_modified_data=other_modified_data,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
@@ -677,8 +681,9 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 
 def generate_list(changekind, changelist, paths, in_paths):
   if changekind == 'A':
-    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_ADD \
-                               or change.action == svn.repos.CHANGE_ACTION_REPLACE
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_ADD
+  elif changekind == 'R':
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_REPLACE
   elif changekind == 'D':
     selection = lambda change: change.action == svn.repos.CHANGE_ACTION_DELETE
   elif changekind == 'M':
@@ -944,14 +949,16 @@ class TextCommitRenderer:
 
     # print summary sections
     self._render_list('Added', data.added_data)
+    self._render_list('Replaced', data.replaced_data)
     self._render_list('Deleted', data.deleted_data)
     self._render_list('Modified', data.modified_data)
 
-    if data.other_added_data or data.other_deleted_data \
-           or data.other_modified_data:
+    if data.other_added_data or data.other_replaced_data \
+           or data.other_deleted_data or data.other_modified_data:
       if data.show_nonmatching_paths:
         w('\nChanges in other areas also in this revision:\n')
         self._render_list('Added', data.other_added_data)
+        self._render_list('Replaced', data.other_replaced_data)
         self._render_list('Deleted', data.other_deleted_data)
         self._render_list('Modified', data.other_modified_data)
       else:
