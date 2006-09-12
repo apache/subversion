@@ -283,8 +283,8 @@ def forced_checkout_with_versioned_obstruction(sbox):
                                                   "--force", sbox.repo_url,
                                                   other_wc_dir)
 
-  test_stderr(".*Failed to add directory.*a versioned directory of the " \
-              "same name already exists", serr)
+  test_stderr("svn: Failed to forcibly add directory '.*A': a versioned " \
+              "directory of the same name already exists\n", serr)
 
 #----------------------------------------------------------------------
 # Ensure that an import followed by a checkout in place works correctly.
