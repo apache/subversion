@@ -70,4 +70,10 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r21471
+    Dramatically speed up WC to WC copy post commit processing.
+    Votes:
+      +1: dionisos
+
+
 Approved changes:
