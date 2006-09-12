@@ -33,7 +33,7 @@ Candidate changes:
   * r21289
     Neon 0.26.x compatibility for Unix build.
     Votes:
-      +1: maxb
+      +1: maxb, dlr
 
   * r21293 (depends on r21289 above)
     Neon 0.26.x compatibility for Windows build.
