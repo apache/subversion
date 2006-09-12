@@ -292,22 +292,6 @@ def remove_props(sbox):
 
 #----------------------------------------------------------------------
 
-# Helper for update_conflict_props() test -- a custom singleton handler.
-def detect_conflict_files(node, extra_files):
-  """NODE has been discovered an extra file on disk.  Verify that it
-  matches one of the regular expressions in the EXTRA_FILES list.  If
-  it matches, remove the match from the list.  If it doesn't match,
-  raise an exception."""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
-      break
-  else:
-    print "Found unexpected disk object:", node.name
-    raise svntest.tree.SVNTreeUnequal
-
 def update_conflict_props(sbox):
   "update with conflicting props"
 
@@ -353,7 +337,8 @@ def update_conflict_props(sbox):
                                         expected_disk,
                                         expected_status,
                                         None,
-                                        detect_conflict_files, extra_files,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files,
                                         None, None, 1)
 
   if len(extra_files) != 0:
