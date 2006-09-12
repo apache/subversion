@@ -217,6 +217,7 @@ Added:
       - copied from r5, dir3/
    dir6/dir5/
       - copied from r6, dir3/dir5/
+Replaced:
    dir6/file3
       - copied unchanged from r6, dir3/file3
 Modified:
