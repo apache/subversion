@@ -19,19 +19,18 @@
 #      ./dist.sh -v 1.4.0 -r ????? -pr branches/1.4.x
 #
 #   will create a 1.4.0 release tarball. Make sure you have apr,
-#   apr-util, neon and zlib subdirectories in your current working
-#   directory or specify the path to them with the -apr, -apru, -neon or
-#   -zlib options.  For example:
+#   apr-util and neon subdirectories in your current working directory
+#   or specify the path to them with the -apr, -apru or -neon options.
+#   For example:
 #      ./dist.sh -v 1.4.0 -r ????? -pr branches/1.4.x \
 #        -apr  ~/in-tree-libraries/apr-0.9.12 \
 #        -apru ~/in-tree-libraries/apr-util-0.9.12 \
 #        -neon ~/in-tree-libraries/neon-0.25.5 \
-#        -zlib ~/in-tree-libraries/zlib-1.2.3
 #
 #   Note that there is _no_ need to run dist.sh from a Subversion
 #   working copy, so you may wish to create a dist-resources directory
-#   containing the apr/, apr-util/, neon/ and zlib/ dependencies, and
-#   run dist.sh from that.
+#   containing the apr/, apr-util/ and neon/ dependencies, and run
+#   dist.sh from that.
 #  
 #   When building alpha, beta or rc tarballs pass the appropriate flag
 #   followed by a number.  For example "-alpha 5", "-beta 3", "-rc 2".
@@ -39,8 +38,8 @@
 #   If neither an -alpha, -beta or -rc option is specified, a release
 #   tarball will be built.
 #  
-#   To build a Windows zip file package, additionally pass -zip and the
-#   path to apr-iconv with -apri.
+#   To build a Windows zip file package, additionally pass -zip, the
+#   path to apr-iconv with -apri, and the path to zlib with -zlib.
 
 
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
@@ -242,10 +241,10 @@ install_dependency apr-util "$APRU_PATH"
 
 if [ -n "$ZIP" ]; then
   install_dependency apr-iconv "$APRI_PATH"
+  install_dependency zlib "$ZLIB_PATH"
 fi
 
 install_dependency neon "$NEON_PATH"
-install_dependency zlib "$ZLIB_PATH"
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f
 
@@ -292,9 +291,9 @@ move_dependency apr
 move_dependency apr-util
 if [ -n "$ZIP" ]; then
   move_dependency apr-iconv
+  move_dependency zlib
 fi
 move_dependency neon
-move_dependency zlib
 
 if [ -z "$ZIP" ]; then
   # Do not use tar, it's probably GNU tar which produces tar files that are
