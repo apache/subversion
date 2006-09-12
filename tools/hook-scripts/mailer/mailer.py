@@ -677,11 +677,12 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 
 def generate_list(changekind, changelist, paths, in_paths):
   if changekind == 'A':
-    selection = lambda change: change.added
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_ADD \
+                               or change.action == svn.repos.CHANGE_ACTION_REPLACE
   elif changekind == 'D':
-    selection = lambda change: change.path is None
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_DELETE
   elif changekind == 'M':
-    selection = lambda change: not change.added and change.path is not None
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_MODIFY
 
   items = [ ]
   for path, change in changelist:
@@ -691,7 +692,9 @@ def generate_list(changekind, changelist, paths, in_paths):
         is_dir=change.item_kind == svn.core.svn_node_dir,
         props_changed=change.prop_changes,
         text_changed=change.text_changed,
-        copied=change.added and change.base_path,
+        copied=(change.action == svn.repos.CHANGE_ACTION_ADD \
+                or change.action == svn.repos.CHANGE_ACTION_REPLACE) \
+               and change.base_path,
         base_path=remove_leading_slashes(change.base_path),
         base_rev=change.base_rev,
         )
@@ -754,7 +757,7 @@ class DiffGenerator:
       # figure out if/how to generate a diff
 
       base_path = remove_leading_slashes(change.base_path)
-      if not change.path:
+      if change.action == svn.repos.CHANGE_ACTION_DELETE:
         # it was delete.
         kind = 'D'
 
@@ -770,7 +773,8 @@ class DiffGenerator:
           label2 = '(empty file)'
           singular = True
 
-      elif change.added:
+      elif change.action == svn.repos.CHANGE_ACTION_ADD \
+           or change.action == svn.repos.CHANGE_ACTION_REPLACE:
         if base_path and (change.base_rev != -1):
 
           # any diff of interest?
