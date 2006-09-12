@@ -417,7 +417,7 @@ def detect_conflict_files(node, extra_files):
   else:
     print "Found unexpected disk object:", node.name
     node.pprint()
-    raise svntest.tree.SVNTreeUnequal
+    raise SVNTreeUnequal
 
 ###########################################################################
 ###########################################################################
