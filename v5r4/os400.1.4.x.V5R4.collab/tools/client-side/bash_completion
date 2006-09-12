@@ -1,0 +1,709 @@
+# Programmable completion for the Subversion svn command under bash. Source
+# this file (or on some systems add it to ~/.bash_completion and start a new
+# shell) and bash's completion mechanism will know all about svn's options!
+# Provides completion for the svnadmin command as well.  Who wants to read
+# man pages/help text...
+
+# Known to work with bash 2.05a with programmable completion and extended
+# pattern matching enabled (use 'shopt -s extglob progcomp' to enable
+# these if they are not already enabled).
+
+shopt -s extglob
+
+# This completion guides the command/option order along the one suggested
+# by "svn help", although other syntaxes are allowed.
+#
+# - there is a "real" parser to check for what is available
+#   and deduce what can be suggested further.
+# - although it is not a good practice, mixed options and arguments
+#   is supported by the completion as it is by the svn command.
+# - the completion works in the middle of a line.
+# - property names are completed: see comments about issues related to handling
+#   ":" within property names although it is a word completion separator.
+# - unknown properties are assumed to be simple file properties.
+# - --revprop and --revision options are forced to revision properties
+#   as they are mandatory in this case.
+# - argument values are suggested to some other options, eg directory names
+#   for --config-dir.
+# - values suggested to some options can be extended with environment variables:
+#     SVN_BASH_FILE_PROPS: other properties on files/directories
+#     SVN_BASH_REV_PROPS: other properties on revisions
+#     SVN_BASH_ENCODINGS: encodings to be suggested
+#     SVN_BASH_MIME_TYPE: mime types to be suggested
+#     SVN_BASH_KEYWORDS: keyword substitutions to be suggested
+# - to do: other options? SVN_BASH_USERNAME?
+_svn()
+{
+	local cur cmds cmdOpts pOpts mOpts rOpts qOpts nOpts optsParam opt
+
+	COMPREPLY=()
+	cur=${COMP_WORDS[COMP_CWORD]}
+
+	# Possible expansions, without pure-prefix abbreviations such as "up".
+	cmds='add blame annotate praise cat checkout co cleanup commit ci \
+              copy cp delete remove rm diff export help import info \
+              list ls lock log merge mkdir move mv rename \
+              propdel pdel propedit pedit propget pget \
+              proplist plist propset pset resolved revert \
+              status switch unlock update'
+
+	# help options have a strange command status...
+	local helpOpts='--help -h'
+	# all special options that have a command status
+	local specOpts="--version $helpOpts"
+
+	# options that require a parameter
+	# note: continued lines must end '|' continuing lines must start '|'
+	optsParam="-r|--revision|--username|--password|--targets|
+	           |-x|--extensions|-m|--message|-F|--file|--encoding|
+	           |--diff-cmd|--diff3-cmd|--editor-cmd|--old|--new|
+	           |--config-dir|--native-eol|--limit"
+
+	# svn:* and other (env SVN_BASH_*_PROPS) properties
+	local svnProps revProps allProps psCmds propCmds
+
+	# svn and user configured file properties
+	svnProps="svn:keywords svn:executable svn:needs-lock svn:externals
+	          svn:ignore svn:eol-style svn:mime-type $SVN_BASH_FILE_PROPS"
+
+	# svn and user configured revision properties
+	revProps="svn:author svn:log svn:date $SVN_BASH_REV_PROPS"
+
+	# all properties as an array variable
+	allProps=( $svnProps $revProps )
+
+	# subcommands that expect property names
+	psCmds='propset|pset|ps'
+	propCmds="$psCmds|propget|pget|pg|propedit|pedit|pe|propdel|pdel|pd"
+
+	# Parse arguments and set various variables about what was found.
+	#
+	# cmd: the current command if available
+	#    isPropCmd: whether it expects a property name argument
+	#    isPsCmd: whether it also expects a property value argument
+	#    isHelpCmd: whether it is about help
+	#    nExpectArgs: how many arguments are expected by the command
+	# help: help requested about this command (if cmd=='help')
+	# prop: property name (if appropriate)
+	#    isRevProp: is it a special revision property
+	# val: property value (if appropriate, under pset)
+	# options: all options encountered
+	#    hasRevPropOpt: is --revprop set
+	#    hasRevisionOpt: is --revision set
+	#    hasRelocateOpt: is --relocate set
+	# nargs: how many arguments were found
+	# stat: status of parsing at the 'current' word
+	#
+	# prev: previous command in the loop
+	# last: status of last parameter analyzed
+	# i: index
+	local cmd= isPropCmd= isPsCmd= isHelpCmd= nExpectArgs= isCur= i=0
+	local prev= help= prop= val= isRevProp= last='none' nargs=0 stat=
+	local options= hasRevPropOpt= hasRevisionOpt= hasRelocateOpt=
+
+	for opt in "${COMP_WORDS[@]}"
+	do
+	    # get status of current word (from previous iteration)
+	    [[ $isCur ]] && stat=$last
+
+	    # are we processing the current word
+	    isCur=
+	    [[ $i -eq $COMP_CWORD ]] && isCur=1
+	    let i++
+
+	    # FIRST must be the "svn" command
+	    [ $last = 'none' ] && { last='first'; continue ; }
+
+	    # SKIP option arguments
+	    if [[ $prev == @($optsParam) ]] ; then
+		prev=''
+		last='skip'
+		continue ;
+	    fi
+
+	    # Argh...  This looks like a bashbug...
+	    # Redirections are passed to the completion function
+	    # although it is managed by the shell directly...
+	    # It matters because we want to tell the user when no more
+	    # completion is available, so it does not necessary
+	    # fallback to the default case.
+	    if [[ $prev == @(<|>|>>|[12]>|[12]>>) ]] ; then
+		prev=''
+		last='skip'
+		continue ;
+	    fi
+	    prev=$opt
+
+	    # get the subCoMmanD
+	    if [[ ! $cmd && $opt \
+               && ( $opt != -* || $opt == @(${specOpts// /|}) ) ]]
+            then
+		cmd=$opt
+		[[ $cmd == @($propCmds) ]] && isPropCmd=1
+		[[ $cmd == @($psCmds) ]] && isPsCmd=1
+		[[ $cmd == @(${helpOpts// /|}) ]] && cmd='help'
+		[[ $cmd = 'help' ]] && isHelpCmd=1
+	        # HELP about a command asked with an option
+		if [[ $isHelpCmd && $cmd && $cmd != 'help' && ! $help ]]
+		then
+		    help=$cmd
+		    cmd='help'
+		fi
+		last='cmd'
+		continue
+	    fi
+
+	    # HELP about a command
+	    if [[ $isHelpCmd && ! $help && $opt && $opt != -* ]]
+	    then
+		help=$opt
+		last='help'
+		continue
+	    fi
+
+	    # PROPerty name
+	    if [[ $isPropCmd && ! $prop && $opt && $opt != -* ]]
+	    then
+		prop=$opt
+		[[ $prop == @(${revProps// /|}) ]] && isRevProp=1
+		last='prop'
+		continue
+	    fi
+
+	    # property VALue
+	    if [[ $isPsCmd && $prop && ! $val && $opt != -* ]] ;
+	    then
+		val=$opt
+		last='val'
+		continue
+	    fi
+
+	    if [[ $last != 'onlyarg' ]]
+	    then
+	      # more OPTions
+	      case $opt in
+		  -r|--revision|--revision=*)
+		      hasRevisionOpt=1
+		      ;;
+		  --revprop)
+		      hasRevPropOpt=1
+		      # restrict to revision properties!
+		      allProps=( $revProps )
+		      # on revprops, only one URL is expected
+		      nExpectArgs=1
+		      ;;
+		  -h|--help)
+		      isHelpCmd=1
+		      ;;
+		  -F|--file)
+		      val='-F'
+		      ;;
+		  --relocate)
+		      hasRelocateOpt=1
+		      ;;
+	      esac
+
+	      # no more options, only arguments, whatever they look like.
+	      if [[ $opt = '--' && ! $isCur ]] ; then
+		  last='onlyarg'
+		  continue
+	      fi
+
+	      # options are recorded...
+	      if [[ $opt == -* ]] ; then
+		  # but not the current one!
+		  [[ ! $isCur ]] && options="$options $opt "
+		  last='opt'
+		  continue
+	      fi
+	    else
+		# onlyarg
+		let nargs++
+		continue
+	    fi
+
+	    # then we have an argument
+	    last='arg'
+	    let nargs++
+	done
+	[[ $stat ]] || stat=$last
+
+	# suggest all subcommands, including special help
+	if [[ ! $cmd || $stat = 'cmd' ]]
+	then
+	    COMPREPLY=( $( compgen -W "$cmds $specOpts" -- $cur ) )
+	    return 0
+	fi
+
+	# suggest all subcommands
+	if [[ $stat = 'help' || ( $isHelpCmd && ! $help ) ]]
+	then
+	    COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
+	    return 0
+	fi
+
+	# help about option arguments
+	if [[ $stat = 'skip' ]]
+	then
+	    local previous=${COMP_WORDS[COMP_CWORD-1]}
+	    local values= dirs= beep=
+
+	    [[ $previous = '--config-dir' ]] && dirs=1
+
+	    [[ $previous = '--native-eol' ]] && values='LF CR CRLF'
+
+	    # just to suggest that a number is expected. hummm.
+	    [[ $previous = '--limit' ]] && values='0 1 2 3 4 5 6 7 8 9'
+
+            # some special partial help about --revision option.
+	    [[ $previous = '--revision' || $previous = '-r' ]] && \
+		values='HEAD BASE PREV COMMITTED 0 {'
+
+	    [[ $previous = '--encoding' ]] && \
+		values="latin1 utf8 $SVN_BASH_ENCODINGS"
+
+	    # could look at ~/.subversion/
+	    [[ $previous = '--username' ]] && beep=1
+	    [[ $previous = '--password' ]] && beep=1
+
+	    # TODO: provide help about other options such as: --old --new
+
+	    # if the previous option required a parameter, do something
+	    # or fallback on ordinary filename expansion
+	    [[ $values ]] && COMPREPLY=( $( compgen -W "$values" -- $cur ) )
+	    [[ $dirs ]] && COMPREPLY=( $( compgen -o dirnames -- $cur ) )
+	    [[ $beep ]] &&
+	    {
+		# 'no known completion'. hummm.
+		echo -en "\a"
+		COMPREPLY=( '' )
+	    }
+	    return 0
+	fi
+
+	# provide allowed property names after property commands
+	if [[ $isPropCmd && ( ! $prop || $stat = 'prop' ) && $cur != -* ]]
+	then
+	    #
+	    # Ok, this part is pretty ugly.
+	    #
+	    # The issue is that ":" is a completion word separator,
+	    # which is a good idea for file:// urls but not within
+	    # property names...
+	    #
+	    # The first idea was to remove locally ":" from COMP_WORDBREAKS
+	    # and then put it back in all cases but in property name
+	    # completion.  It does not always work.  There is a strange bug
+	    # where one may get "svn:svn:xxx" in some unclear cases.
+	    #
+    	    # Thus the handling is reprogrammed here...
+	    # The code assumes that property names look like *:*,
+	    # but it also works reasonably well with simple names.
+	    local choices=
+
+	    if [[ $cur == *:* ]]
+	    then
+		# only suggest/show possible suffixes
+		local prefix=${cur%:*} suffix=${cur#*:} c=
+		for c in ${allProps[@]} ; do
+		    [[ $c == $prefix:* ]] && choices="$choices ${c#*:}"
+		done
+		# everything will be appended to the prefix because ':' is
+		# a separator, so cur is restricted to the suffix part.
+		cur=$suffix
+	    else
+		# only one choice is fine
+		COMPREPLY=( $( compgen -W "${allProps[*]}" -- $cur ) )
+		[ ${#COMPREPLY[@]} -eq 1 ] && return 0
+
+		# no ':' so only suggest prefixes?
+		local seen= n=0 last= c=
+		for c in ${allProps[@]%:*} ; do
+		    # do not put the same prefix twice...
+		    if [[ $c == $cur* && ( ! $seen || $c != @($seen) ) ]]
+		    then
+			let n++
+			last=$c
+			choices="$choices $c:"
+			if [[ $seen ]]
+			then
+			    seen="$seen|$c*"
+			else
+			    seen="$c*"
+			fi
+		    fi
+		done
+
+		# supply two choices to force a partial completion and a beep
+		[[ $n -eq 1 ]] && choices="$last:1 $last:2"
+	    fi
+
+	    COMPREPLY=( $( compgen -W "$choices" -- $cur ) )
+	    return 0
+	fi
+
+	# force mandatory --revprop option on revision properties
+	if [[ $isRevProp && ! $hasRevPropOpt ]]
+	then
+	    COMPREPLY=( $( compgen -W '--revprop' -- $cur ) )
+	    return 0
+	fi
+
+	# force mandatory --revision option on revision properties
+	if [[ $isRevProp && $hasRevPropOpt && ! $hasRevisionOpt ]]
+	then
+	    COMPREPLY=( $( compgen -W '--revision' -- $cur ) )
+	    return 0
+	fi
+
+	# possible completion when setting property values
+	if [[ $isPsCmd && $prop && ( ! $val || $stat = 'val' ) ]]
+	then
+	    # ' is a reminder for an arbitrary value
+	    local values="\' --file"
+	    case $prop in
+		svn:keywords)
+		    # just a subset?
+		    values="Id Rev URL Date Author \' $SVN_BASH_KEYWORDS"
+		    ;;
+		svn:executable|svn:needs-lock)
+		    # hmmm... canonical value * is special to the shell.
+		    values='\\*'
+		    ;;
+		svn:eol-style)
+		    values='native LF CR CRLF'
+		    ;;
+		svn:mime-type)
+		    # could read /etc/mime.types if available. overkill.
+		    values="text/ text/plain text/html text/xml text/rtf
+                       image/ image/png image/gif image/jpeg image/tiff
+                       audio/ audio/midi audio/mpeg
+                       video/ video/mpeg video/mp4
+                       application/ application/octet-stream
+                       $SVN_BASH_MIME_TYPE"
+		    ;;
+	    esac
+
+	    COMPREPLY=( $( compgen -W "$values" -- $cur ) )
+	    # special case for --file... return even if within an option
+	    [[ ${COMPREPLY} ]] && return 0
+	fi
+
+	# maximum number of additional arguments expected in various forms
+	case $cmd in
+	    merge)
+		nExpectArgs=3
+		;;
+	    copy|cp|move|mv|rename|ren|export|import)
+		nExpectArgs=2
+		;;
+	    switch|sw)
+		[[ ! $hasRelocateOpt ]] && nExpectArgs=2
+		;;
+	    help|h)
+		nExpectArgs=0
+		;;
+	    --version)
+		nExpectArgs=0
+		;;
+	esac
+
+	# the maximum number of arguments is reached for a command
+	if [[ $nExpectArgs && $nargs -gt $nExpectArgs ]]
+	then
+	    # some way to tell 'no completion at all'... is there a better one?
+	    # Do not say 'file completion' here.
+	    echo -en "\a"
+	    COMPREPLY=( '' )
+	    return 0
+	fi
+
+	# if not typing an option,
+	# then fallback on ordinary filename expansion
+	if [[ $cur != -* || $stat = 'onlyarg' ]]  ; then
+	    return 0
+	fi
+
+	# otherwise build possible options for the command
+	pOpts="--username --password --no-auth-cache --non-interactive"
+	mOpts="-m --message -F --file --encoding --force-log"
+	rOpts="-r --revision"
+	qOpts="-q --quiet"
+	nOpts="-N --non-recursive"
+
+	cmdOpts=
+	case $cmd in
+	--version)
+		cmdOpts="$qOpts"
+		;;
+	add)
+		cmdOpts="--auto-props --no-auto-props --force --targets \
+		         --no-ignore $nOpts $qOpts"
+		;;
+	blame|annotate|ann|praise)
+		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml --force"
+		;;
+	cat)
+		cmdOpts="$rOpts $pOpts"
+		;;
+	checkout|co)
+		cmdOpts="$rOpts $qOpts $nOpts $pOpts --ignore-externals"
+		;;
+	cleanup)
+		cmdOpts="--diff3-cmd"
+		;;
+	commit|ci)
+		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
+		         --no-unlock"
+		;;
+	copy|cp)
+		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts"
+		;;
+	delete|del|remove|rm)
+		cmdOpts="--force $mOpts $qOpts --targets --editor-cmd $pOpts"
+		;;
+	diff|di)
+		cmdOpts="$rOpts -x --extensions --diff-cmd --no-diff-deleted \
+		         $nOpts $pOpts --force --old --new --notice-ancestry \
+		         -c --change --summarize"
+		;;
+	export)
+		cmdOpts="$rOpts $qOpts $pOpts $nOpts --force --native-eol \
+                         --ignore-externals"
+		;;
+	help|h|\?)
+		cmdOpts=
+		;;
+	import)
+		cmdOpts="--auto-props --no-auto-props $mOpts $qOpts $nOpts \
+		         --no-ignore --editor-cmd $pOpts"
+		;; 
+	info)
+		cmdOpts="$pOpts $rOpts --targets -R --recursive \
+                         --incremental --xml"
+		;;
+	list|ls)
+		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
+                         --incremental --xml"
+		;;
+	lock)
+		cmdOpts="$mOpts --targets --force $pOpts"
+		;;
+	log)
+		cmdOpts="$rOpts -v --verbose --targets $pOpts --stop-on-copy \
+		         --incremental --xml $qOpts --limit"
+		;;
+	merge)
+		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
+		         $pOpts --ignore-ancestry -c --change"
+		;;
+	mkdir)
+		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts"
+		;;
+	move|mv|rename|ren)
+		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts"
+		;;
+	propdel|pdel|pd)
+		cmdOpts="$qOpts -R --recursive $rOpts $pOpts"
+		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
+		;;
+	propedit|pedit|pe)
+		cmdOpts="--encoding --editor-cmd $pOpts --force"
+		[[ $isRevProp || ! $prop ]] && \
+		    cmdOpts="$cmdOpts --revprop $rOpts"
+		;;
+	propget|pget|pg)
+	        cmdOpts="-R --recursive $rOpts --strict $pOpts"
+		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
+		;;
+	proplist|plist|pl)
+		cmdOpts="-v --verbose -R --recursive $rOpts --revprop $qOpts \
+		         $pOpts"
+		;;
+	propset|pset|ps)
+		cmdOpts="$qOpts --targets -R --recursive \
+		         --encoding $pOpts --force"
+		[[ $isRevProp || ! $prop ]] && \
+		    cmdOpts="$cmdOpts --revprop $rOpts"
+		[[ $val ]] || cmdOpts="$cmdOpts -F --file"
+		;;
+	resolved)
+		cmdOpts="--targets -R --recursive $qOpts"
+		;;
+	revert)
+		cmdOpts="--targets -R --recursive $qOpts"
+		;;
+	status|stat|st)
+		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts \
+		         --no-ignore --ignore-externals --incremental --xml"
+		;;
+	switch|sw)
+		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd"
+		;;
+	unlock)
+		cmdOpts="--targets --force $pOpts"
+		;;
+	update|up)
+		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
+                         --ignore-externals"
+		;;
+	*)
+		;;
+	esac
+
+	# add options that are always available whatever the subcommand
+	[[ "$cmd" != "--version" ]] && cmdOpts="$cmdOpts $helpOpts"
+	cmdOpts="$cmdOpts --config-dir"
+
+	# take out options already given
+	for opt in $options
+	do
+	        local optBase
+
+		# remove leading dashes and arguments
+		case $opt in
+		--*)    optBase=${opt/=*/} ;;
+		-*)     optBase=${opt:0:2} ;;
+		esac
+
+		cmdOpts=" $cmdOpts "
+		cmdOpts=${cmdOpts/ ${optBase} / }
+
+		# take out alternatives and mutually exclusives
+		case $optBase in
+		-v)              cmdOpts=${cmdOpts/ --verbose / } ;;
+		--verbose)       cmdOpts=${cmdOpts/ -v / } ;;
+		-N)              cmdOpts=${cmdOpts/ --non-recursive / } ;;
+		--non-recursive) cmdOpts=${cmdOpts/ -N / } ;;
+		-R)              cmdOpts=${cmdOpts/ --recursive / } ;;
+		--recursive)     cmdOpts=${cmdOpts/ -R / } ;;
+		-x)              cmdOpts=${cmdOpts/ --extensions / } ;;
+		--extensions)    cmdOpts=${cmdOpts/ -x / } ;;
+		-q)              cmdOpts=${cmdOpts/ --quiet / } ;;
+		--quiet)         cmdOpts=${cmdOpts/ -q / } ;;
+		-h)              cmdOpts=${cmdOpts/ --help / } ;;
+		--help)          cmdOpts=${cmdOpts/ -h / } ;;
+		-r)              cmdOpts=${cmdOpts/ --revision / } ;;
+		--revision)      cmdOpts=${cmdOpts/ -r / } ;;
+		-c)              cmdOpts=${cmdOpts/ --change / } ;;
+		--change)        cmdOpts=${cmdOpts/ -c / } ;;
+		--auto-props)    cmdOpts=${cmdOpts/ --no-auto-props / } ;;
+		--no-auto-props) cmdOpts=${cmdOpts/ --auto-props / } ;;
+
+		-m|--message|-F|--file)
+			cmdOpts=${cmdOpts/ --message / }
+			cmdOpts=${cmdOpts/ -m / }
+			cmdOpts=${cmdOpts/ --file / }
+			cmdOpts=${cmdOpts/ -F / }
+			;;
+		esac
+
+		# remove help options within help subcommand
+		if [ $isHelpCmd ] ; then
+		    cmdOpts=${cmdOpts/ -h / }
+		    cmdOpts=${cmdOpts/ --help / }
+		fi
+	done
+
+	# provide help about available options
+	COMPREPLY=( $( compgen -W "$cmdOpts" -- $cur ) )
+	return 0
+}
+complete -F _svn -o default svn
+
+_svnadmin ()
+{
+	local cur cmds cmdOpts optsParam opt helpCmds optBase i
+
+	COMPREPLY=()
+	cur=${COMP_WORDS[COMP_CWORD]}
+
+	# Possible expansions, without pure-prefix abbreviations such as "h".
+	cmds='create deltify dump help hotcopy list-dblogs \
+	      list-unused-dblogs load lslocks lstxns recover rmlocks \
+	      rmtxns setlog verify --version'
+
+	if [[ $COMP_CWORD -eq 1 ]] ; then
+		COMPREPLY=( $( compgen -W "$cmds" -- $cur ) )
+		return 0
+	fi
+
+	# options that require a parameter
+	# note: continued lines must end '|' continuing lines must start '|'
+	optsParam="-r|--revision|--parent-dir|--fs-type"
+
+	# if not typing an option, or if the previous option required a
+	# parameter, then fallback on ordinary filename expansion
+	helpCmds='help|--help|h|\?'
+	if [[ ${COMP_WORDS[1]} != @($helpCmds) ]] && \
+	   [[ "$cur" != -* ]] || \
+	   [[ ${COMP_WORDS[COMP_CWORD-1]} == @($optsParam) ]] ; then
+		return 0
+	fi
+
+	cmdOpts=
+	case ${COMP_WORDS[1]} in
+	create)
+		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir --fs-type"
+		;;
+	deltify)
+		cmdOpts="-r --revision -q --quiet"
+		;;
+	dump)
+		cmdOpts="-r --revision --incremental -q --quiet --deltas"
+		;;
+	help|h|\?)
+		cmdOpts="$cmds -q --quiet"
+		;;
+	hotcopy)
+		cmdOpts="--clean-logs"
+		;;
+	load)
+		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
+		         --use-pre-commit-hook --use-post-commit-hook"
+		;;
+	rmtxns)
+		cmdOpts="-q --quiet"
+		;;
+	setlog)
+		cmdOpts="-r --revision --bypass-hooks"
+		;;
+	*)
+		;;
+	esac
+
+	cmdOpts="$cmdOpts --help -h"
+
+	# take out options already given
+	for (( i=2; i<=$COMP_CWORD-1; ++i )) ; do
+		opt=${COMP_WORDS[$i]}
+
+		case $opt in
+		--*)    optBase=${opt/=*/} ;;
+		-*)     optBase=${opt:0:2} ;;
+		esac
+
+		cmdOpts=" $cmdOpts "
+		cmdOpts=${cmdOpts/ ${optBase} / }
+
+		# take out alternatives
+		case $optBase in
+		-q)              cmdOpts=${cmdOpts/ --quiet / } ;;
+		--quiet)         cmdOpts=${cmdOpts/ -q / } ;;
+		-h)              cmdOpts=${cmdOpts/ --help / } ;;
+		--help)          cmdOpts=${cmdOpts/ -h / } ;;
+		-r)              cmdOpts=${cmdOpts/ --revision / } ;;
+		--revision)      cmdOpts=${cmdOpts/ -r / } ;;
+		esac
+
+		# skip next option if this one requires a parameter
+		if [[ $opt == @($optsParam) ]] ; then
+			((++i))
+		fi
+	done
+
+	COMPREPLY=( $( compgen -W "$cmdOpts" -- $cur ) )
+
+	return 0
+}
+complete -F _svnadmin -o default svnadmin

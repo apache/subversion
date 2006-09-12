@@ -1,0 +1,510 @@
+Last updated: $Date: 2001/07/02 21:46:52 $
+
+Three things that need to happen in the filesystem:
+
+   a) Switch to a sane node key system (issue #654).
+
+   b) We need to operate on file contents without holding the entire
+      contents in RAM.  Berkeley DB gives us tools to operate on
+      regions within a value, we just need to use them.
+
+   c) We need to do reverse-delta storage in the filesystem (with
+      checksums).
+
+Some thoughts on them:
+
+
+a) Switch to a sane node key system (issue #654)
+================================================
+
+For more background, read the archived dev list thread with subject
+"Maintaining NodeID sanity":
+
+   http://subversion.tigris.org/servlets/ReadMsg?msgId=72265&listName=dev
+
+Here's the plan, mostly by Bill Tutt and Branko, with assists from
+Karl and Mike:
+
+Note:
+
+   - This is described in terms of a BDB implementation.  Translate to
+     RDB-speak in your head as necessary :-).
+
+   - This proposal supports one copy (a.k.a. branch) operation.  You
+     can call it anything you want: "copy", "branch", "split",
+     "pumpkin", whatever.  We're calling it "copy" :-).  It is the SCM
+     branch operation.
+
+First, a node's key consists of three parts:
+
+   nodeID.copyID.txnID
+
+The "txnID" is really just a unique identifier, but we happened to
+inherit it from the fs txn, and we needed a name for that portion,
+so... :-) Also, the copyID could theoretically live in the node's
+value instead of in its key, but it feels right to put it in the
+key.  (How's that for a powerful argument?)  For nodes that are not
+copies, the copyID is just "0" or some other special value.
+
+There are no more mutability flags -- mutability is determined by
+examining whether the node key's txnID matches the txn in question.
+Therefore, there is no stabilization walk at commit time.
+
+When we commit a change to a node, the nodeID and copyID stay the
+same, only the txnID changes (actually there is a circumstance where
+the copyID can change, but more on that later).  The new txnID is not
+necessarily greater than the old one -- sometimes txns get committed
+out of order! -- but anyway it's different from the old txnID, and the
+same new txnID is used for all other changes in that commit.
+
+  [Greg and Karl disagree on whether to use integer types or `char *'
+   for the parsed representation of IDs.  See the dev list thread
+   that starts here for the details of this:
+   http://subversion.tigris.org/servlets/ReadMsg?msgId=72277&listName=dev
+  ]
+
+After a commit, the txn record in the transactions table does not go
+away; instead, it is updated so it now maps the txnID to the new
+revision.  This allows us to determine the revision a node was
+committed in, in constant time, given the node's key.
+
+Each new version of a node stores the node's predecessor (and does not
+store copyform history).  When node "5.0.fzb" is committed as a
+successor to "5.0.qnr", the new node's value stores a reference to
+"5.0.qnr".
+
+What about copies?
+
+As in the current fs, copies are shallow.  The top of the copied tree
+gets a new node, but the nodes below it are shared with the copy
+source.  The new node key keeps the same nodeID, but gets a new txnID,
+and gets the next unique copyID (replacing the current copyID, if
+any).
+
+In the example below, we copy `A' to `Y'.  Node keys for `A', `Y', and
+`bar' are given in parentheses:
+
+            BEFORE THE COPY               AFTER THE COPY
+               <root>                         <root>     
+              /  |                           /  |  \     
+            /    |                         /    |    \   
+          /      |                       /      |      \ 
+        A(3.0.m) B                     A(3.0.m) B       Y(3.jfb.p)
+        / \      |                     / \      |      / \
+     foo  bar   qux                 foo  bar   qux   foo  bar
+       (5.0.abc)                       (5.0.abc)        (5.0.abc)
+
+Let's flesh out the example with some commits under A and Y.  To save
+space, the colons represent time flow, not directory hierarchy --
+imagine they're the Z axis coming out of the screen or something :-).
+
+                         <root>     
+                        /  |  \     
+                      /    |    \   
+                    /      |      \ 
+                 A(3.0.m)  B       Y(3.jfb.p)
+                  / \      |      / \
+               foo  bar   qux   foo  bar
+                 (5.0.abc)         (5.0.abc)
+                     :                 :
+                     :                 :
+                 (5.0.ejk)         (5.jfb.mht)
+                     :                 :
+                     :                 :
+                 (5.0.xyz)         (5.jfb.uuu)
+                     :                 :
+                     :                 :
+                 (5.0.r2d2)        (5.jfb.2pz)
+                     :                 :
+                     :                 :
+                 (5.0.c3po)        (5.jfb.rdt)
+
+Let's see how easy it is to answer various questions in this system:
+
+Obviously, is_related() is simple -- just check that the nodeID
+portion is the same.  You may not know if the relationship is cousins
+vs ancestor/descendant, but you know whether or not they're related.
+
+Asking is_predecessor(A,B) is also easy.  Just fetch the predecessor
+pointer from B and see if it's A.
+
+Finding out what revisions a node changed in is proportional to the
+number of changes the node has undergone: start at the node, walk back
+through its predecessors, and for each txnID, look up the revision
+number via the transactions table (as described earlier).
+
+During this walk, you can always tell when you encounter a node that
+results from a copy, because the copyID portion will either change or
+disappear entirely.  When this happens, you know one of two things is
+true: either the previous node in the walk was the top of a copied
+tree, or *this* node (the one with the different copyID) was one of
+the unchanged nodes down inside a copied tree.
+
+One might think "Oh, we'll distinguish between these cases by walking
+up the parents of the node, and seeing if we eventually encounter the
+old copyID in one of the parents.  That would tell us that we're in
+the second case.  If we never encounter it, that tells us we're in the
+first."
+
+Not so fast, Spidey.  We don't have parent pointers -- this is a
+predecessor walk by node keys; we can't just walk up the parent path
+like that.  Fortunately, copyIDs are generated from a new `copies'
+table, which maps unique copyIDs onto (REV COPY_DST_PATH
+COPY_DST_NODEKEY).  We look up the rev/path for the old copyID,
+convert it to a node key, and compare it to the node key we're
+currently on.  Voilà!  Actually, we're not sure we'll store all of
+those in the copies table, it may boil down to just the DST_NODEKEY or
+just the other two, we'll see.
+
+Writing those predecessor walk loops well is left as an exercise for
+the reader (umm, more likely for the writers, heh), but you can see
+that the necessary questions can be answered efficiently.
+
+Note that, like txnIDs, copyIDs are just unique numbers.  They may be
+increasing monotonically in the `copies' table, but (due to the fact
+that txn A may be started before txn B yet be committed afterwards)
+it's quite possible that a higher copyID will become visible in the
+revision history before a lower one.
+
+The one thing we can know is that a lower copyID can never be a
+branchwise descendent of a lower copyID, since the lower one must have
+been committed before any of its descendants txns were started, of
+course.  I'm not sure this minimal inference will ever be useful, but
+anyway it's all we've got.  Anyway, right now, we only ever need ask
+if two copyIDs are equal -- we don't order them.
+
+Okay, now what if A already had copied trees underneath it when we
+copied it to Y?  Suppose `bar' is down in one of those subdirectories?
+
+Then when we're committing on /Y/.../bar, we watch for copyIDs as we
+walk down from root, like usual, and if we're in a copy underneath a
+copy, we bubble down a _new_ copyID, distinct from both Y's and B's,
+starting from that point.  Justification: a branch of a branch is
+still a branch, so it gets its own copyID.
+
+At this point, I'm going to hand-wave on describing the
+copy-under-copy behavior any further.  I think the above is enough to
+see that there are no insurmountable problems here, and that the
+filesystem will now have node keys that [lazily] reflect actual
+branching patterns.
+
+A few more notes:
+
+The is_ancestor(X,Y) question is really only asked during merge(),
+that is, during commits.  If entry "somedir/blah" has NodeID Y in the
+txn being committed, and NodeID X in head tree being merged into that
+txn, then we need to make sure X is an ancestor of Y, so that when the
+commit replaces X with Y, we know we're not losing any history.
+
+Therefore, we think we can get away with storing the ancestors in a
+distributed fashion, as a chain: each node knows its immediate
+predecessor (or "precessors", in the future), and you walk back until
+you have your answer.  In real life, we won't usually be walking back
+too far, and the search can be further bounded by the revision range
+implied by the two nodes.  If profiling proves these walks to be a
+bottleneck, we can start caching the results of such walks in a new
+table whose keys are node keys, and values are _full_ ancestor lists.
+
+
+
+b) Operate on portions of files efficiently.
+============================================
+
+   [still pondering this section]
+
+We should take advantage of Berkeley DB's partial record stuff, all
+the way up to the top of the svn fs interfaces.
+
+   - dag_node_t gets two new fields: contents_offset and contents_len.
+     They apply to the node's cache of the contents, not the header or
+     proplist.
+
+   - svn_fs__get_node_rev_contents() takes offset and len arguments,
+     fetches only that data.  The dag_node_t will remember the offset
+     and len.
+
+   - svn_fs__put_node_rev_contents() takes offset and len args as
+     well.
+
+   - change set_node_revision() accordingly.
+
+   - ... todo thinking here ...
+
+So now, whenever you read or write a node revision, you are operating
+on a range.  There will be some way to say "I mean the whole thing",
+of course, so it won't be necessary to know the size in advance.
+
+Thought: possibly we should stop storing data in the dag_node_t
+itself, and just return the data in a void pointer passed to
+svn_fs__get_node_rev_contents().  Still pondering.
+
+
+
+c) Reverse-delta storage.
+=========================
+
+The naive way to recover an old text is:
+
+   retrieve_node_rev (N)
+   {
+     grab_node_revision (&N);
+
+     if (is_fulltext (N))
+       return N;
+     else if (is_shared (N))
+       return retrieve_node_rev (get_sharee (N));
+     else if (is_svndiff (N))
+       return svnpatch (get_svndiff (N), retrieve_node_rev (get_base (N)))
+   }
+
+(Loose pseudo-code, obviously, and the recursion could be a loop, but
+you get the idea.)
+
+The trouble with this is that it constructs and patches each
+intermediate revision.  That'll probably be i/o bound, and anyway much
+of the intermediate material may not end up in the final target, in
+which case reconstructing it was a waste of time.
+
+What we really want is a way to compose a bunch of svndiffs, and then
+apply that composition to the current head, to give us the older
+revision in one step (well, one application anyway).  Both the
+composition and the final application need to happen in a streamy or
+windowed fashion -- we shouldn't have to hold the entire diff in
+memory, nor the entire source, nor the target.
+
+Here's a way to do this:
+
+An svndiff is a series of instructions that are followed to
+reconstruct the target.  There are three possible instructions:
+
+   a) Insert X bytes of new text into the TARGET, and I'm giving you
+      those bytes right here.
+   b) Copy N bytes, starting from offset F in the SOURCE, into the
+      TARGET.
+   c) Copy N bytes, starting from offset F in the TARGET, into the
+      TARGET.
+
+(Note that (c) can actually run past the current end of the target, as
+long by the time you get there, the target is longer.)
+
+To compose two svndiffs...
+
+   ...and I hate to tantalize you, but I'm late and have to run now,
+      so I'll try to finish this tomorrow... crimminy... The quick
+      summary is, we build a new svndiff (the composition of all the
+      intermediates), and as it gets too large, we windowify as we go
+      and put each window temporarily in the database; this makes the
+      composition as a whole less efficient, but means that at any
+      given time we don't have to have the whole thing in memory.  The
+      arithmetic for offset-adjustment is fairly straightforward even
+      when one has to offload windows, I believe.  It's nice that the
+      source is already in the db and we get offset+length style
+      operations from Berkeley naturally anyway.  Branko or anyone,
+      feel free to continue this recipe and see if you can take it
+      somewhere before I get in tomorrow morning...  -kff
+
+
+------------------------------------------------------------------------
+   Notes from JimB about optimizing the in-repository delta generation
+   to make deltas that can be composed more quickly:
+
+I talked about this with Karl on the phone, and gave pretty bad
+explanations of my thinking; I'll try to do better today.  This will
+also provide some background for other readers.
+
+I'm told that RCS reconstructs older file revisions by walking the
+list of diffs, ignoring the actual text, and simply recording the line
+numbers and sizes of the substitutions.  Then, it can run over that
+data and do arithmetic to construct a single `composed' diff against
+the youngest revision would reconstructs the older revision.  Then,
+you apply that composed diff to get the revision you wanted.
+
+For example, if your fulltext is:
+
+rev 3:  abcdefghijklmnopqrst
+
+and your deltas are:
+
+rev 2:  replace 3--6 with "howdy"    (yielding abchowdyghijklmnopqrst)
+rev 1:  replace 6--8 with " are you" (yielding abchow are youghijklmnopqrst)
+
+then the RCS algorithm would gather this info:
+
+rev 2:  replace 3--6 with 5 chars (call them X)
+rev 1:  replace 6--8 with 8 chars (call them Y)
+
+Now, without looking at any of the text, it can compose the two deltas
+to get the following delta, yielding rev 1:
+
+        replace 3--6 with range 0--3 from X
+        replace 6--6 with range 0--8 from Y (i.e. insert Y at 6)
+
+If we then apply this `composed' delta to the original text, we get:
+
+        abchow are youghijklmnopqrst
+
+The point of all this is that you don't need to mess around with
+actual text until the very end.  Until that point, the amount of work
+depends on the amount of change, not on the amount of text involved.
+And when you do get around to actually assembling text, the amount of
+work depends on the size of the output file --- because you're only
+touching each piece of text once --- and only weakly on the amount of
+change.
+
+Our current svndiff format frustrates this somewhat by compressing the
+new text, as well as pulling in pieces of the original.  The
+compression process produces a lot of delta ops that deal with small
+pieces of text.  (Or at least, I expect it does...)  So even if the
+change is something simple --- replacing a single block of text in the
+middle of the file, say --- you end up with an svndiff with a lot of
+ops, mostly concerned with building the replacement text from pieces
+of itself.  This is great, except that having lots of small ops
+increases the amount of work the delta composition phase needs to do.
+In fact, if the ops usually deal with really small pieces of text ---
+a few dozen bytes or so --- I expect it'd be faster to just throw the
+actual text around.  Memcpy is pretty optimized on real systems; you
+could copy a lot of bytes in the time it would take to do funky
+intersections and adjustments on a list of ops talking about those
+bytes, so those ops had better refer to large blocks of bytes.
+
+I'm not sure what to do with that.  It almost seems like we want the
+text delta computation algorithm to optimize deltas for network
+transmission and deltas for storage differently.
+
+
+------------------------------------------------------------------------
+  Notes from Brane: Delta composition
+
+Despite JimB's concerns, it turns out that delta composition is
+straight-forward. The basic idea is that combining two deltas is
+equivalent to applying the second delta to a representation of the
+first delta's result. Bear with me while I shamelessly abuse what
+little I remember about linear algebra.
+
+Given two deltas, A and B, and the source stream S, we want to
+construct a composed delta, AB, that converts S to the target stream
+T. Let's borrow notation from linear algebra and write this
+transformation like this:
+
+    T = AB(S)
+
+Abusing algebra some more, I'll assume that a delta behaves like any
+other linear transformatsion; therefore,
+
+    AB(S) = B(A(S))
+
+and since I'm not about to develop any rigorous proofs here, I'll
+just say that it follows from the above that
+
+    T = B(S'), where S' = A(S)
+
+A small note here: Every delta is actually an n-tuple of delta
+opserations, represented by what I'll call the delta operators [n]
+(for new data), [s] (for source copies) and [t] (for target
+copies). [s] and [t] create bits of the target stream by operating on
+contiguous parts of the source and (existing) target stream,
+respectively; while [n] does the same by operating on raw data.
+
+
+Now, what we actually want to do is derive some form of AB (which, by
+the way, does not have a unique representation, sice we're not trying
+to find the optimal ("normalized") transform) that doesn't in any way
+rely on the value of S'. We do that by building a representation of S'
+that relies only on S, and any new data introduced by the [n]
+operators in A. That's possible because any [t] ops in A merely copy
+parts of S' that have been previously defined by [s] and [n]
+ops. Transforming A by (recursively) replacing all [t] ops with the
+equivalent [s] and [n] ops gives us exactly such a representation,
+which I'll call A'. [*]
+
+Building AB from B and A' is trivial: traversing the list of delta ops
+in B, copy all [n] and [t] ops into the result; for [s] ops, copy the
+range of ops from A' that define the appropriate range in S'. For some
+of the copies, the first or last op from the range in A' will have to
+be split, and the first op in the copy range can sometimes be merged
+with the previous op in AB.
+
+
+Of course, stopping here could give a very sub-optimal AB, because it
+could contain many duplicate copies of the same op ranges from A'. We
+fix this by doing exactly the opposite transformation than A->A': by
+transforming [s] ops from B into [t] ops. We do this by recording the
+source and target of each copy from A' to AB and, whenever the [s]
+from B describes a range in T that was already defined, converting
+that into a [t] instead [**]. Unlike the A->A' transform, we can't remove
+all copies from A' to AB (we can only do that when AB doesn't refer to
+S at all), but we can significantly reduce the number of such copies.
+
+The resulting AB will usually not be the optimal delta from S to T,
+because we will never actually look at S while constructing AB.
+
+
+Summarizing the above, we get the following delta composition
+algorithm:
+
+    ;; X is the set of byte ranges in T defined by copies from S'
+    ;; Y is the current offset in T, defined by the ops in AB
+    foreach OP in B:
+      if (OP = [t]) or (OP = [n]):
+        copy OP to AB
+      else
+        R = (set of ops from A that define S'[OP.offset, OP.length])
+[**]    using X, find the optimal set O of [t] ops to replace part of R
+        foreach OP' in R:
+          if OP' is in (R - O):
+            if (OP' = [t]):
+[*]           replace OP' with equivalent [s] and [n] ops
+            copy OP' to AB
+          else
+[**]        copy OP's equivalent in O to AB
+        insert S'[OP.offset, OP.length]->[Y, OP.length] into X
+
+
+This algorithm ignores details such as op splitting and merging,
+ensuring every op from O gets copied exactly once, helper indexes,
+etc..., but those are implementation details.
+
+
+------------------------------------------------------------------------
+  Notes from Brane: Delta storage
+
+O.K., now that delta composition is out of the way, let's talk a bit
+about storing and retrieving deltified text from the filesystem. I'll
+just jot down a few thoughts about how this could be done, assuming
+one of two possible models of storage management in the filesystem:
+
+  a) all data store and retrieve operations are synchronous; or,
+  b) deltification can run in the background.
+
+
+1) Storing new data
+
+New data arrives either as fulltext (from add) or as a delta from an
+existing version (copy, modify).
+
+  a) if the new data is a delta, convert it to fulltext (possibly
+     combining several existing deltas in the process). Store the
+     fulltext in the tip, and replace the previous tip (which, by
+     induction, contains fulltext) with a delta from the current tip.
+
+  b) store the fulltext or delta in the tip and mark it for async
+     modification. Do a) in the background.
+
+2) Retrieving old data
+
+  a) If the data is a delta, follow the delte references (combining
+     the deltas) until a fulltext is found; apply the combined delta
+     to get the required fulltext.
+
+     If the combined delta reduces to a no-op (the two fulltexts are
+     the same), store the fulltext in the younger of the two nodes and
+     replace the older node's data with a "same" note.
+
+  b) Same as para 1 of a), then mark the node for async
+     modification. In the background, find the diff between the two
+     fulltexts. If they're equal, do para 2 of a). Otherwise, if the
+     diff is smaller than the current diff in the node, replace the
+     current representation. ("Smaller" could be construed as "more
+     optimal" -- it would make sense to take into account the number
+     of delta combinations that could be skipped by replacing the
+     current representation when comparing sizes.)

@@ -1,0 +1,20 @@
+# XML RELAX NG schema for Subversion command-line client output
+# For "svn blame"
+
+include "common.rnc"
+
+start = blame
+
+blame = element blame { target* }
+
+## Information for one blamed file.
+target = element target { attlist.target, entry* }
+attlist.target &= attribute path { target.type }
+
+## Information for one line of a blamed file.
+## NOTE: The order of entries in a target element is insignificant.
+entry = element entry { attlist.entry, commit? }
+attlist.entry &=
+  ## Line number.
+  attribute line-number { xsd:integer { minInclusive = "1" } }
+

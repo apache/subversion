@@ -1,0 +1,10 @@
+#!/bin/sh
+
+env CC='gcc' "../svn/configure"                                              \
+  "--prefix=/home/YOUR_USERNAME/svn/inst"                                    \
+  "--with-berkeley-db=/home/YOUR_USERNAME/svn/db4"                           \
+  "--with-apr=/home/YOUR_USERNAME/svn/inst/apr-0.9/bin/apr-config"           \
+  "--with-apr-util=/home/YOUR_USERNAME/svn/inst/apr-util-0.9/bin/apu-config" \
+  "--with-apxs=/home/YOUR_USERNAME/svn/inst/httpd-2.0/bin/apxs"              \
+  "--disable-shared"                                                         \
+  "$@"

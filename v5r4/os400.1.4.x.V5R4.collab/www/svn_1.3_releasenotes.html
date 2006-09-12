@@ -1,0 +1,408 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Subversion 1.3 Release Notes</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1 style="text-align: center">Subversion 1.3 Release Notes</h1>
+
+<div class="h2" id="news" title="news">
+<h2>What's New in Subversion 1.3</h2>
+
+<ul>
+  <li>Path-based authorization for svnserve</li>
+  <li>Improved logging and repository listing in mod_dav_svn</li>  
+  <li>Hugely improved python and ruby bindings</li>
+  <li>A handful of new commandline switches</li>
+  <li>Some client and server performance improvements</li>
+  <li>Many improved APIs</li>
+  <li>More than 30 new bugfixes</li>
+</ul>
+
+<p>Details are described below.</p>
+
+<p>Subversion 1.3 is a superset of all previous Subversion releases.
+Anything in 1.0.x, 1.1.x, or 1.2.x is also in 1.3, but 1.3 contains
+features and bugfixes not present in any earlier release.  The new
+features will eventually be documented in a 1.3 version of the free
+Subversion book, see
+<a href="http://svnbook.red-bean.com">svnbook.red-bean.com</a>.</p>
+
+</div>  <!-- news -->
+
+<div class="h2" id="downloading" title="downloading">
+<h2>Downloading</h2>
+
+<p>Subversion 1.3 is available as source code in three formats:</p>
+
+<ul>
+  <li><a href="http://subversion.tigris.org/downloads/subversion-1.3.1.tar.gz">subversion-1.3.1.tar.gz</a></li>
+  <li><a href="http://subversion.tigris.org/downloads/subversion-1.3.1.tar.bz2">subversion-1.3.1.tar.bz2</a></li>
+  <li><a href="http://subversion.tigris.org/downloads/subversion-1.3.1.zip">subversion-1.3.1.zip</a>&nbsp;(Windows)</li>
+</ul>
+
+<p>For binary packages, please see <a
+href="project_packages.html#binary-packages">the binary package
+list</a>.  Note that binary packages usually come out about a week
+after the corresponding source release.  The package maintainers are
+volunteers, so please don't harass them&nbsp;&mdash;&nbsp;they know
+when a new source release has come out, and they work as fast as they
+can to make binaries available.</p>
+
+<p>For other Subversion releases, see <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=260&amp;expandFolder=74">this folder</a>.</p>
+
+</div>  <!-- downloading -->
+
+
+<div class="h2" id="compatibility" title="compatibility">
+<h2>Compatibility Concerns</h2>
+
+<p>Older clients and servers interoperate transparently with 1.3
+servers and clients.  Of course, some of the new 1.3 features may not
+be available unless both client and server are the latest version.
+There is <strong>no need</strong> to upgrade your repositories;
+Subversion 1.3 can read repositories created by earlier versions.  To
+upgrade an existing installation, just install the newest libraries
+and binaries on top of the older ones. (<em>WARNING:</em> if you're
+using Berkeley DB repositories, installing a new binary distribution
+of Subversion may force you to upgrade Berkeley DB as well, see
+<a href="#bdb-upgrade">Unexpected Berkeley DB Upgrades</a> below.)</p>
+
+<p>Subversion 1.3 maintains API/ABI compatibility with earlier
+releases, by only adding new functions.  A program written to the 1.0,
+1.1, or 1.2 API can both compile and run using 1.3 libraries.
+However, a program written for 1.3 cannot necessarily compile or run
+against older libraries.</p>
+
+<div class="h3" id="output-changes" title="output-changes">
+<h3>Command Line Output Changes</h3>
+
+<p>Although the Subversion developers try hard to keep output from the
+command line programs compatible between releases, new information
+sometimes has to be added.  This might break scripts that rely on the
+exact format of the output.  In 1.3, the following changes have been
+made to the output:</p>
+
+<ul>
+
+<li><p>'svnlook&nbsp;diff' always diffs added files by default now,
+    and the new '--diff-copy-from' option causes those diffs
+    to be against the copyfrom source instead of against an empty
+    file (for consistency with 'svn&nbsp;diff').  Also, when
+    diffing against the empty file, the diff headers now say
+    "revision&nbsp;0" instead of the copyfrom revision (again for
+    consistency with 'svn&nbsp;diff').</p></li>
+
+<li><p>'svn&nbsp;diff' output is now in native encoding,
+    instead of in UTF8.</p></li>
+
+<li><p>Merge conflict markers are now in the encoding of the user's
+    locale.  (Not exactly a command line output change, but near
+    enough).</p></li>
+
+<li><p>'svn ls --verbose' now shows remote locks as '<tt>O</tt>', just
+    like 'svn status -u' does.</p></li>
+
+</ul>
+
+</div>  <!-- output-changes -->
+
+<div class="h3" id="bdb-upgrade" title="bdb-upgrade">
+<h3>Unexpected Berkeley DB Upgrades</h3>
+
+<p>This is not actually related to the Subversion 1.3 release, but it
+may affect you if you upgrade to 1.3 via a package distribution
+system.</p>
+
+<p>A lot of operating systems now ship Berkeley DB 4.3.  Sometimes the
+system Berkeley DB libraries can be unintentionally upgraded to 4.3 as
+part of some other change pulled down via an OS package delivery
+mechanism&nbsp;&mdash;&nbsp;for example, upgrading one's Subversion
+package.  If this happens to you, you will need
+to <a href="faq.html#bdb43-upgrade">upgrade existing BerkeleyDB-based
+repositories to 4.3.</a></p>
+
+<p>Since Subversion 1.2, the <a
+href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91"
+>Windows binary distributions</a> of Subversion from Branko &#268;ibej
+use Berkeley DB 4.3.  If you are upgrading from an older version, the
+above may be of concern to you.</p>
+
+</div>  <!-- bdb-upgrade -->
+</div>  <!-- compatibility -->
+
+<div class="h2" id="new-features" title="new-features">
+<h2>New Features</h2>
+
+<div class="h3" id="svnserve-authz" title="svnserve-authz">
+<h3>Path-based authorization for svnserve (<em>requires new server</em>)</h3>
+
+<p><b>svnserve</b>, the stand-alone subversion server, is now able to
+restrict both read and write access using the same
+authorization-policy files used by <b>mod_authz_svn</b>.  (Previously,
+the most one could do with svnserve was restrict write-access via
+pre-commit hook scripts.)</p>
+
+<p>The authorization file format is the same
+one <a
+href="http://svnbook.red-bean.com/en/1.1/ch06s04.html#svn-ch-6-sect-4.4.2"
+>described here</a>, in Chapter 6 of the Subversion book.  You simply
+need to point to it from your repository's <em>svnserve.conf</em>
+file using the new <tt>authz-db</tt> directive:</p>
+
+<pre>
+[general]
+password-db = userfile
+realm = my realm
+
+anon-access = none
+auth-access = write
+
+authz-db = authzfile
+</pre>
+
+<p>Note that when the <tt>authz-db</tt> directive is in use, the
+  "blanket" access directives (<tt>anon-access</tt>
+  and <tt>auth-access</tt>) can still be in effect too.  In order to
+  access a path, <em>both</em> the "blanket" directives and per-path
+  authz file must allow access.</p>
+
+</div>  <!-- svnserve-authz -->
+
+
+<div class="h3" id="dav-logging" title="dav-logging">
+<h3>Operational logging for mod_dav_svn (<em>requires new server</em>)</h3>
+
+<p>The Apache HTTPD-based server (mod_dav_svn) is now able to log
+  high-level Subversion operations, e.g., "update", "lock", "commit",
+  etc.  This is an improvement over trying to read and understand the
+  mysterious chains of WebDAV methods currently listed in
+  httpd's <em>accesslog</em> file.</p>
+
+<p>To activate this new feature, you need to make use of httpd 2.0's
+built in logging directives such
+as <a href="http://httpd.apache.org/docs/2.0/logs.html">LogFormat and
+CustomLog</a> directives.  These directives allow you to flexibly
+define your own log formats.  All you need to know is that mod_dav_svn
+now sets an environment variable named SVN-ACTION whenever it feels
+that an http request has completed a particular subversion-related
+action.  So, for example, the following <em>httpd.conf</em> directive
+would log all subversion-related actions to a private logfile, along
+with timestamp and username:</p>
+
+<pre>CustomLog logs/svn_logfile "%t %u %{SVN-ACTION}e" env=SVN-ACTION</pre>
+
+<p>Equivalent functionality is planned for svnserve, the standalone
+  server, but not until Subversion 1.4, because the implementation
+  strategy there will be a bit different.
+  See <a
+  href="http://subversion.tigris.org/issues/show_bug.cgi?id=2409"
+  >Issue #2409</a> for details.</p>
+
+</div>  <!-- dav-logging -->
+
+
+<div class="h3" id="bindings-improvements" title="bindings-improvements">
+<h3>Major Language Binding Improvements</h3>
+
+<ul>
+  <li>It's now possible to build the SWIG bindings from source without 
+      installing SWIG, because we now bundle the generated output of SWIG
+      with the release tarball.</li>
+    
+  <li>The Python and Ruby bindings now support automatic memory management.
+      If you don't supply Subversion API functions with memory pools,
+      Subversion will automatically manage its own memory.</li>
+
+  <li>The Python and Ruby bindings are now more stable, as verified
+      by our expanded test suites.</li>
+      
+  <li>The Ruby bindings now offer complete coverage of the Subversion
+      APIs.</li>
+
+</ul>
+
+</div>  <!-- bindings-improvements -->
+
+
+<div class="h3" id="new-switches" title="new-switches">
+<h3>New subcommand switches</h3>
+   <dl>
+      <dt><tt>svn blame --xml [--incremental]</tt></dt>
+      <dt><tt>svn status --xml [--incremental]</tt></dt>
+      <dt><tt>svn info --xml [--incremental]</tt></dt>
+
+      <dd>Display output in XML.  If <tt>--incremental</tt> is also
+      used, then output XML suitable for concatenation.</dd>
+
+      <dt><tt>svn add --no-ignore</tt></dt>
+      <dt><tt>svn import --no-ignore</tt></dt>
+      <dd>Disregard all "ignored" file patterns.</dd>
+
+      <dt><tt>svnlook tree --full-paths</tt></dt>
+      <dd>Show full paths instead of indented ones.</dd>
+
+      <dt><tt>svnlook diff --diff-copy-from</tt></dt>
+      <dd>Print differences against copy source.</dd>
+
+      <dt><tt>svnlook changed --copy-info</tt></dt>
+      <dd>Show details for copies.</dd>
+   </dl>
+
+</div>  <!-- new-switches -->
+
+</div>  <!-- new-features -->
+
+<div class="h2" id="enhancements" title="enhancements">
+<h2>Enhancements and Bugfixes</h2>
+
+<div class="h3" id="listparentpath" title="listparentpath">
+<h3>Listing available repositories in mod_dav_svn (<em>server</em>)</h3>
+
+<p>The Apache HTTPD-based server can now display (in a web browser)
+the collection of repositories exported by the SVNParentPath
+directive: simply set '<tt>SVNListParentPath&nbsp;on</tt>'
+in <em>httpd.conf</em>.</p>
+
+</div>  <!-- listparentpath -->
+
+
+<div class="h3" id="neon25" title="neon25">
+<h3>Interruptible http(s):// connections (<em>client</em>)</h3>
+
+<p>If built with Neon 0.25.1 or higher, Subversion can be interrupted
+   during network operations over http:// and https://.  This is a
+   long-standing bug that has finally been fixed.</p>
+
+</div>  <!-- neon25 -->
+
+
+<div class="h3" id="_svn-hack" title="_svn-hack">
+<h3>Official support for Windows '_svn' directories (<em>client and
+language bindings</em>)</h3>
+
+<p>The "<b>_svn</b>" hack is
+now <a
+href="http://svn.collab.net/repos/svn/trunk/notes/asp-dot-net-hack.txt">officially
+supported</a>: since some versions of ASP.NET don't allow directories
+beginning with dot (e.g., ".svn", the standard Subversion working copy
+administrative directory), the <b>svn</b> command line client
+and <b>svnversion</b> now treat the environment variable
+SVN_ASP_DOT_NET_HACK specially on Windows.  If this variable is set
+(to any value), they will use "_svn" instead of ".svn".  We recommend
+that all Subversion clients running on Windows take advantage of this
+behaviour.  Note that once the environment variable is set, working
+copies with standard ".svn" directories will stop working, and will
+need to be re-checked-out to get "_svn" instead.</p>
+
+<p class="warningmark">Third party software that uses the Subversion
+libraries needs to be updated to make the equivalent API calls. See
+the three new
+APIs: <b>svn_wc_is_adm_dir</b>, <b>svn_wc_get_adm_dir</b>, and
+<b>svn_wc_set_adm_dir</b>.  Setting the SVN_ASP_DOT_NET_HACK
+environment variable only works for the above-mentioned client
+programs, and only on Windows.  It doesn't work for libraries; users
+of the libraries should call the new APIs, which are
+platform-independent. See <a
+href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=105810"
+>this mail</a> and its thread for more details.</p>
+
+</div>  <!-- _svn-hack -->
+
+
+<div class="h3" id="performance" title="performance">
+<h3>Performance improvements (<em>client and server</em>)</h3>
+
+<p><b>svn status</b> is a bit faster, as is any command that involves
+  tracing long lines of history, such as <b>svn log</b>.  See <a
+  href="http://subversion.tigris.org/issues/show_bug.cgi?id=1970"
+  >issue #1970</a> for details.</p>
+
+<p>It's particularly noticeable when <b>svn blame</b> is run on a file with a
+  large amount of history, or when invoking any command on an older
+  "peg" revision.</p>
+
+</div>  <!-- performance -->
+
+
+<div class="h3" id="apis" title="apis">
+<h3>API improvements (<em>client and server</em>)</h3>
+
+<p>If you develop a 3rd-party client application that uses Subversion
+  APIs, you may want to take notice of some new APIs:</p>
+
+<ul>
+  <li>The APIs used by 'status --show-updates' now make URI, youngest
+      revision, date last modified, youngest node kind, and most
+      recent author available as reported by the server, in addition
+      to the status reflected by the working copy.</li>
+
+  <li>There's now a data-transfer progress callback for ra_dav.</li>
+
+  <li>The repository root URL is now being stored as a separate field
+    in .svn/entries.</li>
+
+  <li>Many APIs have been revised to newer versions.</li>
+</ul>
+
+</div>  <!-- apis -->
+
+<div class="h3" id="bugfixes" title="bugfixes">
+<h3>Other bugfixes (<em>client and server</em>)</h3>
+
+<p>The usual slew of heretofore-unreleased bugfixes.  See the
+<a href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>
+file for full details.</p>
+
+</div>  <!-- bugfixes -->
+
+<div class="h3" id="wc-props-change" title="wc-props-change">
+<h3>Changes in the working copy format</h3>
+
+<p>Subversion 1.3 features a minor change in the way properties are
+stored in the working copy, which reduces the size of some working
+copies significantly.  From the user's point of view, the change is
+completely transparent.  That is, your working copies will go on
+working, even with older clients.</p>
+
+<p>However, programs that interact with the working copy property
+files without using the official Subversion APIs or binaries may
+experience problems.  <a href="http://tmate.org/svn/">JavaSVN</a> is
+the only project that we know of that falls into this category, and
+they have been notified accordingly.  If you happen to be using or
+developing software that, similarly, bypasses the Subversion APIs,
+then you may need to make a minor alteration to the parsing routines.
+See <a
+href="http://svn.collab.net/viewcvs/svn/trunk/subversion/libsvn_wc/props.c?r1=16854&amp;r2=16855&amp;diff_format=h">revision
+16855</a> of the Subversion repository for details.</p>
+
+</div>  <!-- wc-props-change -->
+</div>  <!-- enhancements -->
+
+<div class="h2" id="svn-1.1-deprecation" title="svn-1.1-deprecation">
+<h2>Subversion 1.1.x series no longer supported</h2>
+
+<p>The Subversion 1.1.x line is no longer supported.  This doesn't
+mean that your 1.1 installation is doomed; if it works well and is all
+you need, that's fine.  "No longer supported" just means we've stopped
+accepting bug reports against 1.1.x versions, and will not make any
+more 1.1.x bugfix releases, except perhaps for absolutely critical
+security or data-loss bugs.</p>
+
+</div>  <!-- svn-1.1-deprecation -->
+
+</div>  <!-- app -->
+</body>
+</html>

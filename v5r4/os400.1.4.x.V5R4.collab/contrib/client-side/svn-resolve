@@ -1,0 +1,114 @@
+#!/bin/sh
+# -*- coding:utf-8;mode:shell-script;mode:font-lock -*-
+
+##
+# Resolve Subversion conflicts using FileMerge.
+#
+# (FileMerge is a graphical diff tool in the Mac OS X Developer
+# Tools.)
+#
+# In your working copy, do (for example):
+#
+#   svn-resolve .
+#
+# FileMerge will open a window for each file that is in a conflict
+# state, showing you diffs with the left/right arrows pointing to the
+# side of each change that is selected.  Diffs with gray outlines are
+# automatically resolved.  Diffs with red outlines are the conflicts.
+# Find those and select which side you want, or pull up the split view
+# at he bottom and edit the text to what it should be.
+##
+# Copyright (c) 2002 Wilfredo Sanchez Vega <wsanchez@wsanchez.net>.
+# All rights reserved.
+#
+# Permission to use, copy, modify, and distribute this software for
+# any purpose with or without fee is hereby granted, provided that the
+# above copyright notice, this permission, and the following
+# disclaimer notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHORS DISCLAIM ALL
+# WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+# AUTHORS BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR
+# CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS
+# OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+# NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION
+# WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+##
+
+set -e
+set -u
+
+##
+# Handle command line
+##
+
+usage ()
+{
+  program=$(basename "$0");
+
+  if [ $# != 0 ]; then echo "$@"; echo ""; fi;
+
+  echo "${program}: usage:";
+  echo "    ${program} file1 [file2 ...]";
+}
+
+# Process arguments
+while [ $# != 0 ]; do
+  case "$1" in
+    --help)
+      usage;
+      exit 0;
+      ;;
+    --|*) break; ;;
+  esac;
+done;
+
+##
+# Do The Right Thing
+##
+
+#
+# If opendiff isn't installed, you can't launch FileMerge.
+# If we're not in the OS X Terminal, we probably can't run FileMerge
+#
+if ! type opendiff >& /dev/null || [ "${TERM_PROGRAM:=}" != "Apple_Terminal" ]; then
+    diff "$@";
+    exit $?;
+fi;
+
+resolve ()
+{
+    local conflict="$1";
+
+    local revision=$(svn info "${conflict}" | grep '^Revision: ' | sed 's|^Revision: ||');
+
+    local     left="${conflict}.mine";
+    local    right="${conflict}.r${revision}";
+    local ancestor="";
+
+    for file in $(ls "${conflict}".r*); do
+        if [ "${file}" != "${right}" ]; then
+            if [ -n "${ancestor}" ]; then
+                echo "ERROR: Multiple possible ancestor files exist for file: ${conflict}";
+                return 1;
+            fi;
+            ancestor="${file}";
+        fi;
+    done;
+
+    for file in "${left}" "${right}" "${ancestor}"; do
+        if [ ! -f "${file}" ]; then
+            echo "ERROR: Missing file: ${file}";
+            return 1;
+        fi;
+    done;
+
+    opendiff "${left}" "${right}" -ancestor "${ancestor}" -merge "${conflict}";
+}
+
+for file in "$@"; do
+    for conflict in $(svn status . | grep '^C' | sed 's|^C......||'); do
+        resolve "${conflict}";
+    done;
+done;

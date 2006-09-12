@@ -1,0 +1,203 @@
+Author: gstein
+Date: Sat Sep  8 18:46:40 2001
+New Revision: 1
+
+Added:
+   dir1/
+   dir1/file3
+   dir1/file4
+   dir2/
+   dir2/file5
+   dir2/file6
+   file1
+   file2
+Log:
+initial load
+
+Added: dir1/file3
+==============================================================================
+--- (empty file)
++++ dir1/file3	Sat Sep  8 18:46:40 2001
+@@ -0,0 +1 @@
++file3
+
+Added: dir1/file4
+==============================================================================
+--- (empty file)
++++ dir1/file4	Sat Sep  8 18:46:40 2001
+@@ -0,0 +1 @@
++file4
+
+Added: dir2/file5
+==============================================================================
+--- (empty file)
++++ dir2/file5	Sat Sep  8 18:46:40 2001
+@@ -0,0 +1 @@
++file5
+
+Added: dir2/file6
+==============================================================================
+--- (empty file)
++++ dir2/file6	Sat Sep  8 18:46:40 2001
+@@ -0,0 +1 @@
++file6
+
+Added: file1
+==============================================================================
+--- (empty file)
++++ file1	Sat Sep  8 18:46:40 2001
+@@ -0,0 +1 @@
++file1
+
+Added: file2
+==============================================================================
+--- (empty file)
++++ file2	Sat Sep  8 18:46:40 2001
+@@ -0,0 +1 @@
++file2
+Author: gstein
+Date: Sat Sep  8 21:33:20 2001
+New Revision: 2
+
+Modified:
+   dir2/file5
+   file2
+Log:
+two file changes
+
+Modified: dir2/file5
+==============================================================================
+--- dir2/file5	(original)
++++ dir2/file5	Sat Sep  8 21:33:20 2001
+@@ -1 +1,2 @@
+ file5
++change C2
+
+Modified: file2
+==============================================================================
+--- file2	(original)
++++ file2	Sat Sep  8 21:33:20 2001
+@@ -1 +1,2 @@
+ file2
++change C1
+Author: gstein
+Date: Sun Sep  9 00:20:00 2001
+New Revision: 3
+
+Added:
+   dir2/file7
+      - copied unchanged from rev 1, file1
+   dir3/
+      - copied from rev 1, dir1/
+Log:
+two copies
+Author: gstein
+Date: Sun Sep  9 03:06:40 2001
+New Revision: 4
+
+Added:
+   dir3/file8
+      - copied, changed from rev 1, file1
+Log:
+copied and changed
+
+Copied: dir3/file8 (from rev 1, file1)
+==============================================================================
+--- file1	(original)
++++ dir3/file8	Sun Sep  9 03:06:40 2001
+@@ -1 +1,2 @@
+ file1
++change C3
+Author: gstein
+Date: Sun Sep  9 05:53:20 2001
+New Revision: 5
+
+Added:
+   dir4/
+   file9
+Modified:
+   dir1/file3
+Log:
+mixed addition and change
+
+Modified: dir1/file3
+==============================================================================
+--- dir1/file3	(original)
++++ dir1/file3	Sun Sep  9 05:53:20 2001
+@@ -1 +1,2 @@
+ file3
++change C4
+
+Added: file9
+==============================================================================
+--- (empty file)
++++ file9	Sun Sep  9 05:53:20 2001
+@@ -0,0 +1 @@
++file9
+Author: gstein
+Date: Sun Sep  9 08:40:00 2001
+New Revision: 6
+
+Added:
+   dir1/file10
+   dir3/dir5/
+Removed:
+   dir2/
+   file2
+Modified:
+   dir3/file3
+Log:
+adds and deletes
+
+Added: dir1/file10
+==============================================================================
+--- (empty file)
++++ dir1/file10	Sun Sep  9 08:40:00 2001
+@@ -0,0 +1 @@
++file10
+
+Modified: dir3/file3
+==============================================================================
+--- dir3/file3	(original)
++++ dir3/file3	Sun Sep  9 08:40:00 2001
+@@ -1 +1,2 @@
+ file3
++change C5
+
+Deleted: file2
+==============================================================================
+--- file2	Sun Sep  9 08:40:00 2001
++++ (empty file)
+@@ -1,2 +0,0 @@
+-file2
+-change C1
+Author: gstein
+Date: Sun Sep  9 11:26:40 2001
+New Revision: 7
+
+Added:
+   dir6/
+      - copied from rev 5, dir3/
+   dir6/dir5/
+      - copied from rev 6, dir3/dir5/
+Modified:
+   dir6/file3
+   dir6/file4
+Log:
+copy dir, then make a change
+
+Modified: dir6/file3
+==============================================================================
+--- dir3/file3	(original)
++++ dir6/file3	Sun Sep  9 11:26:40 2001
+@@ -1 +1,2 @@
+ file3
++change C5
+
+Modified: dir6/file4
+==============================================================================
+--- dir3/file4	(original)
++++ dir6/file4	Sun Sep  9 11:26:40 2001
+@@ -1 +1,2 @@
+ file4
++change C6

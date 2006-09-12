@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+    ProjectType="Visual C++"
+    Version="[version]"
+    Name="serf"
+    SccProjectName=""
+    SccLocalPath=""
+    Keyword="MakeFileProj">
+    <Platforms>
+        <Platform
+            Name="Win32"/>
+    </Platforms>
+    <Configurations>
+        <Configuration
+            Name="Debug|Win32"
+            OutputDirectory="Debug"
+            IntermediateDirectory="Debug"
+            ConfigurationType="0"
+            UseOfMFC="0"
+            ATLMinimizesCRunTimeLibraryUsage="FALSE">
+            <Tool
+                Name="VCNMakeTool"
+                BuildCommandLine="nmake /s /nologo /f serf.mak ALL DEBUG_BUILD=1 APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+                ReBuildCommandLine="nmake /s /nologo /f serf.mak CLEAN ALL DEBUG_BUILD=1 APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+                CleanCommandLine="nmake /s /nologo /f serf.mak CLEAN DEBUG_BUILD=1 APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path]  [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+                Output="$(OutDir)\serf.lib"/>
+        </Configuration>
+        <Configuration
+            Name="Release|Win32"
+            OutputDirectory="Release"
+            IntermediateDirectory="Release"
+            ConfigurationType="0"
+            UseOfMFC="0"
+            ATLMinimizesCRunTimeLibraryUsage="FALSE">
+            <Tool
+                Name="VCNMakeTool"
+                BuildCommandLine="nmake /s /nologo /f serf.mak ALL APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+                ReBuildCommandLine="nmake /s /nologo /f serf.mak CLEAN ALL APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path]  [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+                CleanCommandLine="nmake /s /nologo /f serf.mak CLEAN APR_SRC=[apr_path] APRUTIL_SRC=[apr_util_path] [if-any zlib_path]ZLIB_SRC=[zlib_path][end] [if-any openssl_path]OPENSSL_SRC=[openssl_path][end]"
+                Output="$(OutDir)\serf.lib"/>
+        </Configuration>
+    </Configurations>
+    <Files>
+        <Filter
+            Name="Source Files"
+            Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+            [for serf_sources]<File
+                RelativePath="[serf_sources]">
+            </File>
+            [end]
+        </Filter>
+        <Filter
+            Name="Header Files"
+            Filter="h;hpp;hxx;hm;inl">
+            [for serf_headers]<File
+                RelativePath="[serf_headers]">
+            </File>
+            [end]
+        </Filter>
+    </Files>
+    <Globals>
+    </Globals>
+</VisualStudioProject>

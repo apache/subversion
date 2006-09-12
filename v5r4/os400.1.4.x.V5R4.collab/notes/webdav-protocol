@@ -1,0 +1,325 @@
+This file documents Subversion's use of the WebDAV/DeltaV protocol.
+
+
+IMPORTANT RFCs and LINKS
+========================
+
+  * RFC 2518  (WebDAV)
+
+  * RFC 3253  (DeltaV)
+
+  * Subversion's limited uses of DeltaV, as well as interoperability
+    issues, are explained in the "WebDAV" appendix of the free
+    Subversion book (at http://svnbook.red-bean.com)
+
+
+
+
+HTTP METHODS USED, indexed by svn commands that access network
+==============================================================
+
+
+Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
+-------------
+
+  Most commands have to resolve peg-revisions before starting:
+
+  * -r X foo@Y      REPORT                        ('get-locations')
+
+       ...if an old server doesn't support 'get-locations' report, the
+       client traces history using the 'log-report' instead.
+
+  And any command which has to convert a date to a revision:
+
+  * -r {DATE}       REPORT                        ('dated-rev-report')
+
+
+  The following group of commands all use the custom 'update-report'
+  request, which is just a fancy way of driving svn_repos_dir_delta():
+
+  * svn checkout / svn export / svn update:
+   (do_update RA interface)
+
+     ra_dav:        PROPFIND, REPORT              ('update-report' w/send-all)
+
+     ra_serf:       PROPFIND, REPORT              ('update-report')
+                    ... then many PROPFIND/GETs on many parallel connections
+
+  * svn switch:     OPTIONS, PROPFIND, REPORT     ('update-report')
+
+  * svn diff:       OPTIONS, PROPFIND, REPORT     ('update-report')
+                    ... then many GETs
+
+  * svn merge:      OPTIONS, PROPFIND, REPORT     ('update-report')
+                    ... then many GETs
+
+  * svn status -u:  OPTIONS, PROPFIND, REPORT     ('update-report' and
+                                                   'get-locks-report')
+
+  * svn cp URL wc:  OPTIONS, PROPFIND, REPORT     ('update-report')
+                    (this is just like checkout)
+
+
+  And these guys are left over:
+
+  * svn log:        OPTIONS, PROPFIND, REPORT     ('log-report')
+
+  * svn blame:      OPTIONS, PROPFIND, REPORT     ('file-revs-report')
+                    [older clients use GET
+                     and different REPORT]        ('log-report')
+
+  * svn ls:         PROPFIND, REPORT              ('get-locks-report')
+
+  * svn cat:        PROPFIND, GET
+
+  * svn info URL:   PROPFIND
+
+  * svn plist URL:  PROPFIND
+
+  * svn pget URL:   PROPFIND
+ 
+
+
+
+Write Commands  :  (MKACTIVITY, PROPPATCH, PUT, CHECKOUT, MKCOL, MOVE,
+--------------      COPY, DELETE, LOCK, UNLOCK, MERGE)
+
+  With the exception of LOCK/UNLOCK, every write command performs some
+  sort of DeltaV commit operation.  In DeltaV, a commit always starts
+  by creating a transaction (MKACTIVITY), applies a log message
+  (PROPPATCH), does some other write methods, and then ends by
+  committing the transaction (MERGE).  If the MERGE fails, the client
+  may try to remove the transaction with a DELETE.
+
+  * svn commit:
+     ra_dav:        OPTIONS, PROPFIND, MKACTIVITY, 
+                    {CHECKOUT, COPY, MOVE, DELETE, PROPPATCH, PUT, MKCOL},
+                    MERGE (DELETE)
+
+     ra_serf:       OPTIONS to acquire activity collection set
+     (no major      MKACTIVITY to a unique UUID relative to activity set
+      differences)  PROPFIND to get what we think our baseline is
+                    CHECKOUT of baseline revision into activity
+                    Setting log: PROPPATCH on root directory
+                    Delete a file: CHECKOUT file / DELETE
+                    Add a dir:  MKCOL
+                    Add a file: CHECKOUT parent dirs / PUT raw-file
+                    Edit a file: CHECKOUT file / PUT svndiff stream
+                    End commit: MERGE activity, DELETE activity
+
+  * svn import:     OPTIONS, PROPFIND, MKACTIVITY,
+                    {PROPPATCH, PUT, MKCOL},
+                    MERGE (DELETE)
+
+  * svn lock:       PROPFIND, LOCK
+  
+  * svn unlock:     PROPFIND, UNLOCK
+
+  * svn cp URL URL: OPTIONS, PROPFIND, MKACTIVITY, PROPPATCH,
+                    COPY, MERGE.  (DELETE)
+
+  * svn mv URL URL: OPTIONS, PROPFIND, MKACTIVITY, PROPPATCH,
+                    COPY, DELETE, MERGE.  (DELETE)
+
+  * svn rm URL:     OPTIONS, PROPFIND, MKACTIVITY, PROPPATCH, DELETE, MERGE.
+
+  * svn mkdir URL:  OPTIONS, PROPFIND, MKACTIVITY, PROPPATCH, MKCOL, MERGE.
+
+  * svn pset --revprop:  PROPPATCH
+
+Remembering Our Location
+========================
+
+For a file in our WC, both ra_serf and ra_dav will store the checked-in href
+(where the original text-base and properties can be found) in the
+svn:wc:ra_dav:version-url wcprop.
+
+Example property:
+  svn:wc:ra_dav:version-url -> /repos/test/!svn/ver/2/httpd/configure
+
+GET
+===
+
+ra_serf
+-------
+
+For a file that a WC already has when it wants to do an update, ra_serf will
+send two extra headers:
+
+  X-SVN-VR-Base: <checked-in href of locally-present file>
+  Accept-Encoding: svndiff1;q=0.9,svndiff;q=0.8
+
+The server may choose not to return svndiff content but return full-text.
+
+(ra_dav has this same functionality, but is largely just dead code.)
+
+Example
+-------
+
+Request:
+
+  GET /repos/test/!svn/ver/3/httpd/configure HTTP/1.1
+  X-SVN-VR-Base: /repos/test/!svn/ver/2/httpd/configure
+  Accept-Encoding: svndiff1;q=0.9,svndiff;q=0.8
+
+Response:
+
+  HTTP/1.1 200 OK
+  ETag: "3//httpd/configure"
+  Vary: Accept-Encoding
+  Content-Type: application/vnd.svn-svndiff
+  
+  ...svn-svndiff stream that can be passed to svn_txdelta_parse_svndiff...
+
+Custom REPORTs
+==============
+
+We use a bunch of custom reports, here's a little info on what they look like.
+
+update-report
+-------------
+
+Purpose: Present what we have in our WC to the server and let it tell us what
+         has changed.  Has an optional 'send-all' attribute that will include
+         the text-deltas in base64-encoding inline to the XML REPORT response.
+
+Target URL: Base VCC URL
+            Example: REPORT /repos/test/!svn/vcc/default
+
+Note: ra_serf will not set the send-all attribute to the update-report.  It
+      will instead take the returned D:checked-in href and do a pipelined
+      PROPFIND / GET on that resource.
+
+Note: If a client had a previous revision, it would not send the 'start-empty'
+      attribute to entry.
+
+Request:
+
+  <S:update-report send-all="true" xmlns:S="svn:">
+    <S:src-path>http://localhost:8080/repos/test/httpd/support</S:src-path>
+    <S:target-revision>2</S:target-revision>
+    <S:entry rev="2"  start-empty="true"></S:entry>
+  </S:update-report>
+
+Response:
+
+<S:update-report xmlns:S="svn:" xmlns:V="..." xmlns:D="DAV:" send-all="true">
+  <S:target-revision rev="2"/>
+  <S:open-directory rev="2">
+    <D:checked-in>
+      <D:href>/repos/test/!svn/ver/2/httpd/support</D:href>
+    </D:checked-in>
+    <S:set-prop name="svn:entry:committed-rev">2</S:set-prop>
+    ... more set props ...
+    <S:add-file name="ab.c">
+      <D:checked-in>
+        <D:href>/repos/test/!svn/ver/2/httpd/support/ab.c</D:href>
+      </D:checked-in>
+      <S:set-prop name="svn:entry:committed-rev">2</S:set-prop>
+      ... more set props for the file ...
+      <S:txdelta>...base64-encoded file content...</S:txdelta>
+    </S:add-file>
+    <S:add-directory name="os" bc-url="/repos/test/!svn/bc/2/httpd/os">
+      <D:checked-in>
+        <D:href>/repos/test/!svn/ver/2/httpd/os</D:href>
+      </D:checked-in>
+      ...directory contents...
+    </S:add-directory>
+  </S:open-directory>
+</S:update-report>
+
+dated-rev-report
+----------------
+
+Purpose: Get the revision associated with a particular date.
+
+Target URL: VCC URL for repos.
+
+Request:
+
+  <S:dated-rev-report xmlns:S="svn:" xmlns:D="DAV:">
+    <D:creationdate>2005-12-07T13:06:26.034802Z</D:creationdate>
+  </S:dated-rev-report>
+
+Response:
+
+  <S:dated-rev-report xmlns:S="svn:" xmlns:D="DAV:">
+    <D:version-name>4747</D:version-name>
+  </S:dated-rev-report>
+
+get-locks-report
+----------------
+
+Purpose: Get the locks associated with a particular resource.
+
+Target URL: URL of item we're getting the locks for
+
+Request:
+
+  <S:get-locks-report xmlns:S="svn">
+  </S:get-locks-report>
+
+Response:
+
+  <S:get-locks-report xmlns:S="svn">
+    <S:lock>
+      <S:path>/foo/bar/baz</S:path>
+      <S:token>opaquelocktoken:706689a6-8cef-0310-9809-fb7545cbd44e</S:token>
+      <S:owner>fred</S:owner>
+      <S:comment encoding="base64">ET39IGCB93LL4M</S:comment>
+      <S:creationdate>2005-02-07T14:17:08Z</S:creationdate>
+      <S:expirationdate>2005-02-08T14:17:08Z</S:expirationdate>
+    </S:lock>
+  </S:get-locks-report>
+
+get-locations
+-------------
+
+Purpose: Get the location of a path appearing in a particular revision.
+
+Target URL: Current baseline collection for a directory plus relative paths.
+            Example: REPORT /repos/test/!svn/bc/5/httpd
+
+Request:
+ 
+  <S:get-locations xmlns:S="svn:">
+    <S:path></S:path>
+    <S:peg-revision>5</S:peg-revision>
+    <S:location-revision>1</S:location-revision>
+  </S:get-locations>
+
+Response:
+
+  <?xml version="1.0" encoding="utf-8"?>
+  <S:get-locations-report xmlns:S="svn:" xmlns:D="DAV:">
+    <S:location rev="1" path="/httpd"/>
+  </S:get-locations-report>
+
+log-report
+----------
+
+Purpose: Retrieve the log for a portion of the repository.
+
+Target URL: Current baseline collection for a directory plus relative paths.
+            Example: REPORT /repos/test/!svn/bc/5/httpd/support
+
+Request:
+
+  <S:log-report xmlns:S="svn:">
+    <S:start-revision>2</S:start-revision>
+    <S:end-revision>2</S:end-revision>
+    <S:path></S:path>
+  </S:log-report>
+
+Response:
+
+  <?xml version="1.0" encoding="utf-8"?>
+  <S:log-report xmlns:S="svn:" xmlns:D="DAV:">
+    <S:log-item>
+      <D:version-name>2</D:version-name>
+      <S:creator-displayname>bob</S:creator-displayname>
+      <S:date>2006-02-27T18:44:26.149336Z</S:date>
+      <D:comment>Add doo-hickey</D:comment>
+    </S:log-item>
+    ...multiple log-items for each returned revision...
+  </S:log-report>

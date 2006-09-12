@@ -1,0 +1,44 @@
+	  Naming of working copy administrative directories
+	  =================================================
+
+Description:
+============
+Allow use of an alternate name for Subversion working copy
+administrative directories on Windows (which were formerly always
+named ".svn"), by setting the SVN_ASP_DOT_NET_HACK environment variable.
+When the variable is set (to any value), the administrative directory
+will be "_svn" instead of ".svn".
+
+
+Use case:
+=========
+This is a hack to work around unnecessarily restrictive behavior of
+ASP.NET on Windows which prevents access to directories beginning with
+a dot.
+
+
+Notes:
+======
+Once the environment variable is set, normal working copies with
+".svn" directories will stop working, and will need to be
+re-checked-out.
+
+This hack prevents sharing of working copies between Windows and other
+operating systems (e.g. over network mounts).
+
+Thread for more details:
+http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=105810
+
+
+Implementation:
+===============
+Setting the SVN_ASP_DOT_NET_HACK environment variable only works on
+Windows, and only with the svn and svnversion binaries, and the
+language bindings.  It doesn't work for the core C libraries
+themselves; users of the libraries must call the new,
+platform-independent APIs introduced with Subversion 1.3.0 to take
+advantage of this work-around:
+
+o svn_wc_is_adm_dir()
+o svn_wc_get_adm_dir()
+o svn_wc_set_adm_dir() - restricts the list of allowed names to .svn and _svn

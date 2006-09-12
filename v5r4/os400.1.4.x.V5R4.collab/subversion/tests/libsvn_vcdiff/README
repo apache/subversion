@@ -1,0 +1,17 @@
+Test 0:
+    The example text in the vdelta paper.  Use target only, no source.
+
+Test 1:
+    The insertion of "xxxx" in between `l' and `m' in the alphabet.
+
+Test 2:
+    Transposition of the alphabet around the point between `l' and `m'.
+
+Test 3:
+    Insertion of `x' after `d', and another after `t'.
+
+Test 4:
+    Insertion of `x' after `c' (not yet 4 bytes!), and another after `t'.
+
+Test 5:
+    Random text, no relation to source.

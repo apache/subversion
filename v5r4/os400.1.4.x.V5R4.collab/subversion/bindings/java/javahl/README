@@ -1,0 +1,72 @@
+About JavaHL
+------------
+
+JavaHL provides a (mostly native) implemention of a high level Java
+API for Subversion, originally targeted for implementors of GUI
+clients and IDE plug-ins for Subversion.  JavaHL currently provides a
+minimal-but-complete set of APIs which expose the core Subversion C
+API to Java.
+
+
+Build system and output
+-----------------------
+
+JavaHL should compile and run under Linux, Win32, and Mac OS X.
+
+Its build will produce libsvnjavahl.so or libsvnjavahl.dll (the native
+library for Unix or win32, respectively) and svnjavahl.jar (platform
+independent archive of Java bytecode).
+
+For build non win32 platforms, add "--enable-javahl" to the configure
+script's parameters. "--with-jdk" can be provided to specify the path
+to a jdk.  "--with-junit" can be provided to specify the path to a
+junit.jar. JUnit version 3.8.1 has been tested.
+
+The following make target are provided:
+
+javahl                build javahl
+install-javahl        install javahl
+check-javahl          run javahl tests. JUnit and installation is needed.
+
+MacOS X:
+After building libsvnjavahl.dynlib it has to be renamed to
+libsvnjavahl.jnilib.
+
+Windows:
+You need the bin directory of the JDK (>= 1.2) in your path and the
+include and the include\win32 directory have to be in the include path
+of your MS Visual Studio.
+
+To build use the project/target "__JAVAHL__" of the main subversion workspace.
+The private project/workspace is not used anymore.
+
+
+Success stories
+---------------
+
+Svn-Up, Swing GUI and plug-in for the IDEA IDE
+<http://svnup.tigris.org/>
+
+Subclipse, Eclipse IDE plug-in <http://subclipse.tigris.org/>
+
+
+Why not 100% pure Java?
+-----------------------
+
+Though 100% pure Java is often preferred by Java programmers, such an
+impelementation would require re-writing _at least_ the entire
+Subversion client library in Java, resulting in tons of duplicate
+code, a take the maintainer's time away from improving Subversion
+itself.
+
+The JavaSVN <http://tmate.org/svn/> client library has produced a 100%
+pure Java implementation, and attempts to track the latest changes to
+Subversion's core libraries.
+
+
+TODO
+----
+
+o Expose more of Subversion's core libraries through JNI.
+o More JUnit test cases.
+o Improve JavaDoc and coding style.

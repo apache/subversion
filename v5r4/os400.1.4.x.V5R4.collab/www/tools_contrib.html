@@ -1,0 +1,990 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Subversion Tools and Contrib</title>
+</head>
+
+<body id="bodycol">
+<div class="app">
+
+<h1>Subversion Tools and Contrib</h1>
+
+<p>The directories 'tools' and 'contrib' in the Subversion repository
+   contain code that works with Subversion but that Subversion doesn't
+   depend on for normal operations.
+</p>
+<p>The files in 'tools' are maintained collectively by the Subversion
+   project, and are under the same open source copyright as Subversion itself.
+</p>
+<p>Code in contrib/ is open source, but may have a different license or
+   copyright holder than Subversion itself.  The Subversion project does
+   not maintain these programs, but merely distributes them for our
+   users' convenience.
+</p>
+
+<p>The code is grouped into the following subdirectories:</p>
+
+<ul>
+  <li><a href="#backup">backup</a></li>
+  <li><a href="#bdb">bdb</a></li>
+  <li><a href="#cgi">cgi</a></li>
+  <li><a href="#client_side">client-side</a></li>
+  <li><a href="#dev">dev</a></li>
+  <li><a href="#diff">diff</a></li>
+  <li><a href="#hook_scripts">hook-scripts</a></li>
+  <li><a href="#po">po</a></li>
+  <li><a href="#server_side">server-side</a></li>
+  <li><a href="#xslt">xslt</a></li>
+</ul>
+
+
+<h2>Index by keyword</h2>
+
+<ul>
+  <li><strong>authz</strong><ul>
+    <li><a href="#authz_svn_group_py">authz_svn_group.py</a></li>
+    <li><a href="#svnauthz_validate_c">svnauthz-validate.c</a></li>
+  </ul></li>
+  <li><strong>backup</strong><ul>
+    <li><a href="#backup_recipe_sh">backup-recipe.sh</a></li>
+    <li><a href="#hot_backup_py">hot-backup.py</a></li>
+    <li><a href="#svn_backup_dumps_py">svn-backup-dumps.py</a></li>
+    <li><a href="#svn_fast_backup">svn-fast-backup</a></li>
+  </ul></li>
+  <li><strong>bash</strong><ul>
+    <li><a href="#bash_completion">bash_completion</a></li>
+  </ul></li>
+  <li><strong>bdb</strong><ul>
+    <li><a href="#backup_recipe_sh">backup-recipe.sh</a></li>
+    <li><a href="#erase_all_text_data_py">erase-all-text-data.py</a></li>
+    <li><a href="#hot_backup_py">hot-backup.py</a></li>
+    <li><a href="#svn_bdb_view_py">svn-bdb-view.py</a></li>
+    <li><a href="#svn_obliterate_py">svn-obliterate.py</a></li>
+    <li><a href="#whatis_rep_py">whatis-rep.py</a></li>
+  </ul></li>
+  <li><strong>branch / tag</strong><ul>
+    <li><a href="#svncopy_pl">svncopy.pl</a></li>
+  </ul></li>
+  <li><strong>cgi</strong><ul>
+    <li><a href="#mirror_dir_through_svn_cgi">mirror_dir_through_svn.cgi</a></li>
+    <li><a href="#tweak_log_cgi">tweak-log.cgi</a></li>
+  </ul></li>
+  <li><strong>commandline tools</strong><ul>
+    <li><a href="#asvn">asvn</a></li>
+    <li><a href="#mucc_c">mucc.c</a></li>
+    <li><a href="#server_vsn_py">server-vsn.py</a></li>
+    <li><a href="#svn_update_pl">svn_update.pl</a></li>
+  </ul></li>
+  <li><strong>diff</strong><ul>
+    <li><a href="#diff_c">diff.c</a></li>
+    <li><a href="#diff3_c">diff3.c</a></li>
+    <li><a href="#diff4_c">diff4.c</a></li>
+    <li><a href="#diff_to_logmsg_vim">diff-to-logmsg.vim</a></li>
+    <li><a href="#diffwrap_bat">diffwrap.bat</a></li>
+    <li><a href="#diff3wrap_bat">diff3wrap.bat</a></li>
+    <li><a href="#showchange_pl">showchange.pl</a></li>
+    <li><a href="#svn2cl_sh">svn2cl.sh</a></li>
+    <li><a href="#svn_all_diffs_pl">svn_all_diffs.pl</a></li>
+  </ul></li>
+  <li><strong>fsfs</strong><ul>
+    <li><a href="#svn_fast_backup">svn-fast-backup</a></li>
+  </ul></li>
+  <li><strong>graph</strong><ul>
+    <li><a href="#svn_graph_pl">svn-graph.pl</a></li>
+  </ul></li>
+  <li><strong>import</strong><ul>
+    <li><a href="#svn_load_dirs_pl">svn_load_dirs.pl</a></li>
+  </ul></li>
+  <li><strong>log message</strong><ul>
+    <li><a href="#diff_to_logmsg_vim">diff-to-logmsg.vim</a></li>
+    <li><a href="#showchange_pl">showchange.pl</a></li>
+    <li><a href="#svn_log_pl">svn-log.pl</a></li>
+    <li><a href="#svn2cl_sh">svn2cl.sh</a></li>
+    <li><a href="#svn2rss_py">svn2rss.py</a></li>
+  </ul></li>
+  <li><strong>merge</strong><ul>
+    <li><a href="#svnmerge_py">svnmerge.py</a></li>
+    <li><a href="#svnmerge_sh">svnmerge.sh</a></li>
+  </ul></li>
+  <li><strong>mirror</strong><ul>
+    <li><a href="#mirror_dir_through_svn_cgi">mirror_dir_through_svn.cgi</a></li>
+    <li><a href="#svn_push_c">svn-push.c</a></li>
+    <li><a href="#svnmirror_sh">svnmirror.sh</a></li>
+  </ul></li>
+  <li><strong>.po files</strong><ul>
+    <li><a href="#svn_po_status_report_sh">svn-po-status-report.sh</a></li>
+    <li><a href="#svn_po_status_run_sh">svn-po-status-run.sh</a></li>
+    <li><a href="#verify_po_py">verify-po.py</a></li>
+  </ul></li>
+  <li><strong>post-commit - email</strong><ul>
+    <li><a href="#commit_email_pl">commit-email.pl</a></li>
+    <li><a href="#commit_email_rb">commit-email.rb</a></li>
+    <li><a href="#mailer_py">mailer.py</a></li>
+  </ul></li>
+  <li><strong>pre-commit - check</strong><ul>
+    <li><a href="#case_insensitive_py">case-insensitive.py</a></li>
+    <li><a href="#check_case_insensitive_py">check-case-insensitive.py</a></li>
+    <li><a href="#check_mime_type_pl">check-mime-type.pl</a></li>
+    <li><a href="#commit_access_control_pl">commit-access-control.pl</a></li>
+    <li><a href="#commit_block_joke_py">commit-block-joke.py</a></li>
+    <li><a href="#detect_merge_conflicts_sh">detect-merge-conflicts.sh</a></li>
+    <li><a href="#enforcer">enforcer</a></li>
+    <li><a href="#log_police_py">log-police.py</a></li>
+    <li><a href="#pre_commit_check_py">pre-commit-check.py</a></li>
+    <li><a href="#svnperms_py">svnperms.py</a></li>
+    <li><a href="#verify_po_py">verify-po.py</a></li>
+  </ul></li>
+  <li><strong>pre-lock - check</strong><ul>
+    <li><a href="#pre_lock_require_needs_lock_py">pre-lock-require-needs-lock.py</a></li>
+  </ul></li>
+  <li><strong>property</strong><ul>
+    <li><a href="#svn_apply_autoprops_py">svn_apply_autoprops.py</a></li>
+  </ul></li>
+  <li><strong>searching</strong><ul>
+    <li><a href="#svn_export_empty_files_py">svn_export_empty_files.py</a></li>
+    <li><a href="#wcgrep">wcgrep</a></li>
+  </ul></li>
+  <li><strong>vim</strong><ul>
+    <li><a href="#diff_to_logmsg_vim">diff-to-logmsg.vim</a></li>
+    <li><a href="#svn_vim">svn.vim</a></li>
+  </ul></li>
+  <li><strong>working copy</strong><ul>
+    <li><a href="#svn_apply_autoprops_py">svn_apply_autoprops.py</a></li>
+    <li><a href="#svn_clean">svn-clean</a></li>
+    <li><a href="#svn_resolve">svn-resolve</a></li>
+    <li><a href="#svn_update_pl">svn_update.pl</a></li>
+    <li><a href="#svn_viewdiff">svn-viewdiff</a></li>
+    <li><a href="#wcgrep">wcgrep</a></li>
+  </ul></li>
+  <li><strong>xslt</strong><ul>
+    <li><a href="#svnindex_xsl">svnindex.xsl</a></li>
+  </ul></li>
+  <li><strong>subversion development tools</strong><ul>
+    <li><a href="#check_license_py">check-license.py</a></li>
+    <li><a href="#contribulyze_py">contribulyze.py</a></li>
+    <li><a href="#datecheck_py">datecheck.py</a></li>
+    <li><a href="#gcov_patch">gcov.patch</a></li>
+    <li><a href="#getsigs_pl">getsigs.pl</a></li>
+    <li><a href="#gnuify_changelog_pl">gnuify-changelog.pl</a></li>
+    <li><a href="#graph_dav_servers_py">graph-dav-servers.py</a></li>
+    <li><a href="#ff2csv_py">ff2csv.py</a></li>
+    <li><a href="#find_fix_py">find-fix.py</a></li>
+    <li><a href="#run_queries_sh">run-queries.sh</a></li>
+    <li><a href="#lock_check_py">lock-check.py</a></li>
+    <li><a href="#mlpatch_py">mlpatch.py</a></li>
+    <li><a href="#normalize_dump_py">normalize-dump.py</a></li>
+    <li><a href="#po_merge_py">po-merge.py</a></li>
+    <li><a href="#prebuild_cleanup_sh">prebuild-cleanup.sh</a></li>
+    <li><a href="#random_commits_py">random-commits.py</a></li>
+    <li><a href="#scramble_tree_py">scramble-tree.py</a></li>
+    <li><a href="#stress_pl">stress.pl</a></li>
+    <li><a href="#svn_dev_el">svn-dev.el</a></li>
+    <li><a href="#svn_dev_vim">svn-dev.vim</a></li>
+    <li><a href="#svn_merge_revs_py">svn-merge-revs.py</a></li>
+    <li><a href="#trails_py">trails.py</a></li>
+    <li><a href="#verify_history_py">verify-history.py</a></li>
+    <li><a href="#warn_ignored_err_sh">warn-ignored-err.sh</a></li>
+    <li><a href="#which_error_py">which-error.py</a></li>
+  </ul></li>
+</ul>
+
+<div class="h2">
+  <h2><a name="backup">backup</a></h2>
+
+
+  <h3><a name="hot_backup_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/backup/hot-backup.py.in">hot-backup.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/backup">tools/backup</a>)</h3>
+  <p>Perform a "hot" backup of a Berkeley DB repository.
+     (and clean old logfiles after backup completes.)
+  </p>
+</div>
+
+<div class="h2">
+  <h2><a name="bdb">bdb</a></h2>
+
+
+  <h3><a name="erase_all_text_data_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/bdb/erase-all-text-data.py">erase-all-text-data.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/bdb">tools/bdb</a>)</h3>
+  <p>Erases the text of every file in a BDB repository.</p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/tools/bdb/skel.py">skel.py</a>
+    <a href="http://svn.collab.net/repos/svn/trunk/tools/bdb/svnfs.py">svnfs.py</a>
+  </p>
+
+
+  <h3><a name="svn_bdb_view_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/bdb/svn-bdb-view.py">svn-bdb-view.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/bdb">tools/bdb</a>)</h3>
+  <p>A pretty-printer for subversion BDB repository databases.</p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/tools/bdb/skel.py">skel.py</a>
+    <a href="http://svn.collab.net/repos/svn/trunk/tools/bdb/svnfs.py">svnfs.py</a>
+  </p>
+
+
+  <h3><a name="whatis_rep_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/bdb/whatis-rep.py">whatis-rep.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/bdb">tools/bdb</a>)</h3>
+  <p>Print a description (including data, path, and revision) of the
+     specified node reps in a Subversion filesystem.  Walks as much of
+     the reps table as necessary to locate the data (e.g. does a table
+     scan).
+  </p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/tools/bdb/skel.py">skel.py</a>
+    <a href="http://svn.collab.net/repos/svn/trunk/tools/bdb/svnfs.py">svnfs.py</a>
+  </p>
+</div>
+
+
+<div class="h2">
+  <h2><a name="cgi">cgi</a></h2>
+
+
+  <h3><a name="mirror_dir_through_svn_cgi"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/cgi/mirror_dir_through_svn.cgi">mirror_dir_through_svn.cgi</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/cgi">contrib/cgi</a>)</h3>
+  <p>This CGI script mirrors a source directory to a target directory using
+     a Subversion repository as an intermediary.  It's written as a CGI
+     script so that remote users making changes to a WebDAV folder can tell
+     the server to mirror the WebDAV folder contents to another directory
+     on the system.  See the example usage story below.
+  </p>
+  <p>See also <a href="http://svn.collab.net/repos/svn/trunk/contrib/cgi/mirror_dir_through_svn.README">mirror_dir_through_svn.README</a></p>
+
+
+  <h3><a name="tweak_log_cgi"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/cgi/tweak-log.cgi">tweak-log.cgi</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/cgi">contrib/cgi</a>)</h3>
+  <p>It sure would be nice to be able to change the log messages on
+     committed revisions of the Subversion repository via the web.  This
+     is a quick attempt at making that happen.
+  </p>
+</div>
+
+
+<div class="h2">
+  <h2><a name="client_side">client-side</a></h2>
+
+
+  <h3><a name="asvn"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/asvn">asvn</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Archive SVN (asvn) will allow the recording of file types not
+     normally handled by svn. Currently this includes devices,
+     symlinks and file ownership/permissions.
+  </p>
+
+
+  <h3><a name="bash_completion"
+    href="http://svn.collab.net/repos/svn/trunk/tools/client-side/bash_completion">bash_completion</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/client-side">tools/client-side</a>)</h3>
+  <p>Programmable completion for the Subversion svn command under bash.</p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/tools/client-side/bash_completion_test">bash_completion_test</a>
+  </p>
+
+
+  <h3><a name="diff_to_logmsg_vim"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/diff-to-logmsg.vim">diff-to-logmsg.vim</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Converts a 'diff -urp' to a log message skeleton.</p>
+
+
+  <h3><a name="diff3wrap_bat"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/diff3wrap.bat">diff3wrap.bat</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Wrapper for running a diff3/merge program.</p>
+
+
+  <h3><a name="diffwrap_bat"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/diffwrap.bat">diffwrap.bat</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Wrapper for running a diff program.</p>
+
+
+  <h3><a name="mucc_c"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/mucc.c">mucc.c</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Multiple URL Command Client: Combine a list of mv, cp and rm commands
+     on URLs into a single commit.
+  </p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/mucc-test.sh">mucc-test.sh</a>
+  </p>
+
+
+  <h3><a name="search_svnlog_pl"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/search-svnlog.pl">search-svnlog.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Show log messages matching a certain pattern.</p>
+
+
+  <h3><a name="server_vsn_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/client-side/server-vsn.py">server-vsn.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/client-side">tools/client-side</a>)</h3>
+  <p>Print a Subversion server's version number.</p>
+
+
+  <h3><a name="showchange_pl"
+    href="http://svn.collab.net/repos/svn/trunk/tools/client-side/showchange.pl">showchange.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/client-side">tools/client-side</a>)</h3>
+  <p>Show the log message and diff for a revision.</p>
+
+
+  <h3><a name="svn_clean"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn-clean">svn-clean</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Wipes out unversioned files from SVN working copy.</p>
+
+
+  <h3><a name="svn_graph_pl"
+    href="http://svn.collab.net/repos/svn/trunk/tools/client-side/svn-graph.pl">svn-graph.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/client-side">tools/client-side</a>)</h3>
+  <p>Produce a GraphViz .dot graph for the branch history of a node.</p>
+
+
+  <h3><a name="svn_log_pl"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn-log.pl">svn-log.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Generate a nice log format for the Subversion repository.</p>
+
+
+  <h3><a name="svn_push_c"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn-push/svn-push.c">svn-push.c</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn-push">contrib/client-side/svn-push</a>)</h3>
+  <p>Propagate changesets from one (networked) repository to a different
+     (networked) repository.
+  </p>
+
+
+  <h3><a name="svn_resolve"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn-resolve">svn-resolve</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Resolve Subversion conflicts using FileMerge.
+  </p>
+  <p>(FileMerge is a graphical diff tool in the Mac OS X
+     Developer Tools.)
+  </p>
+
+
+  <h3><a name="svn_viewdiff"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn-viewdiff">svn-viewdiff</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>GNU diff wrapper for FileMerge.
+  </p>
+  <p>(FileMerge is a graphical diff tool in the Mac OS X
+     Developer Tools.)
+  </p>
+
+
+  <h3><a name="svn_vim"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn.vim">svn.vim</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Vim syntax hilighting for SVN commit log message template.</p>
+
+
+  <h3><a name="svn2cl_sh"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn2cl/svn2cl.sh">svn2cl.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn2cl">contrib/client-side/svn2cl</a>)</h3>
+  <p>Front end shell script for svn2cl.xsl, calls xsltproc with the
+     correct parameters.
+  </p>
+  <p>See also <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn2cl/README">README</a>.</p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn2cl/svn2cl.1">svn2cl.1</a>
+    <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn2cl/svn2cl.xsl">svn2cl.xsl</a>
+    <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn2cl/svn2html.css">svn2html.css</a>
+    <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn2cl/svn2html.xsl">svn2html.xsl</a>
+  </p>
+
+
+  <h3><a name="svn_all_diffs_pl"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn_all_diffs.pl">svn_all_diffs.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Perl script that gets the revisions that modified a specified
+     file or directory and prints the output of `svn diff' on between
+     all revisions that that modified the file or directory.  Good for
+     seeing what changed over time and for tracking down when a
+     particular line in a file changed.
+  </p>
+
+
+  <h3><a name="svn_apply_autoprops_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn_apply_autoprops.py">svn_apply_autoprops.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>This script reads the auto-properties defined in the
+     $HOME/.subversion/config file and applies them recursively to all
+     the files and directories in the current working copy.
+  </p>
+
+
+  <h3><a name="svn_export_empty_files_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn_export_empty_files.py">svn_export_empty_files.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Script to "export" from a Subversion repository a clean directory
+     tree of empty files instead of the content contained in those
+     files in the repository. The directory tree will also omit the
+     .svn directories.  This script was written to create a non-working
+     working copy that can be crawled with find or find's locate utility
+     to make it easier to find files.
+  </p>
+
+
+  <h3><a name="svn_load_dirs_pl"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn_load_dirs.pl.in">svn_load_dirs.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>This Perl script is designed to load a number of directories into
+     Subversion.  This is useful if you have a number of .zip's or
+     tar.{Z,gz,bz2}'s for a particular package and want to load them into
+     Subversion.
+  </p>
+  <p>See also <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn_load_dirs.README">svn_load_dirs.README</a>.</p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn_load_dirs_property_table.example">svn_load_dirs_property_table.example</a>
+  </p>
+
+
+  <h3><a name="svn_update_pl"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svn_update.pl">svn_update.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Run svn update and force it to produce conflicts for all
+     files which would be merged using diff3.
+  </p>
+  <p>This is a workaround for <a
+       href="http://subversion.tigris.org/issues/show_bug.cgi?id=2048"
+     >issue 2048</a> which was fixed in r13383 and released in
+     svn 1.2.0.
+  </p>
+
+
+  <h3><a name="svncopy_pl"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svncopy.pl.in">svncopy.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Utility script for copying with branching/tagging.</p>
+  <p>See also <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svncopy.README">svncopy.README</a>.</p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/testsvncopy.pl.in">testsvncopy.pl</a>
+  </p>
+
+
+  <h3><a name="svnmerge_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge.py">svnmerge.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Merge tracking script.</p>
+  <p>See also <a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge.README">svnmerge.README</a>.</p>
+
+
+  <h3><a name="svnmerge_sh"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/svnmerge.sh">svnmerge.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Merge tracking script, predecessor of svnmerge.py.</p>
+
+
+  <h3><a name="wcgrep"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/wcgrep">wcgrep</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
+  <p>Useful for greping in a subversion working copy.
+     Essentially it behaves the same way your grep command does.
+  </p>
+</div>
+
+
+<div class="h2">
+  <h2><a name="dev">dev</a></h2>
+
+
+  <h3><a name="check_license_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/check-license.py">check-license.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Check if a file has the proper license in it.</p>
+
+
+  <h3><a name="contribulyze_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/contribulyze.py">contribulyze.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Some Subversion project log messages include parseable data to help
+     track who's contributing what. This script collects that data.
+  </p>
+
+
+  <h3><a name="datecheck_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/datecheck.py">datecheck.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>This is a debugging script to test date-ordering in an SVN repository.</p>
+
+
+  <h3><a name="gcov_patch"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/gcov.patch">gcov.patch</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>This patch can be used to generate a report showing what C source
+     lines are executed when the testsuite is run.
+  </p>
+
+
+  <h3><a name="getsigs_pl"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/getsigs.pl">getsigs.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Terribly ugly hack of a script to verify the signatures on the release
+     tarballs and produce the list of who signed them in the format we use for
+     the announcements.
+  </p>
+
+
+  <h3><a name="gnuify_changelog_pl"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/gnuify-changelog.pl">gnuify-changelog.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>A script to munge the output of 'svn log' into something approaching the
+     style of a GNU ChangeLog.
+  </p>
+
+
+  <h3><a name="graph_dav_servers_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/graph-dav-servers.py">graph-dav-servers.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>This was originally a quick hack to make a pretty picture of svn
+     DAV servers.
+  </p>
+
+
+  <h3><a name="ff2csv_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/iz/ff2csv.py">ff2csv.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev/iz">tools/dev/iz</a>)</h3>
+  <p>Transform find-fix.py output into Excellable csv.</p>
+
+
+  <h3><a name="find_fix_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/iz/find-fix.py">find-fix.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev/iz">tools/dev/iz</a>)</h3>
+  <p>Produce a find/fix report for Subversion's IZ database.</p>
+
+
+  <h3><a name="run_queries_sh"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/iz/run-queries.sh">run-queries.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev/iz">tools/dev/iz</a>)</h3>
+  <p>Run some IssueZilla queries.</p>
+
+
+  <h3><a name="lock_check_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/lock-check.py">lock-check.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Repository lock checker.  Gets and exclusive lock on the provided
+     repository, then runs db_stat to see if the lock counts have been
+     reset to 0.  If not, prints the timestamp of the run and a message
+     about accumulation.
+  </p>
+
+
+  <h3><a name="mlpatch_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/mlpatch.py">mlpatch.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Very annoyingly, the http://svn.haxx.se/ subversion mailing list archives
+     mangle inline patches, and provide no raw message download facility
+     (other than for an entire month's email as an mbox).
+     So, I wrote this script, to demangle them. It's not perfect, as it has to
+     guess about whitespace, but it does an acceptable job.
+  </p>
+
+
+  <h3><a name="normalize_dump_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/normalize-dump.py">normalize-dump.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Reads a Subversion dumpfile from DUMPFILE (or, if not provided,
+     from stdin) and normalizes the metadata contained therein,
+     printing summarized and sorted information.  This is useful for
+     generating data about dumpfiles in a diffable fashion.
+  </p>
+
+
+  <h3><a name="po_merge_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/po-merge.py">po-merge.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Read a single translation entry from the file F and return a
+     tuple with the comments, msgid and msgstr.  The comments is returned
+     as a list of lines which do not end in new-lines.  The msgid and
+     msgstr are strings, possibly with embedded newlines.
+  </p>
+
+
+  <h3><a name="prebuild_cleanup_sh"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/prebuild-cleanup.sh">prebuild-cleanup.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Purify a system, to simulate building Subversion on a "clean" box.</p>
+
+
+  <h3><a name="random_commits_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/random-commits.py">random-commits.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Using the FILELIST (see config below), a series of COUNT commits will be
+     constructed, each changing up to MAXFILES files per commit. The commands
+     will be sent to stdout (formatted as a shell script).
+  </p>
+
+
+  <h3><a name="scramble_tree_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/scramble-tree.py">scramble-tree.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Makes multiple random file changes to a directory tree, for testing.</p>
+
+
+  <h3><a name="stress_pl"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/stress.pl">stress.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>A script that allows some simple testing of Subversion, in
+     particular concurrent read, write and read-write access by the 'svn'
+     client. It can also create working copy trees containing a large
+     number of files and directories. All repository access is via the
+     'svnadmin' and 'svn' commands.
+  </p>
+
+
+  <h3><a name="svn_dev_el"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/svn-dev.el">svn-dev.el</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Emacs Lisp help for writing Subversion code. This file contains
+     some elisp functions which could be helpful to employ while working
+     on Subversion.
+  </p>
+
+
+  <h3><a name="svn_dev_vim"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/svn-dev.vim">svn-dev.vim</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>This file sets vim up to use subversion's coding style. It can be
+     applied on a per buffer basis with :source svn-dev.vim, or can be
+     source from ~/.vimrc to apply settings to all files vim uses. For
+     other variation try :help autocmd.
+  </p>
+
+
+  <h3><a name="svn_merge_revs_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/svn-merge-revs.py">svn-merge-revs.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>This script is meant to ease the pain of merging and
+     reviewing revision(s) on a release branch (although it can be used to
+     merge and review revisions from any line of development to another).
+  </p>
+
+
+  <h3><a name="trails_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/trails.py">trails.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>A program for analyzing Subversion trail usage statistics.</p>
+
+
+  <h3><a name="verify_history_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/verify-history.py">verify-history.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>This program is used to verify the FS history code.</p>
+
+
+  <h3><a name="warn_ignored_err_sh"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/warn-ignored-err.sh">warn-ignored-err.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Insert or remove the GCC attribute "warn_unused_result" on each function
+     that returns a Subversion error, in the specified files or, by default,
+     *.h and *.c in the ./subversion and ./tools trees.
+  </p>
+
+
+  <h3><a name="which_error_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/dev/which-error.py">which-error.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
+  <p>Print semantic Subversion error code names mapped from their numeric
+     error code values.
+  </p>
+</div>
+
+
+<div class="h2">
+  <h2><a name="diff">diff</a></h2>
+
+
+  <h3><a name="diff_c"
+    href="http://svn.collab.net/repos/svn/trunk/tools/diff/diff.c">diff.c</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/diff">tools/diff</a>)</h3>
+  <p>A diff program using subversions diff functions.</p>
+
+
+  <h3><a name="diff3_c"
+    href="http://svn.collab.net/repos/svn/trunk/tools/diff/diff3.c">diff3.c</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/diff">tools/diff</a>)</h3>
+  <p>A diff3 program using subversions diff functions.</p>
+
+
+  <h3><a name="diff4_c"
+    href="http://svn.collab.net/repos/svn/trunk/tools/diff/diff4.c">diff4.c</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/diff">tools/diff</a>)</h3>
+  <p>A diff4 program using subversions diff functions.</p>
+</div>
+
+
+<div class="h2">
+  <h2><a name="hook_scripts">hook-scripts</a></h2>
+
+
+  <h3><a name="case_insensitive_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/case-insensitive.py">case-insensitive.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
+  <p>A pre-commit hook to detect case-insensitive filename clashes.
+  </p>
+  <p>This is *much* more efficient than 
+     <a href="#check_case_insensitive_py">check-case-insensitive.py</a>
+     but it does require Subversion 1.3.0 or later.
+  </p>
+
+
+  <h3><a name="check_case_insensitive_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/check-case-insensitive.py">check-case-insensitive.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
+  <p>This script can be called from a pre-commit hook on either Windows
+     or a Unix like operating system.  It implements the checks required
+     to ensure that the repository acts in a way which is compatible with
+     a case preserving but case insensitive file system.
+  </p>
+  <p>Superceded by <a href="#case_insensitive_py">case-insensitive.py</a>
+     for Subversion 1.3.0 and later.
+  </p>
+
+
+  <h3><a name="check_mime_type_pl"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/check-mime-type.pl">check-mime-type.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
+  <p>Check that every added file has the svn:mime-type property set
+     and every added file with a mime-type matching text/* also has
+     svn:eol-style set. If any file fails this test the user is sent
+     a verbose error message suggesting solutions and the commit is
+     aborted.
+  </p>
+
+
+  <h3><a name="commit_access_control_pl"
+    href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/commit-access-control.pl.in">commit-access-control.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts">tools/hook-scripts</a>)</h3>
+  <p>Uses the `svnlook' program to check if the user who submitted
+     the commit has appropriate rights to perform the commit on all
+     the modified files and directories using the permissions
+     specified in the configuration file.
+  </p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/commit-access-control.cfg.example">commit-access-control.cfg.example</a>
+  </p>
+
+
+  <h3><a name="commit_block_joke_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/commit-block-joke.py">commit-block-joke.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
+  <p>A funny pre-commit hook example.</p>
+
+
+  <h3><a name="commit_email_pl"
+    href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/commit-email.pl.in">commit-email.pl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts">tools/hook-scripts</a>)</h3>
+  <p>Send a notification email describing either a commit or a
+     revprop-change action on a Subversion repository.
+  </p>
+  <p>Uses the `svnlook' program to send commit emails.  Invoke it
+     from `repository/hooks/post-commit'.  Run the script with no
+     arguments for usage.
+  </p>
+
+
+  <h3><a name="commit_email_rb"
+    href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/commit-email.rb">commit-email.rb</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts">tools/hook-scripts</a>)</h3>
+  <p>Uses the Ruby/SWIG client bindings to query the repository about
+     the changes made by a particular revision, and send
+     corresponding change emails.  The program takes command-line
+     options for basic setup and to fine-tune its behavior.
+  </p>
+
+
+  <h3><a name="detect_merge_conflicts_sh"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/detect-merge-conflicts.sh">detect-merge-conflicts.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
+  <p>A pre-commit hook to detect changes that look like forgotten
+     conflict markers.
+  </p>
+
+
+  <h3><a name="enforcer"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/enforcer/enforcer">enforcer</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/enforcer">contrib/hook-scripts/enforcer</a>)</h3>
+  <p>This is a pre-commit hook that allows you to more easily specify
+     a variety of rules that govern what may be committed to your
+     repository.
+  </p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/enforcer/enforcer.conf">enforcer.conf</a>
+  </p>
+
+
+  <h3><a name="log_police_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/log-police.py">log-police.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts">tools/hook-scripts</a>)</h3>
+  <p>Ensures that log messages end with exactly one newline.  Can
+     also be run as a standalone script to fix up old revisions.
+  </p>
+
+
+  <h3><a name="mailer_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/mailer/mailer.py">mailer.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/mailer">tools/hook-scripts/mailer</a>)</h3>
+  <p>Uses the Python/SWIG bindings to directly query the repository
+     about the changes made by a particular revision.  The program
+     uses a configuration file for basic setup and to fine-tune where
+     changes are delivered.  Compared to
+     <a href="#commit_email_pl">commit-email.pl</a>, the output
+     contains a bit more information about property changes, is
+     smarter with binary files, and it streams its output into the
+     mailer (to avoid in-memory buffering).
+  </p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/tools//hook-scripts/mailer/mailer.conf.example">mailer.conf.example</a>
+    <a href="http://svn.collab.net/repos/svn/trunk/tools//hook-scripts/mailer/tests">tests/</a>
+  </p>
+
+
+  <h3><a name="pre_commit_check_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/pre-commit-check.py">pre-commit-check.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
+  <p>A template for checks in a pre-commit hook.</p>
+
+
+  <h3><a name="pre_lock_require_needs_lock_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/pre-lock-require-needs-lock.py">pre-lock-require-needs-lock.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
+  <p>This script, intended for use as a Subversion pre-lock hook, verifies that
+     the PATH that USER is attempting to lock has the svn:needs-lock property
+     set on it, returning success iff it does.
+  </p>
+
+
+  <h3><a name="svn2rss_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/svn2rss.py">svn2rss.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
+  <p>Generates a RSS 2.0 file containing commit information.</p>
+
+
+  <h3><a name="svnperms_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/svnperms.py">svnperms.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts">tools/hook-scripts</a>)</h3>
+  <p>Pre-commit hook that checks write permissions, similar to
+     <a href="#commit_access_control_pl">commit-access-control.pl</a>,
+     but uses a different syntax.  Run 'svnperms.py -h' for usage.
+  </p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/svnperms.conf.example">svnperms.conf.example</a>
+  </p>
+
+
+  <h3><a name="verify_po_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/verify-po.py">verify-po.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts">tools/hook-scripts</a>)</h3>
+  <p>This is a pre-commit hook that checks whether the contents of PO files
+     committed to the repository are encoded in UTF-8.
+  </p>
+</div>
+
+
+<div class="h2">
+  <h2><a name="po">po</a></h2>
+
+
+  <h3><a name="svn_po_status_report_sh"
+    href="http://svn.collab.net/repos/svn/trunk/tools/po/svn-po-status-report.sh">svn-po-status-report.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/po">tools/po</a>)</h3>
+  <p>Subversion po file translation status report generator.</p>
+
+
+  <h3><a name="svn_po_status_run_sh"
+    href="http://svn.collab.net/repos/svn/trunk/tools/po/svn-po-status-run.sh">svn-po-status-run.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/po">tools/po</a>)</h3>
+  <p>Script for mailing status output from cronjobs.</p>
+</div>
+
+
+<div class="h2">
+  <h2><a name="server_side">server-side</a></h2>
+
+
+  <h3><a name="authz_svn_group_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/server-side/authz_svn_group.py">authz_svn_group.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/server-side">contrib/server-side</a>)</h3>
+  <p>mod_python authorization handler for mod_authz_svn groups.</p>
+
+
+  <h3><a name="backup_recipe_sh"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/server-side/backup-recipe.sh">backup-recipe.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/server-side">contrib/server-side</a>)</h3>
+  <p>This shell script demonstrates a backup/restore recipe for live
+     Subversion repositories, using a standard full+incrementals process.
+  </p>
+
+
+  <h3><a name="svn_backup_dumps_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/server-side/svn-backup-dumps.py">svn-backup-dumps.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/server-side">tools/server-side</a>)</h3>
+  <p>This script creates (incremental) dump files from a subversion
+     repository on *IX. It is intended for use in cron jobs and
+     post-commit hooks.
+  </p>
+
+
+  <h3><a name="svn_fast_backup"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/server-side/svn-fast-backup">svn-fast-backup</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/server-side">contrib/server-side</a>)</h3>
+  <p>Use rsync snapshots for very fast FSFS repository backup.</p>
+
+
+  <h3><a name="svn_obliterate_py"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/server-side/svn-obliterate.py">svn-obliterate.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/server-side">contrib/server-side</a>)</h3>
+  <p>Whitewash the contents of a Subversion file and its successors.</p>
+
+
+  <h3><a name="svnauthz_validate_c"
+    href="http://svn.collab.net/repos/svn/trunk/tools/server-side/svnauthz-validate.c">svnauthz-validate.c</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/server-side">tools/server-side</a>)</h3>
+  <p>Load and validate an authz file.</p>
+
+
+  <h3><a name="svnmirror_sh"
+    href="http://svn.collab.net/repos/svn/trunk/contrib/server-side/svnmirror.sh">svnmirror.sh</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/server-side">contrib/server-side</a>)</h3>
+  <p>Mirror subversion repositories. This script supports pushing or
+     pulling the changes via ssh and svn tools.
+  </p>
+</div>
+
+
+<div class="h2">
+  <h2><a name="xslt">xslt</a></h2>
+
+
+  <h3><a name="svnindex_xsl"
+    href="http://svn.collab.net/repos/svn/trunk/tools/xslt/svnindex.xsl">svnindex.xsl</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/xslt">tools/xslt</a>)</h3>
+  <p>A sample XML transformation style sheet for displaying the Subversion
+     directory listing that is generated by mod_dav_svn when the
+     "SVNIndexXSLT" directive is used.
+  </p>
+  <p>Related files:
+    <a href="http://svn.collab.net/repos/svn/trunk/tools/xslt/svnindex.css">svnindex.css</a>
+  </p>
+</div>
+
+
+</div>
+</body>
+</html>

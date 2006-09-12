@@ -1,0 +1,88 @@
+# Microsoft Developer Studio Project File - Name="[target.proj_name]" - Package Owner=<4>
+# Microsoft Developer Studio Generated Build File, Format Version 6.00
+# ** DO NOT EDIT **
+
+# TARGTYPE "[target_type]" [target_number]
+
+CFG=[target.proj_name] - [default_platform] [default_config]
+!MESSAGE This is not a valid makefile. To build this project using NMAKE,
+!MESSAGE use the Export Makefile command and run
+!MESSAGE 
+!MESSAGE NMAKE /f "[target.proj_name]_msvc.mak".
+!MESSAGE 
+!MESSAGE You can specify a configuration when running NMAKE
+!MESSAGE by defining the macro CFG on the command line. For example:
+!MESSAGE 
+!MESSAGE NMAKE /f "[target.proj_name]_msvc.mak" CFG="[target.proj_name] - [default_platform] [default_config]"
+!MESSAGE 
+!MESSAGE Possible choices for configuration are:
+!MESSAGE 
+[for platforms][for configs]!MESSAGE "[target.proj_name] - [platforms] [configs.name]" (based on "[target_type]")
+[end][end]!MESSAGE 
+
+# Begin Project
+# PROP AllowPerConfigDependencies 0
+# PROP Scc_ProjName ""
+# PROP Scc_LocalPath ""
+CPP=cl.exe
+RSC=rc.exe
+[for platforms][for configs]
+![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.proj_name] - [platforms] [configs.name]"
+
+# PROP Use_MFC 0
+# PROP Use_Debug_Libraries [is configs.name "Debug"]1[else]0[end]
+[if-any is_external]# PROP Output_Dir "[rootpath]\[target.output_dir]\[configs.name]"
+# PROP Intermediate_Dir "[rootpath]\[target.intermediate_dir]\[configs.name]"
+# PROP Cmd_Line "cmd /c [target.cmd] [configs.lower]"
+# PROP Rebuild_Opt "rebuild"
+# PROP Target_File "[rootpath]\[target.output_dir]\[is configs.name "Debug"][target.debug][else][target.release][end]"
+# PROP Target_Dir "[rootpath]\[target.output_dir]"
+[else]# PROP Output_Dir "[rootpath]\[configs.name]\[target.output_dir]"
+# PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.intermediate_dir]"
+# PROP Target_Dir ""
+[if-any is_utility][else]LIB32=link.exe -lib
+# ADD LIB32 /out:"[rootpath]\[configs.name]\[target.output_dir]\[target.output_name]"
+# ADD CPP /nologo /W3 /FD /Fd"[rootpath]\[configs.name]\[target.output_dir]\[target.output_pdb]" /c [is configs.name "Debug"]/MDd /Gm /Gi /GX /ZI /Od /GZ[else]/MD /GX /O2 /Zi[end][for configs.defines] /D "[configs.defines]"[end][if-any instrument_apr_pools] /D "APR_POOL_DEBUG=[instrument_apr_pools]"[end][for includes] /I "[includes]"[end]
+# ADD RSC /l [if-any is_exe]0x409[else]0x424[end][is configs.name "Debug"] /d "_DEBUG"[end][for includes] /I "[includes]"[end]
+BSC32=bscmake.exe
+LINK32=link.exe
+[if-any is_exe is_dll]# ADD LINK32 /nologo[if-any is_exe] /subsystem:console[end][if-any is_dll] /dll[end] /debug /machine:IX86[for configs.libs] [configs.libs][end][for configs.libdirs] /libpath:"[configs.libdirs]"[end] /out:"[rootpath]\[configs.name]\[target.output_dir]\[target.output_name]"[if-any instrument_purify_quantify] /fixed:no[end]
+[end][end][end][end][end]
+!ENDIF 
+
+# Begin Target
+
+[for platforms][for configs]# Name "[target.proj_name] - [platforms] [configs.name]"
+[end][end][for sources]# Begin Source File
+
+SOURCE=[sources.path][if-any sources.reldir]
+[for platforms][for configs]
+![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.proj_name] - [platforms] [configs.name]"
+
+# PROP Intermediate_Dir "[rootpath]\[configs.name]\[target.intermediate_dir]\[sources.reldir]"
+[end][end]
+!ENDIF
+[end][for sources.user_deps][if-index sources.user_deps first]
+USERDEP__=[else] [end]"[sources.user_deps]"[end][if-any sources.custom_build]
+
+# Begin Custom Build
+
+InputPath=[sources.path]
+
+[sources.custom_target] : $(SOURCE) "$(INTDIR)" "$(OUTDIR)"
+[if-any sources.custom_build]	[sources.custom_build]
+[end]
+# End Custom Build
+
+[end]
+# End Source File
+[end]
+[if-any target.desc]
+# Begin Source File
+
+SOURCE="[rootpath]\build\win32\svn.rc"
+# ADD RSC /d SVN_FILE_NAME="[target.output_name]" /d SVN_FILE_DESCRIPTION="[target.desc]"
+# End Source File
+[end]
+# End Target
+# End Project

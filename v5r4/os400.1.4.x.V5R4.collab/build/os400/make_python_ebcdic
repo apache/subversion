@@ -1,0 +1,74 @@
+#!/bin/sh
+
+# QSH utility script for converting all python test scripts from utf-8 to
+# ebcidc.
+#
+# usage: make_python_ebcdic svn_root_dir
+#        Where svn_root_dir is the root directory of the subversion source
+#        code tree.
+
+ROOTDIR=$1
+
+cd $ROOTDIR
+
+QSH_REDIRECTION_TEXTDATA=Y
+
+convert_file()
+{
+  TARGET=$1
+  if attr $TARGET CCSID > /dev/null
+    then
+      if attr $TARGET CCSID | grep "37" > /dev/null
+        then echo "Python script '$ROOTDIR/$TARGET' already encoded in ebcdic."                                           
+      else
+        echo "Converting script '$ROOTDIR/$TARGET' from utf-8 to ebcdic."
+        cat $TARGET > $TARGET.37.py
+        rm -f $TARGET
+        mv $TARGET.37.py $TARGET
+      fi
+    else
+      echo "Expected Python script '$ROOTDIR/$TARGET' not found!"
+  fi
+}
+
+convert_file as400test.py
+convert_file build/run_tests.py
+convert_file subversion/tests/cmdline/svntest/__init__.py
+convert_file subversion/tests/cmdline/svntest/actions.py
+convert_file subversion/tests/cmdline/svntest/entry.py
+convert_file subversion/tests/cmdline/svntest/main.py
+convert_file subversion/tests/cmdline/svntest/testcase.py
+convert_file subversion/tests/cmdline/svntest/tree.py
+convert_file subversion/tests/cmdline/svntest/wc.py
+convert_file subversion/tests/cmdline/authz_tests.py
+convert_file subversion/tests/cmdline/autoprop_tests.py 
+convert_file subversion/tests/cmdline/basic_tests.py    
+convert_file subversion/tests/cmdline/blame_tests.py    
+convert_file subversion/tests/cmdline/cat_tests.py      
+convert_file subversion/tests/cmdline/commit_tests.py   
+convert_file subversion/tests/cmdline/copy_tests.py     
+convert_file subversion/tests/cmdline/diff_tests.py     
+convert_file subversion/tests/cmdline/ebcdic.py         
+convert_file subversion/tests/cmdline/export_tests.py   
+convert_file subversion/tests/cmdline/externals_tests.py
+convert_file subversion/tests/cmdline/getopt_tests.py   
+convert_file subversion/tests/cmdline/history_tests.py  
+convert_file subversion/tests/cmdline/import_tests.py    
+convert_file subversion/tests/cmdline/lock_tests.py      
+convert_file subversion/tests/cmdline/log_tests.py       
+convert_file subversion/tests/cmdline/merge_tests.py     
+convert_file subversion/tests/cmdline/prop_tests.py      
+convert_file subversion/tests/cmdline/revert_tests.py    
+convert_file subversion/tests/cmdline/schedule_tests.py  
+convert_file subversion/tests/cmdline/special_tests.py   
+convert_file subversion/tests/cmdline/stat_tests.py      
+convert_file subversion/tests/cmdline/svnadmin_tests.py  
+convert_file subversion/tests/cmdline/svnlook_tests.py   
+convert_file subversion/tests/cmdline/svnversion_tests.py
+convert_file subversion/tests/cmdline/switch_tests.py    
+convert_file subversion/tests/cmdline/trans_tests.py     
+convert_file subversion/tests/cmdline/update_tests.py    
+convert_file subversion/tests/cmdline/utf8_tests.py   
+convert_file subversion/tests/libsvn_subr/target-test.py
+
+exit 0

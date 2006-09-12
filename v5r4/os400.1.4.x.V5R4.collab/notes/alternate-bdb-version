@@ -1,0 +1,85 @@
+This file contains brief notes on building Subversion using a version of
+Berkeley DB other than that which APR-util is linked to.
+
+This is not an officially supported configuration, but can occasionally be a
+useful thing to do.
+
+Section 1: Building Berkeley DB
+-------------------------------
+
+It is necessary that the Berkeley DB installation you build not conflict with
+the one that _is_ linked to APR-util, in two ways:
+
+ 1) In the filesystem.
+    If you are installing to a separate prefix, this is not a problem.
+    If, on the other hand, you are preparing a system package for installation
+    under /usr, you must delete or rename several things after running
+    'make install', but before your packaging system gathers the files into
+    the final package:
+    
+    lib: Delete libdb.a, libdb.so and libdb-4.so, which should leave you with
+      only files containing the full 4.X version of Berkeley DB in
+      their names.
+
+    bin: Rename each executable replacing the string "db_" with "db4.X_" in
+      each case.
+
+    include: Move all the include files that are installed into a subdirectory
+      called "db-4.X".  Additionally, create a symlink within this
+      subdirectory called "db4", pointing to ".".  This is because APR-util
+      may well be attempting to include <db4/db.h>.  See the file apu_want.h
+      to know whether this symlink is actually required on your system.
+    
+    docs: Put the installed Berkeley DB documentation for this version
+      whereever seems appropriate for your distribution.
+
+
+  2) In symbol names.
+     A more insidious kind of potential conflict exists where mod_dav_svn is
+     concerned.  Without care, due to the way some dynamic linkers work, when
+     loaded within Apache HTTPD, libsvn_fs_base may dynamically resolve the
+     Berkeley DB symbols via the already-loaded APR-util, rather than the
+     intended version.  Fortunately, Berkeley DB comes ready-equipped with a
+     way to prevent this.  You must configure Berkeley DB with the parameter
+     --with-uniquename=_someuniquestring.  Personally, I suggest _db4X.  This
+     will result in the Berkeley DB symbols being suffixed with this string,
+     avoiding the mentioned problem.
+
+
+Section 2: Building Subversion
+------------------------------
+
+OK, you have a suitable version of Berkeley DB.  Now you need to trick
+Subversion into linking with it, despite the fact that Subversion's build
+system is geared to taking the Berkeley DB linkage options from APR-util.
+
+Ensure that the development packages for the version of Berkeley DB that your
+APR-util is linked to _are_ installed, because we want configure to find a
+working Berkeley DB, so we can just override its choice of installation with
+some Makefile editing later.
+
+Configure Subversion as normal, then edit the Makefile:
+
+Alter the definition of SVN_APRUTIL_LIBS, removing any existing -ldb, -ldb4,
+or -ldb-4.X option, and add *at the beginning*, the appropriate -ldb-4.X
+option for your desired Berkeley DB version.  Add an -L/path/to/libs option if
+needed.
+
+Alter the definition of INCLUDES, adding *at the beginning*, the appropriate
+-I/usr/include/db-4.X option.
+
+Last issue: Despite this meddling, libtool still fetches a -ldb option for the
+version of Berkeley DB linked to APR-util from the APR-util .la file, and uses
+it when linking the command line programs.  Because of the use of
+--with-uniquename above, this is not a problem per se, but it does result, on
+Linux, in the addition of spurious DT_NEEDED dependency records to the
+binaries, such that they claim to be dependent on BOTH the alternate AND
+APR-util versions of Berkeley DB, despite the fact they never invoke code in
+the linked-to-APR-util version.  This can be avoided by setting
+EXTRA_LDFLAGS="-Wl,--as-needed", though you should be aware that this will
+likely strip off several other DT_NEEDED records too, none of which should be
+necessary, but with the complexities of shared library linking, you should
+probably test that this hasn't had any unforeseen side-effects.
+
+Now make.  If all goes well, your newly built Subversion should be using your
+alternate Berkeley DB version.
