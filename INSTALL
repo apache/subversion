@@ -604,7 +604,7 @@ II.   INSTALLATION
       client, the SVNADMIN administration tool, and the SVNLOOK
       reporting tool.
 
-      Note that if you need support for non-english locales you'll have
+      Note that if you need support for non-English locales you'll have
       to set the APR_ICONV_PATH environment variable to the path of the
       iconv directory in the folder that contains the Subversion install.
 
