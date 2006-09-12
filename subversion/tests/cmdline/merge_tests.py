@@ -2754,24 +2754,6 @@ def merge_dir_branches(sbox):
 
 #----------------------------------------------------------------------
 
-# A test helper function implementing the singleton_handler_a API.
-def detect_conflict_files(node, extra_files):
-  """NODE has been discovered an extra file on disk.  Verify that it
-  matches one of the regular expressions in the EXTRA_FILES list.  If
-  it matches, remove the match from the list.  If it doesn't match,
-  raise an exception."""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
-      break
-  else:
-    print "Found unexpected disk object:", node.name
-    node.pprint()
-    raise svntest.tree.SVNTreeUnequal
-
-
 def safe_property_merge(sbox):
   "property merges don't overwrite existing prop-mods"
 
@@ -2889,7 +2871,8 @@ def safe_property_merge(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # expected error string
-                                       detect_conflict_files, extra_files,
+                                       svntest.tree.detect_conflict_files,
+                                       extra_files,
                                        None, None, # no B singleton handler
                                        1, # check props
                                        0) # dry_run
@@ -3016,7 +2999,8 @@ def property_merge_from_branch(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # expected error string
-                                       detect_conflict_files, extra_files,
+                                       svntest.tree.detect_conflict_files,
+                                       extra_files,
                                        None, None, # no B singleton handler
                                        1, # check props
                                        0) # dry_run
@@ -3201,7 +3185,7 @@ def cherry_pick_text_conflict(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # no error expected
-                                       detect_conflict_files,
+                                       svntest.tree.detect_conflict_files,
                                        ["mu\.working",
                                         "mu\.merge-right\.r4",
                                         "mu\.merge-left\.r3"],
@@ -3607,7 +3591,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
                                          expected_status,
                                          expected_skip,
                                          None,
-                                         detect_conflict_files,
+                                         svntest.tree.detect_conflict_files,
                                          ["alpha\.working",
                                           "alpha\.merge-right\.r2",
                                           "alpha\.merge-left\.r0"])

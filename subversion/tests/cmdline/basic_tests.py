@@ -28,19 +28,6 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = wc.StateItem
 
-#----------------------------------------------------------------------
-
-def expect_extra_files(node, extra_files):
-  """singleton handler for expected singletons"""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern))
-      return
-  print "Found unexpected object:", node.name
-  raise svntest.main.SVNTreeUnequal
-
 ######################################################################
 # Tests
 #
@@ -569,13 +556,13 @@ Original appended text for rho
                  'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
   
   # Do the update and check the results in three ways.
-  # All "extra" files are passed to expect_extra_files().
+  # All "extra" files are passed to detect_conflict_files().
   svntest.actions.run_and_verify_update(wc_backup,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None,
-                                        expect_extra_files,
+                                        svntest.tree.detect_conflict_files,
                                         extra_files)
   
   # verify that the extra_files list is now empty.
