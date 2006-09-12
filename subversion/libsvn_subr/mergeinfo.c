@@ -32,62 +32,26 @@
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
 #endif
 
+/* Define a MIN macro if we don't already have one */
+#ifndef MIN
+#define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 /* Attempt to combine two ranges, IN1 and IN2, and put the result in
-   OUTPUT.  Return whether they could be combined. */
+   OUTPUT.  Return whether they could be combined. 
+   Range overlapping detection algorithm from 
+   http://c2.com/cgi-bin/wiki/fullSearch?TestIfDateRangesOverlap
+*/
 static svn_boolean_t
 combine_ranges(svn_merge_range_t **output, svn_merge_range_t *in1,
                svn_merge_range_t *in2)
 {
-  if (in1->start == in2->start)
+  if (in1->start <= in2->end + 1 && in2->start <= in1->end + 1)
     {
-      (*output)->start = in1->start;
+      (*output)->start = MIN(in1->start, in2->start);
       (*output)->end = MAX(in1->end, in2->end);
       return TRUE;
     }
-  /* [1,4] U [5,9] = [1,9] in subversion revisions */
-  else if (in2->start == in1->end
-           || in2->start == in1->end + 1)
-    {
-      (*output)->start = in1->start;
-      (*output)->end = in2->end;
-      return TRUE;
-    }
-  else if (in1->start == in2->end
-           || in1->start == in2->end + 1)
-    {
-      (*output)->start = in2->start;
-      (*output)->end = in1->end;
-      return TRUE;
-    }
-  else if (in1->start <= in2->start
-           && in1->end >= in2->start)
-    {
-      (*output)->start = in1->start;
-      (*output)->end = MAX(in1->end, in2->end);
-      return TRUE;
-    }
-  else if (in2->start <= in1->start
-           && in2->end >= in1->start)
-    {
-      (*output)->start = in2->start;
-      (*output)->end = MAX(in1->end, in2->end);
-      return TRUE;
-    }
-  else if (in1->start >= in2->start
-           && in1->end <= in2->end)
-    {
-      (*output)->start = in2->start;
-      (*output)->end = in2->end;
-      return TRUE;
-    }
-  else if (in2->start >= in1->start
-           && in2->end <= in1->end)
-    {
-      (*output)->start = in1->start;
-      (*output)->end = in1->end;
-      return TRUE;
-    }
-
   return FALSE;
 }
 
