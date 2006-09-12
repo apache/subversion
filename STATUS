@@ -75,5 +75,10 @@ Candidate changes:
     Votes:
       +1: dionisos
 
+  * r21473
+    Fix compile error when APR_HAS_DSO is not defined (e.g. on RISC OS).
+    Votes:
+      +1: dlr
+
 
 Approved changes:
