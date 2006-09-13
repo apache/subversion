@@ -311,7 +311,7 @@
         $result,
         svn_swig_py_mergeinfo_to_dict(*$1,
 				      $descriptor(svn_merge_range_t *),
-				      _global_svn_swig_py_pool));
+				      _global_py_pool));
     if (PyErr_Occurred()) {
 	SWIG_fail;
     }
@@ -325,7 +325,7 @@
         $result,
         svn_swig_py_mergeinfo_hash_to_dict(*$1,
 				           $descriptor(svn_merge_range_t *),
-				        _global_svn_swig_py_pool));
+				        _global_py_pool));
     if (PyErr_Occurred()) {
 	SWIG_fail;
     }
