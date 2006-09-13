@@ -130,7 +130,7 @@ export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_dav/.libs:$ABS_BUILDD
 CLIENT_CMD="$ABS_BUILDDIR/subversion/svn/svn"
 ldd "$CLIENT_CMD" | grep -q 'not found' \
   && fail "Subversion client couldn't be fully linked at run-time"
-"$CLIENT_CMD" --version | grep -q '^[*] ra_dav' \
+"$CLIENT_CMD" --version | egrep -q '^[*] ra_(dav|serf)' \
   || fail "Subversion client couldn't find and/or load ra_dav library"
 
 httpd="$($APXS -q PROGNAME)"

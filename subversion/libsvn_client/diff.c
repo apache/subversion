@@ -934,8 +934,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
   if (older)
     {
-      SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, FALSE,
-                                     adm_access, subpool));
+      SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, mine, FALSE,
+                                      FALSE, adm_access, subpool));
 
       /* Special case:  if a binary file isn't locally modified, and is
          exactly identical to the 'left' side of the merge, then don't
@@ -1130,7 +1130,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
         const svn_wc_entry_t *entry;
         SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
 
-        /* If it's an unversioned file, don't touch it.  If its scheduled
+        /* If it's an unversioned file, don't touch it.  If it's scheduled
            for deletion, then rm removed it from the working copy and the
            user must have recreated it, don't touch it */
         if (!entry || entry->schedule == svn_wc_schedule_delete)
@@ -1215,7 +1215,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
                                   subpool));
       {
         /* Passing NULL for the notify_func and notify_baton because
-         * repos_diff.c:delete_item will do it for us. */
+         * repos_diff.c:delete_entry() will do it for us. */
         err = svn_client__wc_delete(mine, parent_access, merge_b->force,
                                     merge_b->dry_run, 
                                     NULL, NULL,
@@ -1317,7 +1317,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
     case svn_node_dir:
       /* Adding an unversioned directory doesn't destroy data */
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
-      if (! entry || (entry && entry->schedule == svn_wc_schedule_delete))
+      if (! entry || entry->schedule == svn_wc_schedule_delete)
         {
           if (!merge_b->dry_run)
             SVN_ERR(svn_wc_add2(path, adm_access,

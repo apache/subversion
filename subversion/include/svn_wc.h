@@ -100,6 +100,13 @@ const svn_version_t *svn_wc_version(void);
    */
 #define SVN_WC_TRANSLATE_FORCE_COPY              0x00000008
 
+  /** Use a non-wc-local tmp directory for creating output files,
+   * instead of in the working copy admin tmp area which is the default.
+   *
+   * @since New in 1.4.
+   */
+#define SVN_WC_TRANSLATE_USE_GLOBAL_TMP          0x00000010
+
 /** @} */
 
 
@@ -640,7 +647,11 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_failed_lock,
 
   /** Failed to unlock a path. @since New in 1.2. */
-  svn_wc_notify_failed_unlock
+  svn_wc_notify_failed_unlock,
+
+  /** Tried adding a path that already exists. @since New in 1.5. */
+  svn_wc_notify_exists
+
 } svn_wc_notify_action_t;
 
 
@@ -1092,6 +1103,9 @@ svn_error_t *svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * that if the text base is much longer than the working file, every
  * byte of the text base will still be examined.)
  *
+ * If @a use_tmp_base is true, then use the text-base in the local tmp
+ * area, if false use the 'normal' base revision.
+ *
  * If @a filename does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
@@ -1099,6 +1113,21 @@ svn_error_t *svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * If @a filename is unmodified but has a timestamp variation then this
  * function may "repair" @a filename's text-time by setting it to
  * @a filename's last modification time.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_text_modified_p2(svn_boolean_t *modified_p,
+                                     const char *filename,
+                                     svn_boolean_t force_comparison,
+                                     svn_boolean_t use_tmp_base,
+                                     svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *pool);
+
+
+/** Similar to svn_wc_text_modified_p2() but with the use_tmp_base
+ * parameter always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_text_modified_p(svn_boolean_t *modified_p,
                                     const char *filename,
@@ -2505,7 +2534,33 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
- * @since New in 1.2.
+ * If @a allow_unver_obstructions is true, then allow unversioned
+ * obstructions when adding a path.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
+                                       svn_wc_adm_access_t *anchor,
+                                       const char *target,
+                                       svn_boolean_t use_commit_times,
+                                       svn_boolean_t recurse,
+                                       svn_boolean_t allow_unver_obstructions,
+                                       svn_wc_notify_func2_t notify_func,
+                                       void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       const char *diff3_cmd,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       svn_wc_traversal_info_t *ti,
+                                       apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_wc_get_update_editor3() but with the
+ * allow_unver_obstructions parameter always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_get_update_editor2(svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
@@ -2580,7 +2635,33 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
- * @since New in 1.2.
+ * If @a allow_unver_obstructions is true, then allow unversioned
+ * obstructions when adding a path.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
+                                       svn_wc_adm_access_t *anchor,
+                                       const char *target,
+                                       const char *switch_url,
+                                       svn_boolean_t use_commit_times,
+                                       svn_boolean_t recurse,
+                                       svn_boolean_t allow_unver_obstructions,
+                                       svn_wc_notify_func2_t notify_func,
+                                       void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       const char *diff3_cmd,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       svn_wc_traversal_info_t *ti,
+                                       apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_get_switch_editor3() but with the
+ * allow_unver_obstructions parameter always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
@@ -3498,7 +3579,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * overwrite any existing value of the attribute.  If @a changelist is
  * NULL, then remove any 'changelist' attribute in @a path's entry.
  *
- * Note: this metadata is purely a client-side "bookkeeping"
+ * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
  *
  * @since New in 1.5.

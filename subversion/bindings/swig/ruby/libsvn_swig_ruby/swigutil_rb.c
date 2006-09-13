@@ -766,7 +766,12 @@ c2r_hash_with_key_convert(apr_hash_t *hash,
                           void *value_ctx)
 {
   apr_hash_index_t *hi;
-  VALUE r_hash = rb_hash_new();
+  VALUE r_hash;
+
+  if (!hash)
+    return Qnil;
+
+  r_hash = rb_hash_new();
 
   for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi)) {
     const void *key;
@@ -2943,24 +2948,6 @@ svn_swig_rb_setup_txdelta_window_handler_wrapper(VALUE obj,
   rb_ivar_set(obj, rb_id_handler_baton(),
               c2r_swig_type(handler_baton, (void *)"void *"));
   return obj;
-}
-
-svn_error_t *
-svn_swig_rb_invoke_txdelta_window_handler(VALUE window_handler,
-                                          svn_txdelta_window_t *window,
-                                          apr_pool_t *pool)
-{
-  svn_txdelta_window_handler_t handler;
-  svn_txdelta_window_handler_t *handler_p;
-  void *handler_baton;
-
-  handler_p = &handler;
-  r2c_swig_type2(window_handler, "svn_txdelta_window_handler_t",
-                 (void **)handler_p);
-  r2c_swig_type2(rb_funcall(window_handler, rb_id_baton(), 0),
-                 "void *", &handler_baton);
-
-  return handler(window, handler_baton);
 }
 
 svn_error_t *

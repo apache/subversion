@@ -34,7 +34,17 @@ test_path_is_child(const char **msg,
                    apr_pool_t *pool)
 {
   int i, j;
-#define NUM_TEST_PATHS 9
+
+/* The path checking code is platform specific, so we shouldn't run 
+   the Windows path handling testcases on non-Windows platforms.
+   */
+#if defined(WIN32)
+#define NUM_TEST_PATHS 16
+#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS
+#else
+#define NUM_TEST_PATHS 16
+#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS - 7
+#endif
 
   static const char * const paths[NUM_TEST_PATHS] = { 
     "/foo/bar",
@@ -45,20 +55,35 @@ test_path_is_child(const char **msg,
     SVN_EMPTY_PATH,
     "foo",
     ".foo",
-    "/"
+    "/",
+    "H:/foo/bar",
+    "H:/foo/baz",
+    "H:/foo/bar/baz",
+    "H:/flu/blar/blaz",
+    "H:/foo/bar/baz/bing/boom",
+    "H:/",
+    "H:/iota"
     };
   
   static const char * const remainders[NUM_TEST_PATHS][NUM_TEST_PATHS] = {
-    { 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, "foo", ".foo", 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { "foo/bar", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
-      "foo/bar/baz/bing/boom", 0, 0, 0, 0 }
+      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "bing/boom", 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, "foo/bar", "foo/baz", "foo/bar/baz", 
+      "flu/blar/blaz", "foo/bar/baz/bing/boom", 0, "iota" },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
   };
   
   *msg = "test svn_path_is_child";
@@ -66,9 +91,9 @@ test_path_is_child(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < NUM_TEST_PATHS; i++)
+  for (i = 0; i < RUN_NUM_TEST_PATHS; i++)
     {
-      for (j = 0; j < NUM_TEST_PATHS; j++)
+      for (j = 0; j < RUN_NUM_TEST_PATHS; j++)
         {
           const char *remainder;
 
@@ -112,6 +137,11 @@ test_path_split(const char **msg,
     { "../foo",          "..",            "foo" },
     { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,   SVN_EMPTY_PATH },
     { "/flu\\b/\\blarg", "/flu\\b",       "\\blarg" },
+    { "/",               "/",             "/" },
+#if defined(WIN32)
+    { "X:/",             "X:/",           "X:/" },
+    { "X:/foo",          "X:/",           "foo" },
+#endif /* WIN32 */
   };
   
   *msg = "test svn_path_split";
@@ -453,6 +483,15 @@ test_join(const char **msg,
     { "abc", SVN_EMPTY_PATH, "abc" },
     { SVN_EMPTY_PATH, "/abc", "/abc" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH },
+#if defined(WIN32)
+    { "X:/",SVN_EMPTY_PATH, "X:/" },
+    { "X:/","abc", "X:/abc" },
+    { "X:/", "/def", "/def" },
+    { "X:/abc", "/d", "/d" },
+    { "X:/abc", "/", "/" },
+    { "X:/abc", "X:/", "X:/" },
+    { "X:/abc", "X:/def", "X:/def" },
+#endif /* WIN32 */
   };
 
   *msg = "test svn_path_join(_many)";
@@ -549,7 +588,11 @@ test_basename(const char **msg,
     { "/b/a", "a" },
     { "/b/a", "a" },
     { "/", "/" },
-    { SVN_EMPTY_PATH, SVN_EMPTY_PATH }
+    { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
+#if defined(WIN32)
+    { "X:/", "X:/" },
+    { "X:/abc", "abc" },
+#endif /* WIN32 */
   };
 
   *msg = "test svn_path_basename";
@@ -677,6 +720,9 @@ test_canonicalize(const char **msg,
     { "//hst/foo",            "//hst/foo" },
     { "//hst",                "/hst" },
     { "//hst/./",             "/hst" },
+    { "X:/foo",               "X:/foo" },
+    { "X:/",                  "X:/" },
+    { "X:foo",                "X:foo" },
 #endif /* WIN32 or Cygwin */
     { NULL, NULL }
   };
@@ -715,6 +761,10 @@ test_remove_component(const char **msg,
     { "foo/bar",              "foo" },
     { "/foo/bar",             "/foo" },
     { "/foo",                 "/" },
+#if defined(WIN32)
+    { "X:/foo/bar",           "X:/foo" },
+    { "X:/foo",               "X:/" },
+#endif /* WIN32 */
     { NULL, NULL }
   };
   int i;
@@ -744,6 +794,58 @@ test_remove_component(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_is_root(const char **msg,
+             svn_boolean_t msg_only,
+             svn_test_opts_t *opts,
+             apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Paths to test. */
+  static const char * const paths[] = { 
+    "/foo/bar",
+    "/foo",
+    "/",
+#if defined(WIN32)
+    "X:/foo",
+    "X:/",
+#endif /* WIN32 */
+    "",
+  };
+
+  /* Expected results of the tests. */
+  static const svn_boolean_t retvals[] = {
+    FALSE,
+    FALSE,
+    TRUE,
+    FALSE,
+#if defined(WIN32)
+    TRUE,
+    FALSE,
+#endif /* WIN32 */
+  };
+
+  *msg = "test svn_path_is_root";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
+    {
+      svn_boolean_t retval;
+
+      retval = svn_path_is_root(paths[i], strlen(paths[i]), pool);
+      if (retvals[i] != retval)
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_is_root (%s) returned %s instead of %s",
+           paths[i], retval ? "TRUE" : "FALSE", retvals[i] ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -763,5 +865,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_decompose),
     SVN_TEST_PASS(test_canonicalize),
     SVN_TEST_PASS(test_remove_component),
+    SVN_TEST_PASS(test_is_root),
     SVN_TEST_NULL
   };

@@ -197,6 +197,10 @@
 
 (require 'easymenu)
 
+(eval-when-compile (require 'dired))
+(eval-when-compile (require 'ediff-util))
+(eval-when-compile (require 'elp))
+
 (condition-case nil
     (progn
       (require 'diff-mode))
@@ -226,6 +230,15 @@ of the *svn-log-edit* buffer."
   "*Use log-edit-mode as base for svn-log-edit-mode
 This variable takes effect only when psvn.el is being loaded."
   :type 'boolean
+  :group 'psvn)
+(defcustom svn-log-edit-paragraph-start
+  "$\\|[ \t]*$\\|##.*$\\|\\*.*:.*$\\|[ \t]+(.+):.*$"
+  "*Value used for `paragraph-start' in *svn-log-edit* buffer."
+  :type 'regexp
+  :group 'psvn)
+(defcustom svn-log-edit-paragraph-separate "$\\|##.*$"
+  "*Value used for `paragraph-separate' in *svn-log-edit* buffer."
+  :type 'regexp
   :group 'psvn)
 (defcustom svn-status-hide-unknown nil
   "*Hide unknown files in `svn-status-buffer-name' buffer.
@@ -760,11 +773,13 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
 (put 'svn-global-keymap 'risky-local-variable t)
 (when (not svn-global-keymap)
   (setq svn-global-keymap (make-sparse-keymap))
+  (define-key svn-global-keymap (kbd "v") 'svn-status-version)
   (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
-  (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
+  (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
-  (define-key svn-global-keymap (kbd "b") 'svn-status-blame)
+  (define-key svn-global-keymap (kbd "f =") 'svn-file-show-svn-diff)
+  (define-key svn-global-keymap (kbd "f b") 'svn-status-blame)
   (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
   (define-key svn-global-keymap (kbd "S") 'svn-status-switch-to-status-buffer)
   (define-key svn-global-keymap (kbd "o") 'svn-status-pop-to-status-buffer))
@@ -775,7 +790,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
 
 (when (not svn-status-diff-mode-map)
   (setq svn-status-diff-mode-map (copy-keymap diff-mode-shared-map))
-  (define-key svn-status-diff-mode-map [?g] 'svn-status-diff-update)
+  (define-key svn-status-diff-mode-map [?g] 'revert-buffer)
   (define-key svn-status-diff-mode-map [?s] 'svn-status-pop-to-status-buffer)
   (define-key svn-status-diff-mode-map [?w] 'svn-status-diff-save-current-defun-as-kill))
 
@@ -971,7 +986,9 @@ for example: '(\"revert\" \"file1\"\)
 ARGLIST is flattened and any every nil value is discarded.
 
 If the variable `svn-status-edit-svn-command' is non-nil then the user
-can edit ARGLIST before running svn."
+can edit ARGLIST before running svn.
+
+The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
   (setq arglist (svn-status-flatten-list arglist))
   (if (eq (process-status "svn") nil)
       (progn
@@ -985,6 +1002,7 @@ can edit ARGLIST before running svn."
           (when (eq svn-status-edit-svn-command t)
             (svn-status-toggle-edit-cmd-flag t))
           (message "svn-run %s: %S" cmdtype arglist))
+        (run-hooks 'svn-pre-run-hook)
         (unless (eq mode-line-process 'svn-status-mode-line-process)
           (setq svn-pre-run-mode-line-process mode-line-process)
           (setq mode-line-process 'svn-status-mode-line-process))
@@ -1185,10 +1203,10 @@ can edit ARGLIST before running svn."
         ;(svn-status-show-process-buffer)
         (let ((passwd (read-passwd
                        (format "Enter svn password for %s: " (match-string 1)))))
-          (svn-process-send-string (concat passwd "\n") t)))
+          (svn-process-send-string-and-newline passwd t)))
       (when (looking-at "Username: ")
         (let ((user-name (read-string "Username for svn operation: ")))
-          (svn-process-send-string (concat user-name "\n")))))))
+          (svn-process-send-string-and-newline user-name))))))
 
 (defun svn-parse-rev-num (str)
   (if (and str (stringp str)
@@ -1638,6 +1656,7 @@ A and B must be line-info's."
      :style toggle :selected svn-status-hide-unknown]
     ["Hide Unmodified" svn-status-toggle-hide-unmodified
      :style toggle :selected svn-status-hide-unmodified]
+    ["Show Client versions" svn-status-version t]
     ))
 
 
@@ -2949,6 +2968,15 @@ See `svn-status-marked-files' for what counts as selected."
       (set-buffer "*svn-process*")
       (svn-log-view-mode))))
 
+(defun svn-status-version ()
+  "Show the version numbers for the svn command line client and for psvn.el"
+  (interactive)
+  (svn-run nil t 'version "--version")
+  (svn-status-show-process-output 'info t)
+  (with-current-buffer svn-status-last-output-buffer-name
+    (goto-char (point-min))
+    (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision))))
+
 (defun svn-status-info ()
   "Run `svn info' on all selected files.
 See `svn-status-marked-files' for what counts as selected."
@@ -2976,6 +3004,15 @@ If ARG then prompt for revision to diff against."
   (interactive "P")
   (svn-status-ensure-cursor-on-file)
   (svn-status-show-svn-diff-internal (list (svn-status-get-line-information)) t
+                                     (if arg :ask :auto)))
+
+(defun svn-file-show-svn-diff (arg)
+  "Run `svn diff' on the current file.
+If there is a newer revision in the repository, the diff is done against HEAD,
+otherwise compare the working copy with BASE.
+If ARG then prompt for revision to diff against."
+  (interactive "P")
+  (svn-status-show-svn-diff-internal (list (svn-status-make-line-info buffer-file-name)) nil
                                      (if arg :ask :auto)))
 
 (defun svn-status-show-svn-diff-for-marked-files (arg)
@@ -3065,9 +3102,10 @@ Commands:
 "
   (let ((diff-mode-shared-map (copy-keymap svn-status-diff-mode-map))
         major-mode mode-name)
-    (diff-mode)))
+    (diff-mode)
+    (set (make-local-variable 'revert-buffer-function) 'svn-status-diff-update)))
 
-(defun svn-status-diff-update ()
+(defun svn-status-diff-update (arg noconfirm)
   "Rerun the last svn diff command and update the *svn-diff* buffer."
   (interactive)
   (svn-status-save-some-buffers)
@@ -3237,8 +3275,8 @@ user can enter a new file name, or an existing directory: this is used as the ar
   "Actually run svn mv or svn cp.
 This is just to prevent duplication in `svn-status-prompt-and-act-on-files'"
   (if force
-      (svn-run nil t (intern command) command "--force" "--" original-name dest)
-    (svn-run nil t (intern command) command "--" original-name dest))
+      (svn-run nil t (intern command) command "--force" "--" original destination)
+    (svn-run nil t (intern command) command "--" original destination))
 ;;;TODO: use something like the following instead of calling svn-status-update
 ;;;      at the end of svn-status-mv-cp.
 ;;   (let ((output (svn-status-parse-ar-output))
@@ -3597,6 +3635,17 @@ Note: use C-q C-j to send a line termination character."
     (set-marker (process-mark (get-process "svn")) (point)))
   (process-send-string "svn" string))
 
+(defun svn-process-send-string-and-newline (string &optional send-passwd)
+  "Send a string to the running svn process.
+Just call `svn-process-send-string' with STRING and an end of line termination.
+When called with a prefix argument, read the data from user as password."
+  (interactive (let* ((use-passwd current-prefix-arg)
+                      (s (if use-passwd
+                             (read-passwd "Send secret line to svn process: ")
+                           (read-string "Send line to svn process: "))))
+                 (list s use-passwd)))
+  (svn-process-send-string (concat string "\n") send-passwd))
+
 ;; --------------------------------------------------------------------------------
 ;; Property List stuff
 ;; --------------------------------------------------------------------------------
@@ -3930,6 +3979,10 @@ Commands:
 
 (defvar svn-log-edit-mode-menu) ;really defined with `easy-menu-define' below.
 
+(defun svn-log-edit-common-setup ()
+  (set (make-local-variable 'paragraph-start) svn-log-edit-paragraph-start)
+  (set (make-local-variable 'paragraph-separate) svn-log-edit-paragraph-separate))
+
 (if svn-log-edit-use-log-edit-mode
     (define-derived-mode svn-log-edit-mode log-edit-mode "svn-log-edit"
       "Wrapper around `log-edit-mode' for psvn.el"
@@ -3938,6 +3991,7 @@ Commands:
       (set (make-local-variable 'log-edit-callback) 'svn-log-edit-done)
       (set (make-local-variable 'log-edit-listfun) 'svn-log-edit-files-to-commit)
       (set (make-local-variable 'log-edit-initial-files) (log-edit-files))
+      (svn-log-edit-common-setup)
       (message "Press %s when you are done editing."
                (substitute-command-keys "\\[log-edit-done]"))
       )
@@ -3952,6 +4006,7 @@ Commands:
     (setq major-mode 'svn-log-edit-mode)
     (setq mode-name "svn-log-edit")
     (setq svn-log-edit-update-log-entry nil)
+    (svn-log-edit-common-setup)
     (run-hooks 'svn-log-edit-mode-hook)))
 
 (when (not svn-log-edit-mode-map)
@@ -4196,6 +4251,8 @@ When called with a prefix argument, ask the user for the revision."
 
 (when (not svn-info-mode-map)
   (setq svn-info-mode-map (make-sparse-keymap))
+  (define-key svn-info-mode-map [?s] 'svn-status-pop-to-status-buffer)
+  (define-key svn-info-mode-map (kbd "RET") 'svn-info-show-context)
   (define-key svn-info-mode-map [?q] 'bury-buffer))
 
 (defun svn-info-mode ()
@@ -4204,7 +4261,26 @@ When called with a prefix argument, ask the user for the revision."
   (kill-all-local-variables)
   (use-local-map svn-info-mode-map)
   (setq major-mode 'svn-info-mode)
-  (setq mode-name "svn-info"))
+  (setq mode-name "svn-info")
+  (toggle-read-only 1))
+
+(defun svn-info-show-context ()
+  "Show the context for a line in the info buffer.
+Currently is the output from the svn update command known."
+  (interactive)
+  (cond ((save-excursion
+           (goto-char (point-max))
+           (forward-line -1)
+           (beginning-of-line)
+           (looking-at "Updated to revision"))
+         ;; svn-info contains info from an svn update
+         (let ((file-name (buffer-substring-no-properties (+ 3 (line-beginning-position)) (line-end-position)))
+               (pos))
+           (with-current-buffer svn-status-buffer-name
+             (setq pos (svn-status-get-file-name-buffer-position file-name)))
+           (when pos
+             (pop-to-buffer svn-status-buffer-name)
+             (goto-char pos))))))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-process-mode
@@ -4214,13 +4290,26 @@ When called with a prefix argument, ask the user for the revision."
 
 (when (not svn-process-mode-map)
   (setq svn-process-mode-map (make-sparse-keymap))
+  (define-key svn-process-mode-map (kbd "RET") 'svn-process-send-string-and-newline)
+  (define-key svn-process-mode-map [?s] 'svn-process-send-string)
   (define-key svn-process-mode-map [?q] 'bury-buffer))
 
+(easy-menu-define svn-process-mode-menu svn-process-mode-map
+"'svn-process-mode' menu"
+                  '("SvnProcess"
+                    ["Send line to process" svn-process-send-string-and-newline t]
+                    ["Send raw string to process" svn-process-send-string t]
+                    ["Bury process buffer" bury-buffer t]))
+
 (defun svn-process-mode ()
-  "Major Mode to view process output from svn."
+  "Major Mode to view process output from svn.
+
+You can send a new line terminated string to the process via \\[svn-process-send-string-and-newline]
+You can send raw data to the process via \\[svn-process-send-string]."
   (interactive)
   (kill-all-local-variables)
   (use-local-map svn-process-mode-map)
+  (easy-menu-add svn-log-view-mode-menu)
   (setq major-mode 'svn-process-mode)
   (setq mode-name "svn-process"))
 

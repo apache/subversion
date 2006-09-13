@@ -810,8 +810,8 @@ typedef struct svn_delta_editor_t
    */
   svn_error_t *(*add_file)(const char *path,
                            void *parent_baton,
-                           const char *copy_path,
-                           svn_revnum_t copy_revision,
+                           const char *copyfrom_path,
+                           svn_revnum_t copyfrom_revision,
                            apr_pool_t *file_pool,
                            void **file_baton);
 

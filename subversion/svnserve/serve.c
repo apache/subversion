@@ -2029,13 +2029,12 @@ static svn_error_t *replay(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     err = svn_repos_replay2(root, b->fs_path->data, low_water_mark,
                             send_deltas, editor, edit_baton,
                             authz_check_access_cb_func(b), b, pool);
-  if (! err)
-    SVN_CMD_ERR(editor->close_edit(edit_baton, pool));
 
   if (err)
     svn_error_clear(editor->abort_edit(edit_baton, pool));
   SVN_CMD_ERR(err);
 
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "finish-replay", ""));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
 
   return SVN_NO_ERROR;

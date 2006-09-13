@@ -1787,7 +1787,16 @@ class SvnClientTest < Test::Unit::TestCase
                       repos_uri, info.revision)
     end
   end
-  
+
+  def test_add_providers
+    ctx = Svn::Client::Context.new
+    assert_nothing_raised do
+      ctx.add_ssl_client_cert_file_provider
+      ctx.add_ssl_client_cert_pw_file_provider
+      ctx.add_ssl_server_trust_file_provider
+    end
+  end
+
   def test_not_new
     assert_raise(NoMethodError) do
       Svn::Client::CommitItem.new
@@ -1807,5 +1816,33 @@ class SvnClientTest < Test::Unit::TestCase
     assert_raise(Svn::Error::Cancelled) do
       ctx.commit(@wc_path)
     end
+  end
+
+  def test_set_config
+    log = "sample log"
+    ctx = make_context(log)
+    options = {
+      "groups" => {"collabnet" => "svn.collab.net"},
+      "collabnet" => {
+        "http-proxy-host" => "proxy",
+        "http-proxy-port" => "8080",
+      },
+    }
+    servers_config_file = File.join(@config_path,
+                                    Svn::Core::CONFIG_CATEGORY_SERVERS)
+    File.open(servers_config_file, "w") do |file|
+      options.each do |section, values|
+        file.puts("[#{section}]")
+        values.each do |key, value|
+          file.puts("#{key} = #{value}")
+        end
+      end
+    end
+    config = Svn::Core::Config.config(@config_path)
+    assert_nil(ctx.config)
+    assert_equal(options, config[Svn::Core::CONFIG_CATEGORY_SERVERS].to_hash)
+    ctx.config = config
+    assert_equal(options,
+                 ctx.config[Svn::Core::CONFIG_CATEGORY_SERVERS].to_hash)
   end
 end

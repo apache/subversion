@@ -35,7 +35,7 @@ Blanket commit access:
            jaa   Jani Averbach <jaa@iki.fi>
     julianfoad   Julian Foad <julianfoad@btopenworld.com>
      ringstrom   Tobias Ringström <tobias@ringstrom.mine.nu>
-       jpieper   Josh Pieper <jpieper@andrew.cmu.edu>
+       jpieper   Josh Pieper <jjp@pobox.com>
   jszakmeister   John Szakmeister <john@szakmeister.net>
       dionisos   Erik Hülsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
@@ -48,6 +48,7 @@ Blanket commit access:
         djames   David James <djames@collab.net>
        malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
         pburba   Paul Burba <PaulB@softlanding.com>
+       glasser   David Glasser <glasser@mit.edu>
 
 Commit access for specific areas:
 
@@ -95,9 +96,10 @@ Commit access for specific areas:
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
        mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
-           lgo   Lieven Govaerts <lgo@mobsol.be>             (svntest)
+           lgo   Lieven Govaerts <lgo@mobsol.be>             (tests)
        madanus   Madan U S <madan@collab.net>                (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
+        bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
 
   Translation of message files:
 

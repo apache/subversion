@@ -2,7 +2,7 @@
  * ra_svn.h :  private declarations for the ra_svn module
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -35,6 +35,9 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
                                                apr_pool_t *pool,
                                                void *baton);
 
+/* The size of our per-connection read and write buffers. */
+#define SVN_RA_SVN__READBUF_SIZE 4096
+#define SVN_RA_SVN__WRITEBUF_SIZE 4096
 
 /* This structure is opaque to the server.  The client pokes at the
  * first few fields during setup and cleanup. */
@@ -43,10 +46,10 @@ struct svn_ra_svn_conn_st {
   apr_file_t *in_file;
   apr_file_t *out_file;
   apr_proc_t *proc;       /* Used by client.c when sock is NULL */
-  char read_buf[4096];
+  char read_buf[SVN_RA_SVN__READBUF_SIZE];
   char *read_ptr;
   char *read_end;
-  char write_buf[4096];
+  char write_buf[SVN_RA_SVN__WRITEBUF_SIZE];
   int write_pos;
   const char *uuid;
   const char *repos_root;
@@ -92,7 +95,8 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
                                        const svn_delta_editor_t *editor,
                                        void *edit_baton,
-                                       svn_boolean_t *aborted);
+                                       svn_boolean_t *aborted,
+                                       svn_boolean_t for_replay);
 
 /* CRAM-MD5 client implementation. */
 svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -121,6 +125,10 @@ svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
                                        const char *mech, const char *mech_arg,
                                        svn_boolean_t compat);
+
+/* Initialize the SASL library. */
+svn_error_t *svn_ra_svn__sasl_init(void);
+
 
 #ifdef __cplusplus
 }

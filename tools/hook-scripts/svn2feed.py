@@ -1,12 +1,25 @@
 #!/usr/bin/env python
+# ====================================================================
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+# This software consists of voluntary contributions made by many
+# individuals.  For exact contribution history, see the revision
+# history and logs, available at http://subversion.tigris.org/.
+# ====================================================================
 
-"""Usage: svn2rss.py [OPTION...] REPOS-PATH
+"""Usage: svn2feed.py [OPTION...] REPOS-PATH
 
-Generate an RSS 2.0 feed file containing commit information for the
-Subversion repository located at REPOS-PATH.  Once the maximum number
-of items is reached, older elements are removed.  The item title is
-the revision number, and the item description contains the author,
-date, log messages and changed paths.
+Generate an RSS 2.0 or Atom 1.0 feed file containing commit
+information for the Subversion repository located at REPOS-PATH.  Once
+the maximum number of items is reached, older elements are removed.
+The item title is the revision number, and the item description
+contains the author, date, log messages and changed paths.
 
 Options:
 
@@ -14,14 +27,17 @@ Options:
 
  -F, --format=FORMAT    Required option.  FORMAT must be one of:
                             'rss'  (RSS 2.0)
+                            'atom' (Atom 1.0)
                         to select the appropriate feed format.
 
- -f, --feed-file=PATH   Store the feed in the file located at PATH, which
-                        will be created if it does not exist, or overwritten if
-                        it does.  If not provided, the script will store the
-                        feed in the current working directory, in a file named
-                        REPOS_NAME.rss (where REPOS_NAME is the basename
-                        of the REPOS_PATH command-line argument).
+ -f, --feed-file=PATH   Store the feed in the file located at PATH, which will
+                        be created if it does not exist, or overwritten if it
+                        does.  If not provided, the script will store the feed
+                        in the current working directory, in a file named
+                        REPOS_NAME.rss or REPOS_NAME.atom (where REPOS_NAME is
+                        the basename of the REPOS_PATH command-line argument,
+                        and the file extension depends on the selected
+                        format).
 
  -r, --revision=X[:Y]   Subversion revision (or revision range) to generate
                         info for.  If not provided, info for the single
@@ -40,6 +56,19 @@ Options:
                         svnlook must be on the PATH.
 """
 
+# TODO:
+# --item-url should support arbitrary formatting of the revision number,
+#   to be useful with web viewers other than ViewVC.
+# Rather more than intended is being cached in the pickle file. Instead of
+#   only old items being drawn from the pickle, all the global feed metadata
+#   is actually set only on initial feed creation, and thereafter simply
+#   re-used from the pickle each time.
+
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 import sys
 
 # Python 2.3 is required for datetime
@@ -52,6 +81,7 @@ import os
 import popen2
 import cPickle as pickle
 import datetime
+import time
 
 def usage_and_exit(errmsg=None):
     """Print a usage message, plus an ERRMSG (if provided), then exit.
@@ -74,7 +104,7 @@ def check_url(url, opt):
     if not (url.startswith('https://') \
             or url.startswith('http://') \
             or url.startswith('file://')):
-      usage_and_exit("svn2rss.py: Invalid url '%s' is specified for " \
+      usage_and_exit("svn2feed.py: Invalid url '%s' is specified for " \
                      "'%s' option" % (url, opt))
 
 
@@ -110,18 +140,26 @@ class Svn2Feed:
         child_in.close()
         child_err.close()
 
-        desc = ("\nAuthor: %sDate: %sRevision: %s\nLog: %sModified: \n%s"
-                % (info_lines[0], info_lines[1], revision, info_lines[3],
-                   changed_data))
+        desc = ("\nRevision: %s\nLog: %sModified: \n%s"
+                % (revision, info_lines[3], changed_data))
 
         item_dict = {
+            'author': info_lines[0].strip('\n'),
             'title': "Revision %s" % revision,
             'link': self.item_url and "%s?rev=%s" % (self.item_url, revision),
-            'date': datetime.datetime.now(),
+            'date': self._format_updated_ts(info_lines[1]),
             'description': desc,
             }
 
         return item_dict
+
+    def _format_updated_ts(self, revision_ts):
+
+        # Get "2006-08-10 20:17:08" from 
+        # "2006-07-28 20:17:18 +0530 (Fri, 28 Jul 2006)
+        date = revision_ts[0:19]
+        epoch = time.mktime(time.strptime(date, "%Y-%m-%d %H:%M:%S"))
+        return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(epoch))
 
 
 class Svn2RSS(Svn2Feed):
@@ -132,9 +170,13 @@ class Svn2RSS(Svn2Feed):
         try:
             import PyRSS2Gen
         except ImportError:
-            sys.stderr.write("Error: Required PyRSS2Gen module not found.\n"
-                    "PyRSS2Gen can be downloaded from:\n"
-                    "http://www.dalkescientific.com/Python/PyRSS2Gen.html\n\n")
+            sys.stderr.write("""
+Error: Required PyRSS2Gen module not found.  You can download the PyRSS2Gen
+module from:
+
+    http://www.dalkescientific.com/Python/PyRSS2Gen.html
+
+""")
             sys.exit(1)
         self.PyRSS2Gen = PyRSS2Gen
 
@@ -174,12 +216,128 @@ class Svn2RSS(Svn2Feed):
         info = self._get_item_dict(revision)
 
         rss_item = self.PyRSS2Gen.RSSItem(
+                author = info['author'],
                 title = info['title'],
                 link = info['link'],
                 description = info['description'],
                 guid = self.PyRSS2Gen.Guid(info['link']),
                 pubDate = info['date'])
         return rss_item
+
+
+class Svn2Atom(Svn2Feed):
+    def __init__(self, svn_path, repos_path, item_url, feed_file,
+                 max_items, feed_url):
+        Svn2Feed.__init__(self, svn_path, repos_path, item_url, feed_file,
+                          max_items, feed_url)
+        from xml.dom import getDOMImplementation
+        self.dom_impl = getDOMImplementation()
+
+        self.pickle_file = self.feed_file + ".pickle"
+        if os.path.exists(self.pickle_file):
+            self.document = pickle.load(open(self.pickle_file, "r"))
+            self.feed = self.document.getElementsByTagName('feed')[0]
+        else:
+            self._init_atom_document()
+
+    def get_default_file_extension():
+        return ".atom"
+    get_default_file_extension = staticmethod(get_default_file_extension)
+
+    def add_revision_item(self, revision):
+        item = self._make_atom_item(revision)
+
+        total = 0
+        for childNode in self.feed.childNodes:
+            if childNode.nodeName == 'entry':
+                if total == 0:
+                    self.feed.insertBefore(item, childNode)
+                    total += 1
+                total += 1
+                if total > self.max_items:
+                    self.feed.removeChild(childNode)
+        if total == 0:
+            self.feed.appendChild(item)
+
+    def write_output(self):
+        s = pickle.dumps(self.document)
+        f = open(self.pickle_file, "w")
+        f.write(s)
+        f.close()
+
+        f = open(self.feed_file, "w")
+        f.write(self.document.toxml())
+        f.close()
+
+    def _make_atom_item(self, revision):
+        info = self._get_item_dict(revision)
+
+        doc = self.document
+        entry = doc.createElement("entry")
+
+        id = doc.createElement("id")
+        entry.appendChild(id)
+        id.appendChild(doc.createTextNode(info['link']))
+
+        title = doc.createElement("title")
+        entry.appendChild(title)
+        title.appendChild(doc.createTextNode(info['title']))
+
+        updated = doc.createElement("updated")
+        entry.appendChild(updated)
+        updated.appendChild(doc.createTextNode(info['date']))
+
+        link = doc.createElement("link")
+        entry.appendChild(link)
+        link.setAttribute("href", info['link'])
+
+        summary = doc.createElement("summary")
+        entry.appendChild(summary)
+        summary.appendChild(doc.createTextNode(info['description']))
+
+        author = doc.createElement("author")
+        entry.appendChild(author)
+        aname = doc.createElement("name")
+        author.appendChild(aname)
+        aname.appendChild(doc.createTextNode(info['author']))
+
+        return entry
+
+    def _init_atom_document(self):
+        doc = self.document = self.dom_impl.createDocument(None, None, None)
+        feed = self.feed = doc.createElement("feed")
+        doc.appendChild(feed)
+
+        feed.setAttribute("xmlns", "http://www.w3.org/2005/Atom")
+
+        title = doc.createElement("title")
+        feed.appendChild(title)
+        title.appendChild(doc.createTextNode(self.feed_title))
+
+        id = doc.createElement("id")
+        feed.appendChild(id)
+        id.appendChild(doc.createTextNode(self.feed_url))
+
+        updated = doc.createElement("updated")
+        feed.appendChild(updated)
+        now = datetime.datetime.now()
+        updated.appendChild(doc.createTextNode(self._format_date(now)))
+
+        link = doc.createElement("link")
+        feed.appendChild(link)
+        link.setAttribute("href", self.feed_url)
+
+        author = doc.createElement("author")
+        feed.appendChild(author)
+        aname = doc.createElement("name")
+        author.appendChild(aname)
+        aname.appendChild(doc.createTextNode("subversion"))
+
+    def _format_date(self, dt):
+        """ input date must be in GMT """
+        return ("%04d-%02d-%02dT%02d:%02d:%02d.%02dZ"
+                % (dt.year, dt.month, dt.day, dt.hour, dt.minute,
+                   dt.second, dt.microsecond))
 
 
 def main():
@@ -206,10 +364,10 @@ def main():
     # Now deal with the options.
     max_items = 20
     commit_rev = svn_path = None
-    item_url = feed_url = ""
+    item_url = feed_url = None
     feed_file = None
     feedcls = None
-    feed_classes = { 'rss': Svn2RSS }
+    feed_classes = { 'rss': Svn2RSS, 'atom': Svn2Atom }
 
     for opt, arg in opts:
         if opt in ("-h", "--help"):
@@ -229,7 +387,8 @@ def main():
             except ValueError, msg:
                usage_and_exit("Invalid value '%s' for --max-items." % (arg))
             if max_items < 1:
-               usage_and_exit("Value for --max-items must be a positive integer.")
+               usage_and_exit("Value for --max-items must be a positive "
+                              "integer.")
         elif opt in ("-U", "--feed-url"):
             feed_url = arg
             check_url(feed_url, opt)
@@ -241,6 +400,12 @@ def main():
 
     if feedcls is None:
         usage_and_exit("Option -F [--format] is required.")
+
+    if item_url is None:
+        usage_and_exit("Option -u [--item-url] is required.")
+
+    if feed_url is None:
+        usage_and_exit("Option -U [--feed-url] is required.")
 
     if commit_rev is None:
         svnlook_cmd = 'svnlook'
@@ -272,7 +437,7 @@ def main():
             else:
                 raise ValueError()
         except ValueError, msg:
-            usage_and_exit("svn2rss.py: Invalid value '%s' for --revision." \
+            usage_and_exit("svn2feed.py: Invalid value '%s' for --revision." \
                            % (commit_rev))
 
     if feed_file is None:

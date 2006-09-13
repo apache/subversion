@@ -27,9 +27,9 @@
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_props.h"
+#include "svn_xml.h"
 
 #include "dav_svn.h"
-#include "svn_xml.h"
 
 
 /* #################################################################
@@ -60,24 +60,25 @@
 */
 
 /* send a response to the client for this baton */
-static svn_error_t *send_response(const dav_svn_repos *repos,
-                                  svn_fs_root_t *root,
-                                  const char *path,
-                                  svn_boolean_t is_dir,
-                                  ap_filter_t *output,
-                                  apr_bucket_brigade *bb,
-                                  apr_pool_t *pool)
+static svn_error_t *
+send_response(const dav_svn_repos *repos,
+              svn_fs_root_t *root,
+              const char *path,
+              svn_boolean_t is_dir,
+              ap_filter_t *output,
+              apr_bucket_brigade *bb,
+              apr_pool_t *pool)
 {
   const char *href;
   const char *vsn_url;
   apr_status_t status;
   svn_revnum_t rev_to_use;
 
-  href = dav_svn_build_uri(repos, DAV_SVN_BUILD_URI_PUBLIC,
-                           SVN_IGNORED_REVNUM, path, 0 /* add_href */, pool);
-  rev_to_use = dav_svn_get_safe_cr(root, path, pool);
-  vsn_url = dav_svn_build_uri(repos, DAV_SVN_BUILD_URI_VERSION,
-                              rev_to_use, path, 0 /* add_href */, pool);
+  href = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_PUBLIC,
+                            SVN_IGNORED_REVNUM, path, 0 /* add_href */, pool);
+  rev_to_use = dav_svn__get_safe_cr(root, path, pool);
+  vsn_url = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_VERSION,
+                               rev_to_use, path, 0 /* add_href */, pool);
   status = ap_fputstrs(output, bb,
                        "<D:response>" DEBUG_CR
                        "<D:href>", 
@@ -103,12 +104,13 @@ static svn_error_t *send_response(const dav_svn_repos *repos,
 }
 
 
-static svn_error_t *do_resources(const dav_svn_repos *repos,
-                                 svn_fs_root_t *root, 
-                                 svn_revnum_t revision, 
-                                 ap_filter_t *output,
-                                 apr_bucket_brigade *bb,
-                                 apr_pool_t *pool)
+static svn_error_t *
+do_resources(const dav_svn_repos *repos,
+             svn_fs_root_t *root, 
+             svn_revnum_t revision, 
+             ap_filter_t *output,
+             apr_bucket_brigade *bb,
+             apr_pool_t *pool)
 {
   apr_hash_t *changes;
   apr_hash_t *sent = apr_hash_make(pool);
@@ -198,13 +200,14 @@ static svn_error_t *do_resources(const dav_svn_repos *repos,
    PUBLIC FUNCTIONS
 */
 
-dav_error * dav_svn__merge_response(ap_filter_t *output,
-                                    const dav_svn_repos *repos,
-                                    svn_revnum_t new_rev,
-                                    char *post_commit_err,
-                                    apr_xml_elem *prop_elem,
-                                    svn_boolean_t disable_merge_response,
-                                    apr_pool_t *pool)
+dav_error *
+dav_svn__merge_response(ap_filter_t *output,
+                        const dav_svn_repos *repos,
+                        svn_revnum_t new_rev,
+                        char *post_commit_err,
+                        apr_xml_elem *prop_elem,
+                        svn_boolean_t disable_merge_response,
+                        apr_pool_t *pool)
 {
   apr_bucket_brigade *bb;
   svn_fs_root_t *root;
@@ -218,10 +221,10 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   serr = svn_fs_revision_root(&root, repos->fs, new_rev, pool);
   if (serr != NULL)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not open the FS root for the "
-                                 "revision just committed.",
-                                 repos->pool);
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Could not open the FS root for the "
+                                  "revision just committed.",
+                                  repos->pool);
     }
 
   bb = apr_brigade_create(pool, output->c->bucket_alloc);
@@ -229,8 +232,8 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
   /* prep some strings */
   
   /* the HREF for the baseline is actually the VCC */
-  vcc = dav_svn_build_uri(repos, DAV_SVN_BUILD_URI_VCC, SVN_IGNORED_REVNUM,
-                          NULL, 0 /* add_href */, pool);
+  vcc = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_VCC, SVN_IGNORED_REVNUM,
+                           NULL, 0 /* add_href */, pool);
 
   /* the version-name of the baseline is the revision number */
   rev = apr_psprintf(pool, "%ld", new_rev);
@@ -258,17 +261,17 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
                               SVN_PROP_REVISION_DATE, pool);
   if (serr != NULL)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not get date of newest revision",
-                                 repos->pool); 
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Could not get date of newest revision",
+                                  repos->pool); 
     }
   serr = svn_fs_revision_prop(&creator_displayname, repos->fs, new_rev,
                               SVN_PROP_REVISION_AUTHOR, pool);
   if (serr != NULL)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not get author of newest revision",
-                                 repos->pool); 
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Could not get author of newest revision",
+                                  repos->pool); 
     }
 
 
@@ -337,9 +340,9 @@ dav_error * dav_svn__merge_response(ap_filter_t *output,
       serr = do_resources(repos, root, new_rev, output, bb, pool);
       if (serr != NULL)
         {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Error constructing resource list.",
-                                     repos->pool);
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Error constructing resource list.",
+                                      repos->pool);
         }
     }
 

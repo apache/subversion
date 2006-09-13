@@ -16,11 +16,10 @@
  * ====================================================================
  */
 
-
-
 #include <apr_pools.h>
 #include <apr_strings.h>
 #include <apr_xml.h>
+
 #include <mod_dav.h>
 
 #include "svn_repos.h"
@@ -29,7 +28,7 @@
 #include "svn_path.h"
 #include "svn_dav.h"
 
-#include "dav_svn.h"
+#include "../dav_svn.h"
 
 
 struct log_receiver_baton
@@ -51,7 +50,8 @@ struct log_receiver_baton
    element and set LRB->needs_header to zero.  Else do nothing.
    This is basically duplicated in file_revs.c.  Consider factoring if
    duplicating again. */
-static svn_error_t * maybe_send_header(struct log_receiver_baton *lrb)
+static svn_error_t *
+maybe_send_header(struct log_receiver_baton *lrb)
 {
   if (lrb->needs_header)
     {
@@ -64,15 +64,17 @@ static svn_error_t * maybe_send_header(struct log_receiver_baton *lrb)
   return SVN_NO_ERROR;
 }
 
+
 /* This implements `svn_log_message_receiver_t'.
    BATON is a `struct log_receiver_baton *'.  */
-static svn_error_t * log_receiver(void *baton,
-                                  apr_hash_t *changed_paths,
-                                  svn_revnum_t rev,
-                                  const char *author,
-                                  const char *date,
-                                  const char *msg,
-                                  apr_pool_t *pool)
+static svn_error_t *
+log_receiver(void *baton,
+             apr_hash_t *changed_paths,
+             svn_revnum_t rev,
+             const char *author,
+             const char *date,
+             const char *msg,
+             apr_pool_t *pool)
 {
   struct log_receiver_baton *lrb = baton;
 
@@ -193,18 +195,17 @@ static svn_error_t * log_receiver(void *baton,
 }
 
 
-
-
-dav_error * dav_svn__log_report(const dav_resource *resource,
-                                const apr_xml_doc *doc,
-                                ap_filter_t *output)
+dav_error *
+dav_svn__log_report(const dav_resource *resource,
+                    const apr_xml_doc *doc,
+                    ap_filter_t *output)
 {
   svn_error_t *serr;
   apr_status_t apr_err;
   dav_error *derr = NULL;
   apr_xml_elem *child;
   struct log_receiver_baton lrb;
-  dav_svn_authz_read_baton arb;
+  dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *action;
   const char *target = NULL;
@@ -220,7 +221,7 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
     = apr_array_make(resource->pool, 0, sizeof(const char *));
 
   /* Sanity check. */
-  ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
       return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
@@ -284,32 +285,32 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
                              limit,
                              discover_changed_paths,
                              strict_node_history,
-                             dav_svn_authz_read_func(&arb),
+                             dav_svn__authz_read_func(&arb),
                              &arb,
                              log_receiver,
                              &lrb,
                              resource->pool);
   if (serr)
     {
-      derr = dav_svn_convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                 resource->pool);
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                  resource->pool);
       goto cleanup;
     }
   
   if ((serr = maybe_send_header(&lrb)))
     {
-      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error beginning REPORT response.",
-                                 resource->pool);
+      derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Error beginning REPORT response.",
+                                  resource->pool);
       goto cleanup;
     }
     
   if ((serr = dav_svn__send_xml(lrb.bb, lrb.output, "</S:log-report>"
                                 DEBUG_CR)))
     {
-      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error ending REPORT response.",
-                                 resource->pool);
+      derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Error ending REPORT response.",
+                                  resource->pool);
       goto cleanup;
     }
 
@@ -335,9 +336,9 @@ dav_error * dav_svn__log_report(const dav_resource *resource,
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
   if (((apr_err = ap_fflush(output, lrb.bb))) && (! derr))
-    derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error flushing brigade.",
-                               resource->pool);
+    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error flushing brigade.",
+                                resource->pool);
   return derr;
 }

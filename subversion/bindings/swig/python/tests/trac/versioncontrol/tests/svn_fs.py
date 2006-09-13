@@ -17,6 +17,7 @@ import shutil
 import sys
 import tempfile
 import unittest
+from urllib import pathname2url
 
 try:
     from cStringIO import StringIO
@@ -30,6 +31,15 @@ from trac.versioncontrol import Changeset, Node
 from trac.versioncontrol.svn_fs import SubversionRepository
 
 REPOS_PATH = os.path.join(tempfile.gettempdir(), 'trac-svnrepos')
+REPOS_URL = pathname2url(REPOS_PATH)
+if REPOS_URL.startswith("///"):
+  # Don't add extra slashes if they're already present.
+  # (This is important for Windows compatibility).
+  REPOS_URL = "file:" + REPOS_URL
+else:
+  # If the URL simply starts with '/', we need to add two
+  # extra slashes to make it a valid 'file://' URL
+  REPOS_URL = "file://" + REPOS_URL
 
 
 class SubversionRepositoryTestSetup(TestSetup):

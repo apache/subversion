@@ -67,11 +67,12 @@ typedef struct svn_fs_t svn_fs_t;
 /** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
 
-/** Don't allow svndiff1 to be used in the on-disk storage 
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.4.
  * 
  *  @since New in 1.4. 
  */
-#define SVN_FS_CONFIG_NO_SVNDIFF1                       "no-svndiff1"
+#define SVN_FS_CONFIG_PRE_1_4_COMPATIBLE        "pre-1.4-compatible"
 /** @} */
 
 
@@ -142,9 +143,11 @@ void svn_fs_set_warning_func(svn_fs_t *fs,
  *   SVN_FS_TYPE_BDB   Berkeley-DB implementation
  *   SVN_FS_TYPE_FSFS  Native-filesystem implementation
  *
- * Otherwise, the BDB filesystem type is assumed.  Once the filesystem
- * is created, its type will be recorded so that other functions will
- * know how to operate on it.
+ * If @a fs_config is @c NULL or does not contain a value for
+ * @c SVN_FS_CONFIG_FS_TYPE then the default filesystem type will be used.
+ * This will typically be BDB for version 1.1 and FSFS for later versions,
+ * though the caller should not rely upon any particular default if they
+ * wish to ensure that a filesystem of a specific type is created.
  *
  * @since New in 1.1.
  */
@@ -543,6 +546,15 @@ svn_string_t *svn_fs_unparse_id(const svn_fs_id_t *id,
  * transaction you already have open.  You can also list all the
  * transactions currently present in the database.
  *
+ * You may assign properties to transactions; these are name/value
+ * pairs.  When you commit a transaction, all of its properties become
+ * unversioned revision properties of the new revision.  (There is one
+ * exception: the svn:date property will be automatically set on new
+ * transactions to the date that the transaction was created, and will
+ * be overwritten when the transaction is committed by the current
+ * time; changes to a transaction's svn:date property will not affect
+ * its committed value.)
+ * 
  * Transaction names are guaranteed to contain only letters (upper-
  * and lower-case), digits, `-', and `.', from the ASCII character
  * set.

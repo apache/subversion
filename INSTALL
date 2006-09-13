@@ -36,13 +36,8 @@ I.    BUILD REQUIREMENTS
       ==================
 
       Subversion depends on a number of third party tools and libraries.
-      If you are bootstrapping from a tarball, zipfile or an RPM then
-      you will already have everything you require to get a Subversion
-      client.  So long as you don't plan to build a new client from the
-      latest source or to build a Subversion server, you can go directly
-      to section II.A.
-
-      Otherwise, you need to read the following so that you can determine
+      Some of them are only required to run a Subversion server; others
+      are necessary just for a Subversion client.  This section explains
       what other tools and libraries will be required so that Subversion
       can be built with the set of features you want.
 
@@ -51,6 +46,28 @@ I.    BUILD REQUIREMENTS
       tools, so if you are in a real hurry to get building, you can skip
       straight to section II.  If you want to gather the pieces you will
       need before starting out, however, you should read the following.
+
+      If you're just installing a Subversion client, the Subversion
+      team has created a package containing the minimal prerequisite
+      libraries (Apache Portable Runtime, Neon, and Zlib) called the
+      "dependency package" tarball or zipfile.  You should be able to
+      find it at the same place that you downloaded the Subversion
+      tarball itself from. (Note that this is new as of Subversion
+      1.4.0; previous releases packaged the dependencies in the same
+      tarball as Subversion itself.)  If you don't have these
+      libraries installed already, you can simply unpack the
+      dependency package "on top of" the Subversion package; for
+      example, if you are using a .tar.gz bundle on Unix, you could
+      type:
+
+          $ tar xzvf subversion-1.x.x.tar.gz
+          $ tar xzvf subversion-deps-1.x.x.tar.gz
+          $ cd subversion-1.x.x
+
+      This will place 'apr', 'apr-util', 'neon', and 'zlib'
+      directories directly into your unpacked Subversion distribution,
+      where they will be automatically configured and built by
+      Subversion's build process.
 
       Note: Because previous builds of Subversion may have installed older
       versions of these libraries, you may want to run some of the cleanup
@@ -61,12 +78,14 @@ I.    BUILD REQUIREMENTS
 
       Whenever you want to build any part of Subversion, you need the
       Apache Portable Runtime (APR) and the APR Utility (APR-util)
-      libraries. These are included in Subversion source tarball releases -
-      if you are building from a source tarball, and wish to use the
-      included versions, you may skip ahead to the next requirement.
+      libraries. These are included in the Subversion dependency package -
+      if you are building from a source tarball and wish to use the versions
+      of APR and APR-util included there, just unpack the dependency package
+      and skip ahead to the next requirement.
 
-      If you are not building from a tarball, you will need to get these
-      yourself. Visit this page, and be sure to download the 0.9.x version:
+      If you are not building from a tarball with the dependency
+      package, you will need to get these yourself. Visit this page,
+      and be sure to download the 0.9.x version:
 
           http://apr.apache.org/download.cgi
 
@@ -153,9 +172,11 @@ I.    BUILD REQUIREMENTS
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet via a WebDAV based protocol.  If you
       want to use Subversion to connect to a server over ra_dav (via a
-      http:// or https:// url), you will require Neon.
+      http:// or https:// url), you will require Neon.  (See also section
+      I.11 for information about "serf", an experimental alternative to
+      Neon for accessing servers over WebDAV.)
 
-      The source code is included with the latest Subversion tarball,
+      The source code is included with the Subversion dependencies package,
       and it can also be obtained from:
 
           http://www.webdav.org/neon/neon-0.24.7.tar.gz
@@ -164,12 +185,13 @@ I.    BUILD REQUIREMENTS
 
       Building Neon inside the subversion build:
 
-      The Neon library source code can be installed in "./neon" if you
+      The Neon library source code can be placed in "./neon" if you
       want Subversion to build it as part of the Subversion build process.
 
       Unpack the archive using tar/gunzip.  Rename the resulting
       directory from ./neon-0.XX.Y to just "./neon", inside the top
-      level of your Subversion source tree.
+      level of your Subversion source tree.  (This is what unpacking the
+      Subversion dependencies package does, too.)
 
       Using Neon as an external library:
 
@@ -288,7 +310,32 @@ I.    BUILD REQUIREMENTS
       version if MASM is not compatible with MSVC 6).
 
 
-      11. Libraries for our libraries
+      11. serf
+
+      serf is a library for HTTP and WebDAV which is an alternative to
+      Neon for accessing Subversion repositories over http:// and
+      https:// URLs.  serf is designed as an asynchronous library
+      which can take advantage of HTTP pipelining, so ra_serf may be
+      more efficient than the Neon-based ra_dav.  The serf library can
+      be found at:
+
+          http://code.google.com/p/serf/
+
+      In order to use ra_serf instead of ra_dav, you must install
+      ra_serf, and run Subversion's ./configure with the arguments
+      --with-serf and --without-neon. (The latter isn't required if
+      you don't actually have Neon.)  If serf is installed in a
+      non-standard place, you should use
+      
+          --with-serf=/path/to/serf/install
+      
+      instead.
+
+      For more information on serf and Subversion's ra_serf, see the
+      file subversion/libsvn_ra_serf/README.
+
+
+      12. Libraries for our libraries
 
       Some of the libraries that Subversion depends on themselves have
       optional dependencies that can add features to what Subversion
@@ -310,7 +357,8 @@ I.    BUILD REQUIREMENTS
       "--with-libs=/path/to/lib" in addition.  In particular, on Red Hat
       (but not Fedora Core) it is necessary to specify
       "--with-libs=/usr/kerberos" for OpenSSL to be found.  The zlib library
-      is included in Neon by default, but you can also specify a path to the
+      is included in the Subversion dependencies package, but if you are compiling
+      Neon from a different source you can also specify a path to the
       library using "--with-libs".  Consult the Neon documentation for more
       information on how to use these parameters and versions of libraries
       you need.
@@ -350,7 +398,7 @@ I.    BUILD REQUIREMENTS
       The Windows build scripts will compile the ZLib sources.
 
 
-      11. Documentation
+      13. Documentation
 
       The primary documentation for Subversion is the free book
       "Version Control with Subversion", a.k.a. "The Subversion Book",
@@ -415,7 +463,10 @@ II.   INSTALLATION
 
       These instructions assume you have already installed Subversion
       and checked out a working copy of Subversion's own code --
-      either the latest /trunk code, or some branch or tag.
+      either the latest /trunk code, or some branch or tag.  You also
+      need to have already installed whatever prerequisites that
+      version of Subversion requires (if you haven't, the ./configure
+      step should complain).
 
       You can discard the directory created by the tarball; you're
       about to build the latest, greatest Subversion client.  This is
@@ -461,11 +512,6 @@ II.   INSTALLATION
       the ./configure script.  This enables debugging symbols in your
       binaries (among other things) and most Subversion developers use it.)
 
-      Unlike the pre-packaged tarball (which includes apr, apr-util,
-      and neon subdirectories), ./configure will fail if it cannot
-      find apr, apr-util, and neon libraries already installed on your
-      system.
-
       Since the resulting binary depends on shared libraries, the
       destination library directory must be identified in your
       operating system's library search path. That is in either
@@ -482,9 +528,10 @@ II.   INSTALLATION
       It probably means that the dynamic loader/linker can't find all
       of the libsvn_* libraries.
 
-      Note that if you commonly build with the -jN option to make, the
-      make step above may fail, because we don't ensure that third
-      party libraries in our source tree will finish building before
+      Note that if you commonly build with the -jN option to make and
+      have unpacked a dependency tarball into your checkout, the make
+      step above may fail, because we don't ensure that third party
+      libraries in our source tree will finish building before
       subversion itself.  If you want to use -jN, use the following
       instead:
 
@@ -557,6 +604,14 @@ II.   INSTALLATION
       client, the SVNADMIN administration tool, and the SVNLOOK
       reporting tool.
 
+      Note that if you need support for non-English locales you'll have
+      to set the APR_ICONV_PATH environment variable to the path of the
+      iconv directory in the folder that contains the Subversion install.
+
+      You may also want to add the bin directory in the Subversion folder
+      to your PATH environment variable so as to not have to use the full
+      path when running Subversion commands.
+
       To test the installation, open a DOS box (run either "cmd" or
       "command" from the Start menu's "Run..." menu option), change to
       the directory you installed the executables into, and run:
@@ -569,61 +624,79 @@ II.   INSTALLATION
       If using a self-extracting .exe file, just run it instead of
       unzipping it, to install Subversion.
 
-
   E.  Building the Latest Source under Windows
       ----------------------------------------
 
   E.1 Prerequisites
 
-      * Visual Studio 6 and service pack. It can be built with Visual Studio
-        7 (aka Visual Studio.NET aka Visual Studio.NET 2002) but these
-        instructions assume VS6.
-      * A recent Windows SDK, the one provided with Visual Studio 6 is
-        too old. You only need the 'Core SDK'. You can get it from MSDN
-        if you have it or from
+      * Visual Studio 6 and service pack. It can be built with later versions
+        of Visual Studio (Visual Studio.NET 2002, 2003, 2005 and Visual C++
+        Express 2005) but these instructions assume VS6.
+      * A recent Windows SDK if you are using Visual Studio 6.
+        You can get it from MSDN if you have it or from
         http://www.microsoft.com/msdownload/platformsdk/sdkupdate/ if you
         don't.
       * Python 2.2 or higher, downloaded from http://www.python.org/ which is
         used to generate the project files.
       * Perl 5.8 or higher from http://www.activestate.com/
-      * Awk, from http://cm.bell-labs.com/cm/cs/who/bwk/awk95.exe
-        This is needed to compile Apache or APR.  Note that this is the
-        actual awk program, not an installer - just rename it to awk.exe
-        and it is ready to use.
+      * Awk (from http://cm.bell-labs.com/cm/cs/who/bwk/awk95.exe) is
+        needed to compile Apache or APR.  Note that this is the actual awk
+        program, not an installer - just rename it to awk.exe and it is
+        ready to use.
       * Neon 0.24.7 or higher, downloaded from
         http://www.webdav.org/neon/neon-0.24.7.tar.gz which is required
         for building the client components.  Neon is included in the zip file
         distribution.
-      * Berkeley DB is required for support for local server components,
-        version 4.3.27 is available from
-        http://subversion.tigris.org/servlets/ProjectDocumentList as
-        db-4.3.27-win32.zip. For more information see Section I.5.
-      * Apache 2 source, downloaded from
-        http://httpd.apache.org/download.cgi, these instructions assume
-        version 2.0.54.  Only needed for building the server dso modules.
-      * Apache 2 msi install file, also from
-        http://httpd.apache.org/download.cgi (required for running the
-        tests).  Only needed for testing the server dso modules.
-      * Apache apr, apr-util, and apr-iconv libraries, version 0.9.5.
-        Included in both the Subversion ZIP file and the Apache 2 source
-        tarball.  If you are building from a Subversion checkout and have
-        not downloaded Apache 2, then get these 3 libraries from
-        http://www.apache.org/dist/apr/
-      * ZLib 1.2 or higher sources from http://www.zlib.org/
-      * Openssl 0.9.7f or higher obtained from
-        http://www.openssl.org/source/openssl-0.9.7f.tar.gz
-      * A modified version of GNU libintl, called svn-win32-libintl.zip,
-        for displaying localized messages. Available in
-        http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=2627
-      * GNU gettext for generating message catalog (.mo) files from
-        message translations. Get the latest binaries from
-        http://gnuwin32.sourceforge.net/. You'll need the binaries
-        (gettext-0.14.1-bin.zip) and dependencies (gettext-0.14.1-dep.zip).
+      * Apache apr, apr-util, and apr-iconv libraries, version 0.9.12.
+        Included in both the Subversion dependencies ZIP file and the
+        Apache 2.058 source zip.  If you are building from a Subversion
+        checkout and have not downloaded Apache 2, then get these 3
+        libraries from http://www.apache.org/dist/apr/.  Note that
+        the 1.x APR releases are not yet functional with Subversion --
+        see the note on '[Optional] Apache 2 source' below.
+      * ZLib 1.2 or higher is required and is included in the Subversion
+        dependencies zip file or can be obtained from http://www.zlib.org
       * Either a Subversion client binary from http://subversion.tigris.org/ to
         do the initial checkout of the Subversion source or the zip file
         source distribution. See the section "Bootstrapping from a Zip or
         Installer File under Windows" above for more.
       * A means of unpacking the files, e.g., WinZIP or similar.
+
+      Additional Options
+
+      * [Optional] Apache 2 source, downloaded from
+        http://httpd.apache.org/download.cgi, these instructions assume
+        version 2.0.58.  Only needed for building the server dso modules.
+        Note that although Subversion will compile against Apache 2.2.2
+        and APR 1.2.7, there is a bug that causes runtime failures with
+        Subversion on Windows.  It will hopefully be fixed in the
+        Apache 2.2.3 and APR 1.2.8 release.  The patch is available at:
+        http://www.mail-archive.com/dev@apr.apache.org/msg15242.html if
+        you want to patch and build APR yourself.
+      * [Optional] Apache 2 msi install file, also from
+        http://httpd.apache.org/download.cgi (required for running the
+        tests).  Only needed for testing the server dso modules and if
+        you are using Visual Studio 6.
+        Note that if you are not using Visual Studio 6 (and you want to
+        run and test the server modules) then you must rebuild Apache
+        from source -- do not use the stock MSI since mixing C runtime
+        libraries is not supported.
+      * [Optional] Berkeley DB for backend support of the server
+        components -- versions 4.3.27 and 4.4.20 are available from
+        http://subversion.tigris.org/servlets/ProjectDocumentList as
+        db-4.3.27-win32.zip and db-4.4.20-win32.zip.
+        For more information see Section I.5.
+      * [Optional] Openssl 0.9.7f or higher can be obtained from
+        http://www.openssl.org/source/openssl-0.9.7f.tar.gz
+      * [Optional] A modified version of GNU libintl, called
+        svn-win32-libintl.zip, can be used for displaying localized
+        messages. Available at:
+        http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=2627
+      * [Optional] GNU gettext for generating message catalog (.mo)
+        files from message translations. You can get the latest
+        binaries from http://gnuwin32.sourceforge.net/. You'll need the
+        binaries (gettext-0.14.1-bin.zip) and dependencies
+        (gettext-0.14.1-dep.zip).
       * [Optional] An assembler, e.g., MASM32 from http://www.mas32.com/
         or nasm which is available from
         http://www.kernel.org/pub/software/devel/nasm/binaries/win32/
@@ -631,8 +704,8 @@ II.   INSTALLATION
    E.2 Notes
 
       The Neon library supports secure connections with OpenSSL and
-      on-the-wire compression with zlib. If you want to use those
-      features, you should pass the options "--with-zlib" and
+      on-the-wire compression with zlib. If you want to use the
+      secure connections feature, you should pass the option
       "--with-openssl" to the gen-make.py script. See Section I.11 for
       more details.
 
@@ -663,10 +736,11 @@ II.   INSTALLATION
 
       * Install Visual Studio 6. You either have to tell the installer to
         register environment variables or run VCVARS32.BAT before building
-        anything.
-      * Install a recent Windows Core SDK
-      * Register the SDK with Visual Studio 6. This is a quote from the
-        Microsoft February 2003 SDK documentation:
+        anything.  If you are using a newer Visual Studio, use the
+        'Visual Studio 200x Command Prompt' on the Start menu.
+      * Install and register a recent Windows Core SDK if you are using
+        Visual Studio 6. This is a quote from the Microsoft February 2003
+        SDK documentation:
 
        "To register the SDK bin, include, and library directories with
         Microsoft Visual Studio® version 6.0 and Visual Studio .NET,
@@ -687,13 +761,16 @@ II.   INSTALLATION
       * Copy AWK (awk95.exe) to awk.exe (e.g. SVN\awk\awk.exe) and add
         the directory containing it (e.g. SVN\awk) to the path.
       * Install Apache 2 using the msi file if you are going to test the
-        server dso modules.
+        server dso modules and are using Visual Studio 6.  You must build
+        and install it from source if you are not using Visual Studio 6 and
+        want to build and/or test the server modules.
       * If you checked out Subversion from the repository then extract neon
         into SVN\src-trunk\neon, the zip file source distribution includes
         neon.
-      * Extract the Berkeley DB files into SVN\src-trunk\db4-win32. It's a
-        good idea to add SVN\src-trunk\db4-win32\bin to your PATH, so that
-        Subversion can find the Berkeley DB DLLs.
+      * If you want BDB backend support, extract the Berkeley DB files
+        into SVN\src-trunk\db4-win32. It's a good idea to add
+        SVN\src-trunk\db4-win32\bin to your PATH, so that Subversion can find
+        the Berkeley DB DLLs.
 
         [NOTE: This binary package of Berkeley DB is provided for
             convenience only. Please don't address questions about
@@ -701,13 +778,13 @@ II.   INSTALLATION
             to the project mailing list.]
 
         If you build Berkeley DB from the source, you will have to copy
-        the file db-4.3.27\build_win32\db.h to
+        the file db-x.x.x\build_win32\db.h to
         SVN\src-trunk\db4-win32\include, and all the import libraries to
         SVN\src-trunk\db4-win32\lib. Again, the DLLs should be somewhere in
         your path.
 
-      * Extract Apache source into SVN\httpd-2.0.54 if you wish to build the
-        server dso modules.
+      * If you want to build the server modules, extract Apache source into
+        SVN\httpd-2.x.x.
       * If you are building from a checkout of Subversion, and you are NOT
         building Apache, then you will need the APR libraries.  Depending
         on how you got your version of APR, either:
@@ -717,14 +794,14 @@ II.   INSTALLATION
           - Extract the apr, apr-util and apr-iconv directories from the
             srclib folder in the Apache httpd source into SVN\apr,
             SVN\apr-util, and SVN\apr-iconv respectively.
-      * Extract the ZLib sources into SVN\zlib.
-      * Extract openssl into SVN\openssl-0.9.7f
-      * Extract svn-win32-libintl.zip into SVN\svn-win32-libintl.
-        Add SVN\svn-win32-libintl\inc to your INCLUDE path and
-        SVN\svn-win32-libintl\lib to your LIB path environment variables.
-        You can add these on the command line as shown below.
-      * Extract gettext-0.14.1-bin.zip and gettext-0.14.1-dep.zip into
-        SVN\gettext-0.14.1-bin. Add SVN\gettext-0.14.1-bin\bin to your path.
+      * Extract the ZLib sources into SVN\zlib if you are not using the zlib
+        included in the dependencies zip file.
+      * If you want secure connection (https) client support, extract openssl
+        into SVN\openssl-x.x.x
+      * If you want localized message support, extract svn-win32-libintl.zip
+        into SVN\svn-win32-libintl and extract gettext-x.x.x-bin.zip and
+        gettext-x.x.x-dep.zip into SVN\gettext-x.x.x-bin.
+        Add SVN\gettext-x.x.x-bin\bin to your path.
       * [Optional] Extract MASM32 (only the ML.EXE and ML.ERR files) into
         SVN\asm (or extract nasm into SVN\asm) and put it in your path.
 
@@ -733,8 +810,8 @@ II.   INSTALLATION
     To build the binaries either follow the instructions here or use
     build\win32\vc6-build.bat.in after editing it's default paths to match
     yours and saving it as vc6-build.bat.  The vc6-build.bat does a full build
-    so it requires Apache 2 source and if the tests are to be run the
-    Apache 2 install.
+    using all options so it requires Apache 2 source and the other optional
+    components.
 
     Start in the SVN directory you created.
 
@@ -748,13 +825,11 @@ II.   INSTALLATION
     C:>set ASMDIR=C:\SVN\asm
     C:>set SDKINC=C:\Program Files\Microsoft SDK\include
     C:>set SDKLIB=C:\Program Files\Microsoft SDK\lib
-    C:>set LIBINTLINC=C:\SVN\svn-win32-libintl\inc
-    C:>set LIBINTLLIB=C:\SVN\svn-win32-libintl\lib
     C:>set GETTEXTBIN=C:\SVN\gettext-0.14.1-bin\bin
     C:>PATH=%PATH%;%DRIVE%:\SVN\src-%DIR%\db4-win32;%ASMDIR%;
             %PYTHONDIR%;%AWKDIR%;%GETTEXTBIN%
-    C:>set INCLUDE=%SDKINC%;%INCLUDE%;%LIBINTLINC%
-    C:>set LIB=%SDKLIB%;%LIB%;%LIBINTLLIB%
+    C:>set INCLUDE=%SDKINC%;%INCLUDE%
+    C:>set LIB=%SDKLIB%;%LIB%
 
     OpenSSL
 
@@ -777,12 +852,12 @@ II.   INSTALLATION
     Apache and Subversion will be running incompatible versions of apr.
 
     C:>cd src-%DIR%
-    C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.54
+    C:>python gen-make.py -t dsp --with-httpd=..\httpd-2.0.58
        --with-berkeley-db=db4-win32 --with-openssl=..\openssl-0.9.7f
-       --with-zlib=..\zlib --enable-nls --enable-bdb-in-apr-util
+       --with-zlib=..\zlib --with-libintl=..\svn-win32-libintl
     C:>cd ..
     C:>set APACHEDIR=C:\Program Files\Apache Group\Apache2
-    C:>msdev httpd-2.0.54\apache.dsw /MAKE "BuildBin - Win32 Release"
+    C:>msdev httpd-2.0.58\apache.dsw /MAKE "BuildBin - Win32 Release"
 
     Subversion
 
@@ -794,9 +869,6 @@ II.   INSTALLATION
         apr files yourself you will have to tell the generator where to find
         the APR libraries; the options are --with-apr, --with-apr-util and
         --with-apr-iconv.
-      * You can skip setting the LIBINTLINC and LIBINTLLIB variables, and
-        add "--with-libintl=..\svn-win32-libintl" to the gen-make.py command
-        line instead.
       * If you would like a debug build substitute Debug for Release in
         the msdev commands.
       * There have been rumors that Subversion on Win32 can be built
@@ -811,15 +883,16 @@ II.   INSTALLATION
         directories must be in the Tools/Options/Directories settings (if you
         followed the 'Register the SDK with Visual Studio 6' instructions
         above this has been done for you).
-      * If you are using Visual Studio .NET change -t dsw into -t vcproj on
-        the gen-make.py command.  In this case you will also have to
-        distribute the C runtime dll with the binaries.  Also, since
-        Apache/APR do not provide .vcproj files, you will need to convert
-        the Apache/APR .dsp files to .vcproj files with Visual Studio.
-        Just open the Apache .dsw file and answer 'Yes To All' when the
-        conversion dialog pops up, or you can open the individual .dsp files
-        and convert them one at a time.  The Apache/APR projects required by
-        Subversion are: apr-util\libaprutil.dsp, apr\libapr.dsp,
+      * If you are using Visual Studio .NET change -t dsw into -t vcproj and
+        add the --vsnet-version=200x option on the gen-make.py command.
+        In this case you will also have to distribute the C runtime dll with
+        the binaries.  Also, since Apache/APR do not provide .vcproj files,
+        you will need to convert the Apache/APR .dsp files to .vcproj files
+        with Visual Studio before building -- just open the Apache .dsw file
+        and answer 'Yes To All' when the conversion dialog pops up, or you
+        can open the individual .dsp files and convert them one at a time.
+        The Apache/APR projects required by Subversion are:
+        apr-util\libaprutil.dsp, apr\libapr.dsp,
         apr-iconv\libapriconv.dsp, apr-util\xml\expat\lib\xml.dsp,
         apr-util\uri\gen_uri_delims.dsp (for APR 0.9.x),
         apr-iconv\ccs\libapriconv_ccs_modules.dsp, and
@@ -835,17 +908,21 @@ II.   INSTALLATION
 
     C:>python gen-make.py -t dsp --with-berkeley-db=db4-win32
         --with-openssl=..\openssl-0.9.7f --with-zlib=..\zlib
-        --enable-bdb-in-apr-util --with-libintl=..\svn-win32-libintl
+        --with-libintl=..\svn-win32-libintl
 
     Then build subversion:
 
     C:>msdev subversion_msvc.dsw /USEENV /MAKE "__ALL_TESTS__ - Win32 Release"
     C:>cd ..
 
-    Or, with Visual C++.NET:
+    Or, with Visual C++.NET 2002, 2003, 2005:
 
-    C:>devenv subversion_vcnet.sln /USEENV /build "Debug"
-        /project "__ALL_TESTS__"
+    C:>devenv subversion_vcnet.sln /build "Release" /project "__ALL_TESTS__"
+    C:>cd ..
+
+    Or, with Visual C++ Express 2005:
+
+    C:>msbuild subversion_vcnet.sln /t:__ALL_TESTS__ /p:Configuration=Release
     C:>cd ..
 
     The binaries have now been built.

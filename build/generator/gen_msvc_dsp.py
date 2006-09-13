@@ -50,6 +50,7 @@ class Generator(gen_win.WinGeneratorBase):
     target.output_name = self.get_output_name(target)
     target.output_dir = self.get_output_dir(target)
     target.intermediate_dir = self.get_intermediate_dir(target)
+    target.output_pdb = self.get_output_pdb(target)
 
     configs = self.get_configs(target)
 

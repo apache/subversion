@@ -1,5 +1,5 @@
 Version 1.4.0
-(?? July 2006, from /branches/1.4.x)
+(10 September 2006, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.0
 
  User-visible-changes:
@@ -55,6 +55,9 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * fixed: svn:needs-lock and read-only-ness not always in sync (issue #2306)
     * fixed: post-commit error output not sent to the client (issue #443)
     * fixed: not locked error on commit of switched path (issue #2353)
+    * fixed: svn_apply_autoprops.py should trim whitespace from props (r20790)
+    * fixed: show locking notifications in local path style (r20927)
+    * fixed: encoding error on error messages from invalid options (r20883)
 
   - Server:
     * support for new 'svnsync' repository mirroring utility
@@ -87,6 +90,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * fixed: expect error output from hook scripts in native encoding (r17101)
     * fixed: catch errors starting hook scripts (r16891 17041 -81)
     * fixed: svnserve and authz can cause broken WCs (issue #2566)
+    * fixed: the default hook script templates should be vanilla sh (r20796)
 
   - Both:
     * delta compression improvements:
@@ -111,6 +115,7 @@ Developer-visible-changes:
   - new generic stream helpers (see svn_io.h)
   - authentication providers made available to other clients (see svn_auth.h)
   - svn_cmdline_setup_auth_baton
+  - svn_dso_initialize, svn_dso_load
   - svn_client_diff_summarize and svn_client_diff_summarize_peg
   - svn_client_list
   - svn_config_has_section
@@ -140,6 +145,8 @@ Developer-visible-changes:
 * fixed: svn_io_file_rename and readonlyness on Windows and UNIX (r17366 -69)
 * fixed: ra_dav memory leak when reusing session (issue #2247)
 * fixed: console character encoding problems when built with VS2005 (r20108)
+* fixed: various problems with --enable-dso and global pools (r20996, r20999)
+* fixed: syntax error in installer files on new versions of Inno Setup (r21022)
 * SWIG bindings:
     - SWIG/python bindings:
       - new support for svn_client_info (r19413)
@@ -148,6 +155,7 @@ Developer-visible-changes:
         svn_ra_replay and svn_diff_summarize
       - numerous bug fixes
       - add ruby documentation (make install-swig-rb-doc) (r20166)
+      - add APIs for adding a provider (r21079)
     - SWIG/perl bindings:
       - new support for svn_client_info (r18758)
       - minor corrections to SVN::Fs (r19312)

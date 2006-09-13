@@ -74,7 +74,13 @@ svn_wc_translated_file2(const char **xlated_path,
       svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
 
       svn_path_split(versioned_file, &tmp_dir, &tmp_vfile, pool);
-      tmp_vfile = svn_wc__adm_path(tmp_dir, 1, pool, tmp_vfile, NULL);
+      if (flags & SVN_WC_TRANSLATE_USE_GLOBAL_TMP)
+        {
+          SVN_ERR(svn_io_temp_dir(&tmp_dir, pool));
+          tmp_vfile = svn_path_join(tmp_dir, "svndiff", pool);
+        }
+      else
+        tmp_vfile = svn_wc__adm_path(tmp_dir, 1, pool, tmp_vfile, NULL);
 
       SVN_ERR(svn_io_open_unique_file2
               (NULL, &tmp_vfile,

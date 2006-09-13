@@ -309,26 +309,25 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
 }
 
 
-svn_error_t *
-svn_wc_process_committed4(const char *path,
-                          svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t recurse,
-                          svn_revnum_t new_revnum,
-                          const char *rev_date,
-                          const char *rev_author,
-                          apr_array_header_t *wcprop_changes,
-                          svn_boolean_t remove_lock,
-                          svn_boolean_t remove_changelist,
-                          const unsigned char *digest,
-                          apr_pool_t *pool)
+static svn_error_t *
+process_committed_leaf(int log_number,
+                       const char *path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_boolean_t *recurse,
+                       svn_revnum_t new_revnum,
+                       const char *rev_date,
+                       const char *rev_author,
+                       apr_array_header_t *wcprop_changes,
+                       svn_boolean_t remove_lock,
+                       svn_boolean_t remove_changelist,
+                       const unsigned char *digest,
+                       apr_pool_t *pool)
 {
   const char *base_name;
-  svn_stringbuf_t *logtags;
   const char *hex_digest = NULL;
   svn_wc_entry_t tmp_entry;
   apr_uint32_t modify_flags = 0;
-
-  logtags = svn_stringbuf_create("", pool);
+  svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
 
   SVN_ERR(svn_wc__adm_write_check(adm_access));
 
@@ -387,7 +386,8 @@ svn_wc_process_committed4(const char *path,
         }
 
       /* Oh, and recursing at this point isn't really sensible. */
-      recurse = FALSE;
+      if (recurse)
+        *recurse = FALSE;
     }
   else
     {
@@ -462,10 +462,32 @@ svn_wc_process_committed4(const char *path,
     }
 
   /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__write_log(adm_access, 0, logtags, pool));
+  SVN_ERR(svn_wc__write_log(adm_access, log_number, logtags, pool));
 
-  /* Run the log file we just created. */
-  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_process_committed4(const char *path,
+                          svn_wc_adm_access_t *adm_access,
+                          svn_boolean_t recurse,
+                          svn_revnum_t new_revnum,
+                          const char *rev_date,
+                          const char *rev_author,
+                          apr_array_header_t *wcprop_changes,
+                          svn_boolean_t remove_lock,
+                          svn_boolean_t remove_changelist,
+                          const unsigned char *digest,
+                          apr_pool_t *pool)
+{
+  int log_number = 1;
+
+  SVN_ERR(process_committed_leaf(0, path, adm_access, &recurse,
+                                 new_revnum, rev_date, rev_author,
+                                 wcprop_changes,
+                                 remove_lock, remove_changelist,
+                                 digest, pool));
 
   if (recurse)
     {
@@ -509,15 +531,24 @@ svn_wc_process_committed4(const char *path,
              a directory.  Pass null for wcprop_changes, because the
              ones present in the current call are only applicable to
              this one committed item. */
-          SVN_ERR(svn_wc_process_committed4
-                  (this_path, child_access,
-                   (current_entry->kind == svn_node_dir) ? TRUE : FALSE,
-                   new_revnum, rev_date, rev_author, NULL, FALSE,
-                   remove_changelist, NULL, subpool));
+          if (current_entry->kind == svn_node_dir)
+            SVN_ERR(svn_wc_process_committed4
+                    (this_path, child_access,
+                     TRUE,
+                     new_revnum, rev_date, rev_author, NULL, FALSE,
+                     remove_changelist, NULL, subpool));
+          else
+            SVN_ERR(process_committed_leaf
+                    (log_number++, this_path, adm_access, NULL,
+                     new_revnum, rev_date, rev_author, NULL, FALSE,
+                     remove_changelist, NULL, subpool));
         }
 
       svn_pool_destroy(subpool); 
    }
+
+  /* Run the log file(s) we just created. */
+  SVN_ERR(svn_wc__run_log(adm_access, NULL, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1126,7 +1157,8 @@ svn_wc_add2(const char *path,
           return svn_error_createf 
             (SVN_ERR_WC_NODE_KIND_CHANGE, NULL,
              _("Can't replace '%s' with a node of a differing type; "
-               "commit the deletion, update the parent, and then add '%s'"),
+               "the deletion must be committed and the parent updated "
+               "before adding '%s'"),
              svn_path_local_style(path, pool),
              svn_path_local_style(path, pool));
         }
@@ -1509,7 +1541,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       if (! reinstall_working)
         SVN_ERR(svn_wc__text_modified_internal_p(&reinstall_working,
                                                  fullpath, FALSE, adm_access,
-                                                 FALSE, pool));
+                                                 FALSE, FALSE, pool));
 
       if (reinstall_working)
         {
@@ -1888,8 +1920,8 @@ svn_wc_remove_from_revision_control(svn_wc_adm_access_t *adm_access,
       full_path = svn_path_join(full_path, name, pool);
 
       /* Check for local mods. before removing entry */
-      SVN_ERR(svn_wc_text_modified_p(&text_modified_p, full_path,
-                                     FALSE, adm_access, pool));
+      SVN_ERR(svn_wc_text_modified_p2(&text_modified_p, full_path,
+                                      FALSE, FALSE, adm_access, pool));
       if (text_modified_p && instant_error)
         return svn_error_createf(SVN_ERR_WC_LEFT_LOCAL_MOD, NULL,
                                  _("File '%s' has local modifications"),

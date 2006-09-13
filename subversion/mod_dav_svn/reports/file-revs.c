@@ -16,7 +16,6 @@
  * ====================================================================
  */
 
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
 
@@ -27,7 +26,7 @@
 #include "svn_props.h"
 #include "svn_dav.h"
 
-#include "dav_svn.h"
+#include "../dav_svn.h"
 
 struct file_rev_baton {
   /* this buffers the output for a bit and is automatically flushed,
@@ -49,11 +48,13 @@ struct file_rev_baton {
   void *window_baton;
 };
 
+
 /* If FRB->needs_header is true, send the "<S:file-revs-report>" start
    tag and set FRB->needs_header to zero.  Else do nothing.
    This is basically duplicated in log.c.  Consider factoring if
    duplicating again. */
-static svn_error_t *maybe_send_header(struct file_rev_baton *frb)
+static svn_error_t *
+maybe_send_header(struct file_rev_baton *frb)
 {
   if (frb->needs_header)
     {
@@ -67,11 +68,15 @@ static svn_error_t *maybe_send_header(struct file_rev_baton *frb)
   return SVN_NO_ERROR;
 }
 
+
 /* Send a property named NAME with value VAL in an element named ELEM_NAME. 
    Quote NAME and base64-encode VAL if necessary. */
 static svn_error_t *
-send_prop(struct file_rev_baton *frb, const char *elem_name,
-          const char *name, const svn_string_t *val, apr_pool_t *pool)
+send_prop(struct file_rev_baton *frb,
+          const char *elem_name,
+          const char *name,
+          const svn_string_t *val,
+          apr_pool_t *pool)
 {
   name = apr_xml_quote_string(pool, name, 1);
 
@@ -96,6 +101,7 @@ send_prop(struct file_rev_baton *frb, const char *elem_name,
   return SVN_NO_ERROR;
 }
 
+
 /* This implements the svn_txdelta_window_handler interface.
    Forward to a more interesting window handler and if we're done, terminate
    the txdelta and file-rev elements. */
@@ -116,6 +122,7 @@ delta_window_handler(svn_txdelta_window_t *window, void *baton)
     }
   return SVN_NO_ERROR;
 }
+
 
 /* This implements the svn_repos_file_rev_handler_t interface. */
 static svn_error_t *
@@ -177,8 +184,8 @@ file_rev_handler(void *baton,
     {
       svn_stream_t *base64_stream;
 
-      base64_stream = dav_svn_make_base64_output_stream(frb->bb, frb->output,
-                                                        pool);
+      base64_stream = dav_svn__make_base64_output_stream(frb->bb, frb->output,
+                                                         pool);
       svn_txdelta_to_svndiff2(&frb->window_handler, &frb->window_baton,
                               base64_stream, frb->svndiff_version, pool);
       *window_handler = delta_window_handler;
@@ -196,6 +203,9 @@ file_rev_handler(void *baton,
   return SVN_NO_ERROR;
 }
 
+
+/* Respond to a client request for a REPORT of type file-revs-report for the
+   RESOURCE.  Get request body from DOC and send result to OUTPUT. */
 dav_error *
 dav_svn__file_revs_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
@@ -207,7 +217,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   apr_xml_elem *child;
   int ns;
   struct file_rev_baton frb;
-  dav_svn_authz_read_baton arb;
+  dav_svn__authz_read_baton arb;
   const char *path = NULL;
   
   /* These get determined from the request document. */
@@ -219,7 +229,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   arb.repos = resource->info->repos;
 
   /* Sanity check. */
-  ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   /* ### This is done on other places, but the document element is
      in this namespace, so is this necessary at all? */
   if (ns == -1)
@@ -265,7 +275,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   /* Get the revisions and send them. */
   serr = svn_repos_get_file_revs(resource->info->repos->repos,
                                  path, start, end,
-                                 dav_svn_authz_read_func(&arb), &arb,
+                                 dav_svn__authz_read_func(&arb), &arb,
                                  file_rev_handler, &frb, resource->pool);
 
   if (serr)
@@ -273,27 +283,27 @@ dav_svn__file_revs_report(const dav_resource *resource,
       /* We don't 'goto cleanup' because ap_fflush() tells httpd
          to write the HTTP headers out, and that includes whatever
          r->status is at that particular time.  When we call
-         dav_svn_convert_err(), we don't immediately set r->status
+         dav_svn__convert_err(), we don't immediately set r->status
          right then, so r->status remains 0, hence HTTP status 200
          would be misleadingly returned. */
-      return (dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  serr->message, resource->pool));
+      return (dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                   serr->message, resource->pool));
     }
-  
+
   if ((serr = maybe_send_header(&frb)))
     {
-      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error beginning REPORT reponse",
-                                 resource->pool);
+      derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Error beginning REPORT reponse",
+                                  resource->pool);
       goto cleanup;
     }
-    
+
   if ((serr = dav_svn__send_xml(frb.bb, frb.output,
                                 "</S:file-revs-report>" DEBUG_CR)))
     {
-      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error ending REPORT reponse",
-                                 resource->pool);
+      derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Error ending REPORT reponse",
+                                  resource->pool);
       goto cleanup;
     }
 
@@ -307,9 +317,9 @@ dav_svn__file_revs_report(const dav_resource *resource,
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
   if (((apr_err = ap_fflush(output, frb.bb))) && (! derr))
-    derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error flushing brigade",
-                               resource->pool);
+    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error flushing brigade",
+                                resource->pool);
   return derr;
 }

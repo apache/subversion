@@ -256,6 +256,11 @@ AC_DEFINE_UNQUOTED(SVN_FS_WANT_DB_PATCH, $SVN_FS_WANT_DB_PATCH,
 
 SVN_LIB_SASL
 
+if test "$svn_lib_sasl" = "yes"; then
+  AC_DEFINE(SVN_HAVE_SASL, 1,
+            [Defined if Cyrus SASL v2 is present on the system])
+fi
+
 dnl Mac OS KeyChain -------------------
 
 AC_ARG_ENABLE(keychain,

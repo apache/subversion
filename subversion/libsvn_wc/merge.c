@@ -31,6 +31,241 @@
 #include "svn_private_config.h"
 
 
+/* Return a pointer to the svn_prop_t structure from PROP_DIFF
+   belonging to PROP_NAME, if any.  NULL otherwise.*/
+static const svn_prop_t *
+get_prop(const apr_array_header_t *prop_diff,
+         const char *prop_name)
+{
+  if (prop_diff)
+    {
+      int i;
+      for (i = 0; i < prop_diff->nelts; i++)
+        {
+          const svn_prop_t *elt = &APR_ARRAY_IDX(prop_diff, i, svn_prop_t);
+          if (strcmp(elt->name,prop_name) == 0)
+            return elt;
+        }
+    }
+
+  return NULL;
+}
+
+
+/* Detranslate a working copy file MERGE_TARGET to achieve the effect of:
+
+   1. Detranslate
+   2. Install new props
+   3. Retranslate
+   4. Detranslate
+
+   in 1 pass to get a file which can be compared with the left and right
+   files which were created with the 'new props' above.
+
+   Property changes make this a little complex though. Changes in
+
+   - svn:mime-type
+   - svn:eol-style
+   - svn:keywords
+   - svn:special
+
+   may change the way a file is translated.
+
+   Effect for svn:mime-type:
+
+     The value for svn:mime-type affects the translation wrt keywords
+     and eol-style settings.
+
+   I) both old and new mime-types are texty
+      -> just do the translation dance (as lined out below)
+
+   II) the old one is texty, the new one is binary
+      -> detranslate with the old eol-style and keywords
+         (the new re+detranslation is a no-op)
+
+   III) the old one is binary, the new one texty
+      -> detranslate with the new eol-style
+         (the old detranslation is a no-op)
+
+   IV) the old and new ones are binary
+      -> don't detranslate, just make a straight copy
+
+
+   Effect for svn:eol-style
+
+   I) On add or change use the new value
+
+   II) otherwise: use the old value (absent means 'no translation')
+
+
+   Effect for svn:keywords
+
+     Always use old settings (re+detranslation are no-op)
+
+
+   Effect for svn:special
+
+     Always use the old settings (same reasons as for svn:keywords)
+
+*/
+static svn_error_t *
+detranslate_wc_file(const char **detranslated_file,
+                    const char *merge_target,
+                    svn_wc_adm_access_t *adm_access,
+                    svn_boolean_t force_copy,
+                    const apr_array_header_t *prop_diff,
+                    apr_pool_t *pool)
+{
+  svn_boolean_t is_binary;
+  const svn_prop_t *prop;
+  svn_subst_eol_style_t style;
+  const char *eol;
+  apr_hash_t *keywords;
+  svn_boolean_t special;
+
+  /* Decide if the merge target currently is a text or binary file. */
+  SVN_ERR(svn_wc_has_binary_prop(&is_binary,
+                                 merge_target, adm_access, pool));
+
+
+  /* See if we need to do a straight copy:
+     - old and new mime-types are binary, or
+     - old mime-type is binary and no new mime-type specified */
+  if (is_binary
+      && (((prop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
+           && prop->value && svn_mime_type_is_binary(prop->value->data))
+          || prop == NULL))
+    {
+      /* this is case IV above */
+      keywords = NULL;
+      special = FALSE;
+      eol = NULL;
+      style = svn_subst_eol_style_none;
+    }
+  else if ((!is_binary)
+           && (prop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
+           && prop->value && svn_mime_type_is_binary(prop->value->data))
+    {
+      /* Old props indicate texty, new props indicate binary:
+         detranslate keywords and old eol-style */
+      SVN_ERR(svn_wc__get_keywords(&keywords, merge_target,
+                                   adm_access, NULL, pool));
+      SVN_ERR(svn_wc__get_special(&special, merge_target, adm_access, pool));
+    }
+  else
+    {
+      /* New props indicate texty, regardless of old props */
+
+      /* In case the file used to be special, detranslate specially */
+      SVN_ERR(svn_wc__get_special(&special, merge_target, adm_access, pool));
+
+      if (special)
+        {
+          keywords = NULL;
+          eol = NULL;
+          style = svn_subst_eol_style_none;
+        }
+      else
+        {
+          /* In case a new eol style was set, use that for detranslation */
+          if ((prop = get_prop(prop_diff, SVN_PROP_EOL_STYLE)) && prop->value)
+            {
+              /* Value added or changed */
+              svn_subst_eol_style_from_value(&style, &eol, prop->value->data);
+            }
+          else if (!is_binary)
+            SVN_ERR(svn_wc__get_eol_style(&style, &eol, merge_target,
+                                          adm_access, pool));
+          else
+            {
+              eol = NULL;
+              style = svn_subst_eol_style_none;
+            }
+
+          /* In case there were keywords, detranslate with keywords
+             (iff we were texty) */
+          if (!is_binary)
+            SVN_ERR(svn_wc__get_keywords(&keywords, merge_target,
+                                         adm_access, NULL, pool));
+          else
+            keywords = NULL;
+        }
+    }
+
+  /* Now, detranslate with the settings we created above */
+
+  if (force_copy || keywords || eol || special)
+    {
+      const char *detranslated;
+      /* Force a copy into the temporary wc area to avoid having
+         temporary files created below to appear in the actual wc. */
+
+      SVN_ERR(svn_wc_create_tmp_file2
+              (NULL, &detranslated,
+               svn_wc_adm_access_path(adm_access),
+               svn_io_file_del_none, pool));
+
+      SVN_ERR(svn_subst_translate_to_normal_form(merge_target,
+                                                 detranslated,
+                                                 style,
+                                                 eol, eol ? FALSE : TRUE,
+                                                 keywords,
+                                                 special,
+                                                 pool));
+      *detranslated_file = detranslated;
+    }
+  else
+    *detranslated_file = merge_target;
+
+  return SVN_NO_ERROR;
+}
+
+/* Updates (by copying and translating) the eol style in
+   OLD_TARGET returning the filename containing the
+   correct eol style in NEW_TARGET, if an eol style
+   change is contained in PROP_DIFF */
+static svn_error_t *
+maybe_update_target_eols(const char **new_target,
+                         const char *old_target,
+                         svn_wc_adm_access_t *adm_access,
+                         const apr_array_header_t *prop_diff,
+                         apr_pool_t *pool)
+{
+  const svn_prop_t *prop = get_prop(prop_diff, SVN_PROP_EOL_STYLE);
+
+  if (prop && prop->value)
+    {
+      const char *eol;
+      const char *tmp_new;
+
+      svn_subst_eol_style_from_value(NULL, &eol, prop->value->data);
+      SVN_ERR(svn_wc_create_tmp_file2(NULL, &tmp_new,
+                                      svn_wc_adm_access_path(adm_access),
+                                      svn_io_file_del_none,
+                                      pool));
+      SVN_ERR(svn_subst_copy_and_translate3(old_target,
+                                            tmp_new,
+                                            eol, eol ? FALSE : TRUE,
+                                            NULL, FALSE,
+                                            FALSE, pool));
+      *new_target = tmp_new;
+    }
+  else
+    *new_target = old_target;
+
+  return SVN_NO_ERROR;
+}
+
+/* Internal version of svn_wc_merge, also used to (loggily) merge updates
+   from the repository.
+
+   In the case of updating, the update can have sent new properties,
+   which could affect the way the wc target is detranslated and
+   compared with LEFT and RIGHT for merging.
+
+   Property changes sent by the update are provided in PROP_DIFF.
+
+ */
 
 svn_error_t *
 svn_wc__merge_internal(svn_stringbuf_t **log_accum,
@@ -45,6 +280,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
                        svn_boolean_t dry_run,
                        const char *diff3_cmd,
                        const apr_array_header_t *merge_options,
+                       const apr_array_header_t *prop_diff,
                        apr_pool_t *pool)
 {
   const char *tmp_target, *result_target;
@@ -56,6 +292,7 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
   svn_boolean_t is_binary;
   const svn_wc_entry_t *entry;
   svn_boolean_t contains_conflicts;
+  const svn_prop_t *prop;
 
   svn_path_split(merge_target, &mt_pt, &mt_bn, pool);
 
@@ -68,25 +305,23 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
     }
 
   /* Decide if the merge target is a text or binary file. */
-  SVN_ERR(svn_wc_has_binary_prop(&is_binary, merge_target, adm_access, pool));
-  
+  if ((prop = get_prop(prop_diff, SVN_PROP_MIME_TYPE))
+      && prop->value)
+    is_binary = svn_mime_type_is_binary(prop->value->data);
+  else
+    SVN_ERR(svn_wc_has_binary_prop(&is_binary, merge_target, adm_access, pool));
+
+  SVN_ERR(detranslate_wc_file(&tmp_target, merge_target, adm_access,
+                              (! is_binary) && diff3_cmd != NULL,
+                              prop_diff, pool));
+
+  /* We cannot depend on the left file to contain the same eols as the
+     right file. If the merge target has mods, this will mark the entire
+     file as conflicted, so we need to compensate. */
+  SVN_ERR(maybe_update_target_eols(&left, left, adm_access, prop_diff, pool));
+
   if (! is_binary)              /* this is a text file */
     {
-      apr_uint32_t translate_opts = SVN_WC_TRANSLATE_TO_NF;
-
-      if (diff3_cmd)
-        /* Force a copy into the temporary wc area to avoid having
-           temporary files created below to appear in the actual wc. */
-        translate_opts |= SVN_WC_TRANSLATE_FORCE_COPY;
-
-      /* Make sure a temporary copy of 'target' is available with keywords
-         contracted and line endings in repository-normal (LF) form.
-         This is the file that diff3 will read as the 'mine' file.  */
-      SVN_ERR(svn_wc_translated_file2
-              (&tmp_target, merge_target,
-               merge_target, adm_access,
-               translate_opts, pool));
-
       /* Open a second temporary file for writing; this is where diff3
          will write the merged results. */
       SVN_ERR(svn_wc_create_tmp_file2(&result_f, &result_target,
@@ -348,15 +583,38 @@ svn_wc__merge_internal(svn_stringbuf_t **log_accum,
       SVN_ERR(svn_io_copy_file(right,
                                right_copy, TRUE, pool));
 
+      /* Was the merge target detranslated? */
+      if (merge_target != tmp_target)
+        {
+          /* Create a .mine file too */
+          const char *mine_copy;
+
+          SVN_ERR(svn_io_open_unique_file2(NULL,
+                                           &mine_copy,
+                                           merge_target,
+                                           target_label,
+                                           svn_io_file_del_none,
+                                           pool));
+          mine_copy = svn_path_is_child(adm_path, mine_copy, pool);
+          SVN_ERR(svn_wc__loggy_move(log_accum, NULL,
+                                     adm_access,
+                                     svn_path_is_child(adm_path,
+                                                       tmp_target, pool),
+                                     mine_copy,
+                                     FALSE, pool));
+          tmp_entry.conflict_wrk = mine_copy;
+        }
+      else
+        tmp_entry.conflict_wrk = NULL;
+
       /* Derive the basenames of the backup files. */
       svn_path_split(left_copy, &parentt, &left_base, pool);
       svn_path_split(right_copy, &parentt, &right_base, pool);
-      tmp_entry.conflict_old = left_base;
-      tmp_entry.conflict_new = right_base;
-      tmp_entry.conflict_wrk = NULL;
 
       /* Mark merge_target's entry as "Conflicted", and start tracking
          the backup files in the entry as well. */
+      tmp_entry.conflict_old = left_base;
+      tmp_entry.conflict_new = right_base;
       SVN_ERR(svn_wc__loggy_entry_modify
               (log_accum,
                adm_access, log_merge_target,
@@ -414,6 +672,7 @@ svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
                                  dry_run,
                                  diff3_cmd,
                                  merge_options,
+                                 NULL,
                                  pool));
 
   /* Write our accumulation of log entries into a log file */

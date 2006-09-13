@@ -67,6 +67,7 @@ typedef struct {
   apr_hash_t *tokens;
   svn_boolean_t *aborted;
   apr_pool_t *pool;
+  svn_boolean_t for_replay;
 } ra_svn_driver_state_t;
 
 typedef struct {
@@ -704,6 +705,19 @@ static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
   return svn_ra_svn_write_cmd_response(conn, pool, "");
 }
 
+static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
+                                                apr_pool_t *pool,
+                                                apr_array_header_t *params,
+                                                void *baton)
+{
+  ra_svn_driver_state_t *ds = baton;
+  if (!ds->for_replay)
+    return svn_error_createf
+      (SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
+       _("Command 'finish-replay' invalid outside of replays"));
+  return SVN_NO_ERROR;
+}
+
 static const svn_ra_svn_cmd_entry_t ra_svn_edit_commands[] = {
   { "target-rev",       ra_svn_handle_target_rev },
   { "open-root",        ra_svn_handle_open_root },
@@ -719,23 +733,41 @@ static const svn_ra_svn_cmd_entry_t ra_svn_edit_commands[] = {
   { "close-file",       ra_svn_handle_close_file },
   { "close-edit",       ra_svn_handle_close_edit, TRUE },
   { "abort-edit",       ra_svn_handle_abort_edit, TRUE },
+  { "finish-replay",    ra_svn_handle_finish_replay, TRUE },
   { NULL }
 };
 
-svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                     const svn_delta_editor_t *editor,
-                                     void *edit_baton,
-                                     svn_boolean_t *aborted)
+svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const svn_delta_editor_t *editor,
+                                      void *edit_baton,
+                                      svn_boolean_t *aborted,
+                                      svn_boolean_t for_replay)
 {
   ra_svn_driver_state_t state;
 
   if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EDIT_PIPELINE))
-    return svn_ra_svn__drive_editorp(conn, pool, editor, edit_baton, aborted);
+    return svn_ra_svn__drive_editorp(conn, pool, editor, edit_baton, aborted,
+                                     for_replay);
 
   state.editor = editor;
   state.edit_baton = edit_baton;
   state.tokens = apr_hash_make(pool);
   state.aborted = aborted;
   state.pool = pool;
+  state.for_replay = for_replay;
   return svn_ra_svn_handle_commands(conn, pool, ra_svn_edit_commands, &state);
+}
+
+svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                     const svn_delta_editor_t *editor,
+                                     void *edit_baton,
+                                     svn_boolean_t *aborted)
+{
+  return svn_ra_svn_drive_editor2(conn,
+                                  pool,
+                                  editor,
+                                  edit_baton,
+                                  aborted,
+                                  FALSE);
 }

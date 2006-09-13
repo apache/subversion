@@ -107,7 +107,7 @@ sub MakeSetup
         print "Compiling the setup (take a nap, this will take some time)...\n";;
       }
 
-    $RetVal=`$PathISExe svn.iss`;
+    $RetVal=`"$PathISExe" svn.iss`;
 }
 
 #-------------------------------------------------------------------------------
@@ -127,18 +127,3 @@ sub PathISExe
     return $PathISExe;
 }
 
-#-------------------------------------------------------------------------------
-# FUNCTION PathSetupOut
-# DOES     Finding and returning the current svn.exe path as of
-#          ..\svn_iss_dyn.iss
-sub PathSetupOut
-{
-    my $SetupOut = &cmn_ValuePathfile('path_setup_out');
-  
-    if ( ! -e "../$SetupOut")
-      {
-        die "ERROR: Could not find output directory as described in svn_dynamics.iss\n";
-      }
-
-    return $SetupOut;
-}

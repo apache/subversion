@@ -71,6 +71,7 @@ typedef struct {
   apr_pool_t *pool;
   apr_pool_t *file_pool;
   int file_refs;
+  svn_boolean_t for_replay;
 } ra_svn_driver_state_t;
 
 /* Works for both directories and files; however, the pool handling is
@@ -788,6 +789,21 @@ static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
   return svn_ra_svn_write_cmd_response(conn, pool, "");
 }
 
+static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
+                                                apr_pool_t *pool,
+                                                apr_array_header_t *params,
+                                                ra_svn_driver_state_t *ds)
+{
+  if (!ds->for_replay)
+    return svn_error_createf
+      (SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
+       _("Command 'finish-replay' invalid outside of replays"));
+  ds->done = TRUE;
+  if (ds->aborted)
+    *ds->aborted = FALSE;
+  return SVN_NO_ERROR;
+}
+
 static const struct {
   const char *cmd;
   svn_error_t *(*handler)(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -812,6 +828,7 @@ static const struct {
   { "absent-file",      ra_svn_handle_absent_file },
   { "close-edit",       ra_svn_handle_close_edit },
   { "abort-edit",       ra_svn_handle_abort_edit },
+  { "finish-replay",    ra_svn_handle_finish_replay },
   { NULL }
 };
 
@@ -837,7 +854,8 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
                                        const svn_delta_editor_t *editor,
                                        void *edit_baton,
-                                       svn_boolean_t *aborted)
+                                       svn_boolean_t *aborted,
+                                       svn_boolean_t for_replay)
 {
   ra_svn_driver_state_t state;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -854,6 +872,7 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
   state.pool = pool;
   state.file_pool = svn_pool_create(pool);
   state.file_refs = 0;
+  state.for_replay = for_replay;
 
   while (!state.done)
     {

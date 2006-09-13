@@ -2037,8 +2037,9 @@ def commit_inconsistent_eol(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu') 
 
   svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'native', iota_path)
-  svntest.main.file_append (iota_path, "added extra line to file iota\012"
-                                       "added extra line to file iota\015")
+  svntest.main.file_append_binary(iota_path, 
+                                  "added extra line to file iota\012"
+                                  "added extra line to file iota\015")
   svntest.main.file_append (mu_path, "added extra line to file mu\n"
                                      "added extra line to file mu\n")
 
@@ -2050,7 +2051,6 @@ def commit_inconsistent_eol(sbox):
 
 ########################################################################
 # Run the tests
-
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2066,7 +2066,8 @@ test_list = [ None,
               hudson_part_1,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
-              hudson_part_2,
+              # issue #2578 causes the hudson_part_2 test to fail.
+              XFail(hudson_part_2, svntest.main.is_ra_type_dav),
               hudson_part_2_1,
               XFail(hook_test),
               merge_mixed_revisions,

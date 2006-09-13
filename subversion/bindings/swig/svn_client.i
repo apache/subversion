@@ -45,16 +45,6 @@
 
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
-
-/* members of svn_client_ctx_t */
-%apply void *PY_AS_VOID {
-    void *notify_baton,
-    void *log_msg_baton,
-    void *cancel_baton,
-    void *notify_baton2,
-    void *log_msg_baton2,
-    void *progress_baton
-};
 #endif
 
 /* -----------------------------------------------------------------------
@@ -239,49 +229,6 @@
 }
 #endif
 
-#ifdef SWIGRUBY
-%runtime %{
-  #include <apr.h>
-  #include <apr_pools.h>
-
-  static apr_pool_t *
-  _svn_client_pool(void)
-  {
-    static apr_pool_t *__svn_client_pool = NULL;
-    if (!__svn_client_pool) {
-      apr_pool_create(&__svn_client_pool, NULL);
-    }
-    return __svn_client_pool;
-  }
-
-  static apr_pool_t *
-  _svn_client_config_pool(void)
-  {
-    static apr_pool_t *__svn_client_config_pool = NULL;
-    if (!__svn_client_config_pool) {
-      apr_pool_create(&__svn_client_config_pool, _svn_client_pool());
-    }
-    return __svn_client_config_pool;
-  }
-%}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout) apr_hash_t *config {
-  if ($1)
-    apr_pool_clear(_svn_client_config_pool());
-}
-
-%typemap(in) apr_hash_t *config {
-  $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, "svn_config_t *",
-                                              _svn_client_config_pool());
-}
-
-%typemap(out) apr_hash_t *config {
-  $result = svn_swig_rb_apr_hash_to_hash_swig_type($1, "svn_config_t *");
-}
-#endif
-
 #ifdef SWIGPERL
 /* FIXME: For svn_commit_info_t too? */
 %typemap(argout) svn_client_commit_info_t ** {
@@ -327,6 +274,7 @@
 #include <apu.h>
 #include <apr_xlate.h>
 %}
+%ignore svn_client_ctx_t::config;
 #endif
 
 %include svn_client_h.swg
@@ -373,6 +321,25 @@ svn_client_set_cancel_func(svn_client_ctx_t *ctx,
   ctx->cancel_func = cancel_func;
   ctx->cancel_baton = cancel_baton;
   return (VALUE)cancel_baton;
+}
+
+
+static VALUE
+svn_client_set_config(svn_client_ctx_t *ctx,
+                      apr_hash_t *config,
+                      apr_pool_t *pool)
+{
+  ctx->config = config;
+  return Qnil;
+}
+
+static svn_error_t *
+svn_client_get_config(svn_client_ctx_t *ctx,
+                      apr_hash_t **cfg_hash,
+                      apr_pool_t *pool)
+{
+  *cfg_hash = ctx->config;
+  return SVN_NO_ERROR;
 }
 %}
 #endif

@@ -1107,7 +1107,7 @@ svn_wc__wcprops_write(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
 
       svn_pool_clear(subpool);
 
-      svn_stream_printf(stream, subpool, "%s\n", name);
+      SVN_ERR(svn_stream_printf(stream, subpool, "%s\n", name));
       SVN_ERR(svn_hash_write2(proplist, stream, SVN_HASH_TERMINATOR, subpool));
     }
 
@@ -1787,7 +1787,7 @@ svn_wc_prop_set2(const char *name,
           svn_wc_entry_t tmp_entry;
 
           /* If we changed the keywords or newlines, void the entry
-             timestamp for this file, so svn_wc_text_modified_p() does
+             timestamp for this file, so svn_wc_text_modified_p2() does
              a real (albeit slow) check later on. */
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;

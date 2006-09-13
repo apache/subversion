@@ -409,6 +409,14 @@ def file_append(path, new_text):
   fp.write(new_text)
   fp.close()
 
+# Append in binary mode
+def file_append_binary(path, new_text):
+  "Append NEW_TEXT to file at PATH in binary mode"
+
+  fp = open(path, 'ab')  # open in (a)ppend mode
+  fp.write(new_text)
+  fp.close()
+
 # For making local mods to files
 def file_write(path, new_text):
   "Replace contents of file at PATH with NEW_TEXT"
@@ -554,6 +562,19 @@ def create_python_hook_script (hook_path, hook_script_code):
     file_append (hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
     os.chmod (hook_path, 0755)
 
+######################################################################
+# Functions which check the test configuration
+# (useful for conditional XFails)
+
+def is_ra_type_dav():
+  return test_area_url.startswith('http')
+
+def is_fs_type_fsfs():
+  # This assumes that fsfs is the default fs implementation.
+  return (fs_type == 'fsfs' or fs_type is None)
+
+def is_os_windows():
+  return (os.name == 'nt')
 
 ######################################################################
 # Sandbox handling

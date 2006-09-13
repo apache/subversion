@@ -169,7 +169,8 @@ svn_swig_rb_txdelta_apply_instructions(svn_txdelta_window_t *window,
   char *tbuf;
   apr_size_t tlen;
 
-  tbuf = ALLOCA_N(char, (window->tview_len + 1));
+  tlen = window->tview_len + 1;
+  tbuf = ALLOCA_N(char, tlen);
   svn_txdelta_apply_instructions(window, sbuf, tbuf, &tlen);
 
   return rb_str_new(tbuf, tlen);
@@ -193,15 +194,6 @@ svn_txdelta_apply_wrapper(svn_stream_t *source,
 {
   svn_txdelta_apply(source, target, result_digest, error_info,
                     pool, handler, handler_baton);
-}
-
-static svn_error_t *
-svn_txdelta_invoke_window_handler(VALUE window_handler,
-                                  svn_txdelta_window_t *window,
-                                  apr_pool_t *pool)
-{
-  return svn_swig_rb_invoke_txdelta_window_handler(window_handler,
-                                                   window, pool);
 }
 
 static svn_error_t *

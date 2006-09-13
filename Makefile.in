@@ -285,43 +285,14 @@ install: external-install local-install revision-install
 local-all: @BUILD_RULES@
 
 locale-gnu-pot:
-	(cd $(abs_srcdir)/subversion/ ; \
-	 find . \
-	  -name .svn -prune -or \
-	  -name tests -prune -or \
-	  -name bindings -prune -or \
-	  -name "*.c" -print -or \
-	  -name "svn_error_codes.h" -print | \
-	 $(XGETTEXT) --sort-by-file -k_ -kN_ -kSVN_ERRDEF:3 \
-	  --flag=_:1:pass-c-format \
-	  --flag=N_:1:pass-c-format \
-	  --flag=svn_cmdline_printf:2:c-format \
-	  --flag=svn_cmdline_fprintf:3:c-format \
-	  --flag=svn_error_createf:3:c-format \
-	  --flag=svn_error_wrap_apr:2:c-format \
-	  --flag=svn_stream_printf:3:c-format \
-	  --flag=svn_stream_printf_from_utf8:4:c-format \
-	  --flag=svn_string_createf:2:c-format \
-	  --flag=svn_string_createv:2:c-format \
-	  --flag=svn_stringbuf_createf:2:c-format \
-	  --flag=svn_stringbuf_createv:2:c-format \
-	  --flag=svn_fs_bdb__dberrf:3:c-format \
-	  --flag=file_printf_from_utf8:3:c-format \
-	  --flag=do_io_file_wrapper_cleanup:3:c-format \
-	  --flag=do_io_file_wrapper_cleanup:4:c-format \
-	  --msgid-bugs-address=dev@subversion.tigris.org \
-	  --add-comments --files-from=- -o po/subversion.pot )
+	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
+	  tools/po/po-update.sh pot
 
 # "make locale-gnu-po-update" updates all translations.
 # "make locale-gnu-po-update PO=ll" updates only the ll.po file.
-locale-gnu-po-update: locale-gnu-pot
-	@if test "$(PO)" = "" ; then \
-	  PO='*' ; \
-	fi ; \
-	(cd $(abs_srcdir)/subversion/po ; \
-	 for i in $$PO.po ; do \
-	   $(MSGMERGE) --sort-by-file --update $$i subversion.pot ; \
-	 done )
+locale-gnu-po-update:
+	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
+	  tools/po/po-update.sh $(PO)
 
 # clean everything but the bulky test output, returning the system back
 # to before 'make' was run.

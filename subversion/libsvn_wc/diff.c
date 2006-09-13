@@ -32,10 +32,6 @@
  * locally. Added directories do not have corresponding temporary
  * directories created, as they are not needed.
  *
- * ### TODO: It might be better if the temporary files were not created in
- * the admin's temp area, but in a more general area (/tmp, $TMPDIR) as
- * then diff could be run on a read-only working copy.
- *
  * ### TODO: Replacements where the node kind changes needs support. It
  * mostly works when the change is in the repository, but not when it is
  * in the working copy.
@@ -57,6 +53,7 @@
 
 #include "svn_private_config.h"
 
+
 /*-------------------------------------------------------------------------*/
 /* A little helper function.
 
@@ -116,8 +113,10 @@ reverse_propchanges(apr_hash_t *baseprops,
     }
 }
 
+
 /*-------------------------------------------------------------------------*/
 
+
 /* Overall crawler editor baton.
  */
 struct edit_baton {
@@ -561,7 +560,8 @@ file_diff(struct dir_baton *dir_baton,
 
       SVN_ERR(svn_wc_translated_file2
               (&translated, path, path, adm_access,
-               SVN_WC_TRANSLATE_TO_NF,
+               SVN_WC_TRANSLATE_TO_NF
+               | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
                pool));
 
       SVN_ERR(dir_baton->edit_baton->callbacks->file_added
@@ -577,19 +577,20 @@ file_diff(struct dir_baton *dir_baton,
       break;
 
     default:
-      SVN_ERR(svn_wc_text_modified_p(&modified, path, FALSE,
-                                     adm_access, pool));
+      SVN_ERR(svn_wc_text_modified_p2(&modified, path, FALSE,
+                                      FALSE, adm_access, pool));
       if (modified)
         {
           /* Note that this might be the _second_ time we translate
-             the file, as svn_wc_text_modified_p() might have used a
+             the file, as svn_wc_text_modified_p2() might have used a
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
           SVN_ERR(svn_wc_translated_file2
                   (&translated, path,
                    path, adm_access,
-                   SVN_WC_TRANSLATE_TO_NF,
+                   SVN_WC_TRANSLATE_TO_NF
+                   | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
                    pool));
         }
 
@@ -824,7 +825,8 @@ report_wc_file_as_added(struct dir_baton *dir_baton,
   SVN_ERR(svn_wc_translated_file2
           (&translated_file,
            source_file, path, adm_access,
-           SVN_WC_TRANSLATE_TO_NF,
+           SVN_WC_TRANSLATE_TO_NF
+           | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
            pool));
 
   SVN_ERR(eb->callbacks->file_added
@@ -1421,8 +1423,8 @@ close_file(void *file_baton,
      (BASE:WORKING) modifications. */
   modified = (b->temp_file_path != NULL);
   if (!modified && !eb->use_text_base)
-    SVN_ERR(svn_wc_text_modified_p(&modified, b->path, FALSE,
-                                   adm_access, pool));
+    SVN_ERR(svn_wc_text_modified_p2(&modified, b->path, FALSE,
+                                    FALSE, adm_access, pool));
 
   if (modified)
     {
@@ -1433,7 +1435,8 @@ close_file(void *file_baton,
         SVN_ERR(svn_wc_translated_file2
                 (&localfile, b->path,
                  b->path, adm_access,
-                 SVN_WC_TRANSLATE_TO_NF,
+                 SVN_WC_TRANSLATE_TO_NF
+                 | SVN_WC_TRANSLATE_USE_GLOBAL_TMP,
                  pool));
     }
   else

@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Target_Dir ""
 [if-any is_utility][else]LIB32=link.exe -lib
 # ADD LIB32 /out:"[rootpath]\[configs.name]\[target.output_dir]\[target.output_name]"
-# ADD CPP /nologo /W3 /FD /c [is configs.name "Debug"]/MDd /Gm /Gi /GX /ZI /Od /GZ[else]/MD /GX /O2 /Zi[end][for configs.defines] /D "[configs.defines]"[end][if-any instrument_apr_pools] /D "APR_POOL_DEBUG=[instrument_apr_pools]"[end][for includes] /I "[includes]"[end]
+# ADD CPP /nologo /W3 /FD /Fd"[rootpath]\[configs.name]\[target.output_dir]\[target.output_pdb]" /c [is configs.name "Debug"]/MDd /Gm /Gi /GX /ZI /Od /GZ[else]/MD /GX /O2 /Zi[end][for configs.defines] /D "[configs.defines]"[end][if-any instrument_apr_pools] /D "APR_POOL_DEBUG=[instrument_apr_pools]"[end][for includes] /I "[includes]"[end]
 # ADD RSC /l [if-any is_exe]0x409[else]0x424[end][is configs.name "Debug"] /d "_DEBUG"[end][for includes] /I "[includes]"[end]
 BSC32=bscmake.exe
 LINK32=link.exe
@@ -64,6 +64,8 @@ SOURCE=[sources.path][if-any sources.reldir]
 !ENDIF
 [end][for sources.user_deps][if-index sources.user_deps first]
 USERDEP__=[else] [end]"[sources.user_deps]"[end][if-any sources.custom_build]
+[for platforms][for configs]
+![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.proj_name] - [platforms] [configs.name]"
 
 # Begin Custom Build
 
@@ -73,7 +75,8 @@ InputPath=[sources.path]
 [if-any sources.custom_build]	[sources.custom_build]
 [end]
 # End Custom Build
-
+[end][end]
+!ENDIF
 [end]
 # End Source File
 [end]

@@ -402,6 +402,22 @@ def default_singleton_handler_b(b, baton):
   b.pprint()
   raise SVNTreeUnequal
 
+# A test helper function implementing the singleton_handler_a API.
+def detect_conflict_files(node, extra_files):
+  """NODE has been discovered, an extra file on disk.  Verify that it
+  matches one of the regular expressions in the EXTRA_FILES list.  If
+  it matches, remove the match from the list.  If it doesn't match,
+  raise an exception."""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
+      break
+  else:
+    print "Found unexpected disk object:", node.name
+    node.pprint()
+    raise SVNTreeUnequal
 
 ###########################################################################
 ###########################################################################
@@ -431,7 +447,7 @@ def compare_trees(a, b,
   def display_nodes(a, b):
     'Display two nodes, expected and actual.'
     print "============================================================="
-    print "Expected", b.name, "and actual", a.name, "are different!"
+    print "Expected '%s' and actual '%s' are different!" % (b.name, a.name)
     print "============================================================="
     print "EXPECTED NODE TO BE:"
     print "============================================================="
@@ -569,7 +585,7 @@ def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
 
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^([MAGCUD_ ][MAGCUD_ ])([B ])\s+(.+)')
+  rm1 = re.compile ('^([MAGCUDE_ ][MAGCUDE_ ])([B ])\s+(.+)')
   # There may be other verbs we need to match, in addition to
   # "Restored".  If so, add them as alternatives in the first match
   # group below.

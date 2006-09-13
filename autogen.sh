@@ -99,26 +99,15 @@ fi
 if test -n "$SKIP_DEPS"; then
   echo "Creating build-outputs.mk (no dependencies)..."
   "$PYTHON" ./gen-make.py $RELEASE_ARGS -s build.conf || gen_failed=1
-
-  ### if apr and apr-util are not subdirs, then this fails. only do it
-  ### for the release (from dist.sh; for now)
-  if test -n "$RELEASE_MODE"; then
-    echo "Creating MSVC files (no dependencies)..."
-    "$PYTHON" ./gen-make.py $RELEASE_ARGS -t dsp -s build.conf || gen_failed=1
-  fi
 else
   echo "Creating build-outputs.mk..."
   "$PYTHON" ./gen-make.py $RELEASE_ARGS build.conf || gen_failed=1
-
-  ### if apr and apr-util are not subdirs, then this fails. only do it
-  ### for the release (from dist.sh; for now)
-  if test -n "$RELEASE_MODE"; then
-    echo "Creating MSVC files..."
-    "$PYTHON" ./gen-make.py $RELEASE_ARGS -t dsp -s build.conf || gen_failed=1
-  fi
 fi
 
-find build/ -name '*.pyc' -print -exec rm {} \;
+if test -n "$RELEASE_MODE"; then
+  find build/ -name '*.pyc' -exec rm {} \;
+fi
+
 rm autogen-standalone.mk
 
 if test -n "$gen_failed"; then

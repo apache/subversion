@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path, shutil
+import sys, re, os.path, shutil
 
 # Our testing module
 import svntest
@@ -292,22 +292,6 @@ def remove_props(sbox):
 
 #----------------------------------------------------------------------
 
-# Helper for update_conflict_props() test -- a custom singleton handler.
-def detect_conflict_files(node, extra_files):
-  """NODE has been discovered an extra file on disk.  Verify that it
-  matches one of the regular expressions in the EXTRA_FILES list.  If
-  it matches, remove the match from the list.  If it doesn't match,
-  raise an exception."""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
-      break
-  else:
-    print "Found unexpected disk object:", node.name
-    raise svntest.tree.SVNTreeUnequal
-
 def update_conflict_props(sbox):
   "update with conflicting props"
 
@@ -353,7 +337,8 @@ def update_conflict_props(sbox):
                                         expected_disk,
                                         expected_status,
                                         None,
-                                        detect_conflict_files, extra_files,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files,
                                         None, None, 1)
 
   if len(extra_files) != 0:
@@ -368,6 +353,33 @@ def update_conflict_props(sbox):
   expected_status.tweak('A/mu', 'A', status=' M')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+#----------------------------------------------------------------------
+def commit_conflict_dirprops(sbox):
+  "commit with conflicting dirprops"
+  
+  # Issue #2608: failure to see conflicting dirprops on root of
+  # repository.
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', wc_dir)
+
+  # Commit the file and directory
+  svntest.main.run_svn(None, 'ci', '-m', 'r2', wc_dir)
+
+  # Update to rev 1
+  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
+
+  # Add conflicting properties
+  svntest.main.run_svn(None, 'propset', 'foo', 'eek', wc_dir)
+
+  svntest.actions.run_and_verify_commit(wc_dir, None, None,
+                                        "Out of date: '' in transaction",
+                                        None, None, None, None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -1193,7 +1205,6 @@ def update_props_on_wc_root(sbox):
 ########################################################################
 # Run the tests
 
-
 # list all tests here, starting with None:
 test_list = [ None,
               make_local_props,
@@ -1202,6 +1213,7 @@ test_list = [ None,
               downdate_props,
               remove_props,
               update_conflict_props,
+              XFail(commit_conflict_dirprops, svntest.main.is_fs_type_fsfs),
               commit_replacement_props,
               revert_replacement_props,
               inappropriate_props,

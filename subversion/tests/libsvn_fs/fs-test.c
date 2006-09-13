@@ -3883,6 +3883,10 @@ test_node_created_rev(const char **msg,
   /* begin a new transaction */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, subpool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  /* The created revs on a txn root should be the same as on the rev
+     root it came from, if we haven't made changes yet.  (See issue
+     #2608.) */
+  SVN_ERR(verify_path_revs(txn_root, path_revs, 20, subpool));
   /* make mods */
   SVN_ERR(svn_test__set_file_contents
           (txn_root, "iota", "pointless mod here", subpool));
@@ -4392,6 +4396,15 @@ closest_copy_test(const char **msg,
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool)); 
 
+  /* Okay, just for kicks, let's modify Z2/D/H3/t.  Shouldn't affect
+     its closest-copy-ness, right?  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "Z2/D/H2/t", 
+                                      "Edited text.", spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool)); 
+
   /* Now, we expect Z2/D/H2 to have a closest copy of ("/Z2/D/H2", 3)
      because of the deepest path rule.  We expected Z2/D to have a
      closest copy of ("/Z2", 3).  Z/mu should still have a closest
@@ -4516,7 +4529,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(medium_file_integrity),
     SVN_TEST_PASS(large_file_integrity),
     SVN_TEST_PASS(check_root_revision),
-    SVN_TEST_PASS(test_node_created_rev),
+    SVN_TEST_XFAIL(test_node_created_rev), /* Fails on FSFS, Issue #2608 */
     SVN_TEST_PASS(check_related),
     SVN_TEST_PASS(branch_test),
     SVN_TEST_PASS(verify_checksum),

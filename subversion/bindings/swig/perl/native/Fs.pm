@@ -50,10 +50,10 @@ for (@methods) {
 }
 
 package _p_svn_fs_history_t;
-use SVN::Base qw/Fs svn_fs_history_/;
+use SVN::Base qw(Fs svn_fs_history_);
 
 package _p_svn_fs_txn_t;
-use SVN::Base qw/Fs svn_fs_txn_/;
+use SVN::Base qw(Fs svn_fs_txn_);
 
 *commit = *SVN::Fs::commit_txn;
 *abort = *SVN::Fs::abort_txn;

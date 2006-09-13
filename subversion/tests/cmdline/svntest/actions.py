@@ -247,22 +247,35 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
                             singleton_handler_a = None,
                             a_baton = None,
                             singleton_handler_b = None,
-                            b_baton = None):
-  """Checkout the URL into a new directory WC_DIR_NAME.
-
+                            b_baton = None,
+                            *args):
+  """Checkout the URL into a new directory WC_DIR_NAME. *ARGS are any
+  extra optional args to the checkout subcommand.
+ 
   The subcommand output will be verified against OUTPUT_TREE,
   and the working copy itself will be verified against DISK_TREE.
   SINGLETON_HANDLER_A and SINGLETON_HANDLER_B will be passed to
   tree.compare_trees - see that function's doc string for more details.
-  Returns if successful and raise on failure."""
+  Returns if successful and raise on failure.
+
+  WC_DIR_NAME is deleted if present unless the '--force' option is passed
+  in *ARGS."""
 
   if isinstance(output_tree, wc.State):
     output_tree = output_tree.old_tree()
   if isinstance(disk_tree, wc.State):
     disk_tree = disk_tree.old_tree()
 
-  # Remove dir if it's already there.
-  main.safe_rmtree(wc_dir_name)
+  # Remove dir if it's already there, unless this is a forced checkout.
+  # In that case assume we want to test a forced checkout's toleration
+  # of obstructing paths.
+  remove_wc = True
+  for arg in args:
+    if arg == '--force':
+      remove_wc = False
+      break
+  if remove_wc:
+    main.safe_rmtree(wc_dir_name)
 
   # Checkout and make a tree of the output, using l:foo/p:bar
   ### todo: svn should not be prompting for auth info when using
@@ -270,7 +283,7 @@ def run_and_verify_checkout(URL, wc_dir_name, output_tree, disk_tree,
   output, errput = main.run_svn (None, 'co',
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
-                                 URL, wc_dir_name)
+                                 URL, wc_dir_name, *args)
   mytree = tree.build_tree_from_checkout (output)
 
   # Verify actual output against expected output.
@@ -562,13 +575,20 @@ def run_and_verify_switch(wc_dir_name,
                           wc_target,
                           switch_url,
                           output_tree, disk_tree, status_tree,
+                          error_re_string = None,
                           singleton_handler_a = None,
                           a_baton = None,
                           singleton_handler_b = None,
                           b_baton = None,
-                          check_props = 0):
+                          check_props = 0,
+                          *args):
 
   """Switch WC_TARGET (in working copy dir WC_DIR_NAME) to SWITCH_URL.
+
+  If ERROR_RE_STRING, the switch must exit with error, and the error
+  message must match regular expression ERROR_RE_STRING.
+
+  Else if ERROR_RE_STRING is None, then:
 
   The subcommand output will be verified against OUTPUT_TREE, and the
   working copy itself will be verified against DISK_TREE.  If optional
@@ -587,10 +607,19 @@ def run_and_verify_switch(wc_dir_name,
     status_tree = status_tree.old_tree()
 
   # Update and make a tree of the output.
-  output, errput = main.run_svn (None, 'switch',
+  output, errput = main.run_svn (error_re_string, 'switch',
                                  '--username', main.wc_author,
                                  '--password', main.wc_passwd,
-                                 switch_url, wc_target)
+                                 switch_url, wc_target, *args)
+
+  if (error_re_string):
+    rm = re.compile(error_re_string)
+    for line in errput:
+      match = rm.search(line)
+      if match:
+        return
+    raise main.SVNUnmatchedError
+
   mytree = tree.build_tree_from_checkout (output)
 
   verify_update (mytree, wc_dir_name,

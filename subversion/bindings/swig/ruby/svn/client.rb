@@ -478,7 +478,19 @@ module Svn
       def add_username_provider
         add_provider(Core.auth_get_username_provider)
       end
-      
+
+      def add_ssl_client_cert_file_provider
+        add_provider(Core.auth_get_ssl_client_cert_file_provider)
+      end
+
+      def add_ssl_client_cert_pw_file_provider
+        add_provider(Core.auth_get_ssl_client_cert_pw_file_provider)
+      end
+
+      def add_ssl_server_trust_file_provider
+        add_provider(Core.auth_get_ssl_server_trust_file_provider)
+      end
+
       def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
         args = [retry_limit]
         klass = Core::AuthCredSimple
@@ -520,7 +532,15 @@ module Svn
       def set_cancel_func(callback=Proc.new)
         @cancel_baton = Client.set_cancel_func(self, callback)
       end
-      
+
+      def config=(new_config)
+        Client.set_config(self, new_config)
+      end
+
+      def config
+        Client.get_config(self)
+      end
+
       private
       def init_callbacks
         set_log_msg_func(nil)

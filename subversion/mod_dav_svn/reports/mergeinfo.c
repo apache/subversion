@@ -20,34 +20,31 @@
 #include <apr_strings.h>
 #include <apr_xml.h>
 #include <apr_md5.h>
+
+#include <http_request.h>
+#include <http_log.h>
 #include <mod_dav.h>
 
 #include "svn_pools.h"
 #include "svn_repos.h"
-#include "svn_fs.h"
-#include "svn_md5.h"
-#include "svn_base64.h"
 #include "svn_xml.h"
 #include "svn_path.h"
 #include "svn_dav.h"
-#include "svn_props.h"
-#include "svn_mergeinfo.h"
 
-#include "dav_svn.h"
-#include <http_request.h>
-#include <http_log.h>
+#include "../dav_svn.h"
 
 
-dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
-                                           const apr_xml_doc *doc,
-                                           ap_filter_t *output)
+dav_error *
+dav_svn__get_merge_info_report(const dav_resource *resource,
+                               const apr_xml_doc *doc,
+                               ap_filter_t *output)
 {
   svn_error_t *serr;
   apr_status_t apr_err;
   dav_error *derr = NULL;
   apr_xml_elem *child;
   apr_hash_t *mergeinfo;
-  dav_svn_authz_read_baton arb;
+  dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   const char *action;
   int ns;
@@ -60,7 +57,7 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
     = apr_array_make(resource->pool, 0, sizeof(const char *));
 
   /* Sanity check. */
-  ns = dav_svn_find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
       return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
@@ -104,12 +101,12 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
 
   serr = svn_repos_fs_get_merge_info(&mergeinfo, repos->repos, paths, rev,
                                      include_parents,
-                                     dav_svn_authz_read_func(&arb),
+                                     dav_svn__authz_read_func(&arb),
                                      &arb, resource->pool);
   if (serr)
     {
-      derr = dav_svn_convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                 resource->pool);
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                  resource->pool);
       goto cleanup;
     }
 
@@ -119,8 +116,8 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
                            "\" " "xmlns:D=\"DAV:\">" DEBUG_CR);
   if (serr)
     {
-      derr = dav_svn_convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                 resource->pool);
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
+                                  resource->pool);
       goto cleanup;
     }
 
@@ -149,9 +146,9 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
                                                         info, 0));
           if (serr)
             {
-              derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                         "Error ending REPORT response.",
-                                         resource->pool);
+              derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                          "Error ending REPORT response.",
+                                          resource->pool);
               goto cleanup;
             }
         }
@@ -160,9 +157,9 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
   if ((serr = dav_svn__send_xml(bb, output, "</S:merge-info-report>"
                                 DEBUG_CR)))
     {
-      derr = dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Error ending REPORT response.",
-                                 resource->pool);
+      derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Error ending REPORT response.",
+                                  resource->pool);
       goto cleanup;
     }
 
@@ -188,9 +185,9 @@ dav_error * dav_svn__get_merge_info_report(const dav_resource *resource,
   /* Flush the contents of the brigade (returning an error only if we
      don't already have one). */
   if ((apr_err = ap_fflush(output, bb)) && !derr)
-    derr = dav_svn_convert_err(svn_error_create(apr_err, 0, NULL),
-                               HTTP_INTERNAL_SERVER_ERROR,
-                               "Error flushing brigade.",
-                               resource->pool);
+    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+                                HTTP_INTERNAL_SERVER_ERROR,
+                                "Error flushing brigade.",
+                                resource->pool);
   return derr;
 }

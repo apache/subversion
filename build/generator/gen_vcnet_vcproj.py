@@ -42,6 +42,7 @@ class Generator(gen_win.WinGeneratorBase):
       raise gen_base.GenError("Cannot create project for %s" % target.name)
 
     target.output_name = self.get_output_name(target)
+    target.output_pdb = self.get_output_pdb(target)
     target.output_dir = self.get_output_dir(target)
     target.intermediate_dir = self.get_intermediate_dir(target)
 

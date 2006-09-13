@@ -59,6 +59,7 @@ class WinGeneratorBase(GeneratorBase):
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
     self.have_gen_uri = None
+    self.sasl_path = None
 
     # NLS options
     self.enable_nls = None
@@ -90,6 +91,8 @@ class WinGeneratorBase(GeneratorBase):
         self.zlib_path = val
       elif opt == '--with-swig':
         self.swig_path = val
+      elif opt == '--with-sasl':
+        self.sasl_path = val
       elif opt == '--with-openssl':
         self.openssl_path = val
       elif opt == '--enable-purify':
@@ -394,7 +397,9 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetExe):
       return target.name + '.exe'
     elif isinstance(target, gen_base.TargetJava):
-      return None
+      ### This target file is not actually built, but we need it to keep
+      ### the VC Express build happy.
+      return target.name
     elif isinstance(target, gen_base.TargetApacheMod):
       return target.name + '.so'
     elif isinstance(target, gen_base.TargetLib):
@@ -409,6 +414,11 @@ class WinGeneratorBase(GeneratorBase):
       return target.name + '.exe'
     elif isinstance(target, gen_base.TargetI18N):
       return target.name
+
+  def get_output_pdb(self, target):
+    name = self.get_output_name(target)
+    name = os.path.splitext(name)
+    return name[0] + '.pdb'
 
   def get_output_dir(self, target):
     if isinstance(target, gen_base.TargetJavaHeaders):
@@ -610,48 +620,47 @@ class WinGeneratorBase(GeneratorBase):
     # check if we have a newer neon (0.25.x)
     if self.neon_ver >= 25000:
       fakedefines.append("SVN_NEON_0_25=1")
+    # check for neon 0.26.x or newer
+    if self.neon_ver >= 26000:
+      fakedefines.append("SVN_NEON_0_26=1")
+
+    # check we have sasl
+    if self.sasl_path:
+      fakedefines.append("SVN_HAVE_SASL")
 
     return fakedefines
 
   def get_win_includes(self, target):
     "Return the list of include directories for target"
+    
+    fakeincludes = [ self.path("subversion/include"),
+                     self.path("subversion"),
+                     self.apath(self.apr_path, "include"),
+                     self.apath(self.apr_util_path, "include") ]
 
     if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes = [ self.path("subversion/include"),
-                       self.apath(self.bdb_path, "include"),
-                       self.path("subversion") ]
-      fakeincludes.extend([
-        self.apath(self.apr_path, "include"),
-        self.apath(self.apr_util_path, "include"),
-        self.apath(self.apr_util_path, "xml/expat/lib"),
-        self.apath(self.httpd_path, "include")
-        ])
+      fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
+                            self.apath(self.httpd_path, "include"),
+                            self.apath(self.bdb_path, "include") ])
     elif isinstance(target, gen_base.TargetSWIG):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
-      fakeincludes = [ self.path("subversion/bindings/swig"),
-                       self.path("subversion/bindings/swig/proxy"),
-                       self.path("subversion/bindings/swig/include"),
-                       self.path("subversion/include"),
-                       self.path(util_includes),
-                       self.apath(self.apr_path, "include"),
-                       self.apath(self.apr_util_path, "include") ]
+      fakeincludes.extend([ self.path("subversion/bindings/swig"),
+                            self.path("subversion/bindings/swig/proxy"),
+                            self.path("subversion/bindings/swig/include"),
+                            self.path(util_includes) ])
     else:
-      fakeincludes = [ self.path("subversion/include"),
-                       self.apath(self.apr_path, "include"),
-                       self.apath(self.apr_util_path, "include"),
-                       self.apath(self.apr_util_path, "xml/expat/lib"),
-                       self.apath(self.neon_path, "src"),
-                       self.apath(self.bdb_path, "include"),
-                       self.path("subversion/bindings/swig/proxy"),
-                       self.path("subversion") ]
+      fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
+                            self.apath(self.neon_path, "src"),
+                            self.path("subversion/bindings/swig/proxy"),
+                            self.apath(self.bdb_path, "include") ])
 
     if self.libintl_path:
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
     
     if self.serf_path:
-       fakeincludes.append(self.apath(self.serf_path, ""))
+      fakeincludes.append(self.apath(self.serf_path, ""))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -659,6 +668,9 @@ class WinGeneratorBase(GeneratorBase):
       fakeincludes.append(self.swig_libdir)
 
     fakeincludes.append(self.apath(self.zlib_path))
+
+    if self.sasl_path:
+      fakeincludes.append(self.apath(self.sasl_path, 'include'))
     
     return fakeincludes
 
@@ -671,6 +683,8 @@ class WinGeneratorBase(GeneratorBase):
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path) ]
+    if self.sasl_path:
+      fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -687,6 +701,9 @@ class WinGeneratorBase(GeneratorBase):
       dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
+    sasllib = None
+    if self.sasl_path:
+      sasllib = 'libsasl.lib'
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -719,6 +736,9 @@ class WinGeneratorBase(GeneratorBase):
 
       if dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)
+        
+      if dep.external_lib == '$(SVN_SASL_LIBS)':
+        nondeplibs.append(sasllib)
         
     return gen_base.unique(nondeplibs)
 

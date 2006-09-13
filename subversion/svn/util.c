@@ -286,7 +286,12 @@ svn_cl__edit_externally(svn_string_t **edited_contents /* UTF-8! */,
           err = svn_subst_translate_string(edited_contents, *edited_contents,
                                            encoding, pool);
           if (err)
-            goto cleanup;
+            {
+              err = svn_error_quick_wrap
+                (err, 
+                 _("Error normalizing edited contents to internal format"));
+              goto cleanup;
+            }
         }
     }
   else
@@ -491,8 +496,9 @@ svn_cl__get_log_message(const char **log_msg,
     {
       svn_string_t *log_msg_string = svn_string_create(lmb->message, pool);
 
-      SVN_ERR(svn_subst_translate_string(&log_msg_string, log_msg_string,
-                                         lmb->message_encoding, pool));
+      SVN_ERR_W(svn_subst_translate_string(&log_msg_string, log_msg_string,
+                                           lmb->message_encoding, pool),
+                _("Error normalizing log message to internal format"));
 
       *log_msg = log_msg_string->data;
 

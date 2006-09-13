@@ -10,6 +10,8 @@
 # EXAMPLE:
 #
 #   $ ./server-vsn.py http://svn.collab.net/
+#                   or
+#   $ ./server-vsn.py https://svn.collab.net/
 #
 # Python 1.5.2 or later is required.
 #
@@ -17,28 +19,34 @@
 import sys
 import httplib
 import urlparse
-import string
 
 
 def print_version(url):
   scheme, netloc, path, params, query, fragment = urlparse.urlparse(url)
-  if scheme != 'http':
-    print 'ERROR: this script only supports "http" URLs'
+  if scheme == 'http':
+    conn = httplib.HTTPConnection(netloc)
+  elif scheme == 'https':
+    conn = httplib.HTTPSConnection(netloc)
+  else:
+    print 'ERROR: this script only supports "http" and "https" URLs'
     sys.exit(1)
-  conn = httplib.HTTP(netloc)
   conn.putrequest('OPTIONS', path)
   conn.putheader('Host', netloc)
   conn.endheaders()
-  status, msg, headers = conn.getreply()
-  if status != 200:
+  resp = conn.getresponse()
+  status, msg, server = (resp.status, resp.msg, resp.getheader('Server'))
+  conn.close()
+
+  # Handle "OK" and Handle redirect requests, if requested resource
+  # resides temporarily under a different URL
+  if status != 200 and status != 302:
     print 'ERROR: bad status response: %s %s' % (status, msg)
     sys.exit(1)
-  server = headers.getheader('Server')
   if not server:
     # a missing Server: header. Bad, bad server! Go sit in the corner!
     print 'WARNING: missing header'
   else:
-    for part in string.split(server):
+    for part in server.split(' '):
       if part[:4] == 'SVN/':
         print part[4:]
         break

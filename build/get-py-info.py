@@ -1,6 +1,18 @@
 #
 # get-py-info.py: get various Python info (for building)
 #
+######################################################################
+#
+# Copyright (c) 2002-2006 CollabNet.  All rights reserved.
+#
+# This software is licensed as described in the file COPYING, which
+# you should have received as part of this distribution.  The terms
+# are also available at http://subversion.tigris.org/license-1.html.
+# If newer versions of this license are posted there, you may use a
+# newer version instead, at your option.
+#
+######################################################################
+#
 # This should be loaded/run by the appropriate Python, rather than executed
 # directly as a program. In other words, you should:
 #

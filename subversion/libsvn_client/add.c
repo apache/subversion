@@ -214,44 +214,45 @@ add_file(const char *path,
   svn_node_kind_t kind;
   svn_boolean_t is_special;
 
-  /* add the file */
-  SVN_ERR(svn_wc_add2(path, adm_access, NULL, SVN_INVALID_REVNUM,
-                      ctx->cancel_func, ctx->cancel_baton,
-                      NULL, NULL, pool));
-
   /* Check to see if this is a special file. */
   SVN_ERR(svn_io_check_special_path(path, &kind, &is_special, pool));
 
   if (is_special)
-    {
-      /* This must be a special file. */
-      SVN_ERR(svn_wc_prop_set2
-              (SVN_PROP_SPECIAL,
-               svn_string_create(SVN_PROP_SPECIAL_VALUE, pool),
-               path, adm_access, FALSE, pool));
-      mimetype = NULL;
-    }
+    mimetype = NULL;
   else
+    /* Get automatic properties */
+    /* This may fail on write-only files:
+       we open them to estimate file type.
+       That's why we postpone the add until after this step. */
+    SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path, ctx,
+                                       pool));
+
+  /* Add the file */
+  SVN_ERR(svn_wc_add2(path, adm_access, NULL, SVN_INVALID_REVNUM,
+                      ctx->cancel_func, ctx->cancel_baton,
+                      NULL, NULL, pool));
+
+  if (is_special)
+    /* This must be a special file. */
+    SVN_ERR(svn_wc_prop_set2
+            (SVN_PROP_SPECIAL,
+             svn_string_create(SVN_PROP_SPECIAL_VALUE, pool),
+             path, adm_access, FALSE, pool));
+  else if (properties)
     {
-      /* get automatic properties */
-      SVN_ERR(svn_client__get_auto_props(&properties, &mimetype, path, ctx,
-                                         pool));
-      if (properties)
+      /* loop through the hashtable and add the properties */
+      for (hi = apr_hash_first(pool, properties);
+           hi != NULL; hi = apr_hash_next(hi))
         {
-          /* loop through the hashtable and add the properties */
-          for (hi = apr_hash_first(pool, properties);
-               hi != NULL; hi = apr_hash_next(hi))
-            {
-              const void *pname;
-              void *pval;
-          
-              apr_hash_this(hi, &pname, NULL, &pval);
-              /* It's probably best to pass 0 for force, so that if
-                 the autoprops say to set some weird combination,
-                 we just error and let the user sort it out. */
-              SVN_ERR(svn_wc_prop_set2(pname, pval, path,
-                                       adm_access, FALSE, pool));
-            }
+          const void *pname;
+          void *pval;
+
+          apr_hash_this(hi, &pname, NULL, &pval);
+          /* It's probably best to pass 0 for force, so that if
+             the autoprops say to set some weird combination,
+             we just error and let the user sort it out. */
+          SVN_ERR(svn_wc_prop_set2(pname, pval, path,
+                                   adm_access, FALSE, pool));
         }
     }
 
@@ -315,17 +316,43 @@ add_dir_recursive(const char *dirname,
   if (!no_ignore)
     SVN_ERR(svn_wc_get_ignores(&ignores, ctx->config, dir_access, pool));
 
-  /* Create a subpool for iterative memory control. */
   subpool = svn_pool_create(pool);
 
-  /* Read the directory entries one by one and add those things to
-     revision control. */
   SVN_ERR(svn_io_dir_open(&dir, dirname, pool));
-  for (err = svn_io_dir_read(&this_entry, flags, dir, subpool);
-       err == SVN_NO_ERROR;
-       err = svn_io_dir_read(&this_entry, flags, dir, subpool))
+
+  /* Read the directory entries one by one and add those things to
+     version control. */
+  while (1)
     {
       const char *fullpath;
+
+      svn_pool_clear(subpool);
+
+      err = svn_io_dir_read(&this_entry, flags, dir, subpool);
+
+      if (err)
+        {
+          /* Check if we're done reading the dir's entries. */
+          if (APR_STATUS_IS_ENOENT(err->apr_err))
+            {
+              apr_status_t apr_err;
+
+              svn_error_clear(err);
+              apr_err = apr_dir_close(dir);
+              if (apr_err)
+                return svn_error_wrap_apr
+                  (apr_err, _("Can't close directory '%s'"),
+                   svn_path_local_style(dirname, subpool));
+              break;
+            }
+          else
+            {
+              return svn_error_createf
+                (err->apr_err, err,
+                 _("Error during recursive add of '%s'"),
+                 svn_path_local_style(dirname, subpool));
+            }
+        }
 
       /* Skip entries for this dir and its parent.  */
       if (this_entry.name[0] == '.'
@@ -363,29 +390,6 @@ add_dir_recursive(const char *dirname,
           else if (err)
             return err;
         }
-
-      /* Clean out the per-iteration pool. */
-      svn_pool_clear(subpool);
-    }
-
-  /* Check that the loop exited cleanly. */
-  if (! (APR_STATUS_IS_ENOENT(err->apr_err)))
-    {
-      return svn_error_createf
-        (err->apr_err, err,
-         _("Error during recursive add of '%s'"),
-         svn_path_local_style(dirname, subpool));
-    }
-  else  /* Yes, it exited cleanly, so close the dir. */
-    {
-      apr_status_t apr_err;
-
-      svn_error_clear(err);
-      apr_err = apr_dir_close(dir);
-      if (apr_err)
-        return svn_error_wrap_apr
-          (apr_err, _("Can't close directory '%s'"),
-           svn_path_local_style(dirname, subpool));
     }
 
   /* Opened by svn_wc_add */

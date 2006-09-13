@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os.path, re, time
+import sys, os.path, re, time
 
 # Our testing module
 import svntest
@@ -552,7 +552,7 @@ def status_uninvited_parent_directory(sbox):
 def status_on_forward_deletion(sbox):
   "status -u on working copy deleted in HEAD"
   # See issue #1289.
-  sbox.build()
+  sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   
   top_url = svntest.main.current_repo_url

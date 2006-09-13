@@ -30,44 +30,11 @@
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_props.h"
-#include "svn_ctype.h"
 
 #include "svn_private_config.h"
 
 
 /*** Code. ***/
-
-/* Check whether the UTF8 NAME is a valid property name.  For now, this means
- * the ASCII subset of an XML "Name".
- * XML "Name" is defined at http://www.w3.org/TR/REC-xml#sec-common-syn */
-static svn_boolean_t
-is_valid_prop_name(const char *name)
-{
-  const char *p = name;
-
-  /* The characters we allow use identical representations in UTF8
-     and ASCII, so we can just test for the appropriate ASCII codes.
-     But we can't use standard C character notation ('A', 'B', etc)
-     because there's no guarantee that this C environment is using
-     ASCII. */
-
-  if (!(svn_ctype_isalpha(*p)
-        || *p == SVN_CTYPE_ASCII_COLON
-        || *p == SVN_CTYPE_ASCII_UNDERSCORE))
-    return FALSE;
-  p++;
-  for (; *p; p++)
-    {
-      if (!(svn_ctype_isalnum(*p)
-            || *p == SVN_CTYPE_ASCII_MINUS
-            || *p == SVN_CTYPE_ASCII_DOT
-            || *p == SVN_CTYPE_ASCII_COLON
-            || *p == SVN_CTYPE_ASCII_UNDERSCORE))
-        return FALSE;
-    }
-  return TRUE;
-}
-
 
 /* Check whether NAME is a revision property name.
  * 
@@ -200,7 +167,7 @@ svn_client_propset2(const char *propname,
          target);
     }
 
-  if (propval && ! is_valid_prop_name(propname))
+  if (propval && ! svn_prop_name_is_valid(propname))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Bad property name: '%s'"), propname);
 
@@ -275,7 +242,7 @@ svn_client_revprop_set(const char *propname,
     return svn_error_create(SVN_ERR_CLIENT_REVISION_AUTHOR_CONTAINS_NEWLINE,
                             NULL, _("Value will not be set unless forced"));
 
-  if (propval && ! is_valid_prop_name(propname))
+  if (propval && ! svn_prop_name_is_valid(propname))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Bad property name: '%s'"), propname);
 

@@ -549,14 +549,41 @@ svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
                             const char *name);
 
 
+/* Our equivalent of ne_xml_startelm_cb, the difference being that it
+ * returns errors in a svn_error_t, and returns the element type via
+ * ELEM.  To ignore the element *ELEM should be set to NE_XML_DECLINE
+ * and SVN_NO_ERROR should be returned.
+ */
+typedef svn_error_t * (*svn_ra_dav__startelm_cb_t)(int *elem,
+                                                   void *baton,
+                                                   int parent,
+                                                   const char *nspace,
+                                                   const char *name,
+                                                   const char **atts);
+
+/* Our equivalent of ne_xml_cdata_cb, the difference being that it returns
+ * errors in a svn_error_t.
+ */
+typedef svn_error_t * (*svn_ra_dav__cdata_cb_t)(void *baton,
+                                                int state,
+                                                const char *cdata,
+                                                size_t len);
+
+/* Our equivalent of ne_xml_endelm_cb, the difference being that it returns
+ * errors in a svn_error_t.
+ */
+typedef svn_error_t * (*svn_ra_dav__endelm_cb_t)(void *baton,
+                                                 int state,
+                                                 const char *nspace,
+                                                 const char *name);
+
 /* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
  * in session SESS, and parse the response.  If BODY is non-null, it is
  * the body of the request, else use the contents of file BODY_FILE
  * as the body.
  *
- * VALIDATE_CB, STARTELM_CB, and ENDELM_CB are Neon validation, start
- * element, and end element handlers, respectively, from Neon > 0.24.
- * BATON is passed to each as userdata.
+ * STARTELM_CB, CDATA_CB and ENDELM_CB are start element, cdata and end
+ * element handlers, respectively.  BATON is passed to each as userdata.
  *
  * SET_PARSER is a callback function which, if non-NULL, is called
  * with the XML parser and BATON.  This is useful for providers of
@@ -585,9 +612,9 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            apr_file_t *body_file,
                            void set_parser(ne_xml_parser *parser,
                                            void *baton),
-                           ne_xml_startelm_cb *startelm_cb,
-                           ne_xml_cdata_cb *cdata_cb,
-                           ne_xml_endelm_cb *endelm_cb,
+                           svn_ra_dav__startelm_cb_t startelm_cb,
+                           svn_ra_dav__cdata_cb_t cdata_cb,
+                           svn_ra_dav__endelm_cb_t endelm_cb,
                            void *baton,
                            apr_hash_t *extra_headers,
                            int *status_code,
@@ -778,6 +805,34 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                        apr_pool_t *pool);
 
 
+/* Create an error of type SVN_ERR_RA_DAV_MALFORMED_DATA for cases where
+   we recieve an element we didn't expect to see. */
+#define UNEXPECTED_ELEMENT(ns, elem)                               \
+        (ns ? svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,     \
+                                NULL,                              \
+                                _("Got unexpected element %s:%s"), \
+                                ns,                                \
+                                elem)                              \
+            : svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,     \
+                                NULL,                              \
+                                _("Got unexpected element %s"),    \
+                                elem))
+
+/* Create an error of type SVN_ERR_RA_DAV_MALFORMED_DATA for cases where
+   we don't receive a necessary attribute. */
+#define MISSING_ATTR(ns, elem, attr) \
+        (ns ? svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, \
+                                NULL, \
+                                _("Missing attribute '%s' on element %s:%s"), \
+                                attr, \
+                                ns, \
+                                elem) \
+           : svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, \
+                               NULL, \
+                               _("Missing attribute '%s' on element %s"), \
+                               attr, \
+                               elem))
+
 /* Callback to get data from a Neon request after it has been sent.
 
    REQUEST is the request, DISPATCH_RETURN_VAL is the value that
@@ -803,15 +858,11 @@ svn_ra_dav__request_interrogator(ne_request *request,
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
 
-   #ifdef SVN_NEON_0_25
-
-      If INTERROGATOR is non-NULL, invoke it with the Neon request,
-      the dispatch result, and INTERROGATOR_BATON.  This is done
-      regardless of whether the request appears successful or not.  If
-      the interrogator has an error result, return that error
-      immediately, after freeing the request.
-
-   #endif // SVN_NEON_0_25
+   If INTERROGATOR is non-NULL, invoke it with the Neon request, the
+   dispatch result, and INTERROGATOR_BATON.  This is done regardless of
+   whether the request appears successful or not.  If the interrogator
+   has an error result, return that error immediately, after freeing the
+   request.
 
    ### not super sure on this "okay" stuff, but it means that the request
    ### dispatching code can generate much better errors than the callers
@@ -827,12 +878,18 @@ svn_ra_dav__request_dispatch(int *code_p,
                              const char *url,
                              int okay_1,
                              int okay_2,
-#ifdef SVN_NEON_0_25
                              svn_ra_dav__request_interrogator interrogator,
                              void *interrogator_baton,
-#endif /* SVN_NEON_0_25 */
                              apr_pool_t *pool);
 
+/* Grab the Location HTTP header from the Neon's REQUEST structure,
+   and return it in *LOCATION (expected to be passed in as type char **).
+   Implements the svn_ra_dav__request_interrogator interface (ignoring
+   the DISPATCH_RETURN_VAL parameter). */
+svn_error_t *
+svn_ra_dav__interrogate_for_location(ne_request *request,
+                                     int dispatch_return_val,
+                                     void *location);
 
 /* Give PARSER the ability to parse a mod_dav_svn <D:error> response
    body in the case of a non-2XX response to REQUEST.  If a <D:error>

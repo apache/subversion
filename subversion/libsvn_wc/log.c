@@ -556,7 +556,7 @@ log_do_merge(struct log_runner *loggy,
   err = svn_wc__merge_internal(&log_accum, &merge_outcome,
                                left, right, name, loggy->adm_access,
                                left_label, right_label, target_label,
-                               FALSE, loggy->diff3_cmd, NULL,
+                               FALSE, loggy->diff3_cmd, NULL, NULL,
                                loggy->pool);
   if (err && loggy->rerun && APR_STATUS_IS_ENOENT(err->apr_err))
     {
@@ -2520,8 +2520,8 @@ svn_wc_cleanup2(const char *path,
           SVN_ERR(svn_wc_props_modified_p(&modified, entry_path,
                                           adm_access, subpool));
           if (entry->kind == svn_node_file)
-            SVN_ERR(svn_wc_text_modified_p(&modified, entry_path, FALSE,
-                                           adm_access, subpool));
+            SVN_ERR(svn_wc_text_modified_p2(&modified, entry_path, FALSE,
+                                            FALSE, adm_access, subpool));
         }
     }
   svn_pool_destroy(subpool);

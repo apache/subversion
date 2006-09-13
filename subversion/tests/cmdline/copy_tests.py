@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import stat, string, sys, os, shutil, re
+import stat, sys, os, shutil, re
 
 # Our testing module
 import svntest
@@ -293,7 +293,7 @@ def basic_copy_and_move_files(sbox):
                                      alpha_path, alpha2_path)
 
   # Move mu to H -- local mods
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv', '--force',
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      mu_path, H_path)
 
   # Move iota to F -- no local mods
@@ -1087,7 +1087,7 @@ def url_copy_parent_into_child(sbox):
 def wc_copy_parent_into_child(sbox):
   "copy WC URL/subdir"
 
-  sbox.build()
+  sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   
   B_url = svntest.main.current_repo_url + "/A/B"
@@ -1816,11 +1816,11 @@ def mv_unversioned_file(sbox):
   # Try to forcibly move an unversioned file.
   svntest.actions.run_and_verify_svn(None, None,
                                      ".*unversioned2.* is not under version control.*",
-                                     'mv', '--force',
+                                     'mv',
                                      unver_path_2, dest_path_2)
 
 def force_move(sbox):
-  "'move --force' should not lose local mods"
+  "'move' should not lose local mods"
   # Issue #2435: 'svn move' / 'svn mv' can lose local modifications.
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1851,7 +1851,7 @@ def force_move(sbox):
   try:
     svntest.actions.run_and_verify_svn(None, move_output,
                                        [],
-                                       'move', '--force', 
+                                       'move',
                                        file_name, "dest")
   finally:
     os.chdir(was_cwd)
@@ -1862,7 +1862,7 @@ def force_move(sbox):
   file_handle.close()
   # Error if we dont find the modified contents...
   if modified_file_content != expected_file_content:
-    raise svntest.Failure("File modifications were lost on 'move --force'")
+    raise svntest.Failure("File modifications were lost on 'move'")
 
   # Commit the move and make sure the new content actually reaches
   # the repository.
@@ -1884,6 +1884,814 @@ def force_move(sbox):
   svntest.actions.run_and_verify_svn('Cat file', expected_file_content, [],
                                      'cat',
                                      svntest.main.current_repo_url + '/dest')
+
+
+def copy_copied_file_and_dir(sbox):
+  "copy a copied file and dir"
+  # Improve support for copy and move
+  # Allow copy of copied items without a commit between
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  rho_copy_path_1 = os.path.join(wc_dir, 'A', 'D', 'rho_copy_1')
+  rho_copy_path_2 = os.path.join(wc_dir, 'A', 'B', 'F', 'rho_copy_2')
+
+  # Copy A/D/G/rho to A/D/rho_copy_1
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     rho_path, rho_copy_path_1)
+
+  # Copy the copied file: A/D/rho_copy_1 to A/B/F/rho_copy_2
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     rho_copy_path_1, rho_copy_path_2)
+
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  E_path_copy_1 = os.path.join(wc_dir, 'A', 'B', 'F', 'E_copy_1')
+  E_path_copy_2 = os.path.join(wc_dir, 'A', 'D', 'G', 'E_copy_2')
+
+  # Copy A/B/E to A/B/F/E_copy_1
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     E_path, E_path_copy_1)
+
+  # Copy the copied dir: A/B/F/E_copy_1 to A/D/G/E_copy_2
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     E_path_copy_1, E_path_copy_2)
+
+  # Created expected output tree for 'svn ci':
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/rho_copy_1'       : Item(verb='Adding'),
+    'A/B/F/rho_copy_2'     : Item(verb='Adding'),
+    'A/B/F/E_copy_1/'      : Item(verb='Adding'),
+    'A/D/G/E_copy_2/'      : Item(verb='Adding'),
+    })
+
+  # Create expected status tree 
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/D/rho_copy_1'       : Item(status='  ', wc_rev=2),
+    'A/B/F/rho_copy_2'     : Item(status='  ', wc_rev=2),
+    'A/B/F/E_copy_1'       : Item(status='  ', wc_rev=2),
+    'A/B/F/E_copy_1/alpha' : Item(status='  ', wc_rev=2),
+    'A/B/F/E_copy_1/beta'  : Item(status='  ', wc_rev=2),
+    'A/D/G/E_copy_2'       : Item(status='  ', wc_rev=2),
+    'A/D/G/E_copy_2/alpha' : Item(status='  ', wc_rev=2),
+    'A/D/G/E_copy_2/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+
+def move_copied_file_and_dir(sbox):
+  "move a copied file and dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  rho_copy_path = os.path.join(wc_dir, 'A', 'D', 'rho_copy')
+  rho_copy_move_path = os.path.join(wc_dir, 'A', 'B', 'F', 'rho_copy_moved')
+
+  # Copy A/D/G/rho to A/D/rho_copy
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     rho_path, rho_copy_path)
+
+  # Move the copied file: A/D/rho_copy to A/B/F/rho_copy_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     rho_copy_path, rho_copy_move_path)
+
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  E_path_copy = os.path.join(wc_dir, 'A', 'B', 'F', 'E_copy')
+  E_path_copy_move = os.path.join(wc_dir, 'A', 'D', 'G', 'E_copy_moved')
+
+  # Copy A/B/E to A/B/F/E_copy
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     E_path, E_path_copy)
+
+  # Move the copied file: A/B/F/E_copy to A/D/G/E_copy_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     E_path_copy, E_path_copy_move)
+
+  # Created expected output tree for 'svn ci':
+  # Since we are moving items that were only *scheduled* for addition
+  # we expect only to additions when checking in, rather than a
+  # deletion/addition pair.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F/rho_copy_moved' : Item(verb='Adding'),
+    'A/D/G/E_copy_moved/'  : Item(verb='Adding'),
+    })
+
+  # Create expected status tree 
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/rho_copy_moved'     : Item(status='  ', wc_rev=2),
+    'A/D/G/E_copy_moved'       : Item(status='  ', wc_rev=2),
+    'A/D/G/E_copy_moved/alpha' : Item(status='  ', wc_rev=2),
+    'A/D/G/E_copy_moved/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+
+def move_moved_file_and_dir(sbox):
+  "move a moved file and dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  rho_move_path = os.path.join(wc_dir, 'A', 'D', 'rho_moved')
+  rho_move_moved_path = os.path.join(wc_dir, 'A', 'B', 'F', 'rho_move_moved')
+
+  # Move A/D/G/rho to A/D/rho_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     rho_path, rho_move_path)
+
+  # Move the moved file: A/D/rho_moved to A/B/F/rho_move_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     rho_move_path, rho_move_moved_path)
+
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  E_path_moved = os.path.join(wc_dir, 'A', 'B', 'F', 'E_moved')
+  E_path_move_moved = os.path.join(wc_dir, 'A', 'D', 'G', 'E_move_moved')
+
+  # Copy A/B/E to A/B/F/E_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     E_path, E_path_moved)
+
+  # Move the moved file: A/B/F/E_moved to A/D/G/E_move_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     E_path_moved, E_path_move_moved)
+
+  # Created expected output tree for 'svn ci':
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'                : Item(verb='Deleting'),
+    'A/D/G/E_move_moved/'  : Item(verb='Adding'),
+    'A/D/G/rho'            : Item(verb='Deleting'),
+    'A/B/F/rho_move_moved' : Item(verb='Adding'),
+    })
+
+  # Create expected status tree 
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/D/G/E_move_moved/'      : Item(status='  ', wc_rev=2),
+    'A/D/G/E_move_moved/alpha' : Item(status='  ', wc_rev=2),
+    'A/D/G/E_move_moved/beta'  : Item(status='  ', wc_rev=2),
+    'A/B/F/rho_move_moved'     : Item(status='  ', wc_rev=2),
+    })
+
+  expected_status.remove('A/B/E',
+                         'A/B/E/alpha',
+                         'A/B/E/beta',
+                         'A/D/G/rho')
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+
+def move_file_within_moved_dir(sbox):
+  "move a file twice within a moved dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  D_path_moved = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved')
+
+  # Move A/B/D to A/B/F/D_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     D_path, D_path_moved)
+
+  chi_path = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved', 'H', 'chi')
+  chi_moved_path = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved',
+                                'H', 'chi_moved')
+  chi_moved_again_path = os.path.join(wc_dir, 'A', 'B', 'F',
+                                      'D_moved', 'H', 'chi_moved_again')
+
+  # Move A/B/F/D_moved/H/chi to A/B/F/D_moved/H/chi_moved
+  # then move that to A/B/F/D_moved/H/chi_moved_again
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     chi_path, chi_moved_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     chi_moved_path,
+                                     chi_moved_again_path)
+
+  # Created expected output tree for 'svn ci':
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F/D_moved/'                  : Item(verb='Adding'),
+    'A/B/F/D_moved/H/chi'             : Item(verb='Deleting'),
+    'A/B/F/D_moved/H/chi_moved_again' : Item(verb='Adding'),
+    'A/D'                             : Item(verb='Deleting'),
+    })
+
+  # Create expected status tree 
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/D_moved'                   : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/gamma'             : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G'                 : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/pi'              : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/rho'             : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/tau'             : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H'                 : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H/omega'           : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H/psi'             : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H/chi_moved_again' : Item(status='  ', wc_rev=2),
+    })
+
+  expected_status.remove('A/D',
+                         'A/D/gamma',
+                         'A/D/G',
+                         'A/D/G/pi',
+                         'A/D/G/rho',
+                         'A/D/G/tau',
+                         'A/D/H',
+                         'A/D/H/chi',
+                         'A/D/H/omega',
+                         'A/D/H/psi',
+                         )
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+
+def move_file_out_of_moved_dir(sbox):
+  "move a file out of a moved dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  D_path_moved = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved')
+
+  # Move A/B/D to A/B/F/D_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     D_path, D_path_moved)
+
+  chi_path = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved', 'H', 'chi')
+  chi_moved_path = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved',
+                                'H', 'chi_moved')
+  chi_moved_again_path = os.path.join(wc_dir, 'A', 'C', 'chi_moved_again')
+
+  # Move A/B/F/D_moved/H/chi to A/B/F/D_moved/H/chi_moved
+  # then move that to A/C/chi_moved_again
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     chi_path, chi_moved_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     chi_moved_path,
+                                     chi_moved_again_path)
+
+  # Created expected output tree for 'svn ci':
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/F/D_moved/'      : Item(verb='Adding'),
+    'A/B/F/D_moved/H/chi' : Item(verb='Deleting'),
+    'A/C/chi_moved_again' : Item(verb='Adding'),
+    'A/D'                 : Item(verb='Deleting'),
+    })
+
+  # Create expected status tree 
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/D_moved'         : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/gamma'   : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G'       : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/pi'    : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/rho'   : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/tau'   : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H'       : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H/omega' : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H/psi'   : Item(status='  ', wc_rev=2),
+    'A/C/chi_moved_again'   : Item(status='  ', wc_rev=2),
+    })
+
+  expected_status.remove('A/D',
+                         'A/D/gamma',
+                         'A/D/G',
+                         'A/D/G/pi',
+                         'A/D/G/rho',
+                         'A/D/G/tau',
+                         'A/D/H',
+                         'A/D/H/chi',
+                         'A/D/H/omega',
+                         'A/D/H/psi',
+                         )
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+
+def move_dir_within_moved_dir(sbox):
+  "move a dir twice within a moved dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  D_path_moved = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved')
+
+  # Move A/D to A/B/F/D_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     D_path, D_path_moved)
+
+  H_path = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved', 'H')
+  H_moved_path = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved', 'H_moved')
+  H_moved_again_path = os.path.join(wc_dir, 'A', 'B', 'F',
+                                    'D_moved', 'H_moved_again')
+
+  # Move A/B/F/D_moved/H to A/B/F/D_moved/H_moved
+  # then move that to A/B/F/D_moved/H_moved_again
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     H_path, H_moved_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     H_moved_path,
+                                     H_moved_again_path)
+
+  # Created expected output tree for 'svn ci':
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D'                         : Item(verb='Deleting'),
+    'A/B/F/D_moved'               : Item(verb='Adding'),
+    'A/B/F/D_moved/H'             : Item(verb='Deleting'),
+    'A/B/F/D_moved/H_moved_again' : Item(verb='Adding'),
+    })
+
+  # Create expected status tree 
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/D_moved'                     : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/gamma'               : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G'                   : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/pi'                : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/rho'               : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/tau'               : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H_moved_again'       : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H_moved_again/omega' : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H_moved_again/psi'   : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/H_moved_again/chi'   : Item(status='  ', wc_rev=2),
+    })
+
+  expected_status.remove('A/D',
+                         'A/D/gamma',
+                         'A/D/G',
+                         'A/D/G/pi',
+                         'A/D/G/rho',
+                         'A/D/G/tau',
+                         'A/D/H',
+                         'A/D/H/chi',
+                         'A/D/H/omega',
+                         'A/D/H/psi',
+                         )
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+
+def move_dir_out_of_moved_dir(sbox):
+  "move a dir out of a moved dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  D_path_moved = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved')
+
+  # Move A/D to A/B/F/D_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     D_path, D_path_moved)
+
+  H_path = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved', 'H')
+  H_moved_path = os.path.join(wc_dir, 'A', 'B', 'F', 'D_moved', 'H_moved')
+  H_moved_again_path = os.path.join(wc_dir, 'A', 'C', 'H_moved_again')
+
+  # Move A/B/F/D_moved/H to A/B/F/D_moved/H_moved
+  # then move that to A/C/H_moved_again
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     H_path, H_moved_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     H_moved_path,
+                                     H_moved_again_path)
+
+  # Created expected output tree for 'svn ci':
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D'               : Item(verb='Deleting'),
+    'A/B/F/D_moved'     : Item(verb='Adding'),
+    'A/B/F/D_moved/H'   : Item(verb='Deleting'),
+    'A/C/H_moved_again' : Item(verb='Adding'),
+    })
+
+  # Create expected status tree 
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/B/F/D_moved'           : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/gamma'     : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G'         : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/pi'      : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/rho'     : Item(status='  ', wc_rev=2),
+    'A/B/F/D_moved/G/tau'     : Item(status='  ', wc_rev=2),
+    'A/C/H_moved_again'       : Item(status='  ', wc_rev=2),
+    'A/C/H_moved_again/omega' : Item(status='  ', wc_rev=2),
+    'A/C/H_moved_again/psi'   : Item(status='  ', wc_rev=2),
+    'A/C/H_moved_again/chi'   : Item(status='  ', wc_rev=2),
+    })
+
+  expected_status.remove('A/D',
+                         'A/D/gamma',
+                         'A/D/G',
+                         'A/D/G/pi',
+                         'A/D/G/rho',
+                         'A/D/G/tau',
+                         'A/D/H',
+                         'A/D/H/chi',
+                         'A/D/H/omega',
+                         'A/D/H/psi',
+                         )
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+def move_file_back_and_forth(sbox):
+  "move a moved file back to original location"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
+  rho_move_path = os.path.join(wc_dir, 'A', 'D', 'rho_moved')
+
+  # Move A/D/G/rho to A/D/rho_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     rho_path, rho_move_path)
+
+  # Move the moved file: A/D/rho_moved to A/B/F/rho_move_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     rho_move_path, rho_path)
+
+  # Created expected output tree for 'svn ci':
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/rho' : Item(verb='Replacing'),
+    })
+
+  # Create expected status tree 
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/D/G/rho' : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+
+def move_dir_back_and_forth(sbox):
+  "move a moved dir back to original location"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  D_move_path = os.path.join(wc_dir, 'D_moved')
+
+  # Move A/D to D_moved
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     D_path, D_move_path)
+
+  # Move the moved dir: D_moved back to it's starting
+  # location at A/D.
+  out, err = svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
+                                                'mv', D_move_path,
+                                                D_path)
+
+  for line in err:
+    if re.match('.*Cannot copy to .*as it is scheduled for deletion',
+                line, ):
+      return
+  raise svntest.Failure("mv failed but not in the expected way")
+
+
+def copy_move_added_paths(sbox):
+  "copy and move added paths without commits"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new file and schedule it for addition
+  upsilon_path = os.path.join(wc_dir, 'A', 'D', 'upsilon')
+  svntest.main.file_write(upsilon_path, "This is the file 'upsilon'\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', upsilon_path)
+
+  # Create a dir with children and schedule it for addition
+  I_path = os.path.join(wc_dir, 'A', 'D', 'I')
+  J_path = os.path.join(I_path, 'J')
+  eta_path = os.path.join(I_path, 'eta')
+  theta_path = os.path.join(I_path, 'theta')
+  kappa_path = os.path.join(J_path, 'kappa')
+  os.mkdir(I_path)
+  os.mkdir(J_path)
+  svntest.main.file_write(eta_path, "This is the file 'eta'\n")
+  svntest.main.file_write(theta_path, "This is the file 'theta'\n")
+  svntest.main.file_write(kappa_path, "This is the file 'kappa'\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', I_path)
+
+  # Create another dir and schedule it for addition
+  K_path = os.path.join(wc_dir, 'K')
+  os.mkdir(K_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', K_path)
+
+  # Verify all the adds took place correctly.
+  expected_status_after_adds = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status_after_adds.add({
+    'A/D/I'         : Item(status='A ', wc_rev='0'),
+    'A/D/I/eta'     : Item(status='A ', wc_rev='0'),
+    'A/D/I/J'       : Item(status='A ', wc_rev='0'),
+    'A/D/I/J/kappa' : Item(status='A ', wc_rev='0'),
+    'A/D/I/theta'   : Item(status='A ', wc_rev='0'),
+    'A/D/upsilon'   : Item(status='A ', wc_rev='0'),
+    'K'             : Item(status='A ', wc_rev='0'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status_after_adds)
+
+  # Scatter some unversioned paths within the added dir I.
+  unversioned_path_1 = os.path.join(I_path, 'unversioned1')
+  unversioned_path_2 = os.path.join(J_path, 'unversioned2')
+  L_path = os.path.join(I_path, "L_UNVERSIONED")
+  unversioned_path_3 = os.path.join(L_path, 'unversioned3')
+  svntest.main.file_write(unversioned_path_1, "An unversioned file\n")
+  svntest.main.file_write(unversioned_path_2, "An unversioned file\n")
+  os.mkdir(L_path)
+  svntest.main.file_write(unversioned_path_3, "An unversioned file\n")
+
+  # Copy added dir A/D/I to added dir K/I
+  I_copy_path = os.path.join(K_path, 'I')
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     I_path, I_copy_path)
+
+  # Copy added file A/D/upsilon into added dir K
+  upsilon_copy_path = os.path.join(K_path, 'upsilon')
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     upsilon_path, upsilon_copy_path)
+
+  # Move added file A/D/upsilon to upsilon,
+  # then move it again to A/upsilon
+  upsilon_move_path = os.path.join(wc_dir, 'upsilon')
+  upsilon_move_path_2 = os.path.join(wc_dir, 'A', 'upsilon')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     upsilon_path, upsilon_move_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     upsilon_move_path, upsilon_move_path_2)
+
+  # Move added dir A/D/I to A/B/I,
+  # then move it again to A/D/H/I
+  I_move_path = os.path.join(wc_dir, 'A', 'B', 'I')
+  I_move_path_2 = os.path.join(wc_dir, 'A', 'D', 'H', 'I')
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     I_path, I_move_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     I_move_path, I_move_path_2)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/H/I'         : Item(verb='Adding'),
+    'A/D/H/I/J'       : Item(verb='Adding'),
+    'A/D/H/I/J/kappa' : Item(verb='Adding'),
+    'A/D/H/I/eta'     : Item(verb='Adding'),
+    'A/D/H/I/theta'   : Item(verb='Adding'),
+    'A/upsilon'       : Item(verb='Adding'),
+    'K'               : Item(verb='Adding'),
+    'K/I'             : Item(verb='Adding'),
+    'K/I/J'           : Item(verb='Adding'),
+    'K/I/J/kappa'     : Item(verb='Adding'),
+    'K/I/eta'         : Item(verb='Adding'),
+    'K/I/theta'       : Item(verb='Adding'),
+    'K/upsilon'       : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/D/H/I'         : Item(status='  ', wc_rev=2),
+    'A/D/H/I/J'       : Item(status='  ', wc_rev=2),
+    'A/D/H/I/J/kappa' : Item(status='  ', wc_rev=2),
+    'A/D/H/I/eta'     : Item(status='  ', wc_rev=2),
+    'A/D/H/I/theta'   : Item(status='  ', wc_rev=2),
+    'A/upsilon'       : Item(status='  ', wc_rev=2),
+    'K'               : Item(status='  ', wc_rev=2),
+    'K/I'             : Item(status='  ', wc_rev=2),
+    'K/I/J'           : Item(status='  ', wc_rev=2),
+    'K/I/J/kappa'     : Item(status='  ', wc_rev=2),
+    'K/I/eta'         : Item(status='  ', wc_rev=2),
+    'K/I/theta'       : Item(status='  ', wc_rev=2),
+    'K/upsilon'       : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Run_and_verify_commit() doesn't handle status of unversioned paths
+  # so manually confirm unversioned paths got copied and moved too.
+  unversioned_paths = [
+    os.path.join(wc_dir, 'A', 'D', 'H', 'I', 'unversioned1'),
+    os.path.join(wc_dir, 'A', 'D', 'H', 'I', 'L_UNVERSIONED'),
+    os.path.join(wc_dir, 'A', 'D', 'H', 'I', 'L_UNVERSIONED',
+                 'unversioned3'),
+    os.path.join(wc_dir, 'A', 'D', 'H', 'I', 'J', 'unversioned2'),
+    os.path.join(wc_dir, 'K', 'I', 'unversioned1'),
+    os.path.join(wc_dir, 'K', 'I', 'L_UNVERSIONED'),
+    os.path.join(wc_dir, 'K', 'I', 'L_UNVERSIONED', 'unversioned3'),
+    os.path.join(wc_dir, 'K', 'I', 'J', 'unversioned2')]
+  for path in unversioned_paths:
+    if not os.path.exists(path):
+      raise svntest.Failure("Unversioned path '%s' not found." % path)
+
+
+def copy_added_paths_to_URL(sbox):
+  "copy added path to URL"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a new file and schedule it for addition
+  upsilon_path = os.path.join(wc_dir, 'A', 'D', 'upsilon')
+  svntest.main.file_write(upsilon_path, "This is the file 'upsilon'\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', upsilon_path)
+
+  # Create a dir with children and schedule it for addition
+  I_path = os.path.join(wc_dir, 'A', 'D', 'I')
+  J_path = os.path.join(I_path, 'J')
+  eta_path = os.path.join(I_path, 'eta')
+  theta_path = os.path.join(I_path, 'theta')
+  kappa_path = os.path.join(J_path, 'kappa')
+  os.mkdir(I_path)
+  os.mkdir(J_path)
+  svntest.main.file_write(eta_path, "This is the file 'eta'\n")
+  svntest.main.file_write(theta_path, "This is the file 'theta'\n")
+  svntest.main.file_write(kappa_path, "This is the file 'kappa'\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', I_path)
+
+  # Verify all the adds took place correctly.
+  expected_status_after_adds = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status_after_adds.add({
+    'A/D/I'         : Item(status='A ', wc_rev='0'),
+    'A/D/I/eta'     : Item(status='A ', wc_rev='0'),
+    'A/D/I/J'       : Item(status='A ', wc_rev='0'),
+    'A/D/I/J/kappa' : Item(status='A ', wc_rev='0'),
+    'A/D/I/theta'   : Item(status='A ', wc_rev='0'),
+    'A/D/upsilon'   : Item(status='A ', wc_rev='0'),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status_after_adds)
+
+  # Scatter some unversioned paths within the added dir I.
+  # These don't get copied in a WC->URL copy obviously.
+  unversioned_path_1 = os.path.join(I_path, 'unversioned1')
+  unversioned_path_2 = os.path.join(J_path, 'unversioned2')
+  L_path = os.path.join(I_path, "L_UNVERSIONED")
+  unversioned_path_3 = os.path.join(L_path, 'unversioned3')
+  svntest.main.file_write(unversioned_path_1, "An unversioned file\n")
+  svntest.main.file_write(unversioned_path_2, "An unversioned file\n")
+  os.mkdir(L_path)
+  svntest.main.file_write(unversioned_path_3, "An unversioned file\n")
+
+  # Copy added file A/D/upsilon to URL://A/C/upsilon
+  upsilon_copy_URL = sbox.repo_url + '/A/C/upsilon'
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-m', '',
+                                     upsilon_path, upsilon_copy_URL)
+
+  # Copy added dir A/D/I to URL://A/D/G/I
+  I_copy_URL = sbox.repo_url + '/A/D/G/I'
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-m', '',
+                                     I_path, I_copy_URL)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/I'         : Item(verb='Adding'),
+    'A/D/I/J'       : Item(verb='Adding'),
+    'A/D/I/J/kappa' : Item(verb='Adding'),
+    'A/D/I/eta'     : Item(verb='Adding'),
+    'A/D/I/theta'   : Item(verb='Adding'),
+    'A/D/upsilon'   : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/D/I'         : Item(status='  ', wc_rev=4),
+    'A/D/I/J'       : Item(status='  ', wc_rev=4),
+    'A/D/I/J/kappa' : Item(status='  ', wc_rev=4),
+    'A/D/I/eta'     : Item(status='  ', wc_rev=4),
+    'A/D/I/theta'   : Item(status='  ', wc_rev=4),
+    'A/D/upsilon'   : Item(status='  ', wc_rev=4),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Created expected output for update
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G/I'         : Item(status='A '),
+    'A/D/G/I/theta'   : Item(status='A '),
+    'A/D/G/I/J'       : Item(status='A '),
+    'A/D/G/I/J/kappa' : Item(status='A '),
+    'A/D/G/I/eta'     : Item(status='A '),
+    'A/C/upsilon'     : Item(status='A '),
+    })
+
+  # Created expected disk for update
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/D/G/I'                          : Item(),
+    'A/D/G/I/theta'                    : Item("This is the file 'theta'\n"),
+    'A/D/G/I/J'                        : Item(),
+    'A/D/G/I/J/kappa'                  : Item("This is the file 'kappa'\n"),
+    'A/D/G/I/eta'                      : Item("This is the file 'eta'\n"),
+    'A/C/upsilon'                      : Item("This is the file 'upsilon'\n"),
+    'A/D/I'                            : Item(),
+    'A/D/I/J'                          : Item(),
+    'A/D/I/J/kappa'                    : Item("This is the file 'kappa'\n"),
+    'A/D/I/eta'                        : Item("This is the file 'eta'\n"),
+    'A/D/I/theta'                      : Item("This is the file 'theta'\n"),
+    'A/D/upsilon'                      : Item("This is the file 'upsilon'\n"),
+    'A/D/I/L_UNVERSIONED/unversioned3' : Item("An unversioned file\n"),
+    'A/D/I/L_UNVERSIONED'              : Item(),
+    'A/D/I/unversioned1'               : Item("An unversioned file\n"),
+    'A/D/I/J/unversioned2'             : Item("An unversioned file\n"),
+    })
+
+  # Some more changes to the expected_status to reflect post update WC
+  expected_status.tweak(wc_rev=4)
+  expected_status.add({
+    'A/C'             : Item(status='  ', wc_rev=4),
+    'A/C/upsilon'     : Item(status='  ', wc_rev=4),
+    'A/D/G'           : Item(status='  ', wc_rev=4),
+    'A/D/G/I'         : Item(status='  ', wc_rev=4),
+    'A/D/G/I/theta'   : Item(status='  ', wc_rev=4),
+    'A/D/G/I/J'       : Item(status='  ', wc_rev=4),
+    'A/D/G/I/J/kappa' : Item(status='  ', wc_rev=4),
+    'A/D/G/I/eta'     : Item(status='  ', wc_rev=4),
+    })
+
+  # Update WC, the WC->URL copies above should be added
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
 
 ########################################################################
 # Run the tests
@@ -1928,6 +2736,17 @@ test_list = [ None,
               mv_unversioned_file,
               force_move,
               copy_deleted_dir_into_prefix,
+              copy_copied_file_and_dir,
+              move_copied_file_and_dir,
+              move_moved_file_and_dir,
+              move_file_within_moved_dir,
+              move_file_out_of_moved_dir,
+              move_dir_within_moved_dir,
+              move_dir_out_of_moved_dir,
+              move_file_back_and_forth,
+              move_dir_back_and_forth,
+              copy_move_added_paths,
+              copy_added_paths_to_URL,
              ]
 
 if __name__ == '__main__':

@@ -56,12 +56,6 @@
 #include "ra_dav.h"
 
 
-#define CHKERR(e)               \
-do {                            \
-  if ((rb->err = (e)) != NULL)  \
-    return NE_XML_ABORT;        \
-} while(0)
-
 typedef struct {
   /* the information for this subdir. if rsrc==NULL, then this is a sentinel
      record in fetch_ctx_t.subdirs to close the directory implied by the
@@ -209,8 +203,6 @@ typedef struct {
      its response.  If we see that attribute, we set this to true,
      otherwise, it stays false (i.e., it's not a modern server). */
   svn_boolean_t receiving_all;
-
-  svn_error_t *err;
 
 } report_baton_t;
 
@@ -391,23 +383,26 @@ static svn_error_t *add_props(apr_hash_t *props,
 }
                       
 
-#ifdef SVN_NEON_0_25
 /* This implements the svn_ra_dav__request_interrogator() interface.
    USERDATA is 'ne_content_type *'. */
-static svn_error_t *interrogate_for_content_type(ne_request *request,
+static svn_error_t *interrogate_for_content_type(ne_request *req,
                                                  int dispatch_return_val,
                                                  void *userdata)
 {
   ne_content_type *ctype = userdata;
 
-  if (ne_get_content_type(request, ctype) != 0)
+#ifdef SVN_NEON_0_25
+  if (ne_get_content_type(req, ctype) != 0)
     return svn_error_createf
       (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
        _("Could not get content-type from response"));
+#else /* ! SVN_NEON_0_25 */
+  ne_add_response_header_handler(req, "Content-Type", ne_content_type_handler,
+                                 ctype);
+#endif /* SVN_NEON_0_25 */
 
   return SVN_NO_ERROR;
 }
-#endif /* SVN_NEON_0_25 */
 
 
 static svn_error_t *custom_get_request(ne_session *sess,
@@ -452,13 +447,6 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                url);
     }
 
-#ifndef SVN_NEON_0_25
-  /* we want to get the Content-Type so that we can figure out whether
-     this is an svndiff or a fulltext */
-  ne_add_response_header_handler(req, "Content-Type", ne_content_type_handler,
-                                 &cgc.ctype);
-#endif /* ! SVN_NEON_0_25 */
-
   if (delta_base)
     {
       /* The HTTP delta draft uses an If-None-Match header holding an
@@ -490,9 +478,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   err = svn_ra_dav__request_dispatch(NULL, req, sess, "GET", url,
                                      200 /* OK */,
                                      226 /* IM Used */,
-#ifdef SVN_NEON_0_25
                                      interrogate_for_content_type, &cgc.ctype,
-#endif /* SVN_NEON_0_25 */
                                      pool);
 
 #ifdef SVN_NEON_0_25
@@ -1356,9 +1342,10 @@ static const svn_ra_dav__xml_elm_t gloc_report_elements[] =
   { NULL }
 };
 
-/* This implements the `ne_xml_startelem_cb' prototype. */
-static int gloc_start_element(void *userdata, int parent_state, const char *ns,
-                              const char *ln, const char **atts)
+/* This implements the `svn_ra_dav__startelem_cb_t' prototype. */
+static svn_error_t *
+gloc_start_element(int *elem, void *userdata, int parent_state,
+                   const char *ns, const char *ln, const char **atts)
 {
   get_locations_baton_t *baton = userdata;
   const svn_ra_dav__xml_elm_t *elm;
@@ -1367,7 +1354,10 @@ static int gloc_start_element(void *userdata, int parent_state, const char *ns,
 
   /* Just skip unknown elements. */
   if (!elm)
-    return NE_XML_DECLINE;
+    {
+      *elem = NE_XML_DECLINE;
+      return SVN_NO_ERROR;
+    }
 
   if (parent_state == ELEM_get_locations_report
       && elm->id == ELEM_location)
@@ -1387,10 +1377,13 @@ static int gloc_start_element(void *userdata, int parent_state, const char *ns,
                      apr_pmemdup(baton->pool, &rev, sizeof(rev)),
                      sizeof(rev), apr_pstrdup(baton->pool, path));
       else
-        return NE_XML_ABORT;
+        return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                _("Expected a valid revnum and path"));
     }
 
-  return elm->id;
+  *elem = elm->id;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1546,10 +1539,10 @@ typedef struct {
 
 
 
-/* This implements the `ne_xml_startelem_cb' prototype. */
-static int getlocks_start_element(void *userdata, int parent_state,
-                                  const char *ns, const char *ln,
-                                  const char **atts)
+/* This implements the `svn_ra_dav__startelm_cb_t' prototype. */
+static svn_error_t *
+getlocks_start_element(int *elem, void *userdata, int parent_state,
+                       const char *ns, const char *ln, const char **atts)
 {
   get_locks_baton_t *baton = userdata;
   const svn_ra_dav__xml_elm_t *elm;
@@ -1558,12 +1551,15 @@ static int getlocks_start_element(void *userdata, int parent_state,
 
   /* Just skip unknown elements. */
   if (!elm)
-    return NE_XML_DECLINE;
+    {
+      *elem = NE_XML_DECLINE;
+      return SVN_NO_ERROR;
+    }
 
   if (elm->id == ELEM_lock)
     {
       if (parent_state != ELEM_get_locks_report)
-        return NE_XML_ABORT;
+        return UNEXPECTED_ELEMENT(ns, ln);
       else
         /* allocate a new svn_lock_t in the permanent pool */
         baton->current_lock = svn_lock_create(baton->pool);
@@ -1579,7 +1575,7 @@ static int getlocks_start_element(void *userdata, int parent_state,
       const char *encoding;
 
       if (parent_state != ELEM_lock)
-        return NE_XML_ABORT;
+        return UNEXPECTED_ELEMENT(ns, ln);
 
       /* look for any incoming encodings on these elements. */
       encoding = svn_xml_get_attr_value("encoding", atts);
@@ -1587,13 +1583,16 @@ static int getlocks_start_element(void *userdata, int parent_state,
         baton->encoding = apr_pstrdup(baton->scratchpool, encoding);
     }
 
-  return elm->id;
+  *elem = elm->id;
+
+  return SVN_NO_ERROR;
 }
 
 
-/* This implements the `ne_xml_cdata_cb' prototype. */
-static int getlocks_cdata_handler(void *userdata, int state,
-                                  const char *cdata, size_t len)
+/* This implements the `svn_ra_svn__cdata_cb_t' prototype. */
+static svn_error_t *
+getlocks_cdata_handler(void *userdata, int state,
+                       const char *cdata, size_t len)
 {
   get_locks_baton_t *baton = userdata;
 
@@ -1610,24 +1609,24 @@ static int getlocks_cdata_handler(void *userdata, int state,
       break;
     }
 
-  return 0; /* no error */
+  return SVN_NO_ERROR;
 }
 
 
 
-/* This implements the `ne_xml_endelm_cb' prototype. */
-static int getlocks_end_element(void *userdata, int state,
-                                const char *ns, const char *ln)
+/* This implements the `svn_ra_dav__endelm_cb_t' prototype. */
+static svn_error_t *
+getlocks_end_element(void *userdata, int state,
+                     const char *ns, const char *ln)
 {
   get_locks_baton_t *baton = userdata;
   const svn_ra_dav__xml_elm_t *elm;
-  svn_error_t *err;
 
   elm = svn_ra_dav__lookup_xml_elem(getlocks_report_elements, ns, ln);
 
   /* Just skip unknown elements. */
   if (elm == NULL)
-    return NE_XML_DECLINE;
+    return SVN_NO_ERROR;;
 
   switch (elm->id)
     {
@@ -1638,11 +1637,8 @@ static int getlocks_end_element(void *userdata, int state,
           || (! baton->current_lock->token)
           || (! baton->current_lock->owner)
           || (! baton->current_lock->creation_date))
-        {
-          baton->err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                        _("Incomplete lock data returned"));
-          return NE_XML_ABORT;
-        }
+        SVN_ERR(svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Incomplete lock data returned")));
 
       apr_hash_set(baton->lock_hash, baton->current_lock->path,
                    APR_HASH_KEY_STRING, baton->current_lock);
@@ -1669,28 +1665,18 @@ static int getlocks_end_element(void *userdata, int state,
       break;
 
     case ELEM_lock_creationdate:
-      err = svn_time_from_cstring(&(baton->current_lock->creation_date),
-                                  baton->cdata_accum->data,
-                                  baton->scratchpool);
-      if (err)
-        {
-          baton->err = err;
-          return NE_XML_ABORT;
-        }
+      SVN_ERR(svn_time_from_cstring(&(baton->current_lock->creation_date),
+                                    baton->cdata_accum->data,
+                                    baton->scratchpool));
       /* clean up the accumulator. */
       svn_stringbuf_setempty(baton->cdata_accum);
       svn_pool_clear(baton->scratchpool);
       break;
 
     case ELEM_lock_expirationdate:
-      err = svn_time_from_cstring(&(baton->current_lock->expiration_date),
-                                  baton->cdata_accum->data,
-                                  baton->scratchpool);
-      if (err)
-        {
-          baton->err = err;
-          return NE_XML_ABORT;
-        }
+      SVN_ERR(svn_time_from_cstring(&(baton->current_lock->expiration_date),
+                                    baton->cdata_accum->data,
+                                    baton->scratchpool));
       /* clean up the accumulator. */
       svn_stringbuf_setempty(baton->cdata_accum);
       svn_pool_clear(baton->scratchpool);
@@ -1716,8 +1702,10 @@ static int getlocks_end_element(void *userdata, int state,
                 final_val = decoded_val->data;
               }
             else
-              /* unrecognized encoding! */
-              return NE_XML_ABORT;
+              return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,
+                                       NULL,
+                                       _("Got unrecognized encoding '%s'"),
+                                       baton->encoding);
 
             baton->encoding = NULL;
           }
@@ -1743,7 +1731,7 @@ static int getlocks_end_element(void *userdata, int state,
       break;
     }
 
-  return 0;
+  return SVN_NO_ERROR;
 }
   
 
@@ -2110,8 +2098,8 @@ static void push_dir(report_baton_t *rb,
 }
 
 /* This implements the `ne_xml_startelm_cb' prototype. */
-static int
-start_element(void *userdata, int parent_state, const char *nspace,
+static svn_error_t * 
+start_element(int *elem, void *userdata, int parent_state, const char *nspace,
               const char *elt_name, const char **atts)
 {
   report_baton_t *rb = userdata;
@@ -2132,12 +2120,23 @@ start_element(void *userdata, int parent_state, const char *nspace,
   elm = svn_ra_dav__lookup_xml_elem(report_elements, nspace, elt_name);
 
   if (elm == NULL)
-    return NE_XML_DECLINE;
+    {
+      *elem = NE_XML_DECLINE;
+      return SVN_NO_ERROR;
+    }
 
   rc = validate_element(NULL, parent_state, elm->id);
 
   if (rc != SVN_RA_DAV__XML_VALID)
-    return (rc == SVN_RA_DAV__XML_DECLINE) ? NE_XML_DECLINE : NE_XML_ABORT;
+    {
+      if (rc == SVN_RA_DAV__XML_DECLINE)
+        {
+          *elem = NE_XML_DECLINE;
+          return SVN_NO_ERROR;
+        }
+      else
+        return UNEXPECTED_ELEMENT(nspace, elt_name);
+    }
 
   switch (elm->id)
     {
@@ -2153,9 +2152,9 @@ start_element(void *userdata, int parent_state, const char *nspace,
       att = svn_xml_get_attr_value("rev", atts);
       /* ### verify we got it. punt on error. */
 
-      CHKERR( (*rb->editor->set_target_revision)(rb->edit_baton,
+      SVN_ERR((*rb->editor->set_target_revision)(rb->edit_baton,
                                                  SVN_STR_TO_REV(att),
-                                                 rb->pool) );
+                                                 rb->pool));
       break;
 
     case ELEM_absent_directory:
@@ -2166,9 +2165,9 @@ start_element(void *userdata, int parent_state, const char *nspace,
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, parent_dir->pool);
       svn_path_add_component(pathbuf, name);
 
-      CHKERR( (*rb->editor->absent_directory)(pathbuf->data,
+      SVN_ERR((*rb->editor->absent_directory)(pathbuf->data,
                                               parent_dir->baton,
-                                              parent_dir->pool) );
+                                              parent_dir->pool));
       break;
 
     case ELEM_absent_file:
@@ -2179,9 +2178,9 @@ start_element(void *userdata, int parent_state, const char *nspace,
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, parent_dir->pool);
       svn_path_add_component(pathbuf, name);
 
-      CHKERR( (*rb->editor->absent_file)(pathbuf->data,
+      SVN_ERR((*rb->editor->absent_file)(pathbuf->data,
                                          parent_dir->baton,
-                                         parent_dir->pool) );
+                                         parent_dir->pool));
       break;
 
     case ELEM_resource:
@@ -2205,14 +2204,14 @@ start_element(void *userdata, int parent_state, const char *nspace,
              wrong. */
           if (rb->is_switch && rb->ras->callbacks->invalidate_wc_props)
             {
-              CHKERR( rb->ras->callbacks->invalidate_wc_props
+              SVN_ERR(rb->ras->callbacks->invalidate_wc_props
                       (rb->ras->callback_baton, rb->target, 
-                       SVN_RA_DAV__LP_VSN_URL, rb->pool) );
+                       SVN_RA_DAV__LP_VSN_URL, rb->pool));
             }
 
           subpool = svn_pool_create(rb->pool);
-          CHKERR( (*rb->editor->open_root)(rb->edit_baton, base,
-                                           subpool, &new_dir_baton) );
+          SVN_ERR((*rb->editor->open_root)(rb->edit_baton, base,
+                                           subpool, &new_dir_baton));
 
           /* push the new baton onto the directory baton stack */
           push_dir(rb, new_dir_baton, pathbuf, subpool);
@@ -2229,10 +2228,10 @@ start_element(void *userdata, int parent_state, const char *nspace,
           pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
           svn_path_add_component(pathbuf, rb->namestr->data);
 
-          CHKERR( (*rb->editor->open_directory)(pathbuf->data,
+          SVN_ERR((*rb->editor->open_directory)(pathbuf->data,
                                                 parent_dir->baton, base,
                                                 subpool, 
-                                                &new_dir_baton) );
+                                                &new_dir_baton));
 
           /* push the new baton onto the directory baton stack */
           push_dir(rb, new_dir_baton, pathbuf, subpool);
@@ -2264,10 +2263,10 @@ start_element(void *userdata, int parent_state, const char *nspace,
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
       svn_path_add_component(pathbuf, rb->namestr->data);
 
-      CHKERR( (*rb->editor->add_directory)(pathbuf->data, parent_dir->baton,
+      SVN_ERR((*rb->editor->add_directory)(pathbuf->data, parent_dir->baton,
                                            cpath ? cpath->data : NULL, 
                                            crev, subpool,
-                                           &new_dir_baton) );
+                                           &new_dir_baton));
 
       /* push the new baton onto the directory baton stack */
       push_dir(rb, new_dir_baton, pathbuf, subpool);
@@ -2288,12 +2287,12 @@ start_element(void *userdata, int parent_state, const char *nspace,
       if ((! rb->receiving_all) && bc_url)
         {
           apr_hash_t *bc_children;
-          CHKERR( svn_ra_dav__get_props(&bc_children,
+          SVN_ERR(svn_ra_dav__get_props(&bc_children,
                                         rb->ras->sess2,
                                         bc_url,
                                         NE_DEPTH_ONE,
                                         NULL, NULL /* allprops */,
-                                        TOP_DIR(rb).pool) );
+                                        TOP_DIR(rb).pool));
           
           /* re-index the results into a more usable hash.
              bc_children maps bc-url->resource_t, but we want the
@@ -2344,10 +2343,10 @@ start_element(void *userdata, int parent_state, const char *nspace,
          removed in end_element() */
       svn_path_add_component(parent_dir->pathbuf, rb->namestr->data);
 
-      CHKERR( (*rb->editor->open_file)(parent_dir->pathbuf->data, 
+      SVN_ERR((*rb->editor->open_file)(parent_dir->pathbuf->data, 
                                        parent_dir->baton, base,
                                        rb->file_pool,
-                                       &rb->file_baton) );
+                                       &rb->file_baton));
 
       /* Property fetching is NOT implied in replacement. */
       rb->fetch_props = FALSE;
@@ -2378,11 +2377,11 @@ start_element(void *userdata, int parent_state, const char *nspace,
          removed in end_element() */
       svn_path_add_component(parent_dir->pathbuf, rb->namestr->data);
 
-      CHKERR( (*rb->editor->add_file)(parent_dir->pathbuf->data,
+      SVN_ERR((*rb->editor->add_file)(parent_dir->pathbuf->data,
                                       parent_dir->baton,
                                       cpath ? cpath->data : NULL, 
                                       crev, rb->file_pool,
-                                      &rb->file_baton) );
+                                      &rb->file_baton));
 
       /* Property fetching is implied in addition.  This flag is only
          for parsing old-style reports; it is ignored when talking to
@@ -2400,11 +2399,11 @@ start_element(void *userdata, int parent_state, const char *nspace,
       if (! rb->receiving_all)
         break;
 
-      CHKERR( (*rb->editor->apply_textdelta)(rb->file_baton,
+      SVN_ERR((*rb->editor->apply_textdelta)(rb->file_baton,
                                              NULL, /* ### base_checksum */
                                              rb->file_pool,
                                              &(rb->whandler),
-                                             &(rb->whandler_baton)) );
+                                             &(rb->whandler_baton)));
       
       rb->svndiff_decoder = svn_txdelta_parse_svndiff(rb->whandler,
                                                       rb->whandler_baton,
@@ -2435,12 +2434,12 @@ start_element(void *userdata, int parent_state, const char *nspace,
 
       /* Removing a prop.  */
       if (rb->file_baton == NULL)
-        CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+        SVN_ERR(rb->editor->change_dir_prop(TOP_DIR(rb).baton,
                                             rb->namestr->data, 
-                                            NULL, TOP_DIR(rb).pool) );
+                                            NULL, TOP_DIR(rb).pool));
       else
-        CHKERR( rb->editor->change_file_prop(rb->file_baton, rb->namestr->data,
-                                             NULL, rb->file_pool) );
+        SVN_ERR(rb->editor->change_file_prop(rb->file_baton, rb->namestr->data,
+                                             NULL, rb->file_pool));
       break;
       
     case ELEM_fetch_props:
@@ -2453,13 +2452,13 @@ start_element(void *userdata, int parent_state, const char *nspace,
           svn_stringbuf_set(rb->namestr, SVN_PROP_PREFIX "BOGOSITY");
 
           if (rb->file_baton == NULL)
-            CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+            SVN_ERR(rb->editor->change_dir_prop(TOP_DIR(rb).baton,
                                                 rb->namestr->data, 
-                                                NULL, TOP_DIR(rb).pool) );
+                                                NULL, TOP_DIR(rb).pool));
           else
-            CHKERR( rb->editor->change_file_prop(rb->file_baton,
+            SVN_ERR(rb->editor->change_file_prop(rb->file_baton,
                                                  rb->namestr->data, 
-                                                 NULL, rb->file_pool) );
+                                                 NULL, rb->file_pool));
         }
       else
         {
@@ -2487,7 +2486,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
       if (! rb->receiving_all)
         {
           /* assert: rb->href->len > 0 */
-          CHKERR( simple_fetch_file(rb->ras->sess2, 
+          SVN_ERR(simple_fetch_file(rb->ras->sess2, 
                                     rb->href->data,
                                     TOP_DIR(rb).pathbuf->data,
                                     rb->fetch_content,
@@ -2496,7 +2495,7 @@ start_element(void *userdata, int parent_state, const char *nspace,
                                     rb->editor,
                                     rb->ras->callbacks->get_wc_prop,
                                     rb->ras->callback_baton,
-                                    rb->file_pool) );
+                                    rb->file_pool));
         }
       break;
 
@@ -2518,10 +2517,10 @@ start_element(void *userdata, int parent_state, const char *nspace,
       pathbuf = svn_stringbuf_dup(parent_dir->pathbuf, subpool);
       svn_path_add_component(pathbuf, rb->namestr->data);
 
-      CHKERR( (*rb->editor->delete_entry)(pathbuf->data,
+      SVN_ERR((*rb->editor->delete_entry)(pathbuf->data,
                                           SVN_INVALID_REVNUM,
                                           TOP_DIR(rb).baton,
-                                          subpool) );
+                                          subpool));
       svn_pool_destroy(subpool);
       break;
 
@@ -2529,7 +2528,9 @@ start_element(void *userdata, int parent_state, const char *nspace,
       break;
     }
 
-  return elm->id;
+  *elem = elm->id;
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -2605,9 +2606,9 @@ add_node_props(report_baton_t *rb, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-/* This implements the `ne_xml_cdata_cb' prototype. */
-static int cdata_handler(void *userdata, int state,
-                         const char *cdata, size_t len)
+/* This implements the `svn_ra_dav__cdata_cb_t' prototype. */
+static svn_error_t *
+cdata_handler(void *userdata, int state, const char *cdata, size_t len)
 {
   report_baton_t *rb = userdata;
 
@@ -2634,14 +2635,14 @@ static int cdata_handler(void *userdata, int state,
         if (! rb->receiving_all)
           break;
 
-        CHKERR( svn_stream_write(rb->base64_decoder, cdata, &nlen) );
+        SVN_ERR(svn_stream_write(rb->base64_decoder, cdata, &nlen));
         if (nlen != len)
           {
             /* Short write without associated error?  "Can't happen." */
-            CHKERR( svn_error_createf
-                    (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                     _("Error writing to '%s': unexpected EOF"),
-                     svn_path_local_style(rb->namestr->data, rb->pool)) );
+            return svn_error_createf(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                                     _("Error writing to '%s': unexpected EOF"),
+                                     svn_path_local_style(rb->namestr->data,
+                                                          rb->pool));
           }
       }
       break;
@@ -2650,9 +2651,10 @@ static int cdata_handler(void *userdata, int state,
   return 0; /* no error */
 }
 
-/* This implements the `ne_xml_endelm_cb' prototype. */
-static int end_element(void *userdata, int state,
-                       const char *nspace, const char *elt_name)
+/* This implements the `svn_ra_dav_endelm_cb_t' prototype. */
+static svn_error_t *
+end_element(void *userdata, int state,
+            const char *nspace, const char *elt_name)
 {
   report_baton_t *rb = userdata;
   const svn_delta_editor_t *editor = rb->editor;
@@ -2661,7 +2663,7 @@ static int end_element(void *userdata, int state,
   elm = svn_ra_dav__lookup_xml_elem(report_elements, nspace, elt_name);
 
   if (elm == NULL)
-    return NE_XML_DECLINE;
+    return SVN_NO_ERROR;
 
   switch (elm->id)
     {
@@ -2671,7 +2673,7 @@ static int end_element(void *userdata, int state,
 
     case ELEM_update_report:
       /* End of report; close up the editor. */
-      CHKERR( (*rb->editor->close_edit)(rb->edit_baton, rb->pool) );
+      SVN_ERR((*rb->editor->close_edit)(rb->edit_baton, rb->pool));
       rb->edit_baton = NULL;
       break;
 
@@ -2681,13 +2683,13 @@ static int end_element(void *userdata, int state,
       /* fetch node props, unless this is the top dir and the real
          target of the operation is not the top dir. */
       if (! ((rb->dirs->nelts == 1) && *rb->target))
-        CHKERR( add_node_props(rb, TOP_DIR(rb).pool));
+        SVN_ERR(add_node_props(rb, TOP_DIR(rb).pool));
 
       /* Close the directory on top of the stack, and pop it.  Also,
          destroy the subpool used exclusive by this directory and its
          children.  */
-      CHKERR( (*rb->editor->close_directory)(TOP_DIR(rb).baton, 
-                                             TOP_DIR(rb).pool) );
+      SVN_ERR((*rb->editor->close_directory)(TOP_DIR(rb).baton, 
+                                             TOP_DIR(rb).pool));
       svn_pool_destroy(TOP_DIR(rb).pool);
       apr_array_pop(rb->dirs);
       break;
@@ -2699,7 +2701,7 @@ static int end_element(void *userdata, int state,
       /* fetch file */
       if (! rb->receiving_all)
         {
-          CHKERR( simple_fetch_file(rb->ras->sess2,
+          SVN_ERR(simple_fetch_file(rb->ras->sess2,
                                     rb->href->data,
                                     TOP_DIR(rb).pathbuf->data,
                                     rb->fetch_content,
@@ -2708,16 +2710,16 @@ static int end_element(void *userdata, int state,
                                     rb->editor,
                                     rb->ras->callbacks->get_wc_prop,
                                     rb->ras->callback_baton,
-                                    rb->file_pool) );
+                                    rb->file_pool));
 
           /* fetch node props as necessary. */
-          CHKERR( add_node_props(rb, rb->file_pool) );
+          SVN_ERR(add_node_props(rb, rb->file_pool));
         }
 
       /* close the file and mark that we are no longer operating on a file */
-      CHKERR( (*rb->editor->close_file)(rb->file_baton,
+      SVN_ERR((*rb->editor->close_file)(rb->file_baton,
                                         rb->result_checksum,
-                                        rb->file_pool) );
+                                        rb->file_pool));
       rb->file_baton = NULL;
 
       /* Yank this file out of the directory's path buffer. */
@@ -2735,7 +2737,7 @@ static int end_element(void *userdata, int state,
       if (! rb->receiving_all)
         break;
 
-      CHKERR( svn_stream_close(rb->base64_decoder) );
+      SVN_ERR(svn_stream_close(rb->base64_decoder));
       rb->whandler = NULL;
       rb->whandler_baton = NULL;
       rb->svndiff_decoder = NULL;
@@ -2744,12 +2746,12 @@ static int end_element(void *userdata, int state,
 
     case ELEM_open_file:
       /* fetch node props as necessary. */
-      CHKERR( add_node_props(rb, rb->file_pool) );
+      SVN_ERR(add_node_props(rb, rb->file_pool));
 
       /* close the file and mark that we are no longer operating on a file */
-      CHKERR( (*rb->editor->close_file)(rb->file_baton,
+      SVN_ERR((*rb->editor->close_file)(rb->file_baton,
                                         rb->result_checksum,
-                                        rb->file_pool) );
+                                        rb->file_pool));
       rb->file_baton = NULL;
 
       /* Yank this file out of the directory's path buffer. */
@@ -2784,24 +2786,24 @@ static int end_element(void *userdata, int state,
           }
         else
           {
-            CHKERR( svn_error_createf(SVN_ERR_XML_UNKNOWN_ENCODING, NULL,
+            SVN_ERR(svn_error_createf(SVN_ERR_XML_UNKNOWN_ENCODING, NULL,
                                       _("Unknown XML encoding: '%s'"),
-                                      rb->encoding->data) );
+                                      rb->encoding->data));
             abort(); /* Not reached. */
           }
 
         /* Set the prop. */
         if (rb->file_baton)
           {
-            CHKERR( rb->editor->change_file_prop(rb->file_baton,
+            SVN_ERR(rb->editor->change_file_prop(rb->file_baton,
                                                  rb->namestr->data, 
-                                                 decoded_value_p, pool) );
+                                                 decoded_value_p, pool));
           }
         else
           {
-            CHKERR( rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+            SVN_ERR(rb->editor->change_dir_prop(TOP_DIR(rb).baton,
                                                 rb->namestr->data, 
-                                                decoded_value_p, pool) );
+                                                decoded_value_p, pool));
           }
       }
 
@@ -2828,12 +2830,12 @@ static int end_element(void *userdata, int state,
           href_val.len = rb->href->len;
 
           if (rb->ras->callbacks->set_wc_prop != NULL)
-            CHKERR( rb->ras->callbacks->set_wc_prop
+            SVN_ERR(rb->ras->callbacks->set_wc_prop
                     (rb->ras->callback_baton,
                      rb->current_wcprop_path->data,
                      SVN_RA_DAV__LP_VSN_URL,
                      &href_val,
-                     rb->scratch_pool) );
+                     rb->scratch_pool));
           svn_pool_clear(rb->scratch_pool);
         }
       /* else we're setting a wcprop in the context of an editor drive. */
@@ -2844,9 +2846,9 @@ static int end_element(void *userdata, int state,
              than the top directory. */
           if (! ((rb->dirs->nelts == 1) && *rb->target))
             {
-              CHKERR( simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
+              SVN_ERR(simple_store_vsn_url(rb->href->data, TOP_DIR(rb).baton,
                                            rb->editor->change_dir_prop,
-                                           TOP_DIR(rb).pool) );
+                                           TOP_DIR(rb).pool));
               
               /* save away the URL in case a fetch-props arrives after all of
                  the subdir processing. we will need this copy of the URL to
@@ -2858,9 +2860,9 @@ static int end_element(void *userdata, int state,
         }
       else
         {
-          CHKERR( simple_store_vsn_url(rb->href->data, rb->file_baton,
+          SVN_ERR(simple_store_vsn_url(rb->href->data, rb->file_baton,
                                        rb->editor->change_file_prop,
-                                       rb->file_pool) );
+                                       rb->file_pool));
         }
       break;
 
@@ -2889,7 +2891,7 @@ static int end_element(void *userdata, int state,
 
         valstr.data = rb->cdata_accum->data;
         valstr.len = rb->cdata_accum->len;
-        CHKERR( set_special_wc_prop(name, &valstr, setter, baton, pool) );
+        SVN_ERR(set_special_wc_prop(name, &valstr, setter, baton, pool));
         svn_stringbuf_setempty(rb->cdata_accum);
       }
       break;
@@ -2898,7 +2900,7 @@ static int end_element(void *userdata, int state,
       break;
     }
 
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -3053,17 +3055,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
   /* we're done with the file */
   (void) apr_file_close(rb->tmpfile);
 
-  /* rb->err contains the relevant error if the response was aborted
-   * by a callback returning NE_XML_ABORT; always return that error if
-   * present. */
-  if (rb->err != NULL)
-    {
-      if (err)
-        svn_error_clear(err);
-      return rb->err;
-    }
-  if (err != NULL)
-    return err;
+  SVN_ERR(err);
 
   /* We got the whole HTTP response thing done.  *Whew*.  Our edit
      baton should have been closed by now, so return a failure if it
