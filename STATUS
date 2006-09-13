@@ -21,11 +21,6 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r21289
-    Neon 0.26.x compatibility for Unix build.
-    Votes:
-      +1: maxb, dlr
-
   * r21293 (depends on r21289 above)
     Neon 0.26.x compatibility for Windows build.
     Votes:
@@ -89,3 +84,8 @@ Approved changes:
       handle any problems that occur during that final write.
     Votes:
       +1: dlr, malcolm, rooneg
+
+  * r21289
+    Neon 0.26.x compatibility for Unix build.
+    Votes:
+      +1: maxb, dlr, rooneg
