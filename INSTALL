@@ -643,8 +643,8 @@ II.   INSTALLATION
         needed to compile Apache or APR.  Note that this is the actual awk
         program, not an installer - just rename it to awk.exe and it is
         ready to use.
-      * Neon 0.24.7 or higher, downloaded from
-        http://www.webdav.org/neon/neon-0.24.7.tar.gz which is required
+      * Neon 0.25.0 or higher, downloaded from
+        http://www.webdav.org/neon/neon-0.25.0.tar.gz which is required
         for building the client components.  Neon is included in the zip file
         distribution.
       * Apache apr, apr-util, and apr-iconv libraries, version 0.9.12.
