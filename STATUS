@@ -13,15 +13,6 @@ Status of 1.4.1:
 
 Candidate changes:
 
-  * r21346
-    Explicitly close the FSFS prototype revision file after writing a
-    representation.
-    Justification:
-      An error handling improvement which allows us to detect and
-      handle any problems that occur during that final write.
-    Votes:
-      +1: dlr, malcolm
-
   * r21249, r21251, r21253, r21254
     Fix a bug in the svn_fs_closest_copy() implementations that caused
     confusing errors when tracing certain node locations.  See issue #2600.
@@ -89,3 +80,12 @@ Candidate changes:
       +1: malcolm, dlr
 
 Approved changes:
+
+  * r21346
+    Explicitly close the FSFS prototype revision file after writing a
+    representation.
+    Justification:
+      An error handling improvement which allows us to detect and
+      handle any problems that occur during that final write.
+    Votes:
+      +1: dlr, malcolm, rooneg
