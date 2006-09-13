@@ -167,7 +167,7 @@ I.    BUILD REQUIREMENTS
       newer. The autogen.sh script knows about that.
 
 
-      4.  Neon library 0.24.7 or 0.25.5 (http://www.webdav.org/neon/)
+      4.  Neon library 0.25.5 (http://www.webdav.org/neon/)
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet via a WebDAV based protocol.  If you
@@ -179,8 +179,6 @@ I.    BUILD REQUIREMENTS
       The source code is included with the Subversion dependencies package,
       and it can also be obtained from:
 
-          http://www.webdav.org/neon/neon-0.24.7.tar.gz
-            -or-
           http://www.webdav.org/neon/neon-0.25.5.tar.gz
 
       Building Neon inside the subversion build:
@@ -446,7 +444,7 @@ II.   INSTALLATION
           db*.i386.rpm     (Version 4.0.14 or greater; version 4.3.27 or
                             4.2.52 is preferred however)
           expat            (Comes with RedHat)
-          neon             (Version 0.24.7)
+          neon             (Version 0.25.5)
 
       After downloading, install it (as root user):
 
@@ -708,12 +706,6 @@ II.   INSTALLATION
       secure connections feature, you should pass the option
       "--with-openssl" to the gen-make.py script. See Section I.11 for
       more details.
-
-      Versions of Neon up to and including 0.24.7 fail to define the
-      HAVE_SETSOCKOPT symbol. Make sure that the file config.hw at the
-      root of the Neon sources contains the line
-
-          #define HAVE_SETSOCKOPT
 
       If you are installing under Win9x or NT4 (and do not have Internet
       Explorer 5 or later) and svn.exe doesn't run, try installing
