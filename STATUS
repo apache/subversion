@@ -86,6 +86,6 @@ Candidate changes:
       At the moment, unexpected errors encountered while checking a
       process's exit status result in assigning it a random exit status.
     Votes:
-      +1: malcolm
+      +1: malcolm, dlr
 
 Approved changes:
