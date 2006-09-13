@@ -3220,6 +3220,7 @@ rep_write_contents_close(void *baton)
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev,
                                        b->pool));
 
+  SVN_ERR(svn_io_file_close(b->file, b->pool));
   svn_pool_destroy(b->pool);
 
   return SVN_NO_ERROR;

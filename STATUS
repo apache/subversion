@@ -76,11 +76,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r21346
-    Explicitly close the FSFS prototype revision file after writing a
-    representation.
-    Justification:
-      An error handling improvement which allows us to detect and
-      handle any problems that occur during that final write.
-    Votes:
-      +1: dlr, malcolm, rooneg
