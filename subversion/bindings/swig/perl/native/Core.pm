@@ -50,7 +50,8 @@ BEGIN {
     SVN::_Core::apr_initialize();
 }
 
-our $gpool = SVN::Pool->new_default;
+my $gpool = SVN::Pool->new_default;
+sub gpool { $gpool } # holding the reference to gpool
 SVN::Core::utf_initialize($gpool);
 
 END {
@@ -303,9 +304,9 @@ still being manually adjustable.
 
 Functions requiring pool as the last argument (which are, almost all
 of the subversion functions), the pool is optionally. The default pool
-is used if it is omitted. If default pool is not set, a new root pool
-will be created and set as default automatically when the first
-function requiring a default pool is called.
+is used if it is omitted. When C<SVN::Core> is loaded, it creates a
+pool as the default one, which is also available from
+C<SVN::Core-E<gt>gpool>.
 
 For callback functions providing pool to your subroutine, you could
 also use $pool-E<gt>default to make it the default pool in the scope.
@@ -404,11 +405,15 @@ sub _wrap {
     $npool;
 }
 
+use Scalar::Util 'reftype';
+
 sub DESTROY {
     return if $globaldestroy;
     my $self = shift;
+    # for some reason, REF becomes SCALAR in perl -c or after apr_terminate
+    return if reftype($self) eq 'SCALAR';
     if ($$self eq $SVN::_Core::current_pool) {
-	$SVN::_Core::current_pool = pop @POOLSTACK;
+        $SVN::_Core::current_pool = pop @POOLSTACK;
     }
     if (exists $WRAPPOOL{$self}) {
         delete $WRAPPOOL{$self};
