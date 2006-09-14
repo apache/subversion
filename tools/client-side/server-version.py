@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 #
-# server-vsn.py: print a Subversion server's version number
+# server-version.py: print a Subversion server's version number
 #
-# USAGE: server-vsn.py URL
+# USAGE: server-version.py URL
 #
 # The URL can contain any path on the server, as we are simply looking
 # for Apache's response to OPTIONS, and its Server: header.
 #
 # EXAMPLE:
 #
-#   $ ./server-vsn.py http://svn.collab.net/
+#   $ ./server-version.py http://svn.collab.net/
 #                   or
-#   $ ./server-vsn.py https://svn.collab.net/
+#   $ ./server-version.py https://svn.collab.net/
 #
 # Python 1.5.2 or later is required.
 #
