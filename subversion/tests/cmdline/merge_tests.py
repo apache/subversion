@@ -601,7 +601,8 @@ def delete_file_and_dir(sbox):
   
   # Merge rev 3 into B2
 
-  # Local mods cause everything to be skipped without --force
+  # The local mods to the paths modified in r3 cause the paths to be
+  # skipped (without --force), resulting in no changes to the WC.
   expected_output = wc.State(B2_path, { })
   expected_disk = wc.State('', {
     'E'       : Item(),
@@ -611,7 +612,7 @@ def delete_file_and_dir(sbox):
     'lambda'  : Item("This is the file 'lambda'.\n"),
     })
   expected_status = wc.State(B2_path, {
-    ''        : Item(status=' M'),
+    ''        : Item(status='  '),
     'E'       : Item(status=' M'),
     'E/alpha' : Item(status='  '),
     'E/beta'  : Item(status='  '),
@@ -637,6 +638,7 @@ def delete_file_and_dir(sbox):
     })
   expected_disk.remove('E/alpha', 'E/beta', 'lambda')
   expected_status.tweak('E', 'E/alpha', 'E/beta', 'lambda', status='D ')
+  expected_status.tweak('', status=' M')
   expected_skip.remove('lambda', 'E')
 
   ### Full-to-dry-run automatic comparison disabled because a) dry-run

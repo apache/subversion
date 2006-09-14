@@ -39,10 +39,7 @@ for repos dump/load, including the merge history index.
       collisions (multiple notifications to the same WC item), giving
       preference to later notifications (?).
 
-  * Handle skips.  Merge test 3 fails because a merge of a revision
-    range which contains a delete will not delete locally modified
-    files (at least, not without --force), but is still recording
-    merge info.
+  * Handle skips.
 
     * If all changes in a merge are skipped, no merge info should be
       recorded for the target.
