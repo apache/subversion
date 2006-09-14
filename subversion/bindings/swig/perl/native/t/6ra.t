@@ -83,8 +83,8 @@ like($ra->rev_prop(1, 'svn:date'), qr/^\d+-\d+-\d+T\d+:\d+:\d+\.\d+Z$/,
 # to set up a 'pre-revprop-change' hook script.  These tests are skipped
 # on systems on which I don't know how to do that.
 SKIP: {
-    skip "don't know how to create 'pre-revprop-change' hook script on $^O", 2
-        if $^O eq 'MSWin32' || $^O eq 'MacOS';
+    skip "don't know how to create 'pre-revprop-change' hook script on $^O", 3
+        if $^O eq 'MSWin32';
 
     my $script_filename = "$repospath/hooks/pre-revprop-change";
     open my $script, '>', $script_filename
