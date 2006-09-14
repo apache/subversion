@@ -23,12 +23,10 @@
 #include "svn_props.h"
 #include "svn_client.h"
 
-/**
- * Duplicate a HASH containing (char * -> svn_string_t *) key/value
- * pairs using POOL.
- */
+/* Duplicate a HASH containing (char * -> svn_string_t *) key/value
+   pairs using POOL. */
 static apr_hash_t *
-svn_client__string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
+string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   const void *key;
@@ -80,7 +78,7 @@ svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
     new_item->node_name = svn_stringbuf_dup(item->node_name, pool);
 
   if (item->prop_hash)
-    new_item->prop_hash = svn_client__string_hash_dup(item->prop_hash, pool);
+    new_item->prop_hash = string_hash_dup(item->prop_hash, pool);
 
   return new_item;
 }
