@@ -469,7 +469,7 @@ TODO - doesn't seem to work in Subversion 1.3.2
 
 require SVN::Client;
 
-my $ralib = SVN::_Ra::svn_ra_init_ra_libs($SVN::Core::gpool);
+my $ralib = SVN::_Ra::svn_ra_init_ra_libs(SVN::Core->gpool);
 
 # Ra methods that returns reporter
 my %reporter = map { $_ => 1 } qw(do_diff do_switch do_status do_update);
