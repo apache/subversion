@@ -71,7 +71,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r21387
-    Add svnsync to the Win32 dist script.
-    Votes:
-      +1: djh, dlr, zhakov
