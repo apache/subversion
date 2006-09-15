@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path, shutil, stat
+import sys, re, os.path, shutil, stat
 
 # Our testing module
 import svntest
@@ -301,23 +301,9 @@ def examine_lock(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
 
   # lock a file as wc_author
-  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     '-m', comment, file_path)
-
-  output, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                   'info', file_path)
-
-  lock_info = output[-6:-1]
-  if ((len(lock_info) != 5)
-      or (not lock_info[0].startswith('Lock Token: opaquelocktoken:'))
-      or (lock_info[1] != 'Lock Owner: %s\n' % svntest.main.wc_author)
-      or (not lock_info[2].startswith('Lock Created:'))
-      or (lock_info[4] != '%s\n' % comment)):
-    raise svntest.Failure
-
-
+  svntest.actions.run_and_validate_lock(file_path,
+                                        svntest.main.wc_author,
+                                        svntest.main.wc_passwd)
 
 #----------------------------------------------------------------------
 # II.C.1: Lock a file in wc A.  Check out wc B.  Break the lock in wc
@@ -891,21 +877,10 @@ def examine_lock_via_url(sbox):
   file_path = os.path.join(sbox.wc_dir, fname)
   file_url = svntest.main.current_repo_url + '/' + fname
 
-  # lock a file as wc_author
-  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     '--username', svntest.main.wc_author2,
-                                     '--password', svntest.main.wc_passwd,
-                                     '--no-auth-cache',
-                                     '-m', comment, file_path)
-
-  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
-                                                   file_url)
-
-  match_line = 'Lock Owner: ' + svntest.main.wc_author2 + '\n'
-
-  if not match_line in output:
-    print "Error: expected output '%s' not found in output." % match_line
-    raise svntest.Failure
+  # lock the file url and check the contents of lock
+  svntest.actions.run_and_validate_lock(file_url,
+                                        svntest.main.wc_author2,
+                                        svntest.main.wc_passwd)
 
 #----------------------------------------------------------------------
 def lock_several_files(sbox):
@@ -1520,7 +1495,6 @@ def examine_lock_encoded_recurse(sbox):
   wc_dir = sbox.wc_dir
 
   fname = 'A/B/F/one iota'
-  comment = 'This is a lock test.'
   file_path = os.path.join(sbox.wc_dir, fname)
 
   svntest.main.file_append(file_path, "This represents a binary file\n")
@@ -1542,27 +1516,10 @@ def examine_lock_encoded_recurse(sbox):
                                         None, None,
                                         file_path)
 
-  # lock the file
-  svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     '-m', comment, file_path)
-
-  # Run info and check that we get the lock fields.
-  output, err = \
-          svntest.actions.run_and_verify_svn(None, None, [],
-                                             'info', '-R', 
-                                             svntest.main.current_repo_url +
-                                             '/A/B/F')
-
-  lock_info = output[-6:-1]
-  if ((len(lock_info) != 5)
-      or (not lock_info[0].startswith('Lock Token: opaquelocktoken:'))
-      or (lock_info[1] != 'Lock Owner: %s\n' % svntest.main.wc_author)
-      or (not lock_info[2].startswith('Lock Created:'))
-      or (lock_info[4] != '%s\n' % comment)):
-    raise svntest.Failure
-
+  # lock the file and validate the contents
+  svntest.actions.run_and_validate_lock(file_path,
+                                        svntest.main.wc_author,
+                                        svntest.main.wc_passwd)
 
 
 ########################################################################

@@ -41,10 +41,12 @@ extern "C" {
 
 
 /** Used as an argument when creating temporary files to indicate
-    when a file should be removed.
-
-    Not specifying any of these means no removal at all. */
-typedef enum
+ * when a file should be removed.
+ *
+ * @since New in 1.4.
+ *
+ * Not specifying any of these means no removal at all. */
+typedef enum svn_io_file_del_t
 {
   /** No deletion ever */
   svn_io_file_del_none = 0,
@@ -608,6 +610,8 @@ svn_stream_t *svn_stream_from_stringbuf(svn_stringbuf_t *str,
  * svn_stream_compressed() returns @a stream unmodified. Make sure you
  * call svn_stream_close() on the stream returned by this function,
  * so that all data are flushed and cleaned up.
+ *
+ * @note From 1.4, compression support is always compiled in.
  */
 svn_stream_t *svn_stream_compressed(svn_stream_t *stream, 
                                     apr_pool_t *pool);
@@ -902,7 +906,7 @@ svn_error_t *svn_io_run_diff(const char *dir,
                              apr_pool_t *pool);
 
 
-/** Invoke @c the configured diff3 program, in utf8-encoded @a dir
+/** Invoke the configured @c diff3 program, in utf8-encoded @a dir
  * like this:
  *
  *          diff3 -E -m @a mine @a older @a yours > @a merged
@@ -912,11 +916,12 @@ svn_error_t *svn_io_run_diff(const char *dir,
  * If @a user_args is non-NULL, replace "-E" with the <tt>const char*</tt>
  * elements that @a user_args contains.
  *
- * @a mine, @a older, and @a yours are utf8-encoded paths, relative to @a dir, 
- * to three files that already exist.  @a merged is an open file handle, and
- * is left open after the merge result is written to it. (@a merged
- * should *not* be the same file as @a mine, or nondeterministic things
- * may happen!)
+ * @a mine, @a older and @a yours are utf8-encoded paths (relative to
+ * @a dir or absolute) to three files that already exist.
+ *
+ * @a merged is an open file handle, and is left open after the merge
+ * result is written to it. (@a merged should *not* be the same file
+ * as @a mine, or nondeterministic things may happen!)
  *
  * @a mine_label, @a older_label, @a yours_label are utf8-encoded label
  * parameters for diff3's -L option.  Any of them may be @c NULL, in
@@ -935,7 +940,8 @@ svn_error_t *svn_io_run_diff(const char *dir,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_io_run_diff3_2(const char *dir,
+svn_error_t *svn_io_run_diff3_2(int *exitcode,
+                                const char *dir,
                                 const char *mine,
                                 const char *older,
                                 const char *yours,
@@ -943,12 +949,11 @@ svn_error_t *svn_io_run_diff3_2(const char *dir,
                                 const char *older_label,
                                 const char *yours_label,
                                 apr_file_t *merged,
-                                int *exitcode,
                                 const char *diff3_cmd,
                                 const apr_array_header_t *user_args,
                                 apr_pool_t *pool);
 
-/** Similar to @a svn_io_run_diff3_2(), but with @a user_args set to @c NULL.
+/** Similar to svn_io_run_diff3_2(), but with @a user_args set to @c NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */

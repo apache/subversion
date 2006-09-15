@@ -75,27 +75,28 @@ current_directory_url(const char **url,
 
 
 static svn_error_t *
-make_and_open_local_repos(svn_ra_plugin_t **plugin,
-                          void **session,
+make_and_open_local_repos(svn_ra_session_t **session,
                           const char *repos_name,
                           const char *fs_type,
                           apr_pool_t *pool)
 {
   svn_repos_t *repos;
-  void *ra_baton;
   const char *url;
-  svn_ra_callbacks_t *cbtable = apr_pcalloc(pool, sizeof(*cbtable));
+  svn_ra_callbacks2_t *cbtable;
+  
+  SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
 
   SVN_ERR(svn_test__create_repos(&repos, repos_name, fs_type, pool));
-  SVN_ERR(svn_ra_init_ra_libs(&ra_baton, pool));
-
-  /* Get the plugin which handles "file:" URLs */
-  SVN_ERR(svn_ra_get_ra_library(plugin, ra_baton, "file:", pool));
+  SVN_ERR(svn_ra_initialize(pool));
 
   SVN_ERR(current_directory_url(&url, repos_name, pool));
-
-  /* Open an RA session into this repository. */
-  SVN_ERR((*plugin)->open(session, url, cbtable, NULL, NULL, pool));
+  
+  SVN_ERR(svn_ra_open2(session,
+                       url,
+                       cbtable,
+                       NULL,
+                       NULL,
+                       pool));
 
   return SVN_NO_ERROR;
 }
@@ -112,15 +113,14 @@ open_ra_session(const char **msg,
                 svn_test_opts_t *opts,
                 apr_pool_t *pool)
 {
-  svn_ra_plugin_t *plugin;
-  void *session;
+  svn_ra_session_t *session;
 
   *msg = "open an ra session to a local repository";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(make_and_open_local_repos(&plugin, &session,
+  SVN_ERR(make_and_open_local_repos(&session,
                                     "test-repo-open", opts->fs_type, pool));
 
   return SVN_NO_ERROR;
@@ -134,8 +134,7 @@ get_youngest_rev(const char **msg,
                  svn_test_opts_t *opts, 
                  apr_pool_t *pool)
 {
-  svn_ra_plugin_t *plugin;
-  void *session;
+  svn_ra_session_t *session;
   svn_revnum_t latest_rev;
 
   *msg = "get the youngest revision in a repository";
@@ -143,12 +142,12 @@ get_youngest_rev(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  SVN_ERR(make_and_open_local_repos(&plugin, &session,
+  SVN_ERR(make_and_open_local_repos(&session,
                                     "test-repo-getrev", opts->fs_type,
                                     pool));
 
   /* Get the youngest revision and make sure it's 0. */
-  SVN_ERR(plugin->get_latest_revnum(session, &latest_rev, pool));
+  SVN_ERR(svn_ra_get_latest_revnum(session, &latest_rev, pool));
   
   if (latest_rev != 0)
     return svn_error_create(SVN_ERR_FS_GENERAL, NULL,

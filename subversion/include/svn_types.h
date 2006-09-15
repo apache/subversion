@@ -487,10 +487,10 @@ typedef svn_error_t *(*svn_commit_callback_t)
  *
  * @since New in 1.4.
  */
-void svn_compat_wrap_commit_callback(svn_commit_callback_t callback,
-                                     void *callback_baton,
-                                     svn_commit_callback2_t *callback2,
+void svn_compat_wrap_commit_callback(svn_commit_callback2_t *callback2,
                                      void **callback2_baton,
+                                     svn_commit_callback_t callback,
+                                     void *callback_baton,
                                      apr_pool_t *pool);
 
 

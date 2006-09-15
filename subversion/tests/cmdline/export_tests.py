@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, string, sys, re, os
+import shutil, sys, re, os
 
 # Our testing module
 import svntest
@@ -370,6 +370,22 @@ def export_with_state_deleted(sbox):
                                         expected_output,
                                         expected_disk)
 
+def export_creates_intermediate_folders(sbox):
+  "export and create some intermediate folders"
+  sbox.build(create_wc = False)
+
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  export_target = os.path.join(sbox.wc_dir, 'a', 'b', 'c')
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = export_target
+  expected_output.desc[''] = Item()
+  expected_output.tweak(contents=None, status='A ')
+
+  svntest.actions.run_and_verify_export(svntest.main.current_repo_url,
+                                        export_target,
+                                        expected_output,
+                                        svntest.main.greek_state.copy())
+
 ########################################################################
 # Run the tests
 
@@ -390,6 +406,7 @@ test_list = [ None,
               export_nonexistent_file,
               export_unversioned_file,
               export_with_state_deleted,
+              export_creates_intermediate_folders,
              ]
 
 if __name__ == '__main__':

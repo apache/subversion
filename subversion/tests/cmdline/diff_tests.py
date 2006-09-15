@@ -2538,6 +2538,145 @@ def diff_weird_author(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', '-r1:2', sbox.repo_url)
 
+# test for issue 2121, use -x -w option for ignoring whitespace during diff
+def diff_ignore_whitespace(sbox):
+  "ignore whitespace when diffing"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  open(file_path, 'w').write("Aa\n"
+                             "Bb\n"
+                             "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # only whitespace changes, should return no changes
+  open(file_path, 'w').write(" A  a   \n"
+                             "   B b  \n"
+                             "    C    c    \n")
+
+  svntest.actions.run_and_verify_svn(None, [], [],
+                                     'diff', '-x', '-w', file_path)
+  
+  # some changes + whitespace
+  open(file_path, 'w').write(" A  a   \n"
+                             "Xxxx X\n"
+                             "   Bb b  \n"
+                             "    C    c    \n")
+  expected_output = [
+    "Index: svn-test-work/working_copies/diff_tests-39/iota\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-39/iota\t(revision 2)\n",
+    "+++ svn-test-work/working_copies/diff_tests-39/iota\t(working copy)\n",
+    "@@ -1,3 +1,4 @@\n",
+    " Aa\n",
+    "-Bb\n",
+    "+Xxxx X\n",
+    "+   Bb b  \n",
+    " Cc\n" ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-x', '-w', file_path)
+
+def diff_ignore_eolstyle(sbox):
+  "ignore eol styles when diffing"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+
+  open(file_path, 'w').write("Aa\n"
+                             "Bb\n"
+                             "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # commit only eol changes
+  open(file_path, 'w').write("Aa\r"
+                             "Bb\r"
+                             "Cc")
+
+  expected_output = [
+    "Index: svn-test-work/working_copies/diff_tests-40/iota\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-40/iota\t(revision 2)\n",
+    "+++ svn-test-work/working_copies/diff_tests-40/iota\t(working copy)\n",
+    "@@ -1,3 +1,3 @@\n",
+    " Aa\n",
+    " Bb\n",
+    "-Cc\n",
+    "+Cc\n",
+    "\ No newline at end of file\n" ]
+    
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-x', '--ignore-eol-style', 
+                                     file_path)
+
+# test for issue 2600, diff revision of a file in a renamed folder
+def diff_in_renamed_folder(sbox):
+  "diff a revision of a file in a renamed folder"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  C_path = os.path.join(wc_dir, "A", "C")
+  D_path = os.path.join(wc_dir, "A", "D")
+  kappa_path = os.path.join(D_path, "C", "kappa")
+
+  # add a new file to a renamed (moved in this case) folder.
+  svntest.main.run_svn(None, 'mv', C_path, D_path)
+
+  svntest.main.file_append(kappa_path, "this is file kappa.\n")
+  svntest.main.run_svn(None, 'add', kappa_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/C' : Item(verb='Deleting'),
+      'A/D/C' : Item(verb='Adding'),
+      'A/D/C/kappa' : Item(verb='Adding'),
+  })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  expected_output = svntest.wc.State(wc_dir, {
+      'A/D/C/kappa' : Item(verb='Sending'),
+  })
+
+  # modify the file two times so we have something to diff.
+  for i in range(3, 5):
+    svntest.main.file_append(kappa_path, str(i) + "\n")
+    svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                          None, None, None, None,
+                                          None, None, wc_dir)  
+
+  expected_output = [
+    "Index: svn-test-work/working_copies/diff_tests-41/A/D/C/kappa\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/diff_tests-41/A/D/C/kappa\t(revision 3)\n",
+    "+++ svn-test-work/working_copies/diff_tests-41/A/D/C/kappa\t(revision 4)\n",
+    "@@ -1,2 +1,3 @@\n",
+    " this is file kappa.\n",
+    " 3\n",
+    "+4\n"
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'diff', '-r3:4', kappa_path)
+
 ########################################################################
 #Run the tests
 
@@ -2582,6 +2721,9 @@ test_list = [ None,
               diff_added_subtree,
               basic_diff_summarize,
               diff_weird_author,
+              diff_ignore_whitespace,
+              diff_ignore_eolstyle,
+              diff_in_renamed_folder,
               ]
 
 if __name__ == '__main__':

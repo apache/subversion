@@ -217,8 +217,10 @@ open_file(const char *path,
   struct file_baton *fb = apr_palloc(pool, sizeof(*fb));
 
   SVN_ERR(write_indent(eb, pool));
-  SVN_ERR(svn_stream_printf(eb->out, pool, " open_file : '%s':%ld\n",
+  SVN_ERR(svn_stream_printf(eb->out, pool, "open_file : '%s':%ld\n",
                             path, base_revision));
+
+  eb->indent_level++;
 
   SVN_ERR(eb->wrapped_editor->open_file(path,
                                         pb->wrapped_dir_baton,
@@ -243,7 +245,7 @@ apply_textdelta(void *file_baton,
   struct edit_baton *eb = fb->edit_baton;
 
   SVN_ERR(write_indent(eb, pool));
-  SVN_ERR(svn_stream_printf(eb->out, pool, "  apply_textdelta : %s\n",
+  SVN_ERR(svn_stream_printf(eb->out, pool, "apply_textdelta : %s\n",
                             base_checksum));
 
   SVN_ERR(eb->wrapped_editor->apply_textdelta(fb->wrapped_file_baton,
@@ -263,8 +265,10 @@ close_file(void *file_baton,
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
 
+  eb->indent_level--;
+
   SVN_ERR(write_indent(eb, pool));
-  SVN_ERR(svn_stream_printf(eb->out, pool, " close_file : %s\n",
+  SVN_ERR(svn_stream_printf(eb->out, pool, "close_file : %s\n",
                             text_checksum));
 
   SVN_ERR(eb->wrapped_editor->close_file(fb->wrapped_file_baton,

@@ -2,7 +2,7 @@
 # Makefile.in:  template Makefile for Subversion
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -41,9 +41,9 @@ NEON_LIBS = @NEON_LIBS@
 SVN_APR_LIBS = @SVN_APR_LIBS@
 SVN_APRUTIL_LIBS = @SVN_APRUTIL_LIBS@
 SVN_DB_LIBS =
-SVN_KEYCHAIN_LIBS = @SVN_KEYCHAIN_LIBS@
 SVN_SERF_LIBS = @SVN_SERF_LIBS@
 SVN_SASL_LIBS = @SVN_SASL_LIBS@
+SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
 
 LIBS = @LIBS@
 
@@ -99,9 +99,9 @@ LT_NO_UNDEFINED = @LT_NO_UNDEFINED@
 LT_CXX_LIBADD = @LT_CXX_LIBADD@
 
 INCLUDES = -I$(top_srcdir)/subversion/include -I$(top_builddir)/subversion \
-           @SVN_NEON_INCLUDES@ @SVN_KEYCHAIN_INCLUDES@ \
+           @SVN_NEON_INCLUDES@ \
            @SVN_APR_INCLUDES@ @SVN_APRUTIL_INCLUDES@ @SVN_SERF_INCLUDES@ \
-           @SVN_SASL_INCLUDES@
+           @SVN_SASL_INCLUDES@ @SVN_ZLIB_INCLUDES@
 
 APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_TARGET = @APACHE_TARGET@
@@ -120,6 +120,7 @@ SWIG_RB_LINK = @SWIG_RB_LINK@
 SWIG_RB_SITE_LIB_DIR = @SWIG_RB_SITE_LIB_DIR@
 SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
 SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
+SWIG_RB_RI_DATADIR = $(DESTDIR)$(datadir)/ri/$(RUBY_MAJOR).$(RUBY_MINOR)/site
 
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/java/javahl/include
 
@@ -130,6 +131,9 @@ SVN_APRUTIL_PREFIX = @SVN_APRUTIL_PREFIX@
 
 SVN_SERF_INCLUDES = @SVN_SERF_INCLUDES@
 SVN_SERF_PREFIX = @SVN_SERF_PREFIX@
+
+SVN_ZLIB_PREFIX = @SVN_ZLIB_PREFIX@
+SVN_ZLIB_INCLUDES = @SVN_ZLIB_INCLUDES@
 
 MKDIR = @MKDIR@
 
@@ -164,8 +168,8 @@ LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module $(APACHE_LDFLAGS)
 
 # Compilation of SWIG-generated C source code
-COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
-COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) $(SWIG_INCLUDES) $(SWIG_RB_INCLUDES) -prefer-pic -c -o $@
+COMPILE_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_PY_COMPILE) $(CPPFLAGS) $(SWIG_PY_INCLUDES) -prefer-pic -c -o $@
+COMPILE_RB_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPFLAGS) $(SWIG_RB_INCLUDES) -prefer-pic -c -o $@
 
 # these commands link the wrapper objects into an extension library/module
 LINK_PY_WRAPPER = $(LIBTOOL) $(LTFLAGS) --mode=link $(SWIG_PY_LINK) $(SWIG_LDFLAGS) -rpath $(swig_pydir) -avoid-version -module
@@ -260,6 +264,9 @@ javahl_java_CLASSPATH=$(JAVA_CLASSPATH)
 javahl_tests_CLASSPATH=$(JAVA_CLASSPATH)
 
 RUBY = @RUBY@
+RUBY_MAJOR = @RUBY_MAJOR@
+RUBY_MINOR = @RUBY_MINOR@
+RDOC = @RDOC@
 
 ECHO_C = @ECHO_C@
 ECHO_N = @ECHO_N@
@@ -277,43 +284,14 @@ install: external-install local-install revision-install
 local-all: @BUILD_RULES@
 
 locale-gnu-pot:
-	(cd $(abs_srcdir)/subversion/ ; \
-	 find . \
-	  -name .svn -prune -or \
-	  -name tests -prune -or \
-	  -name bindings -prune -or \
-	  -name "*.c" -print -or \
-	  -name "svn_error_codes.h" -print | \
-	 $(XGETTEXT) --sort-by-file -k_ -kN_ -kSVN_ERRDEF:3 \
-	  --flag=_:1:pass-c-format \
-	  --flag=N_:1:pass-c-format \
-	  --flag=svn_cmdline_printf:2:c-format \
-	  --flag=svn_cmdline_fprintf:3:c-format \
-	  --flag=svn_error_createf:3:c-format \
-	  --flag=svn_error_wrap_apr:2:c-format \
-	  --flag=svn_stream_printf:3:c-format \
-	  --flag=svn_stream_printf_from_utf8:4:c-format \
-	  --flag=svn_string_createf:2:c-format \
-	  --flag=svn_string_createv:2:c-format \
-	  --flag=svn_stringbuf_createf:2:c-format \
-	  --flag=svn_stringbuf_createv:2:c-format \
-	  --flag=svn_fs_bdb__dberrf:3:c-format \
-	  --flag=file_printf_from_utf8:3:c-format \
-	  --flag=do_io_file_wrapper_cleanup:3:c-format \
-	  --flag=do_io_file_wrapper_cleanup:4:c-format \
-	  --msgid-bugs-address=dev@subversion.tigris.org \
-	  --add-comments --files-from=- -o po/subversion.pot )
+	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
+	  tools/po/po-update.sh pot
 
 # "make locale-gnu-po-update" updates all translations.
 # "make locale-gnu-po-update PO=ll" updates only the ll.po file.
-locale-gnu-po-update: locale-gnu-pot
-	@if test "$(PO)" = "" ; then \
-	  PO='*' ; \
-	fi ; \
-	(cd $(abs_srcdir)/subversion/po ; \
-	 for i in $$PO.po ; do \
-	   $(MSGMERGE) --sort-by-file --update $$i subversion.pot ; \
-	 done )
+locale-gnu-po-update:
+	cd $(abs_srcdir) && XGETTEXT="$(XGETTEXT)" MSGMERGE="$(MSGMERGE)" \
+	  tools/po/po-update.sh $(PO)
 
 # clean everything but the bulky test output, returning the system back
 # to before 'make' was run.
@@ -486,7 +464,7 @@ external-extraclean:
 # DOCUMENTATION RULES
 
 # Every single document in every format.
-doc: doc-design doc-misc-docs doc-api
+doc: doc-misc-docs doc-api
 
 # Generate API documentation for the C libraries.
 ### This could also generate JavaDoc for JavaHL, POD for swig-perl, etc.
@@ -497,12 +475,11 @@ doc-api:
 
 # Build all types of a certain doc.
 doc-misc-docs: doc-misc-docs-html doc-misc-docs-pdf doc-misc-docs-ps
-doc-design: doc-design-html doc-design-pdf doc-design-ps
 
 # Build all docs of a certain type.
-doc-all-html: doc-design-html doc-misc-docs-html
-doc-all-pdf: doc-design-pdf doc-misc-docs-pdf
-doc-all-ps: doc-design-ps doc-misc-docs-ps
+doc-all-html: doc-misc-docs-html
+doc-all-pdf: doc-misc-docs-pdf
+doc-all-ps: doc-misc-docs-ps
 
 # Assumes you have {xsltproc, fop, stylesheets} installed.
 doc-misc-docs-html:
@@ -511,14 +488,6 @@ doc-misc-docs-pdf:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) pdf
 doc-misc-docs-ps:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) ps
-
-doc-design-html:
-	cd $(top_srcdir)/doc/design && $(MAKE) all-html
-doc-design-pdf:
-	cd $(top_srcdir)/doc/design && $(MAKE) pdf
-doc-design-ps:
-	cd $(top_srcdir)/doc/design && $(MAKE) ps
-
 
 doc-clean:
 	cd $(top_srcdir)/doc/misc-docs && $(MAKE) clean
@@ -719,3 +688,5 @@ clean-swig-rb:
 extraclean-swig-rb: clean-swig-rb
 	$(EXTRACLEAN_SWIG_RB)
 
+install-swig-rb-doc:
+	$(RDOC) --all --ri --op "$(SWIG_RB_RI_DATADIR)" "$(SWIG_RB_SRC_DIR)/svn"

@@ -1716,26 +1716,15 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
  get around to removing the directory it will still have something in
  it.
 
- This works around the problem by inserting a rewinddir after we
- remove each item in the directory, which makes the problem go away.
+ Similar problem has been observed on FreeBSD.
 
  See http://subversion.tigris.org/issues/show_bug.cgi?id=1896 for more
- discussion.
-*/
-#if defined(__APPLE__) && defined(__MACH__)
-#define MACOSX_REWINDDIR_HACK(dir, path)                                      \
-  do                                                                          \
-    {                                                                         \
-      apr_status_t apr_err  = apr_dir_rewind(dir);                      \
-      if (apr_err)                                                            \
-        return svn_error_wrap_apr(apr_err, _("Can't rewind directory '%s'"), \
-                                  svn_path_local_style(path, pool));    \
-    }                                                                         \
-  while (0)
-#else
-#define MACOSX_REWINDDIR_HACK(dir, path) do {} while (0)
-#endif
+ discussion and an initial solution.
 
+ To work around the problem, we do a rewinddir after we delete all files
+ and see if there's anything left. We repeat the steps untill there's
+ nothing left to delete.
+*/
 
 /* Neither windows nor unix allows us to delete a non-empty
    directory.  
@@ -1750,6 +1739,7 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
   apr_pool_t *subpool;
   apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
   const char *path_apr;
+  int need_rewind;
 
   /* APR doesn't like "" directories */
   if (path[0] == '\0')
@@ -1767,48 +1757,62 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
                               svn_path_local_style(path, pool));
 
   subpool = svn_pool_create(pool);
-  for (status = apr_dir_read(&this_entry, flags, this_dir);
-       status == APR_SUCCESS;
-       status = apr_dir_read(&this_entry, flags, this_dir))
+
+  do
     {
-      svn_pool_clear(subpool);
-      if ((this_entry.filetype == APR_DIR)
-          && ((this_entry.name[0] == '.')
-              && ((this_entry.name[1] == '\0')
-                  || ((this_entry.name[1] == '.')
-                      && (this_entry.name[2] == '\0')))))
+      need_rewind = FALSE;
+    
+      for (status = apr_dir_read(&this_entry, flags, this_dir);
+           status == APR_SUCCESS;
+           status = apr_dir_read(&this_entry, flags, this_dir))
         {
-          continue;
-        }
-      else  /* something other than "." or "..", so proceed */
-        {
-          const char *fullpath, *entry_utf8;
+          svn_pool_clear(subpool);
+          if ((this_entry.filetype == APR_DIR)
+              && ((this_entry.name[0] == '.')
+                  && ((this_entry.name[1] == '\0')
+                      || ((this_entry.name[1] == '.')
+                          && (this_entry.name[2] == '\0')))))
+            {
+              continue;
+            }
+          else  /* something other than "." or "..", so proceed */
+            {
+              const char *fullpath, *entry_utf8;
 
-          SVN_ERR(svn_path_cstring_to_utf8(&entry_utf8, this_entry.name,
-                                           subpool));
+              need_rewind = TRUE;
+
+              SVN_ERR(svn_path_cstring_to_utf8(&entry_utf8, this_entry.name,
+                                               subpool));
           
-          fullpath = svn_path_join(path, entry_utf8, subpool);
+              fullpath = svn_path_join(path, entry_utf8, subpool);
 
-          if (this_entry.filetype == APR_DIR)
-            {
-              SVN_ERR(svn_io_remove_dir(fullpath, subpool));
-
-              MACOSX_REWINDDIR_HACK(this_dir, path);
+              if (this_entry.filetype == APR_DIR)
+                {
+                  SVN_ERR(svn_io_remove_dir(fullpath, subpool));
+                }
+              else if (this_entry.filetype == APR_REG)
+                {
+                  /* ### Do we really need the check for APR_REG here?
+                     Shouldn't we remove symlinks, pipes and whatnot, too?
+                     --xbc */
+                  svn_error_t *err = svn_io_remove_file(fullpath, subpool);
+                  if (err)
+                    return svn_error_createf
+                      (err->apr_err, err, _("Can't remove '%s'"),
+                       svn_path_local_style(fullpath, subpool));
+                }
             }
-          else if (this_entry.filetype == APR_REG)
-            {
-              /* ### Do we really need the check for APR_REG here? Shouldn't
-                 we remove symlinks, pipes and whatnot, too?  --xbc */
-              svn_error_t *err = svn_io_remove_file(fullpath, subpool);
-              if (err)
-                return svn_error_createf
-                  (err->apr_err, err, _("Can't remove '%s'"),
-                   svn_path_local_style(fullpath, subpool));
+        }
 
-              MACOSX_REWINDDIR_HACK(this_dir, path);
-            }
+      if (need_rewind)
+        {
+          status = apr_dir_rewind(this_dir);
+          if (status)
+            return svn_error_wrap_apr(status, _("Can't rewind directory '%s'"),
+                                      svn_path_local_style (path, pool));
         }
     }
+  while (need_rewind);
 
   apr_pool_destroy(subpool);
 
@@ -2100,7 +2104,7 @@ svn_io_wait_for_cmd(apr_proc_t *cmd_proc,
 
   /* Wait for the cmd command to finish. */
   apr_err = apr_proc_wait(cmd_proc, &exitcode_val, &exitwhy_val, APR_WAIT);
-  if (APR_STATUS_IS_CHILD_NOTDONE(apr_err))
+  if (!APR_STATUS_IS_CHILD_DONE(apr_err))
     return svn_error_wrap_apr(apr_err, _("Error waiting for process '%s'"),
                               cmd);
 
@@ -2239,7 +2243,8 @@ svn_io_run_diff(const char *dir,
 
 
 svn_error_t *
-svn_io_run_diff3_2(const char *dir,
+svn_io_run_diff3_2(int *exitcode,
+                   const char *dir,
                    const char *mine,
                    const char *older,
                    const char *yours,
@@ -2247,7 +2252,6 @@ svn_io_run_diff3_2(const char *dir,
                    const char *older_label,
                    const char *yours_label,
                    apr_file_t *merged,
-                   int *exitcode,
                    const char *diff3_cmd,
                    const apr_array_header_t *user_args,
                    apr_pool_t *pool)
@@ -2378,9 +2382,9 @@ svn_io_run_diff3(const char *dir,
                  const char *diff3_cmd,
                  apr_pool_t *pool)
 {
-  return svn_io_run_diff3_2(dir, mine, older, yours,
+  return svn_io_run_diff3_2(exitcode, dir, mine, older, yours,
                             mine_label, older_label, yours_label,
-                            merged, exitcode, diff3_cmd, NULL, pool);
+                            merged, diff3_cmd, NULL, pool);
 }
 
 svn_error_t *

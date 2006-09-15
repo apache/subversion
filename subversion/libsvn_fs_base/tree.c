@@ -4528,13 +4528,13 @@ txn_body_closest_copy(void *baton, trail_t *trail)
      created-rev is COPY_DST_REV, and that node-revision has no
      predecessors, then there is no relevant closest copy.
   */
-  SVN_ERR(svn_fs_base__dag_get_revision(&created_rev, parent_path->node, 
+  SVN_ERR(svn_fs_base__dag_get_revision(&created_rev, path_node_in_copy_dst,
                                         trail, trail->pool));
   if (created_rev == copy_dst_rev)
     {
       const svn_fs_id_t *pred_id;
       SVN_ERR(svn_fs_base__dag_get_predecessor_id(&pred_id, 
-                                                  parent_path->node, 
+                                                  path_node_in_copy_dst,
                                                   trail, trail->pool));
       if (! pred_id)
         return SVN_NO_ERROR;

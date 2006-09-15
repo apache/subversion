@@ -81,20 +81,6 @@ typedef struct
 
   /* The error info related to this baton. */
   bdb_error_info_t *error_info;
-
-  /* This flag determines if the environment baton points to a valid
-     environment descriptor.  It is used for internal bookkeeping and
-     pool lifetime disambiguation, and need not be checked by the user
-     of the baton.
-
-     This flag will become FALSE when the baton is closed (either because
-     of an explicit call to svn_fs_bdb__close, or during pool cleanup);
-     in that case the baton can not be used again.
-
-     The flag may also becone FALSE during global pool cleanup in
-     apr_terminate, if the baton's pool happens to survive longer than
-     the environment descriptor cache. */
-  svn_boolean_t valid;
 } bdb_env_baton_t;
 
 

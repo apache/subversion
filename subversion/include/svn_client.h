@@ -480,6 +480,11 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)
  *
  * @note If there is no blame information for this line, @a revision will be
  * invalid and @a author and @a date will be NULL.
+ *
+ * @note New in 1.4 is that the line is defined to contain only the line
+ * content (and no [partial] EOLs; which was undefined in older versions).
+ * Using this callback with svn_client_blame() or svn_client_blame2()
+ * will still give you the old behaviour.
  */
 typedef svn_error_t *(*svn_client_blame_receiver_t)
   (void *baton,
@@ -691,13 +696,41 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * just the directory represented by @a URL and its immediate
  * non-directory children, but none of its child directories (if any).
  *
+ * If @a allow_unver_obstructions is true then the checkout tolerates
+ * existing unversioned items that obstruct added paths from @a URL.  Only
+ * obstructions of the same type (file or dir) as the added item are
+ * tolerated.  The text of obstructing files is left as-is, effectively
+ * treating it as a user modification after the checkout.  Working
+ * properties of obstructing items are set equal to the base properties.
+ * If @a allow_unver_obstructions is false then the checkout will abort
+ * if there are any unversioned obstructing items.
+ *
  * If @a URL refers to a file rather than a directory, return the
  * error @c SVN_ERR_UNSUPPORTED_FEATURE.  If @a URL does not exist,
  * return the error @c SVN_ERR_RA_ILLEGAL_URL.
  *
  * Use @a pool for any temporary allocation.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_checkout3(svn_revnum_t *result_rev,
+                     const char *URL,
+                     const char *path,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_boolean_t ignore_externals,
+                     svn_boolean_t allow_unver_obstructions,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_client_checkout3() but with the allow_unver_obstructions
+ * parameter always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_checkout2(svn_revnum_t *result_rev,
@@ -754,6 +787,15 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * update just their immediate entries, but not their child
  * directories (if any).
  *
+ * If @a allow_unver_obstructions is true then the update tolerates
+ * existing unversioned items that obstruct added paths from @a URL.  Only
+ * obstructions of the same type (file or dir) as the added item are
+ * tolerated.  The text of obstructing files is left as-is, effectively
+ * treating it as a user modification after the update.  Working
+ * properties of obstructing items are set equal to the base properties.
+ * If @a allow_unver_obstructions is false then the update will abort
+ * if there are any unversioned obstructing items.
+ *
  * If @a ctx->notify_func2 is non-null, invoke @a ctx->notify_func2 with
  * @a ctx->notify_baton2 for each item handled by the update, and also for
  * files restored from text-base.  If @a ctx->cancel_func is non-null, invoke
@@ -761,7 +803,23 @@ svn_client_checkout(svn_revnum_t *result_rev,
  *
  * Use @a pool for any temporary allocation.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_update3(apr_array_header_t **result_revs,
+                   const apr_array_header_t *paths,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t allow_unver_obstructions,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_update3() but with the allow_unver_obstructions
+ * parameter always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_update2(apr_array_header_t **result_revs,
@@ -806,11 +864,39 @@ svn_client_update(svn_revnum_t *result_rev,
  * recursively; otherwise, switch just @a path and its immediate
  * entries, but not its child directories (if any).
  *
+ * If @a allow_unver_obstructions is true then the switch tolerates
+ * existing unversioned items that obstruct added paths from @a URL.  Only
+ * obstructions of the same type (file or dir) as the added item are
+ * tolerated.  The text of obstructing files is left as-is, effectively
+ * treating it as a user modification after the switch.  Working
+ * properties of obstructing items are set equal to the base properties.
+ * If @a allow_unver_obstructions is false then the switch will abort
+ * if there are any unversioned obstructing items.
+ *
  * If @a ctx->notify_func2 is non-null, invoke it with @a ctx->notify_baton2
  * on paths affected by the switch.  Also invoke it for files may be restored
  * from the text-base because they were removed from the working copy.
  *
  * Use @a pool for any temporary allocation.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_switch2(svn_revnum_t *result_rev,
+                   const char *path,
+                   const char *url,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_boolean_t allow_unver_obstructions,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_client_switch2() but with the allow_unver_obstructions
+ * parameter always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_switch(svn_revnum_t *result_rev,
@@ -844,7 +930,8 @@ svn_client_switch(svn_revnum_t *result_rev,
  * If @a no_ignore is @c FALSE, don't add files or directories that match
  * ignore patterns.
  *
- * Important:  this is a *scheduling* operation.  No changes will
+ * @par Important:
+ * This is a *scheduling* operation.  No changes will
  * happen to the repository until a commit occurs.  This scheduling
  * can be removed with svn_client_revert().
  *
@@ -1063,11 +1150,34 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  *
  * Unlock paths in the repository, unless @a keep_locks is true.
  *
- * Use @a pool for any temporary allocations.
+ * If @a changelist_name is non-NULL, then use it as a restrictive filter
+ * on items that are committed;  that is, don't commit anything unless
+ * it's a member of changelist @a changelist_name.  After the commit
+ * completes successfully, remove changelist associations from the
+ * targets, unless @a keep_changelist is set.
+ *
+ *fl Use @a pool for any temporary allocations.
  *
  * If no error is returned and @a (*commit_info_p)->revision is set to
  * @c SVN_INVALID_REVNUM, then the commit was a no-op; nothing needed to
  * be committed.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_commit4(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *targets,
+                   svn_boolean_t recurse,
+                   svn_boolean_t keep_locks,
+                   svn_boolean_t keep_changelist,
+                   const char *changelist_name,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/** Similar to svn_client_commit4(), but always passes a NULL @a
+ * changelist_name and FALSE for @a keep_changelist.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  *
  * @since New in 1.3.
  */
@@ -1201,7 +1311,8 @@ svn_client_status(svn_revnum_t *result_rev,
  *
  * Use @a pool for any temporary allocation.
  *
- * IMPORTANT: A special case for the revision range HEAD:1, which was present
+ * @par Important:
+ * A special case for the revision range HEAD:1, which was present
  * in svn_client_log(), has been removed from svn_client_log2().  Instead, it
  * is expected that callers will specify the range HEAD:0, to avoid a 
  * SVN_ERR_FS_NO_SUCH_REVISION error when invoked against an empty repository
@@ -1616,7 +1727,7 @@ svn_client_diff_summarize_peg(const char *path,
  * ctx->notify_baton2 once for each merged target, passing the target's local 
  * path.
  *
- * If @a dry_run is @a true the merge is carried out, and full notification
+ * If @a dry_run is true, the merge is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
  *
  * The authentication baton cached in @a ctx is used to communicate with the 
@@ -1737,7 +1848,7 @@ svn_client_relocate(const char *dir,
 
 /** Restore the pristine version of a working copy @a paths,
  * effectively undoing any local mods.  For each path in @a paths, if
- * it is a directory, and @a recursive is @a true, this will be a
+ * it is a directory, and @a recursive is true, this will be a
  * recursive operation.
  *
  * If @a ctx->notify_func2 is non-null, then for each item reverted,
@@ -2125,7 +2236,7 @@ svn_client_revprop_get(const char *propname,
  * copy path.
  *
  * Each element of the returned array is (@c svn_client_proplist_item_t *).
- * For each item, item->node_name contains the name relative to the
+ * For each @a item, @a item->node_name contains the name relative to the
  * same base as @a target, and @a item->prop_hash maps (<tt>const char *</tt>)
  * property names to (@c svn_string_t *) values.
  * 
@@ -2344,9 +2455,9 @@ svn_client_list(const char *path_or_url,
                 svn_boolean_t recurse,
                 apr_uint32_t dirent_fields,
                 svn_boolean_t fetch_locks,
-                svn_client_ctx_t *ctx,
                 svn_client_list_func_t list_func,
                 void *baton,
+                svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
 /**
@@ -2449,6 +2560,44 @@ svn_client_cat(svn_stream_t *out,
                const svn_opt_revision_t *revision,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool);
+
+
+/**
+ * Associate @a path with changelist @a changelist, overwriting any
+ * existing changelist association.  (A path cannot be a member of
+ * more than one changelist.)  If @a changelist is NULL, then
+ * deassociate any existing changelist from @a path.
+ *
+ * @note This metadata is purely a client-side "bookkeeping"
+ * convenience, and is entirely managed by the working copy.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_set_changelist(const char *path,
+                          const char *changelist,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *pool);
+
+
+/**
+ * Beginning at @a root_path, do a recursive walk of a working copy
+ * and discover every path which belongs to @a changelist_name.
+ * Return the list of paths in @a *paths.  If no matching paths are
+ * found, return an empty array.
+ *
+ * @a cancel_func/cancel_baton are optional.  If non-NULL, poll them
+ * for user cancellation during the recursive walk.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_retrieve_changelist(apr_array_header_t **paths,
+                               const char *changelist_name,
+                               const char *root_path,
+                               svn_cancel_func_t cancel_func,
+                               void *cancel_baton,
+                               apr_pool_t *pool);
 
 
 /** Locking commands
@@ -2584,6 +2733,8 @@ typedef struct svn_info_t
   const char *conflict_new;
   const char *conflict_wrk;
   const char *prejfile;
+  /* @since New in 1.5. */
+  const char *changelist;
   /** @} */
 
 } svn_info_t;

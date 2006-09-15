@@ -20,6 +20,7 @@ SVN_VERSION_MICRO := $(shell grep 'define SVN_VER_PATCH' < $(VERSION_FILE) | (re
 VERSION := $(SVN_VERSION_MAJOR).$(SVN_VERSION_MINOR).$(SVN_VERSION_MICRO)
 RELEASE := $(shell svn st -v $(SPECFILE) | cut -b 10- | ( read one two ; echo $$one ) )
 OSREL := $(shell ./find-osrel | ( read one two ; echo $$one ))
+ARCH := $(shell arch |(read one two; echo $$one))
 
 SOURCE_RPM_DIR := $(HOME)/$(RPMDIR)/sources/$(NAME)-$(VERSION)-$(RELEASE)
 
@@ -56,8 +57,8 @@ build_rpm_files : build_srpm_files
 	cd $(SOURCE_RPM_DIR); rpmbuild -ba $(SPECFILE)
 
 brand_files :
-	cd $(SOURCE_RPM_DIR)/../../rpms/i386; for oldfile in *$(RELEASE)*; do newfile=`echo $${oldfile} | sed -e "s/-$(VERSION)-$(RELEASE).i386.rpm/-$(VERSION)-$(RELEASE).$(OSREL).i386.rpm/"`; echo Moving $${oldfile} to $${newfile}; mv -f $${oldfile} $${newfile}; done
-	cd $(SOURCE_RPM_DIR)/../../srpms; for oldfile in *$(RELEASE)*; do newfile=`echo $${oldfile} | sed -e "s/-$(VERSION)-$(RELEASE).src.rpm/-$(VERSION)-$(RELEASE).$(OSREL).src.rpm/"`; echo Moving $${oldfile} to $${newfile}; mv -f $${oldfile} $${newfile}; done
+	cd $(SOURCE_RPM_DIR)/../../rpms/$(ARCH); for oldfile in *-$(VERSION)-$(RELEASE)*; do newfile=`echo $${oldfile} | sed -e "s/-$(VERSION)-$(RELEASE).$(ARCH).rpm/-$(VERSION)-$(RELEASE).$(OSREL).$(ARCH).rpm/"`; echo Moving $${oldfile} to $${newfile}; mv -f $${oldfile} $${newfile}; done
+	cd $(SOURCE_RPM_DIR)/../../srpms; for oldfile in *-$(VERSION)-$(RELEASE)*; do newfile=`echo $${oldfile} | sed -e "s/-$(VERSION)-$(RELEASE).src.rpm/-$(VERSION)-$(RELEASE).$(OSREL).src.rpm/"`; echo Moving $${oldfile} to $${newfile}; mv -f $${oldfile} $${newfile}; done
 
 build_srpm_files : $(HOME)/.rpmmacros $(HOME)/$(RPMDIR) subversion.spec
 	rm -rf $(SOURCE_RPM_DIR)

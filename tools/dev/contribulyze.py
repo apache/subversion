@@ -38,7 +38,6 @@
 import os
 import sys
 import re
-import shutil
 import getopt
 try:
   my_getopt = getopt.gnu_getopt
@@ -69,10 +68,18 @@ def complain(msg, fatal=False):
     sys.exit(1)
 
 
-def html_spam_guard(addr):
+def html_spam_guard(addr, entities_only=False):
   """Return a spam-protected version of email ADDR that renders the
-  same in HTML as the original address."""
-  return "".join(map(lambda x: "<span>&#%d;</span>" % ord(x), addr))
+  same in HTML as the original address.  If ENTITIES_ONLY, use a less
+  thorough mangling scheme involving entities only, avoiding the use
+  of tags."""
+  if entities_only:
+    def mangle(x):
+      return "&#%d;" % ord (x)
+  else:
+    def mangle(x):
+      return "<span>&#%d;</span>" % ord(x)
+  return "".join(map(mangle, addr))
 
 
 def escape_html(str):
@@ -88,9 +95,11 @@ def spam_guard_in_html_block(str):
   return _spam_guard_in_html_block_re.subn(_spam_guard_in_html_block_func,
                                            str)[0]
   
-def html_header(title):
-  """Write HTML file header.
-  TITLE parameter is expected to already by HTML-escaped if needed."""
+def html_header(title, page_heading=None):
+  """Write HTML file header.  TITLE and PAGE_HEADING parameters are
+  expected to already by HTML-escaped if needed."""
+  if not page_heading:
+    page_heading = title
   s  = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"\n'
   s += ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
   s += '<html><head>\n'
@@ -99,7 +108,7 @@ def html_header(title):
   s += '<title>%s</title>\n' % title
   s += '</head>\n\n'
   s += '<body style="text-color: black; background-color: white">\n\n'
-  s += '<h1 style="text-align: center">%s</h1>\n\n' % title
+  s += '<h1 style="text-align: center">%s</h1>\n\n' % page_heading
   s += '<hr />\n\n'
   return s
 
@@ -294,8 +303,11 @@ class Contributor:
       complain('Unable to construct a canonical name for Contributor.', True)
     return url_encode(retval, safe="!#$&'()+,;<=>@[]^`{}~")
 
-  def big_name(self, html=False):
-    """Return as complete a name as possible for this contributor."""
+  def big_name(self, html=False, html_eo=False):
+    """Return as complete a name as possible for this contributor.
+    If HTML, then call html_spam_guard() on email addresses.
+    If HTML_EO, then do the same, but specifying entities_only mode."""
+    html = html or html_eo
     name_bits = []
     if self.real_name:
       if html:
@@ -306,7 +318,7 @@ class Contributor:
       if not self.real_name and not self.username:
         name_bits.append(self.email)
       elif html:
-        name_bits.append("&lt;%s&gt;" % html_spam_guard(self.email))
+        name_bits.append("&lt;%s&gt;" % html_spam_guard(self.email, html_eo))
       else:
         name_bits.append("<%s>" % self.email)
     if self.username:
@@ -334,7 +346,8 @@ class Contributor:
     """Create an HTML file named FILENAME, showing all the revisions in which
     this contributor was active."""
     out = open(filename, 'w')
-    out.write(html_header(self.big_name(html=True)))
+    out.write(html_header(self.big_name(html_eo=True),
+                          self.big_name(html=True)))
     unique_logs = { }
 
     sorted_activities = self.activities.keys()

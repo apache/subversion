@@ -75,13 +75,13 @@ AC_DEFUN(SVN_FIND_SWIG,
     #   packages/rpm/rhel-4/subversion.spec
     if test -n "$SWIG_VERSION" &&
        test "$SWIG_VERSION" -ge "103024" &&
-       test "$SWIG_VERSION" -le "103028"; then
+       test "$SWIG_VERSION" -le "103029"; then
       SWIG_SUITABLE=yes
     else
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
       AC_MSG_WARN([Subversion requires 1.3.24 or later, and is known to work])
-      AC_MSG_WARN([with versions up to 1.3.28])
+      AC_MSG_WARN([with versions up to 1.3.29])
     fi
   fi
  
@@ -175,7 +175,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $svn_cv_ruby_includes"
 
     AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
-      svn_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC)), %q( ), Config::CONFIG.fetch(%q(CFLAGS))'` \$(SWIG_RB_INCLUDES)"
+      svn_cv_ruby_compile="`$RUBY -rrbconfig -e 'print Config::CONFIG.fetch(%q(CC)), %q( ), Config::CONFIG.fetch(%q(CFLAGS))'`"
     ])
     SWIG_RB_COMPILE="$svn_cv_ruby_compile"
 

@@ -48,7 +48,7 @@ SEPARATOR = '=' * 78
 
 def main(pool, cmd, config_fname, repos_dir, cmd_args):
   ### TODO:  Sanity check the incoming args
-  
+
   if cmd == 'commit':
     revision = int(cmd_args[0])
     repos = Repository(repos_dir, revision, pool)
@@ -111,6 +111,11 @@ except AttributeError:
       rv = self.fromchild.close()
       rv = self.tochild.close() or rv
       return rv
+
+def remove_leading_slashes(path):
+  while path and path[0] == '/':
+    path = path[1:]
+  return path
 
 
 class OutputBase:
@@ -183,12 +188,31 @@ class MailedOutput(OutputBase):
     OutputBase.__init__(self, cfg, repos, prefix_param)
 
   def start(self, group, params):
-    # whitespace-separated list of addresses; split into a clean list:
-    self.to_addrs = \
-        filter(None, string.split(self.cfg.get('to_addr', group, params)))
+    # whitespace (or another character) separated list of addresses
+    # which must be split into a clean list
+    to_addr_in = self.cfg.get('to_addr', group, params)
+    # if list of addresses starts with '[.]'
+    # use the character between the square brackets as split char
+    # else use whitespaces
+    if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
+                            and to_addr_in[2] == ']':
+      self.to_addrs = \
+        filter(None, string.split(to_addr_in[3:], to_addr_in[1]))
+    else:
+      self.to_addrs = filter(None, string.split(to_addr_in))
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
+    # if the from_addr (also) starts with '[.]' (may happen if one
+    # map is used for both to_addr and from_addr) remove '[.]'
+    if len(self.from_addr) >= 3 and self.from_addr[0] == '[' \
+                                and self.from_addr[2] == ']':
+      self.from_addr = self.from_addr[3:]
     self.reply_to = self.cfg.get('reply_to', group, params)
+    # if the reply_to (also) starts with '[.]' (may happen if one
+    # map is used for both to_addr and reply_to) remove '[.]'
+    if len(self.reply_to) >= 3 and self.reply_to[0] == '[' \
+                               and self.reply_to[2] == ']':
+      self.reply_to = self.reply_to[3:]
 
   def mail_headers(self, group, params):
     subject = self.make_subject(group, params)
@@ -445,7 +469,7 @@ def get_commondir(dirlist):
   a commondir is found, the dirlist returned is rooted in that
   commondir.  If no commondir is found, dirlist is returned unchanged,
   and commondir is the empty string."""
-  if len(dirlist) == 1 or '/' in dirlist:
+  if len(dirlist) < 2 or '/' in dirlist:
     commondir = ''
     newdirs = dirlist
   else:
@@ -572,12 +596,34 @@ class DiffSelections:
 
 
 class DiffURLSelections:
-  def __init__(self, cfg, group):
-    self.add = cfg.get('diff_add_url', group, None)
-    self.copy = cfg.get('diff_copy_url', group, None)
-    self.delete = cfg.get('diff_delete_url', group, None)
-    self.modify = cfg.get('diff_modify_url', group, None)
+  def __init__(self, cfg, group, params):
+    self.cfg = cfg
+    self.group = group
+    self.params = params
 
+  def _get_url(self, action, repos_rev, change):
+    # The parameters for the URLs generation need to be placed in the
+    # parameters for the configuration module, otherwise we may get
+    # KeyError exceptions.
+    params = self.params.copy()
+    params['path'] = change.path and urllib.quote(change.path) or None
+    params['base_path'] = change.base_path and urllib.quote(change.base_path) or None
+    params['rev'] = repos_rev
+    params['base_rev'] = change.base_rev
+
+    return self.cfg.get("diff_%s_url" % action, self.group, params)
+
+  def get_add_url(self, repos_rev, change):
+    return self._get_url('add', repos_rev, change)
+
+  def get_copy_url(self, repos_rev, change):
+    return self._get_url('copy', repos_rev, change)
+
+  def get_delete_url(self, repos_rev, change):
+    return self._get_url('delete', repos_rev, change)
+
+  def get_modify_url(self, repos_rev, change):
+    return self._get_url('modify', repos_rev, change)
 
 def generate_content(renderer, cfg, repos, changelist, group, params, paths,
                      pool):
@@ -587,16 +633,22 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
 
   diffsels = DiffSelections(cfg, group, params)
-  diffurls = DiffURLSelections(cfg, group)
+  diffurls = DiffURLSelections(cfg, group, params)
 
   show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
       or 'yes'
 
+  params_with_rev = params.copy()
+  params_with_rev['rev'] = repos.rev
+  commit_url = cfg.get('commit_url', group, params_with_rev)
+
   # figure out the lists of changes outside the selected path-space
-  other_added_data = other_removed_data = other_modified_data = [ ]
+  other_added_data = other_replaced_data = other_deleted_data = \
+      other_modified_data = [ ]
   if len(paths) != len(changelist) and show_nonmatching_paths != 'no':
     other_added_data = generate_list('A', changelist, paths, False)
-    other_removed_data = generate_list('R', changelist, paths, False)
+    other_replaced_data = generate_list('R', changelist, paths, False)
+    other_deleted_data = generate_list('D', changelist, paths, False)
     other_modified_data = generate_list('M', changelist, paths, False)
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
@@ -610,12 +662,15 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     date=date,
     rev=repos.rev,
     log=repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or '',
+    commit_url=commit_url,
     added_data=generate_list('A', changelist, paths, True),
-    removed_data=generate_list('R', changelist, paths, True),
+    replaced_data=generate_list('R', changelist, paths, True),
+    deleted_data=generate_list('D', changelist, paths, True),
     modified_data=generate_list('M', changelist, paths, True),
     show_nonmatching_paths=show_nonmatching_paths,
     other_added_data=other_added_data,
-    other_removed_data=other_removed_data,
+    other_replaced_data=other_replaced_data,
+    other_deleted_data=other_deleted_data,
     other_modified_data=other_modified_data,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
                         params, diffsels, diffurls, pool),
@@ -626,11 +681,13 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 
 def generate_list(changekind, changelist, paths, in_paths):
   if changekind == 'A':
-    selection = lambda change: change.added
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_ADD
   elif changekind == 'R':
-    selection = lambda change: change.path is None
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_REPLACE
+  elif changekind == 'D':
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_DELETE
   elif changekind == 'M':
-    selection = lambda change: not change.added and change.path is not None
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_MODIFY
 
   items = [ ]
   for path, change in changelist:
@@ -640,8 +697,10 @@ def generate_list(changekind, changelist, paths, in_paths):
         is_dir=change.item_kind == svn.core.svn_node_dir,
         props_changed=change.prop_changes,
         text_changed=change.text_changed,
-        copied=change.added and change.base_path,
-        base_path=change.base_path,
+        copied=(change.action == svn.repos.CHANGE_ACTION_ADD \
+                or change.action == svn.repos.CHANGE_ACTION_REPLACE) \
+               and change.base_path,
+        base_path=remove_leading_slashes(change.base_path),
         base_rev=change.base_rev,
         )
       items.append(item)
@@ -674,17 +733,6 @@ class DiffGenerator:
     # we always have some items
     return True
 
-  def _gen_url(self, urlstr, repos_rev, change):
-    if not len(urlstr):
-      return None
-    args = {
-      'path' : change.path and urllib.quote(change.path) or None,
-      'base_path' : change.base_path and urllib.quote(change.base_path) or None,
-      'rev' : repos_rev,
-      'base_rev' : change.base_rev,
-      }
-    return urlstr % args
-    
   def __getitem__(self, idx):
     while 1:
       if self.idx == len(self.changelist):
@@ -702,7 +750,7 @@ class DiffGenerator:
       binary = None
       singular = None
       content = None
-      
+
       # just skip directories. they have no diffs.
       if change.item_kind == svn.core.svn_node_dir:
         continue
@@ -713,54 +761,59 @@ class DiffGenerator:
 
       # figure out if/how to generate a diff
 
-      if not change.path:
+      base_path = remove_leading_slashes(change.base_path)
+      if change.action == svn.repos.CHANGE_ACTION_DELETE:
         # it was delete.
         kind = 'D'
 
-        # show the diff url?
-        if self.diffurls.delete:
-          diff_url = self._gen_url(self.diffurls.delete,
-                                   self.repos.rev, change)
+        # get the diff url, if any is specified
+        diff_url = self.diffurls.get_delete_url(self.repos.rev, change)
 
         # show the diff?
         if self.diffsels.delete:
           diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                                 change.base_path, None, None, self.pool)
+                                 base_path, None, None, self.pool)
 
-          label1 = '%s\t%s' % (change.base_path, self.date)
+          label1 = '%s\t%s' % (base_path, self.date)
           label2 = '(empty file)'
           singular = True
-          
-      elif change.added:
-        if change.base_path and (change.base_rev != -1):
-          # this file was copied.
-          kind = 'C'
+
+      elif change.action == svn.repos.CHANGE_ACTION_ADD \
+           or change.action == svn.repos.CHANGE_ACTION_REPLACE:
+        if base_path and (change.base_rev != -1):
 
           # any diff of interest?
           if change.text_changed:
+            # this file was copied and modified.
+            kind = 'W'
 
-            # show the diff url?
-            if self.diffurls.copy:
-              diff_url = self._gen_url(self.diffurls.copy,
-                                       self.repos.rev, change)
+            # get the diff url, if any is specified
+            diff_url = self.diffurls.get_copy_url(self.repos.rev, change)
 
             # show the diff?
-            if self.diffsels.copy:
+            if self.diffsels.modify:
               diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                                     change.base_path,
+                                     base_path,
                                      self.repos.root_this, change.path,
                                      self.pool)
-              label1 = change.base_path + '\t(original)'
+              label1 = base_path + '\t(original)'
+              label2 = '%s\t%s' % (change.path, self.date)
+              singular = False
+          else:
+            # this file was copied.
+            kind = 'C'
+            if self.diffsels.copy:
+              diff = svn.fs.FileDiff(None, None, self.repos.root_this,
+                                     change.path, self.pool)
+              label1 = base_path + '\t(original)'
               label2 = '%s\t%s' % (change.path, self.date)
               singular = False
         else:
           # the file was added.
           kind = 'A'
 
-          # show the diff url?
-          if self.diffurls.add:
-            diff_url = self._gen_url(self.diffurls.add,
-                                     self.repos.rev, change)
+          # get the diff url, if any is specified
+          diff_url = self.diffurls.get_add_url(self.repos.rev, change)
 
           # show the diff?
           if self.diffsels.add:
@@ -777,18 +830,16 @@ class DiffGenerator:
         # a simple modification.
         kind = 'M'
 
-        # show the diff url?
-        if self.diffurls.modify:
-          diff_url = self._gen_url(self.diffurls.modify,
-                                   self.repos.rev, change)
+        # get the diff url, if any is specified
+        diff_url = self.diffurls.get_modify_url(self.repos.rev, change)
 
         # show the diff?
         if self.diffsels.modify:
           diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                                 change.base_path,
+                                 base_path,
                                  self.repos.root_this, change.path,
                                  self.pool)
-          label1 = change.base_path + '\t(original)'
+          label1 = base_path + '\t(original)'
           label2 = '%s\t%s' % (change.path, self.date)
           singular = False
 
@@ -808,7 +859,7 @@ class DiffGenerator:
       # return a data item for this diff
       return _data(
         path=change.path,
-        base_path=change.base_path,
+        base_path=base_path,
         base_rev=change.base_rev,
         diff=diff,
         diff_url=diff_url,
@@ -885,20 +936,30 @@ class TextCommitRenderer:
 
     w = self.output.write
 
-    w('Author: %s\nDate: %s\nNew Revision: %s\n\nLog:\n%s\n\n'
-      % (data.author, data.date, data.rev, data.log))
+    w('Author: %s\nDate: %s\nNew Revision: %s\n' % (data.author,
+                                                      data.date,
+                                                      data.rev))
+
+    if data.commit_url:
+      w('URL: %s\n\n' % data.commit_url)
+    else:
+      w('\n')
+
+    w('Log:\n%s\n\n' % data.log.strip())
 
     # print summary sections
     self._render_list('Added', data.added_data)
-    self._render_list('Removed', data.removed_data)
+    self._render_list('Replaced', data.replaced_data)
+    self._render_list('Deleted', data.deleted_data)
     self._render_list('Modified', data.modified_data)
 
-    if data.other_added_data or data.other_removed_data \
-           or data.other_modified_data:
+    if data.other_added_data or data.other_replaced_data \
+           or data.other_deleted_data or data.other_modified_data:
       if data.show_nonmatching_paths:
         w('\nChanges in other areas also in this revision:\n')
         self._render_list('Added', data.other_added_data)
-        self._render_list('Removed', data.other_removed_data)
+        self._render_list('Replaced', data.other_replaced_data)
+        self._render_list('Deleted', data.other_deleted_data)
         self._render_list('Modified', data.other_modified_data)
       else:
         w('and changes in other areas\n')
@@ -952,11 +1013,14 @@ class TextCommitRenderer:
         section_header_printed = True
       if diff.kind == 'D':
         w('\nDeleted: %s\n' % diff.base_path)
+      elif diff.kind == 'A':
+        w('\nAdded: %s\n' % diff.path)
       elif diff.kind == 'C':
         w('\nCopied: %s (from r%d, %s)\n'
           % (diff.path, diff.base_rev, diff.base_path))
-      elif diff.kind == 'A':
-        w('\nAdded: %s\n' % diff.path)
+      elif diff.kind == 'W':
+        w('\nCopied and modified: %s (from r%d, %s)\n'
+          % (diff.path, diff.base_rev, diff.base_path))
       else:
         # kind == 'M'
         w('\nModified: %s\n' % diff.path)
@@ -966,7 +1030,7 @@ class TextCommitRenderer:
 
       if not diff.diff:
         continue
-      
+
       w(SEPARATOR + '\n')
 
       if diff.binary:
@@ -1072,7 +1136,7 @@ class Config:
       value = getattr(sub, option, None)
     if value is None:
       value = getattr(self.defaults, option, '')
-    
+
     # parameterize it
     if params is not None:
       value = value % params
@@ -1081,6 +1145,11 @@ class Config:
     mapper = getattr(self.maps, option, None)
     if mapper is not None:
       value = mapper(value)
+
+      # Apply any parameters that may now be available for
+      # substitution that were not before the mapping.
+      if value is not None and params is not None:
+        value = value % params
 
     return value
 

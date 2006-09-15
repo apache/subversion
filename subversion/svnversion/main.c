@@ -121,7 +121,8 @@ main(int argc, const char *argv[])
       {"no-newline", 'n', 0, N_("do not output the trailing newline")},
       {"committed",  'c', 0, N_("last changed rather than current revisions")},
       {"help", 'h', 0, N_("display this help")},
-      {"version", SVNVERSION_OPT_VERSION, 0, N_("show version information")},
+      {"version", SVNVERSION_OPT_VERSION, 0,
+       N_("show program version information")},
       {0,             0,  0,  0}
     };
 
@@ -163,7 +164,7 @@ main(int argc, const char *argv[])
     }
 #endif
 
-  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnversion: ");
 

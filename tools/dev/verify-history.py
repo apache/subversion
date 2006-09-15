@@ -62,7 +62,7 @@ def check_history(fs_ptr, path, revision):
 def main():
   argc = len(sys.argv)
   if argc < 3 or argc > 4:
-    print "Usage: %s PATH-TO-REPOS PATH-IN-REPOS [REVISION]"
+    print "Usage: %s PATH-TO-REPOS PATH-IN-REPOS [REVISION]" % sys.argv[0]
     sys.exit(1)
 
   fs_ptr = repos.fs(repos.open(sys.argv[1]))

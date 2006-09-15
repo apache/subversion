@@ -217,9 +217,7 @@ static svn_error_t * simple_request(svn_ra_dav__session_t *ras,
   /* run the request and get the resulting status code (and svn_error_t) */
   return svn_ra_dav__request_dispatch(code, req, ras->sess,
                                       method, url, okay_1, okay_2,
-#ifdef SVN_NEON_0_25
                                       NULL, NULL,
-#endif /* SVN_NEON_0_25 */
                                       pool);
 }
 
@@ -441,26 +439,6 @@ static svn_error_t * add_child(version_rsrc_t **child,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_NEON_0_25
-/* This implements the svn_ra_dav__request_interrogator() interface.
-   USERDATA is 'char **'. */
-static svn_error_t *interrogate_for_location(ne_request *request,
-                                             int dispatch_return_val,
-                                             void *userdata)
-{
-  char **location = userdata;
-
-  if (location)
-    {
-      const char *val = ne_get_response_header(request, "location");
-      if (val)
-        *location = strdup(val);
-    }
-
-  return SVN_NO_ERROR;
-}
-#endif /* SVN_NEON_0_25 */
-
 
 static svn_error_t * do_checkout(commit_ctx_t *cc,
                                  const char *vsn_url,
@@ -497,15 +475,6 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                       "</D:activity-set></D:checkout>", cc->activity_url);
   ne_set_request_body_buffer(req, body, strlen(body));
 
-#ifndef SVN_NEON_0_25
-  /* 
-   * We have different const qualifiers here. locn is const char **,
-   * but the prototype is void * (as opposed to const void *).
-   */
-  ne_add_response_header_handler(req, "location",
-                                 ne_duplicate_header, (void *)locn);
-#endif /* ! SVN_NEON_0_25 */
-
   if (token)
     {
       const char *token_header_val;
@@ -518,10 +487,8 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                                      "CHECKOUT", vsn_url,
                                      201 /* Created */,
                                      allow_404 ? 404 /* Not Found */ : 0,
-#ifdef SVN_NEON_0_25
-                                     interrogate_for_location, locn,
-#endif /* SVN_NEON_0_25 */
-                                     pool);
+                                     svn_ra_dav__interrogate_for_location,
+                                     locn, pool);
 
   return err;
 }
@@ -892,9 +859,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                                           "DELETE", child,
                                           204 /* Created */,
                                           404 /* Not Found */,
-#ifdef SVN_NEON_0_25
                                           NULL, NULL,
-#endif /* SVN_NEON_0_25 */
                                           pool);
       SVN_ERR(serr);
     }
@@ -1433,9 +1398,7 @@ static svn_error_t * commit_close_file(void *file_baton,
       err = svn_ra_dav__request_dispatch(&code, req, sess, "PUT", url,
                                          201 /* Created */,
                                          204 /* No Content */,
-#ifdef SVN_NEON_0_25
                                          NULL, NULL,
-#endif /* SVN_NEON_0_25 */
                                          pool);
       
       /* we're done with the file.  this should delete it. */

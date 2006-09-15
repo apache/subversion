@@ -808,7 +808,10 @@ public interface SVNClientInterface
                Revision revisionEnd,
                BlameCallback callback) throws ClientException;
     /**
-     * Set directory for the configuration information
+     * Set directory for the configuration information, taking the
+     * usual steps to ensure that Subversion's config file templates
+     * exist in the specified location.
+     *
      * @param configDir     path of the directory
      * @throws ClientException
      */

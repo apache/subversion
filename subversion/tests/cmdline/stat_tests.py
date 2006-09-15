@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os.path, re, time
+import sys, os.path, re, time
 
 # Our testing module
 import svntest
@@ -371,6 +371,61 @@ def status_for_nonexistent_file(sbox):
 
 #----------------------------------------------------------------------
 
+def status_nonrecursive_update_different_cwd(sbox):
+  "status -v -N -u from different current directories"
+
+  # check combination of status -u and -N
+  # create A/C/J in repository
+  # create A/C/K in working copy
+  # check status output with -u and -N on target C
+  # check status output with -u and -N on target . (in C)
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  was_cwd = os.getcwd()
+
+  J_url  = svntest.main.current_repo_url + '/A/C/J'
+  K_path = os.path.join(wc_dir, 'A', 'C', 'K' )
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'rev 2', J_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', K_path)
+
+  os.chdir(wc_dir)
+  try:
+    expected_output = [
+      '       *                                C/J\n'
+      'A               0       ?   ?           C/K\n'
+      '                1        1 jrandom      C\n',
+      'Status against revision:      2\n' ]
+
+    os.chdir('A')
+    svntest.actions.run_and_verify_svn(None,
+                                       expected_output,
+                                       [],
+                                       'status', '-v', '-N', '-u', 'C')
+
+    expected_output = [
+      '       *                                J\n',
+      'A               0       ?   ?           K\n',
+      '                1        1 jrandom      .\n',
+      'Status against revision:      2\n']
+
+    os.chdir('C')
+    svntest.actions.run_and_verify_svn(None,
+                                       expected_output,
+                                       [],
+                                       'status', '-v', '-N', '-u', '.')
+
+  finally:
+    os.chdir(was_cwd)
+
+
+
+#----------------------------------------------------------------------
+
 def status_file_needs_update(sbox):
   "status -u indicates out-of-dateness"
 
@@ -497,7 +552,7 @@ def status_uninvited_parent_directory(sbox):
 def status_on_forward_deletion(sbox):
   "status -u on working copy deleted in HEAD"
   # See issue #1289.
-  sbox.build()
+  sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   
   top_url = svntest.main.current_repo_url
@@ -866,7 +921,89 @@ def status_dash_u_missing_dir(sbox):
                                      [],
                                      "status", "-u", wc_dir)
 
+def status_add_plus_conflict(sbox):
+  "status on conflicted added file"
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+
+  branch_url  = svntest.main.current_repo_url + '/branch'
+  trunk_url  = svntest.main.current_repo_url + '/trunk'
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir', '-m', 'rev 2',
+                                     branch_url, trunk_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+
+  branch_file = os.path.join(wc_dir, 'branch', 'file')
+
+  open(branch_file, 'wb+').write("line 1\nline2\nline3\n")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', branch_file)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     branch_file, '-m', 'rev 3')
+
+  open(branch_file, 'wb').write("line 1\nline3\n")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     branch_file, '-m', 'rev 4')
+
+  open(branch_file, 'wb').write("line 1\nline2\n")
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'commit',
+                                     branch_file, '-m', 'rev 5')
+
+  trunk_dir = os.path.join(wc_dir, 'trunk')
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     branch_url, '-r', '2:3', trunk_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+                                     branch_url, '-r', '4:5', trunk_dir)
+
+  expected_output = [
+    "?      " + os.path.join(wc_dir, "trunk", "file.merge-left.r4") + "\n",
+    "?      " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
+    "?      " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
+    "C  +   " + os.path.join(wc_dir, "trunk", "file") + "\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
+                                     'status', wc_dir)
+
 #----------------------------------------------------------------------  
+
+def inconsistent_eol(sbox):
+  "status with inconsistent eol style"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, "iota")
+
+  open(iota_path, "wb").write("line 1\nline 2\n")
+
+  svntest.actions.run_and_verify_svn(None,
+                                     "property 'svn:eol-style' set on.*iota",
+                                     [],
+                                     'propset', 'svn:eol-style', 'native',
+                                     os.path.join(wc_dir, 'iota'))
+                                     
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', wc_rev=2)
+
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Make the eol style inconsistent and verify that status says nothing.
+  open(iota_path, "wb").write("line 1\nline 2\r\n")
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 ########################################################################
 # Run the tests
@@ -894,6 +1031,9 @@ test_list = [ None,
               status_ignored_dir,
               status_unversioned_dir,
               status_dash_u_missing_dir,
+              XFail(status_nonrecursive_update_different_cwd),
+              status_add_plus_conflict,
+              inconsistent_eol,
              ]
 
 if __name__ == '__main__':

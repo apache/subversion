@@ -9,8 +9,8 @@
                     <prog ...>
 
 The optional base-url, fs-type, verbose, and cleanup options, and
-the first four parameters are passed unchanged to the TestHarness
-constuctor.  All other parameters are names of test programs.
+the first two parameters are passed unchanged to the TestHarness
+constructor.  All other parameters are names of test programs.
 '''
 
 import os, sys
@@ -47,8 +47,10 @@ class TestHarness:
     'Run all test programs given in LIST.'
     self._open_log('w')
     failed = 0
+    cnt = 0
     for prog in list:
-      failed = self._run_test(prog) or failed
+      failed = self._run_test(prog, cnt, len(list)) or failed
+      cnt += 1
     self._open_log('r')
     log_lines = self.log.readlines()
     skipped = filter(lambda x: x[:6] == 'SKIP: ', log_lines)
@@ -73,7 +75,7 @@ class TestHarness:
       self.log.close()
       self.log = None
 
-  def _run_test(self, prog):
+  def _run_test(self, prog, test_nr, total_tests):
     'Run a single test.'
 
     def quote(arg):
@@ -84,7 +86,8 @@ class TestHarness:
 
     progdir, progbase = os.path.split(prog)
     # Using write here because we don't want even a trailing space
-    sys.stdout.write('Running all tests in ' + progbase + '...')
+    sys.stdout.write('Running all tests in %s [%d/%d]...' % (
+      progbase, test_nr + 1, total_tests))
     print >> self.log, 'START: ' + progbase
 
     if progbase[-3:] == '.py':

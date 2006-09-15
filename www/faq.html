@@ -153,6 +153,8 @@ to FSFS or from FSFS to BDB?</a></li>
     corrupt?</a></li>
 <li><a href="#wc-out-of-date">I'm trying to commit, but Subversion says my
     working copy is out of date?</a></li>
+<li><a href="#obstructed-add">I've contributed a patch to a project and the patch added a new file.
+Now <tt>svn update</tt> does not work.</a></li>
 <li><a href="#unrecognized-url-error">I just built the distribution
     binary, and when I try to check out Subversion, I get an error
     about an "Unrecognized URL scheme."  What's up with that?</a></li>
@@ -160,8 +162,6 @@ to FSFS or from FSFS to BDB?</a></li>
     but I know my repository URL is correct.  What's wrong?</a></li> 
 <li><a href="#configure-sed-error">When I run `<tt>configure</tt>', I
     get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
-<li><a href="#windows-mod_dav_svn-build">I'm getting errors trying to build
-    Subversion 1.2 on Windows &mdash; mod_dav_svn won't build.</a></li>
 <li><a href="#windows-msvc-build">I'm having trouble building
     Subversion under Windows with MSVC++ 6.0.  What should I do?</a></li>
 <li><a href="#windows-drive-letter">How can I specify a Windows drive letter in
@@ -227,12 +227,22 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#debian-libtool">I can't build Subversion from working
     copy source on Debian GNU/Linux; I get errors at the final link
     stage.  What's wrong?</a></li>
+<li><a href="#freebsd-listen-host">I'm using FreeBSD, and I've started
+  svnserve, but it doesn't seem to be listening on port 3690.</a></li>
+<li><a href="#already-under-version-control">I can't add a directory
+    because Subversion says it's "already under version control".</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
 <ul>
 <li><a href="#ramdisk-tests">How do I run the regression tests in a
     RAM disk?</a></li>
+<li><a href="#dynamic-exe-debugging">How do I run a debugger on
+    dynamic Subversion binaries without having to install
+    them?</a></li>
+<li><a href="#avoiding-compiler-inlining">How do I run a debugger on
+    Subversion binaries without compiler inlining obfuscating the
+    source?</a></li>
 </ul>
 
 <h4>References:</h4>
@@ -723,11 +733,6 @@ have that file, get the latest Subversion client and run any command;
 this will cause the configuration directory and template files to be
 created.</p>
 
-<p>Older versions of Subversion, including the 0.14.3 bootstrap
-tarball, use the file ~/.subversion/proxies to define the proxy
-settings.  This file is ignored by the current version of
-Subversion.</p>
-
 <p>Next, you need to make sure the proxy server itself supports all
 the HTTP methods Subversion uses.  Some proxy servers do not support
 these methods by default: PROPFIND, REPORT, MERGE, MKACTIVITY,
@@ -955,13 +960,13 @@ server?</h3>
 
 <p>If you are using a repository with the Berkeley DB back end
 (default for repositories created with Subversion 1.0 and 1.1, not the
-default thereafter), do <i>not</i> access the repository via NFS.
-Berkeley DB <a
-href="http://www.sleepycat.com/docs/ref/env/remote.html">does not
-support storage of databases on remote file systems</a>.  Some NFS
-servers claim that they explicitly support use of Berkeley DB on
-NFS-mounted partitions, but we've only ever seen Berkeley DB databases
-get corrupted when living on an NFS or SMB network drive.</p>
+default thereafter), we recommend <i>not</i> storing the repository on
+a remote filesystem (for example, NFS).  While Berkeley DB databases
+and log files can be stored on remote filesystems, the Berkeley DB
+shared region files cannot be stored on a remote filesystem, so the
+repository may be safely accessed by only a single filesystem client,
+and not all Subversion functionality will be available to even that
+one client.</p>
 
 <p>If you are using the <a
 href="http://svn.collab.net/repos/svn/trunk/notes/fsfs">FSFS</a>
@@ -1958,7 +1963,7 @@ binary.</p>
 <p>Subversion does not support checkout of a single file, it only
 supports checkout of directory structures.</p>
 
-<p>However, you can use 'svn cat' to export a single file.  This will
+<p>However, you can use 'svn export' to export a single file.  This will
 retrieve the file's contents, it just won't create a versioned working
 copy.</p>
 
@@ -2012,7 +2017,7 @@ Windows service, but there are a number of &ldquo;service
 wrappers&rdquo; that can do the job; for example:</p>
 
 <ul>
-<li><a href="http://dark.clansoft.dk/~mbn/svnservice/">SVNService</a>
+<li><a href="http://www.clanlib.org/~mbn/svnservice/">SVNService</a>
 is a free tool written by Magnus Norddahl</li>
 <li><a href="http://support.microsoft.com/kb/q137890/">SrvAny</a>
 is avaliable free of charge from Microsoft</li>
@@ -2412,6 +2417,31 @@ working copy is out of date?</h3>
 
 <![CDATA[-----------------------------------------------------------]]>
 
+<div class="h3" id="obstructed-add" title="obstructed-add">
+<h3>I've contributed a patch to a project and the patch added a new file.
+Now <tt>svn update</tt> does not work.</h3>
+
+<p>In order to include your new file in the patch you likely ran the <tt>svn add</tt>
+command so that the <tt>svn diff</tt> command would include the new file in the patch.
+If your patch is committed to the code base and you run an <tt>svn update</tt>, then
+you might receive an error message of: "svn: Failed to add file 'my.new.file':
+object of the same name already exists".</p>
+
+<p>The reason that you recieved this error is that you still have your local copy of
+the file in your working copy.  The steps to correct this problem are:</p>
+
+<ol>
+	<li>Run the <tt>svn revert</tt> command to remove the scheduled add within
+	Subversion.</li>
+	<li>Delete the file or move it to a location outside your working copy.</li>
+	<li>Now you should be able to run the <tt>svn update</tt> command.</li>
+</ol>
+
+<p>You might want to compare the new file from the repository with your original file.</p>
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
 <div class="h3" id="unrecognized-url-error" title="unrecognized-url-error">
 <h3>I just built the distribution binary,
 and when I try to check out Subversion, I get an error about an
@@ -2466,29 +2496,6 @@ building with are completely up-to-date, and try again.
 </p>
 
 </div>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<div class="h3" id="windows-mod_dav_svn-build"
-  title="windows-mod_dav_svn-build">
-<h3>I'm getting errors trying to build
-    Subversion 1.2 on Windows &mdash; mod_dav_svn won't build.</h3>
-
-<p>It turns out that there's a small build-bug Apache httpd: not all
-of <tt>mod_dav</tt>'s public APIs were properly declared "exportable"
-on Windows.  And Subversion 1.2's <tt>mod_dav_svn</tt> is now using
-these APIs.  This means that out-of-the-box, Subversion 1.2 will not
-compile on Windows against any released httpd sourceball.</p>
-
-<p>This problem is already fixed on httpd's /trunk, and has been
-backported to the httpd 2.0.x branch.  If you're using a released
-httpd source tree, you're out of luck.  Until httpd-2.0.54 is
-released, you will need to manually apply <a
-href="httpd-win32.patch.txt">the same patch</a> to your httpd tree.
-(It's r155345 of httpd's trunk, for reference.)</p>
-
-</div>
-
 
 <![CDATA[-----------------------------------------------------------]]>
  
@@ -3035,16 +3042,26 @@ working copy.</p>
 
 <p>Calm down, take a deep breath.</p>
 
-<p>First of all, notice that the directory which contains the cached
-passwords (usually ~/.subversion/auth/ on Unix systems) has permissions
-of 700, meaning only you can read them.  Trust your OS to protect data
-on disk.</p>
+<p>On UNIX, notice that the directory which contains the cached
+passwords (usually ~/.subversion/auth/) has permissions
+of 700, meaning only you can read them.</p>
 
-<p>Secondly, if you're really worried, you can permanently turn off
+<p>On Windows 2000 or later, svn 1.2 and above uses standard 
+Windows APIs to encrypt the data, so only the user can decrypt the 
+cached password.</p>
+
+<p>Trust your OS to protect data on disk.</p>
+
+<p>However, if you're really worried, you can permanently turn off
 password caching.  With an svn 1.0 client, just set 'store-auth-creds
 = no' in your run-time config file.  With an svn 1.1 client or later,
 you can use the more narrowly-defined 'store-passwords = no' (so that
-server certs are still cached.)</p>
+server certs are still cached). More information on password cacheing
+is in chapter 6 of the <a 
+href="http://svnbook.red-bean.com/nightly/en/index.html">"Nightly 
+Build" Subversion book</a>, under 
+<a href="http://svnbook.red-bean.com/nightly/en/svn.serverconfig.netmodel.html#svn.serverconfig.netmodel.credcache">
+"Client Credentials Caching".</a></p>
 
 <p>Lastly, we point out that CVS has been caching passwords for years
 in the .cvspass file.  It may look like the passwords in .cvspass are
@@ -3306,6 +3323,39 @@ solution described here was not mentioned in that thread.</p>
 
 </div>
 
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="freebsd-listen-host" title="freebsd-listen-host">
+<h3>I'm using FreeBSD, and I've started svnserve, but it doesn't seem
+  to be listening on port 3690.</h3>
+    
+<p>Short answer: invoke <tt>svnserve</tt> with
+   the <tt>--listen-host=0.0.0.0</tt> option.</p>
+<p>Slightly longer answer: FreeBSD daemons only listen on tcp6 by
+  default; that option tells them to also listen on tcp4.</p>
+</div>
+
+<div class="h3" id="already-under-version-control" title="already-under-version-control">
+<h3>I can't add a directory
+    because Subversion says it's "already under version control".</h3>
+<p>The directory you're trying to add already contains
+  a <tt>.svn</tt> subdirectory, but it's from a different repository
+  than the directory to which you're trying to add it.  This probably
+  happened because you used your operating system's "copy" command to
+  copy one working copy into the current one.</p>
+<p>
+  The quick and dirty solution is to delete all <tt>.svn</tt>
+  directories contained in the directory you're trying to add; this
+  will let the "add" command complete.  If you're using Unix, this
+  command will delete <tt>.svn</tt> directories
+  under <tt>dir</tt>:</p>
+<pre>
+  find dir -type d -name .svn -exec rm -rf {} \;
+</pre>
+<p>However, you should ask yourself <em>why</em> you made this copy;
+  and you should ensure that by adding this directory, you won't be
+  making an unwanted copy of it in your repository.
+</p>
 <![CDATA[=========================================================]]>
 
 </div>
@@ -3319,12 +3369,21 @@ solution described here was not mentioned in that thread.</p>
     RAM disk?</h3>
 
 <p>Test execution can be dramatically sped up by keeping Subversion
-test data on a RAM disk.  On a Linux system, add lines like the
-following in your /etc/fstab file:</p>
+test data on a RAM disk.  On a Linux system, you can mount a RAM disk
+on the fly with the command:</p>
 
 <blockquote>
-<div><code>tmpfs  /home/brane/svn/obj-sh/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m</code></div>
-<div><code>tmpfs  /home/brane/svn/obj-st/subversion/tests  tmpfs  defaults,user,noauto,exec,size=64m</code></div>
+<div><code>mount -t tmpfs tmpfs
+/path/to/src/subversion/tests/cmdline/svn-test-work
+-o uid=$USER,mode=770,size=32m</code></div>
+</blockquote>
+
+<p>Or, for a more permanent solution, add lines like the following in
+your <code>/etc/fstab</code> file:</p>
+
+<blockquote>
+<div><code>tmpfs  /path/to/src/svn/subversion/tests/cmdline/svn-test-work
+tmpfs  defaults,user,noauto,exec,size=32m</code></div>
 </blockquote>
 
 <p>The minimum required size for testing ramdisk is approximately 700MB.
@@ -3340,6 +3399,69 @@ make check CLEANUP=true
 <p>See <a href="http://svn.haxx.se/dev/archive-2003-02/0068.shtml"
 >http://svn.haxx.se/dev/archive-2003-02/0068.shtml</a> for the
 original authoritative discussion on use of RAM disks.</p>
+
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="dynamic-exe-debugging" title="dynamic-exe-debugging">
+
+<h3>How do I run a debugger on dynamic Subversion binaries without
+    having to install them?</h3>
+
+<p>Before the <code>make install</code> step on unix-y systems,
+dynamically built "executables" in a Subversion source tree are
+actually libtool-generated shell scripts which re-link and run the
+real binary.  As shown below, this complicates debugging:</p>
+
+<blockquote>
+<div><code>subversion$ gdb subversion/svn/svn</code></div>
+<div><code>... "/path/to/subversion/subversion/svn/svn": not in
+executable format: File format not recognized</code></div>
+</blockquote>
+
+<p>While this can be worked around by building using the
+<code>--disable-shared</code> argument to configure to statically link
+the binaries, or installing them and pointing your debugger at the
+installed version, it's often necessary or more expedient to be able
+to debug them right within your source tree.</p>
+
+<p>To do so, edit the last <code>exec</code> statement in the shell
+script to run the real binary in your debugger.  With gdb, this
+amounts to replacing <code>exec "$progdir/$progname"</code> with
+<code>exec gdb --args "$progdir/$progname"</code>.</p>
+
+<p>This trick is also very useful when applied to the
+libtool-generated shell scripts for the white box tests.</p>
+
+</div>
+
+<![CDATA[-----------------------------------------------------------]]>
+
+<div class="h3" id="avoiding-compiler-inlining"
+title="avoiding-compiler-inlining">
+
+<h3>How do I run a debugger on Subversion binaries without compiler
+    inlining obfuscating the source?</h3>
+
+<p>By default, gcc will often optimize away private variables and
+functions, inlining the associated operations.  This can complicate
+stepping through the code in a debugger.</p>
+
+<p>Work around this by turning off optimization.  Before the
+<code>make</code> step on unix-y systems, do the following:</p>
+
+<blockquote>
+<div><code>subversion$ perl -pi -e 's/-O2//g' config.status</code></div>
+<div><code>subversion$ ./config.status</code></div>
+</blockquote>
+
+<p>Alternately, you can explicitly set <code>CFLAGS</code> before
+running <code>configure</code>.</p>
+
+<p>Remember to undo this operation before installing Subversion from
+source, by regenerating config.status, or unsetting
+<code>CFLAGS</code> before running <code>configure</code>.</p>
 
 </div>
 
@@ -3413,7 +3535,8 @@ quite a bit.</p>
 <h3>What do you mean when you say that
     repository is 'wedged'?</h3>
 
-wedged repository: 
+<p>wedged repository:</p>
+
 <blockquote>
 <p>A Subversion repository consists of two different internal parts, a
 working compartment and a storage compartment.  A wedged repository is
@@ -3425,7 +3548,7 @@ repository. See <a href="#stuck-bdb-repos">this</a> entry for details
 how to do that.</p>
 </blockquote>
 
-corrupted repository: 
+<p>corrupted repository:</p>
 
 <blockquote>
 <p>A corrupted Subversion repository is a repository where the storage

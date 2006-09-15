@@ -132,8 +132,8 @@ static svn_error_t *compat_get_commit_editor(void *session_baton,
   svn_commit_callback2_t callback2;
   void *callback2_baton;
 
-  svn_compat_wrap_commit_callback(callback, callback_baton,
-                                  &callback2, &callback2_baton,
+  svn_compat_wrap_commit_callback(&callback2, &callback2_baton,
+                                  callback, callback_baton,
                                   pool);
   return VTBL.get_commit_editor(session_baton, editor, edit_baton, log_msg,
                                 callback2, callback2_baton,
@@ -160,8 +160,8 @@ static svn_error_t *compat_get_dir(void *session_baton,
                                    apr_hash_t **props,
                                    apr_pool_t *pool)
 {
-  return VTBL.get_dir(session_baton, path, revision, SVN_DIRENT_ALL, dirents,
-                      fetched_rev, props, pool);
+  return VTBL.get_dir(session_baton, dirents, fetched_rev, props,
+                      path, revision, SVN_DIRENT_ALL, pool);
 }
 
 struct compat_report_baton {

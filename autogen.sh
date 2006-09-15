@@ -89,23 +89,13 @@ fi
 if test -n "$SKIP_DEPS"; then
   echo "Creating build-outputs.mk (no dependencies)..."
   "$PYTHON" ./gen-make.py $RELEASE_ARGS -s build.conf || gen_failed=1
-
-  ### if apr and apr-util are not subdirs, then this fails. only do it
-  ### for the release (from dist.sh; for now)
-  if test -n "$RELEASE_MODE"; then
-    echo "Creating MSVC files (no dependencies)..."
-    "$PYTHON" ./gen-make.py $RELEASE_ARGS -t dsp -s build.conf || gen_failed=1
-  fi
 else
   echo "Creating build-outputs.mk..."
   "$PYTHON" ./gen-make.py $RELEASE_ARGS build.conf || gen_failed=1
+fi
 
-  ### if apr and apr-util are not subdirs, then this fails. only do it
-  ### for the release (from dist.sh; for now)
-  if test -n "$RELEASE_MODE"; then
-    echo "Creating MSVC files..."
-    "$PYTHON" ./gen-make.py $RELEASE_ARGS -t dsp -s build.conf || gen_failed=1
-  fi
+if test -n "$RELEASE_MODE"; then
+  find build/ -name '*.pyc' -exec rm {} \;
 fi
 
 rm autogen-standalone.mk
@@ -144,18 +134,6 @@ fi
 # Remove autoconf 2.5x's cache directory
 rm -rf autom4te*.cache
 
-# Run apr/buildconf if it exists.
-if test -x "apr/buildconf" ; then
-  echo "Creating configuration files for apr." # apr's equivalent of autogen.sh
-  (cd apr && ./buildconf)
-fi
-
-# Run apr-util/buildconf if it exists.
-if test -x "apr-util/buildconf" ; then
-  echo "Creating configuration files for apr-util."
-  (cd apr-util && ./buildconf)
-fi
-
 echo ""
 echo "You can run ./configure now."
 echo ""
@@ -167,5 +145,5 @@ echo "./configure --disable-shared"
 echo "./configure --enable-maintainer-mode --disable-shared"
 echo ""
 echo "Note:  If you wish to run a Subversion HTTP server, you will need"
-echo "Apache 2.0.  See the INSTALL file for details."
+echo "Apache 2.x.  See the INSTALL file for details."
 echo ""

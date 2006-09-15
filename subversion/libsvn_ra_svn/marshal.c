@@ -630,20 +630,20 @@ svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
 
 /* --- READING AND PARSING TUPLES --- */
 
-/* Parse a tuple.  Advance *FMT to the end of the tuple specification
- * and advance AP by the corresponding arguments. */
-static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
+/* Parse a tuple of svn_ra_svn_item_t *'s.  Advance *FMT to the end of the
+ * tuple specification and advance AP by the corresponding arguments. */
+static svn_error_t *vparse_tuple(apr_array_header_t *items, apr_pool_t *pool,
                                  const char **fmt, va_list *ap)
 {
-  int count, list_level;
+  int count, nesting_level;
   svn_ra_svn_item_t *elt;
 
-  for (count = 0; **fmt && count < list->nelts; (*fmt)++, count++)
+  for (count = 0; **fmt && count < items->nelts; (*fmt)++, count++)
     {
       /* '?' just means the tuple may stop; skip past it. */
       if (**fmt == '?')
         (*fmt)++;
-      elt = &((svn_ra_svn_item_t *) list->elts)[count];
+      elt = &((svn_ra_svn_item_t *) items->elts)[count];
       if (**fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
         *va_arg(*ap, apr_uint64_t *) = elt->u.number;
       else if (**fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
@@ -677,7 +677,7 @@ static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
     }
   if (**fmt == '?')
     {
-      list_level = 0;
+      nesting_level = 0;
       for (; **fmt; (*fmt)++)
         {
           switch (**fmt)
@@ -701,10 +701,10 @@ static svn_error_t *vparse_tuple(apr_array_header_t *list, apr_pool_t *pool,
               *va_arg(*ap, apr_uint64_t *) = SVN_RA_SVN_UNSPECIFIED_NUMBER;
               break;
             case '(':
-              list_level++;
+              nesting_level++;
               break;
             case ')':
-              if (--list_level < 0)
+              if (--nesting_level < 0)
                 return SVN_NO_ERROR;
               break;
             default:

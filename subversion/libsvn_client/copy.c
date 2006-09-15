@@ -60,7 +60,6 @@ static svn_error_t *
 wc_to_wc_copy(const char *src_path,
               const char *dst_path,
               svn_boolean_t is_move,
-              svn_boolean_t force,
               svn_client_ctx_t *ctx,
               apr_pool_t *pool)
 {
@@ -132,10 +131,6 @@ wc_to_wc_copy(const char *src_path,
             }
         }
 
-      if (!force)
-        /* Ensure there are no "awkward" files. */
-        SVN_ERR_W(svn_client__can_delete(src_path, ctx, pool),
-                  _("Move will not be attempted unless forced"));
     }
   else 
     {
@@ -762,8 +757,7 @@ repos_to_wc_copy(const char *src_url,
   /* Make sure the destination parent is a directory and produce a clear
      error message if it is not. */
   dst_parent = svn_path_dirname(dst_path, pool);
-  SVN_ERR(svn_io_check_path(svn_path_dirname(dst_path, pool),
-                            &dst_parent_kind, pool));
+  SVN_ERR(svn_io_check_path(dst_parent, &dst_parent_kind, pool));
   if (dst_parent_kind != svn_node_dir)
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                              _("Path '%s' is not a directory"),
@@ -822,7 +816,7 @@ repos_to_wc_copy(const char *src_url,
     {
       SVN_ERR(svn_client__checkout_internal
               (NULL, src_url, dst_path, &revision, &revision,
-               TRUE, FALSE, NULL, ctx, pool));
+               TRUE, FALSE, FALSE, NULL, ctx, pool));
 
       if ((revision.kind == svn_opt_revision_head) && same_repositories)
         {
@@ -1018,7 +1012,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
   if ((! src_is_url) && (! dst_is_url))
     {
       SVN_ERR(wc_to_wc_copy(src_path, dst_path,
-                            is_move, force,
+                            is_move,
                             ctx,
                             pool));
     }

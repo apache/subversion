@@ -71,8 +71,6 @@ struct report_baton {
 
   svn_boolean_t had_txdelta;  /* Did we have a txdelta in this file-rev elem? */
 
-  /* Error from parse callback. */
-  svn_error_t *err;
   apr_pool_t *subpool;
 };
 
@@ -103,17 +101,10 @@ static const svn_ra_dav__xml_elm_t report_elements[] =
     { NULL }
   };
 
-/* If an error occurs, store it and abort the XML parse. */
-#define CHKERR(e)               \
-do {                            \
-  if ((rb->err = (e)) != NULL)  \
-    return NE_XML_ABORT;        \
-} while(0)
 
-
-/* This implements the `ne_xml_startelm_cb' prototype. */
-static int
-start_element(void *userdata, int parent_state, const char *ns,
+/* This implements the `svn_ra_dav__startelm_cb_t' prototype. */
+static svn_error_t *
+start_element(int *elem, void *userdata, int parent_state, const char *ns,
               const char *ln, const char **atts)
 {
   struct report_baton *rb = userdata;
@@ -124,13 +115,16 @@ start_element(void *userdata, int parent_state, const char *ns,
 
   /* Skip unknown elements. */
   if (!elm)
-    return NE_XML_DECLINE;
+    {
+      *elem = NE_XML_DECLINE;
+      return SVN_NO_ERROR;
+    }
 
   switch (parent_state)
     {
     case ELEM_root:
       if (elm->id != ELEM_file_revs_report)
-        return NE_XML_ABORT;
+        return UNEXPECTED_ELEMENT(ns, ln);
       break;
 
     case ELEM_file_revs_report:
@@ -139,28 +133,28 @@ start_element(void *userdata, int parent_state, const char *ns,
           reset_file_rev(rb);
           att = svn_xml_get_attr_value("rev", atts);
           if (!att)
-            return NE_XML_ABORT;
+            return MISSING_ATTR(ns, ln, "rev");
           rb->revnum = SVN_STR_TO_REV(att);
           att = svn_xml_get_attr_value("path", atts);
           if (!att)
-            return NE_XML_ABORT;
+            return MISSING_ATTR(ns, ln, "path");
           rb->path = apr_pstrdup(rb->subpool, att);
         }
       else
-        return NE_XML_ABORT;
+        return UNEXPECTED_ELEMENT(ns, ln);
       break;
 
     case ELEM_file_rev:
       /* txdelta must be the last elem in file-rev. */
       if (rb->had_txdelta)
-        return NE_XML_ABORT;
+        return UNEXPECTED_ELEMENT(ns, ln);
       switch (elm->id)
         {
         case ELEM_rev_prop:
         case ELEM_set_prop:
           att = svn_xml_get_attr_value("name", atts);
           if (!att)
-            return NE_XML_ABORT;
+            return MISSING_ATTR(ns, ln, "name");
           rb->prop_name = apr_pstrdup(rb->subpool, att);
           att = svn_xml_get_attr_value("encoding", atts);
           if (att && strcmp(att, "base64") == 0)
@@ -173,7 +167,7 @@ start_element(void *userdata, int parent_state, const char *ns,
             svn_prop_t *prop = apr_array_push(rb->prop_diffs);
             att = svn_xml_get_attr_value("name", atts);
             if (!att || *att == '\0')
-              return NE_XML_ABORT;
+              return MISSING_ATTR(ns, ln, "name");
             prop->name = apr_pstrdup(rb->subpool, att);
             prop->value = NULL;
           }
@@ -183,9 +177,9 @@ start_element(void *userdata, int parent_state, const char *ns,
             svn_txdelta_window_handler_t whandler = NULL;
             void *wbaton;
             /* It's time to call our hanlder. */
-            CHKERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
-                               rb->rev_props, &whandler, &wbaton,
-                               rb->prop_diffs, rb->subpool));
+            SVN_ERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
+                                rb->rev_props, &whandler, &wbaton,
+                                rb->prop_diffs, rb->subpool));
             if (whandler)
               rb->stream = svn_base64_decode
                 (svn_txdelta_parse_svndiff(whandler, wbaton, TRUE,
@@ -193,14 +187,16 @@ start_element(void *userdata, int parent_state, const char *ns,
           }
           break;
         default:
-          return NE_XML_ABORT;
+          return UNEXPECTED_ELEMENT(ns, ln);
         }
       break;
     default:
-      return NE_XML_ABORT;
+      return UNEXPECTED_ELEMENT(ns, ln);
     }
 
-  return elm->id;
+  *elem = elm->id;
+
+  return SVN_NO_ERROR;
 }
 
 /* Extract the property value from RB, possibly base64-decoding it.
@@ -217,8 +213,8 @@ extract_propval(struct report_baton *rb)
     return v;
 }
 
-/* This implements the `ne_xml_endelm_cb' prototype. */
-static int
+/* This implements the `svn_ra_dav__endelm_cb_t' prototype. */
+static svn_error_t *
 end_element(void *userdata, int state,
             const char *nspace, const char *elt_name)
 {
@@ -230,9 +226,9 @@ end_element(void *userdata, int state,
       /* If we had no txdelta, we call the handler here, informing it that
          there were no content changes. */
       if (!rb->had_txdelta)
-        CHKERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
-                           rb->rev_props, NULL, NULL, rb->prop_diffs,
-                           rb->subpool));
+        SVN_ERR(rb->handler(rb->handler_baton, rb->path, rb->revnum,
+                            rb->rev_props, NULL, NULL, rb->prop_diffs,
+                            rb->subpool));
       break;
 
     case ELEM_rev_prop:
@@ -251,17 +247,17 @@ end_element(void *userdata, int state,
     case ELEM_txdelta:
       if (rb->stream)
         {
-          CHKERR(svn_stream_close(rb->stream));
+          SVN_ERR(svn_stream_close(rb->stream));
           rb->stream = NULL;
         }
       rb->had_txdelta = TRUE;
       break;
     }
-  return 0;
+  return SVN_NO_ERROR;
 }
 
-/* This implements the `ne_xml_cdata_cb' prototype. */
-static int
+/* This implements the `svn_ra_dav__cdata_cb' prototype. */
+static svn_error_t *
 cdata_handler(void *userdata, int state,
               const char *cdata, size_t len)
 {
@@ -277,18 +273,17 @@ cdata_handler(void *userdata, int state,
       if (rb->stream)
         {
           apr_size_t l = len;
-          CHKERR(svn_stream_write(rb->stream, cdata, &l));
+          SVN_ERR(svn_stream_write(rb->stream, cdata, &l));
           if (l != len)
-            return NE_XML_ABORT;
+            return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
+                                    _("Failed to write full amount to stream"));
         }
 
       /* In other cases, we just ingore the CDATA. */
     }
 
-  return 0;
+  return SVN_NO_ERROR;
 }
-
-#undef CHKERR
 
 svn_error_t *
 svn_ra_dav__get_file_revs(svn_ra_session_t *session,
@@ -335,7 +330,6 @@ svn_ra_dav__get_file_revs(svn_ra_session_t *session,
   rb.handler = handler;
   rb.handler_baton = handler_baton;
   rb.cdata_accum = svn_stringbuf_create("", pool);
-  rb.err = NULL;
   rb.subpool = svn_pool_create(pool);
   reset_file_rev(&rb);
 
@@ -362,15 +356,6 @@ svn_ra_dav__get_file_revs(svn_ra_session_t *session,
     return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, err,
                             _("'get-file-revs' REPORT not implemented"));
 
-  /* rb.err contains the relevant error if the response was aborted by
-   * a callback returning NE_XML_ABORT; always return that error if
-   * present. */
-  if (rb.err != NULL)
-    {
-      if (err)
-        svn_error_clear(err);
-      return rb.err;
-    }
   SVN_ERR(err);
 
   /* Caller expects at least one revision.  Signal error otherwise. */

@@ -544,12 +544,12 @@ svn_ra_serf__stat(svn_ra_session_t *ra_session,
 
 static svn_error_t *
 svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
-                     const char *rel_path,
-                     svn_revnum_t revision,
-                     apr_uint32_t dirent_fields,
                      apr_hash_t **dirents,
                      svn_revnum_t *fetched_rev,
                      apr_hash_t **ret_props,
+                     const char *rel_path,
+                     svn_revnum_t revision,
+                     apr_uint32_t dirent_fields,
                      apr_pool_t *pool)
 {
   svn_ra_serf__session_t *session = ra_session->priv;

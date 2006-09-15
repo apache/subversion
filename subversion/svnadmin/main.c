@@ -214,7 +214,7 @@ enum
     svnadmin__use_post_commit_hook,
     svnadmin__clean_logs,
     svnadmin__wait,
-    svnadmin__no_svndiff1
+    svnadmin__pre_1_4_compatible
   };
 
 /* Option codes and descriptions.
@@ -230,7 +230,7 @@ static const apr_getopt_option_t options_table[] =
      N_("show help on a subcommand")},
 
     {"version",       svnadmin__version, 0,
-     N_("show version information")},
+     N_("show program version information")},
 
     {"revision",      'r', 1,
      N_("specify revision number ARG (or X:Y range)")},
@@ -282,9 +282,9 @@ static const apr_getopt_option_t options_table[] =
      N_("wait instead of exit if the repository is in\n"
         "                             use by another process")},
 
-    {"no-svndiff1",     svnadmin__no_svndiff1, 0,
-     N_("disallow use of SVNDIFF1 in on-disk storage,\n"
-        "                             for backwards compatibility")},
+    {"pre-1.4-compatible",     svnadmin__pre_1_4_compatible, 0,
+     N_("use format compatible with Subversion versions\n"
+        "                             earlier than 1.4")},
 
     {NULL}
   };
@@ -305,7 +305,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
    ("usage: svnadmin create REPOS_PATH\n\n"
     "Create a new, empty repository at REPOS_PATH.\n"),
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
-    svnadmin__config_dir, svnadmin__fs_type, svnadmin__no_svndiff1} },
+    svnadmin__config_dir, svnadmin__fs_type, svnadmin__pre_1_4_compatible} },
 
   {"deltify", subcommand_deltify, {0}, N_
    ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
@@ -329,7 +329,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
   {"help", subcommand_help, {"?", "h"}, N_
    ("usage: svnadmin help [SUBCOMMAND...]\n\n"
     "Describe the usage of this program or its subcommands.\n"),
-   {svnadmin__version} },
+   {0} },
 
   {"hotcopy", subcommand_hotcopy, {0}, N_
    ("usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
@@ -413,7 +413,7 @@ struct svnadmin_opt_state
   const char *repository_path;
   const char *new_repository_path;                  /* hotcopy dest. path */
   const char *fs_type;                              /* --fs-type */
-  svn_boolean_t no_svndiff1;                        /* --no-svndiff1 */
+  svn_boolean_t pre_1_4_compatible;                 /* --pre-1.4-compatible */
   svn_opt_revision_t start_revision, end_revision;  /* -r X[:Y] */
   svn_boolean_t help;                               /* --help or -? */
   svn_boolean_t version;                            /* --version */
@@ -487,8 +487,8 @@ subcommand_create(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                  APR_HASH_KEY_STRING,
                  opt_state->fs_type);
 
-  if (opt_state->no_svndiff1)
-    apr_hash_set(fs_config, SVN_FS_CONFIG_NO_SVNDIFF1,
+  if (opt_state->pre_1_4_compatible)
+    apr_hash_set(fs_config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
                  APR_HASH_KEY_STRING,
                  "1");
 
@@ -653,6 +653,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   const char *header =
     _("general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
       "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
+      "Type 'svnadmin --version' to see the program version and FS modules.\n"
       "\n"
       "Available subcommands:\n");
 
@@ -1194,7 +1195,7 @@ main(int argc, const char *argv[])
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
 
   /* Parse options. */
-  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnadmin: ");
 
@@ -1255,7 +1256,6 @@ main(int argc, const char *argv[])
         break;
       case svnadmin__version:
         opt_state.version = TRUE;
-        opt_state.help = TRUE;
         break;
       case svnadmin__incremental:
         opt_state.incremental = TRUE;
@@ -1269,8 +1269,8 @@ main(int argc, const char *argv[])
       case svnadmin__force_uuid:
         opt_state.uuid_action = svn_repos_load_uuid_force;
         break;
-      case svnadmin__no_svndiff1:
-        opt_state.no_svndiff1 = TRUE;
+      case svnadmin__pre_1_4_compatible:
+        opt_state.pre_1_4_compatible = TRUE;
         break;        
       case svnadmin__fs_type:
         err = svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool);
@@ -1332,12 +1332,25 @@ main(int argc, const char *argv[])
     {
       if (os->ind >= os->argc)
         {
-          svn_error_clear
-            (svn_cmdline_fprintf(stderr, pool,
-                                 _("subcommand argument required\n")));
-          subcommand_help(NULL, NULL, pool);
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          if (opt_state.version)
+            {
+              /* Use the "help" subcommand to handle the "--version" option. */
+              static const svn_opt_subcommand_desc_t pseudo_cmd =
+                { "--version", subcommand_help, {0}, "",
+                  {svnadmin__version,  /* must accept its own option */
+                  } };
+
+              subcommand = &pseudo_cmd;
+            }
+          else
+            {
+              svn_error_clear
+                (svn_cmdline_fprintf(stderr, pool,
+                                     _("subcommand argument required\n")));
+              subcommand_help(NULL, NULL, pool);
+              svn_pool_destroy(pool);
+              return EXIT_FAILURE;
+            }
         }
       else
         {
@@ -1413,11 +1426,14 @@ main(int argc, const char *argv[])
           const apr_getopt_option_t *badopt = 
             svn_opt_get_option_from_code(opt_id, options_table);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
-          svn_error_clear
-            (svn_cmdline_fprintf
-             (stderr, pool, _("subcommand '%s' doesn't accept option '%s'\n"
-                              "Type 'svnadmin help %s' for usage.\n"),
-              subcommand->name, optstr, subcommand->name));
+          if (subcommand->name[0] == '-')
+            subcommand_help(NULL, NULL, pool);
+          else
+            svn_error_clear
+              (svn_cmdline_fprintf
+               (stderr, pool, _("subcommand '%s' doesn't accept option '%s'\n"
+                                "Type 'svnadmin help %s' for usage.\n"),
+                subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }

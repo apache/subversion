@@ -100,6 +100,13 @@ const svn_version_t *svn_wc_version(void);
    */
 #define SVN_WC_TRANSLATE_FORCE_COPY              0x00000008
 
+  /** Use a non-wc-local tmp directory for creating output files,
+   * instead of in the working copy admin tmp area which is the default.
+   *
+   * @since New in 1.4.
+   */
+#define SVN_WC_TRANSLATE_USE_GLOBAL_TMP          0x00000010
+
 /** @} */
 
 
@@ -640,7 +647,11 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_failed_lock,
 
   /** Failed to unlock a path. @since New in 1.2. */
-  svn_wc_notify_failed_unlock
+  svn_wc_notify_failed_unlock,
+
+  /** Tried adding a path that already exists. @since New in 1.5. */
+  svn_wc_notify_exists
+
 } svn_wc_notify_action_t;
 
 
@@ -1092,9 +1103,31 @@ svn_error_t *svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * that if the text base is much longer than the working file, every
  * byte of the text base will still be examined.)
  *
+ * If @a use_tmp_base is true, then use the text-base in the local tmp
+ * area, if false use the 'normal' base revision.
+ *
  * If @a filename does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
+ *
+ * If @a filename is unmodified but has a timestamp variation then this
+ * function may "repair" @a filename's text-time by setting it to
+ * @a filename's last modification time.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_text_modified_p2(svn_boolean_t *modified_p,
+                                     const char *filename,
+                                     svn_boolean_t force_comparison,
+                                     svn_boolean_t use_tmp_base,
+                                     svn_wc_adm_access_t *adm_access,
+                                     apr_pool_t *pool);
+
+
+/** Similar to svn_wc_text_modified_p2() but with the use_tmp_base
+ * parameter always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_text_modified_p(svn_boolean_t *modified_p,
                                     const char *filename,
@@ -1284,6 +1317,11 @@ typedef struct svn_wc_entry_t
    *
    * @since New in 1.4. */
   const char *present_props;
+
+  /** which changelist this item is part of, or NULL if not part of any.
+   * @since New in 1.5.
+   */
+  const char *changelist;
 
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
@@ -2283,6 +2321,11 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.
  *
+ * If @a remove_changelist is @c TRUE, any association with a
+ * changelist will be removed.
+ *
+ * If @a path is a member of a changelist, remove that association.
+ *
  * If @a path is a file and @a digest is non-null, use @a digest as
  * the checksum for the new text base.  Else, calculate the checksum
  * if needed.
@@ -2291,7 +2334,26 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_process_committed4(const char *path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t recurse,
+                                       svn_revnum_t new_revnum,
+                                       const char *rev_date,
+                                       const char *rev_author,
+                                       apr_array_header_t *wcprop_changes,
+                                       svn_boolean_t remove_lock,
+                                       svn_boolean_t remove_changelist,
+                                       const unsigned char *digest,
+                                       apr_pool_t *pool);
+
+/** Similar to svn_wc_process_committed4(), but with @a
+ * remove_changelist set to FALSE.
+ *
  * @since New in 1.4.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_process_committed3(const char *path,
                                        svn_wc_adm_access_t *adm_access,
@@ -2472,7 +2534,33 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
- * @since New in 1.2.
+ * If @a allow_unver_obstructions is true, then allow unversioned
+ * obstructions when adding a path.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
+                                       svn_wc_adm_access_t *anchor,
+                                       const char *target,
+                                       svn_boolean_t use_commit_times,
+                                       svn_boolean_t recurse,
+                                       svn_boolean_t allow_unver_obstructions,
+                                       svn_wc_notify_func2_t notify_func,
+                                       void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       const char *diff3_cmd,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       svn_wc_traversal_info_t *ti,
+                                       apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_wc_get_update_editor3() but with the
+ * allow_unver_obstructions parameter always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_get_update_editor2(svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
@@ -2547,7 +2635,33 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
- * @since New in 1.2.
+ * If @a allow_unver_obstructions is true, then allow unversioned
+ * obstructions when adding a path.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
+                                       svn_wc_adm_access_t *anchor,
+                                       const char *target,
+                                       const char *switch_url,
+                                       svn_boolean_t use_commit_times,
+                                       svn_boolean_t recurse,
+                                       svn_boolean_t allow_unver_obstructions,
+                                       svn_wc_notify_func2_t notify_func,
+                                       void *notify_baton,
+                                       svn_cancel_func_t cancel_func,
+                                       void *cancel_baton,
+                                       const char *diff3_cmd,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       svn_wc_traversal_info_t *ti,
+                                       apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_get_switch_editor3() but with the
+ * allow_unver_obstructions parameter always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
@@ -2722,7 +2836,7 @@ svn_boolean_t svn_wc_is_entry_prop(const char *name);
  * the working copy's text-base files, rather than the working files.
  *
  * Normally, the difference from repository->working_copy is shown.
- * If @ reverse_order is true, then show working_copy->repository diffs.
+ * If @a reverse_order is true, then show working_copy->repository diffs.
  *
  * If @a cancel_func is non-null, it will be used along with @a cancel_baton 
  * to periodically check if the client has canceled the operation.
@@ -2947,7 +3061,8 @@ typedef enum svn_wc_merge_outcome_t
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_wc_merge2(const char *left,
+svn_error_t *svn_wc_merge2(enum svn_wc_merge_outcome_t *merge_outcome,
+                           const char *left,
                            const char *right,
                            const char *merge_target,
                            svn_wc_adm_access_t *adm_access,
@@ -2955,7 +3070,6 @@ svn_error_t *svn_wc_merge2(const char *left,
                            const char *right_label,
                            const char *target_label,
                            svn_boolean_t dry_run,
-                           enum svn_wc_merge_outcome_t *merge_outcome,
                            const char *diff3_cmd,
                            const apr_array_header_t *merge_options,
                            apr_pool_t *pool);
@@ -3297,8 +3411,9 @@ svn_error_t *svn_wc_translated_file(const char **xlated_p,
  * This process creates a copy of @a path with keywords and eol
  * untranslated.  If @a tempfile is non-null, set @a *tempfile to the
  * path to this copy.  Do not clean up the copy; caller can do that.
- * If @a digest is non-null, set @a *digest to the MD5 checksum of the
- * temporary file.  (The purpose of handing back the tmp copy is that
+ * If @a digest is non-null, put the MD5 checksum of the
+ * temporary file into @a digest, which must point to @c APR_MD5_DIGESTSIZE
+ * bytes of storage.  (The purpose of handing back the tmp copy is that
  * it is usually about to become the new text base anyway, but the
  * installation of the new text base is outside the scope of this
  * function.)
@@ -3316,13 +3431,13 @@ svn_error_t *svn_wc_translated_file(const char **xlated_p,
  *
  * @since New in 1.4.
  */
-svn_error_t *svn_wc_transmit_text_deltas2(const char *path,
+svn_error_t *svn_wc_transmit_text_deltas2(const char **tempfile,
+                                          unsigned char digest[],
+                                          const char *path,
                                           svn_wc_adm_access_t *adm_access,
                                           svn_boolean_t fulltext,
                                           const svn_delta_editor_t *editor,
                                           void *file_baton,
-                                          const char **tempfile,
-                                          const unsigned char **digest,
                                           apr_pool_t *pool);
 
 /** Similar to svn_wc_transmit_text_deltas2(), but with @a digest set to null.
@@ -3375,6 +3490,15 @@ svn_error_t *svn_wc_get_ignores(apr_array_header_t **patterns,
                                 apr_hash_t *config,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
+
+/** Return true iff @a str matches any of the elements of @a list, a
+ * list of zero or more ignore patterns.
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t
+svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
+                         apr_pool_t *pool);
 
 
 /** Add @a lock to the working copy for @a path.  @a adm_access must contain
@@ -3447,6 +3571,23 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *pool);
+
+
+/**
+ * Associate @a path with changelist @a changelist by setting the
+ * 'changelist' attribute in its entry.  Obviously, this will
+ * overwrite any existing value of the attribute.  If @a changelist is
+ * NULL, then remove any 'changelist' attribute in @a path's entry.
+ *
+ * @note This metadata is purely a client-side "bookkeeping"
+ * convenience, and is entirely managed by the working copy.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_set_changelist(const char *path,
+                      const char *changelist,
+                      apr_pool_t *pool);
 
 
 #ifdef __cplusplus

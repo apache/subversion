@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path, shutil
+import sys, re, os.path, shutil
 
 # Our testing module
 import svntest
@@ -292,22 +292,6 @@ def remove_props(sbox):
 
 #----------------------------------------------------------------------
 
-# Helper for update_conflict_props() test -- a custom singleton handler.
-def detect_conflict_files(node, extra_files):
-  """NODE has been discovered an extra file on disk.  Verify that it
-  matches one of the regular expressions in the EXTRA_FILES list.  If
-  it matches, remove the match from the list.  If it doesn't match,
-  raise an exception."""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
-      break
-  else:
-    print "Found unexpected disk object:", node.name
-    raise svntest.tree.SVNTreeUnequal
-
 def update_conflict_props(sbox):
   "update with conflicting props"
 
@@ -353,7 +337,8 @@ def update_conflict_props(sbox):
                                         expected_disk,
                                         expected_status,
                                         None,
-                                        detect_conflict_files, extra_files,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files,
                                         None, None, 1)
 
   if len(extra_files) != 0:
@@ -368,6 +353,35 @@ def update_conflict_props(sbox):
   expected_status.tweak('A/mu', 'A', status=' M')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+#----------------------------------------------------------------------
+def commit_conflict_dirprops(sbox):
+  "commit with conflicting dirprops"
+  
+  # Issue #2608: failure to see conflicting dirprops on root of
+  # repository.
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', wc_dir)
+
+  # Commit the file and directory
+  svntest.main.run_svn(None, 'ci', '-m', 'r2', wc_dir)
+
+  # Update to rev 1
+  svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
+
+  # Add conflicting properties
+  svntest.main.run_svn(None, 'propset', 'foo', 'eek', wc_dir)
+
+  svntest.actions.run_and_verify_commit(wc_dir, None, None,
+                                        "(Your file or directory '.*' is " \
+                                        "probably out-of-date)|" \
+                                        "(Out of date: '' in transaction)",
+                                        None, None, None, None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -1139,11 +1153,59 @@ def removal_schedule_added_props(sbox):
   svntest.actions.run_and_verify_svn(None, [], [],
                                      'proplist', '-v', newfile_path)
 
+#----------------------------------------------------------------------
 
+def update_props_on_wc_root(sbox):
+  "receive properties on the wc root via update"
+
+  # Bootstrap
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Add a property to the root folder
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo', wc_dir)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    '' : Item(verb='Sending')
+    })
+
+  # Created expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', wc_rev=2, status='  ')
+
+  # Commit the working copy
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+ # Create expected output tree for an update of the wc_backup.
+  expected_output = svntest.wc.State(wc_backup, {
+    '' : Item(status=' U'),
+    })
+  # Create expected disk tree for the update.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    '' : Item(props = {'red' : 'rojo'}),
+    })
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.tweak('', status='  ')
+
+  # Do the update and check the results in three ways... INCLUDING PROPS
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
 
 ########################################################################
 # Run the tests
-
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -1153,6 +1215,7 @@ test_list = [ None,
               downdate_props,
               remove_props,
               update_conflict_props,
+              XFail(commit_conflict_dirprops, svntest.main.is_fs_type_fsfs),
               commit_replacement_props,
               revert_replacement_props,
               inappropriate_props,
@@ -1166,6 +1229,7 @@ test_list = [ None,
               recursive_base_wc_ops,
               url_props_ops,
               removal_schedule_added_props,
+              update_props_on_wc_root
              ]
 
 if __name__ == '__main__':

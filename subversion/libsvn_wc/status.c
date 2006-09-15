@@ -324,8 +324,11 @@ assemble_status(svn_wc_status2_t **status,
     }
 
   /* Is this item switched?  Well, to be switched it must have both an URL
-     and a parent with an URL, at the very least. */
-  if (entry->url && parent_entry && parent_entry->url)
+     and a parent with an URL, at the very least. 
+     If this is the root folder on the (virtual) disk, entry and parent_entry 
+     will be equal. */
+  if (entry->url && parent_entry && parent_entry->url &&
+      entry != parent_entry)
     {
       /* An item is switched if its working copy basename differs from the
          basename of its URL. */
@@ -371,8 +374,8 @@ assemble_status(svn_wc_status2_t **status,
           && (wc_special == path_special)
 #endif /* HAVE_SYMLINK */          
           )
-        SVN_ERR(svn_wc_text_modified_p(&text_modified_p, path, FALSE,
-                                       adm_access, pool));
+        SVN_ERR(svn_wc_text_modified_p2(&text_modified_p, path, FALSE,
+                                        FALSE, adm_access, pool));
 
       if (text_modified_p)
         final_text_status = svn_wc_status_modified;
@@ -403,21 +406,25 @@ assemble_status(svn_wc_status2_t **status,
       /* 2. Possibly overwrite the text_status variable with "scheduled"
             states from the entry (A, D, R).  As a group, these states are
             of medium precedence.  They also override any C or M that may
-            be in the prop_status field at this point.*/
+            be in the prop_status field at this point, although they do not
+            override a C text status.*/
 
-      if (entry->schedule == svn_wc_schedule_add)
+      if (entry->schedule == svn_wc_schedule_add
+          && final_text_status != svn_wc_status_conflicted)
         {
           final_text_status = svn_wc_status_added;
           final_prop_status = svn_wc_status_none;
         }
 
-      else if (entry->schedule == svn_wc_schedule_replace)
+      else if (entry->schedule == svn_wc_schedule_replace
+               && final_text_status != svn_wc_status_conflicted)
         {
           final_text_status = svn_wc_status_replaced;
           final_prop_status = svn_wc_status_none;
         }
 
-      else if (entry->schedule == svn_wc_schedule_delete)
+      else if (entry->schedule == svn_wc_schedule_delete
+               && final_text_status != svn_wc_status_conflicted)
         {
           final_text_status = svn_wc_status_deleted;
           final_prop_status = svn_wc_status_none;
@@ -470,7 +477,7 @@ assemble_status(svn_wc_status2_t **status,
         && ((final_prop_status == svn_wc_status_none)
             || (final_prop_status == svn_wc_status_normal))
         && (! locked_p) && (! switched_p) && (! entry->lock_token)
-        && (! repos_lock))
+        && (! repos_lock) && (! entry->changelist))
       {
         *status = NULL;
         return SVN_NO_ERROR;
@@ -639,7 +646,7 @@ send_unversioned_item(const char *name,
                       void *status_baton,
                       apr_pool_t *pool)
 {
-  int ignore_me = svn_cstring_match_glob_list(name, patterns);
+  int ignore_me = svn_wc_match_ignore_list(name, patterns, pool);
   const char *path = svn_path_join(svn_wc_adm_access_path(adm_access), 
                                    name, pool);
   int is_external = is_external_path(externals, path, pool);
@@ -1264,6 +1271,10 @@ is_sendable_status(svn_wc_status2_t *status,
 
   /* If there is a lock token, send it. */
   if (status->entry && status->entry->lock_token)
+    return TRUE;
+
+  /* If the entry is associated with a changelist, send it. */
+  if (status->entry && status->entry->changelist)
     return TRUE;
 
   /* Otherwise, don't send it. */

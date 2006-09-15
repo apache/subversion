@@ -185,6 +185,9 @@ void svn_wc__compat_call_notify_func(void *baton,
  * detranslated version of *FILENAME and the text base, otherwise, a
  * translated version of the text base and *FILENAME will be compared.
  *
+ * If USE_TMP_TEXTBASE is true the temporary text base is used in the
+ * comparison.
+ *
  * If FILENAME does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
@@ -195,7 +198,45 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                  svn_boolean_t force_comparison,
                                  svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t compare_textbases,
+                                 svn_boolean_t use_tmp_textbase,
                                  apr_pool_t *pool);
+
+
+
+/* Merge the difference between LEFT and RIGHT into MERGE_TARGET,
+   accumulating instructions to update the working copy into LOG_ACCUM.
+
+   The merge result is stored in *MERGE_OUTCOME and merge conflicts
+   are marked in MERGE_RESULT using LEFT_LABEL, RIGHT_LABEL and
+   TARGET_LABEL.
+
+   When DRY_RUN is true, no actual changes are made to the working copy.
+
+   If DIFF3_CMD is specified, the given external diff3 tool will
+   be used instead of our built in diff3 routines.
+
+   When MERGE_OPTIONS are specified, they are used by the internal
+   diff3 routines, or passed to the external diff3 tool.
+
+   For a complete description, see svn_wc_merge2() for which this is
+   the (loggy) implementation.
+
+*/
+svn_error_t *
+svn_wc__merge_internal(svn_stringbuf_t **log_accum,
+                       enum svn_wc_merge_outcome_t *merge_outcome,
+                       const char *left,
+                       const char *right,
+                       const char *merge_target,
+                       svn_wc_adm_access_t *adm_access,
+                       const char *left_label,
+                       const char *right_label,
+                       const char *target_label,
+                       svn_boolean_t dry_run,
+                       const char *diff3_cmd,
+                       const apr_array_header_t *merge_options,
+                       const apr_array_header_t *prop_diff,
+                       apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

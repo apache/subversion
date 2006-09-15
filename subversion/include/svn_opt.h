@@ -153,8 +153,8 @@ svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
  * Return pointer to an @c apr_getopt_option_t for the option whose 
  * option code is @a code, or @c NULL if no match.  @a option_table must end
  * with an element whose every field is zero.  If @c command is non-NULL,
- * then the subcommand-specific option description instead of the generic one,
- * if a specific description is defined.
+ * then return the subcommand-specific option description instead of the
+ * generic one, if a specific description is defined.
  *
  * The returned value may be statically allocated, or allocated in @a pool.
  *
@@ -227,7 +227,8 @@ svn_opt_print_generic_help2(const char *header,
                             FILE *stream);
 
 
-/* Same as svn_opt_print_generic_help2(), but acts on
+/**
+ * Same as svn_opt_print_generic_help2(), but acts on
  * #svn_opt_subcommand_desc_t.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
@@ -498,9 +499,9 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  *   * subcommand-specific help (svn_opt_subcommand_help)
  *   * generic help (svn_opt_print_generic_help)
  *   * version info
- *   * simple usage complaint: "Type '@a pgn_name help' for usage."
+ *   * simple usage complaint: "Type '@a pgm_name help' for usage."
  *
- * If @os is not @c NULL and it contains arguments, then try printing
+ * If @a os is not @c NULL and it contains arguments, then try printing
  * help for them as though they are subcommands, using @a cmd_table
  * and @a option_table for option information.
  *
@@ -509,11 +510,11 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  * @a version_footer is non-null, print it following the version
  * information.
  *
- * Else, if @a os is not @NULL and does not contain arguments, print
+ * Else, if @a os is not @c NULL and does not contain arguments, print
  * generic help, via svn_opt_print_generic_help2() with the @a header,
  * @a cmd_table, @a option_table, and @a footer arguments.
  *
- * Else, when @os is @NULL, print the simple usage complaint.
+ * Else, when @a os is @c NULL, print the simple usage complaint.
  *
  * Use @a pool for temporary allocations.
  *
@@ -537,7 +538,8 @@ svn_opt_print_help2(apr_getopt_t *os,
                     apr_pool_t *pool);
 
 
-/* Same as vn_opt_print_help2), but acts on #svn_opt_subcommand_desc_t.
+/**
+ * Same as svn_opt_print_help2(), but acts on #svn_opt_subcommand_desc_t.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */

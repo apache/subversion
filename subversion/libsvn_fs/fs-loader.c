@@ -20,10 +20,10 @@
 #include <string.h>
 #include <apr.h>
 #include <apr_hash.h>
-#include <apr_dso.h>
 #include <apr_thread_mutex.h>
 
 #include "svn_types.h"
+#include "svn_dso.h"
 #include "svn_version.h"
 #include "svn_fs.h"
 #include "svn_path.h"
@@ -95,8 +95,8 @@ load_module(fs_init_func_t *initfunc, const char *name, apr_pool_t *pool)
     /* Find/load the specified library.  If we get an error, assume
        the library doesn't exist.  The library will be unloaded when
        pool is destroyed. */
-    status = apr_dso_load(&dso, libname, pool);
-    if (status)
+    SVN_ERR(svn_dso_load(&dso, libname));
+    if (! dso)
       return SVN_NO_ERROR;
 
     /* find the initialization routine */

@@ -36,9 +36,6 @@
 /* Name of system's null device */
 #define SVN_NULL_DEVICE_NAME "nul"
 
-/* Link fs base library into the fs library */
-#define SVN_LIBSVN_FS_LINKS_FS_BASE
-
 /* Link fs fs library into the fs library */
 #define SVN_LIBSVN_FS_LINKS_FS_FS
 

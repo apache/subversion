@@ -1,8 +1,6 @@
 /*
- * apr.swg :  SWIG include file for selected APR types
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,53 +12,17 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * apr.swg: This is a child file of svn_types.swg, and should not be
+ *   included directly.  This file should contain typemaps that deal
+ *   with APR functionality, not involving any parts of Subversion.
  */
-
-/* This is the interface for the APR headers. This is not built as a module
-   because we aren't going to wrap the APR functions. Thus, we only define
-   the various types in here, as necessary.
-
-   Actually, core.i wraps a few, key functions.
-*/
-
-#ifdef SWIGRUBY
-/* Inhibit incorrect class name warning. */
-#pragma SWIG nowarn=801
-#endif
-
-%include typemaps.i
-
-#ifdef SWIGRUBY
-#if SWIG_VERSION <= 0x010324
-/* for SWIG bug */
-%define OUTPUT_TYPEMAP(type, converter, convtype)
-%typemap(in,numinputs=0) type *OUTPUT($*1_ltype temp), type &OUTPUT($*1_ltype temp) "$1 = &temp;";
-%typemap(argout, fragment="output_helper") type *OUTPUT, type &OUTPUT {
-   VALUE o = converter(convtype (*$1));
-   $result = output_helper($result, o);
-}
-%enddef
-
-OUTPUT_TYPEMAP(long, INT2NUM, (long));
-OUTPUT_TYPEMAP(long long, LL2NUM, (apr_int64_t));
-OUTPUT_TYPEMAP(unsigned long, UINT2NUM, (unsigned long));
-OUTPUT_TYPEMAP(unsigned long long, ULL2NUM, (apr_uint64_t));
-
-#undef OUTPUT_TYPEMAP
-#endif
-
-#endif
-
-/* ----------------------------------------------------------------------- */
-
-/* ### be nice to have all the error values and macros. there are some
-   ### problems including this file, tho. SWIG isn't smart enough with some
-   ### of the preprocessing and thinks there is a macro redefinition */
-//%include apr_errno_h.swg
-typedef int apr_status_t;
 
 /* -----------------------------------------------------------------------
    Create perl5 typemaps for long long datatypes
+   PERL-FIXME: These typemaps are decidedly odd.  They convert long long
+     values to strings before returning them.  This behaviour is either
+     wrong, or needful of a comment explaining it.
 */
 #ifdef SWIGPERL
 %typemap(out) long long {
@@ -81,26 +43,16 @@ typedef int apr_status_t;
     "$1 = &temp;";
 %typemap(argout) long long *OUTPUT {
   char temp[256];
-  if (argvi >= items) {
-    EXTEND(sp,1);
-  }
   sprintf(temp, "%" APR_INT64_T_FMT, (apr_int64_t)*($1));
-  $result = sv_newmortal();
-  sv_setpv($result,temp);
-  argvi++;
+  %append_output(sv_2mortal(newSVpv(temp, 0)));
 }
 
 %typemap(in, numinputs=0) unsigned long long *OUTPUT (apr_uint64_t temp)
     "$1 = &temp;";
 %typemap(argout) unsigned long long *OUTPUT {
   char temp[256];
-  if (argvi >= items) {
-    EXTEND(sp,1);
-  }
   sprintf(temp, "%" APR_UINT64_T_FMT, (apr_uint64_t)*($1));
-  $result = sv_newmortal();
-  sv_setpv($result,temp);
-  argvi++;
+  %append_output(sv_2mortal(newSVpv(temp, 0)));
 }
 #endif
 
@@ -114,8 +66,9 @@ typedef int apr_status_t;
 %apply unsigned long *OUTPUT { apr_uint32_t *, apr_size_t * }
 
 /* If sizeof(apr_off_t) > sizeof(apr_int64_t), apr_off_t will get truncated
- * to a 64-bit integer */ 
+ * to a 64-bit integer */
 %apply long long { apr_off_t, apr_int64_t }
+%apply long long *OUTPUT { apr_int64_t * };
 %apply unsigned long long { apr_uint64_t }
 
 /* -----------------------------------------------------------------------
@@ -131,149 +84,8 @@ typedef apr_int64_t apr_time_t;
    (e.g. /usr/lib/gcc-lib/plat/ver/include). */
 typedef apr_int32_t time_t;
 
-%apply long long *OUTPUT { apr_time_t * };
-
 /* -----------------------------------------------------------------------
-   create an OUTPUT argument typemap for an apr_hash_t **
-*/
-
-#ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
-    "$1 = &temp;";
-#endif
-
-#ifdef SWIGPERL
-%typemap(in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
-    "$1 = &temp;";
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in,numinputs=0) apr_hash_t **OUTPUT (apr_hash_t *temp)
-    "$1 = &temp;";
-#endif
-
-/* -----------------------------------------------------------------------
-   create an OUTPUT argument defn for an apr_hash_t ** which is storing
-   dirent values
-*/
-#ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **DIRENTHASH = apr_hash_t **OUTPUT;
-%typemap(argout,fragment="t_output_helper") apr_hash_t **DIRENTHASH {
-    $result = t_output_helper($result,
-                              svn_swig_py_convert_hash(*$1, 
-                                                       SWIGTYPE_p_svn_dirent_t,
-                                                       NULL));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   create an OUTPUT argument defn for an apr_hash_t ** which is storing
-   property values
-*/
-
-#ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
-%typemap(argout,fragment="t_output_helper") apr_hash_t **PROPHASH {
-    $result = t_output_helper($result, svn_swig_py_prophash_to_dict(*$1));
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
-%typemap(argout) apr_hash_t **PROPHASH {
-    $result = svn_swig_pl_prophash_to_hash(*$1);
-    argvi++;
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in,numinputs=0) apr_hash_t **PROPHASH = apr_hash_t **OUTPUT;
-%typemap(argout, fragment="output_helper") apr_hash_t **PROPHASH
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   create an INPUT argument defn for an apr_hash_t * which is storing
-   property values
-*/
-#ifdef SWIGRUBY
-%typemap(in) apr_hash_t *PROPHASH
-{
-  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
-}
-#endif
-
-#ifdef SWIGPYTHON
-%typemap(in) apr_hash_t *PROPHASH
-{
-  $1 = svn_swig_py_prophash_from_dict($input, _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   create an OUTPUT argument defn for an apr_array_header_t ** which is
-   storing svn_prop_t * property values
-*/
-#ifdef SWIGPYTHON
-%typemap(in, numinputs=0) 
-     apr_array_header_t **OUTPUT_OF_PROP (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
-%typemap(argout, fragment="output_helper")
-     apr_array_header_t **OUTPUT_OF_PROP
-{
-  /* FIXME: Actually do something here. */
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in, numinputs=0)
-     apr_array_header_t **OUTPUT_OF_PROP (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
-%typemap(argout, fragment="output_helper")
-     apr_array_header_t **OUTPUT_OF_PROP
-{
-  $result = output_helper($result, svn_swig_rb_apr_array_to_array_prop(*$1));
-}
-#endif
-
-
-/* -----------------------------------------------------------------------
-   apr_array_header_t ** <const char *>
-*/
-
-%typemap(in, numinputs=0) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P
-(apr_array_header_t *temp) {
-    $1 = &temp;
-}
-#ifdef SWIGPYTHON
-%typemap(argout, fragment="t_output_helper")
-apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-    $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
-}
-#endif
-#ifdef SWIGPERL
-%typemap(argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-    $result = svn_swig_pl_array_to_list(*$1);
-    ++argvi;
-}
-#endif
-#ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper")
-     apr_array_header_t **OUTPUT_OF_CONST_CHAR_P
-{
-  $result = output_helper($result, svn_swig_rb_apr_array_to_array_string(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-  handle apr_file_t *
+   Input of apr_file_t *
 */
 
 #ifdef SWIGPYTHON
@@ -296,32 +108,8 @@ apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
 #endif
 
 /* -----------------------------------------------------------------------
-   apr_file_t ** is always an OUT param
+   Output of apr_file_t *
+   ... is currently being handled by the standard OUTPARAM code in
+   svn_types.swg, but should probably be more comfortably translated to
+   scripting language concepts.
 */
-
-%typemap(in, numinputs=0) apr_file_t ** (apr_file_t *temp)
-    "$1 = &temp;";
-
-#ifdef SWIGPYTHON
-%typemap(argout,fragment="t_output_helper") apr_file_t **
-    "$result = t_output_helper(
-        $result,
-        svn_swig_NewPointerObj(*$1, $*1_descriptor, 
-           _global_svn_swig_py_pool));";
-#endif
-
-#ifdef SWIGPERL
-%typemap(argout) apr_file_t ** {
-    ST(argvi) = sv_newmortal();
-    SWIG_MakePtr(ST(argvi++), (void *)*$1, $*1_descriptor,0);
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(argout, fragment="output_helper") apr_file_t ** {
-    $result = output_helper($result,
-                            SWIG_NewPointerObj((void *)*$1, $*1_descriptor, 0));
-}
-#endif
-
-/* ----------------------------------------------------------------------- */

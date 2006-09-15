@@ -262,11 +262,11 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 }
 
 void
-svn_txdelta_to_svndiff2(svn_stream_t *output,
-                        apr_pool_t *pool,
-                        svn_txdelta_window_handler_t *handler,
+svn_txdelta_to_svndiff2(svn_txdelta_window_handler_t *handler,
                         void **handler_baton,
-                        int version)
+                        svn_stream_t *output,
+                        int svndiff_version,
+                        apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   struct encoder_baton *eb;
@@ -275,7 +275,7 @@ svn_txdelta_to_svndiff2(svn_stream_t *output,
   eb->output = output;
   eb->header_done = FALSE;
   eb->pool = subpool;
-  eb->version = version;
+  eb->version = svndiff_version;
   
   *handler = window_handler;
   *handler_baton = eb;
@@ -287,7 +287,7 @@ svn_txdelta_to_svndiff(svn_stream_t *output,
                        svn_txdelta_window_handler_t *handler,
                        void **handler_baton)
 {
-  svn_txdelta_to_svndiff2(output, pool, handler, handler_baton, 0);
+  svn_txdelta_to_svndiff2(handler, handler_baton, output, 0, pool);
 }
 
 

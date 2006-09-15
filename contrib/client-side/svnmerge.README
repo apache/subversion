@@ -1,11 +1,15 @@
 A Mailman mailing list for the Python and Bourne shell versions of
-svnmerge has been set up at
+svnmerge has been set up at:
 
     http://www.orcaware.com/mailman/listinfo/svnmerge
 
-The Python version is newer and undergoing active development.  It
-also supports more features than the Bourne shell version, including,
-but not limited to:
+The Python version is newer and undergoing active development.  A wiki
+has been been setup at:
+
+    http://www.orcaware.com/svn/wiki/index.php/Svnmerge.py
+
+The Python version supports significantly more features than the
+Bourne shell version, including, but not limited to:
 
   * Add support for more informative commit messages (-V).
 

@@ -192,7 +192,7 @@ typedef struct
   /* size of the fulltext data represented by this delta window. */
   apr_size_t size;
 
-  /* represenatation-key to use when needed source data for
+  /* representation-key to use when needed source data for
      undeltification. */
   const char *rep_key;
 

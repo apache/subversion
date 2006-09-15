@@ -1989,10 +1989,68 @@ def post_commit_hook_test(sbox):
   svntest.actions.run_and_verify_svn (None, expected_output, [],
                                       'ci', '-m', 'log msg', iota_path)
 
+#----------------------------------------------------------------------
+# Commit two targets non-recursively, but both targets should be the 
+# same folder (in multiple variations). Test that svn handles this correctly.
+def commit_same_folder_in_targets(sbox):
+  "commit two targets, both the same folder"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota') 
+
+  svntest.main.file_append (iota_path, "added extra line to file iota")
+  
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    })
+
+  # Created expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.tweak('iota', wc_rev=2)
+
+  # Commit the wc_dir and iota.
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None,
+                                         None, None,
+                                         '-N',
+                                         wc_dir,
+                                         iota_path)
+
+#----------------------------------------------------------------------
+# test for issue 2459: verify that commit fails when a file with mixed
+# eol-styles is included, and show an error message which includes the
+# filename.
+def commit_inconsistent_eol(sbox):
+  "commit files with inconsistent eol should fail"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu') 
+
+  svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'native', iota_path)
+  svntest.main.file_append_binary(iota_path, 
+                                  "added extra line to file iota\012"
+                                  "added extra line to file iota\015")
+  svntest.main.file_append (mu_path, "added extra line to file mu\n"
+                                     "added extra line to file mu\n")
+
+  expected_err = ".*iota.*"
+
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
+                                     'commit', '-m', 'log message',
+                                     wc_dir)
 
 ########################################################################
 # Run the tests
-
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2008,7 +2066,8 @@ test_list = [ None,
               hudson_part_1,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
-              hudson_part_2,
+              # issue #2578 causes the hudson_part_2 test to fail.
+              XFail(hudson_part_2, svntest.main.is_ra_type_dav),
               hudson_part_2_1,
               XFail(hook_test),
               merge_mixed_revisions,
@@ -2029,7 +2088,9 @@ test_list = [ None,
               mods_in_schedule_delete,
               Skip(tab_test, (os.name != 'posix' or sys.platform == 'cygwin')),
               local_mods_are_not_commits,
-              post_commit_hook_test
+              post_commit_hook_test,
+              commit_same_folder_in_targets,
+              commit_inconsistent_eol
              ]
 
 if __name__ == '__main__':

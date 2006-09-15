@@ -569,24 +569,23 @@ c2r_svn_string(void *value, void *ctx)
 static VALUE                                                                 \
 c2r_ ## type ## _dup(void *type, void *ctx)                                  \
 {                                                                            \
-  apr_pool_t *type ## _pool;                                                 \
-  VALUE rb_ ## type ## _pool;                                                \
-  svn_ ## type ## _t *copied_ ## type;                                       \
-  VALUE rb_copied_ ## type;                                                  \
+  apr_pool_t *pool;                                                          \
+  VALUE rb_pool;                                                             \
+  svn_ ## type ## _t *copied_item;                                           \
+  VALUE rb_copied_item;                                                      \
                                                                              \
   if (!type)                                                                 \
     return Qnil;                                                             \
                                                                              \
-  svn_swig_rb_get_pool(0, (VALUE *)0, 0,                                     \
-                       &rb_ ## type ## _pool, &type ## _pool);               \
-  copied_ ## type = svn_ ## dup_func((type_prefix svn_ ## type ## _t *)type, \
-                                     type ## _pool);                         \
-  rb_copied_ ## type = c2r_swig_type((void *)copied_ ## type,                \
-                                     (void *)"svn_" # type "_t *");          \
-  rb_set_pool(rb_copied_ ## type, rb_ ## type ##_pool);                      \
+  svn_swig_rb_get_pool(0, (VALUE *)0, 0, &rb_pool, &pool);                   \
+  copied_item = svn_ ## dup_func((type_prefix svn_ ## type ## _t *)type,     \
+                                  pool);                                     \
+  rb_copied_item = c2r_swig_type((void *)copied_item,                        \
+                                 (void *)"svn_" # type "_t *");              \
+  rb_set_pool(rb_copied_item, rb_pool);                                      \
                                                                              \
-  return rb_copied_ ## type;                                                 \
-}                                                                            \
+  return rb_copied_item;                                                     \
+}
 
 #define DEFINE_DUP_BASE_WITH_CONVENIENCE(type, dup_func, type_prefix)        \
 DEFINE_DUP_BASE(type, dup_func, type_prefix)                                 \
@@ -767,7 +766,12 @@ c2r_hash_with_key_convert(apr_hash_t *hash,
                           void *value_ctx)
 {
   apr_hash_index_t *hi;
-  VALUE r_hash = rb_hash_new();
+  VALUE r_hash;
+
+  if (!hash)
+    return Qnil;
+
+  r_hash = rb_hash_new();
 
   for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi)) {
     const void *key;
@@ -1559,6 +1563,9 @@ svn_swig_rb_get_commit_log_func2(const char **log_msg,
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool;
 
+  *log_msg = NULL;
+  *tmp_file = NULL;
+
   svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
 
   if (!NIL_P(proc)) {
@@ -1574,17 +1581,17 @@ svn_swig_rb_get_commit_log_func2(const char **log_msg,
                        c2r_commit_item2_array(commit_items));
     result = invoke_callback_handle_error(args, rb_pool, &err);
 
-    is_message = rb_ary_entry(result, 0);
-    value = rb_ary_entry(result, 1);
+    if (!err) {
+      is_message = rb_ary_entry(result, 0);
+      value = rb_ary_entry(result, 1);
 
-    Check_Type(value, T_STRING);
-    ret = (char *)r2c_string(value, NULL, pool);
-    if (RTEST(is_message)) {
-      *log_msg = ret;
-      *tmp_file = NULL;
-    } else {
-      *log_msg = NULL;
-      *tmp_file = ret;
+      Check_Type(value, T_STRING);
+      ret = (char *)r2c_string(value, NULL, pool);
+      if (RTEST(is_message)) {
+        *log_msg = ret;
+      } else {
+        *tmp_file = ret;
+      }
     }
   }
   return err;
@@ -2941,24 +2948,6 @@ svn_swig_rb_setup_txdelta_window_handler_wrapper(VALUE obj,
   rb_ivar_set(obj, rb_id_handler_baton(),
               c2r_swig_type(handler_baton, (void *)"void *"));
   return obj;
-}
-
-svn_error_t *
-svn_swig_rb_invoke_txdelta_window_handler(VALUE window_handler,
-                                          svn_txdelta_window_t *window,
-                                          apr_pool_t *pool)
-{
-  svn_txdelta_window_handler_t handler;
-  svn_txdelta_window_handler_t *handler_p;
-  void *handler_baton;
-
-  handler_p = &handler;
-  r2c_swig_type2(window_handler, "svn_txdelta_window_handler_t",
-                 (void **)handler_p);
-  r2c_swig_type2(rb_funcall(window_handler, rb_id_baton(), 0),
-                 "void *", &handler_baton);
-
-  return handler(window, handler_baton);
 }
 
 svn_error_t *

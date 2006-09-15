@@ -428,7 +428,7 @@ svn_repos_begin_report(void **report_baton,
  * drive.
  *
  * If @a start_empty is true and @a path is a directory, then require the
- * caller to explicitly provide all the children of @path - do not assume
+ * caller to explicitly provide all the children of @a path - do not assume
  * that the tree also contains all the children of @a path at @a revision.
  * This is for 'low confidence' client reporting.
  * 
@@ -459,7 +459,7 @@ svn_error_t *svn_repos_set_path(void *report_baton,
 
 /**
  * Given a @a report_baton constructed by svn_repos_begin_report(), 
- * record the presence of @path in the current tree, containing the contents
+ * record the presence of @a path in the current tree, containing the contents
  * of @a link_path at @a revision.
  *
  * Note that while @a path is relative to the anchor/target used in the
@@ -467,7 +467,7 @@ svn_error_t *svn_repos_set_path(void *report_baton,
  * path!
  *
  * If @a start_empty is true and @a path is a directory, then require the
- * caller to explicitly provide all the children of @path - do not assume
+ * caller to explicitly provide all the children of @a path - do not assume
  * that the tree also contains all the children of @a link_path at
  * @a revision.  This is for 'low confidence' client reporting.
  *
@@ -547,7 +547,7 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * @a tgt_root.  @a src_entry is the node to update.  If @a src_entry
  * is empty, then compute the difference between the entire tree
  * anchored at @a src_parent_dir under @a src_root and @a tgt_path
- * under @a target_root.  Else, describe the changes needed to update
+ * under @a tgt_root.  Else, describe the changes needed to update
  * only that entry in @a src_parent_dir.  Typically, callers of this
  * function will use a @a tgt_path that is the concatenation of @a
  * src_parent_dir and @a src_entry.
@@ -887,7 +887,7 @@ typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
 /**
  * Call @a history_func (with @a history_baton) for each interesting
  * history location in the lifetime of @a path in @a fs, from the
- * youngest of @a end and @ start to the oldest.  Only cross
+ * youngest of @a end and @a start to the oldest.  Only cross
  * filesystem copy history if @a cross_copies is @c TRUE.  And do all
  * of this in @a pool.
  *
@@ -1074,7 +1074,7 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /* ---------------------------------------------------------------*/
 
-/* Retreiving multiple revisions of a file. */
+/* Retrieving multiple revisions of a file. */
 
 /**
  * Retrieve a subset of the interesting revisions of a file @a path in

@@ -68,7 +68,9 @@ Read Commands  :  (OPTIONS, PROPFIND, GET, REPORT)
                     [older clients use GET
                      and different REPORT]        ('log-report')
 
-  * svn ls:         PROPFIND, REPORT              ('get-locks-report')
+  * svn ls:         PROPFIND
+
+  * svn ls -v:      PROPFIND, REPORT              ('get-locks-report')
 
   * svn cat:        PROPFIND, GET
 

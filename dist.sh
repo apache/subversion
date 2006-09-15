@@ -1,52 +1,57 @@
 #!/bin/sh
 
-#
-# USAGE: ./dist.sh -v VERSION -r REVISION [-rs REVISION-SVN] [-pr REPOS-PATH]
+# USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
+#                  [-rs REVISION-VER-TAG]
+#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
 #                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
 #                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
-#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
+#                  [-zlib PATH-TO-ZLIB]
 #                  [-zip] [-sign] [-nodeps]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
-#   The REVISION or REVISION-SVN will be used in the version string.
-#   The tarball will be constructed from the root located at REPOS-PATH.
-#   If REPOS-PATH is not specified then the default is "branches/VERSION".
-#   For example, the command line:
+#   The REVISION will be used in the version string, unless
+#   REVISION-VER-TAG is also used to put a different revision in the
+#   version tag than is actually used.  [But why would we want to do
+#   such a weird thing? Should this feature of dist.sh be removed?]
+#   The tarball will be constructed from the root located at REPOS-PATH,
+#   in REVISION.  For example, the command line:
 #
-#      ./dist.sh -v 0.24.2 -r 6284
+#      ./dist.sh -v 1.4.0 -r ????? -pr branches/1.4.x
 #
-#   from the top-level of a branches/0.24.2 working copy will create
-#   the 0.24.2 release tarball. Make sure you have apr, apr-util,
-#   and neon subdirectories in your current working directory or
-#   specify the path to them with the -apr, -apru or -neon options.
-#   For example:
-#      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x \
-#        -apr -neon ~/in-tree-libraries/neon-0.24.7 \
-#        -apr ~/in-tree-libraries/httpd-2.0.50/srclib/apr \
-#        -apru ~/in-tree-libraries/httpd-2.0.50/srclib/apr-util/
+#   will create a 1.4.0 release tarball. Make sure you have apr,
+#   apr-util, neon and zlib subdirectories in your current working
+#   directory or specify the path to them with the -apr, -apru, -neon or
+#   -zlib options.  For example:
+#      ./dist.sh -v 1.4.0 -r ????? -pr branches/1.4.x \
+#        -apr  ~/in-tree-libraries/apr-0.9.12 \
+#        -apru ~/in-tree-libraries/apr-util-0.9.12 \
+#        -neon ~/in-tree-libraries/neon-0.25.5 \
+#        -zlib ~/in-tree-libraries/zlib-1.2.3
 #
-#   When building alpha, beta or rc tarballs pass the appropriate flag
-#   followed by the number for that release.  For example you'd do
-#   the following for a Beta 1 release:
-#      ./dist.sh -v 1.1.0 -r 10277 -pr branches/1.1.x -beta 1
-# 
-#   If neither an -alpha, -beta or -rc option with a number is
-#   specified, it will build a release tarball.
+#   Note that there is _no_ need to run dist.sh from a Subversion
+#   working copy, so you may wish to create a dist-resources directory
+#   containing the apr/, apr-util/, neon/ and zlib/ dependencies, and
+#   run dist.sh from that.
 #  
-#   To build a Windows zip file package pass -zip and the path
-#   to apr-iconv with -apri.
+#   When building alpha, beta or rc tarballs pass the appropriate flag
+#   followed by a number.  For example "-alpha 5", "-beta 3", "-rc 2".
+# 
+#   If neither an -alpha, -beta or -rc option is specified, a release
+#   tarball will be built.
+#  
+#   To build a Windows zip file package, additionally pass -zip and the
+#   path to apr-iconv with -apri.
 
 
-# A quick and dirty usage message
-USAGE="USAGE: ./dist.sh -v VERSION -r REVISION \
-[-rs REVISION-SVN ] [-pr REPOS-PATH] \
+USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
+[-rs REVISION-VER-TAG ] \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM] \
 [-apr APR_PATH ] [-apru APR_UTIL_PATH] [-apri APR_ICONV_PATH] \
-[-neon NEON_PATH ] [-zip] [-sign] [-nodeps]
- EXAMPLES: ./dist.sh -v 0.36.0 -r 8278
+[-neon NEON_PATH ] [-zlib ZLIB_PATH] [-zip] [-sign] [-nodeps]
+ EXAMPLES: ./dist.sh -v 0.36.0 -r 8278 -pr branches/foo
            ./dist.sh -v 0.36.0 -r 8278 -pr trunk
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
-           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -alpha
+           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -alpha 1
            ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -beta 1"
 
 # Let's check and set all the arguments
@@ -54,43 +59,30 @@ ARG_PREV=""
 
 for ARG in $@
 do
-  if [ "$ARG_PREV" ]; then
-
+  if [ -n "$ARG_PREV" ]; then
     case $ARG_PREV in
          -v)  VERSION="$ARG" ;;
          -r)  REVISION="$ARG" ;;
-        -rs)  REVISION_SVN="$ARG" ;;
+        -rs)  REVISION_VER_TAG="$ARG" ;;
         -pr)  REPOS_PATH="$ARG" ;;
-	-rc)  RC="$ARG" ;;
-       -apr)  APR_PATH="$ARG" ;;
-       -apru) APRU_PATH="$ARG" ;;
-       -apri) APRI_PATH="$ARG" ;;
-      -neon)  NEON_PATH="$ARG" ;;
-      -beta)  BETA="$ARG" ;;
      -alpha)  ALPHA="$ARG" ;;
-          *)  ARG_PREV=$ARG ;;
+      -beta)  BETA="$ARG" ;;
+        -rc)  RC="$ARG" ;;
+       -apr)  APR_PATH="$ARG" ;;
+      -apru)  APRU_PATH="$ARG" ;;
+      -apri)  APRI_PATH="$ARG" ;;
+      -zlib)  ZLIB_PATH="$ARG" ;;
+      -neon)  NEON_PATH="$ARG" ;;
     esac
-
     ARG_PREV=""
-
   else
-
     case $ARG in
-      -v|-r|-rs|-pr|-beta|-rc|-alpha|-apr|-apru|-apri|-neon)
+      -v|-r|-rs|-pr|-alpha|-beta|-rc|-apr|-apru|-apri|-zlib|-neon)
         ARG_PREV=$ARG
         ;;
-      -zip)
-        ZIP=1
-        ARG_PREV=""
-        ;;
-      -nodeps)
-        NODEPS=1
-        ARG_PREV=""
-        ;;
-      -sign)
-        SIGN=1
-        ARG_PREV=""
-        ;;
+      -zip) ZIP=1 ;;
+      -nodeps) NODEPS=1 ;;
+      -sign) SIGN=1 ;;
       *)
         echo " $USAGE"
         exit 1
@@ -99,8 +91,8 @@ do
   fi
 done
 
-if [ -z "$REVISION_SVN" ]; then
-  REVISION_SVN=$REVISION
+if [ -z "$REVISION_VER_TAG" ]; then
+  REVISION_VER_TAG=$REVISION
 fi
 
 if [ -n "$ALPHA" ] && [ -n "$BETA" ] ||
@@ -118,7 +110,7 @@ elif [ -n "$RC" ] ; then
   VER_TAG="Release Candidate $RC"
   VER_NUMTAG="-rc$RC"
 else
-  VER_TAG="r$REVISION_SVN"
+  VER_TAG="r$REVISION_VER_TAG"
   VER_NUMTAG=""
 fi
   
@@ -126,7 +118,7 @@ if [ -n "$ZIP" ] ; then
   EXTRA_EXPORT_OPTIONS="--native-eol CRLF"
 fi
 
-if [ -z "$VERSION" ] || [ -z "$REVISION" ] ; then
+if [ -z "$VERSION" ] || [ -z "$REVISION" ] || [ -z "$REPOS_PATH" ]; then
   echo " $USAGE"
   exit 1
 fi
@@ -147,11 +139,11 @@ if [ -z "$APRI_PATH" ]; then
   APRI_PATH='apr-iconv'
 fi
 
-if [ -z "$REPOS_PATH" ]; then
-  REPOS_PATH="branches/$VERSION"
-else
-  REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
+if [ -z "$ZLIB_PATH" ]; then
+  ZLIB_PATH='zlib'
 fi
+
+REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
 
 # See comment when we 'roll' the tarballs as to why pax is required.
 type pax > /dev/null 2>&1
@@ -175,24 +167,29 @@ if [ $? -ne 0 ]; then
 fi
 
 DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
+DEPSNAME="subversion-deps-${VERSION}${VER_NUMTAG}"
 DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
+DEPSPATH="$DIST_SANDBOX/deps/$DISTNAME"
 
 echo "Distribution will be named: $DISTNAME"
-echo " release branch's revision: $REVISION"
-echo "     executable's revision: $REVISION_SVN"
 echo "     constructed from path: /$REPOS_PATH"
+echo " constructed from revision: $REVISION"
+echo "revision in version string: $REVISION_VER_TAG"
 
 rm -rf "$DIST_SANDBOX"
 mkdir "$DIST_SANDBOX"
+mkdir -p "$DEPSPATH"
 echo "Removed and recreated $DIST_SANDBOX"
 
 LC_ALL=C
 LANG=C
+TZ=UTC
 export LC_ALL
 export LANG
+export TZ
 
-echo "Exporting revision $REVISION of Subversion into sandbox..."
+echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
 (cd "$DIST_SANDBOX" && \
  ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
      "http://svn.collab.net/repos/svn/$REPOS_PATH" \
@@ -229,6 +226,17 @@ install_dependency()
   fi
 }
 
+move_dependency()
+{
+  DEP_NAME=$1
+
+  SOURCE_PATH="$DISTPATH/$DEP_NAME"
+  DEST_PATH="$DEPSPATH/$DEP_NAME"
+
+  rm -rf "$DEST_PATH"
+  mv "$SOURCE_PATH" "$DEST_PATH"
+}
+
 install_dependency apr "$APR_PATH"
 install_dependency apr-util "$APRU_PATH"
 
@@ -237,6 +245,7 @@ if [ -n "$ZIP" ]; then
 fi
 
 install_dependency neon "$NEON_PATH"
+install_dependency zlib "$ZLIB_PATH"
 
 find "$DISTPATH" -name config.nice -print | xargs rm -f
 
@@ -256,36 +265,36 @@ sed \
  -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
  -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
  -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
- -e "/#define *SVN_VER_MICRO/s/[0-9]\+/$ver_patch/" \
  -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
  -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
- -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION_SVN/" \
+ -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION_VER_TAG/" \
   < "$vsn_file" > "$vsn_file.tmp"
 
 mv -f "$vsn_file.tmp" "$vsn_file"
 
+echo "Creating svn_version.h.dist, for use in tagging matching tarball..."
 cp "$vsn_file" "svn_version.h.dist"
 
-echo "Running ./autogen.sh in sandbox, to create ./configure ..."
-(cd "$DISTPATH" && ./autogen.sh --release) || exit 1
-
-if [ ! -f $DISTPATH/neon/configure ]; then
-  echo "Creating neon configure"
-  (cd "$DISTPATH/neon" && ./autogen.sh) || exit 1
+# Don't run autogen.sh when we are building the Windows zip file.
+# Windows users don't need the files generated by this command,
+# especially not the generated projects or SWIG files.
+if [ -n "$ZIP" ] ; then
+  echo "Running ./autogen.sh in sandbox, to create ./configure ..."
+  (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 fi
 
 echo "Removing any autom4te.cache directories that might exist..."
 find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
 
-cat > "$DISTPATH/ChangeLog.CVS" <<EOF
-The old CVS ChangeLog is kept at 
-
-     http://subversion.tigris.org/
-
-If you want to see changes since Subversion went self-hosting,
-you probably want to use the "svn log" command -- and if it 
-does not do what you need, please send in a patch!
-EOF
+# Now that the dependencies have been configured/cleaned properly,
+# move them into their separate tree for packaging.
+move_dependency apr
+move_dependency apr-util
+if [ -n "$ZIP" ]; then
+  move_dependency apr-iconv
+fi
+move_dependency neon
+move_dependency zlib
 
 if [ -z "$ZIP" ]; then
   # Do not use tar, it's probably GNU tar which produces tar files that are
@@ -296,9 +305,14 @@ if [ -z "$ZIP" ]; then
   echo "Rolling $DISTNAME.tar ..."
   (cd "$DIST_SANDBOX" > /dev/null && pax -x ustar -w "$DISTNAME") > \
     "$DISTNAME.tar"
+  echo "Rolling $DEPSNAME.tar ..."
+  (cd "$DIST_SANDBOX/deps" > /dev/null && pax -x ustar -w "$DISTNAME") > \
+    "$DEPSNAME.tar"
 
   echo "Compressing to $DISTNAME.tar.bz2 ..."
   bzip2 -9fk "$DISTNAME.tar"
+  echo "Compressing to $DEPSNAME.tar.bz2 ..."
+  bzip2 -9fk "$DEPSNAME.tar"
 
   # Use the gzip -n flag - this prevents it from storing the original name of
   # the .tar file, and far more importantly, the mtime of the .tar file, in the
@@ -311,10 +325,15 @@ if [ -z "$ZIP" ]; then
   # not any of its contents, so there will be no effect on end-users.
   echo "Compressing to $DISTNAME.tar.gz ..."
   gzip -9nf "$DISTNAME.tar"
+  echo "Compressing to $DEPSNAME.tar.gz ..."
+  gzip -9nf "$DEPSNAME.tar"
 else
   echo "Rolling $DISTNAME.zip ..."
   (cd "$DIST_SANDBOX" > /dev/null && zip -q -r - "$DISTNAME") > \
     "$DISTNAME.zip"
+  echo "Rolling $DEPSNAME.zip ..."
+  (cd "$DIST_SANDBOX/deps" > /dev/null && zip -q -r - "$DISTNAME") > \
+    "$DEPSNAME.zip"
 fi
 echo "Removing sandbox..."
 rm -rf "$DIST_SANDBOX"
@@ -349,27 +368,27 @@ sign_file()
 echo ""
 echo "Done:"
 if [ -z "$ZIP" ]; then
-  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
-  sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2
+  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
+  sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2 $DEPSNAME.tar.bz2 $DEPSNAME.tar.gz
   echo ""
   echo "md5sums:"
-  md5sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
+  md5sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
   type sha1sum > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo ""
     echo "sha1sums:"
-    sha1sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
+    sha1sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
   fi
 else
-  ls -l "$DISTNAME.zip"
-  sign_file $DISTNAME.zip
+  ls -l "$DISTNAME.zip" "$DEPSNAME.zip"
+  sign_file $DISTNAME.zip $DEPSNAME.zip
   echo ""
   echo "md5sum:"
-  md5sum "$DISTNAME.zip"
+  md5sum "$DISTNAME.zip" "$DEPSNAME.zip"
   type sha1sum > /dev/null 2>&1
   if [ $? -eq 0 ]; then
     echo ""
     echo "sha1sum:"
-    sha1sum "$DISTNAME.zip"
+    sha1sum "$DISTNAME.zip" "$DEPSNAME.zip"
   fi
 fi

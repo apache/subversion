@@ -81,8 +81,8 @@ main(int argc, char **argv)
 #else
   encoder = svn_base64_encode(stdout_stream, pool);
 #endif
-  svn_txdelta_to_svndiff2(encoder, pool, &svndiff_handler, &svndiff_baton, 
-                          version);
+  svn_txdelta_to_svndiff2(&svndiff_handler, &svndiff_baton, 
+                          encoder, version, pool);
   err = svn_txdelta_send_txstream(txdelta_stream,
                                   svndiff_handler,
                                   svndiff_baton,

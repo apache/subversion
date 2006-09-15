@@ -556,11 +556,7 @@ ra_dav_get_schemes(apr_pool_t *pool)
   static const char *schemes_no_ssl[] = { "http", NULL };
   static const char *schemes_ssl[] = { "http", "https", NULL };
 
-#ifdef SVN_NEON_0_25
   return ne_has_support(NE_FEATURE_SSL) ? schemes_ssl : schemes_no_ssl;
-#else /* ! SVN_NEON_0_25 */
-  return ne_supports_ssl() ? schemes_ssl : schemes_no_ssl;
-#endif /* if/else SVN_NEON_0_25 */
 }
 
 typedef struct neonprogress_baton_t
@@ -651,11 +647,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
   is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
   if (is_ssl_session)
     {
-#ifdef SVN_NEON_0_25
       if (ne_has_support(NE_FEATURE_SSL) == 0)
-#else /* ! SVN_NEON_0_25 */
-      if (ne_supports_ssl() == 0)
-#endif /* if/else SVN_NEON_0_25 */
         {
           ne_uri_free(&uri);
           return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
@@ -923,44 +915,6 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
 }
 
 
-#ifndef SVN_NEON_0_25
-/* A callback of type ne_header_handler, invoked when neon encounters
-   mod_dav_svn's custom 'creationdate' header in a LOCK response. */
-static void
-handle_creationdate_header(void *userdata,
-                           const char *value)
-{
-  struct lock_request_baton *lrb = userdata;
-  svn_error_t *err;
-
-  if (! value)
-    return;
-
-  err = svn_time_from_cstring(&(lrb->creation_date), value, lrb->pool);
-  if (err)
-    {
-      svn_error_clear(err);
-      lrb->creation_date = 0;                      
-    }
-}
-
-
-/* A callback of type ne_header_handler, invoked when neon encounters
-   mod_dav_svn's custom 'lock owner' header in a LOCK response. */
-static void
-handle_lock_owner_header(void *userdata,
-                         const char *value)
-{
-  struct lock_request_baton *lrb = userdata;
-
-  if (! value)
-    return;
-
-  lrb->lock_owner = apr_pstrdup(lrb->pool, value);
-}
-#endif /* ! SVN_NEON_0_25 */
-
-
 /* A callback of type ne_create_request_fn;  called whenever neon
    creates a request. */
 static void 
@@ -1020,15 +974,6 @@ pre_send_hook(ne_request *req,
                                    lrb->current_rev);
           ne_buffer_zappend(header, buf);
         }
-
-#ifndef SVN_NEON_0_25
-      /* Register callbacks to read any custom 'creationdate' and
-         'lock owner' response headers sent by mod_dav_svn. */
-      ne_add_response_header_handler(req, SVN_DAV_CREATIONDATE_HEADER,
-                                     handle_creationdate_header, lrb);
-      ne_add_response_header_handler(req, SVN_DAV_LOCK_OWNER_HEADER,
-                                     handle_lock_owner_header, lrb);
-#endif /* ! SVN_NEON_0_25 */
     }
 
   if (strcmp(lrb->method, "UNLOCK") == 0)
@@ -1048,7 +993,6 @@ pre_send_hook(ne_request *req,
                                 &(lrb->err), lrb->pool);
 }
 
-#ifdef SVN_NEON_0_25
 /* A callback of type ne_post_send_fn;  called after neon has sent a
    request and received a response header back. */
 static int
@@ -1092,7 +1036,6 @@ post_send_hook(ne_request *req,
 
   return NE_OK;
 }
-#endif /* SVN_NEON_0_25 */
 
 
 static void
@@ -1109,9 +1052,7 @@ setup_neon_request_hook(svn_ra_dav__session_t *ras)
 
       ne_hook_create_request(ras->sess, create_request_hook, lrb);
       ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
-#ifdef SVN_NEON_0_25
       ne_hook_post_send(ras->sess, post_send_hook, lrb);
-#endif /* SVN_NEON_0_25 */
 
       lrb->pool = ras->pool;
       ras->lrb = lrb;
@@ -1448,14 +1389,17 @@ struct receiver_baton
 static void
 lock_receiver(void *userdata,
               const struct ne_lock *lock,
+#ifdef SVN_NEON_0_26
+              const ne_uri *uri,
+#else
               const char *uri,
+#endif
               const ne_status *status)
 {
   struct receiver_baton *rb = userdata;
 
   if (lock)
     {
-#ifdef SVN_NEON_0_25
       /* The post_send hook has not run at this stage; so grab the 
          response headers early.  As Joe Orton explains in Issue
          #2297: "post_send hooks run much later than the name might
@@ -1466,7 +1410,6 @@ lock_receiver(void *userdata,
         {
           return;
         }
-#endif /* SVN_NEON_0_25 */
 
       if (!rb->lrb->lock_owner || !rb->lrb->creation_date)
         {

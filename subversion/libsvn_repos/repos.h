@@ -28,8 +28,22 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/*** Repository format number. */
-#define SVN_REPOS__FORMAT_NUMBER     3
+/* Repository format number.
+   
+   Formats 0, 1 and 2 were pre-1.0.
+
+   Format 3 was current for 1.0 through to 1.3.
+
+   Format 4 was an abortive experiment during the development of the
+   locking feature in the lead up to 1.2.
+   
+   Format 5 was new in 1.4, and is the first format which may contain
+   BDB or FSFS filesystems with a FS format other than 1, since prior
+   formats are accepted by some versions of Subversion which do not
+   pay attention to the FS format number.
+*/
+#define SVN_REPOS__FORMAT_NUMBER         5
+#define SVN_REPOS__FORMAT_NUMBER_LEGACY  3
 
 
 /*** Repository layout. ***/

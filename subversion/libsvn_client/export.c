@@ -363,7 +363,7 @@ open_root_internal(const char *path,
   
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_none)
-    SVN_ERR(svn_io_dir_make(path, APR_OS_DEFAULT, pool));
+    SVN_ERR(svn_io_make_dir_recursively(path, pool));
   else if (kind == svn_node_file)
     return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
                              _("'%s' exists and is not a directory"),

@@ -217,11 +217,11 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       const char *rev, *dirname;
       replay_info_t *info;
 
-      dirname = svn_ra_serf__find_attr(attrs, "path");
+      dirname = svn_ra_serf__find_attr(attrs, "name");
       if (!dirname)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                    _("Missing path attr in open-directory element"));
+                    _("Missing name attr in open-directory element"));
         }
       rev = svn_ra_serf__find_attr(attrs, "rev");
       if (!rev)
@@ -243,11 +243,11 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       svn_revnum_t rev;
       replay_info_t *info;
 
-      dir_name = svn_ra_serf__find_attr(attrs, "path");
+      dir_name = svn_ra_serf__find_attr(attrs, "name");
       if (!dir_name)
         {
           return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                    _("Missing path attr in add-directory element"));
+                    _("Missing name attr in add-directory element"));
         }
       copyfrom = svn_ra_serf__find_attr(attrs, "copyfrom-path");
       copyrev = svn_ra_serf__find_attr(attrs, "copyfrom-rev");
@@ -406,7 +406,6 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
   if (state == REPORT &&
       strcmp(name.name, "editor-report") == 0)
     {
-      SVN_ERR(ctx->editor->close_edit(ctx->editor_baton, parser->state->pool));
       svn_ra_serf__xml_pop_state(parser);
     }
   else if (state == OPEN_DIR && strcmp(name.name, "open-directory") == 0)

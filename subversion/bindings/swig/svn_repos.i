@@ -1,8 +1,6 @@
 /*
- * svn_repos.i :  SWIG interface file for svn_repos.h
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,37 +12,26 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_repos.i: SWIG interface file for svn_repos.h
  */
 
-#if defined(SWIGPERL)
+#if defined(SWIGPYTHON)
+%module(package="libsvn") repos
+#elif defined(SWIGPERL)
 %module "SVN::_Repos"
 #elif defined(SWIGRUBY)
 %module "svn::ext::repos"
-#else
-%module repos
 #endif
 
-%include typemaps.i
-
 %include svn_global.swg
-%import apr.swg
 %import core.i
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 %import svn_fs.i
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
-%apply SWIGTYPE **OUTPARAM {
-    svn_repos_t **,
-    svn_dirent_t **,
-    svn_authz_t **,
-    const svn_delta_editor_t **editor,
-    void **edit_baton
-};
-
 %apply const char *MAY_BE_NULL {
     const char *src_entry,
     const char *unused_1,
@@ -56,126 +43,27 @@
     const char *tgt_path
 };
 
-%apply apr_hash_t *STRING_TO_STRING { apr_hash_t *fs_config };
-
-/* svn_repos_db_logfiles() */
-%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
-    apr_array_header_t **logfiles
-}
-
-/* svn_repos_get_logs() */
-%apply const apr_array_header_t *STRINGLIST {
-    const apr_array_header_t *paths
-};
-
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
 
-/* -----------------------------------------------------------------------
-   handle the 'location_revisions' parameter appropriately
-*/
-#ifdef SWIGPYTHON
-%typemap(in) apr_array_header_t *location_revisions {
-    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
-                                                             _global_pool);
-    if ($1 == NULL)
-        SWIG_fail;
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   XXX: for some reasons svn_delta_editor doesn't get typemapped even
-   if svn_delta.i is imported. so we redeclare here.
-*/
-
-#ifdef SWIGPERL
-%typemap(in) (const svn_delta_editor_t *editor, void *edit_baton) {
-    svn_delta_make_editor(&$1, &$2, $input, _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle svn_repos_history_func_t/baton pairs
-*/
-#ifdef SWIGPYTHON
-%typemap(in) (svn_repos_history_func_t history_func, void *history_baton) {
-
-  $1 = svn_swig_py_repos_history_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in) (svn_repos_history_func_t history_func, void *history_baton) {
-
-  $1 = svn_swig_pl_thunk_history_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
 #ifdef SWIGRUBY
-%typemap(in) (svn_repos_history_func_t history_func, void *history_baton)
-{
-  $1 = svn_swig_rb_repos_history_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%apply svn_stream_t *MAY_BE_NULL {
+    svn_stream_t *dumpstream_may_be_null,
+    svn_stream_t *feedback_stream
+};
 #endif
 
-/* -----------------------------------------------------------------------
-   handle svn_repos_fs_get_locks
-*/
-#ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **locks = apr_hash_t **OUTPUT;
-%typemap(argout,fragment="t_output_helper") apr_hash_t **locks {
-    $result = t_output_helper(
-        $result,
-        svn_swig_py_convert_hash(*$1, $descriptor(svn_lock_t *),
-          _global_svn_swig_py_pool));
-}
-#endif
+%callback_typemap(svn_repos_history_func_t history_func, void *history_baton,
+                  svn_swig_py_repos_history_func,
+                  svn_swig_pl_thunk_history_func,
+                  svn_swig_rb_repos_history_func)
 
-
-/* -----------------------------------------------------------------------
-   handle svn_repos_authz_read_func_t/baton pairs
-*/
-
-#ifdef SWIGPERL
-%typemap(in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
-  if (SvOK ($input)) {
-    $1 = svn_swig_pl_thunk_authz_func;
-    $2 = $input; /* our function is the baton */
-  }
-  else {
-    $1 = NULL;
-    $2 = NULL;
-  }
-}
-#endif
-
-#ifdef SWIGPYTHON
-%typemap(in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton) {
-  $1 = svn_swig_py_repos_authz_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_repos_authz_func_t authz_read_func, void *authz_read_baton)
-{
-  if (NIL_P($input)) {
-    $1 = NULL;
-    $2 = NULL;
-  } else {
-    $1 = svn_swig_rb_repos_authz_func;
-    $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-  }
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle start_callback of svn_repos_recover2().
-*/
+%callback_typemap_maybenull(svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            svn_swig_py_repos_authz_func,
+                            svn_swig_pl_thunk_authz_func,
+                            svn_swig_rb_repos_authz_func)
 
 /* cause SWIG syntax error.
 #ifdef SWIGRUBY
@@ -187,114 +75,36 @@
 #endif
 */
 
-/* -----------------------------------------------------------------------
-   handle svn_repos_file_rev_handler_t/baton pairs
-*/
-
 #ifdef SWIGRUBY
-%typemap(in) (svn_repos_file_rev_handler_t handler,
-                    void *handler_baton)
-{
-  $1 = svn_swig_rb_repos_file_rev_handler;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
+%callback_typemap(svn_repos_file_rev_handler_t handler, void *handler_baton,
+                  ,
+                  ,
+                  svn_swig_rb_repos_file_rev_handler)
 
-/* -----------------------------------------------------------------------
-   handle svn_repos_authz_func_t/baton pairs
-*/
+%callback_typemap(svn_repos_authz_func_t authz_read_func,
+                  void *authz_read_baton,
+                  ,
+                  ,
+                  svn_swig_rb_repos_authz_func)
 
-#ifdef SWIGRUBY
-%typemap(in) (svn_repos_authz_func_t authz_read_func,
-                    void *authz_read_baton)
-{
-  $1 = svn_swig_rb_repos_authz_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle svn_repos_authz_callback_t/baton pairs
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_repos_authz_callback_t authz_callback,
-                    void *authz_baton)
-{
-  $1 = svn_swig_rb_repos_authz_callback;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle svn_repos_fs_revision_proplist().
-*/
-
-#ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **table_p = apr_hash_t **OUTPUT;
-%typemap(argout, fragment="output_helper") apr_hash_t **dirents
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
-}
+%callback_typemap(svn_repos_authz_callback_t authz_callback, void *authz_baton,
+                  ,
+                  ,
+                  svn_swig_rb_repos_authz_callback)
 #endif
 
 /* -----------------------------------------------------------------------
    handle svn_repos_get_committed_info().
 */
 #ifdef SWIGRUBY
-%typemap(argout,fragment="output_helper") const char **committed_date
-{
-  $result = output_helper($result, svn_swig_rb_svn_date_string_to_time(*$1));
+%typemap(argout) const char **committed_date {
+  %append_output(svn_swig_rb_svn_date_string_to_time(*$1));
 }
 #endif
 
-/* -----------------------------------------------------------------------
-   handle config in svn_repos_create
-*/
-
-/* ### TODO: %typemap(python, in) apr_hash_t *config {} */
-
-#ifdef SWIGPERL
-%typemap(in) apr_hash_t *config {
-    $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
-					   _global_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   handle the output from svn_repos_trace_node_locations()
-*/
-#ifdef SWIGPYTHON
-%typemap(in,numinputs=0) apr_hash_t **locations = apr_hash_t **OUTPUT;
-%typemap(argout,fragment="t_output_helper") apr_hash_t **locations {
-    $result = t_output_helper($result, svn_swig_py_locationhash_to_dict(*$1));
-}
-#endif
-
-/* ----------------------------------------------------------------------- */
-
-%{
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
-%}
-
+/* Ruby fixups for functions not following the pool convention. */
 #ifdef SWIGRUBY
 %ignore svn_repos_fs;
-#endif
-
-%include svn_repos_h.swg
-
-#ifdef SWIGRUBY
 %inline %{
 static svn_fs_t *
 svn_repos_fs_wrapper(svn_repos_t *fs, apr_pool_t *pool)
@@ -303,3 +113,21 @@ svn_repos_fs_wrapper(svn_repos_t *fs, apr_pool_t *pool)
 }
 %}
 #endif
+
+/* ----------------------------------------------------------------------- */
+
+#ifdef SWIGRUBY
+svn_error_t *svn_repos_dump_fs2(svn_repos_t *repos,
+                                svn_stream_t *dumpstream_may_be_null,
+                                svn_stream_t *feedback_stream,
+                                svn_revnum_t start_rev,
+                                svn_revnum_t end_rev,
+                                svn_boolean_t incremental,
+                                svn_boolean_t use_deltas,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                apr_pool_t *pool);
+%ignore svn_repos_dump_fs2;
+#endif
+
+%include svn_repos_h.swg

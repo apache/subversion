@@ -447,6 +447,12 @@ svn_wc_crawl_revisions2(const char *path,
                            svn_path_dirname(path, pool),
                            adm_access,
                            FALSE, pool));
+
+      if (! parent_entry) 
+        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(path, pool));
+
       base_rev = parent_entry->revision;
       SVN_ERR(reporter->set_path(report_baton, "", base_rev,
                                  entry ? entry->incomplete : TRUE, 
@@ -699,13 +705,13 @@ svn_wc_crawl_revisions(const char *path,
 }
 
 svn_error_t *
-svn_wc_transmit_text_deltas2(const char *path,
+svn_wc_transmit_text_deltas2(const char **tempfile,
+                             unsigned char digest[],
+                             const char *path,
                              svn_wc_adm_access_t *adm_access,
                              svn_boolean_t fulltext,
                              const svn_delta_editor_t *editor,
                              void *file_baton,
-                             const char **tempfile,
-                             const unsigned char **digest,
                              apr_pool_t *pool)
 {
   const char *tmpf, *tmp_base;
@@ -875,7 +881,7 @@ svn_wc_transmit_text_deltas2(const char *path,
   local_digest = svn_txdelta_md5_digest(txdelta_stream);
 
   if (digest)
-    *digest = local_digest;
+    memcpy(digest, local_digest, APR_MD5_DIGESTSIZE);
 
   /* Close the file baton, and get outta here. */
   return editor->close_file
@@ -891,8 +897,8 @@ svn_wc_transmit_text_deltas(const char *path,
                             const char **tempfile,
                             apr_pool_t *pool)
 {
-  return svn_wc_transmit_text_deltas2(path, adm_access, fulltext, editor,
-                                      file_baton, tempfile, NULL, pool);
+  return svn_wc_transmit_text_deltas2(tempfile, NULL, path, adm_access,
+                                      fulltext, editor, file_baton, pool);
 }
 
 svn_error_t *

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -42,6 +42,7 @@ extern "C" {
 /** Currently-defined capabilities. */
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
 #define SVN_RA_SVN_CAP_SVNDIFF1 "svndiff1"
+#define SVN_RA_SVN_CAP_ABSENT_ENTRIES "absent-entries"
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.
@@ -345,7 +346,17 @@ void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
 
 /** Receive edit commands over the network and use them to drive @a editor
  * with @a edit_baton.  On return, @a *aborted will be set if the edit was
- * aborted.
+ * aborted.  The drive can be terminated with a finish-replay command only
+ * if @a for_replay is true.
+ */
+svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const svn_delta_editor_t *editor,
+                                      void *edit_baton,
+                                      svn_boolean_t *aborted,
+                                      svn_boolean_t for_replay);
+
+/** Like svn_ra_svn_drive_editor2, but with @a for_replay always FALSE.
  */
 svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const svn_delta_editor_t *editor,

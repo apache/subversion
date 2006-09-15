@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, stat, string, sys, re, os.path
+import shutil, stat, sys, re, os.path
 
 # Our testing module
 import svntest

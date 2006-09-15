@@ -26,7 +26,6 @@
 #include <apr_strings.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include <apr_dso.h>
 
 #include "svn_version.h"
 #include "svn_types.h"
@@ -35,6 +34,7 @@
 #include "svn_ra.h"
 #include "svn_xml.h"
 #include "svn_path.h"
+#include "svn_dso.h"
 #include "ra_loader.h"
 #include "svn_private_config.h"
 
@@ -144,20 +144,9 @@ load_ra_module(svn_ra__init_func_t *func,
     compat_funcname = apr_psprintf(pool, "svn_ra_%s_init", ra_name);
 
     /* find/load the specified library */
-    status = apr_dso_load(&dso, libname, pool);
-    if (status)
-      {
-#if 0
-        char errbuf[200];
-        apr_dso_error(dso, errbuf, sizeof(errbuf));
-
-        fprintf(stderr, "DSO error: %s\n", errbuf);
-#endif
-
-        /* Just ignore the error. Assume the library isn't present */
-        return SVN_NO_ERROR;
-      }
-    /* note: the library will be unloaded at pool cleanup */
+    SVN_ERR(svn_dso_load(&dso, libname));
+    if (! dso)
+      return SVN_NO_ERROR;
 
     /* find the initialization routines */
     if (func)
@@ -419,8 +408,8 @@ svn_error_t *svn_ra_get_commit_editor(svn_ra_session_t *session,
   svn_commit_callback2_t callback2;
   void *callback2_baton;
 
-  svn_compat_wrap_commit_callback(callback, callback_baton,
-                                  &callback2, &callback2_baton,
+  svn_compat_wrap_commit_callback(&callback2, &callback2_baton,
+                                  callback, callback_baton,
                                   pool);
 
   return svn_ra_get_commit_editor2(session, editor, edit_baton,
@@ -449,21 +438,21 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_hash_t **props,
                             apr_pool_t *pool)
 {
-  return session->vtable->get_dir(session, path, revision, SVN_DIRENT_ALL,
-                                  dirents, fetched_rev, props, pool);
+  return session->vtable->get_dir(session, dirents, fetched_rev, props,
+                                  path, revision, SVN_DIRENT_ALL, pool);
 }
 
 svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
-                             const char *path,
-                             svn_revnum_t revision,
-                             apr_uint32_t dirent_fields,
                              apr_hash_t **dirents,
                              svn_revnum_t *fetched_rev,
                              apr_hash_t **props,
+                             const char *path,
+                             svn_revnum_t revision,
+                             apr_uint32_t dirent_fields,
                              apr_pool_t *pool)
 {
-  return session->vtable->get_dir(session, path, revision, dirent_fields,
-                                  dirents, fetched_rev, props, pool);
+  return session->vtable->get_dir(session, dirents, fetched_rev, props,
+                                  path, revision, dirent_fields, pool);
 }
 
 svn_error_t *svn_ra_do_update(svn_ra_session_t *session,

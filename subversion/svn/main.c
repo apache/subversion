@@ -88,7 +88,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"encoding",      svn_cl__encoding_opt, 1,
                     N_("treat value as being in charset encoding ARG")},
 #endif
-  {"version",       svn_cl__version_opt, 0, N_("print client version info")},
+  {"version",       svn_cl__version_opt, 0,
+                    N_("show program version information")},
   {"verbose",       'v', 0, N_("print extra information")},
   {"show-updates",  'u', 0, N_("display update information")},
   {"username",      svn_cl__auth_username_opt, 1,
@@ -97,7 +98,33 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("specify a password ARG")},
 #ifndef AS400
   {"extensions",    'x', 1,
-                    N_("pass ARG to --diff-cmd as options (default: '-u')")},
+                    N_("Default: '-u'. When Subversion is invoking an\n"
+                       "                            "
+                       " external diff program, ARG is simply passed along\n"
+                       "                            "
+                       " to the program. But when Subversion is using its\n"
+                       "                            "
+                       " default internal diff implementation, or when\n"
+                       "                            "
+                       " Subversion is displaying blame annotations, ARG\n"
+                       "                            "
+                       " could be any of the following:\n"
+                       "                            "
+                       "    -u (--unified):\n"
+                       "                            "
+                       "       Output 3 lines of unified context.\n"
+                       "                            "
+                       "    -b (--ignore-space-change):\n"
+                       "                            "
+                       "       Ignore changes in the amount of white space.\n"
+                       "                            "
+                       "    -w (--ignore-all-space):\n"
+                       "                            "
+                       "       Ignore all white space.\n"
+                       "                            "
+                       "    --ignore-eol-style:\n"
+                       "                            "
+                       "       Ignore changes in EOL style")},
 #endif
   {"targets",       svn_cl__targets_opt, 1,
                     N_("pass contents of file ARG as additional args")},
@@ -157,6 +184,12 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("don't unlock the targets")},
   {"summarize",     svn_cl__summarize, 0,
                     N_("show a summary of the results")},
+  {"clear",         svn_cl__clear_opt, 0,
+                    N_("remove changelist association")},
+  {"changelist",    svn_cl__changelist_opt, 1,
+                    N_("operate only on members of changelist ARG")},
+  {"keep-changelist", svn_cl__keep_changelist_opt, 0,
+                    N_("don't delete changelist after commit")},
   {0,               0, 0, 0}
 };
 
@@ -220,6 +253,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  looked up.\n"),
     {'r', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
+  { "changelist", svn_cl__changelist, {"cl"}, N_
+    ("Associate (or deassociate) local paths with changelist CLNAME.\n"
+     "usage: 1. changelist CLNAME TARGET...\n"
+     "       2. changelist --clear TARGET...\n"),
+    { svn_cl__clear_opt, svn_cl__targets_opt } },
+
   { "checkout", svn_cl__checkout, {"co"}, N_
     ("Check out a working copy from a repository.\n"
      "usage: checkout URL[@REV]... [PATH]\n"
@@ -230,9 +269,20 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  If PATH is omitted, the basename of the URL will be used as\n"
      "  the destination. If multiple URLs are given each will be checked\n"
      "  out into a sub-directory of PATH, with the name of the sub-directory\n"
-     "  being the basename of the URL.\n"),
-    {'r', 'q', 'N', SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
-     svn_cl__ignore_externals_opt} },
+     "  being the basename of the URL.\n"
+     "\n"
+     "  If --force is used, unversioned obstructing paths in the working\n"
+     "  copy destination do not automatically cause the check out to fail.\n"
+     "  If the obstructing path is the same type (file or directory) as the\n"
+     "  corresponding path in the repository it becomes versioned but its\n"
+     "  contents are left 'as-is' in the working copy.  This means that an\n"
+     "  obstructing directory's unversioned children may also obstruct and\n"
+     "  become versioned.  For files, any content differences between the\n"
+     "  obstruction and the repository are treated like a local modification\n"
+     "  to the working copy.  All properties from the repository are applied\n"
+     "  to the obstructing path.\n"),
+    {'r', 'q', 'N', svn_cl__force_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
 
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Recursively clean up the working copy, removing locks, resuming\n"
@@ -260,7 +310,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
        "  successful commit.\n"),
 #endif
     {'q', 'N', svn_cl__targets_opt, svn_cl__no_unlock_opt,
-     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
+     svn_cl__changelist_opt, svn_cl__keep_changelist_opt,
+     svn_cl__config_dir_opt} },
 
   { "copy", svn_cl__copy, {"cp"}, N_
     ("Duplicate something in working copy or repository, remembering history.\n"
@@ -346,11 +398,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "help", svn_cl__help, {"?", "h"}, N_
     ("Describe the usage of this program or its subcommands.\n"
      "usage: help [SUBCOMMAND...]\n"),
-    {svn_cl__version_opt, 'q', svn_cl__config_dir_opt} },
-  /* We need to support "--help", "-?", and all that good stuff, of
-     course.  But those options, since unknown, will result in the
-     help message being printed out anyway, so there's no need to
-     support them explicitly. */
+    {svn_cl__config_dir_opt} },
+  /* This command is also invoked if we see option "--help", "-h" or "-?". */
 
   { "import", svn_cl__import, {0}, N_
     ("Commit an unversioned file or tree into the repository.\n"
@@ -373,7 +422,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
      "  determines in which revision the target is first looked up.\n"),
     {'r', 'R', svn_cl__targets_opt, svn_cl__incremental_opt, svn_cl__xml_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__changelist_opt, svn_cl__config_dir_opt} },
 
   { "list", svn_cl__list, {"ls"}, N_
     ("List directory entries in the repository.\n"
@@ -614,7 +663,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Note:  this subcommand does not require network access, and resolves\n"
      "  any conflicted states.  However, it does not restore removed directories.\n"),
-    {svn_cl__targets_opt, 'R', 'q', svn_cl__config_dir_opt} },
+    {svn_cl__targets_opt, 'R', 'q', svn_cl__changelist_opt,
+     svn_cl__config_dir_opt} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
     ("Print the status of working copy files and directories.\n"
@@ -704,9 +754,20 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
      "     This is used when repository's root URL changes (such as a scheme\n"
      "     or hostname change) but your working copy still reflects the same\n"
-     "     directory within the same repository.\n"),
+     "     directory within the same repository.\n"
+     "\n"
+     "  If --force is used, unversioned obstructing paths in the working\n"
+     "  copy do not automatically cause a failure if the switch attempts to\n"
+     "  add the same path.  If the obstructing path is the same type (file\n"
+     "  or directory) as the corresponding path in the repository it becomes\n"
+     "  versioned but its contents are left 'as-is' in the working copy.\n"
+     "  This means that an obstructing directory's unversioned children may\n"
+     "  also obstruct and become versioned.  For files, any content differences\n"
+     "  between the obstruction and the repository are treated like a local\n"
+     "  modification to the working copy.  All properties from the repository\n"
+     "  are applied to the obstructing path.\n"),
     { 'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__relocate_opt,
-      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__force_opt} },
 
   { "unlock", svn_cl__unlock, {0}, N_
     ("Unlock working copy paths or URLs.\n"
@@ -731,13 +792,27 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    U  Updated\n"
      "    C  Conflict\n"
      "    G  Merged\n"
+     "    E  Existed\n"
      "\n"
      "  A character in the first column signifies an update to the actual file,\n"
      "  while updates to the file's properties are shown in the second column.\n"
      "  A 'B' in the third column signifies that the lock for the file has\n"
-     "  been broken or stolen.\n"),
-    {'r', 'N', 'q', svn_cl__merge_cmd_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__ignore_externals_opt} },
+     "  been broken or stolen.\n"
+     "\n"
+     "  If --force is used, unversioned obstructing paths in the working\n"
+     "  copy do not automatically cause a failure if the update attempts to\n"
+     "  add the same path.  If the obstructing path is the same type (file\n"
+     "  or directory) as the corresponding path in the repository it becomes\n"
+     "  versioned but its contents are left 'as-is' in the working copy.\n"
+     "  This means that an obstructing directory's unversioned children may\n"
+     "  also obstruct and become versioned.  For files, any content differences\n"
+     "  between the obstruction and the repository are treated like a local\n"
+     "  modification to the working copy.  All properties from the repository\n"
+     "  are applied to the obstructing path.  Obstructing paths are reported\n"
+     "  in the first column with code 'E'.\n"),
+    {'r', 'N', 'q', svn_cl__merge_cmd_opt, svn_cl__force_opt,
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
+     svn_cl__ignore_externals_opt} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -859,7 +934,7 @@ main(int argc, const char *argv[])
     }
 
   /* Else, parse options. */
-  err = svn_cmdline__getopt_init(&os, pool, argc, argv);
+  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svn: ");
 
@@ -1048,7 +1123,6 @@ main(int argc, const char *argv[])
         break;
       case svn_cl__version_opt:
         opt_state.version = TRUE;
-        opt_state.help = TRUE;
         break;
       case svn_cl__auth_username_opt:
         err = svn_utf_cstring_to_utf8(&opt_state.auth_username,
@@ -1173,6 +1247,15 @@ main(int argc, const char *argv[])
       case svn_cl__summarize:
         opt_state.summarize = TRUE;
         break;
+      case svn_cl__clear_opt:
+        opt_state.clear = TRUE;
+        break;
+      case svn_cl__changelist_opt:
+        opt_state.changelist = apr_pstrdup(pool, opt_arg);
+        break;
+      case svn_cl__keep_changelist_opt:
+        opt_state.keep_changelist = TRUE;
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -1207,12 +1290,27 @@ main(int argc, const char *argv[])
     {
       if (os->ind >= os->argc)
         {
-          svn_error_clear
-            (svn_cmdline_fprintf(stderr, pool,
-                                 _("Subcommand argument required\n")));
-          svn_cl__help(NULL, NULL, pool);
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+          if (opt_state.version)
+            {
+              /* Use the "help" subcommand to handle the "--version" option. */
+              static const svn_opt_subcommand_desc2_t pseudo_cmd =
+                { "--version", svn_cl__help, {0}, "",
+                  {svn_cl__version_opt,    /* must accept its own option */
+                   'q',                    /* brief output */
+                   svn_cl__config_dir_opt  /* all commands accept this */
+                  } };
+
+              subcommand = &pseudo_cmd;
+            }
+          else
+            {
+              svn_error_clear
+                (svn_cmdline_fprintf(stderr, pool,
+                                     _("Subcommand argument required\n")));
+              svn_cl__help(NULL, NULL, pool);
+              svn_pool_destroy(pool);
+              return EXIT_FAILURE;
+            }
         }
       else
         {
@@ -1250,20 +1348,19 @@ main(int argc, const char *argv[])
 
       if (! svn_opt_subcommand_takes_option2(subcommand, opt_id))
         {
-          const char *optstr, *optstr_utf8, *cmdname_utf8;
+          const char *optstr;
           const apr_getopt_option_t *badopt = 
             svn_opt_get_option_from_code2(opt_id, svn_cl__options,
                                           subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
-          if ((err = svn_utf_cstring_to_utf8(&optstr_utf8, optstr, pool))
-              || (err = svn_utf_cstring_to_utf8(&cmdname_utf8,
-                                                subcommand->name, pool)))
-            return svn_cmdline_handle_exit_error(err, pool, "svn: ");
-          svn_error_clear
-            (svn_cmdline_fprintf
-             (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
-                              "Type 'svn help %s' for usage.\n"),
-              cmdname_utf8, optstr_utf8, cmdname_utf8));
+          if (subcommand->name[0] == '-')
+            svn_cl__help(NULL, NULL, pool);
+          else
+            svn_error_clear
+              (svn_cmdline_fprintf
+               (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
+                                "Type 'svn help %s' for usage.\n"),
+                subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);
           return EXIT_FAILURE;
         }

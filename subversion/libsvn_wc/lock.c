@@ -1114,7 +1114,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
   const char *base_name = svn_path_basename(path, pool);
 
   if (svn_path_is_empty(path)
-      || ! strcmp(path, "/") || ! strcmp(base_name, ".."))
+      || svn_path_is_root(path, strlen(path), pool) 
+      || ! strcmp(base_name, ".."))
     {
       SVN_ERR(do_open(anchor_access, NULL, path, write_lock, depth, FALSE,
                       cancel_func, cancel_baton, pool));
@@ -1566,4 +1567,6 @@ svn_wc__adm_missing(svn_wc_adm_access_t *adm_access,
 
   return FALSE;
 }
+
+
 

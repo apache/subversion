@@ -86,7 +86,21 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_update_add:
       nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf(pool, "A    %s\n", path_local)))
+      if (n->content_state == svn_wc_notify_state_conflicted)
+        {
+          if ((err = svn_cmdline_printf(pool, "C    %s\n", path_local)))
+            goto print_error;
+        }
+      else
+        {
+          if ((err = svn_cmdline_printf(pool, "A    %s\n", path_local)))
+            goto print_error;
+        }
+      break;
+
+    case svn_wc_notify_exists:
+      nb->received_some_change = TRUE;
+      if ((err = svn_cmdline_printf(pool, "E    %s\n", path_local)))
         goto print_error;
       break;
 
@@ -348,13 +362,13 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_locked:
       if ((err = svn_cmdline_printf(pool, _("'%s' locked by user '%s'.\n"),
-                                    n->path, n->lock->owner)))
+                                    path_local, n->lock->owner)))
         goto print_error;
       break;
 
     case svn_wc_notify_unlocked:
       if ((err = svn_cmdline_printf(pool, _("'%s' unlocked.\n"),
-                                    n->path)))
+                                    path_local)))
         goto print_error;
       break;
 

@@ -104,10 +104,10 @@ def lstrip(s, ch):
 def rstrip(s, ch):
     """Replacement for str.rstrip (support for arbitrary chars to strip was
     added in Python 2.2.2)."""
-    if s[-1] != ch:
-        return s
-    i = -2
     try:
+        if s[-1] != ch:
+            return s
+        i = -2
         while s[i] == ch:
             i = i-1
         return s[:i+1]
@@ -232,7 +232,17 @@ def launch(cmd, split_lines=True):
 
 def launchsvn(s, show=False, pretend=False, **kwargs):
     """Launch SVN and grab its output."""
-    cmd = opts["svn"] + " " + s
+    username = opts.get("username", None)
+    password = opts.get("password", None)
+    if username:
+        username = " --username=" + username
+    else:
+        username = ""
+    if password:
+        password = " --password=" + password
+    else:
+        password = ""
+    cmd = opts["svn"] + username + password + " " + s
     if show or opts["verbose"] >= 2:
         print cmd
     if pretend:
@@ -305,6 +315,16 @@ class RevisionLog:
             elif srcdir_change_re.match(line):
                 self.propchange_revs.append(rev)
 
+        # Save the range of the log
+        self.begin = int(begin)
+        if end == "HEAD":
+            # If end is not provided, we do not know which is the latest
+            # revision in the repository. So we set 'end' to the latest
+            # known revision.
+            self.end = log.revs[-1]
+        else:
+            self.end = int(end)
+
         self._merges = None
 
     def merge_metadata(self):
@@ -369,25 +389,47 @@ class VersionedProperty:
         self.revs = [0]
         self.values = [None]
 
+        # We don't have any revisions cached
+        self._initial_value = None
+        self._changed_revs = []
+        self._changed_values = []
+
     def load(self, log):
         """
         Load the history of property changes from the specified
         RevisionLog object.
         """
 
-        # Cache the value of the property over the range of the log.
-        old_value = None
+        # Get the property value before the range of the log
+        if log.begin > 1:
+            self.revs.append(log.begin-1)
+            try:
+                self._initial_value = self.raw_get(log.begin-1)
+            except LaunchError:
+                # The specified URL might not exist before the
+                # range of the log. If so, we can safely assume
+                # that the property was empty at that time.
+                self._initial_value = { }
+            self.values.append(self._initial_value)
+        else:
+            self._initial_value = { }
+            self.values[0] = self._initial_value
+
+        # Cache the property values in the log range
+        old_value = self._initial_value
         for rev in log.propchange_revs:
-           new_value = self.raw_get(rev)
-           if new_value != old_value:
-               self.revs.append(rev)
-               self.values.append(new_value)
-               new_value = old_value
+            new_value = self.raw_get(rev)
+            if new_value != old_value:
+                self._changed_revs.append(rev)
+                self._changed_values.append(new_value)
+                self.revs.append(rev)
+                self.values.append(new_value)
+                new_value = old_value
 
         # Indicate that we know nothing about the value of the property
         # after the range of the log.
         if log.revs:
-            self.revs.append(log.revs[-1])
+            self.revs.append(log.end+1)
             self.values.append(None)
 
     def raw_get(self, rev=None):
@@ -415,11 +457,22 @@ class VersionedProperty:
         # Get the current value of the property
         return self.raw_get(rev)
 
-    def changed_revs(self):
+    def changed_revs(self, key=None):
         """
-        Get a list of the revisions in which this property changed.
+        Get a list of the revisions in which the specified dictionary
+        key was changed in this property. If key is not specified,
+        return a list of revisions in which any key was changed.
         """
-        return self.revs[1:-1]
+        if key is None:
+            return self._changed_revs
+        else:
+            changed_revs = []
+            old_val = self._initial_value
+            for rev, val in zip(self._changed_revs, self._changed_values):
+                if val.get(key) != old_val.get(key):
+                    changed_revs.append(rev)
+                    old_val = val
+            return changed_revs
 
 class RevisionSet:
     """
@@ -868,20 +921,11 @@ def analyze_revs(target_dir, url, begin=1, end=None,
         end = str(list(revs)[-1])
 
     phantom_revs = RevisionSet("%s-%s" % (begin, end)) - revs
-    reflected_revs = []
 
     if find_reflected:
-        merge_metadata = logs[url].merge_metadata()
-
-        report("checking for reflected changes in %d revision(s)"
-               % len(merge_metadata.changed_revs()))
-
-        old_revs = None
-        for rev in merge_metadata.changed_revs():
-            new_revs = merge_metadata.get(rev).get(target_dir)
-            if new_revs != old_revs:
-                reflected_revs.append("%s" % rev)
-            old_revs = new_revs
+        reflected_revs = logs[url].merge_metadata().changed_revs(target_dir)
+    else:
+        reflected_revs = []
 
     reflected_revs = RevisionSet(reflected_revs)
 
@@ -902,7 +946,7 @@ def analyze_head_revs(branch_dir, head_url, **kwargs):
     base = 1
     r = opts["merged-revs"].normalized()
     if r and r[0][0] == 1:
-        base = r[0][1]
+        base = r[0][1] + 1
 
     # See if the user filtered the revision set. If so, we are not
     # interested in something outside that range.
@@ -1015,17 +1059,19 @@ def action_avail(branch_dir, branch_props):
 
     # Compose the set of revisions to show
     revs = RevisionSet("")
+    report_msg = "revisions available to be merged are:"
     if "avail" in opts["avail-showwhat"]:
         revs |= avail_revs
     if "blocked" in opts["avail-showwhat"]:
         revs |= blocked_revs
+        report_msg = "revisions blocked are:"
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
         revs = revs & RevisionSet(opts["revision"])
 
     display_revisions(revs, opts["avail-display"],
-                      "revisions available to be merged are:",
+                      report_msg,
                       opts["head-url"])
 
 def action_integrated(branch_dir, branch_props):
@@ -1607,6 +1653,12 @@ global_opts = [
            help="show subversion commands that make changes"),
     Option("-v", "--verbose",
            help="verbose mode: output more information about progress"),
+    OptionArg("-u", "--username",
+              default=None,
+              help="invoke subversion commands with the supplied username"),
+    OptionArg("-p", "--password",
+              default=None,
+              help="invoke subversion commands with the supplied password"),
 ]
 
 common_opts = [

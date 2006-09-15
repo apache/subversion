@@ -45,7 +45,7 @@ _svn()
               list ls lock log merge mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
               proplist plist propset pset resolved revert \
-              status switch unlock update --version'
+              status switch unlock update'
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -231,7 +231,7 @@ _svn()
 	# suggest all subcommands, including special help
 	if [[ ! $cmd || $stat = 'cmd' ]]
 	then
-	    COMPREPLY=( $( compgen -W "$cmds $helpOpts" -- $cur ) )
+	    COMPREPLY=( $( compgen -W "$cmds $specOpts" -- $cur ) )
 	    return 0
 	fi
 
@@ -403,6 +403,9 @@ _svn()
 	    help|h)
 		nExpectArgs=0
 		;;
+	    --version)
+		nExpectArgs=0
+		;;
 	esac
 
 	# the maximum number of arguments is reached for a command
@@ -469,7 +472,7 @@ _svn()
                          --ignore-externals"
 		;;
 	help|h|\?)
-		cmdOpts="$qOpts"
+		cmdOpts=
 		;;
 	import)
 		cmdOpts="--auto-props --no-auto-props $mOpts $qOpts $nOpts \
@@ -549,7 +552,8 @@ _svn()
 	esac
 
 	# add options that are always available whatever the subcommand
-	cmdOpts="$cmdOpts $helpOpts --config-dir"
+	[[ "$cmd" != "--version" ]] && cmdOpts="$cmdOpts $helpOpts"
+	cmdOpts="$cmdOpts --config-dir"
 
 	# take out options already given
 	for opt in $options
@@ -640,7 +644,8 @@ _svnadmin ()
 	cmdOpts=
 	case ${COMP_WORDS[1]} in
 	create)
-		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir --fs-type"
+		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir \
+                         --fs-type --pre-1.4-compatible"
 		;;
 	deltify)
 		cmdOpts="-r --revision -q --quiet"

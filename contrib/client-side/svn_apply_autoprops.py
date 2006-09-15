@@ -18,7 +18,7 @@
 # $LastChangedDate$
 # $LastChangedBy$
 #
-# Copyright (C) 2005 Blair Zajac.
+# Copyright (C) 2005,2006 Blair Zajac <blair@orcaware.com>
 #
 # This script is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -67,9 +67,6 @@ def get_autoprop_lines(fd):
 
   return lines
 
-re_remove_leading_whitespace = re.compile('^\s+')
-re_remove_trailing_whitespace = re.compile('\s+$')
-
 def process_autoprop_lines(lines):
   result = []
 
@@ -83,18 +80,21 @@ def process_autoprop_lines(lines):
 
     # Remove leading and trailing whitespace from the fnmatch and
     # properties.
-    fnmatch = re.sub(re_remove_leading_whitespace, '', fnmatch)
-    fnmatch = re.sub(re_remove_trailing_whitespace, '', fnmatch)
-    props = re.sub(re_remove_leading_whitespace, '', props)
-    props = re.sub(re_remove_trailing_whitespace, '', props)
+    fnmatch = fnmatch.strip()
+    props = props.strip()
 
-    # Create a list of property name and property values.
+    # Create a list of property name and property values.  Remove all
+    # leading and trailing whitespce from the propery names and
+    # values.
     props_list = []
     for prop in props.split(';'):
+      prop = prop.strip()
       if not len(prop):
         continue
       try:
         (prop_name, prop_value) = prop.split('=', 1)
+        prop_name = prop_name.strip()
+        prop_value = prop_value.strip()
       except ValueError:
         prop_name = prop
         prop_value = '*'

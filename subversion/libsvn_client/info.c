@@ -51,7 +51,7 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->repos_root_URL       = repos_root;
   tmpinfo->last_changed_rev     = dirent->created_rev;
   tmpinfo->last_changed_date    = dirent->time;
-  tmpinfo->last_changed_author  = dirent->last_author;;
+  tmpinfo->last_changed_author  = dirent->last_author;
   tmpinfo->lock                 = lock;
 
   *info = tmpinfo;
@@ -89,6 +89,7 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->conflict_new         = entry->conflict_new;
   tmpinfo->conflict_wrk         = entry->conflict_wrk;
   tmpinfo->prejfile             = entry->prejfile;
+  tmpinfo->changelist           = entry->changelist;
 
   /* lock stuff */
   if (entry->lock_token)  /* the token is the critical bit. */
@@ -134,8 +135,8 @@ push_dir_info(svn_ra_session_t *ra_session,
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_ra_get_dir2(ra_session, dir, rev, DIRENT_FIELDS, &tmpdirents, 
-                          NULL, NULL, pool));
+  SVN_ERR(svn_ra_get_dir2(ra_session, &tmpdirents, NULL, NULL,
+                          dir, rev, DIRENT_FIELDS, pool));
 
   for (hi = apr_hash_first(pool, tmpdirents); hi; hi = apr_hash_next(hi))
     {
@@ -396,8 +397,8 @@ svn_client_info(const char *path_or_url,
                                                    ctx, pool));
       
       /* Get all parent's entries, and find the item's dirent in the hash. */
-      SVN_ERR(svn_ra_get_dir2(parent_ra_session, "", rev, DIRENT_FIELDS,
-                              &parent_ents, NULL, NULL, pool));
+      SVN_ERR(svn_ra_get_dir2(parent_ra_session, &parent_ents, NULL, NULL,
+                              "", rev, DIRENT_FIELDS, pool));
       the_ent = apr_hash_get(parent_ents, base_name, APR_HASH_KEY_STRING);
       if (the_ent == NULL)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,

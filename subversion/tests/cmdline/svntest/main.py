@@ -158,8 +158,12 @@ temp_dir = os.path.join(work_dir, 'local_tmp')
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
+pristine_wc_dir = os.path.join(temp_dir, "wc")
 default_config_dir = config_dir
 
+# Location to the pristine repository, will be calculated from test_area_url
+# when we know what the user specified for --url.
+pristine_url = None
 
 #
 # Our pristine greek-tree state.
@@ -253,7 +257,10 @@ def run_command_stdin(command, error_expected, binary_mode=0,
 
   args = ''
   for arg in varargs:                   # build the command string
-    args = args + ' "' + str(arg) + '"'
+    arg = str(arg)
+    if os.name != 'nt':
+      arg = arg.replace('$', '\$')
+    args = args + ' "' + arg + '"'
 
   # Log the command line
   if verbose_mode:
@@ -402,6 +409,14 @@ def file_append(path, new_text):
   fp.write(new_text)
   fp.close()
 
+# Append in binary mode
+def file_append_binary(path, new_text):
+  "Append NEW_TEXT to file at PATH in binary mode"
+
+  fp = open(path, 'ab')  # open in (a)ppend mode
+  fp.write(new_text)
+  fp.close()
+
 # For making local mods to files
 def file_write(path, new_text):
   "Replace contents of file at PATH with NEW_TEXT"
@@ -444,64 +459,70 @@ def create_repos(path):
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
-  # A BDB hot-backup procedure would be more efficient, but that would
-  # require access to the BDB tools, and this doesn't.  Print a fake
-  # pipe command so that the displayed CMDs can be run by hand
-  create_repos(dst_path)
-  dump_args = ' dump "' + src_path + '"'
-  load_args = ' load "' + dst_path + '"'
-
-  if ignore_uuid:
-    load_args = load_args + " --ignore-uuid"
-  if verbose_mode:
-    print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-          '|', os.path.basename(svnadmin_binary) + load_args,
-  start = time.time()
-  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
-  load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
-  stop = time.time()
-  if verbose_mode:
-    print '<TIME = %.6f>' % (stop - start)
-
-  while 1:
-    data = dump_out.read(1024*1024)  # Arbitrary buffer size
-    if data == "":
-      break
-    load_in.write(data)
-  load_in.close() # Tell load we are done
-
-  dump_lines = dump_err.readlines()
-  load_lines = load_out.readlines()
-  dump_in.close()
-  dump_out.close()
-  dump_err.close()
-  load_out.close()
-  load_err.close()
-
-  dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
-  expect_revision = 0
-  for dump_line in dump_lines:
-    match = dump_re.match(dump_line)
-    if not match or match.group(1) != str(expect_revision):
-      print 'ERROR:  dump failed:', dump_line,
-      raise SVNRepositoryCopyFailure
-    expect_revision += 1
-  if expect_revision != head_revision + 1:
-    print 'ERROR:  dump failed; did not see revision', head_revision
-    raise SVNRepositoryCopyFailure
-
-  load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
-  expect_revision = 1
-  for load_line in load_lines:
-    match = load_re.match(load_line)
-    if match:
-      if match.group(1) != str(expect_revision):
-        print 'ERROR:  load failed:', load_line,
+  # If the copy may have the same uuid, then hotcopy the repos files on disk.
+  if not ignore_uuid:
+    if not os.path.exists(general_repo_dir):
+      os.makedirs(general_repo_dir) # this also creates all the intermediate dirs
+      
+    output, errput = run_svnadmin('hotcopy', src_path, dst_path)
+  else:
+    # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that 
+    # the displayed CMDs can be run by hand
+    create_repos(dst_path)
+    dump_args = ' dump "' + src_path + '"'
+    load_args = ' load "' + dst_path + '"'
+  
+    if ignore_uuid:
+      load_args = load_args + " --ignore-uuid"
+    if verbose_mode:
+      print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
+            '|', os.path.basename(svnadmin_binary) + load_args,
+    start = time.time()
+    dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
+    load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
+    stop = time.time()
+    if verbose_mode:
+      print '<TIME = %.6f>' % (stop - start)
+  
+    while 1:
+      data = dump_out.read(1024*1024)  # Arbitrary buffer size
+      if data == "":
+        break
+      load_in.write(data)
+    load_in.close() # Tell load we are done
+  
+    dump_lines = dump_err.readlines()
+    load_lines = load_out.readlines()
+    dump_in.close()
+    dump_out.close()
+    dump_err.close()
+    load_out.close()
+    load_err.close()
+  
+    dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
+    expect_revision = 0
+    for dump_line in dump_lines:
+      match = dump_re.match(dump_line)
+      if not match or match.group(1) != str(expect_revision):
+        print 'ERROR:  dump failed:', dump_line,
         raise SVNRepositoryCopyFailure
       expect_revision += 1
-  if expect_revision != head_revision + 1:
-    print 'ERROR:  load failed; did not see revision', head_revision
-    raise SVNRepositoryCopyFailure
+    if expect_revision != head_revision + 1:
+      print 'ERROR:  dump failed; did not see revision', head_revision
+      raise SVNRepositoryCopyFailure
+  
+    load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
+    expect_revision = 1
+    for load_line in load_lines:
+      match = load_re.match(load_line)
+      if match:
+        if match.group(1) != str(expect_revision):
+          print 'ERROR:  load failed:', load_line,
+          raise SVNRepositoryCopyFailure
+        expect_revision += 1
+    if expect_revision != head_revision + 1:
+      print 'ERROR:  load failed; did not see revision', head_revision
+      raise SVNRepositoryCopyFailure
 
 
 def set_repos_paths(repo_dir):
@@ -541,6 +562,19 @@ def create_python_hook_script (hook_path, hook_script_code):
     file_append (hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
     os.chmod (hook_path, 0755)
 
+######################################################################
+# Functions which check the test configuration
+# (useful for conditional XFails)
+
+def is_ra_type_dav():
+  return test_area_url.startswith('http')
+
+def is_fs_type_fsfs():
+  # This assumes that fsfs is the default fs implementation.
+  return (fs_type == 'fsfs' or fs_type is None)
+
+def is_os_windows():
+  return (os.name == 'nt')
 
 ######################################################################
 # Sandbox handling
@@ -786,6 +820,7 @@ def run_tests(test_list):
   """
 
   global test_area_url
+  global pristine_url
   global fs_type
   global verbose_mode
   global cleanup_mode
@@ -828,6 +863,11 @@ def run_tests(test_list):
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
+  # Calculate pristine_url from test_area_url.
+  pristine_url = test_area_url + '/' + pristine_dir
+  if windows == 1:
+    pristine_url = string.replace(pristine_url, '\\', '/')  
+  
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
     testnums = range(1, len(test_list))

@@ -34,6 +34,7 @@
 #include <apr_pools.h>
 
 #include "svn_cmdline.h"
+#include "svn_dso.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -86,6 +87,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #endif
 
 #ifdef WIN32
+#if _MSC_VER < 1400
   /* Initialize the input and output encodings. */
   {
     static char input_encoding_buffer[16];
@@ -99,6 +101,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
                  "CP%u", (unsigned) GetConsoleOutputCP());
     output_encoding = output_encoding_buffer;
   }
+#endif /* _MSC_VER < 1400 */
 #endif /* WIN32 */
 
   /* C programs default to the "C" locale. But because svn is supposed
@@ -149,6 +152,9 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
         }
       return EXIT_FAILURE;
     }
+
+  /* This has to happen before any pools are created. */
+  svn_dso_initialize();
 
   if (0 > atexit(apr_terminate))
     {
@@ -453,9 +459,9 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 
 svn_error_t *
 svn_cmdline__getopt_init(apr_getopt_t **os,
-                         apr_pool_t *pool,
                          int argc,
-                         const char *argv[])
+                         const char *argv[],
+                         apr_pool_t *pool)
 {
   apr_status_t apr_err;
 #ifdef AS400_UTF8

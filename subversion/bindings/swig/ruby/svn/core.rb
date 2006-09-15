@@ -319,27 +319,54 @@ module Svn
       end
     end
 
+    # Following methods are also available:
+    #
+    # [created_rev]
+    #   Returns a revision at which the instance was last modified.
+    # [have_props?]
+    #   Returns +true+ if the instance has properties.
+    # [last_author]
+    #   Returns an author who last modified the instance.
+    # [size]
+    #   Returns a size of the instance.
     class Dirent
+      alias have_props? has_props
+
+      # Returns +true+ when the instance is none.
       def none?
         kind == NODE_NONE
       end
 
+      # Returns +true+ when the instance is a directory.
       def directory?
         kind == NODE_DIR
       end
 
+      # Returns +true+ when the instance is a file.
       def file?
         kind == NODE_FILE
       end
 
+      # Returns +true+ when the instance is an unknown node.
       def unknown?
         kind == NODE_UNKNOWN
+      end
+
+      # Returns a Time when the instance was last changed.
+      #
+      # Svn::Core::Dirent#time is replaced by this method, _deprecated_,
+      # and provided for backward compatibility with the 1.3 API.
+      def time2
+        __time = time
+        __time && Time.from_apr_time(__time)
       end
     end
 
     Config = SWIG::TYPE_p_svn_config_t
     
     class Config
+      include Enumerable
+
       class << self
         def config(path)
           Core.config_get_config(path)
@@ -378,9 +405,20 @@ module Svn
       def set(section, option, value)
         Core.config_set(self, section, option, value)
       end
+      alias_method :[]=, :set
       
       def set_bool(section, option, value)
         Core.config_set_bool(self, section, option, value)
+      end
+
+      def each
+        each_section do |section|
+          each_option(section) do |name, value|
+            yield(section, name, value)
+            true
+          end
+          true
+        end
       end
 
       def each_option(section)
@@ -407,6 +445,36 @@ module Svn
 
       def get_server_setting_int(group, name, default)
         Core.config_get_server_setting_int(self, group, name, default)
+      end
+
+      alias_method :_to_s, :to_s
+      def to_s
+        result = ""
+        each_section do |section|
+          result << "[#{section}]\n"
+          each_option(section) do |name, value|
+            result << "#{name} = #{value}\n"
+          end
+          result << "\n"
+        end
+        result
+      end
+
+      def inspect
+        "#{_to_s}#{to_hash.inspect}"
+      end
+
+      def to_hash
+        sections = {}
+        each do |section, name, value|
+          sections[section] ||= {}
+          sections[section][name] = value
+        end
+        sections
+      end
+
+      def ==(other)
+        other.is_a?(self.class) and to_hash == other.to_hash
       end
     end
 
@@ -448,6 +516,25 @@ module Svn
       def date
         __date = _date
         __date && Time.from_svn_format(__date)
+      end
+    end
+
+    # Following methods are also available:
+    #
+    # [action]
+    #   Returns an action taken to the path at the revision.
+    # [copyfrom_path]
+    #   If the path was added at the revision by the copy action from
+    #   another path at another revision, returns an original path.
+    #   Otherwise, returns +nil+.
+    # [copyfrom_rev]
+    #   If the path was added at the revision by the copy action from
+    #   another path at another revision, returns an original revision.
+    #   Otherwise, returns <tt>-1</tt>.
+    class LogChangedPath
+      # Returns +true+ when the path is added by the copy action.
+      def copied?
+        Util.copy?(copyfrom_path, copyfrom_rev)
       end
     end
   end

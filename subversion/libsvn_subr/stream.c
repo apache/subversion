@@ -28,9 +28,7 @@
 #include <apr_errno.h>
 #include <apr_md5.h>
 
-#ifdef SVN_HAVE_ZLIB
 #include <zlib.h>
-#endif
 
 #include "svn_pools.h"
 #include "svn_io.h"
@@ -393,8 +391,6 @@ svn_stream_from_aprfile(apr_file_t *file, apr_pool_t *pool)
 
 /* Compressed stream support */
 
-#ifdef SVN_HAVE_ZLIB
-
 #define ZBUFFER_SIZE 4096       /* The size of the buffer the
                                    compressed stream uses to read from
                                    the substream. Basically an
@@ -651,13 +647,10 @@ close_handler_gz(void *baton)
     return SVN_NO_ERROR;
 }
 
-#endif /* SVN_HAVE_ZLIB */
 
 svn_stream_t *
 svn_stream_compressed(svn_stream_t *stream, apr_pool_t *pool)
 {
-#ifdef SVN_HAVE_ZLIB
-
   struct svn_stream_t *zstream;
   struct zbaton *baton;
 
@@ -679,12 +672,6 @@ svn_stream_compressed(svn_stream_t *stream, apr_pool_t *pool)
   svn_stream_set_close(zstream, close_handler_gz);
   
   return zstream;
-
-#else
-  
-  return stream;
-
-#endif /* SVN_HAVE_ZLIB */
 }
 
 

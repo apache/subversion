@@ -42,7 +42,7 @@ class WinGeneratorBase(GeneratorBase):
     self.serf_path = None
     self.bdb_path = 'db4-win32'
     self.neon_path = 'neon'
-    self.neon_ver = 24007
+    self.neon_ver = 25005
     self.httpd_path = None
     self.libintl_path = None
     self.zlib_path = 'zlib'
@@ -58,6 +58,8 @@ class WinGeneratorBase(GeneratorBase):
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
+    self.have_gen_uri = None
+    self.sasl_path = None
 
     # NLS options
     self.enable_nls = None
@@ -89,6 +91,8 @@ class WinGeneratorBase(GeneratorBase):
         self.zlib_path = val
       elif opt == '--with-swig':
         self.swig_path = val
+      elif opt == '--with-sasl':
+        self.sasl_path = val
       elif opt == '--with-openssl':
         self.openssl_path = val
       elif opt == '--enable-purify':
@@ -146,6 +150,12 @@ class WinGeneratorBase(GeneratorBase):
     # Find neon version
     if self.neon_path:
       self._find_neon()
+      
+    # Check for gen_uri_delims project in apr-util
+    gen_uri_path = os.path.join(self.apr_util_path, 'uri',
+                                'gen_uri_delims.dsp')
+    if os.path.exists(gen_uri_path):
+      self.have_gen_uri = 1
 
     # Run apr-util's w32locatedb.pl script
     self._configure_apr_util()
@@ -231,6 +241,23 @@ class WinGeneratorBase(GeneratorBase):
     # Don't create projects for scripts
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
                              install_targets)
+    
+    # Drop the gen_uri_delims target unless we're on an old apr-util
+    if not self.have_gen_uri:
+      install_targets = filter(lambda x: x.name != 'gen_uri_delims',
+                               install_targets)
+      
+    # Drop the libsvn_fs_base target and tests if we don't have BDB
+    if not self.bdb_lib:
+      install_targets = filter(lambda x: x.name != 'libsvn_fs_base',
+                               install_targets)
+      install_targets = filter(lambda x: not (isinstance(x, gen_base.TargetExe)
+                                              and x.install == 'bdb-test'),
+                               install_targets)
+      
+    # Drop the serf target if we don't have it
+    if not self.serf_path:
+      install_targets = filter(lambda x: x.name != 'serf', install_targets)
 
     for target in install_targets:
       if isinstance(target, gen_base.TargetLib) and target.msvc_fake:
@@ -370,7 +397,9 @@ class WinGeneratorBase(GeneratorBase):
     if isinstance(target, gen_base.TargetExe):
       return target.name + '.exe'
     elif isinstance(target, gen_base.TargetJava):
-      return None
+      ### This target file is not actually built, but we need it to keep
+      ### the VC Express build happy.
+      return target.name
     elif isinstance(target, gen_base.TargetApacheMod):
       return target.name + '.so'
     elif isinstance(target, gen_base.TargetLib):
@@ -385,6 +414,11 @@ class WinGeneratorBase(GeneratorBase):
       return target.name + '.exe'
     elif isinstance(target, gen_base.TargetI18N):
       return target.name
+
+  def get_output_pdb(self, target):
+    name = self.get_output_name(target)
+    name = os.path.splitext(name)
+    return name[0] + '.pdb'
 
   def get_output_dir(self, target):
     if isinstance(target, gen_base.TargetJavaHeaders):
@@ -577,56 +611,53 @@ class WinGeneratorBase(GeneratorBase):
     # XXX: know these things for itself.
     if self.bdb_lib:
       fakedefines.append("APU_HAVE_DB=1")
+      fakedefines.append("SVN_LIBSVN_FS_LINKS_FS_BASE=1")
 
     # check if they wanted nls
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
       
-    # check if we have a newer neon (0.25.x)
-    if self.neon_ver >= 25000:
-      fakedefines.append("SVN_NEON_0_25=1")
+    # check for neon 0.26.x or newer
+    if self.neon_ver >= 26000:
+      fakedefines.append("SVN_NEON_0_26=1")
+
+    # check we have sasl
+    if self.sasl_path:
+      fakedefines.append("SVN_HAVE_SASL")
 
     return fakedefines
 
   def get_win_includes(self, target):
     "Return the list of include directories for target"
+    
+    fakeincludes = [ self.path("subversion/include"),
+                     self.path("subversion"),
+                     self.apath(self.apr_path, "include"),
+                     self.apath(self.apr_util_path, "include") ]
 
     if isinstance(target, gen_base.TargetApacheMod):
-      fakeincludes = [ self.path("subversion/include"),
-                       self.apath(self.bdb_path, "include"),
-                       self.path("subversion") ]
-      fakeincludes.extend([
-        self.apath(self.apr_path, "include"),
-        self.apath(self.apr_util_path, "include"),
-        self.apath(self.apr_util_path, "xml/expat/lib"),
-        self.apath(self.httpd_path, "include")
-        ])
+      fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
+                            self.apath(self.httpd_path, "include"),
+                            self.apath(self.bdb_path, "include") ])
     elif isinstance(target, gen_base.TargetSWIG):
       util_includes = "subversion/bindings/swig/%s/libsvn_swig_%s" \
                       % (target.lang,
                          gen_base.lang_utillib_suffix[target.lang])
-      fakeincludes = [ self.path("subversion/bindings/swig"),
-                       self.path("subversion/bindings/swig/proxy"),
-                       self.path("subversion/bindings/swig/include"),
-                       self.path("subversion/include"),
-                       self.path(util_includes),
-                       self.apath(self.apr_path, "include"),
-                       self.apath(self.apr_util_path, "include") ]
+      fakeincludes.extend([ self.path("subversion/bindings/swig"),
+                            self.path("subversion/bindings/swig/proxy"),
+                            self.path("subversion/bindings/swig/include"),
+                            self.path(util_includes) ])
     else:
-      fakeincludes = [ self.path("subversion/include"),
-                       self.apath(self.apr_path, "include"),
-                       self.apath(self.apr_util_path, "include"),
-                       self.apath(self.apr_util_path, "xml/expat/lib"),
-                       self.apath(self.neon_path, "src"),
-                       self.apath(self.bdb_path, "include"),
-                       self.path("subversion/bindings/swig/proxy"),
-                       self.path("subversion") ]
+      fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
+                            self.apath(self.neon_path, "src"),
+                            self.path("subversion/bindings/swig/proxy"),
+                            self.apath(self.bdb_path, "include") ])
 
     if self.libintl_path:
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
     
     if self.serf_path:
-       fakeincludes.append(self.apath(self.serf_path, ""))
+      fakeincludes.append(self.apath(self.serf_path, ""))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -634,6 +665,9 @@ class WinGeneratorBase(GeneratorBase):
       fakeincludes.append(self.swig_libdir)
 
     fakeincludes.append(self.apath(self.zlib_path))
+
+    if self.sasl_path:
+      fakeincludes.append(self.apath(self.sasl_path, 'include'))
     
     return fakeincludes
 
@@ -646,6 +680,8 @@ class WinGeneratorBase(GeneratorBase):
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path) ]
+    if self.sasl_path:
+      fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -657,9 +693,14 @@ class WinGeneratorBase(GeneratorBase):
   def get_win_libs(self, target, cfg):
     "Return the list of external libraries needed for target"
 
-    dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
+    dblib = None
+    if self.bdb_lib:
+      dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
+    sasllib = None
+    if self.sasl_path:
+      sasllib = 'libsasl.lib'
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -692,6 +733,9 @@ class WinGeneratorBase(GeneratorBase):
 
       if dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)
+        
+      if dep.external_lib == '$(SVN_SASL_LIBS)':
+        nondeplibs.append(sasllib)
         
     return gen_base.unique(nondeplibs)
 
@@ -826,9 +870,8 @@ class WinGeneratorBase(GeneratorBase):
         self.bdb_lib = lib
         break
     else:
-      sys.stderr.write("DB not found; assuming db-4.2.x in db4-win32 "
-                       "by default\n")
-      self.bdb_lib = "libdb42"
+      sys.stderr.write("BDB not found, BDB fs will not be built\n")
+      self.bdb_lib = None
 
   def _find_perl(self):
     "Find the right perl library name to link swig bindings with"
@@ -864,13 +907,13 @@ class WinGeneratorBase(GeneratorBase):
     infp.close()
     try:
       txt = outfp.read()
-      if (txt):
+      if txt:
         vermatch = re.compile(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)$', re.M) \
                    .search(txt)
       else:
         vermatch = None
 
-      if (vermatch):
+      if vermatch:
         version = (int(vermatch.group(1)),
                    int(vermatch.group(2)),
                    int(vermatch.group(3)))
@@ -930,13 +973,15 @@ class WinGeneratorBase(GeneratorBase):
       vermatch = re.compile(r'(\d+)\.(\d+)\.(\d+)$', re.M) \
                    .search(txt)
   
-      if (vermatch):
+      if vermatch:
         version = (int(vermatch.group(1)),
                    int(vermatch.group(2)),
                    int(vermatch.group(3)))
         # build/ac-macros/swig.m4 explains the next incantation
         self.neon_ver = int('%d%02d%03d' % version)
         msg = 'Found neon version %d.%d.%d\n' % version
+        if self.neon_ver < 25005:
+          msg = 'WARNING: Neon version 0.25.5 or higher is required'
     except:
       msg = 'WARNING: Error while determining neon version\n'
     sys.stderr.write(msg)

@@ -49,6 +49,10 @@
 
 #include "svn_private_config.h"
 
+/* An arbitrary maximum path length, so clients can't run us out of memory
+ * by giving us arbitrarily large paths. */
+#define FSFS_MAX_PATH_LEN 4096
+
 /* Following are defines that specify the textual elements of the
    native filesystem directories and revision files. */
 
@@ -434,6 +438,10 @@ svn_fs_fs__youngest_rev(svn_revnum_t *youngest_p,
   return SVN_NO_ERROR;
 }
 
+/* HEADER_CPATH lines need to be long enough to hold FSFS_MAX_PATH_LEN
+ * bytes plus the stuff around them. */
+#define MAX_HEADERS_STR_LEN FSFS_MAX_PATH_LEN + sizeof(HEADER_CPATH ": \n") - 1
+
 /* Given a revision file FILE that has been pre-positioned at the
    beginning of a Node-Rev header block, read in that header block and
    store it in the apr_hash_t HEADERS.  All allocations will be from
@@ -446,7 +454,7 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
   
   while (1)
     {
-      char header_str[1024];
+      char header_str[MAX_HEADERS_STR_LEN];
       const char *name, *value;
       apr_size_t i = 0, header_len;
       apr_size_t limit;
@@ -471,7 +479,7 @@ static svn_error_t * read_header_block(apr_hash_t **headers,
       
       /* Create a 'name' string and point to it. */
       header_str[i] = '\0';
-      name=header_str;
+      name = header_str;
 
       /* Skip over the NULL byte and the space following it. */
       i += 2;
@@ -2138,6 +2146,9 @@ fold_change(apr_hash_t *changes,
   return SVN_NO_ERROR;
 }
 
+/* The 256 is an arbitrary size large enough to hold the node id and the
+ * various flags. */
+#define MAX_CHANGE_LINE_LEN FSFS_MAX_PATH_LEN + 256
 
 /* Read the next entry in the changes record from file FILE and store
    the resulting change in *CHANGE_P.  If there is no next record,
@@ -2147,7 +2158,7 @@ read_change(change_t **change_p,
             apr_file_t *file,
             apr_pool_t *pool)
 {
-  char buf[4096];
+  char buf[MAX_CHANGE_LINE_LEN];
   apr_size_t len = sizeof(buf);
   change_t *change;
   char *str, *last_str;
@@ -2774,9 +2785,9 @@ unparse_dir_entry(svn_node_kind_t kind, const svn_fs_id_t *id,
 }
 
 /* Given a hash ENTRIES of dirent structions, return a hash in
- *STR_ENTRIES_P, that has svn_string_t as the values in the format
- specified by the fs_fs directory contents file.  Perform
- allocations in POOL. */
+   *STR_ENTRIES_P, that has svn_string_t as the values in the format
+   specified by the fs_fs directory contents file.  Perform
+   allocations in POOL. */
 static svn_error_t *
 unparse_dir_entries(apr_hash_t **str_entries_p,
                     apr_hash_t *entries,
@@ -2932,7 +2943,7 @@ write_change_entry(apr_file_t *file,
   if (change->node_rev_id)
     idstr = svn_fs_fs__id_unparse(change->node_rev_id, pool)->data;
   else
-      idstr = ACTION_RESET;
+    idstr = ACTION_RESET;
   
   buf = apr_psprintf(pool, "%s %s %s %s %s\n",
                      idstr, change_string,
@@ -3168,9 +3179,9 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 
   /* Prepare to write the svndiff data. */
   if (ffd->format >= SVN_FS_FS__MIN_SVNDIFF1_FORMAT)
-    svn_txdelta_to_svndiff2(b->rep_stream, pool, &wh, &whb, 1);
+    svn_txdelta_to_svndiff2(&wh, &whb, b->rep_stream, 1, pool);
   else
-    svn_txdelta_to_svndiff2(b->rep_stream, pool, &wh, &whb, 0);
+    svn_txdelta_to_svndiff2(&wh, &whb, b->rep_stream, 0, pool);
 
   b->delta_stream = svn_txdelta_target_push(wh, whb, source, b->pool);
       
@@ -3218,6 +3229,7 @@ rep_write_contents_close(void *baton)
   SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev,
                                        b->pool));
 
+  SVN_ERR(svn_io_file_close(b->file, b->pool));
   svn_pool_destroy(b->pool);
 
   return SVN_NO_ERROR;
@@ -4105,8 +4117,8 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_io_file_create(path_lock(fs, pool), "", pool));
   SVN_ERR(svn_fs_fs__set_uuid(fs, svn_uuid_generate(pool), pool));
 
-  /* See if we had an explicitly requested no svndiff1.  */
-  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_NO_SVNDIFF1,
+  /* See if we had an explicitly requested pre 1.4 compatible.  */
+  if (fs->config && apr_hash_get(fs->config, SVN_FS_CONFIG_PRE_1_4_COMPATIBLE,
                                  APR_HASH_KEY_STRING))
     format = 1;
   

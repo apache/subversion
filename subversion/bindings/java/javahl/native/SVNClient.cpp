@@ -2749,7 +2749,18 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
 
 void SVNClient::setConfigDirectory(const char *configDir)
 {
-    m_configDir = configDir;
+    // A change to the config directory may necessitate creation of
+    // the config templates.
+    Pool requestPool;
+    svn_error_t *err = svn_config_ensure(configDir, requestPool.pool());
+    if (err)
+    {
+	JNIUtil::handleSVNError(err);
+    }
+    else
+    {
+        m_configDir = (configDir == NULL ? "" : configDir);
+    }
 }
 
 const char * SVNClient::getConfigDirectory()

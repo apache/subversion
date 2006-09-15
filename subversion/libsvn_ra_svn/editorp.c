@@ -2,7 +2,7 @@
  * editorp.c :  Pipelined variation of the ra_svn editor
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -71,6 +71,7 @@ typedef struct {
   apr_pool_t *pool;
   apr_pool_t *file_pool;
   int file_refs;
+  svn_boolean_t for_replay;
 } ra_svn_driver_state_t;
 
 /* Works for both directories and files; however, the pool handling is
@@ -216,6 +217,22 @@ static svn_error_t *ra_svn_close_dir(void *dir_baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *ra_svn_absent_dir(const char *path,
+                                      void *parent_baton, apr_pool_t *pool)
+{
+  ra_svn_baton_t *b = parent_baton;
+
+  /* Avoid sending an unknown command if the other end doesn't support
+     absent-dir. */
+  if (! svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_ABSENT_ENTRIES))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(check_for_error(b->eb, pool));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "absent-dir", "cc", path,
+                               b->token));
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *ra_svn_add_file(const char *path,
                                     void *parent_baton,
                                     const char *copy_path,
@@ -295,9 +312,9 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
   svn_stream_set_write(diff_stream, ra_svn_svndiff_handler);
   svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
   if (svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_SVNDIFF1))
-    svn_txdelta_to_svndiff2(diff_stream, pool, wh, wh_baton, 1);
+    svn_txdelta_to_svndiff2(wh, wh_baton, diff_stream, 1, pool);
   else
-    svn_txdelta_to_svndiff2(diff_stream, pool, wh, wh_baton, 0);
+    svn_txdelta_to_svndiff2(wh, wh_baton, diff_stream, 0, pool);
   return SVN_NO_ERROR;
 }
   
@@ -323,6 +340,22 @@ static svn_error_t *ra_svn_close_file(void *file_baton,
   SVN_ERR(check_for_error(b->eb, pool));
   SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "close-file", "c(?c)",
                                b->token, text_checksum));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *ra_svn_absent_file(const char *path,
+                                       void *parent_baton, apr_pool_t *pool)
+{
+  ra_svn_baton_t *b = parent_baton;
+
+  /* Avoid sending an unknown command if the other end doesn't support
+     absent-file. */
+  if (! svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_ABSENT_ENTRIES))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(check_for_error(b->eb, pool));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "absent-file", "cc", path,
+                               b->token));
   return SVN_NO_ERROR;
 }
 
@@ -379,11 +412,13 @@ void svn_ra_svn__get_editorp(const svn_delta_editor_t **editor,
   ra_svn_editor->open_directory = ra_svn_open_dir;
   ra_svn_editor->change_dir_prop = ra_svn_change_dir_prop;
   ra_svn_editor->close_directory = ra_svn_close_dir;
+  ra_svn_editor->absent_directory = ra_svn_absent_dir;
   ra_svn_editor->add_file = ra_svn_add_file;
   ra_svn_editor->open_file = ra_svn_open_file;
   ra_svn_editor->apply_textdelta = ra_svn_apply_textdelta;
   ra_svn_editor->change_file_prop = ra_svn_change_file_prop;
   ra_svn_editor->close_file = ra_svn_close_file;
+  ra_svn_editor->absent_file = ra_svn_absent_file;
   ra_svn_editor->close_edit = ra_svn_close_edit;
   ra_svn_editor->abort_edit = ra_svn_abort_edit;
 
@@ -550,6 +585,24 @@ static svn_error_t *ra_svn_handle_close_dir(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *ra_svn_handle_absent_dir(svn_ra_svn_conn_t *conn,
+                                             apr_pool_t *pool,
+                                             apr_array_header_t *params,
+                                             ra_svn_driver_state_t *ds)
+{
+  const char *path;
+  const char *token;
+  ra_svn_token_entry_t *entry;
+
+  /* Parse parameters and look up the directory token. */
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc", &path, &token));
+  SVN_ERR(lookup_token(ds, token, FALSE, &entry));
+
+  /* Call the editor. */
+  SVN_CMD_ERR(ds->editor->absent_directory(path, entry->baton, pool));
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *ra_svn_handle_add_file(svn_ra_svn_conn_t *conn,
                                            apr_pool_t *pool,
                                            apr_array_header_t *params,
@@ -694,6 +747,24 @@ static svn_error_t *ra_svn_handle_close_file(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *ra_svn_handle_absent_file(svn_ra_svn_conn_t *conn,
+                                              apr_pool_t *pool,
+                                              apr_array_header_t *params,
+                                              ra_svn_driver_state_t *ds)
+{
+  const char *path;
+  const char *token;
+  ra_svn_token_entry_t *entry;
+
+  /* Parse parameters and look up the parent directory token. */
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cc", &path, &token));
+  SVN_ERR(lookup_token(ds, token, FALSE, &entry));
+
+  /* Call the editor. */
+  SVN_CMD_ERR(ds->editor->absent_file(path, entry->baton, pool));
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *ra_svn_handle_close_edit(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool,
                                              apr_array_header_t *params,
@@ -718,6 +789,21 @@ static svn_error_t *ra_svn_handle_abort_edit(svn_ra_svn_conn_t *conn,
   return svn_ra_svn_write_cmd_response(conn, pool, "");
 }
 
+static svn_error_t *ra_svn_handle_finish_replay(svn_ra_svn_conn_t *conn,
+                                                apr_pool_t *pool,
+                                                apr_array_header_t *params,
+                                                ra_svn_driver_state_t *ds)
+{
+  if (!ds->for_replay)
+    return svn_error_createf
+      (SVN_ERR_RA_SVN_UNKNOWN_CMD, NULL,
+       _("Command 'finish-replay' invalid outside of replays"));
+  ds->done = TRUE;
+  if (ds->aborted)
+    *ds->aborted = FALSE;
+  return SVN_NO_ERROR;
+}
+
 static const struct {
   const char *cmd;
   svn_error_t *(*handler)(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -731,6 +817,7 @@ static const struct {
   { "open-dir",         ra_svn_handle_open_dir },
   { "change-dir-prop",  ra_svn_handle_change_dir_prop },
   { "close-dir",        ra_svn_handle_close_dir },
+  { "absent-dir",       ra_svn_handle_absent_dir },
   { "add-file",         ra_svn_handle_add_file },
   { "open-file",        ra_svn_handle_open_file },
   { "apply-textdelta",  ra_svn_handle_apply_textdelta },
@@ -738,8 +825,10 @@ static const struct {
   { "textdelta-end",    ra_svn_handle_textdelta_end },
   { "change-file-prop", ra_svn_handle_change_file_prop },
   { "close-file",       ra_svn_handle_close_file },
+  { "absent-file",      ra_svn_handle_absent_file },
   { "close-edit",       ra_svn_handle_close_edit },
   { "abort-edit",       ra_svn_handle_abort_edit },
+  { "finish-replay",    ra_svn_handle_finish_replay },
   { NULL }
 };
 
@@ -765,7 +854,8 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool,
                                        const svn_delta_editor_t *editor,
                                        void *edit_baton,
-                                       svn_boolean_t *aborted)
+                                       svn_boolean_t *aborted,
+                                       svn_boolean_t for_replay)
 {
   ra_svn_driver_state_t state;
   apr_pool_t *subpool = svn_pool_create(pool);
@@ -782,6 +872,7 @@ svn_error_t *svn_ra_svn__drive_editorp(svn_ra_svn_conn_t *conn,
   state.pool = pool;
   state.file_pool = svn_pool_create(pool);
   state.file_refs = 0;
+  state.for_replay = for_replay;
 
   while (!state.done)
     {

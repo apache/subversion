@@ -458,7 +458,7 @@ svn_error_t *svn_subst_translate_string(svn_string_t **new_value,
  */
 svn_error_t *svn_subst_detranslate_string(svn_string_t **new_value,
                                           const svn_string_t *value,
-                                          svn_boolean_t for_stdout,
+                                          svn_boolean_t for_output,
                                           apr_pool_t *pool);
 
 

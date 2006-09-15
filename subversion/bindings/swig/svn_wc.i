@@ -1,8 +1,6 @@
 /*
- * svn_wc.i :  SWIG interface file for svn_wc.h
- *
  * ====================================================================
- * Copyright (c) 2000-2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,23 +12,20 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_wc.i: SWIG interface file for svn_wc.h
  */
 
-#if defined(SWIGPERL)
+#if defined(SWIGPYTHON)
+%module(package="libsvn") wc
+#elif defined(SWIGPERL)
 %module "SVN::_Wc"
 #elif defined(SWIGRUBY)
 %module "svn::ext::wc"
-#else
-%module wc
 #endif
 
-%include typemaps.i
-
 %include svn_global.swg
-%import apr.swg
 %import core.i
-%import svn_types.swg
-%import svn_string.swg
 %import svn_delta.i
 %import svn_ra.i
 
@@ -46,32 +41,6 @@
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
-
-%apply SWIGTYPE **OUTPARAM {
-    svn_wc_entry_t **,
-    svn_wc_adm_access_t **,
-    svn_wc_status_t **,
-    svn_wc_status2_t **,
-    svn_wc_revision_status_t **
-};
-
-/*
-   svn_wc_check_wc(wc_format)
-   svn_wc_merge(wc_format)
-*/
-%apply int *OUTPUT {
-  int *,
-  enum svn_wc_merge_outcome_t *
-};
-
-/*
-   svn_wc_prop_list()
-   svn_wc_get_prop_diffs()
-*/
-%apply apr_hash_t **PROPHASH {
-  apr_hash_t **props,
-  apr_hash_t **original_props
-};
 
 /* svn_wc_get_prop_diffs() */
 %apply apr_array_header_t **OUTPUT_OF_PROP {
@@ -97,271 +66,62 @@
     const char *trail_url
 }
 
-/* svn_wc_transmit_text_deltas2() */
-%apply (const svn_delta_editor_t *EDITOR, void *BATON)
-{
-  (const svn_delta_editor_t *editor, void *file_baton),
-  (const svn_delta_editor_t *editor, void *baton)
-}
 
-
-%apply const char **OUTPUT { char **url };
-
-
-/* -----------------------------------------------------------------------
-   apr_hash_t ** <const char *, const svn_wc_entry_t *>
-   svn_wc_entries_read()
-*/
+%hash_argout_typemap(entries, svn_wc_entry_t *)
+%hash_argout_typemap(externals_p, svn_wc_external_item_t *)
 
 #ifdef SWIGPYTHON
-%typemap(in, numinputs=0) apr_hash_t **entries = apr_hash_t **OUTPUT;
-%typemap(argout, fragment="t_output_helper") apr_hash_t **entries {
-    $result = t_output_helper(
-        $result,
-        svn_swig_py_convert_hash(*$1, $descriptor(svn_wc_entry_t *),
-          _global_svn_swig_py_pool));
-}
+%callback_typemap(svn_wc_notify_func_t notify_func, void *notify_baton,
+                  svn_swig_py_notify_func,
+                  ,
+                  )
+#endif
+
+#ifndef SWIGPERL
+%callback_typemap(svn_wc_notify_func2_t notify_func, void *notify_baton,
+                  svn_swig_py_notify_func2,
+                  ,
+                  svn_swig_rb_notify_func2)
 #endif
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **entries = apr_hash_t **OUTPUT;
-%typemap(argout, fragment="output_helper") apr_hash_t **entries
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_swig_type
-                            (*$1, "svn_wc_entry_t *"));
-}
+%callback_typemap(const svn_wc_entry_callbacks_t *walk_callbacks,
+                  void *walk_baton,
+                  ,
+                  ,
+                  svn_swig_rb_wc_entry_callbacks())
 #endif
 
-/* -----------------------------------------------------------------------
-   apr_hash_t **externals_old
-   apr_hash_t **externals_new
-   svn_wc_edited_externals()
-*/
+#ifndef SWIGRUBY
+%callback_typemap(svn_wc_status_func_t status_func, void *status_baton,
+                  svn_swig_py_status_func,
+                  svn_swig_pl_status_func,
+                  )
+#endif
 
 #ifdef SWIGRUBY
-%typemap(in, numinputs=0) apr_hash_t **externals_old = apr_hash_t **OUTPUT;
-%typemap(argout, fragment="output_helper") apr_hash_t **externals_old
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_hash_to_hash_string(*$1));
-}
+%callback_typemap(svn_wc_status_func2_t status_func, void *status_baton,
+                  ,
+                  ,
+                  svn_swig_rb_wc_status_func)
 
-%typemap(in, numinputs=0) apr_hash_t **externals_new = apr_hash_t **externals_old;
-%typemap(argout, fragment="output_helper") apr_hash_t **externals_new = apr_hash_t **externals_old;
-#endif
+%callback_typemap(const svn_wc_diff_callbacks2_t *callbacks,
+                  void *callback_baton,
+                  ,
+                  ,
+                  svn_swig_rb_wc_diff_callbacks2())
 
-
-/* -----------------------------------------------------------------------
-   apr_array_header_t **externals_p
-   svn_wc_parse_externals_description2()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in, numinputs=0)
-     apr_array_header_t **externals_p (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
-%typemap(argout, fragment="output_helper")
-     apr_array_header_t **externals_p
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_array_to_array_external_item(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   apr_array_header_t **patterns
-   svn_wc_get_default_ignores()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in, numinputs=0)
-     apr_array_header_t **patterns (apr_array_header_t *temp)
-{
-  $1 = &temp;
-}
-%typemap(argout, fragment="output_helper")
-     apr_array_header_t **patterns
-{
-  $result = output_helper($result,
-                          svn_swig_rb_apr_array_to_array_string(*$1));
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   apr_array_header_t *wcprop_changes
-   svn_wc_process_committed2()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *wcprop_changes
-{
-  VALUE rb_pool;
-  apr_pool_t *pool;
-
-  svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
-        
-  $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   apr_array_header_t *propchanges
-   svn_wc_merge_props()
-*/
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *propchanges
-{
-  VALUE rb_pool;
-  apr_pool_t *pool;
-
-  svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
-        
-  $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   apr_array_header_t *merge_options
-   svn_wc_merge2()
-*/
-#ifdef SWIGRUBY
-%typemap(in) apr_array_header_t *merge_options
-{
-  if (NIL_P($input)) {
-    $1 = NULL;
-  } else {
-    VALUE rb_pool;
-    apr_pool_t *pool;
-
-    svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
-    $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
-  }
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_notify_func_t
-   svn_client_ctx_t
-   svn_wc many
-*/
-
-#ifdef SWIGPYTHON
-%typemap(in) (svn_wc_notify_func_t notify_func, void *notify_baton) {
-  $1 = svn_swig_py_notify_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_notify_func2_t
-   svn_client_ctx_t
-   svn_wc many
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_wc_notify_func2_t notify_func, void *notify_baton)
-{
-  $1 = svn_swig_rb_notify_func2;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_entry_callbacks_t
-   svn_wc_walk_entries2()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (const svn_wc_entry_callbacks_t *walk_callbacks,
-                    void *walk_baton)
-{
-  $1 = svn_swig_rb_wc_entry_callbacks();
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_status_func_t
-   svn_client_status()
-   svn_wc_get_status_editor()
-*/
-
-#ifdef SWIGPYTHON
-%typemap(in) (svn_wc_status_func_t status_func, void *status_baton) {
-  $1 = svn_swig_py_status_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
-#ifdef SWIGPERL
-%typemap(in) (svn_wc_status_func_t status_func, void *status_baton) {
-  $1 = svn_swig_pl_status_func;
-  $2 = $input; /* our function is the baton. */
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_status_func2_t
-   svn_client_status2()
-   svn_wc_get_status_editor2()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_wc_status_func2_t status_func,
-                    void *status_baton)
-{
-  $1 = svn_swig_rb_wc_status_func;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_callbacks2_t
-   svn_wc_get_diff_editor3()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (const svn_wc_diff_callbacks2_t *callbacks,
-                    void *callback_baton)
-{
-  $1 = svn_swig_rb_wc_diff_callbacks2();
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
-#endif
-
-/* -----------------------------------------------------------------------
-   Callback: svn_wc_relocation_validator2_t
-   svn_wc_relocate2()
-*/
-
-#ifdef SWIGRUBY
-%typemap(in) (svn_wc_relocation_validator2_t validator,
-                    void *validator_baton)
-{
-  $1 = svn_swig_rb_wc_relocation_validator2;
-  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
-}
+%callback_typemap(svn_wc_relocation_validator2_t validator,
+                  void *validator_baton,
+                  ,
+                  ,
+                  svn_swig_rb_wc_relocation_validator2)
 #endif
 
 /* ----------------------------------------------------------------------- */
 
 %{
 #include "svn_md5.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGPERL
-#include "swigutil_pl.h"
-#endif
-
-#ifdef SWIGRUBY
-#include "swigutil_rb.h"
-#endif
 %}
 
 %include svn_wc_h.swg

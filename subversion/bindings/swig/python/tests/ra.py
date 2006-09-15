@@ -1,12 +1,11 @@
-import unittest, os
+import unittest, os, setup_path
 
 from svn import core, repos, fs, delta, client, ra
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH
-from urllib import pathname2url
+  REPOS_PATH, REPOS_URL
 
-class SubversionRepositoryTestCase(unittest.TestCase):
+class SubversionRepositoryAccessTestCase(unittest.TestCase):
   """Test cases for the Subversion repository layer"""
 
   def setUp(self):
@@ -14,19 +13,17 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
     ra.initialize()
 
-    self.repos_url = "file://" + pathname2url(REPOS_PATH)
-    
     # Open repository directly for cross-checking
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
 
     callbacks = ra.callbacks2_t()
 
-    self.ra_ctx = ra.open2(self.repos_url, callbacks, None, None)
+    self.ra_ctx = ra.open2(REPOS_URL, callbacks, None, None)
 
   def test_get_repos_root(self):
     root = ra.get_repos_root(self.ra_ctx)
-    self.assertEqual(root,self.repos_url)
+    self.assertEqual(root,REPOS_URL)
 
   def test_get_uuid(self):
     ra_uuid = ra.get_uuid(self.ra_ctx)
@@ -40,14 +37,14 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
   def test_get_dir2(self):
     (dirents,_,props) = ra.get_dir2(self.ra_ctx, '', 1, core.SVN_DIRENT_KIND)
-    self.assertTrue(dirents.has_key('trunk'))
-    self.assertTrue(dirents.has_key('branches'))
-    self.assertTrue(dirents.has_key('tags'))
+    self.assert_(dirents.has_key('trunk'))
+    self.assert_(dirents.has_key('branches'))
+    self.assert_(dirents.has_key('tags'))
     self.assertEqual(dirents['trunk'].kind, core.svn_node_dir)
     self.assertEqual(dirents['branches'].kind, core.svn_node_dir)
     self.assertEqual(dirents['tags'].kind, core.svn_node_dir)
-    self.assertTrue(props.has_key(core.SVN_PROP_ENTRY_UUID))
-    self.assertTrue(props.has_key(core.SVN_PROP_ENTRY_LAST_AUTHOR))
+    self.assert_(props.has_key(core.SVN_PROP_ENTRY_UUID))
+    self.assert_(props.has_key(core.SVN_PROP_ENTRY_LAST_AUTHOR))
 
     (dirents,_,_) = ra.get_dir2(self.ra_ctx, 'trunk', 1, core.SVN_DIRENT_KIND)
 
@@ -55,17 +52,56 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
     (dirents,_,_) = ra.get_dir2(self.ra_ctx, 'trunk', 10, core.SVN_DIRENT_KIND)
 
-    self.assertTrue(dirents.has_key('README2.txt'))
+    self.assert_(dirents.has_key('README2.txt'))
     self.assertEqual(dirents['README2.txt'].kind,core.svn_node_file)
 
-  def test_commit(self):
+  def test_commit2(self):
     def my_callback(info, pool):
         self.assertEqual(info.revision, fs.youngest_rev(self.fs))
 
     editor, edit_baton = ra.get_commit_editor2(self.ra_ctx, "foobar", my_callback, None, False)
-    root = delta.editor_invoke_open_root(editor, edit_baton, 4)
-    child = delta.editor_invoke_add_directory(editor, "bla", root, None, 0)
-    delta.editor_invoke_close_edit(editor, edit_baton)
+    root = editor.open_root(edit_baton, 4)
+    self.assertNotEqual(root, None)
+    child = editor.add_directory("bla", root, None, 0)
+    self.assertNotEqual(child, None)
+    editor.close_edit(edit_baton)
+
+  def test_commit(self):
+    def my_callback(revision, date, author):
+        self.assertEqual(revision, fs.youngest_rev(self.fs))
+
+    editor, edit_baton = ra.get_commit_editor(self.ra_ctx, "foobar", my_callback, None, False)
+    root = editor.open_root(edit_baton, 4)
+    child = editor.add_directory("blah", root, None, 0)
+    editor.close_edit(edit_baton)
+
+  def test_get_locations(self):
+    locations = ra.get_locations(self.ra_ctx, "/trunk/README.txt", 2, range(1,5))
+    self.assertEqual(locations, {
+        2: '/trunk/README.txt', 
+        3: '/trunk/README.txt', 
+        4: '/trunk/README.txt'})
+
+  def test_get_file_revs(self):
+    def rev_handler(path, rev, rev_props, prop_diffs, pool):
+        self.assert_(rev == 2 or rev == 3)
+        self.assertEqual(path, "/trunk/README.txt")
+        if rev == 2:
+            self.assertEqual(rev_props, {
+              'svn:log': 'Added README.',
+              'svn:author': 'john',
+              'svn:date': '2005-04-01T13:12:18.216267Z'
+            })
+            self.assertEqual(prop_diffs, {})
+        elif rev == 3:
+            self.assertEqual(rev_props, {
+              'svn:log': 'Fixed README.\n',
+              'svn:author': 'kate',
+              'svn:date': '2005-04-01T13:24:58.234643Z'
+            })
+            self.assertEqual(prop_diffs, {'svn:mime-type': 'text/plain', 'svn:eol-style': 'native'})
+
+    ra.get_file_revs(self.ra_ctx, "trunk/README.txt", 0, 10, rev_handler)
 
   def test_update(self):
     class TestEditor(delta.Editor):
@@ -77,12 +113,12 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     
     reporter, reporter_baton = ra.do_update(self.ra_ctx, 10, "", True, e_ptr, e_baton)
 
-    ra.reporter2_invoke_set_path(reporter, reporter_baton, "", 0, True, None)
+    reporter.set_path(reporter_baton, "", 0, True, None)
 
-    ra.reporter2_invoke_finish_report(reporter, reporter_baton)
+    reporter.finish_report(reporter_baton)
 
 def suite():
-    return unittest.makeSuite(SubversionRepositoryTestCase, 'test',
+    return unittest.makeSuite(SubversionRepositoryAccessTestCase, 'test',
                               suiteClass=SubversionRepositoryTestSetup)
 
 if __name__ == '__main__':

@@ -181,7 +181,7 @@ void svn_xml_free_parser(svn_xml_parser_t *svn_parser);
  * If an error is returned, the @c svn_xml_parser_t will have been freed
  * automatically, so the caller should not call svn_xml_free_parser().
  */ 
-svn_error_t *svn_xml_parse(svn_xml_parser_t *parser,
+svn_error_t *svn_xml_parse(svn_xml_parser_t *svn_parser,
                            const char *buf,
                            apr_size_t len,
                            svn_boolean_t is_final);

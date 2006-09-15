@@ -17,7 +17,7 @@
 
 import re
 import string
-import os.path
+import os
 
 import main  # the general svntest routines in this module.
 from svntest import Failure
@@ -157,19 +157,16 @@ class SVNTreeNode:
 # TODO: Check to make sure contents and children are mutually exclusive
 
   def add_child(self, newchild):
+    child_already_exists = 0
     if self.children is None:  # if you're a file,
       self.children = []     # become an empty dir.
-    child_already_exists = 0
-    for a in self.children:
-      if a.name == newchild.name:
-        child_already_exists = 1
-        break
-    if child_already_exists == 0:
-      self.children.append(newchild)
-      newchild.path = os.path.join (self.path, newchild.name)
-
-    # If you already have the node,
     else:
+      for a in self.children:
+        if a.name == newchild.name:
+          child_already_exists = 1
+          break
+
+    if child_already_exists:
       if newchild.children is None:
         # this is the 'end' of the chain, so copy any content here.
         a.contents = newchild.contents
@@ -180,6 +177,9 @@ class SVNTreeNode:
         # try to add dangling children to your matching node
         for i in newchild.children:
           a.add_child(i)
+    else:
+      self.children.append(newchild)
+      newchild.path = os.path.join(self.path, newchild.name)
 
 
   def pprint(self):
@@ -402,6 +402,22 @@ def default_singleton_handler_b(b, baton):
   b.pprint()
   raise SVNTreeUnequal
 
+# A test helper function implementing the singleton_handler_a API.
+def detect_conflict_files(node, extra_files):
+  """NODE has been discovered, an extra file on disk.  Verify that it
+  matches one of the regular expressions in the EXTRA_FILES list.  If
+  it matches, remove the match from the list.  If it doesn't match,
+  raise an exception."""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
+      break
+  else:
+    print "Found unexpected disk object:", node.name
+    node.pprint()
+    raise SVNTreeUnequal
 
 ###########################################################################
 ###########################################################################
@@ -431,7 +447,7 @@ def compare_trees(a, b,
   def display_nodes(a, b):
     'Display two nodes, expected and actual.'
     print "============================================================="
-    print "Expected", b.name, "and actual", a.name, "are different!"
+    print "Expected '%s' and actual '%s' are different!" % (b.name, a.name)
     print "============================================================="
     print "EXPECTED NODE TO BE:"
     print "============================================================="
@@ -493,13 +509,9 @@ def compare_trees(a, b,
     print "Error: unequal number of children"
     raise SVNTreeUnequal
   except SVNTreeUnequal:
-    if a.name == root_node_name:
-      raise SVNTreeUnequal
-    else:
+    if a.name != root_node_name:
       print "Unequal at node %s" % a.name
-      raise SVNTreeUnequal
-
-
+    raise
 
 
 
@@ -573,7 +585,7 @@ def build_tree_from_checkout(lines):
   "Return a tree derived by parsing the output LINES from 'co' or 'up'."
 
   root = SVNTreeNode(root_node_name)
-  rm1 = re.compile ('^([MAGCUD_ ][MAGCUD_ ])([B ])\s+(.+)')
+  rm1 = re.compile ('^([MAGCUDE_ ][MAGCUDE_ ])([B ])\s+(.+)')
   # There may be other verbs we need to match, in addition to
   # "Restored".  If so, add them as alternatives in the first match
   # group below.
@@ -746,9 +758,12 @@ def build_tree_from_wc(wc_path, load_props=0, ignore_svn=1):
 
     root = SVNTreeNode(root_node_name, None)
 
-    # if necessary, store the root dir's props in the root node.
+    # if necessary, store the root dir's props in a new child node '.'.
     if load_props:
-      root.props = get_props(wc_path)
+      props = get_props(wc_path)
+      if props:
+        root_dir_node = SVNTreeNode(os.path.basename('.'), None, None, props)
+        root.add_child(root_dir_node)
 
     # Walk the tree recursively
     handle_dir(os.path.normpath(wc_path), root, load_props, ignore_svn)

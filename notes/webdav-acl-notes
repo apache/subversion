@@ -3,9 +3,7 @@ should start to identify how Subversion can implement the requisite
 functionality to become compliant.  Note that some of these items may
 require work in Apache HTTP Server and/or its included mod_dav to succeed.
 
-Current WebDAV ACL draft:
-
-http://www.webdav.org/acl/protocol/draft-ietf-webdav-acl-09.htm
+RFC 3744: http://www.ietf.org/rfc/rfc3744.txt
 
 ===Open questions===
 
@@ -25,9 +23,17 @@ Brane: Agreed. This is very similar to the NTFS inheritance model (no
        surprise there :-) I'd add the restriction that ACLs and ACEs
        can only be inherited from "..", i.e., not from anywhere
        in the repos.
+Wilfredo: Note that there is no way in the protocol to specify inheritance.
+          That is, you can't say (over DAV), "this should inherit from that",
+          So any policy set by the server would have to be one everyone can
+          live with, unless you want to add an extension to provide a way to
+          communicate a policy change to the server.
+Wilfredo: Note also that if you have a resource that inherits from another, and
+          the latter is deleted, you've got to do some cleanup on the server.
+          This can be avoided if you only allow inheritance from a parent.
 
 * Should ACLs themselves be versioned?
-Justin: See above, yes, I think they should.  (Those that aren't derived.)
+Justin: See above, yes, I think they should.  (Those that aren't derived.)
 
 * What sub/superset of WebDAV privileges should Subversion have, and how
   should they map to WebDAV's privilege model?
@@ -36,13 +42,38 @@ Brane: We should at least have a create-child privilege (subsumed in DAV:write,
        so that tags can be created there, but not modified (e.g.,
        set DAV:read and SVN:create-child on the dir, and make all ACLs
        inherited by default (unless overriden))
+Wilfredo: Use DAV:bind for "create child".
+          Again, configurable inheritance will require an extension element
+          (eg. SVN:inherit) in ACL requests.
+Wilfredo: DAV does not require any specific privileges, but does define a few
+          that are useful.  You can also mark some as "abstract", which means
+          they can not be set/unset independently, and a privilege may aggregate
+          others.  Here's the full set defined by DAV, in the hierarchy I used
+          in Twisted:
+          
+          - DAV:all
+            - DAV:read
+            - DAV:write
+              - DAV:write-properties
+              - DAV:write-content
+            - DAV:bind
+            - DAV:unbind
+            - DAV:read-acl
+            - DAV:write-acl
+            - DAV:read-current-user-privilege-set
 
 * What other types of access control mechanisms are we going to require?
 Justin: Bill has mentioned that we might want to control who can change
         the log.  Indeed, there seems to be a separate class of repository
         specific attributes.  Could we key them off of the Subversion root?
         These would seem to be an extension of the WebDAV ACL model, but
-        necessary ones for uses.
+        necessary ones for uses.
+Wilfredo: You can support specific ACEs on the root resource and not allow them
+          on the rest, so you could, for example, have SVN:rewrite-log under
+          DAV:write-properties on the root resource to globally control log
+          edits.  Or (perhaps less confusing for clients), expose it on all
+          resources, but require that it be inherited from the root by all
+          others.
 
 * What are the real semantics of DAV:owner?  Could it be the person who
   create this file?  The site admin?  What?
@@ -52,14 +83,24 @@ Brane: The owner=creator variant seems most common, although on Windows
        of the enclosing composite entity (directory, that is).
        This makes sense in a role-based authz system, which is
        probably the way Subversion wants to go...
+Wilfredo: DAV:owner and DAV:group are useful if you are using a UNIX-style
+          backing store for permissions.  I would suggest that we not use
+          either of these and simply grant DAV:all to the *list* of principals
+          who you consider to be owners.  I think the UNIX owner model is
+          unnecessarily limiting you to one owner.
+          That is, I think that copying or inheriting ACEs from the containing
+          collection is more appropriate.
 
 * What to do about inherited and protected ACEs on MOVEs? (up to impl.)
+Wilfredo: See my note above under "inheritance model" re: dangling inheritance
+          references.
 
 * What ACLs would be required for deletion?  (up to impl.)
 Brane: There are three options: DAV:write on containing directory (that's
        the Unix way, and consistent with our directory structuring),
        DAV:write on the object (that's close to the Windows way),
        or DAV:owner on the object.
+Wilfredo: DAV:unbind on the parent.
 
 * Can the repository structure be itself unchanged with only modifications
   contained within ra_dav and mod_dav_svn?
@@ -87,6 +128,15 @@ Brane: Agreed. But note that there must be a mapping between WebDAV
        for generating sane ACLs, yet the FS must also know the actual
        user. It seems that a user->list-of-groups mapping has to be
        available to the FS somehow.
+Wilfredo: Note also that DAV principals must be exposed as HTTP resources as
+          well; a principal collection is going to want to live somewhere in
+          the repository namespace unless there's a way to put it somewhere
+          else on the HTTP server.
+          On the other hand, if you are parking a repository on a server which
+          also has non-svn DAV resources, there probably should be a way to
+          share the principals, which implies they should be managed by mod_dav,
+          not (necessarily) in the FS layer.  Maybe this sort of sharing isn't
+          that important, though.
 
 * Given Subversion does not know about users, what sorts of ACLs could be
   placed on other non-DAV access to the repository (say ra_local)? 
@@ -141,7 +191,11 @@ Privileges:
   - Controls: PROPPATCH.
   - Modify dead properties, but (optionally) live ones
 - DAV:write-content
-  - Controls: PUT/DELETE
+  - Controls: PUT (for existing resource)
+- DAV:bind
+  - Controls: PUT (for new resource)
+- DAV:unbind
+  - Controls: DELETE
 - DAV:unlock
   - Controls: UNLOCK
 - DAV:read-acl
@@ -178,9 +232,6 @@ ACL properties:
   - Computed effective access for current principal
 - DAV:acl
   - Collection of ACEs (see below)
-- DAV:acl-semantics
-  - Protected
-  - Describes current behavior of implementing access checks
 - DAV:inherited-acl-set
   - Indicates which entities that this ACL inherits from
 - DAV:principal-collection-set
@@ -191,41 +242,37 @@ ACE properties:
   - Invert
   - DAV:principal
     - href to a principal URL
-    - DAV:All
+    - DAV:all
       - All users
-    - DAV:Authenticated
-    - DAV:Unauthenticated
-    - DAV:Property
+    - DAV:authenticated
+    - DAV:unauthenticated
+    - DAV:property
       - If specified property value matches what we know, success.
-        - DAV:Owner matching (?)
-    - DAV:Self
+        - DAV:owner matching (?)
+    - DAV:self
       - Only for principal URLs if authenticated as that principal
   - grant or deny privilege:
     - See above for ACE privileges
   - DAV:protected
     - Any attempt to remove this MUST fail
-  - DAV:inherited
+  - DAV:inherited-acl-set
     - This ACE comes from resource in href
  
-ACE combinations:
-- Describes how ACEs are evaluated
-- DAV:first-match
-- DAV:all-grant-before-any-deny
-- DAV:specific-deny-overrides-grant
-  
 ACE ordering:
 - DAV:deny-before-grant
 
 Allowed ACE:
-- DAV:principal-only-one-ace
-  - A principal may only appearing in one ACE per ACL
 - DAV:grant-only
+  - Deny ACEs are not supported
 - DAV:no-invert
+  - DAV:invert is not supported
 
 Required principals
 - DAV:required-principal
   - Defines that a principal must be defined for this property ACE
     - Usually for DAV:owner (?)
+  - This is mentioned but its usage is not defined in the RFC.  I think it
+    was meant to be removed... -wsanchez
 
 DAV methods changes:
 - OPTIONS

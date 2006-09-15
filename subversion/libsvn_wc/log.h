@@ -98,6 +98,19 @@ svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
                    apr_pool_t *pool);
 
 
+/* Extend **LOG_ACCUM with log instructions to generate a translated
+   file from SRC to DST with translation settings from VERSIONED
+   and flags specified in FLAGS.
+*/
+
+svn_error_t *
+svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
+                              svn_wc_adm_access_t *adm_access,
+                              const char *dst,
+                              const char *src,
+                              const char *versioned,
+                              apr_pool_t *pool);
+
 /* Extend **LOG_ACCUM with log instructions to delete the entry
    associated with PATH from the entries file.
 */
@@ -111,13 +124,20 @@ svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to delete lock related
    fields from the entry belonging to PATH.
 */
-
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
                           svn_wc_adm_access_t *adm_access,
                           const char *path,
                           apr_pool_t *pool);
 
+/* Extend **LOG_ACCUM with log instructions to delete changelist
+   from the entry belonging to PATH.
+*/
+svn_error_t *
+svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
+                                svn_wc_adm_access_t *adm_access,
+                                const char *path,
+                                apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with commands to modify the entry associated with NAME
    according to the flags specified in MODIFY_FLAGS, based on the values
@@ -146,21 +166,6 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
                             const char *propval,
                             apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with log instructions to merge changes between
-   LEFT and RIGHT into TARGET, marking conflicts with the appropriate labels.
-*/
-
-svn_error_t *
-svn_wc__loggy_merge(svn_stringbuf_t **log_accum,
-                    svn_wc_adm_access_t *adm_access,
-                    const char *target,
-                    const char *left,
-                    const char *right,
-                    const char *left_label,
-                    const char *right_label,
-                    const char *target_label,
-                    apr_pool_t *pool);
-
 
 /* Extend **LOG_ACCUM with log instructions to move the file SRC_PATH to
    DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
@@ -176,6 +181,18 @@ svn_wc__loggy_move(svn_stringbuf_t **log_accum,
                    const char *src_path, const char *dst_path,
                    svn_boolean_t remove_dst_if_no_src,
                    apr_pool_t *pool);
+
+
+
+/* Extend **LOG_ACCUM with log instructions to set permissions of PATH
+   to 'executable' if it has the 'executable' property set.
+*/
+
+svn_error_t *
+svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
+                                   svn_wc_adm_access_t *adm_access,
+                                   const char *path,
+                                   apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly' if it has the 'needs-lock' property set and there is

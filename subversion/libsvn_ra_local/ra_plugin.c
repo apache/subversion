@@ -948,12 +948,12 @@ svn_ra_local__get_file(svn_ra_session_t *session,
 /* Getting a directory's entries */
 static svn_error_t *
 svn_ra_local__get_dir(svn_ra_session_t *session,
-                      const char *path,
-                      svn_revnum_t revision,
-                      apr_uint32_t dirent_fields,
                       apr_hash_t **dirents,
                       svn_revnum_t *fetched_rev,
                       apr_hash_t **props,
+                      const char *path,
+                      svn_revnum_t revision,
+                      apr_uint32_t dirent_fields,
                       apr_pool_t *pool)
 {
   svn_fs_root_t *root;
@@ -1265,8 +1265,6 @@ svn_ra_local__replay(svn_ra_session_t *session,
   SVN_ERR(svn_repos_replay2(root, sess->fs_path->data, low_water_mark,
                             send_deltas, editor, edit_baton, NULL, NULL,
                             pool));
-
-  SVN_ERR(editor->close_edit(edit_baton, pool));
 
   return SVN_NO_ERROR;
 }

@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import sys, re, os.path
 
 # Our testing module
 import svntest
@@ -172,10 +172,6 @@ def getopt_help(sbox):
   "run svn help"
   run_one_test(sbox, 'svn_help', 'help')
 
-def getopt_help__version(sbox):
-  "run svn help --version"
-  run_one_test(sbox, 'svn_help--version', 'help', '--version')
-
 def getopt_help_log_switch(sbox):
   "run svn help log switch"
   run_one_test(sbox, 'svn_help_log_switch', 'help', 'log', 'switch')
@@ -195,7 +191,6 @@ test_list = [ None,
               getopt__version__quiet,
               getopt__help,
               getopt_help,
-              getopt_help__version,
               getopt_help_bogus_cmd,
               getopt_help_log_switch
             ]

@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, os.path, re
+import sys, os.path, re
 
 # Our testing module
 import svntest
@@ -105,6 +105,7 @@ def setup_working_copy(wc_dir, value_len):
   global embd_bogus_keywords_path
   global fixed_length_keywords_path
   global id_with_space_path
+  global id_exp_with_dollar_path
 
   # NOTE: Only using author and revision keywords in tests for now,
   # since they return predictable substitutions.
@@ -123,6 +124,7 @@ def setup_working_copy(wc_dir, value_len):
   embd_bogus_keywords_path = os.path.join(wc_dir, 'embd_bogus_keywords')
   fixed_length_keywords_path = os.path.join(wc_dir, 'fixed_length_keywords')
   id_with_space_path = os.path.join(wc_dir, 'id with space')
+  id_exp_with_dollar_path = os.path.join(wc_dir, 'id_exp with_$_sign')
 
   svntest.main.file_append (author_rev_unexp_path, "$Author$\n$Rev$")
   svntest.main.file_append (author_rev_exp_path, "$Author: blah $\n$Rev: 0 $")
@@ -160,6 +162,8 @@ def setup_working_copy(wc_dir, value_len):
     svntest.main.file_append (fixed_length_keywords_path, i)
 
   svntest.main.file_append (id_with_space_path, "$Id$")
+  svntest.main.file_append (id_exp_with_dollar_path, 
+                   "$Id: id_exp with_$_sign 1 2006-06-10 11:10:00Z jrandom $")
 
 
 ### Helper functions for setting/removing properties
@@ -217,6 +221,7 @@ def keywords_from_birth(sbox):
     'embd_bogus_keywords' : Item(status='A ', wc_rev=0),
     'fixed_length_keywords' : Item(status='A ', wc_rev=0),
     'id with space' : Item(status='A ', wc_rev=0),
+    'id_exp with_$_sign' : Item(status='A ', wc_rev=0),
     })
 
   svntest.main.run_svn (None, 'add', author_rev_unexp_path)
@@ -231,6 +236,7 @@ def keywords_from_birth(sbox):
   svntest.main.run_svn (None, 'add', embd_bogus_keywords_path)
   svntest.main.run_svn (None, 'add', fixed_length_keywords_path)
   svntest.main.run_svn (None, 'add', id_with_space_path)
+  svntest.main.run_svn (None, 'add', id_exp_with_dollar_path)
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -243,6 +249,7 @@ def keywords_from_birth(sbox):
   keywords_on (embd_author_rev_exp_path)
   keywords_on (fixed_length_keywords_path)
   keywords_on (id_with_space_path)
+  keywords_on (id_exp_with_dollar_path)
 
   # Commit.
   expected_output = svntest.wc.State(wc_dir, {
@@ -258,6 +265,7 @@ def keywords_from_birth(sbox):
     'embd_bogus_keywords' : Item(verb='Adding'),
     'fixed_length_keywords' : Item(verb='Adding'),
     'id with space' : Item(verb='Adding'),
+    'id_exp with_$_sign' : Item(verb='Adding'),
     })
 
   svntest.actions.run_and_verify_commit (wc_dir, expected_output,
@@ -347,6 +355,17 @@ def keywords_from_birth(sbox):
   if not ((len(lines) == 1)
           and (re.match("\$Id: .*id with space", lines[0]))):
     print "Id expansion failed for", id_with_space_path
+    raise svntest.Failure
+  fp.close()
+
+  # Check the Id keyword for filename with_$_signs.
+  fp = open(id_exp_with_dollar_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (re.match("\$Id: .*id_exp with_\$_sign [^$]* jrandom \$", 
+                        lines[0]))):
+    print "Id expansion failed for", id_exp_with_dollar_path
+    
     raise svntest.Failure
   fp.close()
 

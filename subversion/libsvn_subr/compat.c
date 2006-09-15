@@ -46,10 +46,10 @@ commit_wrapper_callback(const svn_commit_info_t *commit_info,
 }
 
 void
-svn_compat_wrap_commit_callback(svn_commit_callback_t callback,
-                                void *callback_baton,
-                                svn_commit_callback2_t *callback2,
+svn_compat_wrap_commit_callback(svn_commit_callback2_t *callback2,
                                 void **callback2_baton,
+                                svn_commit_callback_t callback,
+                                void *callback_baton,
                                 apr_pool_t *pool)
 {
   struct commit_wrapper_baton *cwb = apr_palloc(pool, sizeof(*cwb));

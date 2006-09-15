@@ -84,6 +84,9 @@ struct edit_baton
 
   /* Was the update-target deleted?  This is a special situation. */
   svn_boolean_t target_deleted;
+
+  /* Allow unversioned obstructions when adding a path. */
+  svn_boolean_t allow_unver_obstructions;
  
   /* Non-null if this is a 'switch' operation. */
   const char *switch_url;
@@ -515,6 +518,10 @@ struct file_baton
   /* Set if this file is new. */
   svn_boolean_t added;
 
+  /* Set if an unversioned file of the same name already existed in
+     this directory. */
+  svn_boolean_t existed;
+
   /* This gets set if the file underwent a text change, which guides
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t text_changed;
@@ -577,6 +584,7 @@ make_file_baton(struct dir_baton *pb,
   f->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
   f->bump_info    = pb->bump_info;
   f->added        = adding;
+  f->existed      = FALSE;
   f->dir_baton    = pb;
 
   /* No need to initialize f->digest, since we used pcalloc(). */
@@ -1050,6 +1058,7 @@ add_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *db = make_dir_baton(path, eb, pb, TRUE, pool);
   svn_node_kind_t kind;
+  svn_boolean_t exists = FALSE;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
      NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
@@ -1057,14 +1066,62 @@ add_directory(const char *path,
       || ((! copyfrom_path) && (SVN_IS_VALID_REVNUM(copyfrom_revision))))
     abort();
 
-  /* There should be nothing with this name. */
   SVN_ERR(svn_io_check_path(db->path, &kind, db->pool));
-  if (kind != svn_node_none)
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("Failed to add directory '%s': "
-         "object of the same name already exists"),
-       svn_path_local_style(db->path, pool));
+
+  /* Check for obstructions. */
+  if (eb->allow_unver_obstructions)
+    {
+      /* The path can exist, but it must be a directory... */
+      if (kind == svn_node_file || kind == svn_node_unknown)
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("Failed to add directory '%s': a non-directory object of the "
+             "same name already exists"),
+           svn_path_local_style(db->path, pool));
+      if (kind == svn_node_dir)
+        {
+          /* ...Ok, it's a directory but it can't be versioned. We don't
+             handle that, yet... */
+          svn_wc_adm_access_t *adm_access;
+
+          /* Test the obstructing dir to see if it's versioned. */
+          svn_error_t *err = svn_wc_adm_open3(&adm_access, NULL,
+                                              db->path, FALSE, 0,
+                                              NULL, NULL, pool);
+          if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+            {
+              /* Something quite unexepected has happened. */
+              return err;
+            }
+          else if (err)
+            {
+              /* Obstructing dir is not versioned, just need to flag it as
+                 existing then we are done here. */
+              exists = TRUE;
+              svn_error_clear(err);
+            }
+          else
+            {
+              /* Obstructing dir *is* versioned. */
+              return svn_error_createf
+                (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                 _("Failed to forcibly add directory '%s': a versioned "
+                   "directory of the same name already exists"),
+                 svn_path_local_style(db->path, pool));
+            }
+        }
+    }
+  else
+    {
+      /* There should be nothing with this name if obstructions are
+         not allowed. */
+      if (kind != svn_node_none)
+        return svn_error_createf
+          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+           _("Failed to add directory '%s': "
+             "object of the same name already exists"),
+           svn_path_local_style(db->path, pool));
+    }
 
   /* It may not be named the same as the administrative directory. */
   if (svn_wc_is_adm_dir(svn_path_basename(path, pool), pool))
@@ -1135,9 +1192,10 @@ add_directory(const char *path,
 
   if (eb->notify_func)
     {
-      svn_wc_notify_t *notify = svn_wc_create_notify(db->path,
-                                                     svn_wc_notify_update_add,
-                                                     pool);
+      svn_wc_notify_t *notify = svn_wc_create_notify(
+        db->path,
+        exists ? svn_wc_notify_exists : svn_wc_notify_update_add,
+        pool);
       notify->kind = svn_node_dir;
       (*eb->notify_func)(eb->notify_baton, notify, pool);
     }
@@ -1461,13 +1519,33 @@ add_or_open_file(const char *path,
   
   /* Sanity checks. */
 
-  /* If adding, there should be nothing with this name. */
+  /* If adding, there should be nothing with this name unless obstructions
+     are permitted. */
   if (adding && (kind != svn_node_none))
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("Failed to add file '%s': object of the same name already exists"),
-       svn_path_local_style(fb->path, pool));
-
+    {
+      if (eb->allow_unver_obstructions)
+        {
+          /* The name can exist, but it better *really* be a file.  If
+             it is treat the existing file as a WC modification by the
+             user. */
+          if (kind != svn_node_file)
+            return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE,
+                                     NULL,
+                                     _("Failed to add file '%s': "
+                                       "a non-file object of the same "
+                                       "name already exists"),
+                                     svn_path_local_style(fb->path,
+                                                          pool));
+          fb->existed = TRUE;
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+             _("Failed to add file '%s': object of the same name "
+               "already exists"), svn_path_local_style(fb->path, pool));
+        }
+    }
   /* sussman sez: If we're trying to add a file that's already in
      `entries' (but not on disk), that's okay.  It's probably because
      the user deleted the working version and ran 'svn up' as a means
@@ -1684,9 +1762,11 @@ change_file_prop(void *file_baton,
      applied. */
   fb->prop_changed = 1;
 
-  /* Special case: if the file is added during a checkout, cache the
-     last-changed-date propval for future use. */
-  if (eb->use_commit_times
+  /* Special case: If use-commit-times config variable is set we
+     cache the last-changed-date propval so we can use it to set
+     the working file's timestamp.  We also want it if this file
+     already existed and is obstructing an added file. */
+  if ((eb->use_commit_times || fb->existed)
       && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
       && value)
     fb->last_changed_date = apr_pstrdup(fb->pool, value->data);
@@ -1784,12 +1864,12 @@ merge_props(svn_stringbuf_t *log_accum,
    the entry refers to a file and has no absent or deleted state.
    Use POOL for temporary allocations. */
 static svn_error_t *
-tweak_entry(svn_stringbuf_t *log_accum,
-            svn_wc_adm_access_t *adm_access,
-            const char *name,
-            svn_revnum_t new_revision,
-            const char *new_URL,
-            apr_pool_t *pool)
+loggy_tweak_entry(svn_stringbuf_t *log_accum,
+                  svn_wc_adm_access_t *adm_access,
+                  const char *name,
+                  svn_revnum_t new_revision,
+                  const char *new_URL,
+                  apr_pool_t *pool)
 {
   /* Write log entry which will bump the revision number.  Also, just
      in case we're overwriting an existing phantom 'deleted' or
@@ -1847,6 +1927,10 @@ tweak_entry(svn_stringbuf_t *log_accum,
  * generated log commands.  If there is no text base, HAS_NEW_TEXT_BASE
  * must be FALSE.
  *
+ * If USE_OBSTRUCTION is TRUE, FILE_PATH exists but is not already under
+ * version control, and FILE_PATH differs from temporary text-base then
+ * don't merge any textual changes, instead leave FILE_PATH as-is.
+ *
  * The caller also provides the property changes for the file in the
  * PROP_CHANGES array; if there are no prop changes, then the caller must pass 
  * NULL instead.  This argument is an array of svn_prop_t structures, 
@@ -1892,6 +1976,7 @@ merge_file(svn_stringbuf_t *log_accum,
            const char *file_path,
            svn_revnum_t new_revision,
            svn_boolean_t has_new_text_base,
+           svn_boolean_t use_obstruction,
            const apr_array_header_t *prop_changes,
            const char *new_URL,
            const char *diff3_cmd,
@@ -1948,8 +2033,9 @@ merge_file(svn_stringbuf_t *log_accum,
                       file_path, prop_changes, pool));
 
   /* Has the user made local mods to the working file?  */
-  SVN_ERR(svn_wc_text_modified_p(&is_locally_modified, file_path,
-                                 FALSE, adm_access, pool));
+  SVN_ERR(svn_wc_text_modified_p2(&is_locally_modified, file_path,
+                                  FALSE, use_obstruction, adm_access,
+                                  pool));
 
   /* In the case where the user has replaced a file with a copy it may 
    * not show as locally modified.  So if the file isn't listed as
@@ -2006,20 +2092,23 @@ merge_file(svn_stringbuf_t *log_accum,
 
   /* Set the new revision and URL in the entry and clean up some other
      fields. */
-  SVN_ERR(tweak_entry(log_accum, adm_access, base_name,
-                      new_revision, new_URL, pool));
+  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, base_name,
+                            new_revision, new_URL, pool));
 
   /* For 'textual' merging, we implement this matrix.
 
-                  Text file                   Binary File
-               -----------------------------------------------
-    Local Mods | svn_wc_merge uses diff3, | svn_wc_merge     |
-               | possibly makes backups & | makes backups,   |
-               | marks file as conflicted.| marks conflicted |
-               -----------------------------------------------
-    No Mods    |        Just overwrite working file.         |
-               |                                             |
-               -----------------------------------------------
+                        Text file                   Binary File
+                     -----------------------------------------------
+    Local Mods &&    | svn_wc_merge uses diff3, | svn_wc_merge     |
+    !USE_OBSTRUCTION | possibly makes backups & | makes backups,   |
+                     | marks file as conflicted.| marks conflicted |
+                     -----------------------------------------------
+    "Local Mods" &&  |        Just leave obstructing file as-is.   |
+    USE_OBSTRUCTION  |                                             |
+                     -----------------------------------------------
+    No Mods          |        Just overwrite working file.         |
+                     |                                             |
+                     -----------------------------------------------
 
    So the first thing we do is figure out where we are in the
    matrix. */
@@ -2036,7 +2125,7 @@ merge_file(svn_stringbuf_t *log_accum,
                                      svn_wc__copy_translate,
                                      tmp_txtb, base_name, FALSE, pool));
         }
-      else   /* working file is locally modified... */
+      else   /* working file or obstruction is locally modified... */
         {
           svn_node_kind_t wfile_kind = svn_node_unknown;
           
@@ -2047,6 +2136,19 @@ merge_file(svn_stringbuf_t *log_accum,
               SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
                                          svn_wc__copy_translate,
                                          tmp_txtb, base_name, FALSE, pool));
+            }
+          else if (use_obstruction)
+            {
+              /* A valid obstruction to an added file exists and it's text
+                 differs from the added file. */
+              svn_wc_entry_t tmp_entry;
+
+              SVN_ERR (svn_time_from_cstring(&(tmp_entry.text_time),
+                                             timestamp_string,pool));
+
+              SVN_ERR(svn_wc__loggy_entry_modify(
+                        &log_accum, adm_access, base_name, &tmp_entry,
+                        SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool));
             }
           else  /* working file exists, and has local mods.*/
             {                  
@@ -2069,35 +2171,21 @@ merge_file(svn_stringbuf_t *log_accum,
                                         e->revision);
               newrev_str = apr_psprintf(pool, ".r%ld",
                                         new_revision);
-              
+
               /* Merge the changes from the old-textbase (TXTB) to
                  new-textbase (TMP_TXTB) into the file we're
-                 updating (BASE_NAME).  Either the merge will
-                 happen smoothly, or a conflict will result.
-                 Luckily, this routine will take care of all eol
-                 and keyword translation, and diff3 will insert
-                 conflict markers for us.  It also deals with binary
-                 files appropriately.  */
-              SVN_ERR(svn_wc__loggy_merge(&log_accum, adm_access,
-                                          base_name, txtb, tmp_txtb,
-                                          oldrev_str, newrev_str, ".mine",
-                                          pool));
-              
-              /* Run a dry-run of the merge to see if a conflict will
-                 occur.  This is needed so we can report back to the
-                 client as the changes come in. */
+                 updating (BASE_NAME). Append commands to update the
+                 working copy to LOG_ACCUM. */
               base = svn_wc_adm_access_path(adm_access);
-
-              /* ### FIXME: We force use of the internal diff3 here
-                     because we don't want to run a graphical external
-                     diff3 twice.  See issue 1914. */
-              SVN_ERR(svn_wc_merge2(svn_path_join(base, txtb, pool),
-                                    svn_path_join(base, tmp_txtb, pool),
-                                    svn_path_join(base, base_name, pool),
-                                    adm_access,
-                                    oldrev_str, newrev_str, ".mine",
-                                    TRUE, &merge_outcome, NULL, NULL,
-                                    pool));
+              SVN_ERR(svn_wc__merge_internal
+                      (&log_accum, &merge_outcome,
+                       svn_path_join(base, txtb, pool),
+                       svn_path_join(base, tmp_txtb, pool),
+                       svn_path_join(base, base_name, pool),
+                       adm_access,
+                       oldrev_str, newrev_str, ".mine",
+                       FALSE, diff3_cmd, NULL, prop_changes,
+                       pool));
 
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
@@ -2139,8 +2227,9 @@ merge_file(svn_stringbuf_t *log_accum,
   /* Log commands to handle text-timestamp */
   if (!is_locally_modified)
     {
-      if (timestamp_string)
-        /* Adjust working copy file */
+      if (timestamp_string && !use_obstruction)
+        /* Adjust working copy file unless this file is an allowed
+           obstruction. */
         SVN_ERR(svn_wc__loggy_set_timestamp(&log_accum, adm_access,
                                             base_name, timestamp_string,
                                             pool));
@@ -2229,6 +2318,7 @@ close_file(void *file_baton,
                      fb->path,
                      (*eb->target_revision),
                      fb->text_changed,
+                     fb->existed,
                      propchanges,
                      fb->new_URL,
                      eb->diff3_cmd,
@@ -2251,8 +2341,12 @@ close_file(void *file_baton,
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(fb->path,
-                               fb->added ? svn_wc_notify_update_add 
-                               : svn_wc_notify_update_update, pool);
+                               (fb->existed
+                                ? svn_wc_notify_exists
+                                : (fb->added
+                                   ? svn_wc_notify_update_add
+                                   : svn_wc_notify_update_update)),
+                               pool);
       notify->kind = svn_node_file;
       notify->content_state = content_state;
       notify->prop_state = prop_state;
@@ -2342,6 +2436,7 @@ make_editor(svn_revnum_t *target_revision,
             svn_boolean_t use_commit_times,
             const char *switch_url,
             svn_boolean_t recurse,
+            svn_boolean_t allow_unver_obstructions,
             svn_wc_notify_func2_t notify_func,
             void *notify_baton,
             svn_cancel_func_t cancel_func,
@@ -2372,21 +2467,22 @@ make_editor(svn_revnum_t *target_revision,
 
   /* Construct an edit baton. */
   eb = apr_pcalloc(subpool, sizeof(*eb));
-  eb->pool            = subpool;
-  eb->use_commit_times= use_commit_times;
-  eb->target_revision = target_revision;
-  eb->switch_url      = switch_url;
-  eb->repos           = entry ? entry->repos : NULL;
-  eb->adm_access      = adm_access;
-  eb->anchor          = anchor;
-  eb->target          = target;
-  eb->recurse         = recurse;
-  eb->notify_func     = notify_func;
-  eb->notify_baton    = notify_baton;
-  eb->traversal_info  = traversal_info;
-  eb->diff3_cmd       = diff3_cmd;
-  eb->cancel_func     = cancel_func;
-  eb->cancel_baton    = cancel_baton;
+  eb->pool                     = subpool;
+  eb->use_commit_times         = use_commit_times;
+  eb->target_revision          = target_revision;
+  eb->switch_url               = switch_url;
+  eb->repos                    = entry ? entry->repos : NULL;
+  eb->adm_access               = adm_access;
+  eb->anchor                   = anchor;
+  eb->target                   = target;
+  eb->recurse                  = recurse;
+  eb->notify_func              = notify_func;
+  eb->notify_baton             = notify_baton;
+  eb->traversal_info           = traversal_info;
+  eb->diff3_cmd                = diff3_cmd;
+  eb->cancel_func              = cancel_func;
+  eb->cancel_baton             = cancel_baton;
+  eb->allow_unver_obstructions = allow_unver_obstructions;
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;
@@ -2418,6 +2514,31 @@ make_editor(svn_revnum_t *target_revision,
 
 
 svn_error_t *
+svn_wc_get_update_editor3(svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          svn_boolean_t use_commit_times,
+                          svn_boolean_t recurse,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          const char *diff3_cmd,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool)
+{
+  return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
+                     target, use_commit_times, NULL, recurse,
+                     allow_unver_obstructions, notify_func, notify_baton,
+                     cancel_func, cancel_baton, diff3_cmd, editor,
+                     edit_baton, traversal_info, pool);
+}
+
+
+svn_error_t *
 svn_wc_get_update_editor2(svn_revnum_t *target_revision,
                           svn_wc_adm_access_t *anchor,
                           const char *target,
@@ -2433,10 +2554,11 @@ svn_wc_get_update_editor2(svn_revnum_t *target_revision,
                           svn_wc_traversal_info_t *traversal_info,
                           apr_pool_t *pool)
 {
-  return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, NULL, recurse, notify_func, 
-                     notify_baton, cancel_func, cancel_baton, diff3_cmd,
-                     editor, edit_baton, traversal_info, pool);
+  return svn_wc_get_update_editor3(target_revision, anchor, target,
+                                   use_commit_times, recurse, FALSE,
+                                   notify_func, notify_baton, cancel_func,
+                                   cancel_baton, diff3_cmd, editor,
+                                   edit_baton, traversal_info, pool);
 }
 
 svn_error_t *
@@ -2459,11 +2581,38 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
   nb->func = notify_func;
   nb->baton = notify_baton;
   
-  return svn_wc_get_update_editor2(target_revision, anchor, target,
-                                   use_commit_times, recurse,
+  return svn_wc_get_update_editor3(target_revision, anchor, target,
+                                   use_commit_times, recurse, FALSE,
                                    svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton, diff3_cmd,
                                    editor, edit_baton, traversal_info, pool);
+}
+
+svn_error_t *
+svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
+                          svn_wc_adm_access_t *anchor,
+                          const char *target,
+                          const char *switch_url,
+                          svn_boolean_t use_commit_times,
+                          svn_boolean_t recurse,
+                          svn_boolean_t allow_unver_obstructions,
+                          svn_wc_notify_func2_t notify_func,
+                          void *notify_baton,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton,
+                          const char *diff3_cmd,
+                          const svn_delta_editor_t **editor,
+                          void **edit_baton,
+                          svn_wc_traversal_info_t *traversal_info,
+                          apr_pool_t *pool)
+{
+  assert(switch_url);
+
+  return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
+                     target, use_commit_times, switch_url, recurse,
+                     allow_unver_obstructions, notify_func, notify_baton,
+                     cancel_func, cancel_baton, diff3_cmd, editor,
+                     edit_baton, traversal_info, pool);
 }
 
 svn_error_t *
@@ -2485,10 +2634,12 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
 {
   assert(switch_url);
 
-  return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, switch_url, recurse, 
-                     notify_func, notify_baton, cancel_func, cancel_baton, 
-                     diff3_cmd, editor, edit_baton, traversal_info, pool);
+  return svn_wc_get_switch_editor3(target_revision, anchor, target,
+                                   switch_url, use_commit_times, recurse,
+                                   FALSE, notify_func, notify_baton,
+                                   cancel_func, cancel_baton, diff3_cmd,
+                                   editor, edit_baton, traversal_info,
+                                   pool);
 }
 
 svn_error_t *
@@ -2512,9 +2663,9 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
   nb->func = notify_func;
   nb->baton = notify_baton;
 
-  return svn_wc_get_switch_editor2(target_revision, anchor, target,
+  return svn_wc_get_switch_editor3(target_revision, anchor, target,
                                    switch_url, use_commit_times, recurse,
-                                   svn_wc__compat_call_notify_func, nb,
+                                   FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton, diff3_cmd,
                                    editor, edit_baton, traversal_info, pool);
 }
@@ -2669,6 +2820,11 @@ check_wc_root(svn_boolean_t *wc_root,
   /* If PATH is the current working directory, we have no choice but
      to consider it a WC root (we can't examine its parent at all) */
   if (svn_path_is_empty(path))
+    return SVN_NO_ERROR;
+
+  /* If this is the root folder (of a drive), it should be the WC 
+     root too. */
+  if (svn_path_is_root(path, strlen(path), pool))
     return SVN_NO_ERROR;
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
@@ -2932,9 +3088,9 @@ svn_wc_add_repos_file2(const char *dst_path,
 
   /* Set the new revision number and URL in the entry and clean up some other
      fields. */
-  SVN_ERR(tweak_entry(log_accum, adm_access, base_name,
-                      dst_entry ? dst_entry->revision : ent->revision,
-                      new_URL, pool));
+  SVN_ERR(loggy_tweak_entry(log_accum, adm_access, base_name,
+                            dst_entry ? dst_entry->revision : ent->revision,
+                            new_URL, pool));
 
   SVN_ERR(install_added_props(log_accum, adm_access, dst_path,
                               new_base_props, new_props, pool));

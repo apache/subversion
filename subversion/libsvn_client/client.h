@@ -313,6 +313,12 @@ svn_error_t * svn_client__wc_delete(const char *path,
                                     svn_client_ctx_t *ctx,
                                     apr_pool_t *pool);
 
+/* Return the list of WC paths to entries which would have been
+   deleted by an update/merge if not in "dry run" mode, or NULL if not
+   in "dry run" mode.  MERGE_CMD_BATON contains the list, which is
+   intended for direct modification. */
+apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
+
 /* ---------------------------------------------------------------- */
 
 /*** Checkout, update and switch ***/
@@ -323,13 +329,17 @@ svn_error_t * svn_client__wc_delete(const char *path,
    function will sleep before returning to ensure timestamp integrity.
    If TIMESTAMP_SLEEP is not NULL then the function will not sleep but
    will set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will
-   not change *TIMESTAMP_SLEEP if no sleep is required. */
+   not change *TIMESTAMP_SLEEP if no sleep is required.  If
+   ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
+   obstruct items added from the repos are tolerated; if FALSE, these
+   obstructions cause the update to fail. */
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const svn_opt_revision_t *revision,
                             svn_boolean_t recurse,
                             svn_boolean_t ignore_externals,
+                            svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
@@ -341,7 +351,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then the
    function will not sleep but will set *TIMESTAMP_SLEEP to TRUE if a
    sleep is required, and will not change *TIMESTAMP_SLEEP if no sleep
-   is required. */
+   is required.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children
+   of PATH that obstruct items added from the repos are tolerated; if FALSE,
+   these obstructions cause the checkout to fail. */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *URL,
@@ -350,6 +362,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const svn_opt_revision_t *revision,
                               svn_boolean_t recurse,
                               svn_boolean_t ignore_externals,
+                              svn_boolean_t allow_unver_obstructions,
                               svn_boolean_t *timestamp_sleep,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
@@ -360,7 +373,10 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
    returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
    NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
    to TRUE if a sleep is required, and will not change
-   *TIMESTAMP_SLEEP if no sleep is required. */
+   *TIMESTAMP_SLEEP if no sleep is required.  If ALLOW_UNVER_OBSTRUCTIONS
+   is TRUE, unversioned children of PATH that obstruct items added from
+   the repos are tolerated; if FALSE, these obstructions cause the switch
+   to fail. */
 svn_error_t *
 svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
@@ -368,6 +384,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const svn_opt_revision_t *revision,
                             svn_boolean_t recurse,
                             svn_boolean_t *timestamp_sleep,
+                            svn_boolean_t allow_unver_obstructions,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool);
 
@@ -534,15 +551,19 @@ svn_client__get_diff_summarize_editor(const char *target,
    canonical repository URLs.  LOCK_TOKENS will point to a hash table
    with const char * lock tokens, keyed on const char * URLs.  Also,
    LOCKED_DIRS will be an apr_hash_t * hash of svn_wc_adm_access_t *
-   keyed
-   on const char * working copy path directory names which were locked
-   in the process of this crawl.  These will need to be unlocked again post-commit.
+   keyed on const char * working copy path directory names which were
+   locked in the process of this crawl.  These will need to be
+   unlocked again post-commit.
 
    If NONRECURSIVE is specified, subdirectories of directory targets
    found in TARGETS will not be crawled for modifications.
 
    If JUST_LOCKED is TRUE, treat unmodified items with lock tokens as
    commit candidates.
+
+   If CHANGELIST_NAME is non-NULL, then use it as a restrictive filter
+   when harvesting committables; that is, don't add a path to
+   COMMITTABLES unless it's a member of the changelist.
 
    If CTX->CANCEL_FUNC is non-null, it will be called with 
    CTX->CANCEL_BATON while harvesting to determine if the client has 
@@ -554,6 +575,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_array_header_t *targets,
                                  svn_boolean_t nonrecursive,
                                  svn_boolean_t just_locked,
+                                 const char *changelist_name,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 

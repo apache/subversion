@@ -67,11 +67,12 @@ typedef struct svn_fs_t svn_fs_t;
 /** @since New in 1.1. */
 #define SVN_FS_TYPE_FSFS                        "fsfs"
 
-/** Don't allow svndiff1 to be used in the on-disk storage 
+/** Create repository format compatible with Subversion versions
+ * earlier than 1.4.
  * 
  *  @since New in 1.4. 
  */
-#define SVN_FS_CONFIG_NO_SVNDIFF1                       "no-svndiff1"
+#define SVN_FS_CONFIG_PRE_1_4_COMPATIBLE        "pre-1.4-compatible"
 /** @} */
 
 
@@ -142,9 +143,11 @@ void svn_fs_set_warning_func(svn_fs_t *fs,
  *   SVN_FS_TYPE_BDB   Berkeley-DB implementation
  *   SVN_FS_TYPE_FSFS  Native-filesystem implementation
  *
- * Otherwise, the BDB filesystem type is assumed.  Once the filesystem
- * is created, its type will be recorded so that other functions will
- * know how to operate on it.
+ * If @a fs_config is @c NULL or does not contain a value for
+ * @c SVN_FS_CONFIG_FS_TYPE then the default filesystem type will be used.
+ * This will typically be BDB for version 1.1 and FSFS for later versions,
+ * though the caller should not rely upon any particular default if they
+ * wish to ensure that a filesystem of a specific type is created.
  *
  * @since New in 1.1.
  */
@@ -173,7 +176,7 @@ svn_error_t *svn_fs_create(svn_fs_t **fs_p, const char *path,
  * @since New in 1.1.
  */
 svn_error_t *svn_fs_open(svn_fs_t **fs_p, const char *path,
-                         apr_hash_t *config, apr_pool_t *pool);
+                         apr_hash_t *fs_config, apr_pool_t *pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
@@ -543,6 +546,15 @@ svn_string_t *svn_fs_unparse_id(const svn_fs_id_t *id,
  * transaction you already have open.  You can also list all the
  * transactions currently present in the database.
  *
+ * You may assign properties to transactions; these are name/value
+ * pairs.  When you commit a transaction, all of its properties become
+ * unversioned revision properties of the new revision.  (There is one
+ * exception: the svn:date property will be automatically set on new
+ * transactions to the date that the transaction was created, and will
+ * be overwritten when the transaction is committed by the current
+ * time; changes to a transaction's svn:date property will not affect
+ * its committed value.)
+ * 
  * Transaction names are guaranteed to contain only letters (upper-
  * and lower-case), digits, `-', and `.', from the ASCII character
  * set.
@@ -717,10 +729,9 @@ svn_error_t *svn_fs_txn_prop(svn_string_t **value_p,
                              apr_pool_t *pool);
 
 
-/** Set @a *table_p to the entire property list of transaction @a txn in
- * filesystem @a fs, as an APR hash table allocated in @a pool.  The
- * resulting table maps property names to pointers to @c svn_string_t
- * objects containing the property value.
+/** Set @a *table_p to the entire property list of transaction @a txn, as
+ * an APR hash table allocated in @a pool.  The resulting table maps property
+ * names to pointers to @c svn_string_t objects containing the property value.
  */
 svn_error_t *svn_fs_txn_proplist(apr_hash_t **table_p,
                                  svn_fs_txn_t *txn,
@@ -890,7 +901,7 @@ svn_error_t *svn_fs_paths_changed(apr_hash_t **changed_paths_p,
 /* Operations appropriate to all kinds of nodes.  */
 
 /** Set @a *kind_p to the type of node present at @a path under @a
- * root.  If @a path does not exist under @a root, set @a *kind to @c
+ * root.  If @a path does not exist under @a root, set @a *kind_p to @c
  * svn_node_none.  Use @a pool for temporary allocation.
  */
 svn_error_t *svn_fs_check_path(svn_node_kind_t *kind_p,
@@ -913,12 +924,12 @@ svn_error_t *svn_fs_node_history(svn_fs_history_t **history_p,
                                  apr_pool_t *pool);
 
 
-/** Set @a *prev_history_t to an opaque node history object which
+/** Set @a *prev_history_p to an opaque node history object which
  * represents the previous (or "next oldest") interesting history
  * location for the filesystem node represented by @a history, or @c
  * NULL if no such previous history exists.  If @a cross_copies is @c
  * FALSE, also return @c NULL if stepping backwards in history to @a
- * prev_history_t would cross a filesystem copy operation.  
+ * *prev_history_p would cross a filesystem copy operation.  
  *
  * @note If this is the first call to svn_fs_history_prev() for the @a
  * history object, it could return a history object whose location is

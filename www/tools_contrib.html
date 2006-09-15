@@ -83,6 +83,7 @@
   <li><strong>commandline tools</strong><ul>
     <li><a href="#asvn">asvn</a></li>
     <li><a href="#mucc_c">mucc.c</a></li>
+    <li><a href="#server_version_py">server-version.py</a></li>
     <li><a href="#server_vsn_py">server-vsn.py</a></li>
     <li><a href="#svn_update_pl">svn_update.pl</a></li>
   </ul></li>
@@ -115,6 +116,7 @@
     <li><a href="#showchange_pl">showchange.pl</a></li>
     <li><a href="#svn_log_pl">svn-log.pl</a></li>
     <li><a href="#svn2cl_sh">svn2cl.sh</a></li>
+    <li><a href="#svn2feed_py">svn2feed.py</a></li>
     <li><a href="#svn2rss_py">svn2rss.py</a></li>
   </ul></li>
   <li><strong>merge</strong><ul>
@@ -345,11 +347,12 @@
   <p>Show log messages matching a certain pattern.</p>
 
 
-  <h3><a name="server_vsn_py"
-    href="http://svn.collab.net/repos/svn/trunk/tools/client-side/server-vsn.py">server-vsn.py</a>
+  <h3><a name="server_version_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/client-side/server-version.py">server-version.py</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/tools/client-side">tools/client-side</a>)</h3>
   <p>Print a Subversion server's version number.</p>
 
+  <p><a name="server_vsn_py">server-version.py was formerly known as server-vsn.py</a></p>
 
   <h3><a name="showchange_pl"
     href="http://svn.collab.net/repos/svn/trunk/tools/client-side/showchange.pl">showchange.pl</a>
@@ -638,10 +641,9 @@
   <h3><a name="po_merge_py"
     href="http://svn.collab.net/repos/svn/trunk/tools/dev/po-merge.py">po-merge.py</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
-  <p>Read a single translation entry from the file F and return a
-     tuple with the comments, msgid and msgstr.  The comments is returned
-     as a list of lines which do not end in new-lines.  The msgid and
-     msgstr are strings, possibly with embedded newlines.
+  <p>This script will replace the translations and flags in a po file with
+     the translations and flags in the source po file read from standard
+     input.  Strings that are not found in the source file are left untouched.
   </p>
 
 
@@ -742,19 +744,19 @@
   <h3><a name="diff_c"
     href="http://svn.collab.net/repos/svn/trunk/tools/diff/diff.c">diff.c</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/tools/diff">tools/diff</a>)</h3>
-  <p>A diff program using subversions diff functions.</p>
+  <p>A diff program using Subversion's diff functions.</p>
 
 
   <h3><a name="diff3_c"
     href="http://svn.collab.net/repos/svn/trunk/tools/diff/diff3.c">diff3.c</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/tools/diff">tools/diff</a>)</h3>
-  <p>A diff3 program using subversions diff functions.</p>
+  <p>A diff3 program using Subversion's diff functions.</p>
 
 
   <h3><a name="diff4_c"
     href="http://svn.collab.net/repos/svn/trunk/tools/diff/diff4.c">diff4.c</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/tools/diff">tools/diff</a>)</h3>
-  <p>A diff4 program using subversions diff functions.</p>
+  <p>A diff4 program using Subversion's diff functions.</p>
 </div>
 
 
@@ -899,10 +901,12 @@
   </p>
 
 
-  <h3><a name="svn2rss_py"
-    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/svn2rss.py">svn2rss.py</a>
-    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
-  <p>Generates a RSS 2.0 file containing commit information.</p>
+  <h3><a name="svn2feed_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/svn2feed.py">svn2feed.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts">tools/hook-scripts</a>)</h3>
+
+  <p>Generates an RSS 2.0 or Atom 1.0 file containing commit information.</p>
+  <p><a name="svn2rss_py">svn2feed.py was formerly known as svn2rss.py</a></p>
 
 
   <h3><a name="svnperms_py"

@@ -148,7 +148,7 @@ store_delta(apr_file_t **tempfile, svn_filesize_t *len,
   /* Compute the delta and send it to the temporary file. */
   SVN_ERR(svn_fs_get_file_delta_stream(&delta_stream, oldroot, oldpath,
                                        newroot, newpath, pool));
-  svn_txdelta_to_svndiff2(temp_stream, pool, &wh, &whb, 0);
+  svn_txdelta_to_svndiff2(&wh, &whb, temp_stream, 0, pool);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream, wh, whb, pool));
 
   /* Get the length of the temporary file and rewind it. */

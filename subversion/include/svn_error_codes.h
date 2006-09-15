@@ -721,6 +721,11 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 10,
              "Unable to extract data from response header")
 
+  /** @since New in 1.5 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_RELOCATED,
+             SVN_ERR_RA_DAV_CATEGORY_START + 11,
+             "Repository has been moved")
+
   /* ra_local errors */
 
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,

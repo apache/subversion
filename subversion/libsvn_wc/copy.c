@@ -39,6 +39,291 @@
 
 /*** Code. ***/
 
+/* Helper function for svn_wc_copy2() which handles WC->WC copying of
+   files which are scheduled for addition or unversioned.
+
+   Copy file SRC_PATH to DST_BASENAME in DST_PARENT_ACCESS.
+
+   DST_PARENT_ACCESS is a 0 depth locked access for a versioned directory
+   in the same WC as SRC_PATH.
+
+   If SRC_IS_ADDED is true then SRC_PATH is scheduled for addition and
+   DST_BASENAME will also be scheduled for addition.
+
+   If SRC_IS_ADDED is false then SRC_PATH is the unversioned child
+   file of a versioned or added parent and DST_BASENAME is simply copied.
+
+   Use POOL for all necessary allocations.
+*/
+static svn_error_t *
+copy_added_file_administratively(const char *src_path,
+                                 svn_boolean_t src_is_added,
+                                 svn_wc_adm_access_t *dst_parent_access,
+                                 const char *dst_basename,
+                                 svn_cancel_func_t cancel_func,
+                                 void *cancel_baton,
+                                 svn_wc_notify_func2_t notify_func,
+                                 void *notify_baton,
+                                 apr_pool_t *pool)
+{
+  const char *dst_path
+    = svn_path_join(svn_wc_adm_access_path(dst_parent_access),
+                    dst_basename, pool);
+
+  /* Copy this file and possibly put it under version control. */
+  SVN_ERR(svn_io_copy_file(src_path, dst_path, TRUE, pool));
+
+  if (src_is_added)
+    {
+      SVN_ERR(svn_wc_add2(dst_path, dst_parent_access, NULL,
+                          SVN_INVALID_REVNUM, cancel_func,
+                          cancel_baton, notify_func,
+                          notify_baton, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper function for svn_wc_copy2() which handles WC->WC copying of
+   directories which are scheduled for addition or unversioned.
+
+   Recursively copy directory SRC_PATH and its children, excluding
+   administrative directories, to DST_BASENAME in DST_PARENT_ACCESS.
+
+   DST_PARENT_ACCESS is a 0 depth locked access for a versioned directory
+   in the same WC as SRC_PATH.
+
+   SRC_ACCESS is a -1 depth access for SRC_PATH
+
+   If SRC_IS_ADDED is true then SRC_PATH is scheduled for addition and
+   DST_BASENAME will also be scheduled for addition.
+
+   If SRC_IS_ADDED is false then SRC_PATH is the unversioned child
+   directory of a versioned or added parent and DST_BASENAME is simply
+   copied.
+
+   Use POOL for all necessary allocations.
+*/
+static svn_error_t *
+copy_added_dir_administratively(const char *src_path,
+                                svn_boolean_t src_is_added,
+                                svn_wc_adm_access_t *dst_parent_access,
+                                svn_wc_adm_access_t *src_access,
+                                const char *dst_basename,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                svn_wc_notify_func2_t notify_func,
+                                void *notify_baton,
+                                apr_pool_t *pool)
+{
+  const char *dst_parent = svn_wc_adm_access_path(dst_parent_access);
+
+  if (! src_is_added)
+    {
+      /* src_path is the top of an unversioned tree, just copy
+         the whole thing and we are done. */
+      SVN_ERR(svn_io_copy_dir_recursively(src_path, dst_parent, dst_basename,
+                                          TRUE, cancel_func, cancel_baton,
+                                          pool));
+    }
+  else
+    {
+      const svn_wc_entry_t *entry;
+      svn_wc_adm_access_t *dst_child_dir_access;
+      svn_wc_adm_access_t *src_child_dir_access;
+      apr_dir_t *dir;
+      apr_finfo_t this_entry;
+      svn_error_t *err;
+      apr_pool_t *subpool;
+      apr_int32_t flags = APR_FINFO_TYPE | APR_FINFO_NAME;
+      /* The 'dst_path' is simply dst_parent/dst_basename */
+      const char *dst_path = svn_path_join(dst_parent, dst_basename, pool);
+
+      /* Check cancellation; note that this catches recursive calls too. */
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      /* "Copy" the dir dst_path and schedule it, and possibly
+         it's children, for addition. */
+      SVN_ERR(svn_io_dir_make(dst_path, APR_OS_DEFAULT, pool));
+
+      /* Add the directory, adding locking access for dst_path
+         to dst_parent_access at the same time. */
+      SVN_ERR(svn_wc_add2(dst_path, dst_parent_access, NULL,
+                          SVN_INVALID_REVNUM, cancel_func, cancel_baton,
+                          notify_func, notify_baton, pool));
+
+      /* Get the accesses for the newly added dir and its source, we'll
+         need both to process any of SRC_PATHS's children below. */
+      SVN_ERR(svn_wc_adm_retrieve(&dst_child_dir_access, dst_parent_access,
+                                  dst_path, pool));
+      SVN_ERR(svn_wc_adm_retrieve(&src_child_dir_access, src_access,
+                                  src_path, pool));
+
+      SVN_ERR(svn_io_dir_open(&dir, src_path, pool));
+
+      subpool = svn_pool_create(pool);
+
+      /* Read src_path's entries one by one. */
+      while (1)
+        {
+          const char *src_fullpath;
+
+          svn_pool_clear(subpool);
+
+          err = svn_io_dir_read(&this_entry, flags, dir, subpool);
+          
+          if (err)
+            {
+              /* Check if we're done reading the dir's entries. */
+              if (APR_STATUS_IS_ENOENT(err->apr_err))
+                {
+                  apr_status_t apr_err;
+
+                  svn_error_clear(err);
+                  apr_err = apr_dir_close(dir);
+                  if (apr_err)
+                    return svn_error_wrap_apr(apr_err,
+                                              _("Can't close "
+                                                "directory '%s'"),
+                                              svn_path_local_style(src_path,
+                                                                   subpool));
+                  break;
+                }
+              else
+                {
+                  return svn_error_createf(err->apr_err, err,
+                                           _("Error during recursive copy "
+                                             "of '%s'"),
+                                           svn_path_local_style(src_path,
+                                                            subpool));
+                }
+            }
+
+          /* Skip entries for this dir and its parent.  */
+          if (this_entry.name[0] == '.'
+              && (this_entry.name[1] == '\0'
+                  || (this_entry.name[1] == '.'
+                      && this_entry.name[2] == '\0')))
+            continue;
+
+          /* Check cancellation so you can cancel during an
+           * add of a directory with lots of files. */
+          if (cancel_func)
+            SVN_ERR(cancel_func(cancel_baton));
+
+          /* Skip over SVN admin directories. */
+          if (svn_wc_is_adm_dir(this_entry.name, subpool))
+            continue;
+
+          /* Construct the full path of the entry. */
+          src_fullpath = svn_path_join(src_path, this_entry.name, subpool);
+
+          SVN_ERR(svn_wc_entry(&entry, src_fullpath, src_child_dir_access,
+                               TRUE, subpool));
+
+          /* Recurse on directories; add files; ignore the rest. */
+          if (this_entry.filetype == APR_DIR)
+            {
+              SVN_ERR(copy_added_dir_administratively(src_fullpath,
+                                                      entry ? TRUE : FALSE,
+                                                      dst_child_dir_access,
+                                                      src_child_dir_access,
+                                                      this_entry.name,
+                                                      cancel_func,
+                                                      cancel_baton,
+                                                      notify_func,
+                                                      notify_baton,
+                                                      subpool));
+            }
+          else if (this_entry.filetype != APR_UNKFILE)
+            {
+              SVN_ERR(copy_added_file_administratively(src_fullpath,
+                                                       entry ? TRUE : FALSE,
+                                                       dst_child_dir_access,
+                                                       this_entry.name,
+                                                       cancel_func,
+                                                       cancel_baton,
+                                                       notify_func,
+                                                       notify_baton,
+                                                       subpool));
+            }
+
+        } /* End while(1) loop */
+
+    svn_pool_destroy(subpool);
+
+  } /* End else src_is_added. */
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Helper function for copy_file_administratively() and
+   copy_dir_administratively().  Determines the COPYFROM_URL and
+   COPYFROM_REV of a file or directory SRC_PATH which is the descendant
+   of an explicitly moved or copied directory that has not been committed.
+*/
+static svn_error_t *
+get_copyfrom_url_rev_via_parent(const char *src_path,
+                                const char **copyfrom_url,
+                                svn_revnum_t *copyfrom_rev,
+                                svn_wc_adm_access_t *src_access,
+                                apr_pool_t *pool)
+{
+  const char *parent_path = svn_path_dirname(src_path, pool);
+  const char *rest = svn_path_basename(src_path, pool);
+  *copyfrom_url = NULL;
+
+  while (! *copyfrom_url)
+    {
+      svn_wc_adm_access_t *parent_access;
+      const svn_wc_entry_t *entry;
+
+      /* Don't look for parent_path in src_access if it can't be
+         there... */
+      if (svn_path_is_ancestor(svn_wc_adm_access_path(src_access),
+                               parent_path))
+        {
+          SVN_ERR(svn_wc_adm_retrieve(&parent_access, src_access,
+                                      parent_path, pool));
+          SVN_ERR(svn_wc_entry(&entry, parent_path, parent_access,
+                               FALSE, pool));
+        }
+      else /* ...get access for parent_path instead. */
+        {
+          SVN_ERR(svn_wc_adm_probe_open3(&parent_access, NULL,
+                                         parent_path, FALSE, -1,
+                                         NULL, NULL, pool));
+          SVN_ERR(svn_wc_entry(&entry, parent_path, parent_access,
+                               FALSE, pool));
+          SVN_ERR(svn_wc_adm_close(parent_access));
+        }
+
+      if (! entry)
+        return svn_error_createf
+          (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+           _("'%s' is not under version control"),
+             svn_path_local_style(parent_path, pool));
+
+      if (entry->copyfrom_url)
+        {
+          *copyfrom_url = svn_path_join(entry->copyfrom_url, rest,
+                                        pool);
+          *copyfrom_rev = entry->copyfrom_rev;
+        }
+      else
+        {
+          rest = svn_path_join(svn_path_basename(parent_path, pool),
+                               rest, pool);
+          parent_path = svn_path_dirname(parent_path, pool);
+        }
+    }
+
+  return SVN_NO_ERROR;
+} 
+
 /* This function effectively creates and schedules a file for
    addition, but does extra administrative things to allow it to
    function as a 'copy'.
@@ -90,18 +375,19 @@ copy_file_administratively(const char *src_path,
                                  svn_path_local_style(dst_path, pool));
     }
 
-  /* Sanity check:  you cannot make a copy of something that's not
-     in the repository.  See comment at the bottom of this file for an
-     explanation. */
+  /* Sanity check 1: You cannot make a copy of something that's not
+     under version control. */
   SVN_ERR(svn_wc_entry(&src_entry, src_path, src_access, FALSE, pool));
   if (! src_entry)
     return svn_error_createf 
       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
        _("Cannot copy or move '%s': it's not under version control"),
        svn_path_local_style(src_path, pool));
-  if ((src_entry->schedule == svn_wc_schedule_add)
-      || (! src_entry->url)
-      || (src_entry->copied))
+
+  /* Sanity check 2: You cannot make a copy of something that's not
+     in the repository unless it's a copy of an uncommitted copy. */
+  if ((src_entry->schedule == svn_wc_schedule_add && (! src_entry->copied))
+      || (! src_entry->url))
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it's not in the repository yet; "
@@ -111,13 +397,42 @@ copy_file_administratively(const char *src_path,
 
   /* Schedule the new file for addition in its parent, WITH HISTORY. */
   {
-    char *copyfrom_url;
+    const char *copyfrom_url;
     const char *tmp_wc_text;
     svn_revnum_t copyfrom_rev;
     apr_hash_t *props, *base_props;
 
-    SVN_ERR(svn_wc_get_ancestry(&copyfrom_url, &copyfrom_rev,
-                                src_path, src_access, pool));
+    /* Are we moving or copying a file that is already moved or copied
+       but not committed? */
+    if (src_entry->copied)
+      {
+        if (src_entry->copyfrom_url)
+          {
+            /* When copying/moving a file that was already explicitly
+               copied/moved then we know the URL it was copied from... */
+            copyfrom_url = apr_pstrdup(pool, src_entry->copyfrom_url);
+            copyfrom_rev = src_entry->copyfrom_rev;
+          }
+        else
+          {
+            /* ...But if this file is merely the descendant of an explicitly
+               copied/moved directory, we need to do a bit more work to
+               determine copyfrom_url and copyfrom_rev. */
+            SVN_ERR(get_copyfrom_url_rev_via_parent(src_path, &copyfrom_url,
+                                                    &copyfrom_rev,
+                                                    src_access, pool));
+          }
+      }
+    else
+      {
+        /* Grrr.  Why isn't the first arg to svn_wc_get_ancestry const? */
+        char *tmp;
+
+        SVN_ERR(svn_wc_get_ancestry(&tmp, &copyfrom_rev, src_path, src_access,
+                                    pool));
+
+        copyfrom_url = tmp;
+      }
 
     /* Load source base and working props. */
     SVN_ERR(svn_wc__load_props(&base_props, &props, src_access,
@@ -339,18 +654,19 @@ copy_dir_administratively(const char *src_path,
   const char *dst_path = svn_path_join(svn_wc_adm_access_path(dst_parent),
                                        dst_basename, pool);
 
-  /* Sanity check:  you cannot make a copy of something that's not
-     in the repository.  See comment at the bottom of this file for an
-     explanation. */
+  /* Sanity check 1: You cannot make a copy of something that's not
+     under version control. */
   SVN_ERR(svn_wc_entry(&src_entry, src_path, src_access, FALSE, pool));
   if (! src_entry)
     return svn_error_createf
       (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
        _("'%s' is not under version control"),
        svn_path_local_style(src_path, pool));
-  if ((src_entry->schedule == svn_wc_schedule_add)
-      || (! src_entry->url)
-      || (src_entry->copied))
+
+  /* Sanity check 2: You cannot make a copy of something that's not
+     in the repository unless it's a copy of an uncommitted copy. */
+  if ((src_entry->schedule == svn_wc_schedule_add && (! src_entry->copied))
+      || (! src_entry->url))
     return svn_error_createf 
       (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
        _("Cannot copy or move '%s': it is not in the repository yet; "
@@ -379,18 +695,57 @@ copy_dir_administratively(const char *src_path,
   SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dst_path, TRUE, -1,
                            cancel_func, cancel_baton, pool));
   SVN_ERR(post_copy_cleanup(adm_access, pool));
-  SVN_ERR(svn_wc_adm_close(adm_access));
 
   /* Schedule the directory for addition in both its parent and itself
      (this_dir) -- WITH HISTORY.  This function should leave the
      existing administrative dir untouched.  */
   {
-    char *copyfrom_url;
+    const char *copyfrom_url;
     svn_revnum_t copyfrom_rev;
-    
-    SVN_ERR(svn_wc_get_ancestry(&copyfrom_url, &copyfrom_rev,
-                                src_path, src_access, pool));
-    
+    svn_wc_entry_t tmp_entry;
+
+    /* Are we copying a dir that is already copied but not committed? */
+    if (src_entry->copied)
+      {
+        if (src_entry->copyfrom_url)
+          {
+            /* When copying/moving a dir that was already explicitly
+               copied/moved then we know the URL it was copied from... */
+            copyfrom_url = apr_pstrdup(pool, src_entry->copyfrom_url);
+            copyfrom_rev = src_entry->copyfrom_rev;
+          }
+        else
+          {
+            /* ...But if this dir is merely the descendant of an explicitly
+               copied/moved directory, we need to do a bit more work to
+               determine copyfrom_url and copyfrom_rev. */
+            SVN_ERR(get_copyfrom_url_rev_via_parent(src_path, &copyfrom_url,
+                                                    &copyfrom_rev,
+                                                    src_access, pool));
+          }
+
+        /* The URL for a copied dir won't exist in the repository, which
+           will cause  svn_wc_add2() below to fail.  Set the URL to the
+           URL of the first copy for now to prevent this. */
+        tmp_entry.url = apr_pstrdup(pool, copyfrom_url);
+        SVN_ERR(svn_wc__entry_modify(adm_access, NULL, /* This Dir */
+                                     &tmp_entry,
+                                     SVN_WC__ENTRY_MODIFY_URL, TRUE,
+                                     pool));
+      }
+    else
+      {
+        /* Grrr.  Why isn't the first arg to svn_wc_get_ancestry const? */
+        char *tmp;
+
+        SVN_ERR(svn_wc_get_ancestry(&tmp, &copyfrom_rev, src_path, src_access,
+                                    pool));
+
+        copyfrom_url = tmp;
+      }
+
+    SVN_ERR(svn_wc_adm_close(adm_access));
+
     SVN_ERR(svn_wc_add2(dst_path, dst_parent,
                         copyfrom_url, copyfrom_rev,
                         cancel_func, cancel_baton,
@@ -454,15 +809,46 @@ svn_wc_copy2(const char *src_path,
   SVN_ERR(svn_io_check_path(src_path, &src_kind, pool));
 
   if (src_kind == svn_node_file)
-    SVN_ERR(copy_file_administratively(src_path, adm_access,
-                                       dst_parent, dst_basename,
-                                       notify_func, notify_baton, pool));
-
+    {
+      /* Check if we are copying a file scheduled for addition,
+         these require special handling. */
+      if (src_entry->schedule == svn_wc_schedule_add
+          && (! src_entry->copied))
+        {
+          SVN_ERR(copy_added_file_administratively(src_path, TRUE,
+                                                   dst_parent, dst_basename,
+                                                   cancel_func, cancel_baton,
+                                                   notify_func, notify_baton,
+                                                   pool));
+        }
+      else
+        {
+          SVN_ERR(copy_file_administratively(src_path, adm_access,
+                                             dst_parent, dst_basename,
+                                             notify_func, notify_baton, pool));
+        }
+    }
   else if (src_kind == svn_node_dir)
-    SVN_ERR(copy_dir_administratively(src_path, adm_access,
-                                      dst_parent, dst_basename,
-                                      cancel_func, cancel_baton,
-                                      notify_func, notify_baton, pool));
+    {
+      /* Check if we are copying a directory scheduled for addition,
+         these require special handling. */
+      if (src_entry->schedule == svn_wc_schedule_add
+          && (! src_entry->copied))
+        {
+          SVN_ERR(copy_added_dir_administratively(src_path, TRUE,
+                                                  dst_parent, adm_access,
+                                                  dst_basename, cancel_func,
+                                                  cancel_baton, notify_func,
+                                                  notify_baton, pool));
+        }
+      else
+        {
+          SVN_ERR(copy_dir_administratively(src_path, adm_access,
+                                            dst_parent, dst_basename,
+                                            cancel_func, cancel_baton,
+                                            notify_func, notify_baton, pool));
+        }
+    }
 
   SVN_ERR(svn_wc_adm_close(adm_access));
 
@@ -492,29 +878,3 @@ svn_wc_copy(const char *src_path,
 }
 
 
-/*
-  Rabbinic Commentary
-
-
-  Q:  Why can't we 'svn cp' something that we just copied?
-      i.e.  'svn cp foo foo2;  svn cp foo2 foo3"
-
-  A:  It leads to inconsistencies.
-
-      In the example above, foo2 has no associated repository URL,
-      because it hasn't been committed yet.  But suppose foo3 simply
-      inherited foo's URL (i.e. foo3 'pointed' to foo as a copy
-      ancestor by virtue of transitivity.)
- 
-      For one, this is not what the user would expect.  That's
-      certainly not what the user typed!  Second, suppose that the
-      user did a commit between the two 'svn cp' commands.  Now foo3
-      really *would* point to foo2, but without that commit, it
-      pointed to foo.  Ugly inconsistency, and the user has no idea
-      that foo3's ancestor would be different in each case.
-
-      And even if somehow we *could* make foo3 point to foo2 before
-      foo2 existed in the repository... what's to prevent a user from
-      committing foo3 first?  That would break.
-
-*/

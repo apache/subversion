@@ -62,12 +62,6 @@ struct file_rev_baton {
   svn_boolean_t ignore_mime_type;
   /* name of file containing the previous revision of the file */
   const char *last_filename;
-  /* name of file containing the previous revision of the file, translated
-     to the appropriate EOL style.  May be identical to the above if no
-     translation was required. */
-  const char *last_filename_translated;
-  svn_subst_eol_style_t eol_style;
-  const char *eol_str;
   struct rev *rev;     /* the rev for which blame is being assigned
                           during a diff */
   struct blame *blame; /* linked list of blame chunks */
@@ -320,7 +314,6 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct delta_baton *dbaton = baton;
   struct file_rev_baton *frb = dbaton->file_rev_baton;
-  const char *translation_tgt = dbaton->filename;
 
   /* Call the wrapped handler first. */
   SVN_ERR(dbaton->wrapped_handler(window, dbaton->wrapped_baton));
@@ -337,31 +330,14 @@ window_handler(svn_txdelta_window_t *window, void *baton)
     SVN_ERR(svn_io_file_close(dbaton->source_file, frb->currpool));
   SVN_ERR(svn_io_file_close(dbaton->file, frb->currpool));
 
-  if (svn_subst_translation_required(frb->eol_style, frb->eol_str,
-                                     NULL, FALSE, FALSE))
-    {
-      SVN_ERR(svn_io_open_unique_file2(NULL,
-                                       &translation_tgt,
-                                       frb->tmp_path,
-                                       ".tmp",
-                                       svn_io_file_del_on_pool_cleanup,
-                                       frb->currpool));
-      SVN_ERR(svn_subst_copy_and_translate3(dbaton->filename,
-                                            translation_tgt,
-                                            frb->eol_str, FALSE,
-                                            NULL, FALSE, FALSE,
-                                            frb->currpool));
-    }
-
   /* Process this file. */
-  SVN_ERR(add_file_blame(frb->last_filename_translated,
-                         translation_tgt, frb));
+  SVN_ERR(add_file_blame(frb->last_filename,
+                         dbaton->filename, frb));
 
   /* Prepare for next revision. */
 
   /* Remember the file name so we can diff it with the next revision. */
   frb->last_filename = dbaton->filename;
-  frb->last_filename_translated = translation_tgt;
 
   /* Switch pools. */
   {
@@ -396,25 +372,6 @@ check_mimetype(apr_array_header_t *prop_diffs, const char *target,
 }
 
 
-static void
-update_eol_style(svn_subst_eol_style_t *style,
-                 const char **eol,
-                 apr_array_header_t *prop_diffs)
-{
-  int i;
-
-  for (i = 0; i < prop_diffs->nelts; ++i)
-    {
-      const svn_prop_t *prop = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
-      if (strcmp(prop->name, SVN_PROP_EOL_STYLE) == 0)
-        {
-          svn_subst_eol_style_from_value
-            (style, eol, prop->value ? prop->value->data : NULL);
-          return;
-        }
-    }
-}
-
 static svn_error_t *
 file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                  apr_hash_t *rev_props,
@@ -434,8 +391,6 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
   /* If this file has a non-textual mime-type, bail out. */
   if (! frb->ignore_mime_type)
     SVN_ERR(check_mimetype(prop_diffs, frb->target, frb->currpool));
-
-  update_eol_style(&frb->eol_style, &frb->eol_str, prop_diffs);
 
   if (frb->ctx->notify_func2)
     {
@@ -586,9 +541,6 @@ svn_client_blame3(const char *target,
   frb.diff_options = diff_options;
   frb.ignore_mime_type = ignore_mime_type;
   frb.last_filename = NULL;
-  frb.last_filename_translated = NULL;
-  frb.eol_style = svn_subst_eol_style_none;
-  frb.eol_str = NULL;
   frb.blame = NULL;
   frb.avail = NULL;
 
@@ -632,7 +584,8 @@ svn_client_blame3(const char *target,
   /* Open the last file and get a stream. */
   SVN_ERR(svn_io_file_open(&file, frb.last_filename, APR_READ | APR_BUFFERED,
                            APR_OS_DEFAULT, pool));
-  stream = svn_stream_from_aprfile(file, pool);
+  stream = svn_subst_stream_translated(svn_stream_from_aprfile(file, pool),
+                                       "\n", TRUE, NULL, FALSE, pool);
 
   /* Process each blame item. */
   for (walk = frb.blame; walk; walk = walk->next)
@@ -668,6 +621,58 @@ svn_client_blame3(const char *target,
   return SVN_NO_ERROR;
 }
 
+
+/* svn_client_blame3 guarantees 'no EOL chars' as part of the receiver
+   LINE argument.  Older versions depend on the fact that if a CR is
+   required, that CR is already part of the LINE data.
+
+   Because of this difference, we need to trap old receivers and append
+   a CR to LINE before passing it on to the actual receiver on platforms
+   which want CRLF line termination.
+
+*/
+
+struct wrapped_receiver_baton_s
+{
+  svn_client_blame_receiver_t orig_receiver;
+  void *orig_baton;
+};
+
+static svn_error_t *
+wrapped_receiver(void *baton,
+                 apr_int64_t line_no,
+                 svn_revnum_t revision,
+                 const char *author,
+                 const char *date,
+                 const char *line,
+                 apr_pool_t *pool)
+{
+  struct wrapped_receiver_baton_s *b = baton;
+  svn_stringbuf_t *expanded_line = svn_stringbuf_create(line, pool);
+
+  svn_stringbuf_appendbytes(expanded_line, "\r", 1);
+
+  return b->orig_receiver(b->orig_baton, line_no, revision, author,
+                          date, expanded_line->data, pool);
+}
+
+static void
+wrap_pre_blame3_receiver(svn_client_blame_receiver_t *receiver,
+                   void **receiver_baton,
+                   apr_pool_t *pool)
+{
+  if (strlen(APR_EOL_STR) > 1)
+    {
+      struct wrapped_receiver_baton_s *b = apr_palloc(pool,sizeof(*b));
+
+      b->orig_receiver = *receiver;
+      b->orig_baton = *receiver_baton;
+
+      *receiver_baton = b;
+      *receiver = wrapped_receiver;
+    }
+}
+
 svn_error_t *
 svn_client_blame2(const char *target,
                   const svn_opt_revision_t *peg_revision,
@@ -678,6 +683,7 @@ svn_client_blame2(const char *target,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
+  wrap_pre_blame3_receiver(&receiver, &receiver_baton, pool);
   return svn_client_blame3(target, peg_revision, start, end,
                            svn_diff_file_options_create(pool), FALSE,
                            receiver, receiver_baton, ctx, pool);
@@ -691,6 +697,7 @@ svn_client_blame(const char *target,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
+  wrap_pre_blame3_receiver(&receiver, &receiver_baton, pool);
   return svn_client_blame2(target, end, start, end,
                            receiver, receiver_baton, ctx, pool);
 }
