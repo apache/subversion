@@ -39,11 +39,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r21387
-    Add svnsync to the Win32 dist script.
-    Votes:
-      +1: djh, dlr
-
   * r21392
     Fix the Python bindings tests so that they use URLs which work
     on Windows.
@@ -76,3 +71,7 @@ Candidate changes:
 
 Approved changes:
 
+  * r21387
+    Add svnsync to the Win32 dist script.
+    Votes:
+      +1: djh, dlr, zhakov
