@@ -168,6 +168,8 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
 
              'bin': (File('%(blddir)s/svn/svn.exe'),
                      File('%(blddir)s/svn/svn.pdb'),
+                     File('%(blddir)s/svnsync/svnsync.pdb'),
+                     File('%(blddir)s/svnsync/svnsync.exe'),
                      File('%(blddir)s/svnadmin/svnadmin.exe'),
                      File('%(blddir)s/svnadmin/svnadmin.pdb'),
                      File('%(blddir)s/svnlook/svnlook.exe'),
