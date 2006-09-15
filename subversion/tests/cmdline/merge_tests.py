@@ -878,11 +878,13 @@ def merge_catches_nonexistent_target(sbox):
   newfile_path = os.path.join(Q_path, 'newfile')
   Q_url = svntest.main.current_repo_url + '/A/D/Q'
 
+  # Copy dir A/D/G to A/D/Q, creating r1.
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', G_path, Q_path)
   
   svntest.main.file_append(newfile_path, 'This is newfile.\n')
   svntest.actions.run_and_verify_svn(None, None, [], 'add', newfile_path)
   
+  # Add newfile to dir G, creating r2.
   expected_output = wc.State(wc_dir, {
     'A/D/Q'          : Item(verb='Adding'),
     'A/D/Q/newfile'  : Item(verb='Adding'),
@@ -902,6 +904,7 @@ def merge_catches_nonexistent_target(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
+  # Change newfile, creating r3.
   svntest.main.file_append(newfile_path, 'A change to newfile.\n')
   expected_output = wc.State(wc_dir, {
     'A/D/Q/newfile'  : Item(verb='Sending'),
@@ -913,6 +916,8 @@ def merge_catches_nonexistent_target(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
+  # Merge the change to newfile (from r3) into G, where newfile
+  # doesn't exist.
   saved_cwd = os.getcwd()
   try:
     os.chdir(G_path)
@@ -924,7 +929,6 @@ def merge_catches_nonexistent_target(sbox):
       'tau'  : Item(),
       })
     expected_status.tweak(status='  ', wc_rev=1)
-    expected_status.tweak('', status=' M')
     expected_disk = wc.State('', {
       'pi'   : Item("This is the file 'pi'.\n"),
       'rho'  : Item("This is the file 'rho'.\n"),
@@ -959,15 +963,17 @@ def merge_tree_deleted_in_target(sbox):
   I_url = svntest.main.current_repo_url + '/A/I'
 
 
+  # Copy B to I, creating r1.
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', B_url, I_url, '-m', 'rev 2')
 
+  # Change some files, creating r2.
   svntest.main.file_append(alpha_path, 'A change to alpha.\n')
   svntest.main.file_append(os.path.join(B_path, 'lambda'), 'change lambda.\n')
-  
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'rev 3', B_path)
 
+  # Remove E, creating r3.
   E_url = svntest.main.current_repo_url + '/A/I/E'
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', E_url, '-m', 'rev 4')
@@ -988,7 +994,6 @@ def merge_tree_deleted_in_target(sbox):
     'lambda'  : Item(status='M '),
     })
   expected_status.tweak(wc_rev=4)
-  expected_status.tweak('', status=' M')
   expected_skip = wc.State(I_path, {
     'E'       : Item(),
     'E/alpha' : Item(),
