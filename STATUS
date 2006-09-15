@@ -49,7 +49,7 @@ Candidate changes:
   * r21424
     Add svnsync to the Win32 installer.
     Votes:
-      +1: dlr
+      +1: dlr, zhakov
 
   * r21471
     Dramatically speed up WC to WC copy post commit processing.
