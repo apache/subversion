@@ -21,7 +21,7 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r21293 (depends on r21289 above)
+  * r21293
     Neon 0.26.x compatibility for Windows build.
     Votes:
       +1: djh, dlr
@@ -46,11 +46,6 @@ Candidate changes:
     Votes:
       +1: djames
 
-  * r21424
-    Add svnsync to the Win32 installer.
-    Votes:
-      +1: dlr, zhakov
-
   * r21471
     Dramatically speed up WC to WC copy post commit processing.
     Votes:
@@ -70,4 +65,9 @@ Candidate changes:
       +1: malcolm, dlr
 
 Approved changes:
+
+  * r21424
+    Add svnsync to the Win32 installer.
+    Votes:
+      +1: dlr, zhakov, djh
 
