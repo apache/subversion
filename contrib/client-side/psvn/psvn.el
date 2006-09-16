@@ -272,6 +272,11 @@ Possible values are: commit, revert."
   :type 'boolean
   :group 'psvn)
 
+(defcustom svn-status-auto-revert-buffers t
+  "*Auto revert buffers that have changed on disk."
+  :type 'boolean
+  :group 'psvn)
+
 (defcustom svn-status-negate-meaning-of-arg-commands '()
   "*List of operations that should use a negated meaning of the prefix argument.
 The supported functions are `svn-status' and `svn-status-set-user-mark'."
@@ -1129,6 +1134,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (when (member 'commit svn-status-unmark-files-after-list)
                     (svn-status-unset-all-usermarks))
                   (svn-status-update-with-command-list (svn-status-parse-commit-output))
+                  (svn-revert-some-buffers)
                   (run-hooks 'svn-log-edit-done-hook)
                   (setq svn-status-files-to-commit nil
                         svn-status-recursive-commit nil)
@@ -1137,6 +1143,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (svn-status-show-process-output 'update t)
                   (setq svn-status-update-list (svn-status-parse-update-output))
                   (svn-status-update)
+                  (svn-revert-some-buffers)
                   (message "svn update finished"))
                  ((eq svn-process-cmd 'add)
                   (svn-status-update-with-command-list (svn-status-parse-ar-output))
@@ -1207,6 +1214,25 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
       (when (looking-at "Username: ")
         (let ((user-name (read-string "Username for svn operation: ")))
           (svn-process-send-string-and-newline user-name))))))
+
+(defun svn-revert-some-buffers (&optional tree)
+  "Reverts all buffers visiting a file in TREE that aren't modified.
+To be run after a commit, an update or a merge."
+  (interactive)
+  (let ((tree (or (svn-status-base-dir) tree)))
+    (dolist (buffer (buffer-list))
+      (with-current-buffer buffer
+        (when (not (buffer-modified-p))
+          (let ((file (buffer-file-name)))
+            (when file
+              (let ((root (svn-status-base-dir (file-name-directory file))))
+                (when (and root
+                           (string= root tree)
+                           ;; buffer is modified and in the tree TREE.
+                           svn-status-auto-revert-buffers)
+                  ;; Keep the buffer if the file doesn't exist
+                  (if (file-exists-p file)
+                      (revert-buffer t t)))))))))))
 
 (defun svn-parse-rev-num (str)
   (if (and str (stringp str)
@@ -4328,7 +4354,7 @@ Return nil, if not in a svn working copy."
              (setq base-dir (file-name-directory dot-svn-dir))
              (string-match "\\(.+/\\).+/" dir-below)
              (setq dir-below
-                   (and (string-match "\(.*/\)[^/]+/" dir-below)
+                   (and (string-match "\\(.*/\\)[^/]+/" dir-below)
                         (match-string 1 dir-below)))
              (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))))
     (and in-tree base-dir)))
