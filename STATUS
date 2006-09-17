@@ -66,8 +66,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r21424
-    Add svnsync to the Win32 installer.
-    Votes:
-      +1: dlr, zhakov, djh
-

@@ -60,6 +60,7 @@ Source: W32notes.txt; DestDir: {app}
 Source: {#= path_setup_in}\subversion\svn-proxy-template.reg; DestDir: {app}; Flags: ignoreversion
 Source: {#= path_svn}\README.txt; DestDir: {app}; DestName: Buildnotes.txt
 Source: {#= path_svnclient}\svn.exe; DestDir: {app}\bin; Flags: ignoreversion
+Source: {#= path_svnsync}\svnsync.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnadmin}\svnadmin.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnlook}\svnlook.exe; DestDir: {app}\bin; Flags: ignoreversion
 Source: {#= path_svnserve}\svnserve.exe; DestDir: {app}\bin; Flags: ignoreversion
@@ -103,6 +104,7 @@ Source: UninsHs.exe; DestDir: {app}; Flags: restartreplace
 ; Debug symbols;
 #ifdef inc_dbgsyms
 Source: {#= path_svnclient_pdb}\svn.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
+Source: {#= path_svnsync_pdb}\svnsync.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
 Source: {#= path_svnadmin_pdb}\svnadmin.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
 Source: {#= path_svnlook_pdb}\svnlook.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
 Source: {#= path_svnserve_pdb}\svnserve.pdb; DestDir: {app}\bin; Flags: ignoreversion; Components: pdb
@@ -179,6 +181,7 @@ Type: filesandordirs; Name: {app}\httpd
 
 ;If add "fixed" flag to "main" in [Components], use these lines:
 ;Type: files; Name: {app}\svn.pdb
+;Type: files; Name: {app}\svnsync.pdb
 ;Type: files; Name: {app}\svnadmin.pdb
 ;Type: files; Name: {app}\svnserve.pdb
 ;Type: files; Name: {app}\svnlook.pdb

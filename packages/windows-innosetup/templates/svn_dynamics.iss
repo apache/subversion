@@ -44,6 +44,7 @@
 
 ; Basic files
 #define path_svnclient         (path_svn + "bin")
+#define path_svnsync           (path_svn + "bin")
 #define path_svnadmin          (path_svn + "bin")
 #define path_svnlook           (path_svn + "bin")
 #define path_svnserve          (path_svn + "bin")
@@ -69,6 +70,7 @@
 ;Debug symbols ----------------------------------------------------------------
 ; Basic files
 #define path_svnclient_pdb     (path_svn + "bin")
+#define path_svnsync_pdb       (path_svn + "bin")
 #define path_svnadmin_pdb      (path_svn + "bin")
 #define path_svnlook_pdb       (path_svn + "bin")
 #define path_svnserve_pdb      (path_svn + "bin")
