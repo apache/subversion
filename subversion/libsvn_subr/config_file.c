@@ -928,7 +928,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "# [group1]"
         APR_EOL_STR
-"# http-proxy-host = proxy1.some-domain-name.com"
+        "# http-proxy-host = proxy1.some-domain-name.com"
         APR_EOL_STR
         "# http-proxy-port = 80"
         APR_EOL_STR
