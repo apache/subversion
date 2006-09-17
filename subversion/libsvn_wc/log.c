@@ -1824,8 +1824,7 @@ run_log(svn_wc_adm_access_t *adm_access,
         err2 = svn_xml_parse(parser, buf, buf_len, 0);
         if (err2)
           {
-            if (err)
-              svn_error_clear(err);
+            svn_error_clear(err);
             SVN_ERR(err2);
           }
       } while (! err);

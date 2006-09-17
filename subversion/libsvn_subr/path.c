@@ -1163,8 +1163,7 @@ svn_path_split_if_file(const char *path,
 
   if (err || finfo.filetype == APR_REG)
     {
-      if (err)
-        svn_error_clear(err);
+      svn_error_clear(err);
       svn_path_split(path, pdirectory, pfile, pool);
     }
   else if (finfo.filetype == APR_DIR)

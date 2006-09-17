@@ -1407,8 +1407,7 @@ main(int argc, const char *argv[])
                 }
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          if (err)
-            svn_error_clear(err);
+          svn_error_clear(err);
         }
 
       /* If the -m argument is a file at all, that's probably not what
