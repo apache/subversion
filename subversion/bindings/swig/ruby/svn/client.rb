@@ -57,7 +57,7 @@ module Svn
         undef new
         def new
           obj = Client.create_context
-          obj.__send__("initialize")
+          obj.funcall("initialize")
           obj
         end
       end

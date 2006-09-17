@@ -1,3 +1,9 @@
+unless respond_to?(:funcall)
+  module Kernel
+    alias funcall __send__
+  end
+end
+
 module Svn
   module Util
 
@@ -60,8 +66,8 @@ module Svn
           target_id = target_name.intern
           target_method = ext_mod.method(meth)
           target_proc = Proc.new{|*args| target_method.call(*args)}
-          target_mod.__send__(:define_method, target_id, target_proc)
-          target_mod.__send__(:module_function, target_id)
+          target_mod.funcall(:define_method, target_id, target_proc)
+          target_mod.funcall(:module_function, target_id)
           @@wrapper_procs << target_proc
         end
       end
