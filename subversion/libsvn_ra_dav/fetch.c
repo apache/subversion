@@ -484,8 +484,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
      than Neon-related errors */
   if (cgc.err)
     {
-      if (err)
-        svn_error_clear(err);
+      svn_error_clear(err);
       return cgc.err;
     }
 
@@ -1746,8 +1745,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
      marshalled over the network.  We give that top priority. */
   if (baton.err)
     {
-      if (err)
-        svn_error_clear(err);
+      svn_error_clear(err);
       
       /* mod_dav_svn is known to return "unsupported feature" on
          unknown REPORT requests, but it's our svn_ra.h promise to

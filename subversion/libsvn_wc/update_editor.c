@@ -211,8 +211,7 @@ get_entry_url(svn_wc_adm_access_t *associated_access,
     }
   if (err || (! entry) || (! entry->url))
     {
-      if (err)
-        svn_error_clear(err);
+      svn_error_clear(err);
       return NULL;
     }
 

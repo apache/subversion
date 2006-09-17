@@ -763,11 +763,7 @@ void SVNAdmin::rmlocks(const char *path, Targets &locks)
             goto move_on;
       
     move_on:      
-        if (err)
-        {
-            svn_error_clear (err);
-        }
-            
+        svn_error_clear (err);
         svn_pool_clear (subpool);
     }
 
