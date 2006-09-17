@@ -148,13 +148,13 @@ class SvnFsTest < Test::Unit::TestCase
     assert_raises(Svn::Error::FsNoSuchTransaction) do
       @fs.open_txn("NOT-EXIST")
     end
-    
+
+    start_time = Time.now
     txn1 = @fs.transaction
     assert_equal([Svn::Core::PROP_REVISION_DATE], txn1.proplist.keys)
     assert_instance_of(Time, txn1.proplist[Svn::Core::PROP_REVISION_DATE])
     date = txn1.prop(Svn::Core::PROP_REVISION_DATE)
-    assert_operator(date, :>=, Time.now - 1)
-    assert_operator(date, :<=, Time.now + 1)
+    assert_operator(start_time..(Time.now), :include?, date)
     txn1.set_prop(Svn::Core::PROP_REVISION_DATE, nil)
     assert_equal([], txn1.proplist.keys)
     assert_equal(youngest_rev, txn1.base_revision)
@@ -328,13 +328,13 @@ class SvnFsTest < Test::Unit::TestCase
     ctx = make_context(log)
     ctx.checkout(@repos_uri, @wc_path)
     ctx.mkdir(["#{@wc_path}/new_dir"])
-    past_time = Time.parse(Time.new.iso8601)
+
+    start_time = Time.now
     info = ctx.commit([@wc_path])
 
     assert_equal(@author, info.author)
     assert_equal(@fs.youngest_rev, info.revision)
-    assert(past_time <= info.date)
-    assert(info.date <= Time.now)
+    assert_operator(start_time..(Time.now), :include?, info.date)
 
     assert_equal(@author, @fs.prop(Svn::Core::PROP_REVISION_AUTHOR))
     assert_equal(log, @fs.prop(Svn::Core::PROP_REVISION_LOG))
