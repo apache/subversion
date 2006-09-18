@@ -597,7 +597,8 @@ txn_vtable_t txn_vtable = {
   svn_fs_base__txn_prop,
   svn_fs_base__txn_proplist,
   svn_fs_base__change_txn_prop,
-  svn_fs_base__txn_root
+  svn_fs_base__txn_root,
+  NULL
 };
 
 

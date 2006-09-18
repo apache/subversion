@@ -130,7 +130,8 @@ static txn_vtable_t txn_vtable = {
   svn_fs_fs__txn_prop,
   svn_fs_fs__txn_proplist,
   svn_fs_fs__change_txn_prop,
-  svn_fs_fs__txn_root
+  svn_fs_fs__txn_root,
+  svn_fs_fs__txn_mergeinfo
 };
 
 /* Pathname helper functions */

@@ -184,6 +184,8 @@ typedef struct txn_vtable_t
                               const svn_string_t *value, apr_pool_t *pool);
   svn_error_t *(*root)(svn_fs_root_t **root_p, svn_fs_txn_t *txn,
                        apr_pool_t *pool);
+  svn_error_t *(*get_mergeinfo)(apr_hash_t **minfoprops, svn_fs_txn_t *txn,
+                                apr_pool_t *pool);
 } txn_vtable_t;
 
 
