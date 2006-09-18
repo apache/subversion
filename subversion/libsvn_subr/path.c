@@ -1020,7 +1020,7 @@ svn_path_uri_from_iri(const char *iri, apr_pool_t *pool)
   return uri_escape(iri, iri_escape_chars, pool);
 }
 
-const char uri_autoescape_chars[256] = {
+static const char uri_autoescape_chars[256] = {
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   0, 1, 0, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
