@@ -2124,15 +2124,18 @@ def update_wc_on_windows_drive(sbox):
     "find the first available drive"
 
     # get the list of used drive letters, use some Windows specific function.
-    import win32api
+    try:
+  		import win32api
 
-    drives=win32api.GetLogicalDriveStrings()
-    drives=string.splitfields(drives,'\000')
+  		drives=win32api.GetLogicalDriveStrings()
+  		drives=string.splitfields(drives,'\000')
 
-    for d in range(ord('G'), ord('Z')+1):
-      drive = chr(d)
-      if not drive + ':\\' in drives:
-        return drive
+  		for d in range(ord('G'), ord('Z')+1):
+  		  drive = chr(d)
+  		  if not drive + ':\\' in drives:
+  			return drive
+    except ImportError:
+      return ''
 
     return ''
 
