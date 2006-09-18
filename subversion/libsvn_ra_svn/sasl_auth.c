@@ -246,10 +246,6 @@ static svn_error_t *handle_interact(svn_auth_cred_simple_t *creds,
 {
   sasl_interact_t *prompt;
 
-  if (!creds)
-    return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                             _("Authentication error from server: %s"),
-                             last_err);
   for (prompt = client_interact; prompt->id != SASL_CB_LIST_END; prompt++)
     {
       switch (prompt->id)
@@ -521,6 +517,12 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
 
       if (!success && need_creds)
         SVN_ERR(svn_auth_next_credentials(&creds, iterstate, pool));
+      /* If we ran out of authentication providers, return the last 
+         error sent by the server. */
+      if (!creds)
+        return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                _("Authentication error from server: %s"),
+                                last_err);
     }
   while (!success);
   svn_pool_destroy(subpool);
