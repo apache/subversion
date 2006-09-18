@@ -1728,6 +1728,8 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                                    FALSE,
                                    pool);
 
+  svn_pool_destroy(baton.scratchpool);
+
   if (err && err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
@@ -1768,8 +1770,6 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
 
   else if (err)
     return err;
-
-  svn_pool_destroy(baton.scratchpool);
 
   *locks = baton.lock_hash;
   return SVN_NO_ERROR;
