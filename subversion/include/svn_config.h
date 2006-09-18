@@ -67,6 +67,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_TIMEOUT              "http-timeout"
 #define SVN_CONFIG_OPTION_HTTP_COMPRESSION          "http-compression"
 #define SVN_CONFIG_OPTION_NEON_DEBUG_MASK           "neon-debug-mask"
+#define SVN_CONFIG_OPTION_HTTP_AUTH_TYPES           "http-auth-types"
 #define SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES       "ssl-authority-files"
 #define SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA      "ssl-trust-default-ca"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE      "ssl-client-cert-file"
