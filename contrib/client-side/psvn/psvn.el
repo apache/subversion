@@ -78,6 +78,7 @@
 ;; * M   - svn-status-mark-modified
 ;; * D   - svn-status-mark-deleted
 ;; * *   - svn-status-mark-changed
+;; * .   - svn-status-mark-by-file-ext
 ;; * %   - svn-status-mark-filename-regexp
 ;; .     - svn-status-goto-root-or-return
 ;; f     - svn-status-find-file
@@ -1562,6 +1563,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-mark-map (kbd "M") 'svn-status-mark-modified)
   (define-key svn-status-mode-mark-map (kbd "D") 'svn-status-mark-deleted)
   (define-key svn-status-mode-mark-map (kbd "*") 'svn-status-mark-changed)
+  (define-key svn-status-mode-mark-map (kbd ".") 'svn-status-mark-by-file-ext)
   (define-key svn-status-mode-mark-map (kbd "%") 'svn-status-mark-filename-regexp)
   (define-key svn-status-mode-mark-map (kbd "u") 'svn-status-show-svn-diff-for-marked-files))
 (when (not svn-status-mode-property-map)
@@ -1676,6 +1678,7 @@ A and B must be line-info's."
      ["Mark/Unmark modified" svn-status-mark-modified t]
      ["Mark/Unmark deleted" svn-status-mark-deleted t]
      ["Mark/Unmark modified/added/deleted" svn-status-mark-changed t]
+     ["Mark/Unmark filename by extension" svn-status-mark-by-file-ext t]
      ["Mark/Unmark filename by regexp" svn-status-mark-filename-regexp t]
      )
     ["Hide Unknown" svn-status-toggle-hide-unknown
@@ -2828,6 +2831,17 @@ If the function is called with a prefix arg, unmark all these files."
          (if current-prefix-arg t nil)))
   (svn-status-apply-usermark-checked
    '(lambda (info) (string-match regexp (svn-status-line-info->filename-nondirectory info))) (not unmark)))
+
+(defun svn-status-mark-by-file-ext (ext &optional unmark)
+  "Mark all files matching the given file extension EXT.
+If the function is called with a prefix arg, unmark all these files."
+  (interactive
+   (list (read-string (concat (if current-prefix-arg "Unmark" "Mark")
+                                         " files with extensions: "))
+         (if current-prefix-arg t nil)))
+  (svn-status-apply-usermark-checked
+   '(lambda (info) (let ((case-fold-search nil))
+                     (string-match (concat "\\." ext "$") (svn-status-line-info->filename-nondirectory info)))) (not unmark)))
 
 (defun svn-status-toggle-hide-unknown ()
   (interactive)
