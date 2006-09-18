@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # -*- mode: shell-script; -*-
 
 # This script simplifies the preparation of the environment for a Subversion client
@@ -50,6 +50,8 @@ else
   fail "Run this script from the root of Subversion's build tree!"
 fi
 
+# If you change this, also make sure to change the svn:ignore entry
+# for it and "make check-clean".
 SVNSERVE_PID=$ABS_BUILDDIR/subversion/tests/svnserveautocheck.pid
 
 export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_dav/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs"
