@@ -69,7 +69,15 @@ Candidate changes:
     Justification:
       Neon wants the path, it's only by chance that the URL usually works.
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
+
+  * r21531
+    Allow HTTP auth protocols to be configurable by way of a
+    "http-auth-types" parameter.
+    Justification:
+      Allow use of GSSAPI/SSPI auth on Windows with Neon 0.26.1+.
+    Votes:
+      +1: dlr
 
 Approved changes:
 
