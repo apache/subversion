@@ -40,7 +40,8 @@ _svn()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "up".
-	cmds='add blame annotate praise cat checkout co cleanup commit ci \
+	cmds='add blame annotate praise cat changelist cl \
+              checkout co cleanup commit ci \
               copy cp delete remove rm diff export help import info \
               list ls lock log merge mkdir move mv rename \
               propdel pdel propedit pedit propget pget \
@@ -441,10 +442,14 @@ _svn()
 		         --no-ignore $nOpts $qOpts"
 		;;
 	blame|annotate|ann|praise)
-		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml --force"
+		cmdOpts="$rOpts $pOpts -v --verbose --incremental --xml \
+		         -x --extensions --force"
 		;;
 	cat)
 		cmdOpts="$rOpts $pOpts"
+		;;
+	changelist|cl)
+		cmdOpts="--clear --targets"
 		;;
 	checkout|co)
 		cmdOpts="$rOpts $qOpts $nOpts $pOpts --ignore-externals"
@@ -454,7 +459,7 @@ _svn()
 		;;
 	commit|ci)
 		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
-		         --no-unlock"
+		         --no-unlock --changelist --keep-changelist"
 		;;
 	copy|cp)
 		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts"
@@ -480,7 +485,7 @@ _svn()
 		;; 
 	info)
 		cmdOpts="$pOpts $rOpts --targets -R --recursive \
-                         --incremental --xml"
+                         --incremental --xml --changelist"
 		;;
 	list|ls)
 		cmdOpts="$rOpts -v --verbose -R --recursive $pOpts \
@@ -495,7 +500,7 @@ _svn()
 		;;
 	merge)
 		cmdOpts="$rOpts $nOpts $qOpts --force --dry-run --diff3-cmd \
-		         $pOpts --ignore-ancestry -c --change"
+		         $pOpts --ignore-ancestry -c --change -x --extensions"
 		;;
 	mkdir)
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts"
@@ -531,7 +536,7 @@ _svn()
 		cmdOpts="--targets -R --recursive $qOpts"
 		;;
 	revert)
-		cmdOpts="--targets -R --recursive $qOpts"
+		cmdOpts="--targets -R --recursive $qOpts --changelist"
 		;;
 	status|stat|st)
 		cmdOpts="-u --show-updates -v --verbose $nOpts $qOpts $pOpts \
@@ -551,7 +556,7 @@ _svn()
 		;;
 	esac
 
-	# add options that are always available whatever the subcommand
+	# add options that are nearly always available
 	[[ "$cmd" != "--version" ]] && cmdOpts="$cmdOpts $helpOpts"
 	cmdOpts="$cmdOpts --config-dir"
 
@@ -619,7 +624,7 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='create deltify dump help hotcopy list-dblogs \
+	cmds='crashtest create deltify dump help hotcopy list-dblogs \
 	      list-unused-dblogs load lslocks lstxns recover rmlocks \
 	      rmtxns setlog verify --version'
 
@@ -662,6 +667,9 @@ _svnadmin ()
 	load)
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
 		         --use-pre-commit-hook --use-post-commit-hook"
+		;;
+	recover)
+		cmdOpts="--wait"
 		;;
 	rmtxns)
 		cmdOpts="-q --quiet"
