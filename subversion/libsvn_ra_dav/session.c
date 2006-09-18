@@ -351,12 +351,14 @@ client_ssl_callback(void *userdata, ne_session *sess,
 }
 
 /* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD,
- * *TIMEOUT_SECONDS and *NEON_DEBUG to the information for REQUESTED_HOST,
- * allocated in POOL, if there is any applicable information.  If there is
- * no applicable information or if there is an error, then set *PROXY_PORT
- * to (unsigned int) -1, *TIMEOUT_SECONDS and *NEON_DEBUG to zero, and the
- * rest to NULL.  This function can return an error, so before checking any
- * values, check the error return value.
+ * *TIMEOUT_SECONDS, *NEON_DEBUG, *COMPRESSION, and *NEON_AUTO_PROTOCOLS
+ * to the information for REQUESTED_HOST, allocated in POOL, if there is
+ * any applicable information.  If there is no applicable information or
+ * if there is an error, then set *PROXY_PORT to (unsigned int) -1,
+ * *TIMEOUT_SECONDS and *NEON_DEBUG to zero, *COMPRESSION to TRUE,
+ * *NEON_AUTH_TYPES is left untouched, and the rest are set to NULL.
+ * This function can return an error, so before examining any values,
+ * check the error return value.
  */
 static svn_error_t *get_server_settings(const char **proxy_host,
                                         unsigned int *proxy_port,
@@ -365,12 +367,13 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         int *timeout_seconds,
                                         int *neon_debug,
                                         svn_boolean_t *compression,
+                                        unsigned int *neon_auth_types,
                                         svn_config_t *cfg,
                                         const char *requested_host,
                                         apr_pool_t *pool)
 {
   const char *exceptions, *port_str, *timeout_str, *server_group;
-  const char *debug_str;
+  const char *debug_str, *http_auth_types;
   svn_boolean_t is_exception = FALSE;
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
@@ -380,6 +383,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   port_str        = NULL;
   timeout_str     = NULL;
   debug_str       = NULL;
+  http_auth_types = NULL;
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
@@ -406,6 +410,10 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                   SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
       svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
+#ifdef SVN_NEON_0_26
+      svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
+#endif
     }
 
   if (cfg)
@@ -431,6 +439,10 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                   *compression));
       svn_config_get(cfg, &debug_str, server_group, 
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, debug_str);
+#ifdef SVN_NEON_0_26
+      svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
+#endif
     }
 
   /* Special case: convert the port value, if any. */
@@ -486,6 +498,29 @@ static svn_error_t *get_server_settings(const char **proxy_host,
     }
   else
     *neon_debug = 0;
+
+#ifdef SVN_NEON_0_26
+  if (http_auth_types)
+    {
+      char *token, *last;
+      char *auth_types_list = apr_palloc(pool, strlen(http_auth_types) + 1);
+      apr_collapse_spaces(auth_types_list, http_auth_types);
+      while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
+        {
+          auth_types_list = NULL;
+          if (strcasecmp("basic", token) == 0)
+            *neon_auth_types |= NE_AUTH_BASIC;
+          else if (strcasecmp("digest", token) == 0)
+            *neon_auth_types |= NE_AUTH_DIGEST;
+          else if (strcasecmp("negotiate", token) == 0)
+            *neon_auth_types |= NE_AUTH_NEGOTIATE;
+          else
+            return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                                    _("Invalid config: unknown http auth"
+                                      "type '%s'", token));
+      }
+    }
+#endif /* SVN_NEON_0_26 */
 
   return SVN_NO_ERROR;
 }
@@ -618,6 +653,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
   svn_config_t *cfg;
   const char *server_group;
   char *itr;
+  unsigned int neon_auth_types;
   neonprogress_baton_t *neonprogress_baton =
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
@@ -677,6 +713,11 @@ svn_ra_dav__open(svn_ra_session_t *session,
     int debug;
     svn_error_t *err;
     
+#ifdef SVN_NEON_0_26
+    neon_auth_types = NE_AUTH_BASIC | NE_AUTH_DIGEST;
+    if (is_ssl_session)
+      neon_auth_types |= NE_AUTH_NEGOTIATE;
+#endif
     err = get_server_settings(&proxy_host,
                               &proxy_port,
                               &proxy_username,
@@ -684,6 +725,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
                               &timeout,
                               &debug,
                               &compression,
+                              &neon_auth_types,
                               cfg,
                               uri.host,
                               pool);
@@ -761,8 +803,13 @@ svn_ra_dav__open(svn_ra_session_t *session,
 
 
   /* Register an authentication 'pull' callback with the neon sessions */
+#ifdef SVN_NEON_0_26
+  ne_add_server_auth(sess, neon_auth_types, request_auth, ras);
+  ne_add_server_auth(sess2, neon_auth_types, request_auth, ras);
+#else
   ne_set_server_auth(sess, request_auth, ras);
   ne_set_server_auth(sess2, request_auth, ras);
+#endif
 
   /* Store our RA session baton in Neon's private data slot so we can
      get at it in functions that take only ne_session_t *sess
