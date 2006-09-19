@@ -18,9 +18,6 @@
 
 
 
-#define APR_WANT_STRFUNC
-#include <apr_want.h> /* for strcmp() */
-
 #include <apr_pools.h>
 #include <apr_tables.h>
 #include <apr_strings.h>
