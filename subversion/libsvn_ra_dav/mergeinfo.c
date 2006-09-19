@@ -59,8 +59,8 @@ static const svn_ra_dav__xml_elm_t mergeinfo_report_elements[] =
     { NULL }
   };
 
-static int
-start_element(void *baton, int parent_state, const char *nspace,
+static svn_error_t *
+start_element(int *elem, void *baton, int parent_state, const char *nspace,
               const char *elt_name, const char **atts)
 {
   struct mergeinfo_baton *mb = baton;
@@ -69,14 +69,17 @@ start_element(void *baton, int parent_state, const char *nspace,
     = svn_ra_dav__lookup_xml_elem(mergeinfo_report_elements, nspace,
                                   elt_name);
   if (! elm)
-    return NE_XML_DECLINE;
+    {
+      *elem = NE_XML_DECLINE;
+      return SVN_NO_ERROR;
+    }
 
   if (parent_state == ELEM_root)
     {
       /* If we're at the root of the tree, the element has to be the editor
        * report itself. */
       if (elm->id != ELEM_merge_info_report)
-        return SVN_RA_DAV__XML_INVALID;
+        return UNEXPECTED_ELEMENT(nspace, elt_name);
     }
 
   if (elm->id == ELEM_merge_info_item)
@@ -85,13 +88,13 @@ start_element(void *baton, int parent_state, const char *nspace,
       mb->curr_path = NULL;
     }
 
-  if (mb->err)
-    return NE_XML_ABORT;
+  SVN_ERR(mb->err);
 
-  return elm->id;
+  *elem = elm->id;
+  return SVN_NO_ERROR;
 }
 
-static int
+static svn_error_t *
 end_element(void *baton, int state, const char *nspace, const char *elt_name)
 {
   struct mergeinfo_baton *mb = baton;
@@ -100,7 +103,7 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
     = svn_ra_dav__lookup_xml_elem(mergeinfo_report_elements, nspace,
                                   elt_name);
   if (! elm)
-    return NE_XML_DECLINE;
+    return UNEXPECTED_ELEMENT(nspace, elt_name);
 
   if (elm->id == ELEM_merge_info_item)
     {
@@ -109,21 +112,17 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
           apr_hash_t *temp;
 
           mb->err = svn_mergeinfo_parse(mb->curr_info, &temp, mb->pool);
-          if (mb->err != SVN_NO_ERROR)
-            goto fail;
+          SVN_ERR(mb->err);
 
           apr_hash_set(mb->result, mb->curr_path,  APR_HASH_KEY_STRING,
                        temp);
         }
     }
- fail:
-  if (mb->err)
-    return NE_XML_ABORT;
 
-  return SVN_RA_DAV__XML_VALID;
+  return SVN_NO_ERROR;
 }
 
-static int
+static svn_error_t *
 cdata_handler(void *baton, int state, const char *cdata, size_t len)
 {
   struct mergeinfo_baton *mb = baton;
@@ -132,18 +131,17 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
   switch (state)
     {
     case ELEM_merge_info_path:
-      mb->curr_path = apr_pstrndup(mb->pool, cdata, len);
+      mb->curr_path = apr_pstrndup(mb->pool, cdata, nlen);
       break;
     case ELEM_merge_info_info:
-      mb->curr_info = apr_pstrndup(mb->pool, cdata, len);
+      mb->curr_info = apr_pstrndup(mb->pool, cdata, nlen);
       break;
     default:
       break;
     }
-  if (mb->err)
-    return NE_XML_ABORT;
+  SVN_ERR(mb->err);
 
-  return 0; /* no error */
+  return SVN_NO_ERROR;
 }
 
 /* Request a merge-info-report from the URL attached to SESSION,
@@ -162,8 +160,6 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct mergeinfo_baton mb;
-
-  svn_error_t *err;
 
   /* ### todo: I don't understand why the static, file-global
      variables shared by update and status are called `report_head'
