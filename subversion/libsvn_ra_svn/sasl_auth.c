@@ -36,9 +36,9 @@
 #include "svn_base64.h"
 
 #include "private/svn_atomic.h"
+#include "private/ra_svn_sasl.h"
 
 #include "ra_svn.h"
-#include "ra_svn_sasl.h"
 
 /* Note: In addition to being used via svn_atomic_init_once to control
  *       initialization of the SASL code this will also be referenced in
@@ -195,6 +195,28 @@ static apr_status_t sasl_dispose_cb(void *data)
   return APR_SUCCESS;
 }
 
+void svn_ra_svn__default_secprops(sasl_security_properties_t *secprops)
+{
+  /* The minimum and maximum security strength factors that the chosen 
+     SASL mechanism should provide.  0 means 'no encryption', 256 means 
+     '256-bit encryption', which is about the best that any SASL
+     mechanism can provide.  Using these values effectively means 'use 
+     whatever encryption the other side wants'.  Note that SASL will try 
+     to use better encryption whenever possible, so if both the server and
+     the client use these values the highest possible encryption strength 
+     will be used. */
+  secprops->min_ssf = 0;
+  secprops->max_ssf = 256;
+
+  /* Set maxbufsize to the maximum amount of data we can read at any one time. 
+     This value needs to be commmunicated to the peer if a security layer 
+     is negotiated. */
+  secprops->maxbufsize = SVN_RA_SVN__READBUF_SIZE;
+
+  secprops->security_flags = 0;
+  secprops->property_names = secprops->property_values = NULL;
+}
+
 /* Create a new SASL context. */
 static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                                  svn_boolean_t is_tunneled,
@@ -203,7 +225,7 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                                  const char *remote_addrport, 
                                  apr_pool_t *pool)
 {
-  sasl_security_properties_t secprops = SVN_RA_SVN__DEFAULT_SECPROPS;
+  sasl_security_properties_t secprops;
   int result;
 
   result = sasl_client_new("svn", hostname, local_addrport, remote_addrport,
@@ -232,6 +254,7 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
 
   /* Set security properties. Don't allow PLAIN or LOGIN, since we 
      don't support TLS yet. */
+  svn_ra_svn__default_secprops(&secprops);
   secprops.security_flags = SASL_SEC_NOPLAINTEXT;
   sasl_setprop(*sasl_ctx, SASL_SEC_PROPS, &secprops);
 
@@ -395,36 +418,38 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
 }
 
 svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport, 
-                                      const char **remote_addrport,
-                                      apr_socket_t *sock,
-                                      apr_pool_t *pool)
+                                       const char **remote_addrport,
+                                       svn_ra_svn_conn_t *conn,
+                                       apr_pool_t *pool)
 {
-  apr_status_t apr_err;
-  apr_sockaddr_t *local_sa, *remote_sa;
-  char *local_addr, *remote_addr;
+  if (conn->sock)
+    {
+      apr_status_t apr_err;
+      apr_sockaddr_t *local_sa, *remote_sa;
+      char *local_addr, *remote_addr;
 
-  apr_err = apr_socket_addr_get(&local_sa, APR_LOCAL, sock);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
+      apr_err = apr_socket_addr_get(&local_sa, APR_LOCAL, conn->sock);
+      if (apr_err)
+        return svn_error_wrap_apr(apr_err, NULL);
 
-  apr_err = apr_socket_addr_get(&remote_sa, APR_REMOTE, sock);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
+      apr_err = apr_socket_addr_get(&remote_sa, APR_REMOTE, conn->sock);
+      if (apr_err)
+        return svn_error_wrap_apr(apr_err, NULL);
 
-  apr_err = apr_sockaddr_ip_get(&local_addr, local_sa);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
+      apr_err = apr_sockaddr_ip_get(&local_addr, local_sa);
+      if (apr_err)
+        return svn_error_wrap_apr(apr_err, NULL);
 
-  apr_err = apr_sockaddr_ip_get(&remote_addr, remote_sa);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
+      apr_err = apr_sockaddr_ip_get(&remote_addr, remote_sa);
+      if (apr_err)
+        return svn_error_wrap_apr(apr_err, NULL);
 
-  /* Format the IP address and port number like this: a.b.c.d;port */
-  *local_addrport = apr_pstrcat(pool, local_addr, ";",
-                                apr_itoa(pool, (int)local_sa->port), NULL);
-  *remote_addrport = apr_pstrcat(pool, remote_addr, ";", 
-                                 apr_itoa(pool, (int)remote_sa->port), NULL);
-
+      /* Format the IP address and port number like this: a.b.c.d;port */
+      *local_addrport = apr_pstrcat(pool, local_addr, ";",
+                                    apr_itoa(pool, (int)local_sa->port), NULL);
+      *remote_addrport = apr_pstrcat(pool, remote_addr, ";", 
+                                     apr_itoa(pool, (int)remote_sa->port), NULL);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -461,7 +486,7 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
   if (!sess->is_tunneled)
     {
       SVN_ERR(svn_ra_svn__get_addresses(&local_addrport, &remote_addrport,
-                                        sess->conn->sock, pool));
+                                        sess->conn, pool));
       SVN_ERR(get_remote_hostname(&hostname, sess->conn->sock));
     }
 

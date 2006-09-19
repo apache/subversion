@@ -32,10 +32,9 @@
 #include "svn_base64.h"
 
 #include "private/svn_atomic.h"
+#include "private/ra_svn_sasl.h"
 
 #include "server.h"
-
-#include "../libsvn_ra_svn/ra_svn_sasl.h"
 
 /* SASL calls this function before doing anything with a username, which gives
    us an opportunity to do some sanity-checking.  If the username contains
@@ -213,23 +212,6 @@ static svn_error_t *try_auth(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR; 
 }
 
-static svn_error_t *get_local_hostname(char **hostname, 
-                                       apr_socket_t *sock)
-{
-  apr_status_t apr_err;
-  apr_sockaddr_t *sa;
-
-  apr_err = apr_socket_addr_get(&sa, APR_LOCAL, sock);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
-
-  apr_err = apr_getnameinfo(hostname, sa, 0);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
-
-  return SVN_NO_ERROR;
-}
-
 static apr_status_t sasl_dispose_cb(void *data)
 {
   sasl_conn_t *sasl_ctx = (sasl_conn_t*) data;
@@ -245,18 +227,22 @@ svn_error_t *sasl_auth_request(svn_ra_svn_conn_t *conn,
 {
   sasl_conn_t *sasl_ctx;
   apr_pool_t *subpool;
+  apr_status_t apr_err;
   const char *localaddrport = NULL, *remoteaddrport = NULL;
   const char *mechlist;
-  char *hostname = NULL;
-  sasl_security_properties_t secprops = SVN_RA_SVN__DEFAULT_SECPROPS;
+  char hostname[APRMAXHOSTLEN + 1];
+  sasl_security_properties_t secprops;
   svn_boolean_t success, no_anonymous;
   int mech_count, result = SASL_OK;
 
-  if (conn->sock)
+  SVN_ERR(svn_ra_svn__get_addresses(&localaddrport, &remoteaddrport,
+                                        conn, pool));
+  apr_err = apr_gethostname(hostname, sizeof(hostname), pool);
+  if (apr_err)
     {
-      SVN_ERR(svn_ra_svn__get_addresses(&localaddrport, &remoteaddrport,
-                                        conn->sock, pool));
-      SVN_ERR(get_local_hostname(&hostname, conn->sock));
+      svn_error_t *err = svn_error_wrap_apr(apr_err, _("Can't get hostname"));
+      SVN_ERR(svn_ra_svn_write_cmd_failure(conn, pool, err));
+      return svn_ra_svn_flush(conn, pool);
     }
 
   /* Create a SASL context. SASL_SUCCESS_DATA tells SASL that the protocol 
@@ -277,6 +263,9 @@ svn_error_t *sasl_auth_request(svn_ra_svn_conn_t *conn,
   /* Make sure the context is always destroyed. */
   apr_pool_cleanup_register(pool, sasl_ctx, sasl_dispose_cb,
                             apr_pool_cleanup_null);
+
+  /* Initialize security properties. */
+  svn_ra_svn__default_secprops(&secprops);
 
   /* Don't allow PLAIN or LOGIN, since we don't support TLS yet. */
   secprops.security_flags = SASL_SEC_NOPLAINTEXT;
