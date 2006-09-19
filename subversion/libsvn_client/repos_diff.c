@@ -27,6 +27,7 @@
  * each file have been created the diff callback is invoked to display
  * the difference between the two files.  */
 
+#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_path.h"
@@ -793,19 +794,7 @@ close_directory(void *dir_baton,
   svn_error_t *err;
 
   if (eb->dry_run)
-    {
-      apr_hash_index_t *hi;
-      apr_hash_t *wc_paths =
-        svn_client__dry_run_deletions(eb->diff_cmd_baton);
-
-      /* FUTURE: Someday, we'll have apr_hash_clear() instead. */
-      for (hi = apr_hash_first(NULL, wc_paths); hi; hi = apr_hash_next(hi))
-        {
-          const void *path;
-          apr_hash_this(hi, &path, NULL, NULL);
-          apr_hash_set(wc_paths, path, APR_HASH_KEY_STRING, NULL);
-        }
-    }
+    svn_hash_clear(svn_client__dry_run_deletions(eb->diff_cmd_baton));
 
   if (b->propchanges->nelts > 0)
     {
