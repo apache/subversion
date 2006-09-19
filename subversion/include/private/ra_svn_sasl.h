@@ -35,22 +35,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
-#include "ra_svn.h" /* for SVN_RA_SVN__READBUF_SIZE */
-
 extern volatile svn_atomic_t svn_ra_svn__sasl_status;
 
-/* Define sane defaults for a sasl_security_properties_t structure.
-   The first two values are the minimum and maximum encryption strengths
-   that the chosen SASL mechanism should provide.  0 means 'no encryption',
-   256 means '256-bit encryption', which is about the best that any SASL
-   mechanism can provide.  Using these values effectively means 'use whatever
-   encryption the other side wants'.  Note that SASL will try to use better
-   encryption whenever possible, so if both the server and the client use
-   these values the highest possible encryption strength will be used.
-   The third value, the connection's read buffer size, needs to be
-   commmunicated to the peer if a security layer is negotiated. */
-#define SVN_RA_SVN__DEFAULT_SECPROPS {0, 256, SVN_RA_SVN__READBUF_SIZE, \
-                                      0, NULL, NULL}
+/* Initialize secprops with default values. */
+void svn_ra_svn__default_secprops(sasl_security_properties_t *secprops);
 
 /* This function is called by the client and the server before
    calling sasl_{client, server}_init. */
@@ -60,7 +48,7 @@ apr_status_t svn_ra_svn__sasl_common_init(void);
    remote and local IP address and port, formatted like this: a.b.c.d;port. */
 svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport,
                                        const char **remote_addrport,
-                                       apr_socket_t *sock,
+                                       svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool);
 #ifdef __cplusplus
 }
