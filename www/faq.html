@@ -3448,20 +3448,23 @@ title="avoiding-compiler-inlining">
 functions, inlining the associated operations.  This can complicate
 stepping through the code in a debugger.</p>
 
-<p>Work around this by turning off optimization.  Before the
-<code>make</code> step on unix-y systems, do the following:</p>
+<p>Work around this by turning off optimization during the
+<code>make</code> step on unix-y systems:</p>
 
 <blockquote>
-<div><code>subversion$ perl -pi -e 's/-O2//g' config.status</code></div>
-<div><code>subversion$ ./config.status</code></div>
+<div><code>subversion$ make -O0</code></div>
 </blockquote>
 
-<p>Alternately, you can explicitly set <code>CFLAGS</code> before
-running <code>configure</code>.</p>
+<p>(That's "dash ohh zero".)  Alternately, you can make this change
+more permanent by running <code>configure</code> as follows:</p>
 
-<p>Remember to undo this operation before installing Subversion from
-source, by regenerating config.status, or unsetting
-<code>CFLAGS</code> before running <code>configure</code>.</p>
+<blockquote>
+<div><code>subversion$ ./configure --enable-debug</code></div>
+</blockquote>
+
+<p>For a production install, remember to undo this operation before
+installing Subversion from source, by re-running <code>make</code> or
+<code>configure</code> without the extra flag.</p>
 
 </div>
 
