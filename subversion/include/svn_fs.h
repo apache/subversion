@@ -998,7 +998,9 @@ svn_error_t *svn_fs_node_id(const svn_fs_id_t **id_p,
 /** Set @a *revision to the revision in which @a path under @a root was 
  * created.  Use @a pool for any temporary allocations.  @a *revision will 
  * be set to @c SVN_INVALID_REVNUM for uncommitted nodes (i.e. modified nodes 
- * under a transaction root).
+ * under a transaction root).  Note that the root of an unmodified transaction
+ * is not itself considered to be modified; in that case, return the revision
+ * upon which the transaction was based.
  */
 svn_error_t *svn_fs_node_created_rev(svn_revnum_t *revision,
                                      svn_fs_root_t *root,
