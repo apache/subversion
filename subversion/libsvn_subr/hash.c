@@ -353,7 +353,7 @@ svn_hash_read(apr_hash_t *hash,
               svn_string_t *value = apr_palloc(pool, sizeof(*value));
 
               /* Get the length of the value */
-              int vallen = atoi(buf + 2);
+              apr_size_t vallen = atoi(buf + 2);
 
               /* Again, 1 extra byte for the null termination. */
               void *valbuf = apr_palloc(pool, vallen + 1);
