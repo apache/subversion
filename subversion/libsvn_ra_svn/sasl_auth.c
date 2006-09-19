@@ -49,7 +49,7 @@
  *       in atexit processing, at which point we are already running in
  *       single threaded mode.
  */
-static volatile svn_atomic_t sasl_status;
+volatile svn_atomic_t svn_ra_svn__sasl_status;
 
 static volatile svn_atomic_t sasl_ctx_count;
 
@@ -59,9 +59,9 @@ static apr_pool_t *sasl_pool = NULL;
 /* Pool cleanup called when sasl_pool is destroyed. */
 static apr_status_t sasl_done_cb(void *data)
 {
-  /* Reset sasl_status, in case the client calls 
+  /* Reset svn_ra_svn__sasl_status, in case the client calls 
      apr_initialize()/apr_terminate() more than once. */
-  sasl_status = 0;
+  svn_ra_svn__sasl_status = 0;
   if (svn_atomic_dec(&sasl_ctx_count) == 0)
     sasl_done();
   return APR_SUCCESS;
@@ -89,7 +89,7 @@ static void *sasl_mutex_alloc_cb(void)
   apr_thread_mutex_t *mutex;
   apr_status_t apr_err;
 
-  if (!sasl_status)
+  if (!svn_ra_svn__sasl_status)
     return NULL;
 
   apr_err = apr_thread_mutex_lock(array_mutex);
@@ -116,21 +116,21 @@ static void *sasl_mutex_alloc_cb(void)
 
 static int sasl_mutex_lock_cb(void *mutex)
 {
-  if (!sasl_status)
+  if (!svn_ra_svn__sasl_status)
     return 0;
   return (apr_thread_mutex_lock(mutex) == APR_SUCCESS) ? 0 : -1;
 }
 
 static int sasl_mutex_unlock_cb(void *mutex)
 {
-  if (!sasl_status)
+  if (!svn_ra_svn__sasl_status)
     return 0;
   return (apr_thread_mutex_unlock(mutex) == APR_SUCCESS) ? 0 : -1;
 }
 
 static void sasl_mutex_free_cb(void *mutex)
 {
-  if (sasl_status)
+  if (svn_ra_svn__sasl_status)
     {
       apr_status_t apr_err = apr_thread_mutex_lock(array_mutex);
       if (apr_err == APR_SUCCESS)
@@ -182,7 +182,7 @@ static svn_error_t *sasl_init_cb(void)
 
 svn_error_t *svn_ra_svn__sasl_init(void)
 {
-  SVN_ERR(svn_atomic_init_once(&sasl_status, sasl_init_cb));
+  SVN_ERR(svn_atomic_init_once(&svn_ra_svn__sasl_status, sasl_init_cb));
   return SVN_NO_ERROR;
 }
 
