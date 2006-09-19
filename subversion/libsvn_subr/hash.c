@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <assert.h>
+#include <apr_version.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_file_io.h>
@@ -427,5 +428,27 @@ svn_hash_diff(apr_hash_t *hash_a,
                                diff_func_baton));
       }
 
+  return SVN_NO_ERROR;
+}
+
+
+/*** Misc. hash APIs ***/
+
+svn_error_t *
+svn_hash_clear(apr_hash_t *hash)
+{
+#if APR_VERSION_AT_LEAST(1, 3, 0)
+  apr_hash_clear(hash);
+#else
+  apr_hash_index_t *hi;
+  const void *key;
+  apr_ssize_t klen;
+
+  for (hi = apr_hash_first(NULL, hash); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &key, &klen, NULL);
+      apr_hash_set(hash, key, klen, NULL);
+    }
+#endif
   return SVN_NO_ERROR;
 }
