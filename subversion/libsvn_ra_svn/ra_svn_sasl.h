@@ -37,6 +37,8 @@ extern "C" {
 
 #include "ra_svn.h" /* for SVN_RA_SVN__READBUF_SIZE */
 
+extern volatile svn_atomic_t svn_ra_svn__sasl_status;
+
 /* Define sane defaults for a sasl_security_properties_t structure.
    The first two values are the minimum and maximum encryption strengths
    that the chosen SASL mechanism should provide.  0 means 'no encryption',

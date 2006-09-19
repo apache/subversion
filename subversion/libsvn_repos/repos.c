@@ -1419,6 +1419,10 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### the file's location is relative to the conf directory."
       APR_EOL_STR
+#ifdef SVN_HAVE_SASL
+      "### If use-sasl is set to \"true\" below, this file will NOT be used."
+      APR_EOL_STR
+#endif
       "### Uncomment the line below to use the default password file."
       APR_EOL_STR
       "# password-db = passwd"
@@ -1446,6 +1450,17 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       "### is repository's uuid."
       APR_EOL_STR
       "# realm = My First Repository"
+#ifdef SVN_HAVE_SASL
+      APR_EOL_STR
+      APR_EOL_STR
+      "[sasl]"
+      APR_EOL_STR
+      "### This option specifies whether you want to use the Cyrus SASL"
+      APR_EOL_STR
+      "### library for authentication. Default is false."
+      APR_EOL_STR
+      "# use-sasl = true"
+#endif
       APR_EOL_STR;
 
     SVN_ERR_W(svn_io_file_create(svn_repos_svnserve_conf(repos, pool),
