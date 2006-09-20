@@ -2734,7 +2734,7 @@ def merge_dir_branches(sbox):
   # Merge from C to F onto the wc_dir
   # We can't use run_and_verify_merge because it doesn't support this
   # syntax of the merge command.  
-  # XXX: Change this if run_and_verify_merge ever gets fixed
+  ### TODO: We can use run_and_verify_merge2() here now.
   expected_output = ["A    " + foo_path + "\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', C_url, F_url, wc_dir)
