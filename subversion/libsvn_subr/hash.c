@@ -437,7 +437,7 @@ svn_hash_diff(apr_hash_t *hash_a,
 svn_error_t *
 svn_hash_clear(apr_hash_t *hash)
 {
-#if APR_VERSION_AT_LEAST(1, 3, 0)
+#ifdef APR_VERSION_AT_LEAST
   apr_hash_clear(hash);
 #else
   apr_hash_index_t *hi;
