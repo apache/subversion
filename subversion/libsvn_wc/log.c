@@ -492,19 +492,18 @@ pick_error_code(struct log_runner *loggy)
     return SVN_ERR_WC_BAD_ADM_LOG;
 }
 
-static void
-signal_error(struct log_runner *loggy, svn_error_t *err)
-{
-  svn_xml_signal_bailout
-    (svn_error_createf(pick_error_code(loggy), err,
-                       _("In directory '%s'"),
-                       svn_path_local_style(svn_wc_adm_access_path
-                                            (loggy->adm_access),
-                                            loggy->pool)),
-     loggy->parser);
-}
-
-
+/* Helper macro for erroring out while running a logfile.
+  
+   This is implemented as a macro so that the error created has a useful
+   line number associated with it. */
+#define SIGNAL_ERROR(loggy, err)                                   \
+  svn_xml_signal_bailout                                           \
+    (svn_error_createf(pick_error_code(loggy), err,                \
+                       _("In directory '%s'"),                     \
+                       svn_path_local_style(svn_wc_adm_access_path \
+                                            (loggy->adm_access),   \
+                                            loggy->pool)),         \
+     loggy->parser)
 
 
 
@@ -608,7 +607,7 @@ log_do_file_xfer(struct log_runner *loggy,
   err = file_xfer_under_path(loggy->adm_access, name, dest, versioned,
                              action, special_only, loggy->rerun, loggy->pool);
   if (err)
-    signal_error(loggy, err);
+    SIGNAL_ERROR(loggy, err);
 
   return SVN_NO_ERROR;
 }
@@ -798,7 +797,7 @@ log_do_modify_entry(struct log_runner *loggy,
                          FALSE, loggy->pool);
 
       if (err)
-        signal_error(loggy, err);
+        SIGNAL_ERROR(loggy, err);
 
       if (! tfile_entry)
         return SVN_NO_ERROR;
@@ -806,7 +805,7 @@ log_do_modify_entry(struct log_runner *loggy,
       err = svn_wc__prop_path(&pfile, tfile, tfile_entry->kind, FALSE,
                               loggy->pool);
       if (err)
-        signal_error(loggy, err);
+        SIGNAL_ERROR(loggy, err);
 
       err = svn_io_file_affected_time(&prop_time, pfile, loggy->pool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
@@ -1543,7 +1542,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
     return;
   else if (! name && strcmp(eltname, SVN_WC__LOG_UPGRADE_FORMAT) != 0)
     {
-      signal_error
+      SIGNAL_ERROR
         (loggy, svn_error_createf 
          (pick_error_code(loggy), NULL,
           _("Log entry missing 'name' attribute (entry '%s' "
@@ -1614,7 +1613,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
   }
   else
     {
-      signal_error
+      SIGNAL_ERROR
         (loggy, svn_error_createf
          (pick_error_code(loggy), NULL,
           _("Unrecognized logfile element '%s' in '%s'"),
@@ -1625,7 +1624,7 @@ start_handler(void *userData, const char *eltname, const char **atts)
     }
 
   if (err)
-    signal_error
+    SIGNAL_ERROR
       (loggy, svn_error_createf
        (pick_error_code(loggy), err,
         _("Error processing command '%s' in '%s'"),
