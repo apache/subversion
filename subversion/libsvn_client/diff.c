@@ -26,6 +26,7 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include "svn_types.h"
+#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_delta.h"
 #include "svn_diff.h"
@@ -1922,11 +1923,11 @@ typedef struct
   void *wrapped_baton;
 
   /* The number of notifications received. */
-  apr_int32_t nbr_notifications;
+  apr_uint32_t nbr_notifications;
 
   /* The list of any skipped paths, which should be examined and
      cleared after each invocation of the callback. */
-  apr_array_header_t *skipped_paths;
+  apr_hash_t *skipped_paths;
 
   /* Pool used in notification_receiver() to avoid the iteration
      sub-pool which is passed in, then subsequently destroyed. */
@@ -1944,12 +1945,13 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
   if (notify->action == svn_wc_notify_skip)
     {
-      if (notify_b->skipped_paths == NULL)
-        notify_b->skipped_paths = apr_array_make(notify_b->pool, 1,
-                                                 sizeof(char *));
+      const char *skipped_path = apr_pstrdup(notify_b->pool, notify->path);
 
-      APR_ARRAY_PUSH(notify_b->skipped_paths, const char *) =
-        apr_pstrdup(notify_b->pool, notify->path);
+      if (notify_b->skipped_paths == NULL)
+        notify_b->skipped_paths = apr_hash_make(notify_b->pool);
+
+      apr_hash_set(notify_b->skipped_paths, skipped_path, APR_HASH_KEY_STRING,
+                   skipped_path);
     }
 
   if (notify->content_state == svn_wc_notify_state_conflicted)
@@ -1971,31 +1973,35 @@ determine_merges_performed(apr_hash_t **merges, const char *target_wcpath,
                            apr_pool_t *pool)
 {
   apr_array_header_t *rangelist = apr_array_make(pool, 1, sizeof(*range));
+  apr_size_t nbr_skips = (notify_b->skipped_paths != NULL ?
+                          apr_hash_count(notify_b->skipped_paths) : 0);
   *merges = apr_hash_make(pool);
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
 
-  /* If we skipped all the paths which would've been modified, avoid
-     setting merge info for the target of the tree. If we happen to
-     skip the root of the target path too (e.g. only its children were
-     merged), it will be unflagged as merged further below. */
-  if (notify_b->skipped_paths == NULL ||
-      notify_b->skipped_paths->nelts >= notify_b->nbr_notifications)
-    apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
-
-  /* Override the merge info for child paths which weren't actually
-     merged. */
-  if (notify_b->skipped_paths != NULL)
+  /* Only set the merge info for the root of the target tree if we
+     didn't skip it or any paths under it. */
+  if (nbr_skips == 0)
     {
-      int i;
-      for (i = 0; i < notify_b->skipped_paths->nelts; i++)
+      apr_hash_set(*merges, target_wcpath, APR_HASH_KEY_STRING, rangelist);
+    }
+  else /* nbr_skips > 0 */
+    {
+      apr_hash_index_t *hi;
+      const void *skipped_path;
+
+      /* Override the merge info for child paths which weren't
+         actually merged. */
+      for (hi = apr_hash_first(NULL, notify_b->skipped_paths); hi;
+           hi = apr_hash_next(hi))
         {
+          apr_hash_this(hi, &skipped_path, NULL, NULL);
+
           /* Add an empty range list for this path. */
-          apr_hash_set(*merges,
-                       APR_ARRAY_IDX(notify_b->skipped_paths, i, const char *),
+          apr_hash_set(*merges, (const char *) skipped_path,
                        APR_HASH_KEY_STRING,
                        apr_array_make(pool, 0, sizeof(*range)));
 
-          if (notify_b->skipped_paths->nelts < notify_b->nbr_notifications)
+          if (nbr_skips < notify_b->nbr_notifications)
             /* ### Use RANGELIST as the merge info for all children of
                ### this path which were not also explicitly
                ### skipped? */
@@ -2330,11 +2336,11 @@ do_merge(const char *initial_URL1,
                                        ctx, pool));
         }
 
-      /* Clear the modification counter and list of skipped paths in
+      /* Clear the notification counter and list of skipped paths in
          preparation for the next revision range merge. */
       notify_b.nbr_notifications = 0;
       if (notify_b.skipped_paths != NULL)
-        notify_b.skipped_paths->nelts = 0;
+        svn_hash_clear(notify_b.skipped_paths);
     }
 
   /* Sleep to ensure timestamp integrity. */
@@ -2550,7 +2556,7 @@ do_single_file_merge(const char *initial_URL1,
          preparation for the next revision range merge. */
       notify_b.nbr_notifications = 0;
       if (notify_b.skipped_paths != NULL)
-        notify_b.skipped_paths->nelts = 0;
+        svn_hash_clear(notify_b.skipped_paths);
     }
 
   /* Sleep to ensure timestamp integrity. */
