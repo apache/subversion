@@ -2036,12 +2036,13 @@ TortoiseSVN manual</a>.</p>
 <h3>How do I convert my repository from using BDB
 to FSFS or from FSFS to BDB?</h3>
 
-<p>There are two steps:</p>
+<p>There are three steps:</p>
 
 <ol>
   <li>A <a href="#dumpload">dump/load</a> from the old format to the new
   one.</li>
   <li>Copy the hook scripts.</li>
+  <li>Copy the configuration files.</li>
 </ol>
 
 <p>Say you have a repository <tt>/svn/myrepos</tt> which is using the BDB
@@ -2064,6 +2065,11 @@ backend and you would like to switch to using the FSFS backend:</p>
   put in <tt>/svn/myreposfsfs/hooks</tt> with those in
   <tt>/svn/myrepos/hooks</tt> and incorporate any changes which you would like
   into your active hook scripts.</li>
+  <li>Copy configuration files from <tt>/svn/myrepos/conf</tt>
+  into <tt>/svn/myreposfsfs/conf</tt> (and don't forget a password
+  file, if you use one).  Or you might instead want to merge
+  the <em>changes</em> that you made to your configuration files into
+  the new default ones.</li>
   <li>Rename <tt>/svn/myrepos</tt> to <tt>/svn/myreposbdb</tt> and then
   <tt>/svn/myreposfsfs</tt> to <tt>/svn/myrepos</tt> ensuring that the
   file permissions are the same as those  that the BDB version had.</li>
