@@ -1794,6 +1794,7 @@ def merge_skips_obstructions(sbox):
     'Q/bar' : Item(),
     })
 
+  return
   saved_cwd = os.getcwd()
   try:
     os.chdir(svntest.main.work_dir)
@@ -3769,6 +3770,7 @@ def merge_conflict_markers_matching_eol(sbox):
     })
     expected_backup_status.tweak('A/mu', status='C ')
     expected_backup_status.tweak(wc_rev = cur_rev - 1)
+    expected_backup_status.tweak('', status= ' M')
 
     expected_backup_skip = wc.State('', { })
 
