@@ -1109,7 +1109,7 @@ def status_nonrecursive_update(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      xout,
                                      [],
-                                     "status", "-uN", wc_dir)
+                                     "status", "-uN", A_path)
 
 ########################################################################
 # Run the tests
