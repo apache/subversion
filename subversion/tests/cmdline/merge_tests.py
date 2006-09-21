@@ -1794,7 +1794,6 @@ def merge_skips_obstructions(sbox):
     'Q/bar' : Item(),
     })
 
-  return
   saved_cwd = os.getcwd()
   try:
     os.chdir(svntest.main.work_dir)
