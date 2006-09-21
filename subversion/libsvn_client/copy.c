@@ -30,6 +30,7 @@
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_time.h"
+#include "svn_props.h"
 
 #include "client.h"
 
@@ -181,6 +182,7 @@ struct path_driver_cb_baton
   svn_boolean_t is_move;
   svn_boolean_t resurrection;
   svn_revnum_t src_revnum;
+  svn_string_t *mergeinfo;
 };
 
 
@@ -245,6 +247,11 @@ path_driver_cb_func(void **dir_baton,
                                              cb_baton->src_url, 
                                              cb_baton->src_revnum, 
                                              pool, &file_baton));
+          if (cb_baton->mergeinfo)
+            SVN_ERR(cb_baton->editor->change_file_prop(file_baton,
+                                                       SVN_PROP_MERGE_INFO,
+                                                       cb_baton->mergeinfo,
+                                                       pool));
           SVN_ERR(cb_baton->editor->close_file(file_baton, NULL, pool));
         }
       else
@@ -253,6 +260,11 @@ path_driver_cb_func(void **dir_baton,
                                                   cb_baton->src_url, 
                                                   cb_baton->src_revnum, 
                                                   pool, dir_baton));
+          if (cb_baton->mergeinfo)
+            SVN_ERR(cb_baton->editor->change_dir_prop(*dir_baton,
+                                                      SVN_PROP_MERGE_INFO,
+                                                      cb_baton->mergeinfo,
+                                                      pool));
         }
     }
   return SVN_NO_ERROR;
@@ -446,6 +458,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   cb_baton.is_move = is_move;
   cb_baton.src_revnum = src_revnum;
   cb_baton.resurrection = resurrection;
+  /* ### TODO: calculate the mergeinfo to set on the target */
+  cb_baton.mergeinfo = NULL;
 
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver(editor, edit_baton, youngest, paths,
