@@ -479,7 +479,7 @@ test_list = [ None,
               Skip(copy_tree_with_symlink, (os.name != 'posix')),
               Skip(replace_symlink_with_file, (os.name != 'posix')),
               Skip(remove_symlink, (os.name != 'posix')),
-              XFail(Skip(merge_symlink_into_file, (os.name != 'posix'))),
+              Skip(merge_symlink_into_file, (os.name != 'posix')),
               XFail(Skip(merge_file_into_symlink, (os.name != 'posix'))),
              ]
 

@@ -101,10 +101,14 @@ svn_wc__load_prop_file(const char *propfile_path,
 
 
 /* Given a HASH full of property name/values, write them to a file
-   located at PROPFILE_PATH.  */
+   located at PROPFILE_PATH.  If WRITE_EMPTY is TRUE then writing
+   an emtpy property hash will result in an actual empty property
+   file on disk, otherwise an empty hash will result in no file
+   being written at all. */
 svn_error_t *
 svn_wc__save_prop_file(const char *propfile_path,
                        apr_hash_t *hash,
+                       svn_boolean_t write_empty,
                        apr_pool_t *pool)
 {
   apr_file_t *prop_tmp;
@@ -114,7 +118,7 @@ svn_wc__save_prop_file(const char *propfile_path,
                             | APR_BUFFERED), 
                            APR_OS_DEFAULT, pool));
 
-  if (apr_hash_count(hash) != 0)
+  if (apr_hash_count(hash) != 0 || write_empty)
     SVN_ERR_W(svn_hash_write(hash, prop_tmp, pool),
               apr_psprintf(pool, 
                            _("Can't write property hash to '%s'"),
@@ -394,7 +398,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
       /* Write the working prop hash to path/.svn/tmp/props/name or
          path/.svn/tmp/dir-props */
       SVN_ERR(svn_wc__save_prop_file(working_prop_tmp_path, working_props,
-                                     pool));
+                                     FALSE, pool));
   
       /* Compute pathnames for the "mv" log entries.  Notice that these
          paths are RELATIVE pathnames (each beginning with ".svn/"), so
@@ -432,7 +436,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                                          kind, TRUE, pool));
 
           SVN_ERR(svn_wc__save_prop_file(base_prop_tmp_path, base_props,
-                                         pool));
+                                         FALSE, pool));
 
           tmp_prop_base = apr_pstrdup(pool, base_prop_tmp_path + access_len);
 
