@@ -16,7 +16,7 @@ it needs to be able to change revprops on your destination repository.
 To do this you'll need to set up a pre-revprop-change hook script that
 lets the user you'll run svnsync as make arbitrary propchanges.
 
-$ cat <<EOF > dest/hooks/pre-revprop-change
+$ cat <<'EOF' > dest/hooks/pre-revprop-change
 #!/bin/sh
 USER="$3"
 
