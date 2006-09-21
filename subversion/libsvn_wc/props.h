@@ -49,9 +49,11 @@ svn_error_t *svn_wc__load_prop_file(const char *propfile_path,
 
 
 /* Given a HASH full of property name/values, write them to a file
-   located at PROPFILE_PATH */
+   located at PROPFILE_PATH.  If WRITE_EMPTY is true, the file will
+   be written out even if HASH is empty. */
 svn_error_t *svn_wc__save_prop_file(const char *propfile_path,
                                     apr_hash_t *hash,
+                                    svn_boolean_t write_empty,
                                     apr_pool_t *pool);
 
 
