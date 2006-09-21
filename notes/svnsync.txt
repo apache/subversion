@@ -99,6 +99,36 @@ A: The source repository must be running Subversion 1.4 or newer, since
    hand, the destination repository can be any version of Subversion, since
    all svnsync is doing is committing changes using the regular RA APIs.
 
+Q: Do I need to run svnsync on the same machine as one of the
+   repositories?
+
+A: While you do need direct access to the destination repository to
+   set up a pre-revprop-change hook script, after that point svnsync
+   communicates with both repositories through the same "repository
+   access" layer that svn uses to connect to remote repositories. So
+   svnsync does not have to be run on the same machine as either
+   repository; it can communicate with both repositories over any of
+   Subversion's RA protocols (svn://, svn+ssh://, http://, https://,
+   or file:///).  In fact, you don't need any special permissions on
+   the source repository at all.
+
+Q: How does svnsync deal with parts of the master repository that I'm not
+   authorized to read?
+
+A: svnsync will simply not copy parts of the repository that you
+   cannot read; files copied from "private" parts of the repository
+   into "public" parts will look as if they have been added from
+   scratch.  If a revision only modifies files that you cannot read,
+   it will appear to be empty.  (Just like with "svn log", log
+   messages from revisions you cannot read part of will be empty.)
+
+Q: Can I mirror a subdirectory of a master repository?
+
+A: While the underlying RA layer command that svnsync relies on does
+   support that, svnsync itself does not currently. (Patches welcome!)
+   If you need this ability right now, you may want to look into SVK
+   (http://svk.bestpractical.com/).
+
 Q: What happens when I change a revprop on the master server?
 
 A: That depends, did you change it on a revision that had already been
