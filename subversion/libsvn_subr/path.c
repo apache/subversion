@@ -185,7 +185,7 @@ char *svn_path_join_many(apr_pool_t *pool, const char *base, ...)
       if (nargs++ < MAX_SAVED_LENGTHS)
         saved_lengths[nargs] = len;
 
-      if (svn_path_is_absolute(s, strlen(s), pool))
+      if (svn_path_is_absolute(s, len, pool))
         {
           /* an absolute path. skip all components to this point and reset
              the total length. */
@@ -698,7 +698,7 @@ svn_path_is_ancestor(const char *path1, const char *path2)
 {
   apr_size_t path1_len = strlen(path1);
 
-  /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
+  /* If path1 is empty and path2 is not absolute, then path1 is an ancestor. */
   if (SVN_PATH_IS_EMPTY(path1))
     return *path2 != '/';
 
