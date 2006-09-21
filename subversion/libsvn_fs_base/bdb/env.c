@@ -47,7 +47,7 @@
    threads, so all direct or indirect access to the pool is serialized
    with a global mutex.
 
-   Because several threads can now hse the same DB_ENV handle, we must
+   Because several threads can now use the same DB_ENV handle, we must
    use the DB_THREAD flag when opening the environments, otherwise the
    env handles (and all of libsvn_fs_base) won't be thread-safe.
 
