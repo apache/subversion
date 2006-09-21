@@ -26,6 +26,7 @@
 #include <apr_atomic.h>
 
 #include "svn_error.h"
+#include "private/svn_compat.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -40,39 +41,39 @@ extern "C" {
  */
 
 /** The type used by all the other atomic operations. */
-#if APR_MAJOR_VERSION > 0
+#if APR_VERSION_AT_LEAST(1, 0, 0)
 #define svn_atomic_t apr_uint32_t
 #else
 #define svn_atomic_t apr_atomic_t
-#endif /* APR_MAJOR_VERSION */
+#endif
 
 /** Atomically read an #svn_atomic_t from memory. */
-#if APR_MAJOR_VERSION > 0
+#if APR_VERSION_AT_LEAST(1, 0, 0)
 #define svn_atomic_read(mem) apr_atomic_read32((mem))
 #else
 #define svn_atomic_read(mem) apr_atomic_read((mem))
-#endif /* APR_MAJOR_VERSION */
+#endif
 
 /** Atomically set an #svn_atomic_t in memory. */
-#if APR_MAJOR_VERSION > 0
+#if APR_VERSION_AT_LEAST(1, 0, 0)
 #define svn_atomic_set(mem, val) apr_atomic_set32((mem), (val))
 #else
 #define svn_atomic_set(mem, val) apr_atomic_set((mem), (val))
-#endif /* APR_MAJOR_VERSION */
+#endif
 
 /** Atomically increment an #svn_atomic_t. */
-#if APR_MAJOR_VERSION > 0
+#if APR_VERSION_AT_LEAST(1, 0, 0)
 #define svn_atomic_inc(mem) apr_atomic_inc32(mem)
 #else
 #define svn_atomic_inc(mem) apr_atomic_inc(mem)
-#endif /* APR_MAJOR_VERSION */
+#endif
 
 /** Atomically decrement an #svn_atomic_t. */
-#if APR_MAJOR_VERSION > 0
+#if APR_VERSION_AT_LEAST(1, 0, 0)
 #define svn_atomic_dec(mem) apr_atomic_dec32(mem)
 #else
 #define svn_atomic_dec(mem) apr_atomic_dec(mem)
-#endif /* APR_MAJOR_VERSION */
+#endif
 
 /** 
  * Atomic compare-and-swap.
@@ -85,13 +86,13 @@ extern "C" {
  *       that on some platforms, the CAS function is implemented in a
  *       way that is incompatible with the other atomic operations.
  */
-#if APR_MAJOR_VERSION > 0
+#if APR_VERSION_AT_LEAST(1, 0, 0)
 #define svn_atomic_cas(mem, with, cmp) \
     apr_atomic_cas32((mem), (with), (cmp))
 #else
 #define svn_atomic_cas(mem, with, cmp) \
     apr_atomic_cas((mem), (with), (cmp))
-#endif /* APR_MAJOR_VERSION */
+#endif
 /** @} */
 
 /**
