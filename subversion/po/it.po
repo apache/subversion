@@ -88,8 +88,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-09-19 05:00+0200\n"
-"PO-Revision-Date: 2006-09-19 08:31+0200\n"
+"POT-Creation-Date: 2006-09-21 05:00+0200\n"
+"PO-Revision-Date: 2006-09-21 08:59+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3312,7 +3312,7 @@ msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versione %d del lettore per ra_svn non supportata"
 
 #: libsvn_ra_svn/cram.c:194 libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/sasl_auth.c:334 libsvn_ra_svn/sasl_auth.c:389
+#: libsvn_ra_svn/sasl_auth.c:357 libsvn_ra_svn/sasl_auth.c:412
 #: libsvn_ra_svn/simple_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "Risposta del server inattesa all'autenticazione"
@@ -3387,15 +3387,16 @@ msgstr "Lista degli errori non conformi"
 msgid "Unknown status '%s' in command response"
 msgstr "Status sconosciuto '%s' nella risposta del comando"
 
-#: libsvn_ra_svn/sasl_auth.c:179
+#: libsvn_ra_svn/sasl_auth.c:179 svnserve/sasl_auth.c:104
+#: svnserve/sasl_auth.c:114
 msgid "Could not initialize the SASL library"
 msgstr "Non riesco ad inizializzare la libreria SASL"
 
-#: libsvn_ra_svn/sasl_auth.c:264
+#: libsvn_ra_svn/sasl_auth.c:287
 msgid "Unhandled SASL interaction"
 msgstr "Interazione con SASL non gestita"
 
-#: libsvn_ra_svn/sasl_auth.c:524 libsvn_ra_svn/simple_auth.c:58
+#: libsvn_ra_svn/sasl_auth.c:549 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
@@ -3783,35 +3784,35 @@ msgstr "Sto creando l'aggancio post-revprop-change"
 msgid "Creating conf directory"
 msgstr "Sto creando la directory per le configurazioni"
 
-#: libsvn_repos/repos.c:1453
+#: libsvn_repos/repos.c:1468
 msgid "Creating svnserve.conf file"
 msgstr "Sto creando il file svnserve.conf"
 
-#: libsvn_repos/repos.c:1478
+#: libsvn_repos/repos.c:1493
 msgid "Creating passwd file"
 msgstr "Sto creando il file passwd"
 
-#: libsvn_repos/repos.c:1527
+#: libsvn_repos/repos.c:1542
 msgid "Creating authz file"
 msgstr "Sto creando il file authz"
 
-#: libsvn_repos/repos.c:1560
+#: libsvn_repos/repos.c:1575
 msgid "Could not create top-level directory"
 msgstr "Non riesco a creare la directory al primo livello"
 
-#: libsvn_repos/repos.c:1564
+#: libsvn_repos/repos.c:1579
 msgid "Creating DAV sandbox dir"
 msgstr "Sto creando la directory di sandbox per il DAV"
 
-#: libsvn_repos/repos.c:1645
+#: libsvn_repos/repos.c:1660
 msgid "Error opening db lockfile"
 msgstr "Errore nell'apertura del file di lock del database"
 
-#: libsvn_repos/repos.c:1682
+#: libsvn_repos/repos.c:1697
 msgid "Repository creation failed"
 msgstr "La creazione del repository è fallito"
 
-#: libsvn_repos/repos.c:1763
+#: libsvn_repos/repos.c:1778
 #, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
 msgstr ""
@@ -4373,7 +4374,7 @@ msgstr "Non riesco a determinare la codifuca nativa del percorso"
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Carattere di controllo non valido '0x%02x' nel percorso '%s'"
 
-#: libsvn_subr/prompt.c:97 svnserve/main.c:490
+#: libsvn_subr/prompt.c:97 svnserve/main.c:494
 msgid "Can't open stdin"
 msgstr "Non riesco ad aprire stdin"
 
@@ -5029,127 +5030,131 @@ msgstr "Il file di blocco '%s' non è un normale file"
 msgid "Can't move source to dest"
 msgstr "Non posso spostare la sorgente nella destinazione"
 
-#: libsvn_wc/log.c:500
+#. Helper macro for erroring out while running a logfile.
+#.
+#. This is implemented as a macro so that the error created has a useful
+#. line number associated with it.
+#: libsvn_wc/log.c:502
 #, c-format
 msgid "In directory '%s'"
 msgstr "Nella directory '%s'"
 
-#: libsvn_wc/log.c:528
+#: libsvn_wc/log.c:527
 #, c-format
 msgid "Missing 'left' attribute in '%s'"
 msgstr "Attributo 'left' mancante in '%s'"
 
-#: libsvn_wc/log.c:535
+#: libsvn_wc/log.c:534
 #, c-format
 msgid "Missing 'right' attribute in '%s'"
 msgstr "Attributo 'right' mancante in '%s'"
 
-#: libsvn_wc/log.c:603
+#: libsvn_wc/log.c:602
 #, c-format
 msgid "Missing 'dest' attribute in '%s'"
 msgstr "Attributo 'dest' mancante in '%s'"
 
-#: libsvn_wc/log.c:684
+#: libsvn_wc/log.c:683
 #, c-format
 msgid "Missing 'timestamp' attribute in '%s'"
 msgstr "Attributo 'timestamp' mancante in '%s'"
 
-#: libsvn_wc/log.c:780 libsvn_wc/log.c:820
+#: libsvn_wc/log.c:779 libsvn_wc/log.c:819
 #, c-format
 msgid "Error getting 'affected time' on '%s'"
 msgstr "Errore nella lettura di 'affected time' di '%s'"
 
-#: libsvn_wc/log.c:831
+#: libsvn_wc/log.c:830
 #, c-format
 msgid "Error modifying entry for '%s'"
 msgstr "Errore nalla modifica della voce di '%s'"
 
-#: libsvn_wc/log.c:857
+#: libsvn_wc/log.c:856
 #, c-format
 msgid "Error removing lock from entry for '%s'"
 msgstr "Errore nella rimozione del blocco dalla voce per '%s'"
 
-#: libsvn_wc/log.c:880
+#: libsvn_wc/log.c:879
 #, c-format
 msgid "Error removing changelist from entry '%s'"
 msgstr "Errore nella rimozione della changelist dalla voce '%s'"
 
-#: libsvn_wc/log.c:1010
+#: libsvn_wc/log.c:1009
 #, c-format
 msgid "Missing 'revision' attribute for '%s'"
 msgstr "Attributo 'revision' mancante per '%s'"
 
-#: libsvn_wc/log.c:1034
+#: libsvn_wc/log.c:1033
 #, c-format
 msgid "Log command for directory '%s' is mislocated"
 msgstr ""
 "Il comando di log per la directory '%s' non è correttamente localizzato"
 
-#: libsvn_wc/log.c:1209 libsvn_wc/log.c:1285
+#: libsvn_wc/log.c:1208 libsvn_wc/log.c:1284
 #, c-format
 msgid "Error checking existence of '%s'"
 msgstr "Errore nel controllo dell'esistenza di '%s'"
 
-#: libsvn_wc/log.c:1219 libsvn_wc/log.c:1225
+#: libsvn_wc/log.c:1218 libsvn_wc/log.c:1224
 #, c-format
 msgid "Error getting 'affected time' for '%s'"
 msgstr "Errore nella lettura di 'affected time' di '%s'"
 
-#: libsvn_wc/log.c:1235
+#: libsvn_wc/log.c:1234
 #, c-format
 msgid "Error comparing '%s' and '%s'"
 msgstr "Errore nel confronto fra '%s' e '%s'"
 
-#: libsvn_wc/log.c:1345
+#: libsvn_wc/log.c:1344
 #, c-format
 msgid "Error replacing text-base of '%s'"
 msgstr "Errore nella sostituzione del testo base di '%s'"
 
-#: libsvn_wc/log.c:1354
+#: libsvn_wc/log.c:1353
 #, c-format
 msgid "Error getting 'affected time' of '%s'"
 msgstr "Errore nella lettura di 'affected time' di '%s'"
 
-#: libsvn_wc/log.c:1392 libsvn_wc/log.c:1459
+#: libsvn_wc/log.c:1391 libsvn_wc/log.c:1458
 #, c-format
 msgid "Error modifying entry of '%s'"
 msgstr "Errore nella modifica della voce di '%s'"
 
-#: libsvn_wc/log.c:1514
+#: libsvn_wc/log.c:1513
 msgid "Invalid 'format' attribute"
 msgstr "Attributo 'format' non valido"
 
-#: libsvn_wc/log.c:1549
+#: libsvn_wc/log.c:1548
 #, c-format
 msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
 msgstr ""
 "La voce del log manca dell'attributo 'name' (voce '%s' per la directory '%s')"
 
-#: libsvn_wc/log.c:1620
+#: libsvn_wc/log.c:1619
 #, c-format
 msgid "Unrecognized logfile element '%s' in '%s'"
 msgstr "Elemento '%s' del file di log in '%s' non riconosciuto"
 
-#: libsvn_wc/log.c:1631
+#: libsvn_wc/log.c:1630
 #, c-format
 msgid "Error processing command '%s' in '%s'"
 msgstr "Errore nell'esecuzione del comando '%s' in '%s'"
 
-#: libsvn_wc/log.c:1809
+#: libsvn_wc/log.c:1808
 msgid "Couldn't open log"
 msgstr "Non ho potuto aprire il log"
 
-#: libsvn_wc/log.c:1820
+#: libsvn_wc/log.c:1819
 #, c-format
 msgid "Error reading administrative log file in '%s'"
 msgstr "Errore nella lettura del file di log amministrativo in '%s'"
 
-#: libsvn_wc/log.c:2434
+#: libsvn_wc/log.c:2433
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "Errore nella scrittura del log per '%s'"
 
-#: libsvn_wc/log.c:2482
+#: libsvn_wc/log.c:2481
 #, c-format
 msgid "'%s' is not a working copy directory"
 msgstr "'%s' non è una directory della copia locale"
@@ -5440,7 +5445,7 @@ msgid "Local, non-commit operations do not take a log message"
 msgstr ""
 "Operazioni in locale, senza commit non necessitano di un messaggio di log"
 
-#: svn/diff-cmd.c:117 svnserve/main.c:499
+#: svn/diff-cmd.c:117 svnserve/main.c:503
 msgid "Can't open stdout"
 msgstr "Non riesco ad aprire stdout"
 
@@ -8705,15 +8710,15 @@ msgstr ""
 "\n"
 "Opzioni valide:\n"
 
-#: svnserve/main.c:468
+#: svnserve/main.c:472
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
 msgstr "Devi specificare esattamente un'opzione fra -d, -i, -t o -X.\n"
 
-#: svnserve/main.c:478
+#: svnserve/main.c:482
 msgid "Option --tunnel-user is only valid in tunnel mode.\n"
 msgstr "L'opzione --tunnel-user è valida solo per la modalità tunnel.\n"
 
-#: svnserve/main.c:547
+#: svnserve/main.c:551
 msgid ""
 "svnserve: The --service flag is only valid if the process is started by the "
 "Service Control Manager.\n"
@@ -8721,33 +8726,45 @@ msgstr ""
 "svnserve: L'opzione --service è valida solo se il processo è avviato\n"
 "dal Service Control Manager\n"
 
-#: svnserve/main.c:583
+#: svnserve/main.c:587
 msgid "Can't get address info"
 msgstr "Non riesco ad ottenere le informazioni dell'indirizzo"
 
-#: svnserve/main.c:599
+#: svnserve/main.c:603
 msgid "Can't create server socket"
 msgstr "Non riesco a creare un socket per il server"
 
-#: svnserve/main.c:612
+#: svnserve/main.c:616
 msgid "Can't bind server socket"
 msgstr "Non riesco ad allacciarmi al socket del server"
 
-#: svnserve/main.c:680
+#: svnserve/main.c:684
 msgid "Can't accept client connection"
 msgstr "Non posso accettare la connessione del client"
 
-#: svnserve/main.c:734
+#: svnserve/main.c:738
 msgid "Can't create threadattr"
 msgstr "Non riesco a creare l'attributo del thread"
 
-#: svnserve/main.c:742
+#: svnserve/main.c:746
 msgid "Can't set detached state"
 msgstr "Non riesco ad impostare lo stato scollegato"
 
-#: svnserve/main.c:755
+#: svnserve/main.c:759
 msgid "Can't create thread"
 msgstr "Non riesco a creare il thread"
+
+#: svnserve/sasl_auth.c:243
+msgid "Can't get hostname"
+msgstr "Non riesco ad ottenere il nome dell'host"
+
+#: svnserve/sasl_auth.c:299
+msgid "Could not obtain the list of SASL mechanisms"
+msgstr "Non riesco ad ottenre l'elenco dei meccanismi SASL"
+
+#: svnserve/sasl_auth.c:337
+msgid "Couldn't obtain the authenticated username"
+msgstr "Non riesco ad ottenere il nome dell'utente autenticato"
 
 #: svnserve/winservice.c:341
 msgid "Failed to create winservice_start_event"
