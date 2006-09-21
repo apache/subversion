@@ -77,7 +77,7 @@ Candidate changes:
     Justification:
       Allow use of GSSAPI/SSPI auth on Windows with Neon 0.26.1+.
     Votes:
-      +1: dlr
+      +1: dlr, djh
 
   * r21575
     Update the URL for the svnmerge.py wiki page.
