@@ -11,6 +11,7 @@ First, you need to create your destination repository:
 $ svnadmin create dest
 
 Because svnsync uses revprops to keep track of bookkeeping information
+(and because it copies revprops from the source to the destination)
 it needs to be able to change revprops on your destination repository.
 To do this you'll need to set up a pre-revprop-change hook script that
 lets the user you'll run svnsync as make arbitrary propchanges.
