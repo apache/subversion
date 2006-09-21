@@ -79,6 +79,8 @@ Candidate changes:
     Votes:
       +1: dlr, djh
 
+Approved changes:
+
   * r21575
     Update the URL for the svnmerge.py wiki page.
     Justification:
@@ -94,6 +96,3 @@ Candidate changes:
       there unless they browse the source code.
     Votes:
       +1: blair, dlr
-
-Approved changes:
-
