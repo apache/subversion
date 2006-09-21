@@ -97,3 +97,19 @@ A: The source repository must be running Subversion 1.4 or newer, since
    svnsync uses a new RA layer command that was added in 1.4.  On the other
    hand, the destination repository can be any version of Subversion, since
    all svnsync is doing is committing changes using the regular RA APIs.
+
+Q: What happens when I change a revprop on the master server?
+
+A: That depends, did you change it on a revision that had already been
+   mirrored or one that's still waiting to be mirrored.  If the revision
+   hasn't been mirrored yet, the new revprop will just get copied across
+   normally when the next sync happens.  If not, then you've got a small
+   problem.  You see, since revprops aren't versioned, there's no way to
+   detect (via the Subversion RA APIs anyway) that it's been changed, so
+   the next time you run a sync svnsync has no way to tell that it has
+   changed.  There is a way for you to build your own solution though,
+   just use the 'svnsync copy-revprops' command.  The usual technique is
+   either to put an explicit call to it in your master repository's
+   post-revprop-change script, or to have the post-revprop-change script
+   record the fact that a change occurred, and then later on have some
+   job look through the list of changes and copy them over for you.
