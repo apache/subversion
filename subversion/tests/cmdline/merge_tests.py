@@ -1931,7 +1931,7 @@ def merge_skips_obstructions(sbox):
     os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
-# At one stage a merge that added items with the same name as missing
+# At one time, a merge that added items with the same name as missing
 # items would attempt to add the items and fail, leaving the working
 # copy locked and broken.
 
