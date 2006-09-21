@@ -141,6 +141,8 @@ class State:
 
     return svntest.tree.build_generic_tree(nodelist)
 
+  def __str__(self):
+    return str(self.old_tree())
 
 class StateItem:
   """Describes an individual item within a working copy.
