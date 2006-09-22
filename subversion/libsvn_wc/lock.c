@@ -933,16 +933,25 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
           if (subdir_entry->kind == svn_node_dir
               && kind == svn_node_file)
             {
-              return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                       _("Expected '%s' to be a directory but found a file"), 
-                                       svn_path_local_style(path, pool));
+              const char *err_msg = apr_psprintf
+                (pool, _("Expected '%s' to be a directory but found a file"),
+                 svn_path_local_style(path, pool));
+              return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
+                                      svn_error_create
+                                        (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                                         err_msg),
+                                      err_msg);
             }
           else if (subdir_entry->kind == svn_node_file
                    && kind == svn_node_dir)
             {
-              return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                       _("Expected '%s' to be a file but found a directory"), 
-                                       svn_path_local_style(path, pool));
+              const char *err_msg = apr_psprintf
+                (pool, _("Expected '%s' to be a file but found a directory"),
+                 svn_path_local_style(path, pool));
+              return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
+                                      svn_error_create(SVN_ERR_WC_NOT_FILE,
+                                                       NULL, err_msg),
+                                      err_msg);
             }
         }
       
@@ -959,9 +968,15 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
         }
 
       if (kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                 _("Directory '%s' is missing"),
-                                 svn_path_local_style(path, pool));
+        {
+          const char *err_msg = apr_psprintf(pool,
+                                             _("Directory '%s' is missing"),
+                                             svn_path_local_style(path, pool));
+          return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
+                                  svn_error_create(SVN_ERR_WC_PATH_NOT_FOUND,
+                                                   NULL, err_msg),
+                                  err_msg);
+        }
       
       else if (kind == svn_node_dir && wckind == svn_node_none)
         return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
