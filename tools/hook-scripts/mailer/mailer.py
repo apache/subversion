@@ -323,7 +323,8 @@ class Commit(Messenger):
     Messenger.__init__(self, pool, cfg, repos, 'commit_subject_prefix')
 
     # get all the changes and sort by path
-    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, self.pool)
+    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, \
+                                       self.pool)
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
     svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
 
@@ -607,7 +608,8 @@ class DiffURLSelections:
     # KeyError exceptions.
     params = self.params.copy()
     params['path'] = change.path and urllib.quote(change.path) or None
-    params['base_path'] = change.base_path and urllib.quote(change.base_path) or None
+    params['base_path'] = change.base_path and urllib.quote(change.base_path) \
+                          or None
     params['rev'] = repos_rev
     params['base_rev'] = change.base_rev
 
@@ -1000,7 +1002,7 @@ class TextCommitRenderer:
           % (text, d.base_rev, d.base_path, is_dir))
 
   def _render_diffs(self, diffs, section_header):
-    """Render diffs. Write the SECTION_HEADER iff there are actually
+    """Render diffs. Write the SECTION_HEADER if there are actually
     any diffs to render."""
     w = self.output.write
     section_header_printed = False
