@@ -743,9 +743,7 @@ svn_error_t * svn_ra_dav__merge_activity(
   /* is there an error stashed away in our context? */
   if (mc.err)
     {
-      if (err)
-        svn_error_clear(err);
-
+      svn_error_clear(err);
       return mc.err;
     }
   else if (err)

@@ -2052,9 +2052,6 @@ def commit_inconsistent_eol(sbox):
 ########################################################################
 # Run the tests
 
-def is_this_dav():
-  return svntest.main.test_area_url.startswith('http')
-
 # list all tests here, starting with None:
 test_list = [ None,
               commit_one_file,
@@ -2070,7 +2067,7 @@ test_list = [ None,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
               # issue #2578 causes the hudson_part_2 test to fail.
-              XFail(hudson_part_2, is_this_dav),
+              XFail(hudson_part_2, svntest.main.is_ra_type_dav),
               hudson_part_2_1,
               XFail(hook_test),
               merge_mixed_revisions,

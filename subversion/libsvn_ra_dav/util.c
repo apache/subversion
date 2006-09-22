@@ -21,6 +21,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include <ne_alloc.h>
 #include <ne_socket.h>
 #include <ne_uri.h>
 #include <ne_compress.h>
@@ -312,7 +313,6 @@ static int ra_dav_error_accepter(void *userdata,
      in neon 0.25.0, trying to parse a 401 response as XML using
      ne_xml_parse_v aborts the response; so the auth hooks never got a
      chance. */
-#ifdef SVN_NEON_0_25
   ne_content_type ctype;
 
   /* Only accept non-2xx responses with text/xml content-type */
@@ -325,10 +325,6 @@ static int ra_dav_error_accepter(void *userdata,
     }
   else 
     return 0;
-#else /* ! SVN_NEON_0_25 */
-  /* Only accept the body-response if the HTTP status code is *not* 2XX. */
-  return (st->klass != 2);
-#endif /* if/else SVN_NEON_0_25 */
 }
 
 
@@ -505,11 +501,7 @@ typedef struct spool_reader_baton_t
 
 
 /* This implements the ne_block_reader() callback interface. */
-#ifdef SVN_NEON_0_25
 static int
-#else /* ! SVN_NEON_0_25 */
-static void
-#endif /* if/else SVN_NEON_0_25 */
 spool_reader(void *userdata, 
              const char *buf, 
              size_t len)
@@ -519,13 +511,11 @@ spool_reader(void *userdata,
     baton->error = svn_io_file_write_full(baton->spool_file, buf, 
                                           len, NULL, baton->pool);
 
-#ifdef SVN_NEON_0_25
   if (baton->error)
     /* ### Call ne_set_error(), as ne_block_reader doc implies? */
     return 1;
   else
     return 0;
-#endif /* SVN_NEON_0_25 */
 }
 
 
@@ -555,6 +545,14 @@ parse_spool_file(const char *spool_file_name,
 }
 
 
+/* A baton that is used along with a set of Neon ne_startelm_cb,
+ * ne_cdata_cb, and ne_endelm_cb callbacks to handle conversion
+ * from Subversion style errors to Neon style errors.
+ *
+ * The underlying Subversion callbacks are called, and if errors
+ * are returned they are stored in this baton and a Neon level
+ * error code is returned to the parser.
+ */
 typedef struct {
   svn_error_t *err;
 
@@ -655,9 +653,6 @@ parsed_request(ne_session *sess,
   ne_xml_parser *success_parser = NULL;
   ne_xml_parser *error_parser = NULL;
   int rv;
-#ifndef SVN_NEON_0_25
-  int decompress_rv;
-#endif /* ! SVN_NEON_0_25 */
   int code;
   int expected_code;
   const char *msg;
@@ -802,31 +797,11 @@ parsed_request(ne_session *sess,
         }
     }
 
-#ifdef SVN_NEON_0_25
   if (decompress_main)
     ne_decompress_destroy(decompress_main);
 
   if (decompress_err)
     ne_decompress_destroy(decompress_err);
-#else  /* ! SVN_NEON_0_25 */
-  if (decompress_main)
-    {
-      decompress_rv = ne_decompress_destroy(decompress_main);
-      if (decompress_rv != 0)
-        {
-          rv = decompress_rv;
-        }
-    }
-
-  if (decompress_err)
-    {
-      decompress_rv = ne_decompress_destroy(decompress_err);
-      if (decompress_rv != 0)
-        {
-          rv = decompress_rv;
-        }
-    }
-#endif /* if/else SVN_NEON_0_25 */
   
   code = ne_get_status(req)->code;
   if (status_code)
@@ -847,6 +822,22 @@ parsed_request(ne_session *sess,
         {
           msg = apr_psprintf(pool, _("'%s' path not found"), url);
           err = svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL, msg);
+        }
+      else if (code == 301 || code == 302)
+        {
+          char *location;
+          SVN_ERR(svn_ra_dav__interrogate_for_location(req, rv, &location));
+          msg = apr_psprintf(pool,
+                             (code == 301
+                              ? _("Repository moved permanently to '%s';"
+                                  " please relocate")
+                              : _("Repository moved temporarily to '%s';"
+                                  " please relocate")),
+                             location);
+          err = svn_error_create(SVN_ERR_RA_DAV_RELOCATED, NULL, msg);
+
+          if (location)
+            ne_free(location);
         }
       else
         {
@@ -1026,10 +1017,8 @@ svn_ra_dav__request_dispatch(int *code_p,
                              const char *url,
                              int okay_1,
                              int okay_2,
-#ifdef SVN_NEON_0_25
                              svn_ra_dav__request_interrogator interrogator,
                              void *interrogator_baton,
-#endif /* SVN_NEON_0_25 */
                              apr_pool_t *pool)
 {
   ne_xml_parser *error_parser;
@@ -1039,9 +1028,7 @@ svn_ra_dav__request_dispatch(int *code_p,
   int code;
   const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
-#ifdef SVN_NEON_0_25
   svn_error_t *err2 = SVN_NO_ERROR;
-#endif /* SVN_NEON_0_25 */
 
   /* attach a standard <D:error> body parser to the request */
   error_parser = ne_xml_create();
@@ -1060,22 +1047,18 @@ svn_ra_dav__request_dispatch(int *code_p,
   if (code_p)
      *code_p = code;
 
-#ifdef SVN_NEON_0_25
   if (interrogator)
     err2 = (*interrogator)(request, rv, interrogator_baton);
-#endif /* SVN_NEON_0_25 */
 
   ne_request_destroy(request);
   ne_xml_destroy(error_parser);
 
-#ifdef SVN_NEON_0_25
   /* If the request interrogator returned error, pass that along now. */
   if (err2)
     {
       svn_error_clear(err);
       return err2;
     }
-#endif /* SVN_NEON_0_25 */
 
   /* If the status code was one of the two that we expected, then go
      ahead and return now. IGNORE any marshalled error. */
@@ -1090,4 +1073,22 @@ svn_ra_dav__request_dispatch(int *code_p,
      that we didn't expect. */
   msg = apr_psprintf(pool, _("%s of '%s'"), method, url);
   return svn_ra_dav__convert_error(session, msg, rv, pool);
+}
+
+
+svn_error_t *
+svn_ra_dav__interrogate_for_location(ne_request *request,
+                                     int dispatch_return_val,
+                                     void *userdata)
+{
+  char **location = userdata;
+
+  if (location)
+    {
+      const char *val = ne_get_response_header(request, "Location");
+      if (val)
+        *location = ne_strdup(val);
+    }
+
+  return SVN_NO_ERROR;
 }

@@ -351,12 +351,14 @@ client_ssl_callback(void *userdata, ne_session *sess,
 }
 
 /* Set *PROXY_HOST, *PROXY_PORT, *PROXY_USERNAME, *PROXY_PASSWORD,
- * *TIMEOUT_SECONDS and *NEON_DEBUG to the information for REQUESTED_HOST,
- * allocated in POOL, if there is any applicable information.  If there is
- * no applicable information or if there is an error, then set *PROXY_PORT
- * to (unsigned int) -1, *TIMEOUT_SECONDS and *NEON_DEBUG to zero, and the
- * rest to NULL.  This function can return an error, so before checking any
- * values, check the error return value.
+ * *TIMEOUT_SECONDS, *NEON_DEBUG, *COMPRESSION, and *NEON_AUTO_PROTOCOLS
+ * to the information for REQUESTED_HOST, allocated in POOL, if there is
+ * any applicable information.  If there is no applicable information or
+ * if there is an error, then set *PROXY_PORT to (unsigned int) -1,
+ * *TIMEOUT_SECONDS and *NEON_DEBUG to zero, *COMPRESSION to TRUE,
+ * *NEON_AUTH_TYPES is left untouched, and the rest are set to NULL.
+ * This function can return an error, so before examining any values,
+ * check the error return value.
  */
 static svn_error_t *get_server_settings(const char **proxy_host,
                                         unsigned int *proxy_port,
@@ -365,12 +367,13 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                         int *timeout_seconds,
                                         int *neon_debug,
                                         svn_boolean_t *compression,
+                                        unsigned int *neon_auth_types,
                                         svn_config_t *cfg,
                                         const char *requested_host,
                                         apr_pool_t *pool)
 {
   const char *exceptions, *port_str, *timeout_str, *server_group;
-  const char *debug_str;
+  const char *debug_str, *http_auth_types;
   svn_boolean_t is_exception = FALSE;
   /* If we find nothing, default to nulls. */
   *proxy_host     = NULL;
@@ -380,6 +383,7 @@ static svn_error_t *get_server_settings(const char **proxy_host,
   port_str        = NULL;
   timeout_str     = NULL;
   debug_str       = NULL;
+  http_auth_types = NULL;
 
   /* If there are defaults, use them, but only if the requested host
      is not one of the exceptions to the defaults. */
@@ -406,6 +410,10 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                   SVN_CONFIG_OPTION_HTTP_COMPRESSION, TRUE));
       svn_config_get(cfg, &debug_str, SVN_CONFIG_SECTION_GLOBAL, 
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, NULL);
+#ifdef SVN_NEON_0_26
+      svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
+#endif
     }
 
   if (cfg)
@@ -431,6 +439,10 @@ static svn_error_t *get_server_settings(const char **proxy_host,
                                   *compression));
       svn_config_get(cfg, &debug_str, server_group, 
                      SVN_CONFIG_OPTION_NEON_DEBUG_MASK, debug_str);
+#ifdef SVN_NEON_0_26
+      svn_config_get(cfg, &http_auth_types, SVN_CONFIG_SECTION_GLOBAL,
+                     SVN_CONFIG_OPTION_HTTP_AUTH_TYPES, NULL);
+#endif
     }
 
   /* Special case: convert the port value, if any. */
@@ -486,6 +498,29 @@ static svn_error_t *get_server_settings(const char **proxy_host,
     }
   else
     *neon_debug = 0;
+
+#ifdef SVN_NEON_0_26
+  if (http_auth_types)
+    {
+      char *token, *last;
+      char *auth_types_list = apr_palloc(pool, strlen(http_auth_types) + 1);
+      apr_collapse_spaces(auth_types_list, http_auth_types);
+      while ((token = apr_strtok(auth_types_list, ";", &last)) != NULL)
+        {
+          auth_types_list = NULL;
+          if (strcasecmp("basic", token) == 0)
+            *neon_auth_types |= NE_AUTH_BASIC;
+          else if (strcasecmp("digest", token) == 0)
+            *neon_auth_types |= NE_AUTH_DIGEST;
+          else if (strcasecmp("negotiate", token) == 0)
+            *neon_auth_types |= NE_AUTH_NEGOTIATE;
+          else
+            return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                                    _("Invalid config: unknown http auth"
+                                      "type '%s'", token));
+      }
+    }
+#endif /* SVN_NEON_0_26 */
 
   return SVN_NO_ERROR;
 }
@@ -556,11 +591,7 @@ ra_dav_get_schemes(apr_pool_t *pool)
   static const char *schemes_no_ssl[] = { "http", NULL };
   static const char *schemes_ssl[] = { "http", "https", NULL };
 
-#ifdef SVN_NEON_0_25
   return ne_has_support(NE_FEATURE_SSL) ? schemes_ssl : schemes_no_ssl;
-#else /* ! SVN_NEON_0_25 */
-  return ne_supports_ssl() ? schemes_ssl : schemes_no_ssl;
-#endif /* if/else SVN_NEON_0_25 */
 }
 
 typedef struct neonprogress_baton_t
@@ -622,6 +653,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
   svn_config_t *cfg;
   const char *server_group;
   char *itr;
+  unsigned int neon_auth_types;
   neonprogress_baton_t *neonprogress_baton =
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
@@ -651,11 +683,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
   is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
   if (is_ssl_session)
     {
-#ifdef SVN_NEON_0_25
       if (ne_has_support(NE_FEATURE_SSL) == 0)
-#else /* ! SVN_NEON_0_25 */
-      if (ne_supports_ssl() == 0)
-#endif /* if/else SVN_NEON_0_25 */
         {
           ne_uri_free(&uri);
           return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
@@ -685,6 +713,11 @@ svn_ra_dav__open(svn_ra_session_t *session,
     int debug;
     svn_error_t *err;
     
+#ifdef SVN_NEON_0_26
+    neon_auth_types = NE_AUTH_BASIC | NE_AUTH_DIGEST;
+    if (is_ssl_session)
+      neon_auth_types |= NE_AUTH_NEGOTIATE;
+#endif
     err = get_server_settings(&proxy_host,
                               &proxy_port,
                               &proxy_username,
@@ -692,6 +725,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
                               &timeout,
                               &debug,
                               &compression,
+                              &neon_auth_types,
                               cfg,
                               uri.host,
                               pool);
@@ -769,8 +803,13 @@ svn_ra_dav__open(svn_ra_session_t *session,
 
 
   /* Register an authentication 'pull' callback with the neon sessions */
+#ifdef SVN_NEON_0_26
+  ne_add_server_auth(sess, neon_auth_types, request_auth, ras);
+  ne_add_server_auth(sess2, neon_auth_types, request_auth, ras);
+#else
   ne_set_server_auth(sess, request_auth, ras);
   ne_set_server_auth(sess2, request_auth, ras);
+#endif
 
   /* Store our RA session baton in Neon's private data slot so we can
      get at it in functions that take only ne_session_t *sess
@@ -923,44 +962,6 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
 }
 
 
-#ifndef SVN_NEON_0_25
-/* A callback of type ne_header_handler, invoked when neon encounters
-   mod_dav_svn's custom 'creationdate' header in a LOCK response. */
-static void
-handle_creationdate_header(void *userdata,
-                           const char *value)
-{
-  struct lock_request_baton *lrb = userdata;
-  svn_error_t *err;
-
-  if (! value)
-    return;
-
-  err = svn_time_from_cstring(&(lrb->creation_date), value, lrb->pool);
-  if (err)
-    {
-      svn_error_clear(err);
-      lrb->creation_date = 0;                      
-    }
-}
-
-
-/* A callback of type ne_header_handler, invoked when neon encounters
-   mod_dav_svn's custom 'lock owner' header in a LOCK response. */
-static void
-handle_lock_owner_header(void *userdata,
-                         const char *value)
-{
-  struct lock_request_baton *lrb = userdata;
-
-  if (! value)
-    return;
-
-  lrb->lock_owner = apr_pstrdup(lrb->pool, value);
-}
-#endif /* ! SVN_NEON_0_25 */
-
-
 /* A callback of type ne_create_request_fn;  called whenever neon
    creates a request. */
 static void 
@@ -1020,15 +1021,6 @@ pre_send_hook(ne_request *req,
                                    lrb->current_rev);
           ne_buffer_zappend(header, buf);
         }
-
-#ifndef SVN_NEON_0_25
-      /* Register callbacks to read any custom 'creationdate' and
-         'lock owner' response headers sent by mod_dav_svn. */
-      ne_add_response_header_handler(req, SVN_DAV_CREATIONDATE_HEADER,
-                                     handle_creationdate_header, lrb);
-      ne_add_response_header_handler(req, SVN_DAV_LOCK_OWNER_HEADER,
-                                     handle_lock_owner_header, lrb);
-#endif /* ! SVN_NEON_0_25 */
     }
 
   if (strcmp(lrb->method, "UNLOCK") == 0)
@@ -1048,7 +1040,6 @@ pre_send_hook(ne_request *req,
                                 &(lrb->err), lrb->pool);
 }
 
-#ifdef SVN_NEON_0_25
 /* A callback of type ne_post_send_fn;  called after neon has sent a
    request and received a response header back. */
 static int
@@ -1092,7 +1083,6 @@ post_send_hook(ne_request *req,
 
   return NE_OK;
 }
-#endif /* SVN_NEON_0_25 */
 
 
 static void
@@ -1109,9 +1099,7 @@ setup_neon_request_hook(svn_ra_dav__session_t *ras)
 
       ne_hook_create_request(ras->sess, create_request_hook, lrb);
       ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
-#ifdef SVN_NEON_0_25
       ne_hook_post_send(ras->sess, post_send_hook, lrb);
-#endif /* SVN_NEON_0_25 */
 
       lrb->pool = ras->pool;
       ras->lrb = lrb;
@@ -1459,7 +1447,6 @@ lock_receiver(void *userdata,
 
   if (lock)
     {
-#ifdef SVN_NEON_0_25
       /* The post_send hook has not run at this stage; so grab the 
          response headers early.  As Joe Orton explains in Issue
          #2297: "post_send hooks run much later than the name might
@@ -1470,7 +1457,6 @@ lock_receiver(void *userdata,
         {
           return;
         }
-#endif /* SVN_NEON_0_25 */
 
       if (!rb->lrb->lock_owner || !rb->lrb->creation_date)
         {
@@ -1515,6 +1501,7 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   struct receiver_baton *rb;
   svn_string_t fs_path;
   svn_error_t *err;
+  ne_uri uri;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component(ras->url->data, path, pool);  
@@ -1537,6 +1524,14 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
 
   /* Ask neon to "discover" the lock (presumably by doing a PROPFIND
      for the DAV:supportedlock property). */
+  
+  /* ne_lock_discover wants just the path, so parse it out of the url. */
+  if (ne_uri_parse(url, &uri) == 0)
+    {
+      url = apr_pstrdup(pool, uri.path);
+      ne_uri_free(&uri);
+    }
+
   rv = ne_lock_discover(ras->sess, url, lock_receiver, rb);
 
   /* Did we get a <D:error> response? */

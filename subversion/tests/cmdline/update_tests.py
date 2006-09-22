@@ -506,22 +506,6 @@ def receive_overlapping_same_change(sbox):
 
 #----------------------------------------------------------------------
 
-# Helper for update_to_resolve_text_conflicts() test -- a singleton handler.
-def detect_conflict_files(node, extra_files):
-  """NODE has been discovered an extra file on disk.  Verify that it
-  matches one of the regular expressions in the EXTRA_FILES list.  If
-  it matches, remove the match from the list.  If it doesn't match,
-  raise an exception."""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
-      break
-  else:
-    print "Found unexpected object:", node.name
-    raise svntest.main.SVNTreeUnequal
-
 def update_to_resolve_text_conflicts(sbox):
   "delete files and update to resolve text conflicts"
   
@@ -606,7 +590,7 @@ Original appended text for rho
                                         expected_disk,
                                         expected_status,
                                         None,
-                                        detect_conflict_files,
+                                        svntest.tree.detect_conflict_files,
                                         extra_files)
 
   
@@ -2140,15 +2124,18 @@ def update_wc_on_windows_drive(sbox):
     "find the first available drive"
 
     # get the list of used drive letters, use some Windows specific function.
-    import win32api
+    try:
+  		import win32api
 
-    drives=win32api.GetLogicalDriveStrings()
-    drives=string.splitfields(drives,'\000')
+  		drives=win32api.GetLogicalDriveStrings()
+  		drives=string.splitfields(drives,'\000')
 
-    for d in range(ord('G'), ord('Z')+1):
-      drive = chr(d)
-      if not drive + ':\\' in drives:
-        return drive
+  		for d in range(ord('G'), ord('Z')+1):
+  		  drive = chr(d)
+  		  if not drive + ':\\' in drives:
+  			return drive
+    except ImportError:
+      return ''
 
     return ''
 

@@ -28,19 +28,6 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = wc.StateItem
 
-#----------------------------------------------------------------------
-
-def expect_extra_files(node, extra_files):
-  """singleton handler for expected singletons"""
-
-  for pattern in extra_files:
-    mo = re.match(pattern, node.name)
-    if mo:
-      extra_files.pop(extra_files.index(pattern))
-      return
-  print "Found unexpected object:", node.name
-  raise svntest.main.SVNTreeUnequal
-
 ######################################################################
 # Tests
 #
@@ -569,13 +556,13 @@ Original appended text for rho
                  'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
   
   # Do the update and check the results in three ways.
-  # All "extra" files are passed to expect_extra_files().
+  # All "extra" files are passed to detect_conflict_files().
   svntest.actions.run_and_verify_update(wc_backup,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None,
-                                        expect_extra_files,
+                                        svntest.tree.detect_conflict_files,
                                         extra_files)
   
   # verify that the extra_files list is now empty.
@@ -1737,11 +1724,22 @@ def move_relative_paths(sbox):
   })
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+# Issue #2612.
+def ls_space_in_repo_name(sbox):
+  'basic ls'
+
+  sbox.build(name = "repo with spaces")
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn('ls the root of the repository',
+                                     ['A/\n', 'iota\n'],
+                                     [], 'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     sbox.repo_url)
+
 ########################################################################
 # Run the tests
-
-def is_this_windows():
-  return (os.name == 'nt')
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -1775,7 +1773,8 @@ test_list = [ None,
               info_nonhead,
               ls_nonhead,
               cat_added_PREV,
-              XFail(move_relative_paths, is_this_windows),
+              XFail(move_relative_paths, svntest.main.is_os_windows),
+              ls_space_in_repo_name,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

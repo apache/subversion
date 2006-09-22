@@ -1103,16 +1103,16 @@ class SvnClientTest < Test::Unit::TestCase
     ctx = make_context(log)
     File.open(path1, "w") {|f| f.print(src1)}
     ctx.add(path1)
-
     ctx.ci(@wc_path)
 
     File.open(path1, "w") {|f| f.print(src2)}
-
-    assert_raises(Svn::Error::ClientModified) do
+    assert_nothing_raised do
       ctx.mv(path1, path2)
     end
-    ctx.cleanup(@wc_path)
+    ctx.revert([path1, path2])
+    FileUtils.rm(path2)
 
+    File.open(path1, "w") {|f| f.print(src2)}
     assert_nothing_raised do
       ctx.mv_f(path1, path2)
     end

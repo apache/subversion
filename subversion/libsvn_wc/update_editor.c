@@ -211,8 +211,7 @@ get_entry_url(svn_wc_adm_access_t *associated_access,
     }
   if (err || (! entry) || (! entry->url))
     {
-      if (err)
-        svn_error_clear(err);
+      svn_error_clear(err);
       return NULL;
     }
 
@@ -3056,6 +3055,28 @@ svn_wc_add_repos_file2(const char *dst_path,
         SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
                                    adm_access, dst_bprop, dst_rprop,
                                    FALSE, pool));
+      else if (kind == svn_node_none)
+        {
+          /* If there wasn't any prop base we still need an empty revert
+             propfile, otherwise a revert won't know that a change to the
+             props needs to be made (it'll just see no file, and do nothing).
+             So manufacture an empty propfile and force it to be written out. */
+
+          apr_hash_t *empty_hash = apr_hash_make(pool);
+          const char *propfile_path;
+
+          SVN_ERR(svn_wc__prop_path(&propfile_path, base_name,
+                                           svn_node_file, TRUE, pool));
+
+          SVN_ERR(svn_wc__save_prop_file(svn_path_join(full_path,
+                                                       propfile_path,
+                                                       pool),
+                                         empty_hash, TRUE, pool));
+
+          SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
+                                     adm_access, propfile_path, dst_rprop,
+                                     FALSE, pool));
+        }
     }
   
   /* Schedule this for addition first, before the entry exists.

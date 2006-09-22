@@ -56,6 +56,7 @@ svn_dso_initialize()
   dso_cache = apr_hash_make(dso_pool);
 }
 
+#if APR_HAS_DSO
 svn_error_t *
 svn_dso_load(apr_dso_handle_t **dso, const char *fname)
 {
@@ -123,3 +124,4 @@ svn_dso_load(apr_dso_handle_t **dso, const char *fname)
 
   return SVN_NO_ERROR;
 }
+#endif /* APR_HAS_DSO */

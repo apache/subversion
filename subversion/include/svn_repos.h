@@ -262,6 +262,11 @@ svn_error_t *svn_repos_recover(const char *path, apr_pool_t *pool);
  * start_callback_baton as argument before the recovery starts, but
  * after the exclusive lock has been acquired.
  *
+ * @note On some platforms the exclusive lock does not exclude other
+ * threads in the same process so this function should only be called
+ * by a single threaded process, or by a multi-threaded process when
+ * no other threads are accessing the repository.
+ *
  * @since New in 1.1.
  */
 svn_error_t *svn_repos_recover2(const char *path,

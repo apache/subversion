@@ -40,11 +40,9 @@
 /*** Hook drivers. ***/
 
 /* NAME, CMD and ARGS are the name, path to and arguments for the hook
-   program that is to be run.  If READ_ERRSTREAM is TRUE then the hook's
-   exit status will be checked, and if an error occurred the hook's stderr
-   output will be added to the returned error.
-
-   If READ_ERRSTREAM is FALSE the hook's stderr output will be discarded.
+   program that is to be run.  The hook's exit status will be checked,
+   and if an error occurred the hook's stderr output will be added to
+   the returned error.
 
    If STDIN_HANDLE is non-null, pass it as the hook's stdin, else pass
    no stdin to the hook. */
@@ -52,7 +50,6 @@ static svn_error_t *
 run_hook_cmd(const char *name,
              const char *cmd,
              const char **args,
-             svn_boolean_t read_errstream,
              apr_file_t *stdin_handle,
              apr_pool_t *pool)
 #ifndef AS400
@@ -127,7 +124,7 @@ run_hook_cmd(const char *name,
         {
           if (! APR_PROC_CHECK_EXIT(exitwhy) || exitcode != 0)
             {
-              if (read_errstream && ! err2)
+              if (! err2)
                 {
                   err2 = svn_utf_cstring_to_utf8(&error, native_error->data,
                                                  pool);
@@ -235,26 +232,14 @@ run_hook_cmd(const char *name,
                              cmd);
 
   /* Map stderr. */
-  if (read_errstream)
+  /* Get pipe for hook's stderr. */
+  if (pipe(stderr_pipe) != 0)
     {
-      /* Get pipe for hook's stderr. */
-      if (pipe(stderr_pipe) != 0)
-        {
-          return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                   "Can't create stderr pipe for "
-                                   "hook '%s'", cmd);
-        }
-      fd_map[2] = stderr_pipe[1];
+      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                               "Can't create stderr pipe for "
+                               "hook '%s'", cmd);
     }
-  else
-    {
-      /* Just dump stderr to /dev/null if we don't want it. */
-      fd_map[2] = open(dev_null_ebcdic, O_WRONLY);
-      if (fd_map[2] == -1)
-        return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                 "Error opening /dev/null for hook "
-                                 "script '%s'", cmd);
-    }
+  fd_map[2] = stderr_pipe[1];
 
   /* Spawn the hook command. */
   child_pid = spawn(native_args[0], 3, fd_map, &xmp_inherit, native_args,
@@ -279,7 +264,7 @@ run_hook_cmd(const char *name,
                              "Error closing write end of stderr pipe to "
                              "hook script '%s'", cmd);
 
-  while (read_errstream)
+  while (1)
     {
       int rc;
 
@@ -335,19 +320,10 @@ run_hook_cmd(const char *name,
     {
       if (WEXITSTATUS(exitcode))
         {
-          if (read_errstream)
-            {
-              return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                       "'%s' hook failed with error "
-                                       "output:\n%s", name,
-                                       script_stderr_utf8);
-            }
-          else
-            {
-              return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                                       "'%s' hook failed; no error output "
-                                       "available", name);
-            }
+          return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                                   "'%s' hook failed with error "
+                                   "output:\n%s", name,
+                                   script_stderr_utf8);
         }
       else
         /* Success! */
@@ -485,7 +461,7 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
       args[2] = user ? user : "";
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd("start-commit", hook, args, TRUE, NULL, pool));
+      SVN_ERR(run_hook_cmd("start-commit", hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -513,7 +489,7 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
       args[2] = txn_name;
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd("pre-commit", hook, args, TRUE, NULL, pool));
+      SVN_ERR(run_hook_cmd("pre-commit", hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -541,7 +517,7 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
       args[2] = apr_psprintf(pool, "%ld", rev);
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd("post-commit", hook, args, TRUE, NULL, pool));
+      SVN_ERR(run_hook_cmd("post-commit", hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -588,8 +564,8 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd("pre-revprop-change", hook, args, TRUE,
-                           stdin_handle, pool));
+      SVN_ERR(run_hook_cmd("pre-revprop-change", hook, args, stdin_handle,
+                           pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -650,8 +626,8 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd("post-revprop-change", hook, args, FALSE,
-                           stdin_handle, pool));
+      SVN_ERR(run_hook_cmd("post-revprop-change", hook, args, stdin_handle,
+                           pool));
       
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -684,7 +660,7 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
       args[3] = username;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd("pre-lock", hook, args, TRUE, NULL, pool));
+      SVN_ERR(run_hook_cmd("pre-lock", hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -720,8 +696,7 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
       args[3] = NULL;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd("post-lock", hook, args, FALSE, 
-                           stdin_handle, pool));
+      SVN_ERR(run_hook_cmd("post-lock", hook, args, stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -753,7 +728,7 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
       args[3] = username ? username : "";
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd("pre-unlock", hook, args, TRUE, NULL, pool));
+      SVN_ERR(run_hook_cmd("pre-unlock", hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -789,8 +764,7 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
       args[3] = NULL;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd("post-unlock", hook, args, FALSE, 
-                           stdin_handle, pool));
+      SVN_ERR(run_hook_cmd("post-unlock", hook, args, stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }

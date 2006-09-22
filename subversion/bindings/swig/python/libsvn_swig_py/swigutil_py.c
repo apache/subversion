@@ -102,8 +102,8 @@ void svn_swig_py_acquire_py_lock(void)
 /*** Automatic Pool Management Functions ***/
 
 /* The application pool */
-static apr_pool_t *_global_pool = NULL;
-static PyObject *_global_svn_swig_py_pool = NULL;
+static apr_pool_t *application_pool = NULL;
+static PyObject *application_py_pool = NULL;
 static char assertValid[] = "assert_valid";
 static char markValid[] = "_mark_valid";
 static char parentPool[] = "_parent_pool";
@@ -145,8 +145,8 @@ int svn_swig_py_get_pool_arg(PyObject *args, swig_type_info *type,
     }
 
   /* We couldn't find a pool argument, so we'll create a subpool */
-  *pool = svn_pool_create(_global_pool);
-  *py_pool = svn_swig_NewPointerObj(*pool, type, _global_svn_swig_py_pool,
+  *pool = svn_pool_create(application_pool);
+  *py_pool = svn_swig_NewPointerObj(*pool, type, application_py_pool,
                                     NULL);
   if (*py_pool == NULL)
     return 1;
@@ -184,15 +184,15 @@ int svn_swig_py_get_parent_pool(PyObject *args, swig_type_info *type,
 /* Set the application pool */
 void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool)
 {
-  _global_pool = pool;
-  _global_svn_swig_py_pool = py_pool;
+  application_pool = pool;
+  application_py_pool = py_pool;
 }
 
 /* Clear the application pool */
 void svn_swig_py_clear_application_pool()
 {
-  _global_pool = NULL;
-  _global_svn_swig_py_pool = NULL;
+  application_pool = NULL;
+  application_py_pool = NULL;
 }
 
 /* Set the parent pool of a proxy object */
@@ -394,9 +394,9 @@ static PyObject *make_ob_pool(void *pool)
   /* Return a brand new default pool to Python. This pool isn't
    * normally used for anything. It's just here for compatibility
    * with Subversion 1.2. */
-  apr_pool_t *new_pool = svn_pool_create(_global_pool);
+  apr_pool_t *new_pool = svn_pool_create(application_pool);
   PyObject *new_py_pool = svn_swig_NewPointerObj(new_pool,
-    svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool, NULL);
+    svn_swig_TypeQuery("apr_pool_t *"), application_py_pool, NULL);
   (void) pool; /* Silence compiler warnings about unused parameter. */
   return new_py_pool;
 }
@@ -651,9 +651,9 @@ PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type,
 #define DECLARE_SWIG_CONSTRUCTOR(type, dup) \
 static PyObject *make_ob_##type(void *value) \
 { \
-  apr_pool_t *new_pool = svn_pool_create(_global_pool); \
+  apr_pool_t *new_pool = svn_pool_create(application_pool); \
   PyObject *new_py_pool = svn_swig_NewPointerObj(new_pool, \
-    svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool, NULL); \
+    svn_swig_TypeQuery("apr_pool_t *"), application_py_pool, NULL); \
   svn_##type##_t *new_value = dup(value, new_pool); \
   return svn_swig_NewPointerObjString(new_value, "svn_" #type "_t *", \
       new_py_pool); \
@@ -1634,8 +1634,7 @@ void svn_swig_py_notify_func(void *baton,
     }
 
   /* Our error has no place to go. :-( */
-  if (err)
-    svn_error_clear(err);
+  svn_error_clear(err);
 
   svn_swig_py_release_py_lock();
 }
@@ -1670,8 +1669,7 @@ void svn_swig_py_notify_func2(void *baton,
     }
 
   /* Our error has no place to go. :-( */
-  if (err)
-    svn_error_clear(err);
+  svn_error_clear(err);
 
   svn_swig_py_release_py_lock();
 }
@@ -1702,8 +1700,7 @@ void svn_swig_py_status_func(void *baton,
     }
 
   /* Our error has no place to go. :-( */
-  if (err)
-    svn_error_clear(err);
+  svn_error_clear(err);
 
   svn_swig_py_release_py_lock();
 }

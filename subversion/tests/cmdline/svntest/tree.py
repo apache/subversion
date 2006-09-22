@@ -18,6 +18,7 @@
 import re
 import string
 import os
+import sys
 
 import main  # the general svntest routines in this module.
 from svntest import Failure
@@ -182,20 +183,20 @@ class SVNTreeNode:
       newchild.path = os.path.join(self.path, newchild.name)
 
 
-  def pprint(self):
+  def pprint(self, stream = sys.stdout):
     "Pretty-print the meta data for this node."
-    print " * Node name:  ", self.name
-    print "    Path:      ", self.path
+    print >> stream, " * Node name:  ", self.name
+    print >> stream, "    Path:      ", self.path
     mime_type = self.props.get("svn:mime-type")
     if not mime_type or mime_type.startswith("text/"):
       if self.children is not None:
-        print "    Contents:   N/A (node is a directory)"
+        print >> stream, "    Contents:   N/A (node is a directory)"
       else:
-        print "    Contents:  ", self.contents
+        print >> stream, "    Contents:  ", self.contents
     else:
-      print "    Contents:   %d bytes (binary)" % len(self.contents)
-    print "    Properties:", self.props
-    print "    Attributes:", self.atts
+      print >> stream, "    Contents:   %d bytes (binary)" % len(self.contents)
+    print >> stream, "    Properties:", self.props
+    print >> stream, "    Attributes:", self.atts
     ### FIXME: I'd like to be able to tell the difference between
     ### self.children is None (file) and self.children == [] (empty
     ### directory), but it seems that most places that construct
@@ -203,9 +204,16 @@ class SVNTreeNode:
     ###
     ### See issue #1611 about this problem.  -kfogel
     if self.children is not None:
-      print "    Children:  ", len(self.children)
+      print >> stream, "    Children:  ", len(self.children)
     else:
-      print "    Children:   N/A (node is a file)"
+      print >> stream, "    Children:   N/A (node is a file)"
+
+  def __str__(self):
+    import StringIO
+    s = StringIO.StringIO()
+    self.pprint(s)
+    return s.getvalue()
+    
 
 # reserved name of the root of the tree
 root_node_name = "__SVN_ROOT_NODE"
@@ -402,6 +410,22 @@ def default_singleton_handler_b(b, baton):
   b.pprint()
   raise SVNTreeUnequal
 
+# A test helper function implementing the singleton_handler_a API.
+def detect_conflict_files(node, extra_files):
+  """NODE has been discovered, an extra file on disk.  Verify that it
+  matches one of the regular expressions in the EXTRA_FILES list.  If
+  it matches, remove the match from the list.  If it doesn't match,
+  raise an exception."""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
+      break
+  else:
+    print "Found unexpected disk object:", node.name
+    node.pprint()
+    raise SVNTreeUnequal
 
 ###########################################################################
 ###########################################################################

@@ -185,7 +185,7 @@ char *svn_path_join_many(apr_pool_t *pool, const char *base, ...)
       if (nargs++ < MAX_SAVED_LENGTHS)
         saved_lengths[nargs] = len;
 
-      if (svn_path_is_absolute(s, strlen(s), pool))
+      if (svn_path_is_absolute(s, len, pool))
         {
           /* an absolute path. skip all components to this point and reset
              the total length. */
@@ -698,7 +698,7 @@ svn_path_is_ancestor(const char *path1, const char *path2)
 {
   apr_size_t path1_len = strlen(path1);
 
-  /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
+  /* If path1 is empty and path2 is not absolute, then path1 is an ancestor. */
   if (SVN_PATH_IS_EMPTY(path1))
     return *path2 != '/';
 
@@ -1020,7 +1020,7 @@ svn_path_uri_from_iri(const char *iri, apr_pool_t *pool)
   return uri_escape(iri, iri_escape_chars, pool);
 }
 
-const char uri_autoescape_chars[256] = {
+static const char uri_autoescape_chars[256] = {
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   1, 1, 1, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
   0, 1, 0, 1, 1, 1, 1, 1,  1, 1, 1, 1, 1, 1, 1, 1,
@@ -1163,8 +1163,7 @@ svn_path_split_if_file(const char *path,
 
   if (err || finfo.filetype == APR_REG)
     {
-      if (err)
-        svn_error_clear(err);
+      svn_error_clear(err);
       svn_path_split(path, pdirectory, pfile, pool);
     }
   else if (finfo.filetype == APR_DIR)

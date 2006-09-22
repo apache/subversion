@@ -2104,7 +2104,7 @@ svn_io_wait_for_cmd(apr_proc_t *cmd_proc,
 
   /* Wait for the cmd command to finish. */
   apr_err = apr_proc_wait(cmd_proc, &exitcode_val, &exitwhy_val, APR_WAIT);
-  if (APR_STATUS_IS_CHILD_NOTDONE(apr_err))
+  if (!APR_STATUS_IS_CHILD_DONE(apr_err))
     return svn_error_wrap_apr(apr_err, _("Error waiting for process '%s'"),
                               cmd);
 

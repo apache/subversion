@@ -257,7 +257,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Associate (or deassociate) local paths with changelist CLNAME.\n"
      "usage: 1. changelist CLNAME TARGET...\n"
      "       2. changelist --clear TARGET...\n"),
-    { svn_cl__clear_opt, svn_cl__targets_opt } },
+    { svn_cl__clear_opt, svn_cl__targets_opt, svn_cl__config_dir_opt } },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
     ("Check out a working copy from a repository.\n"
@@ -1407,8 +1407,7 @@ main(int argc, const char *argv[])
                 }
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          if (err)
-            svn_error_clear(err);
+          svn_error_clear(err);
         }
 
       /* If the -m argument is a file at all, that's probably not what

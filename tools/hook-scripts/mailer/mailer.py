@@ -323,7 +323,8 @@ class Commit(Messenger):
     Messenger.__init__(self, pool, cfg, repos, 'commit_subject_prefix')
 
     # get all the changes and sort by path
-    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, self.pool)
+    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, \
+                                       self.pool)
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
     svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
 
@@ -607,7 +608,8 @@ class DiffURLSelections:
     # KeyError exceptions.
     params = self.params.copy()
     params['path'] = change.path and urllib.quote(change.path) or None
-    params['base_path'] = change.base_path and urllib.quote(change.base_path) or None
+    params['base_path'] = change.base_path and urllib.quote(change.base_path) \
+                          or None
     params['rev'] = repos_rev
     params['base_rev'] = change.base_rev
 
@@ -643,9 +645,11 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   commit_url = cfg.get('commit_url', group, params_with_rev)
 
   # figure out the lists of changes outside the selected path-space
-  other_added_data = other_deleted_data = other_modified_data = [ ]
+  other_added_data = other_replaced_data = other_deleted_data = \
+      other_modified_data = [ ]
   if len(paths) != len(changelist) and show_nonmatching_paths != 'no':
     other_added_data = generate_list('A', changelist, paths, False)
+    other_replaced_data = generate_list('R', changelist, paths, False)
     other_deleted_data = generate_list('D', changelist, paths, False)
     other_modified_data = generate_list('M', changelist, paths, False)
 
@@ -662,10 +666,12 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     log=repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or '',
     commit_url=commit_url,
     added_data=generate_list('A', changelist, paths, True),
+    replaced_data=generate_list('R', changelist, paths, True),
     deleted_data=generate_list('D', changelist, paths, True),
     modified_data=generate_list('M', changelist, paths, True),
     show_nonmatching_paths=show_nonmatching_paths,
     other_added_data=other_added_data,
+    other_replaced_data=other_replaced_data,
     other_deleted_data=other_deleted_data,
     other_modified_data=other_modified_data,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
@@ -677,11 +683,13 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
 
 def generate_list(changekind, changelist, paths, in_paths):
   if changekind == 'A':
-    selection = lambda change: change.added
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_ADD
+  elif changekind == 'R':
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_REPLACE
   elif changekind == 'D':
-    selection = lambda change: change.path is None
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_DELETE
   elif changekind == 'M':
-    selection = lambda change: not change.added and change.path is not None
+    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_MODIFY
 
   items = [ ]
   for path, change in changelist:
@@ -691,7 +699,9 @@ def generate_list(changekind, changelist, paths, in_paths):
         is_dir=change.item_kind == svn.core.svn_node_dir,
         props_changed=change.prop_changes,
         text_changed=change.text_changed,
-        copied=change.added and change.base_path,
+        copied=(change.action == svn.repos.CHANGE_ACTION_ADD \
+                or change.action == svn.repos.CHANGE_ACTION_REPLACE) \
+               and change.base_path,
         base_path=remove_leading_slashes(change.base_path),
         base_rev=change.base_rev,
         )
@@ -754,7 +764,7 @@ class DiffGenerator:
       # figure out if/how to generate a diff
 
       base_path = remove_leading_slashes(change.base_path)
-      if not change.path:
+      if change.action == svn.repos.CHANGE_ACTION_DELETE:
         # it was delete.
         kind = 'D'
 
@@ -770,7 +780,8 @@ class DiffGenerator:
           label2 = '(empty file)'
           singular = True
 
-      elif change.added:
+      elif change.action == svn.repos.CHANGE_ACTION_ADD \
+           or change.action == svn.repos.CHANGE_ACTION_REPLACE:
         if base_path and (change.base_rev != -1):
 
           # any diff of interest?
@@ -909,6 +920,9 @@ class DiffContent:
     else:
       ltype = 'U'
 
+    if line[-2] == '\r':
+      line=line[0:-2] + '\n' # remove carriage return
+
     return _data(
       raw=line,
       text=line[1:-1],  # remove indicator and newline
@@ -940,14 +954,16 @@ class TextCommitRenderer:
 
     # print summary sections
     self._render_list('Added', data.added_data)
+    self._render_list('Replaced', data.replaced_data)
     self._render_list('Deleted', data.deleted_data)
     self._render_list('Modified', data.modified_data)
 
-    if data.other_added_data or data.other_deleted_data \
-           or data.other_modified_data:
+    if data.other_added_data or data.other_replaced_data \
+           or data.other_deleted_data or data.other_modified_data:
       if data.show_nonmatching_paths:
         w('\nChanges in other areas also in this revision:\n')
         self._render_list('Added', data.other_added_data)
+        self._render_list('Replaced', data.other_replaced_data)
         self._render_list('Deleted', data.other_deleted_data)
         self._render_list('Modified', data.other_modified_data)
       else:
@@ -989,8 +1005,10 @@ class TextCommitRenderer:
           % (text, d.base_rev, d.base_path, is_dir))
 
   def _render_diffs(self, diffs, section_header):
-    """Render diffs. Write the SECTION_HEADER iff there are actually
+    """Render diffs. Write the SECTION_HEADER if there are actually
     any diffs to render."""
+    if not diffs:
+      return
     w = self.output.write
     section_header_printed = False
 
@@ -1026,7 +1044,7 @@ class TextCommitRenderer:
         if diff.singular:
           w('Binary file. No diff available.\n')
         else:
-          w('Binary files. No diff available.\n')
+          w('Binary file (source and/or target). No diff available.\n')
         continue
 
       for line in diff.content:
