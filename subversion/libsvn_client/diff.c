@@ -2162,6 +2162,7 @@ grok_range_info_from_opt_revisions(svn_merge_range_t *range,
   else 
     {
       *merge_type = merge_type_merge;
+      range->start += 1;
     }
 
   return SVN_NO_ERROR;
