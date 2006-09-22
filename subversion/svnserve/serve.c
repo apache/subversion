@@ -502,7 +502,8 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   path = svn_path_canonicalize(path, pool);
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   if (!b->err)
-    b->err = get_fs_path(b->repos_url, url, &fs_path, pool);
+    b->err = get_fs_path(svn_path_uri_decode(b->repos_url, pool), url,
+                         &fs_path, pool);
   if (!b->err)
     b->err = svn_repos_link_path2(b->report_baton, path, fs_path, rev,
                                   start_empty, lock_token, pool);
@@ -710,7 +711,8 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &url));
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(get_fs_path(b->repos_url, url, &fs_path, pool));
+  SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool), url,
+                          &fs_path, pool));
   svn_stringbuf_set(b->fs_path, fs_path);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
