@@ -2308,6 +2308,70 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
 
 /* Commits. */
 
+
+/**
+ * Storage type for queued post-commit data.
+ *
+ * @since New in 1.5.
+ */
+typedef struct svn_wc_committed_queue_t svn_wc_committed_queue_t;
+
+
+/**
+ * Create a queue for use with svn_wc_queue_committed() and
+ * svn_wc_process_committed_queue().
+ *
+ * The returned queue and all further
+ * allocations required for queueing new items will also be done
+ * from @a pool.
+ */
+svn_wc_committed_queue_t *
+svn_wc_committed_queue_create(apr_pool_t *pool);
+
+
+
+/**
+ * Queue committed items to be processed later by
+ * svn_wc_process_committed_queue().
+ *
+ * The first time this function is called, @a *queue should
+ * be @c NULL to signal that initialization is required.
+ *
+ * All pointer data passed to this function
+ * (@a path, @adm_access, @a wcprop_changes
+ * and @a digest) should remain valid until the queue has been
+ * processed by svn_wc_process_committed_queue().
+ *
+ * The parameters have the same meaning as those
+ * for svn_wc_process_committed4().
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
+                       const char *path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_boolean_t recurse,
+                       apr_array_header_t *wcprop_changes,
+                       svn_boolean_t remove_lock,
+                       svn_boolean_t remove_changelist,
+                       const unsigned char *digest,
+                       apr_pool_t *pool);
+
+
+/**
+ * Like svn_wc_process_committed4(), but batch processes
+ * items queued with svn_wc_queue_committed().
+ */
+svn_error_t *
+svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
+                               svn_wc_adm_access_t *adm_access,
+                               svn_revnum_t new_revnum,
+                               const char *rev_date,
+                               const char *rev_author,
+                               apr_pool_t *pool);
+
+
 /**
  * Bump a successfully committed absolute @a path to @a new_revnum after a
  * commit succeeds.  @a rev_date and @a rev_author are the (server-side)
