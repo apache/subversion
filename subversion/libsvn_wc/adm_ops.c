@@ -565,7 +565,7 @@ typedef struct committed_queue_item_t
   svn_boolean_t remove_lock;
   svn_boolean_t remove_changelist;
   apr_array_header_t *wcprop_changes;
-  const char *digest;
+  const unsigned char *digest;
 } committed_queue_item_t;
 
 
