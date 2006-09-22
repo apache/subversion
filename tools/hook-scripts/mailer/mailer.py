@@ -920,6 +920,9 @@ class DiffContent:
     else:
       ltype = 'U'
 
+    if line[-2] == '\r':
+      line=line[0:-2] + '\n' # remove carriage return
+
     return _data(
       raw=line,
       text=line[1:-1],  # remove indicator and newline
@@ -1004,6 +1007,8 @@ class TextCommitRenderer:
   def _render_diffs(self, diffs, section_header):
     """Render diffs. Write the SECTION_HEADER if there are actually
     any diffs to render."""
+    if not diffs:
+      return
     w = self.output.write
     section_header_printed = False
 
@@ -1039,7 +1044,7 @@ class TextCommitRenderer:
         if diff.singular:
           w('Binary file. No diff available.\n')
         else:
-          w('Binary files. No diff available.\n')
+          w('Binary file (source and/or target). No diff available.\n')
         continue
 
       for line in diff.content:
