@@ -1228,14 +1228,16 @@ To be run after a commit, an update or a merge."
         (when (not (buffer-modified-p))
           (let ((file (buffer-file-name)))
             (when file
-              (let ((root (svn-status-base-dir (file-name-directory file))))
+              (let ((root (svn-status-base-dir (file-name-directory file)))
+                    (point-pos (point)))
                 (when (and root
                            (string= root tree)
                            ;; buffer is modified and in the tree TREE.
                            svn-status-auto-revert-buffers)
                   ;; Keep the buffer if the file doesn't exist
-                  (if (file-exists-p file)
-                      (revert-buffer t t)))))))))))
+                  (when (file-exists-p file)
+                    (revert-buffer t t)
+                    (goto-char point-pos)))))))))))
 
 (defun svn-parse-rev-num (str)
   (if (and str (stringp str)
@@ -1769,7 +1771,7 @@ in use before `svn-status' was called."
          (when svn-status-initial-window-configuration
            (set-window-configuration svn-status-initial-window-configuration)))
         (t
-         (let ((bl '("*svn-log-edit*" "*svn-property-edit*" "*svn-log*" svn-process-buffer-name)))
+         (let ((bl `("*svn-log-edit*" "*svn-property-edit*" "*svn-log*" ,svn-process-buffer-name)))
            (while bl
              (when (get-buffer (car bl))
                (bury-buffer (car bl)))
