@@ -94,27 +94,22 @@ class TestHarness:
       progname = sys.executable
       cmdline = [quote(progname),
                  quote(os.path.join(self.srcdir, prog))]
-      if self.verbose is not None:
-        cmdline.append('--verbose')
-      if self.cleanup is not None:
-        cmdline.append('--cleanup')
       if self.base_url is not None:
         cmdline.append(quote('--url=' + self.base_url))
-      if self.fs_type is not None:
-        cmdline.append(quote('--fs-type=' + self.fs_type))
     elif os.access(prog, os.X_OK):
       progname = './' + progbase
       cmdline = [quote(progname),
                  quote('--srcdir=' + os.path.join(self.srcdir, progdir))]
-      if self.verbose is not None:
-        cmdline.append('--verbose')
-      if self.cleanup is not None:
-        cmdline.append('--cleanup')
-      if self.fs_type is not None:
-        cmdline.append(quote('--fs-type=' + self.fs_type))
     else:
       print 'Don\'t know what to do about ' + progbase
       sys.exit(1)
+
+    if self.verbose is not None:
+      cmdline.append('--verbose')
+    if self.cleanup is not None:
+      cmdline.append('--cleanup')
+    if self.fs_type is not None:
+      cmdline.append(quote('--fs-type=' + self.fs_type))
 
     old_cwd = os.getcwd()
     try:
