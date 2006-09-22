@@ -79,6 +79,14 @@ Candidate changes:
     Votes:
       +1: dlr, djh
 
+  * r21609
+    Make it possible to check out repositories with spaces in ther names over
+    ra_svn.
+    Justification:
+      Simple fix.  User reported problem.
+    Votes:
+      +1: rooneg
+
 Approved changes:
 
   * r21575
