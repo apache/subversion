@@ -911,8 +911,9 @@ test_is_root(const char **msg,
     FALSE,
     TRUE,
     FALSE,
-    TRUE
+    TRUE,
 #endif /* WIN32 */
+    FALSE
   };
 
   *msg = "test svn_path_is_root";
