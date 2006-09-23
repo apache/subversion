@@ -284,9 +284,20 @@ def create_from_path(path, contents=None, props={}, atts={}):
     ### we should raise a less generic error here. which?
     raise SVNTreeError
 
-  root_node = SVNTreeNode(elements[0], None)
-
-  add_elements_as_path(root_node, elements[1:])
+  root_node = None
+  
+  # if this is Windows: if the path contains a drive name (X:), make it
+  # the root node.
+  if os.name == 'nt':
+    m = re.match("([a-zA-Z]:)(.+)", elements[0])
+    if m:
+      root_node = SVNTreeNode(m.group(1), None)
+      elements[0] = m.group(2)
+      add_elements_as_path(root_node, elements[0:])
+  
+  if not root_node:
+    root_node = SVNTreeNode(elements[0], None)
+    add_elements_as_path(root_node, elements[1:])
 
   # deposit contents in the very last node.
   node = root_node
