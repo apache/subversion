@@ -23,15 +23,15 @@ Added:
 
 Added: file1
 ==============================================================================
---- (empty file)
-+++ file1	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file1	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file1
 
 Added: file2
 ==============================================================================
---- (empty file)
-+++ file2	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file2	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file2
 
@@ -39,29 +39,29 @@ Diffs of changes in other areas also in this revision:
 
 Added: dir1/file3
 ==============================================================================
---- (empty file)
-+++ dir1/file3	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir1/file3	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file3
 
 Added: dir1/file4
 ==============================================================================
---- (empty file)
-+++ dir1/file4	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir1/file4	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file4
 
 Added: dir2/file5
 ==============================================================================
---- (empty file)
-+++ dir2/file5	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file5
 
 Added: dir2/file6
 ==============================================================================
---- (empty file)
-+++ dir2/file6	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir2/file6	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file6
 Group: All
@@ -86,43 +86,43 @@ Added:
 
 Added: dir1/file3
 ==============================================================================
---- (empty file)
-+++ dir1/file3	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir1/file3	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file3
 
 Added: dir1/file4
 ==============================================================================
---- (empty file)
-+++ dir1/file4	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir1/file4	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file4
 
 Added: dir2/file5
 ==============================================================================
---- (empty file)
-+++ dir2/file5	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file5
 
 Added: dir2/file6
 ==============================================================================
---- (empty file)
-+++ dir2/file6	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir2/file6	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file6
 
 Added: file1
 ==============================================================================
---- (empty file)
-+++ file1	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file1	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file1
 
 Added: file2
 ==============================================================================
---- (empty file)
-+++ file2	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file2	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file2
 Group: file
@@ -141,15 +141,15 @@ Added:
 
 Added: file1
 ==============================================================================
---- (empty file)
-+++ file1	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file1	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file1
 
 Added: file2
 ==============================================================================
---- (empty file)
-+++ file2	Sun Sep  9 01:46:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file2	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file2
 Group: file plus other areas
@@ -173,8 +173,8 @@ Modified:
 
 Modified: file2
 ==============================================================================
---- file2	(original)
-+++ file2	Sun Sep  9 04:33:20 2001
+--- file2	Sun Sep  9 01:46:40 2001	(r1)
++++ file2	Sun Sep  9 04:33:20 2001	(r2)
 @@ -1 +1,2 @@
  file2
 +change C1
@@ -183,8 +183,8 @@ Diffs of changes in other areas also in this revision:
 
 Modified: dir2/file5
 ==============================================================================
---- dir2/file5	(original)
-+++ dir2/file5	Sun Sep  9 04:33:20 2001
+--- dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
++++ dir2/file5	Sun Sep  9 04:33:20 2001	(r2)
 @@ -1 +1,2 @@
  file5
 +change C2
@@ -206,16 +206,16 @@ Modified:
 
 Modified: dir2/file5
 ==============================================================================
---- dir2/file5	(original)
-+++ dir2/file5	Sun Sep  9 04:33:20 2001
+--- dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
++++ dir2/file5	Sun Sep  9 04:33:20 2001	(r2)
 @@ -1 +1,2 @@
  file5
 +change C2
 
 Modified: file2
 ==============================================================================
---- file2	(original)
-+++ file2	Sun Sep  9 04:33:20 2001
+--- file2	Sun Sep  9 01:46:40 2001	(r1)
++++ file2	Sun Sep  9 04:33:20 2001	(r2)
 @@ -1 +1,2 @@
  file2
 +change C1
@@ -235,8 +235,8 @@ Modified:
 
 Modified: file2
 ==============================================================================
---- file2	(original)
-+++ file2	Sun Sep  9 04:33:20 2001
+--- file2	Sun Sep  9 01:46:40 2001	(r1)
++++ file2	Sun Sep  9 04:33:20 2001	(r2)
 @@ -1 +1,2 @@
  file2
 +change C1
@@ -258,8 +258,8 @@ Added:
 
 Copied: dir2/file7 (from r2, file1)
 ==============================================================================
---- file1	(original)
-+++ dir2/file7	Sun Sep  9 07:20:00 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir2/file7	Sun Sep  9 07:20:00 2001	(r3, copy of r2, file1)
 @@ -0,0 +1 @@
 +file1
 Group: All
@@ -278,8 +278,8 @@ Added:
 
 Copied and modified: dir3/file8 (from r2, file1)
 ==============================================================================
---- file1	(original)
-+++ dir3/file8	Sun Sep  9 10:06:40 2001
+--- file1	Sun Sep  9 04:33:20 2001	(r2, copy source)
++++ dir3/file8	Sun Sep  9 10:06:40 2001	(r4)
 @@ -1 +1,2 @@
  file1
 +change C3
@@ -347,8 +347,8 @@ Modified:
 
 Added: file9
 ==============================================================================
---- (empty file)
-+++ file9	Sun Sep  9 15:40:00 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
 
@@ -356,8 +356,8 @@ Diffs of changes in other areas also in this revision:
 
 Modified: dir1/file3
 ==============================================================================
---- dir1/file3	(original)
-+++ dir1/file3	Sun Sep  9 15:40:00 2001
+--- dir1/file3	Sun Sep  9 12:53:20 2001	(r5)
++++ dir1/file3	Sun Sep  9 15:40:00 2001	(r6)
 @@ -1 +1,2 @@
  file3
 +change C4
@@ -379,16 +379,16 @@ Modified:
 
 Modified: dir1/file3
 ==============================================================================
---- dir1/file3	(original)
-+++ dir1/file3	Sun Sep  9 15:40:00 2001
+--- dir1/file3	Sun Sep  9 12:53:20 2001	(r5)
++++ dir1/file3	Sun Sep  9 15:40:00 2001	(r6)
 @@ -1 +1,2 @@
  file3
 +change C4
 
 Added: file9
 ==============================================================================
---- (empty file)
-+++ file9	Sun Sep  9 15:40:00 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
 Group: file
@@ -406,8 +406,8 @@ Added:
 
 Added: file9
 ==============================================================================
---- (empty file)
-+++ file9	Sun Sep  9 15:40:00 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
 Group: file plus other areas
@@ -434,8 +434,8 @@ Modified:
 
 Deleted: file2
 ==============================================================================
---- file2	Sun Sep  9 18:26:40 2001
-+++ (empty file)
+--- file2	Sun Sep  9 18:26:40 2001	(r6)
++++ /dev/null	00:00:00 1970	(deleted)
 @@ -1,2 +0,0 @@
 -file2
 -change C1
@@ -444,15 +444,15 @@ Diffs of changes in other areas also in this revision:
 
 Added: dir1/file10
 ==============================================================================
---- (empty file)
-+++ dir1/file10	Sun Sep  9 18:26:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir1/file10	Sun Sep  9 18:26:40 2001	(r7)
 @@ -0,0 +1 @@
 +file10
 
 Modified: dir3/file3
 ==============================================================================
---- dir3/file3	(original)
-+++ dir3/file3	Sun Sep  9 18:26:40 2001
+--- dir3/file3	Sun Sep  9 15:40:00 2001	(r6)
++++ dir3/file3	Sun Sep  9 18:26:40 2001	(r7)
 @@ -1 +1,2 @@
  file3
 +change C5
@@ -477,23 +477,23 @@ Modified:
 
 Added: dir1/file10
 ==============================================================================
---- (empty file)
-+++ dir1/file10	Sun Sep  9 18:26:40 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir1/file10	Sun Sep  9 18:26:40 2001	(r7)
 @@ -0,0 +1 @@
 +file10
 
 Modified: dir3/file3
 ==============================================================================
---- dir3/file3	(original)
-+++ dir3/file3	Sun Sep  9 18:26:40 2001
+--- dir3/file3	Sun Sep  9 15:40:00 2001	(r6)
++++ dir3/file3	Sun Sep  9 18:26:40 2001	(r7)
 @@ -1 +1,2 @@
  file3
 +change C5
 
 Deleted: file2
 ==============================================================================
---- file2	Sun Sep  9 18:26:40 2001
-+++ (empty file)
+--- file2	Sun Sep  9 18:26:40 2001	(r6)
++++ /dev/null	00:00:00 1970	(deleted)
 @@ -1,2 +0,0 @@
 -file2
 -change C1
@@ -512,8 +512,8 @@ Deleted:
 
 Deleted: file2
 ==============================================================================
---- file2	Sun Sep  9 18:26:40 2001
-+++ (empty file)
+--- file2	Sun Sep  9 18:26:40 2001	(r6)
++++ /dev/null	00:00:00 1970	(deleted)
 @@ -1,2 +0,0 @@
 -file2
 -change C1
@@ -540,16 +540,16 @@ Modified:
 
 Copied: dir6/file3 (from r7, dir3/file3)
 ==============================================================================
---- dir3/file3	(original)
-+++ dir6/file3	Sun Sep  9 21:13:20 2001
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ dir6/file3	Sun Sep  9 21:13:20 2001	(r8, copy of r7, dir3/file3)
 @@ -0,0 +1,2 @@
 +file3
 +change C5
 
 Modified: dir6/file4
 ==============================================================================
---- dir3/file4	(original)
-+++ dir6/file4	Sun Sep  9 21:13:20 2001
+--- dir3/file4	Sun Sep  9 15:40:00 2001	(r6)
++++ dir6/file4	Sun Sep  9 21:13:20 2001	(r8)
 @@ -1 +1,2 @@
  file4
 +change C6
