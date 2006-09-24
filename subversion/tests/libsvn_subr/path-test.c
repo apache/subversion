@@ -2,7 +2,7 @@
  * path-test.c -- test the path functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -181,26 +181,18 @@ test_is_url(const char **msg,
 {
   apr_size_t i;
 
-  /* Paths to test. */
-  static const char * const paths[] = { 
-    "://blah/blah",
-    "a:abb://boo/",
-    "http://svn.collab.net/repos/svn",
-    "scheme/with://slash/",
-    "file:///path/to/repository",
-    "file://",
-    "file:/",
-  };
-
-  /* Expected results of the tests. */
-  static const svn_boolean_t retvals[] = {
-    FALSE,
-    FALSE,
-    TRUE,
-    FALSE,
-    TRUE,
-    TRUE,
-    FALSE,
+  /* Paths to test and their expected results. */
+  struct { 
+    const char *path;
+    svn_boolean_t result;
+  } tests[] = {
+    { "://blah/blah",                     FALSE },
+    { "a:abb://boo/",                     FALSE },
+    { "http://svn.collab.net/repos/svn",  TRUE  },
+    { "scheme/with://slash/",             FALSE },
+    { "file:///path/to/repository",       TRUE  },
+    { "file://",                          TRUE  },
+    { "file:/",                           FALSE },
   };
 
   *msg = "test svn_path_is_url";
@@ -208,16 +200,17 @@ test_is_url(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
       svn_boolean_t retval;
 
-      retval = svn_path_is_url(paths[i]);
-      if (retvals[i] != retval)
+      retval = svn_path_is_url(tests[i].path);
+      if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_url (%s) returned %s instead of %s",
-           paths[i], retval ? "TRUE" : "FALSE", retvals[i] ? "TRUE" : "FALSE");
+           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].result ? "TRUE" : "FALSE");
     }
 
   return SVN_NO_ERROR;
@@ -232,46 +225,38 @@ test_is_uri_safe(const char **msg,
 {
   apr_size_t i;
 
-  /* Paths to test. */
-  static const char * const paths[] = { 
-    "http://svn.collab.net/repos",
-    "http://svn.collab.net/repos%",
-    "http://svn.collab.net/repos%/svn",
-    "http://svn.collab.net/repos%2g",
-    "http://svn.collab.net/repos%2g/svn",
-    "http://svn.collab.net/repos%%",
-    "http://svn.collab.net/repos%%/svn",
-    "http://svn.collab.net/repos%2a",
-    "http://svn.collab.net/repos%2a/svn",
+  /* Paths to test and their expected results. */
+  struct { 
+    const char *path;
+    svn_boolean_t result;
+  } tests[] = {
+    { "http://svn.collab.net/repos",        TRUE  },
+    { "http://svn.collab.net/repos%",       FALSE },
+    { "http://svn.collab.net/repos%/svn",   FALSE },
+    { "http://svn.collab.net/repos%2g",     FALSE },
+    { "http://svn.collab.net/repos%2g/svn", FALSE },
+    { "http://svn.collab.net/repos%%",      FALSE },
+    { "http://svn.collab.net/repos%%/svn",  FALSE },
+    { "http://svn.collab.net/repos%2a",     TRUE  },
+    { "http://svn.collab.net/repos%2a/svn", TRUE  },
   };
-
-  /* Expected results of the tests. */
-  static const svn_boolean_t retvals[] = {
-    TRUE,
-    FALSE,
-    FALSE,
-    FALSE,
-    FALSE,
-    FALSE,
-    FALSE,
-    TRUE,
-    TRUE };
 
   *msg = "test svn_path_is_uri_safe";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < (sizeof(paths) / sizeof(const char *)); i++)
+  for (i = 0; i < (sizeof(tests) / sizeof(tests[0])); i++)
     {
       svn_boolean_t retval;
 
-      retval = svn_path_is_uri_safe(paths[i]);
-      if (retvals[i] != retval)
+      retval = svn_path_is_uri_safe(tests[i].path);
+      if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_uri_safe (%s) returned %s instead of %s",
-           paths[i], retval ? "TRUE" : "FALSE", retvals[i] ? "TRUE" : "FALSE");
+           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].result ? "TRUE" : "FALSE");
     }
 
   return SVN_NO_ERROR;
@@ -888,32 +873,21 @@ test_is_root(const char **msg,
 {
   apr_size_t i;
 
-  /* Paths to test. */
-  static const char * const paths[] = { 
-    "/foo/bar",
-    "/foo",
-    "/",
+  /* Paths to test and their expected results. */
+  struct { 
+    const char *path;
+    svn_boolean_t result;
+  } tests[] = {
+    { "/foo/bar",      FALSE },
+    { "/foo",          FALSE },
+    { "/",             TRUE },
 #if defined(WIN32)
-    "X:/foo",
-    "X:/",
-    "X:foo",
-    "X:",
+    { "X:/foo",        FALSE },
+    { "X:/",           TRUE },
+    { "X:foo",         FALSE },
+    { "X:",            TRUE },
 #endif /* WIN32 */
-    "",
-  };
-
-  /* Expected results of the tests. */
-  static const svn_boolean_t retvals[] = {
-    FALSE,
-    FALSE,
-    TRUE,
-#if defined(WIN32)
-    FALSE,
-    TRUE,
-    FALSE,
-    TRUE,
-#endif /* WIN32 */
-    FALSE
+    { "",              FALSE },
   };
 
   *msg = "test svn_path_is_root";
@@ -921,16 +895,17 @@ test_is_root(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
       svn_boolean_t retval;
 
-      retval = svn_path_is_root(paths[i], strlen(paths[i]), pool);
-      if (retvals[i] != retval)
+      retval = svn_path_is_root(tests[i].path, strlen(tests[i].path), pool);
+      if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_root (%s) returned %s instead of %s",
-           paths[i], retval ? "TRUE" : "FALSE", retvals[i] ? "TRUE" : "FALSE");
+           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].result ? "TRUE" : "FALSE");
     }
 
   return SVN_NO_ERROR;
@@ -944,55 +919,34 @@ test_path_is_ancestor(const char **msg,
 {
   apr_size_t i;
 
-  static const char * const paths[][2] = { 
-    { "/foo",            "/foo/bar"      },
-    { "/foo/bar",        "/foo/bar/"     },
-    { "/",               "/foo"          },
-    { SVN_EMPTY_PATH,    "foo"           },
-    { SVN_EMPTY_PATH,    ".bar",         },
-
-    { "/.bar",           "/"             },
-    { "foo/bar",         "foo"           },
-    { "/foo/bar",        "/foo"          },
-    { "foo",             "foo/bar"       },
-    { "foo.",            "foo./.bar"     },
-
-    { "../foo",          ".."            },
-    { SVN_EMPTY_PATH,   SVN_EMPTY_PATH   },
-    { "/",               "/"             },
-
+  /* Paths to test and their expected results. */
+  struct { 
+    const char *path1;
+    const char *path2;
+    svn_boolean_t result;
+  } tests[] = {
+    { "/foo",            "/foo/bar",      TRUE},
+    { "/foo/bar",        "/foo/bar/",     TRUE},
+    { "/",               "/foo",          TRUE},
+    { SVN_EMPTY_PATH,    "foo",           TRUE},
+    { SVN_EMPTY_PATH,    ".bar",          TRUE},
+                                         
+    { "/.bar",           "/",             FALSE},
+    { "foo/bar",         "foo",           FALSE},
+    { "/foo/bar",        "/foo",          FALSE},
+    { "foo",             "foo/bar",       TRUE},
+    { "foo.",            "foo./.bar",     TRUE},
+                                         
+    { "../foo",          "..",            FALSE},
+    { SVN_EMPTY_PATH,    SVN_EMPTY_PATH,  TRUE},
+    { "/",               "/",             TRUE},
+                                         
 #if defined(WIN32)
-    { "X:/",             "X:/"           },
-    { "X:/foo",          "X:/"           },
-    { "X:/",             "X:/foo"        },
-    { "X:",              "X:foo"         },
-    { "X:foo",           "X:bar"         },
-#endif /* WIN32 */
-  };
-
-  /* Expected results of the tests. */
-  static const svn_boolean_t retvals[] = {
-    TRUE,
-    TRUE,
-    TRUE,
-    TRUE,
-    TRUE,
-
-    FALSE,
-    FALSE,
-    FALSE,
-    TRUE,
-    TRUE,
-
-    FALSE,
-    TRUE,
-    TRUE,
-#if defined(WIN32)
-    TRUE,
-    FALSE,
-    TRUE,
-    TRUE,
-    FALSE
+    { "X:/",             "X:/",           TRUE},
+    { "X:/foo",          "X:/",           FALSE},
+    { "X:/",             "X:/foo",        TRUE},
+    { "X:",              "X:foo",         TRUE},
+    { "X:foo",           "X:bar",         FALSE},
 #endif /* WIN32 */
   };
 
@@ -1001,17 +955,17 @@ test_path_is_ancestor(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = 0; i < sizeof(paths) / sizeof(paths[0]); i++)
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
     {
       svn_boolean_t retval;
 
-      retval = svn_path_is_ancestor(paths[i][0], paths[i][1]);
-      if (retvals[i] != retval)
+      retval = svn_path_is_ancestor(tests[i].path1, tests[i].path2);
+      if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_is_ancestor (%s, %s) returned %s instead of %s",
-           paths[i][0], paths[i][1], retval ? "TRUE" : "FALSE", 
-           retvals[i] ? "TRUE" : "FALSE");
+           tests[i].path1, tests[i].path2, retval ? "TRUE" : "FALSE", 
+           tests[i].result ? "TRUE" : "FALSE");
     }
   return SVN_NO_ERROR;
 }
