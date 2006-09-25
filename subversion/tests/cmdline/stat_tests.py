@@ -884,6 +884,7 @@ def status_ignored_dir(sbox):
   # run_and_verify_status doesn't handle this weird kind of entry.
   svntest.actions.run_and_verify_svn(None,
                                      ['I      *            ' + new_dir + "\n",
+                                      '       *        1   ' + wc_dir + "\n",
                                       'Status against revision:      2\n'], [],
                                      "status", "-u", wc_dir)
 
