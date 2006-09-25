@@ -982,6 +982,52 @@ test_is_absolute(const char **msg,
 }
 
 static svn_error_t *
+test_path_check_valid(const char **msg,
+                      svn_boolean_t msg_only,
+                      svn_test_opts_t *opts,
+                      apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  /* Paths to test and their expected results. */
+  struct { 
+    const char *path;
+    svn_boolean_t result;
+  } tests[] = {
+    { "/foo/bar",      TRUE },
+    { "/foo",          TRUE },
+    { "/",             TRUE },
+    { "foo/bar",       TRUE },
+    { "foo bar",       TRUE },
+    { "foo\7bar",      FALSE },
+    { "foo\31bar",     FALSE },
+    { "\7foo\31bar",   FALSE },
+    { "\7",            FALSE },
+    { "",              TRUE },
+  };
+
+  *msg = "test svn_path_check_valid";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+    {
+      svn_error_t *err = svn_path_check_valid(tests[i].path, pool);
+      svn_boolean_t retval = (err == SVN_NO_ERROR);
+
+      if (tests[i].result != retval)
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_check_valid (%s) returned %s instead of %s",
+           tests[i].path, retval ? "TRUE" : "FALSE", 
+           tests[i].result ? "TRUE" : "FALSE");
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 test_path_is_ancestor(const char **msg,
                       svn_boolean_t msg_only,
                       svn_test_opts_t *opts,
@@ -1063,5 +1109,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_is_root),
     SVN_TEST_PASS(test_is_absolute),
     SVN_TEST_PASS(test_path_is_ancestor),
+    SVN_TEST_PASS(test_path_check_valid),
     SVN_TEST_NULL
   };
