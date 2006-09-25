@@ -589,6 +589,26 @@ svn_client_propget2(apr_hash_t **props,
   return SVN_NO_ERROR;
 }
 
+/* Squelch ERR by returning SVN_NO_ERROR if ERR is casued by a missing
+   path (e.g. SVN_ERR_WC_PATH_NOT_FOUND). */
+static svn_error_t *
+wc_walker_error_handler(const char *path,
+                        svn_error_t *err,
+                        void *walk_baton,
+                        apr_pool_t *pool)
+{
+  if (err)
+    {
+      /* Suppress errors from missing paths. */
+      /* ### FIXME: Knowing where this check occurs in the error chain
+         ### violates proper encapsulation. */
+      if (!err->child || err->child->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
+        return err;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
                              const char *target, svn_boolean_t pristine,
@@ -597,12 +617,13 @@ svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
                              svn_boolean_t recurse, svn_client_ctx_t *ctx,
                              apr_pool_t *pool)
 {
-  static const svn_wc_entry_callbacks_t walk_callbacks = { propget_walk_cb };
+  static const svn_wc_entry_callbacks2_t walk_callbacks =
+    { propget_walk_cb, wc_walker_error_handler };
   struct propget_walk_baton wb = { propname, pristine, adm_access, props };
 
   /* Fetch the property, recursively or for a single resource. */
   if (recurse && entry->kind == svn_node_dir)
-    SVN_ERR(svn_wc_walk_entries2(target, adm_access, &walk_callbacks, &wb,
+    SVN_ERR(svn_wc_walk_entries3(target, adm_access, &walk_callbacks, &wb,
                                  FALSE, ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   else
