@@ -1432,7 +1432,7 @@ svn_error_t *svn_wc_get_ancestry(char **url,
 /** A callback vtable invoked by the generic entry-walker function.
  * @since New in 1.5.
  */
-typedef struct
+typedef struct svn_wc_entry_callbacks2_t
 {
   /** An @a entry was found at @a path. */
   svn_error_t *(*found_entry)(const char *path,
