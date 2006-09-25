@@ -361,6 +361,9 @@ check: $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(FS_TYPE)" != ""; then                                   \
 	    flags="--fs-type $(FS_TYPE) $$flags";                            \
 	  fi;                                                                \
+	  if test "$(ENABLE_SASL)" != ""; then                               \
+	    flags="--enable-sasl $$flags";                                   \
+	  fi;                                                                \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py $$flags                 \
 		    '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
 	else                                                                 \
@@ -381,6 +384,16 @@ davautocheck:
 
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
+#
+# You can run 'make svncheck ENABLE_SASL=true' to use Cyrus SASL for 
+# authentication. Before you do that, make sure the jrandom and jconstant
+# users can authenticate in the svntest realm, e.g. by running (as root or
+# some other user with write access to your sasl db):
+#
+#   saslpasswd2 -c -u svntest jrandom 
+#   saslpasswd2 -c -u svntest jconstant
+#
+# The password is 'rayjandom' for both users.
 svncheck: 
 	@$(MAKE) check BASE_URL=svn://localhost
 

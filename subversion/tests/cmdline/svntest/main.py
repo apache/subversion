@@ -128,6 +128,9 @@ verbose_mode = 0
 # Global variable indicating if we want test data cleaned up after success
 cleanup_mode = 0
 
+# Global variable indicating if svnserve should use Cyrus SASL
+enable_sasl = 0
+
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
 if windows == 1:
@@ -448,10 +451,15 @@ def create_repos(path):
     raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
-  file_append(os.path.join(path, "conf", "svnserve.conf"),
-              "[general]\nauth-access = write\npassword-db = passwd\n");
-  file_append(os.path.join(path, "conf", "passwd"),
-               "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
+  file_write(get_svnserve_conf_file_path(path),
+             "[general]\nauth-access = write\n");
+  if enable_sasl == 1:
+    file_append(get_svnserve_conf_file_path(path),
+                "realm = svntest\n[sasl]\nuse-sasl = true\n")
+  else:
+    file_append(get_svnserve_conf_file_path(path), "password-db = passwd\n")
+    file_append(os.path.join(path, "conf", "passwd"),
+                "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
 
@@ -824,6 +832,7 @@ def run_tests(test_list):
   global fs_type
   global verbose_mode
   global cleanup_mode
+  global enable_sasl
   testnums = []
   # Should the tests be listed (as opposed to executed)?
   list_tests = 0
@@ -833,7 +842,8 @@ def run_tests(test_list):
   os.environ['SVN_EDITOR'] = ''
 
   opts, args = my_getopt(sys.argv[1:], 'v',
-                         ['url=', 'fs-type=', 'verbose', 'cleanup', 'list'])
+                         ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
+                          'enable-sasl'])
 
   for arg in args:
     if arg == "list":
@@ -859,6 +869,9 @@ def run_tests(test_list):
 
     elif opt == "--list":
       list_tests = 1
+
+    elif opt == "--enable-sasl":
+      enable_sasl = 1
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
