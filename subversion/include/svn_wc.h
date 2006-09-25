@@ -1429,7 +1429,29 @@ svn_error_t *svn_wc_get_ancestry(char **url,
                                  apr_pool_t *pool);
 
 
-/** A callback vtable invoked by the generic entry-walker function. */
+/** A callback vtable invoked by the generic entry-walker function.
+ * @since New in 1.5.
+ */
+typedef struct
+{
+  /** An @a entry was found at @a path. */
+  svn_error_t *(*found_entry)(const char *path,
+                              const svn_wc_entry_t *entry,
+                              void *walk_baton,
+                              apr_pool_t *pool);
+
+  /** Handle the error @a err encountered while processing @a path.
+   * Wrap or squelch @a err as desired, and return an @c svn_error_t
+   * *, or @c SVN_NO_ERROR.
+   */
+  svn_error_t *(*handle_error)(const char *path,
+                               svn_error_t *err,
+                               void *walk_baton,
+                               apr_pool_t *pool);
+
+} svn_wc_entry_callbacks2_t;
+
+/** @deprecated Provided for backward compatibility with the 1.4 API. */
 typedef struct svn_wc_entry_callbacks_t
 {
   /** An @a entry was found at @a path. */
@@ -1438,10 +1460,7 @@ typedef struct svn_wc_entry_callbacks_t
                               void *walk_baton,
                               apr_pool_t *pool);
 
-  /* ### add more callbacks as new callers need them. */
-
 } svn_wc_entry_callbacks_t;
-
 
 /**
  * A generic entry-walker.
@@ -1468,7 +1487,23 @@ typedef struct svn_wc_entry_callbacks_t
  * distinguished by looking for @c SVN_WC_ENTRY_THIS_DIR in the 'name'
  * field of the entry.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_walk_entries3(const char *path,
+                                  svn_wc_adm_access_t *adm_access,
+                                  const svn_wc_entry_callbacks2_t 
+                                  *walk_callbacks,
+                                  void *walk_baton,
+                                  svn_boolean_t show_hidden,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_walk_entries3(), but without cancellation support
+ * or error handling from @a walk_callbacks.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_walk_entries2(const char *path,
                                   svn_wc_adm_access_t *adm_access,
