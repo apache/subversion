@@ -297,7 +297,7 @@ This can be either absolute or looked up on `exec-path'."
   :type 'file
   :group 'psvn)
 
-(defcustom svn-status-svn-environment-var-list '()
+(defcustom svn-status-svn-environment-var-list '("LANG=C")
   "*A list of environment variables that should be set for that svn process.
 Each element is either a string \"VARIABLE=VALUE\" which will be added to
 the environment when svn is run, or just \"VARIABLE\" which causes that
@@ -4253,6 +4253,7 @@ Commands:
 
 (defun svn-log-revision-at-point ()
   (save-excursion
+    (end-of-line)
     (re-search-backward "^r\\([0-9]+\\)")
     (svn-match-string-no-properties 1)))
 
