@@ -25,6 +25,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include "svn_error.h"
 #include "svn_client.h"
 #include "client.h"
 #include "svn_path.h"
@@ -597,16 +598,9 @@ wc_walker_error_handler(const char *path,
                         void *walk_baton,
                         apr_pool_t *pool)
 {
-  if (err)
-    {
-      /* Suppress errors from missing paths. */
-      /* ### FIXME: Knowing where this check occurs in the error chain
-         ### violates proper encapsulation. */
-      if (!err->child || err->child->apr_err != SVN_ERR_WC_PATH_NOT_FOUND)
-        return err;
-    }
-
-  return SVN_NO_ERROR;
+  /* Suppress errors from missing paths. */
+  return (svn_error_root_cause_is(err, SVN_ERR_WC_PATH_NOT_FOUND) ?
+          SVN_NO_ERROR : err);
 }
 
 svn_error_t *
