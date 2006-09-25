@@ -104,10 +104,10 @@ def lstrip(s, ch):
 def rstrip(s, ch):
     """Replacement for str.rstrip (support for arbitrary chars to strip was
     added in Python 2.2.2)."""
-    if s[-1] != ch:
-        return s
-    i = -2
     try:
+        if s[-1] != ch:
+            return s
+        i = -2
         while s[i] == ch:
             i = i-1
         return s[:i+1]

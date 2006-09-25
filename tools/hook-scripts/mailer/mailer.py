@@ -323,7 +323,8 @@ class Commit(Messenger):
     Messenger.__init__(self, pool, cfg, repos, 'commit_subject_prefix')
 
     # get all the changes and sort by path
-    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, self.pool)
+    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, \
+                                       self.pool)
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
     svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
 
@@ -607,7 +608,8 @@ class DiffURLSelections:
     # KeyError exceptions.
     params = self.params.copy()
     params['path'] = change.path and urllib.quote(change.path) or None
-    params['base_path'] = change.base_path and urllib.quote(change.base_path) or None
+    params['base_path'] = change.base_path and urllib.quote(change.base_path) \
+                          or None
     params['rev'] = repos_rev
     params['base_rev'] = change.base_rev
 
@@ -759,6 +761,14 @@ class DiffGenerator:
       if self.paths.has_key(path) != self.in_paths:
         continue
 
+      if change.base_rev != -1:
+        svndate = self.repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE,
+                                          change.base_rev)
+        ### pick a different date format?
+        base_date = time.ctime(svn.core.secs_from_timestr(svndate, self.pool))
+      else:
+        base_date = ''
+
       # figure out if/how to generate a diff
 
       base_path = remove_leading_slashes(change.base_path)
@@ -774,8 +784,8 @@ class DiffGenerator:
           diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
                                  base_path, None, None, self.pool)
 
-          label1 = '%s\t%s' % (base_path, self.date)
-          label2 = '(empty file)'
+          label1 = '%s\t%s\t(r%s)' % (base_path, self.date, change.base_rev)
+          label2 = '/dev/null\t00:00:00 1970\t(deleted)'
           singular = True
 
       elif change.action == svn.repos.CHANGE_ACTION_ADD \
@@ -796,8 +806,10 @@ class DiffGenerator:
                                      base_path,
                                      self.repos.root_this, change.path,
                                      self.pool)
-              label1 = base_path + '\t(original)'
-              label2 = '%s\t%s' % (change.path, self.date)
+              label1 = '%s\t%s\t(r%s, copy source)' \
+                       % (base_path, base_date, change.base_rev)
+              label2 = '%s\t%s\t(r%s)' \
+                       % (change.path, self.date, self.repos.rev)
               singular = False
           else:
             # this file was copied.
@@ -805,8 +817,11 @@ class DiffGenerator:
             if self.diffsels.copy:
               diff = svn.fs.FileDiff(None, None, self.repos.root_this,
                                      change.path, self.pool)
-              label1 = base_path + '\t(original)'
-              label2 = '%s\t%s' % (change.path, self.date)
+              label1 = '/dev/null\t00:00:00 1970\t' \
+                       '(empty, because file is newly added)'
+              label2 = '%s\t%s\t(r%s, copy of r%s, %s)' \
+                       % (change.path, self.date, self.repos.rev, \
+                          change.base_rev, base_path)
               singular = False
         else:
           # the file was added.
@@ -819,8 +834,10 @@ class DiffGenerator:
           if self.diffsels.add:
             diff = svn.fs.FileDiff(None, None, self.repos.root_this,
                                    change.path, self.pool)
-            label1 = '(empty file)'
-            label2 = '%s\t%s' % (change.path, self.date)
+            label1 = '/dev/null\t00:00:00 1970\t' \
+                     '(empty, because file is newly added)'
+            label2 = '%s\t%s\t(r%s)' \
+                     % (change.path, self.date, self.repos.rev)
             singular = True
 
       elif not change.text_changed:
@@ -839,8 +856,10 @@ class DiffGenerator:
                                  base_path,
                                  self.repos.root_this, change.path,
                                  self.pool)
-          label1 = base_path + '\t(original)'
-          label2 = '%s\t%s' % (change.path, self.date)
+          label1 = '%s\t%s\t(r%s)' \
+                   % (base_path, base_date, change.base_rev)
+          label2 = '%s\t%s\t(r%s)' \
+                   % (change.path, self.date, self.repos.rev)
           singular = False
 
       if diff:
@@ -917,6 +936,9 @@ class DiffContent:
       ltype = 'C'
     else:
       ltype = 'U'
+
+    if line[-2] == '\r':
+      line=line[0:-2] + '\n' # remove carriage return
 
     return _data(
       raw=line,
@@ -1000,8 +1022,10 @@ class TextCommitRenderer:
           % (text, d.base_rev, d.base_path, is_dir))
 
   def _render_diffs(self, diffs, section_header):
-    """Render diffs. Write the SECTION_HEADER iff there are actually
+    """Render diffs. Write the SECTION_HEADER if there are actually
     any diffs to render."""
+    if not diffs:
+      return
     w = self.output.write
     section_header_printed = False
 
@@ -1037,7 +1061,7 @@ class TextCommitRenderer:
         if diff.singular:
           w('Binary file. No diff available.\n')
         else:
-          w('Binary files. No diff available.\n')
+          w('Binary file (source and/or target). No diff available.\n')
         continue
 
       for line in diff.content:
@@ -1061,8 +1085,10 @@ class Repository:
 
     self.author = self.get_rev_prop(svn.core.SVN_PROP_REVISION_AUTHOR)
 
-  def get_rev_prop(self, propname):
-    return svn.fs.revision_prop(self.fs_ptr, self.rev, propname, self.pool)
+  def get_rev_prop(self, propname, rev = None):
+    if not rev:
+      rev = self.rev
+    return svn.fs.revision_prop(self.fs_ptr, rev, propname, self.pool)
 
   def get_root(self, rev):
     try:

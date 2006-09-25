@@ -391,15 +391,10 @@ static svn_error_t *interrogate_for_content_type(ne_request *req,
 {
   ne_content_type *ctype = userdata;
 
-#ifdef SVN_NEON_0_25
   if (ne_get_content_type(req, ctype) != 0)
     return svn_error_createf
       (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
        _("Could not get content-type from response"));
-#else /* ! SVN_NEON_0_25 */
-  ne_add_response_header_handler(req, "Content-Type", ne_content_type_handler,
-                                 ctype);
-#endif /* SVN_NEON_0_25 */
 
   return SVN_NO_ERROR;
 }
@@ -420,9 +415,6 @@ static svn_error_t *custom_get_request(ne_session *sess,
   ne_request *req;
   ne_decompress *decompress;
   svn_error_t *err;
-#ifndef SVN_NEON_0_25
-  int decompress_rv;
-#endif /* ! SVN_NEON_0_25 */
   svn_ra_dav__session_t *ras = ne_get_session_private(sess,
                                                      SVN_RA_NE_SESSION_ID);
 
@@ -481,15 +473,8 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                      interrogate_for_content_type, &cgc.ctype,
                                      pool);
 
-#ifdef SVN_NEON_0_25
   if (decompress)
     ne_decompress_destroy(decompress);
-#else /* ! SVN_NEON_0_25 */
-  if (decompress) 
-    decompress_rv = ne_decompress_destroy(decompress);
-  else 
-    decompress_rv = 0;
-#endif /* if/else SVN_NEON_0_25 */
 
   /* we no longer need this */
   if (cgc.ctype.value != NULL)
@@ -499,32 +484,15 @@ static svn_error_t *custom_get_request(ne_session *sess,
      than Neon-related errors */
   if (cgc.err)
     {
-      if (err)
-        svn_error_clear(err);
+      svn_error_clear(err);
       return cgc.err;
     }
-
-#ifndef SVN_NEON_0_25
-  if (decompress_rv != 0)
-    {
-       const char *msg;
-
-       msg = apr_psprintf(pool, _("GET request failed for '%s'"), url);
-       if (err)
-         svn_error_clear(err);
-       err = svn_ra_dav__convert_error(sess, msg, decompress_rv, pool);
-    }
-#endif /* ! SVN_NEON_0_25 */
 
   return err;
 }
 
 /* This implements the ne_block_reader() callback interface. */
-#ifdef SVN_NEON_0_25
 static int
-#else /* ! SVN_NEON_0_25 */
-static void
-#endif /* if/else SVN_NEON_0_25 */
 fetch_file_reader(void *userdata, const char *buf, size_t len)
 {
   custom_get_ctx_t *cgc = userdata;
@@ -533,27 +501,16 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   if (cgc->err)
     {
       /* We must have gotten an error during the last read. */
-#ifdef SVN_NEON_0_25
       /* Abort the rest of the read. */
       /* ### Call ne_set_error(), as ne_block_reader doc implies? */
       return 1;
-#else /* ! SVN_NEON_0_25 */
-      /* In Neon < 0.25.0, we have no way to abort the read process,
-         so we'll just have to eat all the data, even though we
-         already know we can't handle it. */
-      return;
-#endif /* if/else SVN_NEON_0_25 */
 
     }
 
   if (len == 0)
     {
       /* file is complete. */
-#ifdef SVN_NEON_0_25
       return 0;
-#else /* ! SVN_NEON_0_25 */
-      return;
-#endif /* if/else SVN_NEON_0_25 */
     }
 
   if (!cgc->checked_type)
@@ -625,9 +582,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 #endif
     }
 
-#ifdef SVN_NEON_0_25
   return 0;
-#endif /* SVN_NEON_0_25 */
 }
 
 static svn_error_t *simple_fetch_file(ne_session *sess,
@@ -672,11 +627,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
 /* Helper (neon callback) for svn_ra_dav__get_file.  This implements
    the ne_block_reader() callback interface. */
-#ifdef SVN_NEON_0_25
 static int
-#else /* ! SVN_NEON_0_25 */
-static void
-#endif /* if/else SVN_NEON_0_25 */
 get_file_reader(void *userdata, const char *buf, size_t len)
 {
   custom_get_ctx_t *cgc = userdata;
@@ -694,7 +645,6 @@ get_file_reader(void *userdata, const char *buf, size_t len)
   wlen = len;
   err = svn_stream_write(stream, buf, &wlen);
 
-#ifdef SVN_NEON_0_25
   /* Technically, if the write came up short then there's guaranteed
      to be an error anyway, so we only really need to check for error.
      But heck, why not gather as much information as possible about
@@ -707,7 +657,6 @@ get_file_reader(void *userdata, const char *buf, size_t len)
     }
 
   return 0;
-#endif /* SVN_NEON_0_25 */
 }
 
 
@@ -1779,6 +1728,8 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                                    FALSE,
                                    pool);
 
+  svn_pool_destroy(baton.scratchpool);
+
   if (err && err->apr_err == SVN_ERR_RA_DAV_PATH_NOT_FOUND)
     {
       svn_error_clear(err);
@@ -1796,8 +1747,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
      marshalled over the network.  We give that top priority. */
   if (baton.err)
     {
-      if (err)
-        svn_error_clear(err);
+      svn_error_clear(err);
       
       /* mod_dav_svn is known to return "unsupported feature" on
          unknown REPORT requests, but it's our svn_ra.h promise to
@@ -1820,8 +1770,6 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
 
   else if (err)
     return err;
-
-  svn_pool_destroy(baton.scratchpool);
 
   *locks = baton.lock_hash;
   return SVN_NO_ERROR;

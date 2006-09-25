@@ -1964,7 +1964,7 @@ def merge_skips_obstructions(sbox):
     os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
-# At one stage a merge that added items with the same name as missing
+# At one time, a merge that added items with the same name as missing
 # items would attempt to add the items and fail, leaving the working
 # copy locked and broken.
 
@@ -1987,8 +1987,7 @@ def merge_into_missing(sbox):
     'A/B/F/Q'       : Item(verb='Adding'),
     'A/B/F/foo'     : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/Q'       : Item(status='  ', wc_rev=2),
     'A/B/F/foo'     : Item(status='  ', wc_rev=2),
@@ -2775,7 +2774,7 @@ def merge_dir_branches(sbox):
   # Merge from C to F onto the wc_dir
   # We can't use run_and_verify_merge because it doesn't support this
   # syntax of the merge command.  
-  # XXX: Change this if run_and_verify_merge ever gets fixed
+  ### TODO: We can use run_and_verify_merge2() here now.
   expected_output = ["A    " + foo_path + "\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', C_url, F_url, wc_dir)

@@ -469,12 +469,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 
   /* Find the name and set up the entry under that name. */
   name = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
-  /* XXX Replace the obsolete "svn:this_dir".
-     XXX This code should go away by 1.0 */
-  {
-    if (name && strcmp(name, "svn:this_dir") == 0)
-      name = SVN_WC_ENTRY_THIS_DIR;
-  }
   entry->name = name ? apr_pstrdup(pool, name) : SVN_WC_ENTRY_THIS_DIR;
 
   /* Attempt to set revision (resolve_to_defaults may do it later, too) */

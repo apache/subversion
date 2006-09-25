@@ -42,7 +42,7 @@ class WinGeneratorBase(GeneratorBase):
     self.serf_path = None
     self.bdb_path = 'db4-win32'
     self.neon_path = 'neon'
-    self.neon_ver = 24007
+    self.neon_ver = 25005
     self.httpd_path = None
     self.libintl_path = None
     self.zlib_path = 'zlib'
@@ -620,9 +620,6 @@ class WinGeneratorBase(GeneratorBase):
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
       
-    # check if we have a newer neon (0.25.x)
-    if self.neon_ver >= 25000:
-      fakedefines.append("SVN_NEON_0_25=1")
     # check for neon 0.26.x or newer
     if self.neon_ver >= 26000:
       fakedefines.append("SVN_NEON_0_26=1")
@@ -993,6 +990,8 @@ class WinGeneratorBase(GeneratorBase):
         # build/ac-macros/swig.m4 explains the next incantation
         self.neon_ver = int('%d%02d%03d' % version)
         msg = 'Found neon version %d.%d.%d\n' % version
+        if self.neon_ver < 25005:
+          msg = 'WARNING: Neon version 0.25.5 or higher is required'
     except:
       msg = 'WARNING: Error while determining neon version\n'
     sys.stderr.write(msg)

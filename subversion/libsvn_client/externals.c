@@ -143,9 +143,8 @@ relegate_external(const char *path,
          no big deal.
       */
       err = svn_io_remove_file(new_path, pool);
-      if (err)
-        svn_error_clear(err);  /* It's not clear why this is ignored, is
-                                   it because the rename will catch it? */
+      svn_error_clear(err);  /* It's not clear why this is ignored, is
+                                 it because the rename will catch it? */
 
       /* Rename. */
       SVN_ERR(svn_io_file_rename(path, new_path, pool));

@@ -4529,7 +4529,7 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(medium_file_integrity),
     SVN_TEST_PASS(large_file_integrity),
     SVN_TEST_PASS(check_root_revision),
-    SVN_TEST_XFAIL(test_node_created_rev), /* Fails on FSFS, Issue #2608 */
+    SVN_TEST_PASS(test_node_created_rev),
     SVN_TEST_PASS(check_related),
     SVN_TEST_PASS(branch_test),
     SVN_TEST_PASS(verify_checksum),

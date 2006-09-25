@@ -195,7 +195,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
   base_fs_data_t *bfd = fs->fsap_data;
   DBC *cursor;
   DBT key, value;
-  int db_err;
+  int db_err, db_c_err;
   apr_pool_t *subpool = svn_pool_create(pool);
   const char *lock_token;
   svn_lock_t *lock;
@@ -281,10 +281,12 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
     }
 
   svn_pool_destroy(subpool);
-  cursor->c_close(cursor);
+  db_c_err = cursor->c_close(cursor);
 
   if (db_err && (db_err != DB_NOTFOUND)) 
     SVN_ERR(BDB_WRAP(fs, "fetching lock tokens", db_err));
+  if (db_c_err)
+    SVN_ERR(BDB_WRAP(fs, "fetching lock tokens (closing cursor)", db_c_err));
 
   return SVN_NO_ERROR;
 }

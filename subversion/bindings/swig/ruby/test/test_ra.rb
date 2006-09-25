@@ -210,12 +210,15 @@ class SvnRaTest < Test::Unit::TestCase
     ctx = make_context(log)
     callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
     session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
-    result = nil
+    actual_info = nil
+    actual_date = nil
 
-    expect = [1, Time.now.to_s, @author]
+    expected_info = [1, @author]
+    start_time = Time.now
     gc_disable do
       editor, baton = session.commit_editor(log) do |rev, date, author|
-        result = [rev, date.to_s, author]
+        actual_info = [rev, author]
+        actual_date = date
       end
       editor.baton = baton
 
@@ -225,7 +228,8 @@ class SvnRaTest < Test::Unit::TestCase
         GC.start
         editor.close_edit
       end
-      assert_equal(expect, result)
+      assert_equal(expected_info, actual_info)
+      assert_operator(start_time..(Time.now), :include?, actual_date)
     end
   end
 
@@ -236,12 +240,15 @@ class SvnRaTest < Test::Unit::TestCase
     ctx = make_context(log)
     callbacks = Svn::Ra::Callbacks.new(ctx.auth_baton)
     session = Svn::Ra::Session.open(@repos_uri, config, callbacks)
-    result = nil
+    actual_info = nil
+    actual_date = nil
 
-    expect = [1, Time.now.to_s, @author]
+    expected_info = [1, @author]
+    start_time = Time.now
     gc_disable do
       editor = session.commit_editor2(log) do |info|
-        result = [info.revision, info.date.to_s, info.author]
+        actual_info = [info.revision, info.author]
+        actual_date = info.date
       end
 
       root = editor.open_root(-1)
@@ -250,7 +257,8 @@ class SvnRaTest < Test::Unit::TestCase
         GC.start
         editor.close_edit
       end
-      assert_equal(expect, result)
+      assert_equal(expected_info, actual_info)
+      assert_operator(start_time..(Time.now), :include?, actual_date)
     end
   end
 

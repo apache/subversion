@@ -313,7 +313,6 @@ static int ra_dav_error_accepter(void *userdata,
      in neon 0.25.0, trying to parse a 401 response as XML using
      ne_xml_parse_v aborts the response; so the auth hooks never got a
      chance. */
-#ifdef SVN_NEON_0_25
   ne_content_type ctype;
 
   /* Only accept non-2xx responses with text/xml content-type */
@@ -326,10 +325,6 @@ static int ra_dav_error_accepter(void *userdata,
     }
   else 
     return 0;
-#else /* ! SVN_NEON_0_25 */
-  /* Only accept the body-response if the HTTP status code is *not* 2XX. */
-  return (st->klass != 2);
-#endif /* if/else SVN_NEON_0_25 */
 }
 
 
@@ -506,11 +501,7 @@ typedef struct spool_reader_baton_t
 
 
 /* This implements the ne_block_reader() callback interface. */
-#ifdef SVN_NEON_0_25
 static int
-#else /* ! SVN_NEON_0_25 */
-static void
-#endif /* if/else SVN_NEON_0_25 */
 spool_reader(void *userdata, 
              const char *buf, 
              size_t len)
@@ -520,13 +511,11 @@ spool_reader(void *userdata,
     baton->error = svn_io_file_write_full(baton->spool_file, buf, 
                                           len, NULL, baton->pool);
 
-#ifdef SVN_NEON_0_25
   if (baton->error)
     /* ### Call ne_set_error(), as ne_block_reader doc implies? */
     return 1;
   else
     return 0;
-#endif /* SVN_NEON_0_25 */
 }
 
 
@@ -664,9 +653,6 @@ parsed_request(ne_session *sess,
   ne_xml_parser *success_parser = NULL;
   ne_xml_parser *error_parser = NULL;
   int rv;
-#ifndef SVN_NEON_0_25
-  int decompress_rv;
-#endif /* ! SVN_NEON_0_25 */
   int code;
   int expected_code;
   const char *msg;
@@ -811,31 +797,11 @@ parsed_request(ne_session *sess,
         }
     }
 
-#ifdef SVN_NEON_0_25
   if (decompress_main)
     ne_decompress_destroy(decompress_main);
 
   if (decompress_err)
     ne_decompress_destroy(decompress_err);
-#else  /* ! SVN_NEON_0_25 */
-  if (decompress_main)
-    {
-      decompress_rv = ne_decompress_destroy(decompress_main);
-      if (decompress_rv != 0)
-        {
-          rv = decompress_rv;
-        }
-    }
-
-  if (decompress_err)
-    {
-      decompress_rv = ne_decompress_destroy(decompress_err);
-      if (decompress_rv != 0)
-        {
-          rv = decompress_rv;
-        }
-    }
-#endif /* if/else SVN_NEON_0_25 */
   
   code = ne_get_status(req)->code;
   if (status_code)
@@ -1119,15 +1085,9 @@ svn_ra_dav__interrogate_for_location(ne_request *request,
 
   if (location)
     {
-#ifdef SVN_NEON_0_25
       const char *val = ne_get_response_header(request, "Location");
       if (val)
         *location = ne_strdup(val);
-#else /* ! SVN_NEON_0_25 */
-      ne_add_response_header_handler(request, "Location",
-                                     ne_duplicate_header, location);
-#endif /* SVN_NEON_0_25 */
-
     }
 
   return SVN_NO_ERROR;

@@ -32,6 +32,7 @@
 #include "svn_sorts.h"
 #include "svn_io.h"
 #include "svn_pools.h"
+#include "private/svn_compat.h"
 
 
 
@@ -354,7 +355,7 @@ svn_hash_read(apr_hash_t *hash,
               svn_string_t *value = apr_palloc(pool, sizeof(*value));
 
               /* Get the length of the value */
-              int vallen = atoi(buf + 2);
+              apr_size_t vallen = atoi(buf + 2);
 
               /* Again, 1 extra byte for the null termination. */
               void *valbuf = apr_palloc(pool, vallen + 1);
@@ -437,9 +438,7 @@ svn_hash_diff(apr_hash_t *hash_a,
 svn_error_t *
 svn_hash_clear(apr_hash_t *hash)
 {
-/* The APR_VERSION_AT_LEAST() macro is new in APR 1.3.0, which also
-   happens to be the minimum version we require. */
-#ifdef APR_VERSION_AT_LEAST /* 1.3.0 */
+#if APR_VERSION_AT_LEAST(1, 3, 0)
   apr_hash_clear(hash);
 #else
   apr_hash_index_t *hi;

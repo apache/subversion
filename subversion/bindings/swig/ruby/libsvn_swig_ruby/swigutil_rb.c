@@ -3,6 +3,12 @@
 #include "swigutil_rb.h"
 #include <st.h>
 
+#ifndef RE_OPTION_IGNORECASE
+#  ifdef ONIG_OPTION_IGNORECASE
+#    define RE_OPTION_IGNORECASE ONIG_OPTION_IGNORECASE
+#  endif
+#endif
+
 #include "svn_nls.h"
 #include "svn_pools.h"
 #include "svn_time.h"

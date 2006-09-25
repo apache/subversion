@@ -520,6 +520,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
       /* free the LOCN if it got assigned. */
       if (locn)
         free(locn);
+      locn = NULL;
 
       /* re-fetch, forcing a query to the server */
       SVN_ERR(get_version_url(cc, rsrc, TRUE, pool));

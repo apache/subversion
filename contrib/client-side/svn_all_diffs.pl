@@ -91,7 +91,9 @@ exit 0;
 sub usage
 {
   warn "@_\n" if @_;
-  die "usage: $0 [file_or_dir]\n";
+  die "usage: $0 [options] [file_or_dir]\n",
+      "Valid options:\n",
+      "  -l [--log] : also show the log messages\n";
 }
 
 sub print_revision

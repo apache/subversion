@@ -573,7 +573,11 @@ svn_cl__get_log_message(const char **log_msg,
           svn_stringbuf_appendbytes(tmp_message, &text_mod, 1); 
           svn_stringbuf_appendbytes(tmp_message, &prop_mod, 1); 
           svn_stringbuf_appendbytes(tmp_message, &unlock, 1); 
-          svn_stringbuf_appendcstr(tmp_message, "  ");
+          if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+            /* History included via copy/move. */
+            svn_stringbuf_appendcstr(tmp_message, "+ ");
+          else
+            svn_stringbuf_appendcstr(tmp_message, "  ");
           svn_stringbuf_appendcstr(tmp_message, path);
           svn_stringbuf_appendcstr(tmp_message, APR_EOL_STR);
         }

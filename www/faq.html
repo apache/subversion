@@ -2036,12 +2036,13 @@ TortoiseSVN manual</a>.</p>
 <h3>How do I convert my repository from using BDB
 to FSFS or from FSFS to BDB?</h3>
 
-<p>There are two steps:</p>
+<p>There are three steps:</p>
 
 <ol>
   <li>A <a href="#dumpload">dump/load</a> from the old format to the new
   one.</li>
   <li>Copy the hook scripts.</li>
+  <li>Copy the configuration files.</li>
 </ol>
 
 <p>Say you have a repository <tt>/svn/myrepos</tt> which is using the BDB
@@ -2064,6 +2065,11 @@ backend and you would like to switch to using the FSFS backend:</p>
   put in <tt>/svn/myreposfsfs/hooks</tt> with those in
   <tt>/svn/myrepos/hooks</tt> and incorporate any changes which you would like
   into your active hook scripts.</li>
+  <li>Copy configuration files from <tt>/svn/myrepos/conf</tt>
+  into <tt>/svn/myreposfsfs/conf</tt> (and don't forget a password
+  file, if you use one).  Or you might instead want to merge
+  the <em>changes</em> that you made to your configuration files into
+  the new default ones.</li>
   <li>Rename <tt>/svn/myrepos</tt> to <tt>/svn/myreposbdb</tt> and then
   <tt>/svn/myreposfsfs</tt> to <tt>/svn/myrepos</tt> ensuring that the
   file permissions are the same as those  that the BDB version had.</li>
@@ -3448,20 +3454,23 @@ title="avoiding-compiler-inlining">
 functions, inlining the associated operations.  This can complicate
 stepping through the code in a debugger.</p>
 
-<p>Work around this by turning off optimization.  Before the
-<code>make</code> step on unix-y systems, do the following:</p>
+<p>Work around this by turning off optimization during the
+<code>make</code> step on unix-y systems:</p>
 
 <blockquote>
-<div><code>subversion$ perl -pi -e 's/-O2//g' config.status</code></div>
-<div><code>subversion$ ./config.status</code></div>
+<div><code>subversion$ make EXTRA_CFLAGS=-O0</code></div>
 </blockquote>
 
-<p>Alternately, you can explicitly set <code>CFLAGS</code> before
-running <code>configure</code>.</p>
+<p>(That's "dash ohh zero".)  Alternately, you can make this change
+more permanent by running <code>configure</code> as follows:</p>
 
-<p>Remember to undo this operation before installing Subversion from
-source, by regenerating config.status, or unsetting
-<code>CFLAGS</code> before running <code>configure</code>.</p>
+<blockquote>
+<div><code>subversion$ ./configure --enable-debug</code></div>
+</blockquote>
+
+<p>For a production install, remember to undo this operation before
+installing Subversion from source, by re-running <code>make</code> or
+<code>configure</code> without the extra flag.</p>
 
 </div>
 
