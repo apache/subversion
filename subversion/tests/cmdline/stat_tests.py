@@ -884,6 +884,7 @@ def status_ignored_dir(sbox):
   # run_and_verify_status doesn't handle this weird kind of entry.
   svntest.actions.run_and_verify_svn(None,
                                      ['I      *            ' + new_dir + "\n",
+                                      '       *        1   ' + wc_dir + "\n",
                                       'Status against revision:      2\n'], [],
                                      "status", "-u", wc_dir)
 
@@ -1053,8 +1054,8 @@ def status_update_with_incoming_props(sbox):
 
   # Can't use run_and_verify_status here because the out-of-date 
   # information in the status output isn't copied in the status tree.
-  xout = ["       *        1   " + wc_dir + "\n",
-          "       *        1   " + os.path.join(wc_dir, "A") + "\n",
+  xout = ["       *        1   " + A_path + "\n",
+          "       *        1   " + wc_dir + "\n",
           "Status against revision:      2\n" ]
 
   svntest.actions.run_and_verify_svn(None,
@@ -1140,7 +1141,7 @@ test_list = [ None,
               XFail(status_nonrecursive_update_different_cwd),
               status_add_plus_conflict,
               inconsistent_eol,
-              XFail(status_update_with_incoming_props),
+              status_update_with_incoming_props,
               XFail(status_nonrecursive_update),
              ]
 

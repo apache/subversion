@@ -148,6 +148,14 @@ svn_error_t *svn_error_quick_wrap(svn_error_t *child, const char *new_msg);
  */
 void svn_error_compose(svn_error_t *chain, svn_error_t *new_err);
 
+/** Return whether @a apr_err exists as the root cause of @a err by
+ * finding the last error in its chain (e.g. it or its children), and
+ * comparing its @c apr_error field.
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t svn_error_root_cause_is(svn_error_t *err, apr_status_t apr_err);
+
 /** Create a new error that is a deep copy of @a err and return it.
  *
  * @since New in 1.2.
