@@ -88,7 +88,7 @@ Candidate changes:
       +1: rooneg, dlr
 
   * r21638, r21566, r21641
-    Fix issue #2533, making 'svn status -u' shows remotely changed
+    Fix issue #2533, making 'svn status -u' show remotely changed
     properties on the root of a working copy.
     Justification:
       A user reported bug with a straightforward fix, plus regression
