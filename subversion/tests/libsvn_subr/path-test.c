@@ -271,7 +271,10 @@ test_uri_encode(const char **msg,
 {
   int i;
 
-  const char *paths[5][2] = { 
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
     { "http://subversion.tigris.org", 
          "http://subversion.tigris.org"},
     { " special_at_beginning",
@@ -294,23 +297,23 @@ test_uri_encode(const char **msg,
       const char *en_path, *de_path;
 
       /* URI-encode the path, and verify the results. */
-      en_path = svn_path_uri_encode(paths[i][0], pool);
-      if (strcmp(en_path, paths[i][1]))
+      en_path = svn_path_uri_encode(tests[i].path, pool);
+      if (strcmp(en_path, tests[i].result))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
              "svn_path_uri_encode ('%s') returned '%s' instead of '%s'",
-             paths[i][0], en_path, paths[i][1]);
+             tests[i].path, en_path, tests[i].result);
         }
  
       /* URI-decode the path, and make sure we're back where we started. */
       de_path = svn_path_uri_decode(en_path, pool);
-      if (strcmp(de_path, paths[i][0]))
+      if (strcmp(de_path, tests[i].path))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
              "svn_path_uri_decode ('%s') returned '%s' instead of '%s'",
-             paths[i][1], de_path, paths[i][0]);
+             tests[i].result, de_path, tests[i].path);
         }
     }
   return SVN_NO_ERROR;
@@ -325,7 +328,10 @@ test_uri_decode(const char **msg,
 {
   int i;
 
-  const char *paths[3][2] = { 
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
     { "http://c.r.a/s%\0008me", 
          "http://c.r.a/s%"},
     { "http://c.r.a/s%6\000me",
@@ -344,13 +350,13 @@ test_uri_decode(const char **msg,
       const char *de_path;
 
       /* URI-decode the path, and verify the results. */
-      de_path = svn_path_uri_decode(paths[i][0], pool);
-      if (strcmp(de_path, paths[i][1]))
+      de_path = svn_path_uri_decode(tests[i].path, pool);
+      if (strcmp(de_path, tests[i].result))
         {
           return svn_error_createf
             (SVN_ERR_TEST_FAILED, NULL,
              "svn_path_uri_decode ('%s') returned '%s' instead of '%s'",
-             paths[i][0], de_path, paths[i][1]);
+             tests[i].path, de_path, tests[i].result);
         }
     }
   return SVN_NO_ERROR;
@@ -363,7 +369,10 @@ test_uri_autoescape(const char **msg,
                     svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
-  static const char *paths[3][2] = {
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
     { "http://svn.collab.net/", "http://svn.collab.net/" },
     { "file:///<>\" {}|\\^`", "file:///%3C%3E%22%20%7B%7D%7C%5C%5E%60" },
     { "http://[::1]", "http://[::1]" }
@@ -377,18 +386,18 @@ test_uri_autoescape(const char **msg,
 
   for (i = 0; i < 3; ++i)
     {
-      const char* uri = svn_path_uri_autoescape(paths[i][0], pool);
-      if (strcmp(uri, paths[i][1]) != 0)
+      const char* uri = svn_path_uri_autoescape(tests[i].path, pool);
+      if (strcmp(uri, tests[i].result) != 0)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_uri_autoescape on '%s' returned '%s' instead of '%s'",
-           paths[i][0], uri, paths[i][1]);
-      if (strcmp(paths[i][0], paths[i][1]) == 0
-          && paths[i][0] != uri)
+           tests[i].path, uri, tests[i].result);
+      if (strcmp(tests[i].path, tests[i].result) == 0
+          && tests[i].path != uri)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_uri_autoescape on '%s' returned identical but not same"
-           " string", paths[i][0]);
+           " string", tests[i].path);
     }
                                   
   return SVN_NO_ERROR;
@@ -588,7 +597,10 @@ test_basename(const char **msg,
   int i;
   char *result;
 
-  static const char * const paths[][2] = {
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
     { "abc", "abc" },
     { "/abc", "abc" },
     { "/abc", "abc" },
@@ -614,10 +626,10 @@ test_basename(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = sizeof(paths) / sizeof(paths[0]); i--; )
+  for (i = sizeof(tests) / sizeof(tests[0]); i--; )
     {
-      const char *path = paths[i][0];
-      const char *expect = paths[i][1];
+      const char *path = tests[i].path;
+      const char *expect = tests[i].result;
 
       result = svn_path_basename(path, pool);
       if (strcmp(result, expect))
@@ -640,7 +652,10 @@ test_dirname(const char **msg,
   int i;
   char *result;
 
-  static const char * const paths[][2] = {
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
     { "abc", "" },
     { "/abc", "/" },
     { "/x/abc", "/x" },
@@ -666,10 +681,10 @@ test_dirname(const char **msg,
   if (msg_only)
     return SVN_NO_ERROR;
 
-  for (i = sizeof(paths) / sizeof(paths[0]); i--; )
+  for (i = sizeof(tests) / sizeof(tests[0]); i--; )
     {
-      const char *path = paths[i][0];
-      const char *expect = paths[i][1];
+      const char *path = tests[i].path;
+      const char *expect = tests[i].result;
 
       result = svn_path_dirname(path, pool);
       if (strcmp(result, expect))
@@ -746,7 +761,10 @@ test_canonicalize(const char **msg,
                   svn_test_opts_t *opts,
                   apr_pool_t *pool)
 {
-  const char *paths[][2] = {
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
     { "",                     "" },
     { ".",                    "" },
     { "/",                    "/" },
@@ -801,15 +819,15 @@ test_canonicalize(const char **msg,
     return SVN_NO_ERROR;
 
   i = 0;
-  while (paths[i][0])
+  while (tests[i].path)
     {
-      const char *canonical = svn_path_canonicalize(paths[i][0], pool);
+      const char *canonical = svn_path_canonicalize(tests[i].path, pool);
 
-      if (strcmp(canonical, paths[i][1]))
+      if (strcmp(canonical, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_path_canonicalize(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
-                                 paths[i][0], canonical, paths[i][1]);
+                                 tests[i].path, canonical, tests[i].result);
       ++i;
     }
 
@@ -822,7 +840,10 @@ test_remove_component(const char **msg,
                       svn_test_opts_t *opts,
                       apr_pool_t *pool)
 {
-  const char *paths[][2] = {
+  struct {
+    const char *path;
+    const char *result;
+  } tests[] = {
     { "",                     "" },
     { "/",                    "/" },
     { "foo",                  "" },
@@ -848,17 +869,17 @@ test_remove_component(const char **msg,
   buf = svn_stringbuf_create("", pool);
   
   i = 0;
-  while (paths[i][0])
+  while (tests[i].path)
     {
-      svn_stringbuf_set(buf, paths[i][0]);
+      svn_stringbuf_set(buf, tests[i].path);
 
       svn_path_remove_component(buf);
       
-      if (strcmp(buf->data, paths[i][1]))
+      if (strcmp(buf->data, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_path_remove_component(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
-                                 paths[i][0], buf->data, paths[i][1]);
+                                 tests[i].path, buf->data, tests[i].result);
       ++i;
     }
 
