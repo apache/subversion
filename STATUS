@@ -96,6 +96,17 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r21657
+    Fix issue #2602, making 'svn co URL@{DATE}' work.
+    Justification:
+      Brokenness.
+    Notes:
+      Revision should merge fine, but the regression test will get
+      skipped (because there's no checkout_tests.py).  Test was
+      introduced in r21275.
+    Votes:
+      +1: cmpilato
+
 Approved changes:
 
   * r21575
