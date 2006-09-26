@@ -87,14 +87,15 @@ Candidate changes:
     Votes:
       +1: rooneg, dlr
 
-  * r21638, r21566, r21641
+  * r21638, r21566, r21641, r21669
     Fix issue #2533, making 'svn status -u' show remotely changed
     properties on the root of a working copy.
     Justification:
       A user reported bug with a straightforward fix, plus regression
       test.
+    Branch: TBD
     Votes:
-      +1: dlr
+      -1: dlr (fix not yet complete)
 
   * r21657, r21662
     Fix issue #2602, making 'svn co URL@{DATE}' work.
