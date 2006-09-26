@@ -1855,18 +1855,15 @@ svn_swig_rb_delta_path_driver_cb_func(void **dir_baton,
 
   if (!NIL_P(proc)) {
     VALUE args, result;
+    item_baton *ib = (item_baton *)parent_baton;
 
     args = rb_ary_new3(4,
                        proc,
                        rb_id_call(),
-                       parent_baton ? (VALUE)parent_baton : Qnil,
+                       ib->baton,
                        c2r_string2(path));
     result = invoke_callback_handle_error(args, rb_pool, &err);
-    if (path[0] != '\0' && path[strlen(path) - 1] == '/') {
-      *dir_baton = (void *)result;
-    } else {
-      *dir_baton = NULL;
-    }
+    *dir_baton = make_baton(pool, ib->editor, result);
   }
   
   return err;
