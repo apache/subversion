@@ -436,7 +436,7 @@ svn_hash_diff(apr_hash_t *hash_a,
 /*** Misc. hash APIs ***/
 
 svn_error_t *
-svn_hash_clear(apr_hash_t *hash)
+svn_hash__clear(apr_hash_t *hash)
 {
 #if APR_VERSION_AT_LEAST(1, 3, 0)
   apr_hash_clear(hash);

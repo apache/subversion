@@ -382,7 +382,7 @@ bdb_init_cb(void)
 svn_error_t *
 svn_fs_bdb__init(void)
 {
-  SVN_ERR(svn_atomic_init_once(&bdb_cache_state, bdb_init_cb));
+  SVN_ERR(svn_atomic__init_once(&bdb_cache_state, bdb_init_cb));
   return SVN_NO_ERROR;
 }
 
