@@ -535,9 +535,15 @@ to do so.</p>
 documentation comment that describes what the function does.  The
 documentation should mention every parameter received by the function,
 every possible return value, and (if not obvious) the conditions under
-which the function could return an error.  Put the parameter names in
-upper case in the doc string, even when they are not upper case in the
-actual declaration, so that they stand out to human readers.</p>
+which the function could return an error.</p>
+
+<p>For internal documentation put the parameter names in upper case
+in the doc string, even when they are not upper case in the actual
+declaration, so that they stand out to human readers.</p>
+
+<p>Use the doxygen (www.doxygen.org) format for public interface
+documentation.  This means anything that goes in a public header
+file.</p>
 
 <p>For public or semi-public API functions, the doc string should go
 above the function in the .h file where it is declared; otherwise, it
@@ -545,12 +551,6 @@ goes above the function definition in the .c file.</p>
 
 <p>For structure types, document each individual member of the
 structure as well as the structure itself.</p>
-
-<p>Use the doxygen (www.doxygen.org) format for interface
-documentation.  There is still some legacy documentation in Subversion
-that uses a different style, from before we adopted doxygen, but it
-will eventually be converted.  New documentation should start out in
-doxygen format.</p>
 
 <p>Read over the Subversion code to get an overview of how
 documentation looks in practice; in particular, see
