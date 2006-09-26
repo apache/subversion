@@ -1022,7 +1022,7 @@ def status_update_with_incoming_props(sbox):
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
     ''  : Item(verb='Sending'),
-    'A' : Item(verb='Sending')
+    'A' : Item(verb='Sending'),
     })
 
   # Created expected status tree.
