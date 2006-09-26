@@ -233,8 +233,9 @@ svn_error_root_cause_is(svn_error_t *err, apr_status_t apr_err)
     {
       if (err->child)
         err = err->child;
-      else if (err->apr_err == apr_err)
-        return TRUE;
+      else
+        /* We've reached the end of the line. */
+        return (err->apr_err == apr_err);
     }
 
   return FALSE;
