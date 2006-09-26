@@ -730,13 +730,13 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
             }
           else  /* looking at non-empty peg revision */
             {
-	      const char *rev_str = path + i + 1;
-	      int rev_len = strlen(rev_str);
-              
+              const char *rev_str = path + i + 1;
+
               if (is_url)
                 {
                   /* URLs are URI-encoded, so we look for dates with
                      URI-encoded delimeters.  */
+                  int rev_len = strlen(rev_str);
                   if (rev_len > 6
                       && rev_str[0] == '%' 
                       && rev_str[1] == '7' 
