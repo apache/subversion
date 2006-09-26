@@ -9,9 +9,12 @@
 #  endif
 #endif
 
+#include <locale.h>
+
 #include "svn_nls.h"
 #include "svn_pools.h"
 #include "svn_time.h"
+#include "svn_utf.h"
 
 
 #define POOL_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_core_pool())))
@@ -108,16 +111,6 @@ rb_ary_aref1(VALUE ary, VALUE arg)
   return rb_ary_aref(1, args, ary);
 }
 
-
-
-/* initialize */
-void
-svn_swig_rb_initialize(void)
-{
-  apr_initialize();
-  atexit(apr_terminate);
-  svn_nls_init();
-}
 
 
 /* constant getter */
@@ -231,6 +224,89 @@ rb_svn_fs_file_system(void)
     rb_ivar_set(cSvnFsFileSystem, rb_id___batons__(), rb_hash_new());
   }
   return cSvnFsFileSystem;
+}
+
+
+/* initialize */
+static VALUE
+svn_swig_rb_converter_to_locale_encoding(VALUE self, VALUE str)
+{
+  apr_pool_t *pool;
+  svn_error_t *err;
+  const char *dest;
+  VALUE result;
+
+  pool = svn_pool_create(NULL);
+  err = svn_utf_cstring_from_utf8(&dest, StringValueCStr(str), pool);
+  if (err) {
+    apr_pool_destroy(pool);
+    svn_swig_rb_handle_svn_error(err);
+  }
+
+  result = rb_str_new2(dest);
+  apr_pool_destroy(pool);
+  return result;
+}
+
+static VALUE
+svn_swig_rb_locale_set(int argc, VALUE *argv, VALUE self)
+{
+  char *result;
+  int category;
+  const char *locale;
+  VALUE rb_category, rb_locale;
+
+  rb_scan_args(argc, argv, "02", &rb_category, &rb_locale);
+
+  if (NIL_P(rb_category))
+    category = LC_ALL;
+  else
+    category = NUM2INT(rb_category);
+
+  if (NIL_P(rb_locale))
+    locale = "";
+  else
+    locale = StringValueCStr(rb_locale);
+
+  result = setlocale(category, locale);
+
+  return result ? rb_str_new2(result) : Qnil;
+}
+
+void
+svn_swig_rb_initialize(void)
+{
+  apr_status_t status;
+  apr_pool_t *pool;
+  VALUE mSvnConverter, mSvnLocale;
+
+  status = apr_initialize();
+  if (status) {
+    char buf[1024];
+    apr_strerror(status, buf, sizeof(buf) - 1);
+    rb_raise(rb_eLoadError, "cannot initialize APR: %s", buf);
+  }
+
+  if (atexit(apr_terminate)) {
+    rb_raise(rb_eLoadError, "atexit registration failed");
+  }
+
+  pool = svn_pool_create(NULL);
+  svn_utf_initialize(pool);
+
+  mSvnConverter = rb_define_module_under(rb_svn(), "Converter");
+  rb_define_module_function(mSvnConverter, "to_locale_encoding",
+                            svn_swig_rb_converter_to_locale_encoding, 1);
+
+  mSvnLocale = rb_define_module_under(rb_svn(), "Locale");
+  rb_define_const(mSvnLocale, "ALL", INT2NUM(LC_ALL));
+  rb_define_const(mSvnLocale, "COLLATE", INT2NUM(LC_COLLATE));
+  rb_define_const(mSvnLocale, "CTYPE", INT2NUM(LC_CTYPE));
+  rb_define_const(mSvnLocale, "MESSAGES", INT2NUM(LC_MESSAGES));
+  rb_define_const(mSvnLocale, "MONETARY", INT2NUM(LC_MONETARY));
+  rb_define_const(mSvnLocale, "NUMERIC", INT2NUM(LC_NUMERIC));
+  rb_define_const(mSvnLocale, "TIME", INT2NUM(LC_TIME));
+  rb_define_module_function(mSvnLocale, "set", svn_swig_rb_locale_set, -1);
 }
 
 
