@@ -38,7 +38,7 @@ module Svn
     attr_reader :code, :error_message, :file, :line
     def initialize(code, message, file=nil, line=nil)
       @code = code
-      @error_message = to_locale_encoding(message)
+      @error_message = message
       @file = file
       @line = line
       msg = ""
@@ -48,20 +48,7 @@ module Svn
         msg << " "
       end
       msg << @error_message
-      super(msg)
-    end
-
-    private
-    begin
-      require "gettext"
-      require "iconv"
-      def to_locale_encoding(str)
-        Iconv.iconv(Locale.charset, "UTF-8", str).join
-      end
-    rescue LoadError
-      def to_locale_encoding(str)
-        str
-      end
+      super(Converter.to_locale_encoding(msg))
     end
   end
 end
