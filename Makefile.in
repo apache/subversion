@@ -413,8 +413,8 @@ svnsshcheck:
 	@$(MAKE) check \
 	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/cmdline
 
-fsfscheck:
-	@$(MAKE) check FS_TYPE=fsfs
+bdbcheck:
+	@$(MAKE) check FS_TYPE=bdb
 
 check-clean:
 	rm -rf subversion/tests/cmdline/svn-test-work              \
