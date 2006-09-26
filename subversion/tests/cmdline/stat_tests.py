@@ -1009,7 +1009,7 @@ def inconsistent_eol(sbox):
 #----------------------------------------------------------------------
 # Test for issue #2533
 def status_update_with_incoming_props(sbox):
-  "run 'status -u' with incoming propchanges"
+  "run 'status -u' variations w/ incoming propchanges"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1062,6 +1062,17 @@ def status_update_with_incoming_props(sbox):
                                      xout,
                                      [],
                                      "status", "-u", wc_dir)
+
+  xout = ["                1        1 jrandom      " +
+          os.path.join(wc_dir, "iota") + "\n",
+          "                1        1 jrandom      " + A_path + "\n",
+          "       *        1        1 jrandom      " + wc_dir + "\n",
+          "Status against revision:      2\n" ]
+
+  svntest.actions.run_and_verify_svn(None,
+                                     xout,
+                                     [],
+                                     "status", "-uvN", wc_dir)
 
 #----------------------------------------------------------------------
 # Test for issue #2468
@@ -1141,7 +1152,7 @@ test_list = [ None,
               XFail(status_nonrecursive_update_different_cwd),
               status_add_plus_conflict,
               inconsistent_eol,
-              status_update_with_incoming_props,
+              XFail(status_update_with_incoming_props),
               XFail(status_nonrecursive_update),
              ]
 
