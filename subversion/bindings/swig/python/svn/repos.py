@@ -35,7 +35,7 @@ CHANGE_ACTION_REPLACE = 3
 
 class ChangedPath:
   __slots__ = [ 'item_kind', 'prop_changes', 'text_changed',
-                'base_path', 'base_rev', 'path', 'added',
+                'base_path', 'base_rev', 'path', 'added', 'action',
                 ]
   def __init__(self,
                item_kind, prop_changes, text_changed, base_path, base_rev,
