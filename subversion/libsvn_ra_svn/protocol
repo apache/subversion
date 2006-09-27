@@ -473,14 +473,15 @@ by the command which invoked the report (following an abort-edit
 call).  Errors resulting from an abort-report call are ignored.
 
   set-path:
-    params: ( path:string rev:number start-empty:bool ? [ lock-token:string ] )
+    params: ( path:string rev:number start-empty:bool
+              ? [ lock-token:string ] ? [ depth:number ] )
 
   delete-path:
     params: ( path:string )
 
   link-path:
     params: ( path:string url:string rev:number start-empty:bool 
-              ? [ lock-token:string ] )
+              ? [ lock-token:string ] ? [ depth:number ] )
 
   finish-report:
     params: ( )
