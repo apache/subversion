@@ -21,11 +21,6 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r21293
-    Neon 0.26.x compatibility for Windows build.
-    Votes:
-      +1: djh, dlr
-
   * r21357
     Python/SWIG crash when apr_hash_t typemap is used.
     Votes:
@@ -109,6 +104,11 @@ Candidate changes:
       +1: cmpilato, dlr
 
 Approved changes:
+
+  * r21293
+    Neon 0.26.x compatibility for Windows build.
+    Votes:
+      +1: djh, dlr, rooneg
 
   * r21575
     Update the URL for the svnmerge.py wiki page.
