@@ -644,6 +644,7 @@ base_create(svn_fs_t *fs, const char *path, apr_pool_t *pool)
     (svn_path_join(fs->path, FORMAT_FILE, pool), format, pool);
   if (svn_err) goto error;
 
+  SVN_ERR(svn_fs_merge_info__create_index(path, pool));
   return SVN_NO_ERROR;
 
 error:

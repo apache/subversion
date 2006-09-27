@@ -56,6 +56,7 @@
 #include "bdb/changes-table.h"
 #include "bdb/copies-table.h"
 #include "../libsvn_fs/fs-loader.h"
+#include "private/svn_fs_merge_info.h"
 
 
 /* ### I believe this constant will become internal to reps-strings.c.
@@ -4374,7 +4375,7 @@ static root_vtable_t root_vtable = {
   base_get_file_delta_stream,
   base_merge,
   NULL,
-  NULL
+  svn_fs_merge_info__get_merge_info
 };
 
 

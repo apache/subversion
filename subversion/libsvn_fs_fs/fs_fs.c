@@ -28,8 +28,6 @@
 #include <apr_md5.h>
 #include <apr_thread_mutex.h>
 
-#include <sqlite3.h>
-
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_path.h"
@@ -48,6 +46,7 @@
 #include "fs_fs.h"
 #include "id.h"
 
+#include "private/svn_fs_merge_info.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -159,12 +158,6 @@ static const char *
 path_lock(svn_fs_t *fs, apr_pool_t *pool)
 {
   return svn_path_join(fs->path, PATH_LOCK_FILE, pool);
-}
-
-static const char *
-path_mergeinfo_db(svn_fs_t *fs, apr_pool_t *pool)
-{
-  return svn_path_join(fs->path, PATH_MERGEINFO_DB, pool);
 }
 
 const char *
@@ -304,16 +297,6 @@ check_format(int format)
 
   return SVN_NO_ERROR;
 }
-
-/*#define SQLITE3_DEBUG 1 */
-#ifdef SQLITE3_DEBUG
-static void
-sqlite_tracer (void *data, const char *sql)
-{
-  /*  sqlite3 *db = data; */
-  fprintf (stderr, "SQLITE SQL is \"%s\"\n", sql);
-}
-#endif
 
 svn_error_t *
 svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
@@ -2557,7 +2540,6 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
 {
   svn_fs_txn_t *txn;
   svn_fs_id_t *root_id;
-  fs_txn_data_t *ftd;
 
   txn = apr_pcalloc(pool, sizeof(*txn));
 
@@ -2568,8 +2550,6 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
   txn->base_rev = rev;
 
   txn->vtable = &txn_vtable;
-  ftd = apr_pcalloc(pool, sizeof(*ftd));
-  txn->fsap_data = ftd;
   *txn_p = txn;
   
   /* Create a new root node for this transaction. */
@@ -4003,165 +3983,12 @@ verify_locks(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
-/* Create SQL to insert the necessary indexing data for all the merge
-   info lists of PATH, which is provided (unparsed) in MINFOSTRING. */
-static svn_error_t *
-index_path_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev,
-                      const char *path, svn_string_t *minfostring,
-                      apr_pool_t *pool)
-{
-  apr_hash_t *minfo;
-  apr_hash_index_t *hi;
-  sqlite3_stmt *stmt;
-  fs_txn_data_t *ftd;
-  
-  ftd = txn->fsap_data;
-
-  SVN_ERR(svn_mergeinfo_parse(minfostring->data, &minfo, pool));
-
-  for (hi = apr_hash_first(pool, minfo); 
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const char *from;
-      apr_array_header_t *revlist;
-      const void *key;
-      void *val;
-      
-      apr_hash_this(hi, &key, NULL, &val);
-
-      from = key;
-      revlist = val;
-
-      if (from && revlist)
-        {
-          int i;
-          SQLITE_ERR(sqlite3_prepare(ftd->mtd,
-                                     "INSERT INTO mergeinfo (revision, mergedto, mergedfrom, mergedrevstart, mergedrevend) VALUES (?, ?, ?, ?, ?);",
-                                     -1, &stmt, NULL), ftd->mtd);
-          SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), ftd->mtd);
-          SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
-                     ftd->mtd);
-          SQLITE_ERR(sqlite3_bind_text(stmt, 3, from, -1, SQLITE_TRANSIENT),
-                     ftd->mtd);
-          for (i = 0; i < revlist->nelts; i++)
-            {
-              svn_merge_range_t *range;
-              
-              range = APR_ARRAY_IDX(revlist, i, svn_merge_range_t *);
-              SQLITE_ERR(sqlite3_bind_int64(stmt, 4, range->start),
-                         ftd->mtd);
-              SQLITE_ERR(sqlite3_bind_int64(stmt, 5, range->end),
-                         ftd->mtd);
-              if (sqlite3_step(stmt) != SQLITE_DONE)
-                return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                                        sqlite3_errmsg(ftd->mtd));
-
-              SQLITE_ERR(sqlite3_reset(stmt), ftd->mtd);
-            }
-          SQLITE_ERR(sqlite3_finalize(stmt), ftd->mtd);
-        }      
-    }
-  SQLITE_ERR (sqlite3_prepare(ftd->mtd, 
-                              "INSERT INTO mergeinfo_changed (revision, path) VALUES (?, ?);", 
-                              -1, &stmt, NULL),
-              ftd->mtd);
-  SQLITE_ERR(sqlite3_bind_int64(stmt, 1, new_rev), ftd->mtd);
-  
-  SQLITE_ERR(sqlite3_bind_text(stmt, 2, path, -1, SQLITE_TRANSIENT),
-             ftd->mtd);
-  
-  if (sqlite3_step(stmt) != SQLITE_DONE)
-    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                            sqlite3_errmsg(ftd->mtd));
-  
-  SQLITE_ERR(sqlite3_finalize(stmt), ftd->mtd);
-  
-  return SVN_NO_ERROR;
-}
-
-/* Create the index for any merge info in TXN (a no-op if TXN has no
-   associated merge info). */
-static svn_error_t *
-index_txn_merge_info(svn_fs_txn_t *txn, svn_revnum_t new_rev, 
-                     apr_pool_t *pool)
-{
-  apr_hash_t *minfoprops;
-  apr_hash_index_t *hi;
-
-  SVN_ERR(svn_fs_fs__txn_mergeinfo(&minfoprops, txn, pool));
-
-  for (hi = apr_hash_first(pool, minfoprops);
-       hi != NULL;
-       hi = apr_hash_next(hi))
-    {
-      const char *minfopath;
-      svn_string_t *minfostring;
-      const void *key;
-      void *val;
-
-      apr_hash_this(hi, &key, NULL, &val);
-
-      minfopath = key;
-      minfostring = val;
-
-      SVN_ERR(index_path_merge_info(txn, new_rev, minfopath, minfostring,
-                                    pool));
-    }
-
-  return SVN_NO_ERROR; 
-}
-
 /* Baton used for commit_body below. */
 struct commit_baton {
   svn_revnum_t *new_rev_p;
   svn_fs_t *fs;
   svn_fs_txn_t *txn;
 };
-
-/* Clean the merge info index for any previous failed commit with the
-   revision number as NEW_REV, and if the current transaction contains
-   merge info, record it. */
-static svn_error_t *
-update_merge_info_index(struct commit_baton *cb, svn_revnum_t new_rev,
-                        svn_boolean_t txn_contains_merge_info,
-                        apr_pool_t *pool)
-{
-  const char *deletestring;
-  fs_txn_data_t *ftd = cb->txn->fsap_data;
-      
-  SQLITE_ERR(sqlite3_open(path_mergeinfo_db(cb->fs, pool),
-                          &ftd->mtd), ftd->mtd);
-#ifdef SQLITE3_DEBUG
-  sqlite3_trace (ftd->mtd, sqlite_tracer, ftd->mtd);
-#endif 
-  SVN_ERR(fs_sqlite_exec(ftd->mtd, "begin transaction;", NULL, NULL));
-
-  /* Cleanup the leftovers of any previous, failed FSFS transactions
-     involving NEW_REV. */
-  deletestring = apr_psprintf(pool, 
-                              "delete from mergeinfo_changed where revision = %ld;",
-                              new_rev);
-  SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
-  deletestring = apr_psprintf(pool, 
-                              "delete from mergeinfo where revision = %ld;", 
-                              new_rev);
-  SVN_ERR(fs_sqlite_exec(ftd->mtd, deletestring, NULL, NULL));
-
-  /* Record any merge info from the current transaction. */
-  if (txn_contains_merge_info)
-    SVN_ERR(index_txn_merge_info(cb->txn, new_rev, pool));
-
-  /* This is moved here from commit_txn, because we don't want to
-     write the final current file if the sqlite commit fails.
-     On the other hand, if we commit the transaction and end up failing
-     the current file, we just end up with inaccessible data in the
-     database, not a real problem.  */
-  SVN_ERR(fs_sqlite_exec(ftd->mtd, "commit transaction;", NULL, NULL));
-  SQLITE_ERR(sqlite3_close(ftd->mtd), ftd->mtd);
-
-  return SVN_NO_ERROR; 
-}
 
 /* The work-horse for svn_fs_fs__commit, called with the FS write lock.
    This implements the svn_fs_fs__with_write_lock() 'body' callback
@@ -4280,7 +4107,8 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__move_into_place(revprop_filename, final_revprop, 
                                      old_rev_filename, pool));
   
-  SVN_ERR(update_merge_info_index(cb, new_rev, txn_contains_merge_info, pool));
+  SVN_ERR(svn_fs_merge_info__update_index(cb->txn, new_rev,
+                                          txn_contains_merge_info, pool));
 
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
@@ -4359,57 +4187,15 @@ write_revision_zero(svn_fs_t *fs)
   return svn_fs_fs__set_revision_proplist(fs, 0, proplist, fs->pool);
 }
 
-/* Execute SQL on the sqlite database, and raise an SVN error if the
-   result is not okay.  */
-
-svn_error_t *
-fs_sqlite_exec (sqlite3 *db, const char *sql,
-                sqlite3_callback callback,
-                void *callbackdata)
-{
-  char *errmsg;
-  if (sqlite3_exec(db, sql, NULL, NULL, &errmsg) != SQLITE_OK)
-    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                            errmsg);
-  return SVN_NO_ERROR;
-}
-
-const char SVN_MTD_CREATE_SQL[] = "pragma auto_vacuum = 1;"
-  APR_EOL_STR 
-  "create table mergeinfo (revision integer not null, mergedfrom text not null, mergedto text not null, mergedrevstart integer not null, mergedrevend integer not null);"
-  APR_EOL_STR
-  "create index mi_mergedfrom_idx on mergeinfo (mergedfrom);"
-  APR_EOL_STR
-  "create index mi_mergedto_idx on mergeinfo (mergedto);"
-  APR_EOL_STR
-  "create index mi_revision_idx on mergeinfo (revision);"
-  APR_EOL_STR
-  "create table mergeinfo_changed (revision integer not null, path text not null);"
-  APR_EOL_STR
-  "create unique index mi_c_revpath_idx on mergeinfo_changed (revision, path);"
-  APR_EOL_STR
-  "create index mi_c_path_idx on mergeinfo_changed (path);"
-  APR_EOL_STR
-  "create index mi_c_revision_idx on mergeinfo_changed (revision);"
-  APR_EOL_STR;
-
 svn_error_t *
 svn_fs_fs__create(svn_fs_t *fs,
                   const char *path,
                   apr_pool_t *pool)
 {
   int format = SVN_FS_FS__FORMAT_NUMBER;
-  fs_fs_data_t *ffd = fs->fsap_data;
 
   fs->path = apr_pstrdup(pool, path);
 
-  SQLITE_ERR(sqlite3_open(path_mergeinfo_db(fs, pool), &ffd->mtd),
-                          ffd->mtd);
-#ifdef SQLITE3_DEBUG
-  sqlite3_trace (ffd->mtd, sqlite_tracer, ffd->mtd);
-#endif
-  SVN_ERR(fs_sqlite_exec(ffd->mtd, SVN_MTD_CREATE_SQL, NULL, NULL));
-  
   SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVS_DIR,
                                                     pool),
                                       pool));
@@ -4435,11 +4221,8 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_io_write_version_file
           (path_format(fs, pool), format, pool));
   ((fs_fs_data_t *) fs->fsap_data)->format = format;
-  
-  SQLITE_ERR(sqlite3_close(ffd->mtd), ffd->mtd);
-
-  ffd->mtd = NULL;
-
+ 
+  SVN_ERR(svn_fs_merge_info__create_index(path, pool)); 
   return SVN_NO_ERROR;
 }
 
@@ -4536,7 +4319,6 @@ svn_fs_fs__open_txn(svn_fs_txn_t **txn_p,
   svn_fs_txn_t *txn;
   svn_node_kind_t kind;
   transaction_t *local_txn;
-  fs_txn_data_t *ftd;
 
   /* First check to see if the directory exists. */
   SVN_ERR(svn_io_check_path(path_txn_dir(fs, name, pool), &kind, pool));
@@ -4557,8 +4339,6 @@ svn_fs_fs__open_txn(svn_fs_txn_t **txn_p,
   txn->base_rev = svn_fs_fs__id_rev(local_txn->base_id);
 
   txn->vtable = &txn_vtable;
-  ftd = apr_pcalloc(pool, sizeof(*ftd));
-  txn->fsap_data = ftd;
   *txn_p = txn;
 
   return SVN_NO_ERROR;
