@@ -634,15 +634,6 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                              _("Working copy path '%s' does not exist in "
                                "repository"), e_path);
 
-  /* ### TODO: Fake the path_info->depth check just to see. */
-  if (info)
-    {
-      FILE *f = fopen("/tmp/kff.tmp", "a");
-      fprintf(f, "KFF: with recurse %d, and path_info '%ld:%s':\n",
-              recurse, info->rev, info->path);
-      fprintf(f, "   depth: %d\n", info->depth);
-      fclose(f);
-    }
   if (!recurse && ((s_entry && s_entry->kind == svn_node_dir)
                    || (t_entry && t_entry->kind == svn_node_dir)))
     /* ### TODO: This should handle depth now.  Aha, and I think I
