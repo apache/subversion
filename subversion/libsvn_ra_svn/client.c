@@ -259,7 +259,7 @@ static svn_error_t *ra_svn_set_path(void *baton, const char *path,
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb(?c)n",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb(?c)(n)",
                                path, rev, start_empty, lock_token,
                                (apr_uint64_t) depth));
   fflush(stdout);
@@ -285,7 +285,7 @@ static svn_error_t *ra_svn_link_path(void *baton, const char *path,
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb(?c)n",
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb(?c)(n)",
                                path, url, rev, start_empty, lock_token,
                                (apr_uint64_t) depth));
   return SVN_NO_ERROR;
