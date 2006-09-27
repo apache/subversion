@@ -1152,7 +1152,7 @@ test_list = [ None,
               XFail(status_nonrecursive_update_different_cwd),
               status_add_plus_conflict,
               inconsistent_eol,
-              XFail(status_update_with_incoming_props),
+              status_update_with_incoming_props,
               XFail(status_nonrecursive_update),
              ]
 
