@@ -1041,7 +1041,7 @@ tweak_statushash(void *baton,
         return SVN_NO_ERROR;
 
       /* Use the public API to get a statstruct, and put it into the hash. */
-      SVN_ERR(svn_wc_status2(&statstruct, path, NULL, pool));
+      SVN_ERR(svn_wc_status2(&statstruct, path, adm_access, pool));
       statstruct->repos_lock = repos_lock;
       apr_hash_set(statushash, apr_pstrdup(pool, path), 
                    APR_HASH_KEY_STRING, statstruct);
@@ -1575,13 +1575,23 @@ close_directory(void *dir_baton,
          that tweak_statushash won't do anything if repos_text_status
          is not svn_wc_status_added. */
       if (pb)
-        /* NOTE: When we add directory locking, we need to find a directory
-           lock here. */
-        SVN_ERR(tweak_statushash(pb, TRUE,
-                                 eb->adm_access,
-                                 db->path, TRUE,
-                                 repos_text_status,
-                                 repos_prop_status, NULL));
+        {
+          /* ### When we add directory locking, we need to find a
+             ### directory lock here. */
+          SVN_ERR(tweak_statushash(pb, TRUE,
+                                   eb->adm_access,
+                                   db->path, TRUE,
+                                   repos_text_status,
+                                   repos_prop_status, NULL));
+        }
+      else
+        {
+          /* We're editing the root dir of the WC.  As its repos
+             status info isn't otherwise set, set it directly to
+             trigger invocation of the status callback below. */
+          eb->anchor_status->repos_prop_status = repos_prop_status;
+          eb->anchor_status->repos_text_status = repos_text_status;
+        }
     }
 
   /* Handle this directory's statuses, and then note in the parent
