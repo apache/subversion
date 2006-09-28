@@ -854,7 +854,7 @@ class DiffGenerator:
                                  base_path, None, None, self.pool)
 
           label1 = '%s\t%s\t(r%s)' % (base_path, self.date, change.base_rev)
-          label2 = '/dev/null\t00:00:00 1970\t(deleted)'
+          label2 = '/dev/null\tThu Jan  1 00:00:00 1970\t(deleted)'
           singular = True
 
       elif change.action == svn.repos.CHANGE_ACTION_ADD \
@@ -886,7 +886,7 @@ class DiffGenerator:
             if self.diffsels.copy:
               diff = svn.fs.FileDiff(None, None, self.repos.root_this,
                                      change.path, self.pool)
-              label1 = '/dev/null\t00:00:00 1970\t' \
+              label1 = '/dev/null\tThu Jan  1 00:00:00 1970\t' \
                        '(empty, because file is newly added)'
               label2 = '%s\t%s\t(r%s, copy of r%s, %s)' \
                        % (change.path, self.date, self.repos.rev, \
@@ -903,7 +903,7 @@ class DiffGenerator:
           if self.diffsels.add:
             diff = svn.fs.FileDiff(None, None, self.repos.root_this,
                                    change.path, self.pool)
-            label1 = '/dev/null\t00:00:00 1970\t' \
+            label1 = '/dev/null\tThu Jan  1 00:00:00 1970\t' \
                      '(empty, because file is newly added)'
             label2 = '%s\t%s\t(r%s)' \
                      % (change.path, self.date, self.repos.rev)
@@ -1173,7 +1173,7 @@ class PropDiffGenerator:
         fp.write('\n')
       fp.close()
       if action_type == 'A' or action_type == 'C':
-        label_from = '/dev/null\t00:00:00 1970\t' \
+        label_from = '/dev/null\tThu Jan  1 00:00:00 1970\t' \
                      '(empty, because property is newly added)'
       elif action_type == 'W':
         label_from = '%s|%s\t%s\t(r%s, copy source)' \
@@ -1185,7 +1185,7 @@ class PropDiffGenerator:
         label_to = '%s|%s\t%s\t(r%s, copy of r%s, %s)' % \
                    (path, prop, date, rev, base_rev, base_path)
       elif action_type == 'D':
-        label_to = '/dev/null\t00:00:00 1970\t(deleted)'
+        label_to = '/dev/null\tThu Jan  1 00:00:00 1970\t(deleted)'
       else:
         label_to = '%s|%s\t%s\t(r%s)' % (path, prop, date, rev)
       diff = DiffContent(self.cfg.get_diff_cmd(self.group, {
@@ -1394,14 +1394,14 @@ class TextCommitRenderer:
     section_header_printed = False
 
     for prop in props:
+      if prop.item_kind == svn.core.svn_node_dir:
+        prop.path += '/'
       if prop.added_path_props or prop.added_props \
          or prop.copied_path_props or prop.deleted_path_props \
          or prop.deleted_props or prop.modified_props:
         if not section_header_printed:
           w('\n%s:\n' % section_header)
           section_header_printed = True
-        if prop.item_kind == svn.core.svn_node_dir:
-          prop.path += '/'
         w('   %s\n' % prop.path)
         self.__render_props('Added path', prop.added_path_props)
         self.__render_props('Added', prop.added_props)
@@ -1475,8 +1475,8 @@ class TextCommitRenderer:
     section_header_printed = False
 
     for prop in props:
-      if len(prop.added_path_props)+len(prop.added_props)+len(prop.copied_path_props) \
-         +len(prop.deleted_path_props)+len(prop.deleted_props)+len(prop.modified_props) > 0:
+      if prop.added_path_count+prop.added_count+prop.copied_path_count \
+         +prop.deleted_path_count+prop.deleted_count+prop.modified_count > 0:
         if not section_header_printed and not self.other_areas_written \
           and section_header:
           w('\n%s:\n' % section_header)
