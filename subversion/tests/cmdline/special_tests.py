@@ -406,6 +406,7 @@ def merge_symlink_into_file(sbox):
                        os.path.join(wc_dir, 'A', 'D'))
 
   expected_output = svntest.wc.State(wc_dir, {
+    'A/D'       : Item(verb='Sending'),
     'A/D/gamma' : Item(verb='Replacing'),
     })
 

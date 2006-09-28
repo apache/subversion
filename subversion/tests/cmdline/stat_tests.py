@@ -968,6 +968,7 @@ def status_add_plus_conflict(sbox):
     "?      " + os.path.join(wc_dir, "trunk", "file.merge-left.r4") + "\n",
     "?      " + os.path.join(wc_dir, "trunk", "file.merge-right.r5") + "\n",
     "?      " + os.path.join(wc_dir, "trunk", "file.working") + "\n",
+    " M     " + os.path.join(wc_dir, "trunk") + "\n",
     "C  +   " + os.path.join(wc_dir, "trunk", "file") + "\n",
   ]
 

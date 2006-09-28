@@ -1571,13 +1571,13 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   # need a sub-tree of it rather than straight copy.
   expected_disk = svntest.main.greek_state.subtree("A")
   expected_disk.add({
-    ""      : Item(props={SVN_PROP_MERGE_INFO : "/copy-of-A:3"}),
+    #""      : Item(props={SVN_PROP_MERGE_INFO : "/copy-of-A:3"}),
     "theta" : Item(theta_contents,
                    props={"svn:mime-type" : "application/octet-stream"}),
     })
   expected_status = svntest.actions.get_virginal_state(short_wc, 1)
   expected_status.add({
-    "A"       : Item(status=" M", wc_rev=1),
+    #"A"       : Item(status=" M", wc_rev=1),
     "A/theta" : Item(status="  ", wc_rev=3),
     })
   expected_status.remove("")  # top-level of the WC
