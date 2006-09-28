@@ -549,7 +549,7 @@ def create_python_hook_script (hook_path, hook_script_code):
 def compare_unordered_output(expected, actual):
   """Compare lists of output lines for equality disregarding the
      order of the lines"""
-  if len(actual) is not len(expected):
+  if len(actual) != len(expected):
     raise Failure("Length of expected output not equal to actual length")
   for aline in actual:
     try:
