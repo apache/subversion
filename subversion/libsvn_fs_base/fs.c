@@ -57,6 +57,7 @@
 #include "bdb/lock-tokens-table.h"
 
 #include "../libsvn_fs/fs-loader.h"
+#include "private/svn_fs_merge_info.h"
 
 
 /* Checking for return values, and reporting errors.  */
