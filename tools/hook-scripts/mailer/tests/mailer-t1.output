@@ -23,14 +23,14 @@ Added:
 
 Added: file1
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ file1	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file1
 
 Added: file2
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ file2	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file2
@@ -39,28 +39,28 @@ Diffs of changes in other areas also in this revision:
 
 Added: dir1/file3
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir1/file3	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file3
 
 Added: dir1/file4
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir1/file4	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file4
 
 Added: dir2/file5
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file5
 
 Added: dir2/file6
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir2/file6	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file6
@@ -86,42 +86,42 @@ Added:
 
 Added: dir1/file3
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir1/file3	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file3
 
 Added: dir1/file4
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir1/file4	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file4
 
 Added: dir2/file5
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file5
 
 Added: dir2/file6
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir2/file6	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file6
 
 Added: file1
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ file1	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file1
 
 Added: file2
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ file2	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file2
@@ -141,14 +141,14 @@ Added:
 
 Added: file1
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ file1	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file1
 
 Added: file2
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ file2	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file2
@@ -171,19 +171,6 @@ Modified:
    dir1/   (props changed)
    dir2/file5
 
-Property Changes:
-   file1
-      Added:
-         prop1
-   file2
-      Added:
-         prop1
-
-Property Changes in other areas also in this revision:
-   dir1/
-      Added:
-         prop3
-
 Modified: file2
 ==============================================================================
 --- file2	Sun Sep  9 01:46:40 2001	(r1)
@@ -194,14 +181,14 @@ Modified: file2
 
 Added property for: file1 (from r1, file1)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file1|prop1	Sun Sep  9 04:33:20 2001	(r2)
 @@ -0,0 +1 @@
 +propval1
 
 Added property for: file2 (from r1, file2)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file2|prop1	Sun Sep  9 04:33:20 2001	(r2)
 @@ -0,0 +1 @@
 +propval1
@@ -218,7 +205,7 @@ Modified: dir2/file5
 
 Added property for: dir1/ (from r1, dir1)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ dir1|prop3	Sun Sep  9 04:33:20 2001	(r2)
 @@ -0,0 +1 @@
 +propval3
@@ -269,29 +256,29 @@ Modified: file2
 
 Added property for: dir1/ (from r1, dir1)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ dir1|prop3	Sun Sep  9 04:33:20 2001	(r2)
 @@ -0,0 +1 @@
 +propval3
 
 Added property for: file1 (from r1, file1)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file1|prop1	Sun Sep  9 04:33:20 2001	(r2)
 @@ -0,0 +1 @@
 +propval1
 
 Added properties for: file2 (from r1, file2)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file2|prop1	Sun Sep  9 04:33:20 2001	(r2)
 @@ -0,0 +1 @@
 +propval1
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file2|svn:keywords	Sun Sep  9 04:33:20 2001	(r2)
 @@ -0,0 +1 @@
 +Id
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file2|svn:new_svn_prop	Sun Sep  9 04:33:20 2001	(r2)
 @@ -0,0 +1 @@
 +val
@@ -327,14 +314,14 @@ Modified: file2
 
 Added property for: file1 (from r1, file1)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file1|prop1	Sun Sep  9 04:33:20 2001	(r2)
 @@ -0,0 +1 @@
 +propval1
 
 Added property for: file2 (from r1, file2)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file2|prop1	Sun Sep  9 04:33:20 2001	(r2)
 @@ -0,0 +1 @@
 +propval1
@@ -364,14 +351,14 @@ Property Changes:
 
 Copied: dir2/file7 (from r2, file1)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir2/file7	Sun Sep  9 07:20:00 2001	(r3, copy of r2, file1)
 @@ -0,0 +1 @@
 +file1
 
 Copied path property for: dir2/file7 (from r2, file1)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ dir2/file7|prop1	Sun Sep  9 07:20:00 2001	(r3, copy of r2, file1)
 @@ -0,0 +1 @@
 +propval1
@@ -412,7 +399,7 @@ Copied and modified: dir3/file8 (from r2, file1)
 
 Copied path property for: dir3/file8 (from r2, file1)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ dir3/file8|prop1	Sun Sep  9 10:06:40 2001	(r4, copy of r2, file1)
 @@ -0,0 +1 @@
 +propval1
@@ -434,24 +421,9 @@ Modified:
    dir1/   (props changed)
    dir3/   (props changed)
 
-Property Changes:
-   file2
-      Added:
-         prop2
-      Deleted:
-         prop1
-
-Property Changes in other areas also in this revision:
-   dir1/
-      Modified:
-         prop3
-   dir3/
-      Deleted:
-         prop3
-
 Added property for: file2 (from r4, file2)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file2|prop2	Sun Sep  9 12:53:20 2001	(r5)
 @@ -0,0 +1 @@
 +propval2
@@ -459,7 +431,7 @@ Added property for: file2 (from r4, file2)
 Deleted property for: file2 (from r4, file2)
 ==============================================================================
 --- file2|prop1	Sun Sep  9 10:06:40 2001	(r4)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1 +0,0 @@
 -propval1
 
@@ -476,7 +448,7 @@ Copied path and modified property for: dir1/ (from r4, dir1)
 Deleted property for: dir3/ (from r4, dir3)
 ==============================================================================
 --- dir3|prop3	Sun Sep  9 10:06:40 2001	(r4)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1 +0,0 @@
 -propval4
 Group: All
@@ -521,13 +493,13 @@ Copied path and modified property for: dir1/ (from r4, dir1)
 Deleted property for: dir3/ (from r4, dir3)
 ==============================================================================
 --- dir3|prop3	Sun Sep  9 10:06:40 2001	(r4)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1 +0,0 @@
 -propval4
 
 Added property for: file2 (from r4, file2)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file2|prop2	Sun Sep  9 12:53:20 2001	(r5)
 @@ -0,0 +1 @@
 +propval2
@@ -535,11 +507,11 @@ Added property for: file2 (from r4, file2)
 Deleted properties for: file2 (from r4, file2)
 ==============================================================================
 --- file2|prop1	Sun Sep  9 10:06:40 2001	(r4)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1 +0,0 @@
 -propval1
 --- file2|svn:new_svn_prop	Sun Sep  9 10:06:40 2001	(r4)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1 +0,0 @@
 -val
 
@@ -572,7 +544,7 @@ Property Changes:
 
 Added property for: file2 (from r4, file2)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file2|prop2	Sun Sep  9 12:53:20 2001	(r5)
 @@ -0,0 +1 @@
 +propval2
@@ -580,7 +552,7 @@ Added property for: file2 (from r4, file2)
 Deleted property for: file2 (from r4, file2)
 ==============================================================================
 --- file2|prop1	Sun Sep  9 10:06:40 2001	(r4)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1 +0,0 @@
 -propval1
 Group: file plus other areas
@@ -604,7 +576,7 @@ Modified:
 
 Added: file9
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
@@ -644,7 +616,7 @@ Modified: dir1/file3
 
 Added: file9
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
@@ -663,7 +635,7 @@ Added:
 
 Added: file9
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
@@ -692,7 +664,7 @@ Modified:
 Deleted: file2
 ==============================================================================
 --- file2	Sun Sep  9 18:26:40 2001	(r6)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1,2 +0,0 @@
 -file2
 -change C1
@@ -701,7 +673,7 @@ Diffs of changes in other areas also in this revision:
 
 Added: dir1/file10
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir1/file10	Sun Sep  9 18:26:40 2001	(r7)
 @@ -0,0 +1 @@
 +file10
@@ -740,7 +712,7 @@ Property Changes:
 
 Added: dir1/file10
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir1/file10	Sun Sep  9 18:26:40 2001	(r7)
 @@ -0,0 +1 @@
 +file10
@@ -756,7 +728,7 @@ Modified: dir3/file3
 Deleted: file2
 ==============================================================================
 --- file2	Sun Sep  9 18:26:40 2001	(r6)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1,2 +0,0 @@
 -file2
 -change C1
@@ -764,11 +736,11 @@ Deleted: file2
 Deleted path properties for: file2 (from r6, file2)
 ==============================================================================
 --- file2|prop2	Sun Sep  9 15:40:00 2001	(r6)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1 +0,0 @@
 -propval2
 --- file2|svn:keywords	Sun Sep  9 15:40:00 2001	(r6)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1 +0,0 @@
 -Date
 Group: file
@@ -787,7 +759,7 @@ Deleted:
 Deleted: file2
 ==============================================================================
 --- file2	Sun Sep  9 18:26:40 2001	(r6)
-+++ /dev/null	00:00:00 1970	(deleted)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1,2 +0,0 @@
 -file2
 -change C1
@@ -814,7 +786,7 @@ Modified:
 
 Copied: dir6/file3 (from r7, dir3/file3)
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
 +++ dir6/file3	Sun Sep  9 21:13:20 2001	(r8, copy of r7, dir3/file3)
 @@ -0,0 +1,2 @@
 +file3
@@ -841,11 +813,6 @@ Added:
    file11   (contents, props changed)
 Modified:
    file9   (props changed)
-
-Property Changes:
-   file9
-      Added:
-         prop2
 
 Added: file11
 ==============================================================================
@@ -884,7 +851,7 @@ Binary file. No diff available.
 
 Added path property for: file11
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because property is newly added)
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
 +++ file11|svn:mime-type	Mon Sep 10 00:00:00 2001	(r9)
 @@ -0,0 +1 @@
 +application/octet-stream
@@ -934,11 +901,6 @@ change binary file
 Modified:
    file11
    file9   (props changed)
-
-Property Changes:
-   file9
-      Modified:
-         prop2
 
 Modified: file11
 ==============================================================================
