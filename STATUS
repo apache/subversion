@@ -82,7 +82,7 @@ Candidate changes:
     Votes:
       +1: rooneg, dlr
 
-  * r21566, r21638, r21641, r21669, r21685, r21696
+  * r21566, r21638, r21641, r21669, r21685, r21696, r21705
     Fix issue #2533, making 'svn status -u' show remotely changed
     properties on the root of a working copy.
     Justification:
