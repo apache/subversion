@@ -108,7 +108,7 @@ href="#merge-history-prereqs">prerequisites</a>.</p>
 <p>The first question that many people ask is "where should we store
 the merge information?" (what we store will be covered next).  A merge
 history property, named <code>SVN_MERGE_PROPERTY</code>
-(e.g. <code>svn:merged-revs</code>) stored in the revision properties,
+(e.g. <code>svn:mergeinfo</code>) stored in the revision properties,
 directory properties, and file properties.  Each will store the
 <em>full</em>, <em>complete</em> list of current merged in changes, as
 far as it knows.  This ensures that the merge algorithm and other
@@ -145,7 +145,7 @@ represented as a path, a colon, and then a comma separated revision
 list, containing one or more revision or revision ranges.  Revision
 range end and beginning points are separated by "-".</p>
 
-<div class="h4" id="merged-revs-grammar">
+<div class="h4" id="merge-info-grammar">
 <h4>Grammar</h4>
 <table>
 <tr>
@@ -173,7 +173,7 @@ range end and beginning points are separated by "-".</p>
   <td>revisionline (NEWLINE revisionline)*</td>
 </tr>
 </table>
-</div>  <!-- merged-revs-grammar -->
+</div>  <!-- merge-info-grammar -->
 
 <p>This list will <em>not</em> be stored in a canonicalized minimal
 form for a path (e.g. it may contain single revision numbers that
