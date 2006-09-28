@@ -21,6 +21,7 @@ import string, sys, os.path, re, time
 
 # Our testing module
 import svntest
+from svntest import wc
 
 
 # (abbreviation)
@@ -1003,10 +1004,13 @@ def status_update_with_incoming_props(sbox):
           "       *        1   " + wc_dir + "\n",
           "Status against revision:      2\n" ]
 
-  svntest.actions.run_and_verify_svn(None,
-                                     xout,
-                                     [],
-                                     "status", "-u", wc_dir)
+  output, errput = svntest.actions.run_and_verify_svn(None,
+                                                      None,
+                                                      [],
+                                                      "status", "-u",
+                                                      wc_dir)
+
+  svntest.main.compare_unordered_output(xout, output)
 
   xout = ["                1        1 jrandom      " +
           os.path.join(wc_dir, "iota") + "\n",
@@ -1014,10 +1018,54 @@ def status_update_with_incoming_props(sbox):
           "       *        1        1 jrandom      " + wc_dir + "\n",
           "Status against revision:      2\n" ]
 
-  svntest.actions.run_and_verify_svn(None,
-                                     xout,
-                                     [],
-                                     "status", "-uvN", wc_dir)
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
+                                                       "status", "-uvN",
+                                                       wc_dir)
+
+  svntest.main.compare_unordered_output(xout, output)
+
+  # Retrieve last changed date from svn log
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'log', wc_dir,
+                                                     '--xml', '-r1')
+
+  info_msg = "<date>"
+  for line in output:
+    if line.find(info_msg) >= 0:
+      time_str = line[:len(line)]
+      break
+  else:
+    raise svntest.Failure
+
+  xout = ["<?xml version=\"1.0\"?>\n",
+          "<status>\n",
+          "<target\n",
+          "   path=\"%s\">\n" % (wc_dir),
+          "<entry\n",
+          "   path=\"%s\">\n" % (wc_dir),
+          "<wc-status\n",
+          "   props=\"none\"\n",
+          "   item=\"normal\"\n",
+          "   revision=\"1\">\n",
+          "<commit\n",
+          "   revision=\"1\">\n",
+          "<author>%s</author>\n" % svntest.main.wc_author,
+          time_str,
+          "</commit>\n",
+          "</wc-status>\n",
+          "<repos-status\n",
+          "   props=\"modified\"\n",
+          "   item=\"none\">\n",
+          "</repos-status>\n",
+          "</entry>\n",
+          "<against\n",
+          "   revision=\"2\"/>\n",
+          "</target>\n",
+          "</status>\n",]
+
+  output, error = svntest.actions.run_and_verify_svn (None, xout, [],
+                                                      'status', wc_dir,
+                                                      '--xml', '-uN')
 
 ########################################################################
 # Run the tests
