@@ -461,20 +461,22 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  *
  * Some examples would be:
  *
- *   - "foo/bar"              -> "foo/bar",       (unspecified)
- *   - "foo/bar@13"           -> "foo/bar",       (number, 13)
- *   - "foo/bar@HEAD"         -> "foo/bar",       (head)
- *   - "foo/bar@{1999-12-31}" -> "foo/bar",       (date, 1999-12-31)
- *   - "http://a/b@27"        -> "http://a/b",    (number, 27)
- *   - "http://a/b@COMMITTED" -> "http://a/b",    (committed) [*]
- *   - "foo/bar@1:2"          -> error
- *   - "foo/bar@baz"          -> error
- *   - "foo/bar@"             -> error
- *   - "foo/bar/@13"          -> "foo/bar",       (number, 13)
- *   - "foo/bar@@13"          -> "foo/bar@",      (number, 13)
- *   - "foo/@bar@HEAD"        -> "foo/@bar",      (head)
- *   - "foo@/bar"             -> "foo@/bar",      (unspecified)
- *   - "foo@HEAD/bar"         -> "foo@HEAD/bar",  (unspecified)
+ *    "foo/bar"                      -> "foo/bar",       (unspecified)
+ *    "foo/bar@13"                   -> "foo/bar",       (number, 13)
+ *    "foo/bar@HEAD"                 -> "foo/bar",       (head)
+ *    "foo/bar@{1999-12-31}"         -> "foo/bar",       (date, 1999-12-31)
+ *    "http://a/b@27"                -> "http://a/b",    (number, 27)
+ *    "http://a/b@COMMITTED"         -> "http://a/b",    (committed) [*]
+ *    "http://a/b@{1999-12-31}       -> "http://a/b",    (date, 1999-12-31)
+ *    "http://a/b@%7B1999-12-31%7D   -> "http://a/b",    (date, 1999-12-31)
+ *    "foo/bar@1:2"                  -> error
+ *    "foo/bar@baz"                  -> error
+ *    "foo/bar@"                     -> error
+ *    "foo/bar/@13"                  -> "foo/bar",       (number, 13)
+ *    "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
+ *    "foo/@bar@HEAD"                -> "foo/@bar",      (head)
+ *    "foo@/bar"                     -> "foo@/bar",      (unspecified)
+ *    "foo@HEAD/bar"                 -> "foo@HEAD/bar",  (unspecified)
  *
  *   [*] Syntactically valid but probably not semantically useful.
  *

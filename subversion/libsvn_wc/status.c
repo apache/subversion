@@ -1039,13 +1039,8 @@ tweak_statushash(void *baton,
          correctly in the first, that path would either be mentioned
          as an 'add' or not mentioned at all, depending on how we
          eventually fix the bugs in non-recursivity.  See issue
-         #2122 for details. 
-
-         This behavior isn't appropriate for the root directory of our
-         WC, which may have properties which were changed remotely
-         (see issue #2533). */
-      if ((is_dir_baton && ((struct dir_baton *) baton)->parent_baton) &&
-          repos_text_status != svn_wc_status_added)
+         #2122 for details. */
+      if (repos_text_status != svn_wc_status_added)
         return SVN_NO_ERROR;
 
       /* Use the public API to get a statstruct, and put it into the hash. */
@@ -1575,26 +1570,38 @@ close_directory(void *dir_baton,
       if (db->added)
         {
           repos_text_status = svn_wc_status_added;
-          repos_prop_status = db->prop_changed ? svn_wc_status_added : 0;
+          repos_prop_status = db->prop_changed ? svn_wc_status_added
+                              : svn_wc_status_none;
         }
       else
         {
-          repos_text_status = db->text_changed ? svn_wc_status_modified : 0;
-          repos_prop_status = db->prop_changed ? svn_wc_status_modified : 0;
+          repos_text_status = db->text_changed ? svn_wc_status_modified
+                              : svn_wc_status_none;
+          repos_prop_status = db->prop_changed ? svn_wc_status_modified
+                              : svn_wc_status_none;
         }
 
-      /* Add this directory's properties to its parent directory's
-         status hash, or if it's the root of the WC, to its own status
-         hash.  Note that tweak_statushash() won't do anything if
-         repos_text_status is not svn_wc_status_added.
-
-         NOTE: When we add directory locking, we need to find a
-         directory lock here. */
-      SVN_ERR(tweak_statushash((pb ? pb : db), TRUE,
-                               eb->adm_access,
-                               db->path, TRUE,
-                               repos_text_status,
-                               repos_prop_status, NULL));
+      /* Maybe add this directory to its parent's status hash.  Note
+         that tweak_statushash won't do anything if repos_text_status
+         is not svn_wc_status_added. */
+      if (pb)
+        {
+          /* ### When we add directory locking, we need to find a
+             ### directory lock here. */
+          SVN_ERR(tweak_statushash(pb, TRUE,
+                                   eb->adm_access,
+                                   db->path, TRUE,
+                                   repos_text_status,
+                                   repos_prop_status, NULL));
+        }
+      else
+        {
+          /* We're editing the root dir of the WC.  As its repos
+             status info isn't otherwise set, set it directly to
+             trigger invocation of the status callback below. */
+          eb->anchor_status->repos_prop_status = repos_prop_status;
+          eb->anchor_status->repos_text_status = repos_text_status;
+        }
     }
 
   /* Handle this directory's statuses, and then note in the parent

@@ -118,7 +118,7 @@ static svn_error_t *initialize(void)
 
 svn_error_t *sasl_init(void)
 {
-  SVN_ERR(svn_atomic_init_once(&svn_ra_svn__sasl_status, initialize));
+  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, initialize));
   return SVN_NO_ERROR;
 }
 

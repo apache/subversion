@@ -2380,7 +2380,7 @@ do_merge(const char *initial_URL1,
              in preparation for the next revision range merge. */
           notify_b.nbr_notifications = 0;
           if (notify_b.skipped_paths != NULL)
-            svn_hash_clear(notify_b.skipped_paths);
+            svn_hash__clear(notify_b.skipped_paths);
         }
     }
 
@@ -2611,7 +2611,7 @@ do_single_file_merge(const char *initial_URL1,
              in preparation for the next revision range merge. */
           notify_b.nbr_notifications = 0;
           if (notify_b.skipped_paths != NULL)
-            svn_hash_clear(notify_b.skipped_paths);
+            svn_hash__clear(notify_b.skipped_paths);
         }
     }
 

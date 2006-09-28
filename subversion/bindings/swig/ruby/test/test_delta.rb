@@ -178,17 +178,26 @@ class SvnDeltaTest < Test::Unit::TestCase
 
   def test_path_driver
     editor = Svn::Delta::BaseEditor.new
-    data = []
+    sorted_paths = []
     callback = Proc.new do |parent_baton, path|
-      if /\/\z/ =~ path
-        data << [:dir, path]
-        parent_baton
-      else
-        data << [:file, path]
-      end
+      sorted_paths << path
     end
-    Svn::Delta.path_driver(editor, 0, ["/"], &callback)
-    assert_equal([[:dir, '/']], data)
+
+    targets = [
+      "/",
+      "/file1",
+      "/dir1",
+      "/dir2/file2",
+      "/dir2/dir3/file3",
+      "/dir2/dir3/file4"
+    ]
+    10.times do
+      x = rand(targets.size)
+      y = rand(targets.size)
+      targets[x], targets[y] = targets[y], targets[x]
+    end
+    Svn::Delta.path_driver(editor, 0, targets, &callback)
+    assert_equal(targets.sort, sorted_paths)
   end
   
   def test_changed

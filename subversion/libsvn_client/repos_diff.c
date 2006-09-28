@@ -794,7 +794,7 @@ close_directory(void *dir_baton,
   svn_error_t *err;
 
   if (eb->dry_run)
-    svn_hash_clear(svn_client__dry_run_deletions(eb->diff_cmd_baton));
+    svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton));
 
   if (b->propchanges->nelts > 0)
     {

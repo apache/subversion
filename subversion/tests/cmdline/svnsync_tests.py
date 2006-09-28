@@ -69,10 +69,10 @@ def run_init(dst_url, src_url):
     "initialize", dst_url, src_url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
-  if output != ['Copied properties for revision 0.\n']:
-    raise svntest.actions.SVNUnexpectedStdout(output)
   if errput:
     raise svntest.actions.SVNUnexpectedStderr(errput)
+  if output != ['Copied properties for revision 0.\n']:
+    raise svntest.actions.SVNUnexpectedStdout(output)
 
 
 def run_test(sbox, dump_file_name):
