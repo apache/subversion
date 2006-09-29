@@ -157,10 +157,7 @@ svn_client_propset2(const char *propname,
     {
       /* The rationale for not supporting this is that it makes it too
          easy to possibly overwrite someone else's change without noticing.
-         (See also tools/examples/svnput.c).
-
-         Besides, we don't have a client context for auth or log getting in
-         this function anyway. */
+         (See also tools/examples/svnput.c). */
       return svn_error_createf
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Setting property on non-local target '%s' is not supported"),
