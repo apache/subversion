@@ -90,7 +90,7 @@ Candidate changes:
       test.
     Branch: 1.4.x-issue-2533
     Votes:
-      +1: dlr
+      +1: dlr, pburba
 
   * r21657, r21662
     Fix issue #2602, making 'svn co URL@{DATE}' work.
