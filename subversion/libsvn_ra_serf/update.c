@@ -1830,7 +1830,6 @@ set_path(void *report_baton,
   serf_bucket_t *tmp;
   svn_stringbuf_t *path_buf;
 
-  /* ### TODO: send depth here */
   tmp = SERF_BUCKET_SIMPLE_STRING_LEN("<S:entry rev=\"",
                                       sizeof("<S:entry rev=\"")-1,
                                       report->sess->bkt_alloc);
