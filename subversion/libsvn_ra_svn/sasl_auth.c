@@ -40,7 +40,7 @@
 
 #include "ra_svn.h"
 
-/* Note: In addition to being used via svn_atomic_init_once to control
+/* Note: In addition to being used via svn_atomic__init_once to control
  *       initialization of the SASL code this will also be referenced in
  *       the various functions that work with sasl mutexes to determine
  *       if the sasl pool has been destroyed.  This should be safe, since
@@ -182,7 +182,7 @@ static svn_error_t *sasl_init_cb(void)
 
 svn_error_t *svn_ra_svn__sasl_init(void)
 {
-  SVN_ERR(svn_atomic_init_once(&svn_ra_svn__sasl_status, sasl_init_cb));
+  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, sasl_init_cb));
   return SVN_NO_ERROR;
 }
 

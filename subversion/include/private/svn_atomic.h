@@ -105,8 +105,8 @@ extern "C" {
  * @since New in 1.5.
  */
 svn_error_t *
-svn_atomic_init_once(volatile svn_atomic_t *global_status,
-                     svn_error_t *(*init_func)(void));
+svn_atomic__init_once(volatile svn_atomic_t *global_status,
+                      svn_error_t *(*init_func)(void));
 
 #ifdef __cplusplus
 }

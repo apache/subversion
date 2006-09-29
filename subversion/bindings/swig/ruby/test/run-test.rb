@@ -13,15 +13,8 @@ at_exit {FileUtils.rm_rf(ext_dir)}
 $LOAD_PATH.unshift(ext_dir)
 $LOAD_PATH.unshift(Dir.pwd)
 
-begin
-  require "gettext"
-  if Locale.respond_to?(:set)
-    Locale.set(nil)
-  else
-    Locale.setlocale(Locale::ALL, nil)
-  end
-rescue LoadError
-end
+require 'svn/core'
+Svn::Locale.set
 
 if Test::Unit::AutoRunner.respond_to?(:standalone?)
   exit Test::Unit::AutoRunner.run($0, File.dirname($0))

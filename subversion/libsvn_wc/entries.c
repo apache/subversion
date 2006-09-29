@@ -2743,7 +2743,7 @@ svn_wc__entries_init(const char *path,
 static svn_error_t *
 walker_helper(const char *dirpath,
               svn_wc_adm_access_t *adm_access,
-              const svn_wc_entry_callbacks_t *walk_callbacks,
+              const svn_wc_entry_callbacks2_t *walk_callbacks,
               void *walk_baton,
               svn_boolean_t show_hidden,
               svn_cancel_func_t cancel_func,
@@ -2755,17 +2755,24 @@ walker_helper(const char *dirpath,
   apr_hash_index_t *hi;
   svn_wc_entry_t *dot_entry;
 
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, show_hidden, pool));
+  SVN_ERR(walk_callbacks->handle_error
+          (dirpath, svn_wc_entries_read(&entries, adm_access, show_hidden,
+                                        pool), walk_baton, pool));
   
   /* As promised, always return the '.' entry first. */
   dot_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, 
                            APR_HASH_KEY_STRING);
   if (! dot_entry)
-    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                             _("Directory '%s' has no THIS_DIR entry"),
-                             svn_path_local_style(dirpath, pool));
+    return walk_callbacks->handle_error
+      (dirpath, svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                                  _("Directory '%s' has no THIS_DIR entry"),
+                                  svn_path_local_style(dirpath, pool)),
+       walk_baton, pool);
 
-  SVN_ERR(walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool));
+  SVN_ERR(walk_callbacks->handle_error
+          (dirpath,
+           walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool),
+           walk_baton, pool));
 
   /* Loop over each of the other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
@@ -2787,18 +2794,25 @@ walker_helper(const char *dirpath,
         continue;
 
       entrypath = svn_path_join(dirpath, key, subpool);
-      SVN_ERR(walk_callbacks->found_entry(entrypath, current_entry,
-                                          walk_baton, subpool));
+      SVN_ERR(walk_callbacks->handle_error
+              (entrypath, walk_callbacks->found_entry(entrypath, current_entry,
+                                                      walk_baton, subpool),
+               walk_baton, pool));
 
       if (current_entry->kind == svn_node_dir)
         {
           svn_wc_adm_access_t *entry_access;
-          SVN_ERR(svn_wc_adm_retrieve(&entry_access, adm_access, entrypath,
-                                      subpool));
-          SVN_ERR(walker_helper(entrypath, entry_access,
-                                walk_callbacks, walk_baton,
-                                show_hidden, cancel_func, cancel_baton,
-                                subpool));
+          SVN_ERR(walk_callbacks->handle_error
+                  (entrypath,
+                   svn_wc_adm_retrieve(&entry_access, adm_access, entrypath,
+                                       subpool),
+                   walk_baton, pool));
+
+          if (entry_access)
+            SVN_ERR(walker_helper(entrypath, entry_access,
+                                  walk_callbacks, walk_baton,
+                                  show_hidden, cancel_func, cancel_baton,
+                                  subpool));
         }
 
       svn_pool_clear(subpool);
@@ -2809,7 +2823,6 @@ walker_helper(const char *dirpath,
 }
 
 
-/* The public function */
 svn_error_t *
 svn_wc_walk_entries(const char *path,
                     svn_wc_adm_access_t *adm_access,
@@ -2823,10 +2836,36 @@ svn_wc_walk_entries(const char *path,
                               pool);
 }
 
+static svn_error_t *
+walker_default_error_handler(const char *path,
+                             svn_error_t *err,
+                             void *walk_baton,
+                             apr_pool_t *pool)
+{
+  return err;
+}
+
 svn_error_t *
 svn_wc_walk_entries2(const char *path,
                      svn_wc_adm_access_t *adm_access,
                      const svn_wc_entry_callbacks_t *walk_callbacks,
+                     void *walk_baton,
+                     svn_boolean_t show_hidden,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool)
+{
+  svn_wc_entry_callbacks2_t walk_cb2 = { walk_callbacks->found_entry,
+                                         walker_default_error_handler };
+  return svn_wc_walk_entries3(path, adm_access, &walk_cb2, walk_baton,
+                              show_hidden, cancel_func, cancel_baton, pool);
+}
+
+/* The public API. */
+svn_error_t *
+svn_wc_walk_entries3(const char *path,
+                     svn_wc_adm_access_t *adm_access,
+                     const svn_wc_entry_callbacks2_t *walk_callbacks,
                      void *walk_baton,
                      svn_boolean_t show_hidden,
                      svn_cancel_func_t cancel_func,
@@ -2838,21 +2877,27 @@ svn_wc_walk_entries2(const char *path,
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, show_hidden, pool));
 
   if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+    return walk_callbacks->handle_error
+      (path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                               _("'%s' is not under version control"),
+                               svn_path_local_style(path, pool)),
+       walk_baton, pool);
 
   if (entry->kind == svn_node_file)
-    return walk_callbacks->found_entry(path, entry, walk_baton, pool);
+    return walk_callbacks->handle_error
+      (path, walk_callbacks->found_entry(path, entry, walk_baton, pool),
+       walk_baton, pool);
 
   else if (entry->kind == svn_node_dir)
     return walker_helper(path, adm_access, walk_callbacks, walk_baton,
                          show_hidden, cancel_func, cancel_baton, pool);
 
   else
-    return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                             _("'%s' has an unrecognized node kind"),
-                             svn_path_local_style(path, pool));
+    return walk_callbacks->handle_error
+      (path, svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                               _("'%s' has an unrecognized node kind"),
+                               svn_path_local_style(path, pool)),
+       walk_baton, pool);
 }
 
 

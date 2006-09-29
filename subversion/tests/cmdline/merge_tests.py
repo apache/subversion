@@ -1954,8 +1954,7 @@ def merge_into_missing(sbox):
     'A/B/F/Q'       : Item(verb='Adding'),
     'A/B/F/foo'     : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/Q'       : Item(status='  ', wc_rev=2),
     'A/B/F/foo'     : Item(status='  ', wc_rev=2),

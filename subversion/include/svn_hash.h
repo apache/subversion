@@ -200,7 +200,7 @@ svn_error_t *svn_hash_diff(apr_hash_t *hash_a,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_hash_clear(apr_hash_t *hash);
+svn_error_t *svn_hash__clear(apr_hash_t *hash);
 
 /** @} */
 

@@ -1726,7 +1726,7 @@ def move_relative_paths(sbox):
 
 # Issue #2612.
 def ls_space_in_repo_name(sbox):
-  'basic ls'
+  'basic ls of repos with space in name'
 
   sbox.build(name = "repo with spaces")
   wc_dir = sbox.wc_dir

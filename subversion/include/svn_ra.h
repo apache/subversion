@@ -667,13 +667,13 @@ svn_error_t *svn_ra_get_commit_editor(svn_ra_session_t *session,
 
 /**
  * Fetch the contents and properties of file @a path at @a revision.
- * Interpret @a path relative to the URL in @a session.  Use
- * @a pool for all allocations.
+ * @a revision may be SVN_INVALID_REVNUM, indicating that the HEAD
+ * revision should be used.  Interpret @a path relative to the URL in
+ * @a session.  Use @a pool for all allocations.
  *
- * If @a revision is @c SVN_INVALID_REVNUM (meaning 'head') and
- * @a *fetched_rev is not @c NULL, then this function will set
- * @a *fetched_rev to the actual revision that was retrieved.  (Some
- * callers want to know, and some don't.) 
+ * If @a revision is @c SVN_INVALID_REVNUM and @a fetched_rev is not
+ * @c NULL, then set @a *fetched_rev to the actual revision that was
+ * retrieved.
  *
  * If @a stream is non @c NULL, push the contents of the file at @a
  * stream, do not call svn_stream_close() when finished.

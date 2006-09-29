@@ -519,7 +519,7 @@ test_list = [ None,
               checkout_broken_eol,
               checkout_creates_intermediate_folders,
               checkout_peg_rev,
-              XFail(checkout_peg_rev_date),
+              checkout_peg_rev_date,
               XFail(depth_one_checkout),
             ]
 

@@ -2168,7 +2168,7 @@ def update_wc_on_windows_drive(sbox):
     mu_path = os.path.join(wc_dir, 'A', 'mu')
     svntest.main.file_append (mu_path, '\nAppended text for mu')
     zeta_path = os.path.join(wc_dir, 'zeta')
-    svntest.main.file_append(zeta_path, "This is the file 'zeta'.\n")
+    svntest.main.file_append(zeta_path, "This is the file 'zeta'\n")
     svntest.main.run_svn(None, 'add', zeta_path)
 
     # Commit.
@@ -2191,7 +2191,7 @@ def update_wc_on_windows_drive(sbox):
     os.mkdir(dir1_path)
     svntest.main.run_svn(None, 'add', '-N', dir1_path)
     file1_path = os.path.join(dir1_path, 'file1')
-    svntest.main.file_append(file1_path, "This is the file 'file1'.\n")
+    svntest.main.file_append(file1_path, "This is the file 'file1'\n")
     svntest.main.run_svn(None, 'add', '-N', file1_path)
 
     expected_output = svntest.wc.State(wc_dir, {
@@ -2226,7 +2226,34 @@ def update_wc_on_windows_drive(sbox):
                                           None, None, None, None, None, 0,
                                           '-r', '1', wc_dir)
 
-    svntest.main.run_svn(None, 'update', wc_dir)
+    os.chdir(was_cwd)
+
+    # update to the latest version, but use the relative path 'X:'
+    wc_dir = drive + ":"
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/mu' : Item(status='U '),
+      'zeta' : Item(status='A '),
+      'dir1' : Item(status='A '),
+      'dir1/file1' : Item(status='A '),      
+      })    
+    expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+    expected_status.tweak(wc_rev=3)
+    expected_status.add({
+      'dir1' : Item(status='  ', wc_rev=3),
+      'dir1/file1' : Item(status='  ', wc_rev=3),
+      'zeta' : Item(status='  ', wc_rev=3),
+      })
+    expected_disk.add({
+      'zeta'    : Item("This is the file 'zeta'\n"),
+      'dir1/file1': Item("This is the file 'file1'\n"),
+      })
+    expected_disk.tweak('A/mu', contents = expected_disk.desc['A/mu'].contents
+                        + '\nAppended text for mu')
+    svntest.actions.run_and_verify_update(wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status)    
+    
   finally:
     os.chdir(was_cwd)
     # cleanup the virtual drive

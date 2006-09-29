@@ -1442,7 +1442,29 @@ svn_error_t *svn_wc_get_ancestry(char **url,
                                  apr_pool_t *pool);
 
 
-/** A callback vtable invoked by the generic entry-walker function. */
+/** A callback vtable invoked by the generic entry-walker function.
+ * @since New in 1.5.
+ */
+typedef struct svn_wc_entry_callbacks2_t
+{
+  /** An @a entry was found at @a path. */
+  svn_error_t *(*found_entry)(const char *path,
+                              const svn_wc_entry_t *entry,
+                              void *walk_baton,
+                              apr_pool_t *pool);
+
+  /** Handle the error @a err encountered while processing @a path.
+   * Wrap or squelch @a err as desired, and return an @c svn_error_t
+   * *, or @c SVN_NO_ERROR.
+   */
+  svn_error_t *(*handle_error)(const char *path,
+                               svn_error_t *err,
+                               void *walk_baton,
+                               apr_pool_t *pool);
+
+} svn_wc_entry_callbacks2_t;
+
+/** @deprecated Provided for backward compatibility with the 1.4 API. */
 typedef struct svn_wc_entry_callbacks_t
 {
   /** An @a entry was found at @a path. */
@@ -1451,10 +1473,7 @@ typedef struct svn_wc_entry_callbacks_t
                               void *walk_baton,
                               apr_pool_t *pool);
 
-  /* ### add more callbacks as new callers need them. */
-
 } svn_wc_entry_callbacks_t;
-
 
 /**
  * A generic entry-walker.
@@ -1481,7 +1500,23 @@ typedef struct svn_wc_entry_callbacks_t
  * distinguished by looking for @c SVN_WC_ENTRY_THIS_DIR in the 'name'
  * field of the entry.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_walk_entries3(const char *path,
+                                  svn_wc_adm_access_t *adm_access,
+                                  const svn_wc_entry_callbacks2_t 
+                                  *walk_callbacks,
+                                  void *walk_baton,
+                                  svn_boolean_t show_hidden,
+                                  svn_cancel_func_t cancel_func,
+                                  void *cancel_baton,
+                                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_walk_entries3(), but without cancellation support
+ * or error handling from @a walk_callbacks.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_walk_entries2(const char *path,
                                   svn_wc_adm_access_t *adm_access,
@@ -2316,6 +2351,70 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
 
 
 /* Commits. */
+
+
+/**
+ * Storage type for queued post-commit data.
+ *
+ * @since New in 1.5.
+ */
+typedef struct svn_wc_committed_queue_t svn_wc_committed_queue_t;
+
+
+/**
+ * Create a queue for use with svn_wc_queue_committed() and
+ * svn_wc_process_committed_queue().
+ *
+ * The returned queue and all further
+ * allocations required for queueing new items will also be done
+ * from @a pool.
+ */
+svn_wc_committed_queue_t *
+svn_wc_committed_queue_create(apr_pool_t *pool);
+
+
+
+/**
+ * Queue committed items to be processed later by
+ * svn_wc_process_committed_queue().
+ *
+ * The first time this function is called, @a *queue should
+ * be @c NULL to signal that initialization is required.
+ *
+ * All pointer data passed to this function
+ * (@a path, @adm_access, @a wcprop_changes
+ * and @a digest) should remain valid until the queue has been
+ * processed by svn_wc_process_committed_queue().
+ *
+ * The parameters have the same meaning as those
+ * for svn_wc_process_committed4().
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
+                       const char *path,
+                       svn_wc_adm_access_t *adm_access,
+                       svn_boolean_t recurse,
+                       apr_array_header_t *wcprop_changes,
+                       svn_boolean_t remove_lock,
+                       svn_boolean_t remove_changelist,
+                       const unsigned char *digest,
+                       apr_pool_t *pool);
+
+
+/**
+ * Like svn_wc_process_committed4(), but batch processes
+ * items queued with svn_wc_queue_committed().
+ */
+svn_error_t *
+svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
+                               svn_wc_adm_access_t *adm_access,
+                               svn_revnum_t new_revnum,
+                               const char *rev_date,
+                               const char *rev_author,
+                               apr_pool_t *pool);
+
 
 /**
  * Bump a successfully committed absolute @a path to @a new_revnum after a

@@ -21,6 +21,7 @@ import sys, os.path, re, time
 
 # Our testing module
 import svntest
+from svntest import wc
 
 
 # (abbreviation)
@@ -884,6 +885,7 @@ def status_ignored_dir(sbox):
   # run_and_verify_status doesn't handle this weird kind of entry.
   svntest.actions.run_and_verify_svn(None,
                                      ['I      *            ' + new_dir + "\n",
+                                      '       *        1   ' + wc_dir + "\n",
                                       'Status against revision:      2\n'], [],
                                      "status", "-u", wc_dir)
 
@@ -1008,7 +1010,7 @@ def inconsistent_eol(sbox):
 #----------------------------------------------------------------------
 # Test for issue #2533
 def status_update_with_incoming_props(sbox):
-  "run 'status -u' with incoming propchanges"
+  "run 'status -u' variations w/ incoming propchanges"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1021,7 +1023,7 @@ def status_update_with_incoming_props(sbox):
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
     ''  : Item(verb='Sending'),
-    'A' : Item(verb='Sending')
+    'A' : Item(verb='Sending'),
     })
 
   # Created expected status tree.
@@ -1053,14 +1055,72 @@ def status_update_with_incoming_props(sbox):
 
   # Can't use run_and_verify_status here because the out-of-date 
   # information in the status output isn't copied in the status tree.
-  xout = ["       *        1   " + wc_dir + "\n",
-          "       *        1   " + os.path.join(wc_dir, "A") + "\n",
+  xout = ["       *        1   " + A_path + "\n",
+          "       *        1   " + wc_dir + "\n",
           "Status against revision:      2\n" ]
 
-  svntest.actions.run_and_verify_svn(None,
-                                     xout,
-                                     [],
-                                     "status", "-u", wc_dir)
+  output, errput = svntest.actions.run_and_verify_svn(None,
+                                                      None,
+                                                      [],
+                                                      "status", "-u",
+                                                      wc_dir)
+
+  svntest.main.compare_unordered_output(xout, output)
+
+  xout = ["                1        1 jrandom      " +
+          os.path.join(wc_dir, "iota") + "\n",
+          "                1        1 jrandom      " + A_path + "\n",
+          "       *        1        1 jrandom      " + wc_dir + "\n",
+          "Status against revision:      2\n" ]
+
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
+                                                       "status", "-uvN",
+                                                       wc_dir)
+
+  svntest.main.compare_unordered_output(xout, output)
+
+  # Retrieve last changed date from svn log
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'log', wc_dir,
+                                                     '--xml', '-r1')
+
+  info_msg = "<date>"
+  for line in output:
+    if line.find(info_msg) >= 0:
+      time_str = line[:len(line)]
+      break
+  else:
+    raise svntest.Failure
+
+  xout = ["<?xml version=\"1.0\"?>\n",
+          "<status>\n",
+          "<target\n",
+          "   path=\"%s\">\n" % (wc_dir),
+          "<entry\n",
+          "   path=\"%s\">\n" % (wc_dir),
+          "<wc-status\n",
+          "   props=\"none\"\n",
+          "   item=\"normal\"\n",
+          "   revision=\"1\">\n",
+          "<commit\n",
+          "   revision=\"1\">\n",
+          "<author>%s</author>\n" % svntest.main.wc_author,
+          time_str,
+          "</commit>\n",
+          "</wc-status>\n",
+          "<repos-status\n",
+          "   props=\"modified\"\n",
+          "   item=\"none\">\n",
+          "</repos-status>\n",
+          "</entry>\n",
+          "<against\n",
+          "   revision=\"2\"/>\n",
+          "</target>\n",
+          "</status>\n",]
+
+  output, error = svntest.actions.run_and_verify_svn (None, xout, [],
+                                                      'status', wc_dir,
+                                                      '--xml', '-uN')
 
 #----------------------------------------------------------------------
 # Test for issue #2468
@@ -1140,7 +1200,7 @@ test_list = [ None,
               XFail(status_nonrecursive_update_different_cwd),
               status_add_plus_conflict,
               inconsistent_eol,
-              XFail(status_update_with_incoming_props),
+              status_update_with_incoming_props,
               XFail(status_nonrecursive_update),
              ]
 
