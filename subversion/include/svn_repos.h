@@ -386,8 +386,15 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  * @a text_deltas instructs the driver of the @a editor to enable
  * the generation of text deltas.
  *
- * @a recurse instructs the driver of the @a editor to send a recursive
- * delta (or not.)
+ * @a depth tells the driver of the @a editor whether and how deeply
+ * to recurse by default.  This depth can be overridden for subpaths
+ * by explicitly telling the reporter that they are at different
+ * depths.  For example, if the reported tree is the @c A subdir of
+ * the Greek Tree, at depth @c svn_depth_zero, but the @c A/B subdir
+ * is reported at depth @c svn_depth_infinity, then repository-side
+ * changes to @c A/mu, or underneath @c A/C and @c A/D, will not be
+ * reflected in the editor drive, but changes underneath @c A/B would
+ * be.
  *
  * @a ignore_ancestry instructs the driver to ignore node ancestry
  * when determining how to transmit differences.
@@ -400,6 +407,40 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  *
  * @note @a username isn't used and should be removed if this function is
  * revised.
+ */
+svn_error_t *
+svn_repos_begin_report2(void **report_baton,
+                        svn_revnum_t revnum,
+                        const char *username,
+                        svn_repos_t *repos,
+                        const char *fs_base,
+                        const char *target,
+                        const char *tgt_path,
+                        svn_boolean_t text_deltas,
+                        svn_depth_t depth,
+                        svn_boolean_t ignore_ancestry,
+                        const svn_delta_editor_t *editor,
+                        void *edit_baton,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_pool_t *pool);
+
+/**
+ * The same as svn_repos_begin_report2(), but taking a boolean
+ * @a recurse flag instead of an @c svn_depth_t depth.
+ *
+ * If @a recurse is true, the editor drive will behave as it would for
+ * a depth of @c svn_depth_infinity; if @a recurse is false, then as
+ * for @c svn_depth_zero.
+ *
+ * ### TODO: Here is the place where the difference between 'depth'
+ * ### and 'recurse' is most conspicuous.  If we had a depth like
+ * ### 'svn_depth_files_only', that would be a true equivalent to
+ * ### what recurse=false means today.  I think we've decided not to
+ * ### do that, and to just live with the subtle behavior change, but
+ * ### am dropping this comment here to make sure to confirm that.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_repos_begin_report(void **report_baton,
@@ -418,8 +459,9 @@ svn_repos_begin_report(void **report_baton,
                        void *authz_read_baton,
                        apr_pool_t *pool);
 
+
 /**
- * Given a @a report_baton constructed by svn_repos_begin_report(),
+ * Given a @a report_baton constructed by svn_repos_begin_report2(),
  * record the presence of @a path, at @a revision with depth @a depth,
  * in the current tree.
  *
@@ -479,7 +521,7 @@ svn_error_t *svn_repos_set_path(void *report_baton,
                                 apr_pool_t *pool);
 
 /**
- * Given a @a report_baton constructed by svn_repos_begin_report(), 
+ * Given a @a report_baton constructed by svn_repos_begin_report2(), 
  * record the presence of @a path in the current tree, containing the contents
  * of @a link_path at @a revision with depth @a depth.
  *
@@ -535,7 +577,7 @@ svn_error_t *svn_repos_link_path(void *report_baton,
                                  svn_boolean_t start_empty,
                                  apr_pool_t *pool);
 
-/** Given a @a report_baton constructed by svn_repos_begin_report(), 
+/** Given a @a report_baton constructed by svn_repos_begin_report2(), 
  * record the non-existence of @a path in the current tree.
  *
  * (This allows the reporter's driver to describe missing pieces of a
@@ -547,7 +589,7 @@ svn_error_t *svn_repos_delete_path(void *report_baton,
                                    const char *path,
                                    apr_pool_t *pool);
 
-/** Given a @a report_baton constructed by svn_repos_begin_report(),
+/** Given a @a report_baton constructed by svn_repos_begin_report2(),
  * finish the report and drive the editor as specified when the report
  * baton was constructed.
  *
@@ -563,7 +605,7 @@ svn_error_t *svn_repos_finish_report(void *report_baton,
                                      apr_pool_t *pool);
 
 
-/** Given a @a report_baton constructed by svn_repos_begin_report(),
+/** Given a @a report_baton constructed by svn_repos_begin_report2(),
  * abort the report.  This function can be called anytime before
  * svn_repos_finish_report() is called.
  *

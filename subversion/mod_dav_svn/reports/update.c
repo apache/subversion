@@ -913,7 +913,7 @@ dav_svn__update_report(const dav_resource *resource,
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = "";
   svn_boolean_t text_deltas = TRUE;
-  svn_boolean_t recurse = TRUE;
+  svn_depth_t depth = svn_depth_unknown;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
   dav_svn__authz_read_baton arb;
@@ -1013,13 +1013,25 @@ dav_svn__update_report(const dav_resource *resource,
             return derr;
           target = cdata;
         }
+      if (child->ns == ns && strcmp(child->name, "depth") == 0)
+        {
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          /* ### TODO: is this an abuse of SVN_STR_TO_REV()?
+             ### Should we make a new macro, or just convert
+             ### by hand? */
+          depth = SVN_STR_TO_REV(cdata);
+        }
       if (child->ns == ns && strcmp(child->name, "recursive") == 0)
         {
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          if (strcmp(cdata, "no") == 0)
-            recurse = FALSE;
+          if ((depth == svn_depth_unknown) && (strcmp(cdata, "no") == 0))
+            depth = svn_depth_zero;
+          /* The "yes" case is handled later, by checking if depth is
+             still svn_depth_unknown. */
         }
       if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
         {
@@ -1117,6 +1129,12 @@ dav_svn__update_report(const dav_resource *resource,
   if (! uc.send_all)
     text_deltas = FALSE;
 
+  /* If the client did not specify the depth (either via a 'depth'
+     element, for new clients, or via 'recurse' for old clients),
+     then default to infinite depth. */
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
   /* When we call svn_repos_finish_report, it will ultimately run
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
      case of an update or status, these paths should be identical.  In
@@ -1137,17 +1155,17 @@ dav_svn__update_report(const dav_resource *resource,
   editor->close_file = upd_close_file;
   editor->absent_file = upd_absent_file;
   editor->close_edit = upd_close_edit;
-  if ((serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
-                                     repos->repos, 
-                                     src_path, target,
-                                     dst_path,
-                                     text_deltas,
-                                     recurse,
-                                     ignore_ancestry,
-                                     editor, &uc,
-                                     dav_svn__authz_read_func(&arb),
-                                     &arb,
-                                     resource->pool)))
+  if ((serr = svn_repos_begin_report2(&rbaton, revnum, repos->username, 
+                                      repos->repos, 
+                                      src_path, target,
+                                      dst_path,
+                                      text_deltas,
+                                      depth,
+                                      ignore_ancestry,
+                                      editor, &uc,
+                                      dav_svn__authz_read_func(&arb),
+                                      &arb,
+                                      resource->pool)))
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "The state report gatherer could not be "
@@ -1166,7 +1184,6 @@ dav_svn__update_report(const dav_resource *resource,
           {
             const char *path;
             svn_revnum_t rev = SVN_INVALID_REVNUM;
-            svn_depth_t depth = svn_depth_infinity;
             const char *linkpath = NULL;
             const char *locktoken = NULL;
             svn_boolean_t start_empty = FALSE;
@@ -1374,6 +1391,9 @@ dav_svn__update_report(const dav_resource *resource,
       /* Compare subtree DST_PATH within a pristine revision to
          revision 0.  This should result in nothing but 'add' calls
          to the editor. */
+      /* ### TODO: Probably the incomplete-directories work will
+         ### require changing 'recurse' to 'depth' here too.  Keep an
+         ### eye on this... */
       serr = svn_repos_dir_delta(zero_root, "", target,
                                  uc.rev_root, dst_path,
                                  /* re-use the editor */

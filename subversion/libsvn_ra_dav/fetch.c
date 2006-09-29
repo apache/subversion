@@ -3052,8 +3052,7 @@ static const svn_ra_reporter3_t ra_dav_reporter = {
    in the directory represented by the SESSION's URL, or empty if the
    entire directory is meant to be the target.
 
-   If RECURSE is set, the operation will be recursive (intead of
-   "depth 1").
+   ### TODO: document DEPTH behavior
 
    If IGNORE_ANCESTRY is set, the server will transmit real diffs
    between the working copy and the target even if those objects are
@@ -3083,7 +3082,7 @@ make_reporter(svn_ra_session_t *session,
               svn_revnum_t revision,
               const char *target,
               const char *dst_path,
-              svn_boolean_t recurse,
+              svn_depth_t depth,
               svn_boolean_t ignore_ancestry,
               svn_boolean_t resource_walk,
               const svn_delta_editor_t *editor,
@@ -3181,14 +3180,12 @@ make_reporter(svn_ra_session_t *session,
       SVN_ERR(svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool));
     }
 
-  /* mod_dav_svn will assume recursive, unless it finds this element. */
-  if (!recurse)
-    {
-      const char *data = "<S:recursive>no</S:recursive>" DEBUG_CR;
-      SVN_ERR(svn_io_file_write_full(rb->tmpfile, data, strlen(data),
-                                     NULL, pool));
-    }
-
+  /* mod_dav_svn defaults to svn_depth_infinity, but we always send anyway. */
+  {
+    s = apr_psprintf(pool, "<S:depth>%d</S:depth>" DEBUG_CR, depth);
+    SVN_ERR(svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool));
+  }
+  
   /* mod_dav_svn will use ancestry in diffs unless it finds this element. */
   if (ignore_ancestry)
     {
@@ -3232,7 +3229,7 @@ svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
-                                    svn_boolean_t recurse,
+                                    svn_depth_t depth,
                                     const svn_delta_editor_t *wc_update,
                                     void *wc_update_baton,
                                     apr_pool_t *pool)
@@ -3243,7 +3240,7 @@ svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
                        revision_to_update_to,
                        update_target,
                        NULL,
-                       recurse,
+                       depth,
                        FALSE,
                        FALSE,
                        wc_update,
@@ -3260,7 +3257,7 @@ svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
                                     void **report_baton,
                                     const char *status_target,
                                     svn_revnum_t revision,
-                                    svn_boolean_t recurse,
+                                    svn_depth_t depth,
                                     const svn_delta_editor_t *wc_status,
                                     void *wc_status_baton,
                                     apr_pool_t *pool)
@@ -3271,7 +3268,7 @@ svn_error_t * svn_ra_dav__do_status(svn_ra_session_t *session,
                        revision,
                        status_target,
                        NULL,
-                       recurse,
+                       depth,
                        FALSE,
                        FALSE,
                        wc_status,
@@ -3288,7 +3285,7 @@ svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
                                     void **report_baton,
                                     svn_revnum_t revision_to_update_to,
                                     const char *update_target,
-                                    svn_boolean_t recurse,
+                                    svn_depth_t depth,
                                     const char *switch_url,
                                     const svn_delta_editor_t *wc_update,
                                     void *wc_update_baton,
@@ -3300,7 +3297,7 @@ svn_error_t * svn_ra_dav__do_switch(svn_ra_session_t *session,
                        revision_to_update_to,
                        update_target,
                        switch_url,
-                       recurse,
+                       depth,
                        TRUE,
                        FALSE, /* ### Disabled, pre-1.2 servers sometimes
                                  return incorrect resource-walk data */
@@ -3318,7 +3315,7 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                                   void **report_baton,
                                   svn_revnum_t revision,
                                   const char *diff_target,
-                                  svn_boolean_t recurse,
+                                  svn_depth_t depth,
                                   svn_boolean_t ignore_ancestry,
                                   svn_boolean_t text_deltas,
                                   const char *versus_url,
@@ -3332,7 +3329,7 @@ svn_error_t * svn_ra_dav__do_diff(svn_ra_session_t *session,
                        revision,
                        diff_target,
                        versus_url,
-                       recurse,
+                       depth,
                        ignore_ancestry,
                        FALSE,
                        wc_diff,

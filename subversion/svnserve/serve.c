@@ -42,6 +42,17 @@
 
 #include "server.h"
 
+/* Set DEPTH based on RECURSE, but if only DEPTH was unset.  This
+ * is because old clients send only recurse, not depth.
+ * 
+ * RECURSE is boolean, but DEPTH must be apr_uint64_t (rather than
+ * svn_depth_t) because it receives from svn_ra_svn_parse_tuple().
+ */
+#define MAYBE_UNFOLD_TO_DEPTH(recurse, depth)                       \
+    if ((depth) == SVN_RA_SVN_UNSPECIFIED_NUMBER)                   \
+      (depth) = ((recurse) ? svn_depth_infinity : svn_depth_zero)
+
+
 typedef struct {
   apr_pool_t *pool;
   svn_revnum_t *new_rev;
@@ -556,7 +567,7 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   server_baton_t *b, svn_revnum_t rev,
                                   const char *target, const char *tgt_path,
                                   svn_boolean_t text_deltas,
-                                  svn_boolean_t recurse,
+                                  svn_depth_t depth,
                                   svn_boolean_t ignore_ancestry)
 {
   const svn_delta_editor_t *editor;
@@ -567,12 +578,12 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_CMD_ERR(svn_repos_begin_report(&report_baton, rev, b->user, b->repos,
-                                     b->fs_path->data, target, tgt_path,
-                                     text_deltas, recurse, ignore_ancestry,
-                                     editor, edit_baton,
-                                     authz_check_access_cb_func(b),
-                                     b, pool));
+  SVN_CMD_ERR(svn_repos_begin_report2(&report_baton, rev, b->user, b->repos,
+                                      b->fs_path->data, target, tgt_path,
+                                      text_deltas, depth, ignore_ancestry,
+                                      editor, edit_baton,
+                                      authz_check_access_cb_func(b),
+                                      b, pool));
 
   rb.sb = b;
   rb.repos_url = svn_path_uri_decode(b->repos_url, pool);
@@ -1251,16 +1262,19 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *target;
   svn_boolean_t recurse;
+  apr_uint64_t depth;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb", &rev, &target,
-                                 &recurse));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?(?n)", &rev, &target,
+                                 &recurse, &depth));
   target = svn_path_canonicalize(target, pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
 
-  return accept_report(conn, pool, b, rev, target, NULL, TRUE, recurse, FALSE);
+  MAYBE_UNFOLD_TO_DEPTH(recurse, depth);
+  return accept_report(conn, pool, b, rev, target, NULL, TRUE,
+                       (svn_depth_t) depth, FALSE);
 }
 
 static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -1271,10 +1285,11 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *target;
   const char *switch_url, *switch_path;
   svn_boolean_t recurse;
+  apr_uint64_t depth;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc", &rev, &target,
-                                 &recurse, &switch_url));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc?(?n)", &rev, &target,
+                                 &recurse, &switch_url, &depth));
   target = svn_path_canonicalize(target, pool);
   switch_url = svn_path_canonicalize(switch_url, pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
@@ -1284,8 +1299,9 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           svn_path_uri_decode(switch_url, pool),
                           &switch_path, pool));
 
-  return accept_report(conn, pool, b, rev, target, switch_path, TRUE, recurse,
-                       TRUE);
+  MAYBE_UNFOLD_TO_DEPTH(recurse, depth);
+  return accept_report(conn, pool, b, rev, target, switch_path, TRUE,
+                       (svn_depth_t) depth, TRUE);
 }
 
 static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -1295,16 +1311,19 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_revnum_t rev;
   const char *target;
   svn_boolean_t recurse;
+  apr_uint64_t depth;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb?(?r)",
-                                 &target, &recurse, &rev));
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb?(?r)?(?n)",
+                                 &target, &recurse, &rev, &depth));
   target = svn_path_canonicalize(target, pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
   if (!SVN_IS_VALID_REVNUM(rev))
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
-  return accept_report(conn, pool, b, rev, target, NULL, FALSE, recurse,
-                       FALSE);
+
+  MAYBE_UNFOLD_TO_DEPTH(recurse, depth);
+  return accept_report(conn, pool, b, rev, target, NULL, FALSE,
+                       (svn_depth_t) depth, FALSE);
 }
 
 static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
@@ -1315,20 +1334,23 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *target, *versus_url, *versus_path;
   svn_boolean_t recurse, ignore_ancestry;
   svn_boolean_t text_deltas;
+  apr_uint64_t depth;
 
   /* Parse the arguments. */
   if (params->nelts == 5)
     {
       /* Clients before 1.4 don't send the text_deltas boolean. */
-      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbc", &rev, &target,
-                                     &recurse, &ignore_ancestry, &versus_url));
+      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbc?(?n)",
+                                     &rev, &target, &recurse,
+                                     &ignore_ancestry, &versus_url, &depth));
       text_deltas = TRUE;
     }
   else
     {
-      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbcb", &rev, &target,
-                                     &recurse, &ignore_ancestry, &versus_url,
-                                     &text_deltas));
+      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbcb?(?n)",
+                                     &rev, &target, &recurse,
+                                     &ignore_ancestry, &versus_url,
+                                     &text_deltas, &depth));
     }
   target = svn_path_canonicalize(target, pool);
   versus_url = svn_path_canonicalize(versus_url, pool);
@@ -1339,8 +1361,9 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                           svn_path_uri_decode(versus_url, pool),
                           &versus_path, pool));
 
+  MAYBE_UNFOLD_TO_DEPTH(recurse, depth);
   return accept_report(conn, pool, b, rev, target, versus_path,
-                       text_deltas, recurse, ignore_ancestry);
+                       text_deltas, (svn_depth_t) depth, ignore_ancestry);
 }
 
 /* Send a log entry to the client. */

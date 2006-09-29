@@ -572,7 +572,7 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                void **report_baton,
                                svn_revnum_t revision_to_update_to,
                                const char *update_target,
-                               svn_boolean_t recurse,
+                               svn_depth_t depth,
                                const svn_delta_editor_t *update_editor,
                                void *update_baton,
                                apr_pool_t *pool)
@@ -580,7 +580,7 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
   return session->vtable->do_update(session,
                                     reporter, report_baton,
                                     revision_to_update_to, update_target,
-                                    recurse, update_editor, update_baton,
+                                    depth, update_editor, update_baton,
                                     pool);
 }
 
@@ -601,7 +601,8 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
   return session->vtable->do_update(session,
                                     &(b->reporter3), &(b->reporter3_baton),
                                     revision_to_update_to, update_target,
-                                    recurse, update_editor, update_baton,
+                                    UNFOLD_TO_DEPTH(recurse),
+                                    update_editor, update_baton,
                                     pool);
 }
 
@@ -610,7 +611,7 @@ svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
                                void **report_baton,
                                svn_revnum_t revision_to_switch_to,
                                const char *switch_target,
-                               svn_boolean_t recurse,
+                               svn_depth_t depth,
                                const char *switch_url,
                                const svn_delta_editor_t *switch_editor,
                                void *switch_baton,
@@ -619,7 +620,7 @@ svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
   return session->vtable->do_switch(session,
                                     reporter, report_baton,
                                     revision_to_switch_to, switch_target,
-                                    recurse, switch_url, switch_editor,
+                                    depth, switch_url, switch_editor,
                                     switch_baton, pool);
 }
 
@@ -641,8 +642,9 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
   return session->vtable->do_switch(session,
                                     &(b->reporter3), &(b->reporter3_baton),
                                     revision_to_switch_to, switch_target,
-                                    recurse, switch_url, switch_editor,
-                                    switch_baton, pool);
+                                    UNFOLD_TO_DEPTH(recurse),
+                                    switch_url, switch_editor, switch_baton,
+                                    pool);
 }
 
 svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
@@ -650,14 +652,14 @@ svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
                                void **report_baton,
                                const char *status_target,
                                svn_revnum_t revision,
-                               svn_boolean_t recurse,
+                               svn_depth_t depth,
                                const svn_delta_editor_t *status_editor,
                                void *status_baton,
                                apr_pool_t *pool)
 {
   return session->vtable->do_status(session,
                                     reporter, report_baton,
-                                    status_target, revision, recurse,
+                                    status_target, revision, depth,
                                     status_editor, status_baton, pool);
 }
 
@@ -677,7 +679,8 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
 
   return session->vtable->do_status(session,
                                     &(b->reporter3), &(b->reporter3_baton),
-                                    status_target, revision, recurse,
+                                    status_target, revision,
+                                    UNFOLD_TO_DEPTH(recurse),
                                     status_editor, status_baton, pool);
 }
 
@@ -686,7 +689,7 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              void **report_baton,
                              svn_revnum_t revision,
                              const char *diff_target,
-                             svn_boolean_t recurse,
+                             svn_depth_t depth,
                              svn_boolean_t ignore_ancestry,
                              svn_boolean_t text_deltas,
                              const char *versus_url,
@@ -697,7 +700,7 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
   return session->vtable->do_diff(session,
                                   reporter, report_baton,
                                   revision, diff_target,
-                                  recurse, ignore_ancestry,
+                                  depth, ignore_ancestry,
                                   text_deltas, versus_url, diff_editor,
                                   diff_baton, pool);
 }
@@ -722,7 +725,7 @@ svn_error_t *svn_ra_do_diff2(svn_ra_session_t *session,
   return session->vtable->do_diff(session,
                                   &(b->reporter3), &(b->reporter3_baton),
                                   revision, diff_target,
-                                  recurse, ignore_ancestry,
+                                  UNFOLD_TO_DEPTH(recurse), ignore_ancestry,
                                   text_deltas, versus_url, diff_editor,
                                   diff_baton, pool);
 }
@@ -746,7 +749,7 @@ svn_error_t *svn_ra_do_diff(svn_ra_session_t *session,
   return session->vtable->do_diff(session,
                                   &(b->reporter3), &(b->reporter3_baton),
                                   revision, diff_target,
-                                  recurse, ignore_ancestry,
+                                  UNFOLD_TO_DEPTH(recurse), ignore_ancestry,
                                   TRUE, versus_url, diff_editor,
                                   diff_baton, pool);
 }

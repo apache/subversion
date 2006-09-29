@@ -31,6 +31,12 @@
 extern "C" {
 #endif
 
+/* Return svn_depth_t depth based on boolen RECURSE.  This is a helper
+   for translating from the old pre-depth API. */
+#define UNFOLD_TO_DEPTH(recurse) \
+  (recurse) ? svn_depth_infinity : svn_depth_zero
+
+
 /* The RA layer vtable. */
 typedef struct svn_ra__vtable_t {
   /* This field should always remain first in the vtable. */
@@ -109,7 +115,7 @@ typedef struct svn_ra__vtable_t {
                             void **report_baton,
                             svn_revnum_t revision_to_update_to,
                             const char *update_target,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             const svn_delta_editor_t *update_editor,
                             void *update_baton,
                             apr_pool_t *pool);
@@ -118,7 +124,7 @@ typedef struct svn_ra__vtable_t {
                             void **report_baton,
                             svn_revnum_t revision_to_switch_to,
                             const char *switch_target,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             const char *switch_url,
                             const svn_delta_editor_t *switch_editor,
                             void *switch_baton,
@@ -128,7 +134,7 @@ typedef struct svn_ra__vtable_t {
                             void **report_baton,
                             const char *status_target,
                             svn_revnum_t revision,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             const svn_delta_editor_t *status_editor,
                             void *status_baton,
                             apr_pool_t *pool);
@@ -137,7 +143,7 @@ typedef struct svn_ra__vtable_t {
                           void **report_baton,
                           svn_revnum_t revision,
                           const char *diff_target,
-                          svn_boolean_t recurse,
+                          svn_depth_t depth,
                           svn_boolean_t ignore_ancestry,
                           svn_boolean_t text_deltas,
                           const char *versus_url,
