@@ -394,8 +394,9 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     "from your post-revprop-change hook, or because the modification of\n"
     "revision properties has not been enabled in the pre-revprop-change\n"
     "hook).\n\n"
-    "NOTE: revision properties are not historied, so this command\n"
-    "will permanently overwrite the previous log message.\n"),
+    "NOTE: Revision properties are not versioned (e.g. no revision history\n"
+    "is maintained), so this command will permanently overwrite the previous\n"
+    "log message.\n"),
    {'r', svnadmin__bypass_hooks} },
 
   {"verify", subcommand_verify, {0}, N_
