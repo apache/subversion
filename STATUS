@@ -103,6 +103,15 @@ Candidate changes:
     Votes:
       +1: cmpilato, dlr
 
+  * r21720
+    Fix 'Checksum mismatch' error when receiving update for
+    locally replaced-with-history file.
+    Justification:
+      Breaks working copy update.
+    Votes:
+      +1: dionisos
+
+
 Approved changes:
 
   * r21293
