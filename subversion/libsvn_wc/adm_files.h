@@ -191,7 +191,7 @@ svn_error_t *svn_wc__close_text_base(apr_file_t *fp,
                                      apr_pool_t *pool);
 
 /* Close the revert-base for FILE.
- * FP was obtained from svn_wc__open_text_base().
+ * FP was obtained from svn_wc__open_revert_base().
  * Behaves like svn_wc__close_adm_file(), which see.
  */
 svn_error_t *svn_wc__close_revert_base(apr_file_t *fp,
