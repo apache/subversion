@@ -1628,6 +1628,7 @@ apply_textdelta(void *file_baton,
   svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *ent;
+  svn_boolean_t replaced;
 
   /* Open the text base for reading, unless this is a checkout. */
   hb->source = NULL;
@@ -1687,14 +1688,28 @@ apply_textdelta(void *file_baton,
              svn_path_local_style(tb, pool), ent->checksum, hex_digest);
         }
     }
-  
-  err = svn_wc__open_text_base(&hb->source, fb->path, APR_READ,
-                               handler_pool);
+
+  replaced = ent && ent->schedule == svn_wc_schedule_replace;
+
+  if (replaced)
+    err = svn_wc__open_revert_base(&hb->source, fb->path,
+                                   APR_READ,
+                                   handler_pool);
+  else
+    err = svn_wc__open_text_base(&hb->source, fb->path, APR_READ,
+                                 handler_pool);
+
   if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
     {
       if (hb->source)
-        svn_error_clear(svn_wc__close_text_base(hb->source, fb->path,
-                                                0, handler_pool));
+        {
+          if (replaced)
+            svn_error_clear(svn_wc__close_revert_base(hb->source, fb->path,
+                                                      0, handler_pool));
+          else
+            svn_error_clear(svn_wc__close_text_base(hb->source, fb->path,
+                                                    0, handler_pool));
+        }
       svn_pool_destroy(handler_pool);
       return err;
     }
@@ -1703,17 +1718,30 @@ apply_textdelta(void *file_baton,
       svn_error_clear(err);
       hb->source = NULL;  /* make sure */
     }
-  
+
   /* Open the text base for writing (this will get us a temporary file).  */
   hb->dest = NULL;
-  err = svn_wc__open_text_base(&hb->dest, fb->path,
-                               (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                               handler_pool);
+
+  if (replaced)
+    err = svn_wc__open_revert_base(&hb->dest, fb->path,
+                                   (APR_WRITE | APR_TRUNCATE | APR_CREATE),
+                                   handler_pool);
+  else
+    err = svn_wc__open_text_base(&hb->dest, fb->path,
+                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
+                                 handler_pool);
+
   if (err)
     {
       if (hb->dest)
-        svn_error_clear(svn_wc__close_text_base(hb->dest, fb->path, 0,
-                                                handler_pool));
+        {
+          if (replaced)
+            svn_error_clear(svn_wc__close_revert_base(hb->dest, fb->path, 0,
+                                                      handler_pool));
+          else
+            svn_error_clear(svn_wc__close_text_base(hb->dest, fb->path, 0,
+                                                    handler_pool));
+        }
       svn_pool_destroy(handler_pool);
       return err;
     }
@@ -2047,7 +2075,7 @@ merge_file(svn_stringbuf_t *log_accum,
       if (entry && entry->schedule == svn_wc_schedule_replace)
         is_replaced = TRUE;
     }
-  
+
   if (new_text_path)   /* is there a new text-base to install? */
     {
       if (!is_replaced)
@@ -2057,11 +2085,8 @@ merge_file(svn_stringbuf_t *log_accum,
         }
       else
         {
-          const char *tmp_txtb_real = svn_wc__text_base_path(base_name, TRUE,
-                                                             pool);
           txtb = svn_wc__text_revert_path(base_name, FALSE, pool);
           tmp_txtb = svn_wc__text_revert_path(base_name, TRUE, pool);
-          SVN_ERR(svn_io_file_rename(tmp_txtb_real, tmp_txtb, pool));
         }
     }
   else if (magic_props_changed) /* no new text base, but... */
