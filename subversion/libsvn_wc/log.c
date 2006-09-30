@@ -993,6 +993,8 @@ log_do_committed(struct log_runner *loggy,
   apr_time_t text_time = 0; /* By default, don't override old stamp. */
   svn_node_kind_t kind;
   svn_wc_adm_access_t *adm_access;
+  apr_finfo_t finfo;
+
 
   /* Determine the actual full path of the affected item. */
   if (! is_this_dir)
@@ -1188,60 +1190,6 @@ log_do_committed(struct log_runner *loggy,
     }
 
 
-  /* For file commit items, we need to "install" the user's working
-     file as the new `text-base' in the administrative area.  A copy
-     of this file should have been dropped into our `tmp/text-base'
-     directory during the commit process.  Part of this process
-     involves setting the textual timestamp for this entry.  We'd like
-     to just use the timestamp of the working file, but it is possible that
-     at some point during the commit, the real working file might have
-     changed again.  If that has happened, we'll use the timestamp of
-     the copy of this file in `tmp/text-base'. */
-  if (! is_this_dir)
-    {
-      const char *wf = full_path, *tmpf;
-
-      /* Make sure our working file copy is present in the temp area. */
-      tmpf = svn_wc__text_base_path(wf, 1, pool);
-      if ((err = svn_io_check_path(tmpf, &kind, pool)))
-        return svn_error_createf(pick_error_code(loggy), err,
-                                 _("Error checking existence of '%s'"), name);
-      if (kind == svn_node_file)
-        {
-          svn_boolean_t modified = FALSE;
-          apr_time_t wf_time, tmpf_time;
-
-          /* Get the timestamp from working and temporary base file. */
-          if ((err = svn_io_file_affected_time(&wf_time, wf, pool)))
-            return svn_error_createf
-              (pick_error_code(loggy), err,
-               _("Error getting 'affected time' for '%s'"),
-               svn_path_local_style(wf, pool));
-          
-          if ((err = svn_io_file_affected_time(&tmpf_time, tmpf, pool)))
-            return svn_error_createf
-              (pick_error_code(loggy), err,
-               _("Error getting 'affected time' for '%s'"),
-               svn_path_local_style(tmpf, pool));
-
-          /* Verify that the working file is the same as the tmpf file. */
-          if (wf_time != tmpf_time)
-            {
-              if ((err = svn_wc__versioned_file_modcheck(&modified, wf,
-                                                         loggy->adm_access,
-                                                         tmpf, TRUE, pool)))
-                return svn_error_createf(pick_error_code(loggy), err,
-                                         _("Error comparing '%s' and '%s'"),
-                                         svn_path_local_style(wf, pool),
-                                         svn_path_local_style(tmpf, pool));
-            }
-
-          /* If they are the same, use the working file's timestamp,
-             else use the tmpf file's timestamp. */
-          text_time = modified ? tmpf_time : wf_time;
-        }
-    }
-              
   /* Now check for property commits.  If a property commit occurred, a
      copy of the "working" property file should have been dumped in
      the admistrative `tmp' area.  We'll let that tmpfile's existence
@@ -1330,9 +1278,6 @@ log_do_committed(struct log_runner *loggy,
       }
   }   
 
-  /* Timestamps have been decided on, and prop-base has been installed
-     if necessary.  Now we install the new text-base (if present), and
-     possibly re-translate the working file. */
   if (! is_this_dir)
     {
       /* Install the new file, which may involve expanding keywords. */
@@ -1343,15 +1288,74 @@ log_do_committed(struct log_runner *loggy,
           (pick_error_code(loggy), err,
            _("Error replacing text-base of '%s'"), name);
 
-      
+      if ((err = svn_io_stat(&finfo, full_path, APR_FINFO_MIN | APR_FINFO_LINK,
+                             pool)))
+        return svn_error_createf(pick_error_code(loggy), err,
+                                 _("Error getting 'affected time' of '%s'"),
+                                 svn_path_local_style(full_path, pool));
       /* If the working file was overwritten (due to re-translation)
          or touched (due to +x / -x), then use *that* textual
          timestamp instead. */
       if (overwrote_working)
-        if ((err = svn_io_file_affected_time(&text_time, full_path, pool)))
-          return svn_error_createf(pick_error_code(loggy), err,
-                                   _("Error getting 'affected time' of '%s'"),
-                                   svn_path_local_style(full_path, pool));
+        text_time = finfo.mtime;
+      else
+        {
+          /* The working copy file hasn't been overwritten, meaning
+             we need to decide which timestamp to use. */
+
+          /* For file commit items, we need to "install" the user's working
+             file as the new `text-base' in the administrative area.  A copy
+             of this file should have been dropped into our `tmp/text-base'
+             directory during the commit process.  Part of this process
+             involves setting the textual timestamp for this entry.  We'd like
+             to just use the timestamp of the working file, but it is possible
+             that at some point during the commit, the real working file might
+             have changed again.  If that has happened, we'll use the
+             timestamp of the copy of this file in `tmp/text-base'. */
+
+          const char *tmpf;
+          svn_boolean_t modified = FALSE;
+          apr_finfo_t tmpf_finfo;
+
+          /* Assume for now our working file copy
+             is present in the temp area. */
+          tmpf = svn_wc__text_base_path(full_path, 1, pool);
+
+          /* If it isn't, we'll error out here... */
+          err = svn_io_stat(&tmpf_finfo, tmpf, APR_FINFO_MIN | APR_FINFO_LINK,
+                            pool);
+          if (err)
+            {
+              if (APR_STATUS_IS_ENOENT(err->apr_err)
+                  || APR_STATUS_IS_ENOTDIR(err->apr_err))
+                svn_error_clear(err);
+              else
+                return svn_error_createf
+                  (pick_error_code(loggy), err,
+                   _("Error getting 'affected time' for '%s'"),
+                   svn_path_local_style(tmpf, pool));
+            }
+          else
+            {
+              /* Verify that the working file is the same as the tmpf file. */
+              modified = finfo.size == tmpf_finfo.size;
+              if (finfo.mtime != tmpf_finfo.mtime && ! modified)
+                {
+                  err = svn_wc__versioned_file_modcheck(&modified, full_path,
+                                                        loggy->adm_access,
+                                                        tmpf, FALSE, pool);
+                  if (err)
+                    return svn_error_createf
+                      (pick_error_code(loggy), err,
+                       _("Error comparing '%s' and '%s'"),
+                       svn_path_local_style(full_path, pool),
+                       svn_path_local_style(tmpf, pool));
+                }
+              /* If they are the same, use the working file's timestamp,
+                 else use the tmpf file's timestamp. */
+              text_time = modified ? tmpf_finfo.mtime : finfo.mtime;
+            }
+        }
     }
     
   /* Files have been moved, and timestamps have been found.  It is now
