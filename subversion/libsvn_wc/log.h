@@ -151,7 +151,7 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
                            const char *name,
                            svn_wc_entry_t *entry,
-                           apr_uint32_t modify_flags,
+                           apr_uint64_t modify_flags,
                            apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME

@@ -734,7 +734,7 @@ log_do_modify_entry(struct log_runner *loggy,
   apr_hash_t *ah = svn_xml_make_att_hash(atts, loggy->pool);
   const char *tfile;
   svn_wc_entry_t *entry;
-  apr_uint32_t modify_flags;
+  apr_uint64_t modify_flags;
   const char *valuestr;
 
   if (loggy->rerun)
@@ -2090,7 +2090,7 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
                            const char *name,
                            svn_wc_entry_t *entry,
-                           apr_uint32_t modify_flags,
+                           apr_uint64_t modify_flags,
                            apr_pool_t *pool)
 {
   apr_hash_t *prop_hash = apr_hash_make(pool);
