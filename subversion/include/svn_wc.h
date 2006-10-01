@@ -1323,6 +1323,11 @@ typedef struct svn_wc_entry_t
    */
   const char *changelist;
 
+  /** The checksum used to verify the integrity of revert-base files.
+   * @since New in 1.5.
+   */
+  const char *revertbase_checksum;
+
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
 } svn_wc_entry_t;

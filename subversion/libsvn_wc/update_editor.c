@@ -714,7 +714,7 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
 {
   int i;
   svn_wc_entry_t tmp_entry;
-  apr_uint32_t flags = 0;
+  apr_uint64_t flags = 0;
 
   if (lock_state)
     *lock_state = svn_wc_notify_lock_state_unchanged;
@@ -835,7 +835,7 @@ open_root(void *edit_baton,
       /* For an update with a NULL target, this is equivalent to open_dir(): */
       svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t tmp_entry;
-      apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
+      apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
         SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
                                      
       /* Mark directory as being at target_revision, but incomplete. */  
@@ -1213,7 +1213,7 @@ open_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_entry_t tmp_entry;
-  apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
+  apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
     SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
                                  
   svn_wc_adm_access_t *adm_access;
@@ -1905,7 +1905,7 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
      in case we're overwriting an existing phantom 'deleted' or
      'absent' entry, be sure to remove the hiddenness. */
   svn_wc_entry_t tmp_entry;
-  apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND
+  apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND
     | SVN_WC__ENTRY_MODIFY_REVISION
     | SVN_WC__ENTRY_MODIFY_DELETED
     | SVN_WC__ENTRY_MODIFY_ABSENT;
@@ -3113,7 +3113,7 @@ svn_wc_add_repos_file2(const char *dst_path,
    */
   {
     svn_wc_entry_t tmp_entry;
-    apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
+    apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
 
     tmp_entry.schedule = svn_wc_schedule_add;
 
