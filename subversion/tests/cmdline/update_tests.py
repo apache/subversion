@@ -2291,15 +2291,25 @@ def update_wc_with_replaced_file(sbox):
     })    
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
-    'iota' : Item(status='C ', wc_rev=2),
+    'iota' : Item(status='C ', wc_rev='-', copied='+'),
     })
   expected_disk = svntest.main.greek_state.copy()    
-  expected_disk.tweak('iota', contents = expected_disk.desc['iota'].contents
-                      + "New line in 'iota'\n")
+  expected_disk.tweak('iota', contents =
+    """<<<<<<< .mine
+This is the file 'mu'.
+=======
+This is the file 'iota'.
+New line in 'iota'
+>>>>>>> .r2
+""")
+  conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        expected_status)
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        conflict_files)
 
 ########################################################################
 # Run the tests
@@ -2339,7 +2349,7 @@ test_list = [ None,
               forced_update,
               forced_update_failures,
               update_wc_on_windows_drive,
-              XFail(update_wc_with_replaced_file),
+              update_wc_with_replaced_file,
              ]
 
 if __name__ == '__main__':

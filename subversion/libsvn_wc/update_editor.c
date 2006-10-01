@@ -1652,7 +1652,9 @@ apply_textdelta(void *file_baton,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               svn_path_dirname(fb->path, pool), pool));
   SVN_ERR(svn_wc_entry(&ent, fb->path, adm_access, FALSE, pool));
-      
+
+  replaced = ent && ent->schedule == svn_wc_schedule_replace;
+
   /* Only compare checksums this file has an entry, and the entry has
      a checksum.  If there's no entry, it just means the file is
      created in this update, so there won't be any previously recorded
@@ -1663,8 +1665,11 @@ apply_textdelta(void *file_baton,
       unsigned char digest[APR_MD5_DIGESTSIZE];
       const char *hex_digest;
       const char *tb;
-      
-      tb = svn_wc__text_base_path(fb->path, FALSE, pool);
+
+      if (replaced)
+        tb = svn_wc__text_revert_path(fb->path, FALSE, pool);
+      else
+        tb = svn_wc__text_base_path(fb->path, FALSE, pool);
       SVN_ERR(svn_io_file_checksum(digest, tb, pool));
       hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
       
@@ -1680,7 +1685,7 @@ apply_textdelta(void *file_baton,
                svn_path_local_style(tb, pool), base_checksum, hex_digest);
         }
       
-      if (strcmp(hex_digest, ent->checksum) != 0)
+      if (! replaced && strcmp(hex_digest, ent->checksum) != 0)
         {
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
@@ -1688,8 +1693,6 @@ apply_textdelta(void *file_baton,
              svn_path_local_style(tb, pool), ent->checksum, hex_digest);
         }
     }
-
-  replaced = ent && ent->schedule == svn_wc_schedule_replace;
 
   if (replaced)
     err = svn_wc__open_revert_base(&hb->source, fb->path,
