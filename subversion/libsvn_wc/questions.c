@@ -269,6 +269,11 @@ compare_and_verify(svn_boolean_t *modified_p,
 
   need_translation = svn_subst_translation_required(eol_style, eol_str,
                                                     keywords, special, TRUE);
+  /* Special files can only be compared through their text bases:
+     they have no working copy representation
+     for example: symlinks aren't guaranteed to be valid, nor does
+                  it make sense to compare with the linked file-or-directory. */
+  compare_textbases |= special;
   if (verify_checksum || need_translation)
     {
       /* Reading files is necessary. */
@@ -279,7 +284,7 @@ compare_and_verify(svn_boolean_t *modified_p,
       const svn_wc_entry_t *entry;
       
       SVN_ERR(svn_io_file_open(&b_file_h, base_file, APR_READ,
-                              APR_OS_DEFAULT, pool));
+                               APR_OS_DEFAULT, pool));
 
       b_stream = svn_stream_from_aprfile2(b_file_h, FALSE, pool);
 
