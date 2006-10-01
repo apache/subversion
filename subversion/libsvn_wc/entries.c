@@ -2542,9 +2542,6 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
   if (entry->present_props)
     dupentry->present_props = apr_pstrdup(pool, entry->present_props);
-  if (entry->revertbase_checksum)
-    dupentry->revertbase_checksum
-      = apr_pstrdup(pool, entry->revertbase_checksum);
   return dupentry;
 }
 

@@ -72,7 +72,6 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS     "cachable-props"
 #define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
 #define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
-#define SVN_WC__ENTRY_ATTR_REVERT_CHECKSUM    "revertbase-checksum"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
