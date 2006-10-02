@@ -469,10 +469,11 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * - The client examines its working copy data, and produces a tree
  *   delta describing the changes to be committed.
  * - The client networking library consumes that delta, and sends them
- *   across the wire as an equivalent series of WebDAV requests.
- * - The Apache WebDAV module receives those requests and produces a
- *   tree delta --- hopefully equivalent to the one the client
- *   produced above.
+ *   across the wire as an equivalent series of network requests (for
+ *   example, to svnserve as an ra_svn protocol stream, or to an
+ *   Apache httpd server as WebDAV commands)
+ * - The server receives those requests and produces a tree delta ---
+ *   hopefully equivalent to the one the client produced above.
  * - The Subversion server module consumes that delta and commits an
  *   appropriate transaction to the filesystem.
  *
@@ -480,19 +481,19 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * - The Subversion server module talks to the filesystem and produces
  *   a tree delta describing the changes necessary to bring the
  *   client's working copy up to date.
- * - The Apache WebDAV module consumes this delta, and assembles a
- *   WebDAV reply representing the appropriate changes.
- * - The client networking library receives that WebDAV reply, and
- *   produces a tree delta --- hopefully equivalent to the one the
- *   Subversion server produced above.
+ * - The server consumes this delta, and assembles a reply
+ *   representing the appropriate changes.
+ * - The client networking library receives that reply, and produces a
+ *   tree delta --- hopefully equivalent to the one the Subversion
+ *   server produced above. 
  * - The working copy library consumes that delta, and makes the
  *   appropriate changes to the working copy.
  *
  * The simplest approach would be to represent tree deltas using the
  * obvious data structure.  To do an update, the server would
  * construct a delta structure, and the working copy library would
- * apply that structure to the working copy; WebDAV's job would simply
- * be to get the structure across the net intact.
+ * apply that structure to the working copy; the network layer's job
+ * would simply be to get the structure across the net intact.
  *
  * However, we expect that these deltas will occasionally be too large
  * to fit in a typical workstation's swap area.  For example, in
