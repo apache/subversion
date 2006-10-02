@@ -805,11 +805,13 @@ test_canonicalize(const char **msg,
     { "//hst/foo",            "//hst/foo" },
     { "//hst",                "/hst" },
     { "//hst/./",             "/hst" },
+#endif /* WIN32 or Cygwin */
+#if defined(WIN32)
     { "X:/foo",               "X:/foo" },
     { "X:/",                  "X:/" },
     { "X:",                   "X:" },
     { "X:foo",                "X:foo" },
-#endif /* WIN32 or Cygwin */
+#endif /* WIN32 */
     { NULL, NULL }
   };
   int i;
