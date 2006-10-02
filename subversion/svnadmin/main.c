@@ -194,6 +194,7 @@ static svn_opt_subcommand_t
   subcommand_recover,
   subcommand_rmlocks,
   subcommand_rmtxns,
+  subcommand_setrevprop,
   subcommand_setlog,
   subcommand_verify;
 
@@ -385,6 +386,19 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
    ("usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\n"
     "Delete the named transaction(s).\n"),
    {'q'} },
+
+  {"setrevprop", subcommand_setrevprop, {0}, N_
+   ("usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n\n"
+    "Set the property NAME on revision REVISION to the contents of FILE. Use\n"
+    "--bypass-hooks to avoid triggering the revision-property-related hooks\n"
+    "(for example, if you do not want an email notification sent\n"
+    "from your post-revprop-change hook, or because the modification of\n"
+    "revision properties has not been enabled in the pre-revprop-change\n"
+    "hook).\n\n"
+    "NOTE: Revision properties are not versioned (e.g. no revision history\n"
+    "is maintained), so this command will permanently overwrite the previous\n"
+    "value for the property.\n"),
+   {'r', svnadmin__bypass_hooks} },
 
   {"setlog", subcommand_setlog, {0}, N_
    ("usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n\n"
@@ -911,41 +925,25 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
-/* This implements `svn_opt_subcommand_t'. */
+/* A helper for the 'setrevprop' and 'setlog' commands. */
 static svn_error_t *
-subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+set_revprop(const char *prop_name, const char *filename,
+            struct svnadmin_opt_state *opt_state, apr_pool_t *pool)
 {
-  struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
+  svn_string_t *prop_value = svn_string_create("", pool);
   svn_stringbuf_t *file_contents;
   const char *filename_utf8;
-  apr_array_header_t *args;
-  svn_string_t *log_contents = svn_string_create("", pool);
 
-  if (opt_state->start_revision.kind != svn_opt_revision_number)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("Missing revision"));
-  else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("Only one revision allowed"));
-    
-  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
-
-  if (args->nelts != 1)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("Exactly one file argument required"));
-  
-  SVN_ERR(svn_utf_cstring_to_utf8(&filename_utf8,
-                                  APR_ARRAY_IDX(args, 0, const char *),
-                                  pool));
+  SVN_ERR(svn_utf_cstring_to_utf8(&filename_utf8, filename, pool));
   filename_utf8 = svn_path_internal_style(filename_utf8, pool);
+
   SVN_ERR(svn_stringbuf_from_file(&file_contents, filename_utf8, pool)); 
 
-  log_contents->data = file_contents->data;
-  log_contents->len = file_contents->len;
+  prop_value->data = file_contents->data;
+  prop_value->len = file_contents->len;
 
-  SVN_ERR(svn_subst_translate_string(&log_contents, log_contents,
-                                     NULL, pool));
+  SVN_ERR(svn_subst_translate_string(&prop_value, prop_value, NULL, pool));
 
   /* Open the filesystem  */
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
@@ -956,17 +954,70 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     {
       svn_fs_t *fs = svn_repos_fs(repos);
       SVN_ERR(svn_fs_change_rev_prop 
-              (fs, opt_state->start_revision.value.number, 
-               SVN_PROP_REVISION_LOG, log_contents, pool));
+              (fs, opt_state->start_revision.value.number,
+               prop_name, prop_value, pool));
     }
   else
     {
       SVN_ERR(svn_repos_fs_change_rev_prop2
               (repos, opt_state->start_revision.value.number,
-               NULL, SVN_PROP_REVISION_LOG, log_contents, NULL, NULL, pool));
+               NULL, prop_name, prop_value, NULL, NULL, pool));
     }
 
   return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_setrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  apr_array_header_t *args;
+
+  if (opt_state->start_revision.kind != svn_opt_revision_number)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Missing revision"));
+  else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Only one revision allowed"));
+
+  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
+
+  if (args->nelts != 2)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Exactly one property name and one file "
+                               "argument required"));
+
+  return set_revprop(APR_ARRAY_IDX(args, 0, const char *),
+                     APR_ARRAY_IDX(args, 1, const char *),
+                     opt_state, pool);
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  apr_array_header_t *args;
+
+  if (opt_state->start_revision.kind != svn_opt_revision_number)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Missing revision"));
+  else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Only one revision allowed"));
+
+  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
+
+  if (args->nelts != 1)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Exactly one file argument required"));
+
+  return set_revprop(SVN_PROP_REVISION_LOG,
+                     APR_ARRAY_IDX(args, 0, const char *),
+                     opt_state, pool);
 }
 
 

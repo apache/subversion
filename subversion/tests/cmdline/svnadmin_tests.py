@@ -355,8 +355,47 @@ def hotcopy_format(sbox):
   if contents1 != contents2:
     print "Error: db/format file contents do not match after hotcopy"
     raise svntest.Failure
-  
 
+#----------------------------------------------------------------------
+
+def setrevprop(sbox):
+  "'setlog' and 'setrevprop', bypassing hooks'"
+  sbox.build()
+
+  # Try a simple log modification, without bypassing hook scripts.
+  iota_path = os.path.join(sbox.wc_dir, "iota")
+  output, errput = svntest.main.run_svnadmin("setlog", sbox.repo_dir,
+                                             "-r0", "--bypass-hooks",
+                                             iota_path)
+  if errput:
+    print "Error: 'setlog' failed"
+    raise svntest.Failure
+
+  # Verify that the revprop value matches what we set when retrieved
+  # through the client.
+  svntest.actions.run_and_verify_svn(None,
+                                     [ "This is the file 'iota'.\n", "\n" ],
+                                     [], "propget", "--revprop", "-r0",
+                                     "svn:log", sbox.wc_dir)
+
+  # Try an author log modification, this time bypassing hook scripts.
+  foo_path = os.path.join(sbox.wc_dir, "foo")
+  fp = open(foo_path, "w")
+  fp.write("foo")
+  fp.close()
+
+  output, errput = svntest.main.run_svnadmin("setrevprop", sbox.repo_dir,
+                                             "-r0", "--bypass-hooks",
+                                             "svn:author", foo_path)
+  if errput:
+    print "Error: 'setrevprop' failed"
+    raise svntest.Failure
+
+  # Verify that the revprop value matches what we set when retrieved
+  # through the client.
+  svntest.actions.run_and_verify_svn(None, [ "foo\n" ], [], "propget",
+                                     "--revprop", "-r0", "svn:author",
+                                     sbox.wc_dir)
 
 
 ########################################################################
@@ -373,6 +412,7 @@ test_list = [ None,
               dump_quiet,
               hotcopy_dot,
               hotcopy_format,
+              setrevprop,
              ]
 
 if __name__ == '__main__':
