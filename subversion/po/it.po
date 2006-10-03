@@ -88,8 +88,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-10-02 05:00+0200\n"
-"PO-Revision-Date: 2006-10-02 09:02+0200\n"
+"POT-Creation-Date: 2006-10-03 05:00+0200\n"
+"PO-Revision-Date: 2006-10-03 08:46+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -5534,7 +5534,7 @@ msgstr "URL non valida '%s'"
 msgid "'%s' has invalid revision"
 msgstr "'%s' ha una revisione non valida"
 
-#: svn/info-cmd.c:267 svnadmin/main.c:1047
+#: svn/info-cmd.c:267 svnadmin/main.c:1098
 #, c-format
 msgid "Path: %s\n"
 msgstr "Percorso: %s\n"
@@ -5757,7 +5757,7 @@ msgstr "forza l'esecuzione dell'operazione"
 msgid "force validity of log message source"
 msgstr "forza la validità della sorgente di un messaggio di log"
 
-#: svn/main.c:63 svn/main.c:64 svnadmin/main.c:227 svnadmin/main.c:230
+#: svn/main.c:63 svn/main.c:64 svnadmin/main.c:228 svnadmin/main.c:231
 #: svndumpfilter/main.c:780 svndumpfilter/main.c:783 svnlook/main.c:90
 #: svnlook/main.c:93 svnsync/main.c:104 svnsync/main.c:106
 msgid "show help on a subcommand"
@@ -5826,7 +5826,7 @@ msgstr "restituisce un output adatto alla concatenazione"
 msgid "treat value as being in charset encoding ARG"
 msgstr "tratta il valore come se fosse codificato in ARG"
 
-#: svn/main.c:92 svnadmin/main.c:233 svndumpfilter/main.c:786
+#: svn/main.c:92 svnadmin/main.c:234 svndumpfilter/main.c:786
 #: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:102
 #: svnversion/main.c:125
 msgid "show program version information"
@@ -5961,7 +5961,7 @@ msgstr "opera su una proprietà di revisione (usare con -r)"
 msgid "relocate via URL-rewriting"
 msgstr "riloca tramite la riscrittura delle URL"
 
-#: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:100
+#: svn/main.c:168 svnadmin/main.c:270 svnsync/main.c:100
 msgid "read user configuration files from directory ARG"
 msgstr "leggi i file di configurazione personali dalla directory ARG"
 
@@ -7138,7 +7138,7 @@ msgstr ""
 "c,\n"
 "prova '-r N:M' invece di '-r N -r M'"
 
-#: svn/main.c:1056 svnadmin/main.c:1245
+#: svn/main.c:1056 svnadmin/main.c:1296
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Errore di sintassi nell'argomento di revisione '%s'"
@@ -7156,7 +7156,7 @@ msgstr "Errore di sintassi nell'argomento native-eol '%s'"
 msgid "Subcommand argument required\n"
 msgstr "È necessario specificare un argomento per il comando\n"
 
-#: svn/main.c:1328 svnadmin/main.c:1368 svndumpfilter/main.c:1226
+#: svn/main.c:1328 svnadmin/main.c:1419 svndumpfilter/main.c:1226
 #: svnlook/main.c:2056
 #, c-format
 msgid "Unknown command: '%s'\n"
@@ -7659,52 +7659,52 @@ msgstr "È richiesto un repository come argomento"
 msgid "'%s' is an URL when it should be a path"
 msgstr "'%s' è un'URL quando dovrebbe essere un percorso"
 
-#: svnadmin/main.c:236
+#: svnadmin/main.c:237
 msgid "specify revision number ARG (or X:Y range)"
 msgstr "specifica il numero di revisione ARG (o l'insieme X:Y)"
 
-#: svnadmin/main.c:239
+#: svnadmin/main.c:240
 msgid "dump incrementally"
 msgstr "effettua un dump incrementale"
 
-#: svnadmin/main.c:242
+#: svnadmin/main.c:243
 msgid "use deltas in dump output"
 msgstr "usa i delta nell'output del dump"
 
-#: svnadmin/main.c:245
+#: svnadmin/main.c:246
 msgid "bypass the repository hook system"
 msgstr "scavalca il sistema di hook del repository"
 
-#: svnadmin/main.c:248
+#: svnadmin/main.c:249
 msgid "no progress (only errors) to stderr"
 msgstr "nessuna informazione di avanzamento (solo errori) in stderr"
 
-#: svnadmin/main.c:251
+#: svnadmin/main.c:252
 msgid "ignore any repos UUID found in the stream"
 msgstr "ignora ogni UUID di repository nel flusso di dati"
 
-#: svnadmin/main.c:254
+#: svnadmin/main.c:255
 msgid "set repos UUID to that found in stream, if any"
 msgstr ""
 "imposta l'UUID del repository a quello trovato nel flusso di dati, se esiste"
 
-#: svnadmin/main.c:257
+#: svnadmin/main.c:258
 msgid "type of repository: 'fsfs' (default) or 'bdb'"
 msgstr "tipo di repository: 'fsfs' (default) o 'bdb'"
 
-#: svnadmin/main.c:260
+#: svnadmin/main.c:261
 msgid "load at specified directory in repository"
 msgstr "carica nella directory specificata del repository"
 
-#: svnadmin/main.c:263
+#: svnadmin/main.c:264
 msgid "disable fsync at transaction commit [Berkeley DB]"
 msgstr "disabilita l'fsync al commit delle transazioni [Berkeley DB]"
 
-#: svnadmin/main.c:266
+#: svnadmin/main.c:267
 msgid "disable automatic log file removal [Berkeley DB]"
 msgstr "disabilita la rimozione automatica dei file di log [Berkeley DB]"
 
-#: svnadmin/main.c:272
+#: svnadmin/main.c:273
 msgid ""
 "remove redundant Berkeley DB log files\n"
 "                             from source repository [Berkeley DB]"
@@ -7712,19 +7712,19 @@ msgstr ""
 "rimuove i file di log ridondanti del Berkeley DB \n"
 "dal repository sorgente [Berkeley DB]"
 
-#: svnadmin/main.c:276
+#: svnadmin/main.c:277
 msgid "call pre-commit hook before committing revisions"
 msgstr ""
 "invoca l'aggancio di pre-commit prima di effettuare il \n"
 "commit delle revisioni"
 
-#: svnadmin/main.c:279
+#: svnadmin/main.c:280
 msgid "call post-commit hook after committing revisions"
 msgstr ""
 "invoca l'aggancio di post-commit dopo avere effettuato\n"
 "il commit delle revisioni"
 
-#: svnadmin/main.c:282
+#: svnadmin/main.c:283
 msgid ""
 "wait instead of exit if the repository is in\n"
 "                             use by another process"
@@ -7732,7 +7732,7 @@ msgstr ""
 "attende invece di uscire se il repository è\n"
 "in uso da un altro processo"
 
-#: svnadmin/main.c:286
+#: svnadmin/main.c:287
 msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
@@ -7740,7 +7740,7 @@ msgstr ""
 "usa un formato compatibile con le versioni di Subversion\n"
 "precedenti alla 1.4"
 
-#: svnadmin/main.c:299
+#: svnadmin/main.c:300
 msgid ""
 "usage: svnadmin crashtest REPOS_PATH\n"
 "\n"
@@ -7753,7 +7753,7 @@ msgstr ""
 "simulando in questo modo un processo che va in crash tenendo aperta la\n"
 "comunicazione con il repository.\n"
 
-#: svnadmin/main.c:305
+#: svnadmin/main.c:306
 msgid ""
 "usage: svnadmin create REPOS_PATH\n"
 "\n"
@@ -7763,7 +7763,7 @@ msgstr ""
 "\n"
 "Crea un nuovo repository vuoto in PERCORSO_REPOSITORY.\n"
 
-#: svnadmin/main.c:311
+#: svnadmin/main.c:312
 msgid ""
 "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
 "\n"
@@ -7781,7 +7781,7 @@ msgstr ""
 "differenze (o delta) rispetto alla revisione precedente. Se non viene\n"
 "specificata nessuna revisione verrà deltificata la revisione HEAD.\n"
 
-#: svnadmin/main.c:320
+#: svnadmin/main.c:321
 msgid ""
 "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
 "\n"
@@ -7802,7 +7802,7 @@ msgstr ""
 "la differenza rispetto alla revisione precedente anziché lo scarico "
 "completo.\n"
 
-#: svnadmin/main.c:330
+#: svnadmin/main.c:331
 msgid ""
 "usage: svnadmin help [SUBCOMMAND...]\n"
 "\n"
@@ -7812,7 +7812,7 @@ msgstr ""
 "\n"
 "Descrive l'uso di questo programma o dei suoi comandi.\n"
 
-#: svnadmin/main.c:335
+#: svnadmin/main.c:336
 msgid ""
 "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
 "\n"
@@ -7822,7 +7822,7 @@ msgstr ""
 "\n"
 "Crea una copia a caldo di un repository.\n"
 
-#: svnadmin/main.c:340
+#: svnadmin/main.c:341
 msgid ""
 "usage: svnadmin list-dblogs REPOS_PATH\n"
 "\n"
@@ -7838,7 +7838,7 @@ msgstr ""
 "ATTENZIONE: Modificare o cancellare file di log che sono ancora\n"
 "in uso corromperà il repository.\n"
 
-#: svnadmin/main.c:347
+#: svnadmin/main.c:348
 msgid ""
 "usage: svnadmin list-unused-dblogs REPOS_PATH\n"
 "\n"
@@ -7850,7 +7850,7 @@ msgstr ""
 "Elenca i file di log inutilizzati del database Berkeley.\n"
 "\n"
 
-#: svnadmin/main.c:352
+#: svnadmin/main.c:353
 msgid ""
 "usage: svnadmin load REPOS_PATH\n"
 "\n"
@@ -7867,7 +7867,7 @@ msgstr ""
 "il suo UUID verrà per default impostato dai dati del dump. Le informazioni\n"
 "sul progresso vengono mandate su stdout.\n"
 
-#: svnadmin/main.c:362
+#: svnadmin/main.c:363
 msgid ""
 "usage: svnadmin lslocks REPOS_PATH\n"
 "\n"
@@ -7877,7 +7877,7 @@ msgstr ""
 "\n"
 "Stampa le descrizioni di tutti i blocchi.\n"
 
-#: svnadmin/main.c:367
+#: svnadmin/main.c:368
 msgid ""
 "usage: svnadmin lstxns REPOS_PATH\n"
 "\n"
@@ -7888,7 +7888,7 @@ msgstr ""
 "Stampa i nomi di tutte le transazioni di cui non è stato eseguito il "
 "commit.\n"
 
-#: svnadmin/main.c:372
+#: svnadmin/main.c:373
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
@@ -7904,7 +7904,7 @@ msgstr ""
 "La procedura di recupero richiede accesso esclusivo al repository e \n"
 "verrà interrotta se risulterà in uso da un altro processo.\n"
 
-#: svnadmin/main.c:380
+#: svnadmin/main.c:381
 msgid ""
 "usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n"
 "\n"
@@ -7914,7 +7914,7 @@ msgstr ""
 "\n"
 "Forza la rimozione del blocc da PERC_BLOCCATO.\n"
 
-#: svnadmin/main.c:385
+#: svnadmin/main.c:386
 msgid ""
 "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
 "\n"
@@ -7924,7 +7924,35 @@ msgstr ""
 "\n"
 "Elimina le transazioni elencate.\n"
 
-#: svnadmin/main.c:390
+#: svnadmin/main.c:391
+msgid ""
+"usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
+"\n"
+"Set the property NAME on revision REVISION to the contents of FILE. Use\n"
+"--bypass-hooks to avoid triggering the revision-property-related hooks\n"
+"(for example, if you do not want an email notification sent\n"
+"from your post-revprop-change hook, or because the modification of\n"
+"revision properties has not been enabled in the pre-revprop-change\n"
+"hook).\n"
+"\n"
+"NOTE: Revision properties are not versioned (e.g. no revision history\n"
+"is maintained), so this command will permanently overwrite the previous\n"
+"value for the property.\n"
+msgstr ""
+"uso: svnadmin setrevprop PERC_REPO -r REVISIONE NOME FILE\n"
+"\n"
+"Imposta la proprietà NOME della revisione REVISIONE in base al\n"
+"contenuto di FILE. Usa --bypass-hooks per evitare di attivare gli hook\n"
+"relativi alla revisione di proprietà (ad esempio se non vuoi che\n"
+"un'email di notifica venga spedita dall'hook post-revprop-change o\n"
+"perché la modifica delle proprietà di revisione non è stata abilitata\n"
+"nell'hook pre-revprop-change).\n"
+"\n"
+"NOTA: le proprietà di revisione non sono sotto controllo di versione,\n"
+"quindi questo comando sovrascriverà permanentemente il messaggio di\n"
+"log precedente.\n"
+
+#: svnadmin/main.c:404
 msgid ""
 "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
 "\n"
@@ -7952,7 +7980,7 @@ msgstr ""
 "quindi questo comando sovrascriverà permanentemente il messaggio di\n"
 "log precedente.\n"
 
-#: svnadmin/main.c:403
+#: svnadmin/main.c:417
 msgid ""
 "usage: svnadmin verify REPOS_PATH\n"
 "\n"
@@ -7962,30 +7990,30 @@ msgstr ""
 "\n"
 "Verifica i dati immagazzinati nel repository.\n"
 
-#: svnadmin/main.c:457
+#: svnadmin/main.c:471
 msgid "Invalid revision specifier"
 msgstr "Numero di revisione fornito non valido"
 
-#: svnadmin/main.c:462
+#: svnadmin/main.c:476
 #, c-format
 msgid "Revisions must not be greater than the youngest revision (%ld)"
 msgstr ""
 "Le revisioni non possono essere più grandi della revisione più recente %ld"
 
-#: svnadmin/main.c:535 svnadmin/main.c:630
+#: svnadmin/main.c:549 svnadmin/main.c:644
 msgid "First revision cannot be higher than second"
 msgstr "La prima revisione non può essere superiore alla seconda"
 
-#: svnadmin/main.c:544
+#: svnadmin/main.c:558
 #, c-format
 msgid "Deltifying revision %ld..."
 msgstr "Deltificazione della revisione %ld..."
 
-#: svnadmin/main.c:548
+#: svnadmin/main.c:562
 msgid "done.\n"
 msgstr "fatto.\n"
 
-#: svnadmin/main.c:655
+#: svnadmin/main.c:669
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -8000,7 +8028,7 @@ msgstr ""
 "\n"
 "Commandi disponibili:\n"
 
-#: svnadmin/main.c:662 svnlook/main.c:1663 svnserve/main.c:203
+#: svnadmin/main.c:676 svnlook/main.c:1663 svnserve/main.c:203
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -8008,7 +8036,7 @@ msgstr ""
 "Sono disponibili i seguenti moduli di accesso (FS) al repository:\n"
 "\n"
 
-#: svnadmin/main.c:739
+#: svnadmin/main.c:753
 msgid ""
 "Repository lock acquired.\n"
 "Please wait; recovering the repository may take some time...\n"
@@ -8016,7 +8044,7 @@ msgstr ""
 "Ottenuto il lock del repository.\n"
 "Attendere prego; il recupero del repository può richiedere del tempo...\n"
 
-#: svnadmin/main.c:774
+#: svnadmin/main.c:788
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
@@ -8024,13 +8052,13 @@ msgstr ""
 "Non ho pututo ottenere l'accesso esclusivo al repository; forse\n"
 "un altro processo come httpd o svn lo stanno utilizzando?"
 
-#: svnadmin/main.c:779
+#: svnadmin/main.c:793
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr ""
 "In attesa di ottenere il blocco del repository; forse un altro\n"
 "processo lo sta utilizzando?\n"
 
-#: svnadmin/main.c:786
+#: svnadmin/main.c:800
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -8038,49 +8066,53 @@ msgstr ""
 "\n"
 "Recupero completato.\n"
 
-#: svnadmin/main.c:793
+#: svnadmin/main.c:807
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "L'ultima revisione del repository è %ld.\n"
 
-#: svnadmin/main.c:903
+#: svnadmin/main.c:917
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "Transazione '%s' rimossa.\n"
 
-#: svnadmin/main.c:927
+#: svnadmin/main.c:980 svnadmin/main.c:1007
 msgid "Missing revision"
 msgstr "Revisione mancante"
 
-#: svnadmin/main.c:930
+#: svnadmin/main.c:983 svnadmin/main.c:1010
 msgid "Only one revision allowed"
 msgstr "È permessa una sola revisione"
 
-#: svnadmin/main.c:936
+#: svnadmin/main.c:989
+msgid "Exactly one property name and one file argument required"
+msgstr "È richiesto esattamente un solo nome di proprietà come argomento"
+
+#: svnadmin/main.c:1016
 msgid "Exactly one file argument required"
 msgstr "È richiesto esattamente un solo file come argomento"
 
-#: svnadmin/main.c:1048 svnlook/main.c:1728
+#: svnadmin/main.c:1099 svnlook/main.c:1728
 #, c-format
 msgid "UUID Token: %s\n"
 msgstr "UUID del gettone: %s\n"
 
-#: svnadmin/main.c:1049 svnlook/main.c:1729
+#: svnadmin/main.c:1100 svnlook/main.c:1729
 #, c-format
 msgid "Owner: %s\n"
 msgstr "Proprietario: %s\n"
 
-#: svnadmin/main.c:1050 svnlook/main.c:1730
+#: svnadmin/main.c:1101 svnlook/main.c:1730
 #, c-format
 msgid "Created: %s\n"
 msgstr "Creato: %s\n"
 
-#: svnadmin/main.c:1051 svnlook/main.c:1731
+#: svnadmin/main.c:1102 svnlook/main.c:1731
 #, c-format
 msgid "Expires: %s\n"
 msgstr "Scade: %s\n"
 
-#: svnadmin/main.c:1053
+#: svnadmin/main.c:1104
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -8091,7 +8123,7 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1054
+#: svnadmin/main.c:1105
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -8102,27 +8134,27 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1111
+#: svnadmin/main.c:1162
 #, c-format
 msgid "Path '%s' isn't locked.\n"
 msgstr "Il percorso '%s' non è bloccato\n"
 
-#: svnadmin/main.c:1123
+#: svnadmin/main.c:1174
 #, c-format
 msgid "Removed lock on '%s'.\n"
 msgstr "Rimosso il blocco da '%s'\n"
 
-#: svnadmin/main.c:1231
+#: svnadmin/main.c:1282
 msgid ""
 "Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
 msgstr ""
 "Vi sono più argomenti di revisione; prova '-r N:M' invece di '-r N -r M'"
 
-#: svnadmin/main.c:1350
+#: svnadmin/main.c:1401
 msgid "subcommand argument required\n"
 msgstr "richiesto argomento per il comando\n"
 
-#: svnadmin/main.c:1435
+#: svnadmin/main.c:1486
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
