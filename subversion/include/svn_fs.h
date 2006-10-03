@@ -1415,7 +1415,8 @@ svn_error_t *svn_fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
  *
  * Set @a *contents_p to a stream ready to receive full textual data.
  * When the caller closes this stream, the data replaces the previous
- * contents of the file.
+ * contents of the file.  The caller must write all file data and close
+ * the stream before making further changes to the transaction.
  *
  * If @a path does not exist in @a root, return an error.  (You cannot use
  * this routine to create new files;  use svn_fs_make_file() to create
