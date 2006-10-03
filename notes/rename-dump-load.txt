@@ -1,0 +1,65 @@
+                          Dump and Load w/ Renames
+                       AKA: Ouch, Please Make It Stop
+
+Renames play nasty games with dump/load, because depending on what else is
+done to a given renamed path in the revision in question you might have to
+run the rename operation at different times.
+
+For example:
+
+  mv A/B X
+  mv A Y
+
+This means that the first rename really has to be run before the second
+one can be.  This can be even more problematic if (for example) X already
+exists, in which case you need to make sure that the move or delete that
+gets X out of the way happens first.
+
+So for the following operations:
+
+  rm X
+  mv A/B X
+  mv A Y
+
+The actual order we need to run them in (the order that they're listed) may
+very well be different than the order in which the editor drive runs.  If
+the editor does something like this:
+
+  open_root
+    rename_dir_from A to Y
+    open_directory A
+      rename_dir_from A/B to X
+    close_directory A
+    delete_entry X
+    rename_dir_to X from A/B
+    rename_dir_to Y from A
+  close_directory
+
+The up shot of this is that you can't just hold renames until the source
+directory of the rename is closed, there will be cases when they can't be
+run at all until far later in the process.  In those cases we need to keep
+the pending operation around until we've done the work that's required to
+get stuff out of the way.
+
+                               The Plan (tm)
+
+Renames become objects that persist throughout large parts of the course
+of the dump operation.  When we first hit a rename editor callback a rename
+object is created and stored in the renames hash of the dir baton of the
+common parent of the src and dest paths.  If it was created in response
+to a rename_*_from operation we also add an entry in the source dir's dir
+baton.  When a close_directory occurs we'll try to run any outgoing rename
+operations, marking them as run if they aren't obstructed.  When an
+open_directory occurs we carry any rename operations that are sitting in
+its parent's dir baton that have a destination under that tree down into
+its dir baton.  Whenever we do an outgoing rename or a delete operation
+we check the current dir baton's set of pending renames to see if there
+are any waiting for that node to become clear.
+
+How do we tell when rename operations are no longer needed?  Well, when
+the common parent's dir baton is finished, you know it can't be needed
+any more, so it can go away then.
+
+What's wrong with this?  Well, what if we need to rename A/B to X/Y so that
+we can later rename X/Y to A/B?  Not sure if there's a work around for that,
+but I'm also not sure if there's a way to get that into the system anyway.
