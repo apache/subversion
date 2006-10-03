@@ -362,7 +362,7 @@ def setrevprop(sbox):
   "'setlog' and 'setrevprop', bypassing hooks'"
   sbox.build()
 
-  # Try a simple log modification, without bypassing hook scripts.
+  # Try a simple log property modification.
   iota_path = os.path.join(sbox.wc_dir, "iota")
   output, errput = svntest.main.run_svnadmin("setlog", sbox.repo_dir,
                                              "-r0", "--bypass-hooks",
@@ -378,7 +378,7 @@ def setrevprop(sbox):
                                      [], "propget", "--revprop", "-r0",
                                      "svn:log", sbox.wc_dir)
 
-  # Try an author log modification, this time bypassing hook scripts.
+  # Try an author property modification.
   foo_path = os.path.join(sbox.wc_dir, "foo")
   fp = open(foo_path, "w")
   fp.write("foo")
