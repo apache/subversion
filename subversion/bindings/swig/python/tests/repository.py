@@ -127,6 +127,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
                      "''(a few years later)'' Argh... v1.1 was buggy, "
                      "after all")
 
+    # We expect this to complain because we have no pre-revprop-change
+    # hook script for the repository.
     self.assertRaises(_core.SubversionException, repos.fs_change_rev_prop3,
                       self.repos, self.rev, "jrandom", "svn:log",
                       "Youngest revision", True, True, _authz_callback)
