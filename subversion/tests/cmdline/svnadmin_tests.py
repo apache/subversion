@@ -385,8 +385,7 @@ def setrevprop(sbox):
   fp.close()
 
   output, errput = svntest.main.run_svnadmin("setrevprop", sbox.repo_dir,
-                                             "-r0", "--bypass-hooks",
-                                             "svn:author", foo_path)
+                                             "-r0", "svn:author", foo_path)
   if errput:
     print "Error: 'setrevprop' failed"
     raise svntest.Failure
