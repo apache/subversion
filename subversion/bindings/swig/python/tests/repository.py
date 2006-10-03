@@ -121,7 +121,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertEqual(len(editor.textdeltas),2)
 
   def test_retrieve_and_change_rev_prop(self):
-    """Test scope of get_logs callbacks"""
+    """Test playing with revprops"""
     self.assertEqual(repos.fs_revision_prop(self.repos, self.rev, "svn:log",
                                             _authz_callback),
                      "''(a few years later)'' Argh... v1.1 was buggy, "
