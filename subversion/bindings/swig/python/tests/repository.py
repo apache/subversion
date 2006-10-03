@@ -19,6 +19,10 @@ class ChangeReceiver(delta.Editor):
         self.textdeltas.append(textdelta)
     return textdelta_handler
 
+def _authz_callback(root, path, pool):
+  "A dummy authz callback which always returns success."
+  return 1
+
 class SubversionRepositoryTestCase(unittest.TestCase):
   """Test cases for the Subversion repository layer"""
   
@@ -103,22 +107,38 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
   def test_dir_delta(self):
     """Test scope of dir_delta callbacks"""
-    def authz_cb(root, path, pool):
-      return 1
-    
     # Run dir_delta
     this_root = fs.revision_root(self.fs, self.rev)
     prev_root = fs.revision_root(self.fs, self.rev-1)
     editor = ChangeReceiver(this_root, prev_root)
     e_ptr, e_baton = delta.make_editor(editor)
     repos.dir_delta(prev_root, '', '', this_root, '', e_ptr, e_baton,
-        authz_cb, 1, 1, 0, 0)
+                    _authz_callback, 1, 1, 0, 0)
    
     # Check results
     self.assertEqual(editor.textdeltas[0].new_data, "This is a test.\n")
     self.assertEqual(editor.textdeltas[1].new_data, "A test.\n")
     self.assertEqual(len(editor.textdeltas),2)
-      
+
+  def test_retrieve_and_change_rev_prop(self):
+    """Test scope of get_logs callbacks"""
+    self.assertEqual(repos.fs_revision_prop(self.repos, self.rev, "svn:log",
+                                            _authz_callback),
+                     "''(a few years later)'' Argh... v1.1 was buggy, "
+                     "after all")
+
+    self.assertRaises(_core.SubversionException, repos.fs_change_rev_prop3,
+                      self.repos, self.rev, "jrandom", "svn:log",
+                      "Youngest revision", True, True, _authz_callback)
+
+    repos.fs_change_rev_prop3(self.repos, self.rev, "jrandom", "svn:log",
+                              "Youngest revision", False, False,
+                              _authz_callback)
+
+    self.assertEqual(repos.fs_revision_prop(self.repos, self.rev, "svn:log",
+                                            _authz_callback),
+                     "Youngest revision")
+
 def suite():
     return unittest.makeSuite(SubversionRepositoryTestCase, 'test',
                               suiteClass=SubversionRepositoryTestSetup)
