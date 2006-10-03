@@ -147,7 +147,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
-     update_editor will be driven by svn_repos_dir_delta. */
+     update_editor will be driven by svn_repos_dir_delta2. */
   err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
                                 TRUE, recurse, use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,

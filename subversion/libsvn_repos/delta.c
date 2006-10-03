@@ -55,7 +55,7 @@ struct context {
   svn_repos_authz_func_t authz_read_func;
   void *authz_read_baton;
   svn_boolean_t text_deltas;
-  svn_boolean_t recurse;
+  svn_depth_t depth;
   svn_boolean_t entry_props;
   svn_boolean_t ignore_ancestry;
 };
@@ -197,20 +197,20 @@ not_a_dir_error(const char *role,
 
 /* Public interface to computing directory deltas.  */
 svn_error_t *
-svn_repos_dir_delta(svn_fs_root_t *src_root,
-                    const char *src_parent_dir,
-                    const char *src_entry,
-                    svn_fs_root_t *tgt_root,
-                    const char *tgt_fullpath,
-                    const svn_delta_editor_t *editor,
-                    void *edit_baton,
-                    svn_repos_authz_func_t authz_read_func,
-                    void *authz_read_baton,
-                    svn_boolean_t text_deltas,
-                    svn_boolean_t recurse,
-                    svn_boolean_t entry_props,
-                    svn_boolean_t ignore_ancestry,
-                    apr_pool_t *pool)
+svn_repos_dir_delta2(svn_fs_root_t *src_root,
+                     const char *src_parent_dir,
+                     const char *src_entry,
+                     svn_fs_root_t *tgt_root,
+                     const char *tgt_fullpath,
+                     const svn_delta_editor_t *editor,
+                     void *edit_baton,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_boolean_t text_deltas,
+                     svn_depth_t depth,
+                     svn_boolean_t entry_props,
+                     svn_boolean_t ignore_ancestry,
+                     apr_pool_t *pool)
 {
   void *root_baton = NULL;
   struct context c;
@@ -283,7 +283,7 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
   c.authz_read_func = authz_read_func;
   c.authz_read_baton = authz_read_baton;
   c.text_deltas = text_deltas;
-  c.recurse = recurse;
+  c.depth = depth;
   c.entry_props = entry_props;
   c.ignore_ancestry = ignore_ancestry;
 
@@ -371,6 +371,43 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
 
   /* All's well that ends well. */
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_dir_delta(svn_fs_root_t *src_root,
+                    const char *src_parent_dir,
+                    const char *src_entry,
+                    svn_fs_root_t *tgt_root,
+                    const char *tgt_fullpath,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
+                    svn_repos_authz_func_t authz_read_func,
+                    void *authz_read_baton,
+                    svn_boolean_t text_deltas,
+                    svn_boolean_t recurse,
+                    svn_boolean_t entry_props,
+                    svn_boolean_t ignore_ancestry,
+                    apr_pool_t *pool)
+{
+  return svn_repos_dir_delta2(src_root,
+                              src_parent_dir,
+                              src_entry,
+                              tgt_root,
+                              tgt_fullpath,
+                              editor,
+                              edit_baton,
+                              authz_read_func,
+                              authz_read_baton,
+                              text_deltas,
+                              /* ### TODO: This duplicates the logic
+                                 ### of the UNFOLD_TO_DEPTH() macro in
+                                 ### libsvn_ra/ra_loader.h.  Should we
+                                 ### unify? */
+                              (recurse) ? svn_depth_infinity : svn_depth_zero,
+                              entry_props,
+                              ignore_ancestry,
+                              pool);
 }
 
 
@@ -983,7 +1020,9 @@ delta_dirs(struct context *c,
           s_fullpath = svn_path_join(source_path, t_entry->name, subpool);
           src_kind = s_entry->kind;
 
-          if (c->recurse || (src_kind != svn_node_dir))
+          /* ### TODO: for now, the simplest kind of depth logic.
+             ### Eventually we may want a trinary conditional. */
+          if ((c->depth == svn_depth_infinity) || (src_kind != svn_node_dir))
             {
               /* Use svn_fs_compare_ids() to compare our current
                  source and target ids.
@@ -1018,7 +1057,9 @@ delta_dirs(struct context *c,
         }            
       else
         {
-          if (c->recurse || (tgt_kind != svn_node_dir))
+          /* ### TODO: for now, the simplest kind of depth logic.
+             ### Eventually we may want a trinary conditional. */
+          if ((c->depth == svn_depth_infinity) || (tgt_kind != svn_node_dir))
             {
               SVN_ERR(add_file_or_dir(c, dir_baton, t_fullpath,
                                       e_fullpath, tgt_kind, subpool));
@@ -1048,8 +1089,10 @@ delta_dirs(struct context *c,
           src_kind = s_entry->kind;
           e_fullpath = svn_path_join(edit_path, s_entry->name, subpool);
 
-          /* Do we actually want to delete the dir if we're non-recursive? */
-          if (c->recurse || (src_kind != svn_node_dir))
+          /* Do we actually want to delete the dir if we're non-recursive?
+             ### TODO: for now, the simplest kind of depth logic.
+             ### Eventually we may want a trinary conditional. */
+          if ((c->depth == svn_depth_infinity) || (src_kind != svn_node_dir))
             SVN_ERR(delete(c, dir_baton, e_fullpath, subpool));
         }
     }

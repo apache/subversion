@@ -448,7 +448,7 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
          they're hardcoded here.  Isn't there some header file that both
          sides of the network can share?? */
       
-      /* ### special knowledge: svn_repos_dir_delta will never send
+      /* ### special knowledge: svn_repos_dir_delta2 will never send
        *removals* of the commit-info "entry props". */
       if (baton->committed_rev)
         SVN_ERR(dav_svn__send_xml(baton->uc->bb, baton->uc->output,
@@ -1097,7 +1097,7 @@ dav_svn__update_report(const dav_resource *resource,
              telescoping dst_path be. */
           uc.dst_path = svn_path_dirname(dst_path, resource->pool);
 
-          /* Also, the svn_repos_dir_delta() is going to preserve our
+          /* Also, the svn_repos_dir_delta2() is going to preserve our
              target's name, so we need a pathmap entry for that. */
           if (! uc.pathmap)
             uc.pathmap = apr_hash_make(resource->pool);
@@ -1281,7 +1281,7 @@ dav_svn__update_report(const dav_resource *resource,
     else
       spath = src_path;
 
-    /* If a second path was passed to svn_repos_dir_delta(), then it
+    /* If a second path was passed to svn_repos_dir_delta2(), then it
        must have been switch, diff, or merge.  */
     if (dst_path)
       {
@@ -1391,16 +1391,17 @@ dav_svn__update_report(const dav_resource *resource,
       /* Compare subtree DST_PATH within a pristine revision to
          revision 0.  This should result in nothing but 'add' calls
          to the editor. */
-      /* ### TODO: Probably the incomplete-directories work will
-         ### require changing 'recurse' to 'depth' here too.  Keep an
-         ### eye on this... */
-      serr = svn_repos_dir_delta(zero_root, "", target,
-                                 uc.rev_root, dst_path,
-                                 /* re-use the editor */
-                                 editor, &uc, dav_svn__authz_read_func(&arb),
-                                 &arb, FALSE /* text-deltas */, recurse, 
-                                 TRUE /* entryprops */, 
-                                 FALSE /* ignore-ancestry */, resource->pool);
+      serr = svn_repos_dir_delta2(zero_root, "", target,
+                                  uc.rev_root, dst_path,
+                                  /* re-use the editor */
+                                  editor, &uc,
+                                  dav_svn__authz_read_func(&arb),
+                                  &arb, FALSE /* text-deltas */,
+                                  depth,
+                                  TRUE /* entryprops */, 
+                                  FALSE /* ignore-ancestry */,
+                                  resource->pool);
+
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

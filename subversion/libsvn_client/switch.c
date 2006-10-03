@@ -146,7 +146,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the update_editor
-     will be driven by svn_repos_dir_delta.
+     will be driven by svn_repos_dir_delta2.
 
      We pass NULL for traversal_info because this is a switch, not an
      update, and therefore we don't want to handle any externals
