@@ -1400,7 +1400,8 @@ validate_prop_against_node_kind(const char *name,
                                  SVN_PROP_NEEDS_LOCK,
                                  NULL };
   const char **node_kind_prohibit;
-  const char *path_display = svn_path_is_url(path) ? path : svn_path_local_style(path, pool);
+  const char *path_display
+    = svn_path_is_url(path) ? path : svn_path_local_style(path, pool);
 
   switch (node_kind)
     {
@@ -1447,8 +1448,8 @@ get_file_for_validation(const svn_string_t **mime_type,
   apr_file_t *fp;
   svn_stream_t *read_stream;
 
-  SVN_ERR(svn_wc_prop_get(mime_type, SVN_PROP_MIME_TYPE, gb->path, gb->adm_access,
-                          pool));
+  SVN_ERR(svn_wc_prop_get(mime_type, SVN_PROP_MIME_TYPE,
+                          gb->path, gb->adm_access, pool));
 
   /* Open PATH. */
   SVN_ERR(svn_io_file_open(&fp, gb->path, 
@@ -1477,14 +1478,16 @@ validate_eol_prop_against_file(const char *path,
   svn_stream_t *translating_stream;
   svn_error_t *err;
   const svn_string_t *mime_type;
-  const char *path_display = svn_path_is_url(path) ? path : svn_path_local_style(path, pool);
+  const char *path_display
+    = svn_path_is_url(path) ? path : svn_path_local_style(path, pool);
 
   /* The "getter" will do a newline translation.  All we really care
      about here is whether or not the function fails on inconsistent
      line endings.  The function is "translating" to an empty stream.
      This is sneeeeeeeeeeeaky. */
   translating_stream = svn_subst_stream_translated(svn_stream_empty(pool),
-                                                   "", FALSE, NULL, FALSE, pool);
+                                                   "", FALSE, NULL, FALSE,
+                                                   pool);
 
   err = getter(&mime_type, translating_stream, getter_baton, pool);
 
@@ -1562,7 +1565,8 @@ svn_wc_prop_set2(const char *name,
       gb->path = path;
       gb->adm_access = adm_access;
 
-      SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value, path, entry->kind, skip_checks,
+      SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value, path,
+                                           entry->kind, skip_checks,
                                            get_file_for_validation, gb, pool));
       value = new_value;
     }
