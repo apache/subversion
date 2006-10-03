@@ -352,8 +352,9 @@ svn_ra_local__change_rev_prop(svn_ra_session_t *session,
 
   SVN_ERR(get_username(session, pool));
 
-  SVN_ERR(svn_repos_fs_change_rev_prop2(baton->repos, rev, baton->username,
-                                        name, value, NULL, NULL, pool));
+  SVN_ERR(svn_repos_fs_change_rev_prop3(baton->repos, rev, baton->username,
+                                        name, value, TRUE, TRUE, NULL, NULL,
+                                        pool));
 
   return SVN_NO_ERROR;
 }

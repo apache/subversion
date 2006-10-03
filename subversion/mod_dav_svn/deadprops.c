@@ -160,11 +160,11 @@ save_value(dav_db *db, const dav_prop_name *name, const svn_string_t *value)
            not a working resource!  But this is how we currently
            (hackily) allow the svn client to change unversioned rev
            props.  See issue #916. */
-        serr = svn_repos_fs_change_rev_prop2
+        serr = svn_repos_fs_change_rev_prop3
           (db->resource->info->repos->repos,
            db->resource->info->root.rev,
            db->resource->info->repos->username,
-           propname, value,
+           propname, value, TRUE, TRUE,
            db->authz_read_func,
            db->authz_read_baton,
            db->resource->pool);
@@ -413,10 +413,10 @@ db_remove(dav_db *db, const dav_prop_name *name)
          not a working resource!  But this is how we currently
          (hackily) allow the svn client to change unversioned rev
          props.  See issue #916. */
-      serr = svn_repos_fs_change_rev_prop2(db->resource->info->repos->repos,
+      serr = svn_repos_fs_change_rev_prop3(db->resource->info->repos->repos,
                                            db->resource->info->root.rev,
                                            db->resource->info->repos->username,
-                                           propname, NULL,
+                                           propname, NULL, TRUE, TRUE,
                                            db->authz_read_func,
                                            db->authz_read_baton,
                                            db->resource->pool);
