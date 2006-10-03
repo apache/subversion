@@ -213,6 +213,8 @@ enum
     svnadmin__bypass_hooks,
     svnadmin__use_pre_commit_hook,
     svnadmin__use_post_commit_hook,
+    svnadmin__use_pre_revprop_change_hook,
+    svnadmin__use_post_revprop_change_hook,
     svnadmin__clean_logs,
     svnadmin__wait,
     svnadmin__pre_1_4_compatible
@@ -278,6 +280,12 @@ static const apr_getopt_option_t options_table[] =
 
     {"use-post-commit-hook", svnadmin__use_post_commit_hook, 0,
      N_("call post-commit hook after committing revisions")},
+
+    {"use-pre-revprop-change-hook", svnadmin__use_pre_revprop_change_hook, 0,
+     N_("call hook before changing revision property")},
+
+    {"use-post-revprop-change-hook", svnadmin__use_post_revprop_change_hook, 0,
+     N_("call hook after changing revision property")},
 
     {"wait",          svnadmin__wait, 0,
      N_("wait instead of exit if the repository is in\n"
@@ -403,15 +411,14 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
   {"setrevprop", subcommand_setrevprop, {0}, N_
    ("usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n\n"
     "Set the property NAME on revision REVISION to the contents of FILE. Use\n"
-    "--bypass-hooks to avoid triggering the revision-property-related hooks\n"
-    "(for example, if you do not want an email notification sent\n"
-    "from your post-revprop-change hook, or because the modification of\n"
-    "revision properties has not been enabled in the pre-revprop-change\n"
-    "hook).\n\n"
+    "--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\n"
+    "the revision property-related hooks (for example, if you want an email\n"
+    "notification sent from your post-revprop-change hook).\n\n"
     "NOTE: Revision properties are not versioned (e.g. no revision history\n"
     "is maintained), so this command will permanently overwrite the previous\n"
     "value for the property.\n"),
-   {'r', svnadmin__bypass_hooks} },
+   {'r', svnadmin__use_pre_revprop_change_hook,
+    svnadmin__use_post_revprop_change_hook} },
 
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
@@ -436,6 +443,8 @@ struct svnadmin_opt_state
   svn_boolean_t use_deltas;                         /* --deltas */
   svn_boolean_t use_pre_commit_hook;                /* --use-pre-commit-hook */
   svn_boolean_t use_post_commit_hook;               /* --use-post-commit-hook */
+  svn_boolean_t use_pre_revprop_change_hook;        /* --use-pre-revprop-change-hook */
+  svn_boolean_t use_post_revprop_change_hook;       /* --use-post-revprop-change-hook */
   svn_boolean_t quiet;                              /* --quiet */
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
   svn_boolean_t bdb_log_keep;                       /* --bdb-log-keep */
@@ -925,7 +934,9 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
-/* A helper for the 'setrevprop' and 'setlog' commands. */
+/* A helper for the 'setrevprop' and 'setlog' commands.  Expects
+   OPT_STATE->use_pre_revprop_change_hook and
+   OPT_STATE->use_post_revprop_change_hook to be set appropriately. */
 static svn_error_t *
 set_revprop(const char *prop_name, const char *filename,
             struct svnadmin_opt_state *opt_state, apr_pool_t *pool)
@@ -950,18 +961,21 @@ set_revprop(const char *prop_name, const char *filename,
 
   /* If we are bypassing the hooks system, we just hit the filesystem
      directly. */
-  if (opt_state->bypass_hooks)
+  if (opt_state->use_pre_revprop_change_hook ||
+      opt_state->use_post_revprop_change_hook)
+    {
+      SVN_ERR(svn_repos_fs_change_rev_prop3
+              (repos, opt_state->start_revision.value.number,
+               NULL, prop_name, prop_value,
+               opt_state->use_pre_revprop_change_hook,
+               opt_state->use_post_revprop_change_hook, NULL, NULL, pool));
+    }
+  else
     {
       svn_fs_t *fs = svn_repos_fs(repos);
       SVN_ERR(svn_fs_change_rev_prop 
               (fs, opt_state->start_revision.value.number,
                prop_name, prop_value, pool));
-    }
-  else
-    {
-      SVN_ERR(svn_repos_fs_change_rev_prop2
-              (repos, opt_state->start_revision.value.number,
-               NULL, prop_name, prop_value, NULL, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1014,6 +1028,13 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   if (args->nelts != 1)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                              _("Exactly one file argument required"));
+
+  /* set_revprop() responds only to pre-/post-revprop-change opts. */
+  if (!opt_state->bypass_hooks)
+    {
+      opt_state->use_pre_revprop_change_hook = TRUE;
+      opt_state->use_post_revprop_change_hook = TRUE;
+    }
 
   return set_revprop(SVN_PROP_REVISION_LOG,
                      APR_ARRAY_IDX(args, 0, const char *),
@@ -1342,6 +1363,12 @@ main(int argc, const char *argv[])
         break;
       case svnadmin__use_post_commit_hook:
         opt_state.use_post_commit_hook = TRUE;
+        break;
+      case svnadmin__use_pre_revprop_change_hook:
+        opt_state.use_pre_revprop_change_hook = TRUE;
+        break;
+      case svnadmin__use_post_revprop_change_hook:
+        opt_state.use_post_revprop_change_hook = TRUE;
         break;
       case svnadmin__bdb_txn_nosync:
         opt_state.bdb_txn_nosync = TRUE;

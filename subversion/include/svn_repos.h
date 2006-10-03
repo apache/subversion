@@ -1201,6 +1201,38 @@ svn_error_t *svn_repos_fs_get_locks(apr_hash_t **locks,
 /** @} */
 
 /**
+ * Like svn_fs_change_rev_prop2(), but invoke the @a repos's pre- and
+ * post-revprop-change hooks around the change as specified by @a
+ * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
+ * (respectively).  Use @a pool for temporary allocations.
+ *
+ * @a rev is the revision whose property to change, @a name is the
+ * name of the property, and @a new_value is the new value of the
+ * property.   @a author is the authenticated username of the person
+ * changing the property value, or null if not available.
+ *
+ * If @a authz_read_func is non-NULL, then use it (with @a
+ * authz_read_baton) to validate the changed-paths associated with @a
+ * rev.  If the revision contains any unreadable changed paths, then
+ * return SVN_ERR_AUTHZ_UNREADABLE.
+ * 
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
+                                           svn_revnum_t rev,
+                                           const char *author,
+                                           const char *name,
+                                           const svn_string_t *new_value,
+                                           svn_boolean_t
+                                           use_pre_revprop_change_hook,
+                                           svn_boolean_t
+                                           use_post_revprop_change_hook,
+                                           svn_repos_authz_func_t
+                                           authz_read_func,
+                                           void *authz_read_baton,
+                                           apr_pool_t *pool);
+
+/**
  * Like svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
  * post-revprop-change hooks around the change.  Use @a pool for
  * temporary allocations.
@@ -1216,6 +1248,7 @@ svn_error_t *svn_repos_fs_get_locks(apr_hash_t **locks,
  * return SVN_ERR_AUTHZ_UNREADABLE.
  * 
  * @since New in 1.1.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
                                            svn_revnum_t rev,
