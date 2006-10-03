@@ -383,13 +383,13 @@ path_driver_cb_func(void **dir_baton,
             SVN_ERR(editor->rename_dir_from(entry->dest_path,
                                             parent_baton,
                                             path,
-                                            SVN_INVALID_REVNUM,
+                                            entry->src_rev,
                                             pool));
           else
             SVN_ERR(editor->rename_file_from(entry->dest_path,
                                              parent_baton,
                                              path,
-                                             SVN_INVALID_REVNUM,
+                                             entry->src_rev,
                                              pool));
         }
     }

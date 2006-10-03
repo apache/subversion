@@ -248,17 +248,17 @@ V 27
 2006-06-12T15:52:34.741342Z
 PROPS-END
 
-Node-path: Q
-Node-kind: dir
-Node-action: rename
-Node-copyfrom-rev: 1
-Node-copyfrom-path: A
-
-
 Node-path: X
 Node-kind: dir
 Node-action: rename
 Node-copyfrom-rev: 1
 Node-copyfrom-path: A/B
+
+
+Node-path: Q
+Node-kind: dir
+Node-action: rename
+Node-copyfrom-rev: 1
+Node-copyfrom-path: A
 
 

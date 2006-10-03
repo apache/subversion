@@ -193,6 +193,14 @@ struct edit_baton
   apr_size_t bufsize;
 };
 
+/* A struct that holds all the info about a pending rename operation,
+   so we can get back to it later in the editor drive. */
+struct rename_src {
+  svn_node_kind_t src_kind;
+  const char *src_path;
+  svn_revnum_t src_rev;
+};
+
 struct dir_baton
 {
   struct edit_baton *edit_baton;
@@ -219,6 +227,9 @@ struct dir_baton
      full paths, because that's what the editor driver gives us.  but
      really, they're all within this directory.) */
   apr_hash_t *deleted_entries;
+
+  /* hash mapping destination paths for renames to rename_src structs. */
+  apr_hash_t *renamed_entries;
 
   /* pool to be used for deleting the hash items */
   apr_pool_t *pool;
@@ -273,6 +284,7 @@ make_dir_baton(const char *path,
   new_db->added = added;
   new_db->written_out = FALSE;
   new_db->deleted_entries = apr_hash_make(pool);
+  new_db->renamed_entries = apr_hash_make(pool);
   new_db->pool = pool;
   
   return new_db;
@@ -664,6 +676,19 @@ open_directory(const char *path,
   struct dir_baton *new_db;
   const char *cmp_path = NULL;
   svn_revnum_t cmp_rev = SVN_INVALID_REVNUM;
+  struct rename_src *rs;
+
+  /* If there's a pending rename to this location we need to do that
+     rename before we do anything else, then remove it from the hash
+     so it isn't renamed later. */
+  rs = apr_hash_get(pb->renamed_entries, path, APR_HASH_KEY_STRING);
+  if (rs)
+    {
+      SVN_ERR(dump_node(eb, path, rs->src_kind, svn_node_action_rename,
+                        FALSE, rs->src_path, rs->src_rev, pool));
+
+      apr_hash_set(pb->renamed_entries, path, APR_HASH_KEY_STRING, NULL);
+    }
 
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
@@ -688,7 +713,25 @@ close_directory(void *dir_baton,
   struct edit_baton *eb = db->edit_baton;
   apr_hash_index_t *hi;
   apr_pool_t *subpool = svn_pool_create(pool);
-  
+
+  for (hi = apr_hash_first(pool, db->renamed_entries);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      struct rename_src *rs;
+      const char *dst_path;
+      const void *key;
+      void *val;
+
+      apr_hash_this(hi, &key, NULL, &val);
+
+      dst_path = key;
+      rs = val;
+
+      SVN_ERR(dump_node(eb, dst_path, rs->src_kind, svn_node_action_rename,
+                        FALSE, rs->src_path, rs->src_rev, pool));
+    }
+
   for (hi = apr_hash_first(pool, db->deleted_entries);
        hi;
        hi = apr_hash_next(hi))
@@ -761,7 +804,20 @@ open_file(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   const char *cmp_path = NULL;
   svn_revnum_t cmp_rev = SVN_INVALID_REVNUM;
-  
+  struct rename_src *rs;
+
+  /* If there's a pending rename to this location we need to do that
+     rename before we do anything else, then remove it from the hash
+     so it isn't renamed later. */
+  rs = apr_hash_get(pb->renamed_entries, path, APR_HASH_KEY_STRING);
+  if (rs)
+    {
+      SVN_ERR(dump_node(eb, path, rs->src_kind, svn_node_action_rename,
+                        FALSE, rs->src_path, rs->src_rev, pool));
+
+      apr_hash_set(pb->renamed_entries, path, APR_HASH_KEY_STRING, NULL);
+    }
+ 
   /* If the parent directory has explicit comparison path and rev,
      record the same for this one. */
   if (pb && ARE_VALID_COPY_ARGS(pb->cmp_path, pb->cmp_rev))
@@ -804,43 +860,48 @@ change_dir_prop(void *parent_baton,
 
 
 static svn_error_t *
-rename_file_to(const char *path,
-               void *parent_baton,
-               const char *src_path,
-               svn_revnum_t src_rev,
-               apr_pool_t *pool,
-               void **file_baton)
+rename_file_from(const char *dst_path,
+                 void *parent_baton,
+                 const char *src_path,
+                 svn_revnum_t src_rev,
+                 apr_pool_t *pool)
 {
   struct dir_baton *db = parent_baton;
   struct edit_baton *eb = db->edit_baton;
+  struct rename_src *rs = apr_pcalloc(db->pool, sizeof (*rs));
 
-  SVN_ERR(dump_node(eb, path, svn_node_file, svn_node_action_rename,
-                    FALSE, src_path, src_rev, pool));
+  rs->src_kind = svn_node_file;
+  rs->src_path = apr_pstrdup(db->pool, src_path);
+  rs->src_rev = src_rev;
 
-  *file_baton = NULL;  /* muhahahaha again */
+  apr_hash_set(db->renamed_entries,
+               apr_pstrdup(db->pool, dst_path),
+               APR_HASH_KEY_STRING,
+               rs);
 
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
-rename_dir_to(const char *path,
-              void *parent_baton,
-              const char *src_path,
-              svn_revnum_t src_rev,
-              apr_pool_t *pool,
-              void **child_baton)
+rename_dir_from(const char *dst_path,
+                void *parent_baton,
+                const char *src_path,
+                svn_revnum_t src_rev,
+                apr_pool_t *pool)
 {
-  struct dir_baton *pb = parent_baton;
-  struct edit_baton *eb = pb->edit_baton;
-  struct dir_baton *new_db 
-    = make_dir_baton(path, src_path, src_rev, eb, pb, TRUE, pool);
+  struct dir_baton *db = parent_baton;
+  struct edit_baton *eb = db->edit_baton;
+  struct rename_src *rs = apr_pcalloc(db->pool, sizeof (*rs));
 
-  SVN_ERR(dump_node(eb, path, svn_node_dir, svn_node_action_rename,
-                    FALSE, src_path, src_rev, pool));
+  rs->src_kind = svn_node_dir;
+  rs->src_path = apr_pstrdup(db->pool, src_path);
+  rs->src_rev = src_rev;
 
-  new_db->written_out = TRUE;
-
-  *child_baton = new_db;
+  apr_hash_set(db->renamed_entries,
+               apr_pstrdup(db->pool, dst_path),
+               APR_HASH_KEY_STRING,
+               rs);
 
   return SVN_NO_ERROR;
 }
@@ -883,8 +944,8 @@ get_dump_editor(const svn_delta_editor2_t **editor,
   dump_editor->change_dir_prop = change_dir_prop;
   dump_editor->add_file = add_file;
   dump_editor->open_file = open_file;
-  dump_editor->rename_file_to = rename_file_to;
-  dump_editor->rename_dir_to = rename_dir_to;
+  dump_editor->rename_file_from = rename_file_from;
+  dump_editor->rename_dir_from = rename_dir_from;
 
   *edit_baton = eb;
   *editor = dump_editor;

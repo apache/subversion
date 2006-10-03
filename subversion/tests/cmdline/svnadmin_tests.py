@@ -438,7 +438,7 @@ test_list = [ None,
               move_plus_copy,
               move_plus_delete,
               move_from_deleted,
-              XFail(multiple_moves),
+              multiple_moves,
              ]
 
 if __name__ == '__main__':

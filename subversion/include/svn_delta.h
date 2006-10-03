@@ -937,17 +937,17 @@ typedef struct {
                                 void **child_baton);
 
   /** XXX document me. */
-  svn_error_t *(*rename_file_from)(const char *path,
+  svn_error_t *(*rename_file_from)(const char *dst_path,
                                    void *parent_baton,
-                                   const char *dest_path,
-                                   svn_revnum_t dest_revision,
+                                   const char *src_path,
+                                   svn_revnum_t src_revision,
                                    apr_pool_t *file_pool);
 
   /** XXX document me. */
-  svn_error_t *(*rename_dir_from)(const char *path,
+  svn_error_t *(*rename_dir_from)(const char *dst_path,
                                   void *parent_baton,
-                                  const char *dest_path,
-                                  svn_revnum_t dest_revision,
+                                  const char *src_path,
+                                  svn_revnum_t src_revision,
                                   apr_pool_t *dir_pool);
 
 } svn_delta_editor2_t;
