@@ -33,8 +33,6 @@ access to a Subversion repository on the local filesystem.
 
 my @methods = ();		# List of functions to wrap
 
-push @methods, qw(open create);
-
 =head2 CONSTRUCTORS
 
 =over
