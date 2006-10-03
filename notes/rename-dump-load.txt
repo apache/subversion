@@ -1,9 +1,19 @@
                           Dump and Load w/ Renames
                        AKA: Ouch, Please Make It Stop
 
+So, the goal of a dump/load operation is, in short, to take an editor drive
+that describes a given revision and transform it into a series of dumpfile
+entries that can successfully be loaded via svnadmin load.
+
 Renames play nasty games with dump/load, because depending on what else is
 done to a given renamed path in the revision in question you might have to
-run the rename operation at different times.
+run the rename operation at different times.  This is different from copy
+and delete as seen in a move operation because the copy and delete ops are
+independent.  The source and destination sides of a rename operation are
+by definition not independent, so you can't just do part of it at one point
+in the drive and the rest later, you have to pick one point to do it at,
+and which point in time is correct depend on other operations that may be
+occurring in the same revision.
 
 For example:
 
@@ -22,8 +32,8 @@ So for the following operations:
   mv A Y
 
 The actual order we need to run them in (the order that they're listed) may
-very well be different than the order in which the editor drive runs.  If
-the editor does something like this:
+very well be different than the order in which the editor drive runs.  For
+example, what if the editor does something like this:
 
   open_root
     rename_dir_from A to Y
@@ -35,11 +45,14 @@ the editor does something like this:
     rename_dir_to Y from A
   close_directory
 
-The up shot of this is that you can't just hold renames until the source
-directory of the rename is closed, there will be cases when they can't be
-run at all until far later in the process.  In those cases we need to keep
-the pending operation around until we've done the work that's required to
-get stuff out of the way.
+The up shot of this is that you can't just execute renames as soon as you
+see them in the editor drive, and you can't hold renames until the source
+directory of the rename is closed (which would handle the "something under
+this path needs to be renamed out of it first" case), there will still be
+cases when they can't be run at all until far later in the process because
+the destination is obstructed.  In those cases we need to keep the pending
+operation around until we've done the work that's required to get stuff
+out of the way.
 
                                The Plan (tm)
 
