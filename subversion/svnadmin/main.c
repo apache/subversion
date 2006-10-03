@@ -194,8 +194,8 @@ static svn_opt_subcommand_t
   subcommand_recover,
   subcommand_rmlocks,
   subcommand_rmtxns,
-  subcommand_setrevprop,
   subcommand_setlog,
+  subcommand_setrevprop,
   subcommand_verify;
 
 enum 
@@ -387,19 +387,6 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     "Delete the named transaction(s).\n"),
    {'q'} },
 
-  {"setrevprop", subcommand_setrevprop, {0}, N_
-   ("usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n\n"
-    "Set the property NAME on revision REVISION to the contents of FILE. Use\n"
-    "--bypass-hooks to avoid triggering the revision-property-related hooks\n"
-    "(for example, if you do not want an email notification sent\n"
-    "from your post-revprop-change hook, or because the modification of\n"
-    "revision properties has not been enabled in the pre-revprop-change\n"
-    "hook).\n\n"
-    "NOTE: Revision properties are not versioned (e.g. no revision history\n"
-    "is maintained), so this command will permanently overwrite the previous\n"
-    "value for the property.\n"),
-   {'r', svnadmin__bypass_hooks} },
-
   {"setlog", subcommand_setlog, {0}, N_
    ("usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n\n"
     "Set the log-message on revision REVISION to the contents of FILE.  Use\n"
@@ -411,6 +398,19 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     "NOTE: Revision properties are not versioned (e.g. no revision history\n"
     "is maintained), so this command will permanently overwrite the previous\n"
     "log message.\n"),
+   {'r', svnadmin__bypass_hooks} },
+
+  {"setrevprop", subcommand_setrevprop, {0}, N_
+   ("usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n\n"
+    "Set the property NAME on revision REVISION to the contents of FILE. Use\n"
+    "--bypass-hooks to avoid triggering the revision-property-related hooks\n"
+    "(for example, if you do not want an email notification sent\n"
+    "from your post-revprop-change hook, or because the modification of\n"
+    "revision properties has not been enabled in the pre-revprop-change\n"
+    "hook).\n\n"
+    "NOTE: Revision properties are not versioned (e.g. no revision history\n"
+    "is maintained), so this command will permanently overwrite the previous\n"
+    "value for the property.\n"),
    {'r', svnadmin__bypass_hooks} },
 
   {"verify", subcommand_verify, {0}, N_
