@@ -125,6 +125,16 @@ Candidate changes:
     Votes:
       +1: malcolm
 
+  * r21765
+    JavaHL: Compile Java bytecode for the target platform of a Java
+    1.2 JVM.
+    Justification:
+      The default target platform release number is typically equal to
+      the compiling JDK version, which is likely much higher than our
+      supported minimum runtime (Java 1.2).
+    Votes:
+      +1: dlr
+
 Approved changes:
 
   * r21293
