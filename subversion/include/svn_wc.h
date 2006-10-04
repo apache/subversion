@@ -2936,6 +2936,51 @@ svn_boolean_t svn_wc_is_wc_prop(const char *name);
 /** Return true iff @a name is a 'entry' property name. */
 svn_boolean_t svn_wc_is_entry_prop(const char *name);
 
+/** Callback type used by @c svn_wc_canonicalize_svn_prop.
+ *  
+ * It should set @a mime_type to the value of @a SVN_PROP_MIME_TYPE
+ * for the path passed to @c svn_prop_mime_type (allocated from @a
+ * pool), and then write the contents of the file to @a stream.
+ *
+ * (Currently, this is used if you are attempting to set the @a
+ * SVN_PROP_EOL_STYLE property, to make sure that the value matches
+ * the mime type and contents.)
+ */
+typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)
+  (const svn_string_t **mime_type,
+   svn_stream_t *stream,
+   void *baton,
+   apr_pool_t *pool);
+
+
+/** Canonicalize the value of an svn:* property @a propname with
+ * value @propval.
+ *
+ * If the property is not appropriate for a node of kind @a kind, or
+ * is otherwise invalid, throw an error.  Otherwise, set @a *propval_p
+ * to a canonicalized version of the property value.  If @a
+ * skip_some_checks is true, only some validity checks are taken.
+ *
+ * Some validity checks require access to the contents and MIME type
+ * of the target if it is a file; they will call @a getter with @a
+ * getter_baton, which then needs to set the MIME type and print the
+ * contents of the file to the given stream.
+ *
+ * @a path should be the path of the file in question; it is only used
+ * for error messages.
+ *
+ * ### This is not actually related to the WC, but it does need to call
+ * ### svn_wc_parse_externals_description2.
+ */
+svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
+                                          const char *propname,
+                                          const svn_string_t *propval,
+                                          const char *path,
+                                          svn_node_kind_t kind,
+                                          svn_boolean_t skip_some_checks,
+                                          svn_wc_canonicalize_svn_prop_get_file_t getter,
+                                          void *getter_baton,
+                                          apr_pool_t *pool);
 
 
 

@@ -73,7 +73,7 @@ alloc_entry(apr_pool_t *pool)
  * false.  ENTRY_NAME is the name of the WC-entry. */
 static svn_error_t *
 do_bool_attr(svn_boolean_t *entry_flag,
-             apr_uint32_t *modify_flags, apr_uint32_t modify_flag,
+             apr_uint64_t *modify_flags, apr_uint64_t modify_flag,
              apr_hash_t *atts, const char *attr_name,
              const char *entry_name)
 {
@@ -473,7 +473,7 @@ read_entry(svn_wc_entry_t **new_entry,
 
 svn_error_t *
 svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
-                      apr_uint32_t *modify_flags,
+                      apr_uint64_t *modify_flags,
                       apr_hash_t *atts,
                       apr_pool_t *pool)
 {
@@ -885,7 +885,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   apr_hash_t *attributes;
   svn_wc_entry_t *entry;
   svn_error_t *err;
-  apr_uint32_t modify_flags = 0;
+  apr_uint64_t modify_flags = 0;
 
   /* We only care about the `entry' tag; all other tags, such as `xml'
      and `wc-entries', are ignored. */
@@ -2023,7 +2023,7 @@ svn_wc__entries_write(apr_hash_t *entries,
 static void
 fold_entry(apr_hash_t *entries,
            const char *name,
-           apr_uint32_t modify_flags,
+           apr_uint64_t modify_flags,
            svn_wc_entry_t *entry,
            apr_pool_t *pool)
 {
@@ -2241,7 +2241,7 @@ svn_wc__entry_remove(apr_hash_t *entries, const char *name)
 static svn_error_t *
 fold_scheduling(apr_hash_t *entries,
                 const char *name,
-                apr_uint32_t *modify_flags,
+                apr_uint64_t *modify_flags,
                 svn_wc_schedule_t *schedule,
                 apr_pool_t *pool)
 {
@@ -2461,7 +2461,7 @@ svn_error_t *
 svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                      const char *name,
                      svn_wc_entry_t *entry,
-                     apr_uint32_t modify_flags,
+                     apr_uint64_t modify_flags,
                      svn_boolean_t do_sync,
                      apr_pool_t *pool)
 {
@@ -2482,7 +2482,7 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
       svn_wc_entry_t *entry_before, *entry_after;
-      apr_uint32_t orig_modify_flags = modify_flags;
+      apr_uint64_t orig_modify_flags = modify_flags;
       svn_wc_schedule_t orig_schedule = entry->schedule;
 
       /* Keep a copy of the unmodified entry on hand. */

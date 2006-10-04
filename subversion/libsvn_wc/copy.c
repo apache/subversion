@@ -530,7 +530,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
       void *val;
       svn_node_kind_t kind;
       svn_boolean_t deleted = FALSE;
-      apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
+      apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
 
       svn_pool_clear(subpool);
 
