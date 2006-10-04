@@ -135,7 +135,7 @@ AC_DEFUN(SVN_FIND_JDK,
     dnl Add javac flags.
     # The release for "-source" could actually be greater than that
     # of "-target", if we want to cross-compile for lesser JVMs.
-    JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.2"
+    JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.3"
     if test "$enable_debugging" = "yes"; then
       JAVAC_FLAGS="-g $JAVAC_FLAGS"
     fi
