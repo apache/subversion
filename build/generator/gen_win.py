@@ -318,7 +318,7 @@ class WinGeneratorBase(GeneratorBase):
 
           sourcepath = self.path(source.sourcepath)
 
-          cbuild = "javac -g -target 1.2 -source 1.2 -classpath %s -d %s " \
+          cbuild = "javac -g -target 1.2 -source 1.3 -classpath %s -d %s " \
                    "-sourcepath %s $(InputPath)" \
                    % tuple(map(self.quote, (classes, targetdir, sourcepath)))
 
