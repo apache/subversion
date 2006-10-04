@@ -348,11 +348,6 @@ void JNIUtil::handleSVNError(svn_error_t *err)
         svn_error_clear(err);
         return;
     }
-    if(isJavaExceptionThrown())
-    {
-        svn_error_clear(err);
-        return;
-    }
     jstring jfile = makeJString(err->file);
     if(isJavaExceptionThrown())
     {

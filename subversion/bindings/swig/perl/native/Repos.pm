@@ -22,17 +22,6 @@ SVN::Repos - Subversion repository functions
 SVN::Repos wraps the object-oriented C<svn_repos_t> functions, providing
 access to a Subversion repository on the local filesystem.
 
-=cut
-
-# Build up a list of methods as we go through the file.  Add each method
-# to @methods, then document it.  The full list of methods is then
-# instantiated at the bottom of this file.
-#
-# This should make it easier to keep the documentation and list of methods
-# in sync.
-
-my @methods = ();		# List of functions to wrap
-
 =head2 CONSTRUCTORS
 
 =over
@@ -54,6 +43,15 @@ object.
 =over
 
 =cut
+
+# Build up a list of methods as we go through the file.  Add each method
+# to @methods, then document it.  The full list of methods is then
+# instantiated at the bottom of this file.
+#
+# This should make it easier to keep the documentation and list of methods
+# in sync.
+
+my @methods = ();		# List of methods to wrap
 
 push @methods, qw(fs);
 
