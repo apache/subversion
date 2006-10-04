@@ -111,6 +111,19 @@ Candidate changes:
     Votes:
       +1: dionisos
 
+  * r21738
+    Prevent an API violation from corrupting FSFS repositories, as seen
+    in issue #2467 and reports from users.
+    Justification:
+      Silently corrupting the repository is a Bad Thing.
+    Notes:
+      Branch needed to avoid the backport of a new error code.
+    Concerns:
+      This isn't exactly a trivial fix.  We are also assuming that this
+      is the cause of the corruption we've seen.
+    Branch: 1.4.x-r21738 (-c21763)
+    Votes:
+      +1: malcolm
 
 Approved changes:
 
