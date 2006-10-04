@@ -538,7 +538,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
    has been closed.
 
    If the prototype revision file is already locked, return error
-   SVN_FS_REP_BEING_WRITTEN.
+   SVN_ERR_FS_REP_BEING_WRITTEN.
 
    Perform all allocations in POOL. */
 static svn_error_t *
