@@ -8,8 +8,8 @@ provides a minimal-but-complete set of APIs which expose the core
 Subversion C API to Java.  It requires a JRE 1.2+ (runtime).
 
 
-Build system and output
------------------------
+Build system
+------------
 
 JavaHL should compile and run under Linux, Win32, and Mac OS X with a
 JDK 1.3+.
@@ -45,10 +45,10 @@ The private project/workspace is not used anymore.
 Success stories
 ---------------
 
+Subclipse, Eclipse IDE plug-in <http://subclipse.tigris.org/>
+
 Svn-Up, Swing GUI and plug-in for the IDEA IDE
 <http://svnup.tigris.org/>
-
-Subclipse, Eclipse IDE plug-in <http://subclipse.tigris.org/>
 
 
 Why not 100% pure Java?
