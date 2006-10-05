@@ -68,6 +68,7 @@ Path::init (const char * pi_path)
 {
     if(*pi_path == 0)
     {
+        m_error_occured = NULL;
         m_path = "";
     }
     else

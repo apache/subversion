@@ -1333,21 +1333,10 @@ svn_error_t *svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
                                            apr_pool_t *pool);
 
 /**
- * Like svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
- * post-revprop-change hooks around the change.  Use @a pool for
- * temporary allocations.
- *
- * @a rev is the revision whose property to change, @a name is the
- * name of the property, and @a new_value is the new value of the
- * property.   @a author is the authenticated username of the person
- * changing the property value, or null if not available.
- *
- * If @a authz_read_func is non-NULL, then use it (with @a
- * authz_read_baton) to validate the changed-paths associated with @a
- * rev.  If the revision contains any unreadable changed paths, then
- * return SVN_ERR_AUTHZ_UNREADABLE.
+ * Similar to svn_repos_fs_change_rev_prop3(), but with the @a
+ * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
+ * always set to @c TRUE.
  * 
- * @since New in 1.1.
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_repos_fs_change_rev_prop2(svn_repos_t *repos,

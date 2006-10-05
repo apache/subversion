@@ -1090,7 +1090,6 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (svn-process-sentinel-fixup-path-seperators)
                   (svn-status-apply-elide-list)
                   (svn-parse-status-result)
-                  ;(set-buffer act-buf) ; THIS LINE NOT NEEDED? s-s-u-b does (set-buffer *svn-status*)
                   (svn-status-update-buffer)
                   (when svn-status-update-previous-process-output
                     (set-buffer (process-buffer process))
@@ -1304,6 +1303,24 @@ nb: LOCKED-MARK refers to the kind of locks you get after an error,
         switched-mark
         locked-repo-mark))
 
+(defvar svn-user-names-including-blanks nil "A list of svn user names that include blanks.")
+;;(setq svn-user-names-including-blanks '("feng shui" "mister blank"))
+;;(add-hook 'svn-pre-parse-status-hook 'svn-status-parse-fixup-user-names-including-blanks)
+
+(defun svn-status-parse-fixup-user-names-including-blanks ()
+  "Helper function to allow user names that include blanks.
+Add this function to the `svn-pre-parse-status-hook'. The variable
+`svn-user-names-including-blanks' must be configured to hold all user names that contain
+blanks. This function replaces the blanks with '-' to allow further processing with
+the usual parsing functionality in `svn-parse-status-result'."
+  (when svn-user-names-including-blanks
+    (goto-char (point-min))
+    (let ((search-string (concat " \\(" (mapconcat 'concat svn-user-names-including-blanks "\\|") "\\) ")))
+      (save-match-data
+        (save-excursion
+          (while (re-search-forward search-string (point-max) t)
+            (replace-match (replace-regexp-in-string " " "-" (match-string 1)) nil nil nil 1)))))))
+
 (defun svn-parse-status-result ()
   "Parse the `svn-process-buffer-name' buffer.
 The results are used to build the `svn-status-info' variable."
@@ -1330,6 +1347,7 @@ The results are used to build the `svn-status-info' variable."
           (dir-set '(".")))
       (set-buffer svn-process-buffer-name)
       (setq svn-status-info nil)
+      (run-hooks 'svn-pre-parse-status-hook)
       (goto-char (point-min))
       (while (< (point) (point-max))
         (cond

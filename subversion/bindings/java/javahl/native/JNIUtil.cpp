@@ -737,13 +737,13 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t * pool)
 
       /* The above doesn't guarantee a valid URI. */
       if (! svn_path_is_uri_safe (path))
-        return svn_error_createf (SVN_ERR_BAD_URL, 0,
+        return svn_error_createf (SVN_ERR_BAD_URL, NULL,
                                   _("URL '%s' is not properly URI-encoded"),
                                   path);
 
       /* Verify that no backpaths are present in the URL. */
       if (svn_path_is_backpath_present (path))
-        return svn_error_createf (SVN_ERR_BAD_URL, 0,
+        return svn_error_createf (SVN_ERR_BAD_URL, NULL,
                                   _("URL '%s' contains a '..' element"),
                                   path);
       

@@ -642,8 +642,8 @@ public class SVNTests extends TestCase
          */
         public void checkStatus() throws Exception
         {
-            Status[] states = client.status(workingCopy.getAbsolutePath(), true,
-                    false, true, true);
+            Status[] states = client.status(workingCopy.getAbsolutePath(),
+                                            true, false, true, true);
             wc.check(states, workingCopy.getAbsolutePath());
         }
     }
