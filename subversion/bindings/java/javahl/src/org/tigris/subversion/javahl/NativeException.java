@@ -66,4 +66,26 @@ class NativeException extends SubversionException
     {
         return aprError;
     }
+
+    /**
+     * @return The description, with {@link #source} and {@link
+     * #aprError} appended (if any).
+     */
+    public String getMessage()
+    {
+        StringBuffer msg = new StringBuffer(super.getMessage());
+        // ### This might be better off in JNIUtil::handleSVNError().
+        String src = getSource();
+        if (src != null)
+        {
+            msg.append("svn: ");
+            msg.append(src);
+            int aprErr = getAprError();
+            if (aprErr != -1)
+            {
+                msg.append(": (apr_err=").append(aprErr).append(')');
+            }
+        }
+        return msg.toString();
+    }
 }
