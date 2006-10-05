@@ -452,7 +452,8 @@ _svn()
 		cmdOpts="--clear --targets"
 		;;
 	checkout|co)
-		cmdOpts="$rOpts $qOpts $nOpts $pOpts --ignore-externals"
+		cmdOpts="$rOpts $qOpts $nOpts $pOpts --ignore-externals \
+                         --force"
 		;;
 	cleanup)
 		cmdOpts="--diff3-cmd"
@@ -543,14 +544,15 @@ _svn()
 		         --no-ignore --ignore-externals --incremental --xml"
 		;;
 	switch|sw)
-		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd"
+		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd \
+                         --force"
 		;;
 	unlock)
 		cmdOpts="--targets --force $pOpts"
 		;;
 	update|up)
 		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
-                         --ignore-externals"
+                         --ignore-externals --force"
 		;;
 	*)
 		;;
