@@ -18,46 +18,49 @@
 package org.tigris.subversion.javahl;
 
 /**
- * Subversion client exception class.
- * This exception is throw whenever something goes wrong in the jni-interface
+ * This exception is thrown whenever something goes wrong in the
+ * Subversion JavaHL binding's JNI interface.
  */
 public class ClientException extends Exception
 {
     /**
-     * The constructor is only used by the native library.
-     * @param message message 
-     * @param source source
-     * @param aprError APR error code
-     */
-    ClientException(String message, String source, int aprError)
-    {
-    	super(message);
-        this.source = source;
-		this.aprError = aprError;
-    }
-    /**
-     * the exception message
-     */
-    private String message;
-
-    /**
-     * the error source
+     * Any associated error source (e.g. line number) for a wrapped
+     * <code>svn_error_t</code>.
      */
     private String source;
+
     /**
-     * the APR error id
+     * Any associated APR error code for a wrapped
+     * <code>svn_error_t</code>.
      */
     private int aprError;
 
     /**
-     * Returns the error source.
+     * This constructor is only used by the native library.
+     *
+     * @param message A description of the problem.
+     * @param source The error's source.
+     * @param aprError Any associated APR error code for a wrapped
+     * <code>svn_error_t</code>.
+     */
+    ClientException(String message, String source, int aprError)
+    {
+        super(message);
+        this.source = source;
+        this.aprError = aprError;
+    }
+
+    /**
+     * @return The error source (e.g. line number).
      */
     public String getSource()
     {
         return source;
     }
+
     /**
-     * Returns the APR error id.
+     * @return Any associated APR error code for a wrapped
+     * <code>svn_error_t</code>.
      */
     public int getAprError()
     {
