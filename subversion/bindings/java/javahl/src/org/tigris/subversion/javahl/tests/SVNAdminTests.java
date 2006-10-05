@@ -17,9 +17,11 @@
  */
 package org.tigris.subversion.javahl.tests;
 
-import junit.framework.TestCase;
-import org.tigris.subversion.javahl.SVNAdmin;
 import java.io.File;
+import junit.framework.TestCase;
+
+import org.tigris.subversion.javahl.SubversionException;
+import org.tigris.subversion.javahl.SVNAdmin;
 
 /**
  * This class is used for testing the SVNAdmin class
@@ -28,10 +30,13 @@ import java.io.File;
  */
 public class SVNAdminTests extends TestCase
 {
+    private static final String REPOS_PATH = "testrep";
+
     /**
      * the objects, which is going to be tested
      */
-    SVNAdmin testee;
+    private SVNAdmin testee;
+
     /**
      * setup the test
      * @throws Exception
@@ -56,43 +61,59 @@ public class SVNAdminTests extends TestCase
      * Test the basic SVNAdmin.create functionality
      * @throws Throwable
      */
-    public void testCreate() throws Throwable
+    public void testCreate()
+        throws SubversionException
     {
-        testee.create("testrep", false, false, null, SVNAdmin.BDB);
-        assertTrue("repository exists", new File("testrep").exists());
-        removeRepository("testrep");
-        assertFalse("repository deleted", new File("testrep").exists());
+        createRepository(REPOS_PATH);
+        File reposDir = new File(REPOS_PATH);
+        assertTrue("repository exists", reposDir.exists());
+        removeRepository(REPOS_PATH);
+        assertFalse("repository deleted", reposDir.exists());
     }
 
     /**
-     * remove a rempositryl
-     * @param pathName      path name of the repository
-     * @throws Exception
+     * Create a repository at <code>reposPath</code>.
+     *
+     * @param reposPath The path to the repository.
      */
-    protected void removeRepository(String pathName) throws Exception
+    protected void createRepository(String reposPath)
+        throws SubversionException
     {
-        File masterDir = new File(pathName);
-        removeDirOrFile(masterDir);
+        testee.create(reposPath, false, false, null, SVNAdmin.BDB);
     }
 
     /**
-     * remove a file or a directory with its content
-     * @param file  the file or directory to be removed
+     * Delete the repository at <code>reposPath</code>.
+     *
+     * @param reposPath The path to the repository.
      */
-    private void removeDirOrFile(File file)
+    protected void removeRepository(String reposPath)
     {
-        if(!file.exists())
+        removeDirOrFile(new File(reposPath));
+    }
+
+    /**
+     * Remove a file or a directory and all its content.
+     *
+     * @param path The file or directory to be removed.
+     */
+    private void removeDirOrFile(File path)
+    {
+        if (!path.exists())
         {
             return;
         }
-        if(file.isDirectory())
+
+        if (path.isDirectory())
         {
-            File[] content = file.listFiles();
-            for(int i = 0; i < content.length; i++)
-                removeDirOrFile(content[i]);
-            file.delete();
+            // Recurse (depth-first), deleting contents.
+            File[] dirContents = path.listFiles();
+            for (int i = 0; i < dirContents.length; i++)
+            {
+                removeDirOrFile(dirContents[i]);
+            }
         }
-        else
-            file.delete();
+
+        path.delete();
     }
 }
