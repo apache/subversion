@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,10 +19,22 @@ package org.tigris.subversion.javahl;
 
 /**
  * This exception is thrown whenever something goes wrong in the
- * Subversion JavaHL binding's JNI interface.
+ * Subversion JavaHL binding's JNI code.
  */
-public class ClientException extends NativeException
+class NativeException extends SubversionException
 {
+    /**
+     * Any associated error source (e.g. line number) for a wrapped
+     * <code>svn_error_t</code>.
+     */
+    private String source;
+
+    /**
+     * Any associated APR error code for a wrapped
+     * <code>svn_error_t</code>.
+     */
+    private int aprError;
+
     /**
      * This constructor is only used by the native library.
      *
@@ -31,8 +43,27 @@ public class ClientException extends NativeException
      * @param aprError Any associated APR error code for a wrapped
      * <code>svn_error_t</code>.
      */
-    ClientException(String message, String source, int aprError)
+    NativeException(String message, String source, int aprError)
     {
-        super(message, source, aprError);
+        super(message);
+        this.source = source;
+        this.aprError = aprError;
+    }
+
+    /**
+     * @return The error source (e.g. line number).
+     */
+    public String getSource()
+    {
+        return source;
+    }
+
+    /**
+     * @return Any associated APR error code for a wrapped
+     * <code>svn_error_t</code>.
+     */
+    public int getAprError()
+    {
+        return aprError;
     }
 }
