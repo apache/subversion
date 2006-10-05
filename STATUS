@@ -104,10 +104,11 @@ Candidate changes:
       +1: cmpilato, dlr
 
   * r21720, r21724, r21726
-    Fix 'Checksum mismatch' error when receiving update for
+    Fix issue #2618: 'Checksum mismatch' error when receiving update for
     locally replaced-with-history file.
     Justification:
       Breaks working copy update; includes tests.
+    Branch: 1.4.x-issue-2618
     Votes:
       +1: dionisos
 
