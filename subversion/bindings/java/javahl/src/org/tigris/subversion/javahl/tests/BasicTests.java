@@ -116,6 +116,19 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * test the basic SVNClient.status functionality
+     * @throws Throwable
+     */
+    public void testBasicStatus() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+
+        // check the status of the working copy
+        thisTest.checkStatus();
+    }
+
+    /**
      * test the basic SVNClient.checkout functionality
      * @throws Throwable
      */
@@ -161,19 +174,6 @@ public class BasicTests extends SVNTests
 
         // deleted file should reapear
         thisTest.getWc().setItemTextStatus("A/B/lambda", Status.Kind.normal);
-
-        // check the status of the working copy
-        thisTest.checkStatus();
-    }
-
-    /**
-     * test the basic SVNClient.status functionality
-     * @throws Throwable
-     */
-    public void testBasicStatus() throws Throwable
-    {
-        // build the test setup
-        OneTest thisTest = new OneTest();
 
         // check the status of the working copy
         thisTest.checkStatus();
