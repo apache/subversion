@@ -1018,6 +1018,7 @@ test_path_check_valid(const char **msg,
       svn_error_t *err = svn_path_check_valid(tests[i].path, pool);
       svn_boolean_t retval = (err == SVN_NO_ERROR);
 
+      svn_error_clear(err);
       if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,

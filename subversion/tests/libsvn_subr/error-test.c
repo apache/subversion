@@ -51,15 +51,22 @@ test_error_is_root_cause(const char **msg,
   for (i = 0; i < 2; i++)
    {
     if (svn_error_root_cause_is(err, secondary_err_codes[i]))
-      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                               "svn_error_root_cause_is returned a "
-                               "false-postive");
+      {
+        svn_error_clear(err);
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "svn_error_root_cause_is returned a "
+                                 "false-postive");
+      }
    }
 
   if (!svn_error_root_cause_is(err, root_cause_err_code))
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "svn_error_root_cause_is detection failed");
+    {
+      svn_error_clear(err);
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "svn_error_root_cause_is detection failed");
+    }
 
+  svn_error_clear(err);
   return SVN_NO_ERROR;
 }
 
