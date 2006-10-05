@@ -400,11 +400,7 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
                               authz_read_func,
                               authz_read_baton,
                               text_deltas,
-                              /* ### TODO: This duplicates the logic
-                                 ### of the UNFOLD_TO_DEPTH() macro in
-                                 ### libsvn_ra/ra_loader.h.  Should we
-                                 ### unify? */
-                              (recurse) ? svn_depth_infinity : svn_depth_zero,
+                              SVN_DEPTH_FROM_RECURSE(recurse),
                               entry_props,
                               ignore_ancestry,
                               pool);

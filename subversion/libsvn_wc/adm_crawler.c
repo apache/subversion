@@ -124,6 +124,8 @@ restore_file(const char *file_path,
 /* The recursive crawler that describes a mixed-revision working
    copy to an RA layer.  Used to initiate updates.
 
+   ### TODO: document DEPTH parameter
+
    This is a depth-first recursive walk of DIR_PATH under ADM_ACCESS.
    Look at each entry and check if its revision is different than
    DIR_REV.  If so, report this fact to REPORTER.  If an entry is
@@ -153,7 +155,7 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                  svn_wc_notify_func2_t notify_func,
                  void *notify_baton,
                  svn_boolean_t restore_files,
-                 svn_boolean_t recurse,
+                 svn_depth_t depth,
                  svn_boolean_t report_everything,
                  svn_boolean_t use_commit_times,
                  svn_wc_traversal_info_t *traversal_info,
@@ -203,6 +205,8 @@ report_revisions(svn_wc_adm_access_t *adm_access,
   /* Looping over current directory's SVN entries: */
   iterpool = svn_pool_create(subpool);
 
+  /* ### TODO: See TODO comment in svn_wc_crawl_revisions3()
+     ### about depth treatment here. */ 
   for (hi = apr_hash_first(subpool, entries); hi; hi = apr_hash_next(hi))
     {
       const void *key;
@@ -336,8 +340,16 @@ report_revisions(svn_wc_adm_access_t *adm_access,
         } /* end file case */
       
       /*** Directories (in recursive mode) ***/
-      else if (current_entry->kind == svn_node_dir && recurse)
+      else if (current_entry->kind == svn_node_dir
+               && depth == svn_depth_infinity)
         {
+          /* ### TODO: I think it's correct to check whether
+             ### 'depth == svn_depth_infinity' above.  If the
+             ### specified depth is not infinity, then we don't want
+             ### to recurse at all.  If it is, then we want recursion
+             ### to be dependent on the subdirs' entries, right?
+             ### That's what the code below does. */ 
+
           svn_wc_adm_access_t *subdir_access;
           const svn_wc_entry_t *subdir_entry;
 
@@ -403,16 +415,18 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                                        subdir_entry->lock_token,
                                        iterpool));
 
-          /* Recurse. */
-          SVN_ERR(report_revisions(adm_access, this_path,
-                                   subdir_entry->revision,
-                                   reporter, report_baton,
-                                   notify_func, notify_baton,
-                                   restore_files, recurse,
-                                   subdir_entry->incomplete,
-                                   use_commit_times,
-                                   traversal_info,
-                                   iterpool));
+          /* ### TODO: See TODO comment in svn_wc_crawl_revisions3()
+             ### about depth treatment here. */ 
+          if (depth == svn_depth_infinity)
+            SVN_ERR(report_revisions(adm_access, this_path,
+                                     subdir_entry->revision,
+                                     reporter, report_baton,
+                                     notify_func, notify_baton,
+                                     restore_files, depth,
+                                     subdir_entry->incomplete,
+                                     use_commit_times,
+                                     traversal_info,
+                                     iterpool));
         } /* end directory case */
     } /* end main entries loop */
 
@@ -433,7 +447,7 @@ svn_wc_crawl_revisions3(const char *path,
                         const svn_ra_reporter3_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
-                        svn_boolean_t recurse,
+                        svn_depth_t depth,
                         svn_boolean_t use_commit_times,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
@@ -513,6 +527,10 @@ svn_wc_crawl_revisions3(const char *path,
         }
     }
 
+  /* The found depth controls if no specific depth was requested. */
+  if (depth == svn_depth_unknown)
+    depth = entry->depth;
+
   if (entry->kind == svn_node_dir)
     {
       if (missing)
@@ -523,8 +541,16 @@ svn_wc_crawl_revisions3(const char *path,
           if (err)
             goto abort_report;
         }
-      else 
+      else if (depth == svn_depth_infinity)
         {
+          /* ### TODO: Just passing depth here is not enough.  There
+             ### can be circumstances where the root is depth 0 or 1,
+             ### but some child directories are present at depth
+             ### infinity.  We need to detect them and recurse into
+             ### them *unless* there is a passed-in depth that is not
+             ### infinity.  I think.
+           */
+
           /* Recursively crawl ROOT_DIRECTORY and report differing
              revisions. */
           err = report_revisions(adm_access,
@@ -532,7 +558,7 @@ svn_wc_crawl_revisions3(const char *path,
                                  base_rev,
                                  reporter, report_baton,
                                  notify_func, notify_baton,
-                                 restore_files, recurse,
+                                 restore_files, depth,
                                  entry->incomplete,
                                  use_commit_times,
                                  traversal_info,
@@ -719,7 +745,7 @@ svn_wc_crawl_revisions2(const char *path,
                                  adm_access,
                                  &wrap_3to2_reporter, &wrb,
                                  restore_files,
-                                 recurse,
+                                 SVN_DEPTH_FROM_RECURSE(recurse),
                                  use_commit_times,
                                  notify_func,
                                  notify_baton,
@@ -822,6 +848,10 @@ svn_wc_crawl_revisions(const char *path,
   nb.func = notify_func;
   nb.baton = notify_baton;
 
+  /* ### TODO: Ideally, this would call svn_wc_crawl_revisions3() (or
+     ### whatever the latest interface is) directly.  However, I'm
+     ### too distracted to untangle the layers of compat wrappers
+     ### going on here right now, so I'm just going to leave it. */
   return svn_wc_crawl_revisions2(path, adm_access, &wrap_2to1_reporter, &wrb,
                                  restore_files, recurse, use_commit_times,
                                  svn_wc__compat_call_notify_func, &nb,

@@ -222,6 +222,17 @@ typedef enum
 } svn_depth_t;
 
 
+/* Return an @c svn_depth_t depth based on boolean @a recurse.
+ *
+ * @note New code should never need to use this, it is called only
+ * from pre-depth APIs, for compatibility.
+ *
+ * @since New in 1.4.
+ */
+#define SVN_DEPTH_FROM_RECURSE(recurse) \
+  ((recurse) ? svn_depth_infinity : svn_depth_zero)
+
+
 /**
  * It is sometimes convenient to indicate which parts of an @c svn_dirent_t
  * object you are actually interested in, so that calculating and sending

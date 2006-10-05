@@ -31,12 +31,6 @@
 extern "C" {
 #endif
 
-/* Return svn_depth_t depth based on boolen RECURSE.  This is a helper
-   for translating from the old pre-depth API. */
-#define UNFOLD_TO_DEPTH(recurse) \
-  (recurse) ? svn_depth_infinity : svn_depth_zero
-
-
 /* The RA layer vtable. */
 typedef struct svn_ra__vtable_t {
   /* This field should always remain first in the vtable. */

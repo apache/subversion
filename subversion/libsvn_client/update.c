@@ -42,7 +42,7 @@ svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const svn_opt_revision_t *revision,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
@@ -75,7 +75,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* Use PATH to get the update's anchor and targets and get a write lock */
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
-                                 TRUE, recurse ? -1 : 0,
+                                 TRUE,
+                                 depth == svn_depth_infinity ? -1 : 0,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   anchor = svn_wc_adm_access_path(adm_access);
@@ -127,7 +128,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
   SVN_ERR(svn_wc_get_update_editor3(&revnum, adm_access, target,
-                                    use_commit_times, recurse,
+                                    use_commit_times, depth,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
@@ -142,14 +143,14 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             &reporter, &report_baton,
                             revnum,
                             target,
-                            recurse,
+                            depth,
                             update_editor, update_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
      PATH.  When we call reporter->finish_report, the
      update_editor will be driven by svn_repos_dir_delta2. */
   err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
-                                TRUE, recurse, use_commit_times,
+                                TRUE, depth, use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 traversal_info, pool);
       
@@ -165,7 +166,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  if (recurse && (! ignore_externals))
+  if ((depth == svn_depth_infinity) && (! ignore_externals))
     SVN_ERR(svn_client__handle_externals(traversal_info, 
                                          TRUE, /* update unchanged ones */
                                          use_sleep, ctx, pool));

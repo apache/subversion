@@ -2517,6 +2517,8 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * to @a reporter/@a report_baton.  Obviously, if @a path is a file
  * instead of a directory, this depth-first crawl will be a short one.
  *
+ * ### TODO: document @a depth parameter.
+ *
  * No locks are or logs are created, nor are any animals harmed in the
  * process.  No cleanup is necessary.  @a adm_access must be an access 
  * baton for the @a path hierarchy, it does not require a write lock.
@@ -2546,7 +2548,7 @@ svn_wc_crawl_revisions3(const char *path,
                         const svn_ra_reporter3_t *reporter,
                         void *report_baton,
                         svn_boolean_t restore_files,
-                        svn_boolean_t recurse,
+                        svn_depth_t depth,
                         svn_boolean_t use_commit_times,
                         svn_wc_notify_func2_t notify_func,
                         void *notify_baton,
@@ -2671,7 +2673,7 @@ svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
                                        const char *target,
                                        svn_boolean_t use_commit_times,
-                                       svn_boolean_t recurse,
+                                       svn_depth_t depth,
                                        svn_boolean_t allow_unver_obstructions,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
