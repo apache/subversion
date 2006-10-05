@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,10 +18,10 @@
 package org.tigris.subversion.javahl;
 
 /**
- * This exception is thrown whenever something goes wrong in the
- * Subversion JavaHL binding's JNI interface.
+ * This checked exception is thrown whenever something goes wrong with
+ * the Subversion JavaHL bindings.
  */
-public class ClientException extends NativeException
+public class SubversionException extends Exception
 {
     /**
      * This constructor is only used by the native library.
@@ -31,8 +31,8 @@ public class ClientException extends NativeException
      * @param aprError Any associated APR error code for a wrapped
      * <code>svn_error_t</code>.
      */
-    ClientException(String message, String source, int aprError)
+    protected SubversionException(String message)
     {
-        super(message, source, aprError);
+        super(message);
     }
 }
