@@ -134,9 +134,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r21526
-    Pass path, not url, in to ne_lock_discover.
-    Justification:
-      Neon wants the path, it's only by chance that the URL usually works.
-    Votes:
-      +1: rooneg, dlr, cmpilato

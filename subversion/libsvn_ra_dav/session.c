@@ -1515,6 +1515,7 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   struct receiver_baton *rb;
   svn_string_t fs_path;
   svn_error_t *err;
+  ne_uri uri;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component(ras->url->data, path, pool);  
@@ -1537,6 +1538,14 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
 
   /* Ask neon to "discover" the lock (presumably by doing a PROPFIND
      for the DAV:supportedlock property). */
+  
+  /* ne_lock_discover wants just the path, so parse it out of the url. */
+  if (ne_uri_parse(url, &uri) == 0)
+    {
+      url = apr_pstrdup(pool, uri.path);
+      ne_uri_free(&uri);
+    }
+
   rv = ne_lock_discover(ras->sess, url, lock_receiver, rb);
 
   /* Did we get a <D:error> response? */
