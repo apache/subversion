@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,7 +18,6 @@
 package org.tigris.subversion.javahl.tests;
 
 import junit.framework.TestCase;
-import junit.framework.TestSuite;
 import org.tigris.subversion.javahl.*;
 
 import java.io.File;
@@ -28,10 +27,11 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+
 /**
  * common base class for the javahl binding tests
  */
-public class SVNTests extends TestCase
+class SVNTests extends TestCase
 {
     /**
      * our admin object, mostly used for creating,dumping and loading
@@ -100,68 +100,18 @@ public class SVNTests extends TestCase
     protected Map expectedCommitItems;
 
     /**
-     * common root directory for all tests. Can be set by the command line or
-     * by the system property "test.rootdir". If not set, the current directory
-     * of this process is used
+     * Common root directory for all tests. Can be set by the command
+     * line or by the system property <code>test.rootdir</code>.  If
+     * not set, the current working directory of this process is used.
      */
     protected static String rootDirectoryName;
+
     /**
      * common root URL for all tests. Can be set by the command line or by the
      * system property "test.rooturl". If not set, the file url of the
      * rootDirectoryName is used.
      */
     protected static String rootUrl;
-
-    /**
-     * retrieve the root directory and the root url from the command line
-     * arguments
-     * @param args  command line arguments
-     */
-    protected static void processArgs(String[] args)
-    {
-        if (args == null)
-            return;
-        for (int i = 0; i < args.length; i++)
-        {
-            String arg = args[i];
-            if ("-d".equals(arg))
-            {
-                if (i + 1 < args.length)
-                {
-                    rootDirectoryName = args[++i];
-                }
-            }
-            if ("-u".equals(arg))
-            {
-                if (i + 1 < args.length)
-                {
-                    rootUrl = args[++i];
-                }
-            }
-        }
-    }
-
-    /**
-     * Main method, will call all tests of all test classes
-     * @param args command line arguments
-     */
-    public static void main(String[] args)
-    {
-        processArgs(args);
-        junit.textui.TestRunner.run(suite());
-    }
-
-    /**
-     * build a test suite with all test of all test classes known
-     * @return complete test suite
-     */
-    public static TestSuite suite()
-    {
-        TestSuite suite = new TestSuite();
-        suite.addTestSuite(BasicTests.class);
-        suite.addTestSuite(SVNAdminTests.class);
-        return suite;
-    }
 
     /**
      * Initialize one test object
