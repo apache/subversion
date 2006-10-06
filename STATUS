@@ -134,15 +134,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r21592
-    Add the -l or --log command line option in svn_all_diffs.pl's
-    usage message.
-    Justification:
-      Without a usage message documenting it, people won't know it's
-      there unless they browse the source code.
-    Votes:
-      +1: blair, dlr
-
   * r21609
     Make it possible to check out repositories with spaces in ther names over
     ra_svn.
