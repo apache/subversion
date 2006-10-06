@@ -649,6 +649,7 @@ do_open(svn_wc_adm_access_t **adm_access,
                   /* This closes all the children in temporary hash as well */
                   svn_error_clear(svn_wc_adm_close(lock));
                   svn_pool_destroy(subpool);
+                  lock->set = NULL;
                   return err;
                 }
             }
@@ -670,6 +671,7 @@ do_open(svn_wc_adm_access_t **adm_access,
                   /* This closes all the children in temporary hash as well */
                   svn_error_clear(svn_wc_adm_close(lock));
                   svn_pool_destroy(subpool);
+                  lock->set = NULL;
                   return err;
                 }
 
@@ -1336,9 +1338,10 @@ do_close(svn_wc_adm_access_t *adm_access,
           SVN_ERR(remove_lock(adm_access->path, adm_access->pool));
           adm_access->lock_exists = FALSE;
         }
-      /* Reset to prevent further use of the write lock. */
-      adm_access->type = svn_wc__adm_access_closed;
     }
+
+  /* Reset to prevent further use of the lock. */
+  adm_access->type = svn_wc__adm_access_closed;
 
   /* Detach from set */
   if (adm_access->set)

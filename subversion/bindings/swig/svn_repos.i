@@ -40,7 +40,8 @@
     const char *user,
     const char *log_msg,
     const char *lock_token,
-    const char *tgt_path
+    const char *tgt_path,
+    const char *parent_dir
 };
 
 #ifdef SWIGPYTHON

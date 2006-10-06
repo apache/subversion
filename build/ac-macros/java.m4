@@ -24,7 +24,7 @@ AC_DEFUN(SVN_CHECK_JDK,
     esac
   ],
   [
-    SVN_FIND_JDK(check)
+    SVN_FIND_JDK(check, $JAVA_OLDEST_WORKING_VER)
   ])
 ])
 
