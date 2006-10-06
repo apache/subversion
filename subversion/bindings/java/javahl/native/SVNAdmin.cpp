@@ -512,25 +512,27 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
 
 }
 
-void SVNAdmin::setLog(const char *path, Revision &revision, 
-                      const char *message, bool bypassHooks)
+void SVNAdmin::setRevProp(const char *path, Revision &revision,
+			  const char *propName, const char *propValue,
+			  bool usePreRevPropChangeHook,
+			  bool usePostRevPropChangeHook)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
-    if(message == NULL)
+    if (propName == NULL)
     {
-        JNIUtil::throwNullPointerException("message");
+        JNIUtil::throwNullPointerException("propName");
         return;
     }
-    path = svn_path_internal_style(path, requestPool.pool());
-    svn_repos_t *repos;
-    svn_string_t *log_contents = svn_string_create (message, 
-                                                    requestPool.pool());
-
+    if (propValue == NULL)
+    {
+        JNIUtil::throwNullPointerException("propValue");
+        return;
+    }
     if (revision.revision()->kind != svn_opt_revision_number)
     {
         JNIUtil::handleSVNError(
@@ -545,9 +547,12 @@ void SVNAdmin::setLog(const char *path, Revision &revision,
                               _("Only one revision allowed")));
       return;
     }
+
     /* Open the filesystem  */
-    svn_error_t *err = svn_repos_open (&repos, path, requestPool.pool());
-    if(err != SVN_NO_ERROR)
+    svn_repos_t *repos;
+    path = svn_path_internal_style(path, requestPool.pool());
+    svn_error_t *err = svn_repos_open(&repos, path, requestPool.pool());
+    if (err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(err);
         return;
@@ -555,20 +560,23 @@ void SVNAdmin::setLog(const char *path, Revision &revision,
 
     /* If we are bypassing the hooks system, we just hit the filesystem
        directly. */
-    if (bypassHooks)
+    svn_string_t *propValStr = svn_string_create(propValue,
+						 requestPool.pool());
+    if (usePreRevPropChangeHook || usePostRevPropChangeHook)
     {
-        svn_fs_t *fs = svn_repos_fs (repos);
-        err = svn_fs_change_rev_prop
-               (fs, revision.revision()->value.number,
-                SVN_PROP_REVISION_LOG, log_contents, requestPool.pool());
+        err = svn_repos_fs_change_rev_prop3
+            (repos, revision.revision()->value.number, NULL,
+             propName, propValStr, usePreRevPropChangeHook,
+	     usePostRevPropChangeHook, NULL, NULL, requestPool.pool());
     }
     else
     {
-        err = svn_repos_fs_change_rev_prop
-               (repos, revision.revision()->value.number,
-                NULL, SVN_PROP_REVISION_LOG, log_contents, requestPool.pool());
+        svn_fs_t *fs = svn_repos_fs (repos);
+        err = svn_fs_change_rev_prop
+            (fs, revision.revision()->value.number,
+             propName, propValStr, requestPool.pool());
     }
-    if(err != SVN_NO_ERROR)
+    if (err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(err);
         return;

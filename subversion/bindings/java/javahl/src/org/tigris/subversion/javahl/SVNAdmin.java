@@ -206,10 +206,33 @@ public class SVNAdmin
      * @param message           the message to be set
      * @param bypassHooks       if to bypass all repository hooks
      * @throws ClientException  throw in case of problem
+     * @deprecated Use setRevProp() instead.
      */
     public native void setLog(String path, Revision rev, String message,
                               boolean bypassHooks)
             throws ClientException;
+
+    /**
+     * Change the value of the revision property <code>propName</code>
+     * to <code>propValue</code>.  By default, does not run
+     * pre-/post-revprop-change hook scripts.
+     *
+     * @param path The path to the repository.
+     * @param rev The revision for which to change a property value.
+     * @param propName The name of the property to change.
+     * @param propValue The new value to set for the property.
+     * @param usePreRevPropChangeHook Whether to run the
+     * <i>pre-revprop-change</i> hook script.
+     * @param usePostRevPropChangeHook Whether to run the
+     * <i>post-revprop-change</i> hook script.
+     * @exception SubversionException If a problem occurs.
+     * @since 1.5.0
+     */
+    public native void setRevProp(String path, Revision rev,
+                                  String propName, String propValue,
+                                  boolean usePreRevPropChangeHook,
+                                  boolean usePostRevPropChangeHook)
+            throws SubversionException;
 
     /**
      * verify the repository
