@@ -21,11 +21,6 @@ Candidate changes:
     Votes:
       +1: cmpilato
 
-  * r21357
-    Python/SWIG crash when apr_hash_t typemap is used.
-    Votes:
-      +1: djames
-
   * r21384, r21047
     A merge which results in a conflicted file in your WC should
     produce a "conflicted" merge notification.  'svn merge --dry-run'
@@ -135,7 +130,7 @@ Candidate changes:
     Justification:
       Apparently this is causing 80% of the TortoiseSVN crashes for 1.4.0.
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
 Approved changes:
 
@@ -143,6 +138,11 @@ Approved changes:
     Neon 0.26.x compatibility for Windows build.
     Votes:
       +1: djh, dlr, rooneg
+
+  * r21357
+    Python/SWIG crash when apr_hash_t typemap is used.
+    Votes:
+      +1: djames, dlr
 
   * r21575
     Update the URL for the svnmerge.py wiki page.
