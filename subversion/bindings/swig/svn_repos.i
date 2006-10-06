@@ -53,7 +53,8 @@
     const char *user,
     const char *log_msg,
     const char *lock_token,
-    const char *tgt_path
+    const char *tgt_path,
+    const char *parent_dir
 };
 
 %apply apr_hash_t *STRING_TO_STRING { apr_hash_t *fs_config };
