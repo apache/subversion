@@ -59,13 +59,6 @@ Candidate changes:
     Votes:
       +1: malcolm, dlr
 
-  * r21526
-    Pass path, not url, in to ne_lock_discover.
-    Justification:
-      Neon wants the path, it's only by chance that the URL usually works.
-    Votes:
-      +1: rooneg, dlr
-
   * r21531
     Allow HTTP auth protocols to be configurable by way of a
     "http-auth-types" parameter.
@@ -73,14 +66,7 @@ Candidate changes:
       Allow use of GSSAPI/SSPI auth on Windows with Neon 0.26.1+.
     Votes:
       +1: dlr, djh
-
-  * r21609
-    Make it possible to check out repositories with spaces in ther names over
-    ra_svn.
-    Justification:
-      Simple fix.  User reported problem.
-    Votes:
-      +1: rooneg, dlr
+      -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
   * r21566, r21638, r21641, r21669, r21685, r21696, r21705
     Fix issue #2533, making 'svn status -u' show remotely changed
@@ -173,3 +159,18 @@ Approved changes:
       there unless they browse the source code.
     Votes:
       +1: blair, dlr
+
+  * r21609
+    Make it possible to check out repositories with spaces in ther names over
+    ra_svn.
+    Justification:
+      Simple fix.  User reported problem.
+    Votes:
+      +1: rooneg, dlr, cmpilato
+
+  * r21526
+    Pass path, not url, in to ne_lock_discover.
+    Justification:
+      Neon wants the path, it's only by chance that the URL usually works.
+    Votes:
+      +1: rooneg, dlr, cmpilato
