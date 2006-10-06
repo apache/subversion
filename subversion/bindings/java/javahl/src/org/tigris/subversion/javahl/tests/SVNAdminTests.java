@@ -89,31 +89,6 @@ public class SVNAdminTests extends TestCase
      */
     protected void removeRepository(String reposPath)
     {
-        removeDirOrFile(new File(reposPath));
-    }
-
-    /**
-     * Remove a file or a directory and all its content.
-     *
-     * @param path The file or directory to be removed.
-     */
-    private void removeDirOrFile(File path)
-    {
-        if (!path.exists())
-        {
-            return;
-        }
-
-        if (path.isDirectory())
-        {
-            // Recurse (depth-first), deleting contents.
-            File[] dirContents = path.listFiles();
-            for (int i = 0; i < dirContents.length; i++)
-            {
-                removeDirOrFile(dirContents[i]);
-            }
-        }
-
-        path.delete();
+        SVNTests.removeDirOrFile(new File(reposPath));
     }
 }

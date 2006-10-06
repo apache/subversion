@@ -663,7 +663,7 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // remove & revert X
-        removeDirectoryWithContent(new File(thisTest.getWorkingCopy(), "X"));
+        removeDirOrFile(new File(thisTest.getWorkingCopy(), "X"));
         client.revert(thisTest.getWCPath()+"/X", false);
         thisTest.getWc().removeItem("X");
 
@@ -672,7 +672,7 @@ public class BasicTests extends SVNTests
 
         // delete the directory A/B/E
         client.remove(new String[] {thisTest.getWCPath()+"/A/B/E"}, null, true);
-        removeDirectoryWithContent(new File(thisTest.getWorkingCopy(), "A/B/E"));
+        removeDirOrFile(new File(thisTest.getWorkingCopy(), "A/B/E"));
         thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.deleted);
         thisTest.getWc().removeItem("A/B/E/alpha");
         thisTest.getWc().removeItem("A/B/E/beta");
@@ -1292,7 +1292,7 @@ public class BasicTests extends SVNTests
                 "log message for import", true);
 
         // remove dir
-        removeDirectoryWithContent(dir);
+        removeDirOrFile(dir);
 
         // udpate the working copy
         assertEquals("wrong revision from update", 2,
