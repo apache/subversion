@@ -46,14 +46,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r21483
-    Improve error checking when running external commands (e.g. hook scripts).
-    Justification:
-      At the moment, unexpected errors encountered while checking a
-      process's exit status result in assigning it a random exit status.
-    Votes:
-      +1: malcolm, dlr
-
   * r21531
     Allow HTTP auth protocols to be configurable by way of a
     "http-auth-types" parameter.
@@ -134,3 +126,10 @@ Candidate changes:
 
 Approved changes:
 
+  * r21483
+    Improve error checking when running external commands (e.g. hook scripts).
+    Justification:
+      At the moment, unexpected errors encountered while checking a
+      process's exit status result in assigning it a random exit status.
+    Votes:
+      +1: malcolm, dlr, zhakov
