@@ -134,11 +134,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r21357
-    Python/SWIG crash when apr_hash_t typemap is used.
-    Votes:
-      +1: djames, dlr
-
   * r21575
     Update the URL for the svnmerge.py wiki page.
     Justification:
