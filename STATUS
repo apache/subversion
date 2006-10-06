@@ -134,11 +134,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r21293
-    Neon 0.26.x compatibility for Windows build.
-    Votes:
-      +1: djh, dlr, rooneg
-
   * r21357
     Python/SWIG crash when apr_hash_t typemap is used.
     Votes:

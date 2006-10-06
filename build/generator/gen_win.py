@@ -617,6 +617,9 @@ class WinGeneratorBase(GeneratorBase):
     # check if we have a newer neon (0.25.x)
     if self.neon_ver >= 25000:
       fakedefines.append("SVN_NEON_0_25=1")
+    # check for neon 0.26.x or newer
+    if self.neon_ver >= 26000:
+      fakedefines.append("SVN_NEON_0_26=1")
 
     return fakedefines
 
