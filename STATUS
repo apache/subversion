@@ -134,14 +134,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r21609
-    Make it possible to check out repositories with spaces in ther names over
-    ra_svn.
-    Justification:
-      Simple fix.  User reported problem.
-    Votes:
-      +1: rooneg, dlr, cmpilato
-
   * r21526
     Pass path, not url, in to ne_lock_discover.
     Justification:
