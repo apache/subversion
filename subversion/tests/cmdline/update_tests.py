@@ -1724,7 +1724,7 @@ New line in 'iota'
                                         expected_disk,
                                         expected_status,
                                         None,
-                                        svntest.tree.detect_conflict_files,
+                                        detect_conflict_files,
                                         conflict_files)
 
 ########################################################################
