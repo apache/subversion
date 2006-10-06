@@ -117,12 +117,11 @@ Candidate changes:
     Votes:
       +1: dlr
 
+Approved changes:
+
   * r21792
     Fix crash that occurs when opening a working copy is interupted.
     Justification:
       Apparently this is causing 80% of the TortoiseSVN crashes for 1.4.0.
     Votes:
-      +1: rooneg, dlr
-
-Approved changes:
-
+      +1: rooneg, dlr, philip
