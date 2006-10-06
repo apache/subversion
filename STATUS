@@ -134,13 +134,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r21575
-    Update the URL for the svnmerge.py wiki page.
-    Justification:
-      Bad to send out old URLs.  Documentation only commit.
-    Votes:
-      +1: blair, dlr
-
   * r21592
     Add the -l or --log command line option in svn_all_diffs.pl's
     usage message.
