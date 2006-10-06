@@ -96,7 +96,7 @@ Candidate changes:
       Breaks working copy update; includes tests.
     Branch: 1.4.x-issue-2618
     Votes:
-      +1: dionisos
+      +1: dionisos, zhakov
 
   * r21738
     Prevent an API violation from corrupting FSFS repositories, as seen
