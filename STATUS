@@ -150,7 +150,7 @@ Candidate changes:
       svn_repos_load_fs2()'s parent_dir argument accepts NULL and
       this change doesn't break API.
     Votes:
-      +1: kou
+      +1: kou, blair
 
 Approved changes:
 
