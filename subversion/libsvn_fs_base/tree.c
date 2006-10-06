@@ -1465,8 +1465,7 @@ base_dir_entries(apr_hash_t **table_p,
   if (table)
     {
       apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create(pool);
-      for (hi = apr_hash_first(subpool, table); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(pool, table); hi; hi = apr_hash_next(hi))
         {
           svn_fs_dirent_t *entry;
           struct node_kind_args nk_args;
