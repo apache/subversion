@@ -99,7 +99,7 @@ Candidate changes:
     Votes:
       +1: malcolm
 
-  * r21765, r21767
+  * r21765, r21767, r21814
     JavaHL: Compile Java bytecode for the target platform of a Java
     1.2 JVM.
     Justification:
