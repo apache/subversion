@@ -40,8 +40,8 @@ public class RunTests
         public static TestSuite suite()
         {
             TestSuite suite = new SVNTestSuite();
-            suite.addTestSuite(BasicTests.class);
             suite.addTestSuite(SVNAdminTests.class);
+            suite.addTestSuite(BasicTests.class);
             return suite;
         }
     }
