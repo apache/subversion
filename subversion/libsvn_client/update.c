@@ -200,7 +200,7 @@ svn_error_t *
 svn_client_update3(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
                    const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
+                   svn_depth_t depth,
                    svn_boolean_t ignore_externals,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
@@ -225,7 +225,7 @@ svn_client_update3(apr_array_header_t **result_revs,
         break;
 
       err = svn_client__update_internal(&result_rev, path, revision,
-                                        recurse, ignore_externals,
+                                        depth, ignore_externals,
                                         allow_unver_obstructions,
                                         &sleep, ctx, subpool);
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
@@ -263,7 +263,8 @@ svn_client_update2(apr_array_header_t **result_revs,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
-  return svn_client_update3(result_revs, paths, revision, recurse,
+  return svn_client_update3(result_revs, paths, revision,
+                            SVN_DEPTH_FROM_RECURSE(recurse),
                             ignore_externals, FALSE, ctx, pool);
 }
 
@@ -275,6 +276,7 @@ svn_client_update(svn_revnum_t *result_rev,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
 {
-  return svn_client__update_internal(result_rev, path, revision, recurse, 
+  return svn_client__update_internal(result_rev, path, revision,
+                                     SVN_DEPTH_FROM_RECURSE(recurse), 
                                      FALSE, FALSE, NULL, ctx, pool);
 }

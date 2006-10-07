@@ -78,9 +78,12 @@ svn_cl__revert(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
 
-  err = svn_client_revert(targets, opt_state->recursive, ctx, pool);
+  err = svn_client_revert(targets, SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                          ctx, pool);
 
-  if (err && (err->apr_err == SVN_ERR_WC_NOT_LOCKED) && ! opt_state->recursive)
+  if (err
+      && (err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+      && (! SVN_DEPTH_TO_RECURSE(opt_state->depth)))
     {
       err = svn_error_quick_wrap
         (err, _("Try 'svn revert --recursive' instead?"));

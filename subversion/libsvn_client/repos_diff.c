@@ -50,8 +50,9 @@ struct edit_baton {
   const svn_wc_diff_callbacks2_t *diff_callbacks;
   void *diff_cmd_baton;
 
-  /* RECURSE is TRUE if this is a recursive diff or merge, false otherwise */
-  svn_boolean_t recurse;
+  /* Depth to which this diff or merge should descend. */
+  /* ### TODO: This field appears to be completely unused!  */
+  svn_depth_t depth;
 
   /* DRY_RUN is TRUE if this is a dry-run diff, false otherwise. */
   svn_boolean_t dry_run;
@@ -903,7 +904,7 @@ svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
                             const svn_wc_diff_callbacks2_t *diff_callbacks,
                             void *diff_cmd_baton,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t dry_run,
                             svn_ra_session_t *ra_session,
                             svn_revnum_t revision,
@@ -923,7 +924,7 @@ svn_client__get_diff_editor(const char *target,
   eb->adm_access = adm_access;
   eb->diff_callbacks = diff_callbacks;
   eb->diff_cmd_baton = diff_cmd_baton;
-  eb->recurse = recurse;
+  eb->depth = depth;
   eb->dry_run = dry_run;
   eb->ra_session = ra_session;
   eb->revision = revision;

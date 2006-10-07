@@ -55,7 +55,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const char *switch_url,
                             const svn_opt_revision_t *revision,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t *timestamp_sleep,
                             svn_boolean_t allow_unver_obstructions,
                             svn_client_ctx_t *ctx,
@@ -130,7 +130,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
   SVN_ERR(svn_wc_get_switch_editor3(&revnum, adm_access, target,
-                                    switch_url, use_commit_times, recurse,
+                                    switch_url, use_commit_times, depth,
                                     allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
@@ -141,7 +141,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
   /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
      invalid revnum, that means RA will use the latest revision. */
   SVN_ERR(svn_ra_do_switch2(ra_session, &reporter, &report_baton, revnum,
-                            target, recurse, switch_url,
+                            target, depth, switch_url,
                             switch_editor, switch_edit_baton, pool));
 
   /* Drive the reporter structure, describing the revisions within
@@ -152,7 +152,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
      update, and therefore we don't want to handle any externals
      except the ones directly affected by the switch. */ 
   err = svn_wc_crawl_revisions3(path, dir_access, reporter, report_baton,
-                                TRUE, recurse, use_commit_times,
+                                TRUE, depth, use_commit_times,
                                 ctx->notify_func2, ctx->notify_baton2,
                                 NULL, /* no traversal info */
                                 pool);
@@ -208,13 +208,13 @@ svn_client_switch2(svn_revnum_t *result_rev,
                    const char *path,
                    const char *switch_url,
                    const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
+                   svn_depth_t depth,
                    svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
   return svn_client__switch_internal(result_rev, path, switch_url, revision,
-                                     recurse, NULL,
+                                     depth, NULL,
                                      allow_unver_obstructions, ctx, pool);
 }
 
@@ -228,5 +228,6 @@ svn_client_switch(svn_revnum_t *result_rev,
                   apr_pool_t *pool)
 {
   return svn_client__switch_internal(result_rev, path, switch_url, revision,
-                                     recurse, NULL, FALSE, ctx, pool);
+                                     SVN_DEPTH_FROM_RECURSE(recurse),
+                                     NULL, FALSE, ctx, pool);
 }

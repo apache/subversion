@@ -101,18 +101,20 @@ svn_cl__propdel(apr_getopt_t *os,
 
           /* Pass FALSE for 'skip_checks' because it doesn't matter here,
              and opt_state->force doesn't apply to this command anyway. */
-          SVN_ERR(svn_cl__try(svn_client_propset2(pname_utf8, NULL, target,
-                                                  opt_state->recursive,
-                                                  FALSE, ctx, subpool),
-                              &success, opt_state->quiet,
-                              SVN_ERR_UNVERSIONED_RESOURCE,
-                              SVN_ERR_ENTRY_NOT_FOUND,
-                              SVN_NO_ERROR));
+          SVN_ERR(svn_cl__try
+                  (svn_client_propset2(pname_utf8, NULL, target,
+                                       SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                                       FALSE, ctx, subpool),
+                   &success, opt_state->quiet,
+                   SVN_ERR_UNVERSIONED_RESOURCE,
+                   SVN_ERR_ENTRY_NOT_FOUND,
+                   SVN_NO_ERROR));
           
           if (success && (! opt_state->quiet))
             {
               SVN_ERR(svn_cmdline_printf
-                      (subpool, opt_state->recursive
+                      (subpool, 
+                       SVN_DEPTH_TO_RECURSE(opt_state->depth)
                        ? _("property '%s' deleted (recursively) from '%s'.\n")
                        : _("property '%s' deleted from '%s'.\n"),
                        pname_utf8, svn_path_local_style(target, subpool)));

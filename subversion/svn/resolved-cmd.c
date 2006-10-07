@@ -62,7 +62,7 @@ svn_cl__resolved(apr_getopt_t *os,
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));    
       err = svn_client_resolved(target,
-                                opt_state->recursive,
+                                SVN_DEPTH_TO_RECURSE(opt_state->depth),
                                 ctx,
                                 subpool);
       if (err)

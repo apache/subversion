@@ -299,7 +299,8 @@ svn_cl__list(apr_getopt_t *os,
 
       SVN_ERR(svn_client_list(truepath, &peg_revision,
                               &(opt_state->start_revision),
-                              opt_state->recursive, dirent_fields,
+                              SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                              dirent_fields,
                               (opt_state->xml || opt_state->verbose),
                               opt_state->xml ? print_dirent_xml : print_dirent,
                               &pb, ctx, subpool));

@@ -79,6 +79,7 @@ typedef enum {
   svn_cl__strict_opt,
   svn_cl__summarize,
   svn_cl__targets_opt,
+  svn_cl__depth_opt,
   svn_cl__version_opt,
   svn_cl__xml_opt
 } svn_cl__longopt_t;
@@ -99,10 +100,9 @@ typedef struct svn_cl__opt_state_t
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;
 
-  /* Note: these next two flags only reflect switches given on the
-     commandline.  For example, 'svn up' (with no options) will *not*
-     set either of these flags, but will be recursive anyway */
-  svn_boolean_t recursive, nonrecursive;
+  /* Note: this next flag reflects the switch actually given on the
+     command line.  If no depth was passed, it's svn_depth_unknown. */
+  svn_depth_t depth;
 
   /* Was --no-unlock specified? */
   svn_boolean_t no_unlock;

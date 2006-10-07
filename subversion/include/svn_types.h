@@ -227,10 +227,21 @@ typedef enum
  * @note New code should never need to use this, it is called only
  * from pre-depth APIs, for compatibility.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
  */
 #define SVN_DEPTH_FROM_RECURSE(recurse) \
   ((recurse) ? svn_depth_infinity : svn_depth_zero)
+
+/* Return a recursion boolean based on @a depth.
+ *
+ * Although much code has been converted to use depth, some code still
+ * takes a recurse boolean.  In most cases, it makes sense to treat
+ * unknown or infinite depth as recursive, and any other depth as
+ * non-recursive.
+ */
+#define SVN_DEPTH_TO_RECURSE(depth)                                \
+  (((depth) == svn_depth_infinity || (depth) == svn_depth_unknown) \
+   ? TRUE : FALSE)
 
 
 /**

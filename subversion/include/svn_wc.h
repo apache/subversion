@@ -2998,9 +2998,12 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
  *
- * @a recurse determines whether to descend into subdirectories when @a target
- * is a directory.  If @a recurse is @c TRUE then @a anchor should be part of 
- * an access baton set for the @a target hierarchy.
+ * If @a depth is @c svn_depth_zero, just diff exactly @a target or
+ * @a anchor if @a target is empty.  If @c svn_depth_one, then do the
+ * same and top-level entries as well (if any).  If @c svn_depth_infinity,
+ * then diff fully recursively.  In the latter case, @a anchor should
+ * be part of an access baton set for the @a target hierarchy.
+ * ### TODO: I'm not sure what the last part of that last sentence means.
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -3016,6 +3019,28 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * If @a cancel_func is non-null, it will be used along with @a cancel_baton 
  * to periodically check if the client has canceled the operation.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
+                                     const char *target,
+                                     const svn_wc_diff_callbacks2_t *callbacks,
+                                     void *callback_baton,
+                                     svn_depth_t depth,
+                                     svn_boolean_t ignore_ancestry,
+                                     svn_boolean_t use_text_base,
+                                     svn_boolean_t reverse_order,
+                                     svn_cancel_func_t cancel_func,
+                                     void *cancel_baton,
+                                     const svn_delta_editor_t **editor,
+                                     void **edit_baton,
+                                     apr_pool_t *pool);
+/**
+ * Similar to svn_wc_get_diff_editor4(), but with @a depth set to
+ * @c svn_depth_infinity if @a recurse is true, or @a svn_depth_zero
+ * if @a recurse is false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+
  * @since New in 1.2.
  */
 svn_error_t *svn_wc_get_diff_editor3(svn_wc_adm_access_t *anchor,

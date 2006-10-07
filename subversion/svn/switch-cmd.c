@@ -101,7 +101,9 @@ svn_cl__switch(apr_getopt_t *os,
 
   /* handle only-rewrite case specially */
   if (opt_state->relocate)
-    return rewrite_urls(targets, !opt_state->nonrecursive, ctx, pool);
+    return rewrite_urls(targets,
+                        SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                        ctx, pool);
 
   if (targets->nelts < 1)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
@@ -152,9 +154,7 @@ svn_cl__switch(apr_getopt_t *os,
   /* Do the 'switch' update. */
   SVN_ERR(svn_client_switch2(NULL, target, switch_url,
                              &(opt_state->start_revision),
-                             opt_state->nonrecursive ? FALSE : TRUE,
-                             opt_state->force,
-                             ctx, pool));
+                             opt_state->depth, opt_state->force, ctx, pool));
 
   return SVN_NO_ERROR;
 }

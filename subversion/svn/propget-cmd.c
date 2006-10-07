@@ -138,13 +138,15 @@ svn_cl__propget(apr_getopt_t *os,
           SVN_ERR(svn_client_propget2(&props, pname_utf8, truepath,
                                       &peg_revision,
                                       &(opt_state->start_revision),
-                                      opt_state->recursive, ctx, subpool));
+                                      SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                                      ctx, subpool));
           
           /* Any time there is more than one thing to print, or where
              the path associated with a printed thing is not obvious,
              we'll print filenames.  That is, unless we've been told
              not to do so with the --strict option. */
-          print_filenames = ((opt_state->recursive || targets->nelts > 1
+          print_filenames = ((SVN_DEPTH_TO_RECURSE(opt_state->depth)
+                              || targets->nelts > 1
                               || apr_hash_count(props) > 1)
                              && (! opt_state->strict));
             

@@ -406,7 +406,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
  * DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
  * implement the file comparison function
  *
- * RECURSE is set if the diff is to be recursive.
+ * DEPTH is the depth to recurse.
  *
  * DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
  *
@@ -425,7 +425,7 @@ svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
                             const svn_wc_diff_callbacks2_t *diff_cmd,
                             void *diff_cmd_baton,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t dry_run,
                             svn_ra_session_t *ra_session, 
                             svn_revnum_t revision,

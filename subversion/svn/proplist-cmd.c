@@ -95,10 +95,11 @@ svn_cl__proplist(apr_getopt_t *os,
                                      subpool));
           
           SVN_ERR(svn_cl__try
-                  (svn_client_proplist2(&props, truepath, &peg_revision,
-                                        &(opt_state->start_revision),
-                                        opt_state->recursive,
-                                        ctx, subpool),
+                  (svn_client_proplist2
+                   (&props, truepath, &peg_revision,
+                    &(opt_state->start_revision),
+                    SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                    ctx, subpool),
                    NULL, opt_state->quiet,
                    SVN_ERR_UNVERSIONED_RESOURCE,
                    SVN_ERR_ENTRY_NOT_FOUND,

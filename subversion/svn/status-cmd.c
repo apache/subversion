@@ -208,7 +208,7 @@ do_status(svn_cl__opt_state_t *opt_state,
 
   SVN_ERR(svn_client_status2(&repos_rev, target, rev,
                              print_status, status_baton,
-                             opt_state->nonrecursive ? FALSE : TRUE,
+                             SVN_DEPTH_TO_RECURSE(opt_state->depth),
                              opt_state->verbose,
                              opt_state->update,
                              opt_state->no_ignore,

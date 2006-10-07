@@ -166,21 +166,22 @@ svn_cl__propset(apr_getopt_t *os,
 
           svn_pool_clear(subpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-          SVN_ERR(svn_cl__try(svn_client_propset2(pname_utf8,
-                                                  propval, target,
-                                                  opt_state->recursive,
-                                                  opt_state->force,
-                                                  ctx, subpool),
-                              &success, opt_state->quiet,
-                              SVN_ERR_UNVERSIONED_RESOURCE,
-                              SVN_ERR_ENTRY_NOT_FOUND,
-                              SVN_NO_ERROR));
+          SVN_ERR(svn_cl__try
+                  (svn_client_propset2(pname_utf8,
+                                       propval, target,
+                                       SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                                       opt_state->force,
+                                       ctx, subpool),
+                   &success, opt_state->quiet,
+                   SVN_ERR_UNVERSIONED_RESOURCE,
+                   SVN_ERR_ENTRY_NOT_FOUND,
+                   SVN_NO_ERROR));
 
           if (success && (! opt_state->quiet))
             {
               SVN_ERR
                 (svn_cmdline_printf
-                 (pool, opt_state->recursive
+                 (pool, SVN_DEPTH_TO_RECURSE(opt_state->depth)
                   ? _("property '%s' set (recursively) on '%s'\n")
                   : _("property '%s' set on '%s'\n"),
                   pname, svn_path_local_style(target, pool)));

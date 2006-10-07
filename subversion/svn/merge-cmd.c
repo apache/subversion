@@ -159,12 +159,12 @@ svn_cl__merge(apr_getopt_t *os,
 
   if (using_alternate_syntax)
     {
-      err = svn_client_merge_peg2(sourcepath1,
+      err = svn_client_merge_peg3(sourcepath1,
                                   &(opt_state->start_revision),
                                   &(opt_state->end_revision),
                                   &peg_revision,
                                   targetpath,
-                                  opt_state->nonrecursive ? FALSE : TRUE,
+                                  opt_state->depth,
                                   opt_state->ignore_ancestry,
                                   opt_state->force,
                                   opt_state->dry_run,
@@ -174,12 +174,12 @@ svn_cl__merge(apr_getopt_t *os,
     }
   else
     {
-      err = svn_client_merge2(sourcepath1,
+      err = svn_client_merge3(sourcepath1,
                               &(opt_state->start_revision),
                               sourcepath2,
                               &(opt_state->end_revision),
                               targetpath,
-                              opt_state->nonrecursive ? FALSE : TRUE,
+                              opt_state->depth,
                               opt_state->ignore_ancestry,
                               opt_state->force,
                               opt_state->dry_run,

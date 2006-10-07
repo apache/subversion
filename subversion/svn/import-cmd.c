@@ -107,13 +107,14 @@ svn_cl__import(apr_getopt_t *os,
   SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2), opt_state,
                                      NULL, ctx->config, pool));
   SVN_ERR(svn_cl__cleanup_log_msg 
-          (ctx->log_msg_baton2, svn_client_import2(&commit_info,
-                                                   path,
-                                                   url,
-                                                   opt_state->nonrecursive,
-                                                   opt_state->no_ignore,
-                                                   ctx,
-                                                   pool)));
+          (ctx->log_msg_baton2,
+           svn_client_import2(&commit_info,
+                              path,
+                              url,
+                              (! SVN_DEPTH_TO_RECURSE(opt_state->depth)),
+                              opt_state->no_ignore,
+                              ctx,
+                              pool)));
 
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));

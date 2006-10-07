@@ -579,7 +579,8 @@ svn_cl__info(apr_getopt_t *os,
       err = svn_client_info(truepath,
                             &peg_revision, &(opt_state->start_revision),
                             info_receiver, baton,
-                            opt_state->recursive, ctx, subpool);
+                            SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                            ctx, subpool);
 
       /* If one of the targets is a non-existent URL or wc-entry,
          don't bail out.  Just warn and move on to the next target. */

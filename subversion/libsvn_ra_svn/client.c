@@ -43,14 +43,6 @@
 
 #include "ra_svn.h"
 
-/* Return a recursion boolean based on DEPTH.  This is because old
- * servers still require a recurse boolean, and don't understand depth.
- *
- * Returning false for any non-infinity depth value is a necessary
- * approximation, as depth simply carries more information than recurse.
- */
-#define FOLD_FROM_DEPTH(depth) ((depth) == svn_depth_infinity) ? TRUE : FALSE
-
 typedef struct {
   svn_ra_svn__session_baton_t *sess_baton;
   apr_pool_t *pool;
@@ -1016,7 +1008,7 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  svn_boolean_t recurse = FOLD_FROM_DEPTH(depth);
+  svn_boolean_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start an update. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cb(n)", rev, target,
@@ -1040,7 +1032,7 @@ static svn_error_t *ra_svn_switch(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  svn_boolean_t recurse = FOLD_FROM_DEPTH(depth);
+  svn_boolean_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start a switch. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "(?r)cbc(n)", rev,
@@ -1065,7 +1057,7 @@ static svn_error_t *ra_svn_status(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  svn_boolean_t recurse = FOLD_FROM_DEPTH(depth);
+  svn_boolean_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start a status operation. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb(?r)(n)",
@@ -1092,7 +1084,7 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
-  svn_boolean_t recurse = FOLD_FROM_DEPTH(depth);
+  svn_boolean_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start a diff. */
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbcb(n)", rev,
