@@ -100,8 +100,9 @@ typedef struct svn_cl__opt_state_t
   /* Max number of log messages to get back from svn_client_log2. */
   int limit;
 
-  /* Note: this next flag reflects the switch actually given on the
-     command line.  If no depth was passed, it's svn_depth_unknown. */
+  /* Note: after option processing is done, the depth flag will
+     reflect the switch actually given on the command line, or 
+     svn_depth_unknown if none. */
   svn_depth_t depth;
 
   /* Was --no-unlock specified? */
