@@ -230,7 +230,7 @@ typedef enum
  * @since New in 1.5.
  */
 #define SVN_DEPTH_FROM_RECURSE(recurse) \
-  ((recurse) ? svn_depth_infinity : svn_depth_zero)
+  ((recurse) ? svn_depth_infinity : svn_depth_one)
 
 /* Return a recursion boolean based on @a depth.
  *
