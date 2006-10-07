@@ -117,6 +117,8 @@ Candidate changes:
     Votes:
       +1: dlr
 
+Approved changes:
+
   * r21793
     Ruby: Accept nil for Svn::Repos#load_fs's parent_dir argument.
     Justification:
@@ -124,6 +126,3 @@ Candidate changes:
       this change doesn't break API.
     Votes:
       +1: kou, blair
-
-Approved changes:
-
