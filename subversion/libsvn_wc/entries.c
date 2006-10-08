@@ -1567,6 +1567,7 @@ write_entry(svn_stringbuf_t *buf,
         break;
       case svn_depth_one:
         val = "depth-one";
+        break;
       default:
         /* Else assume 2 (svn_depth_infinity), which we represent as "",
            which write_val() will emit if handed NULL. */
