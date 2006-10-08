@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,8 +17,6 @@
  */
 package org.tigris.subversion.javahl.tests;
 
-import junit.framework.TestSuite;
-import junit.framework.TestResult;
 import org.tigris.subversion.javahl.*;
 
 import java.io.File;
@@ -49,28 +47,6 @@ public class BasicTests extends SVNTests
             testCounter = 0;
             testBaseName = testName;
         }
-    }
-
-    /**
-     * Build a test suite of all tests of this class
-     * @return the new test suite
-     */
-    public static TestSuite suite() {
-        return new TestSuite(BasicTests.class);
-    }
-
-    /**
-     * Main method to run tests standalone
-     * @param args command line arguments to specify root directory and root
-     * url
-     */
-    public static void main(String[] args) {
-        processArgs(args);
-        TestResult tr = junit.textui.TestRunner.run(suite());
-        if (tr.errorCount() != 0 || tr.failureCount() != 0) {
-            System.exit(1);
-        }
-        System.exit(0);
     }
 
     /**
@@ -687,7 +663,7 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // remove & revert X
-        removeDirectoryWithContent(new File(thisTest.getWorkingCopy(), "X"));
+        removeDirOrFile(new File(thisTest.getWorkingCopy(), "X"));
         client.revert(thisTest.getWCPath()+"/X", false);
         thisTest.getWc().removeItem("X");
 
@@ -696,7 +672,7 @@ public class BasicTests extends SVNTests
 
         // delete the directory A/B/E
         client.remove(new String[] {thisTest.getWCPath()+"/A/B/E"}, null, true);
-        removeDirectoryWithContent(new File(thisTest.getWorkingCopy(), "A/B/E"));
+        removeDirOrFile(new File(thisTest.getWorkingCopy(), "A/B/E"));
         thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.deleted);
         thisTest.getWc().removeItem("A/B/E/alpha");
         thisTest.getWc().removeItem("A/B/E/beta");
@@ -1316,7 +1292,7 @@ public class BasicTests extends SVNTests
                 "log message for import", true);
 
         // remove dir
-        removeDirectoryWithContent(dir);
+        removeDirOrFile(dir);
 
         // udpate the working copy
         assertEquals("wrong revision from update", 2,
