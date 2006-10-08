@@ -1056,8 +1056,8 @@ init_adm(const char *path,
          const char *uuid,
          const char *url,
          const char *repos,
-         svn_depth_t depth,
          svn_revnum_t initial_rev,
+         svn_depth_t depth,
          apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -1128,7 +1128,7 @@ svn_wc_ensure_adm3(const char *path,
 
   SVN_ERR(check_adm_exists(&exists_already, path, url, revision, pool));
   return (exists_already ? SVN_NO_ERROR :
-          init_adm(path, uuid, url, repos, depth, revision, pool));
+          init_adm(path, uuid, url, repos, revision, depth, pool));
 }
 
 svn_error_t *
