@@ -221,6 +221,7 @@ svn_client_status2(svn_revnum_t *result_rev,
   const svn_wc_entry_t *entry;
   struct status_baton sb;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
+  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE(recurse);
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
@@ -232,8 +233,13 @@ svn_client_status2(svn_revnum_t *result_rev,
                                  pool));
   anchor = svn_wc_adm_access_path(anchor_access);
 
+  /* ### TODO: This function should stop taking recurse and start
+     ### taking depth, and when svn_depth_unknown, we'd get the depth
+     ### from the working copy here. */ 
+
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
+  /* ### TODO: ...and this would take depth, not recurse... */
   SVN_ERR(svn_wc_get_status_editor2(&editor, &edit_baton, &set_locks_baton,
                                     &edit_revision, anchor_access, target,
                                     ctx->config, recurse, get_all, no_ignore,
@@ -309,7 +315,7 @@ svn_client_status2(svn_revnum_t *result_rev,
           /* Do the deed.  Let the RA layer drive the status editor. */
           SVN_ERR(svn_ra_do_status2(ra_session, &rb.wrapped_reporter,
                                     &rb.wrapped_report_baton,
-                                    target, revnum, recurse, editor, 
+                                    target, revnum, depth, editor, 
                                     edit_baton, pool));
 
           /* Init the report baton. */
@@ -324,7 +330,7 @@ svn_client_status2(svn_revnum_t *result_rev,
              working copy and HEAD. */
           SVN_ERR(svn_wc_crawl_revisions3(path, target_access,
                                           &lock_fetch_reporter, &rb, FALSE,
-                                          recurse, FALSE, NULL, NULL, NULL,
+                                          depth, FALSE, NULL, NULL, NULL,
                                           pool));
         }
     }
@@ -356,7 +362,7 @@ svn_client_status2(svn_revnum_t *result_rev,
      are interesting to an svn:externals property to
      svn_wc_status_unversioned, otherwise we'll just remove the status
      item altogether. */
-  if (recurse && (! ignore_externals))
+  if ((depth == svn_depth_infinity) && (! ignore_externals))
     SVN_ERR(svn_client__do_external_status(traversal_info, status_func,
                                            status_baton, get_all, update,
                                            no_ignore, ctx, pool));

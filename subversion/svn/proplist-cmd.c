@@ -78,6 +78,9 @@ svn_cl__proplist(apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
+      if (opt_state->depth == svn_depth_unknown)
+        opt_state->depth = svn_depth_infinity;
+
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = ((const char **) (targets->elts))[i];

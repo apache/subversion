@@ -324,20 +324,33 @@ apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
 /*** Checkout, update and switch ***/
 
 /* Update a working copy PATH to REVISION, and (if not NULL) set
-   RESULT_REV to the update revision.  RECURSE if so commanded;
-   likewise, possibly IGNORE_EXTERNALS.  If TIMESTAMP_SLEEP is NULL this
-   function will sleep before returning to ensure timestamp integrity.
-   If TIMESTAMP_SLEEP is not NULL then the function will not sleep but
-   will set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will
-   not change *TIMESTAMP_SLEEP if no sleep is required.  If
-   ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
-   obstruct items added from the repos are tolerated; if FALSE, these
-   obstructions cause the update to fail. */
+   RESULT_REV to the update revision.
+
+   If DEPTH is svn_depth_unknown, then use whatever depth is already
+   set for PATH.  Else if DEPTH is svn_depth_infinity, then update
+   fully recursively (resetting the existing depth of the working copy
+   if necessary).  Else DEPTH is svn_depth_one, then update all files
+   under PATH (if any), but include any subdirectories at svn_depth_zero.
+   Else if DEPTH is svn_depth_zero, just update PATH; if PATH is a
+   directory, that means touching only its properties not its entries.
+
+   If IGNORE_EXTERNALS is true, do no externals processing.
+
+   If TIMESTAMP_SLEEP is NULL this function will sleep before
+   returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
+   NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
+   to TRUE if a sleep is required, and will not change
+   *TIMESTAMP_SLEEP if no sleep is required.
+
+   If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
+   that obstruct items added from the repos are tolerated; if FALSE,
+   these obstructions cause the update to fail. */
+
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const svn_opt_revision_t *revision,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,

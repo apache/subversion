@@ -1456,6 +1456,14 @@ svn_wc_add2(const char *path,
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
+      /* ### TODO: Both the calls to svn_wc_ensure_adm3() below pass
+         ### svn_depth_infinity.  I think this is reasonable, because
+         ### we don't have any other source of depth information in
+         ### the current context, and if svn_wc_ensure_adm3() *does*
+         ### create a new admin directory, it ought to default to
+         ### svn_depth_infinity.  However, if we 'svn add' ever takes
+         ### a depth parameter, then this would need to change. */
+
       if (! copyfrom_url)
         {
           const svn_wc_entry_t *p_entry; /* ### why not use parent_entry? */
@@ -1471,8 +1479,8 @@ svn_wc_add2(const char *path,
   
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR(svn_wc_ensure_adm2(path, NULL, new_url, p_entry->repos,
-                                     0, pool));
+          SVN_ERR(svn_wc_ensure_adm3(path, NULL, new_url, p_entry->repos,
+                                     0, svn_depth_infinity, pool));
         }
       else
         {
@@ -1480,9 +1488,9 @@ svn_wc_add2(const char *path,
              the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
-          SVN_ERR(svn_wc_ensure_adm2(path, NULL, copyfrom_url,
+          SVN_ERR(svn_wc_ensure_adm3(path, NULL, copyfrom_url,
                                      parent_entry->repos, copyfrom_rev,
-                                     pool));
+                                     svn_depth_infinity, pool));
         }
       
       /* We want the locks to persist, so use the access baton's pool */
@@ -1497,7 +1505,7 @@ svn_wc_add2(const char *path,
 
       /* We're making the same mods we made above, but this time we'll
          force the scheduling.  Also make sure to undo the
-         'incomplete' flag which svn_wc_ensure_adm2 sets by default. */
+         'incomplete' flag which svn_wc_ensure_adm3 sets by default. */
       modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
       modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
       tmp_entry.schedule = is_replace 

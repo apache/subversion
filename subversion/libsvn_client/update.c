@@ -58,6 +58,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
+  int adm_open_depth;
   svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   svn_wc_adm_access_t *adm_access;
   svn_boolean_t use_commit_times;
@@ -69,14 +70,28 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config, 
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
+
+  /* ### TODO: Ah, the irony.  We'd like to base our adm_open depth on
+     ### the depth we're going to use for the update.  But that
+     ### may depend on the depth in the working copy, which we can't
+     ### discover without calling adm_open.  We could expend an extra
+     ### call, with adm_open_depth=0, to get the real depth (but only
+     ### if we need to) and then make the real call... but it's not
+     ### worth the complexity right now.  Locking the entire tree when
+     ### we didn't need to is a performance hit, but (except for
+     ### access contention) not a correctness problem. */
+
+  if (depth == svn_depth_zero || depth == svn_depth_one)
+    adm_open_depth = 0;
+  else
+    adm_open_depth = -1;
   
   /* Sanity check.  Without this, the update is meaningless. */
   assert(path);
 
   /* Use PATH to get the update's anchor and targets and get a write lock */
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
-                                 TRUE,
-                                 depth == svn_depth_infinity ? -1 : 0,
+                                 TRUE, adm_open_depth,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   anchor = svn_wc_adm_access_path(adm_access);
@@ -87,6 +102,16 @@ svn_client__update_internal(svn_revnum_t *result_rev,
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Entry '%s' has no URL"),
                              svn_path_local_style(anchor, pool));
+
+  /* ### TODO: do we need a definite_depth_p() routine below?  If
+     ### svn_depth_ignore and/or svn_depth_exclude turn out to be
+     ### really used, then yes, but let's see if that happens first. */
+
+  /* Figure out the real depth for the update.  If target is a file,
+     then we don't care about depth, and if it is a directory, then
+     it would be anchor, not target.  So just ask anchor! */
+  if (depth == svn_depth_unknown)
+    depth = entry->depth;
 
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */

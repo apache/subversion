@@ -693,6 +693,11 @@ svn_client_create_context(svn_client_ctx_t **ctx,
  * out @a URL as an empty directory at that depth, with none of its
  * entries present.
  *
+ * If @a depth is @c svn_depth_unknown, then behave as if for
+ * @c svn_depth_infinity, except in the case of resuming a previous
+ * checkout of @a path (i.e., updating), in which case use the depth
+ * of the existing working copy.
+ *
  * If @a ignore_externals is set, don't process externals definitions
  * as part of this operation.
  *

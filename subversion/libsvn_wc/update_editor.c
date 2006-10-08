@@ -648,6 +648,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
 
 /* Prepare directory for dir_baton DB for updating or checking out.
+ * Give it depth DEPTH.
  *
  * If the path already exists, but is not a working copy for
  * ANCESTOR_URL and ANCESTOR_REVISION, then an error will be returned. 
@@ -656,6 +657,7 @@ static svn_error_t *
 prep_directory(struct dir_baton *db,
                const char *ancestor_url,
                svn_revnum_t ancestor_revision,
+               svn_depth_t depth,
                apr_pool_t *pool)
 {
   const char *repos;
@@ -673,9 +675,9 @@ prep_directory(struct dir_baton *db,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  SVN_ERR(svn_wc_ensure_adm2(db->path, NULL,
+  SVN_ERR(svn_wc_ensure_adm3(db->path, NULL,
                              ancestor_url, repos,
-                             ancestor_revision, pool));
+                             ancestor_revision, depth, pool));
 
   if (! db->edit_baton->adm_access
       || strcmp(svn_wc_adm_access_path(db->edit_baton->adm_access),
@@ -1182,10 +1184,18 @@ add_directory(const char *path,
                                    TRUE /* immediate write */, pool));
     }
 
-  SVN_ERR(prep_directory(db,
-                         db->new_URL,
-                         *(eb->target_revision),
-                         db->pool));
+  {
+    svn_depth_t depth =
+      (eb->depth == svn_depth_zero || eb->depth == svn_depth_one)
+      ? svn_depth_zero
+      : svn_depth_infinity;
+
+    SVN_ERR(prep_directory(db,
+                           db->new_URL,
+                           *(eb->target_revision),
+                           depth,
+                           db->pool));
+  }
 
   *child_baton = db;
 

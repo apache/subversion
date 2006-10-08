@@ -123,6 +123,9 @@ svn_cl__propset(apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
+      if (opt_state->depth == svn_depth_unknown)
+        opt_state->depth = svn_depth_infinity;
+
       /* The customary implicit dot rule has been prone to user error
        * here.  People would do intuitive things like
        * 

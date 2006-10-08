@@ -379,7 +379,7 @@ print_info(const char *target,
           break;
 
         default:
-          /* Remember that svn_depth_exclude should never happen here. */
+          /* Other depths should never happen here. */
           SVN_ERR(svn_cmdline_printf(pool, _("Depth: INVALID\n")));
         }
 
@@ -560,6 +560,9 @@ svn_cl__info(apr_getopt_t *os,
                                   "mode"));
     }
   
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = svn_depth_infinity;
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *truepath;

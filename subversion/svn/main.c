@@ -1477,13 +1477,6 @@ main(int argc, const char *argv[])
         }
     }
 
-  /* Most recursable commands default to svn_depth_infinity, but not all. */
-  if (subcommand->cmd_func == svn_cl__revert
-      && opt_state.depth == svn_depth_unknown)
-    opt_state.depth = SVN_DEPTH_FROM_RECURSE(FALSE);
-  else
-    opt_state.depth = svn_depth_infinity;
-
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;
   if ((err = svn_client_create_context(&ctx, pool)))

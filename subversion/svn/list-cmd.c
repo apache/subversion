@@ -273,6 +273,9 @@ svn_cl__list(apr_getopt_t *os,
   pb.ctx = ctx;
   pb.verbose = opt_state->verbose;
 
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = svn_depth_infinity;
+
   /* For each target, try to list it. */
   for (i = 0; i < targets->nelts; i++)
     {

@@ -1551,12 +1551,14 @@ svn_error_t *svn_wc_mark_missing_deleted(const char *path,
                                          apr_pool_t *pool);
                        
 
-
 /** Ensure that an administrative area exists for @a path, so that @a
- * path is a working copy subdir based on @a url at @a revision, and
- * with repository UUID @a uuid and repository root URL @a repos.
- * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must be a
- * prefix of @a url.
+ * path is a working copy subdir based on @a url at @a revision, with
+ * depth @a depth, and with repository UUID @a uuid and repository
+ * root URL @a repos.  
+ *
+ * @a depth must be a definite depth, it cannot be @c svn_depth_unknown
+ * or @c svn_depth_ignore.  @a uuid and @a repos may be @c NULL.  If
+ * non-@c NULL, @a repos must be a prefix of @a url.
  *
  * If the administrative area does not exist, then create it and
  * initialize it to an unlocked state.
@@ -1570,6 +1572,23 @@ svn_error_t *svn_wc_mark_missing_deleted(const char *path,
  * Do not ensure existence of @a path itself; if @a path does not
  * exist, return error.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_ensure_adm3(const char *path,
+                                const char *uuid,
+                                const char *url,
+                                const char *repos,
+                                svn_revnum_t revision,
+                                svn_depth_t depth,
+                                apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_wc_ensure_adm3(), but with @a depth set to
+ * @c svn_depth_infinity.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
+ *
  * @since New in 1.3.
  */
 svn_error_t *svn_wc_ensure_adm2(const char *path,
@@ -1580,7 +1599,9 @@ svn_error_t *svn_wc_ensure_adm2(const char *path,
                                 apr_pool_t *pool);
 
 
-/** Similar to svn_wc_ensure_adm2(), but with @a repos set to @c NULL.
+/**
+ * Similar to svn_wc_ensure_adm3(), but with @a depth set to
+ * @c svn_depth_infinity and @a repos set to @c NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
@@ -2666,6 +2687,16 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  *
  * If @a allow_unver_obstructions is true, then allow unversioned
  * obstructions when adding a path.
+ *
+ * If @a depth is @c svn_depth_infinity, update fully recursively.
+ * Else if it is @c svn_depth_one, update the uppermost directory and
+ * its immediate entries, but not subdirectories.  Else if it is
+ * @c svn_depth_zero, update exactly the uppermost target, and don't
+ * touch its entries.
+ *
+ * @note @a depth overrides whatever depth is already set in @a anchor
+ * or @a target.  To use those depths, the caller should detect them
+ * and set @a depth accordingly.
  *
  * @since New in 1.5.
  */

@@ -2689,6 +2689,7 @@ svn_wc__entries_init(const char *path,
                      const char *url,
                      const char *repos,
                      svn_revnum_t initial_rev,
+                     svn_depth_t depth,
                      apr_pool_t *pool)
 {
   apr_file_t *f = NULL;
@@ -2696,8 +2697,11 @@ svn_wc__entries_init(const char *path,
                                                  SVN_WC__VERSION);
   svn_wc_entry_t *entry = alloc_entry(pool);
 
-  /* Sanity check. */
+  /* Sanity checks. */
   assert(! repos || svn_path_is_ancestor(repos, url));
+  assert(depth == svn_depth_zero
+         || depth == svn_depth_one
+         || depth == svn_depth_infinity);
 
   /* Create the entries file, which must not exist prior to this. */
   SVN_ERR(svn_wc__open_adm_file(&f, path, SVN_WC__ADM_ENTRIES,
@@ -2713,6 +2717,7 @@ svn_wc__entries_init(const char *path,
   entry->revision = initial_rev;
   entry->uuid = uuid;
   entry->repos = repos;
+  entry->depth = depth;
   if (initial_rev > 0)
     entry->incomplete = TRUE;
   /* Add cachable-props here so that it can be inherited by other entries.
