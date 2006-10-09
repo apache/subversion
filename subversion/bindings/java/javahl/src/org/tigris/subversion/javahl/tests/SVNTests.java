@@ -510,7 +510,7 @@ class SVNTests extends TestCase
         {
             String testName = testBaseName + ++testCounter;
             this.wc = greekWC.copy();
-            this.repository = createStartRepository(testName);
+            this.repository = createInitialRepository(testName);
             this.url = makeReposUrl(repository);
 
             if (createWC)
@@ -619,7 +619,7 @@ class SVNTests extends TestCase
          * @exception IOException If there is a problem finding the
          * dump file.
          */
-        protected File createStartRepository(String testName)
+        protected File createInitialRepository(String testName)
             throws SubversionException, IOException
         {
             // build a clean repository directory
