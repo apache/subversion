@@ -403,9 +403,8 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     "from your post-revprop-change hook, or because the modification of\n"
     "revision properties has not been enabled in the pre-revprop-change\n"
     "hook).\n\n"
-    "NOTE: Revision properties are not versioned (e.g. no revision history\n"
-    "is maintained), so this command will permanently overwrite the previous\n"
-    "log message.\n"),
+    "NOTE: Revision properties are not versioned, so this command will\n"
+    "overwrite the previous log message.\n"),
    {'r', svnadmin__bypass_hooks} },
 
   {"setrevprop", subcommand_setrevprop, {0}, N_
@@ -414,9 +413,8 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     "--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\n"
     "the revision property-related hooks (for example, if you want an email\n"
     "notification sent from your post-revprop-change hook).\n\n"
-    "NOTE: Revision properties are not versioned (e.g. no revision history\n"
-    "is maintained), so this command will permanently overwrite the previous\n"
-    "value for the property.\n"),
+    "NOTE: Revision properties are not versioned, so this command will\n"
+    "overwrite the previous value of the property.\n"),
    {'r', svnadmin__use_pre_revprop_change_hook,
     svnadmin__use_post_revprop_change_hook} },
 
