@@ -2244,7 +2244,7 @@ diff_repos_wc(const apr_array_header_t *options,
                                                NULL, NULL, NULL, FALSE, TRUE,
                                                ctx, pool));
       
-  SVN_ERR(svn_wc_get_diff_editor3(adm_access, target,
+  SVN_ERR(svn_wc_get_diff_editor4(adm_access, target,
                                   callbacks, callback_baton,
                                   depth,
                                   ignore_ancestry,

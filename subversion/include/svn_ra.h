@@ -988,9 +988,7 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  * and the addition of another, but if this flag is @c TRUE,
  * unrelated items will be diffed as if they were related.
  *
- * If @a recurse is true and the target is a directory, diff
- * recursively; otherwise, diff just target and its immediate entries,
- * but not its child directories (if any).
+ * ### TODO: document @a depth, when figure out how it should work!
  *
  * The caller may not perform any RA operations using @a session before
  * finishing the report, and may not perform any RA operations using
@@ -1013,7 +1011,7 @@ svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
                              void **report_baton,
                              svn_revnum_t revision,
                              const char *diff_target,
-                             svn_boolean_t recurse,
+                             svn_depth_t depth,
                              svn_boolean_t ignore_ancestry,
                              svn_boolean_t text_deltas,
                              const char *versus_url,
