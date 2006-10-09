@@ -97,12 +97,120 @@ def depth_one_checkout(sbox):
   depth_one_same_as_nonrecursive(sbox, "--depth=1")
 
 #----------------------------------------------------------------------
+def depth_zero_update_bypass_single_file(sbox):
+  "updating depth-0 wc should not receive file mod"
+
+  sbox.build(create_wc = False)
+  if os.path.exists(sbox.wc_dir):
+    svntest.main.safe_rmtree(sbox.wc_dir)
+
+  wc2 = sbox.wc_dir + '-2'
+  if os.path.exists(wc2):
+    svntest.main.safe_rmtree(wc2)
+
+  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
+                                     SVNAnyOutput, [], "co",
+                                     "--depth", "0",
+                                     svntest.main.current_repo_url,
+                                     sbox.wc_dir)
+
+  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
+                                     SVNAnyOutput, [], "co",
+                                     svntest.main.current_repo_url,
+                                     wc2)
+
+  iota_path = os.path.join(wc2, 'iota')
+  svntest.main.file_append(iota_path, "new text\n")
+
+  # Commit in the "other" wc.
+  expected_output = svntest.wc.State(wc2, { 'iota' : Item(verb='Sending'), })
+  expected_status = svntest.actions.get_virginal_state(wc2, 1)
+  expected_status.tweak('iota', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit(wc2,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None, wc2)
+
+  # Update the depth-0 wc, expecting not to receive the change to iota.
+  expected_output = svntest.wc.State(sbox.wc_dir, { })
+  expected_disk = svntest.wc.State('', { })
+  expected_status = svntest.wc.State(sbox.wc_dir, { '' : wc.StateItem() })
+  expected_status.tweak(contents=None, status='  ', wc_rev=2)
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None)
+
+#----------------------------------------------------------------------
+def depth_one_get_top_file_mod_only(sbox):
+  "updating depth-1 wc should get top file mod only"
+
+  sbox.build(create_wc = False)
+  if os.path.exists(sbox.wc_dir):
+    svntest.main.safe_rmtree(sbox.wc_dir)
+
+  wc2 = sbox.wc_dir + '-2'
+  if os.path.exists(wc2):
+    svntest.main.safe_rmtree(wc2)
+
+  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
+                                     SVNAnyOutput, [], "co",
+                                     "--depth", "1",
+                                     svntest.main.current_repo_url,
+                                     sbox.wc_dir)
+
+  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
+                                     SVNAnyOutput, [], "co",
+                                     svntest.main.current_repo_url,
+                                     wc2)
+
+  iota_path = os.path.join(wc2, 'iota')
+  svntest.main.file_append(iota_path, "new text in iota\n")
+  mu_path = os.path.join(wc2, 'A', 'mu')
+  svntest.main.file_append(mu_path, "new text in mu\n")
+
+  # Commit in the "other" wc.
+  expected_output = svntest.wc.State(wc2,
+                                     { 'iota' : Item(verb='Sending'),
+                                       'A/mu' : Item(verb='Sending'),
+                                       })
+  expected_status = svntest.actions.get_virginal_state(wc2, 1)
+  expected_status.tweak('iota', wc_rev=2, status='  ')
+  expected_status.tweak('A/mu', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit(wc2,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None, wc2)
+
+  # Update the depth-0 wc, expecting to receive only the change to iota.
+  expected_output = svntest.wc.State(sbox.wc_dir,
+                                     { 'iota' : Item(status='U ') })
+  expected_disk = svntest.wc.State('', { })
+  expected_disk.add(\
+    {'iota' : Item(contents="This is the file 'iota'.\nnew text in iota\n"),
+     'A' : Item(contents=None) } )
+  expected_status = svntest.wc.State(sbox.wc_dir, { '' : wc.StateItem() })
+  expected_status.tweak(contents=None, status='  ', wc_rev=2)
+  expected_status.add(\
+    {'iota' : Item(status='  ', wc_rev=2),
+     'A' : Item(status='  ', wc_rev=2) } )
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None)
+
+
+#----------------------------------------------------------------------
 
 # list all tests here, starting with None:
 test_list = [ None,
               depth_zero_checkout,
               depth_one_checkout,
               nonrecursive_checkout,
+              depth_zero_update_bypass_single_file,
+              depth_one_get_top_file_mod_only,
             ]
 
 if __name__ == "__main__":
