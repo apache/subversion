@@ -363,28 +363,26 @@ parse_mergeinfo_from_db(sqlite3 *db,
 }
 
 
-/* Helper for get_merge_info_for_path that will append a string to each
-   path that exists in the mergeinfo hash.  */
+/* Helper for get_merge_info_for_path() that will append
+   PATH_TO_APPEND to each path that exists in the merge info hash
+   INPUT, and return a new merge info hash in *OUTPUT.  */
 static svn_error_t *
 append_component_to_paths(apr_hash_t **output,
                           apr_hash_t *input,
-                          const char *toappend,
+                          const char *path_to_append,
                           apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   *output = apr_hash_make(pool);
 
-  for (hi = apr_hash_first(pool, input);
-       hi;
-       hi = apr_hash_next(hi))
+  for (hi = apr_hash_first(pool, input); hi; hi = apr_hash_next(hi))
     {
       const void *key;
       void *val;
-      apr_ssize_t klen;
       char *newpath;
 
-      apr_hash_this(hi, &key, &klen, &val);
-      newpath = svn_path_join((const char *)key, toappend, pool);
+      apr_hash_this(hi, &key, NULL, &val);
+      newpath = svn_path_join((const char *) key, path_to_append, pool);
       apr_hash_set(*output, newpath, APR_HASH_KEY_STRING, val);
     }
 
