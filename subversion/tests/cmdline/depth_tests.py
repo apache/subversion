@@ -101,9 +101,9 @@ def depth_one_checkout(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              XFail(depth_zero_checkout),
-              XFail(depth_one_checkout),
-              XFail(nonrecursive_checkout),
+              depth_zero_checkout,
+              depth_one_checkout,
+              nonrecursive_checkout,
             ]
 
 if __name__ == "__main__":
