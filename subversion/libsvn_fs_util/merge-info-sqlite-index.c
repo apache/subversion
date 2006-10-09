@@ -479,17 +479,9 @@ get_merge_info_for_path(sqlite3 *db,
             apr_hash_set(result, path, APR_HASH_KEY_STRING, NULL);
           else if (cacheresult)
             {
-              const char *p;
-              int i;
               apr_hash_t *translatedhash;
-              char *toappend;
+              const char *toappend = &path[parentpath->len + 1];
 
-              /* We want to append from the part after the / to the end of the
-                 path string.  */
-              toappend = apr_pcalloc(pool,
-                                     (strlen(path) - parentpath->len) + 1);
-              for (i = 0, p = &path[parentpath->len + 1]; *p; i++, p++)
-                *(toappend + i) = *p;
               append_component_to_paths(&translatedhash, cacheresult,
                                         toappend, pool);
               apr_hash_set(result, path, APR_HASH_KEY_STRING,
