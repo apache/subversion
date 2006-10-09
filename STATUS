@@ -54,11 +54,13 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r21531
+  * r21531, r21845
     Allow HTTP auth protocols to be configurable by way of a
     "http-auth-types" parameter.
     Justification:
-      Allow use of GSSAPI/SSPI auth on Windows with Neon 0.26.1+.
+      Allow GSSAPI/SSPI auth to be enabled/disabled on Windows with
+      Neon 0.26.1+, addressesing numerous bug reports from
+      TortoiseSVN, Subversion, Subclipse, etc.
     Votes:
       +1: dlr, djh
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
