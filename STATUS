@@ -54,7 +54,7 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r21531, r21845
+  * r21531, r21848
     Allow HTTP auth protocols to be configurable by way of a
     "http-auth-types" parameter.
     Justification:
