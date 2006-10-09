@@ -28,7 +28,6 @@ from svntest import wc, SVNAnyOutput
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
 
 #----------------------------------------------------------------------
 # Helper function for testing stderr from co.

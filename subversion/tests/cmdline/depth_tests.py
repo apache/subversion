@@ -28,7 +28,6 @@ from svntest import wc, SVNAnyOutput
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = wc.StateItem
-XFail = svntest.testcase.XFail
 
 #----------------------------------------------------------------------
 # Ensure that 'checkout --depth=0' results in a depth 0 working directory.
