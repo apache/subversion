@@ -49,7 +49,7 @@ def check_prop(name, path, exp_out):
 #----------------------------------------------------------------------
 
 def make_local_props(sbox):
-  "write/read props in wc only (ps, pl, pdel, pe)"
+  "write/read props in wc only (ps, pl, pdel)"
 
   # Bootstrap
   sbox.build()
@@ -59,8 +59,6 @@ def make_local_props(sbox):
   svntest.main.run_svn(None, 'propset', 'blue', 'azul',
                        os.path.join(wc_dir, 'A', 'mu'))
   svntest.main.run_svn(None, 'propset', 'green', 'verde',
-                       os.path.join(wc_dir, 'A', 'mu'))  
-  svntest.main.run_svn(None, 'propset', 'editme', 'the foo fighters',
                        os.path.join(wc_dir, 'A', 'mu'))  
   svntest.main.run_svn(None, 'propset', 'red', 'rojo',
                        os.path.join(wc_dir, 'A', 'D', 'G'))  
@@ -78,15 +76,9 @@ def make_local_props(sbox):
   svntest.main.run_svn(None, 'propdel', 'yellow',
                        os.path.join(wc_dir, 'A', 'D', 'G'))  
 
-  svntest.main.use_editor('foo_to_bar')
-  # Edit one property
-  svntest.main.run_svn(None, 'propedit', 'editme',
-                       os.path.join(wc_dir, 'A', 'mu'))
-
   # What we expect the disk tree to look like:
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu', props={'blue' : 'azul', 'green' : 'verde',
-                                     'editme' : 'the bar fighters'})
+  expected_disk.tweak('A/mu', props={'blue' : 'azul', 'green' : 'verde'})
   expected_disk.tweak('A/D/G', props={'red' : 'rojo'})
 
   # Read the real disk tree.  Notice we are passing the (normally
