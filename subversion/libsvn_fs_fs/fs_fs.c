@@ -67,7 +67,6 @@
 #define PATH_REVPROPS_DIR  "revprops"      /* Directory of revprops */
 #define PATH_TXNS_DIR      "transactions"  /* Directory of transactions */
 #define PATH_LOCKS_DIR     "locks"         /* Directory of locks */
-#define PATH_MERGEINFO_DB  "mergeinfo.db"  /* Contains mergeinfo.  */
 
 /* Names of special files and file extensions for transactions */
 #define PATH_CHANGES       "changes"       /* Records changes made so far */
@@ -387,7 +386,8 @@ svn_fs_fs__hotcopy(const char *src_path,
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
   
   /* Copy the merge tracking info. */
-  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_MERGEINFO_DB, pool));
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS_MERGE_INFO__DB_NAME,
+                               pool));
 
   /* Find the youngest revision from this current file. */
   SVN_ERR(get_youngest(&youngest, dst_path, pool));

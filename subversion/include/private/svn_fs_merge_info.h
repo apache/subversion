@@ -24,6 +24,9 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* The name of the sqlite merge info database. */
+#define SVN_FS_MERGE_INFO__DB_NAME "mergeinfo.db"
+
 /* Create the merge info index under PATH.  Use POOL for any temporary
    allocations. */
 svn_error_t *

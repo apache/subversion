@@ -1029,6 +1029,10 @@ base_hotcopy(const char *src_path,
   /* Copy the DB_CONFIG file. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, "DB_CONFIG", pool));
 
+  /* Copy the merge tracking info. */
+  SVN_ERR(svn_io_dir_file_copy(src_path, dest_path, SVN_FS_MERGE_INFO__DB_NAME,
+                               pool));
+
   /* In order to copy the database files safely and atomically, we
      must copy them in chunks which are multiples of the page-size
      used by BDB.  See sleepycat docs for details, or svn issue #1818. */
