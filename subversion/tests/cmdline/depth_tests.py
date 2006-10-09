@@ -203,6 +203,43 @@ def depth_one_get_top_file_mod_only(sbox):
 
 
 #----------------------------------------------------------------------
+def depth_zero_commit(sbox):
+  "todo: commit a file from a depth-0 working copy"
+  # Bring iota into a depth-0 working copy, then commit a change to it.
+
+#----------------------------------------------------------------------
+def depth_zero_bring_in_file(sbox):
+  "todo: bring a file into a depth-0 working copy"
+  # Run 'svn up iota' to bring iota permanently into the working copy.
+
+#----------------------------------------------------------------------
+def depth_zero_bring_in_dir(sbox):
+  "todo: bring a dir into a depth-0 working copy"
+  # Run 'svn up A' to bring A permanently into the working copy.
+
+#----------------------------------------------------------------------
+def depth_one_bring_in_file(sbox):
+  "todo: bring a file into a depth-1 working copy"
+  # Run 'svn up A/mu' to bring A/mu permanently into the working copy.
+  # How should 'svn up A/D/gamma' behave, however?  Edge cases...
+
+#----------------------------------------------------------------------
+def depth_one_bring_in_dir(sbox):
+  "todo: bring a dir into a depth-1 working copy"
+  # Run 'svn up A/B' to bring A/B permanently into the working copy.
+
+#----------------------------------------------------------------------
+def depth_one_fill_in_dir(sbox):
+  "todo: bring a dir into a depth-1 working copy"
+  # Run 'svn up A' to fill in A as a depth-infinity subdir.
+
+#----------------------------------------------------------------------
+def depth_mixed_bring_in_dir(sbox):
+  "todo: bring a dir into a mixed-depth working copy"
+  # Run 'svn up --depth=1 A' in a depth-0 working copy.  Then run
+  # 'svn up A/B' to fill out B.
+
+#----------------------------------------------------------------------
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -211,6 +248,13 @@ test_list = [ None,
               nonrecursive_checkout,
               depth_zero_update_bypass_single_file,
               depth_one_get_top_file_mod_only,
+              depth_zero_commit,
+              depth_zero_bring_in_file,
+              depth_zero_bring_in_dir,
+              depth_one_bring_in_file,
+              depth_one_bring_in_dir,
+              depth_one_fill_in_dir,
+              depth_mixed_bring_in_dir,
             ]
 
 if __name__ == "__main__":
