@@ -36,10 +36,10 @@ convention, the initial content of each file is a single line, such as
             /A/mu
             /A/B/
             /A/B/lambda
-            /A/B/E
+            /A/B/E/
             /A/B/E/alpha
             /A/B/E/beta
-            /A/B/F
+            /A/B/F/
             /A/C/
             /A/D/
             /A/D/gamma
