@@ -1660,7 +1660,7 @@ svn_error_t *svn_client_diff(const apr_array_header_t *diff_options,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_client_diff_peg3(const apr_array_header_t *diff_options,
+svn_error_t *svn_client_diff_peg4(const apr_array_header_t *diff_options,
                                   const char *path,
                                   const svn_opt_revision_t *peg_revision,
                                   const svn_opt_revision_t *start_revision,
