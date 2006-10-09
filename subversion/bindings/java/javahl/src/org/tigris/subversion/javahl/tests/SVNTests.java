@@ -43,10 +43,10 @@ class SVNTests extends TestCase
      */
     protected SVNClientInterface client;
     /**
-     * the root directory. All other files and directories will created in
-     * here
+     * The root directory for the test data. All other files and
+     * directories will created under here.
      */
-    protected File rootDir;
+    protected final File rootDir;
     /**
      * the base name of the test. Together with the testCounter this will make
      * up the directory name of the test.
@@ -73,22 +73,22 @@ class SVNTests extends TestCase
      * will be used for the sample repository and its dumpfile and for
      * the config directory
      */
-    protected File localTmp;
+    protected final File localTmp;
     /**
      * the directory "repositories" in the rootDir. All test repositories will
      * be created here.
      */
-    protected File repositories;
+    protected final File repositories;
     /**
      * the directory "working_copies" in the rootDir. All test working copies
      * will be created here.
      */
-    protected File workingCopies;
+    protected final File workingCopies;
     /**
      * the directory "config" in the localTmp. It will be used as the
      * configuration directory for all the tests.
      */
-    protected File conf;
+    protected final File conf;
     /**
      * standard log message. Used for all commits.
      */
@@ -141,6 +141,15 @@ class SVNTests extends TestCase
             else if(rootUrl.startsWith("file:/"))
                 rootUrl = rootUrl.replaceFirst("file:/", "file:///");
         }
+
+        // ### The paths for the command-line tests are now
+        // ### "svn-test-work/local_tmp", "svn-test-work/repositories"
+        // ### and "svn-test-work/repositories".  The JavaHL tests
+        // ### have not been updated to match.
+        this.localTmp = new File(this.rootDir, "local_tmp");
+        this.conf = new File(this.localTmp, "config");
+        this.repositories = new File(this.rootDir, "repositories");
+        this.workingCopies = new File(this.rootDir, "working_copies");
     }
 
     /**
@@ -151,27 +160,11 @@ class SVNTests extends TestCase
     {
         super.setUp();
 
-        // create a clean directory for the config files and the sample
-        // repository
-        //
-        // ### The path is now "svn-test-work/local_tmp", however, I'm
-        // ### not sure how to update this code for that.
-        localTmp = new File(rootDir, "local_tmp");
-        if(localTmp.exists())
-            removeDirOrFile(localTmp);
-        localTmp.mkdir();
-        conf = new File(localTmp, "config");
-        conf.mkdir();
+        createDirectories();
 
         // create and configure the needed subversion objects
         admin = new SVNAdmin();
-        client = new SVNClientSynchronized();
-        client.notification2(new MyNotifier());
-        client.commitMessageHandler(new MyCommitMessage());
-        client.username("jrandom");
-        client.password("rayjandom");
-        client.setConfigDirectory(conf.getAbsolutePath());
-        expectedCommitItems = new HashMap();
+        initClient();
 
         // build and dump the sample repository
         File greekFiles = buildGreekFiles();
@@ -185,16 +178,42 @@ class SVNTests extends TestCase
                 null, true );
         admin.dump(greekRepos.getAbsolutePath(), new FileOutputer(greekDump),
                 new IgnoreOutputer(), null, null, false);
+    }
 
-        // create the directory for the repositories and the working copies
-        //
-        // ### The paths are now "svn-test-work/repositories" and
-        // ### "svn-test-work/repositories".  However, I'm not sure
-        // ### how to update this code for that. 
-        repositories = new File(rootDir, "repositories");
-        repositories.mkdirs();
-        workingCopies = new File(rootDir, "working_copies");
-        workingCopies.mkdirs();
+    /**
+     * Create a directory for the sample (Greek) repository, config
+     * files, repositories and working copies.
+     */
+    private void createDirectories()
+    {
+        this.rootDir.mkdirs();
+
+        if (this.localTmp.exists())
+        {
+            removeDirOrFile(this.localTmp);
+        }
+        this.localTmp.mkdir();
+        this.conf.mkdir();
+
+        this.repositories.mkdir();
+        this.workingCopies.mkdir();
+    }
+
+    /**
+     * Initialize {@link #client}, setting up its notifier, commit
+     * message handler, user name, password, config directory, and
+     * expected commit items.
+     */
+    private void initClient()
+        throws SubversionException
+    {
+        this.client = new SVNClientSynchronized();
+        this.client.notification2(new MyNotifier());
+        this.client.commitMessageHandler(new MyCommitMessage());
+        this.client.username("jrandom");
+        this.client.password("rayjandom");
+        this.client.setConfigDirectory(this.conf.getAbsolutePath());
+        this.expectedCommitItems = new HashMap();
     }
 
     /**
@@ -496,7 +515,7 @@ class SVNTests extends TestCase
 
             if (createWC)
             {
-                workingCopy = createStartWorkingCopy(repository, testName);
+                workingCopy = createInitialWorkingCopy(repository, testName);
             }
         }
 
@@ -540,7 +559,7 @@ class SVNTests extends TestCase
             repository = orig.getRepository();
             url = orig.getUrl();
             wc = orig.wc.copy();
-            workingCopy = createStartWorkingCopy(repository, testName);
+            workingCopy = createInitialWorkingCopy(repository, testName);
         }
 
         /**
@@ -620,7 +639,7 @@ class SVNTests extends TestCase
          * @return the directory of the working copy
          * @throws Exception
          */
-        protected File createStartWorkingCopy(File repos, String testName)
+        protected File createInitialWorkingCopy(File repos, String testName)
             throws SubversionException, IOException
         {
             // build a clean working directory
