@@ -662,8 +662,7 @@ push_props_on_list(apr_array_header_t *list,
 {
   if (prop_hash && apr_hash_count(prop_hash))
     {
-      svn_client_proplist_item_t *item
-        = apr_palloc(pool, sizeof(svn_client_proplist_item_t));
+      svn_client_proplist_item_t *item = apr_palloc(pool, sizeof(*item));
       item->node_name = svn_stringbuf_create(path, pool);
       item->prop_hash = prop_hash;
       
