@@ -819,31 +819,13 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   /* Remove any deleted entries.  Do this before processing the
      target, for graceful handling of case-only renames. */
-  if (s_entries)
+  if (s_entries && (depth == svn_depth_one || depth == svn_depth_infinity))
     {
       for (hi = apr_hash_first(pool, s_entries); hi; hi = apr_hash_next(hi))
         {
           svn_pool_clear(subpool);
           apr_hash_this(hi, NULL, NULL, &val);
           s_entry = val;
-
-#if 0
-          /* Check if local or prevailing depth tells us not to send
-             deletes for entries here.
-             ### TODO: This code is bogus as it stands.
-             ### fetch_path_info() is a destructive call.  There has
-             ### to be some other way to determine local depth;
-             ### otherwise, we need a way to avoid needing local
-             ### depth in the first place.
-          */
-          e_fullpath = svn_path_join(e_path, s_entry->name, subpool);
-          SVN_ERR(fetch_path_info(b, &name, &info, e_fullpath, subpool));
-          if (! info)
-            SVN_ERR(fetch_path_info(b, &name, &info, e_path, subpool));
-          if ((info && info->depth == svn_depth_zero)
-              || (!info && (depth == svn_depth_zero)))
-            continue;
-#endif /* 0 */
 
           if (apr_hash_get(t_entries, s_entry->name,
                            APR_HASH_KEY_STRING) == NULL)
