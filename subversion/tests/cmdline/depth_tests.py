@@ -225,7 +225,23 @@ def depth_zero_commit(sbox):
 def depth_zero_bring_in_file(sbox):
   "bring a file into a depth-0 working copy"
   # Run 'svn up iota' to bring iota permanently into the working copy.
-  raise svntest.Failure("<test not yet written>")
+  wc0, x, y = set_up_depthy_working_copies(sbox, zero=True)
+
+  iota_path = os.path.join(wc0, 'iota')
+  if os.path.exists(iota_path):
+    raise svntest.Failure("'%s' exists when it shouldn't" % iota_path)
+
+  # ### I'd love to do this using the recommended {expected_output,
+  # ### expected_status, expected_disk} method here, but after twenty
+  # ### minutes of trying to figure out how, I decided to compromise.
+
+  # Update iota by name, expecting to receive it.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', iota_path)
+
+  iota_path = os.path.join(wc0, 'iota')
+  if not os.path.exists(iota_path):
+    raise svntest.Failure("'%s' doesn't exist when it should" % iota_path)
+
 
 #----------------------------------------------------------------------
 def depth_zero_bring_in_dir(sbox):
@@ -322,7 +338,7 @@ test_list = [ None,
               depth_zero_update_bypass_single_file,
               depth_one_get_top_file_mod_only,
               XFail(depth_zero_commit),
-              XFail(depth_zero_bring_in_file),
+              depth_zero_bring_in_file,
               XFail(depth_zero_bring_in_dir),
               XFail(depth_one_bring_in_file),
               XFail(depth_one_bring_in_dir),
