@@ -444,7 +444,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
   /* First, ensure that no thread in this process (including this one)
      is currently writing to this transaction's proto-rev file. */
   if (txn->being_written)
-    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+    return svn_error_createf(SVN_ERR_FS_TRANSACTION_NOT_MUTABLE, NULL,
                              _("Cannot write to the prototype revision file "
                                "of transaction '%s' because a previous "
                                "representation is currently being written by "
@@ -480,7 +480,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
         svn_error_clear(svn_io_file_close(lockfile, pool));
 
         if (APR_STATUS_IS_EAGAIN(apr_err))
-          return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+          return svn_error_createf(SVN_ERR_FS_TRANSACTION_NOT_MUTABLE, NULL,
                                    _("Cannot write to the prototype revision "
                                      "file of transaction '%s' because a "
                                      "previous representation is currently "
@@ -533,7 +533,7 @@ get_writable_proto_rev_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
    has been closed.
 
    If the prototype revision file is already locked, return error
-   SVN_ERR_FS_CORRUPT.
+   SVN_ERR_FS_TRANSACTION_NOT_MUTABLE.
 
    Perform all allocations in POOL. */
 static svn_error_t *
