@@ -225,7 +225,19 @@ def depth_zero_commit(sbox):
 def depth_zero_bring_in_file(sbox):
   "bring a file into a depth-0 working copy"
   # Run 'svn up iota' to bring iota permanently into the working copy.
-  raise svntest.Failure("<test not yet written>")
+  wc0, x, y = set_up_depthy_working_copies(sbox, zero=True)
+
+  # Update the depth-0 wc, expecting to receive iota.
+  expected_output = svntest.wc.State(wc0, { })
+  expected_disk = svntest.wc.State('', { })
+  expected_status = svntest.wc.State(wc0, { '' : svntest.wc.StateItem() })
+  expected_status.tweak(contents=None, status='  ', wc_rev=2)
+  svntest.actions.run_and_verify_update(wc0,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None)
+
 
 #----------------------------------------------------------------------
 def depth_zero_bring_in_dir(sbox):
