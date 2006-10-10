@@ -29,30 +29,71 @@ Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = wc.StateItem
 
+# For errors setting up the depthy working copies.
+class DepthSetupError(Exception):
+  def __init__ (self, args=None):
+    self.args = args
+
+def set_up_depthy_working_copies(sbox, zero=False, one=False, infinity=False):
+  """Set up up to three working copies, at various depths.  At least
+  one of depths ZERO, ONE, or INFINITY must be passed as True.  The
+  corresponding working copy paths are returned in a three-element
+  tuple in that order, with element value of None for working copies
+  that were not created.  If all args are False, raise DepthSetupError."""
+
+  if infinity is False and zero is False and one is False:
+    raise DepthSetupError("At least one working copy depth must be passed.")
+
+  wc = None
+  if infinity:
+    sbox.build()
+    wc = sbox.wc_dir
+  else:
+    sbox.build(create_wc = False)
+    if os.path.exists(sbox.wc_dir):
+      svntest.main.safe_rmtree(sbox.wc_dir)
+
+  wc0 = None
+  if zero:
+    wc0 = sbox.wc_dir + '-d0'
+    if os.path.exists(wc0):
+      svntest.main.safe_rmtree(wc0)
+    svntest.actions.run_and_verify_svn("Unexpected error from co --depth=0",
+                                       SVNAnyOutput, [], "co",
+                                       "--depth", "0",
+                                       svntest.main.current_repo_url,
+                                       wc0)
+
+  wc1 = None
+  if one:
+    wc1 = sbox.wc_dir + '-d1'
+    if os.path.exists(wc1):
+      svntest.main.safe_rmtree(wc1)
+    svntest.actions.run_and_verify_svn("Unexpected error from co --depth=1",
+                                       SVNAnyOutput, [], "co",
+                                       "--depth", "1",
+                                       svntest.main.current_repo_url,
+                                       wc1)
+
+  return wc0, wc1, wc
+
+
 #----------------------------------------------------------------------
 # Ensure that 'checkout --depth=0' results in a depth 0 working directory.
 def depth_zero_checkout(sbox):
   "depth-0 (non-recursive) checkout"
 
-  sbox.build(create_wc = False)
-  if os.path.exists(sbox.wc_dir):
-    svntest.main.safe_rmtree(sbox.wc_dir)
+  wc0, ign_a, ign_b = set_up_depthy_working_copies(sbox, zero=True)
 
-  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
-                                     SVNAnyOutput, [], "co",
-                                     "--depth", "0",
-                                     svntest.main.current_repo_url,
-                                     sbox.wc_dir)
-
-  if os.path.exists(os.path.join(sbox.wc_dir, "iota")):
+  if os.path.exists(os.path.join(wc0, "iota")):
     raise svntest.Failure("depth-zero checkout created file 'iota'")
 
-  if os.path.exists(os.path.join(sbox.wc_dir, "A")):
+  if os.path.exists(os.path.join(wc0, "A")):
     raise svntest.Failure("depth-zero checkout created subdir 'A'")
 
   svntest.actions.run_and_verify_svn(
     "Expected depth zero for top of WC, got some other depth",
-    "Depth: zero", [], "info", sbox.wc_dir)
+    "Depth: zero", [], "info", wc0)
                     
 
 # Helper for two test functions.
@@ -61,6 +102,9 @@ def depth_one_same_as_nonrecursive(sbox, opt):
   passed '-N' or '--depth=1' for OPT.  The two should get the same
   result, hence this helper containing the common code between the
   two tests."""
+
+  # This duplicates some code from set_up_depthy_working_copies(), but
+  # that's because it's abstracting out a different axis.
 
   sbox.build(create_wc = False)
   if os.path.exists(sbox.wc_dir):
@@ -96,106 +140,75 @@ def depth_one_checkout(sbox):
   "depth-1 checkout"
   depth_one_same_as_nonrecursive(sbox, "--depth=1")
 
+
 #----------------------------------------------------------------------
 def depth_zero_update_bypass_single_file(sbox):
   "updating depth-0 wc should not receive file mod"
 
-  sbox.build(create_wc = False)
-  if os.path.exists(sbox.wc_dir):
-    svntest.main.safe_rmtree(sbox.wc_dir)
+  wc0, ign, wc = set_up_depthy_working_copies(sbox, zero=True, infinity=True)
 
-  wc2 = sbox.wc_dir + '-2'
-  if os.path.exists(wc2):
-    svntest.main.safe_rmtree(wc2)
-
-  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
-                                     SVNAnyOutput, [], "co",
-                                     "--depth", "0",
-                                     svntest.main.current_repo_url,
-                                     sbox.wc_dir)
-
-  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
-                                     SVNAnyOutput, [], "co",
-                                     svntest.main.current_repo_url,
-                                     wc2)
-
-  iota_path = os.path.join(wc2, 'iota')
+  iota_path = os.path.join(wc, 'iota')
   svntest.main.file_append(iota_path, "new text\n")
 
   # Commit in the "other" wc.
-  expected_output = svntest.wc.State(wc2, { 'iota' : Item(verb='Sending'), })
-  expected_status = svntest.actions.get_virginal_state(wc2, 1)
+  expected_output = svntest.wc.State(wc, { 'iota' : Item(verb='Sending'), })
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
   expected_status.tweak('iota', wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit(wc2,
+  svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc2)
+                                        None, None, None, None, None, wc)
 
   # Update the depth-0 wc, expecting not to receive the change to iota.
-  expected_output = svntest.wc.State(sbox.wc_dir, { })
+  expected_output = svntest.wc.State(wc0, { })
   expected_disk = svntest.wc.State('', { })
-  expected_status = svntest.wc.State(sbox.wc_dir, { '' : wc.StateItem() })
+  expected_status = svntest.wc.State(wc0, { '' : svntest.wc.StateItem() })
   expected_status.tweak(contents=None, status='  ', wc_rev=2)
-  svntest.actions.run_and_verify_update(sbox.wc_dir,
+  svntest.actions.run_and_verify_update(wc0,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None, None, None, None, None)
 
+
 #----------------------------------------------------------------------
 def depth_one_get_top_file_mod_only(sbox):
   "updating depth-1 wc should get top file mod only"
 
-  sbox.build(create_wc = False)
-  if os.path.exists(sbox.wc_dir):
-    svntest.main.safe_rmtree(sbox.wc_dir)
+  ign, wc1, wc = set_up_depthy_working_copies(sbox, one=True, infinity=True)
 
-  wc2 = sbox.wc_dir + '-2'
-  if os.path.exists(wc2):
-    svntest.main.safe_rmtree(wc2)
-
-  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
-                                     SVNAnyOutput, [], "co",
-                                     "--depth", "1",
-                                     svntest.main.current_repo_url,
-                                     sbox.wc_dir)
-
-  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
-                                     SVNAnyOutput, [], "co",
-                                     svntest.main.current_repo_url,
-                                     wc2)
-
-  iota_path = os.path.join(wc2, 'iota')
+  iota_path = os.path.join(wc, 'iota')
   svntest.main.file_append(iota_path, "new text in iota\n")
-  mu_path = os.path.join(wc2, 'A', 'mu')
+  mu_path = os.path.join(wc, 'A', 'mu')
   svntest.main.file_append(mu_path, "new text in mu\n")
 
   # Commit in the "other" wc.
-  expected_output = svntest.wc.State(wc2,
+  expected_output = svntest.wc.State(wc,
                                      { 'iota' : Item(verb='Sending'),
                                        'A/mu' : Item(verb='Sending'),
                                        })
-  expected_status = svntest.actions.get_virginal_state(wc2, 1)
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
   expected_status.tweak('iota', wc_rev=2, status='  ')
   expected_status.tweak('A/mu', wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit(wc2,
+  svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None, None, None, None, None, wc2)
+                                        None, None, None, None, None, wc)
 
   # Update the depth-0 wc, expecting to receive only the change to iota.
-  expected_output = svntest.wc.State(sbox.wc_dir,
+  expected_output = svntest.wc.State(wc1,
                                      { 'iota' : Item(status='U ') })
   expected_disk = svntest.wc.State('', { })
   expected_disk.add(\
     {'iota' : Item(contents="This is the file 'iota'.\nnew text in iota\n"),
      'A' : Item(contents=None) } )
-  expected_status = svntest.wc.State(sbox.wc_dir, { '' : wc.StateItem() })
+  expected_status = svntest.wc.State(wc1,
+                                     { '' : svntest.wc.StateItem() })
   expected_status.tweak(contents=None, status='  ', wc_rev=2)
   expected_status.add(\
     {'iota' : Item(status='  ', wc_rev=2),
      'A' : Item(status='  ', wc_rev=2) } )
-  svntest.actions.run_and_verify_update(sbox.wc_dir,
+  svntest.actions.run_and_verify_update(wc1,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
