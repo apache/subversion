@@ -240,6 +240,32 @@ def depth_mixed_bring_in_dir(sbox):
   # 'svn up A/B' to fill out B.
 
 #----------------------------------------------------------------------
+def depth_zero_unreceive_delete(sbox):
+  "todo: depth-0 working copy ignores a deletion"
+  # Check out a depth-0 greek tree to wc1.  In wc2, delete iota and
+  # commit.  Update wc1; should not receive the delete.
+
+#----------------------------------------------------------------------
+def depth_zero_receive_delete(sbox):
+  "todo: depth-0 working copy receives a deletion"
+  # Check out a depth-0 greek tree to wc1.  Then 'svn up' iota to get
+  # iota into wc1.  In wc2, delete iota and commit.  Update wc1;
+  # should receive the delete.
+
+#----------------------------------------------------------------------
+def depth_one_unreceive_delete(sbox):
+  "todo: depth-1 working copy ignores a deletion"
+  # Check out a depth-1 greek tree to wc1.  In wc2, delete A/mu and
+  # commit.  Update wc1; should not receive the delete.
+
+#----------------------------------------------------------------------
+def depth_one_receive_delete(sbox):
+  "todo: depth-1 working copy receives a deletion"
+  # Check out a depth-1 greek tree to wc1.  In wc2, delete iota and
+  # commit.  Update wc1  should receive the delete.
+
+
+#----------------------------------------------------------------------
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -255,6 +281,10 @@ test_list = [ None,
               depth_one_bring_in_dir,
               depth_one_fill_in_dir,
               depth_mixed_bring_in_dir,
+              depth_zero_unreceive_delete,
+              depth_zero_receive_delete,
+              depth_one_receive_delete,
+              depth_one_receive_delete,
             ]
 
 if __name__ == "__main__":
