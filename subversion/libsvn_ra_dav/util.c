@@ -228,7 +228,7 @@ static void shim_xml_push_handler(ne_xml_parser *p,
                                   void *userdata,
                                   apr_pool_t *pool)
 {
-  neon_shim_baton_t *baton = apr_pcalloc(pool, sizeof(neon_shim_baton_t));
+  neon_shim_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
   baton->pool = pool;
   baton->original_userdata = userdata;
   baton->elements = elements;

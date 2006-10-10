@@ -1755,7 +1755,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   svn_delta_editor_t *editor;
   commit_context_t *ctx;
 
-  ctx = apr_pcalloc(pool, sizeof(commit_context_t));
+  ctx = apr_pcalloc(pool, sizeof(*ctx));
 
   ctx->pool = pool;
 
