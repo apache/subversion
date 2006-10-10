@@ -34,9 +34,6 @@
 #include "../libsvn_fs/fs-loader.h"
 #include "svn_private_config.h"
 
-/* Following are defines that specify the textual elements of the
-   native filesystem directories and revision files. */
-
 /* We want to cache that we saw no mergeinfo for a path as well,
    so we use a -1 converted to a pointer to represent this. */
 #define NEGATIVE_CACHE_RESULT ((void *)(-1))
@@ -53,7 +50,7 @@
 static const char *
 path_mergeinfo_db(const char *path, apr_pool_t *pool)
 {
-  return svn_path_join(path, SVN_FS_MERGE_INFO_DB_NAME, pool);
+  return svn_path_join(path, SVN_FS_MERGE_INFO__DB_NAME, pool);
 }
 
 #ifdef SQLITE3_DEBUG
