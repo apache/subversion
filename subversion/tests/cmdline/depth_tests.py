@@ -264,7 +264,31 @@ def depth_zero_unreceive_delete(sbox):
   "depth-0 working copy ignores a deletion"
   # Check out a depth-0 greek tree to wc1.  In wc2, delete iota and
   # commit.  Update wc1; should not receive the delete.
-  raise svntest.Failure("<test not yet written>")
+  wc0, ign, wc = set_up_depthy_working_copies(sbox, zero=True, infinity=True)
+
+  iota_path = os.path.join(wc, 'iota')
+
+  # Commit in the "other" wc.
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', iota_path)
+  expected_output = svntest.wc.State(wc, { 'iota' : Item(verb='Deleting'), })
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
+  expected_status.remove('iota')
+  svntest.actions.run_and_verify_commit(wc,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None, wc)
+
+  # Update the depth-0 wc, expecting not to receive the deletion of iota.
+  expected_output = svntest.wc.State(wc0, { })
+  expected_disk = svntest.wc.State('', { })
+  expected_status = svntest.wc.State(wc0, { '' : svntest.wc.StateItem() })
+  expected_status.tweak(contents=None, status='  ', wc_rev=2)
+  svntest.actions.run_and_verify_update(wc0,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None)
+
 
 #----------------------------------------------------------------------
 def depth_zero_receive_delete(sbox):
