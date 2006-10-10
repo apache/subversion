@@ -204,66 +204,76 @@ def depth_one_get_top_file_mod_only(sbox):
 
 #----------------------------------------------------------------------
 def depth_zero_commit(sbox):
-  "todo: commit a file from a depth-0 working copy"
+  "commit a file from a depth-0 working copy"
   # Bring iota into a depth-0 working copy, then commit a change to it.
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 def depth_zero_bring_in_file(sbox):
-  "todo: bring a file into a depth-0 working copy"
+  "bring a file into a depth-0 working copy"
   # Run 'svn up iota' to bring iota permanently into the working copy.
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 def depth_zero_bring_in_dir(sbox):
-  "todo: bring a dir into a depth-0 working copy"
+  "bring a dir into a depth-0 working copy"
   # Run 'svn up A' to bring A permanently into the working copy.
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 def depth_one_bring_in_file(sbox):
-  "todo: bring a file into a depth-1 working copy"
+  "bring a file into a depth-1 working copy"
   # Run 'svn up A/mu' to bring A/mu permanently into the working copy.
   # How should 'svn up A/D/gamma' behave, however?  Edge cases...
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 def depth_one_bring_in_dir(sbox):
-  "todo: bring a dir into a depth-1 working copy"
+  "bring a dir into a depth-1 working copy"
   # Run 'svn up A/B' to bring A/B permanently into the working copy.
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 def depth_one_fill_in_dir(sbox):
-  "todo: bring a dir into a depth-1 working copy"
+  "bring a dir into a depth-1 working copy"
   # Run 'svn up A' to fill in A as a depth-infinity subdir.
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 def depth_mixed_bring_in_dir(sbox):
-  "todo: bring a dir into a mixed-depth working copy"
+  "bring a dir into a mixed-depth working copy"
   # Run 'svn up --depth=1 A' in a depth-0 working copy.  Then run
   # 'svn up A/B' to fill out B.
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 def depth_zero_unreceive_delete(sbox):
-  "todo: depth-0 working copy ignores a deletion"
+  "depth-0 working copy ignores a deletion"
   # Check out a depth-0 greek tree to wc1.  In wc2, delete iota and
   # commit.  Update wc1; should not receive the delete.
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 def depth_zero_receive_delete(sbox):
-  "todo: depth-0 working copy receives a deletion"
+  "depth-0 working copy receives a deletion"
   # Check out a depth-0 greek tree to wc1.  Then 'svn up' iota to get
   # iota into wc1.  In wc2, delete iota and commit.  Update wc1;
   # should receive the delete.
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 def depth_one_unreceive_delete(sbox):
-  "todo: depth-1 working copy ignores a deletion"
+  "depth-1 working copy ignores a deletion"
   # Check out a depth-1 greek tree to wc1.  In wc2, delete A/mu and
   # commit.  Update wc1; should not receive the delete.
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 def depth_one_receive_delete(sbox):
-  "todo: depth-1 working copy receives a deletion"
+  "depth-1 working copy receives a deletion"
   # Check out a depth-1 greek tree to wc1.  In wc2, delete iota and
   # commit.  Update wc1  should receive the delete.
-
+  raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
 
@@ -274,17 +284,17 @@ test_list = [ None,
               nonrecursive_checkout,
               depth_zero_update_bypass_single_file,
               depth_one_get_top_file_mod_only,
-              depth_zero_commit,
-              depth_zero_bring_in_file,
-              depth_zero_bring_in_dir,
-              depth_one_bring_in_file,
-              depth_one_bring_in_dir,
-              depth_one_fill_in_dir,
-              depth_mixed_bring_in_dir,
-              depth_zero_unreceive_delete,
-              depth_zero_receive_delete,
-              depth_one_receive_delete,
-              depth_one_receive_delete,
+              XFail(depth_zero_commit),
+              XFail(depth_zero_bring_in_file),
+              XFail(depth_zero_bring_in_dir),
+              XFail(depth_one_bring_in_file),
+              XFail(depth_one_bring_in_dir),
+              XFail(depth_one_fill_in_dir),
+              XFail(depth_mixed_bring_in_dir),
+              XFail(depth_zero_unreceive_delete),
+              XFail(depth_zero_receive_delete),
+              XFail(depth_one_unreceive_delete),
+              XFail(depth_one_receive_delete),
             ]
 
 if __name__ == "__main__":
