@@ -166,7 +166,7 @@ svn_diff__get_tokens(svn_diff__position_t **position_list,
                                           hash, token));
 
       /* Create a new position */
-      position = apr_palloc(pool, sizeof(svn_diff__position_t));
+      position = apr_palloc(pool, sizeof(*position));
       position->next = NULL;
       position->node = node;
       position->offset = offset;
