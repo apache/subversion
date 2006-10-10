@@ -1460,7 +1460,7 @@ def update_to_future_add(sbox):
   # Now try updating the directory into the future
   A_path = os.path.join(wc_dir, 'A')
 
-  expected_status = svntest.wc.State(wc_dir, {
+  expected_output = svntest.wc.State(wc_dir, {
     'A'              : Item(status='A '),
     'A/mu'           : Item(status='A '),
     'A/B'            : Item(status='A '),
@@ -1484,7 +1484,7 @@ def update_to_future_add(sbox):
   expected_disk = svntest.main.greek_state.copy()
   
   svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_status,
+                                        expected_output,
                                         expected_disk,
                                         None, None,
                                         None, None, None, None, 0,
