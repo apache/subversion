@@ -384,14 +384,15 @@ append_component_to_paths(apr_hash_t **output,
 }
 
 /* Helper for get_merge_info that will recursively get merge info for
-   a single path.  */
+ * a single path.  Pass RESULT as NULL if you do not want the result
+ * to be updated.
+ */
 static svn_error_t *
 get_merge_info_for_path(sqlite3 *db,
                         const char *path,
                         svn_revnum_t rev,
                         apr_hash_t *result,
                         apr_hash_t *cache,
-                        svn_boolean_t setresult,
                         svn_boolean_t include_parents,
                         apr_pool_t *pool)
 {
@@ -404,7 +405,7 @@ get_merge_info_for_path(sqlite3 *db,
   cacheresult = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
   if (cacheresult != 0)
     {
-      if (cacheresult != NEGATIVE_CACHE_RESULT && setresult)
+      if (cacheresult != NEGATIVE_CACHE_RESULT && result)
         apr_hash_set(result, path, APR_HASH_KEY_STRING, cacheresult);
       return SVN_NO_ERROR;
     }
@@ -434,7 +435,7 @@ get_merge_info_for_path(sqlite3 *db,
       SVN_ERR(parse_mergeinfo_from_db(db, path, rev, &pathresult, pool));
       if (pathresult)
         {
-          if (setresult)
+          if (result)
             apr_hash_set(result, path, APR_HASH_KEY_STRING, pathresult);
           apr_hash_set(cache, path, APR_HASH_KEY_STRING, pathresult);
         }
@@ -462,9 +463,9 @@ get_merge_info_for_path(sqlite3 *db,
         parentpath->data = "";
 
       SVN_ERR(get_merge_info_for_path(db, parentpath->data, rev,
-                                      result, cache, FALSE, include_parents,
+                                      NULL, cache, include_parents,
                                       pool));
-      if (setresult)
+      if (result)
         {
           /* Now translate the result for our parent to our path */
           cacheresult = apr_hash_get(cache, parentpath->data,
@@ -518,8 +519,8 @@ svn_fs_merge_info__get_merge_info(apr_hash_t **mergeinfo,
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
       SVN_ERR (get_merge_info_for_path (db, path, rev, *mergeinfo,
-                                        mergeinfo_cache, TRUE,
-                                        include_parents, pool));
+                                        mergeinfo_cache, include_parents, 
+                                        pool));
     }
 
   for (i = 0; i < paths->nelts; i++)
