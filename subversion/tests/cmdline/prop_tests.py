@@ -1062,7 +1062,7 @@ def url_props_ops(sbox):
   wc_dir = sbox.wc_dir
 
   prop1 = 'prop1'
-  propval1 = 'propval1'
+  propval1 = 'propval1 is foo'
   prop2 = 'prop2'
   propval2 = 'propval2'
 
@@ -1125,6 +1125,17 @@ def url_props_ops(sbox):
   output, errput = svntest.main.run_svn(None, 'proplist', '-v', A_url)
   verify_output([ prop1 + ' : ' + propval1, prop2 + ' : ' + propval2,
                   'Properties on ' ], output, errput)
+
+  # Test propedit
+  svntest.main.use_editor('foo_to_bar')
+  propval1 = propval1.replace('foo', 'bar')
+  svntest.main.run_svn(None, 'propedit', prop1, '-m', 'editlog', iota_url)
+  svntest.main.run_svn(None, 'propedit', prop1, '-m', 'editlog', A_url)
+  svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
+                                     'propget', prop1, iota_url)
+  svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
+                                     'propget', prop1, A_url)
+
 
 #----------------------------------------------------------------------
 def removal_schedule_added_props(sbox):
