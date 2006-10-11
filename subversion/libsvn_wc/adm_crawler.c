@@ -47,7 +47,7 @@
 #include "svn_private_config.h"
 
 
-/* Helper for report_revisions().
+/* Helper for report_revisions_and_depths().
    
    Perform an atomic restoration of the file FILE_PATH; that is, copy
    the file's text-base to the administrative tmp area, and then move
@@ -124,14 +124,16 @@ restore_file(const char *file_path,
 /* The recursive crawler that describes a mixed-revision working
    copy to an RA layer.  Used to initiate updates.
 
-   ### TODO: document DEPTH parameter
-
    This is a depth-first recursive walk of DIR_PATH under ADM_ACCESS.
    Look at each entry and check if its revision is different than
    DIR_REV.  If so, report this fact to REPORTER.  If an entry is
    missing from disk, report its absence to REPORTER.  If an entry has
-   a different URL than expected, report that to REPORTER.  Finally,
-   if REPORT_EVERYTHING is set, then report all children unconditionally.
+   a different URL than expected, report that to REPORTER.  If an
+   entry has a different depth than its parent, report that to
+   REPORTER.  
+
+   Alternatively, if REPORT_EVERYTHING is set, then report all
+   children unconditionally.
 
    If TRAVERSAL_INFO is non-null, record this directory's
    value of svn:externals in both TRAVERSAL_INFO->externals_old and
@@ -147,19 +149,19 @@ restore_file(const char *file_path,
    will be called to report the restoration.  USE_COMMIT_TIMES is
    passed to restore_file() helper. */
 static svn_error_t *
-report_revisions(svn_wc_adm_access_t *adm_access,
-                 const char *dir_path,
-                 svn_revnum_t dir_rev,
-                 const svn_ra_reporter3_t *reporter,
-                 void *report_baton,
-                 svn_wc_notify_func2_t notify_func,
-                 void *notify_baton,
-                 svn_boolean_t restore_files,
-                 svn_depth_t depth,
-                 svn_boolean_t report_everything,
-                 svn_boolean_t use_commit_times,
-                 svn_wc_traversal_info_t *traversal_info,
-                 apr_pool_t *pool)
+report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
+                            const char *dir_path,
+                            svn_revnum_t dir_rev,
+                            const svn_ra_reporter3_t *reporter,
+                            void *report_baton,
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            svn_boolean_t restore_files,
+                            svn_depth_t depth,
+                            svn_boolean_t report_everything,
+                            svn_boolean_t use_commit_times,
+                            svn_wc_traversal_info_t *traversal_info,
+                            apr_pool_t *pool)
 {
   apr_hash_t *entries, *dirents;
   apr_hash_index_t *hi;
@@ -205,8 +207,6 @@ report_revisions(svn_wc_adm_access_t *adm_access,
   /* Looping over current directory's SVN entries: */
   iterpool = svn_pool_create(subpool);
 
-  /* ### TODO: See TODO comment in svn_wc_crawl_revisions3()
-     ### about depth treatment here. */ 
   for (hi = apr_hash_first(subpool, entries); hi; hi = apr_hash_next(hi))
     {
       const void *key;
@@ -268,12 +268,6 @@ report_revisions(svn_wc_adm_access_t *adm_access,
       /*** Files ***/
       if (current_entry->kind == svn_node_file) 
         {
-          /* ### TODO: Depth is irrelevant for files, but below we get
-           * ### it from the entry anyway.  Should we bother?  Should
-           * ### we always use svn_depth_zero for files instead?
-           * ### Maybe a special svn_depth_file?  Mull on this.
-           */
-
           /* If the item is missing from disk, and we're supposed to
              restore missing things, and it isn't missing as a result
              of a scheduling operation, then ... */
@@ -327,8 +321,10 @@ report_revisions(svn_wc_adm_access_t *adm_access,
                                         FALSE,
                                         current_entry->lock_token,
                                         iterpool));
-          /* ... or perhaps just a differing revision or lock token. */
+          /* ... or perhaps just a differing revision or depth or
+             lock token. */
           else if (current_entry->revision !=  dir_rev
+                   || current_entry->depth != depth
                    || current_entry->lock_token)
             SVN_ERR(reporter->set_path(report_baton,
                                        this_path,
@@ -418,15 +414,15 @@ report_revisions(svn_wc_adm_access_t *adm_access,
           /* ### TODO: See TODO comment in svn_wc_crawl_revisions3()
              ### about depth treatment here. */ 
           if (depth == svn_depth_infinity)
-            SVN_ERR(report_revisions(adm_access, this_path,
-                                     subdir_entry->revision,
-                                     reporter, report_baton,
-                                     notify_func, notify_baton,
-                                     restore_files, depth,
-                                     subdir_entry->incomplete,
-                                     use_commit_times,
-                                     traversal_info,
-                                     iterpool));
+            SVN_ERR(report_revisions_and_depths(adm_access, this_path,
+                                                subdir_entry->revision,
+                                                reporter, report_baton,
+                                                notify_func, notify_baton,
+                                                restore_files, depth,
+                                                subdir_entry->incomplete,
+                                                use_commit_times,
+                                                traversal_info,
+                                                iterpool));
         } /* end directory case */
     } /* end main entries loop */
 
@@ -541,7 +537,7 @@ svn_wc_crawl_revisions3(const char *path,
           if (err)
             goto abort_report;
         }
-      else if (depth == svn_depth_infinity)
+      else
         {
           /* ### TODO: Just passing depth here is not enough.  There
              ### can be circumstances where the root is depth 0 or 1,
@@ -553,16 +549,16 @@ svn_wc_crawl_revisions3(const char *path,
 
           /* Recursively crawl ROOT_DIRECTORY and report differing
              revisions. */
-          err = report_revisions(adm_access,
-                                 "",
-                                 base_rev,
-                                 reporter, report_baton,
-                                 notify_func, notify_baton,
-                                 restore_files, depth,
-                                 entry->incomplete,
-                                 use_commit_times,
-                                 traversal_info,
-                                 pool);
+          err = report_revisions_and_depths(adm_access,
+                                            "",
+                                            base_rev,
+                                            reporter, report_baton,
+                                            notify_func, notify_baton,
+                                            restore_files, depth,
+                                            entry->incomplete,
+                                            use_commit_times,
+                                            traversal_info,
+                                            pool);
           if (err)
             goto abort_report;
         }

@@ -222,10 +222,10 @@ def depth_zero_commit(sbox):
   raise svntest.Failure("<test not yet written>")
 
 #----------------------------------------------------------------------
-def depth_zero_bring_in_file(sbox):
+def depth_zero_with_file(sbox):
   "bring a file into a depth-0 working copy"
   # Run 'svn up iota' to bring iota permanently into the working copy.
-  wc0, ignored1, ignored2 = set_up_depthy_working_copies(sbox, zero=True)
+  wc0, ign, wc = set_up_depthy_working_copies(sbox, zero=True, infinity=True)
 
   iota_path = os.path.join(wc0, 'iota')
   if os.path.exists(iota_path):
@@ -238,9 +238,24 @@ def depth_zero_bring_in_file(sbox):
   # Update iota by name, expecting to receive it.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', iota_path)
 
-  iota_path = os.path.join(wc0, 'iota')
+  # Test that we did receive it.
   if not os.path.exists(iota_path):
     raise svntest.Failure("'%s' doesn't exist when it should" % iota_path)
+
+  # Commit a change to iota in the "other" wc.
+  other_iota_path = os.path.join(wc, 'iota')
+  svntest.main.file_append(other_iota_path, "new text\n")
+  expected_output = svntest.wc.State(wc, { 'iota' : Item(verb='Sending'), })
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
+  expected_status.tweak('iota', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit(wc,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None, wc)
+
+  # The next thing will be to delete iota and see if wc0 can receive that.
+  # However, I know that it can't yet, so one thing at a time :-).
+  # svntest.actions.run_and_verify_svn(None, None, [], 'rm', other_iota_path)
 
 
 #----------------------------------------------------------------------
@@ -338,7 +353,7 @@ test_list = [ None,
               depth_zero_update_bypass_single_file,
               depth_one_get_top_file_mod_only,
               XFail(depth_zero_commit),
-              depth_zero_bring_in_file,
+              depth_zero_with_file,
               XFail(depth_zero_bring_in_dir),
               XFail(depth_one_bring_in_file),
               XFail(depth_one_bring_in_dir),
