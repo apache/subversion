@@ -294,8 +294,8 @@ class RevisionLog:
         revision_re = re.compile(r"^r(\d+)")
 
         # Look for changes which contain merge tracking information
-        rlpath = target_to_rlpath(url)
-        srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(rlpath))
+        repos_path = target_to_repos_relative_path(url)
+        srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(repos_path))
 
         # Setup the log options (--quiet, so we don't show log messages)
         log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
@@ -748,9 +748,9 @@ def get_repo_root(dir):
 
     assert False, "svn repos root not found"
 
-def target_to_rlpath(target):
+def target_to_repos_relative_path(target):
     """Convert a target (either a working copy path or an URL) into a
-    repo-local path."""
+    repository-relative path."""
     root = get_repo_root(target)
     url = target_to_url(target)
     assert root[-1] != "/"
@@ -761,13 +761,13 @@ def get_copyfrom(dir):
     """Get copyfrom info for a given target (it represents the directory from
     where it was branched). NOTE: repos root has no copyfrom info. In this case
     None is returned."""
-    rlpath = target_to_rlpath(dir)
+    repos_path = target_to_repos_relative_path(dir)
     out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir,
                     split_lines=False)
     out = out.replace("\n", " ")
     try:
         m = re.search(r'(<path\s[^>]*action="A"[^>]*>%s</path>)'
-                      % re.escape(rlpath), out)
+                      % re.escape(repos_path), out)
         head = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
         rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
         return head,rev
@@ -845,7 +845,7 @@ def get_default_head(branch_dir, branch_props):
         error("no integration info available")
 
     props = branch_props.copy()
-    directory = target_to_rlpath(branch_dir)
+    directory = target_to_repos_relative_path(branch_dir)
 
     # To make bidirectional merges easier, find the target's
     # repository local path so it can be removed from the list of
@@ -935,7 +935,7 @@ def analyze_head_revs(branch_dir, head_url, **kwargs):
     """For the given branch and head, extract the real and phantom
     head revisions."""
     branch_url = target_to_url(branch_dir)
-    target_dir = target_to_rlpath(branch_dir)
+    target_dir = target_to_repos_relative_path(branch_dir)
 
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
@@ -1906,9 +1906,9 @@ def main(args):
             # Check if it is a substring of a repo-relative URL recorded
             # within the branch properties.
             found = []
-            for rlpath in branch_props.keys():
-                if rlpath.find(head) > 0:
-                    found.append(rlpath)
+            for repos_path in branch_props.keys():
+                if repos_path.find(head) > 0:
+                    found.append(repos_path)
             if len(found) == 1:
                 head = get_repo_root(branch_dir) + found[0]
             else:
@@ -1916,7 +1916,7 @@ def main(args):
                       'substring), nor a working directory' % head)
 
         opts["head-url"] = target_to_url(head)
-        opts["head-path"] = target_to_rlpath(head)
+        opts["head-path"] = target_to_repos_relative_path(head)
 
     # Sanity check head_url
     assert is_url(opts["head-url"])
