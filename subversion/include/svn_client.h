@@ -2114,6 +2114,16 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * 
  * A @a propval of @c NULL will delete the property.
  *
+ * The @a target may only be an URL if @a base_revision_for_url is not
+ * @c SVN_INVALID_REVNUM; in this case, the property will only be set
+ * if it has not changed since revision @a base_revision_for_url.  @a
+ * base_revision_for_url must be @c SVN_INVALID_REVNUM if @a target is
+ * not an URL.  @a recurse is not supported on URLs.  The
+ * authentication baton in @a ctx and @a ctx->log_msg_func/@a
+ * ctx->log_msg_baton will be used to immediately attempt to commit
+ * the property change in the repository.  If the commit succeeds,
+ * allocate (in @a pool) and populate @a *commit_info_p.
+ *
  * If @a propname is an svn-controlled property (i.e. prefixed with
  * @c SVN_PROP_PREFIX), then the caller is responsible for ensuring that
  * the value is UTF8-encoded and uses LF line-endings.
@@ -2130,7 +2140,24 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  *
  * Use @a pool for all memory allocation.
  * 
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_propset3(svn_commit_info_t **commit_info_p,
+                    const char *propname,
+                    const svn_string_t *propval,
+                    const char *target,
+                    svn_boolean_t recurse,
+                    svn_boolean_t skip_checks,
+                    svn_revnum_t base_revision_for_url,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/**
+ * Like svn_client_propset2(), but with @a base_revision_for_url
+ * always @c SVN_INVALID_REVNUM, and @a commit_info_p always NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_propset2(const char *propname,
@@ -2205,6 +2232,8 @@ svn_client_revprop_set(const char *propname,
  * it defaults to @c svn_opt_revision_head for URLs or @c
  * svn_opt_revision_working for WC targets.  Use the authentication
  * baton in @a ctx for authentication if contacting the repository.
+ * If @a actual_revnum is not @c NULL, the actual revision number used
+ * for the fetch is stored in @a *actual_revnum.
  *
  * If @a target is a file or @a recurse is false, @a *props will have
  * at most one element.
@@ -2213,6 +2242,23 @@ svn_client_revprop_set(const char *propname,
  * even if empty.
  *
  * @since New in 1.2.
+ */
+svn_error_t *
+svn_client_propget3(apr_hash_t **props,
+                    const char *propname,
+                    const char *target,
+                    const svn_opt_revision_t *peg_revision,
+                    const svn_opt_revision_t *revision,
+                    svn_revnum_t *actual_revnum,
+                    svn_boolean_t recurse,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_propget3(), except that @a actual_revnum is
+ * always @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_propget2(apr_hash_t **props,
