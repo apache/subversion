@@ -114,6 +114,9 @@ svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
 svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 
+# The location of our mock svneditor script.
+svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
+
 # Username and password used by the working copies
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
@@ -583,6 +586,10 @@ def compare_unordered_output(expected, actual):
     except ValueError:
       raise Failure("Expected output does not match actual output")
 
+def use_editor(func):
+  os.environ['SVN_EDITOR'] = svneditor_script
+  os.environ['SVNTEST_EDITOR_FUNC'] = func
+
 ######################################################################
 # Functions which check the test configuration
 # (useful for conditional XFails)
@@ -737,6 +744,12 @@ class TestRunner:
       sandbox = None
       args = ()
 
+    # Explicitly set this so that commands that commit but don't supply a
+    # log message will fail rather than invoke an editor.
+    # Tests that want to use an editor should invoke svntest.main.use_editor.
+    os.environ['SVN_EDITOR'] = ''
+    os.environ['SVNTEST_EDITOR_FUNC'] = ''
+
     try:
       rc = self.pred.run(args)
       if rc is not None:
@@ -849,10 +862,6 @@ def run_tests(test_list):
   testnums = []
   # Should the tests be listed (as opposed to executed)?
   list_tests = 0
-
-  # Explicitly set this so that commands that commit but don't supply a
-  # log message will fail rather than invoke an editor.
-  os.environ['SVN_EDITOR'] = ''
 
   opts, args = my_getopt(sys.argv[1:], 'v',
                          ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
