@@ -237,8 +237,8 @@ report_revisions(svn_wc_adm_access_t *adm_access,
          knows it's gone... */
       if (current_entry->deleted || current_entry->absent)
         {
-          /* ...unless we're reporting everything, in which case it's already
-             missing on the server.  */
+          /* ...unless we're reporting everything, in which case we're
+             going to report it missing later anyway. */
           if (! report_everything)
             SVN_ERR(reporter->delete_path(report_baton, this_path, iterpool));
           continue;
