@@ -67,8 +67,8 @@ sqlite_tracer (void *data, const char *sql)
 
 static svn_error_t *
 util_sqlite_exec (sqlite3 *db, const char *sql,
-                sqlite3_callback callback,
-                void *callbackdata)
+                  sqlite3_callback callback,
+                  void *callbackdata)
 {
   char *err_msg;
   if (sqlite3_exec(db, sql, NULL, NULL, &err_msg) != SQLITE_OK)

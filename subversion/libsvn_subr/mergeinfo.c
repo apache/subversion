@@ -717,7 +717,7 @@ svn_range_to_string(svn_stringbuf_t **result, svn_merge_range_t *range,
    back to a text format rangelist in OUTPUT.  */
 svn_error_t *
 svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *input,
-                         apr_pool_t *pool)
+                        apr_pool_t *pool)
 {
   *output = svn_stringbuf_create("", pool);
 
