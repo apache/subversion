@@ -225,7 +225,7 @@ def depth_zero_commit(sbox):
 def depth_zero_bring_in_file(sbox):
   "bring a file into a depth-0 working copy"
   # Run 'svn up iota' to bring iota permanently into the working copy.
-  wc0, x, y = set_up_depthy_working_copies(sbox, zero=True)
+  wc0, ignored1, ignored2 = set_up_depthy_working_copies(sbox, zero=True)
 
   iota_path = os.path.join(wc0, 'iota')
   if os.path.exists(iota_path):
