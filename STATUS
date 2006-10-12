@@ -142,16 +142,13 @@ Candidate changes:
       (-x -w option).
     - Test to validate that svn merge ignores eolstyle when requested
       (-x --ignore-eol-style option). 
-    - Add checkout_tests.py (r20945, r20947, but none of the tests)
     - Test that a copy of a directory (by URL) to a pre-existing
       directory (within the WC) copies the source *under* the target
       directory
     - Test if a repository with spaces in the name is accessible.
-    Notes:
-      There will be some small conflicts when merging the tests due to
-      r20945,r20947 so I propose to do the backport myself.
     Justification:
       Regression tests for issue added in 1.4.x or before.
+    Branch: 1.4.x-r20350
     Votes:
       +1: lgo
 
