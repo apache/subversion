@@ -129,7 +129,8 @@ propset_walk_cb(const char *path,
 }
 
 
-struct getter_baton {
+struct getter_baton
+{
   svn_ra_session_t *ra_session;
   svn_revnum_t base_revision_for_url;
 };
