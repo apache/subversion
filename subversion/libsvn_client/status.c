@@ -265,7 +265,7 @@ svn_client_status2(svn_revnum_t *result_rev,
       /* Open a repository session to the URL. */
       SVN_ERR(svn_client__open_ra_session_internal(&ra_session, URL, anchor,
                                                    anchor_access, NULL,
-                                                   TRUE, TRUE, 
+                                                   FALSE, TRUE, 
                                                    ctx, pool));
 
       /* Verify that URL exists in HEAD.  If it doesn't, this can save
