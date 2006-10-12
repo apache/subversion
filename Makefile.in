@@ -340,7 +340,7 @@ javahl: javahl-java javahl-javah javahl-lib @JAVAHL_TESTS_TARGET@
 install-javahl: install-javahl-java install-javahl-javah install-javahl-lib
 
 clean-javahl:
-	rm -rf $(javahl_java_PATH) $(javahl_javah_PATH) @JAVAHL_OBJDIR@:$(libdir)
+	rm -rf $(javahl_java_PATH) $(javahl_javah_PATH) @JAVAHL_OBJDIR@
 
 check-javahl: javahl
 	@if [ -z "@JAVAHL_TESTS_TARGET@" ]; then \
