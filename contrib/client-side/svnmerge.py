@@ -1915,8 +1915,14 @@ def main(args):
                 error('"%s" is neither a valid URL (or an unambiguous '
                       'substring), nor a working directory' % head)
 
+        head_path = target_to_repos_relative_path(head)
+        if str(cmd) == "init" and \
+               head_path == target_to_repos_relative_path("."):
+            error("cannot init integration source '%s'\nIt must "
+                  "differ from the repository-relative path of the current "
+                  "directory." % head_path)
+        opts["head-path"] = head_path
         opts["head-url"] = target_to_url(head)
-        opts["head-path"] = target_to_repos_relative_path(head)
 
     # Sanity check head_url
     assert is_url(opts["head-url"])
