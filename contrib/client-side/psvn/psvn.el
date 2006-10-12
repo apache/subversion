@@ -218,7 +218,7 @@
 (defcustom svn-log-edit-file-name "++svn-log++"
   "*Name of a saved log file.
 This can be either absolute, or relative to the default directory
-of the *svn-log-edit* buffer."
+of the `svn-log-edit-buffer-name' buffer."
   :type 'file
   :group 'psvn)
 (put 'svn-log-edit-file-name 'risky-local-variable t)
@@ -234,11 +234,11 @@ This variable takes effect only when psvn.el is being loaded."
   :group 'psvn)
 (defcustom svn-log-edit-paragraph-start
   "$\\|[ \t]*$\\|##.*$\\|\\*.*:.*$\\|[ \t]+(.+):.*$"
-  "*Value used for `paragraph-start' in *svn-log-edit* buffer."
+  "*Value used for `paragraph-start' in `svn-log-edit-buffer-name' buffer."
   :type 'regexp
   :group 'psvn)
 (defcustom svn-log-edit-paragraph-separate "$\\|##.*$"
-  "*Value used for `paragraph-separate' in *svn-log-edit* buffer."
+  "*Value used for `paragraph-separate' in `svn-log-edit-buffer-name' buffer."
   :type 'regexp
   :group 'psvn)
 (defcustom svn-status-hide-unknown nil
@@ -382,6 +382,7 @@ See `svn-status-message' for the meaning of values for that variable.")
 
 (defvar svn-status-buffer-name "*svn-status*" "Name for the svn status buffer")
 (defvar svn-process-buffer-name "*svn-process*" "Name for the svn process buffer")
+(defvar svn-log-edit-buffer-name "*svn-log-edit*" "Name for the svn log-edit buffer")
 
 (defcustom svn-status-use-header-line
   (if (boundp 'header-line-format) t 'inline)
@@ -799,6 +800,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (setq svn-status-diff-mode-map (copy-keymap diff-mode-shared-map))
   (define-key svn-status-diff-mode-map [?g] 'revert-buffer)
   (define-key svn-status-diff-mode-map [?s] 'svn-status-pop-to-status-buffer)
+  (define-key svn-status-diff-mode-map [?c] 'svn-status-diff-pop-to-commit-buffer)
   (define-key svn-status-diff-mode-map [?w] 'svn-status-diff-save-current-defun-as-kill))
 
 (defvar svn-global-trac-map ()
@@ -1090,7 +1092,6 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (svn-process-sentinel-fixup-path-seperators)
                   (svn-status-apply-elide-list)
                   (svn-parse-status-result)
-                  ;(set-buffer act-buf) ; THIS LINE NOT NEEDED? s-s-u-b does (set-buffer *svn-status*)
                   (svn-status-update-buffer)
                   (when svn-status-update-previous-process-output
                     (set-buffer (process-buffer process))
@@ -1304,6 +1305,24 @@ nb: LOCKED-MARK refers to the kind of locks you get after an error,
         switched-mark
         locked-repo-mark))
 
+(defvar svn-user-names-including-blanks nil "A list of svn user names that include blanks.")
+;;(setq svn-user-names-including-blanks '("feng shui" "mister blank"))
+;;(add-hook 'svn-pre-parse-status-hook 'svn-status-parse-fixup-user-names-including-blanks)
+
+(defun svn-status-parse-fixup-user-names-including-blanks ()
+  "Helper function to allow user names that include blanks.
+Add this function to the `svn-pre-parse-status-hook'. The variable
+`svn-user-names-including-blanks' must be configured to hold all user names that contain
+blanks. This function replaces the blanks with '-' to allow further processing with
+the usual parsing functionality in `svn-parse-status-result'."
+  (when svn-user-names-including-blanks
+    (goto-char (point-min))
+    (let ((search-string (concat " \\(" (mapconcat 'concat svn-user-names-including-blanks "\\|") "\\) ")))
+      (save-match-data
+        (save-excursion
+          (while (re-search-forward search-string (point-max) t)
+            (replace-match (replace-regexp-in-string " " "-" (match-string 1)) nil nil nil 1)))))))
+
 (defun svn-parse-status-result ()
   "Parse the `svn-process-buffer-name' buffer.
 The results are used to build the `svn-status-info' variable."
@@ -1330,6 +1349,7 @@ The results are used to build the `svn-status-info' variable."
           (dir-set '(".")))
       (set-buffer svn-process-buffer-name)
       (setq svn-status-info nil)
+      (run-hooks 'svn-pre-parse-status-hook)
       (goto-char (point-min))
       (while (< (point) (point-max))
         (cond
@@ -1761,7 +1781,7 @@ The following keys are defined:
 Currently this is:
   `svn-status-buffer-name'
   `svn-process-buffer-name'
-  *svn-log-edit*
+  `svn-log-edit-buffer-name'
   *svn-property-edit*
   *svn-log*
 When called with a prefix argument, ARG, switch back to the window configuration that was
@@ -1771,7 +1791,7 @@ in use before `svn-status' was called."
          (when svn-status-initial-window-configuration
            (set-window-configuration svn-status-initial-window-configuration)))
         (t
-         (let ((bl `("*svn-log-edit*" "*svn-property-edit*" "*svn-log*" ,svn-process-buffer-name)))
+         (let ((bl `(,svn-log-edit-buffer-name "*svn-property-edit*" "*svn-log*" ,svn-process-buffer-name)))
            (while bl
              (when (get-buffer (car bl))
                (bury-buffer (car bl)))
@@ -3127,6 +3147,15 @@ That function uses `add-log-current-defun'"
           (message "Copied %S" func-name))
       (message "No current defun detected."))))
 
+(defun svn-status-diff-pop-to-commit-buffer ()
+  "Temporary switch to the `svn-status-buffer-name' buffer and start a commit from there."
+  (interactive)
+  (let ((window-conf (current-window-configuration)))
+    (svn-status-switch-to-status-buffer)
+    (svn-status-commit)
+    (set-window-configuration window-conf)
+    (setq svn-status-pre-commit-window-configuration window-conf)
+    (pop-to-buffer svn-log-edit-buffer-name)))
 
 (defun svn-status-activate-diff-mode ()
   "Show the `svn-process-buffer-name' buffer, using the diff-mode."
@@ -3397,8 +3426,8 @@ If no files have been marked, commit recursively the file at point."
 (defun svn-status-pop-to-commit-buffer ()
   (interactive)
   (setq svn-status-pre-commit-window-configuration (current-window-configuration))
-  (let* ((use-existing-buffer (get-buffer "*svn-log-edit*"))
-         (commit-buffer (get-buffer-create "*svn-log-edit*"))
+  (let* ((use-existing-buffer (get-buffer svn-log-edit-buffer-name))
+         (commit-buffer (get-buffer-create svn-log-edit-buffer-name))
          (dir default-directory))
     (pop-to-buffer commit-buffer)
     (setq default-directory dir)
@@ -4087,7 +4116,7 @@ Commands:
   (interactive)
   (svn-status-save-some-buffers)
   (save-excursion
-    (set-buffer (get-buffer "*svn-log-edit*"))
+    (set-buffer (get-buffer svn-log-edit-buffer-name))
     (when svn-log-edit-insert-files-to-commit
       (svn-log-edit-remove-comment-lines))
     (when (fboundp 'set-buffer-file-coding-system)
@@ -4156,9 +4185,9 @@ If ARG then show diff between some other version of the selected files."
   (write-region (point-min) (point-max) svn-log-edit-file-name))
 
 (defun svn-log-edit-erase-edit-buffer ()
-  "Delete everything in the *svn-log-edit* buffer."
+  "Delete everything in the `svn-log-edit-buffer-name' buffer."
   (interactive)
-  (set-buffer "*svn-log-edit*")
+  (set-buffer svn-log-edit-buffer-name)
   (erase-buffer))
 
 (defun svn-log-edit-insert-files-to-commit ()

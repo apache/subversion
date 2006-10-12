@@ -1460,7 +1460,7 @@ def update_to_future_add(sbox):
   # Now try updating the directory into the future
   A_path = os.path.join(wc_dir, 'A')
 
-  expected_status = svntest.wc.State(wc_dir, {
+  expected_output = svntest.wc.State(wc_dir, {
     'A'              : Item(status='A '),
     'A/mu'           : Item(status='A '),
     'A/B'            : Item(status='A '),
@@ -1484,7 +1484,7 @@ def update_to_future_add(sbox):
   expected_disk = svntest.main.greek_state.copy()
   
   svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_status,
+                                        expected_output,
                                         expected_disk,
                                         None, None,
                                         None, None, None, None, 0,
@@ -2259,6 +2259,58 @@ def update_wc_on_windows_drive(sbox):
     # cleanup the virtual drive
     os.popen3('subst /D ' + drive +': ', 't')
 
+# Issue #2618: update a working copy with replacedwith-history file.
+def update_wc_with_replaced_file(sbox):
+  "update wc containing a replaced-with-history file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy.
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # we need a change in the repository
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  iota_bu_path = os.path.join(wc_backup, 'iota')
+  svntest.main.file_append(iota_bu_path, "New line in 'iota'\n")
+  svntest.main.run_svn(None, 'ci', wc_backup, '-m', 'changed file')
+
+  # Make us a working copy with a 'replace-with-history' file.
+  svntest.main.run_svn(None, 'rm', iota_path)
+  svntest.main.run_svn(None, 'cp', mu_path, iota_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='R ', copied='+', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Now update the wc
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='C '),
+    })    
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'iota' : Item(status='C ', wc_rev='-', copied='+'),
+    })
+  expected_disk = svntest.main.greek_state.copy()    
+  expected_disk.tweak('iota', contents =
+    """<<<<<<< .mine
+This is the file 'mu'.
+=======
+This is the file 'iota'.
+New line in 'iota'
+>>>>>>> .r2
+""")
+  conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        conflict_files)
+
 ########################################################################
 # Run the tests
 
@@ -2297,6 +2349,7 @@ test_list = [ None,
               forced_update,
               forced_update_failures,
               update_wc_on_windows_drive,
+              update_wc_with_replaced_file,
              ]
 
 if __name__ == '__main__':

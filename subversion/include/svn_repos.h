@@ -1237,9 +1237,10 @@ svn_error_t *svn_repos_fs_get_locks(apr_hash_t **locks,
 /** @} */
 
 /**
- * Like svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
- * post-revprop-change hooks around the change.  Use @a pool for
- * temporary allocations.
+ * Like svn_fs_change_rev_prop2(), but invoke the @a repos's pre- and
+ * post-revprop-change hooks around the change as specified by @a
+ * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
+ * (respectively).  Use @a pool for temporary allocations.
  *
  * @a rev is the revision whose property to change, @a name is the
  * name of the property, and @a new_value is the new value of the
@@ -1251,7 +1252,28 @@ svn_error_t *svn_repos_fs_get_locks(apr_hash_t **locks,
  * rev.  If the revision contains any unreadable changed paths, then
  * return SVN_ERR_AUTHZ_UNREADABLE.
  * 
- * @since New in 1.1.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
+                                           svn_revnum_t rev,
+                                           const char *author,
+                                           const char *name,
+                                           const svn_string_t *new_value,
+                                           svn_boolean_t
+                                           use_pre_revprop_change_hook,
+                                           svn_boolean_t
+                                           use_post_revprop_change_hook,
+                                           svn_repos_authz_func_t
+                                           authz_read_func,
+                                           void *authz_read_baton,
+                                           apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_fs_change_rev_prop3(), but with the @a
+ * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
+ * always set to @c TRUE.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
                                            svn_revnum_t rev,

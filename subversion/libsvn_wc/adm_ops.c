@@ -327,7 +327,7 @@ process_committed_leaf(int log_number,
   const char *base_name;
   const char *hex_digest = NULL;
   svn_wc_entry_t tmp_entry;
-  apr_uint32_t modify_flags = 0;
+  apr_uint64_t modify_flags = 0;
   svn_stringbuf_t *logtags = svn_stringbuf_create("", pool);
 
   SVN_ERR(svn_wc__adm_write_check(adm_access));
@@ -845,7 +845,7 @@ remove_file_if_present(const char *file, apr_pool_t *pool)
    flag, depending on the state of MODIFY_FLAGS. */
 static svn_error_t *
 mark_tree(svn_wc_adm_access_t *adm_access, 
-          apr_uint32_t modify_flags,
+          apr_uint64_t modify_flags,
           svn_wc_schedule_t schedule,
           svn_boolean_t copied,
           svn_cancel_func_t cancel_func,
@@ -1320,7 +1320,7 @@ svn_wc_add2(const char *path,
   svn_wc_entry_t tmp_entry;
   svn_boolean_t is_replace = FALSE;
   svn_node_kind_t kind;
-  apr_uint32_t modify_flags = 0;
+  apr_uint64_t modify_flags = 0;
   svn_wc_adm_access_t *adm_access;
 
   SVN_ERR(svn_path_check_valid(path, pool));
@@ -1641,7 +1641,7 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   /* If true, force reinstallation of working file. */
   svn_boolean_t reinstall_working = FALSE;
   svn_wc_entry_t tmp_entry;
-  apr_uint32_t flags = 0;
+  apr_uint64_t flags = 0;
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
   apr_hash_t *baseprops = NULL;
   const char *adm_path = svn_wc_adm_access_path(adm_access);
@@ -2405,7 +2405,7 @@ resolve_conflict_on_entry(const char *path,
                           apr_pool_t *pool)
 {
   svn_boolean_t was_present, need_feedback = FALSE;
-  apr_uint32_t modify_flags = 0;
+  apr_uint64_t modify_flags = 0;
   svn_wc_entry_t *entry = svn_wc_entry_dup(orig_entry, pool);
 
   /* Yes indeed, being able to map a function over a list would be nice. */

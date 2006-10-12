@@ -224,7 +224,7 @@ public class WC
      * @param singleFilePath    the path to be checked
      * @throws Exception
      */
-    void check(DirEntry[] tested, String singleFilePath) throws Exception
+    void check(DirEntry[] tested, String singleFilePath)
     {
         Assert.assertEquals("not a single dir entry", 1, tested.length);
         Item item = (Item)items.get(singleFilePath);
@@ -242,7 +242,6 @@ public class WC
      * @throws Exception
      */
     void check(DirEntry[] tested, String basePath, boolean recursive)
-            throws Exception
     {
         // clear the touched flag of all items
         Iterator it = items.values().iterator();
@@ -317,9 +316,11 @@ public class WC
      * Check the result of a SVNClient.status versus the expected state
      * @param tested            the result to be tested
      * @param workingCopyPath   the path of the working copy
-     * @throws Exception
+     * @exception IOException If there is a problem finding or reading
+     * the WC.
      */
-    void check(Status[] tested, String workingCopyPath) throws Exception
+    void check(Status[] tested, String workingCopyPath)
+        throws IOException
     {
         // clear the touched flag of all items
         Iterator it = items.values().iterator();

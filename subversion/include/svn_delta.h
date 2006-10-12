@@ -469,10 +469,11 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * - The client examines its working copy data, and produces a tree
  *   delta describing the changes to be committed.
  * - The client networking library consumes that delta, and sends them
- *   across the wire as an equivalent series of WebDAV requests.
- * - The Apache WebDAV module receives those requests and produces a
- *   tree delta --- hopefully equivalent to the one the client
- *   produced above.
+ *   across the wire as an equivalent series of network requests (for
+ *   example, to svnserve as an ra_svn protocol stream, or to an
+ *   Apache httpd server as WebDAV commands)
+ * - The server receives those requests and produces a tree delta ---
+ *   hopefully equivalent to the one the client produced above.
  * - The Subversion server module consumes that delta and commits an
  *   appropriate transaction to the filesystem.
  *
@@ -480,19 +481,19 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * - The Subversion server module talks to the filesystem and produces
  *   a tree delta describing the changes necessary to bring the
  *   client's working copy up to date.
- * - The Apache WebDAV module consumes this delta, and assembles a
- *   WebDAV reply representing the appropriate changes.
- * - The client networking library receives that WebDAV reply, and
- *   produces a tree delta --- hopefully equivalent to the one the
- *   Subversion server produced above.
+ * - The server consumes this delta, and assembles a reply
+ *   representing the appropriate changes.
+ * - The client networking library receives that reply, and produces a
+ *   tree delta --- hopefully equivalent to the one the Subversion
+ *   server produced above. 
  * - The working copy library consumes that delta, and makes the
  *   appropriate changes to the working copy.
  *
  * The simplest approach would be to represent tree deltas using the
  * obvious data structure.  To do an update, the server would
  * construct a delta structure, and the working copy library would
- * apply that structure to the working copy; WebDAV's job would simply
- * be to get the structure across the net intact.
+ * apply that structure to the working copy; the network layer's job
+ * would simply be to get the structure across the net intact.
  *
  * However, we expect that these deltas will occasionally be too large
  * to fit in a typical workstation's swap area.  For example, in
@@ -644,7 +645,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * So, the producer needs to use directory and file batons as if it
  * is doing a single depth-first traversal of the tree, with the
  * exception that the producer may keep file batons open in order to
- * make apply_textdelta calls at the end.
+ * make @c apply_textdelta calls at the end.
  *
  *
  * <h3>Pool Usage</h3>
@@ -656,7 +657,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * the appropriate pool on each function invocation. 
  *
  * Based on the requirement of calling the editor functions in a
- * depth-first style, it is usually customary for the driver to similar
+ * depth-first style, it is usually customary for the driver to similarly
  * nest the pools. However, this is only a safety feature to ensure
  * that pools associated with deeper items are always cleared when the
  * top-level items are also cleared. The interface does not assume, nor
@@ -714,9 +715,9 @@ typedef struct svn_delta_editor_t
 
 
   /** Remove the directory entry named @a path, a child of the directory
-   * represented by @a parent_baton.  If @a revision is set, it is used as a
-   * sanity check to ensure that you are removing the revision of @a path
-   * that you really think you are.
+   * represented by @a parent_baton.  If @a revision is a valid
+   * revision number, it is used as a sanity check to ensure that you
+   * are really removing the revision of @a path that you think you are.
    *
    * All allocations should be performed in @a pool.
    */
@@ -820,7 +821,7 @@ typedef struct svn_delta_editor_t
    *
    * The callback can store a baton for this new file in @a **file_baton;
    * whatever value it stores there should be passed through to
-   * apply_textdelta.  If a valid revnum, @a base_revision is the
+   * @c apply_textdelta.  If a valid revnum, @a base_revision is the
    * current revision of the file.
    *
    * Allocations for the returned @a file_baton should be performed in
@@ -849,7 +850,7 @@ typedef struct svn_delta_editor_t
    * which the delta is being applied; it is ignored if null, and may
    * be ignored even if not null.  If it is not ignored, it must match
    * the checksum of the base text against which svndiff data is being
-   * applied; if it does not, apply_textdelta or the @a *handler call
+   * applied; if it does not, @c apply_textdelta or the @a *handler call
    * which detects the mismatch will return the error
    * SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
    * still be an error if @a base_checksum is neither null nor the hex
@@ -933,7 +934,7 @@ svn_delta_editor_t *svn_delta_default_editor(apr_pool_t *pool);
 
 /** A text-delta window handler which does nothing.
  *
- * Editors can return this handler from apply_textdelta if they don't
+ * Editors can return this handler from @c apply_textdelta if they don't
  * care about text delta windows.
  */
 svn_error_t *svn_delta_noop_window_handler(svn_txdelta_window_t *window,

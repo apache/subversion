@@ -592,6 +592,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 43,
              "Unsupported FS format")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_REP_BEING_WRITTEN,
+             SVN_ERR_FS_CATEGORY_START + 44,
+             "Representation is being written")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

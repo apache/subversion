@@ -759,8 +759,8 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      optional element pattern "(?s)" isn't used. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc?s", &rev, &name, &value));
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, FALSE));
-  SVN_CMD_ERR(svn_repos_fs_change_rev_prop2(b->repos, rev, b->user,
-                                            name, value,
+  SVN_CMD_ERR(svn_repos_fs_change_rev_prop3(b->repos, rev, b->user,
+                                            name, value, TRUE, TRUE,
                                             authz_check_access_cb_func(b), b,
                                             pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));

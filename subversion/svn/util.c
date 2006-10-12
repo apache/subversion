@@ -230,6 +230,21 @@ svn_cl__edit_externally(svn_string_t **edited_contents /* UTF-8! */,
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
   apr_err = apr_stat(&finfo_before, tmpfile_apr,
+                     APR_FINFO_MTIME, pool);
+  if (apr_err)
+    {
+      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
+      goto cleanup;
+    }
+
+  /* Backdate the file a little bit in case the editor is very fast
+     and doesn't change the size.  (Use two seconds, since some
+     filesystems have coarse granularity.)  It's OK if this call
+     fails, so we don't check its return value.*/
+  apr_file_mtime_set(tmpfile_apr, finfo_before.mtime - 2000, pool);
+  
+  /* Stat it again to get the mtime we actually set. */
+  apr_err = apr_stat(&finfo_before, tmpfile_apr,
                      APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {

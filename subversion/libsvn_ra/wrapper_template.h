@@ -60,7 +60,7 @@ static svn_error_t *compat_open(void **session_baton,
   svn_ra_callbacks2_t *callbacks2 = apr_pcalloc(pool,
                                                 sizeof(*callbacks2));
 
-  svn_ra_session_t *sess = apr_pcalloc(pool, sizeof(svn_ra_session_t));
+  svn_ra_session_t *sess = apr_pcalloc(pool, sizeof(*sess));
   sess->vtable = &VTBL;
   sess->pool = pool;
 

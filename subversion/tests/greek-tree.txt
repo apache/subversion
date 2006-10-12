@@ -30,16 +30,24 @@ convention, the initial content of each file is a single line, such as
 
 <============================< Same as... >================================>
 
-         /iota
-   
-         /A/                        /A/D/
-         /A/mu                      /A/D/gamma
-                                    /A/D/H/
-         /A/B/                      /A/D/H/chi
-         /A/B/lambda                /A/D/H/psi
-         /A/B/E                     /A/D/H/omega
-         /A/B/E/alpha
-         /A/B/E/beta                /A/D/G/
-         /A/B/F                     /A/D/G/pi
-                                    /A/D/G/rho
-         /A/C/                      /A/D/G/tau
+            /
+            /iota
+            /A/
+            /A/mu
+            /A/B/
+            /A/B/lambda
+            /A/B/E/
+            /A/B/E/alpha
+            /A/B/E/beta
+            /A/B/F/
+            /A/C/
+            /A/D/
+            /A/D/gamma
+            /A/D/H/
+            /A/D/H/chi
+            /A/D/H/psi
+            /A/D/H/omega
+            /A/D/G/
+            /A/D/G/pi
+            /A/D/G/rho
+            /A/D/G/tau

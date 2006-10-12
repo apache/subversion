@@ -1174,7 +1174,7 @@ close_revision(void *baton)
     return SVN_NO_ERROR;
 
   /* Prepare memory for saving dump-rev -> in-repos-rev mapping. */
-  old_rev = apr_palloc(pb->pool, sizeof(svn_revnum_t) * 2);
+  old_rev = apr_palloc(pb->pool, sizeof(*old_rev) * 2);
   new_rev = old_rev + 1;
   *old_rev = rb->rev;
 
