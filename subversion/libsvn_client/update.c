@@ -31,6 +31,7 @@
 #include "svn_time.h"
 #include "svn_path.h"
 #include "svn_pools.h"
+#include "svn_io.h"
 #include "client.h"
 
 #include "svn_private_config.h"
@@ -55,6 +56,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   void *report_baton;
   const svn_wc_entry_t *entry;
   const char *anchor, *target;
+  svn_node_kind_t kind;
   const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
@@ -103,15 +105,41 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                              _("Entry '%s' has no URL"),
                              svn_path_local_style(anchor, pool));
 
-  /* ### TODO: do we need a definite_depth_p() routine below?  If
-     ### svn_depth_ignore and/or svn_depth_exclude turn out to be
-     ### really used, then yes, but let's see if that happens first. */
-
-  /* Figure out the real depth for the update.  If target is a file,
-     then we don't care about depth, and if it is a directory, then
-     it would be anchor, not target.  So just ask anchor! */
+  /* Figure out the real depth for the update, using sophisticated
+     techniques from http://en.wikipedia.org/wiki/Bone_divination. */
   if (depth == svn_depth_unknown)
-    depth = entry->depth;
+    {
+      SVN_ERR(svn_io_check_path(path, &kind, pool));
+      if (kind == svn_node_none || kind == svn_node_file)
+        depth = svn_depth_infinity;
+      else if (kind == svn_node_dir)
+        {
+          if (adm_access == dir_access)
+            depth = entry->depth;
+          else
+            {
+              /* I'm not sure this situation can ever happen in real
+                 life, but svn_wc_adm_open_anchor() doesn't explicitly
+                 prohibit it, so we must be prepared. */
+              const svn_wc_entry_t *tmp_ent;
+              SVN_ERR(svn_wc_entry(&tmp_ent, path, dir_access, FALSE, pool));
+              if (tmp_ent)
+                depth = tmp_ent->depth;
+              else
+                return svn_error_createf
+                  (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                   _("'%s' is not a working copy directory"),
+                   svn_path_local_style(path, pool));
+            }
+        }
+      else
+        {
+          return svn_error_createf
+            (SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+             _("'%s' is neither a file nor a directory"),
+             svn_path_local_style(path, pool));
+        }
+    }
 
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */

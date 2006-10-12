@@ -327,12 +327,14 @@ apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
    RESULT_REV to the update revision.
 
    If DEPTH is svn_depth_unknown, then use whatever depth is already
-   set for PATH.  Else if DEPTH is svn_depth_infinity, then update
-   fully recursively (resetting the existing depth of the working copy
-   if necessary).  Else DEPTH is svn_depth_one, then update all files
-   under PATH (if any), but include any subdirectories at svn_depth_zero.
-   Else if DEPTH is svn_depth_zero, just update PATH; if PATH is a
-   directory, that means touching only its properties not its entries.
+   set for PATH, or @c svn_depth_infinity if PATH does not exist.
+
+   Else if DEPTH is svn_depth_infinity, then update fully recursively
+   (resetting the existing depth of the working copy if necessary).
+   Else DEPTH is svn_depth_one, then update all files under PATH (if
+   any), but include any subdirectories at svn_depth_zero.  Else if
+   DEPTH is svn_depth_zero, just update PATH; if PATH is a directory,
+   that means touching only its properties not its entries.
 
    If IGNORE_EXTERNALS is true, do no externals processing.
 
