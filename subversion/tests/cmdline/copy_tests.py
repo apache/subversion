@@ -1014,6 +1014,29 @@ def repos_to_wc(sbox):
     })
   svntest.actions.run_and_verify_status (wc_dir, expected_output)
 
+  # Revert everything and verify.
+  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '-R', wc_dir)
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # URL->wc copy:
+  # Copy a directory to a pre-existing WC directory.
+  # The source directory should be copied *under* the target directory.
+  B_url = svntest.main.current_repo_url + "/A/B"
+  D_dir = os.path.join (wc_dir, 'A', 'D')
+
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'copy', B_url, D_dir)  
+
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_output.add({
+    'A/D/B'         : Item(status='A ', copied='+', wc_rev='-'), 
+    'A/D/B/lambda'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/B/E'       : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/B/E/beta'  : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/B/E/alpha' : Item(status='  ', copied='+', wc_rev='-'),
+    'A/D/B/F'       : Item(status='  ', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status (wc_dir, expected_output)
 
 #----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug

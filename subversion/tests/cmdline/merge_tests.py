@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -3405,6 +3405,144 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
                                         None, None, None, None,
                                         wc_dir)
 
+# use -x -w option for ignoring whitespace during merge
+def merge_ignore_whitespace(sbox):
+  "ignore whitespace when merging"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # commit base version of iota
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+  file_url = svntest.main.current_repo_url + '/iota'
+
+  open(file_path, 'w').write("Aa\n"
+                             "Bb\n"
+                             "Cc\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # change the file, mostly whitespace changes + an extra line
+  open(file_path, 'w').write("A  a\n"
+                             "Bb \n"
+                             " Cc\n"
+                             "New line in iota\n")
+  expected_output = wc.State(wc_dir, { file_name : Item(verb='Sending'), })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(file_name, wc_rev=3)
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None, None, None,
+                                         wc_dir)
+
+  # Backdate iota to revision 2, so we can merge in the rev 3 changes.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '-r', '2', file_path)
+  # Make some local whitespace changes, these should not conflict
+  # with the remote whitespace changes as both will be ignored.
+  open(file_path, 'w').write("    Aa\n"
+                             "B b\n"
+                             "C c\n")
+
+  # Lines changed only by whitespaces - both in local or remote - 
+  # should be ignored
+  expected_output = wc.State(sbox.wc_dir, { file_name : Item(status='G ') })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak(file_name,
+                      contents="    Aa\n"
+                               "B b\n"
+                               "C c\n"
+                               "New line in iota\n")
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak(file_name, status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_merge(sbox.wc_dir, '2', '3', 
+                                       svntest.main.current_repo_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 
+                                       0, 0,
+                                       '-x', '-w')
+
+# use -x --ignore-eol-style option for ignoring eolstyle during merge
+def merge_ignore_eolstyle(sbox):
+  "ignore eolstyle when merging"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # commit base version of iota
+  file_name = "iota"
+  file_path = os.path.join(wc_dir, file_name)
+  file_url = svntest.main.current_repo_url + '/iota'
+
+  open(file_path, 'wb').write("Aa\r\n"
+                              "Bb\r\n"
+                              "Cc\r\n")
+  expected_output = svntest.wc.State(wc_dir, {
+      'iota' : Item(verb='Sending'),
+      })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None, None, None,
+                                        None, None, wc_dir)
+
+  # change the file, mostly eol changes + an extra line
+  open(file_path, 'wb').write("Aa\r"
+                              "Bb\n"
+                              "Cc\r"
+                              "New line in iota\n")
+  expected_output = wc.State(wc_dir, { file_name : Item(verb='Sending'), })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak(file_name, wc_rev=3)
+  svntest.actions.run_and_verify_commit (wc_dir,
+                                         expected_output,
+                                         expected_status,
+                                         None,
+                                         None, None, None, None,
+                                         wc_dir)
+
+  # Backdate iota to revision 2, so we can merge in the rev 3 changes.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'up', '-r', '2', file_path)
+  # Make some local eol changes, these should not conflict
+  # with the remote eol changes as both will be ignored.
+  open(file_path, 'wb').write("Aa\n"
+                              "Bb\r"
+                              "Cc\n")
+
+  # Lines changed only by eolstyle - both in local or remote - 
+  # should be ignored
+  expected_output = wc.State(sbox.wc_dir, { file_name : Item(status='G ') })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak(file_name,
+                      contents="Aa\n"
+                               "Bb\r"
+                               "Cc\n"
+                               "New line in iota\n")
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak(file_name, status='M ', wc_rev=2)
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_merge(sbox.wc_dir, '2', '3', 
+                                       svntest.main.current_repo_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None, 
+                                       0, 0,
+                                       '-x', '--ignore-eol-style')
+
 ########################################################################
 # Run the tests
 
@@ -3443,6 +3581,8 @@ test_list = [ None,
               merge_dir_replace,
               merge_file_replace_to_mixed_rev_wc,
               merge_added_dir_to_deleted_in_target,
+              merge_ignore_whitespace,
+              merge_ignore_eolstyle
              ]
 
 if __name__ == '__main__':
