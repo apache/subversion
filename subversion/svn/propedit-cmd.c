@@ -255,10 +255,14 @@ svn_cl__propedit(apr_getopt_t *os,
               else if (err)
                 return err;
               
-              SVN_ERR
-                (svn_cmdline_printf
-                 (subpool, _("Set new value for property '%s' on '%s'\n"),
-                  pname_utf8, target_local));
+              /* Print a message if we successfully committed or if it
+                 was just a wc propset (but not if the user aborted an URL
+                 propedit). */
+              if (commit_info || ! svn_path_is_url(target))
+                SVN_ERR
+                  (svn_cmdline_printf
+                   (subpool, _("Set new value for property '%s' on '%s'\n"),
+                    pname_utf8, target_local));
 
               if (commit_info && ! opt_state->quiet)
                 SVN_ERR(svn_cl__print_commit_info(commit_info, subpool));
