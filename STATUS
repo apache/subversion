@@ -164,12 +164,3 @@ Candidate changes:
       +1: dlr
 
 Approved changes:
-
-  * r20992
-    svnshell.py:
-      Fix Python assertion when a non-integer argument is given to the
-        setrev command.
-    Justification:
-      Assertion in officially supported scripts in tools/ is bad.
-    Votes:
-      +1: blair, dlr
