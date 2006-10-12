@@ -203,7 +203,6 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   const char *message;
   const svn_delta_editor_t *editor;
   void *commit_baton, *edit_baton;
-  apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char *));
   svn_error_t *err;
 
   if (prop_kind != svn_prop_regular_kind)
@@ -233,28 +232,27 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   if (propval && svn_prop_is_svn_prop(propname))
     {
       const svn_string_t *new_value;
-      struct getter_baton *gb = apr_pcalloc(pool, sizeof(*gb));
+      struct getter_baton gb;
       
-      gb->ra_session = ra_session;
-      gb->base_revision_for_url = base_revision_for_url;
+      gb.ra_session = ra_session;
+      gb.base_revision_for_url = base_revision_for_url;
       SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, propname, propval,
                                            target, node_kind, skip_checks,
-                                           get_file_for_validation, gb, pool));
+                                           get_file_for_validation, &gb, pool));
       propval = new_value;
     }
 
   /* Create a new commit item and add it to the array. */
   if (ctx->log_msg_func || ctx->log_msg_func2)
     {
-      svn_client_commit_item2_t *item;
+      svn_client_commit_item2_t item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
-        = apr_array_make(pool, 1, sizeof(item));
+        = apr_array_make(pool, 1, sizeof(&item));
       
-      item = apr_pcalloc(pool, sizeof(*item));
-      item->url = target;
-      item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
-      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+      item.url = target;
+      item.state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = &item;
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
                                       ctx, pool));
       if (! message)
