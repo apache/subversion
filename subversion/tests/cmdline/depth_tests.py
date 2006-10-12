@@ -284,6 +284,7 @@ def depth_zero_with_dir(sbox):
   wc0, ign_a, wc = set_up_depthy_working_copies(sbox, zero=True, infinity=True)
 
   A_path = os.path.join(wc0, 'A')
+  other_mu_path = os.path.join(wc, 'A', 'mu')
 
   # We expect A to be added at depth infinity, so a normal 'svn up A'
   # should be sufficient to add all descendants.
@@ -321,7 +322,6 @@ def depth_zero_with_dir(sbox):
                                         A_path)
 
   # Commit a change to A/mu in the "other" wc.
-  other_mu_path = os.path.join(wc, 'A', 'mu')
   svntest.main.file_write(other_mu_path, "new text\n")
   expected_output = svntest.wc.State(\
     wc, { 'A/mu' : Item(verb='Sending'), })
@@ -339,6 +339,35 @@ def depth_zero_with_dir(sbox):
   expected_disk.tweak('A/mu', contents='new text\n')
   expected_status = svntest.actions.get_virginal_state(wc0, 2)
   expected_status.remove('iota')
+  expected_status.tweak('', wc_rev=1)
+  svntest.actions.run_and_verify_update(wc0,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        A_path)
+
+  # Commit the deletion of A/mu from the "other" wc.
+  svntest.main.file_write(other_mu_path, "new text\n")
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', other_mu_path)
+  expected_output = svntest.wc.State(wc, { 'A/mu' : Item(verb='Deleting'), })
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
+  expected_status.remove('A/mu')
+  svntest.actions.run_and_verify_commit(wc,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None, wc)
+
+
+  # Update "A" by name in wc0, expect to A/mu to disappear.
+  expected_output = svntest.wc.State(wc0, { 'A/mu' : Item(status='D ') })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_disk.remove('A/mu')
+  expected_status = svntest.actions.get_virginal_state(wc0, 3)
+  expected_status.remove('iota')
+  expected_status.remove('A/mu')
   expected_status.tweak('', wc_rev=1)
   svntest.actions.run_and_verify_update(wc0,
                                         expected_output,
