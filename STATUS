@@ -155,6 +155,16 @@ Candidate changes:
     Votes:
       +1: lgo
 
+  * r21897
+    Add validation of the HEAD argument passed to 'svnmerge.py init'.
+    Justification:
+      This common gotcha otherwise results in an ugly stack trace with
+      no meaningful feedback to the user.
+    Votes:
+      +1: dlr
+
+Approved changes:
+
   * r20992
     svnshell.py:
       Fix Python assertion when a non-integer argument is given to the
@@ -162,6 +172,4 @@ Candidate changes:
     Justification:
       Assertion in officially supported scripts in tools/ is bad.
     Votes:
-      +1: blair
-
-Approved changes:
+      +1: blair, dlr
