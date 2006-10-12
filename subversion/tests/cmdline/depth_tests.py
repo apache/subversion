@@ -278,10 +278,77 @@ def depth_zero_with_file(sbox):
 
 
 #----------------------------------------------------------------------
-def depth_zero_bring_in_dir(sbox):
+def depth_zero_with_dir(sbox):
   "bring a dir into a depth-0 working copy"
   # Run 'svn up A' to bring A permanently into the working copy.
-  raise svntest.Failure("<test not yet written>")
+  wc0, ign_a, wc = set_up_depthy_working_copies(sbox, zero=True, infinity=True)
+
+  A_path = os.path.join(wc0, 'A')
+
+  # We expect A to be added at depth infinity, so a normal 'svn up A'
+  # should be sufficient to add all descendants.
+  expected_output = svntest.wc.State(wc0, {
+    'A'              : Item(status='A '),
+    'A/mu'           : Item(status='A '),
+    'A/B'            : Item(status='A '),
+    'A/B/lambda'     : Item(status='A '),
+    'A/B/E'          : Item(status='A '),
+    'A/B/E/alpha'    : Item(status='A '),
+    'A/B/E/beta'     : Item(status='A '),
+    'A/B/F'          : Item(status='A '),
+    'A/C'            : Item(status='A '),
+    'A/D'            : Item(status='A '),
+    'A/D/gamma'      : Item(status='A '),
+    'A/D/G'          : Item(status='A '),
+    'A/D/G/pi'       : Item(status='A '),
+    'A/D/G/rho'      : Item(status='A '),
+    'A/D/G/tau'      : Item(status='A '),
+    'A/D/H'          : Item(status='A '),
+    'A/D/H/chi'      : Item(status='A '),
+    'A/D/H/psi'      : Item(status='A '),
+    'A/D/H/omega'    : Item(status='A ')
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_status = svntest.actions.get_virginal_state(wc0, 1)
+  expected_status.remove('iota')
+  svntest.actions.run_and_verify_update(wc0,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        A_path)
+
+  # Commit a change to A/mu in the "other" wc.
+  other_mu_path = os.path.join(wc, 'A', 'mu')
+  svntest.main.file_write(other_mu_path, "new text\n")
+  expected_output = svntest.wc.State(\
+    wc, { 'A/mu' : Item(verb='Sending'), })
+  expected_status = svntest.actions.get_virginal_state(wc, 1)
+  expected_status.tweak('A/mu', wc_rev=2, status='  ')
+  svntest.actions.run_and_verify_commit(wc,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None, wc)
+
+  # Update "A" by name in wc0, expect to receive the change to A/mu.
+  expected_output = svntest.wc.State(wc0, { 'A/mu' : Item(status='U ') })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('iota')
+  expected_disk.tweak('A/mu', contents='new text\n')
+  expected_status = svntest.actions.get_virginal_state(wc0, 2)
+  expected_status.remove('iota')
+  expected_status.tweak('', wc_rev=1)
+  svntest.actions.run_and_verify_update(wc0,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None,
+                                        None, None, None, None,
+                                        A_path)
+
+
 
 #----------------------------------------------------------------------
 def depth_one_bring_in_file(sbox):
@@ -365,7 +432,7 @@ test_list = [ None,
               depth_one_get_top_file_mod_only,
               XFail(depth_zero_commit),
               depth_zero_with_file,
-              XFail(depth_zero_bring_in_dir),
+              XFail(depth_zero_with_dir),
               XFail(depth_one_bring_in_file),
               XFail(depth_one_bring_in_dir),
               XFail(depth_one_fill_in_dir),
