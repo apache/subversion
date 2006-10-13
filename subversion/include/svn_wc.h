@@ -137,6 +137,10 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * to the set containing @a associated.  @a associated can be @c NULL, in 
  * which case @a adm_access is the start of a new set.
  *
+ * ### TODO: We should change the name of the @a depth parameter here,
+ * ### so as not to confuse it with all the @c svn_depth_t depths
+ * ### elsewhere in the code.  Maybe @a levels_to_lock or something.
+ *
  * @a depth specifies how much to lock.  Zero means just the specified
  * directory.  Any negative value means to lock the entire working copy
  * directory hierarchy under @a path.  A positive value indicates the number of
