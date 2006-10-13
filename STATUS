@@ -115,7 +115,7 @@ Candidate changes:
       is the cause of the corruption we've seen.
     Branch: 1.4.x-r21738 (-c21763 -c21863)
     Votes:
-      +1: malcolm
+      -1: malcolm (currently broken on threaded svnserve; will fix on trunk)
 
   * r21765, r21767, r21814
     JavaHL: Compile Java bytecode for the target platform of a Java
