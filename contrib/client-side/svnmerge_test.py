@@ -492,6 +492,10 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.svnmerge("block", error=True, match=r"no integration")
         self.svnmerge("unblock", error=True, match=r"no integration")
 
+    def testSelfReferentialInit(self):
+        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"],
+                       error=True, match=r"cannot init integration source")
+
     def testBlocked(self):
 
         # Initialize svnmerge
@@ -656,7 +660,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.assertEqual(None, pblocked)
 
     def testUninitForce(self):
-        self.svnmerge2(["init", self.test_repo_url + "/branches/test-branch"])
+        self.svnmerge2(["init", self.test_repo_url + "/trunk"])
 
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision")
@@ -667,7 +671,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                     match=r"Committed revision")
 
         p = self.getproperty()
-        self.assertEqual("/branches/test-branch:1-13 /branches/testYYY-branch:1-14", p)
+        self.assertEqual("/branches/testYYY-branch:1-14 /trunk:1-13", p)
 
         open("test1", "a").write("foo")
 
@@ -676,7 +680,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
 
         self.svnmerge("uninit -F --source " + self.test_repo_url + "/branches/testYYY-branch")
         p = self.getproperty()
-        self.assertEqual("/branches/test-branch:1-13", p)
+        self.assertEqual("/trunk:1-13", p)
 
     def testCheckInitializeEverything(self):
         self.svnmerge2(["init", self.test_repo_url + "/trunk"])

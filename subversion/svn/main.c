@@ -565,13 +565,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 #ifndef AS400
   { "propedit", svn_cl__propedit, {"pedit", "pe"}, N_
     ("Edit a property with an external editor.\n"
-     "usage: 1. propedit PROPNAME PATH...\n"
+     "usage: 1. propedit PROPNAME TARGET...\n"
      "       2. propedit PROPNAME --revprop -r REV [TARGET]\n"
      "\n"
-     "  1. Edits versioned props in working copy.\n"
+     "  1. Edits versioned prop in working copy or repository.\n"
      "  2. Edits unversioned remote prop on repos revision.\n"
      "     TARGET only determines which repository to access.\n"),
-    {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
+    {'r', svn_cl__revprop_opt, SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
      svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
 #endif
