@@ -160,7 +160,7 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r21904
+  * r21904, r21919
     Stop requiring write access to a working copy when running
     'svn status --show-updates'
     Justification:
