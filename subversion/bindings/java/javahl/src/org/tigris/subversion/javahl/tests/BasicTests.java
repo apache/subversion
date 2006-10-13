@@ -194,7 +194,6 @@ public class BasicTests extends SVNTests
                      client.update(thisTest.getWCPath() + "/A/D/G",
                                    null, true),
                      rev);
-        Info Ginfo = client.info(thisTest.getWCPath() + "/A/D/G");
         long GCommitRev = rev;
 
         // ----- r4: modify file A/D/G/tau --------------------------
@@ -230,7 +229,6 @@ public class BasicTests extends SVNTests
                                          "log msg", true),
                      expectedRev++);
         thisTest.getWc().removeItem("A/C");
-        Info Cinfo = client.info(thisTest.getWCPath() + "/A/B");
         long CCommitRev = rev;
 
         // ----- r6: Add dir A/B/I ----------------------------------
