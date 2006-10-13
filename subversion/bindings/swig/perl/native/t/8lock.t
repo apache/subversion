@@ -36,7 +36,7 @@ ok(my $lock = $fs->get_lock('/testfile'));
 is ($lock->token, 'hate software');
 is ($lock->owner, 'foo');
 
-my $acc = SVN::Fs::create_access('fnord');
+$acc = SVN::Fs::create_access('fnord');
 is ($acc->get_username, 'fnord');
 $fs->set_access($acc);
 
