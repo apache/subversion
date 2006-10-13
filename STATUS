@@ -160,4 +160,12 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r21904
+    Stop requiring write access to a working copy when running
+    'svn status --show-updates'
+    Justification:
+      Small change. Status is a read-only operation by design.
+    Votes:
+      +1: dionisos
+
 Approved changes:
