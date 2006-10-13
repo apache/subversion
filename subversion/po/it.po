@@ -89,8 +89,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-10-08 09:11+0200\n"
-"PO-Revision-Date: 2006-10-09 08:53+0200\n"
+"POT-Creation-Date: 2006-10-13 05:00+0200\n"
+"PO-Revision-Date: 2006-10-13 09:03+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -168,7 +168,7 @@ msgid "Read error in pipe"
 msgstr "Errore di lettura sulla pipe"
 
 #: include/svn_error_codes.h:231 libsvn_subr/cmdline.c:291
-#: libsvn_subr/cmdline.c:308 svn/util.c:726
+#: libsvn_subr/cmdline.c:308 svn/util.c:741
 msgid "Write error"
 msgstr "Errore di scrittura"
 
@@ -1086,8 +1086,8 @@ msgstr ""
 #: libsvn_client/diff.c:1463 libsvn_client/diff.c:2193
 #: libsvn_client/diff.c:2788 libsvn_client/diff.c:2916
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
-#: libsvn_client/prop_commands.c:177 libsvn_client/prop_commands.c:410
-#: libsvn_client/prop_commands.c:573 libsvn_client/prop_commands.c:914
+#: libsvn_client/prop_commands.c:351 libsvn_client/prop_commands.c:605
+#: libsvn_client/prop_commands.c:769 libsvn_client/prop_commands.c:1126
 #: libsvn_client/ra.c:181 libsvn_client/revisions.c:89
 #: libsvn_client/status.c:256 libsvn_client/switch.c:107
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
@@ -1168,7 +1168,7 @@ msgstr ""
 msgid "Cannot move URL '%s' into itself"
 msgstr "Non posso spostare l'URL '%s' su se stessa"
 
-#: libsvn_client/copy.c:385
+#: libsvn_client/copy.c:385 libsvn_client/prop_commands.c:225
 #, c-format
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "Il percorso '%s' non esiste nella revisione %ld"
@@ -1424,32 +1424,45 @@ msgstr ""
 "'%s' è una proprietà della copia di lavoro, per cui non è accessibile ai "
 "client"
 
-#: libsvn_client/prop_commands.c:150
+#: libsvn_client/prop_commands.c:212
+#, c-format
+msgid "Property '%s' is not a regular property"
+msgstr "La proprietà '%s' non è regolare"
+
+#: libsvn_client/prop_commands.c:312
 #, c-format
 msgid "Revision property '%s' not allowed in this context"
 msgstr "Proprietà di revisione '%s' non permessa in questo contesto"
 
-#: libsvn_client/prop_commands.c:163
-#, c-format
-msgid "Setting property on non-local target '%s' is not supported"
-msgstr ""
-"L'impostazione di una proprietà su un target non locale '%s' non è supportata"
-
-#: libsvn_client/prop_commands.c:169 libsvn_client/prop_commands.c:244
+#: libsvn_client/prop_commands.c:320 libsvn_client/prop_commands.c:439
 #, c-format
 msgid "Bad property name: '%s'"
 msgstr "Nome di proprietà non valido: '%s'"
 
-#: libsvn_client/prop_commands.c:240
+#: libsvn_client/prop_commands.c:331
+#, c-format
+msgid "Setting property on non-local target '%s' needs a base revision"
+msgstr ""
+"L'impostazione di una proprietà su un target non locale '%s' necessita\n"
+"di una revisione di partenza"
+
+#: libsvn_client/prop_commands.c:337
+#, c-format
+msgid "Setting property recursively on non-local target '%s' is not supported"
+msgstr ""
+"L'impostazione ricorsiva di una proprietà su un target non locale '%s'\n"
+"non è supportata"
+
+#: libsvn_client/prop_commands.c:435
 msgid "Value will not be set unless forced"
 msgstr "Il valore non sarà impostato se non forzato"
 
-#: libsvn_client/prop_commands.c:463
+#: libsvn_client/prop_commands.c:658
 #, c-format
 msgid "'%s' does not exist in revision %ld"
 msgstr "'%s' non esiste nella revisione %ld"
 
-#: libsvn_client/prop_commands.c:470 libsvn_client/prop_commands.c:721
+#: libsvn_client/prop_commands.c:665 libsvn_client/prop_commands.c:933
 #, c-format
 msgid "Unknown node kind for '%s'"
 msgstr "Tipo di nodo sconosciuto per '%s'"
@@ -2387,12 +2400,16 @@ msgstr "Non posso sbloccare la transazione '%s' che non è bloccata"
 #: libsvn_fs_fs/fs_fs.c:385
 #, c-format
 msgid "Can't unlock prototype revision lockfile for transaction '%s'"
-msgstr "Non posso sbloccare il file di blocco del prototipo di revisione per la transazione '%s'"
+msgstr ""
+"Non posso sbloccare il file di blocco del prototipo di revisione per la "
+"transazione '%s'"
 
 #: libsvn_fs_fs/fs_fs.c:391
 #, c-format
 msgid "Can't close prototype revision lockfile for transaction '%s'"
-msgstr "Non posso chiudere il file di blocco del prototipo di revisione per la transazione '%s'"
+msgstr ""
+"Non posso chiudere il file di blocco del prototipo di revisione per la "
+"transazione '%s'"
 
 #: libsvn_fs_fs/fs_fs.c:453
 #, c-format
@@ -2400,7 +2417,8 @@ msgid ""
 "Cannot write to the prototype revision file of transaction '%s' because a "
 "previous representation is currently being written by this process"
 msgstr ""
-"Non posso scrivere sul file di blocco del prototipo di revisione per la transazione '%s'\n"
+"Non posso scrivere sul file di blocco del prototipo di revisione per la "
+"transazione '%s'\n"
 "perché una precedente rappresentazione è in scrittura da questo processo"
 
 #: libsvn_fs_fs/fs_fs.c:489
@@ -2409,7 +2427,8 @@ msgid ""
 "Cannot write to the prototype revision file of transaction '%s' because a "
 "previous representation is currently being written by another process"
 msgstr ""
-"Non posso scrivere sul file di blocco del prototipo di revisione per la transazione '%s'\n"
+"Non posso scrivere sul file di blocco del prototipo di revisione per la "
+"transazione '%s'\n"
 "perché una precedente rappresentazione è in scrittura da questo processo"
 
 #: libsvn_fs_fs/fs_fs.c:496 libsvn_subr/io.c:1531
@@ -2567,7 +2586,7 @@ msgid "Corrupt current file"
 msgstr "File corrente corrotto"
 
 #: libsvn_fs_fs/fs_fs.c:4024 libsvn_subr/io.c:2662 svn/util.c:236
-#: svn/util.c:260
+#: svn/util.c:251 svn/util.c:275
 #, c-format
 msgid "Can't stat '%s'"
 msgstr "Non riesco a eseguire stat() su '%s'"
@@ -5496,6 +5515,7 @@ msgid "'%s' does not appear to be a URL"
 msgstr "'%s' non sembra essere un'URL"
 
 #: svn/copy-cmd.c:108 svn/delete-cmd.c:64 svn/mkdir-cmd.c:66
+#: svn/propedit-cmd.c:200
 msgid "Local, non-commit operations do not take a log message"
 msgstr ""
 "Operazioni in locale, senza commit non necessitano di un messaggio di log"
@@ -5589,7 +5609,7 @@ msgstr "URL non valida '%s'"
 msgid "'%s' has invalid revision"
 msgstr "'%s' ha una revisione non valida"
 
-#: svn/info-cmd.c:267 svnadmin/main.c:1119
+#: svn/info-cmd.c:267 svnadmin/main.c:1117
 #, c-format
 msgid "Path: %s\n"
 msgstr "Percorso: %s\n"
@@ -6654,12 +6674,13 @@ msgstr ""
 "     OBBIETTIVO determina semplicemente a quale repository accedere.\n"
 
 #: svn/main.c:563
+#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
-"usage: 1. propedit PROPNAME PATH...\n"
+"usage: 1. propedit PROPNAME TARGET...\n"
 "       2. propedit PROPNAME --revprop -r REV [TARGET]\n"
 "\n"
-"  1. Edits versioned props in working copy.\n"
+"  1. Edits versioned prop in working copy or repository.\n"
 "  2. Edits unversioned remote prop on repos revision.\n"
 "     TARGET only determines which repository to access.\n"
 msgstr ""
@@ -6667,11 +6688,11 @@ msgstr ""
 "uso: 1. propedit PROPRIETÀ PERCORSO...\n"
 "     2. propedit PROPRIETÀ --revprop -r REV [OBBIETTIVO]\n"
 "\n"
-"  1. Modifica delle proprietà sotto controllo di versione nella copia "
-"locale.\n"
-"  2. Modifica una proprietà non sotto controllo di versione nella revisione "
-"del repository.\n"
-"     OBBIETTIVO determina semplicemente a quale repository accedere.\n"
+"  1. Modifica delle proprietà sotto controllo di versione nella copia\n"
+"     di lavoro o nel repository.\n"
+"  2. Modifica una proprietà non sotto controllo di versione nella\n"
+"     copia di lavoro o nel repository; OBBIETTIVO determina\n"
+"     semplicemente a quale repository accedere.\n"
 
 #: svn/main.c:576
 msgid ""
@@ -7193,7 +7214,7 @@ msgstr ""
 "c,\n"
 "prova '-r N:M' invece di '-r N -r M'"
 
-#: svn/main.c:1056 svnadmin/main.c:1317
+#: svn/main.c:1056 svnadmin/main.c:1315
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Errore di sintassi nell'argomento di revisione '%s'"
@@ -7211,7 +7232,7 @@ msgstr "Errore di sintassi nell'argomento native-eol '%s'"
 msgid "Subcommand argument required\n"
 msgstr "È necessario specificare un argomento per il comando\n"
 
-#: svn/main.c:1328 svnadmin/main.c:1446 svndumpfilter/main.c:1226
+#: svn/main.c:1328 svnadmin/main.c:1444 svndumpfilter/main.c:1226
 #: svnlook/main.c:2056
 #, c-format
 msgid "Unknown command: '%s'\n"
@@ -7463,7 +7484,7 @@ msgstr "la proprietà '%s' è stata cancellata da '%s'.\n"
 msgid "'%s' is not a valid Subversion property name"
 msgstr "'%s' non è un nome valido per una proprietà di Subversion"
 
-#: svn/propedit-cmd.c:105 svn/propedit-cmd.c:229 svn/propset-cmd.c:85
+#: svn/propedit-cmd.c:105 svn/propedit-cmd.c:241 svn/propset-cmd.c:85
 msgid "Bad encoding option: prop value not stored as UTF8"
 msgstr "Errore di codifica: il valore della proprietà non è in UTF8"
 
@@ -7489,23 +7510,17 @@ msgstr ""
 msgid "Explicit target argument required"
 msgstr "È richiesto un argomento per un obiettivo esplicito"
 
-#: svn/propedit-cmd.c:177
-#, c-format
-msgid "Editing property on non-local target '%s' not yet supported"
-msgstr ""
-"La modifica di proprietà sull'oggetto non locale '%s' non è ancora supportata"
-
-#: svn/propedit-cmd.c:204 svn/switch-cmd.c:140
+#: svn/propedit-cmd.c:211 svn/switch-cmd.c:140
 #, c-format
 msgid "'%s' does not appear to be a working copy path"
 msgstr "'%s' non sembra essere un percorso della copia locale"
 
-#: svn/propedit-cmd.c:236
+#: svn/propedit-cmd.c:264
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
 msgstr "Imposta un nuovo valore per la proprietà '%s' in '%s'\n"
 
-#: svn/propedit-cmd.c:243
+#: svn/propedit-cmd.c:274
 #, c-format
 msgid "No changes to property '%s' on '%s'\n"
 msgstr "Nessun cambiamento alla proprietà '%s' in '%s'\n"
@@ -7631,40 +7646,40 @@ msgstr "Non riesco a cambiare la directory di lavoro in '%s'"
 msgid "Can't write to '%s'"
 msgstr "Non riesco a scrivere su '%s'"
 
-#: svn/util.c:251
+#: svn/util.c:266
 #, c-format
 msgid "system('%s') returned %d"
 msgstr "system('%s') ha restituito %d"
 
-#: svn/util.c:292
+#: svn/util.c:307
 msgid "Error normalizing edited contents to internal format"
 msgstr ""
 "Errore durante la normalizzazione dei contenuti modificati nel\n"
 "formato interno"
 
-#: svn/util.c:323
+#: svn/util.c:338
 msgid "Can't restore working directory"
 msgstr "Non riesco a ripristinare la directory di lavoro"
 
-#: svn/util.c:363
+#: svn/util.c:378
 msgid "Log message contains a zero byte"
 msgstr "Il messaggio di log contiene un byte zero"
 
-#: svn/util.c:423
+#: svn/util.c:438
 msgid "Your commit message was left in a temporary file:"
 msgstr "Il tuo messaggio di log è stato salvato in un file temporaneo:"
 
-#: svn/util.c:475
+#: svn/util.c:490
 msgid "--This line, and those below, will be ignored--"
 msgstr "--Questa linea, e quelle sotto di essa, saranno ignorate--"
 
-#: svn/util.c:501
+#: svn/util.c:516
 msgid "Error normalizing log message to internal format"
 msgstr ""
 "Errore nella normalizzazione del messaggio di log nel\n"
 "formato interno"
 
-#: svn/util.c:516
+#: svn/util.c:531
 msgid ""
 "Use of an external editor to fetch log message is not supported on OS400; "
 "consider using the --message (-m) or --file (-F) options"
@@ -7672,12 +7687,12 @@ msgstr ""
 "L'uso di editor esterno non è supportato sotto OS400; in alternativa,\n"
 "considera l'uso delle opzioni --message (-m) o --file (-F)"
 
-#: svn/util.c:602
+#: svn/util.c:617
 msgid "Cannot invoke editor to get log message when non-interactive"
 msgstr ""
 "Non posso invocare l'editor per i messaggi di log in modalità non interattiva"
 
-#: svn/util.c:615
+#: svn/util.c:630
 msgid ""
 "Could not use external editor to fetch log message; consider setting the "
 "$SVN_EDITOR environment variable or using the --message (-m) or --file (-F) "
@@ -7687,7 +7702,7 @@ msgstr ""
 "log; dovresti impostare la variabile d'ambiente $SVN_EDITOR o usare le "
 "opzioni --message (-m) o --file (-F)"
 
-#: svn/util.c:651
+#: svn/util.c:666
 msgid ""
 "\n"
 "Log message unchanged or not specified\n"
@@ -7697,7 +7712,7 @@ msgstr ""
 "Messaggio di log non modificato o non specificato\n"
 "a)nnulla, c)ontinua, e)dit\n"
 
-#: svn/util.c:704
+#: svn/util.c:719
 msgid "Use --force to override this restriction"
 msgstr "Usa --force per ignorare questa restrizione"
 
@@ -7998,24 +8013,23 @@ msgid ""
 "revision properties has not been enabled in the pre-revprop-change\n"
 "hook).\n"
 "\n"
-"NOTE: Revision properties are not versioned (e.g. no revision history\n"
-"is maintained), so this command will permanently overwrite the previous\n"
-"log message.\n"
+"NOTE: Revision properties are not versioned, so this command will\n"
+"overwrite the previous log message.\n"
 msgstr ""
 "uso: svnadmin setlog PERC_REPO -r REVISIONE FILE\n"
 "\n"
 "Imposta il messaggio di log della revisione REVISIONE in base al\n"
-"contenuto di FILE. Usa --bypass-hooks per evitare di attivare gli hook\n"
-"relativi alla revisione di proprietà (ad esempio se non vuoi che\n"
-"un'email di notifica venga spedita dall'hook post-revprop-change o\n"
-"perché la modifica delle proprietà di revisione non è stata abilitata\n"
-"nell'hook pre-revprop-change).\n"
+"contenuto di FILE. Usa --bypass-hooks per evitare di attivare gli\n"
+"agganci relativi alla revisione di proprietà (ad esempio se non vuoi\n"
+"che un'email di notifica venga spedita dall'aggancio\n"
+"post-revprop-change o perché la modifica delle proprietà di revisione\n"
+"non è stata abilitata nell'hook pre-revprop-change).\n"
 "\n"
 "NOTA: le proprietà di revisione non sono sotto controllo di versione,\n"
 "quindi questo comando sovrascriverà permanentemente il messaggio di\n"
 "log precedente.\n"
 
-#: svnadmin/main.c:412
+#: svnadmin/main.c:411
 msgid ""
 "usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
 "\n"
@@ -8024,9 +8038,8 @@ msgid ""
 "the revision property-related hooks (for example, if you want an email\n"
 "notification sent from your post-revprop-change hook).\n"
 "\n"
-"NOTE: Revision properties are not versioned (e.g. no revision history\n"
-"is maintained), so this command will permanently overwrite the previous\n"
-"value for the property.\n"
+"NOTE: Revision properties are not versioned, so this command will\n"
+"overwrite the previous value of the property.\n"
 msgstr ""
 "uso: svnadmin setrevprop PERC_REPO -r REVISIONE NOME FILE\n"
 "\n"
@@ -8041,7 +8054,7 @@ msgstr ""
 "quindi questo comando sovrascriverà permanentemente il messaggio di\n"
 "log precedente.\n"
 
-#: svnadmin/main.c:424
+#: svnadmin/main.c:422
 msgid ""
 "usage: svnadmin verify REPOS_PATH\n"
 "\n"
@@ -8051,30 +8064,30 @@ msgstr ""
 "\n"
 "Verifica i dati immagazzinati nel repository.\n"
 
-#: svnadmin/main.c:480
+#: svnadmin/main.c:478
 msgid "Invalid revision specifier"
 msgstr "Numero di revisione fornito non valido"
 
-#: svnadmin/main.c:485
+#: svnadmin/main.c:483
 #, c-format
 msgid "Revisions must not be greater than the youngest revision (%ld)"
 msgstr ""
 "Le revisioni non possono essere più grandi della revisione più recente %ld"
 
-#: svnadmin/main.c:558 svnadmin/main.c:653
+#: svnadmin/main.c:556 svnadmin/main.c:651
 msgid "First revision cannot be higher than second"
 msgstr "La prima revisione non può essere superiore alla seconda"
 
-#: svnadmin/main.c:567
+#: svnadmin/main.c:565
 #, c-format
 msgid "Deltifying revision %ld..."
 msgstr "Deltificazione della revisione %ld..."
 
-#: svnadmin/main.c:571
+#: svnadmin/main.c:569
 msgid "done.\n"
 msgstr "fatto.\n"
 
-#: svnadmin/main.c:678
+#: svnadmin/main.c:676
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -8089,7 +8102,7 @@ msgstr ""
 "\n"
 "Commandi disponibili:\n"
 
-#: svnadmin/main.c:685 svnlook/main.c:1663 svnserve/main.c:203
+#: svnadmin/main.c:683 svnlook/main.c:1663 svnserve/main.c:203
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
 "\n"
@@ -8097,7 +8110,7 @@ msgstr ""
 "Sono disponibili i seguenti moduli di accesso (FS) al repository:\n"
 "\n"
 
-#: svnadmin/main.c:762
+#: svnadmin/main.c:760
 msgid ""
 "Repository lock acquired.\n"
 "Please wait; recovering the repository may take some time...\n"
@@ -8105,7 +8118,7 @@ msgstr ""
 "Ottenuto il lock del repository.\n"
 "Attendere prego; il recupero del repository può richiedere del tempo...\n"
 
-#: svnadmin/main.c:797
+#: svnadmin/main.c:795
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
@@ -8113,13 +8126,13 @@ msgstr ""
 "Non ho pututo ottenere l'accesso esclusivo al repository; forse\n"
 "un altro processo come httpd o svn lo stanno utilizzando?"
 
-#: svnadmin/main.c:802
+#: svnadmin/main.c:800
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr ""
 "In attesa di ottenere il blocco del repository; forse un altro\n"
 "processo lo sta utilizzando?\n"
 
-#: svnadmin/main.c:809
+#: svnadmin/main.c:807
 msgid ""
 "\n"
 "Recovery completed.\n"
@@ -8127,53 +8140,53 @@ msgstr ""
 "\n"
 "Recupero completato.\n"
 
-#: svnadmin/main.c:816
+#: svnadmin/main.c:814
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "L'ultima revisione del repository è %ld.\n"
 
-#: svnadmin/main.c:926
+#: svnadmin/main.c:924
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "Transazione '%s' rimossa.\n"
 
-#: svnadmin/main.c:994 svnadmin/main.c:1021
+#: svnadmin/main.c:992 svnadmin/main.c:1019
 msgid "Missing revision"
 msgstr "Revisione mancante"
 
-#: svnadmin/main.c:997 svnadmin/main.c:1024
+#: svnadmin/main.c:995 svnadmin/main.c:1022
 msgid "Only one revision allowed"
 msgstr "È permessa una sola revisione"
 
-#: svnadmin/main.c:1003
+#: svnadmin/main.c:1001
 msgid "Exactly one property name and one file argument required"
 msgstr "È richiesto esattamente un solo nome di proprietà come argomento"
 
-#: svnadmin/main.c:1030
+#: svnadmin/main.c:1028
 msgid "Exactly one file argument required"
 msgstr "È richiesto esattamente un solo file come argomento"
 
-#: svnadmin/main.c:1120 svnlook/main.c:1728
+#: svnadmin/main.c:1118 svnlook/main.c:1728
 #, c-format
 msgid "UUID Token: %s\n"
 msgstr "UUID del gettone: %s\n"
 
-#: svnadmin/main.c:1121 svnlook/main.c:1729
+#: svnadmin/main.c:1119 svnlook/main.c:1729
 #, c-format
 msgid "Owner: %s\n"
 msgstr "Proprietario: %s\n"
 
-#: svnadmin/main.c:1122 svnlook/main.c:1730
+#: svnadmin/main.c:1120 svnlook/main.c:1730
 #, c-format
 msgid "Created: %s\n"
 msgstr "Creato: %s\n"
 
-#: svnadmin/main.c:1123 svnlook/main.c:1731
+#: svnadmin/main.c:1121 svnlook/main.c:1731
 #, c-format
 msgid "Expires: %s\n"
 msgstr "Scade: %s\n"
 
-#: svnadmin/main.c:1125
+#: svnadmin/main.c:1123
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -8184,7 +8197,7 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1126
+#: svnadmin/main.c:1124
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -8195,27 +8208,27 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1183
+#: svnadmin/main.c:1181
 #, c-format
 msgid "Path '%s' isn't locked.\n"
 msgstr "Il percorso '%s' non è bloccato\n"
 
-#: svnadmin/main.c:1195
+#: svnadmin/main.c:1193
 #, c-format
 msgid "Removed lock on '%s'.\n"
 msgstr "Rimosso il blocco da '%s'\n"
 
-#: svnadmin/main.c:1303
+#: svnadmin/main.c:1301
 msgid ""
 "Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
 msgstr ""
 "Vi sono più argomenti di revisione; prova '-r N:M' invece di '-r N -r M'"
 
-#: svnadmin/main.c:1428
+#: svnadmin/main.c:1426
 msgid "subcommand argument required\n"
 msgstr "richiesto argomento per il comando\n"
 
-#: svnadmin/main.c:1513
+#: svnadmin/main.c:1511
 #, c-format
 msgid ""
 "subcommand '%s' doesn't accept option '%s'\n"
