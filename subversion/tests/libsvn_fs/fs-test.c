@@ -4391,6 +4391,15 @@ closest_copy_test(const char **msg,
   SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
   SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool)); 
 
+  /* Okay, just for kicks, let's modify Z2/D/H3/t.  Shouldn't affect
+     its closest-copy-ness, right?  */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "Z2/D/H2/t", 
+                                      "Edited text.", spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool)); 
+
   /* Now, we expect Z2/D/H2 to have a closest copy of ("/Z2/D/H2", 3)
      because of the deepest path rule.  We expected Z2/D to have a
      closest copy of ("/Z2", 3).  Z/mu should still have a closest
