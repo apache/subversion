@@ -46,7 +46,7 @@ Candidate changes:
     on Windows.
     Branch: 1.4.x-r21392
     Votes:
-      +1: djames
+      +1: djames, rooneg
 
   * r21471
     Dramatically speed up WC to WC copy post commit processing by
