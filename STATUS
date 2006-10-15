@@ -59,7 +59,7 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r21531, r21848
+  * r21531, r21848, r21934
     Allow HTTP auth protocols to be configurable by way of a
     "http-auth-types" parameter.
     Justification:
@@ -67,7 +67,7 @@ Candidate changes:
       Neon 0.26.1+, addressesing numerous bug reports from
       TortoiseSVN, Subversion, Subclipse, etc.
     Votes:
-      +1: dlr, djh
+      +1: dlr, djh, jerenkrantz
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
   * r21720, r21724, r21726
@@ -198,4 +198,4 @@ Approved changes:
       Allow use of Neon 0.26.x with --disable-neon-version-check, since we
       have already backported support for it.
     Votes:
-      +1: maxb
+      +1: maxb, jerenkrantz
