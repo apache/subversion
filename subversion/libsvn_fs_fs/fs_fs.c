@@ -555,7 +555,7 @@ get_writable_proto_rev(apr_file_t **file,
 static svn_error_t *
 purge_shared_txn_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
 {
-  const char *txn_id = baton;
+  const char *txn_id = *(const char **)baton;
 
   free_shared_txn(fs, txn_id);
   return SVN_NO_ERROR;
