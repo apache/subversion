@@ -57,7 +57,7 @@ Candidate changes:
   * r21473
     Fix compile error when APR_HAS_DSO is not defined (e.g. on RISC OS).
     Votes:
-      +1: dlr
+      +1: dlr, jerenkrantz
 
   * r21531, r21848, r21934
     Allow HTTP auth protocols to be configurable by way of a
