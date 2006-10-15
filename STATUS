@@ -41,19 +41,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r21471
-    Dramatically speed up WC to WC copy post commit processing by
-    eliminating O(n^2) .svn/entries writing behaviour.
-    Justification:
-      Factor 10 speedups (see log message).
-    Note:
-      On trunk, this issue is solved with better memory bounding
-      properties in r21616,r21619.
-    Branch:
-      1.4.x-r21471
-    Votes:
-      +1: dionisos
-
   * r21531, r21848, r21934
     Allow HTTP auth protocols to be configurable by way of a
     "http-auth-types" parameter.
@@ -64,15 +51,6 @@ Candidate changes:
     Votes:
       +1: dlr, djh, jerenkrantz
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
-
-  * r21720, r21724, r21726
-    Fix issue #2618: 'Checksum mismatch' error when receiving update for
-    locally replaced-with-history file.
-    Justification:
-      Breaks working copy update; includes tests.
-    Branch: 1.4.x-issue-2618
-    Votes:
-      +1: dionisos, zhakov
 
   * r21738, r21924
     Prevent an API violation from corrupting FSFS repositories, as seen
@@ -88,24 +66,6 @@ Candidate changes:
     Votes:
       +1: malcolm
 
-  * r21765, r21767, r21814
-    JavaHL: Compile Java bytecode for the target platform of a Java
-    1.2 JVM.
-    Justification:
-      The default target platform release number is typically equal to
-      the compiling JDK version, which is likely much higher than our
-      supported minimum runtime (Java 1.2).
-    Votes:
-      +1: dlr, jerenkrantz
-
-  * r21770
-    JavaHL: Fix a JVM crash when the empty string is passed to the
-    checkout() method.
-    Justification:
-      SEGVs and JVM crashes are bad.
-    Votes:
-      +1: dlr, jerenkrantz
-
   * r21897
     Add validation of the HEAD argument passed to 'svnmerge.py init'.
     Justification:
@@ -113,14 +73,6 @@ Candidate changes:
       no meaningful feedback to the user.
     Votes:
       +1: dlr
-
-  * r21904, r21919
-    Stop requiring write access to a working copy when running
-    'svn status --show-updates'
-    Justification:
-      Small change. Status is a read-only operation by design.
-    Votes:
-      +1: dionisos
 
   * r21930
     Add Neon 0.26.0 and 0.26.1 to NEON_ALLOWED_LIST.
@@ -140,3 +92,58 @@ Approved changes:
     Votes:
       +1: lgo, glasser
 
+  * r21930
+    Add Neon 0.26.0 and 0.26.1 to NEON_ALLOWED_LIST.
+    Justification:
+      Allow use of Neon 0.26.x with --disable-neon-version-check, since we
+      have already backported support for it.
+    Votes:
+      +1: maxb, jerenkrantz, danderson
+
+  * r21471
+    Dramatically speed up WC to WC copy post commit processing by
+    eliminating O(n^2) .svn/entries writing behaviour.
+    Justification:
+      Factor 10 speedups (see log message).
+    Note:
+      On trunk, this issue is solved with better memory bounding
+      properties in r21616,r21619.
+    Branch:
+      1.4.x-r21471
+    Votes:
+      +1: dionisos, danderson, rooneg, malcolm
+
+  * r21720, r21724, r21726
+    Fix issue #2618: 'Checksum mismatch' error when receiving update for
+    locally replaced-with-history file.
+    Justification:
+      Breaks working copy update; includes tests.
+    Branch: 1.4.x-issue-2618
+    Votes:
+      +1: dionisos, zhakov, malcolm, glasser, rooneg, sussman
+
+  * r21765, r21767, r21814
+    JavaHL: Compile Java bytecode for the target platform of a Java
+    1.2 JVM.
+    Justification:
+      The default target platform release number is typically equal to
+      the compiling JDK version, which is likely much higher than our
+      supported minimum runtime (Java 1.2).
+    Votes:
+      +1: dlr, jerenkrantz
+
+  * r21770
+    JavaHL: Fix a JVM crash when the empty string is passed to the
+    checkout() method.
+    Justification:
+      SEGVs and JVM crashes are bad.
+    Votes:
+      +1: dlr, jerenkrantz
+
+  * r21904, r21919
+    Stop requiring write access to a working copy when running
+    'svn status --show-updates'
+    Justification:
+      Small change. Status is a read-only operation by design.
+    Votes:
+      +1: dionisos, sussman, malcolm
