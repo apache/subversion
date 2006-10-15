@@ -699,6 +699,10 @@ struct merge_cmd_baton {
      because it's created as an empty temp file on disk regardless).*/
   svn_boolean_t add_necessitated_merge;
 
+  /* The list of paths for entries we've deleted, used only when in
+     dry_run mode. */
+  apr_hash_t *dry_run_deletions;
+
   /* The diff3_cmd in ctx->config, if any, else null.  We could just
      extract this as needed, but since more than one caller uses it,
      we just set it up when this baton is created. */
@@ -707,6 +711,26 @@ struct merge_cmd_baton {
 
   apr_pool_t *pool;
 };
+
+apr_hash_t *
+svn_client__dry_run_deletions(void *merge_cmd_baton)
+{
+  struct merge_cmd_baton *merge_b = merge_cmd_baton;
+  return merge_b->dry_run_deletions;
+}
+
+/* Used to avoid spurious notifications (e.g. conflicts) from a merge
+   attempt into an existing target which would have been deleted if we
+   weren't in dry_run mode (issue #2584).  Assumes that WCPATH is
+   still versioned (e.g. has an associated entry). */
+static APR_INLINE svn_boolean_t
+dry_run_deleted_p(struct merge_cmd_baton *merge_b, const char *wcpath)
+{
+    return (merge_b->dry_run &&
+            apr_hash_get(merge_b->dry_run_deletions, wcpath,
+                         APR_HASH_KEY_STRING) != NULL);
+}
+
 
 /* A svn_wc_diff_callbacks2_t function.  Used for both file and directory
    property merges. */
@@ -997,11 +1021,19 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
       }
       break;
     case svn_node_dir:
-      {
-        /* this will make the repos_editor send a 'skipped' message */
-        if (content_state)
-          *content_state = svn_wc_notify_state_obstructed;
-      }
+      if (content_state)
+        {
+          /* directory already exists, is it under version control? */
+          const svn_wc_entry_t *entry;
+          SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
+
+          if (entry && dry_run_deleted_p(merge_b, mine))
+            *content_state = svn_wc_notify_state_changed;
+          else
+            /* this will make the repos_editor send a 'skipped' message */
+            *content_state = svn_wc_notify_state_obstructed;
+        }
+      break;
     case svn_node_file:
       {
         /* file already exists, is it under version control? */
@@ -1019,20 +1051,28 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
           }
         else
           {
-            /* Indicate that we merge because of an add to handle a
-               special case for binary files w/ no local mods. */
-            merge_b->add_necessitated_merge = TRUE;
+            if (dry_run_deleted_p(merge_b, mine))
+              {
+                if (content_state)
+                  *content_state = svn_wc_notify_state_changed;
+              }
+            else
+              {
+                /* Indicate that we merge because of an add to handle a
+                   special case for binary files with no local mods. */
+                  merge_b->add_necessitated_merge = TRUE;
 
-            SVN_ERR(merge_file_changed(adm_access, content_state, prop_state,
-                                       mine, older, yours,
-                                       rev1, rev2,
-                                       mimetype1, mimetype2,
-                                       prop_changes, original_props,
-                                       baton));            
+                  SVN_ERR(merge_file_changed(adm_access, content_state,
+                                             prop_state, mine, older, yours,
+                                             rev1, rev2,
+                                             mimetype1, mimetype2,
+                                             prop_changes, original_props,
+                                             baton));
 
-            /* Reset the state so that the baton can safely be reused
-               in subsequent ops occurring during this merge. */
-            merge_b->add_necessitated_merge = FALSE;
+                /* Reset the state so that the baton can safely be reused
+                   in subsequent ops occurring during this merge. */
+                  merge_b->add_necessitated_merge = FALSE;
+              }
           }
         break;      
       }
@@ -1201,17 +1241,30 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           if (state)
             *state = svn_wc_notify_state_changed;
         }
-      else
+      else if (state)
         {
-          if (state)
+          if (dry_run_deleted_p(merge_b, path))
+            *state = svn_wc_notify_state_changed;
+          else
             *state = svn_wc_notify_state_obstructed;
         }
       break;
     case svn_node_file:
       if (merge_b->dry_run)
         merge_b->added_path = NULL;
+
       if (state)
-        *state = svn_wc_notify_state_obstructed;
+        {
+          SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, subpool));
+
+          if (entry && dry_run_deleted_p(merge_b, path))
+            /* ### TODO: Retain record of this dir being added to
+               ### avoid problems from subsequent edits which try to
+               ### add children. */
+            *state = svn_wc_notify_state_changed;
+          else
+            *state = svn_wc_notify_state_obstructed;
+        }
       break;
     default:
       if (merge_b->dry_run)
@@ -2745,6 +2798,7 @@ svn_client_merge2(const char *source1,
   merge_cmd_baton.path = path2;
   merge_cmd_baton.added_path = NULL;
   merge_cmd_baton.add_necessitated_merge = FALSE;
+  merge_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool) : NULL);
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.pool = pool;
 
@@ -2874,6 +2928,7 @@ svn_client_merge_peg2(const char *source,
   merge_cmd_baton.path = path;
   merge_cmd_baton.added_path = NULL;
   merge_cmd_baton.add_necessitated_merge = FALSE;
+  merge_cmd_baton.dry_run_deletions = (dry_run ? apr_hash_make(pool) : NULL);
   merge_cmd_baton.ctx = ctx;
   merge_cmd_baton.pool = pool;
 
