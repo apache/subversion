@@ -41,13 +41,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r21392
-    Fix the Python bindings tests so that they use URLs which work
-    on Windows.
-    Branch: 1.4.x-r21392
-    Votes:
-      +1: djames, rooneg
-
   * r21471
     Dramatically speed up WC to WC copy post commit processing by
     eliminating O(n^2) .svn/entries writing behaviour.
@@ -135,6 +128,13 @@ Candidate changes:
       +1: dionisos
 
 Approved changes:
+
+  * r21392
+    Fix the Python bindings tests so that they use URLs which work
+    on Windows.
+    Branch: 1.4.x-r21392
+    Votes:
+      +1: djames, rooneg
 
   * r21566, r21638, r21641, r21669, r21685, r21696, r21705
     Fix issue #2533, making 'svn status -u' show remotely changed
