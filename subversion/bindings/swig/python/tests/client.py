@@ -3,7 +3,7 @@ import unittest, os
 from svn import core, repos, fs, delta, client
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH
+  REPOS_PATH, REPOS_URL
 from urllib import pathname2url
 
 class SubversionRepositoryTestCase(unittest.TestCase):
@@ -32,16 +32,15 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     # Run info
     revt = core.svn_opt_revision_t()
     revt.kind = core.svn_opt_revision_head
-    repos_url = "file://" + pathname2url(REPOS_PATH)
-    client.info(repos_url, revt, revt, self.info_receiver,
+    client.info(REPOS_URL, revt, revt, self.info_receiver,
                 False, self.client_ctx)
 
     # Check output from running info. This also serves to verify that
     # the internal 'info' object is still valid
     self.assertEqual(self.path, os.path.basename(REPOS_PATH))
     self.info.assert_valid()
-    self.assertEqual(self.info.URL, repos_url)
-    self.assertEqual(self.info.repos_root_URL, repos_url)
+    self.assertEqual(self.info.URL, REPOS_URL)
+    self.assertEqual(self.info.repos_root_URL, REPOS_URL)
 
 
 def suite():
