@@ -124,11 +124,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r21473
-    Fix compile error when APR_HAS_DSO is not defined (e.g. on RISC OS).
-    Votes:
-      +1: dlr, jerenkrantz, rooneg
-
   * r21392
     Fix the Python bindings tests so that they use URLs which work
     on Windows.
