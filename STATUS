@@ -7,6 +7,16 @@ delay a release, etc.
 NOTE:  This branch uses svnmerge.py for merge tracking.  Please familiarize
 yourself with that tool if you plan to actually merge changes here.
 
+For example, to merge a number of revisions from trunk into branch,
+you can use the svnmerge.py script that is in the branch.
+
+$ contrib/client-side/svnmerge.py merge -r 21000-21006,21008,21876
+$ svn diff
+$ svn commit
+
+Do no run the svnmerge.py N separate times for each revision to merge
+over, since svnmerge.py will not merge into a WC with uncommitted
+changes.
 
 Status of 1.4.1:
 ================
