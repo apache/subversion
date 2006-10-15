@@ -515,9 +515,9 @@ static svn_error_t *get_server_settings(const char **proxy_host,
           else if (strcasecmp("negotiate", token) == 0)
             *neon_auth_types |= NE_AUTH_NEGOTIATE;
           else
-            return svn_error_create(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
-                                    _("Invalid config: unknown http auth"
-                                      "type '%s'", token));
+            return svn_error_createf(SVN_ERR_RA_DAV_INVALID_CONFIG_VALUE, NULL,
+                                     _("Invalid config: unknown http auth"
+                                       "type '%s'"), token);
       }
     }
 #endif /* SVN_NEON_0_26 */
