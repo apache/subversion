@@ -122,6 +122,14 @@ Candidate changes:
     Votes:
       +1: dionisos
 
+  * r21930
+    Add Neon 0.26.0 and 0.26.1 to NEON_ALLOWED_LIST.
+    Justification:
+      Allow use of Neon 0.26.x with --disable-neon-version-check, since we
+      have already backported support for it.
+    Votes:
+      +1: maxb, jerenkrantz
+
 Approved changes:
 
   * r21566, r21638, r21641, r21669, r21685, r21696, r21705
@@ -158,11 +166,3 @@ Approved changes:
     Branch: 1.4.x-r20350
     Votes:
       +1: lgo, glasser
-
-  * r21930
-    Add Neon 0.26.0 and 0.26.1 to NEON_ALLOWED_LIST.
-    Justification:
-      Allow use of Neon 0.26.x with --disable-neon-version-check, since we
-      have already backported support for it.
-    Votes:
-      +1: maxb, jerenkrantz
