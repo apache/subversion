@@ -2,16 +2,17 @@ About JavaHL
 ------------
 
 JavaHL provides a (mostly native) implemention of a high level Java
-API for Subversion, originally targeted for implementors of GUI
-clients and IDE plug-ins for Subversion.  JavaHL currently provides a
-minimal-but-complete set of APIs which expose the core Subversion C
-API to Java.
+API for Subversion, which was originally targeted for implementors of
+GUI clients and IDE plug-ins for Subversion.  JavaHL currently
+provides a minimal-but-complete set of APIs which expose the core
+Subversion C API to Java.  It requires a JRE 1.2+ (runtime).
 
 
 Build system and output
 -----------------------
 
-JavaHL should compile and run under Linux, Win32, and Mac OS X.
+JavaHL should compile and run under Linux, Win32, and Mac OS X with a
+JDK 1.3+.
 
 Its build will produce libsvnjavahl.so or libsvnjavahl.dll (the native
 library for Unix or win32, respectively) and svnjavahl.jar (platform
@@ -33,9 +34,9 @@ After building libsvnjavahl.dynlib it has to be renamed to
 libsvnjavahl.jnilib.
 
 Windows:
-You need the bin directory of the JDK (>= 1.2) in your path and the
-include and the include\win32 directory have to be in the include path
-of your MS Visual Studio.
+You need the bin directory of the JDK in your path and the include and
+the include\win32 directory have to be in the include path of your MS
+Visual Studio.
 
 To build use the project/target "__JAVAHL__" of the main subversion workspace.
 The private project/workspace is not used anymore.

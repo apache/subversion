@@ -551,8 +551,10 @@ if test -z "$PYTHON"; then
 fi
 AC_PATH_PROGS(PYTHON, "$PYTHON", none)
 
+# The minimum version for the JVM runtime for our Java bytecode.
+JAVA_OLDEST_WORKING_VER='1.2'
 # SVN_CHECK_JDK sets $JAVA_CLASSPATH
-SVN_CHECK_JDK
+SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_PATH_PROG(PERL, perl, none)
 

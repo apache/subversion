@@ -92,16 +92,6 @@ Approved changes:
     Votes:
       +1: dionisos, zhakov, malcolm, glasser, rooneg, sussman
 
-  * r21765, r21767, r21814
-    JavaHL: Compile Java bytecode for the target platform of a Java
-    1.2 JVM.
-    Justification:
-      The default target platform release number is typically equal to
-      the compiling JDK version, which is likely much higher than our
-      supported minimum runtime (Java 1.2).
-    Votes:
-      +1: dlr, jerenkrantz
-
   * r21770
     JavaHL: Fix a JVM crash when the empty string is passed to the
     checkout() method.
