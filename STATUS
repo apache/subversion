@@ -84,14 +84,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r21717
-    Regression test for issue #2533, part of the r21566 group (but was 
-    forgotten).
-    Justification:
-      Test for an issue fixed (if backported) in 1.4.x
-    Votes:
-      +1: lgo, glasser
-
   * r21930
     Add Neon 0.26.0 and 0.26.1 to NEON_ALLOWED_LIST.
     Justification:
