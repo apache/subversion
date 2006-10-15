@@ -203,3 +203,10 @@ Approved changes:
     Votes:
       +1: glasser
 
+  * r21930
+    Add Neon 0.26.0 and 0.26.1 to NEON_ALLOWED_LIST.
+    Justification:
+      Allow use of Neon 0.26.x with --disable-neon-version-check, since we
+      have already backported support for it.
+    Votes:
+      +1: maxb
