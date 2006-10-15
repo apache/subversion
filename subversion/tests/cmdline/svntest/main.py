@@ -546,6 +546,19 @@ def create_python_hook_script (hook_path, hook_script_code):
     os.chmod (hook_path, 0755)
 
 
+def compare_unordered_output(expected, actual):
+  """Compare lists of output lines for equality disregarding the
+     order of the lines"""
+  if len(actual) != len(expected):
+    raise Failure("Length of expected output not equal to actual length")
+  for aline in actual:
+    try:
+      i = expected.index(aline)
+      expected.pop(i)
+    except ValueError:
+      raise Failure("Expected output does not match actual output")
+
+
 ######################################################################
 # Sandbox handling
 
