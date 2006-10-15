@@ -182,16 +182,6 @@ Approved changes:
     Votes:
       +1: lgo, glasser
 
-  * r21578, r21585, r21586, r21587, r21588
-    Adds a notes/svnsync.txt file.
-    Justification:
-      We should be shipping the only real documentation of svnsync
-      (notes/svnsync.txt).
-    Notes:
-      I don't have svnmerge.py set up or I'd do this myself.
-    Votes:
-      +1: glasser
-
   * r21930
     Add Neon 0.26.0 and 0.26.1 to NEON_ALLOWED_LIST.
     Justification:

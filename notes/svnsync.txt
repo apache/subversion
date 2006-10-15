@@ -1,0 +1,146 @@
+                           ==== What Is It? ====
+
+svnsync is a tool for creating and maintaining read-only mirrors of
+subversion repositories.  It works by replaying commits that occurred
+in one repository and committing it into another.
+
+                           ==== Basic Setup ====
+
+First, you need to create your destination repository:
+
+$ svnadmin create dest
+
+Because svnsync uses revprops to keep track of bookkeeping information
+(and because it copies revprops from the source to the destination)
+it needs to be able to change revprops on your destination repository.
+To do this you'll need to set up a pre-revprop-change hook script that
+lets the user you'll run svnsync as make arbitrary propchanges.
+
+$ cat <<'EOF' > dest/hooks/pre-revprop-change
+#!/bin/sh
+USER="$3"
+
+if [ "$USER" = "svnsync" ]; then exit 0; fi
+
+echo "Only the svnsync user can change revprops" >&2
+exit 1
+EOF
+$ chmod +x dest/hooks/pre-revprop-change
+
+$ svnsync init --username svnsync file://`pwd`/dest \
+                                  http://svn.example.org/source/repos
+Copied properties for revision 0
+$
+
+Note that the arguments to 'svnsync init' are two arbitrary repository
+URLs.  The first is the destination, which must be empty, and the second
+is the source.
+
+Now you can just run the 'svnsync sync' command to synchronize pending
+revisions.  This will copy any revisions that exist in the source repos
+but don't exist in the destination repos.
+
+$ svnsync sync file://`pwd`/dest
+Committed revision 1.
+Copied properties for revision 1.
+Committed revision 2.
+Copied properties for revision 2.
+Committed revision 3.
+Copied properties for revision 3.
+...
+
+                              ==== Locks ====
+
+If you kill a sync while it's occurring there's a chance that it might
+leave the repository "locked".  svnsync ensures that only one svnsync
+process is copying data into a given destination repository at a time
+by creating a svn:sync-lock revprop on revision zero of the destination
+repository.  If that property is there, but you're sure no svnsync is
+actually running, you can unlock the repository by deleting that revprop.
+
+$ svn pdel --revprop -r 0 svn:sync-lock file://`pwd`/dest
+
+                               ==== FAQ ====
+
+Q: So what can I do with this thing anyway?
+
+A: Well, anything that's read-only.  As long as you don't commit changes
+   to the destination repository you're all set.  This means destination
+   repositories are good for providing offsite mirrors, read-only mirrors,
+   etc.
+
+Q: What if I want to check out from a mirror, but commit to the master?
+
+A: That's possible, but requires some gymnastics.  You see, each repository
+   has its own UUID, which is stored in the working copy, so if you check
+   out from the mirror, and then do a 'svn switch --relocate' to point to
+   the master it'll error out.  To make this work you need to make sure that
+   the mirrors have the same UUID as the master.  You can set a repository
+   UUID via the following technique:
+
+$ cat - <<EOF | svnadmin load --force-uuid dest
+SVN-fs-dump-format-version: 2
+
+UUID: d48dd586-eb1d-0410-b581-e6e13afcedeb
+EOF
+
+   Once both the mirror and master repositories have the same UUID you can
+   safely check out from the mirror and commit to the master, all you have
+   to do is do a 'svn switch --relocate' to point your working copy to the
+   master before a commit.  Note that you should NEVER commit changes to a
+   mirror other than via svnsync, so to avoid accidentally doing so you may
+   want to add a pre-commit hook script that disallows commits from users
+   other than the one you run svnsync as.
+
+Q: What version of Subversion is required to use svnsync?
+
+A: The source repository must be running Subversion 1.4 or newer, since
+   svnsync uses a new RA layer command that was added in 1.4.  On the other
+   hand, the destination repository can be any version of Subversion, since
+   all svnsync is doing is committing changes using the regular RA APIs.
+
+Q: Do I need to run svnsync on the same machine as one of the
+   repositories?
+
+A: While you do need direct access to the destination repository to
+   set up a pre-revprop-change hook script, after that point svnsync
+   communicates with both repositories through the same "repository
+   access" layer that svn uses to connect to remote repositories. So
+   svnsync does not have to be run on the same machine as either
+   repository; it can communicate with both repositories over any of
+   Subversion's RA protocols (svn://, svn+ssh://, http://, https://,
+   or file:///).  In fact, you don't need any special permissions on
+   the source repository at all.
+
+Q: How does svnsync deal with parts of the master repository that I'm not
+   authorized to read?
+
+A: svnsync will simply not copy parts of the repository that you
+   cannot read; files copied from "private" parts of the repository
+   into "public" parts will look as if they have been added from
+   scratch.  If a revision only modifies files that you cannot read,
+   it will appear to be empty.  (Just like with "svn log", log
+   messages from revisions you cannot read part of will be empty.)
+
+Q: Can I mirror a subdirectory of a master repository?
+
+A: While the underlying RA layer command that svnsync relies on does
+   support that, svnsync itself does not currently. (Patches welcome!)
+   If you need this ability right now, you may want to look into SVK
+   (http://svk.bestpractical.com/).
+
+Q: What happens when I change a revprop on the master server?
+
+A: That depends, did you change it on a revision that had already been
+   mirrored or one that's still waiting to be mirrored.  If the revision
+   hasn't been mirrored yet, the new revprop will just get copied across
+   normally when the next sync happens.  If not, then you've got a small
+   problem.  You see, since revprops aren't versioned, there's no way to
+   detect (via the Subversion RA APIs anyway) that it's been changed, so
+   the next time you run a sync svnsync has no way to tell that it has
+   changed.  There is a way for you to build your own solution though,
+   just use the 'svnsync copy-revprops' command.  The usual technique is
+   either to put an explicit call to it in your master repository's
+   post-revprop-change script, or to have the post-revprop-change script
+   record the fact that a change occurred, and then later on have some
+   job look through the list of changes and copy them over for you.
