@@ -68,12 +68,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r21720, r21724, r21726
-    Fix issue #2618: 'Checksum mismatch' error when receiving update for
-    locally replaced-with-history file.
-    Justification:
-      Breaks working copy update; includes tests.
-    Branch: 1.4.x-issue-2618
-    Votes:
-      +1: dionisos, zhakov, malcolm, glasser, rooneg, sussman
-
