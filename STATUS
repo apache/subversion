@@ -36,6 +36,8 @@ Candidate changes:
     produce a "conflicted" merge notification.  'svn merge --dry-run'
     needs to be smarter about accessing the working copy (see issue
     #2584).
+    Notes:
+      Conflicts, needs a backport branch.
     Votes:
       +1: dlr
 
