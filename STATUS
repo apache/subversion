@@ -92,14 +92,6 @@ Approved changes:
     Votes:
       +1: dionisos, zhakov, malcolm, glasser, rooneg, sussman
 
-  * r21770
-    JavaHL: Fix a JVM crash when the empty string is passed to the
-    checkout() method.
-    Justification:
-      SEGVs and JVM crashes are bad.
-    Votes:
-      +1: dlr, jerenkrantz
-
   * r21904, r21919
     Stop requiring write access to a working copy when running
     'svn status --show-updates'
