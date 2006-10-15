@@ -23,15 +23,14 @@ Status of 1.4.1:
 
 Candidate changes:
 
-  * r21384, r21047
+  * r21384, r21047, r19698
     A merge which results in a conflicted file in your WC should
     produce a "conflicted" merge notification.  'svn merge --dry-run'
     needs to be smarter about accessing the working copy (see issue
     #2584).
-    Notes:
-      Conflicts, needs a backport branch.
+    Branch: 1.4.x-r21047
     Votes:
-      +1: dlr
+      +1: dlr (not 19698)
 
   * r21531, r21848, r21934
     Allow HTTP auth protocols to be configurable by way of a
