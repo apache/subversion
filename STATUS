@@ -65,6 +65,8 @@ Candidate changes:
     Branch: 1.4.x-r21738 (-r21762:HEAD)
     Votes:
       +1: malcolm
+      -0: djames (This fix breaks the test suite on Windows.
+                  See http://svn.haxx.se/dev/archive-2006-10/0394.shtml)
 
   * r21897
     Add validation of the HEAD argument passed to 'svnmerge.py init'.
