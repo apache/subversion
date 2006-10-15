@@ -11,7 +11,7 @@ Blanket commit access:
 
           jimb   Jim Blandy <jimb@red-bean.com>
        sussman   Ben Collins-Sussman <sussman@red-bean.com>
-        kfogel   Karl Fogel <kfogel@collab.net>
+        kfogel   Karl Fogel <kfogel@red-bean.com>
         gstein   Greg Stein <gstein@lyra.org>
          brane   Branko Čibej <brane@xbc.nu>
            joe   Joe Orton <joe@light.plus.com>
@@ -35,7 +35,7 @@ Blanket commit access:
            jaa   Jani Averbach <jaa@iki.fi>
     julianfoad   Julian Foad <julianfoad@btopenworld.com>
      ringstrom   Tobias Ringström <tobias@ringstrom.mine.nu>
-       jpieper   Josh Pieper <jpieper@andrew.cmu.edu>
+       jpieper   Josh Pieper <jjp@pobox.com>
   jszakmeister   John Szakmeister <john@szakmeister.net>
       dionisos   Erik Hülsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
@@ -43,11 +43,12 @@ Blanket commit access:
           maxb   Max Bowsher <maxb1@ukf.net>
       lundblad   Peter N. Lundblad <peter@famlundblad.se>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
-     danderson   David Anderson <david.anderson@calixo.net>
+     danderson   David Anderson <david.anderson@natulte.net>
         zhakov   Ivan Zhakov <chemodax@gmail.com>
         djames   David James <djames@collab.net>
        malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
         pburba   Paul Burba <PaulB@softlanding.com>
+       glasser   David Glasser <glasser@mit.edu>
 
 Commit access for specific areas:
 
@@ -58,10 +59,12 @@ Commit access for specific areas:
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
+    jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
 
   Packages:
 
            dws   David Summers <david@summersoft.fay.ar.us>  (RPMs)
+       ebswift   Troy Simpson <troy@ebswift.com>             (windows-innosetup)
 
   Miscellaneous:
 
@@ -93,13 +96,17 @@ Commit access for specific areas:
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
        mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
+           lgo   Lieven Govaerts <lgo@mobsol.be>             (tests)
+       madanus   Madan U S <madan@collab.net>                (svnmerge)
+          wein   Mathias Weinert <wein@mccw.de>              (mailer)
+        bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
 
   Translation of message files:
 
        niqueco   Nicolás Lichtmaier <nick@reloco.com.ar>     (po: es)
         luebbe   Lübbe Onken <luebbe@tigris.org>             (po: de)
-      oyvindmo   Øyvind Møll <svn@moll.no>                   (doc, po: nb)
-      sunny256   Øyvind A. Holm <sunny@sunbase.org>          (doc, po: nb)
+      oyvindmo   Øyvind Møll <svn@moll.no>                   (po: nb)
+      sunny256   Øyvind A. Holm <sunny@sunbase.org>          (po: nb)
         jzgoda   Jaroslaw Zgoda <jzgoda@o2.pl>               (po: pl)
       karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
         plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
@@ -143,7 +150,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
 
 Committers who have asked to be listed as dormant:
 
-        bdenny   Brian Denny <brian@briandenny.net>
+        bdenny   Brian Estlin <brian@implementality.com>
       rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
 
 ## Local Variables:

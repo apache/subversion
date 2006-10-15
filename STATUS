@@ -192,17 +192,6 @@ Approved changes:
     Votes:
       +1: glasser
 
-  * r19649, r19664, r19707, r19885, r19899, r20114, r20517, r20618,
-    r20944, r21121, r21250, r21378, r21836, r21923
-    Updates to COMMITTERS.
-    Justification:
-      We should be shipping up-to-date contact information with
-      our releases.
-    Notes:
-      I don't have svnmerge.py set up or I'd do this myself.
-    Votes:
-      +1: glasser
-
   * r21930
     Add Neon 0.26.0 and 0.26.1 to NEON_ALLOWED_LIST.
     Justification:
