@@ -154,17 +154,6 @@ Approved changes:
     Votes:
       +1: lgo, glasser
 
-  * r21657, r21662
-    Fix issue #2602, making 'svn co URL@{DATE}' work.
-    Justification:
-      Brokenness.
-    Notes:
-      Revision should merge fine, but the regression test will get
-      skipped (because there's no checkout_tests.py).  Test was
-      introduced in r21275.
-    Votes:
-      +1: cmpilato, dlr, glasser
-
   * r20350, r20351, r20397, r20398, r21497, r21611, r21612
     Regression tests:
     - Test to validate that conflict markers now match the file's eol style
