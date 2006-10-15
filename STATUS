@@ -96,7 +96,7 @@ Candidate changes:
       the compiling JDK version, which is likely much higher than our
       supported minimum runtime (Java 1.2).
     Votes:
-      +1: dlr
+      +1: dlr, jerenkrantz
 
   * r21770
     JavaHL: Fix a JVM crash when the empty string is passed to the
@@ -104,7 +104,7 @@ Candidate changes:
     Justification:
       SEGVs and JVM crashes are bad.
     Votes:
-      +1: dlr
+      +1: dlr, jerenkrantz
 
   * r21897
     Add validation of the HEAD argument passed to 'svnmerge.py init'.
