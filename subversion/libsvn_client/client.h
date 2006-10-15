@@ -198,6 +198,10 @@ typedef struct
   const char *base_dir;
   svn_wc_adm_access_t *base_access;
 
+  /* When true, makes sure temporary files are created
+     outside the working copy. */
+  svn_boolean_t read_only_wc;
+
   /* An array of svn_client_commit_item2_t * structures, present only
      during working copy commits. */
   apr_array_header_t *commit_items;

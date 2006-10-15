@@ -92,14 +92,6 @@ Approved changes:
     Votes:
       +1: dionisos, zhakov, malcolm, glasser, rooneg, sussman
 
-  * r21904, r21919
-    Stop requiring write access to a working copy when running
-    'svn status --show-updates'
-    Justification:
-      Small change. Status is a read-only operation by design.
-    Votes:
-      +1: dionisos, sussman, malcolm
-
   * r21249, r21251, r21253, r21254
     Fix a bug in the svn_fs_closest_copy() implementations that caused
     confusing errors when tracing certain node locations.  See issue #2600.

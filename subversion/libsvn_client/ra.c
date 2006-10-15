@@ -57,7 +57,7 @@ open_tmp_file(apr_file_t **fp,
   svn_client__callback_baton_t *cb = callback_baton;
   const char *truepath;
 
-  if (cb->base_dir)
+  if (cb->base_dir && ! cb->read_only_wc)
     truepath = apr_pstrdup(pool, cb->base_dir);
   else
     SVN_ERR(svn_io_temp_dir(&truepath, pool));
@@ -284,6 +284,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
 
   cb->base_dir = base_dir;
   cb->base_access = base_access;
+  cb->read_only_wc = read_only_wc;
   cb->pool = pool;
   cb->commit_items = commit_items;
   cb->ctx = ctx;
