@@ -68,19 +68,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r21471
-    Dramatically speed up WC to WC copy post commit processing by
-    eliminating O(n^2) .svn/entries writing behaviour.
-    Justification:
-      Factor 10 speedups (see log message).
-    Note:
-      On trunk, this issue is solved with better memory bounding
-      properties in r21616,r21619.
-    Branch:
-      1.4.x-r21471
-    Votes:
-      +1: dionisos, danderson, rooneg, malcolm
-
   * r21720, r21724, r21726
     Fix issue #2618: 'Checksum mismatch' error when receiving update for
     locally replaced-with-history file.
