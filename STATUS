@@ -23,14 +23,6 @@ Status of 1.4.1:
 
 Candidate changes:
 
-  * r21249, r21251, r21253, r21254
-    Fix a bug in the svn_fs_closest_copy() implementations that caused
-    confusing errors when tracing certain node locations.  See issue #2600.
-    Notes:
-      The bugfix is in r21254 -- all the others just add regression tests.
-    Votes:
-      +1: cmpilato, glasser
-
   * r21384, r21047
     A merge which results in a conflicted file in your WC should
     produce a "conflicted" merge notification.  'svn merge --dry-run'
@@ -141,3 +133,12 @@ Approved changes:
       Small change. Status is a read-only operation by design.
     Votes:
       +1: dionisos, sussman, malcolm
+
+  * r21249, r21251, r21253, r21254
+    Fix a bug in the svn_fs_closest_copy() implementations that caused
+    confusing errors when tracing certain node locations.  See issue #2600.
+    Notes:
+      The bugfix is in r21254 -- all the others just add regression tests.
+    Votes:
+      +1: cmpilato, glasser, malcolm, sussman
+
