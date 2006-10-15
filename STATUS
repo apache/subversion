@@ -19,7 +19,7 @@ Candidate changes:
     Notes:
       The bugfix is in r21254 -- all the others just add regression tests.
     Votes:
-      +1: cmpilato
+      +1: cmpilato, glasser
 
   * r21384, r21047
     A merge which results in a conflicted file in your WC should
@@ -65,35 +65,6 @@ Candidate changes:
       +1: dlr, djh
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
-  * r21566, r21638, r21641, r21669, r21685, r21696, r21705
-    Fix issue #2533, making 'svn status -u' show remotely changed
-    properties on the root of a working copy.
-    Justification:
-      A user reported bug with a straightforward fix, plus regression
-      test.
-    Branch: 1.4.x-issue-2533
-    Votes:
-      +1: dlr, pburba
-
-  * r21717
-    Regression test for issue #2533, part of the r21566 group (but was 
-    forgotten).
-    Justification:
-      Test for an issue fixed (if backported) in 1.4.x
-    Votes:
-      +1: lgo
-
-  * r21657, r21662
-    Fix issue #2602, making 'svn co URL@{DATE}' work.
-    Justification:
-      Brokenness.
-    Notes:
-      Revision should merge fine, but the regression test will get
-      skipped (because there's no checkout_tests.py).  Test was
-      introduced in r21275.
-    Votes:
-      +1: cmpilato, dlr
-
   * r21720, r21724, r21726
     Fix issue #2618: 'Checksum mismatch' error when receiving update for
     locally replaced-with-history file.
@@ -135,23 +106,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r20350, r20351, r20397, r20398, r21497, r21611, r21612
-    Regression tests:
-    - Test to validate that conflict markers now match the file's eol style
-    - Test to validate that svn merge ignores whitespace when requested
-      (-x -w option).
-    - Test to validate that svn merge ignores eolstyle when requested
-      (-x --ignore-eol-style option). 
-    - Test that a copy of a directory (by URL) to a pre-existing
-      directory (within the WC) copies the source *under* the target
-      directory
-    - Test if a repository with spaces in the name is accessible.
-    Justification:
-      Regression tests for issue added in 1.4.x or before.
-    Branch: 1.4.x-r20350
-    Votes:
-      +1: lgo
-
   * r21897
     Add validation of the HEAD argument passed to 'svnmerge.py init'.
     Justification:
@@ -169,3 +123,71 @@ Candidate changes:
       +1: dionisos
 
 Approved changes:
+
+  * r21566, r21638, r21641, r21669, r21685, r21696, r21705
+    Fix issue #2533, making 'svn status -u' show remotely changed
+    properties on the root of a working copy.
+    Justification:
+      A user reported bug with a straightforward fix, plus regression
+      test.
+    Branch: 1.4.x-issue-2533
+    Votes:
+      +1: dlr, pburba, glasser
+
+  * r21717
+    Regression test for issue #2533, part of the r21566 group (but was 
+    forgotten).
+    Justification:
+      Test for an issue fixed (if backported) in 1.4.x
+    Votes:
+      +1: lgo, glasser
+
+  * r21657, r21662
+    Fix issue #2602, making 'svn co URL@{DATE}' work.
+    Justification:
+      Brokenness.
+    Notes:
+      Revision should merge fine, but the regression test will get
+      skipped (because there's no checkout_tests.py).  Test was
+      introduced in r21275.
+    Votes:
+      +1: cmpilato, dlr, glasser
+
+  * r20350, r20351, r20397, r20398, r21497, r21611, r21612
+    Regression tests:
+    - Test to validate that conflict markers now match the file's eol style
+    - Test to validate that svn merge ignores whitespace when requested
+      (-x -w option).
+    - Test to validate that svn merge ignores eolstyle when requested
+      (-x --ignore-eol-style option). 
+    - Test that a copy of a directory (by URL) to a pre-existing
+      directory (within the WC) copies the source *under* the target
+      directory
+    - Test if a repository with spaces in the name is accessible.
+    Justification:
+      Regression tests for issue added in 1.4.x or before.
+    Branch: 1.4.x-r20350
+    Votes:
+      +1: lgo, glasser
+
+  * r21578, r21585, r21586, r21587, r21588
+    Adds a notes/svnsync.txt file.
+    Justification:
+      We should be shipping the only real documentation of svnsync
+      (notes/svnsync.txt).
+    Notes:
+      I don't have svnmerge.py set up or I'd do this myself.
+    Votes:
+      +1: glasser
+
+  * r19649, r19664, r19707, r19885, r19899, r20114, r20517, r20618,
+    r20944, r21121, r21250, r21378, r21836, r21923
+    Updates to COMMITTERS.
+    Justification:
+      We should be shipping up-to-date contact information with
+      our releases.
+    Notes:
+      I don't have svnmerge.py set up or I'd do this myself.
+    Votes:
+      +1: glasser
+
