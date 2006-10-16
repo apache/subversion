@@ -14,7 +14,7 @@ $ contrib/client-side/svnmerge.py merge -r 21000-21006,21008,21876
 $ svn diff
 $ svn commit
 
-Do no run the svnmerge.py N separate times for each revision to merge
+Do not run svnmerge.py N separate times for each revision to merge
 over, since svnmerge.py will not merge into a WC with uncommitted
 changes.
 
