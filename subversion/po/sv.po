@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-10-16 08:57+0200\n"
-"PO-Revision-Date: 2006-06-07 13:27+0200\n"
+"PO-Revision-Date: 2006-10-16 09:15+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -447,9 +447,8 @@ msgid "Unsupported FS format"
 msgstr "Formatet på filsystemet stöds ej"
 
 #: include/svn_error_codes.h:593
-#, fuzzy
 msgid "Representation is being written"
-msgstr "Representationen är ej av typen \"delta\""
+msgstr "Representationen håller på att skrivas"
 
 #: include/svn_error_codes.h:599
 msgid "The repository is locked, perhaps for db recovery"
@@ -566,9 +565,8 @@ msgid "Unable to extract data from response header"
 msgstr "Kunde inte läsa data från responshuvud"
 
 #: include/svn_error_codes.h:732
-#, fuzzy
 msgid "Repository has been moved"
-msgstr "Arkivet saknar unik identifierare (UUID)"
+msgstr "Arkivet har flyttats"
 
 #: include/svn_error_codes.h:738 include/svn_error_codes.h:767
 msgid "Couldn't find a repository"
@@ -1350,9 +1348,9 @@ msgid "'%s' is a wcprop, thus not accessible to clients"
 msgstr "'%s' är en wcprop; ej tillgänglig för klienter"
 
 #: libsvn_client/prop_commands.c:212
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' is not a regular property"
-msgstr "Egenskapen \"%s\" är en postegenskap"
+msgstr "Egenskapen \"%s\" är inte en vanlig egenskap"
 
 #: libsvn_client/prop_commands.c:312
 #, c-format
@@ -1365,14 +1363,14 @@ msgid "Bad property name: '%s'"
 msgstr "Felaktigt egenskapsnamn: \"%s\""
 
 #: libsvn_client/prop_commands.c:331
-#, fuzzy, c-format
+#, c-format
 msgid "Setting property on non-local target '%s' needs a base revision"
-msgstr "Att sätta egenskap på målet \"%s\" som inte är lokalt stöds inte ännu"
+msgstr "Att sätta en egenskap på målet \"%s\" som inte är lokalt kräver en basrevision"
 
 #: libsvn_client/prop_commands.c:337
-#, fuzzy, c-format
+#, c-format
 msgid "Setting property recursively on non-local target '%s' is not supported"
-msgstr "Att sätta egenskap på målet \"%s\" som inte är lokalt stöds inte ännu"
+msgstr "Att sätta en egenskap rekursivt på målet \"%s\" som inte är lokalt stöds inte"
 
 #: libsvn_client/prop_commands.c:435
 msgid "Value will not be set unless forced"
@@ -2258,24 +2256,24 @@ msgid "Corrupt lockfile for path '%s' in filesystem '%s'"
 msgstr "Trasig låsfil för säkvägen \"%s\" i filsystemet \"%s\""
 
 #: libsvn_fs_fs/fs.c:89
-#, fuzzy, c-format
+#, c-format
 msgid "Can't fetch FSFS shared data"
-msgstr "Kan inte hämta FSFS-lås"
+msgstr "Kan inte hämta delad data i FSFS"
 
 #: libsvn_fs_fs/fs.c:105
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create FSFS write-lock mutex"
-msgstr "Kan inte skapa FSFS-lås"
+msgstr "Kan inte skapa skrivlås+mutex i FSFS"
 
 #: libsvn_fs_fs/fs.c:113
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create FSFS txn list mutex"
-msgstr "Kan inte skapa FSFS-lås"
+msgstr "Kan inte skapa mutex för transaktionslista i FSFS"
 
 #: libsvn_fs_fs/fs.c:119
-#, fuzzy, c-format
+#, c-format
 msgid "Can't store FSFS shared data"
-msgstr "Kan inte lagra FSFS-lås"
+msgstr "Kan inte lagra delad data i FSFS"
 
 #: libsvn_fs_fs/fs.c:345
 msgid "Module for working with a plain file (FSFS) repository."
@@ -2287,24 +2285,24 @@ msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "Versionen för FS-laddaren (%d) stöds ej för fsfs"
 
 #: libsvn_fs_fs/fs_fs.c:340
-#, fuzzy, c-format
+#, c-format
 msgid "Can't grab FSFS txn list mutex"
-msgstr "Kan inte allokera mutex för filsystemsbiblioteket"
+msgstr "Kan inte låsa mutex för transaktionslistan i FSFS"
 
 #: libsvn_fs_fs/fs_fs.c:348
-#, fuzzy, c-format
+#, c-format
 msgid "Can't ungrab FSFS txn list mutex"
-msgstr "Kan inte släppa lås för FS"
+msgstr "Kan inte låsa upp mutex för transaktionslistan i FSFS"
 
 #: libsvn_fs_fs/fs_fs.c:374
-#, fuzzy, c-format
+#, c-format
 msgid "Can't unlock unknown transaction '%s'"
-msgstr "Kan inte låsa upp lås för teckenkonvertering"
+msgstr "Kan inte låsa upp okänd transaktion \"%s\""
 
 #: libsvn_fs_fs/fs_fs.c:378
-#, fuzzy, c-format
+#, c-format
 msgid "Can't unlock nonlocked transaction '%s'"
-msgstr "Kan inte låsa upp lås för teckenkonvertering"
+msgstr "Kan inte låsa upp olåst transaktion \"%s\""
 
 #: libsvn_fs_fs/fs_fs.c:385
 #, c-format
@@ -2665,9 +2663,9 @@ msgid "Incomplete lock data returned"
 msgstr "Ofullständig låsdata erhölls"
 
 #: libsvn_ra_dav/fetch.c:1656
-#, fuzzy, c-format
+#, c-format
 msgid "Got unrecognized encoding '%s'"
-msgstr "Okänd nodtyp: \"%s\""
+msgstr "Okänd kodning \"%s\""
 
 #: libsvn_ra_dav/fetch.c:1757 libsvn_ra_dav/fetch.c:1765
 #: libsvn_ra_dav/fetch.c:1769 libsvn_ra_serf/locks.c:512
