@@ -72,7 +72,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.2.x\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-23 13:50-0500\n"
-"PO-Revision-Date: 2006-02-16 10:13+0100\n"
+"PO-Revision-Date: 2006-10-16 14:10+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -143,7 +143,7 @@ msgstr "Eindeutige Namen ausgegangen"
 
 #: include/svn_error_codes.h:222
 msgid "Framing error in pipe protocol"
-msgstr "Rahmenfehler im 'Pipe' Protokoll"
+msgstr "Rahmenfehler im Pipe-Protokoll"
 
 #: include/svn_error_codes.h:227
 msgid "Read error in pipe"
@@ -410,7 +410,7 @@ msgstr ""
 
 #: include/svn_error_codes.h:502
 msgid "Tried to change an immutable representation"
-msgstr "Versuch, eine *nicht-veränderliche* Darstellung zu ändern"
+msgstr "Versuchte, eine nicht-veränderliche Darstellung zu ändern"
 
 #: include/svn_error_codes.h:506
 msgid "Malformed skeleton data"
@@ -613,7 +613,7 @@ msgstr "Unbekanntes svn Protokollkommando"
 
 #: include/svn_error_codes.h:745
 msgid "Network connection closed unexpectedly"
-msgstr "Netzwerkverbindung wurde unerwartet geschlossen."
+msgstr "Netzwerkverbindung wurde unerwartet geschlossen"
 
 #: include/svn_error_codes.h:749
 msgid "Network read/write error"
@@ -657,32 +657,31 @@ msgstr "Eintrag ist nicht schreibbar"
 
 #: include/svn_error_codes.h:812
 msgid "Svndiff data has invalid header"
-msgstr "Svndiff Daten enthalten ungültigen Kopf"
+msgstr "Svndiff-Daten enthalten ungültigen Kopf"
 
 #: include/svn_error_codes.h:816
 msgid "Svndiff data contains corrupt window"
-msgstr "Svndiff Daten enthalten defektes Fenster"
+msgstr "Svndiff-Daten enthalten defektes Fenster"
 
 #: include/svn_error_codes.h:820
 msgid "Svndiff data contains backward-sliding source view"
-msgstr "Svndiff Daten enthalten rückwärts gleitenden Blick auf Quellen"
+msgstr "Svndiff-Daten enthalten rückwärts gleitenden Blick auf Quellen"
 
 #: include/svn_error_codes.h:824
 msgid "Svndiff data contains invalid instruction"
-msgstr "Svndiff Daten enthalten ungültige Anweisung"
+msgstr "Svndiff-Daten enthalten ungültige Anweisung"
 
 #: include/svn_error_codes.h:828
 msgid "Svndiff data ends unexpectedly"
-msgstr "Svndiff Daten enden unerwartet"
+msgstr "Svndiff-Daten enden unerwartet"
 
 #: include/svn_error_codes.h:832
 msgid "Svndiff compressed data is invalid"
-msgstr "Komprimierte svndiff Daten sind ungültig"
+msgstr "Komprimierte svndiff-Daten sind ungültig"
 
 #: include/svn_error_codes.h:838
-#, fuzzy
 msgid "Diff data source modified unexpectedly"
-msgstr "Svndiff Daten enden unerwartet"
+msgstr "Diff-Datenquellen wurden unerwarteterweise verändert"
 
 #: include/svn_error_codes.h:844
 msgid "Apache has no path to an SVN filesystem"
@@ -785,7 +784,7 @@ msgstr "Inkorrekte Parameter übergeben"
 #: include/svn_error_codes.h:948
 msgid "Tried a versioning operation on an unversioned resource"
 msgstr ""
-"Versuch, eine Versionsoperation auf nicht versionierter Ressource auszuführen"
+"Versuchte, eine Versionsoperation auf nicht versionierter Ressource auszuführen"
 
 #: include/svn_error_codes.h:952
 msgid "Test failed"
@@ -1151,7 +1150,7 @@ msgstr "Pfad '%s' wurde in Revision %ld nicht gefunden"
 #: libsvn_client/copy.c:750
 #, c-format
 msgid "Path '%s' not found in head revision"
-msgstr "Pfad '%s' wurde in der HEAD Revision nicht gefunden"
+msgstr "Pfad '%s' wurde in der HEAD-Revision nicht gefunden"
 
 #: libsvn_client/copy.c:786
 #, c-format
@@ -1490,14 +1489,12 @@ msgid "Unrecognized revision type requested for '%s'"
 msgstr "Unbekannter Revisionstyp für '%s' angefragt"
 
 #: libsvn_delta/svndiff.c:144
-#, fuzzy
 msgid "Compression of svndiff data failed"
-msgstr "Kompression der svndiff Daten fehlgeschlagen"
+msgstr "Kompression der svndiff-Daten fehlgeschlagen"
 
 #: libsvn_delta/svndiff.c:407
-#, fuzzy
 msgid "Decompression of svndiff data failed"
-msgstr "Dekompression der svndiff Daten fehlgeschlagen"
+msgstr "Dekompression der svndiff-Daten fehlgeschlagen"
 
 #: libsvn_delta/svndiff.c:414
 msgid "Size of uncompressed data does not match stored original length"
@@ -1545,20 +1542,20 @@ msgstr "Delta enthält nicht genügend neue Daten"
 
 #: libsvn_delta/svndiff.c:634
 msgid "Svndiff has invalid header"
-msgstr "Svndiff Daten enthalten ungültigen Kopf"
+msgstr "Svndiff-Daten enthalten ungültigen Kopf"
 
 #: libsvn_delta/svndiff.c:689 libsvn_delta/svndiff.c:845
 msgid "Svndiff contains corrupt window header"
-msgstr "Svndiff Daten enthalten defektes Fenster"
+msgstr "Svndiff-Daten enthalten defektes Fenster"
 
 #: libsvn_delta/svndiff.c:698
 msgid "Svndiff has backwards-sliding source views"
-msgstr "Svndiff Daten enthalten rückwärts gleitenden Blick auf Quellen"
+msgstr "Svndiff-Daten enthalten rückwärts gleitenden Blick auf Quellen"
 
 #: libsvn_delta/svndiff.c:747 libsvn_delta/svndiff.c:794
 #: libsvn_delta/svndiff.c:867
 msgid "Unexpected end of svndiff input"
-msgstr "Unerwartetes Ende der Svndiff Eingangsdaten"
+msgstr "Unerwartetes Ende der Svndiff-Eingangsdaten"
 
 #: libsvn_diff/diff_file.c:593
 #, c-format
@@ -1699,7 +1696,7 @@ msgstr "lese Kopie"
 
 #: libsvn_fs_base/bdb/nodes-table.c:97
 msgid "allocating new node ID (getting 'next-key')"
-msgstr "Allokiere neue Knoten ID (hole 'next-key')"
+msgstr "Allokiere neue Knoten-ID (hole 'next-key')"
 
 #: libsvn_fs_base/bdb/nodes-table.c:115
 msgid "bumping next node ID key"
@@ -2400,7 +2397,7 @@ msgstr "Lesen eines svndiff-Fensters las über Ende der Darstellung hinaus"
 
 #: libsvn_fs_fs/fs_fs.c:1516
 msgid "svndiff data requested non-existent source"
-msgstr "svndiff Daten verlangten nicht existierende Quelle"
+msgstr "svndiff-Daten verlangten nicht existierende Quelle"
 
 #: libsvn_fs_fs/fs_fs.c:1522
 msgid "svndiff requested position beyond end of stream"
@@ -2516,7 +2513,7 @@ msgstr "Kann 'lock/entries' Hashdatei '%s' nicht zerlegen"
 #: libsvn_fs_fs/lock.c:715 libsvn_fs_fs/lock.c:736
 #, c-format
 msgid "Path '%s' doesn't exist in HEAD revision"
-msgstr "Pfad '%s' existiert nicht in HEAD Revision"
+msgstr "Pfad '%s' existiert nicht in HEAD-Revision"
 
 #: libsvn_fs_fs/lock.c:741
 #, c-format
@@ -2533,7 +2530,7 @@ msgstr ""
 #: libsvn_ra/ra_loader.c:285
 #, c-format
 msgid "Unrecognized URL scheme for '%s'"
-msgstr "Unbekanntes URL Schema für '%s'"
+msgstr "Unbekanntes URL-Schema für '%s'"
 
 #: libsvn_ra/ra_loader.c:336
 #, c-format
@@ -2543,12 +2540,12 @@ msgstr "'%s' ist nicht im selben Projektarchiv wie '%s'"
 #: libsvn_ra/ra_loader.c:707
 #, c-format
 msgid "  - handles '%s' scheme\n"
-msgstr "  - behandelt '%s' Schema\n"
+msgstr "  - behandelt Schema '%s'\n"
 
 #: libsvn_ra/ra_loader.c:793
 #, c-format
 msgid "Unrecognized URL scheme '%s'"
-msgstr "Unbekanntes URL Schema '%s'"
+msgstr "Unbekanntes URL-Schema '%s'"
 
 #: libsvn_ra_dav/commit.c:199
 #, c-format
@@ -2564,7 +2561,7 @@ msgstr ""
 #: libsvn_ra_dav/commit.c:487
 #, c-format
 msgid "Could not create a CHECKOUT request (%s)"
-msgstr "Konnte keine CHECKOUT Anfrage (%s) erzeugen"
+msgstr "Konnte keine CHECKOUT-Anfrage (%s) erzeugen"
 
 #: libsvn_ra_dav/commit.c:574 libsvn_ra_serf/commit.c:375
 #: libsvn_ra_serf/commit.c:436
@@ -2574,7 +2571,7 @@ msgstr "Datei oder Verzeichnis '%s' ist wahrscheinlich veraltet"
 
 #: libsvn_ra_dav/commit.c:582
 msgid "The CHECKOUT response did not contain a 'Location:' header"
-msgstr "Die CHECKOUT Antwort enthielt keinen 'Location:' Kopf"
+msgstr "Die CHECKOUT-Antwort enthielt keinen 'Location:' Kopf"
 
 #: libsvn_ra_dav/commit.c:881
 #, c-format
@@ -3168,7 +3165,7 @@ msgstr "Unmöglich lange Projektarchivbasis vom Server"
 
 #: libsvn_ra_svn/client.c:591
 msgid "Module for accessing a repository using the svn network protocol."
-msgstr "Modul zum Zugriff auf ein Projektarchiv über das svn Netzwerkprotokoll"
+msgstr "Modul zum Zugriff auf ein Projektarchiv über das svn-Netzwerkprotokoll"
 
 #: libsvn_ra_svn/client.c:739
 msgid "Server did not send repository root"
@@ -3320,7 +3317,7 @@ msgstr "Kann nicht aus Verbindung lesen"
 
 #: libsvn_ra_svn/marshal.c:262
 msgid "Connection closed unexpectedly"
-msgstr "Netzwerkverbindung wurde unerwartet geschlossen."
+msgstr "Netzwerkverbindung wurde unerwartet geschlossen"
 
 #: libsvn_ra_svn/marshal.c:506
 msgid "String length larger than maximum"
@@ -3443,7 +3440,7 @@ msgstr "* Ausgegeben Revision %ld.\n"
 #: libsvn_repos/dump.c:1046
 #, c-format
 msgid "* Verified revision %ld.\n"
-msgstr "* Verifiziert Revision %ld.\n"
+msgstr "* Verifizierte Revision %ld.\n"
 
 #: libsvn_repos/fs-wrap.c:57 libsvn_repos/load.c:1211
 msgid "Commit succeeded, but post-commit hook failed"
@@ -3455,8 +3452,8 @@ msgid ""
 "Storage of non-regular property '%s' is disallowed through the repository "
 "interface, and could indicate a bug in your client"
 msgstr ""
-"Das Speichern der speziellen Eigenschaft '%s' wird vom PA verhindert, und "
-"könnte auf einen Bug in Ihrem Client hindeuten"
+"Das Speichern der speziellen Eigenschaft '%s' wird vom Projektarchiv "
+"verhindert und könnte auf einen Bug in Ihrem Client hindeuten"
 
 #: libsvn_repos/fs-wrap.c:296
 #, c-format
@@ -4290,6 +4287,7 @@ msgstr "Fehler beim Ermitteln der Groß-/Kleinschreibung von '%s'"
 
 #: libsvn_subr/opt.c:954
 #, c-format
+# FIXME: Datum ist nicht übersetzbar (Aug  3 2006 statt 3. August 2006)
 msgid ""
 "%s, version %s\n"
 "   compiled %s, %s\n"
@@ -5614,22 +5612,22 @@ msgstr "Prüfsumme: %s\n"
 #: svn/info-cmd.c:371
 #, c-format
 msgid "Conflict Previous Base File: %s\n"
-msgstr "Konflikt vorherige Ausgangsdatei: %s\n"
+msgstr "Konfliktdatei mit vorheriger Ausgangsdatei: %s\n"
 
 #: svn/info-cmd.c:377
 #, c-format
 msgid "Conflict Previous Working File: %s\n"
-msgstr "Konflikt vorherige Arbeitsdatei: %s\n"
+msgstr "Konfliktdatei mit vorheriger Arbeitsdatei: %s\n"
 
 #: svn/info-cmd.c:382
 #, c-format
 msgid "Conflict Current Base File: %s\n"
-msgstr "Konflikt aktuelle Ausgangsdatei: %s\n"
+msgstr "Konfliktdatei mit aktueller Ausgangsdatei: %s\n"
 
 #: svn/info-cmd.c:387
 #, c-format
 msgid "Conflict Properties File: %s\n"
-msgstr "Konflikt Eigenschaftsdatei: %s\n"
+msgstr "Konfliktdatei mit Eigenschaften: %s\n"
 
 #: svn/info-cmd.c:395
 #, c-format
@@ -6937,7 +6935,7 @@ msgstr ""
 "\n"
 "  1. Platziert die Arbeitskopie so um, dass sie eine neue URL im "
 "Projektarchiv\n"
-"     widerspiegelt. Dieses Verhalten ist ähnlich 'svn update' und wird\n"
+"     widerspiegelt. Dieses Verhalten ist ähnlich zu 'svn update' und wird\n"
 "     verwendet, um eine Arbeitskopie auf einen Zweig oder eine Marke im "
 "selben\n"
 "     Projektarchiv umzustellen.\n"
@@ -7821,7 +7819,7 @@ msgstr ""
 "Aufruf: svnadmin recover ARCHIV_PFAD\n"
 "\n"
 "Lässt die Berkeley DB Rettungsprozedur auf einem Projektarchiv laufen.\n"
-"Veranlassen Sie das, falls sie Fehlermeldungen erhalten haben, die Sie\n"
+"Veranlassen Sie das, falls Sie Fehlermeldungen erhalten haben, die Sie\n"
 "dazu auffordern. Die Wiederherstellung erfordert exklusiven Zugriff auf das\n"
 "Projektarchiv. Der Vorgang wird nicht gestartet, falls das Projektarchiv "
 "von\n"
