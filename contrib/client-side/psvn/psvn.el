@@ -2568,13 +2568,19 @@ The string in parentheses is shown in the status line to show the state."
 
 (defun svn-status-next-line (nr-of-lines)
   (interactive "p")
-  (next-line nr-of-lines)
+  (while (progn
+           (next-line nr-of-lines)
+           (and (not (eobp))
+                (not (svn-status-get-line-information)))))
   (when (svn-status-get-line-information)
     (goto-char (+ (svn-point-at-bol) svn-status-default-column))))
 
 (defun svn-status-previous-line (nr-of-lines)
   (interactive "p")
-  (previous-line nr-of-lines)
+  (while (progn
+           (previous-line nr-of-lines)
+           (and (not (bobp))
+                (not (svn-status-get-line-information)))))
   (when (svn-status-get-line-information)
     (goto-char (+ (svn-point-at-bol) svn-status-default-column))))
 
