@@ -3039,13 +3039,20 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-log-view-mode))))
 
 (defun svn-status-version ()
-  "Show the version numbers for the svn command line client and for psvn.el"
+  "Show the version numbers for psvn.el and the svn command line client"
   (interactive)
-  (svn-run nil t 'version "--version")
-  (svn-status-show-process-output 'info t)
-  (with-current-buffer svn-status-last-output-buffer-name
-    (goto-char (point-min))
-    (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision))))
+  (let ((window-conf (current-window-configuration))
+        (version-string))
+    (svn-run nil t 'version "--version")
+    (svn-status-show-process-output 'info t)
+    (with-current-buffer svn-status-last-output-buffer-name
+      (let ((buffer-read-only nil))
+        (goto-char (point-min))
+        (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision)))
+      (setq version-string (buffer-substring-no-properties (point-min) (point-max))))
+    (unless (interactive-p)
+      (set-window-configuration window-conf)
+      version-string)))
 
 (defun svn-status-info ()
   "Run `svn info' on all selected files.
