@@ -65,16 +65,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r21282
-    Delete the notes/old folder so it's not shipped anymore in the release
-    package. The content of the /trunk/notes/old folder was moved to 
-    /developer-resources/obsolete-notes.
-    Justification:
-      Doc change, don't include obsolete docs in release packages.
-    Votes:
-      +0: lgo
-      +1: malcolm
-
   * 21974
     Requre httpd-2.0.46-61.1 or greater to pick up version with APR >= 0.9.7.
     Justification:
