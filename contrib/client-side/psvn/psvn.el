@@ -4361,8 +4361,12 @@ Currently is the output from the svn update command known."
            (beginning-of-line)
            (looking-at "Updated to revision"))
          ;; svn-info contains info from an svn update
-         (let ((file-name (buffer-substring-no-properties (+ 3 (line-beginning-position)) (line-end-position)))
+         (let ((cur-pos (point))
+               (file-name (buffer-substring-no-properties
+                           (progn (beginning-of-line) (re-search-forward " +") (point))
+                           (line-end-position)))
                (pos))
+           (goto-char cur-pos)
            (with-current-buffer svn-status-buffer-name
              (setq pos (svn-status-get-file-name-buffer-position file-name)))
            (when pos
