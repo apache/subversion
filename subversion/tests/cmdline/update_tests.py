@@ -1880,7 +1880,7 @@ test_list = [ None,
               obstructed_update_alters_wc_props,
               update_xml_unsafe_dir,
               checkout_broken_eol,
-              conflict_markers_matching_eol
+              conflict_markers_matching_eol,
               update_wc_with_replaced_file,
              ]
 
