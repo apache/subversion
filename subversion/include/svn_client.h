@@ -1743,7 +1743,7 @@ svn_client_diff_summarize_peg(const char *path,
  * path.
  *
  * If @a record_only is true, the merge info for the revisions which
- * would've been merged are recorded, without the merge actually being
+ * would've been merged is recorded, without the merge actually being
  * performed.
  *
  * If @a dry_run is true, the merge is carried out, and full notification
