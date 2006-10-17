@@ -1961,7 +1961,21 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
 
       if (notify->content_state == svn_wc_notify_state_conflicted)
         {
-          /* ### We might be able to use the entries cache instead. */
+          /* TODO: Determine whether the path is already conflicted. */
+          svn_boolean_t path_already_conflicted = FALSE;
+          if (path_already_conflicted)
+            {
+              /* TODO: Invoke any provided conflict resolution callback.
+              void *conflict_resolver = NULL;
+              if (conflict_resolver)
+                (*conflict_resolver)(notify_b->path, notify_b->pool);
+              */
+            }
+          else
+            {
+              /* Note the path in conflict. */
+              /* ### We might be able to use the entries cache instead. */
+            }
         }
     }
 
