@@ -183,6 +183,17 @@ SVNReposName_cmd(cmd_parms *cmd, void *config, const char *arg1)
 
 
 static const char *
+SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
+{
+  dir_conf_t *conf = config;
+
+  conf->master_uri = apr_pstrdup(cmd->pool, arg1);
+
+  return NULL;
+}
+
+
+static const char *
 SVNIndexXSLT_cmd(cmd_parms *cmd, void *config, const char *arg1)
 {
   dir_conf_t *conf = config;
@@ -556,7 +567,7 @@ merge_xml_in_filter(ap_filter_t *f,
 
 static int proxy_merge_fixup(request_rec *r)
 {
-    dav_svn_dir_conf *conf;
+    dir_conf_t *conf;
 
     conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
@@ -572,7 +583,7 @@ static int proxy_merge_fixup(request_rec *r)
 
         seg = strstr(r->unparsed_uri, conf->root_dir);
         if (seg && (r->method_number == M_MERGE ||
-            strstr(seg, dav_svn_get_special_uri(r)))) {
+            strstr(seg, dav_svn__get_special_uri(r)))) {
             seg += strlen(conf->root_dir);
 
             r->proxyreq = PROXYREQ_PROXY;
@@ -607,7 +618,7 @@ static apr_status_t location_in_filter(ap_filter_t *f,
 {
     request_rec *r = f->r;
     locate_ctx_t *ctx = f->ctx;
-    dav_svn_dir_conf *conf;
+    dir_conf_t *conf;
     apr_status_t rv;
     apr_bucket *bkt;
 
@@ -676,7 +687,7 @@ static apr_status_t location_header_filter(ap_filter_t *f,
                                            apr_bucket_brigade *bb)
 {
     request_rec *r = f->r;
-    dav_svn_dir_conf *conf;
+    dir_conf_t *conf;
 
     conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
 
@@ -707,7 +718,7 @@ static apr_status_t location_body_filter(ap_filter_t *f,
 {
     request_rec *r = f->r;
     locate_ctx_t *ctx = f->ctx;
-    dav_svn_dir_conf *conf;
+    dir_conf_t *conf;
     apr_bucket *bkt;
 
     conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
@@ -803,7 +814,7 @@ static const command_rec cmds[] =
                ACCESS_CONF|RSRC_CONF, "allow GET of SVNParentPath."),
 
   /* per directory/location */
-  AP_INIT_TAKE1("SVNMasterURI", dav_svn_master_uri, NULL, ACCESS_CONF,
+  AP_INIT_TAKE1("SVNMasterURI", SVNMasterURI_cmd, NULL, ACCESS_CONF,
                 "specifies a URI to access a master Subversion repository"),
 
   { NULL }
