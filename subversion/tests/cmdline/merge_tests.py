@@ -1145,7 +1145,7 @@ def merge_similar_unrelated_trees(sbox):
   svntest.actions.run_and_verify_status(apply_path, expected_status)
 
 #----------------------------------------------------------------------
-def merge_one_file_helper(sbox, arg_flav):
+def merge_one_file_helper(sbox, arg_flav, record_only = 0):
   sbox.build()
   wc_dir = sbox.wc_dir
   
@@ -1209,23 +1209,34 @@ def merge_one_file_helper(sbox, arg_flav):
   saved_cwd = os.getcwd()
   try:
     os.chdir(G_path)
+
     # Cannot use run_and_verify_merge with a file target
+    merge_cmd = ['merge']
     if arg_flav == 'r':
-      svntest.actions.run_and_verify_svn(None,
-                                         ['U    rho\n'], [],
-                                         'merge', '-r', '1:2', rho_url)
+      merge_cmd += ['-r', '1:2']
     elif arg_flav == 'c':
-      svntest.actions.run_and_verify_svn(None,
-                                         ['U    rho\n'], [],
-                                         'merge', '-c', '2', rho_url)
+      merge_cmd += ['-c', '2']
     else:
       raise svntest.Failure
 
+    if record_only:
+      expected_output = ['\n']
+      merge_cmd.append('--record-only')
+    else:
+      expected_output = ['U    rho\n']
+    merge_cmd.append(rho_url)
+
+    svntest.actions.run_and_verify_svn(None, expected_output, [], *merge_cmd)
+
     # Inspect rho, make sure it's right.
     rho_text = svntest.tree.get_text('rho')
-    if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
-      print "Unexpected text merging to 'rho' in '" + G_path + "'"
-      raise svntest.Failure
+    if record_only:
+      expected_text = "This is the file 'rho'.\n"
+    else:
+      expected_text = "This is the file 'rho'.\nA new line in rho.\n"
+    if rho_text != expected_text:
+        print "Unexpected text merged to 'rho' in '" + G_path + "'"
+        raise svntest.Failure
   finally:
     os.chdir(saved_cwd)
 
@@ -1239,6 +1250,10 @@ def merge_one_file_using_r(sbox):
 def merge_one_file_using_c(sbox):
   "merge one file (issue #1150) using the -c option"
   merge_one_file_helper(sbox, 'c')
+
+def merge_record_only(sbox):
+  "mark a revision range as merged"
+  merge_one_file_helper(sbox, 'r', 1)
 
 #----------------------------------------------------------------------
 # This is a regression for the enhancement added in issue #785.
@@ -3892,6 +3907,7 @@ test_list = [ None,
               three_way_merge_add_of_existing_binary_file,
               merge_one_file_using_r,
               merge_one_file_using_c,
+              XFail(merge_record_only),
               merge_in_new_file_and_diff,
               merge_skips_obstructions,
               merge_into_missing,
