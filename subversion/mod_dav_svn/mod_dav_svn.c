@@ -18,8 +18,10 @@
  */
 
 #include <apr_strings.h>
+#include <apr_strmatch.h>
 
 #include <httpd.h>
+#include <http_core.h>
 #include <http_config.h>
 #include <http_request.h>
 #include <http_log.h>
@@ -59,12 +61,14 @@ enum conf_flag {
 /* per-dir configuration */
 typedef struct {
   const char *fs_path;               /* path to the SVN FS */
+  const char *master_uri;            /* URI to the master SVN repos */
   const char *repo_name;             /* repository name */
   const char *xslt_uri;              /* XSL transform URI */
   const char *fs_parent_path;        /* path to parent of SVN FS'es  */
   enum conf_flag autoversioning;  /* whether autoversioning is active */
   enum conf_flag do_path_authz;   /* whether GET subrequests are active */
   enum conf_flag list_parentpath; /* whether to allow GET of parentpath */
+  const char *root_dir;              /* our top-level directory */
 } dir_conf_t;
 
 
@@ -137,6 +141,8 @@ create_dir_config(apr_pool_t *p, char *dir)
   /* NOTE: dir==NULL creates the default per-dir config */
   dir_conf_t *conf = apr_pcalloc(p, sizeof(*conf));
 
+  conf->root_dir = dir;
+
   return conf;
 }
 
@@ -151,12 +157,15 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf = apr_pcalloc(p, sizeof(*newconf));
 
   newconf->fs_path = INHERIT_VALUE(parent, child, fs_path);
+  newconf->master_uri = INHERIT_VALUE(parent, child, master_uri);
   newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
   newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
   newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->do_path_authz = INHERIT_VALUE(parent, child, do_path_authz);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
+  /* Prefer our parent's value over our new one - hence the swap. */
+  newconf->root_dir = INHERIT_VALUE(child, parent, root_dir);
 
   return newconf;
 }
@@ -366,6 +375,16 @@ dav_svn__get_repo_name(request_rec *r)
 
 
 const char *
+dav_svn__get_master_uri(request_rec *r)
+{
+  dir_conf_t *conf;
+
+  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+  return conf->master_uri;
+}
+
+
+const char *
 dav_svn__get_xslt_uri(request_rec *r)
 {
   dir_conf_t *conf;
@@ -535,6 +554,212 @@ merge_xml_in_filter(ap_filter_t *f,
 }
 
 
+static int proxy_merge_fixup(request_rec *r)
+{
+    dav_svn_dir_conf *conf;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
+    if (conf->root_dir && conf->master_uri) {
+        const char *seg;
+
+        /* We know we can always safely handle these. */
+        if (r->method_number == M_PROPFIND ||
+            r->method_number == M_GET ||
+            r->method_number == M_OPTIONS) {
+            return OK;
+        }
+
+        seg = strstr(r->unparsed_uri, conf->root_dir);
+        if (seg && (r->method_number == M_MERGE ||
+            strstr(seg, dav_svn_get_special_uri(r)))) {
+            seg += strlen(conf->root_dir);
+
+            r->proxyreq = PROXYREQ_PROXY;
+            r->uri = r->unparsed_uri;
+            r->filename = apr_pstrcat(r->pool, "proxy:", conf->master_uri,
+                                      "/", seg, NULL);
+            r->handler = "proxy-server";
+            ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
+            ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
+            ap_add_input_filter("IncomingRewrite", NULL, r, r->connection);
+        }
+    }
+    return OK;
+}
+
+typedef struct locate_ctx_t
+{
+    const apr_strmatch_pattern *pattern;
+    apr_size_t pattern_len;
+    apr_uri_t uri; 
+    const char *localpath;
+    apr_size_t  localpath_len;
+    const char *remotepath;
+    apr_size_t  remotepath_len;
+} locate_ctx_t;
+
+static apr_status_t location_in_filter(ap_filter_t *f,
+                                       apr_bucket_brigade *bb,
+                                       ap_input_mode_t mode,
+                                       apr_read_type_e block,
+                                       apr_off_t readbytes)
+{
+    request_rec *r = f->r;
+    locate_ctx_t *ctx = f->ctx;
+    dav_svn_dir_conf *conf;
+    apr_status_t rv;
+    apr_bucket *bkt;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
+    if (r->main || !conf->master_uri) {
+        ap_remove_output_filter(f);
+        return ap_get_brigade(f->next, bb, mode, block, readbytes);
+    }
+
+    if (!f->ctx) {
+        const char *full_path;
+        ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
+
+        apr_uri_parse(r->pool, conf->master_uri, &ctx->uri);
+        ctx->remotepath = apr_pstrcat(r->pool, ctx->uri.path, "/", 
+                                      dav_svn_get_special_uri(r), NULL);
+        ctx->remotepath_len = strlen(ctx->remotepath);
+        ctx->localpath = apr_pstrcat(r->pool, conf->root_dir, "/", 
+                                     dav_svn_get_special_uri(r), NULL);
+        ctx->localpath_len = strlen(ctx->localpath);
+        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->localpath, 0);
+        ctx->pattern_len = ctx->localpath_len;
+    }
+
+    rv = ap_get_brigade(f->next, bb, mode, block, readbytes);
+    if (rv) {
+        return rv;
+    }
+
+    bkt = APR_BRIGADE_FIRST(bb);
+    while (bkt != APR_BRIGADE_SENTINEL(bb)) {
+
+        const char *data, *match;
+        apr_size_t len;
+
+        if (APR_BUCKET_IS_METADATA(bkt)) {
+            bkt = APR_BUCKET_NEXT(bkt); 
+            continue;
+        }
+
+        /* read */
+        apr_bucket_read(bkt, &data, &len, APR_BLOCK_READ);
+        match = apr_strmatch(ctx->pattern, data, len);
+        if (match) {
+            apr_bucket *next_bucket;
+            char *foo;
+            apr_bucket_split(bkt, match - data);
+            next_bucket = APR_BUCKET_NEXT(bkt); 
+            apr_bucket_split(next_bucket, ctx->pattern_len);
+            bkt = APR_BUCKET_NEXT(next_bucket);
+            apr_bucket_delete(next_bucket);
+            next_bucket = apr_bucket_pool_create(ctx->remotepath,
+                                                 ctx->remotepath_len,
+                                                 r->pool, bb->bucket_alloc);
+            APR_BUCKET_INSERT_BEFORE(bkt, next_bucket);
+        }
+        else {
+            bkt = APR_BUCKET_NEXT(bkt); 
+        }
+    }
+    return APR_SUCCESS;
+}
+
+static apr_status_t location_header_filter(ap_filter_t *f,
+                                           apr_bucket_brigade *bb)
+{
+    request_rec *r = f->r;
+    dav_svn_dir_conf *conf;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
+    if (!r->main && conf->master_uri) {
+        const char *location, *start_foo = NULL;
+        apr_size_t master_len;
+
+        location = apr_table_get(r->headers_out, "Location");
+        if (location) {
+            start_foo = strstr(location, conf->master_uri);
+        }
+        if (start_foo) {
+            const char *new_uri;
+            start_foo += strlen(conf->master_uri);
+            new_uri = ap_construct_url(r->pool,
+                                       apr_pstrcat(r->pool, conf->root_dir,
+                                                   start_foo, NULL),
+                                       r);
+            apr_table_set(r->headers_out, "Location", new_uri);
+        }
+    }
+    ap_remove_output_filter(f);
+    return ap_pass_brigade(f->next, bb);
+}
+
+static apr_status_t location_body_filter(ap_filter_t *f,
+                                          apr_bucket_brigade *bb)
+{
+    request_rec *r = f->r;
+    locate_ctx_t *ctx = f->ctx;
+    dav_svn_dir_conf *conf;
+    apr_bucket *bkt;
+
+    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
+
+    if (r->main || !conf->master_uri) {
+        ap_remove_output_filter(f);
+        return ap_pass_brigade(f->next, bb);
+    }
+
+    if (!f->ctx) {
+        const char *full_path;
+        ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
+
+        apr_uri_parse(r->pool, conf->master_uri, &ctx->uri);
+        ctx->remotepath = apr_pstrcat(r->pool, ctx->uri.path, "/", 
+                                      dav_svn_get_special_uri(r), NULL);
+        ctx->remotepath_len = strlen(ctx->remotepath);
+        ctx->localpath = apr_pstrcat(r->pool, conf->root_dir, "/", 
+                                     dav_svn_get_special_uri(r), NULL);
+        ctx->localpath_len = strlen(ctx->localpath);
+        ctx->pattern = apr_strmatch_precompile(r->pool, ctx->remotepath, 0);
+        ctx->pattern_len = ctx->remotepath_len;
+    }
+
+    bkt = APR_BRIGADE_FIRST(bb);
+    while (bkt != APR_BRIGADE_SENTINEL(bb)) {
+
+        const char *data, *match;
+        apr_size_t len;
+
+        /* read */
+        apr_bucket_read(bkt, &data, &len, APR_BLOCK_READ);
+        match = apr_strmatch(ctx->pattern, data, len);
+        if (match) {
+            apr_bucket *next_bucket;
+            char *foo;
+            apr_bucket_split(bkt, match - data);
+            next_bucket = APR_BUCKET_NEXT(bkt); 
+            apr_bucket_split(next_bucket, ctx->pattern_len);
+            bkt = APR_BUCKET_NEXT(next_bucket);
+            apr_bucket_delete(next_bucket);
+            next_bucket = apr_bucket_pool_create(ctx->localpath,
+                                                 ctx->localpath_len,
+                                                 r->pool, bb->bucket_alloc);
+            APR_BUCKET_INSERT_BEFORE(bkt, next_bucket);
+        }
+        else {
+            bkt = APR_BUCKET_NEXT(bkt); 
+        }
+    }
+    return ap_pass_brigade(f->next, bb);
+}
 
 /** Module framework stuff **/
 
@@ -577,6 +802,10 @@ static const command_rec cmds[] =
   AP_INIT_FLAG("SVNListParentPath", SVNListParentPath_cmd, NULL,
                ACCESS_CONF|RSRC_CONF, "allow GET of SVNParentPath."),
 
+  /* per directory/location */
+  AP_INIT_TAKE1("SVNMasterURI", dav_svn_master_uri, NULL, ACCESS_CONF,
+                "specifies a URI to access a master Subversion repository"),
+
   { NULL }
 };
 
@@ -614,6 +843,15 @@ register_hooks(apr_pool_t *pconf)
   dav_hook_insert_all_liveprops(dav_svn__insert_all_liveprops, NULL, NULL,
                                 APR_HOOK_MIDDLE);
   dav_register_liveprop_group(pconf, &dav_svn__liveprop_group);
+
+  /* Proxy / mirroring filters and fixups */
+  ap_register_output_filter("LocationRewrite", location_header_filter, NULL,
+                            AP_FTYPE_CONTENT_SET);
+  ap_register_output_filter("ReposRewrite", location_body_filter, NULL,
+                            AP_FTYPE_CONTENT_SET);
+  ap_register_input_filter("IncomingRewrite", location_in_filter, NULL,
+                           AP_FTYPE_CONTENT_SET);
+  ap_hook_fixups(proxy_merge_fixup, NULL, NULL, APR_HOOK_MIDDLE);
 }
 
 
