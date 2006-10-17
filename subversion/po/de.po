@@ -77,8 +77,8 @@ msgstr ""
 "Project-Id-Version: subversion 1.4.x\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-23 13:50-0500\n"
-"PO-Revision-Date: 2006-10-17 11:32+0100\n"
-"Last-Translator: Lübbe Onken <luebbe@tigris.org>\n"
+"PO-Revision-Date: 2006-10-17 11:30+0200\n"
+"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -2452,25 +2452,25 @@ msgstr "Fehlerhafter Kopf in Revisionsdatei gefunden"
 #: libsvn_fs_fs/fs_fs.c:977
 #: libsvn_fs_fs/fs_fs.c:985
 msgid "Malformed text rep offset line in node-rev"
-msgstr "Fehlerhafte 'text rep offset' Zeile in Knoten-Rev"
+msgstr "Fehlerhafte 'text rep offset' Zeile in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1054
 msgid "Missing kind field in node-rev"
-msgstr "Fehlendes 'kind' Feld in Knoten-Rev"
+msgstr "Fehlendes 'kind' Feld in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1085
 msgid "Missing cpath in node-rev"
-msgstr "Fehlender 'cpath' in Knoten-Rev"
+msgstr "Fehlender 'cpath' in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1112
 #: libsvn_fs_fs/fs_fs.c:1118
 msgid "Malformed copyroot line in node-rev"
-msgstr "Fehlerhafte 'copyroot' Zeile in Knoten-Rev"
+msgstr "Fehlerhafte 'copyroot' Zeile in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1136
 #: libsvn_fs_fs/fs_fs.c:1142
 msgid "Malformed copyfrom line in node-rev"
-msgstr "Fehlerhafte 'copyfrom' Zeile in Knoten-Rev"
+msgstr "Fehlerhafte 'copyfrom' Zeile in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1251
 #: libsvn_fs_fs/fs_fs.c:3613
@@ -2483,11 +2483,11 @@ msgstr "Fehlerhafter Darstellungskopf"
 
 #: libsvn_fs_fs/fs_fs.c:1359
 msgid "Missing node-id in node-rev"
-msgstr "Fehlende Knoten-Id in Knoten-Rev"
+msgstr "Fehlende Knoten-Id in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1365
 msgid "Corrupt node-id in node-rev"
-msgstr "Korrupte Knoten-Id in Knoten-Rev"
+msgstr "Korrupte Knoten-Id in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1410
 #, c-format
@@ -3165,7 +3165,7 @@ msgstr ""
 
 #: libsvn_ra_serf/replay.c:204
 msgid "Missing revision attr in delete-entry element"
-msgstr "Fehlendes Revisionsattribut in 'delete-entry ' Element"
+msgstr "Fehlendes Revisionsattribut in 'delete-entry' Element"
 
 #: libsvn_ra_serf/replay.c:224
 msgid "Missing name attr in open-directory element"
@@ -3177,7 +3177,7 @@ msgstr "Fehlendes Revisionsattribut in 'open-directory' Element"
 
 #: libsvn_ra_serf/replay.c:250
 msgid "Missing name attr in add-directory element"
-msgstr "Fehlendes Namenssattribut in 'add-directory' Element"
+msgstr "Fehlendes Namensattribut in 'add-directory' Element"
 
 #: libsvn_ra_serf/replay.c:285
 msgid "Missing name attr in open-file element"
@@ -3197,8 +3197,9 @@ msgid "Missing name attr in %s element"
 msgstr "Fehlendes Namensattribut in %s Element"
 
 #: libsvn_ra_serf/serf.c:52
+# CHECKME: serf nicht mit Sklave übersetzen? Was ist das überhaupt, ein Programmiermodell?
 msgid "Access repository via WebDAV protocol through serf."
-msgstr "Auf ein Projektarchiv über das WebDAV Protokoll mittels 'serf' zugreifen"
+msgstr "Auf ein Projektarchiv über das WebDAV-Protokoll mittels 'serf' zugreifen."
 
 #: libsvn_ra_serf/serf.c:155
 #, c-format
@@ -4885,7 +4886,6 @@ msgid "Invalid escape sequence"
 msgstr "Ungültige Escapesequenz"
 
 #: libsvn_wc/entries.c:118
-#, fuzzy
 msgid "Invalid escaped character"
 msgstr "Ungültiges geschütztes Zeichen"
 
@@ -7993,7 +7993,7 @@ msgstr ""
 "Geben Sie 'svnadmin help <Unterbefehl>' ein, um Hilfe zu einem Unterbefehl\n"
 "          zu erhalten.\n"
 "Geben Sie 'svnadmin --version' ein, um die Programmversion und die Datei-\n"
-"          systemmodule zu sehen\n"
+"          systemmodule zu sehen.\n"
 "\n"
 "Verfügbare Unterbefehle:\n"
 
@@ -8224,7 +8224,7 @@ msgstr ""
 "Aufruf: svndumpfilter UNTERBEFEHL [Optionen & Parameter ...]\n"
 "Geben Sie 'svndumpfilter help <Unterbefehl>' ein, um Hilfe zu einem\n"
 "          Unterbefehl zu erhalten.\n"
-"Geben Sie 'svndumpfilter --version' ein, um die Programmversion zu sehen\n"
+"Geben Sie 'svndumpfilter --version' ein, um die Programmversion zu sehen.\n"
 "\n"
 "Verfügbare Unterbefehle:\n"
 
@@ -8597,7 +8597,7 @@ msgstr ""
 "Geben Sie 'svnlook help <Unterbefehl>' ein, um Hilfe zu einem Unterbefehl\n"
 "         zu erhalten.\n"
 "Geben Sie 'svnlook --version' ein, um die Programmversion und die Datei-\n"
-"         systemmodule zu sehen\n"
+"         systemmodule zu sehen.\n"
 "\n"
 "Verfügbare Unterbefehle:\n"
 
@@ -9057,4 +9057,3 @@ msgstr "exportiert %s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' nicht versioniert und nicht exportiert\n"
-
