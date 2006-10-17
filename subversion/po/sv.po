@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-10-16 08:57+0200\n"
-"PO-Revision-Date: 2006-10-16 09:15+0200\n"
+"PO-Revision-Date: 2006-10-17 20:04+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -2651,7 +2651,7 @@ msgstr "Ogiltigt svar från servern på dated-rev-förfrågan"
 
 #: libsvn_ra_dav/fetch.c:1330
 msgid "Expected a valid revnum and path"
-msgstr ""
+msgstr "Väntade ett giltigt revisionsnummer och sökväg"
 
 #: libsvn_ra_dav/fetch.c:1412
 msgid "'get-locations' REPORT not implemented"
@@ -2697,9 +2697,8 @@ msgstr ""
 "Hanteringen av REPORT-responsen kunde inte slutföra körningen av editorn"
 
 #: libsvn_ra_dav/file_revs.c:279
-#, fuzzy
 msgid "Failed to write full amount to stream"
-msgstr "Kan inte skriva till ström"
+msgstr "Kunde inte skriva all data till ström"
 
 #: libsvn_ra_dav/file_revs.c:357
 msgid "'get-file-revs' REPORT not implemented"
@@ -2849,9 +2848,9 @@ msgid "Invalid config: illegal character in debug mask value"
 msgstr "Felaktig konfiguration: ogiltigt tecken i debug mask-värde"
 
 #: libsvn_ra_dav/session.c:519
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unknown http authtype '%s'"
-msgstr "Felaktig konfiguration: kan inte ladda certifikatfilen \"%s\""
+msgstr "Felaktig konfiguration: okänd http-authtype \"%s\""
 
 #: libsvn_ra_dav/session.c:580
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
@@ -3066,9 +3065,8 @@ msgid "Missing revision attr in open-directory element"
 msgstr "Attributet revision saknas på open-directory-elementet"
 
 #: libsvn_ra_serf/replay.c:250
-#, fuzzy
 msgid "Missing name attr in add-directory element"
-msgstr "Attributet path saknas på add-directory-elementet"
+msgstr "Attributet name saknas på add-directory-elementet"
 
 #: libsvn_ra_serf/replay.c:285
 msgid "Missing name attr in open-file element"
@@ -3361,7 +3359,7 @@ msgstr "Okänd status \"%s\" i kommandorespons"
 #: svnserve/sasl_auth.c:114
 #, c-format
 msgid "Could not initialize the SASL library"
-msgstr ""
+msgstr "Kunde inte initiera SASL-biblioteket"
 
 #: libsvn_ra_svn/sasl_auth.c:287
 msgid "Unhandled SASL interaction"
@@ -3770,9 +3768,9 @@ msgid "Repository creation failed"
 msgstr "Kunde inte skapa arkiv"
 
 #: libsvn_repos/repos.c:1778
-#, fuzzy, c-format
+#, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
-msgstr "Förväntat format på filsystemet '%d'; hittade '%d'"
+msgstr "Förväntat format på arkivet \"%d\" eller \"%d\"; hittade \"%d\""
 
 #: libsvn_repos/rev_hunt.c:64
 #, c-format
@@ -3846,14 +3844,14 @@ msgid "Can't expand time"
 msgstr "Kan inte dela upp tid"
 
 #: libsvn_subr/dso.c:71
-#, fuzzy, c-format
+#, c-format
 msgid "Can't grab DSO mutex"
-msgstr "Kan inte allokera mutex för filsystemsbiblioteket"
+msgstr "Kan inte l[sa mutex för bibliotek"
 
 #: libsvn_subr/dso.c:85 libsvn_subr/dso.c:107 libsvn_subr/dso.c:122
-#, fuzzy, c-format
+#, c-format
 msgid "Can't ungrab DSO mutex"
-msgstr "Kan inte släppa lås för FS"
+msgstr "Kan inte släppa lås för bibliotek"
 
 #: libsvn_subr/error.c:341
 msgid "Can't recode error string from APR"
@@ -4621,13 +4619,11 @@ msgid "'%s' is already under version control"
 msgstr "\"%s\" är redan versionshanterad"
 
 #: libsvn_wc/adm_ops.c:1378
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Can't replace '%s' with a node of a differing type; the deletion must be "
 "committed and the parent updated before adding '%s'"
-msgstr ""
-"Kan inte ersätta \"%s\" med en nod av en annan typ; arkivera raderingen, "
-"uppdatera föräldern och lägg sedan till \"%s\""
+msgstr "Kan inte ersätta \"%s\" med en nod av en annan typ; raderingen måste arkiveras och föräldern uppdateras innann \"%s\" kan läggas till"
 
 #: libsvn_wc/adm_ops.c:1395
 #, c-format
@@ -4685,9 +4681,9 @@ msgid "File '%s' has local modifications"
 msgstr "Filen \"%s\" har lokala ändringar"
 
 #: libsvn_wc/copy.c:197
-#, fuzzy, c-format
+#, c-format
 msgid "Error during recursive copy of '%s'"
-msgstr "Fel vid rekursivt tillägg av \"%s\""
+msgstr "Fel vid rekursiv kopiering av \"%s\""
 
 #: libsvn_wc/copy.c:362
 #, c-format
@@ -5265,20 +5261,18 @@ msgid "Error writing log file for '%s'"
 msgstr "Fel när loggfilen för \"%s\" skrevs"
 
 #: libsvn_wc/update_editor.c:1077
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Failed to add directory '%s': a non-directory object of the same name "
 "already exists"
-msgstr ""
-"Kunde inte lägga till katalogen \"%s\": ett objekt med samma namn finns redan"
+msgstr "Kunde inte lägga till katalogen \"%s\": ett objekt med samma namn, som inte är en katalog, finns redan"
 
 #: libsvn_wc/update_editor.c:1107
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Failed to forcibly add directory '%s': a versioned directory of the same "
 "name already exists"
-msgstr ""
-"Kunde inte lägga till katalogen \"%s\": ett objekt med samma namn finns redan"
+msgstr "Kunde inte tvingande lägga till katalogen \"%s\": ett versionshanterat objekt med samma namn finns redan"
 
 #: libsvn_wc/update_editor.c:1120
 #, c-format
@@ -5324,11 +5318,10 @@ msgstr ""
 "schemalagd att läggas till"
 
 #: libsvn_wc/update_editor.c:1533
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Failed to add file '%s': a non-file object of the same name already exists"
-msgstr ""
-"Kunde inte lägga till filen \"%s\": ett objekt med samma namn finns redan"
+msgstr "Kunde inte lägga till filen \"%s\": ett objekt med samma namn, som inte är en fil, finns redan"
 
 #: libsvn_wc/update_editor.c:1544
 #, c-format
@@ -5424,7 +5417,7 @@ msgstr ""
 "över den"
 
 #: svn/help-cmd.c:45
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "usage: svn <subcommand> [options] [args]\n"
 "Subversion command-line client, version %s.\n"
@@ -5440,12 +5433,14 @@ msgid ""
 msgstr ""
 "användning: svn <underkommando> [flaggor] [argument]\n"
 "Subversion kommandoradsklient, version %s.\n"
-"Skriv \"svn help <underkommando>\" för att få hjälp med specifika "
-"underkommandon.\n"
+"Skriv \"svn help <underkommando>\" för att få hjälp med ett specifikt\n"
+"underkommando.\n"
+"Skriv \"svn --version\" för att se versionsnummer och insticksmoduler för\n"
+"  akrivåtkomst eller \"svn --version --quiet\" för att se endast versionsnummret.\n"
 "\n"
 "De flesta underkommandona tar fil- och/eller katalogargument och går ned i\n"
 "kataloger rekursivt. Om inga argument ges till sådana kommandon, används\n"
-"aktuell katalog rekursivt.\n"
+"aktuell katalog (inklusive katalogen själv) rekursivt.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
@@ -5786,9 +5781,8 @@ msgstr ""
 #: svn/main.c:92 svnadmin/main.c:236 svndumpfilter/main.c:786
 #: svnlook/main.c:96 svnserve/main.c:149 svnsync/main.c:102
 #: svnversion/main.c:125
-#, fuzzy
 msgid "show program version information"
-msgstr "visa versionsinformation"
+msgstr "visa programversionsinformation"
 
 #: svn/main.c:93
 msgid "print extra information"
@@ -6514,7 +6508,6 @@ msgstr ""
 "     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 
 #: svn/main.c:563
-#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME TARGET...\n"
@@ -6525,11 +6518,11 @@ msgid ""
 "     TARGET only determines which repository to access.\n"
 msgstr ""
 "Redigera en egenskap med en extern editor.\n"
-"användning: 1. propedit PROPNAMN SÖKVÄG...\n"
-"            2. propedit PROPNAMN --revprop -r REV [MÅL]\n"
+"användning: 1. propedit EGENSKAPSNAMN MÅL...\n"
+"            2. propedit EGENSKAPSNAMN --revprop -r REV [MÅL]\n"
 "\n"
-"  1. Redigera versionshanterade egenskaper i arbetskopian.\n"
-"  2. Redigera en icke versionshanterad revisionsegenskap på en revision i\n"
+"  1. Redigerar versionshanterade egenskaper i arbetskopian eller arkivet.\n"
+"  2. Redigerar en icke versionshanterad revisionsegenskap på en revision i\n"
 "     arkivet.\n"
 "     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 
@@ -6876,7 +6869,6 @@ msgstr ""
 "    Status gentemot revision:   981\n"
 
 #: svn/main.c:746
-#, fuzzy
 msgid ""
 "Update the working copy to a different URL.\n"
 "usage: 1. switch URL [PATH]\n"
@@ -6906,16 +6898,26 @@ msgstr ""
 "användning: 1. switch URL [SÖKVÄG]\n"
 "            2. switch --relocate FRÅN TILL [SÖKVÄG...]\n"
 "\n"
-"  1. Uppdatera arbetskopian så att den återspeglar en ny URL i arkivet\n"
+"  1. Uppdatera arbetskopian så att den återspeglar en ny URL i arkivet.\n"
 "     Detta liknar hur \"svn update\" beter sig och är det sätt på vilket\n"
-"     man flyttar en arbetskopia till en förgrening eller märke inom ett\n"
+"     man flyttar en arbetskopia till en gren eller märke inom ett\n"
 "     och samma arkiv.\n"
 "\n"
-"  2. Skriv endast om arbetskopians URL-metadata för en syntaxmässig "
-"ändring.\n"
+"  2. Skriv endast om arbetskopians URL-metadata för en syntaxmässig ändring.\n"
 "     Detta används när rot-URL:en för ett arkiv ändras (till exempel en\n"
 "     schema- eller värdnamnsändring), men din arbetskopia återspeglar\n"
 "     fortfarande samma katalog i samma arkiv.\n"
+"\n"
+"  Om --force används, orsakar icke versionshanterade sökvägar som är i\n"
+"  vägen inte automatiskt att operationen misslyckas vid försök att lägga till\n"
+"  dem. Om sökvägen som är i vägen är av samma typ (fil eller katalog)\n"
+"  som motsvarande sökväg i arkivet, kommer den att bli versionshanterad,\n"
+"  men innehållet lämnas som det är i arbetskopian. Detta medför att en\n"
+"  katalog som är i vägen även kan ha barn som är i vägen, vilka följaktligen\n"
+"  också blir versionshanterade. Vad gäller filer kommer skillnader\n"
+"  mellan de filer som är i vägen och arkivets filer att betraktas som lokala\n"
+"  ändringar i arbetskopian. Samtliga egenskaper i arkivet läggs till för\n"
+"  sökvägar som är i vägen.\n"
 
 #: svn/main.c:773
 msgid ""
@@ -6930,7 +6932,6 @@ msgstr ""
 "Använd --force för att \"bryta upp\" ett låset.\n"
 
 #: svn/main.c:781
-#, fuzzy
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -6968,8 +6969,7 @@ msgstr ""
 "Inför ändringar från arkivet i arbetskopian.\n"
 "användning: update [SÖKVÄG...]\n"
 "\n"
-"  Om ingen revision anges, görs arbetskopian aktuell enligt "
-"huvudrevisionen.\n"
+"  Om ingen revision anges, görs arbetskopian aktuell enligt huvudrevisionen.\n"
 "  Annars synkroniseras arbetskopian med den revision som anges med -r.\n"
 "\n"
 "  För varje uppdaterat objekt visas en rad vars första tecken indikerar\n"
@@ -6980,11 +6980,23 @@ msgstr ""
 "    U  Uppdaterat\n"
 "    C  Konflikt\n"
 "    G  Sammanslaget (merge)\n"
+"    E  Fanns redan\n"
 "\n"
 "  Ett tecken i den första kolumnen visar en uppdatering av filen,\n"
 "  medan uppdateringar av filens egenskaper visas i den andra kolumnen.\n"
-"  Ett \"B\" i tredje kolumnen visar att ett lås har blivit stulet eller "
-"brutet.\n"
+"  Ett \"B\" i tredje kolumnen visar att ett lås har blivit stulet eller brutet.\n"
+"\n"
+"  Om --force används, orsakar icke versionshanterade sökvägar som är i\n"
+"  vägen inte automatiskt att operationen misslyckas vid försök att lägga till\n"
+"  dem. Om sökvägen som är i vägen är av samma typ (fil eller katalog)\n"
+"  som motsvarande sökväg i arkivet, kommer den att bli versionshanterad,\n"
+"  men innehållet lämnas som det är i arbetskopian. Detta medför att en\n"
+"  katalog som är i vägen även kan ha barn som är i vägen, vilka följaktligen\n"
+"  också blir versionshanterade. Vad gäller filer kommer skillnader\n"
+"  mellan de filer som är i vägen och arkivets filer att betraktas som lokala\n"
+"  ändringar i arbetskopian. Samtliga egenskaper i arkivet läggs till för\n"
+"  sökvägar som är i vägen. Sökvägar som är i vägen rapporteras i första\n"
+"  kolumnen med ett \"E\".\n"
 
 #: svn/main.c:857 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:146
 msgid "Caught signal"
@@ -7296,9 +7308,9 @@ msgid "property '%s' deleted from '%s'.\n"
 msgstr "egenskapen \"%s\" raderades från \"%s\".\n"
 
 #: svn/propedit-cmd.c:60
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid Subversion property name"
-msgstr "\"%s\" är inget giltigt namn på administrationskatalogen"
+msgstr "\"%s\" är inget giltigt namn på en Subversion-egenskap"
 
 #: svn/propedit-cmd.c:105 svn/propedit-cmd.c:241 svn/propset-cmd.c:85
 msgid "Bad encoding option: prop value not stored as UTF8"
@@ -7602,14 +7614,12 @@ msgid "call post-commit hook after committing revisions"
 msgstr "anropa post-commit-hookskript efter arkivering av revisioner"
 
 #: svnadmin/main.c:285
-#, fuzzy
 msgid "call hook before changing revision property"
-msgstr "anropa pre-commit-hookskript före arkivering av revisioner"
+msgstr "anropa hookskript före 'ndring av revisionsegenskap"
 
 #: svnadmin/main.c:288
-#, fuzzy
 msgid "call hook after changing revision property"
-msgstr "anropa post-commit-hookskript efter arkivering av revisioner"
+msgstr "anropa hookskript efter ändring av revisionsegenskap"
 
 #: svnadmin/main.c:291
 msgid ""
@@ -7971,9 +7981,9 @@ msgid "Only one revision allowed"
 msgstr "Endast en revision tillåts"
 
 #: svnadmin/main.c:1001
-#, fuzzy, c-format
+#, c-format
 msgid "Exactly one property name and one file argument required"
-msgstr "Det krävs exakt ett filargument"
+msgstr "Det krävs exakt ett revisionsnamn och ett filargument"
 
 #: svnadmin/main.c:1028
 #, c-format
@@ -8702,19 +8712,17 @@ msgid "Can't create thread"
 msgstr "Kan inte skapa tråd"
 
 #: svnserve/sasl_auth.c:243
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get hostname"
-msgstr "Kan inte erhålla lokalt värdnamn"
+msgstr "Kan inte erhålla värdnamn"
 
 #: svnserve/sasl_auth.c:299
 msgid "Could not obtain the list of SASL mechanisms"
 msgstr ""
 
 #: svnserve/sasl_auth.c:337
-#, fuzzy
 msgid "Couldn't obtain the authenticated username"
-msgstr ""
-"Kan inte låsa upp sökvägen '%s', inget autentiserat användarnamn tillgängligt"
+msgstr "Kan inte erhålla autenticerat användarnamn"
 
 #: svnserve/winservice.c:341
 #, c-format
@@ -8811,9 +8819,9 @@ msgid "Copied properties for revision %ld (%s* properties skipped).\n"
 msgstr ""
 
 #: svnsync/main.c:346
-#, fuzzy, c-format
+#, c-format
 msgid "Copied properties for revision %ld.\n"
-msgstr "Ej versionshanterade egenskaper på revision %ld:\n"
+msgstr "Kopierade egenskaper för revision %ld.\n"
 
 #: svnsync/main.c:387
 msgid "Cannot initialize a repository with content in it"
@@ -8826,26 +8834,23 @@ msgstr "Destinationsarkivet synkroniseras redan från \"%s\""
 
 #: svnsync/main.c:455 svnsync/main.c:458 svnsync/main.c:1116
 #: svnsync/main.c:1200
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not a URL"
-msgstr "Sökvägen \"%s\" är inte en fil"
+msgstr "Sökvägen \"%s\" är inte en URL"
 
 #: svnsync/main.c:838
-#, fuzzy, c-format
+#, c-format
 msgid "Committed revision %ld.\n"
-msgstr ""
-"\n"
-"Arkiverade revision %ld.\n"
+msgstr "Arkiverade revision %ld.\n"
 
 #: svnsync/main.c:877
 msgid "Destination repository has not been initialized"
 msgstr "Destinationsarkivet har ej initierats"
 
 #: svnsync/main.c:892
-#, fuzzy, c-format
+#, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
-msgstr ""
-"UUID:n på destinationsarkivet (%s) matchar inte den förväntade UUID:n (%s)"
+msgstr "UUID:n på källarkivet (%s) matchar inte den förväntade UUID:n (%s)"
 
 #: svnsync/main.c:954
 #, c-format
@@ -8874,9 +8879,8 @@ msgstr ""
 "synkroniserats"
 
 #: svnsync/main.c:1203
-#, fuzzy
 msgid "Invalid revision number"
-msgstr "Ogiltigt revisionsnummer angivet"
+msgstr "Ogiltigt revisionsnummer"
 
 #: svnsync/main.c:1239
 #, fuzzy
@@ -8903,9 +8907,8 @@ msgstr ""
 "Skriv \"svnsync help %s\" för användning.\n"
 
 #: svnsync/main.c:1490
-#, fuzzy
 msgid "Not enough arguments provided; try 'svnsync help' for more info"
-msgstr "För få argument; använd \"svn --help\" för mer information"
+msgstr "För få argument; försök med \"svnsync --help\" för mer information"
 
 #: svnversion/main.c:39
 #, c-format
@@ -8988,80 +8991,3 @@ msgstr "exporterad%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "\"%s\" är varken versionshanterad eller exporterad\n"
-
-#~ msgid "Editing property on non-local target '%s' not yet supported"
-#~ msgstr ""
-#~ "Att editera egenskap på målet \"%s\" som inte är lokalt stöds inte ännu"
-
-#~ msgid "Missing rev attr in delete-entry element"
-#~ msgstr "Attributet rev saknas på delete-entry-elementet"
-
-#~ msgid "GET request failed for '%s'"
-#~ msgstr "GET-förfrågan misslyckades för \"%s\""
-
-#~ msgid "Move will not be attempted unless forced"
-#~ msgstr "Flytt kommer inte att försökas utan att det framtvingas"
-
-#~ msgid "Missing path attr in open-directory element"
-#~ msgstr "Attributet path saknas på open-directory-elementet"
-
-#~ msgid "Expected format '%d' of repository; found format '%d'"
-#~ msgstr "Väntade format \"%d\" av arkivet, fann \"%d\""
-
-#~ msgid "print client version info"
-#~ msgstr "skriv versionsinformation för klienten"
-
-#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
-#~ msgstr ""
-#~ "skicka ARG till --diff-cmd som flaggor\n"
-#~ "                             (standardvärde: \"-u\")"
-
-#~ msgid ""
-#~ "Check out a working copy from a repository.\n"
-#~ "usage: checkout URL[@REV]... [PATH]\n"
-#~ "\n"
-#~ "  If specified, REV determines in which revision the URL is first\n"
-#~ "  looked up.\n"
-#~ "\n"
-#~ "  If PATH is omitted, the basename of the URL will be used as\n"
-#~ "  the destination. If multiple URLs are given each will be checked\n"
-#~ "  out into a sub-directory of PATH, with the name of the sub-directory\n"
-#~ "  being the basename of the URL.\n"
-#~ msgstr ""
-#~ "Checka ut en arbetskopia från ett arkiv.\n"
-#~ "användning: checkout URL[@REV]... [SÖKVÄG]\n"
-#~ "\n"
-#~ "  Om REV anges, bestämmer den i vilken revision URL:en först letas upp.\n"
-#~ "\n"
-#~ "  Om PATH inte anges, kommer basnamnet för URL att användas som "
-#~ "destination.\n"
-#~ "  Om flera URL:er anges, kommer varje URL att checkas ut i en "
-#~ "underkatalog\n"
-#~ "  till PATH med basnamnet för URL:en som namn på underkatalogen.\n"
-
-#~ msgid ""
-#~ "disallow use of SVNDIFF1 in on-disk storage,\n"
-#~ "                             for backwards compatibility"
-#~ msgstr ""
-#~ "tillåt ej användning av svndiff1 vid lagring på\n"
-#~ "                             disk, för bakåtkompatibilitet"
-
-#~ msgid ""
-#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-#~ "Initialize a destination repository.\n"
-#~ msgstr ""
-#~ "användning: svnsync initialize DEST_URL --source-url KÄLL_URL\n"
-#~ "Initiera ett destinationsarkiv.\n"
-
-#~ msgid "The url to synchronize from"
-#~ msgstr "URL:en att synkronisera från"
-
-#~ msgid "Committing rev %ld\n"
-#~ msgstr "Arkiverar revision %ld\n"
-
-#~ msgid ""
-#~ "Currently copying rev %ld in source is less than latest rev in "
-#~ "destination (%ld)"
-#~ msgstr ""
-#~ "Den revision %ld i källan som nu kopieras är mindre än den senaste "
-#~ "revisionen i destinationen (%ld)"
