@@ -65,13 +65,13 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * 21974
+Approved changes:
+
+  * r21974
     Requre httpd-2.0.46-61.1 or greater to pick up version with APR >= 0.9.7.
     Justification:
       Multiple people are trying to install the RHEL3 subversion
       RPM without downloading and installing the requisite httpd package.
     Votes:
-      +1: dws
-
-Approved changes:
-
+      +1: dws, dlr
+      +0: lgo
