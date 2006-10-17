@@ -1,8 +1,8 @@
 /*
- * util.c: some handy utilities functions
+ * util.c: some handy utility functions
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,19 +17,60 @@
  */
 
 #include <apr_xml.h>
+#include <apr_errno.h>
 #include <apr_uri.h>
+
 #include <mod_dav.h>
 
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_dav.h"
+#include "svn_base64.h"
 
 #include "dav_svn.h"
 
 
+dav_error *
+dav_svn__new_error_tag(apr_pool_t *pool,
+                       int status,
+                       int error_id,
+                       const char *desc,
+                       const char *namespace,
+                       const char *tagname)
+{
+  /* dav_new_error_tag will record errno but Subversion makes no attempt
+     to ensure that it is valid.  We reset it to avoid putting incorrect
+     information into the error log, at the expense of possibly removing
+     valid information. */
+  errno = 0;
 
-dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
-                                const char *message)
+  return dav_new_error_tag(pool, status, error_id, desc, namespace, tagname);
+}
+
+
+/* Build up a chain of DAV errors that correspond to the underlying SVN
+   errors that caused this problem. */
+static dav_error *
+build_error_chain(apr_pool_t *pool, svn_error_t *err, int status)
+{
+  char *msg = err->message ? apr_pstrdup(pool, err->message) : NULL;
+
+  dav_error *derr = dav_svn__new_error_tag(pool, status, err->apr_err, msg,
+                                           SVN_DAV_ERROR_NAMESPACE,
+                                           SVN_DAV_ERROR_TAG);
+
+  if (err->child)
+    derr->prev = build_error_chain(pool, err->child, status);
+
+  return derr;
+}
+
+
+dav_error *
+dav_svn__convert_err(svn_error_t *serr,
+                     int status,
+                     const char *message,
+                     apr_pool_t *pool)
 {
     dav_error *derr;
 
@@ -38,9 +79,10 @@ dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
        svn_error_t's are marshalled to the client via the single
        generic <svn:error/> tag nestled within a <D:error> block. */
 
-    /* Even though the caller passed in some HTTP status code, we
-       should look at the actual subversion error code and use the
-       -best- HTTP mapping we can. */
+    /* Examine the Subverion error code, and select the most
+       appropriate HTTP status code.  If no more appropriate HTTP
+       status code maps to the Subversion error code, use the one
+       suggested status provided by the caller. */
     switch (serr->apr_err)
       {
       case SVN_ERR_FS_NOT_FOUND:
@@ -49,44 +91,82 @@ dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
       case SVN_ERR_UNSUPPORTED_FEATURE:
         status = HTTP_NOT_IMPLEMENTED;
         break;
+      case SVN_ERR_FS_PATH_ALREADY_LOCKED:
+        status = HTTP_LOCKED;
+        break;
         /* add other mappings here */
       }
 
-    derr = dav_new_error_tag(serr->pool, status,
-                             serr->apr_err, serr->message,
-                             SVN_DAV_ERROR_NAMESPACE,
-                             SVN_DAV_ERROR_TAG);
+    derr = build_error_chain(pool, serr, status);
     if (message != NULL)
-        derr = dav_push_error(serr->pool, status, serr->apr_err,
-                              message, derr);
+      derr = dav_push_error(pool, status, serr->apr_err, message, derr);
+
+    /* Now, destroy the Subversion error. */
+    svn_error_clear(serr);
+
     return derr;
 }
 
 
-svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
-                                 const char *path,
-                                 apr_pool_t *pool)
+/* Set *REVISION to the youngest revision in which an interesting
+   history item (a modification, or a copy) occurred for PATH under
+   ROOT.  Use POOL for scratchwork. */
+static svn_error_t *
+get_last_history_rev(svn_revnum_t *revision,
+                     svn_fs_root_t *root,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  svn_fs_history_t *history;
+  const char *ignored;
+
+  /* Get an initial HISTORY baton. */
+  SVN_ERR(svn_fs_node_history(&history, root, path, pool));
+
+  /* Now get the first *real* point of interesting history. */
+  SVN_ERR(svn_fs_history_prev(&history, history, FALSE, pool));
+
+  /* Fetch the location information for this history step. */
+  return svn_fs_history_location(&ignored, revision, history, pool);
+}
+
+
+svn_revnum_t
+dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool)
 {
   svn_revnum_t revision = svn_fs_revision_root_revision(root);    
-  svn_revnum_t created_rev;
+  svn_revnum_t history_rev;
   svn_fs_root_t *other_root;
+  svn_fs_t *fs = svn_fs_root_fs(root);
   const svn_fs_id_t *id, *other_id;
+  svn_error_t *err;
 
-  if (svn_fs_node_id(&id, root, path, pool))
-    return revision;   /* couldn't get id of root/path */
+  if ((err = svn_fs_node_id(&id, root, path, pool)))
+    {
+      svn_error_clear(err);
+      return revision;   /* couldn't get id of root/path */
+    }
 
-  if (svn_fs_node_created_rev(&created_rev, root, path, pool))
-    return revision;   /* couldn't find created_rev */
+  if ((err = get_last_history_rev(&history_rev, root, path, pool)))
+    {
+      svn_error_clear(err);
+      return revision;   /* couldn't find last history rev */
+    }
   
-  if (svn_fs_revision_root(&other_root, svn_fs_root_fs(root),
-                           created_rev, pool))
-    return revision;   /* couldn't open the created rev */
+  if ((err = svn_fs_revision_root(&other_root, fs, history_rev, pool)))
+    {
+      svn_error_clear(err);
+      return revision;   /* couldn't open the history rev */
+    }
 
-  if (svn_fs_node_id(&other_id, other_root, path, pool))
-    return revision;   /* couldn't get id of other_root/path */
+  if ((err = svn_fs_node_id(&other_id, other_root, path, pool)))
+    {
+      svn_error_clear(err);
+      return revision;   /* couldn't get id of other_root/path */
+    }
 
   if (svn_fs_compare_ids(id, other_id) == 0)
-    return created_rev;  /* the created_rev is safe!  the same node
+    return history_rev;  /* the history rev is safe!  the same node
                             exists at the same path in both revisions. */    
 
   /* default */
@@ -94,17 +174,17 @@ svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
 }
                                    
 
-
-const char *dav_svn_build_uri(const dav_svn_repos *repos,
-                              enum dav_svn_build_what what,
-                              svn_revnum_t revision,
-                              const char *path,
-                              int add_href,
-                              apr_pool_t *pool)
+const char *
+dav_svn__build_uri(const dav_svn_repos *repos,
+                   enum dav_svn__build_what what,
+                   svn_revnum_t revision,
+                   const char *path,
+                   int add_href,
+                   apr_pool_t *pool)
 {
   const char *root_path = repos->root_path;
   const char *special_uri = repos->special_uri;
-  const char *path_uri = path ? svn_path_uri_encode (path, pool) : NULL;
+  const char *path_uri = path ? svn_path_uri_encode(path, pool) : NULL;
   const char *href1 = add_href ? "<D:href>" : "";
   const char *href2 = add_href ? "</D:href>" : "";
 
@@ -116,29 +196,29 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
 
   switch (what)
     {
-    case DAV_SVN_BUILD_URI_ACT_COLLECTION:
+    case DAV_SVN__BUILD_URI_ACT_COLLECTION:
       return apr_psprintf(pool, "%s%s/%s/act/%s",
                           href1, root_path, special_uri, href2);
 
-    case DAV_SVN_BUILD_URI_BASELINE:
-      return apr_psprintf(pool, "%s%s/%s/bln/%" SVN_REVNUM_T_FMT "%s",
+    case DAV_SVN__BUILD_URI_BASELINE:
+      return apr_psprintf(pool, "%s%s/%s/bln/%ld%s",
                           href1, root_path, special_uri, revision, href2);
 
-    case DAV_SVN_BUILD_URI_BC:
-      return apr_psprintf(pool, "%s%s/%s/bc/%" SVN_REVNUM_T_FMT "/%s",
+    case DAV_SVN__BUILD_URI_BC:
+      return apr_psprintf(pool, "%s%s/%s/bc/%ld/%s",
                           href1, root_path, special_uri, revision, href2);
 
-    case DAV_SVN_BUILD_URI_PUBLIC:
+    case DAV_SVN__BUILD_URI_PUBLIC:
       return apr_psprintf(pool, "%s%s%s%s",
                           href1, root_path, path_uri, href2);
 
-    case DAV_SVN_BUILD_URI_VERSION:
-      return apr_psprintf(pool, "%s%s/%s/ver/%" SVN_REVNUM_T_FMT "%s%s",
+    case DAV_SVN__BUILD_URI_VERSION:
+      return apr_psprintf(pool, "%s%s/%s/ver/%ld%s%s",
                           href1, root_path, special_uri,
                           revision, path_uri, href2);
 
-    case DAV_SVN_BUILD_URI_VCC:
-      return apr_psprintf(pool, "%s%s/%s/vcc/" DAV_SVN_DEFAULT_VCC_NAME "%s",
+    case DAV_SVN__BUILD_URI_VCC:
+      return apr_psprintf(pool, "%s%s/%s/vcc/" DAV_SVN__DEFAULT_VCC_NAME "%s",
                           href1, root_path, special_uri, href2);
 
     default:
@@ -150,13 +230,15 @@ const char *dav_svn_build_uri(const dav_svn_repos *repos,
   /* NOTREACHED */
 }
 
-svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
-                                      const dav_resource *relative,
-                                      const char *uri,
-                                      apr_pool_t *pool)
+
+svn_error_t *
+dav_svn__simple_parse_uri(dav_svn__uri_info *info,
+                          const dav_resource *relative,
+                          const char *uri,
+                          apr_pool_t *pool)
 {
   apr_uri_t comp;
-  char *path;
+  const char *path;
   apr_size_t len1;
   apr_size_t len2;
   const char *slash;
@@ -168,11 +250,15 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
 
   /* ### ignore all URI parts but the path (for now) */
 
-  path = comp.path;
-
   /* clean up the URI */
-  ap_getparents(path);
-  ap_no2slash(path);
+  if (comp.path == NULL)
+    path = "/";
+  else
+    {
+      ap_getparents(comp.path);
+      ap_no2slash(comp.path);
+      path = comp.path;
+    }
 
   /*
    * Does the URI path specify the same repository? It does not if one of:
@@ -192,8 +278,8 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
       || memcmp(path, relative->info->repos->root_path, len2) != 0)
     {
       return svn_error_create(SVN_ERR_APMOD_MALFORMED_URI, NULL,
-                              "The specified URI does not refer to this "
-                              "repository, so it is unusable.");
+                              "Unusable URI: it does not refer to this "
+                              "repository");
     }
 
   /* prep the return value */
@@ -221,7 +307,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
     {
       /* this is an ordinary "public" URI, so back up to include the
          leading '/' and just return... no need to parse further. */
-      info->repos_path = svn_path_uri_decode (path - 1, pool);
+      info->repos_path = svn_path_uri_decode(path - 1, pool);
       return NULL;
     }
 
@@ -260,7 +346,7 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
         {
           created_rev_str = apr_pstrndup(pool, path, slash - path);
           info->rev = SVN_STR_TO_REV(created_rev_str);
-          info->repos_path = svn_path_uri_decode (slash, pool);
+          info->repos_path = svn_path_uri_decode(slash, pool);
         }
       if (info->rev == SVN_INVALID_REVNUM)
         goto malformed_uri;
@@ -272,16 +358,17 @@ svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
 
  malformed_uri:
     return svn_error_create(SVN_ERR_APMOD_MALFORMED_URI, NULL,
-                            "The specified URI could not be parsed.");
+                            "The specified URI could not be parsed");
 
  unhandled_form:
   return svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                          "dav_svn_simple_parse_uri does not support that "
-                          "URI form yet.");
+                          "Unsupported URI form");
 }
 
+
 /* ### move this into apr_xml */
-int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri)
+int
+dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri)
 {
   int i;
 
@@ -289,4 +376,104 @@ int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri)
     if (strcmp(APR_XML_GET_URI_ITEM(namespaces, i), uri) == 0)
       return i;
   return -1;
+}
+
+
+svn_error_t *
+dav_svn__send_xml(apr_bucket_brigade *bb,
+                  ap_filter_t *output,
+                  const char *fmt,
+                  ...)
+{
+  apr_status_t apr_err;
+  va_list ap;
+
+  va_start(ap, fmt);
+  apr_err = apr_brigade_vprintf(bb, ap_filter_flush, output, fmt, ap);
+  va_end(ap);
+  if (apr_err)
+    return svn_error_create(apr_err, 0, NULL);
+  /* ### check for an aborted connection, since the brigade functions
+     don't appear to be return useful errors when the connection is
+     dropped. */
+  if (output->c->aborted)
+    return svn_error_create(SVN_ERR_APMOD_CONNECTION_ABORTED, 0, NULL);
+  return SVN_NO_ERROR;
+}
+
+
+dav_error *
+dav_svn__test_canonical(const char *path, apr_pool_t *pool)
+{
+  if (strcmp(path, svn_path_canonicalize(path, pool)) == 0)
+    return NULL;
+
+  /* Otherwise, generate a generic HTTP_BAD_REQUEST error. */
+  return dav_svn__new_error_tag
+    (pool, HTTP_BAD_REQUEST, 0, 
+     apr_psprintf(pool, 
+                  "Path '%s' is not canonicalized; "
+                  "there is a problem with the client.", path),
+     SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+}
+
+
+dav_error *
+dav_svn__sanitize_error(svn_error_t *serr,
+                        const char *new_msg,
+                        int http_status,
+                        request_rec *r)
+{
+  svn_error_t *safe_err = serr;
+  if (new_msg != NULL)
+    {
+      /* Sanitization is necessary.  Create a new, safe error and
+           log the original error. */
+        safe_err = svn_error_create(serr->apr_err, NULL, new_msg);
+        ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r,
+                      "%s", serr->message);
+        svn_error_clear(serr);
+      }
+    return dav_svn__convert_err(safe_err, http_status,
+                                apr_psprintf(r->pool, safe_err->message),
+                                r->pool);
+}
+
+
+struct brigade_write_baton
+{
+  apr_bucket_brigade *bb;
+  ap_filter_t *output;
+};
+
+
+/* This implements 'svn_write_fn_t'. */
+static svn_error_t *
+brigade_write_fn(void *baton, const char *data, apr_size_t *len)
+{
+  struct brigade_write_baton *wb = baton;
+  apr_status_t apr_err;
+
+  apr_err = apr_brigade_write(wb->bb, ap_filter_flush, wb->output, data, *len);
+
+  if (apr_err != APR_SUCCESS)
+    return svn_error_wrap_apr(apr_err, "Error writing base64 data");
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_stream_t *
+dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
+                                   ap_filter_t *output,
+                                   apr_pool_t *pool)
+{
+  struct brigade_write_baton *wb = apr_palloc(pool, sizeof(*wb));
+  svn_stream_t *stream = svn_stream_create(wb, pool);
+
+  wb->bb = bb;
+  wb->output = output;
+  svn_stream_set_write(stream, brigade_write_fn);
+
+  return svn_base64_encode(stream, pool);
 }

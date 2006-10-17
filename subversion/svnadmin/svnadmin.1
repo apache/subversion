@@ -1,103 +1,27 @@
-.TH svnadmin 1 "22 Sept 2002" "svn r3206" "Subversion Command Line Tool"
+.\" You can view this file with:
+.\" nroff -man [filename]
+.\"
+.TH svnadmin 1
 .SH NAME
 svnadmin \- Subversion repository administration tool
 .SH SYNOPSIS
 .TP
-\fBsvnadmin\fP \fIcommand\fP \fIrepos-path\fP [\fIargs\fP]
+\fBsvnadmin\fP \fIcommand\fP \fI/path/to/repos\fP [\fIoptions\fP] [\fIargs\fP]
 .SH OVERVIEW
+Subversion is a version control system, which allows you to keep old
+versions of files and directories (usually source code), keep a log of
+who, when, and why changes occurred, etc., like CVS, RCS or SCCS.
+\fBSubversion\fP keeps a single copy of the master sources.  This copy
+is called the source ``repository''; it contains all the information
+to permit extracting previous versions of those files at any time.
 
-\fBsvnadmin\fP is a tool to perform administrative operations on a Subversion
-repository.  A Subversion repository contains the revision history of a
-directory tree. The revision history includes file changes and log messages as
-well as move and copy operations that were applied at some time in the past to
-the tree.  \fBsvnadmin\fP operations are typically carried out by an
-administrator. The
-.BR svn (1) 
-tool handles operations for normal users of the source controlled resource.
-.SH COMMANDS
-.TP
-.BI create " repos-path"
-Create a new, empty repository at
-.IR repos-path .
-For example, a repository can be created with the command:
+For more information about the Subversion project, visit 
+http://subversion.tigris.org.
 
-.SP
-.in +1i
-.ft B
-.nf
-$ svnadmin create /var/svn
-.fi
-.ft P
-.in -1i
-.SP
+Documentation for Subversion and its tools, including detailed usage
+explanations of the \fBsvn\fP, \fBsvnadmin\fP, \fBsvnserve\fP and
+\fBsvnlook\fP programs, historical background, philosophical 
+approaches and reasonings, etc., can be found at 
+http://svnbook.red-bean.com/.
 
-Importing a source tree into the repository created above is possible
-with the 
-.BR svn (1)
-command :
-
-.SP
-.in +1i
-.ft B
-.nf
-$ svn import file:///var/svn . new_proj
-.fi
-.ft P
-.in -1i
-.SP
-.TP
-.BI createtxn " repos-path \-rbase_rev"
-Create a new transaction based on
-.IR base_rev .
-.TP
-.BI dump " repos-path"  " \fR[\fI \-rlower-rev\fR[\fI:upper-rev\fR] ] \fR[\fI--incremental\fR]\fI"
-Dump the contents of filesystem to stdout in a 'dumpfile'
-portable format, sending feedback to stderr.  Dump revisions
-.IR lower-rev
-through 
-.IR upper-rev . 
-If no revisions are given, all revision trees are dumped.  
-If just
-.IR lower-rev 
-is given, that one revision tree is dumped.  A 'dumpfile' is used to 
-convert between incompatible repository formats. If
-.BI --incremental
-is passed, then the first revision dumped will be a diff against the
-previous revision, instead of the usual fulltext.
-.TP
-.BI load " repos-path"
-Read a 'dumpfile'-formatted stream from stdin, committing
-new revisions into the repository's filesystem.
-Send progress feedback to stdout.
-.TP
-.BI lscr " repos-path path \fR[\fI --copies \fR]\fI"
-Print, one-per-line and youngest-to-eldest, the revisions in which 
-.IR path 
-was modified.  Use the --copies flag to allow this operation 
-to cross copy history while searching for revisions.
-(For directories, this is, for now, almost guaranteed to be
-uninteresting.  Also, path must exist in the HEAD of the repository.)
-.TP
-.BI lstxns " repos_path"
-Print all txn names.
-.TP
-.BI recover " repos_path"
-Run the Berkeley DB recovery procedure on a repository.
-WARNING: only run this when you are SURE you're the only process
-accessing the repository.  Requires exclusive access.
-.TP
-.BI rmtxns " repos-path txn-name \fR[\fI ... \fR]\fI"
-Delete the transaction(s) named 
-.BI txn-name.
-.TP
-.BI setlog " repos-path \-rrev file"
-Set the log-message on revision 
-.IR rev 
-to the contents of 
-.IR file .
-Be careful with this option.  Log messages are stored as revision properties.  
-The history of revision properties is not saved.  This command will 
-.B permanently
-overwrite the previous log message.
-.SH "SEE ALSO"
-.BR svn (1)
+Run `svnadmin help' to access the built-in tool documentation.

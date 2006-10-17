@@ -57,24 +57,34 @@ Instead, your code should define an externally visible array
 `test_funcs', like this:
 
     /* The test table.  */
-
-    svn_error_t *(*test_funcs[]) (const char **msg,
-                                  svn_boolean_t msg_only,
-                                  apr_pool_t *pool) = {
-      0,
-      test_a,
-      test_b,
-      test_c,
-      0
+    struct svn_test_descriptor_t test_funcs[] =
+    {
+      SVN_TEST_NULL,
+      SVN_TEST_PASS(test_a),
+      SVN_TEST_PASS(test_b),
+      SVN_TEST_PASS(test_c),
+      SVN_TEST_NULL
     };
 
 In this example, `test_a', `test_b', and `test_c' are the names of
 test functions.  The first and last elements of the array must be
-zero.  The first zero is there to leave room for Buddha.  The standard
-`main' function searches for the final zero to determine the size of
-the array.
+SVN_TEST_NULL.  The first SVN_TEST_NULL is there to leave room for
+Buddha.  The standard `main' function searches for the final
+SVN_TEST_NULL to determine the size of the array.
 
-Each test function has the following type:
+Instead of SVN_TEST_PASS, you can use SVN_TEST_XFAIL to declare that a
+test is expected to fail. The status of such tests is then no longer
+marked as PASS or FAIL, but rather as XFAIL (eXpected FAILure) or
+XPASS (uneXpected PASS).
+
+The purpose of XFAIL tests is to confirm that a known bug still
+exists. When you see such a test uneXpectedly PASS, you've probably
+fixed the bug it tests for, even if that wasn't your intention. :-)
+XFAIL is not to be used as a way of testing a deliberately invalid
+operation that is expected to fail when Subversion is working
+correctly, nor as a place-holder for a test that is not yet written.
+
+Each test function conforms to the svn_test_driver_t prototype:
 
 	svn_error_t *f (const char **MSG,
                         svn_boolean_t MSG_ONLY
@@ -102,7 +112,7 @@ The python test framework exercises the command-line client as a
 "black box".
 
 To write python tests, please look at the README file inside the
-clients/cmdline/ subdirectory.
+cmdline/ subdirectory.
 
 
 When to write new tests
@@ -116,12 +126,8 @@ case that in the process of fixing a bug, several old bugs are
 accidentally resurrected... and then quickly revealed by the test
 suite.
 
-This same rule should apply to Subversion development: ** If you fix a
+This same rule applies to Subversion development: ** If you fix a
 bug, write a test for it. **
-
-(However, we should note that this rule is somewhat relaxed until
-Subversion hits 1.0.  A majority of pre-1.0 bugs are due to the code
-being in the "initial growth" stage.)
 
 
 What not to test
@@ -175,24 +181,19 @@ this...
 What's here
 -----------
 
-   * svn_tests_main.c 
+   * svn_test_main.c
      [shared library "libsvn_tests_main"]
      A standardized main() function to drive tests.  Link this into
      your automated test-programs.
 
-   * svn_tests_editor.c
+   * svn_test_editor.c
      [shared library "libsvn_tests_editor"]
      An editor for testing drivers of svn_delta_edit_fns_t.  This
      editor's functions simply print information to stdout.
 
-   * xml/
-    A subdirectory containing various <delta-pkg> XML files.  If one
-    of these testing trees isn't what you need, create a new one and
-    put it with the others.
-
-   * clients/cmdline/
+   * cmdline/
      A collection of python scripts to test the command-line client.
-   
+
 
 `make check`
 ------------
@@ -216,7 +217,7 @@ section.
 Testing Over DAV
 ----------------
 
-Please see subversion/tests/clients/cmdline/README for how to run the
+Please see subversion/tests/cmdline/README for how to run the
 command-line client test suite against a remote repository.
 
 Conclusion

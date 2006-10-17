@@ -6,7 +6,7 @@ Ben's Quick Summary of WebDAV and DeltaV
   servers behave as traditional fileservers, complete with a locking
   model and meta-data properties.
 
-* DeltaV: RFC 3256.  Adds more HTTP methods to WebDAV, introducing
+* DeltaV: RFC 3253.  Adds more HTTP methods to WebDAV, introducing
   versioning concepts.  Provides a number of flexible versioning
   models that servers can support, and some backwards-compatibility
   modes for older WebDAV or HTTP/1.1 clients.
@@ -88,12 +88,12 @@ New HTTP server response headers: {DAV, ...}
                requirement also prevents some non-DAV aware program
                from using your auth credentials and accidentally doing
                an ignorant PUT.  think of it as credentials for your
-               client sofware!)
+               client software!)
 
        - 'DAV:supportedlock' live property: indicates what kinds of
           locking is allowed on a resource.
 
-       - the rfc defines an 'opaquelocktoken' schema that all dav
+       - the rfc defines an 'opaquelocktoken' scheme that all dav
          servers must know how to understand: clients may generate and
          post them in an If: header.
 
@@ -156,7 +156,7 @@ collection, whatever.
    itself.  The pointer is just a property, called "DAV:checked-in".
    By definition, the contents of the VCR are always equal to the
    contents of the VR it points to.  If you change the pointer to a
-   different VR, the the VCR's contents magically change to match.
+   different VR, the VCR's contents magically change to match.
 
  * All of a VCR's VR objects need to be organized somehow.  And in
    fact, they *are* organized into a little tree of predecessors and

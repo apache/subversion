@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -24,9 +24,12 @@
 #define SVN_HASH_H
 
 #include <apr_pools.h>
-#include <apr_tables.h>         /* for apr_array_header_t */
 #include <apr_hash.h>
 #include <apr_file_io.h>
+
+#include "svn_types.h"
+#include "svn_io.h"
+#include "svn_error.h"
 
 
 #ifdef __cplusplus
@@ -46,24 +49,89 @@ extern "C" {
  * @{
  */
 
-/** Read a hash table from a file.
+/**
+ * The conventional terminator for hash dumps.
  *
- * Read a hash table from @a srcfile, storing the resultants names and
- * values in @a hash.  Use a @a pool for all allocations.  @a hash will 
- * have <tt>const char *</tt> keys and <tt>svn_string_t *</tt> values.  
+ * @since New in 1.1.
  */
-apr_status_t svn_hash_read (apr_hash_t *hash, 
-                            apr_file_t *srcfile,
+#define SVN_HASH_TERMINATOR "END"
+
+/**
+ * Read a hash table from @a stream, storing the resultants names and
+ * values in @a hash.  Use a @a pool for all allocations.  @a hash will
+ * have <tt>const char *</tt> keys and <tt>svn_string_t *</tt> values.
+ * If @a terminator is NULL, expect the hash to be terminated by the
+ * end of the stream; otherwise, expect the hash to be terminated by a
+ * line containing @a terminator.  Pass @c SVN_HASH_TERMINATOR to use
+ * the conventional terminator "END".
+ *
+ * @since New in 1.1.
+ */
+svn_error_t *svn_hash_read2(apr_hash_t *hash,
+                            svn_stream_t *stream,
+                            const char *terminator,
                             apr_pool_t *pool);
 
-/** Write a hash to a file.
+/**
+ * Dump @a hash to @a stream.  Use @a pool for all allocations.  @a
+ * hash has <tt>const char *</tt> keys and <tt>svn_string_t *</tt>
+ * values.  If @a terminator is not NULL, terminate the hash with a
+ * line containing @a terminator.
  *
- * Dump @a hash to @a destfile.  Use @a pool for all allocations.  @a hash 
- * has <tt>const char *</tt> keys and <tt>svn_string_t *</tt> values.  
+ * @since New in 1.1.
  */
-apr_status_t svn_hash_write (apr_hash_t *hash, 
-                             apr_file_t *destfile,
+svn_error_t *svn_hash_write2(apr_hash_t *hash, 
+                             svn_stream_t *stream,
+                             const char *terminator,
                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_hash_read2(), but allows @a stream to contain
+ * deletion lines which remove entries from @a hash as well as adding
+ * to it.
+ *
+ * @since New in 1.1.
+ */
+svn_error_t *svn_hash_read_incremental(apr_hash_t *hash,
+                                       svn_stream_t *stream,
+                                       const char *terminator,
+                                       apr_pool_t *pool);
+
+/**
+ * Similar to svn_hash_write2(), but only writes out entries for
+ * keys which differ between @a hash and @a oldhash, and also writes
+ * out deletion lines for keys which are present in @a oldhash but not
+ * in @a hash.
+ *
+ * @since New in 1.1.
+ */
+svn_error_t *svn_hash_write_incremental(apr_hash_t *hash,
+                                        apr_hash_t *oldhash,
+                                        svn_stream_t *stream,
+                                        const char *terminator,
+                                        apr_pool_t *pool);
+
+/**
+ * This function behaves like svn_hash_read2(), but it only works
+ * on an apr_file_t input, empty files are accepted, and the hash is
+ * expected to be terminated with a line containing "END" or
+ * "PROPS-END".
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ */
+svn_error_t *svn_hash_read(apr_hash_t *hash, 
+                           apr_file_t *srcfile,
+                           apr_pool_t *pool);
+
+/**
+ * This function behaves like svn_hash_write2(), but it only works
+ * on an apr_file_t output, and the terminator is always "END".
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ */
+svn_error_t *svn_hash_write(apr_hash_t *hash, 
+                            apr_file_t *destfile,
+                            apr_pool_t *pool);
 
 /** @} */
 
@@ -90,9 +158,9 @@ enum svn_hash_diff_key_status
 
 /** Function type for expressing a key's status between two hash tables. */
 typedef svn_error_t *(*svn_hash_diff_func_t)
-       (const void *key, apr_ssize_t klen,
-        enum svn_hash_diff_key_status status,
-        void *baton);
+  (const void *key, apr_ssize_t klen,
+   enum svn_hash_diff_key_status status,
+   void *baton);
 
 
 /** Take the diff of two hashtables.
@@ -112,11 +180,27 @@ typedef svn_error_t *(*svn_hash_diff_func_t)
  *
  * Use @a pool for temporary allocation.
  */
-svn_error_t *svn_hash_diff (apr_hash_t *hash_a,
-                            apr_hash_t *hash_b,
-                            svn_hash_diff_func_t diff_func,
-                            void *diff_func_baton,
-                            apr_pool_t *pool);
+svn_error_t *svn_hash_diff(apr_hash_t *hash_a,
+                           apr_hash_t *hash_b,
+                           svn_hash_diff_func_t diff_func,
+                           void *diff_func_baton,
+                           apr_pool_t *pool);
+
+/** @} */
+
+
+/**
+ * @defgroup svn_hash_misc Miscellaneous hash APIs
+ * @{
+ */
+
+/**
+ * Clear any key/value pairs in the hash table.  A wrapper for a
+ * apr_hash_clear(), which isn't available until APR 1.3.0.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_hash__clear(apr_hash_t *hash);
 
 /** @} */
 

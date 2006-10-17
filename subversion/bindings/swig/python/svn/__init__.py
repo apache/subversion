@@ -1,11 +1,12 @@
 #
-# __init__.py:  defines this directory as the 'svn' package.
+# __init__.py: defines this directory as the 'svn' package
 #
-#  Subversion is a tool for revision control. 
-#  See http://subversion.tigris.org for more information.
+# Subversion is a tool for revision control. 
+# See http://subversion.tigris.org for more information.
 #    
-# ====================================================================
-# Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+######################################################################
+#
+# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -14,4 +15,6 @@
 # newer version instead, at your option.
 #
 ######################################################################
-#
+
+__all__ = ['core', 'client', 'delta', 'fs', 'ra', 'repos', 'wc']
+

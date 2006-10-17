@@ -1,10 +1,10 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 # revplist.py : display revision properties
 #
 ######################################################################
 #
-# Copyright (c) 2002 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -18,31 +18,35 @@
 import sys
 import os
 import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 
-from svn import fs, util
+from svn import fs, core
 
-def plist(pool, rev=None, home='.', *props):
+def plist(rev=None, home='.', *props):
 
   db_path = os.path.join(home, 'db')
   if not os.path.exists(db_path):
     db_path = home
 
-  fs_ptr = fs.new(pool)
+  fs_ptr = fs.new(None)
   fs.open_berkeley(fs_ptr, db_path)
 
   if rev is None:
-    rev = fs.youngest_rev(fs_ptr, pool)
+    rev = fs.youngest_rev(fs_ptr)
 
   print 'Properties for revision:', rev
   if props:
     for propname in props:
-      value = fs.revision_prop(fs_ptr, rev, propname, pool)
+      value = fs.revision_prop(fs_ptr, rev, propname)
       if value is None:
         print '%s: <not present>' % propname
       else:
         print '%s: %s' % (propname, value)
   else:
-    proplist = fs.revision_proplist(fs_ptr, rev, pool)
+    proplist = fs.revision_proplist(fs_ptr, rev)
     for propname, value in proplist.items():
       print '%s: %s' % (propname, value)
 
@@ -52,7 +56,7 @@ def usage():
 
 def main():
   ### how to invoke usage() ?
-  opts, args = getopt.getopt(sys.argv[1:], 'r:h:')
+  opts, args = my_getopt(sys.argv[1:], 'r:h:')
   rev = None
   home = '.'
   for name, value in opts:
@@ -61,7 +65,7 @@ def main():
     elif name == '-h':
       home = value
 
-  apply(util.run_app, (plist, rev, home) + tuple(args))
+  apply(plist, (rev, home) + tuple(args))
 
 if __name__ == '__main__':
   main()

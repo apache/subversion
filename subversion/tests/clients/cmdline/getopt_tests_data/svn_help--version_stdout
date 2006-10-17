@@ -1,7 +1,0 @@
-help (?, h): Display this usage message.
-usage: help [SUBCOMMAND [SUBCOMMAND ... ]]
-
-Valid options:
-  --version                : print client version info
-  -q [--quiet]             : print as little as possible
-

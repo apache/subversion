@@ -2,7 +2,7 @@
  * sorts.c:   all sorts of sorts
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,17 +21,15 @@
 #include <apr_pools.h>
 #include <apr_hash.h>
 #include <apr_tables.h>
-#include <string.h>       /* for strncmp() */
 #include <stdlib.h>       /* for qsort()   */
 #include <assert.h>
-#include "svn_string.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
-#include "svn_props.h"
+#include "svn_error.h"
 
 
 
-/*** apr_hash_sorted_keys() ***/
+/*** svn_sort__hash() ***/
 
 /* (Should this be a permanent part of APR?)
 
@@ -51,7 +49,7 @@
 
    Therefore, it makes sense to store pointers to {void *, size_t}
    structures in our array.  No such apr object exists... BUT... if we
-   can use a new type svn_item_t which contains {char *, size_t, void
+   can use a new type svn_sort__item_t which contains {char *, size_t, void
    *}.  If store these objects in our array, we get the hash value
    *for free*.  When looping over the final array, we don't need to
    call apr_hash_get().  Major bonus!
@@ -59,7 +57,8 @@
 
 
 int
-svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b)
+svn_sort_compare_items_as_paths(const svn_sort__item_t *a,
+                                const svn_sort__item_t *b)
 {
   const char *astr, *bstr;
 
@@ -67,12 +66,30 @@ svn_sort_compare_items_as_paths (const svn_item_t *a, const svn_item_t *b)
   bstr = b->key;
   assert(astr[a->klen] == '\0');
   assert(bstr[b->klen] == '\0');
-  return svn_path_compare_paths (astr, bstr);
+  return svn_path_compare_paths(astr, bstr);
 }
 
 
 int
-svn_sort_compare_revisions (const void *a, const void *b)
+svn_sort_compare_items_lexically(const svn_sort__item_t *a,
+                                 const svn_sort__item_t *b)
+{
+  int val;
+  apr_size_t len;
+
+  /* Compare bytes of a's key and b's key up to the common length. */
+  len = (a->klen < b->klen) ? a->klen : b->klen;
+  val = memcmp(a->key, b->key, len);
+  if (val != 0)
+    return val;
+
+  /* They match up until one of them ends; whichever is longer is greater. */
+  return (a->klen < b->klen) ? -1 : (a->klen > b->klen) ? 1 : 0;
+}
+
+
+int
+svn_sort_compare_revisions(const void *a, const void *b)
 {
   svn_revnum_t a_rev = *(const svn_revnum_t *)a;
   svn_revnum_t b_rev = *(const svn_revnum_t *)b;
@@ -84,127 +101,40 @@ svn_sort_compare_revisions (const void *a, const void *b)
 }
 
 
-#ifndef apr_hash_sort_keys
+int 
+svn_sort_compare_paths(const void *a, const void *b)
+{
+  const char *item1 = *((const char * const *) a);
+  const char *item2 = *((const char * const *) b);
 
-/* see svn_sorts.h for documentation */
+  return svn_path_compare_paths(item1, item2);
+}
+
+
+
 apr_array_header_t *
-apr_hash_sorted_keys (apr_hash_t *ht,
-                      int (*comparison_func) (const svn_item_t *,
-                                              const svn_item_t *),
-                      apr_pool_t *pool)
+svn_sort__hash(apr_hash_t *ht,
+               int (*comparison_func)(const svn_sort__item_t *,
+                                      const svn_sort__item_t *),
+               apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   apr_array_header_t *ary;
 
-  /* allocate an array with only one element to begin with. */
-  ary = apr_array_make (pool, 1, sizeof(svn_item_t));
+  /* allocate an array with enough elements to hold all the keys. */
+  ary = apr_array_make(pool, apr_hash_count(ht), sizeof(svn_sort__item_t));
 
   /* loop over hash table and push all keys into the array */
-  for (hi = apr_hash_first (pool, ht); hi; hi = apr_hash_next (hi))
+  for (hi = apr_hash_first(pool, ht); hi; hi = apr_hash_next(hi))
     {
-      svn_item_t *item = apr_array_push (ary);
+      svn_sort__item_t *item = apr_array_push(ary);
 
-      apr_hash_this (hi, &item->key, &item->klen, &item->value);
+      apr_hash_this(hi, &item->key, &item->klen, &item->value);
     }
   
   /* now quicksort the array.  */
-  qsort (ary->elts, ary->nelts, ary->elt_size,
-         (int (*)(const void *, const void *))comparison_func);
+  qsort(ary->elts, ary->nelts, ary->elt_size,
+        (int (*)(const void *, const void *))comparison_func);
 
   return ary;
 }
-#endif /* apr_hash_sort_keys */
-
-
-
-/** Sorting properties **/
-
-svn_boolean_t
-svn_prop_is_svn_prop (const char *prop_name)
-{
-  return strncmp (prop_name, SVN_PROP_PREFIX, (sizeof (SVN_PROP_PREFIX) - 1)) 
-         ? FALSE 
-         : TRUE;
-}
-
-
-svn_prop_kind_t
-svn_property_kind (int *prefix_len,
-                   const char *prop_name)
-{
-  apr_size_t wc_prefix_len = sizeof (SVN_PROP_WC_PREFIX) - 1;
-  apr_size_t entry_prefix_len = sizeof (SVN_PROP_ENTRY_PREFIX) - 1;
-
-  if (strncmp (prop_name, SVN_PROP_WC_PREFIX, wc_prefix_len) == 0)
-    {
-      if (prefix_len)
-        *prefix_len = wc_prefix_len;
-      return svn_prop_wc_kind;     
-    }
-
-  if (strncmp (prop_name, SVN_PROP_ENTRY_PREFIX, entry_prefix_len) == 0)
-    {
-      if (prefix_len)
-        *prefix_len = entry_prefix_len;
-      return svn_prop_entry_kind;     
-    }
-
-  /* else... */
-  if (prefix_len)
-    *prefix_len = 0;
-  return svn_prop_regular_kind;
-}
-
-
-svn_error_t *
-svn_categorize_props (const apr_array_header_t *proplist,
-                      apr_array_header_t **entry_props,
-                      apr_array_header_t **wc_props,
-                      apr_array_header_t **regular_props,
-                      apr_pool_t *pool)
-{
-  int i;
-  *entry_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
-  *wc_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
-  *regular_props = apr_array_make (pool, 1, sizeof (svn_prop_t));
-
-  for (i = 0; i < proplist->nelts; i++)
-    {
-      svn_prop_t *prop, *newprop;
-      enum svn_prop_kind kind;
-      
-      prop = &APR_ARRAY_IDX (proplist, i, svn_prop_t);      
-      kind = svn_property_kind (NULL, prop->name);
-
-      if (kind == svn_prop_regular_kind)
-        newprop = apr_array_push (*regular_props);
-      else if (kind == svn_prop_wc_kind)
-        newprop = apr_array_push (*wc_props);
-      else if (kind == svn_prop_entry_kind)
-        newprop = apr_array_push (*entry_props);
-      else
-        /* Technically this can't happen, but might as well have the
-           code ready in case that ever changes. */
-        return svn_error_createf (SVN_ERR_BAD_PROP_KIND, NULL,
-                                  "bad prop kind for property '%s'",
-                                  prop->name);
-
-      newprop->name = prop->name;
-      newprop->value = prop->value;
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_boolean_t
-svn_prop_needs_translation (const char *propname)
-{
-  /* ### Someday, we may want to be picky and choosy about which
-     properties require UTF8 and EOL conversion.  For now, all "svn:"
-     props need it.  */
-
-  return svn_prop_is_svn_prop (propname);
-}
-
-

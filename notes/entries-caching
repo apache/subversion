@@ -23,18 +23,34 @@ svn_wc_entry.  The function svn_wc__entries_write is used to update
 the entries file on disk.  The function svn_wc__entry_modify is
 implemented in terms of entries_read and entries_write.
 
-Caching during read-only operations is essentially complete.  For
-read-write operations one potential bottleneck remains: calling
-svn_wc__entries_write repeatedly, usually through the function
-svn_wc__entry_modify.  This writes the entire file even if only one
-entry has changed.  A partial solution is in place: when running a log
-file any changes are accumulated in the access baton and only finally
-written when the log file completes.  There is scope to use the same
-mechanism in other places, although it may be best to refrain from
-doing this until the interface changes (see section 2) are resolved.
-There is also an alternative approach, which would be to write changes
-to separate files and at some point combine these separate files into
-a single file.
+1.1 Write Caching Overview
+
+An overview of the update process.
+
+   1. Lock the directory
+   2. Read the entries file and cache in memory
+   3. Start the wc update
+      3.1  Start a directory update
+         3.1.1 Start file update
+            3.1.1.1 Write a log file specific to this item
+         3.1.3 Finish file update
+      3.2. Finish directory update
+      3.3. Run log files
+         3.3.1. Log file commands modify entries in memory
+      3.4  Finish log files
+      3.5. Flush entries to disk
+      3.6. Remove log files
+   4. Finish update
+   5. Unlock directory
+
+Each directory update may contain multiple file updates so when the
+directory update is complete there may be multiple log files.  While
+the log files are being run the entries modifications are cached in
+memory and written once when the log files are complete.  The reason
+for accumulating multiple log files is that flushing the entries to
+disk involves writing the entire entries file, if it were done after
+each file then the total amount of entries data written would grow
+exponentially during a checkout.
 
 
 2. Interface Enhancements
@@ -89,8 +105,9 @@ directory hierarchy.  I would like to record this information in the
 access baton set, and modify the retrieve functions to include an
 svn_boolean_t* parameter that gets set TRUE when a request for a
 missing directory is made.  The advantage of doing this is that the
-application could avoid making svn_io_check_path calls when the access
-baton already has the information.
+application could avoid making svn_io_check_path and svn_wc_check_wc
+calls when the access baton already has the information.  The function
+prop_path_internal looks like a good candidate for this optimisation.
 
 
 3. Access Baton Sets
@@ -161,8 +178,7 @@ identify those places that are failing to use the log file mechanism.
 6. Status
    ------
 
-Entries caching has been implemented.  Write performance has been
-addressed, but could possibly be improved (section 1).
+Entries caching has been implemented.
 
 The interface changes (section 2) have not been started.
 

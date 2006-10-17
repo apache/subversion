@@ -1,7 +1,0 @@
-#
-# mailer.conf: example configuration file for mailer.py
-#
-
-[general]
-diff = /usr/bin/diff -u -L %(label)s %(from)s %(to)s
-

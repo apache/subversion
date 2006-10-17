@@ -1,5 +1,7 @@
 # This is a sample configuration file for commit-access-control.pl.
 #
+# $Id$
+#
 # This file uses the Windows ini style, where the file consists of a
 # number of sections, each section starts with a unique section name
 # in square brackets.  Parameters in each section are specified as

@@ -102,9 +102,9 @@ anyway, if you want to implement exclusive locks. A GET will just
 check that list first, and if it finds the URL, look into the
 associated txn instead of HEAD.]
 
-[ gstein: note that that list is cross-txn; we probably want a new dbm
-  in the REPOS/dav/ subdir. map the repos path (derived from the URL)
-  to the txn-name containing the most recent copy.
+[ gstein: note that list is cross-txn; we probably want a new dbm in
+  the REPOS/dav/ subdir. map the repos path (derived from the URL) to
+  the txn-name containing the most recent copy.
   
   my hope was to avoid additional state like this, and encode that
   state in something like the locktoken. ]
@@ -199,9 +199,9 @@ Analysis of dav_svn_put()
 At the moment, ra_dav is only attempting to PUT WR's.  
 
 mod_dav, however, already has an autoversioning infrastructure, and it
-currently attempts to to bookend the stream-writing with an
-auto-checkout and auto-checkin.  But mod_dav_svn doesn't support those
-operations yet, so they're just no-ops.
+currently attempts to bookend the stream-writing with an auto-checkout
+and auto-checkin.  But mod_dav_svn doesn't support those operations
+yet, so they're just no-ops.
 
 By supporting auto_checkout and auto_checkin, we're adding the magic
 ability for a PUT on a VCR to happen: the VCR is magically transformed
@@ -321,3 +321,26 @@ auto_checkin:
   how that affects us from an ongoing "httpd needs some fixes for svn"
   standpoint.
   ]
+
+
+-----------------------------------------------------------
+
+Late 2004 Notes:
+
+  We're working on a real locking system now.  Eventually, we'll be
+  able to use this feature to complete autoversioning ("phase 2"
+  above.)
+
+  - remember that we'll need to be able to look up a lock in the
+    lock-table by UUID.  Generic DAV clients use UUID URIs to talk
+    about locks.
+
+  - MSWord locks a document with a timeout of 180 seconds, then
+    continuously re-LOCKs every so often, passing the existing
+    lock-token back in an If: header.   mod_dav_fs returns the same
+    lock-token UUID (presumably with a newer expiration time).  Our
+    current implementation doesn't allow for mutable lock tokens.  We
+    need to make sure that this doesn't mess up MSWord... that it's
+    usin the *last* token to renew locks, not the first one.
+
+

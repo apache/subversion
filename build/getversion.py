@@ -40,7 +40,7 @@ if __name__ == '__main__':
   p = Parser()
   p.search('SVN_VER_MAJOR', 'major')
   p.search('SVN_VER_MINOR', 'minor')
-  p.search('SVN_VER_MICRO', 'patch')
+  p.search('SVN_VER_PATCH', 'patch')
 
   import os, sys
   r = p.parse(sys.argv[1])

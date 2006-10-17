@@ -35,7 +35,7 @@ Note:
      "pumpkin", whatever.  We're calling it "copy" :-).  It is the SCM
      branch operation.
 
-First, a node's key consists of three parts
+First, a node's key consists of three parts:
 
    nodeID.copyID.txnID
 
@@ -473,7 +473,7 @@ about storing and retrieving deltified text from the filesystem. I'll
 just jot down a few thoughts about how this could be done, assuming
 one of two possible models of storage management in the filesystem:
 
-  a) all data store and retreive operations are synchronous; or,
+  a) all data store and retrieve operations are synchronous; or,
   b) deltification can run in the background.
 
 
@@ -490,7 +490,7 @@ existing version (copy, modify).
   b) store the fulltext or delta in the tip and mark it for async
      modification. Do a) in the background.
 
-2) Retreiving old data
+2) Retrieving old data
 
   a) If the data is a delta, follow the delte references (combining
      the deltas) until a fulltext is found; apply the combined delta

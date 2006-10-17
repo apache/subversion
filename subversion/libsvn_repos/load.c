@@ -1,7 +1,7 @@
 /* load.c --- parsing a 'dumpfile'-formatted stream.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,16 +16,18 @@
  */
 
 
+#include "svn_private_config.h"
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_string.h"
-#include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_props.h"
+#include "repos.h"
+#include "svn_private_config.h"
 
 #include <apr_lib.h>
-
 
 
 /*----------------------------------------------------------------------*/
@@ -38,7 +40,13 @@ struct parse_baton
   svn_fs_t *fs;
 
   svn_boolean_t use_history;
+  svn_boolean_t use_pre_commit_hook;
+  svn_boolean_t use_post_commit_hook;
   svn_stream_t *outstream;
+  enum svn_repos_load_uuid uuid_action;
+  const char *parent_dir;
+  apr_pool_t *pool;
+  apr_hash_t *rev_map;
 };
 
 struct revision_baton
@@ -61,6 +69,7 @@ struct node_baton
   const char *path;
   svn_node_kind_t kind;
   enum svn_node_action action;
+  const char *md5_checksum;     /* null, if not available */
 
   svn_revnum_t copyfrom_rev;
   const char *copyfrom_path;
@@ -73,8 +82,47 @@ struct node_baton
 
 /*----------------------------------------------------------------------*/
 
+/** A conversion function between the two vtable types. **/
+static svn_repos_parse_fns2_t *
+fns2_from_fns(const svn_repos_parser_fns_t *fns,
+              apr_pool_t *pool)
+{
+  svn_repos_parse_fns2_t *fns2;
+
+  fns2 = apr_palloc(pool, sizeof(*fns2));
+  fns2->new_revision_record = fns->new_revision_record;
+  fns2->uuid_record = fns->uuid_record;
+  fns2->new_node_record = fns->new_node_record;
+  fns2->set_revision_property = fns->set_revision_property;
+  fns2->set_node_property = fns->set_node_property;
+  fns2->remove_node_props = fns->remove_node_props;
+  fns2->set_fulltext = fns->set_fulltext;
+  fns2->close_node = fns->close_node;
+  fns2->close_revision = fns->close_revision;
+  fns2->delete_node_property = NULL;
+  fns2->apply_textdelta = NULL;
+  return fns2;
+}
+
+
+/*----------------------------------------------------------------------*/
+
 /** The parser and related helper funcs **/
 
+
+static svn_error_t *
+stream_ran_dry(void)
+{
+  return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
+                          _("Premature end of content data in dumpstream"));
+}
+
+static svn_error_t *
+stream_malformed(void)
+{
+  return svn_error_create(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                          _("Dumpstream data appears to be malformed"));
+}
 
 /* Allocate a new hash *HEADERS in POOL, and read a series of
    RFC822-style headers from STREAM.  Duplicate each header's name and
@@ -87,39 +135,44 @@ struct node_baton
    be passed in as FIRST_HEADER.  If not, pass NULL instead.
  */
 static svn_error_t *
-read_header_block (svn_stream_t *stream,
-                   svn_stringbuf_t *first_header,
-                   apr_hash_t **headers,
-                   apr_pool_t *pool)
+read_header_block(svn_stream_t *stream,
+                  svn_stringbuf_t *first_header,
+                  apr_hash_t **headers,
+                  apr_pool_t *pool)
 {
-  *headers = apr_hash_make (pool);  
+  *headers = apr_hash_make(pool);  
 
   while (1)
     {
       svn_stringbuf_t *header_str;
       const char *name, *value; 
+      svn_boolean_t eof;
       apr_size_t i = 0;
 
       if (first_header != NULL)
         {
           header_str = first_header;
           first_header = NULL;  /* so we never visit this block again. */
+          eof = FALSE;
         }
 
       else
         /* Read the next line into a stringbuf. */
-        SVN_ERR (svn_stream_readline (stream, &header_str, pool));
-      
-      if ((header_str == NULL) || (svn_stringbuf_isempty (header_str)))
+        SVN_ERR(svn_stream_readline(stream, &header_str, "\n", &eof, pool));
+
+      if (svn_stringbuf_isempty(header_str))
         break;    /* end of header block */
+      else if (eof)
+        return stream_ran_dry();
 
       /* Find the next colon in the stringbuf. */
       while (header_str->data[i] != ':')
         {
           if (header_str->data[i] == '\0')
-            return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                                     "Found malformed header block "
-                                     "in dumpfile stream.");
+            return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                                     _("Dump stream contains a malformed "
+                                       "header (with no ':') at '%.20s'"),
+                                     header_str->data);
           i++;
         }
       /* Create a 'name' string and point to it. */
@@ -129,33 +182,54 @@ read_header_block (svn_stream_t *stream,
       /* Skip over the NULL byte and the space following it.  */
       i += 2;
       if (i > header_str->len)
-        return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                                 "Found malformed header block "
-                                 "in dumpfile stream.");
+        return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                                 _("Dump stream contains a malformed "
+                                   "header (with no value) at '%.20s'"),
+                                 header_str->data);
 
       /* Point to the 'value' string. */
       value = header_str->data + i;
       
       /* Store name/value in hash. */
-      apr_hash_set (*headers, name, APR_HASH_KEY_STRING, value);
+      apr_hash_set(*headers, name, APR_HASH_KEY_STRING, value);
     }
 
   return SVN_NO_ERROR;
 }
 
 
+/* Set *PBUF to a string of length LEN, allocated in POOL, read from STREAM.
+   Also read a newline from STREAM and increase *ACTUAL_LEN by the total
+   number of bytes read from STREAM.  */
 static svn_error_t *
-stream_ran_dry (void)
+read_key_or_val(char **pbuf,
+                svn_filesize_t *actual_length,
+                svn_stream_t *stream,
+                apr_size_t len,
+                apr_pool_t *pool)
 {
-  return svn_error_create (SVN_ERR_INCOMPLETE_DATA, NULL,
-                           "Premature end of content data in dumpstream.");
-}
+  char *buf = apr_pcalloc(pool, len + 1);
+  apr_size_t numread;
+  char c;
 
-static svn_error_t *
-stream_malformed (void)
-{
-  return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                           "Dumpstream data appears to be malformed.");
+  numread = len;
+  SVN_ERR(svn_stream_read(stream, buf, &numread));
+  *actual_length += numread;
+  if (numread != len)
+    return stream_ran_dry();
+  buf[len] = '\0';
+
+  /* Suck up extra newline after key data */
+  numread = 1;
+  SVN_ERR(svn_stream_read(stream, &c, &numread));
+  *actual_length += numread;
+  if (numread != 1)
+    return stream_ran_dry();
+  if (c != '\n')
+    return stream_malformed();
+
+  *pbuf = buf;
+  return SVN_NO_ERROR;
 }
 
 /* Read CONTENT_LENGTH bytes from STREAM, parsing the bytes as an
@@ -163,118 +237,107 @@ stream_malformed (void)
    PARSE_FNS->set_*_property on RECORD_BATON (depending on the value
    of IS_NODE.)
 
+   Set *ACTUAL_LENGTH to the number of bytes consumed from STREAM.
+   If an error is returned, the value of *ACTUAL_LENGTH is undefined.
+
    Use POOL for all allocations.  */
 static svn_error_t *
-parse_property_block (svn_stream_t *stream,
-                      apr_size_t content_length,
-                      const svn_repos_parser_fns_t *parse_fns,
-                      void *record_baton,
-                      svn_boolean_t is_node,
-                      apr_pool_t *pool)
+parse_property_block(svn_stream_t *stream,
+                     svn_filesize_t content_length,
+                     const svn_repos_parse_fns2_t *parse_fns,
+                     void *record_baton,
+                     svn_boolean_t is_node,
+                     svn_filesize_t *actual_length,
+                     apr_pool_t *pool)
 {
   svn_stringbuf_t *strbuf;
+  apr_pool_t *proppool = svn_pool_create(pool);
 
-  while (content_length)
+  *actual_length = 0;
+  while (content_length != *actual_length)
     {
       char *buf;  /* a pointer into the stringbuf's data */
+      svn_boolean_t eof;
 
+      svn_pool_clear(proppool);
+      
       /* Read a key length line.  (Actually, it might be PROPS_END). */
-      SVN_ERR (svn_stream_readline (stream, &strbuf, pool));
+      SVN_ERR(svn_stream_readline(stream, &strbuf, "\n", &eof, proppool));
 
-      if (strbuf == NULL)
+      if (eof)
         {
           /* We could just use stream_ran_dry() or stream_malformed(),
              but better to give a non-generic property block error. */ 
           return svn_error_create
             (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-             "incomplete or unterminated property block");
+             _("Incomplete or unterminated property block"));
         }
 
-      content_length -= (strbuf->len + 1); /* +1 because we read a \n too. */
+      *actual_length += (strbuf->len + 1); /* +1 because we read a \n too. */
       buf = strbuf->data;
 
-      if (! strcmp (buf, "PROPS-END"))
+      if (! strcmp(buf, "PROPS-END"))
         break; /* no more properties. */
 
       else if ((buf[0] == 'K') && (buf[1] == ' '))
         {
-          apr_size_t numread;
           char *keybuf;
-          char c;
-          
-          /* Get the length of the key */
-          apr_size_t keylen = (apr_size_t) atoi (buf + 2);
 
-          /* Now read that much into a buffer, + 1 byte for null terminator */
-          keybuf = apr_pcalloc (pool, keylen + 1);
-          numread = keylen;
-          SVN_ERR (svn_stream_read (stream, keybuf, &numread));
-          content_length -= numread;
-          if (numread != keylen)
-            return stream_ran_dry ();
-          keybuf[keylen] = '\0';
-
-          /* Suck up extra newline after key data */
-          numread = 1;
-          SVN_ERR (svn_stream_read (stream, &c, &numread));
-          content_length -= numread;
-          if (numread != 1)
-            return stream_ran_dry ();
-          if (c != '\n') 
-            return stream_malformed ();
+          SVN_ERR(read_key_or_val(&keybuf, actual_length,
+                                  stream, atoi(buf + 2), proppool));
 
           /* Read a val length line */
-          SVN_ERR (svn_stream_readline (stream, &strbuf, pool));
-          content_length -= (strbuf->len + 1); /* +1 because we read \n too */
+          SVN_ERR(svn_stream_readline(stream, &strbuf, "\n", &eof, proppool));
+          if (eof)
+            return stream_ran_dry();
+
+          *actual_length += (strbuf->len + 1); /* +1 because we read \n too */
           buf = strbuf->data;
 
           if ((buf[0] == 'V') && (buf[1] == ' '))
             {
               svn_string_t propstring;
+              char *valbuf;
 
-              /* Get the length of the value */
-              apr_size_t vallen = atoi (buf + 2);
-
-              /* Again, 1 extra byte for the null termination. */
-              char *valbuf = apr_palloc (pool, vallen + 1);
-              numread = vallen;
-              SVN_ERR (svn_stream_read (stream, valbuf, &numread));
-              content_length -= numread;
-              if (numread != vallen)
-                return stream_ran_dry ();
-              ((char *) valbuf)[vallen] = '\0';
-
-              /* Suck up extra newline after val data */
-              numread = 1;
-              SVN_ERR (svn_stream_read (stream, &c, &numread));
-              content_length -= numread;
-              if (numread != 1)
-                return stream_ran_dry ();
-              if (c != '\n') 
-                return stream_malformed ();
-
-              /* Create final value string */
+              propstring.len = atoi(buf + 2);
+              SVN_ERR(read_key_or_val(&valbuf, actual_length,
+                                      stream, propstring.len, proppool));
               propstring.data = valbuf;
-              propstring.len = vallen;
 
               /* Now, send the property pair to the vtable! */
               if (is_node)
-                SVN_ERR (parse_fns->set_node_property (record_baton,
-                                                       keybuf,
-                                                       &propstring));
+                SVN_ERR(parse_fns->set_node_property(record_baton,
+                                                     keybuf,
+                                                     &propstring));
               else
-                SVN_ERR (parse_fns->set_revision_property (record_baton,
-                                                           keybuf,
-                                                           &propstring));
+                SVN_ERR(parse_fns->set_revision_property(record_baton,
+                                                         keybuf,
+                                                         &propstring));
             }
           else
-            return stream_malformed (); /* didn't find expected 'V' line */
+            return stream_malformed(); /* didn't find expected 'V' line */
+        }
+      else if ((buf[0] == 'D') && (buf[1] == ' '))
+        {
+          char *keybuf;
+
+          SVN_ERR(read_key_or_val(&keybuf, actual_length,
+                                  stream, atoi(buf + 2), proppool));
+
+          /* We don't expect these in revision properties, and if we see
+             one when we don't have a delete_node_property callback,
+             then we're seeing a v3 feature in a v2 dump. */
+          if (!is_node || !parse_fns->delete_node_property)
+            return stream_malformed();
+
+          SVN_ERR(parse_fns->delete_node_property(record_baton, keybuf));
         }
       else
-        return stream_malformed (); /* didn't find expected 'K' line */
+        return stream_malformed(); /* didn't find expected 'K' line */
       
     } /* while (1) */
 
+  svn_pool_destroy(proppool);
   return SVN_NO_ERROR;
 }                  
 
@@ -285,19 +348,32 @@ parse_property_block (svn_stream_t *stream,
 
    Use POOL for all allocations.  */
 static svn_error_t *
-parse_text_block (svn_stream_t *stream,
-                  apr_size_t content_length,
-                  const svn_repos_parser_fns_t *parse_fns,
-                  void *record_baton,
-                  char *buffer,
-                  apr_size_t buflen,
-                  apr_pool_t *pool)
+parse_text_block(svn_stream_t *stream,
+                 svn_filesize_t content_length,
+                 svn_boolean_t is_delta,
+                 const svn_repos_parse_fns2_t *parse_fns,
+                 void *record_baton,
+                 char *buffer,
+                 apr_size_t buflen,
+                 apr_pool_t *pool)
 {
   svn_stream_t *text_stream = NULL;
   apr_size_t num_to_read, rlen, wlen;
-  
-  /* Get a stream to which we can push the data. */
-  SVN_ERR (parse_fns->set_fulltext (&text_stream, record_baton));
+
+  if (is_delta)
+    {
+      svn_txdelta_window_handler_t wh;
+      void *whb;
+
+      SVN_ERR(parse_fns->apply_textdelta(&wh, &whb, record_baton));
+      if (wh)
+        text_stream = svn_txdelta_parse_svndiff(wh, whb, TRUE, pool);
+    }
+  else
+    {
+      /* Get a stream to which we can push the data. */
+      SVN_ERR(parse_fns->set_fulltext(&text_stream, record_baton));
+    }
 
   /* If there are no contents to read, just write an empty buffer
      through our callback. */
@@ -305,7 +381,7 @@ parse_text_block (svn_stream_t *stream,
     {
       wlen = 0;
       if (text_stream)
-        SVN_ERR (svn_stream_write (text_stream, "", &wlen));
+        SVN_ERR(svn_stream_write(text_stream, "", &wlen));
     }
 
   /* Regardless of whether or not we have a sink for our data, we
@@ -315,43 +391,62 @@ parse_text_block (svn_stream_t *stream,
       if (content_length >= buflen)
         rlen = buflen;
       else
-        rlen = content_length;
+        rlen = (apr_size_t) content_length;
       
       num_to_read = rlen;
-      SVN_ERR (svn_stream_read (stream, buffer, &rlen));
+      SVN_ERR(svn_stream_read(stream, buffer, &rlen));
       content_length -= rlen;
       if (rlen != num_to_read)
-        return stream_ran_dry ();
+        return stream_ran_dry();
       
       if (text_stream)
         {
           /* write however many bytes you read. */
           wlen = rlen;
-          SVN_ERR (svn_stream_write (text_stream, buffer, &wlen));
+          SVN_ERR(svn_stream_write(text_stream, buffer, &wlen));
           if (wlen != rlen)
             {
               /* Uh oh, didn't write as many bytes as we read. */
-              return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                       "Error pushing textual contents.");
+              return svn_error_create(SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                                      _("Unexpected EOF writing contents"));
             }
         }
     }
   
   /* If we opened a stream, we must close it. */
   if (text_stream)
-    SVN_ERR (svn_stream_close (text_stream));
+    SVN_ERR(svn_stream_close(text_stream));
 
   return SVN_NO_ERROR;
 }
 
 
 
+/* Parse VERSIONSTRING and verify that we support the dumpfile format
+   version number, setting *VERSION appropriately. */
 static svn_error_t *
-validate_format_version (const char *versionstring)
+parse_format_version(const char *versionstring, int *version)
 {
-  /* ### parse string and verify that we support the dumpfile format
-         version number. */
-  
+  static const int magic_len = sizeof(SVN_REPOS_DUMPFILE_MAGIC_HEADER) - 1;
+  const char *p = strchr(versionstring, ':');
+  int value;
+
+  if (p == NULL
+      || p != (versionstring + magic_len)
+      || strncmp(versionstring,
+                 SVN_REPOS_DUMPFILE_MAGIC_HEADER,
+                 magic_len))
+    return svn_error_create(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                            _("Malformed dumpfile header"));
+
+  value = atoi(p+1);
+
+  if (value > SVN_REPOS_DUMPFILE_FORMAT_VERSION)
+    return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                             _("Unsupported dumpfile version: %d"),
+                             value);
+
+  *version = value;
   return SVN_NO_ERROR;
 }
 
@@ -359,26 +454,38 @@ validate_format_version (const char *versionstring)
 
 /* The Main Parser Logic */
 svn_error_t *
-svn_repos_parse_dumpstream (svn_stream_t *stream,
-                            const svn_repos_parser_fns_t *parse_fns,
+svn_repos_parse_dumpstream2(svn_stream_t *stream,
+                            const svn_repos_parse_fns2_t *parse_fns,
                             void *parse_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
                             apr_pool_t *pool)
 {
+  svn_boolean_t eof;
   svn_stringbuf_t *linebuf;
   void *rev_baton = NULL;
-  char *buffer = apr_palloc (pool, SVN_STREAM_CHUNK_SIZE);
-  apr_size_t buflen = SVN_STREAM_CHUNK_SIZE;
-  apr_pool_t *linepool = svn_pool_create (pool);
-  apr_pool_t *revpool = svn_pool_create (pool);
-  apr_pool_t *nodepool = svn_pool_create (pool);
+  char *buffer = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
+  apr_size_t buflen = SVN__STREAM_CHUNK_SIZE;
+  apr_pool_t *linepool = svn_pool_create(pool);
+  apr_pool_t *revpool = svn_pool_create(pool);
+  apr_pool_t *nodepool = svn_pool_create(pool);
+  int version;
 
-  SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
-  if (linebuf == NULL)
-    return stream_ran_dry ();
+  SVN_ERR(svn_stream_readline(stream, &linebuf, "\n", &eof, linepool));
+  if (eof)
+    return stream_ran_dry();
     
   /* The first two lines of the stream are the dumpfile-format version
      number, and a blank line. */
-  SVN_ERR (validate_format_version (linebuf->data));
+  SVN_ERR(parse_format_version(linebuf->data, &version));
+
+  /* If we were called from svn_repos_parse_dumpstream(), the
+     callbacks to handle delta contents will be NULL, so we have to
+     reject dumpfiles with the current version. */
+  if (version == SVN_REPOS_DUMPFILE_FORMAT_VERSION
+      && (!parse_fns->delete_node_property || !parse_fns->apply_textdelta))
+    return svn_error_createf(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                             _("Unsupported dumpfile version: %d"), version);
 
   /* A dumpfile "record" is defined to be a header-block of
      rfc822-style headers, possibly followed by a content-block.
@@ -398,99 +505,226 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
     {
       apr_hash_t *headers;
       void *node_baton;
-      const char *valstr;
       svn_boolean_t found_node = FALSE;
+      svn_boolean_t old_v1_with_cl = FALSE;
+      const char *content_length;
+      const char *prop_cl;
+      const char *text_cl;
+      const char *value;
+      svn_filesize_t actual_prop_length;
 
       /* Clear our per-line pool. */
-      svn_pool_clear (linepool);
+      svn_pool_clear(linepool);
+
+      /* Check for cancellation. */
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
 
       /* Keep reading blank lines until we discover a new record, or until
          the stream runs out. */
-      SVN_ERR (svn_stream_readline (stream, &linebuf, linepool));
-      
-      if (linebuf == NULL)
-        break;   /* end of stream, go home. */
+      SVN_ERR(svn_stream_readline(stream, &linebuf, "\n", &eof, linepool));
 
-      if ((linebuf->len == 0) || (apr_isspace (linebuf->data[0])))
+      if (eof)
+        {
+          if (svn_stringbuf_isempty(linebuf))
+            break;   /* end of stream, go home. */
+          else
+            return stream_ran_dry();
+        }
+
+      if ((linebuf->len == 0) || (apr_isspace(linebuf->data[0])))
         continue; /* empty line ... loop */
 
       /*** Found the beginning of a new record. ***/ 
 
       /* The last line we read better be a header of some sort.
          Read the whole header-block into a hash. */
-      SVN_ERR (read_header_block (stream, linebuf, &headers, linepool));
+      SVN_ERR(read_header_block(stream, linebuf, &headers, linepool));
 
-      /* Create some kind of new record object. */
+      /*** Handle the various header blocks. ***/
 
       /* Is this a revision record? */
-      if (apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
-                        APR_HASH_KEY_STRING))
+      if (apr_hash_get(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
+                       APR_HASH_KEY_STRING))
         {
           /* If we already have a rev_baton open, we need to close it
              and clear the per-revision subpool. */
           if (rev_baton != NULL)
             {
-              SVN_ERR (parse_fns->close_revision (rev_baton));
-              svn_pool_clear (revpool);
+              SVN_ERR(parse_fns->close_revision(rev_baton));
+              svn_pool_clear(revpool);
             }
 
-          SVN_ERR (parse_fns->new_revision_record (&rev_baton,
-                                                   headers, parse_baton,
-                                                   revpool));
+          SVN_ERR(parse_fns->new_revision_record(&rev_baton,
+                                                 headers, parse_baton,
+                                                 revpool));
         }
-
       /* Or is this, perhaps, a node record? */
-      else if (apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
-                             APR_HASH_KEY_STRING))
+      else if (apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_PATH,
+                            APR_HASH_KEY_STRING))
         {
-          SVN_ERR (parse_fns->new_node_record (&node_baton,
-                                               headers,
-                                               rev_baton,
-                                               nodepool));
+          SVN_ERR(parse_fns->new_node_record(&node_baton,
+                                             headers,
+                                             rev_baton,
+                                             nodepool));
           found_node = TRUE;
         }
-
+      /* Or is this the repos UUID? */
+      else if ((value = apr_hash_get(headers, SVN_REPOS_DUMPFILE_UUID,
+                                     APR_HASH_KEY_STRING)))
+        {
+          SVN_ERR(parse_fns->uuid_record(value, parse_baton, pool));
+        }
+      /* Or perhaps a dumpfile format? */
+      else if ((value = apr_hash_get(headers, 
+                                     SVN_REPOS_DUMPFILE_MAGIC_HEADER,
+                                     APR_HASH_KEY_STRING)))
+        {
+          /* ### someday, switch modes of operation here. */
+          version = atoi(value);
+        }
       /* Or is this bogosity?! */
       else
         {
           /* What the heck is this record?!? */
-          return svn_error_create (SVN_ERR_STREAM_MALFORMED_DATA, NULL,
-                                   "Unrecognized record type in stream.");
+          return svn_error_create(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                                  _("Unrecognized record type in stream"));
         }
-      
+
+      /* Need 3 values below to determine v1 dump type
+
+         Old (pre 0.14?) v1 dumps don't have Prop-content-length
+         and Text-content-length fields, but always have a properties
+         block in a block with Content-Length > 0 */
+
+      content_length = apr_hash_get(headers,
+                                    SVN_REPOS_DUMPFILE_CONTENT_LENGTH,
+                                    APR_HASH_KEY_STRING);
+      prop_cl = apr_hash_get(headers,
+                             SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
+                             APR_HASH_KEY_STRING);
+      text_cl = apr_hash_get(headers,
+                             SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
+                             APR_HASH_KEY_STRING);
+      old_v1_with_cl =
+        version == 1 && content_length && ! prop_cl && ! text_cl;
+
       /* Is there a props content-block to parse? */
-      if ((valstr = apr_hash_get (headers,
-                                  SVN_REPOS_DUMPFILE_PROP_CONTENT_LENGTH,
-                                  APR_HASH_KEY_STRING)))
+      if (prop_cl || old_v1_with_cl)
         {
-          SVN_ERR (parse_property_block (stream, 
-                                         (apr_size_t) atoi (valstr),
-                                         parse_fns,
-                                         found_node ? node_baton : rev_baton,
-                                         found_node,
-                                         found_node ? nodepool : revpool));
+          const char *delta = apr_hash_get(headers,
+                                           SVN_REPOS_DUMPFILE_PROP_DELTA,
+                                           APR_HASH_KEY_STRING);
+          svn_boolean_t is_delta = (delta && strcmp(delta, "true") == 0);
+
+          /* First, remove all node properties, unless this is a delta
+             property block. */
+          if (found_node && !is_delta)
+            SVN_ERR(parse_fns->remove_node_props(node_baton));
+
+          SVN_ERR(parse_property_block
+                  (stream,
+                   svn__atoui64(prop_cl ? prop_cl : content_length),
+                   parse_fns,
+                   found_node ? node_baton : rev_baton,
+                   found_node,
+                   &actual_prop_length,
+                   found_node ? nodepool : revpool));
         }
 
       /* Is there a text content-block to parse? */
-      if ((valstr = apr_hash_get (headers,
-                                  SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH,
-                                  APR_HASH_KEY_STRING)))
+      if (text_cl)
         {
-          SVN_ERR (parse_text_block (stream, 
-                                     (apr_size_t) atoi (valstr),
+          const char *delta = apr_hash_get(headers,
+                                           SVN_REPOS_DUMPFILE_TEXT_DELTA,
+                                           APR_HASH_KEY_STRING);
+          svn_boolean_t is_delta = (delta && strcmp(delta, "true") == 0);
+
+          SVN_ERR(parse_text_block(stream,
+                                   svn__atoui64(text_cl),
+                                   is_delta,
+                                   parse_fns,
+                                   found_node ? node_baton : rev_baton,
+                                   buffer,
+                                   buflen,
+                                   found_node ? nodepool : revpool));
+        }
+      else if (old_v1_with_cl)
+        {
+          /* An old-v1 block with a Content-length might have a text block.
+             If the property block did not consume all the bytes of the
+             Content-length, then it clearly does have a text block.
+             If not, then we must deduce whether we have an *empty* text
+             block or an *absent* text block.  The rules are:
+             - "Node-kind: file" blocks have an empty (i.e. present, but
+               zero-length) text block, since they represent a file
+               modification.  Note that file-copied-text-unmodified blocks
+               have no Content-length - even if they should have contained
+               a modified property block, the pre-0.14 dumper forgets to
+               dump the modified properties. 
+             - If it is not a file node, then it is a revision or directory,
+               and so has an absent text block.
+          */
+          const char *node_kind;
+          svn_filesize_t cl_value = svn__atoui64(content_length)
+                                    - actual_prop_length;
+
+          if (cl_value || 
+              ((node_kind = apr_hash_get(headers,
+                                         SVN_REPOS_DUMPFILE_NODE_KIND,
+                                         APR_HASH_KEY_STRING))
+               && strcmp(node_kind, "file") == 0)
+             )
+            SVN_ERR(parse_text_block(stream,
+                                     cl_value,
+                                     FALSE,
                                      parse_fns,
                                      found_node ? node_baton : rev_baton,
-                                     buffer, 
+                                     buffer,
                                      buflen,
                                      found_node ? nodepool : revpool));
         }
-      
+
+      /* if we have a content-length header, did we read all of it?
+         in case of an old v1, we *always* read all of it, because
+         text-content-length == content-length - prop-content-length
+      */
+      if (content_length && ! old_v1_with_cl)
+        {
+          apr_size_t rlen, num_to_read;
+          svn_filesize_t remaining =
+            svn__atoui64(content_length) -
+            (prop_cl ? svn__atoui64(prop_cl) : 0) -
+            (text_cl ? svn__atoui64(text_cl) : 0);
+
+
+          if (remaining < 0)
+            return svn_error_create(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                                    _("Sum of subblock sizes larger than "
+                                      "total block content length"));
+
+          /* Consume remaining bytes in this content block */
+          while (remaining > 0)
+            {
+              if (remaining >= buflen)
+                rlen = buflen;
+              else
+                rlen = (apr_size_t) remaining;
+
+              num_to_read = rlen;
+              SVN_ERR(svn_stream_read(stream, buffer, &rlen));
+              remaining -= rlen;
+              if (rlen != num_to_read)
+                return stream_ran_dry();
+            }
+        }
+
       /* If we just finished processing a node record, we need to
          close the node record and clear the per-node subpool. */
       if (found_node)
         {
-          SVN_ERR (parse_fns->close_node (node_baton));
-          svn_pool_clear (nodepool);
+          SVN_ERR(parse_fns->close_node(node_baton));
+          svn_pool_clear(nodepool);
         }
       
       /*** End of processing for one record. ***/
@@ -499,15 +733,28 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
   /* Close out whatever revision we're in. */
   if (rev_baton != NULL)
-    SVN_ERR (parse_fns->close_revision (rev_baton));
+    SVN_ERR(parse_fns->close_revision(rev_baton));
 
-  svn_pool_destroy (linepool);
-  svn_pool_destroy (revpool);
-  svn_pool_destroy (nodepool);
+  svn_pool_destroy(linepool);
+  svn_pool_destroy(revpool);
+  svn_pool_destroy(nodepool);
   return SVN_NO_ERROR;
 }
 
 
+svn_error_t *
+svn_repos_parse_dumpstream(svn_stream_t *stream,
+                           const svn_repos_parser_fns_t *parse_fns,
+                           void *parse_baton,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *pool)
+{
+  svn_repos_parse_fns2_t *fns2 = fns2_from_fns(parse_fns, pool);
+
+  return svn_repos_parse_dumpstream2(stream, fns2, parse_baton,
+                                     cancel_func, cancel_baton, pool);
+}
 
 /*----------------------------------------------------------------------*/
 
@@ -515,11 +762,11 @@ svn_repos_parse_dumpstream (svn_stream_t *stream,
 
 
 static struct node_baton *
-make_node_baton (apr_hash_t *headers,
-                 struct revision_baton *rb,
-                 apr_pool_t *pool)
+make_node_baton(apr_hash_t *headers,
+                struct revision_baton *rb,
+                apr_pool_t *pool)
 {
-  struct node_baton *nb = apr_pcalloc (pool, sizeof(*nb));
+  struct node_baton *nb = apr_pcalloc(pool, sizeof(*nb));
   const char *val;
 
   /* Start with sensible defaults. */
@@ -528,41 +775,58 @@ make_node_baton (apr_hash_t *headers,
   nb->kind = svn_node_unknown;
 
   /* Then add info from the headers.  */
-  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_PATH,
-                           APR_HASH_KEY_STRING)))
-    nb->path = apr_pstrdup (pool, val);
+  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_PATH,
+                          APR_HASH_KEY_STRING)))
+  {
+    if (rb->pb->parent_dir)
+      nb->path = svn_path_join(rb->pb->parent_dir, val, pool);
+    else
+      nb->path = apr_pstrdup(pool, val);
+  }
 
-  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_KIND,
-                           APR_HASH_KEY_STRING)))
+  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_KIND,
+                          APR_HASH_KEY_STRING)))
     {
-      if (! strcmp (val, "file"))
+      if (! strcmp(val, "file"))
         nb->kind = svn_node_file;
-      else if (! strcmp (val, "dir"))
+      else if (! strcmp(val, "dir"))
         nb->kind = svn_node_dir;
     }
 
-  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_ACTION,
-                           APR_HASH_KEY_STRING)))
+  nb->action = (enum svn_node_action)(-1);  /* an invalid action code */
+  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_ACTION,
+                          APR_HASH_KEY_STRING)))
     {
-      if (! strcmp (val, "change"))
+      if (! strcmp(val, "change"))
         nb->action = svn_node_action_change;
-      else if (! strcmp (val, "add"))
+      else if (! strcmp(val, "add"))
         nb->action = svn_node_action_add;
-      else if (! strcmp (val, "delete"))
+      else if (! strcmp(val, "delete"))
         nb->action = svn_node_action_delete;
-      else if (! strcmp (val, "replace"))
+      else if (! strcmp(val, "replace"))
         nb->action = svn_node_action_replace;
     }
 
-  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
-                           APR_HASH_KEY_STRING)))
+  nb->copyfrom_rev = SVN_INVALID_REVNUM;
+  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
+                          APR_HASH_KEY_STRING)))
     {
-      nb->copyfrom_rev = (svn_revnum_t) atoi (val);
+      nb->copyfrom_rev = (svn_revnum_t) atoi(val);
     }
-  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
-                           APR_HASH_KEY_STRING)))
+  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_PATH,
+                          APR_HASH_KEY_STRING)))
     {
-      nb->copyfrom_path = apr_pstrdup (pool, val);
+      if (rb->pb->parent_dir)
+        nb->copyfrom_path = svn_path_join(rb->pb->parent_dir,
+                                          (*val == '/' ? val + 1 : val), pool);
+      else
+        nb->copyfrom_path = apr_pstrdup(pool, val);
+    }
+
+  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_TEXT_CONTENT_CHECKSUM,
+                          APR_HASH_KEY_STRING)))
+    {
+      nb->md5_checksum = apr_pstrdup(pool, val);
     }
 
   /* What's cool about this dump format is that the parser just
@@ -572,19 +836,19 @@ make_node_baton (apr_hash_t *headers,
 }
 
 static struct revision_baton *
-make_revision_baton (apr_hash_t *headers,
-                     struct parse_baton *pb,
-                     apr_pool_t *pool)
+make_revision_baton(apr_hash_t *headers,
+                    struct parse_baton *pb,
+                    apr_pool_t *pool)
 {
-  struct revision_baton *rb = apr_pcalloc (pool, sizeof(*rb));
+  struct revision_baton *rb = apr_pcalloc(pool, sizeof(*rb));
   const char *val;
 
   rb->pb = pb;
   rb->pool = pool;
   rb->rev = SVN_INVALID_REVNUM;
 
-  if ((val = apr_hash_get (headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
-                           APR_HASH_KEY_STRING)))
+  if ((val = apr_hash_get(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER,
+                          APR_HASH_KEY_STRING)))
     rb->rev = SVN_STR_TO_REV(val);
 
   return rb;
@@ -592,32 +856,33 @@ make_revision_baton (apr_hash_t *headers,
 
 
 static svn_error_t *
-new_revision_record (void **revision_baton,
-                     apr_hash_t *headers,
-                     void *parse_baton,
-                     apr_pool_t *pool)
+new_revision_record(void **revision_baton,
+                    apr_hash_t *headers,
+                    void *parse_baton,
+                    apr_pool_t *pool)
 {
   struct parse_baton *pb = parse_baton;
   struct revision_baton *rb;
   svn_revnum_t head_rev;
 
-  rb = make_revision_baton (headers, pb, pool);
-  SVN_ERR (svn_fs_youngest_rev (&head_rev, pb->fs, pool));
+  rb = make_revision_baton(headers, pb, pool);
+  SVN_ERR(svn_fs_youngest_rev(&head_rev, pb->fs, pool));
 
-  /* Calculate the revision 'offset' for finding copyfrom sources.
+  /* FIXME: This is a lame fallback loading multiple segments of dump in
+     several seperate operations. It is highly susceptible to race conditions.
+     Calculate the revision 'offset' for finding copyfrom sources.
      It might be positive or negative. */
   rb->rev_offset = (rb->rev) - (head_rev + 1);
-
+ 
   if (rb->rev > 0)
     {
       /* Create a new fs txn. */
-      SVN_ERR (svn_fs_begin_txn (&(rb->txn), pb->fs, head_rev, pool));
-      SVN_ERR (svn_fs_txn_root (&(rb->txn_root), rb->txn, pool));
+      SVN_ERR(svn_fs_begin_txn2(&(rb->txn), pb->fs, head_rev, 0, pool));
+      SVN_ERR(svn_fs_txn_root(&(rb->txn_root), rb->txn, pool));
       
-      if (pb->outstream)
-        svn_stream_printf (pb->outstream, pool,
-                           "<<< Started new txn, based on original revision %"
-                           SVN_REVNUM_T_FMT "\n", rb->rev);
+      SVN_ERR(svn_stream_printf(pb->outstream, pool,
+                                _("<<< Started new transaction, based on "
+                                  "original revision %ld\n"), rb->rev));
     }
 
   /* If we're parsing revision 0, only the revision are (possibly)
@@ -633,100 +898,129 @@ new_revision_record (void **revision_baton,
 
 /* Factorized helper func for new_node_record() */
 static svn_error_t *
-maybe_add_with_history (struct node_baton *nb,
-                        struct revision_baton *rb,
-                        apr_pool_t *pool)
+maybe_add_with_history(struct node_baton *nb,
+                       struct revision_baton *rb,
+                       apr_pool_t *pool)
 {
   struct parse_baton *pb = rb->pb;
+  apr_size_t len;
 
   if ((nb->copyfrom_path == NULL) || (! pb->use_history))
     {
       /* Add empty file or dir, without history. */
       if (nb->kind == svn_node_file)
-        SVN_ERR (svn_fs_make_file (rb->txn_root, nb->path, pool));
+        SVN_ERR(svn_fs_make_file(rb->txn_root, nb->path, pool));
 
       else if (nb->kind == svn_node_dir)
-        SVN_ERR (svn_fs_make_dir (rb->txn_root, nb->path, pool));
+        SVN_ERR(svn_fs_make_dir(rb->txn_root, nb->path, pool));
     }
   else
     {
       /* Hunt down the source revision in this fs. */
       svn_fs_root_t *copy_root;
       svn_revnum_t src_rev = nb->copyfrom_rev - rb->rev_offset;
+      svn_revnum_t *src_rev_from_map;
+      if ((src_rev_from_map = apr_hash_get(pb->rev_map, &nb->copyfrom_rev,
+                                           sizeof(nb->copyfrom_rev))))
+        src_rev = *src_rev_from_map;
 
       if (! SVN_IS_VALID_REVNUM(src_rev))
-        return svn_error_createf (SVN_ERR_FS_NO_SUCH_REVISION, NULL,
-                                  "Relative copyfrom_rev %" SVN_REVNUM_T_FMT
-                                  " is not available in current repository.",
-                                  src_rev);
+        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                 _("Relative source revision %ld is not"
+                                   " available in current repository"),
+                                 src_rev);
 
-      SVN_ERR (svn_fs_revision_root (&copy_root, pb->fs, src_rev, pool));
-      SVN_ERR (svn_fs_copy (copy_root, nb->copyfrom_path,
-                            rb->txn_root, nb->path, pool));
+      SVN_ERR(svn_fs_revision_root(&copy_root, pb->fs, src_rev, pool));
+      SVN_ERR(svn_fs_copy(copy_root, nb->copyfrom_path,
+                          rb->txn_root, nb->path, pool));
 
-      if (pb->outstream)
-        {
-          apr_size_t len = 9;
-          svn_stream_write (pb->outstream, "COPIED...", &len);
-        }
+      len = 9;
+      SVN_ERR(svn_stream_write(pb->outstream, "COPIED...", &len));
     }
 
   return SVN_NO_ERROR;
 }
 
 
+static svn_error_t *
+uuid_record(const char *uuid,
+            void *parse_baton,
+            apr_pool_t *pool)
+{
+  struct parse_baton *pb = parse_baton;
+  svn_revnum_t youngest_rev;
+
+  if (pb->uuid_action == svn_repos_load_uuid_ignore)
+    return SVN_NO_ERROR;
+
+  if (pb->uuid_action != svn_repos_load_uuid_force)
+    {
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, pb->fs, pool));
+      if (youngest_rev != 0)
+        return SVN_NO_ERROR;
+    }
+
+  return svn_fs_set_uuid(pb->fs, uuid, pool);
+}
 
 static svn_error_t *
-new_node_record (void **node_baton,
-                 apr_hash_t *headers,
-                 void *revision_baton,
-                 apr_pool_t *pool)
+new_node_record(void **node_baton,
+                apr_hash_t *headers,
+                void *revision_baton,
+                apr_pool_t *pool)
 {
   struct revision_baton *rb = revision_baton;
   struct parse_baton *pb = rb->pb;
-  struct node_baton *nb = make_node_baton (headers, rb, pool);
+  struct node_baton *nb;
+  
+  if (rb->rev == 0)
+    return svn_error_create(SVN_ERR_STREAM_MALFORMED_DATA, NULL,
+                            _("Malformed dumpstream: "
+                              "Revision 0 must not contain node records"));
+
+  nb = make_node_baton(headers, rb, pool);
 
   switch (nb->action)
     {
     case svn_node_action_change:
       {
-        if (pb->outstream)
-          svn_stream_printf (pb->outstream, pool,
-                             "     * editing path : %s ...", nb->path);
+        SVN_ERR(svn_stream_printf(pb->outstream, pool,
+                                  _("     * editing path : %s ..."),
+                                  nb->path));
         break;
       }
     case svn_node_action_delete:
       {
-        if (pb->outstream)
-          svn_stream_printf (pb->outstream, pool,
-                             "     * deleting path : %s ...", nb->path);
-        SVN_ERR (svn_fs_delete_tree (rb->txn_root, nb->path, pool));
+        SVN_ERR(svn_stream_printf(pb->outstream, pool,
+                                  _("     * deleting path : %s ..."),
+                                  nb->path));
+        SVN_ERR(svn_fs_delete(rb->txn_root, nb->path, pool));
         break;
       }
     case svn_node_action_add:
       {
-        if (pb->outstream)
-          svn_stream_printf (pb->outstream, pool,
-                             "     * adding path : %s ...", nb->path);
+        SVN_ERR(svn_stream_printf(pb->outstream, pool,
+                                  _("     * adding path : %s ..."),
+                                  nb->path));
 
-        SVN_ERR (maybe_add_with_history (nb, rb, pool));
+        SVN_ERR(maybe_add_with_history(nb, rb, pool));
         break;
       }
     case svn_node_action_replace:
       {
-        if (pb->outstream)
-          svn_stream_printf (pb->outstream, pool,
-                             "     * replacing path : %s ...", nb->path);
+        SVN_ERR(svn_stream_printf(pb->outstream, pool,
+                                  _("     * replacing path : %s ..."),
+                                  nb->path));
 
-        SVN_ERR (svn_fs_delete_tree (rb->txn_root, nb->path, pool));
+        SVN_ERR(svn_fs_delete(rb->txn_root, nb->path, pool));
 
-        SVN_ERR (maybe_add_with_history (nb, rb, pool));
+        SVN_ERR(maybe_add_with_history(nb, rb, pool));
         break;
       }
     default:
-      return svn_error_createf (SVN_ERR_STREAM_UNRECOGNIZED_DATA, NULL,
-                                "Unrecognized node-action on node %s.",
-                                nb->path);
+      return svn_error_createf(SVN_ERR_STREAM_UNRECOGNIZED_DATA, NULL,
+                               _("Unrecognized node-action on node '%s'"),
+                               nb->path);
     }
 
   *node_baton = nb;
@@ -735,20 +1029,20 @@ new_node_record (void **node_baton,
 
 
 static svn_error_t *
-set_revision_property (void *baton,
-                       const char *name,
-                       const svn_string_t *value)
+set_revision_property(void *baton,
+                      const char *name,
+                      const svn_string_t *value)
 {
   struct revision_baton *rb = baton;
 
   if (rb->rev > 0)
     {
-      SVN_ERR (svn_fs_change_txn_prop (rb->txn, name, value, rb->pool));
+      SVN_ERR(svn_fs_change_txn_prop(rb->txn, name, value, rb->pool));
       
       /* Remember any datestamp that passes through!  (See comment in
          close_revision() below.) */
-      if (! strcmp (name, SVN_PROP_REVISION_DATE))
-        rb->datestamp = svn_string_dup (value, rb->pool);
+      if (! strcmp(name, SVN_PROP_REVISION_DATE))
+        rb->datestamp = svn_string_dup(value, rb->pool);
     }
   else if (rb->rev == 0)
     {     
@@ -757,96 +1051,195 @@ set_revision_property (void *baton,
       struct parse_baton *pb = rb->pb;
       svn_revnum_t youngest_rev;
 
-      SVN_ERR (svn_fs_youngest_rev (&youngest_rev, pb->fs, rb->pool));
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, pb->fs, rb->pool));
 
       if (youngest_rev == 0)
-        SVN_ERR (svn_fs_change_rev_prop (pb->fs, 0, name, value, rb->pool));
+        SVN_ERR(svn_fs_change_rev_prop(pb->fs, 0, name, value, rb->pool));
     }
 
   return SVN_NO_ERROR;
 }
 
+
 static svn_error_t *
-set_node_property (void *baton,
-                   const char *name,
-                   const svn_string_t *value)
+set_node_property(void *baton,
+                  const char *name,
+                  const svn_string_t *value)
 {
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
 
-  SVN_ERR (svn_fs_change_node_prop (rb->txn_root, nb->path,
-                                    name, value, nb->pool));
+  SVN_ERR(svn_fs_change_node_prop(rb->txn_root, nb->path,
+                                  name, value, nb->pool));
   
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-set_fulltext (svn_stream_t **stream,
-              void *node_baton)
+delete_node_property(void *baton,
+                     const char *name)
+{
+  struct node_baton *nb = baton;
+  struct revision_baton *rb = nb->rb;
+
+  SVN_ERR(svn_fs_change_node_prop(rb->txn_root, nb->path,
+                                  name, NULL, nb->pool));
+  
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+remove_node_props(void *baton)
+{
+  struct node_baton *nb = baton;
+  struct revision_baton *rb = nb->rb;
+  apr_hash_t *proplist;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_fs_node_proplist(&proplist,
+                               rb->txn_root, nb->path, nb->pool));
+
+  for (hi = apr_hash_first(nb->pool, proplist); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t keylen;
+      void *val;
+
+      apr_hash_this(hi, &key, &keylen, &val);
+
+      SVN_ERR(svn_fs_change_node_prop(rb->txn_root, nb->path,
+                                      (const char *) key, NULL,
+                                      nb->pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+apply_textdelta(svn_txdelta_window_handler_t *handler,
+                void **handler_baton,
+                void *node_baton)
 {
   struct node_baton *nb = node_baton;
   struct revision_baton *rb = nb->rb;
 
-  return svn_fs_apply_text (stream,
-                            rb->txn_root, nb->path,
-                            nb->pool);
+  return svn_fs_apply_textdelta(handler, handler_baton,
+                                rb->txn_root, nb->path,
+                                NULL, nb->md5_checksum,
+                                nb->pool);
 }
 
 
 static svn_error_t *
-close_node (void *baton)
+set_fulltext(svn_stream_t **stream,
+             void *node_baton)
+{
+  struct node_baton *nb = node_baton;
+  struct revision_baton *rb = nb->rb;
+
+  return svn_fs_apply_text(stream,
+                           rb->txn_root, nb->path,
+                           nb->md5_checksum,
+                           nb->pool);
+}
+
+
+static svn_error_t *
+close_node(void *baton)
 {
   struct node_baton *nb = baton;
   struct revision_baton *rb = nb->rb;
   struct parse_baton *pb = rb->pb;
+  apr_size_t len = 7;
 
-  if (pb->outstream)
-    {
-      apr_size_t len = 7;
-      svn_stream_write (pb->outstream, " done.\n", &len);
-    }
+  SVN_ERR(svn_stream_write(pb->outstream, _(" done.\n"), &len));
   
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-close_revision (void *baton)
+close_revision(void *baton)
 {
   struct revision_baton *rb = baton;
   struct parse_baton *pb = rb->pb;
   const char *conflict_msg = NULL;
-  svn_revnum_t new_rev;
+  svn_revnum_t *old_rev, *new_rev;
   svn_error_t *err;
 
   if (rb->rev <= 0)
     return SVN_NO_ERROR;
 
-  err = svn_fs_commit_txn (&conflict_msg, &new_rev, rb->txn);
+  /* Prepare memory for saving dump-rev -> in-repos-rev mapping. */
+  old_rev = apr_palloc(pb->pool, sizeof(*old_rev) * 2);
+  new_rev = old_rev + 1;
+  *old_rev = rb->rev;
 
-  if (err)
+  /* Run the pre-commit hook, if so commanded. */
+  if (pb->use_pre_commit_hook)
     {
-      svn_fs_abort_txn (rb->txn);
+      const char *txn_name;
+      err = svn_fs_txn_name(&txn_name, rb->txn, rb->pool);
+      if (! err)
+        err = svn_repos__hooks_pre_commit(pb->repos, txn_name, rb->pool);
+      if (err)
+        {
+          svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
+          return err;
+        }
+    }
+
+  /* Commit. */
+  if ((err = svn_fs_commit_txn(&conflict_msg, new_rev, rb->txn, rb->pool)))
+    {
+      svn_error_clear(svn_fs_abort_txn(rb->txn, rb->pool));
       if (conflict_msg)
-        return svn_error_quick_wrap (err, conflict_msg);
+        return svn_error_quick_wrap(err, conflict_msg);
       else
         return err;
     }
+
+  /* Run post-commit hook, if so commanded.  */
+  if (pb->use_post_commit_hook)
+    {
+      if ((err = svn_repos__hooks_post_commit(pb->repos, *new_rev, rb->pool)))
+        return svn_error_create
+          (SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED, err,
+           _("Commit succeeded, but post-commit hook failed"));
+    }
+
+  /* After a successful commit, must record the dump-rev -> in-repos-rev
+     mapping, so that copyfrom instructions in the dump file can look up the
+     correct repository revision to copy from. */
+  apr_hash_set(pb->rev_map, old_rev, sizeof(svn_revnum_t), new_rev);
+
+  /* Deltify the predecessors of paths changed in this revision. */
+  SVN_ERR(svn_fs_deltify_revision(pb->fs, *new_rev, rb->pool));
 
   /* Grrr, svn_fs_commit_txn rewrites the datestamp property to the
      current clock-time.  We don't want that, we want to preserve
      history exactly.  Good thing revision props aren't versioned! */
   if (rb->datestamp)
-    SVN_ERR (svn_fs_change_rev_prop (pb->fs, new_rev,
-                                     SVN_PROP_REVISION_DATE, rb->datestamp,
-                                     rb->pool));
+    SVN_ERR(svn_fs_change_rev_prop(pb->fs, *new_rev,
+                                   SVN_PROP_REVISION_DATE, rb->datestamp,
+                                   rb->pool));
 
-  if (pb->outstream)
-    svn_stream_printf (pb->outstream, rb->pool,
-                       "\n------- Committed new rev %" SVN_REVNUM_T_FMT
-                       " (loaded from original rev %" SVN_REVNUM_T_FMT
-                       ") >>>\n\n", new_rev, rb->rev);
+  if (*new_rev == rb->rev)
+    {
+      SVN_ERR(svn_stream_printf(pb->outstream, rb->pool,
+                                _("\n------- Committed revision %ld"
+                                  " >>>\n\n"), *new_rev));
+    }
+  else
+    {
+      SVN_ERR(svn_stream_printf(pb->outstream, rb->pool,
+                                _("\n------- Committed new rev %ld"
+                                  " (loaded from original rev %ld"
+                                  ") >>>\n\n"), *new_rev, rb->rev));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -858,28 +1251,63 @@ close_revision (void *baton)
 
 
 svn_error_t *
-svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
+svn_repos_get_fs_build_parser2(const svn_repos_parse_fns2_t **callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_boolean_t use_history,
+                               enum svn_repos_load_uuid uuid_action,
                                svn_stream_t *outstream,
+                               const char *parent_dir,
                                apr_pool_t *pool)
 {
-  svn_repos_parser_fns_t *parser = apr_pcalloc (pool, sizeof(*parser));
-  struct parse_baton *pb = apr_pcalloc (pool, sizeof(*pb));
+  const svn_repos_parser_fns_t *fns;
+  svn_repos_parse_fns2_t *parser;
+
+  /* Fetch the old-style vtable and baton, convert the vtable to a
+   * new-style vtable, and set the new callbacks. */
+  SVN_ERR(svn_repos_get_fs_build_parser(&fns, parse_baton, repos,
+                                        use_history, uuid_action, outstream,
+                                        parent_dir, pool));
+  parser = fns2_from_fns(fns, pool);
+  parser->delete_node_property = delete_node_property;
+  parser->apply_textdelta = apply_textdelta;
+  *callbacks = parser;
+  return SVN_NO_ERROR;
+}
+
+
+
+svn_error_t *
+svn_repos_get_fs_build_parser(const svn_repos_parser_fns_t **parser_callbacks,
+                              void **parse_baton,
+                              svn_repos_t *repos,
+                              svn_boolean_t use_history,
+                              enum svn_repos_load_uuid uuid_action,
+                              svn_stream_t *outstream,
+                              const char *parent_dir,
+                              apr_pool_t *pool)
+{
+  svn_repos_parser_fns_t *parser = apr_pcalloc(pool, sizeof(*parser));
+  struct parse_baton *pb = apr_pcalloc(pool, sizeof(*pb));
 
   parser->new_revision_record = new_revision_record;
   parser->new_node_record = new_node_record;
+  parser->uuid_record = uuid_record;
   parser->set_revision_property = set_revision_property;
   parser->set_node_property = set_node_property;
+  parser->remove_node_props = remove_node_props;
   parser->set_fulltext = set_fulltext;
   parser->close_node = close_node;
   parser->close_revision = close_revision;
 
   pb->repos = repos;
-  pb->fs = svn_repos_fs (repos);
+  pb->fs = svn_repos_fs(repos);
   pb->use_history = use_history;
-  pb->outstream = outstream;
+  pb->outstream = outstream ? outstream : svn_stream_empty(pool);
+  pb->uuid_action = uuid_action;
+  pb->parent_dir = parent_dir;
+  pb->pool = pool;
+  pb->rev_map = apr_hash_make(pool);
 
   *parser_callbacks = parser;
   *parse_baton = pb;
@@ -889,23 +1317,55 @@ svn_repos_get_fs_build_parser (const svn_repos_parser_fns_t **parser_callbacks,
 
 
 svn_error_t *
-svn_repos_load_fs (svn_repos_t *repos,
+svn_repos_load_fs2(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    svn_stream_t *feedback_stream,
+                   enum svn_repos_load_uuid uuid_action,
+                   const char *parent_dir,
+                   svn_boolean_t use_pre_commit_hook,
+                   svn_boolean_t use_post_commit_hook,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
                    apr_pool_t *pool)
 {
-  const svn_repos_parser_fns_t *parser;
+  const svn_repos_parse_fns2_t *parser;
   void *parse_baton;
-  
+  struct parse_baton *pb;
+
   /* This is really simple. */  
 
-  SVN_ERR (svn_repos_get_fs_build_parser (&parser, &parse_baton,
-                                          repos,
-                                          TRUE, /* look for copyfrom revs */
-                                          feedback_stream,
-                                          pool));
+  SVN_ERR(svn_repos_get_fs_build_parser2(&parser, &parse_baton,
+                                         repos,
+                                         TRUE, /* look for copyfrom revs */
+                                         uuid_action,
+                                         feedback_stream,
+                                         parent_dir,
+                                         pool));
 
-  SVN_ERR (svn_repos_parse_dumpstream (dumpstream, parser, parse_baton, pool));
+  /* Heh.  We know this is a parse_baton.  This file made it.  So
+     cast away, and set our hook booleans.  */
+  pb = parse_baton;
+  pb->use_pre_commit_hook = use_pre_commit_hook;
+  pb->use_post_commit_hook = use_post_commit_hook;
+
+  SVN_ERR(svn_repos_parse_dumpstream2(dumpstream, parser, parse_baton,
+                                      cancel_func, cancel_baton, pool));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_load_fs(svn_repos_t *repos,
+                  svn_stream_t *dumpstream,
+                  svn_stream_t *feedback_stream,
+                  enum svn_repos_load_uuid uuid_action,
+                  const char *parent_dir,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *pool)
+{
+  return svn_repos_load_fs2(repos, dumpstream, feedback_stream, 
+                            uuid_action, parent_dir, FALSE, FALSE,
+                            cancel_func, cancel_baton, pool);
 }

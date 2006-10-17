@@ -34,13 +34,11 @@ get help on {\sl subcommand}		          \\
 \vspace{0.1in} \hspace{-0.1in}{\bf\Large Working Copies}   &
 (If {\sl [targets\dots]} are omitted, SVN assumes `{\tt .}')  \\
 
-{\tt svn checkout} {\sl [flags]} {\sl URL}\dots &
-create a new working directory			 \\
+{\tt svn checkout} {\sl [flags]} {\sl URL} {\sl dest} &
+create a new working directory {\sl dest} as a copy of {\sl URL} \\
 
 \hspace{0.5in}{\tt -r} {\sl N}		&
 check out revision {\sl N} of {\sl URL}	  \\
-\hspace{0.5in}{\tt -d} {\sl dest}		&
-place working copy in new directory {\sl dest}	 \\
 
 \\
 {\tt svn update} {\sl [flags]} {\sl [targets\dots]}	&
@@ -63,17 +61,14 @@ Use contents of {\sl logfile} as change's log entry		 \\
 {\tt svn add} {\sl [flags]} {\sl targets\dots}    &
 schedule {\sl targets} for addition		         \\
 
-\hspace{0.5in}{\tt --recursive}		&
-add a target directory recursively	 \\
-
 \\
 {\tt svn rm} {\sl [flags]} {\sl paths} \verb!|! {\sl URLs\dots}	&
 schedule working-copy {\sl paths} for removal,
 or immediately delete {\sl URLs}	 \\
 
 \\
-{\tt svn import} {\sl URL} {\sl path} {\sl new-entry}	&
-recursively commit {\sl path} to {\sl new-entry} within {\sl URL} \\
+{\tt svn import} {\sl path} {\sl URL}	&
+recursively commit {\sl path} to {\sl URL} \\
 
 %-------------------------------------------------------------------------
 \\
@@ -98,7 +93,7 @@ show tracked information on {\sl targets}   \\
 revert {\sl targets} to ``pristine'' state   \\
 
 \\
-{\tt svn resolve} {\sl [targets\dots]}	&
+{\tt svn resolved} {\sl [targets\dots]}	&
 removes conflict files associated with conflicted {\sl targets}   \\
 
 \\

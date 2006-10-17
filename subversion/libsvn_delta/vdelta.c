@@ -2,7 +2,7 @@
  * vdelta.c:  vdelta generator.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -44,9 +44,7 @@
        index = slot - slots;
        ...
      }
-
-  This hash table implementation os based on the description in
-  http://subversion.tigris.org/subversion-dev/current/msg00152.html. */
+*/
 
 
 /* Size of a vdelta hash key. */
@@ -70,20 +68,20 @@ typedef struct hash_table_t {
    of the size of the source and target parts of the delta window.
    Allocate from POOL. */
 static hash_table_t *
-create_hash_table (apr_size_t num_slots, apr_pool_t *pool)
+create_hash_table(apr_size_t num_slots, apr_pool_t *pool)
 {
   int i;
   apr_size_t j;
-  hash_table_t* table = apr_palloc (pool, sizeof (*table));
+  hash_table_t* table = apr_palloc(pool, sizeof(*table));
 
   /* This should be a reasonable number of buckets ... */
   table->num_buckets = (num_slots / 3) | 1;
-  table->buckets = apr_palloc (pool, (table->num_buckets
-                                      * sizeof (*table->buckets)));
+  table->buckets = apr_palloc(pool, (table->num_buckets
+                                     * sizeof(*table->buckets)));
   for (i = 0; i < table->num_buckets; ++i)
     table->buckets[i] = NULL;
 
-  table->slots = apr_palloc (pool, num_slots * sizeof (*table->slots));
+  table->slots = apr_palloc(pool, num_slots * sizeof(*table->slots));
   for (j = 0; j < num_slots; ++j)
     table->slots[j].next = NULL;
 
@@ -93,14 +91,14 @@ create_hash_table (apr_size_t num_slots, apr_pool_t *pool)
 
 /* Convert a key to a pointer to the key's hash bucket.
    We use a 2-universal multiplicative hash function. If you're
-   windering about the selected multiplier, take a look at the
+   wondering about the selected multiplier, take a look at the
    comments in apr/tables/apr_hash.c:find_entry for a discussion
    on fast string hashes; it's very illuminating.
 
    [ We use 127 instead of 33 here because I happen to like
      interesting prime numbers, so there. --xbc ] */
 static APR_INLINE apr_uint32_t
-get_bucket (const hash_table_t *table, const char *key)
+get_bucket(const hash_table_t *table, const char *key)
 {
   int i;
   apr_uint32_t hash = 0;
@@ -112,10 +110,10 @@ get_bucket (const hash_table_t *table, const char *key)
 
 /* Store a key->index mapping into the hash table. */
 static APR_INLINE void
-store_mapping (hash_table_t *table, const char* key, apr_off_t idx)
+store_mapping(hash_table_t *table, const char* key, apr_size_t idx)
 {
-  apr_uint32_t bucket = get_bucket (table, key);
-  assert (table->slots[idx].next == NULL);
+  apr_uint32_t bucket = get_bucket(table, key);
+  assert(table->slots[idx].next == NULL);
   table->slots[idx].next = table->buckets[bucket];
   table->buckets[bucket] = &table->slots[idx];
 }
@@ -127,9 +125,7 @@ store_mapping (hash_table_t *table, const char* key, apr_off_t idx)
 
    The article "Delta Algorithms: An Empirical Analysis" by Hunt,
    Vo and Tichy contains a description of the vdelta algorithm,
-   but it's incomplete. Here's a detailed description (see also
-   http://subversion.tigris.org/subversion-dev/current/msg00158.html
-   in the mailing list archives):
+   but it's incomplete. Here's a detailed description:
    
      1. Look up the four bytes starting at the current position
         pointer.  If there are no matches for those four bytes,
@@ -160,7 +156,7 @@ store_mapping (hash_table_t *table, const char* key, apr_off_t idx)
 
    Note that the vdelta algorithm allows copies that cross the
    source/target data boundary. Because our internal delta
-   representation has different opcodes for source and terget copies,
+   representation has different opcodes for source and target copies,
    we split them in two. This means that the opcode stream in the
    delta window can contain copies shorter than VD_KEY_SIZE. These
    could be represented by insert ops instead, but we'll leave them
@@ -173,7 +169,7 @@ store_mapping (hash_table_t *table, const char* key, apr_off_t idx)
    Note that (match < from && from <= end) must always be true here. */
 
 static APR_INLINE int
-find_match_len (const char *match, const char *from, const char *end)
+find_match_len(const char *match, const char *from, const char *end)
 {
   const char *here = from;
   while (here < end && *match == *here)
@@ -188,13 +184,13 @@ find_match_len (const char *match, const char *from, const char *end)
 /* This is the main vdelta generator. */
 
 static void
-vdelta (svn_txdelta__ops_baton_t *build_baton,
-        const char *data,
-        const char *start,
-        const char *end,
-        svn_boolean_t outputflag,
-        hash_table_t *table,
-        apr_pool_t *pool)
+vdelta(svn_txdelta__ops_baton_t *build_baton,
+       const char *data,
+       const char *start,
+       const char *end,
+       svn_boolean_t outputflag,
+       hash_table_t *table,
+       apr_pool_t *pool)
 {
   const char *here = start;     /* Current position in the buffer. */
   const char *insert_from = NULL; /* Start of byte range for insertion. */
@@ -212,8 +208,8 @@ vdelta (svn_txdelta__ops_baton_t *build_baton,
           const char *from = ((insert_from != NULL) ? insert_from : here);
 
           if (outputflag && from < end)
-            svn_txdelta__insert_op (build_baton, svn_txdelta_new, 0,
-                                    end - from, from, pool);
+            svn_txdelta__insert_op(build_baton, svn_txdelta_new, 0,
+                                   end - from, from, pool);
           return;
         }
 
@@ -229,7 +225,7 @@ vdelta (svn_txdelta__ops_baton_t *build_baton,
              if we don't have a current match yet.  See which mapping
              yields the longest extension.  */
           progress = FALSE;
-          for (slot = table->buckets[get_bucket (table, key)];
+          for (slot = table->buckets[get_bucket(table, key)];
                slot != NULL;
                slot = slot->next)
             {
@@ -239,7 +235,7 @@ vdelta (svn_txdelta__ops_baton_t *build_baton,
               if (slot - table->slots < key - here) /* Too close to start */
                 continue;
               match = data + (slot - table->slots) - (key - here);
-              match_len = find_match_len (match, here, end);
+              match_len = find_match_len(match, here, end);
 
               /* We can only copy from the source or from the target, so
                  don't let the match cross START.  */
@@ -262,7 +258,7 @@ vdelta (svn_txdelta__ops_baton_t *build_baton,
       if (current_match_len < VD_KEY_SIZE)
         {
           /* There is no match here; store a mapping and insert this byte. */
-          store_mapping (table, here, here - data);
+          store_mapping(table, here, here - data);
           if (insert_from == NULL)
             insert_from = here;
           here++;
@@ -273,21 +269,21 @@ vdelta (svn_txdelta__ops_baton_t *build_baton,
           if (insert_from != NULL)
             {
               /* Commit the pending insert. */
-              svn_txdelta__insert_op (build_baton, svn_txdelta_new,
-                                      0, here - insert_from,
-                                      insert_from, pool);
+              svn_txdelta__insert_op(build_baton, svn_txdelta_new,
+                                     0, here - insert_from,
+                                     insert_from, pool);
               insert_from = NULL;
             }
           if (current_match < start) /* Copy from source. */
-            svn_txdelta__insert_op (build_baton, svn_txdelta_source,
-                                    current_match - data,
-                                    current_match_len,
-                                    NULL, pool);
+            svn_txdelta__insert_op(build_baton, svn_txdelta_source,
+                                   current_match - data,
+                                   current_match_len,
+                                   NULL, pool);
           else                       /* Copy from target */
-            svn_txdelta__insert_op (build_baton, svn_txdelta_target,
-                                    current_match - start,
-                                    current_match_len,
-                                    NULL, pool);
+            svn_txdelta__insert_op(build_baton, svn_txdelta_target,
+                                   current_match - start,
+                                   current_match_len,
+                                   NULL, pool);
         }
 
       /* Adjust the current position and insert mappings for the
@@ -297,24 +293,24 @@ vdelta (svn_txdelta__ops_baton_t *build_baton,
         {
           char const *last = here - (VD_KEY_SIZE - 1);
           for (; last < here; ++last)
-            store_mapping (table, last, last - data);
+            store_mapping(table, last, last - data);
         }
     }
 }
 
 
 void
-svn_txdelta__vdelta (svn_txdelta__ops_baton_t *build_baton,
-                     const char *data,
-                     apr_size_t source_len,
-                     apr_size_t target_len,
-                     apr_pool_t *pool)
+svn_txdelta__vdelta(svn_txdelta__ops_baton_t *build_baton,
+                    const char *data,
+                    apr_size_t source_len,
+                    apr_size_t target_len,
+                    apr_pool_t *pool)
 {
-  hash_table_t *table = create_hash_table (source_len + target_len, pool);
+  hash_table_t *table = create_hash_table(source_len + target_len, pool);
 
-  vdelta (build_baton, data, data, data + source_len, FALSE, table, pool);
-  vdelta (build_baton, data, data + source_len, data + source_len + target_len,
-          TRUE, table, pool);
+  vdelta(build_baton, data, data, data + source_len, FALSE, table, pool);
+  vdelta(build_baton, data, data + source_len, data + source_len + target_len,
+         TRUE, table, pool);
 
 #if 0
   /* This bit of code calculates the hash load and the
@@ -340,8 +336,8 @@ svn_txdelta__vdelta (svn_txdelta__ops_baton_t *build_baton,
         }
       }
     }
-    fprintf (stderr, "Hash stats: load %d, collisions %d\n",
-             100 - 100 * empty / table->num_buckets, collisions);
+    fprintf(stderr, "Hash stats: load %d, collisions %d\n",
+            100 - 100 * empty / table->num_buckets, collisions);
   }
 #endif
 }

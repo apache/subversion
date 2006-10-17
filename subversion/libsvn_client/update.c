@@ -2,7 +2,7 @@
  * update.c:  wrappers around wc update functionality
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,138 +26,254 @@
 
 #include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_string.h"
 #include "svn_error.h"
+#include "svn_config.h"
+#include "svn_time.h"
 #include "svn_path.h"
-#include "svn_io.h"
+#include "svn_pools.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 
 
 /*** Code. ***/
 
 svn_error_t *
-svn_client_update (svn_client_auth_baton_t *auth_baton,
-                   const char *path,
-                   const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
-                   svn_wc_notify_func_t notify_func,
-                   void *notify_baton,
-                   apr_pool_t *pool)
+svn_client__update_internal(svn_revnum_t *result_rev,
+                            const char *path,
+                            const svn_opt_revision_t *revision,
+                            svn_boolean_t recurse,
+                            svn_boolean_t ignore_externals,
+                            svn_boolean_t allow_unver_obstructions,
+                            svn_boolean_t *timestamp_sleep,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool)
 {
   const svn_delta_editor_t *update_editor;
   void *update_edit_baton;
-  const svn_ra_reporter_t *reporter;
+  const svn_ra_reporter2_t *reporter;
   void *report_baton;
   const svn_wc_entry_t *entry;
-  const char *URL, *anchor, *target;
+  const char *anchor, *target;
+  const char *repos_root;
   svn_error_t *err;
   svn_revnum_t revnum;
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info (pool);
+  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   svn_wc_adm_access_t *adm_access;
-
+  svn_boolean_t use_commit_times;
+  svn_boolean_t sleep_here = FALSE;
+  svn_boolean_t *use_sleep = timestamp_sleep ? timestamp_sleep : &sleep_here;
+  const char *diff3_cmd;
+  svn_ra_session_t *ra_session;
+  svn_wc_adm_access_t *dir_access;
+  svn_config_t *cfg = ctx->config ? apr_hash_get(ctx->config, 
+                                                 SVN_CONFIG_CATEGORY_CONFIG,
+                                                 APR_HASH_KEY_STRING) : NULL;
+  
   /* Sanity check.  Without this, the update is meaningless. */
-  assert (path);
+  assert(path);
 
   /* Use PATH to get the update's anchor and targets and get a write lock */
-  SVN_ERR (svn_wc_get_actual_target (path, &anchor, &target, pool));
-  SVN_ERR (svn_wc_adm_open (&adm_access, NULL, anchor, TRUE, TRUE, pool));
+  SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
+                                 TRUE, recurse ? -1 : 0,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 pool));
+  anchor = svn_wc_adm_access_path(adm_access);
 
   /* Get full URL from the ANCHOR. */
-  SVN_ERR (svn_wc_entry (&entry, anchor, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       "svn_client_update: %s is not under revision control", anchor);
+  SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
   if (! entry->url)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_MISSING_URL, NULL,
-       "svn_client_update: entry '%s' has no URL", anchor);
-  URL = apr_pstrdup (pool, entry->url);
+    return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
+                             _("Entry '%s' has no URL"),
+                             svn_path_local_style(anchor, pool));
 
   /* Get revnum set to something meaningful, so we can fetch the
      update editor. */
   if (revision->kind == svn_opt_revision_number)
-    revnum = revision->value.number; /* do the trivial conversion manually */
+    revnum = revision->value.number;
   else
-    revnum = SVN_INVALID_REVNUM; /* no matter, do real conversion later */
+    revnum = SVN_INVALID_REVNUM;
+
+  /* Get the external diff3, if any. */    
+  svn_config_get(cfg, &diff3_cmd, SVN_CONFIG_SECTION_HELPERS,
+                 SVN_CONFIG_OPTION_DIFF3_CMD, NULL);
+
+  /* See if the user wants last-commit timestamps instead of current ones. */
+  SVN_ERR(svn_config_get_bool(cfg, &use_commit_times,
+                              SVN_CONFIG_SECTION_MISCELLANY,
+                              SVN_CONFIG_OPTION_USE_COMMIT_TIMES, FALSE));
+
+  /* Open an RA session for the URL */
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, entry->url,
+                                               anchor, adm_access,
+                                               NULL, TRUE, TRUE, 
+                                               ctx, pool));
+
+  /* ### todo: shouldn't svn_client__get_revision_number be able
+     to take a URL as easily as a local path?  */
+  SVN_ERR(svn_client__get_revision_number
+          (&revnum, ra_session, revision, path, pool));
+
+  /* Take the chance to set the repository root on the target.
+     Why do we bother doing this for old working copies?
+     There are two reasons: first, it's nice to get this information into
+     old WCs so they are "ready" when we start depending on it.  (We can
+     never *depend* upon it in a strict sense, however.)
+     Second, if people mix old and new clients, this information will
+     be dropped by the old clients, which might be annoying. */
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
+  SVN_ERR(svn_wc_maybe_set_repos_root(dir_access, path, repos_root, pool));
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
-  SVN_ERR (svn_wc_get_update_editor (adm_access,
-                                     target,
-                                     revnum,
-                                     recurse,
-                                     notify_func, notify_baton,
-                                     &update_editor, &update_edit_baton,
-                                     traversal_info,
-                                     pool));
-
-    {
-      void *ra_baton, *session;
-      svn_ra_plugin_t *ra_lib;
-      svn_node_kind_t kind;
-      svn_wc_adm_access_t *dir_access;
-
-      /* Get the RA vtable that matches URL. */
-      SVN_ERR (svn_ra_init_ra_libs (&ra_baton, pool));
-      SVN_ERR (svn_ra_get_ra_library (&ra_lib, ra_baton, URL, pool));
-
-      /* Open an RA session for the URL */
-      SVN_ERR (svn_client__open_ra_session (&session, ra_lib, URL, anchor,
-                                            adm_access, NULL, TRUE, TRUE, TRUE, 
-                                            auth_baton, pool));
-
-      /* ### todo: shouldn't svn_client__get_revision_number be able
-         to take a url as easily as a local path?  */
-      SVN_ERR (svn_client__get_revision_number
-               (&revnum, ra_lib, session, revision, anchor, pool));
-
-      /* Tell RA to do a update of URL+TARGET to REVISION; if we pass an
-         invalid revnum, that means RA will use the latest revision.  */
-      SVN_ERR (ra_lib->do_update (session,
-                                  &reporter, &report_baton,
-                                  revnum,
-                                  target,
-                                  recurse,
-                                  update_editor, update_edit_baton));
-
-      SVN_ERR (svn_io_check_path (path, &kind, pool));
-      SVN_ERR (svn_wc_adm_retrieve (&dir_access, adm_access,
-                                    (kind == svn_node_dir
-                                     ? path
-                                     : svn_path_dirname (path, pool)),
+  SVN_ERR(svn_wc_get_update_editor3(&revnum, adm_access, target,
+                                    use_commit_times, recurse,
+                                    allow_unver_obstructions,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    diff3_cmd,
+                                    &update_editor, &update_edit_baton,
+                                    traversal_info,
                                     pool));
 
-      /* Drive the reporter structure, describing the revisions within
-         PATH.  When we call reporter->finish_report, the
-         update_editor will be driven by svn_repos_dir_delta. */
-      err = svn_wc_crawl_revisions (path, dir_access, reporter, report_baton,
-                                    TRUE, recurse,
-                                    notify_func, notify_baton,
-                                    traversal_info, pool);
+  /* Tell RA to do an update of URL+TARGET to REVISION; if we pass an
+     invalid revnum, that means RA will use the latest revision.  */
+  SVN_ERR(svn_ra_do_update(ra_session,
+                           &reporter, &report_baton,
+                           revnum,
+                           target,
+                           recurse,
+                           update_editor, update_edit_baton, pool));
+
+  /* Drive the reporter structure, describing the revisions within
+     PATH.  When we call reporter->finish_report, the
+     update_editor will be driven by svn_repos_dir_delta. */
+  err = svn_wc_crawl_revisions2(path, dir_access, reporter, report_baton,
+                                TRUE, recurse, use_commit_times,
+                                ctx->notify_func2, ctx->notify_baton2,
+                                traversal_info, pool);
       
-      /* Sleep for one second to ensure timestamp integrity. */
-      apr_sleep (APR_USEC_PER_SEC * 1);
-
-      if (err)
-        return err;
-
-      /* Close the RA session. */
-      SVN_ERR (ra_lib->close (session));
-    }      
+  if (err)
+    {
+      /* Don't rely on the error handling to handle the sleep later, do
+         it now */
+      svn_sleep_for_timestamps();
+      return err;
+    }
+  *use_sleep = TRUE;
   
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
      the primary operation.  */
-  if (recurse)
-    SVN_ERR (svn_client__handle_externals (traversal_info,
-                                           notify_func, notify_baton,
-                                           auth_baton,
-                                           TRUE, /* update unchanged ones */
-                                           pool));
+  if (recurse && (! ignore_externals))
+    SVN_ERR(svn_client__handle_externals(traversal_info, 
+                                         TRUE, /* update unchanged ones */
+                                         use_sleep, ctx, pool));
 
-  SVN_ERR (svn_wc_adm_close (adm_access));
+  if (sleep_here)
+    svn_sleep_for_timestamps();
 
+  SVN_ERR(svn_wc_adm_close(adm_access));
+
+  /* Let everyone know we're finished here. */
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(anchor, svn_wc_notify_update_completed, pool);
+      notify->kind = svn_node_none;
+      notify->content_state = notify->prop_state
+        = svn_wc_notify_state_inapplicable;
+      notify->lock_state = svn_wc_notify_lock_state_inapplicable;
+      notify->revision = revnum;
+      (*ctx->notify_func2)(ctx->notify_baton2, notify, pool);
+    }
+
+  /* If the caller wants the result revision, give it to them. */
+  if (result_rev)
+    *result_rev = revnum;
+  
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_update3(apr_array_header_t **result_revs,
+                   const apr_array_header_t *paths,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_boolean_t ignore_externals,
+                   svn_boolean_t allow_unver_obstructions,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  int i;
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  if (result_revs)
+    *result_revs = apr_array_make(pool, paths->nelts, sizeof(svn_revnum_t));
+
+  for (i = 0; i < paths->nelts; ++i)
+    {
+      svn_boolean_t sleep;
+      svn_revnum_t result_rev;
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+
+      svn_pool_clear(subpool);
+
+      if (ctx->cancel_func && (err = ctx->cancel_func(ctx->cancel_baton)))
+        break;
+
+      err = svn_client__update_internal(&result_rev, path, revision,
+                                        recurse, ignore_externals,
+                                        allow_unver_obstructions,
+                                        &sleep, ctx, subpool);
+      if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+        {
+          return err;
+        }
+      else if (err)
+        {
+          /* SVN_ERR_WC_NOT_DIRECTORY: it's not versioned */
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+          result_rev = SVN_INVALID_REVNUM;
+          if (ctx->notify_func2)
+            (*ctx->notify_func2)(ctx->notify_baton2,
+                                 svn_wc_create_notify(path,
+                                                      svn_wc_notify_skip,
+                                                      subpool), subpool);
+        }
+      if (result_revs)
+        APR_ARRAY_PUSH(*result_revs, svn_revnum_t) = result_rev;
+    }
+
+  svn_pool_destroy(subpool);
+  svn_sleep_for_timestamps();
+
+  return err;
+}
+
+svn_error_t *
+svn_client_update2(apr_array_header_t **result_revs,
+                   const apr_array_header_t *paths,
+                   const svn_opt_revision_t *revision,
+                   svn_boolean_t recurse,
+                   svn_boolean_t ignore_externals,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_update3(result_revs, paths, revision, recurse,
+                            ignore_externals, FALSE, ctx, pool);
+}
+
+svn_error_t *
+svn_client_update(svn_revnum_t *result_rev,
+                  const char *path,
+                  const svn_opt_revision_t *revision,
+                  svn_boolean_t recurse,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client__update_internal(result_rev, path, revision, recurse, 
+                                     FALSE, FALSE, NULL, ctx, pool);
 }

@@ -2,7 +2,7 @@
  * revisions.c:  discovering revisions
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,24 +21,22 @@
 #include <apr_pools.h>
 
 #include "svn_error.h"
-#include "svn_string.h"
 #include "svn_ra.h"
 #include "svn_wc.h"
-#include "svn_client.h"
 #include "svn_path.h"
 #include "client.h"
 
+#include "svn_private_config.h"
 
 
 
 
 svn_error_t *
-svn_client__get_revision_number (svn_revnum_t *revnum,
-                                 svn_ra_plugin_t *ra_lib,
-                                 void *sess,
-                                 const svn_opt_revision_t *revision,
-                                 const char *path,
-                                 apr_pool_t *pool)
+svn_client__get_revision_number(svn_revnum_t *revnum,
+                                svn_ra_session_t *ra_session,
+                                const svn_opt_revision_t *revision,
+                                const char *path,
+                                apr_pool_t *pool)
 {
   /* ### When revision->kind == svn_opt_revision_date, is there an
      optimization such that we can compare revision->value->date with
@@ -50,22 +48,21 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
      doesn't seem worth it.  -kff */
 
   /* Sanity check. */
-  if (((ra_lib == NULL) || (sess == NULL))
+  if (ra_session == NULL
       && ((revision->kind == svn_opt_revision_date)
           || (revision->kind == svn_opt_revision_head)))
     {
       return svn_error_create
-        (SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, NULL,
-         "svn_client__get_revision_number: "
-         "need ra_lib and session for date or head revisions.");
+        (SVN_ERR_CLIENT_RA_ACCESS_REQUIRED, NULL, NULL);
     }
 
   if (revision->kind == svn_opt_revision_number)
     *revnum = revision->value.number;
   else if (revision->kind == svn_opt_revision_date)
-    SVN_ERR (ra_lib->get_dated_revision (sess, revnum, revision->value.date));
+    SVN_ERR(svn_ra_get_dated_revision(ra_session, revnum,
+                                      revision->value.date, pool));
   else if (revision->kind == svn_opt_revision_head)
-    SVN_ERR (ra_lib->get_latest_revnum (sess, revnum));
+    SVN_ERR(svn_ra_get_latest_revnum(ra_session, revnum, pool));
   else if (revision->kind == svn_opt_revision_unspecified)
     *revnum = SVN_INVALID_REVNUM;
   else if ((revision->kind == svn_opt_revision_committed)
@@ -79,25 +76,28 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
       /* Sanity check. */
       if (path == NULL)
         return svn_error_create
-          (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, NULL,
-           "svn_client__get_revision_number: "
-           "need a version-controlled path to fetch local revision info.");
+          (SVN_ERR_CLIENT_VERSIONED_PATH_REQUIRED, NULL, NULL);
 
-      SVN_ERR (svn_wc_adm_probe_open (&adm_access, NULL, path, FALSE, FALSE,
-                                      pool));
-      SVN_ERR (svn_wc_entry (&ent, path, adm_access, FALSE, pool));
-      SVN_ERR (svn_wc_adm_close (adm_access));
+      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
+                                     0, NULL, NULL, pool));
+      SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc_adm_close(adm_access));
 
       if (! ent)
         return svn_error_createf
         (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-         "svn_client__get_revision: '%s' not under revision control", path);
+	 _("'%s' is not under version control"),
+         svn_path_local_style(path, pool));
       
       if ((revision->kind == svn_opt_revision_base)
           || (revision->kind == svn_opt_revision_working))
         *revnum = ent->revision;
       else
         {
+          if (! SVN_IS_VALID_REVNUM(ent->cmt_rev))
+            return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                                     _("Path '%s' has no committed revision"),
+                                     path);
           *revnum = ent->cmt_rev;
           if (revision->kind == svn_opt_revision_previous)
             (*revnum)--;
@@ -106,16 +106,16 @@ svn_client__get_revision_number (svn_revnum_t *revnum,
   else
     return svn_error_createf
       (SVN_ERR_CLIENT_BAD_REVISION, NULL,
-       "svn_client__get_revision_number: "
-       "unrecognized revision type requested for '%s'", path);
+       _("Unrecognized revision type requested for '%s'"),
+       svn_path_local_style(path, pool));
   
   return SVN_NO_ERROR;
 }
 
 
 svn_boolean_t
-svn_client__compare_revisions (svn_opt_revision_t *revision1,
-                               svn_opt_revision_t *revision2)
+svn_client__compare_revisions(svn_opt_revision_t *revision1,
+                              svn_opt_revision_t *revision2)
 {
   if ((revision1->kind != revision2->kind)
       || ((revision1->kind == svn_opt_revision_number)
@@ -130,7 +130,7 @@ svn_client__compare_revisions (svn_opt_revision_t *revision1,
 
 
 svn_boolean_t
-svn_client__revision_is_local (const svn_opt_revision_t *revision)
+svn_client__revision_is_local(const svn_opt_revision_t *revision)
 {
   if ((revision->kind == svn_opt_revision_unspecified)
       || (revision->kind == svn_opt_revision_head)

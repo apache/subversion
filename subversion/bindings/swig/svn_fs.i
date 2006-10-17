@@ -1,8 +1,6 @@
 /*
- * svn_fs.i :  SWIG interface file for svn_fs.h
- *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,14 +12,20 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_fs.i: SWIG interface file for svn_fs.h
  */
 
-%module _fs
-%include typemaps.i
+#if defined(SWIGPYTHON)
+%module(package="libsvn") fs
+#elif defined(SWIGPERL)
+%module "SVN::_Fs"
+#elif defined(SWIGRUBY)
+%module "svn::ext::fs"
+#endif
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import core.i
 %import svn_delta.i
 
 /* -----------------------------------------------------------------------
@@ -32,89 +36,82 @@
 */
 %nodefault;
 
-/* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
-*/
-%apply SWIGTYPE **OUTPARAM {
-    svn_fs_root_t **,
-    svn_fs_txn_t **,
-    void **,
-    svn_fs_id_t **,
-    const char **,
-    svn_stream_t **
-};
+/* Redundant from 1.1 onwards, so not worth manually wrapping the callback. */
+%ignore svn_fs_set_berkeley_errcall;
 
 /* ### need to deal with IN params which have "const" and OUT params which
    ### return non-const type. SWIG's type checking may see these as
    ### incompatible. */
 
-/* -----------------------------------------------------------------------
-   for the FS, 'int *' will always be an OUTPUT parameter
-*/
-%apply int *OUTPUT { int * };
-
-/* -----------------------------------------------------------------------
-   define the data/len pair of svn_fs_parse_id to be a single argument
-*/
-%apply (const char *PTR, apr_size_t LEN) {
-    (const char *data, apr_size_t len)
-}
-
-/* -----------------------------------------------------------------------
-   list_transaction's "apr_array_header_t **" is returning a list of strings.
-*/
-
-%typemap(in,numinputs=0) apr_array_header_t ** (apr_array_header_t *temp) {
-    $1 = &temp;
-}
-%typemap(python, argout, fragment="t_output_helper") 
-apr_array_header_t **names_p {
-    $result = t_output_helper($result, svn_swig_py_array_to_list(*$1));
-}
-
-/* -----------------------------------------------------------------------
-   revisions_changed's "apr_array_header_t **" is returning a list of
-   revs.  also, its input array is a list of strings.
-*/
-
-%typemap(python, argout, fragment="t_output_helper") 
-apr_array_header_t **revs {
-    $result = t_output_helper($result, svn_swig_py_revarray_to_list(*$1));
-}
-%apply const apr_array_header_t *STRINGLIST { 
-    const apr_array_header_t *paths 
+%apply const char *MAY_BE_NULL {
+    const char *base_checksum,
+    const char *result_checksum,
+    const char *token,
+    const char *comment
 };
 
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
+
+%hash_argout_typemap(entries_p, svn_fs_dirent_t *)
+%hash_argout_typemap(changed_paths_p, svn_fs_path_change_t *)
+
+#ifndef SWIGPERL
+%callback_typemap(svn_fs_get_locks_callback_t get_locks_func,
+                  void *get_locks_baton,
+                  svn_swig_py_fs_get_locks_func,
+                  ,
+                  svn_swig_rb_fs_get_locks_callback)
+#endif
+
 /* -----------------------------------------------------------------------
-   all uses of "apr_hash_t **" are returning property hashes
+   Fix the return value for svn_fs_commit_txn(). If the conflict result is
+   NULL, then t_output_helper() is passed Py_None, but that goofs up
+   because that is *also* the marker for "I haven't started assembling a
+   multi-valued return yet" which means the second return value (new_rev)
+   will not cause a 2-tuple to be manufactured.
+
+   The answer is to explicitly create a 2-tuple return value.
+
+   FIXME: Do the Perl and Ruby bindings need to do something similar?
 */
-
-%apply apr_hash_t **PROPHASH { apr_hash_t ** };
-
-/* -----------------------------------------------------------------------
-   except for svn_fs_dir_entries, which returns svn_fs_dirent_t structures
-*/
-
-%typemap(in,numinputs=0) apr_hash_t **entries_p = apr_hash_t **OUTPUT;
-%typemap(python,argout,fragment="t_output_helper") apr_hash_t **entries_p {
-    $result = t_output_helper(
-        $result,
-        svn_swig_py_convert_hash(*$1, SWIGTYPE_p_svn_fs_dirent_t));
+#ifdef SWIGPYTHON
+%typemap(argout) (const char **conflict_p, svn_revnum_t *new_rev) {
+    /* this is always Py_None */
+    Py_DECREF($result);
+    /* build the result tuple */
+    $result = Py_BuildValue("zi", *$1, (long)*$2);
 }
+#endif
+
+/* Ruby fixups for functions not following the pool convention. */
+#ifdef SWIGRUBY
+%ignore svn_fs_set_warning_func;
+%ignore svn_fs_root_fs;
+
+%inline %{
+static void
+svn_fs_set_warning_func_wrapper(svn_fs_t *fs,
+                                svn_fs_warning_callback_t warning,
+                                void *warning_baton,
+                                apr_pool_t *pool)
+{
+  svn_fs_set_warning_func(fs, warning, warning_baton);
+}
+
+static svn_fs_t *
+svn_fs_root_fs_wrapper(svn_fs_root_t *root, apr_pool_t *pool)
+{
+  return svn_fs_root_fs(root);
+}
+%}
+#endif
 
 /* ----------------------------------------------------------------------- */
 
-
-%include svn_fs.h
-
-%header %{
-#include "svn_fs.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
-#endif
-
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
-#endif
+%{
+#include "svn_md5.h"
 %}
+
+%include svn_fs_h.swg

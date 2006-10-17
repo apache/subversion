@@ -1,38 +1,58 @@
+#!/usr/bin/env python
 #
-# run-tests.py - run the tests in the regression test suite.
+# run_tests.py - run the tests in the regression test suite.
 #
+
+'''usage: python run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
+                    [--verbose] [--cleanup] [--enable-sasl]
+                    <abs_srcdir> <abs_builddir>
+                    <prog ...>
+
+The optional base-url, fs-type, verbose, and cleanup options, and
+the first two parameters are passed unchanged to the TestHarness
+constructor.  All other parameters are names of test programs.
+'''
 
 import os, sys
 
+import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 
 class TestHarness:
   '''Test harness for Subversion tests.
   '''
 
-  def __init__(self, abs_srcdir, abs_builddir, python, shell, logfile,
-               base_url = None):
+  def __init__(self, abs_srcdir, abs_builddir, logfile,
+               base_url=None, fs_type=None, verbose=None, cleanup=None,
+               enable_sasl=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
-    PYTHON is the name of the python interpreter.
-    SHELL is the name of the shell.
     LOGFILE is the name of the log file.
     BASE_URL is the base url for DAV tests.
+    FS_TYPE is the FS type for repository creation.
     '''
     self.srcdir = abs_srcdir
     self.builddir = abs_builddir
-    self.python = python
-    self.shell = shell
     self.logfile = logfile
     self.base_url = base_url
+    self.fs_type = fs_type
+    self.verbose = verbose
+    self.cleanup = cleanup
+    self.enable_sasl = enable_sasl
     self.log = None
 
   def run(self, list):
     'Run all test programs given in LIST.'
     self._open_log('w')
     failed = 0
+    cnt = 0
     for prog in list:
-      failed = self._run_test(prog) or failed
+      failed = self._run_test(prog, cnt, len(list)) or failed
+      cnt += 1
     self._open_log('r')
     log_lines = self.log.readlines()
     skipped = filter(lambda x: x[:6] == 'SKIP: ', log_lines)
@@ -57,7 +77,7 @@ class TestHarness:
       self.log.close()
       self.log = None
 
-  def _run_test(self, prog):
+  def _run_test(self, prog, test_nr, total_tests):
     'Run a single test.'
 
     def quote(arg):
@@ -68,28 +88,32 @@ class TestHarness:
 
     progdir, progbase = os.path.split(prog)
     # Using write here because we don't want even a trailing space
-    sys.stdout.write('Running all tests in ' + progbase + '...')
+    sys.stdout.write('Running all tests in %s [%d/%d]...' % (
+      progbase, test_nr + 1, total_tests))
     print >> self.log, 'START: ' + progbase
 
     if progbase[-3:] == '.py':
-      progname = self.python
+      progname = sys.executable
       cmdline = [quote(progname),
                  quote(os.path.join(self.srcdir, prog))]
       if self.base_url is not None:
-        cmdline.append('--url')
-        cmdline.append(quote(self.base_url))
-    elif progbase[-3:] == '.sh':
-      progname = self.shell
-      cmdline = [quote(progname),
-                 quote(os.path.join(self.srcdir, prog)),
-                 quote(os.path.join(self.builddir, progdir)),
-                 quote(os.path.join(self.srcdir, progdir))]
+        cmdline.append(quote('--url=' + self.base_url))
+      if self.enable_sasl is not None:
+        cmdline.append('--enable-sasl')
     elif os.access(prog, os.X_OK):
       progname = './' + progbase
-      cmdline = [quote(progname)]
+      cmdline = [quote(progname),
+                 quote('--srcdir=' + os.path.join(self.srcdir, progdir))]
     else:
       print 'Don\'t know what to do about ' + progbase
       sys.exit(1)
+
+    if self.verbose is not None:
+      cmdline.append('--verbose')
+    if self.cleanup is not None:
+      cmdline.append('--cleanup')
+    if self.fs_type is not None:
+      cmdline.append(quote('--fs-type=' + self.fs_type))
 
     old_cwd = os.getcwd()
     try:
@@ -101,7 +125,13 @@ class TestHarness:
     else:
       os.chdir(old_cwd)
 
-    if failed:
+    # We always return 1 for failed tests, if some other failure than 1
+    # probably means the test didn't run at all and probably didn't
+    # output any failure info.
+    if failed == 1:
+      print 'FAILURE'
+    elif failed:
+      print >> self.log, 'FAIL:  ' + progbase + ': Unknown test failure see tests.log.\n'
       print 'FAILURE'
     else:
       print 'success'
@@ -134,33 +164,38 @@ class TestHarness:
 
 
 def main():
-  '''Argument parsing and test driver.
+  try:
+    opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
+                           ['url=', 'fs-type=', 'verbose', 'cleanup', 
+                            'enable-sasl'])
+  except getopt.GetoptError:
+    args = []
 
-  Usage: run-tests.py [--url <base_url>] <abs_srcdir> <abs_builddir>
-                      <python> <shell> <prog ...>
-
-  The optional base_url and the first four parameters and  are passed
-  unchanged to the TestHarness constuctor.  All other parameters
-  are names of test programs.
-  '''
-  if len(sys.argv) < 6 \
-     or sys.argv[1] == '--url' and len(sys.argv) < 8:
-    print 'Usage: run-tests.py <abs_srcdir> <abs_builddir>' \
-          '<python> <shell> [--url <base_url>] <prog ...>'
+  if len(args) < 3:
+    print __doc__
     sys.exit(2)
 
-  if sys.argv[1] == '--url':
-    base_index = 2
-    base_url = sys.argv[2]
-  else:
-    base_index = 0
-    base_url = None
+  base_url, fs_type, verbose, cleanup, enable_sasl = None, None, None, None, \
+                                                     None
+  for opt, val in opts:
+    if opt in ('-u', '--url'):
+      base_url = val
+    elif opt in ('-f', '--fs-type'):
+      fs_type = val
+    elif opt in ('-v', '--verbose'):
+      verbose = 1
+    elif opt in ('-c', '--cleanup'):
+      cleanup = 1
+    elif opt in ('--enable-sasl'):
+      enable_sasl = 1
+    else:
+      raise getopt.GetoptError
 
-  th = TestHarness(sys.argv[base_index+1], sys.argv[base_index+2],
-                   sys.argv[base_index+3], sys.argv[base_index+4],
-                   os.path.abspath('tests.log'), base_url)
+  th = TestHarness(args[0], args[1],
+                   os.path.abspath('tests.log'),
+                   base_url, fs_type, verbose, cleanup, enable_sasl)
 
-  failed = th.run(sys.argv[base_index+5:])
+  failed = th.run(args[2:])
   if failed:
     sys.exit(1)
 

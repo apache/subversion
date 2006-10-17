@@ -1,0 +1,66 @@
+Branch: http://svn.collab.net/repos/svn/branches/dav-mirror/
+
+Purpose: This branch is meant to introduce a master/slave server
+replication model for Subversion ra_dav transactions.
+
+All clients interact with a slave server, but the slave transparently
+passes all of the write-oriented activites to the master (rewriting the
+content as necessary).  The slaves are essentially read-only, but they
+do have a complete copy of the repository locally.  This serves to
+alleviate read traffic from the master server which may be desirable
+in certain circumstances.
+
+This model has several advantages to using a straight HTTP DAV-aware
+caching proxy, in that it can respond to all requests without seeing them
+first.
+
+Requirements: httpd 2.1 with mod_proxy enabled
+              (several fixes to mod_proxy were committed for this patch that
+               have not been backported to the 2.0 branch of httpd.  Just use
+               HEAD of the httpd-2.0 repository.)
+
+Issues/Thoughts:
+- The master maybe should update the slaves using a DAV commit of its own.
+  (essentially replay the commit once it is approved).  This requires
+  a way to inject commits/user to the slave.  But, this would eliminate the
+  reliance on post-commit hooks.
+- Alternatively, slaves could pull updates rather than being pushed out by
+  the master.  How would this work?  Separate process on client?
+- This isn't multi-master replication.  The slave won't accept commits
+  on its own.  If the master can't be contacted for a write operation, it
+  will return a proxy error.  (Multi-master == distributed repositories.)
+- Remove the location_filter for the header.  I believe mod_proxy does this
+  for us already.  We may just be duplicating things.  We will still have
+  to rewrite the bodies of the requests/responses though.
+- Determine a better way to handle the MERGE call.  It's the only operation
+  that doesn't occur on the activity URL.
+- Cross fingers and see what people think of it.
+
+Usage:
+
+You must use the dav-mirror branch described above.
+
+Each slave has:
+
+<Location /repos/slave>
+  DAV svn
+  SVNPath /my/local/copy/of/repos
+  SVNMasterURI http://master.example.com/repos/master
+</Location>
+
+The master must have a post-commit hook that updates the slaves.  An
+example that does this using 'svnadmin dump'/'svnadmin load' and ssh is
+provided here:
+
+#!/bin/sh
+REPOS="$1"
+REV="$2"
+SLAVE_HOST=slave.example.com
+SLAVE_PATH=/my/local/copy/of/repos
+
+# Ensure svnadmin is in your PATH on both this machine and the remote server!
+svnadmin dump --incremental -r$2 $1 > /tmp/$2.dump
+scp /tmp/$2.dump $SLAVE_HOST:$SLAVE_PATH
+ssh $SLAVE_HOST "svnadmin load $SLAVE_PATH < $SLAVE_PATH/$2.dump"
+ssh $SLAVE_HOST "rm $SLAVE_PATH/$2.dump"
+rm /tmp/$2.dump

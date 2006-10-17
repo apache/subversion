@@ -2,28 +2,36 @@
 
 ### Run this to produce everything needed for configuration. ###
 
-# Ensure some permissions for executables used by this script
-for execfile in gen-make.py \
-                dist.sh \
-                build/buildcheck.sh \
-                build/getversion.py \
-                build/PrintPath \
-                ac-helpers/get-neon-ver.sh \
-                ac-helpers/install-sh; do
-  chmod +x $execfile                
-done
-
 
 # Run tests to ensure that our build requirements are met
-NEON_CHECK_CONTROL=""
-if test "$1" = "--disable-neon-version-check"; then
-    NEON_CHECK_CONTROL="$1"
-    shift
-fi
-./build/buildcheck.sh $NEON_CHECK_CONTROL || exit 1
-
-### temporary cleanup during transition to libtool 1.4
-(cd ac-helpers ; rm -f ltconfig ltmain.sh libtool.m4)
+RELEASE_MODE=""
+RELEASE_ARGS=""
+SKIP_DEPS=""
+while test $# != 0; do
+  case "$1" in
+    --release)
+      RELEASE_MODE="$1"
+      RELEASE_ARGS="--release"
+      shift
+      ;;
+    -s)
+      SKIP_DEPS="yes"
+      shift
+      ;;
+    --)         # end of option parsing
+      break
+      ;;
+    *)
+      echo "invalid parameter: '$1'"
+      exit 1
+      ;;
+  esac
+done
+# ### The order of parameters is important; buildcheck.sh depends on it and
+# ### we don't want to copy the fancy option parsing loop there. For the
+# ### same reason, all parameters should be quoted, so that buildcheck.sh
+# ### sees an empty arg rather than missing one.
+./build/buildcheck.sh "$RELEASE_MODE" || exit 1
 
 #
 # Handle some libtool helper files
@@ -32,7 +40,7 @@ fi
 # ### APR's libtool. deferring to a second round of change...
 #
 
-libtoolize="`./build/PrintPath glibtoolize libtoolize`"
+libtoolize="`./build/PrintPath glibtoolize libtoolize libtoolize15`"
 
 if [ "x$libtoolize" = "x" ]; then
     echo "libtoolize not found in path"
@@ -42,66 +50,62 @@ fi
 $libtoolize --copy --automake
 
 ltpath="`dirname $libtoolize`"
-ltfile="`cd $ltpath/../share/aclocal ; pwd`"/libtool.m4
+ltfile=${LIBTOOL_M4-`cd $ltpath/../share/aclocal ; pwd`/libtool.m4}
 
 if [ ! -f $ltfile ]; then
-    echo "$ltfile not found"
+    echo "$ltfile not found (try setting the LIBTOOL_M4 environment variable)"
     exit 1
 fi
 
 echo "Copying libtool helper: $ltfile"
-cp $ltfile ac-helpers/libtool.m4
-
-# This is just temporary until people's workspaces are cleared -- remove
-# any old aclocal.m4 left over from prior build so it doesn't cause errors.
-rm -f aclocal.m4
-
-# Produce getdate.c from getdate.y.
-# Again, this means that "developers" who run autogen.sh need either
-# yacc or bison -- but not people who compile sourceballs, since `make
-# dist` will include getdate.c.
-echo "Creating getdate.c..."
-bison -o subversion/libsvn_subr/getdate.c subversion/libsvn_subr/getdate.y
-if [ $? -ne 0 ]; then
-    yacc -o subversion/libsvn_subr/getdate.c subversion/libsvn_subr/getdate.y
-    if [ $? -ne 0 ]; then
-        echo
-        echo "   Error:  can't find either bison or yacc."
-        echo "   One of these is needed to generate the date parser."
-        echo
-        exit 1
-    fi
-fi
+cp $ltfile build/libtool.m4
 
 # Create the file detailing all of the build outputs for SVN.
 #
 # Note: this dependency on Python is fine: only SVN developers use autogen.sh
 #       and we can state that dev people need Python on their machine. Note
-#       that running gen-make.py requires Python 1.X or newer.
+#       that running gen-make.py requires Python 2.X or newer.
 
-OK=`python -c 'print "OK"'`
-if test "${OK}" != "OK" ; then
-  echo "Python check failed, make sure python is installed and on the PATH"
+PYTHON="`./build/find_python.sh`"
+if test -z "$PYTHON"; then
+  echo "Python 2.0 or later is required to run autogen.sh"
+  echo "If you have a suitable Python installed, but not on the"
+  echo "PATH, set the environment variable PYTHON to the full path"
+  echo "to the Python executable, and re-run autogen.sh"
   exit 1
 fi
 
-if test "$1" = "-s"; then
-  echo "Creating build-outputs.mk (no dependencies)..."
-  ./gen-make.py -s build.conf ;
-else
-  echo "Creating build-outputs.mk..."
-  ./gen-make.py build.conf ;
+# Compile SWIG headers into standalone C files if we are in release mode
+if test -n "$RELEASE_MODE"; then
+  echo "Generating SWIG code..."
+  # Generate build-outputs.mk in non-release-mode, so that we can
+  # build the SWIG-related files
+  "$PYTHON" ./gen-make.py build.conf || gen_failed=1
+
+  # Build the SWIG-related files
+  make -f autogen-standalone.mk autogen-swig
 fi
 
-if test "$?" != "0"; then
-  echo "gen-make.py failed"
+if test -n "$SKIP_DEPS"; then
+  echo "Creating build-outputs.mk (no dependencies)..."
+  "$PYTHON" ./gen-make.py $RELEASE_ARGS -s build.conf || gen_failed=1
+else
+  echo "Creating build-outputs.mk..."
+  "$PYTHON" ./gen-make.py $RELEASE_ARGS build.conf || gen_failed=1
+fi
+
+if test -n "$RELEASE_MODE"; then
+  find build/ -name '*.pyc' -exec rm {} \;
+fi
+
+rm autogen-standalone.mk
+
+if test -n "$gen_failed"; then
+  echo "ERROR: gen-make.py failed"
   exit 1
 fi
 
 # Produce config.h.in
-# Do this before the automake (automake barfs if the header isn't available).
-# Do it after the aclocal command -- automake sets up the header to depend
-# on aclocal.m4
 echo "Creating svn_private_config.h.in..."
 ${AUTOHEADER:-autoheader}
 
@@ -130,18 +134,6 @@ fi
 # Remove autoconf 2.5x's cache directory
 rm -rf autom4te*.cache
 
-# Run apr/buildconf if it exists.
-if test -x "apr/buildconf" ; then
-  echo "Creating configuration files for apr." # apr's equivalent of autogen.sh
-  (cd apr && ./buildconf)
-fi
-
-# Run apr-util/buildconf if it exists.
-if test -x "apr-util/buildconf" ; then
-  echo "Creating configuration files for apr-util."
-  (cd apr-util && ./buildconf)
-fi
-
 echo ""
 echo "You can run ./configure now."
 echo ""
@@ -152,7 +144,6 @@ echo "./configure --enable-maintainer-mode"
 echo "./configure --disable-shared"
 echo "./configure --enable-maintainer-mode --disable-shared"
 echo ""
-echo "Note:  this build will create the Subversion shared libraries and a"
-echo "       command-line client.  If you wish to build a Subversion server,"
-echo "       you will need Apache 2.0.  See the INSTALL file for details."
+echo "Note:  If you wish to run a Subversion HTTP server, you will need"
+echo "Apache 2.x.  See the INSTALL file for details."
 echo ""

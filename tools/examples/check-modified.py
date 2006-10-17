@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 #
 # USAGE: check-modified.py FILE_OR_DIR1 FILE_OR_DIR2 ...
 #
@@ -8,9 +8,11 @@
 import sys
 import os
 import os.path
-import svn.util
+import svn.core
 import svn.client
 import svn.wc
+
+FORCE_COMPARISON = 0
 
 def usage():
   print "Usage: " + sys.argv[0] + " FILE_OR_DIR1 FILE_OR_DIR2\n"
@@ -18,30 +20,25 @@ def usage():
 
 def run(files):
 
-  svn.util.apr_initialize()
-  pool = svn.util.svn_pool_create(None)
-
   for f in files:
     dirpath = fullpath = os.path.abspath(f)
     if not os.path.isdir(dirpath):
       dirpath = os.path.dirname(dirpath)
   
-    adm_baton = svn.wc.svn_wc_adm_open(None, dirpath, False, True, pool)
+    adm_baton = svn.wc.adm_open(None, dirpath, False, True)
 
     try:
-      entry = svn.wc.svn_wc_entry(fullpath, adm_baton, 0, pool)
+      entry = svn.wc.entry(fullpath, adm_baton, 0)
 
-      if svn.wc.svn_wc_text_modified_p(fullpath, adm_baton, pool):
+      if svn.wc.text_modified_p(fullpath, FORCE_COMPARISON,
+				adm_baton):
         print "M      %s" % f
       else:
         print "       %s" % f
     except:
       print "?      %s" % f
 
-    svn.wc.svn_wc_adm_close(adm_baton)
-
-  svn.util.svn_pool_destroy(pool)
-  svn.util.apr_terminate()        
+    svn.wc.adm_close(adm_baton)
 
 if __name__ == '__main__':
   run(sys.argv[1:])

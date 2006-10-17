@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -29,7 +29,7 @@
 #include <apr_errno.h>     /* APR's error system */
 #include <apr_pools.h>
 
-#include <svn_types.h>
+#include "svn_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,42 +39,53 @@ extern "C" {
 
 /* Wrappers around APR pools, so we get debugging. */
 
-/** Wrapper around @c apr_pool_create, with a simpler interface */
-apr_pool_t *svn_pool_create (apr_pool_t *parent_pool);
+/** The recommended maximum amount of memory (4MB) to keep in an APR
+ * allocator on the free list, conveniently defined here to share
+ * between all our applications.
+ */
+#define SVN_ALLOCATOR_RECOMMENDED_MAX_FREE (4096 * 1024)
+
+
+/** Wrapper around apr_pool_create_ex(), with a simpler interface.
+ * The return pool will have an abort function set, which will call
+ * abort() on OOM.
+ */
+apr_pool_t *svn_pool_create_ex(apr_pool_t *parent_pool,
+                               apr_allocator_t *allocator);
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-apr_pool_t *svn_pool_create_debug (apr_pool_t *parent_pool,
-                                   const char *file_line);
+apr_pool_t *svn_pool_create_ex_debug(apr_pool_t *parent_pool,
+                                     apr_allocator_t *allocator,
+                                     const char *file_line);
 
 #if APR_POOL_DEBUG
-#define svn_pool_create(p) svn_pool_create_debug(p, APR_POOL__FILE_LINE__)
+#define svn_pool_create_ex(pool, allocator) \
+svn_pool_create_ex_debug(pool, allocator, APR_POOL__FILE_LINE__)
+
 #endif /* APR_POOL_DEBUG */
 #endif /* DOXYGEN_SHOULD_SKIP_THIS */
 
-/** Wrapper around @c apr_pool_clear */
-void svn_pool_clear (apr_pool_t *p);
 
-#ifndef DOXYGEN_SHOULD_SKIP_THIS
-void svn_pool_clear_debug (apr_pool_t *p,
-                           const char *file_line);
+/** Create a pool as a subpool of @a parent_pool */
+#define svn_pool_create(parent_pool) svn_pool_create_ex(parent_pool, NULL)
 
-#if APR_POOL_DEBUG
-#define svn_pool_clear(p) svn_pool_clear_debug(p, APR_POOL__FILE_LINE__)
-#endif /* APR_POOL_DEBUG */
-#endif /* DOXYGEN_SHOULD_SKIP_THIS */
+/** Clear a @a pool destroying its children.
+ *
+ * This define for @c svn_pool_clear exists for completeness.
+ */
+#define svn_pool_clear apr_pool_clear
+
 
 /** Destroy a @a pool and all of its children. 
  *
- * Destroy a @a pool and all of its children. 
- *
- * This define for @c svn_pool_destroy exists for symmatry (the
- * not-so-grand reason) and for the existence of a great memory usage
- * debugging hook (the grand reason).
+ * This define for @c svn_pool_destroy exists for symmetry and
+ * completeness.
  */
 #define svn_pool_destroy apr_pool_destroy
+
 
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
 
-#endif /* SVN_ERROR_H */
+#endif /* SVN_POOLS_H */

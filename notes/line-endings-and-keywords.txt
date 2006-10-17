@@ -249,10 +249,10 @@ is a whitespace-separated list of keywords to expand.  Since keywords
 have both long and short forms, both ways are allowed in the value of
 the svn:keywords property.  Here are all the keywords:
 
-   "LastChangedBy"       "Author"    ---> either one expands author
-   "LastChangedDate"     "Date"      ---> either one expands date
-   "LastChangedRevision" "Rev"       ---> either one expands rev
-   "HeadURL"             "URL"       ---> either one expands url
+   "LastChangedBy"       "Author"         ---> either one expands author
+   "LastChangedDate"     "Date"           ---> either one expands date
+   "LastChangedRevision" "Revision" "Rev" ---> any one expands rev
+   "HeadURL"             "URL"            ---> either one expands url
 
 Here are some example values of the property:
 

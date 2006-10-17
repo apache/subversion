@@ -1,47 +1,50 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
-# USAGE: blame.py [-r REV] [-h DBHOME] repos-path
+# USAGE: blame.py [-r REV] repos-path file
 #
 
 import sys
 import os
 import getopt
+try:
+  my_getopt = getopt.gnu_getopt
+except AttributeError:
+  my_getopt = getopt.getopt
 import difflib
-from svn import fs, util
+from svn import fs, core, repos
 
 CHUNK_SIZE = 100000
 
-def getfile(pool, path, rev=None, home='.'):
+def blame(path, filename, rev=None):
   
-  db_path = os.path.join(home, 'db')
-  if not os.path.exists(db_path):
-    db_path = home
   annotresult = {}
-  fsob = fs.new(pool)
-  fs.open_berkeley(fsob, db_path)
-  
+  path = core.svn_path_canonicalize(path)
+
+  repos_ptr = repos.open(path)
+  fsob = repos.fs(repos_ptr)
+ 
   if rev is None:
-    rev = fs.youngest_rev(fsob, pool)
+    rev = fs.youngest_rev(fsob)
   filedata = '' 
   for i in xrange(0, rev+1):
-    root = fs.revision_root(fsob, i, pool)
-    if fs.check_path(root, path, pool) != util.svn_node_none:
+    root = fs.revision_root(fsob, i)
+    if fs.check_path(root, filename) != core.svn_node_none:
       first = i
       break
   print "First revision is %d" % first
   print "Last revision is %d" % rev
   for i in xrange(first, rev+1):
     previousroot = root
-    root = fs.revision_root(fsob, i, pool)
+    root = fs.revision_root(fsob, i)
     if i != first:
-      if not fs.contents_changed(root, path, previousroot, path, pool):
+      if not fs.contents_changed(root, filename, previousroot, filename):
         continue
       
-    file = fs.file_contents(root, path, pool)
+    file = fs.file_contents(root, filename)
     previousdata = filedata
     filedata = ''
     while 1:
-      data = util.svn_stream_read(file, CHUNK_SIZE)
+      data = core.svn_stream_read(file, CHUNK_SIZE)
       if not data:
         break
       filedata = filedata + data
@@ -57,7 +60,7 @@ def getfile(pool, path, rev=None, home='.'):
           k = k + 1
           continue
         else:
-	  annotresult[k] = (i, j[2:])
+          annotresult[k] = (i, j[2:])
           k = k + 1
           continue
       elif j[0] == '?':
@@ -73,21 +76,18 @@ def getfile(pool, path, rev=None, home='.'):
                                                annotresult[x][1]))
 
 def usage():
-  print "USAGE: blame.py [-r REV] [-h DBHOME] repos-path"
+  print "USAGE: blame.py [-r REV] repos-path file"
   sys.exit(1)
 
 def main():
-  opts, args = getopt.getopt(sys.argv[1:], 'r:h:')
-  if len(args) != 1:
+  opts, args = getopt.getopt(sys.argv[1:], 'r:')
+  if len(args) != 2:
     usage()
   rev = None
-  home = '.'
   for name, value in opts:
     if name == '-r':
       rev = int(value)
-    elif name == '-h':
-      home = value
-  util.run_app(getfile, args[0], rev, home)
+  blame(args[0], args[1], rev)
 
 if __name__ == '__main__':
   main()

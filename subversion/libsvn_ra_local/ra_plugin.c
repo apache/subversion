@@ -2,7 +2,7 @@
  * ra_plugin.c : the main RA module for local repository access
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,77 +23,17 @@
 #include "svn_repos.h"
 #include "svn_pools.h"
 #include "svn_time.h"
+#include "svn_props.h"
+#include "svn_path.h"
+#include "svn_private_config.h"
+#include "../libsvn_ra/ra_loader.h"
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
+#include <assert.h>
+
 /*----------------------------------------------------------------*/
-
-/** Callbacks **/
-
-/* A device to record the targets of commits, and ensuring that proper
-   commit closure happens on them (namely, revision setting and wc
-   property setting).  This is passed to the `commit hook' routine by
-   svn_repos_get_commit_editor.  (   ) */
-struct commit_cleanup_baton
-{
-  /* Allocation for this baton, as well as all committed_targets */
-  apr_pool_t *pool;
-
-  /* The filesystem that we just committed to. */
-  svn_fs_t *fs;
-
-  /* If non-null, store the new revision here. */
-  svn_revnum_t *new_rev;
-
-  /* If non-null, store the repository date of the commit here. */
-  const char **committed_date;
-
-  /* If non-null, store the repository author of the commit here. */
-  const char **committed_author;
-};
-
-
-/* An instance of svn_repos_commit_callback_t.
- * 
- * BATON is `struct commit_cleanup_baton *'.  Loop over all committed
- * target paths in BATON->committed_targets, invoking
- * BATON->close_func() on each one with NEW_REV.
- *
- * Set *(BATON->new_rev) to NEW_REV, and copy COMMITTED_DATE and
- * COMMITTED_AUTHOR to *(BATON->committed_date) and
- * *(BATON->committed_date) respectively, allocating the new storage
- * in BATON->pool.
- *
- * This routine is originally passed as a "hook" to the filesystem
- * commit editor.  When we get here, the track-editor has already
- * stored committed targets inside the baton.
- */
-static svn_error_t *
-cleanup_commit (svn_revnum_t new_rev,
-                const char *committed_date,
-                const char *committed_author,
-                void *baton)
-{
-  struct commit_cleanup_baton *cb = baton;
-
-  /* Store the new revision information in the baton. */
-  if (cb->new_rev)
-    *(cb->new_rev) = new_rev;
-
-  if (cb->committed_date)
-    *(cb->committed_date) = committed_date 
-                            ? apr_pstrdup (cb->pool, committed_date) 
-                            : NULL;
-
-  if (cb->committed_author)
-    *(cb->committed_author) = committed_author
-                              ? apr_pstrdup (cb->pool, committed_author) 
-                              : NULL;
-
-  return SVN_NO_ERROR;
-}
-
 
 
 /* The reporter vtable needed by do_update() */
@@ -106,11 +46,11 @@ typedef struct reporter_baton_t
 
 
 static void *
-make_reporter_baton (svn_ra_local__session_baton_t *session,
-                     void *report_baton,
-                     apr_pool_t *pool)
+make_reporter_baton(svn_ra_local__session_baton_t *session,
+                    void *report_baton,
+                    apr_pool_t *pool)
 {
-  reporter_baton_t *rbaton = apr_palloc (pool, sizeof (*rbaton));
+  reporter_baton_t *rbaton = apr_palloc(pool, sizeof(*rbaton));
   rbaton->session = session;
   rbaton->report_baton = report_baton;
   return rbaton;
@@ -118,65 +58,77 @@ make_reporter_baton (svn_ra_local__session_baton_t *session,
 
 
 static svn_error_t *
-reporter_set_path (void *reporter_baton,
+reporter_set_path(void *reporter_baton,
+                  const char *path,
+                  svn_revnum_t revision,
+                  svn_boolean_t start_empty,
+                  const char *lock_token,
+                  apr_pool_t *pool)
+{
+  reporter_baton_t *rbaton = reporter_baton;
+  return svn_repos_set_path2(rbaton->report_baton, path,
+                             revision, start_empty, lock_token, pool);
+}
+
+
+static svn_error_t *
+reporter_delete_path(void *reporter_baton,
+                     const char *path,
+                     apr_pool_t *pool)
+{
+  reporter_baton_t *rbaton = reporter_baton;
+  return svn_repos_delete_path(rbaton->report_baton, path, pool);
+}
+
+
+static svn_error_t *
+reporter_link_path(void *reporter_baton,
                    const char *path,
-                   svn_revnum_t revision)
-{
-  reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_set_path (rbaton->report_baton, path, revision);
-}
-
-
-static svn_error_t *
-reporter_delete_path (void *reporter_baton,
-                      const char *path)
-{
-  reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_delete_path (rbaton->report_baton, path);
-}
-
-
-static svn_error_t *
-reporter_link_path (void *reporter_baton,
-                    const char *path,
-                    const char *url,
-                    svn_revnum_t revision)
+                   const char *url,
+                   svn_revnum_t revision,
+                   svn_boolean_t start_empty,
+                   const char *lock_token,
+                   apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
   const char *fs_path = NULL;
+  const char *repos_url_decoded;
   int repos_url_len;
 
-  url = svn_path_uri_decode(url, rbaton->session->pool);
-  repos_url_len = strlen(rbaton->session->repos_url);
-  if (strncmp(url, rbaton->session->repos_url, repos_url_len) != 0)
-    return svn_error_createf (SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              "'%s'\n"
-                              "is not the same repository as\n"
-                              "'%s'", url, rbaton->session->repos_url);
+  url = svn_path_uri_decode(url, pool);
+  repos_url_decoded = svn_path_uri_decode(rbaton->session->repos_url, pool);
+  repos_url_len = strlen(repos_url_decoded);
+  if (strncmp(url, repos_url_decoded, repos_url_len) != 0)
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("'%s'\n"
+                               "is not the same repository as\n"
+                               "'%s'"), url, rbaton->session->repos_url);
   fs_path = url + repos_url_len;
 
-  return svn_repos_link_path (rbaton->report_baton, path,
-                              fs_path, revision);
+  return svn_repos_link_path2(rbaton->report_baton, path, fs_path, revision,
+                              start_empty, lock_token, pool);
 }
 
 
 static svn_error_t *
-reporter_finish_report (void *reporter_baton)
+reporter_finish_report(void *reporter_baton,
+                       apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_finish_report (rbaton->report_baton);
+  return svn_repos_finish_report(rbaton->report_baton, pool);
 }
 
 
 static svn_error_t *
-reporter_abort_report (void *reporter_baton)
+reporter_abort_report(void *reporter_baton,
+                      apr_pool_t *pool)
 {
   reporter_baton_t *rbaton = reporter_baton;
-  return svn_repos_abort_report (rbaton->report_baton);
+  return svn_repos_abort_report(rbaton->report_baton, pool);
 }
 
 
-static const svn_ra_reporter_t ra_local_reporter = 
+static const svn_ra_reporter2_t ra_local_reporter = 
 {
   reporter_set_path,
   reporter_delete_path,
@@ -185,100 +137,190 @@ static const svn_ra_reporter_t ra_local_reporter =
   reporter_abort_report
 };
 
+static svn_error_t *
+svn_ra_local__get_file_revs(svn_ra_session_t *session,
+                            const char *path,
+                            svn_revnum_t start,
+                            svn_revnum_t end,
+                            svn_ra_file_rev_handler_t handler,
+                            void *handler_baton,
+                            apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sbaton = session->priv;
+  const char *abs_path = sbaton->fs_path->data;
+
+  /* Concatenate paths */
+  abs_path = svn_path_join(abs_path, path, pool);
+
+  return svn_repos_get_file_revs(sbaton->repos, abs_path, start, end, NULL,
+                                 NULL, handler, handler_baton, pool);
+}
+
+/* Pool cleanup handler: Ensure that the access descriptor of the filesystem
+   DATA is set to NULL. */
+static apr_status_t
+cleanup_access(void *data)
+{
+  svn_error_t *serr;
+  svn_fs_t *fs = data;
+
+  serr = svn_fs_set_access(fs, NULL);
+
+  if (serr)
+    {
+      apr_status_t apr_err = serr->apr_err;
+      svn_error_clear(serr);
+      return apr_err;
+    }
+
+  return APR_SUCCESS;
+}
+
+static svn_error_t *
+get_username(svn_ra_session_t *session,
+             apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *baton = session->priv;
+  svn_auth_iterstate_t *iterstate;
+  svn_fs_access_t *access_ctx;
+
+  /* If we've already found the username don't ask for it again. */
+  if (! baton->username)
+    {
+      /* Get a username somehow, so we have some svn:author property to
+         attach to a commit. */
+      if (baton->callbacks->auth_baton)
+        {
+          void *creds;
+          svn_auth_cred_username_t *username_creds;
+          SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
+                                             SVN_AUTH_CRED_USERNAME,
+                                             baton->uuid, /* realmstring */
+                                             baton->callbacks->auth_baton,
+                                             pool));
+          
+          /* No point in calling next_creds(), since that assumes that the
+             first_creds() somehow failed to authenticate.  But there's no
+             challenge going on, so we use whatever creds we get back on
+             the first try. */
+          username_creds = creds;
+          if (username_creds && username_creds->username)
+            {
+              baton->username = apr_pstrdup(session->pool,
+                                            username_creds->username);
+              svn_error_clear(svn_auth_save_credentials(iterstate, pool));
+            }
+          else
+            baton->username = "";
+        }
+      else
+        baton->username = "";
+    }
+
+  /* If we have a real username, attach it to the filesystem so that it can
+     be used to validate locks.  Even if there already is a user context
+     associated, it may contain irrelevant lock tokens, so always create a new.
+  */
+  if (*baton->username)
+    {
+      SVN_ERR(svn_fs_create_access(&access_ctx, baton->username,
+                                   pool));
+      SVN_ERR(svn_fs_set_access(baton->fs, access_ctx));
+
+      /* Make sure this context is disassociated when the pool gets
+         destroyed. */
+      apr_pool_cleanup_register(pool, baton->fs, cleanup_access,
+                                apr_pool_cleanup_null);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 
 /*----------------------------------------------------------------*/
 
-/** The RA plugin routines **/
+/** The RA vtable routines **/
 
+#define RA_LOCAL_DESCRIPTION \
+        N_("Module for accessing a repository on local disk.")
+
+static const char *
+svn_ra_local__get_description(void)
+{
+  return _(RA_LOCAL_DESCRIPTION);
+}
+
+static const char * const *
+svn_ra_local__get_schemes(apr_pool_t *pool)
+{
+  static const char *schemes[] = { "file", NULL };
+
+  return schemes;
+}
 
 static svn_error_t *
-svn_ra_local__open (void **session_baton,
-                    const char *repos_URL,
-                    const svn_ra_callbacks_t *callbacks,
-                    void *callback_baton,
-                    apr_pool_t *pool)
+svn_ra_local__open(svn_ra_session_t *session,
+                   const char *repos_URL,
+                   const svn_ra_callbacks2_t *callbacks,
+                   void *callback_baton,
+                   apr_hash_t *config,
+                   apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *session;
-  void *a, *auth_baton;
-  svn_ra_username_authenticator_t *authenticator;
-
-  /* Allocate and stash the session_baton args we have already. */
-  session = apr_pcalloc (pool, sizeof(*session));
-  session->pool = pool;
-  session->repository_URL = repos_URL;
+  svn_ra_local__session_baton_t *baton;
+  const char *fs_path;
   
-  /* Get the username by "pulling" it from the callbacks. */
-  SVN_ERR (callbacks->get_authenticator (&a,
-                                         &auth_baton, 
-                                         svn_ra_auth_username, 
-                                         callback_baton, pool));
-
-  authenticator = (svn_ra_username_authenticator_t *) a;
-
-  SVN_ERR (authenticator->get_username (&(session->username),
-                                        auth_baton, FALSE, pool));
-
+  /* Allocate and stash the session_baton args we have already. */
+  baton = apr_pcalloc(pool, sizeof(*baton));
+  baton->callbacks = callbacks;
+  baton->callback_baton = callback_baton;
+  
   /* Look through the URL, figure out which part points to the
      repository, and which part is the path *within* the
      repository. */
-  SVN_ERR_W (svn_ra_local__split_URL (&(session->repos),
-                                      &(session->repos_url),
-                                      &(session->fs_path),
-                                      session->repository_URL,
-                                      session->pool),
-             "Unable to open an ra_local session to URL");
+  SVN_ERR_W(svn_ra_local__split_URL(&(baton->repos),
+                                    &(baton->repos_url),
+                                    &fs_path,
+                                    repos_URL,
+                                    session->pool),
+            _("Unable to open an ra_local session to URL"));
+  baton->fs_path = svn_stringbuf_create(fs_path, session->pool);
 
   /* Cache the filesystem object from the repos here for
      convenience. */
-  session->fs = svn_repos_fs (session->repos);
+  baton->fs = svn_repos_fs(baton->repos);
 
-  /* Stuff the callbacks/baton here. */
-  session->callbacks = callbacks;
-  session->callback_baton = callback_baton;
+  /* Cache the repository UUID as well */
+  SVN_ERR(svn_fs_get_uuid(baton->fs, &baton->uuid, session->pool));
 
-  /* ### ra_local is not going to bother to store the username in the
-     working copy.  This means that the username will always be
-     fetched from getuid() or from a commandline arg, which is fine.
+  /* Be sure username is NULL so we know to look it up / ask for it */
+  baton->username = NULL;
 
-     The reason for this decision is that in ra_local, authentication
-     and authorization are blurred; we'd have to use authorization as
-     a *test* to decide if the authentication was valid.  And we
-     certainly don't want to track every subsequent svn_fs_* call's
-     error, just to decide if it's legitmate to store a username! */
-
-  *session_baton = session;
+  session->priv = baton;
   return SVN_NO_ERROR;
 }
 
-
-
 static svn_error_t *
-svn_ra_local__close (void *session_baton)
+svn_ra_local__reparent(svn_ra_session_t *session,
+                       const char *url,
+                       apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *baton = 
-    (svn_ra_local__session_baton_t *) session_baton;
+  svn_ra_local__session_baton_t *baton = session->priv;
 
-  /* Close the repository, which will free any memory used by it. */
-  SVN_ERR (svn_repos_close (baton->repos));
-  
-  /* NULL out the FS cache so no one is tempted to use it again. */
-  baton->fs = NULL;
+  svn_stringbuf_set(baton->fs_path,
+                    svn_path_uri_decode(url + strlen(baton->repos_url),
+                                        pool));
 
   return SVN_NO_ERROR;
 }
 
-
-
-
 static svn_error_t *
-svn_ra_local__get_latest_revnum (void *session_baton,
-                                 svn_revnum_t *latest_revnum)
+svn_ra_local__get_latest_revnum(svn_ra_session_t *session,
+                                svn_revnum_t *latest_revnum,
+                                apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *baton = 
-    (svn_ra_local__session_baton_t *) session_baton;
+  svn_ra_local__session_baton_t *baton = session->priv;
 
-  SVN_ERR (svn_fs_youngest_rev (latest_revnum, baton->fs, baton->pool));
+  SVN_ERR(svn_fs_youngest_rev(latest_revnum, baton->fs, pool));
 
   return SVN_NO_ERROR;
 }
@@ -286,156 +328,266 @@ svn_ra_local__get_latest_revnum (void *session_baton,
 
 
 static svn_error_t *
-svn_ra_local__get_dated_revision (void *session_baton,
-                                  svn_revnum_t *revision,
-                                  apr_time_t tm)
+svn_ra_local__get_dated_revision(svn_ra_session_t *session,
+                                 svn_revnum_t *revision,
+                                 apr_time_t tm,
+                                 apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *baton = 
-    (svn_ra_local__session_baton_t *) session_baton;
+  svn_ra_local__session_baton_t *baton = session->priv;
 
-  SVN_ERR (svn_repos_dated_revision (revision, baton->repos, tm, baton->pool));
+  SVN_ERR(svn_repos_dated_revision(revision, baton->repos, tm, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-svn_ra_local__change_rev_prop (void *session_baton,
-                               svn_revnum_t rev,
-                               const char *name,
-                               const svn_string_t *value)
+svn_ra_local__change_rev_prop(svn_ra_session_t *session,
+                              svn_revnum_t rev,
+                              const char *name,
+                              const svn_string_t *value,
+                              apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *baton = 
-    (svn_ra_local__session_baton_t *) session_baton;
+  svn_ra_local__session_baton_t *baton = session->priv;
 
-  SVN_ERR (svn_repos_fs_change_rev_prop (baton->repos, rev, baton->username,
-                                         name, value, baton->pool));
+  SVN_ERR(get_username(session, pool));
+
+  SVN_ERR(svn_repos_fs_change_rev_prop3(baton->repos, rev, baton->username,
+                                        name, value, TRUE, TRUE, NULL, NULL,
+                                        pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-svn_ra_local__rev_proplist (void *session_baton,
-                            svn_revnum_t rev,
-                            apr_hash_t **props)
+svn_ra_local__get_uuid(svn_ra_session_t *session,
+                       const char **uuid,
+                       apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *baton = 
-    (svn_ra_local__session_baton_t *) session_baton;
+  svn_ra_local__session_baton_t *baton = session->priv;
 
-  SVN_ERR (svn_fs_revision_proplist (props, baton->fs, rev, baton->pool));
+  *uuid = baton->uuid;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_local__get_repos_root(svn_ra_session_t *session,
+                             const char **url,
+                             apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *baton = session->priv;
+
+  *url = baton->repos_url;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_local__rev_proplist(svn_ra_session_t *session,
+                           svn_revnum_t rev,
+                           apr_hash_t **props,
+                           apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *baton = session->priv;
+
+  SVN_ERR(svn_repos_fs_revision_proplist(props, baton->repos, rev,
+                                         NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-svn_ra_local__rev_prop (void *session_baton,
-                        svn_revnum_t rev,
-                        const char *name,
-                        svn_string_t **value)
+svn_ra_local__rev_prop(svn_ra_session_t *session,
+                       svn_revnum_t rev,
+                       const char *name,
+                       svn_string_t **value,
+                       apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *baton = 
-    (svn_ra_local__session_baton_t *) session_baton;
+  svn_ra_local__session_baton_t *baton = session->priv;
 
-  SVN_ERR (svn_fs_revision_prop (value, baton->fs, rev, name, baton->pool));
+  SVN_ERR(svn_repos_fs_revision_prop(value, baton->repos, rev, name,
+                                     NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
 
 
-static svn_error_t *
-svn_ra_local__get_commit_editor (void *session_baton,
-                                 const svn_delta_editor_t **editor,
-                                 void **edit_baton,
-                                 svn_revnum_t *new_rev,
-                                 const char **committed_date,
-                                 const char **committed_author,
-                                 const char *log_msg)
+struct deltify_etc_baton
 {
-  svn_ra_local__session_baton_t *sess = session_baton;
-  struct commit_cleanup_baton *cb
-    = apr_pcalloc (sess->pool, sizeof (*cb));
+  svn_fs_t *fs;                    /* the fs to deltify in */
+  svn_repos_t *repos;              /* repos for unlocking */
+  const char *fs_path;             /* fs-path part of split session URL */
+  apr_hash_t *lock_tokens;         /* tokens to unlock, if any */
+  apr_pool_t *pool;                /* pool for scratch work */
+  svn_commit_callback2_t callback;  /* the original callback */
+  void *callback_baton;            /* the original callback's baton */
+};
 
-  /* Construct a commit cleanup baton */
-  cb->pool = sess->pool;
-  cb->fs = sess->fs;
-  cb->new_rev = new_rev;
-  cb->committed_date = committed_date;
-  cb->committed_author = committed_author;
-                                         
-  /* Get the repos commit-editor */     
-  SVN_ERR (svn_repos_get_commit_editor (editor, edit_baton, sess->repos,
-                                        sess->repos_url, sess->fs_path,
-                                        sess->username, log_msg,
-                                        cleanup_commit, cb, sess->pool));
+/* This implements 'svn_commit_callback_t'.  Its invokes the original
+   (wrapped) callback, but also does deltification on the new revision and
+   possibly unlocks committed paths.
+   BATON is 'struct deltify_etc_baton *'. */
+static svn_error_t * 
+deltify_etc(const svn_commit_info_t *commit_info,
+            void *baton, apr_pool_t *pool)
+{
+  struct deltify_etc_baton *db = baton;
+  svn_error_t *err1, *err2;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
 
-  return SVN_NO_ERROR;
+  /* Invoke the original callback first, in case someone's waiting to
+     know the revision number so they can go off and annotate an
+     issue or something. */
+  err1 = (*db->callback)(commit_info, db->callback_baton, pool);
+
+  /* Maybe unlock the paths. */
+  if (db->lock_tokens)
+    {
+      iterpool = svn_pool_create(db->pool);
+      for (hi = apr_hash_first(db->pool, db->lock_tokens); hi;
+           hi = apr_hash_next(hi))
+        {
+          const void *rel_path;
+          void *val;
+          const char *abs_path, *token;
+
+          svn_pool_clear(iterpool);
+          apr_hash_this(hi, &rel_path, NULL, &val);
+          token = val;
+          abs_path = svn_path_join(db->fs_path, rel_path, iterpool);
+          /* We may get errors here if the lock was broken or stolen
+             after the commit succeeded.  This is fine and should be
+             ignored. */
+          svn_error_clear(svn_repos_fs_unlock(db->repos, abs_path, token,
+                                              FALSE, iterpool));
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  /* But, deltification shouldn't be stopped just because someone's
+     random callback failed, so proceed unconditionally on to
+     deltification. */
+  err2 = svn_fs_deltify_revision(db->fs, commit_info->revision, db->pool);
+
+  /* It's more interesting if the original callback failed, so let
+     that one dominate. */
+  if (err1)
+    {
+      svn_error_clear(err2);
+      return err1;
+    }
+
+  return err2;
 }
 
 
 static svn_error_t *
-svn_ra_local__do_checkout (void *session_baton,
-                           svn_revnum_t revision,
-                           svn_boolean_t recurse,
-                           const svn_delta_editor_t *editor,
-                           void *edit_baton)
+svn_ra_local__get_commit_editor(svn_ra_session_t *session,
+                                const svn_delta_editor_t **editor,
+                                void **edit_baton,
+                                const char *log_msg,
+                                svn_commit_callback2_t callback,
+                                void *callback_baton,
+                                apr_hash_t *lock_tokens,
+                                svn_boolean_t keep_locks,
+                                apr_pool_t *pool)
 {
-  svn_revnum_t revnum_to_fetch;
-  svn_ra_local__session_baton_t *sbaton = 
-    (svn_ra_local__session_baton_t *) session_baton;
-  
-  if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revnum_to_fetch));
+  svn_ra_local__session_baton_t *sess_baton = session->priv;
+  struct deltify_etc_baton *db = apr_palloc(pool, sizeof(*db));
+  apr_hash_index_t *hi;
+  svn_fs_access_t *fs_access;
+
+  db->fs = sess_baton->fs;
+  db->repos = sess_baton->repos;
+  db->fs_path = sess_baton->fs_path->data;
+  if (! keep_locks)
+    db->lock_tokens = lock_tokens;
   else
-    revnum_to_fetch = revision;
+    db->lock_tokens = NULL;
+  db->pool = pool;
+  db->callback = callback;
+  db->callback_baton = callback_baton;
 
-  SVN_ERR (svn_repos_checkout (sbaton->fs,
-                               revnum_to_fetch,
-                               recurse,
-                               sbaton->fs_path,
-                               editor, edit_baton, sbaton->pool));
+  SVN_ERR(get_username(session, pool));
+
+  /* If there are lock tokens to add, do so. */
+  if (lock_tokens)
+    {
+      SVN_ERR(svn_fs_get_access(&fs_access, sess_baton->fs));
+
+      /* If there is no access context, the filesystem will scream if a
+         lock is needed. */      
+      if (fs_access)
+        {
+          for (hi = apr_hash_first(pool, lock_tokens); hi;
+               hi = apr_hash_next(hi))
+            {
+              void *val;
+              const char *token;
+
+              apr_hash_this(hi, NULL, NULL, &val);
+              token = val;
+              SVN_ERR(svn_fs_access_add_lock_token(fs_access, token));
+            }
+        }
+    }
+              
+  /* Get the repos commit-editor */     
+  SVN_ERR(svn_repos_get_commit_editor4
+          (editor, edit_baton, sess_baton->repos, NULL,
+           svn_path_uri_decode(sess_baton->repos_url, pool),
+           sess_baton->fs_path->data,
+           sess_baton->username, log_msg,
+           deltify_etc, db, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-make_reporter (void *session_baton,
-               const svn_ra_reporter_t **reporter,
-               void **report_baton,
-               svn_revnum_t revision,
-               const char *target,
-               const char *other_url,
-               svn_boolean_t text_deltas,
-               svn_boolean_t recurse,
-               const svn_delta_editor_t *editor,
-               void *edit_baton)
+make_reporter(svn_ra_session_t *session,
+              const svn_ra_reporter2_t **reporter,
+              void **report_baton,
+              svn_revnum_t revision,
+              const char *target,
+              const char *other_url,
+              svn_boolean_t text_deltas,
+              svn_boolean_t recurse,
+              svn_boolean_t ignore_ancestry,
+              const svn_delta_editor_t *editor,
+              void *edit_baton,
+              apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *sbaton = session_baton;
+  svn_ra_local__session_baton_t *sbaton = session->priv;
   void *rbaton;
   int repos_url_len;
   const char *other_fs_path = NULL;
+  const char *repos_url_decoded;
 
   /* Get the HEAD revision if one is not supplied. */
   if (! SVN_IS_VALID_REVNUM(revision))
-    SVN_ERR (svn_ra_local__get_latest_revnum (sbaton, &revision));
+    SVN_ERR(svn_ra_local__get_latest_revnum(session, &revision, pool));
 
   /* If OTHER_URL was provided, validate it and convert it into a
      regular filesystem path. */
   if (other_url)
     {
-      other_url = svn_path_uri_decode (other_url, sbaton->pool);
-      repos_url_len = strlen(sbaton->repos_url);
+      other_url = svn_path_uri_decode(other_url, pool);
+      repos_url_decoded = svn_path_uri_decode(sbaton->repos_url, pool);
+      repos_url_len = strlen(repos_url_decoded);
       
       /* Sanity check:  the other_url better be in the same repository as
          the original session url! */
-      if (strncmp (other_url, sbaton->repos_url, repos_url_len) != 0)
+      if (strncmp(other_url, repos_url_decoded, repos_url_len) != 0)
         return svn_error_createf 
           (SVN_ERR_RA_ILLEGAL_URL, NULL,
-           "'%s'\n"
-           "is not the same repository as\n"
-           "'%s'", other_url, sbaton->repos_url);
+           _("'%s'\n"
+             "is not the same repository as\n"
+             "'%s'"), other_url, sbaton->repos_url);
 
       other_fs_path = other_url + repos_url_len;
     }
@@ -443,168 +595,197 @@ make_reporter (void *session_baton,
   /* Pass back our reporter */
   *reporter = &ra_local_reporter;
 
+  SVN_ERR(get_username(session, pool));
+  
   /* Build a reporter baton. */
-  SVN_ERR (svn_repos_begin_report (&rbaton,
-                                   revision,
-                                   sbaton->username,
-                                   sbaton->repos, 
-                                   sbaton->fs_path,
-                                   target, 
-                                   other_fs_path,
-                                   text_deltas,
-                                   recurse,
-                                   editor, 
-                                   edit_baton,
-                                   sbaton->pool));
+  SVN_ERR(svn_repos_begin_report(&rbaton,
+                                 revision,
+                                 sbaton->username,
+                                 sbaton->repos, 
+                                 sbaton->fs_path->data,
+                                 target, 
+                                 other_fs_path,
+                                 text_deltas,
+                                 recurse,
+                                 ignore_ancestry,
+                                 editor, 
+                                 edit_baton,
+                                 NULL,
+                                 NULL,
+                                 pool));
   
   /* Wrap the report baton given us by the repos layer with our own
      reporter baton. */
-  *report_baton = make_reporter_baton (sbaton, rbaton, sbaton->pool);
+  *report_baton = make_reporter_baton(sbaton, rbaton, pool);
 
   return SVN_NO_ERROR;
 }
 
 
 static svn_error_t *
-svn_ra_local__do_update (void *session_baton,
-                         const svn_ra_reporter_t **reporter,
-                         void **report_baton,
-                         svn_revnum_t update_revision,
-                         const char *update_target,
-                         svn_boolean_t recurse,
-                         const svn_delta_editor_t *update_editor,
-                         void *update_baton)
+svn_ra_local__do_update(svn_ra_session_t *session,
+                        const svn_ra_reporter2_t **reporter,
+                        void **report_baton,
+                        svn_revnum_t update_revision,
+                        const char *update_target,
+                        svn_boolean_t recurse,
+                        const svn_delta_editor_t *update_editor,
+                        void *update_baton,
+                        apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
-                        reporter,
-                        report_baton,
-                        update_revision,
-                        update_target,
-                        NULL,
-                        TRUE,
-                        recurse,
-                        update_editor,
-                        update_baton);
+  return make_reporter(session,
+                       reporter,
+                       report_baton,
+                       update_revision,
+                       update_target,
+                       NULL,
+                       TRUE,
+                       recurse,
+                       FALSE,
+                       update_editor,
+                       update_baton,
+                       pool);
 }
 
 
 static svn_error_t *
-svn_ra_local__do_switch (void *session_baton,
-                         const svn_ra_reporter_t **reporter,
-                         void **report_baton,
-                         svn_revnum_t update_revision,
-                         const char *update_target,
-                         svn_boolean_t recurse,
-                         const char *switch_url,
-                         const svn_delta_editor_t *update_editor,
-                         void *update_baton)
+svn_ra_local__do_switch(svn_ra_session_t *session,
+                        const svn_ra_reporter2_t **reporter,
+                        void **report_baton,
+                        svn_revnum_t update_revision,
+                        const char *update_target,
+                        svn_boolean_t recurse,
+                        const char *switch_url,
+                        const svn_delta_editor_t *update_editor,
+                        void *update_baton,
+                        apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
-                        reporter,
-                        report_baton,
-                        update_revision,
-                        update_target,
-                        switch_url,
-                        TRUE,
-                        recurse,
-                        update_editor,
-                        update_baton);
+  return make_reporter(session,
+                       reporter,
+                       report_baton,
+                       update_revision,
+                       update_target,
+                       switch_url,
+                       TRUE,
+                       recurse,
+                       TRUE,
+                       update_editor,
+                       update_baton,
+                       pool);
 }
 
 
 static svn_error_t *
-svn_ra_local__do_status (void *session_baton,
-                         const svn_ra_reporter_t **reporter,
-                         void **report_baton,
-                         const char *status_target,
-                         svn_boolean_t recurse,
-                         const svn_delta_editor_t *status_editor,
-                         void *status_baton)
+svn_ra_local__do_status(svn_ra_session_t *session,
+                        const svn_ra_reporter2_t **reporter,
+                        void **report_baton,
+                        const char *status_target,
+                        svn_revnum_t revision,
+                        svn_boolean_t recurse,
+                        const svn_delta_editor_t *status_editor,
+                        void *status_baton,
+                        apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
-                        reporter,
-                        report_baton,
-                        SVN_INVALID_REVNUM,
-                        status_target,
-                        NULL,
-                        FALSE,
-                        recurse,
-                        status_editor,
-                        status_baton);
+  return make_reporter(session,
+                       reporter,
+                       report_baton,
+                       revision,
+                       status_target,
+                       NULL,
+                       FALSE,
+                       recurse,
+                       FALSE,
+                       status_editor,
+                       status_baton,
+                       pool);
 }
 
 
 static svn_error_t *
-svn_ra_local__do_diff (void *session_baton,
-                       const svn_ra_reporter_t **reporter,
-                       void **report_baton,
-                       svn_revnum_t update_revision,
-                       const char *update_target,
-                       svn_boolean_t recurse,
-                       const char *switch_url,
-                       const svn_delta_editor_t *update_editor,
-                       void *update_baton)
+svn_ra_local__do_diff(svn_ra_session_t *session,
+                      const svn_ra_reporter2_t **reporter,
+                      void **report_baton,
+                      svn_revnum_t update_revision,
+                      const char *update_target,
+                      svn_boolean_t recurse,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t text_deltas,
+                      const char *switch_url,
+                      const svn_delta_editor_t *update_editor,
+                      void *update_baton,
+                      apr_pool_t *pool)
 {
-  return make_reporter (session_baton,
-                        reporter,
-                        report_baton,
-                        update_revision,
-                        update_target,
-                        switch_url,
-                        TRUE,
-                        recurse,
-                        update_editor,
-                        update_baton);
+  return make_reporter(session,
+                       reporter,
+                       report_baton,
+                       update_revision,
+                       update_target,
+                       switch_url,
+                       text_deltas,
+                       recurse,
+                       ignore_ancestry,
+                       update_editor,
+                       update_baton,
+                       pool);
 }
 
 
 static svn_error_t *
-svn_ra_local__get_log (void *session_baton,
-                       const apr_array_header_t *paths,
-                       svn_revnum_t start,
-                       svn_revnum_t end,
-                       svn_boolean_t discover_changed_paths,
-                       svn_boolean_t strict_node_history,
-                       svn_log_message_receiver_t receiver,
-                       void *receiver_baton)
+svn_ra_local__get_log(svn_ra_session_t *session,
+                      const apr_array_header_t *paths,
+                      svn_revnum_t start,
+                      svn_revnum_t end,
+                      int limit,
+                      svn_boolean_t discover_changed_paths,
+                      svn_boolean_t strict_node_history,
+                      svn_log_message_receiver_t receiver,
+                      void *receiver_baton,
+                      apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *sbaton = session_baton;
-  apr_array_header_t *abs_paths
-    = apr_array_make (sbaton->pool, paths->nelts, sizeof (const char *));
+  svn_ra_local__session_baton_t *sbaton = session->priv;
   int i;
+  apr_array_header_t *abs_paths =
+    apr_array_make(pool, 0, sizeof(const char *));
 
-  for (i = 0; i < paths->nelts; i++)
+  if (paths)
     {
-      const char *abs_path = "";
-      const char *relative_path = (((const char **)(paths)->elts)[i]);
-
-      /* Append the relative paths to the base FS path to get an
-         absolute repository path. */
-      abs_path = svn_path_join (sbaton->fs_path, relative_path, sbaton->pool);
-      (*((const char **)(apr_array_push (abs_paths)))) = abs_path;
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *abs_path = "";
+          const char *relative_path = (((const char **)(paths)->elts)[i]);
+          
+          /* Append the relative paths to the base FS path to get an
+             absolute repository path. */
+          abs_path = svn_path_join(sbaton->fs_path->data, relative_path,
+                                   pool);
+          (*((const char **)(apr_array_push(abs_paths)))) = abs_path;
+        }
     }
 
-  return svn_repos_get_logs (sbaton->repos,
+  return svn_repos_get_logs3(sbaton->repos,
                              abs_paths,
                              start,
                              end,
+                             limit,
                              discover_changed_paths,
                              strict_node_history,
+                             NULL, NULL,
                              receiver,
                              receiver_baton,
-                             sbaton->pool);
+                             pool);
 }
 
 
 static svn_error_t *
-svn_ra_local__do_check_path (svn_node_kind_t *kind,
-                             void *session_baton,
-                             const char *path,
-                             svn_revnum_t revision)
+svn_ra_local__do_check_path(svn_ra_session_t *session,
+                            const char *path,
+                            svn_revnum_t revision,
+                            svn_node_kind_t *kind,
+                            apr_pool_t *pool)
 {
-  svn_ra_local__session_baton_t *sbaton = session_baton;
+  svn_ra_local__session_baton_t *sbaton = session->priv;
   svn_fs_root_t *root;
-  const char *abs_path = sbaton->fs_path;
+  const char *abs_path = sbaton->fs_path->data;
 
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
@@ -617,33 +798,103 @@ svn_ra_local__do_check_path (svn_node_kind_t *kind,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    abs_path = svn_path_join (abs_path, path, sbaton->pool);
+    abs_path = svn_path_join(abs_path, path, pool);
 
-  if (! SVN_IS_VALID_REVNUM (revision))
-    SVN_ERR (svn_fs_youngest_rev (&revision, sbaton->fs, sbaton->pool));
-  SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, sbaton->pool));
-  *kind = svn_fs_check_path (root, abs_path, sbaton->pool);
+  if (! SVN_IS_VALID_REVNUM(revision))
+    SVN_ERR(svn_fs_youngest_rev(&revision, sbaton->fs, pool));
+  SVN_ERR(svn_fs_revision_root(&root, sbaton->fs, revision, pool));
+  SVN_ERR(svn_fs_check_path(kind, root, abs_path, pool));
   return SVN_NO_ERROR;
 }
 
 
+static svn_error_t *
+svn_ra_local__stat(svn_ra_session_t *session,
+                   const char *path,
+                   svn_revnum_t revision,
+                   svn_dirent_t **dirent,
+                   apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sbaton = session->priv;
+  svn_fs_root_t *root;
+  const char *abs_path = sbaton->fs_path->data;
+  
+  /* ### see note above in __do_check_path() */
+  if (abs_path[0] == '\0')
+    abs_path = "/";
+
+  if (path)
+    abs_path = svn_path_join(abs_path, path, pool);
+
+  if (! SVN_IS_VALID_REVNUM(revision))
+    SVN_ERR(svn_fs_youngest_rev(&revision, sbaton->fs, pool));
+  SVN_ERR(svn_fs_revision_root(&root, sbaton->fs, revision, pool));
+
+  SVN_ERR(svn_repos_stat(dirent, root, abs_path, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
 
+static svn_error_t *
+get_node_props(apr_hash_t **props,
+               svn_ra_local__session_baton_t *sbaton,
+               svn_fs_root_t *root,
+               const char *path,
+               apr_pool_t *pool)
+{
+  svn_revnum_t cmt_rev;
+  const char *cmt_date, *cmt_author;
+
+  /* Create a hash with props attached to the fs node. */
+  SVN_ERR(svn_fs_node_proplist(props, root, path, pool));
+      
+  /* Now add some non-tweakable metadata to the hash as well... */
+    
+  /* The so-called 'entryprops' with info about CR & friends. */
+  SVN_ERR(svn_repos_get_committed_info(&cmt_rev, &cmt_date,
+                                       &cmt_author, root, path, pool));
+
+  apr_hash_set(*props, 
+               SVN_PROP_ENTRY_COMMITTED_REV, 
+               APR_HASH_KEY_STRING, 
+               svn_string_createf(pool, "%ld", cmt_rev));
+  apr_hash_set(*props, 
+               SVN_PROP_ENTRY_COMMITTED_DATE, 
+               APR_HASH_KEY_STRING, 
+               cmt_date ? svn_string_create(cmt_date, pool) : NULL);
+  apr_hash_set(*props, 
+               SVN_PROP_ENTRY_LAST_AUTHOR, 
+               APR_HASH_KEY_STRING, 
+               cmt_author ? svn_string_create(cmt_author, pool) : NULL);
+  apr_hash_set(*props, 
+               SVN_PROP_ENTRY_UUID,
+               APR_HASH_KEY_STRING, 
+               svn_string_create(sbaton->uuid, pool));
+
+  /* We have no 'wcprops' in ra_local, but might someday. */
+  
+  return SVN_NO_ERROR;
+}
+
+
 /* Getting just one file. */
 static svn_error_t *
-svn_ra_local__get_file (void *session_baton,
-                        const char *path,
-                        svn_revnum_t revision,
-                        svn_stream_t *stream,
-                        svn_revnum_t *fetched_rev,
-                        apr_hash_t **props)
+svn_ra_local__get_file(svn_ra_session_t *session,
+                       const char *path,
+                       svn_revnum_t revision,
+                       svn_stream_t *stream,
+                       svn_revnum_t *fetched_rev,
+                       apr_hash_t **props,
+                       apr_pool_t *pool)
 {
   svn_fs_root_t *root;
   svn_stream_t *contents;
   svn_revnum_t youngest_rev;
-  char buf[SVN_STREAM_CHUNK_SIZE];
-  apr_size_t rlen, wlen;
-  svn_ra_local__session_baton_t *sbaton = session_baton;
-  const char *abs_path = sbaton->fs_path;
+  svn_ra_local__session_baton_t *sbaton = session->priv;
+  const char *abs_path = sbaton->fs_path->data;
 
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
@@ -656,121 +907,63 @@ svn_ra_local__get_file (void *session_baton,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    abs_path = svn_path_join (abs_path, path, sbaton->pool);
+    abs_path = svn_path_join(abs_path, path, pool);
 
   /* Open the revision's root. */
-  if (! SVN_IS_VALID_REVNUM (revision))
+  if (! SVN_IS_VALID_REVNUM(revision))
     {
-      SVN_ERR (svn_fs_youngest_rev (&youngest_rev, sbaton->fs, sbaton->pool));
-      SVN_ERR (svn_fs_revision_root (&root, sbaton->fs,
-                                     youngest_rev, sbaton->pool));
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, sbaton->fs, pool));
+      SVN_ERR(svn_fs_revision_root(&root, sbaton->fs, youngest_rev, pool));
       if (fetched_rev != NULL)
         *fetched_rev = youngest_rev;
     }
   else
-    SVN_ERR (svn_fs_revision_root (&root, sbaton->fs,
-                                   revision, sbaton->pool));
+    SVN_ERR(svn_fs_revision_root(&root, sbaton->fs, revision, pool));
 
   if (stream)
     {
       /* Get a stream representing the file's contents. */
-      SVN_ERR (svn_fs_file_contents (&contents, root,
-                                     abs_path, sbaton->pool));
+      SVN_ERR(svn_fs_file_contents(&contents, root, abs_path, pool));
       
-      /* Now push data from the fs stream back at the caller's stream. */
-      while (1)
-        {
-          /* read a maximum number of bytes from the file, please. */
-          rlen = SVN_STREAM_CHUNK_SIZE; 
-          SVN_ERR (svn_stream_read (contents, buf, &rlen));
-          
-          /* write however many bytes you read, please. */
-          wlen = rlen;
-          SVN_ERR (svn_stream_write (stream, buf, &wlen));
-          if (wlen != rlen)
-            {
-              /* Uh oh, didn't write as many bytes as we read, and no
-                 error was returned.  According to the docstring, this
-                 should never happen. */
-              return svn_error_create (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                                       "Error writing to svn_stream.");
-            }
-          
-          if (rlen != SVN_STREAM_CHUNK_SIZE)
-            {
-              /* svn_stream_read didn't throw an error, yet it didn't read
-                 all the bytes requested.  According to the docstring,
-                 this means a plain old EOF happened, so we're done. */
-              break;
-            }
-        }
+      /* Now push data from the fs stream back at the caller's stream.
+         Note that this particular RA layer does not computing a
+         checksum as we go, and confirming it against the repository's
+         checksum when done.  That's because it calls
+         svn_fs_file_contents() directly, which already checks the
+         stored checksum, and all we're doing here is writing bytes in
+         a loop.  Truly, Nothing Can Go Wrong :-).  But RA layers that
+         go over a network should confirm the checksum. */
+      SVN_ERR(svn_stream_copy(contents, stream, pool));
+      SVN_ERR(svn_stream_close(contents));
     }
-      
+
+  /* Handle props if requested. */
   if (props)
-    {
-      svn_revnum_t committed_rev;
-      const char *committed_date, *last_author;
-      svn_string_t *value;
-      char *revision_str = NULL;
-
-      /* Create a hash with props attached to the fs node. */
-      SVN_ERR (svn_fs_node_proplist (props, root, abs_path, sbaton->pool));
-      
-      /* Now add some non-tweakable metadata to the hash as well... */
-    
-      /* The so-called 'entryprops' with info about CR & friends. */
-      SVN_ERR (svn_repos_get_committed_info (&committed_rev,
-                                             &committed_date,
-                                             &last_author,
-                                             root, abs_path,
-                                             sbaton->pool));
-
-
-      revision_str = apr_psprintf (sbaton->pool, "%" SVN_REVNUM_T_FMT,
-                                   committed_rev);
-      value = svn_string_create (revision_str, sbaton->pool);
-      apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_REV, 
-                    APR_HASH_KEY_STRING, value);
-                    
-      if (committed_date)
-        value = svn_string_create (committed_date, sbaton->pool);
-      else
-        value = NULL;
-      apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_DATE, 
-                    APR_HASH_KEY_STRING, value);
-      
-      if (last_author)
-        value = svn_string_create (last_author, sbaton->pool);
-      else
-        value = NULL;
-      apr_hash_set (*props, SVN_PROP_ENTRY_LAST_AUTHOR, 
-                    APR_HASH_KEY_STRING, value);
-            
-      /* We have no 'wcprops' in ra_local, but might someday. */
-    }
+    SVN_ERR(get_node_props(props, sbaton, root, abs_path, pool));
 
   return SVN_NO_ERROR;
 }
-
 
 
 
 /* Getting a directory's entries */
 static svn_error_t *
-svn_ra_local__get_dir (void *session_baton,
-                       const char *path,
-                       svn_revnum_t revision,
-                       apr_hash_t **dirents,
-                       svn_revnum_t *fetched_rev,
-                       apr_hash_t **props)
+svn_ra_local__get_dir(svn_ra_session_t *session,
+                      apr_hash_t **dirents,
+                      svn_revnum_t *fetched_rev,
+                      apr_hash_t **props,
+                      const char *path,
+                      svn_revnum_t revision,
+                      apr_uint32_t dirent_fields,
+                      apr_pool_t *pool)
 {
   svn_fs_root_t *root;
   svn_revnum_t youngest_rev;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
-  svn_ra_local__session_baton_t *sbaton = session_baton;
-  const char *abs_path = sbaton->fs_path;
-  apr_pool_t *subpool, *pool = sbaton->pool;
+  svn_ra_local__session_baton_t *sbaton = session->priv;
+  const char *abs_path = sbaton->fs_path->data;
+  apr_pool_t *subpool;
 
   /* ### Not sure if this counts as a workaround or not.  The
      session baton uses the empty string to mean root, and not
@@ -783,131 +976,318 @@ svn_ra_local__get_dir (void *session_baton,
 
   /* If we were given a relative path to append, append it. */
   if (path)
-    abs_path = svn_path_join (abs_path, path, pool);
+    abs_path = svn_path_join(abs_path, path, pool);
 
   /* Open the revision's root. */
-  if (! SVN_IS_VALID_REVNUM (revision))
+  if (! SVN_IS_VALID_REVNUM(revision))
     {
-      SVN_ERR (svn_fs_youngest_rev (&youngest_rev, sbaton->fs, pool));
-      SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, youngest_rev, pool));
+      SVN_ERR(svn_fs_youngest_rev(&youngest_rev, sbaton->fs, pool));
+      SVN_ERR(svn_fs_revision_root(&root, sbaton->fs, youngest_rev, pool));
       if (fetched_rev != NULL)
         *fetched_rev = youngest_rev;
     }
   else
-    SVN_ERR (svn_fs_revision_root (&root, sbaton->fs, revision, pool));
+    SVN_ERR(svn_fs_revision_root(&root, sbaton->fs, revision, pool));
 
   if (dirents)
     {
       /* Get the dir's entries. */
-      SVN_ERR (svn_fs_dir_entries (&entries, root, abs_path, pool));
+      SVN_ERR(svn_fs_dir_entries(&entries, root, abs_path, pool));
       
       /* Loop over the fs dirents, and build a hash of general
          svn_dirent_t's. */
-      *dirents = apr_hash_make (pool);
-      subpool = svn_pool_create (pool);
-      for (hi = apr_hash_first (pool, entries); hi; hi = apr_hash_next (hi))
+      *dirents = apr_hash_make(pool);
+      subpool = svn_pool_create(pool);
+      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
           const void *key;
           void *val;
-          svn_boolean_t is_dir;
           apr_hash_t *prophash;
           const char *datestring, *entryname, *fullpath;
           svn_fs_dirent_t *fs_entry;
-          svn_dirent_t *entry = apr_pcalloc (pool, sizeof(*entry));
-          
-          
-          apr_hash_this (hi, &key, NULL, &val);
+          svn_dirent_t *entry = apr_pcalloc(pool, sizeof(*entry));
+
+          svn_pool_clear(subpool);
+
+          apr_hash_this(hi, &key, NULL, &val);
           entryname = (const char *) key;
           fs_entry = (svn_fs_dirent_t *) val;
-          
-          /* node kind */
-          fullpath = svn_path_join (abs_path, entryname, subpool);
-          SVN_ERR (svn_fs_is_dir (&is_dir, root, fullpath, subpool));
-          entry->kind = is_dir ? svn_node_dir : svn_node_file;
-          
-          /* size  */
-          if (is_dir)
-            entry->size = 0;
-          else
-            SVN_ERR (svn_fs_file_length (&(entry->size), root,
-                                         fullpath, subpool));
-          
-          /* has_props? */
-          SVN_ERR (svn_fs_node_proplist (&prophash, root, fullpath, subpool));
-          entry->has_props = (apr_hash_count (prophash)) ? TRUE : FALSE;
-          
-          /* created_rev & friends */
-          SVN_ERR (svn_repos_get_committed_info (&(entry->created_rev),
-                                                 &datestring,
-                                                 &(entry->last_author),
-                                                 root, fullpath, pool));
-          if (datestring)
-            SVN_ERR (svn_time_from_cstring(&(entry->time),
-                                           datestring, subpool));
-          
+
+          fullpath = svn_path_join(abs_path, entryname, subpool);
+        
+          if (dirent_fields & SVN_DIRENT_KIND)
+            {  
+              /* node kind */
+              entry->kind = fs_entry->kind;
+            }
+
+          if (dirent_fields & SVN_DIRENT_SIZE)
+            {          
+              /* size  */
+              if (entry->kind == svn_node_dir)
+                entry->size = 0;
+              else
+                SVN_ERR(svn_fs_file_length(&(entry->size), root,
+                                           fullpath, subpool));
+            }
+
+          if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+            { 
+              /* has_props? */
+              SVN_ERR(svn_fs_node_proplist(&prophash, root, fullpath,
+                                           subpool));
+              entry->has_props = (apr_hash_count(prophash)) ? TRUE : FALSE;
+            }
+
+          if ((dirent_fields & SVN_DIRENT_TIME)
+              || (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+              || (dirent_fields & SVN_DIRENT_CREATED_REV))
+            { 
+              /* created_rev & friends */
+              SVN_ERR(svn_repos_get_committed_info(&(entry->created_rev),
+                                                   &datestring,
+                                                   &(entry->last_author),
+                                                   root, fullpath, subpool));
+              if (datestring)
+                SVN_ERR(svn_time_from_cstring(&(entry->time), datestring,
+                                              pool));
+              if (entry->last_author)
+                entry->last_author = apr_pstrdup(pool, entry->last_author);
+            }
+ 
           /* Store. */
-          apr_hash_set (*dirents, entryname, APR_HASH_KEY_STRING, entry);
-          
-          svn_pool_clear (subpool);
+          apr_hash_set(*dirents, entryname, APR_HASH_KEY_STRING, entry);
         }
+      svn_pool_destroy(subpool);
     }
 
-  /* Get the dir's properties too, if requested. */
+  /* Handle props if requested. */
   if (props)
-    {
-      svn_revnum_t committed_rev;
-      const char *committed_date, *last_author;
-      svn_string_t *value;
-      char *revision_str = NULL;
+    SVN_ERR(get_node_props(props, sbaton, root, abs_path, pool));
 
-      /* Create a hash with props attached to the fs node. */
-      SVN_ERR (svn_fs_node_proplist (props, root, abs_path, pool));
-      
-      /* Now add some non-tweakable metadata to the hash as well... */
-    
-      /* The so-called 'entryprops' with info about CR & friends. */
-      SVN_ERR (svn_repos_get_committed_info (&committed_rev,
-                                             &committed_date,
-                                             &last_author,
-                                             root, abs_path,
-                                             pool));
+  return SVN_NO_ERROR;
+}
 
-      revision_str = apr_psprintf (pool, "%" SVN_REVNUM_T_FMT,
-                                   committed_rev);
-      value = svn_string_create (revision_str, sbaton->pool);
-      apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_REV, 
-                    APR_HASH_KEY_STRING, value);
+static svn_error_t *
+svn_ra_local__get_locations(svn_ra_session_t *session,
+                            apr_hash_t **locations,
+                            const char *relative_path,
+                            svn_revnum_t peg_revision,
+                            apr_array_header_t *location_revisions,
+                            apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sbaton = session->priv;
+  const char *abs_path;
 
-      value = (committed_date) ? 
-        svn_string_create (committed_date, pool) : NULL;
+  /* Append the relative path to the base FS path to get an
+     absolute repository path. */
+  abs_path = svn_path_join(sbaton->fs_path->data, relative_path, pool);
 
-      apr_hash_set (*props, SVN_PROP_ENTRY_COMMITTED_DATE, 
-                    APR_HASH_KEY_STRING, value);
-
-      value = (last_author) ? 
-        svn_string_create (last_author, pool) : NULL;
-
-      apr_hash_set (*props, SVN_PROP_ENTRY_LAST_AUTHOR, 
-                    APR_HASH_KEY_STRING, value);
-            
-      /* We have no 'wcprops' in ra_local, but might someday. */
-    }
+  SVN_ERR(svn_repos_trace_node_locations(sbaton->fs, locations, abs_path,
+                                         peg_revision, location_revisions,
+                                         NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }
 
 
 
+static svn_error_t *
+svn_ra_local__lock(svn_ra_session_t *session,
+                   apr_hash_t *path_revs,
+                   const char *comment,
+                   svn_boolean_t force,
+                   svn_ra_lock_callback_t lock_func, 
+                   void *lock_baton,
+                   apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* A username is absolutely required to lock a path. */
+  SVN_ERR(get_username(session, pool));
+
+  for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
+    {
+      svn_lock_t *lock;
+      const void *key;
+      const char *path;
+      void *val;
+      svn_revnum_t *revnum;
+      const char *abs_path;
+      svn_error_t *err, *callback_err = NULL;
+ 
+      svn_pool_clear(iterpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      revnum = val;
+
+      abs_path = svn_path_join(sess->fs_path->data, path, iterpool);
+
+      /* This wrapper will call pre- and post-lock hooks. */
+      err = svn_repos_fs_lock(&lock, sess->repos, abs_path, NULL, comment,
+                              FALSE /* not DAV comment */,
+                              0 /* no expiration */, *revnum, force, 
+                              iterpool);
+
+      if (err && !SVN_ERR_IS_LOCK_ERROR(err))
+        return err;
+
+      if (lock_func)
+        callback_err = lock_func(lock_baton, path, TRUE, err ? NULL : lock,
+                                 err, iterpool);
+
+      svn_error_clear(err);
+
+      if (callback_err)
+        return callback_err;
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+svn_ra_local__unlock(svn_ra_session_t *session,
+                     apr_hash_t *path_tokens,
+                     svn_boolean_t force,
+                     svn_ra_lock_callback_t lock_func, 
+                     void *lock_baton,
+                     apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  /* A username is absolutely required to unlock a path. */
+  SVN_ERR(get_username(session, pool));
+
+  for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      const char *path;
+      void *val;
+      const char *abs_path, *token;
+      svn_error_t *err, *callback_err = NULL;
+ 
+      svn_pool_clear(iterpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      path = key;
+      /* Since we can't store NULL values in a hash, we turn "" to
+         NULL here. */
+      if (strcmp(val, "") != 0)
+        token = val;
+      else
+        token = NULL;
+
+      abs_path = svn_path_join(sess->fs_path->data, path, iterpool);
+
+      /* This wrapper will call pre- and post-unlock hooks. */
+      err = svn_repos_fs_unlock(sess->repos, abs_path, token, force,
+                                iterpool);
+
+      if (err && !SVN_ERR_IS_UNLOCK_ERROR(err))
+        return err;
+
+      if (lock_func)
+        callback_err = lock_func(lock_baton, path, FALSE, NULL, err, iterpool);
+
+      svn_error_clear(err);
+
+      if (callback_err)
+        return callback_err;
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+svn_ra_local__get_lock(svn_ra_session_t *session,
+                       svn_lock_t **lock,
+                       const char *path,
+                       apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  const char *abs_path;
+
+  /* Get the absolute path. */
+  abs_path = svn_path_join(sess->fs_path->data, path, pool);
+
+  SVN_ERR(svn_fs_get_lock(lock, sess->fs, abs_path, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+static svn_error_t *
+svn_ra_local__get_locks(svn_ra_session_t *session,
+                        apr_hash_t **locks,
+                        const char *path,
+                        apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  const char *abs_path;
+
+  /* Get the absolute path. */
+  abs_path = svn_path_join(sess->fs_path->data, path, pool);
+
+  /* Kinda silly to call the repos wrapper, since we have no authz
+     func to give it.  But heck, why not. */
+  SVN_ERR(svn_repos_fs_get_locks(locks, sess->repos, abs_path,
+                                 NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+svn_ra_local__replay(svn_ra_session_t *session,
+                     svn_revnum_t revision,
+                     svn_revnum_t low_water_mark,
+                     svn_boolean_t send_deltas,
+                     const svn_delta_editor_t *editor,
+                     void *edit_baton,
+                     apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *sess = session->priv;
+  svn_fs_root_t *root;
+
+  SVN_ERR(svn_fs_revision_root(&root, svn_repos_fs(sess->repos),
+                               revision, pool));
+
+  SVN_ERR(svn_repos_replay2(root, sess->fs_path->data, low_water_mark,
+                            send_deltas, editor, edit_baton, NULL, NULL,
+                            pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 /*----------------------------------------------------------------*/
 
-/** The ra_plugin **/
-
-static const svn_ra_plugin_t ra_local_plugin = 
+static const svn_version_t *
+ra_local_version(void)
 {
-  "ra_local",
-  "Module for accessing a repository on local disk.",
+  SVN_VERSION_BODY;
+}
+
+/** The ra_vtable **/
+
+static const svn_ra__vtable_t ra_local_vtable =
+{
+  ra_local_version,
+  svn_ra_local__get_description,
+  svn_ra_local__get_schemes,
   svn_ra_local__open,
-  svn_ra_local__close,
+  svn_ra_local__reparent,
   svn_ra_local__get_latest_revnum,
   svn_ra_local__get_dated_revision,
   svn_ra_local__change_rev_prop,
@@ -916,28 +1296,68 @@ static const svn_ra_plugin_t ra_local_plugin =
   svn_ra_local__get_commit_editor,
   svn_ra_local__get_file,
   svn_ra_local__get_dir,
-  svn_ra_local__do_checkout,
   svn_ra_local__do_update,
   svn_ra_local__do_switch,
   svn_ra_local__do_status,
   svn_ra_local__do_diff,
   svn_ra_local__get_log,
-  svn_ra_local__do_check_path
+  svn_ra_local__do_check_path,
+  svn_ra_local__stat,
+  svn_ra_local__get_uuid,
+  svn_ra_local__get_repos_root,
+  svn_ra_local__get_locations,
+  svn_ra_local__get_file_revs,
+  svn_ra_local__lock,
+  svn_ra_local__unlock,
+  svn_ra_local__get_lock,
+  svn_ra_local__get_locks,
+  svn_ra_local__replay,
 };
 
 
 /*----------------------------------------------------------------*/
 
-/** The One Public Routine, called by libsvn_client **/
+/** The One Public Routine, called by libsvn_ra **/
 
 svn_error_t *
-svn_ra_local_init (int abi_version,
-                   apr_pool_t *pool,
-                   apr_hash_t *hash)
+svn_ra_local__init(const svn_version_t *loader_version,
+                   const svn_ra__vtable_t **vtable,
+                   apr_pool_t *pool)
 {
-  apr_hash_set (hash, "file", APR_HASH_KEY_STRING, &ra_local_plugin);
+  static const svn_version_checklist_t checklist[] =
+    {
+      { "svn_subr",  svn_subr_version },
+      { "svn_delta", svn_delta_version },
+      { "svn_repos", svn_repos_version },
+      { "svn_fs",    svn_fs_version },
+      { NULL, NULL }
+    };
 
-  /* ben sez:  todo:  check that abi_version >=1. */
+  
+  /* Simplified version check to make sure we can safely use the
+     VTABLE parameter. The RA loader does a more exhaustive check. */
+  if (loader_version->major != SVN_VER_MAJOR)
+    return svn_error_createf(SVN_ERR_VERSION_MISMATCH, NULL,
+                             _("Unsupported RA loader version (%d) for "
+                               "ra_local"),
+                             loader_version->major);
+
+  SVN_ERR(svn_ver_check_list(ra_local_version(), checklist));
+
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
+  /* This assumes that POOL was the pool used to load the dso. */
+  SVN_ERR(svn_fs_initialize(pool));
+#endif
+
+  *vtable = &ra_local_vtable;
 
   return SVN_NO_ERROR;
 }
+
+/* Compatibility wrapper for the 1.1 and before API. */
+#define NAME "ra_local"
+#define DESCRIPTION RA_LOCAL_DESCRIPTION
+#define VTBL ra_local_vtable
+#define INITFUNC svn_ra_local__init
+#define COMPAT_INITFUNC svn_ra_local_init
+#include "../libsvn_ra/wrapper_template.h"

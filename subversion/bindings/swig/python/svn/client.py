@@ -1,9 +1,12 @@
 #
-# client.py : various utilities for interacting with the _client module
+# client.py: public Python interface for client components
 #
+# Subversion is a tool for revision control. 
+# See http://subversion.tigris.org for more information.
+#    
 ######################################################################
 #
-# Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -12,6 +15,9 @@
 # newer version instead, at your option.
 #
 ######################################################################
-#
 
-from _client import *
+from libsvn.client import *
+from svn.core import _unprefix_names
+_unprefix_names(locals(), 'svn_client_')
+_unprefix_names(locals(), 'SVN_CLIENT_')
+del _unprefix_names

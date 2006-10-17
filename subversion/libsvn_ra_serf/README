@@ -1,0 +1,92 @@
+ra_serf status
+==============
+
+This library is an RA-layer implementation of a WebDAV client that uses Serf.
+
+Serf's homepage is at:
+  http://code.google.com/p/serf/
+
+The latest serf sources can be fetched via SVN at:
+  http://serf.googlecode.com/svn/trunk/
+
+ra_serf can be enabled with the following configure flags:
+ "--without-neon --with-serf=/path/to/serf/install"
+ (You need to disable neon and point at serf.)
+
+For more about how ra_serf/ra_dav talk WebDAV, consult notes/webdav-protocol.
+
+Working copies are interchangable between ra_serf and ra_dav.  (They both use
+the svn:wc:ra_dav:version-url property to store the latest revision of a file.)
+
+Completed tasks
+---------------
+- Core functionality complete (see regression test status below)
+- https support (SSL)
+- Basic authentication
+- Update parallelization/pipelining (also for status/diff/switch/etc)
+  - Does not require inline base64-encoding of content
+  - 4 connections are open on an update (matches browser's default behavior)
+  - 1 connection is used for the REPORT; 3 are used to fetch files & props
+- Supports http-compression config flag
+
+Regression test status
+----------------------
+All regression tests are known to pass on:
+  - Debian/AMD64 with APR 1.3.x
+
+The following tests 'fail' due to ordering differences with ra_serf:
+  - FAIL:  diff_tests.py 29: diff to BASE with local property mods
+  - FAIL:  diff_tests.py 31: diff a property change plus a local prop edit
+
+ra_serf is known to compile and work on:
+  - Windows
+  - Mac OS X
+  - Solaris
+
+Things to do before 1.4.0 release
+---------------------------------
+
+- Verify regression tests passage on the following platforms:
+  - Windows
+  - Mac OS X
+  - Solaris
+  - anything with APR 0.9.12
+
+- Point at a packaged release of serf
+
+Things to do before the next release (1.5.x timeframe)
+------------------------------------------------------
+
+- Proxy support
+
+- Digest authentication
+
+- SSL client certificates
+
+- NTLM/SSPI integration for Windows folks
+
+Nice to haves
+-------------
+
+- Move some of the code from ra_serf into serf.  Serf doesn't have a very
+  high-level API; but the code in util.c can go a long way towards that.
+
+- Commit paralleization/pipelining
+  - Determine how to use HTTP pipelining and multiple connections for commit
+  - May need response from CHECKOUT to issue PUT/PROPPATCH
+  - ra_svn has a custom commit pipelining that may be worth investigating too
+
+- Use PROPFIND Depth: 1 when we are adding a directory locally to skip
+  fetching properties on files
+
+- Discover server's keep-alive setting via OPTIONS requests and notify serf
+
+- Fix bug in mod_dav_svn that omits remove-prop in the update-report when a
+  lock is broken and send-all is false.
+  (See upd_change_xxx_prop in mod_dav_svn/update.c)
+
+- Fix bug in mod_dav_svn/mod_deflate that causes it to hold onto the entire
+  REPORT response until it is completed.  (This is why ra_serf doesn't request
+  gzip compression on the REPORT requests.)
+
+- Remove remaining abort()s - ;-) aka add better debug logging

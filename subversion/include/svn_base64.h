@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,28 +22,26 @@
 #ifndef SVN_BASE64_H
 #define SVN_BASE64_H
 
+#include <apr_md5.h>
+
 #include "svn_io.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/** Return a stream that encodes data in base64.
- *
- * Return a writable generic stream which will encode binary data in
+/** Return a writable generic stream which will encode binary data in
  * base64 format and write the encoded data to @c output.  Be sure to
  * close the stream when done writing in order to squeeze out the last
  * bit of encoded data.  The stream is allocated in @c pool.
  */
-svn_stream_t *svn_base64_encode (svn_stream_t *output, apr_pool_t *pool);
+svn_stream_t *svn_base64_encode(svn_stream_t *output, apr_pool_t *pool);
 
-/** Return a stream that decodes base64 data.
- *
- * Return a writable generic stream which will decode base64-encoded
+/** Return a writable generic stream which will decode base64-encoded
  * data and write the decoded data to @c output.  The stream is allocated 
  * in @c pool.
  */
-svn_stream_t *svn_base64_decode (svn_stream_t *output, apr_pool_t *pool);
+svn_stream_t *svn_base64_decode(svn_stream_t *output, apr_pool_t *pool);
 
 
 /** Encode an @c svn_stringbuf_t into base64.
@@ -51,16 +49,25 @@ svn_stream_t *svn_base64_decode (svn_stream_t *output, apr_pool_t *pool);
  * A simple interface for encoding base64 data assuming we have all of 
  * it present at once.  The returned string will be allocated from @c pool.
  */
-svn_stringbuf_t *svn_base64_encode_string (svn_stringbuf_t *str,
-                                           apr_pool_t *pool);
+const svn_string_t *svn_base64_encode_string(const svn_string_t *str,
+                                             apr_pool_t *pool);
 
 /** Decode an @c svn_stringbuf_t from base64.
  *
  * A simple interface for decoding base64 data assuming we have all of 
  * it present at once.  The returned string will be allocated from @c pool.
  */
-svn_stringbuf_t *svn_base64_decode_string (svn_stringbuf_t *str,
-                                           apr_pool_t *pool);
+const svn_string_t *svn_base64_decode_string(const svn_string_t *str,
+                                             apr_pool_t *pool);
+
+
+/** Return a base64-encoded checksum for finalized @c digest.
+ *
+ * @c digest contains @c APR_MD5_DIGESTSIZE bytes of finalized data.
+ * Allocate the returned checksum in @c pool.
+ */
+svn_stringbuf_t *svn_base64_from_md5(unsigned char digest[],
+                                     apr_pool_t *pool);
 
 
 #ifdef __cplusplus

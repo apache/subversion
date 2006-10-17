@@ -1,7 +1,7 @@
 /* delta-window-test.h -- utilities for delta window output
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,7 +26,7 @@
 #include "svn_delta.h"
 
 static apr_off_t
-delta_window_size_estimate (const svn_txdelta_window_t *window)
+delta_window_size_estimate(const svn_txdelta_window_t *window)
 {
   apr_off_t len;
   int i;
@@ -58,56 +58,58 @@ delta_window_size_estimate (const svn_txdelta_window_t *window)
 
 
 static apr_off_t
-delta_window_print (const svn_txdelta_window_t *window,
-                    const char *tag, FILE *stream)
+delta_window_print(const svn_txdelta_window_t *window,
+                   const char *tag, FILE *stream)
 {
-  const apr_off_t len = delta_window_size_estimate (window);
-  apr_off_t op_offset = 0, tmp;
+  const apr_off_t len = delta_window_size_estimate(window);
+  apr_off_t op_offset = 0;
   int i;
 
   if (!window)
     return 0;
 
-  fprintf (stream, "%s: (WINDOW %" APR_OFF_T_FMT, tag, len);
-  fprintf (stream,
-           " (%" APR_OFF_T_FMT " %" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT ")",
-           window->sview_offset, window->sview_len, window->tview_len);
+  fprintf(stream, "%s: (WINDOW %" APR_OFF_T_FMT, tag, len);
+  fprintf(stream,
+          " (%" SVN_FILESIZE_T_FMT
+          " %" APR_SIZE_T_FMT " %" APR_SIZE_T_FMT ")",
+          window->sview_offset, window->sview_len, window->tview_len);
   for (i = 0; i < window->num_ops; ++i)
     {
       apr_size_t const offset = window->ops[i].offset;
       apr_size_t const length = window->ops[i].length;
+      apr_size_t tmp;
       switch (window->ops[i].action_code)
         {
         case svn_txdelta_source:
-          fprintf (stream, "\n%s:   (%" APR_OFF_T_FMT " SRC %" APR_SIZE_T_FMT
-                   " %" APR_SIZE_T_FMT ")", tag, op_offset, offset, length);
+          fprintf(stream, "\n%s:   (%" APR_OFF_T_FMT " SRC %" APR_SIZE_T_FMT
+                  " %" APR_SIZE_T_FMT ")", tag, op_offset, offset, length);
           break;
         case svn_txdelta_target:
-          fprintf (stream, "\n%s:   (%" APR_OFF_T_FMT " TGT %" APR_SIZE_T_FMT
-                   " %" APR_SIZE_T_FMT ")", tag, op_offset, offset, length);
+          fprintf(stream, "\n%s:   (%" APR_OFF_T_FMT " TGT %" APR_SIZE_T_FMT
+                  " %" APR_SIZE_T_FMT ")", tag, op_offset, offset, length);
           break;
         case svn_txdelta_new:
-          fprintf (stream, "\n%s:   (%" APR_OFF_T_FMT " NEW %"
-                   APR_SIZE_T_FMT " \"", tag, op_offset, length);
+          fprintf(stream, "\n%s:   (%" APR_OFF_T_FMT " NEW %"
+                  APR_SIZE_T_FMT " \"", tag, op_offset, length);
           for (tmp = offset; tmp < offset + length; ++tmp)
             {
               int const dat = window->new_data->data[tmp];
-              if (apr_iscntrl (dat) || !apr_isascii(dat))
-                fprintf (stream, "\\%3.3o", dat & 0xff);
+              if (apr_iscntrl(dat) || !apr_isascii(dat))
+                fprintf(stream, "\\%3.3o", dat & 0xff);
               else if (dat == '\\')
-                fputs ("\\\\", stream);
+                fputs("\\\\", stream);
               else
-                putc (dat, stream);
+                putc(dat, stream);
             }
-          fputs ("\")", stream);
+          fputs("\")", stream);
           break;
         default:
-          fprintf (stream, "\n%s:   (BAD-OP)", tag);
+          fprintf(stream, "\n%s:   (BAD-OP)", tag);
         }
 
       op_offset += length;
     }
-  fputs (")\n", stream);
+  fputs(")\n", stream);
   return len;
 }
 

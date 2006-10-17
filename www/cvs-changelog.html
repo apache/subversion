@@ -1,15 +1,33 @@
-<TABLE BORDER="0" CELLPADDING="2" WIDTH="98%" BGCOLOR="white">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Subversion CVS ChangeLog (static)</title>
+</head>
 
-<TR>
-<TD WIDTH="100%" BGCOLOR="#CCCC99"><STRONG><font color="#000033"
-FACE="Arial, Helvetica, sans-serif">
+<body>
+<div class="app">
+
+<table border="0" cellpadding="2" cellspacing="2"
+  style="background-color: white">
+
+<tr>
+<td style="background-color: #CCCC99; color: #000033;
+  font-family: Arial, Helvetica, sans-serif"><strong>
 Subversion CVS ChangeLog (static)
-</font></STRONG></TD>
-</TR>
+</strong></td>
+</tr>
 
 
-<TR>
-<TD WIDTH="100%" HEIGHT="100" BGCOLOR="#f0f0f0">
+<tr>
+<td style="background-color: #f0f0f0">
 
 <p>
 
@@ -18,6 +36,7 @@ repository.  Since Subversion is no longer kept under CVS, this
 ChangeLog stops on the day of the switchover (August 30, 2001).
 Development is now happening in a Subversion repository; use
 Subversion itself to see commit messages from there.
+</p>
 
 <pre>
 2001-08-30 22:25   Karl Fogel &lt;kfogel@collab.net&gt;
@@ -2831,7 +2850,7 @@ Subversion itself to see commit messages from there.
 	   
 	
 	
-	http://subversion.tigris.org/servlets/ReadMsg?msgId=28881&listName=dev
+	http://subversion.tigris.org/servlets/ReadMsg?msgId=28881&amp;listName=dev
 	
 	See also my mail with the subject line 
 	
@@ -3547,7 +3566,7 @@ Subversion itself to see commit messages from there.
 	upgrade it to use either "username only" and/or "username/password"
 	authentication.  
 	
-	The next step on the agenda is to allow storage of usernames & 
+	The next step on the agenda is to allow storage of usernames &amp; 
 	passwords in the working copy.  
 	
 	* svn_ra.h 
@@ -3588,7 +3607,7 @@ Subversion itself to see commit messages from there.
 	  'cc' after authentication finishes.  
 	
 	* libsvn_ra_local/ra_plugin.c (get_authenticator):  implement.  
-	  (authenticate):  essentially renamed & hacked from open().  
+	  (authenticate):  essentially renamed &amp; hacked from open().  
 	  (set_username):  implement.  
 	  (close):  don't free whole pool, since we're no longer subpooling.  
 	  (get_commit_editor):  send session_baton-&gt;username to
@@ -5049,7 +5068,7 @@ Subversion itself to see commit messages from there.
 
 	* subversion/include/svn_client.h (1.37):
 
-	Change API docstrings:  before & after editors are *optional*.  
+	Change API docstrings:  before &amp; after editors are *optional*.  
 
 2001-07-16 09:34   Ben Collins-Sussman &lt;sussman@collab.net&gt;
 
@@ -5799,7 +5818,7 @@ Subversion itself to see commit messages from there.
 
 	* notes/dav_setup.txt (1.8):
 
-	Updating & modernizing the Subversion Server HOWTO.  
+	Updating &amp; modernizing the Subversion Server HOWTO.  
 
 2001-07-06 10:21   Ben Collins-Sussman &lt;sussman@collab.net&gt;
 
@@ -6956,7 +6975,7 @@ Subversion itself to see commit messages from there.
 	* subversion/tests/libsvn_fs/strings-reps-test.c (1.7):
 
 	Disable code in mainline branch, as it only compiles in 
-	"strings-reps-dev" branch (which Mike & Karl are working on.) 
+	"strings-reps-dev" branch (which Mike &amp; Karl are working on.) 
 
 2001-06-26 12:38   Joe Orton &lt;joe@light.plus.com&gt;
 
@@ -9351,7 +9370,7 @@ Subversion itself to see commit messages from there.
 
 	* subversion/libsvn_wc/adm_crawler.c 
 	
-	  (do_apply_textdelta): Clean up bad logic conversion that occured 
+	  (do_apply_textdelta): Clean up bad logic conversion that occurred 
 	  in my recent Big Ol' Change.  
 	
 	* subversion/libsvn_wc/adm_ops.c 
@@ -11800,7 +11819,7 @@ Subversion itself to see commit messages from there.
 	Lots of new code (and rewriting) of python test suite.  It's not
 	done yet.  Please don't try to use this stuff yet.  :) 
 	
-	* README:        expanded overview of goals & design.  
+	* README:        expanded overview of goals &amp; design.  
 	
 	* svn_tree.py:   new file, general code for creating trees.  Mucho
 	                 code from Sam TH &lt;sam@uchicago.edu&gt;, and lots of hacking 
@@ -12343,7 +12362,7 @@ Subversion itself to see commit messages from there.
 	
 	* configure.in 
 	
-	  (SVN_TESTS_MAIN_LIBS): Got rid of seperate SVN_TESTS_EDITOR_LIBS, 
+	  (SVN_TESTS_MAIN_LIBS): Got rid of separate SVN_TESTS_EDITOR_LIBS, 
 	  merging it into SVN_TESTS_MAIN_LIBS.  
 	
 	  (BUILD_FS_STUFF): New automake conditional for use in 
@@ -15370,7 +15389,7 @@ Subversion itself to see commit messages from there.
 	  routine.  We don't need to pass in a list of targets to update;
 	  instead, the RA layer will update *one* target: whatever path
 	  happens to be in the session URL.  (If the client has many targets
-	  to update, it can open an independent RA session & update for each
+	  to update, it can open an independent RA session &amp; update for each
 	  one.  Remember that an update command isn't atomic; only commits
 	are.) 
 	
@@ -20013,7 +20032,7 @@ Subversion itself to see commit messages from there.
 	
 	* target.c (PATH_MAX):  compensate for now, so freebsd will build.  
 	
-	* tests/libsvn_ra_local/*:  new dir & files for ra_local mini-test 
+	* tests/libsvn_ra_local/*:  new dir &amp; files for ra_local mini-test 
 
 2001-02-14 12:01   Branko Cibej &lt;brane@xbc.nu&gt;
 
@@ -22115,7 +22134,7 @@ Subversion itself to see commit messages from there.
 	* subversion/Makefile.am (1.19, post-edit-baton-removal,
 	pre-edit-baton-removal):
 
-	Fix library build order;  `make clean && make' was failing, because 
+	Fix library build order;  `make clean &amp;&amp; make' was failing, because 
 	svnadmin was trying to link against libsvn_fs, which didn't yet
 	exist.  
 
@@ -25798,7 +25817,7 @@ Subversion itself to see commit messages from there.
 	(process_subdirectory): MAJOR rewrite/reorganization. add section
 	that checks for local mods.  Look for property changes too now, on
 	both files and dirs.  focus directory recursion at routine's end, no
-	longer in the middle too.  remove special (delete && add) section;
+	longer in the middle too.  remove special (delete &amp;&amp; add) section;
 	just keep the delete and add section in correct order, and make them 
 	non-mutually exclusive.  call do_prop_deltas() if a local mod is 
 	found, or if a file being added has props.  
@@ -26109,7 +26128,7 @@ Subversion itself to see commit messages from there.
 	The ability to print double status codes.  
 	
 	* libsvn_wc/status.c (assemble_status): mark *both* status flags in 
-	  status_t structure by examining conflicts & local mods on both 
+	  status_t structure by examining conflicts &amp; local mods on both 
 	  textual and property components.  
 	
 	* client/status.c (generate_status_codes):  new func, generates
@@ -32785,7 +32804,7 @@ Subversion itself to see commit messages from there.
 	* subversion/libsvn_subr/xml.c (1.18):
 
 	escape_string() needs to work for attribute values as well as 
-	character data, so quote "' in addition to &&lt;&gt;.  
+	character data, so quote "' in addition to &amp;&lt;&gt;.  
 
 2000-09-29 22:58   Greg Hudson &lt;ghudson@mit.edu&gt;
 
@@ -34521,7 +34540,7 @@ Subversion itself to see commit messages from there.
 
 	(svn_wc__sync_adm_file, open_adm_file, close_adm_file): Reuse 
 	va_lists.  It makes logical sense that doing so is legal, despite
-	the very slight implication on p. 155 of K&R (2nd edition) that
+	the very slight implication on p. 155 of K&amp;R (2nd edition) that
 	va_lists should only be used once.  
 
 2000-09-14 06:56   Joe Orton &lt;joe@light.plus.com&gt;
@@ -35679,7 +35698,7 @@ Subversion itself to see commit messages from there.
 
 	(do_directory_callback): avoid initialization issues by eliminating 
 	local var `child_baton' in favor of
-	`&(youngest_frame-&gt;child_baton)'.  
+	`&amp;(youngest_frame-&gt;child_baton)'.  
 	(do_file_callback): same as above, but for `file_baton'.  
 
 2000-09-01 16:32   Karl Fogel &lt;kfogel@collab.net&gt;
@@ -38855,7 +38874,7 @@ Subversion itself to see commit messages from there.
 	* subversion/libsvn_subr/: svn_error.h (1.21), svn_parse.c (1.25):
 
 	No subversion routine calls svn_handle_error() anymore; instead, 
-	warnings are created by generating & nesting a stack of errors of
+	warnings are created by generating &amp; nesting a stack of errors of
 	type SVN_WARNING.  At the end of the routine, the batch (stack) is 
 	returned.  Applications that have their own error-handling code
 	should recognized the SVN_WARNING type and realize it's non-fatal.  
@@ -39359,8 +39378,8 @@ Subversion itself to see commit messages from there.
 
 	* doc/client.texi (1.25):
 
-	Correct decimal ascii number of single forward quote (&#39, not
-	&#96).  
+	Correct decimal ascii number of single forward quote (&amp;#39, not
+	&amp;#96).  
 
 2000-07-07 15:53   Ben Collins-Sussman &lt;sussman@collab.net&gt;
 
@@ -40976,9 +40995,9 @@ Subversion itself to see commit messages from there.
 	initial checkin 
 </pre>
 
-<p>
-
 </td>
 </tr>
-</TABLE>
-<BR>
+</table>
+</div>
+</body>
+</html>

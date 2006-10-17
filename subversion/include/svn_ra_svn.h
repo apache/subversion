@@ -1,8 +1,7 @@
-/*
- * svn_ra_svn.h :  libsvn_ra_svn functions used by the server
- *
+/**
+ * @copyright
  * ====================================================================
- * Copyright (c) 2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +13,10 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file svn_ra_svn.h
+ * @brief libsvn_ra_svn functions used by the server
  */
 
 
@@ -22,95 +25,184 @@
 #ifndef SVN_RA_SVN_H
 #define SVN_RA_SVN_H
 
+#include <apr.h>
+#include <apr_pools.h>
 #include <apr_network_io.h>
-#include <svn_delta.h>
+#include "svn_config.h"
+
+#include "svn_delta.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/* The well-known svn port number.  Right now this is just a random
- * port in the private range; I am waiting for a real port
- * assignment. -ghudson */
-#define SVN_RA_SVN_PORT 51662
+/** The well-known svn port number. */
+#define SVN_RA_SVN_PORT 3690
 
-/* A specialized form of SVN_ERR to deal with errors which occur in an
- * svn_ra_svn_command_handler.  An error returned with this macro will
- * be passed back to the other side of the connection.  Use this macro
- * when performing the requested operation; use the regular SVN_ERR
- * when performing I/O with the client. */
+/** Currently-defined capabilities. */
+#define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
+#define SVN_RA_SVN_CAP_SVNDIFF1 "svndiff1"
+#define SVN_RA_SVN_CAP_ABSENT_ENTRIES "absent-entries"
+
+/** ra_svn passes @c svn_dirent_t fields over the wire as a list of
+ * words, these are the values used to represent each field.
+ *
+ * @defgroup ra_svn_dirent_fields ra_svn dirent fields
+ * @{
+ */
+
+/** The ra_svn way of saying @c SVN_DIRENT_KIND. */
+#define SVN_RA_SVN_DIRENT_KIND "kind"
+
+/** The ra_svn way of saying @c SVN_DIRENT_SIZE. */
+#define SVN_RA_SVN_DIRENT_SIZE "size"
+
+/** The ra_svn way of saying @c SVN_DIRENT_HAS_PROPS. */
+#define SVN_RA_SVN_DIRENT_HAS_PROPS "has-props"
+
+/** The ra_svn way of saying @c SVN_DIRENT_CREATED_REV. */
+#define SVN_RA_SVN_DIRENT_CREATED_REV "created-rev"
+
+/** The ra_svn way of saying @c SVN_DIRENT_TIME. */
+#define SVN_RA_SVN_DIRENT_TIME "time"
+
+/** The ra_svn way of saying @c SVN_DIRENT_LAST_AUTHOR. */
+#define SVN_RA_SVN_DIRENT_LAST_AUTHOR "last-author"
+
+/** @} */
+
+/** A value used to indicate an optional number element in a tuple that was
+ * not received.
+ */
+#define SVN_RA_SVN_UNSPECIFIED_NUMBER ~((apr_uint64_t) 0)
+
+/** A specialized form of @c SVN_ERR to deal with errors which occur in an
+ * svn_ra_svn_command_handler().
+ *
+ * An error returned with this macro will be passed back to the other side 
+ * of the connection.  Use this macro when performing the requested operation; 
+ * use the regular @c SVN_ERR when performing I/O with the client.
+ */
 #define SVN_CMD_ERR(expr)                                     \
   do {                                                        \
     svn_error_t *svn_err__temp = (expr);                      \
     if (svn_err__temp)                                        \
       return svn_error_create(SVN_ERR_RA_SVN_CMD_ERR,         \
-			      svn_err__temp, NULL);           \
+                              svn_err__temp, NULL);           \
   } while (0)
 
+/** an ra_svn connection. */
 typedef struct svn_ra_svn_conn_st svn_ra_svn_conn_t;
 
-/* Command handler, used by svn_ra_svn_handle_commands. */
+/** Command handler, used by svn_ra_svn_handle_commands(). */
 typedef svn_error_t *(*svn_ra_svn_command_handler)(svn_ra_svn_conn_t *conn,
                                                    apr_pool_t *pool,
                                                    apr_array_header_t *params,
                                                    void *baton);
 
-/* Command table, used by svn_ra_svn_handle_commands.  If TERMINATE
- * is set, command-handling will cease after command is processed. */
-typedef struct {
+/** Command table, used by svn_ra_svn_handle_commands().
+ *
+ * If @c terminate is set, command-handling will cease after command is
+ * processed.
+ */
+typedef struct svn_ra_svn_cmd_entry_t 
+{
   const char *cmdname;
   svn_ra_svn_command_handler handler;
   svn_boolean_t terminate;
 } svn_ra_svn_cmd_entry_t;
 
-/* Memory representation of an on-the-wire data item. */
-typedef struct {
+/** Memory representation of an on-the-wire data item. */
+typedef struct svn_ra_svn_item_t 
+{
+  /** Variant indicator. */
   enum {
     SVN_RA_SVN_NUMBER,
     SVN_RA_SVN_STRING,
     SVN_RA_SVN_WORD,
     SVN_RA_SVN_LIST
   } kind;
+  /** Variant data. */
   union {
     apr_uint64_t number;
     svn_string_t *string;
     const char *word;
-    apr_array_header_t *list;	/* Contains svn_ra_svn_item_ts. */
+
+    /** Contains @c svn_ra_svn_item_t's. */
+    apr_array_header_t *list;
   } u;
 } svn_ra_svn_item_t;
 
 typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
 
-/* Initialize a connection structure for the given socket or
- * input/output files.  Either SOCK or IN_FILE/OUT_FILE must be set,
- * not both. */
+/** Initialize a connection structure for the given socket or
+ * input/output files.
+ *
+ * Either @a sock or @a in_file/@a out_file must be set, not both.
+ */
 svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
                                           apr_file_t *in_file,
                                           apr_file_t *out_file,
                                           apr_pool_t *pool);
 
-/* Write simple data items over the net.  Writes will be buffered until
- * the next read or flush. */
+/** Initialize a connection's capabilities to the ones specified in
+ * @a list, which contains svn_ra_svn_item_t entries (which should
+ * be of type SVN_RA_SVN_WORD; a malformed data error will result if
+ * any are not). */
+svn_error_t *svn_ra_svn_set_capabilities(svn_ra_svn_conn_t *conn,
+                                         apr_array_header_t *list);
+
+/** Return @c TRUE if @a conn has the capability @a capability, or
+ * @c FALSE if it does not. */
+svn_boolean_t svn_ra_svn_has_capability(svn_ra_svn_conn_t *conn,
+                                        const char *capability);
+
+/** Write a number over the net.
+ *
+ * Writes will be buffered until the next read or flush.
+ */
 svn_error_t *svn_ra_svn_write_number(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      apr_uint64_t number);
+
+/** Write a string over the net.
+ *
+ * Writes will be buffered until the next read or flush.
+ */
 svn_error_t *svn_ra_svn_write_string(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const svn_string_t *str);
+
+/** Write a cstring over the net.
+ *
+ * Writes will be buffered until the next read or flush.
+ */
 svn_error_t *svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
                                       apr_pool_t *pool, const char *s);
+
+/** Write a word over the net.
+ *
+ * Writes will be buffered until the next read or flush.
+ */
 svn_error_t *svn_ra_svn_write_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    const char *word);
 
-/* Begin or end a list.  As above, writes will be buffered. */
+/** Begin a list.  Writes will be buffered until the next read or flush. */
 svn_error_t *svn_ra_svn_start_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
+
+/** End a list.  Writes will be buffered until the next read or flush. */
 svn_error_t *svn_ra_svn_end_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
 
-/* Flush the write buffer.  Normally this shouldn't be necessary,
- * since the write buffer is flushed when a read is attempted. */
+/** Flush the write buffer.
+ *
+ * Normally this shouldn't be necessary, since the write buffer is flushed
+ * when a read is attempted.
+ */
 svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
 
-/* Write a tuple, using a printf-like interface.  The format string may
- * contain:
+/** Write a tuple, using a printf-like interface.
  *
+ * The format string @a fmt may contain:
+ *
+ *<pre>
  *   Spec  Argument type         Item type
  *   ----  --------------------  ---------
  *   n     apr_uint64_t          Number
@@ -121,24 +213,50 @@ svn_error_t *svn_ra_svn_flush(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
  *   b     svn_boolean_t         Word ("true" or "false")
  *   (                           Begin tuple
  *   )                           End tuple
- *   [                           Begin optional tuple
- *   ]                           End optional tuple
+ *   ?                           Remaining elements optional
+ *   ! (at beginning or end)     Suppress opening or closing of tuple
+ * </pre>
  *
- * Inside an optional tuple, 'r' values may be SVN_INVALID_REVNUM and
- * 's', 'c', and 'w' values may be NULL; in these cases no data will
- * be written.  Either all or none of the optional tuple values should
- * be valid.  Optional tuples may not be nested.
+ * Inside the optional part of a tuple, 'r' values may be @c
+ * SVN_INVALID_REVNUM, 'n' values may be
+ * SVN_RA_SVN_UNSPECIFIED_NUMBER, and 's', 'c', and 'w' values may be
+ * @c NULL; in these cases no data will be written.  'b' and '(' may
+ * not appear in the optional part of a tuple.  Either all or none of
+ * the optional values should be valid.
+ *
+ * (If we ever have a need for an optional boolean value, we should
+ * invent a 'B' specifier which stores a boolean into an int, using -1
+ * for unspecified.  Right now there is no need for such a thing.)
+ *
+ * Use the '!' format specifier to write partial tuples when you have
+ * to transmit an array or other unusual data.  For example, to write
+ * a tuple containing a revision, an array of words, and a boolean:
+ *   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "r(!", rev));
+ *   for (i = 0; i < n; i++)
+ *     SVN_ERR(svn_ra_svn_write_word(conn, pool, words[i]));
+ *   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b", flag));
  */
 svn_error_t *svn_ra_svn_write_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                     const char *fmt, ...);
 
-/* Read an item from the network into ITEM. */
+/** Read an item from the network into @a *item. */
 svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   svn_ra_svn_item_t **item);
 
-/* Parse an array of svn_item_t structures as a tuple, using a
- * printf-like interface.  The format string may contain:
+/** Scan data on @a conn until we find something which looks like the
+ * beginning of an svn server greeting (an open paren followed by a
+ * whitespace character).  This function is appropriate for beginning
+ * a client connection opened in tunnel mode, since people's dotfiles
+ * sometimes write output to stdout.  It may only be called at the
+ * beginning of a client connection.
+ */
+svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
+                                             apr_pool_t *pool);
+
+/** Parse an array of @c svn_sort__item_t structures as a tuple, using a
+ * printf-like interface.  The format string @a fmt may contain:
  *
+ *<pre>
  *   Spec  Argument type          Item type
  *   ----  --------------------   ---------
  *   n     apr_uint64_t *         Number
@@ -148,72 +266,120 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  *   w     const char **          Word
  *   b     svn_boolean_t *        Word ("true" or "false")
  *   l     apr_array_header_t **  List
- *   [                            Begin optional tuple
- *   ]                            End optional tuple
+ *   (                            Begin tuple
+ *   )                            End tuple
+ *   ?                            Tuple is allowed to end here
+ *</pre>
  *
- * If an optional tuple contains no data, 'r' values will be set to
- * SVN_INVALID_REVNUM and 's', 'c', 'w', and 'l' values will be set to
- * NULL.  'n' and 'b' may not appear inside an optional tuple
- * specification.  Optional tuples may not be nested.
+ * Note that a tuple is only allowed to end precisely at a '?', or at
+ * the end of the specification.  So if @a fmt is "c?cc" and @a list
+ * contains two elements, an error will result.
+ *
+ * If an optional part of a tuple contains no data, 'r' values will be
+ * set to @c SVN_INVALID_REVNUM, 'n' values will be set to
+ * SVN_RA_SVN_UNSPECIFIED_NUMBER, and 's', 'c', 'w', and 'l' values
+ * will be set to @c NULL.  'b' may not appear inside an optional
+ * tuple specification.
  */
 svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
                                     apr_pool_t *pool,
                                     const char *fmt, ...);
 
-/* Read an item from the network and parse it as a tuple, using the
- * above format string notation. */
+/** Read a tuple from the network and parse it as a tuple, using the
+ * format string notation from svn_ra_svn_parse_tuple().
+ */
 svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    const char *fmt, ...);
+
+/** Read a command response from the network and parse it as a tuple, using 
+ * the format string notation from svn_ra_svn_parse_tuple().
+ */
 svn_error_t *svn_ra_svn_read_cmd_response(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool,
                                           const char *fmt, ...);
 
-/* Accept commands over the network and handle them according to
- * COMMANDS.  Command handlers will be passed CONN, a subpool of POOL
- * (cleared after each command is handled), the parameters of the
- * command, and BATON.  Commands will be accepted until a terminating
- * command is received (a command with "terminate" set in the command
- * table).  Normally, this function will only halt and return an error
- * when a communications failure occurs, and will send other errors to
- * the remote connection as command failures.  If PASS_THROUGH_ERRORS
- * is set, all errors will be returned (after being sent to the remote
- * connection if appropriate). */
+/** Accept commands over the network and handle them according to @a
+ * commands.  Command handlers will be passed @a conn, a subpool of @a
+ * pool (cleared after each command is handled), the parameters of the
+ * command, and @a baton.  Commands will be accepted until a
+ * terminating command is received (a command with "terminate" set in
+ * the command table).  If a command handler returns an error wrapped
+ * in SVN_RA_SVN_CMD_ERR (see the @c SVN_CMD_ERR macro), the error
+ * will be reported to the other side of the connection and the
+ * command loop will continue; any other kind of error (typically a
+ * network or protocol error) is passed through to the caller.
+ */
 svn_error_t *svn_ra_svn_handle_commands(svn_ra_svn_conn_t *conn,
                                         apr_pool_t *pool,
-                                        svn_ra_svn_cmd_entry_t *commands,
-                                        void *baton,
-                                        svn_boolean_t pass_through_errors);
+                                        const svn_ra_svn_cmd_entry_t *commands,
+                                        void *baton);
 
-/* Write a command or successful command response over the network,
- * using the same format string notation as svn_ra_svn_write_tuple. */
+/** Write a command over the network, using the same format string notation 
+ * as svn_ra_svn_write_tuple().
+ */
 svn_error_t *svn_ra_svn_write_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                   const char *cmdname, const char *fmt, ...);
+
+/** Write a successful command response over the network, using the
+ * same format string notation as svn_ra_svn_write_tuple().  Do not use
+ * partial tuples with this function; if you need to use partial
+ * tuples, just write out the "success" and argument tuple by hand.
+ */
 svn_error_t *svn_ra_svn_write_cmd_response(svn_ra_svn_conn_t *conn,
                                            apr_pool_t *pool,
                                            const char *fmt, ...);
 
-/* Write an unsuccessful command response over the network. */
+/** Write an unsuccessful command response over the network. */
 svn_error_t *svn_ra_svn_write_cmd_failure(svn_ra_svn_conn_t *conn,
                                           apr_pool_t *pool, svn_error_t *err);
 
-/* Set *EDITOR and *EDIT_BATON to an editor which will pass editing
- * operations over the network, using CONN and POOL.  Upon successful
- * completion of the edit, the editor will invoke CALLBACK with
- * CALLBACK_BATON as an argument. */
+/** Set @a *editor and @a *edit_baton to an editor which will pass editing
+ * operations over the network, using @a conn and @a pool.
+ *
+ * Upon successful completion of the edit, the editor will invoke @a callback 
+ * with @a callback_baton as an argument.
+ */
 void svn_ra_svn_get_editor(const svn_delta_editor_t **editor,
                            void **edit_baton, svn_ra_svn_conn_t *conn,
                            apr_pool_t *pool, svn_ra_svn_edit_callback callback,
                            void *callback_baton);
 
-/* Receive edit commands over the network and use them to drive EDITOR
- * with EDIT_BATON.  On return, *ABORTED will be set if the edit was
- * aborted.  See the svn_ra_svn_handle_commands description for the
- * meaning of PASS_THROUGH_ERRORS. */
+/** Receive edit commands over the network and use them to drive @a editor
+ * with @a edit_baton.  On return, @a *aborted will be set if the edit was
+ * aborted.  The drive can be terminated with a finish-replay command only
+ * if @a for_replay is true.
+ */
+svn_error_t *svn_ra_svn_drive_editor2(svn_ra_svn_conn_t *conn,
+                                      apr_pool_t *pool,
+                                      const svn_delta_editor_t *editor,
+                                      void *edit_baton,
+                                      svn_boolean_t *aborted,
+                                      svn_boolean_t for_replay);
+
+/** Like svn_ra_svn_drive_editor2, but with @a for_replay always FALSE.
+ */
 svn_error_t *svn_ra_svn_drive_editor(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                      const svn_delta_editor_t *editor,
                                      void *edit_baton,
-                                     svn_boolean_t pass_through_errors,
                                      svn_boolean_t *aborted);
+
+/** This function is only intended for use by svnserve.
+ *
+ * Perform CRAM-MD5 password authentication.  On success, return
+ * SVN_NO_ERROR with *user set to the username and *success set to
+ * TRUE.  On an error which can be reported to the client, report the
+ * error and return SVN_NO_ERROR with *success set to FALSE.  On
+ * communications failure, return an error.
+ */
+svn_error_t *svn_ra_svn_cram_server(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                    svn_config_t *pwdb, const char **user,
+                                    svn_boolean_t *success);
+
+/**
+ * Get libsvn_ra_svn version information.
+ * @since New in 1.1.
+ */
+const svn_version_t *svn_ra_svn_version(void);
 
 #ifdef __cplusplus
 }

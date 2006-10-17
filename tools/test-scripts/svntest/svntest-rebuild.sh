@@ -8,16 +8,15 @@ BUILD_TYPE="$1"
 
 # Compute local vars
 LOG_FILE="$LOG_FILE_PREFIX.$BUILD_TYPE"
-TEST="`$GUESS` $BUILD_TYPE"
-REV="`$SVN st -v $SVN_REPO/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
+BUILD="`$GUESS` $BUILD_TYPE"
+REV="`$SVN st -v $SVN_SOURCE/README | $CUT -c 12-17 | $SED -e 's/^ *//'`"
 
 # Initialize the log file
-echo "TEST: Revision $REV on $TEST" >> $LOG_FILE
+echo "BUILD: $REVPREFIX$REV on $BUILD" >> $LOG_FILE
 echo >> $LOG_FILE
 
 # Check the build type
 START "check build type" "Checking build type..."
-BUILD_TYPE="$1"
 case $BUILD_TYPE in
     shared) OBJ="$OBJ_SHARED" ;;
     static) OBJ="$OBJ_STATIC" ;;
@@ -29,8 +28,11 @@ PASS
 
 # Create the object directory
 START "create object directory" "Creating object directory..."
-$RM_RF $TEST_ROOT/$OBJ >> $LOG_FILE 2>&1 || FAIL
-$MKDIR $TEST_ROOT/$OBJ >> $LOG_FILE 2>&1 || FAIL
+umount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests" >> $LOG_FILE 2>&1 || FAIL 
+$RM_RF "$TEST_ROOT/$OBJ" >> $LOG_FILE 2>&1 || FAIL
+$MKDIR "$TEST_ROOT/$OBJ" >> $LOG_FILE 2>&1 || FAIL
+$MKDIR_P "$TEST_ROOT/$OBJ/subversion/tests" >> $LOG_FILE 2>&1 || FAIL
+mount_ramdisk "$TEST_ROOT/$OBJ/subversion/tests" >> $LOG_FILE 2>&1 || FAIL 
 PASS
 
 # Configure
@@ -41,9 +43,9 @@ $CAT "$TEST_ROOT/$CONFIG_PREFIX.$BUILD_TYPE" >> $LOG_FILE
 
 cd $TEST_ROOT/$OBJ
 $TEST_ROOT/$CONFIG_PREFIX.$BUILD_TYPE \
-    > "$TEST_ROOT/LOG_svn_configure_$BUILD_TYPE" 2>&1
+    > "$LOG_FILE_DIR/LOG_svn_configure_$BUILD_TYPE" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_svn_configure_$BUILD_TYPE"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_svn_configure_$BUILD_TYPE"
     FAIL
 }
 PASS
@@ -51,25 +53,25 @@ PASS
 # Build
 START "build" "Building..."
 cd $TEST_ROOT/$OBJ
-$MAKE > "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE" 2>&1
+$MAKE $MAKE_OPTS > "$LOG_FILE_DIR/LOG_svn_build_$BUILD_TYPE" 2>&1
 test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_svn_build_$BUILD_TYPE"
+    FAIL_LOG "$LOG_FILE_DIR/LOG_svn_build_$BUILD_TYPE"
     FAIL
 }
 PASS
 
-# Test
-START "check" "Testing..."
-cd $TEST_ROOT/$OBJ
-$MAKE check > "$TEST_ROOT/LOG_svn_check_$BUILD_TYPE" 2>&1
-test $? = 0 || {
-    FAIL_LOG "$TEST_ROOT/LOG_svn_check_$BUILD_TYPE"
-    $CP "tests.log" "$LOG_FILE_PREFIX.log.$BUILD_TYPE.$REV.failed" \
-        >> $LOG_FILE 2>&1
 
-    echo >> $LOG_FILE
-    echo "tests.log:" >> $LOG_FILE
-    $CAT tests.log >> $LOG_FILE 2>&1
+# Install (bc mod_dav_svn.so)
+START "install" "Installing..."
+cd $TEST_ROOT/$OBJ
+$RM_RF "$INST_DIR/$SVN_NAME"
+$MAKE install > "$LOG_FILE_DIR/LOG_svn_install_$BUILD_TYPE" 2>&1
+test $? = 0 || {
+    FAIL_LOG "$LOG_FILE_DIR/LOG_svn_build_$BUILD_TYPE"
     FAIL
 }
+PASS
+
+START "$SVN_NAME::rebuild flag" "Updating rebuild flag..."
+$DATE "+%s" > "$TEST_ROOT/$SVN_NAME.rb" || FAIL
 PASS

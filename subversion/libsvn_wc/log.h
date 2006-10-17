@@ -2,7 +2,7 @@
  * log.h :  interfaces for running .svn/log files.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,11 +21,9 @@
 #define SVN_LIBSVN_WC_LOG_H
 
 #include <apr_pools.h>
+
 #include "svn_types.h"
-#include "svn_string.h"
 #include "svn_error.h"
-#include "svn_path.h"
-#include "svn_xml.h"
 #include "svn_wc.h"
 
 #ifdef __cplusplus
@@ -33,137 +31,260 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Note: every entry in the logfile is either idempotent or atomic.
- * This allows us to remove the entire logfile when every entry in it
- * has been completed -- if you crash in the middle of running a
- * logfile, and then later are running over it again as part of the
- * recovery, a given entry is "safe" in the sense that you can either
- * tell it has already been done (in which case, ignore it) or you can
- * do it again without ill effect.
- */
 
-/** Log actions. **/
+/* Return the path to use for logfile number LOG_NUMBER.  The returned
+   string will be allocated from POOL.
 
-/* Set some attributes on SVN_WC__LOG_ATTR_NAME's entry.  Unmentioned
-   attributes are unaffected. */
-#define SVN_WC__LOG_MODIFY_ENTRY        "modify-entry"
-
-/* Delete the entry SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_DELETE_ENTRY        "delete-entry"
-
-/* Run an external command:
- *    - command to run is SVN_WC__LOG_ATTR_NAME
- *    - arguments are SVN_WC__LOG_ATTR_ARG_[1,2,3,...]
- *    - input from SVN_WC__LOG_ATTR_INFILE, defaults to stdin
- *    - output into SVN_WC__LOG_ATTR_OUTFILE, defaults to stdout
- *    - stderr into SVN_WC__LOG_ATTR_ERRFILE, defaults to stderr
- *
- * The program will be run in the working copy directory, that is, the
- * same directory from which paths in the log file are rooted.
- */
-#define SVN_WC__LOG_RUN_CMD             "run"
-
-/* Move file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
-#define SVN_WC__LOG_MV                  "mv"
-
-/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
-#define SVN_WC__LOG_CP                  "cp"
-
-/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
-   expand any keywords and use any eol-style defined by properties of
-   the DEST. */
-#define SVN_WC__LOG_CP_AND_TRANSLATE    "cp-and-translate"
-
-/* Copy file SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST, but
-   contract any keywords and convert to LF eol, according to
-   properties of NAME. */
-#define SVN_WC__LOG_CP_AND_DETRANSLATE    "cp-and-detranslate"
-
-/* Remove file SVN_WC__LOG_ATTR_NAME. */
-#define SVN_WC__LOG_RM                  "rm"
-
-/* Append file from SVN_WC__LOG_ATTR_NAME to SVN_WC__LOG_ATTR_DEST. */
-#define SVN_WC__LOG_APPEND              "append"
-
-/* Make file SVN_WC__LOG_ATTR_NAME readonly */
-#define SVN_WC__LOG_READONLY            "readonly"
-
-/* Handle closure after a commit completes successfully:  
- *
- *   If SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME exists, then
- *      compare SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME with working file
- *         if they're the same, use working file's timestamp
- *         else use SVN/tmp/text-base/SVN_WC__LOG_ATTR_NAME's timestamp
- *      set SVN_WC__LOG_ATTR_NAME's revision to N
- */
-#define SVN_WC__LOG_COMMITTED           "committed"
-
-/* On target SVN_WC__LOG_ATTR_NAME, set wc property
-   SVN_WC__LOG_ATTR_PROPNAME to value SVN_WC__LOG_ATTR_PROPVAL.  If
-   SVN_WC__LOG_ATTR_PROPVAL is absent, then remove the property. */
-#define SVN_WC__LOG_MODIFY_WCPROP        "modify-wcprop"
-
-
-/* A log command which runs svn_wc_merge().
-   See its documentation for details.
-
-   Here is a map of entry-attributes to svn_wc_merge arguments:
-
-         SVN_WC__LOG_NAME         : MERGE_TARGET
-         SVN_WC__LOG_ATTR_ARG_1   : LEFT
-         SVN_WC__LOG_ATTR_ARG_2   : RIGHT
-         SVN_WC__LOG_ATTR_ARG_3   : LEFT_LABEL
-         SVN_WC__LOG_ATTR_ARG_4   : RIGHT_LABEL
-         SVN_WC__LOG_ATTR_ARG_5   : TARGET_LABEL
-
-   Of course, the three paths should be *relative* to the directory in
-   which the log is running, as with all other log commands.  (Usually
-   they're just basenames within loggy->path.)
- */
-#define SVN_WC__LOG_MERGE        "merge"
-
-
-/** Log attributes.  See the documentation above for log actions for
-    how these are used. **/
-#define SVN_WC__LOG_ATTR_NAME           "name"
-#define SVN_WC__LOG_ATTR_DEST           "dest"
-#define SVN_WC__LOG_ATTR_PROPNAME       "propname"
-#define SVN_WC__LOG_ATTR_PROPVAL        "propval"
-#define SVN_WC__LOG_ATTR_REVISION       "revision"
-#define SVN_WC__LOG_ATTR_TEXT_REJFILE   "text-rejfile"
-#define SVN_WC__LOG_ATTR_PROP_REJFILE   "prop-rejfile"
-/* The rest are for SVN_WC__LOG_RUN_CMD.  Extend as necessary. */
-#define SVN_WC__LOG_ATTR_INFILE         "infile"
-#define SVN_WC__LOG_ATTR_OUTFILE        "outfile"
-#define SVN_WC__LOG_ATTR_ERRFILE        "errfile"
-#define SVN_WC__LOG_ATTR_ARG_1          "arg1"
-#define SVN_WC__LOG_ATTR_ARG_2          "arg2"
-#define SVN_WC__LOG_ATTR_ARG_3          "arg3"
-#define SVN_WC__LOG_ATTR_ARG_4          "arg4"
-#define SVN_WC__LOG_ATTR_ARG_5          "arg5"
-#define SVN_WC__LOG_ATTR_ARG_6          "arg6"
-#define SVN_WC__LOG_ATTR_ARG_7          "arg7"
-#define SVN_WC__LOG_ATTR_ARG_8          "arg8"
-#define SVN_WC__LOG_ATTR_ARG_9          "arg9"
-
-
-/* Starting at PATH, write out log entries indicating that a commit
- * succeeded, using REVISION as the new revision number.  run_log will
- * use these log items to complete the commit. 
- * 
- * Targets is a hash of files/dirs that actually got committed --
- * these are the only ones who we can write log items for, and whose
- * revision numbers will get set.
- */
-svn_error_t *svn_wc__log_commit (const char *path,
-                                 apr_hash_t *targets,
-                                 svn_revnum_t revision,
+   For log number 0, this will just be SVN_WC__ADM_LOG to maintain
+   compatibility with 1.0.x.  Higher numbers have the digits of the
+   number appended to SVN_WC__ADM_LOG so that they look like "log.1",
+   "log.2", etc. */
+const char *svn_wc__logfile_path(int log_number,
                                  apr_pool_t *pool);
 
 
-/* Process the instructions in the log file for ADM_ACCESS. */
-svn_error_t *svn_wc__run_log (svn_wc_adm_access_t *adm_access,
+/* Extend **LOG_ACCUM with log instructions to append the contents
+   of SRC to DST.
+*/
+
+svn_error_t *
+svn_wc__loggy_append(svn_stringbuf_t **log_accum,
+                     svn_wc_adm_access_t *adm_access,
+                     const char *src, const char *dst,
+                     apr_pool_t *pool);
+
+
+/* Extend **LOG_ACCUM with log instructions to mark PATH as committed
+   with revision REVNUM.
+*/
+
+svn_error_t *
+svn_wc__loggy_committed(svn_stringbuf_t **log_accum,
+                        svn_wc_adm_access_t *adm_access,
+                        const char *path, svn_revnum_t revnum,
+                        apr_pool_t *pool);
+
+
+/* Extend **LOG_ACCUM with log instructions to copy the file SRC_PATH to
+   DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
+   the file at DST_PATH will be deleted if any.
+
+   Sets *DST_MODIFIED, if either the copy or the remove have been carried out.
+*/
+
+typedef enum svn_wc__copy_t
+{
+  /* Normal copy, no translation */
+  svn_wc__copy_normal = 0,
+
+  /* Copy, translate using file properties */
+  svn_wc__copy_translate,
+
+  /* Copy, translate using only the svn:special property, if any */
+  svn_wc__copy_translate_special_only,
+
+  /* Copy, detranslate using file properties */
+  svn_wc__copy_detranslate
+} svn_wc__copy_t;
+
+
+svn_error_t *
+svn_wc__loggy_copy(svn_stringbuf_t **log_accum,
+                   svn_boolean_t *dst_modified,
+                   svn_wc_adm_access_t *adm_access,
+                   svn_wc__copy_t copy_type,
+                   const char *src_path, const char *dst_path,
+                   svn_boolean_t remove_dst_if_no_src,
+                   apr_pool_t *pool);
+
+
+/* Extend **LOG_ACCUM with log instructions to generate a translated
+   file from SRC to DST with translation settings from VERSIONED
+   and flags specified in FLAGS.
+*/
+
+svn_error_t *
+svn_wc__loggy_translated_file(svn_stringbuf_t **log_accum,
+                              svn_wc_adm_access_t *adm_access,
+                              const char *dst,
+                              const char *src,
+                              const char *versioned,
                               apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with log instructions to delete the entry
+   associated with PATH from the entries file.
+*/
+svn_error_t *
+svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *path,
+                           apr_pool_t *pool);
+
+
+/* Extend **LOG_ACCUM with log instructions to delete lock related
+   fields from the entry belonging to PATH.
+*/
+svn_error_t *
+svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
+                          svn_wc_adm_access_t *adm_access,
+                          const char *path,
+                          apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with log instructions to delete changelist
+   from the entry belonging to PATH.
+*/
+svn_error_t *
+svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
+                                svn_wc_adm_access_t *adm_access,
+                                const char *path,
+                                apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with commands to modify the entry associated with NAME
+   according to the flags specified in MODIFY_FLAGS, based on the values
+   supplied in *ENTRY.
+
+   The flags in MODIFY_FLAGS are to be taken from the svn_wc__entry_modify
+   parameter by the same name.
+*/
+svn_error_t *
+svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *name,
+                           svn_wc_entry_t *entry,
+                           apr_uint64_t modify_flags,
+                           apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
+   for PATH, setting it to PROPVAL.
+*/
+
+svn_error_t *
+svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *path,
+                            const char *propname,
+                            const char *propval,
+                            apr_pool_t *pool);
+
+
+/* Extend **LOG_ACCUM with log instructions to move the file SRC_PATH to
+   DST_PATH, if it exists. If it doesn't and REMOVE_DST_IF_NO_SRC is TRUE
+   the file at DST_PATH will be deleted if any.
+
+   Sets *DST_MODIFIED, if either the copy or the remove have been carried out.
+*/
+
+svn_error_t *
+svn_wc__loggy_move(svn_stringbuf_t **log_accum,
+                   svn_boolean_t *dst_modified,
+                   svn_wc_adm_access_t *adm_access,
+                   const char *src_path, const char *dst_path,
+                   svn_boolean_t remove_dst_if_no_src,
+                   apr_pool_t *pool);
+
+
+
+/* Extend **LOG_ACCUM with log instructions to set permissions of PATH
+   to 'executable' if it has the 'executable' property set.
+*/
+
+svn_error_t *
+svn_wc__loggy_maybe_set_executable(svn_stringbuf_t **log_accum,
+                                   svn_wc_adm_access_t *adm_access,
+                                   const char *path,
+                                   apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with log instructions to set permissions of PATH
+   to 'readonly' if it has the 'needs-lock' property set and there is
+   no lock for the file in the working copy.
+*/
+
+svn_error_t *
+svn_wc__loggy_maybe_set_readonly(svn_stringbuf_t **log_accum,
+                                 svn_wc_adm_access_t *adm_access,
+                                 const char *path,
+                                 apr_pool_t *pool);
+
+
+/* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH
+   in the entry field with name TIME_PROP.
+
+   Use SVN_WC__ENTRY_ATTR_* values for TIME_PROP.
+*/
+
+svn_error_t *
+svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
+                                          svn_wc_adm_access_t *adm_access,
+                                          const char *path,
+                                          const char *time_prop,
+                                          apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with log instructions to set permissions of PATH
+   to 'readonly'.
+*/
+
+svn_error_t *
+svn_wc__loggy_set_readonly(svn_stringbuf_t **log_accum,
+                           svn_wc_adm_access_t *adm_access,
+                           const char *path,
+                           apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH.
+*/
+
+svn_error_t *
+svn_wc__loggy_set_timestamp(svn_stringbuf_t **log_accum,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *path,
+                            const char *timestr,
+                            apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with log instructions to remove the file
+   BASE_NAME, if it exists.
+*/
+svn_error_t *
+svn_wc__loggy_remove(svn_stringbuf_t **log_accum,
+                     svn_wc_adm_access_t *adm_access,
+                     const char *base_name,
+                     apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with instructions to cause the working copy of ADM_ACCESS
+   to be upgraded to FORMAT. */
+svn_error_t *
+svn_wc__loggy_upgrade_format(svn_stringbuf_t **log_accum,
+                             svn_wc_adm_access_t *adm_access,
+                             int format,
+                             apr_pool_t *pool);
+
+
+/* Create a log file with LOG_NUMBER. Write LOG_CONTENT to it and close-
+   and-sync afterwards. ADM_ACCESS must point to a locked working copy.
+
+
+   Helper to eliminate code duplication. */
+svn_error_t *
+svn_wc__write_log(svn_wc_adm_access_t *adm_access,
+                  int log_number, svn_stringbuf_t *log_content,
+                  apr_pool_t *pool);
+
+
+/* Process the instructions in the log file for ADM_ACCESS. 
+   DIFF3_CMD is the external differ used by the 'SVN_WC__LOG_MERGE'
+   log entry.  It is always safe to pass null for this.
+
+   If the log fails on its first command, return the error
+   SVN_ERR_WC_BAD_ADM_LOG_START.  If it fails on some subsequent
+   command, return SVN_ERR_WC_BAD_ADM_LOG. */
+svn_error_t *svn_wc__run_log(svn_wc_adm_access_t *adm_access,
+                             const char *diff3_cmd,
+                             apr_pool_t *pool);
+
+/* Similar to svn_wc__run_log except that it is assumed that the log
+   file has been run before and so some of the log commands may
+   already have been processed. */
+svn_error_t *svn_wc__rerun_log(svn_wc_adm_access_t *adm_access,
+                               const char *diff3_cmd,
+                               apr_pool_t *pool);
 
 
 #ifdef __cplusplus

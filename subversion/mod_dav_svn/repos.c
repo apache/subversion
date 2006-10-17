@@ -2,7 +2,7 @@
  * repos.c: mod_dav_svn repository provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,27 +16,30 @@
  * ====================================================================
  */
 
-
+#define APR_WANT_STRFUNC
+#include <apr_want.h>
+#include <apr_strings.h>
+#include <apr_hash.h>
+#include <apr_lib.h>
 
 #include <httpd.h>
+#include <http_request.h>
 #include <http_protocol.h>
 #include <http_log.h>
 #include <http_core.h>  /* for ap_construct_url */
 #include <mod_dav.h>
 
-#define APR_WANT_STRFUNC
-#include <apr_want.h>
-#include <apr_strings.h>
-#include <apr_hash.h>
-
 #include "svn_types.h"
 #include "svn_pools.h"
 #include "svn_error.h"
+#include "svn_time.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_dav.h"
 #include "svn_sorts.h"
 #include "svn_version.h"
+#include "svn_props.h"
+#include "mod_dav_svn.h"
 
 #include "dav_svn.h"
 
@@ -53,37 +56,59 @@ struct dav_stream {
   void *delta_baton;
 };
 
-typedef struct {
-  ap_filter_t *output;
-  apr_pool_t *pool;
-} dav_svn_diff_ctx_t;
 
+/* Convenience structure that facilitates combined memory allocation of
+   a dav_resource and dav_resource_private pair. */
 typedef struct {
   dav_resource res;
   dav_resource_private priv;
 } dav_resource_combined;
 
-/* private context for doing a walk */
-typedef struct {
-  /* the input walk parameters */
-  const dav_walk_params *params;
 
-  /* reused as we walk */
-  dav_walk_resource wres;
+/* Helper-wrapper around svn_fs_check_path(), which takes the same
+   arguments.  But: if we attempt to stat a path like "file1/file2",
+   then still return 'svn_node_none' to signal nonexistence, rather
+   than a full-blown filesystem error.  This allows mod_dav to throw
+   404 instead of 500. */
+static dav_error *
+fs_check_path(svn_node_kind_t *kind,
+              svn_fs_root_t *root,
+              const char *path,
+              apr_pool_t *pool)
+{
+  svn_error_t *serr;
+  svn_node_kind_t my_kind;
 
-  /* the current resource */
-  dav_resource res;             /* wres.resource refers here */
-  dav_resource_private info;    /* the info in res */
-  svn_stringbuf_t *uri;            /* the uri within res */
-  svn_stringbuf_t *repos_path;     /* the repos_path within res */
+  serr = svn_fs_check_path(&my_kind, root, path, pool);
 
-} dav_svn_walker_context;
+  /* Possibly trap other fs-errors here someday -- errors which may
+     simply indicate the path's nonexistence, rather than a critical
+     problem. */
+  if (serr && serr->apr_err == SVN_ERR_FS_NOT_DIRECTORY)
+    {
+      svn_error_clear(serr);
+      *kind = svn_node_none;
+      return NULL;
+    }
+  else if (serr)
+    {
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  apr_psprintf(pool, "Error checking kind of "
+                                               "path '%s' in repository",
+                                               path),
+                                  pool);
+    }
+
+  *kind = my_kind;
+  return NULL;
+}
 
 
-static int dav_svn_parse_version_uri(dav_resource_combined *comb,
-                                     const char *path,
-                                     const char *label,
-                                     int use_checked_in)
+static int
+parse_version_uri(dav_resource_combined *comb,
+                  const char *path,
+                  const char *label,
+                  int use_checked_in)
 {
   const char *slash;
   const char *created_rev_str;
@@ -131,10 +156,12 @@ static int dav_svn_parse_version_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
-static int dav_svn_parse_history_uri(dav_resource_combined *comb,
-                                     const char *path,
-                                     const char *label,
-                                     int use_checked_in)
+
+static int
+parse_history_uri(dav_resource_combined *comb,
+                  const char *path,
+                  const char *label,
+                  int use_checked_in)
 {
   /* format: ??? */
 
@@ -148,10 +175,12 @@ static int dav_svn_parse_history_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
-static int dav_svn_parse_working_uri(dav_resource_combined *comb,
-                                     const char *path,
-                                     const char *label,
-                                     int use_checked_in)
+
+static int
+parse_working_uri(dav_resource_combined *comb,
+                  const char *path,
+                  const char *label,
+                  int use_checked_in)
 {
   const char *slash;
 
@@ -187,10 +216,12 @@ static int dav_svn_parse_working_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
-static int dav_svn_parse_activity_uri(dav_resource_combined *comb,
-                                      const char *path,
-                                      const char *label,
-                                      int use_checked_in)
+
+static int
+parse_activity_uri(dav_resource_combined *comb,
+                   const char *path,
+                   const char *label,
+                   int use_checked_in)
 {
   /* format: ACTIVITY_ID */
 
@@ -203,14 +234,16 @@ static int dav_svn_parse_activity_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
-static int dav_svn_parse_vcc_uri(dav_resource_combined *comb,
-                                 const char *path,
-                                 const char *label,
-                                 int use_checked_in)
+
+static int
+parse_vcc_uri(dav_resource_combined *comb,
+              const char *path,
+              const char *label,
+              int use_checked_in)
 {
   /* format: "default" (a singleton) */
 
-  if (strcmp(path, DAV_SVN_DEFAULT_VCC_NAME) != 0)
+  if (strcmp(path, DAV_SVN__DEFAULT_VCC_NAME) != 0)
     return TRUE;
 
   if (label == NULL && !use_checked_in)
@@ -247,7 +280,7 @@ static int dav_svn_parse_vcc_uri(dav_resource_combined *comb,
           /* use the DAV:checked-in value of the VCC. this is always the
              "latest" (or "youngest") revision. */
 
-          /* signal dav_svn_prep_version to look it up */
+          /* signal prep_version to look it up */
           revnum = SVN_INVALID_REVNUM;
         }
 
@@ -267,10 +300,12 @@ static int dav_svn_parse_vcc_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
-static int dav_svn_parse_baseline_coll_uri(dav_resource_combined *comb,
-                                           const char *path,
-                                           const char *label,
-                                           int use_checked_in)
+
+static int
+parse_baseline_coll_uri(dav_resource_combined *comb,
+                        const char *path,
+                        const char *label,
+                        int use_checked_in)
 {
   const char *slash;
   int revnum;
@@ -304,10 +339,12 @@ static int dav_svn_parse_baseline_coll_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
-static int dav_svn_parse_baseline_uri(dav_resource_combined *comb,
-                                      const char *path,
-                                      const char *label,
-                                      int use_checked_in)
+
+static int
+parse_baseline_uri(dav_resource_combined *comb,
+                   const char *path,
+                   const char *label,
+                   int use_checked_in)
 {
   int revnum;
 
@@ -336,10 +373,12 @@ static int dav_svn_parse_baseline_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
-static int dav_svn_parse_wrk_baseline_uri(dav_resource_combined *comb,
-                                          const char *path,
-                                          const char *label,
-                                          int use_checked_in)
+
+static int
+parse_wrk_baseline_uri(dav_resource_combined *comb,
+                       const char *path,
+                       const char *label,
+                       int use_checked_in)
 {
   const char *slash;
 
@@ -365,6 +404,7 @@ static int dav_svn_parse_wrk_baseline_uri(dav_resource_combined *comb,
 
   return FALSE;
 }
+
 
 static const struct special_defn
 {
@@ -397,34 +437,23 @@ static const struct special_defn
 
 } special_subdirs[] =
 {
-  { "ver", dav_svn_parse_version_uri,
-    1, TRUE, DAV_SVN_RESTYPE_VER_COLLECTION },
-  { "his", dav_svn_parse_history_uri,
-    0, FALSE, DAV_SVN_RESTYPE_HIS_COLLECTION },
-  { "wrk", dav_svn_parse_working_uri,
-    1, TRUE,  DAV_SVN_RESTYPE_WRK_COLLECTION },
-  { "act", dav_svn_parse_activity_uri,
-    1, FALSE, DAV_SVN_RESTYPE_ACT_COLLECTION },
-  { "vcc", dav_svn_parse_vcc_uri,
-    1, FALSE, DAV_SVN_RESTYPE_VCC_COLLECTION },
-  { "bc", dav_svn_parse_baseline_coll_uri,
-    1, TRUE, DAV_SVN_RESTYPE_BC_COLLECTION },
-  { "bln", dav_svn_parse_baseline_uri,
-    1, FALSE, DAV_SVN_RESTYPE_BLN_COLLECTION },
-  { "wbl", dav_svn_parse_wrk_baseline_uri,
-    2, FALSE, DAV_SVN_RESTYPE_WBL_COLLECTION },
-
+  { "ver", parse_version_uri, 1, TRUE, DAV_SVN_RESTYPE_VER_COLLECTION },
+  { "his", parse_history_uri, 0, FALSE, DAV_SVN_RESTYPE_HIS_COLLECTION },
+  { "wrk", parse_working_uri, 1, TRUE,  DAV_SVN_RESTYPE_WRK_COLLECTION },
+  { "act", parse_activity_uri, 1, FALSE, DAV_SVN_RESTYPE_ACT_COLLECTION },
+  { "vcc", parse_vcc_uri, 1, FALSE, DAV_SVN_RESTYPE_VCC_COLLECTION },
+  { "bc", parse_baseline_coll_uri, 1, TRUE, DAV_SVN_RESTYPE_BC_COLLECTION },
+  { "bln", parse_baseline_uri, 1, FALSE, DAV_SVN_RESTYPE_BLN_COLLECTION },
+  { "wbl", parse_wrk_baseline_uri, 2, FALSE, DAV_SVN_RESTYPE_WBL_COLLECTION },
   { NULL } /* sentinel */
 };
 
+
 /*
- * dav_svn_parse_uri: parse the provided URI into its various bits
+ * parse_uri: parse the provided URI into its various bits
  *
  * URI will contain a path relative to our configured root URI. It should
  * not have a leading "/". The root is identified by "".
- *
- * SPECIAL_URI is the component of the URI path configured by the
- * SVNSpecialPath directive (defaults to "$svn").
  *
  * On output: *COMB will contain all of the information parsed out of
  * the URI -- the resource type, activity ID, path, etc.
@@ -434,10 +463,11 @@ static const struct special_defn
  *
  * TRUE is returned if a parsing error occurred. FALSE for success.
  */
-static int dav_svn_parse_uri(dav_resource_combined *comb,
-                             const char *uri,
-                             const char *label,
-                             int use_checked_in)
+static int
+parse_uri(dav_resource_combined *comb,
+          const char *uri,
+          const char *label,
+          int use_checked_in)
 {
   const char *special_uri = comb->priv.repos->special_uri;
   apr_size_t len1;
@@ -516,11 +546,14 @@ static int dav_svn_parse_uri(dav_resource_combined *comb,
   return FALSE;
 }
 
-static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
+
+static dav_error *
+prep_regular(dav_resource_combined *comb)
 {
   apr_pool_t *pool = comb->res.pool;
   dav_svn_repos *repos = comb->priv.repos;
   svn_error_t *serr;
+  dav_error *derr;
   svn_node_kind_t kind;
 
   /* A REGULAR resource might have a specific revision already (e.g. if it
@@ -532,9 +565,10 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
       serr = svn_fs_youngest_rev(&comb->priv.root.rev, repos->fs, pool);
       if (serr != NULL)
         {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not determine the proper "
-                                     "revision to access");
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Could not determine the proper "
+                                      "revision to access",
+                                      pool);
         }
     }
 
@@ -543,23 +577,37 @@ static dav_error * dav_svn_prep_regular(dav_resource_combined *comb)
                               comb->priv.root.rev, pool);
   if (serr != NULL)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not open the root of the "
-                                 "repository");
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Could not open the root of the "
+                                  "repository",
+                                  pool);
     }
 
-  kind = svn_fs_check_path (comb->priv.root.root, comb->priv.repos_path,
-                            pool);
+  derr = fs_check_path(&kind, comb->priv.root.root,
+                       comb->priv.repos_path, pool);
+  if (derr != NULL)
+    return derr;
 
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
   comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
 
+  /* HACK:  dav_get_resource_state() is making shortcut assumptions
+     about how to distinguish a null resource from a lock-null
+     resource.  This is the only way to get around that problem.
+     Without it, it won't ever detect lock-nulls, and thus 'svn unlock
+     nonexistentURL' will always return 404's. */
+  if (! comb->res.exists)
+    comb->priv.r->path_info = (char *) "";
+
   return NULL;
 }
 
-static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
+
+static dav_error *
+prep_version(dav_resource_combined *comb)
 {
   svn_error_t *serr;
+  apr_pool_t *pool = comb->res.pool;
 
   /* we are accessing the Version Resource by REV/PATH */
   
@@ -570,15 +618,16 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
     {
       serr = svn_fs_youngest_rev(&comb->priv.root.rev,
                                  comb->priv.repos->fs,
-                                 comb->res.pool);
+                                 pool);
       if (serr != NULL)
         {
           /* ### might not be a baseline */
           
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not fetch 'youngest' revision "
-                                     "to enable accessing the latest "
-                                     "baseline resource.");
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Could not fetch 'youngest' revision "
+                                      "to enable accessing the latest "
+                                      "baseline resource.",
+                                      pool);
         }
     }
   
@@ -591,11 +640,12 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
       serr = svn_fs_revision_root(&comb->priv.root.root, 
                                   comb->priv.repos->fs,
                                   comb->priv.root.rev,
-                                  comb->res.pool);
+                                  pool);
       if (serr != NULL)
         {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not open a revision root.");
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Could not open a revision root.",
+                                      pool);
         }
     }
 
@@ -605,26 +655,31 @@ static dav_error * dav_svn_prep_version(dav_resource_combined *comb)
   /* Set up the proper URI. Most likely, we arrived here via a VCC,
      so the URI will be incorrect. Set the canonical form. */
   /* ### assuming a baseline */
-  comb->res.uri = dav_svn_build_uri(comb->priv.repos,
-                                    DAV_SVN_BUILD_URI_BASELINE,
-                                    comb->priv.root.rev, NULL,
-                                    0 /* add_href */,
-                                    comb->res.pool);
+  comb->res.uri = dav_svn__build_uri(comb->priv.repos,
+                                     DAV_SVN__BUILD_URI_BASELINE,
+                                     comb->priv.root.rev, NULL,
+                                     0 /* add_href */,
+                                     pool);
 
   return NULL;
 }
 
-static dav_error * dav_svn_prep_history(dav_resource_combined *comb)
+
+static dav_error *
+prep_history(dav_resource_combined *comb)
 {
   return NULL;
 }
 
-static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
+
+static dav_error *
+prep_working(dav_resource_combined *comb)
 {
-  const char *txn_name = dav_svn_get_txn(comb->priv.repos,
-                                         comb->priv.root.activity_id);
+  const char *txn_name = dav_svn__get_txn(comb->priv.repos,
+                                          comb->priv.root.activity_id);
   apr_pool_t *pool = comb->res.pool;
   svn_error_t *serr;
+  dav_error *derr;
   svn_node_kind_t kind;
 
   if (txn_name == NULL)
@@ -643,13 +698,17 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
   if (serr != NULL)
     {
       if (serr->apr_err == SVN_ERR_FS_NO_SUCH_TRANSACTION)
-        return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                             "An activity was specified and found, but the "
-                             "corresponding SVN FS transaction was not "
-                             "found.");
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not open the SVN FS transaction "
-                                 "corresponding to the specified activity.");
+        {
+          svn_error_clear(serr);
+          return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                               "An activity was specified and found, but the "
+                               "corresponding SVN FS transaction was not "
+                               "found.");
+        }
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Could not open the SVN FS transaction "
+                                  "corresponding to the specified activity.",
+                                  pool);
     }
 
   if (comb->res.baselined)
@@ -662,17 +721,63 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
       return NULL;
     }
 
+  /* Set the txn author if not previously set.  Protect against multi-author
+   * commits by verifying authenticated user associated with the current
+   * request is the same as the txn author.
+   * Note that anonymous requests are being excluded as being a change
+   * in author, because the commit may touch areas of the repository
+   * that are anonymous writeable as well as areas that are not.
+   */
+  if (comb->priv.repos->username)
+    {
+      svn_string_t *current_author;
+      svn_string_t request_author;
+
+      serr = svn_fs_txn_prop(&current_author, comb->priv.root.txn,
+               SVN_PROP_REVISION_AUTHOR, pool);
+      if (serr != NULL)
+        {
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                   "Failed to retrieve author of the SVN FS transaction "
+                   "corresponding to the specified activity.",
+                   pool);
+        }
+
+      request_author.data = comb->priv.repos->username;
+      request_author.len = strlen(request_author.data);
+      if (!current_author)
+        {
+          serr = svn_fs_change_txn_prop(comb->priv.root.txn,
+                   SVN_PROP_REVISION_AUTHOR, &request_author, pool);
+          if (serr != NULL)
+            {
+              return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                       "Failed to set the author of the SVN FS transaction "
+                       "corresponding to the specified activity.",
+                       pool);
+            }
+        }
+      else if (!svn_string_compare(current_author, &request_author))
+        {
+          return dav_new_error(pool, HTTP_NOT_IMPLEMENTED, 0,
+                   "Multi-author commits not supported.");
+        }
+    }
+
   /* get the root of the tree */
   serr = svn_fs_txn_root(&comb->priv.root.root, comb->priv.root.txn, pool);
   if (serr != NULL)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not open the (txn) root of the "
-                                 "repository");
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Could not open the (transaction) root of "
+                                  "the repository",
+                                  pool);
     }
 
-  kind = svn_fs_check_path (comb->priv.root.root, comb->priv.repos_path,
-                            pool);
+  derr = fs_check_path(&kind, comb->priv.root.root,
+                       comb->priv.repos_path, pool);
+  if (derr != NULL)
+    return derr;
 
   comb->res.exists = (kind == svn_node_none) ? FALSE : TRUE;
   comb->res.collection = (kind == svn_node_dir) ? TRUE : FALSE;
@@ -680,10 +785,12 @@ static dav_error * dav_svn_prep_working(dav_resource_combined *comb)
   return NULL;
 }
 
-static dav_error * dav_svn_prep_activity(dav_resource_combined *comb)
+
+static dav_error *
+prep_activity(dav_resource_combined *comb)
 {
-  const char *txn_name = dav_svn_get_txn(comb->priv.repos,
-                                         comb->priv.root.activity_id);
+  const char *txn_name = dav_svn__get_txn(comb->priv.repos,
+                                          comb->priv.root.activity_id);
 
   comb->priv.root.txn_name = txn_name;
   comb->res.exists = txn_name != NULL;
@@ -691,7 +798,9 @@ static dav_error * dav_svn_prep_activity(dav_resource_combined *comb)
   return NULL;
 }
 
-static dav_error * dav_svn_prep_private(dav_resource_combined *comb)
+
+static dav_error *
+prep_private(dav_resource_combined *comb)
 {
   if (comb->priv.restype == DAV_SVN_RESTYPE_VCC)
     {
@@ -702,6 +811,7 @@ static dav_error * dav_svn_prep_private(dav_resource_combined *comb)
   return NULL;
 }
 
+
 static const struct res_type_handler
 {
   dav_resource_type type;
@@ -710,16 +820,17 @@ static const struct res_type_handler
 } res_type_handlers[] =
 {
   /* skip UNKNOWN */
-  { DAV_RESOURCE_TYPE_REGULAR, dav_svn_prep_regular },
-  { DAV_RESOURCE_TYPE_VERSION, dav_svn_prep_version },
-  { DAV_RESOURCE_TYPE_HISTORY, dav_svn_prep_history },
-  { DAV_RESOURCE_TYPE_WORKING, dav_svn_prep_working },
+  { DAV_RESOURCE_TYPE_REGULAR, prep_regular },
+  { DAV_RESOURCE_TYPE_VERSION, prep_version },
+  { DAV_RESOURCE_TYPE_HISTORY, prep_history },
+  { DAV_RESOURCE_TYPE_WORKING, prep_working },
   /* skip WORKSPACE */
-  { DAV_RESOURCE_TYPE_ACTIVITY, dav_svn_prep_activity },
-  { DAV_RESOURCE_TYPE_PRIVATE, dav_svn_prep_private },
+  { DAV_RESOURCE_TYPE_ACTIVITY, prep_activity },
+  { DAV_RESOURCE_TYPE_PRIVATE, prep_private },
 
   { 0, NULL }   /* sentinel */
 };
+
 
 /*
 ** ### docco...
@@ -727,7 +838,8 @@ static const struct res_type_handler
 ** Set .exists and .collection
 ** open other, internal bits...
 */
-static dav_error * dav_svn_prep_resource(dav_resource_combined *comb)
+static dav_error *
+prep_resource(dav_resource_combined *comb)
 {
   const struct res_type_handler *scan;
 
@@ -741,9 +853,10 @@ static dav_error * dav_svn_prep_resource(dav_resource_combined *comb)
                        "DESIGN FAILURE: unknown resource type");
 }
 
-static dav_resource *dav_svn_create_private_resource(
-    const dav_resource *base,
-    enum dav_svn_private_restype restype)
+
+static dav_resource *
+create_private_resource(const dav_resource *base,
+                        enum dav_svn_private_restype restype)
 {
   dav_resource_combined *comb;
   svn_stringbuf_t *path;
@@ -759,7 +872,7 @@ static dav_resource *dav_svn_create_private_resource(
 
   comb = apr_pcalloc(base->pool, sizeof(*comb));
 
-  /* ### can/should we leverage dav_svn_prep_resource */
+  /* ### can/should we leverage prep_resource */
 
   comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
 
@@ -770,7 +883,7 @@ static dav_resource *dav_svn_create_private_resource(
   comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
                               path->data, NULL);
   comb->res.info = &comb->priv;
-  comb->res.hooks = &dav_svn_hooks_repos;
+  comb->res.hooks = &dav_svn__hooks_repository;
   comb->res.pool = base->pool;
 
   comb->priv.uri_path = path;
@@ -779,31 +892,32 @@ static dav_resource *dav_svn_create_private_resource(
   return &comb->res;
 }
 
-static void log_warning(apr_pool_t *pool, void *baton, const char *fmt, ...)
+
+static void log_warning(void *baton, svn_error_t *err)
 {
   request_rec *r = baton;
-  va_list va;
-  const char *s;
 
-  va_start(va, fmt);
-  s = apr_pvsprintf(r->pool, fmt, va);
-  va_end(va);
+  /* ### hmm. the FS is cleaned up at request cleanup time. "r" might
+     ### not really be valid. we should probably put the FS into a
+     ### subpool to ensure it gets cleaned before the request.
 
-  ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", s);
+     ### is there a good way to create and use a subpool for all
+     ### of our functions ... ??
+  */
 
-  /* Ignore the `pool' parameter, we got our pool from the baton. */
-  (void) pool;
+  ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s", err->message);
 }
 
 
-dav_error * dav_svn_split_uri (request_rec *r,
-                               const char *uri_to_split,
-                               const char *root_path,
-                               const char **cleaned_uri,
-                               int *trailing_slash,
-                               const char **repos_name,
-                               const char **relative_path,
-                               const char **repos_path)
+AP_MODULE_DECLARE(dav_error *)
+dav_svn_split_uri(request_rec *r,
+                  const char *uri_to_split,
+                  const char *root_path,
+                  const char **cleaned_uri,
+                  int *trailing_slash,
+                  const char **repos_name,
+                  const char **relative_path,
+                  const char **repos_path)
 {
   apr_size_t len1;
   int had_slash;
@@ -813,8 +927,8 @@ dav_error * dav_svn_split_uri (request_rec *r,
   char *uri;
 
   /* one of these is NULL, the other non-NULL. */
-  fs_path = dav_svn_get_fs_path(r);
-  fs_parent_path = dav_svn_get_fs_parent_path(r);
+  fs_path = dav_svn__get_fs_path(r);
+  fs_parent_path = dav_svn__get_fs_parent_path(r);
 
   if ((fs_path == NULL) && (fs_parent_path == NULL))
     {
@@ -932,12 +1046,12 @@ dav_error * dav_svn_split_uri (request_rec *r,
   *relative_path = apr_pstrdup(r->pool, relative);
 
   /* Code to remove the !svn junk from the front of the relative path,
-     mainly stolen from dav_svn_parse_uri().  This code assumes that
+     mainly stolen from parse_uri().  This code assumes that
      the 'relative' string being parsed doesn't start with '/'. */
   relative++;
 
   {
-    const char *special_uri = dav_svn_get_special_uri(r);
+    const char *special_uri = dav_svn__get_special_uri(r);
     apr_size_t len2;
     char ch;
 
@@ -1032,9 +1146,10 @@ dav_error * dav_svn_split_uri (request_rec *r,
               }
             
             if (defn->name == NULL)
-              dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
-                            SVN_ERR_APMOD_MALFORMED_URI,
-                            "Couldn't match subdir after special_uri.");
+              return
+                dav_new_error(r->pool, HTTP_INTERNAL_SERVER_ERROR,
+                              SVN_ERR_APMOD_MALFORMED_URI,
+                              "Couldn't match subdir after special_uri.");
           }
       }
     else
@@ -1049,11 +1164,272 @@ dav_error * dav_svn_split_uri (request_rec *r,
 }
 
 
-static dav_error * dav_svn_get_resource(request_rec *r,
-                                        const char *root_path,
-                                        const char *label,
-                                        int use_checked_in,
-                                        dav_resource **resource)
+/* Context for cleanup handler. */
+struct cleanup_fs_access_baton
+{
+  svn_fs_t *fs;
+  apr_pool_t *pool;
+};
+
+
+/* Pool cleanup handler.  Make sure fs's access ctx points to NULL
+   when request pool is destroyed. */
+static apr_status_t
+cleanup_fs_access(void *data)
+{
+  svn_error_t *serr;
+  struct cleanup_fs_access_baton *baton = data;
+  
+  serr = svn_fs_set_access(baton->fs, NULL);
+  if (serr)
+    {
+      ap_log_perror(APLOG_MARK, APLOG_ERR, serr->apr_err, baton->pool,
+                    "cleanup_fs_access: error clearing fs access context");
+      svn_error_clear(serr);
+    }
+
+  return APR_SUCCESS;
+}
+
+
+/* Helper func to construct a special 'parentpath' private resource. */
+static dav_error *
+get_parentpath_resource(request_rec *r,
+                        const char *root_path,
+                        dav_resource **resource)
+{
+  const char *new_uri;
+  dav_svn_root *droot = apr_pcalloc(r->pool, sizeof(*droot));
+  dav_svn_repos *repos = apr_pcalloc(r->pool, sizeof(*repos));
+  dav_resource_combined *comb = apr_pcalloc(r->pool, sizeof(*comb));
+  apr_size_t len = strlen(r->uri);
+
+  comb->res.exists = TRUE;
+  comb->res.collection = TRUE;
+  comb->res.uri = apr_pstrdup(r->pool, r->uri);
+  comb->res.info = &comb->priv;
+  comb->res.hooks = &dav_svn__hooks_repository;
+  comb->res.pool = r->pool;
+  comb->res.type = DAV_RESOURCE_TYPE_PRIVATE;
+  
+  comb->priv.restype = DAV_SVN_RESTYPE_PARENTPATH_COLLECTION;
+  comb->priv.r = r;
+  comb->priv.repos_path = "Collection of Repositories";
+  comb->priv.root = *droot;
+  droot->rev = SVN_INVALID_REVNUM;
+  
+  comb->priv.repos = repos;      
+  repos->pool = r->pool;
+  repos->xslt_uri = dav_svn__get_xslt_uri(r);
+  repos->autoversioning = dav_svn__get_autoversioning_flag(r);
+  repos->base_url = ap_construct_url(r->pool, "", r);
+  repos->special_uri = dav_svn__get_special_uri(r);
+  repos->username = r->user;
+  
+  /* Make sure this type of resource always has a trailing slash; if
+     not, redirect to a URI that does. */
+  if (r->uri[len-1] != '/')
+    {
+      new_uri = apr_pstrcat(r->pool, ap_escape_uri(r->pool, r->uri),
+                            "/", NULL);
+      apr_table_setn(r->headers_out, "Location",
+                     ap_construct_url(r->pool, new_uri, r));
+      return dav_new_error(r->pool, HTTP_MOVED_PERMANENTLY, 0,
+                           "Requests for a collection must have a "
+                           "trailing slash on the URI.");
+    }
+  
+  /* No other "prepping" of resource needs to happen -- no opening
+     of a repository or anything like that, because, well, there's
+     no repository to open. */
+  *resource = &comb->res;
+  return NULL;
+}
+
+/* --------------- Borrowed from httpd's mod_negotiation.c -------------- */
+
+typedef struct accept_rec {
+  char *name;                 /* MUST be lowercase */
+  float quality;
+} accept_rec;
+
+/*
+ * Get a single Accept-encoding line from ACCEPT_LINE, and place the
+ * information we have parsed out of it into RESULT.
+ */
+
+static const char *get_entry(apr_pool_t *p, accept_rec *result,
+                             const char *accept_line)
+{
+    result->quality = 1.0f;
+
+    /*
+     * Note that this handles what I gather is the "old format",
+     *
+     *    Accept: text/html text/plain moo/zot
+     *
+     * without any compatibility kludges --- if the token after the
+     * MIME type begins with a semicolon, we know we're looking at parms,
+     * otherwise, we know we aren't.  (So why all the pissing and moaning
+     * in the CERN server code?  I must be missing something).
+     */
+
+    result->name = ap_get_token(p, &accept_line, 0);
+    ap_str_tolower(result->name);     /* You want case insensitive,
+                                       * you'll *get* case insensitive.
+                                       */
+
+    while (*accept_line == ';')
+      {
+        /* Parameters ... */
+
+        char *parm;
+        char *cp;
+        char *end;
+
+        ++accept_line;
+        parm = ap_get_token(p, &accept_line, 1);
+
+        /* Look for 'var = value' --- and make sure the var is in lcase. */
+
+        for (cp = parm; (*cp && !apr_isspace(*cp) && *cp != '='); ++cp)
+          {
+            *cp = apr_tolower(*cp);
+          }
+
+        if (!*cp)
+          {
+            continue;           /* No '='; just ignore it. */
+          }
+
+        *cp++ = '\0';           /* Delimit var */
+        while (*cp && (apr_isspace(*cp) || *cp == '='))
+          {
+            ++cp;
+          }
+
+        if (*cp == '"')
+          {
+            ++cp;
+            for (end = cp;
+                 (*end && *end != '\n' && *end != '\r' && *end != '\"');
+                 end++);
+          }
+        else
+          {
+            for (end = cp; (*end && !apr_isspace(*end)); end++);
+          }
+        if (*end)
+          {
+            *end = '\0';        /* strip ending quote or return */
+          }
+        ap_str_tolower(cp);
+
+        if (parm[0] == 'q'
+            && (parm[1] == '\0' || (parm[1] == 's' && parm[2] == '\0')))
+          {
+            result->quality = (float) atof(cp);
+          }
+      }
+
+    if (*accept_line == ',')
+      {
+        ++accept_line;
+      }
+
+    return accept_line;
+}
+
+/* @a accept_line is the Accept-Encoding header, which is of the
+   format:
+
+     Accept-Encoding: name; q=N;
+
+   This function will return an array of accept_rec structures that
+   contain the accepted encodings and the quality each one has
+   associated with them.
+*/
+static apr_array_header_t *do_header_line(apr_pool_t *p,
+                                          const char *accept_line)
+{
+    apr_array_header_t *accept_recs;
+
+    if (!accept_line)
+      return NULL;
+
+    accept_recs = apr_array_make(p, 10, sizeof(accept_rec));
+
+    while (*accept_line)
+      {
+        accept_rec *prefs = (accept_rec *) apr_array_push(accept_recs);
+        accept_line = get_entry(p, prefs, accept_line);
+      }
+
+    return accept_recs;
+}
+
+/* ---------------------------------------------------------------------- */
+
+
+/* qsort comparison function for the quality field of the accept_rec
+   structure */
+static int sort_encoding_pref(const void *accept_rec1, const void *accept_rec2)
+{
+  float diff = ((const accept_rec *) accept_rec1)->quality -
+      ((const accept_rec *) accept_rec2)->quality;
+  return (diff == 0 ? 0 : (diff > 0 ? -1 : 1));
+}
+
+/* Parse and handle any possible Accept-Encoding header that has been
+   sent as part of the request.  */
+static void
+negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
+{
+  /* It would be nice if mod_negotiation
+     <http://httpd.apache.org/docs-2.1/mod/mod_negotiation.html> could
+     handle the Accept-Encoding header parsing for us.  Sadly, it
+     looks like its data structures and routines are private (see
+     httpd/modules/mappers/mod_negotiation.c).  Thus, we duplicate the
+     necessary ones in this file. */
+  int i;
+  const apr_array_header_t *encoding_prefs;
+  encoding_prefs = do_header_line(r->pool, 
+                                  apr_table_get(r->headers_in, 
+                                                "Accept-Encoding"));
+
+  if (!encoding_prefs || apr_is_empty_array(encoding_prefs))
+    {
+      *svndiff_version = 0;
+      return;
+    }
+
+  *svndiff_version = 0;
+  qsort(encoding_prefs->elts, (size_t) encoding_prefs->nelts,
+        sizeof(accept_rec), sort_encoding_pref);
+  for (i = 0; i < encoding_prefs->nelts; i++)
+    {
+      struct accept_rec rec = APR_ARRAY_IDX(encoding_prefs, i,
+                                            struct accept_rec);
+      if (strcmp(rec.name, "svndiff1") == 0)
+        {
+          *svndiff_version = 1;
+          break;
+        }
+      else if (strcmp(rec.name, "svndiff") == 0)
+        {
+          *svndiff_version = 0;
+          break;
+        }
+    } 
+}
+
+
+static dav_error *
+get_resource(request_rec *r,
+             const char *root_path,
+             const char *label,
+             int use_checked_in,
+             dav_resource **resource)
 {
   const char *fs_path;
   const char *repo_name;
@@ -1065,41 +1441,73 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   const char *repos_name;
   const char *relative;
   const char *repos_path;
+  const char *repos_key;
+  const char *version_name;
   svn_error_t *serr;
   dav_error *err;
   int had_slash;
+  dav_locktoken_list *ltl;
+  struct cleanup_fs_access_baton *cleanup_baton;
+  void *userdata;
 
-  repo_name = dav_svn_get_repo_name(r);
-  xslt_uri = dav_svn_get_xslt_uri(r);
+  repo_name = dav_svn__get_repo_name(r);
+  xslt_uri = dav_svn__get_xslt_uri(r);
+  fs_parent_path = dav_svn__get_fs_parent_path(r);
+
+  /* Special case: detect and build the SVNParentPath as a unique type
+     of private resource, iff the SVNListParentPath directive is 'on'. */
+  if (fs_parent_path && dav_svn__get_list_parentpath_flag(r))
+    {
+      char *uri = apr_pstrdup(r->pool, r->uri);
+      char *parentpath = apr_pstrdup(r->pool, root_path);
+      apr_size_t uri_len = strlen(uri);
+      apr_size_t parentpath_len = strlen(parentpath);
+
+      if (uri[uri_len-1] == '/')
+        uri[uri_len-1] = '\0';          
+
+      if (parentpath[parentpath_len-1] == '/')
+        parentpath[parentpath_len-1] = '\0';          
+
+      if (strcmp(parentpath, uri) == 0)
+        {
+          err = get_parentpath_resource(r, root_path, resource);
+          if (err)
+            return err;
+          return NULL;
+        }
+    }
 
   /* This does all the work of interpreting/splitting the request uri. */
-  err = dav_svn_split_uri (r, r->uri, root_path,
-                           &cleaned_uri, &had_slash, 
-                           &repos_name, &relative, &repos_path);
+  err = dav_svn_split_uri(r, r->uri, root_path,
+                          &cleaned_uri, &had_slash, 
+                          &repos_name, &relative, &repos_path);
   if (err)
     return err;
 
   /* The path that we will eventually try to open as an svn
      repository.  Normally defined by the SVNPath directive. */
-  fs_path = dav_svn_get_fs_path(r);
+  fs_path = dav_svn__get_fs_path(r);
 
   /* If the SVNParentPath directive was used instead... */
-  fs_parent_path = dav_svn_get_fs_parent_path(r);
   if (fs_parent_path != NULL)
     {      
-      /* ...then the path to the repository is actually one implicit
+      /* ...then the URL to the repository is actually one implicit
          component longer... */
-      root_path = svn_path_join (root_path, repos_name, r->pool);
+      root_path = svn_path_join(root_path, repos_name, r->pool);
       /* ...and we need to specify exactly what repository to open. */
-      fs_path = svn_path_join (fs_parent_path, repos_name, r->pool);
+      fs_path = svn_path_join(fs_parent_path, repos_name, r->pool);
     }
 
   /* Start building and filling a 'combination' object. */
   comb = apr_pcalloc(r->pool, sizeof(*comb));
   comb->res.info = &comb->priv;
-  comb->res.hooks = &dav_svn_hooks_repos;
+  comb->res.hooks = &dav_svn__hooks_repository;
   comb->res.pool = r->pool;
   comb->res.uri = cleaned_uri;
+
+  /* Original request, off which to generate subrequests later. */
+  comb->priv.r = r;
 
   /* ### ugly hack to carry over Content-Type data to the open_stream, which
      ### does not have access to the request headers. */
@@ -1111,6 +1519,8 @@ static dav_error * dav_svn_get_resource(request_rec *r,
       && strcmp(ct, SVN_SVNDIFF_MIME_TYPE) == 0;
   }
 
+  negotiate_encoding_prefs(r, &comb->priv.svndiff_version);
+
   /* ### and another hack for computing diffs to send to the client */
   comb->priv.delta_base = apr_table_get(r->headers_in,
                                         SVN_DAV_DELTA_BASE_HEADER);
@@ -1118,6 +1528,17 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* Gather any options requested by an svn client. */
   comb->priv.svn_client_options = apr_table_get(r->headers_in,
                                                 SVN_DAV_OPTIONS_HEADER);
+
+  /* See if the client sent a custom 'version name' request header. */
+  version_name = apr_table_get(r->headers_in, SVN_DAV_VERSION_NAME_HEADER);
+  comb->priv.version_name 
+    = version_name ? SVN_STR_TO_REV(version_name): SVN_INVALID_REVNUM;
+
+  /* Remember checksums, if any. */
+  comb->priv.base_checksum =
+    apr_table_get(r->headers_in, SVN_DAV_BASE_FULLTEXT_MD5_HEADER);
+  comb->priv.result_checksum =
+    apr_table_get(r->headers_in, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER);
 
   /* "relative" is part of the "uri" string, so it has the proper
      lifetime to store here. */
@@ -1137,7 +1558,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* We are assuming the root_path will live at least as long as this
      resource. Considering that it typically comes from the per-dir
      config in mod_dav, this is valid for now. */
-  repos->root_path = root_path;
+  repos->root_path = svn_path_uri_encode(root_path, r->pool);
 
   /* where is the SVN FS for this resource? */
   repos->fs_path = fs_path;
@@ -1148,30 +1569,126 @@ static dav_error * dav_svn_get_resource(request_rec *r,
   /* An XSL transformation */
   repos->xslt_uri = xslt_uri;
 
+  /* Is autoversioning active in this repos? */
+  repos->autoversioning = dav_svn__get_autoversioning_flag(r);
+
   /* Remember various bits for later URL construction */
   repos->base_url = ap_construct_url(r->pool, "", r);
-  repos->special_uri = dav_svn_get_special_uri(r);
+  repos->special_uri = dav_svn__get_special_uri(r);
 
   /* Remember who is making this request */
-  if ((repos->username = r->user) == NULL)
-    repos->username = "anonymous";
+  repos->username = r->user;
 
-  /* open the SVN FS */
-  serr = svn_repos_open(&(repos->repos), fs_path, r->pool);
-  if (serr != NULL)
+  /* Remember if the requesting client is a Subversion client */
+  {
+    const char *ua = apr_table_get(r->headers_in, "User-Agent");
+    if (ua && (ap_strstr_c(ua, "SVN/") == ua))
+      repos->is_svn_client = TRUE;
+  }
+  
+  /* Retrieve/cache open repository */
+  repos_key = apr_pstrcat(r->pool, "mod_dav_svn:", fs_path, NULL);
+  apr_pool_userdata_get(&userdata, repos_key, r->connection->pool);
+  repos->repos = userdata;
+  if (repos->repos == NULL)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 apr_psprintf(r->pool,
-                                              "Could not open the SVN "
-                                              "filesystem at %s",
-                                              fs_path));
+      serr = svn_repos_open(&(repos->repos), fs_path, r->connection->pool);
+      if (serr != NULL)
+        {
+          /* The error returned by svn_repos_open might contain the
+             actual path to the failed repository.  We don't want to
+             leak that path back to the client, because that would be
+             a security risk, but we do want to log the real error on
+             the server side. */
+          return dav_svn__sanitize_error(serr, "Could not open the requested "
+                                         "SVN filesystem",
+                                         HTTP_INTERNAL_SERVER_ERROR, r);
+        }
+
+      /* Cache the open repos for the next request on this connection */
+      apr_pool_userdata_set(repos->repos, repos_key,
+                            NULL, r->connection->pool);
     }
 
   /* cache the filesystem object */
-  repos->fs = svn_repos_fs (repos->repos);
+  repos->fs = svn_repos_fs(repos->repos);
 
   /* capture warnings during cleanup of the FS */
   svn_fs_set_warning_func(repos->fs, log_warning, r);
+
+  /* if an authenticated username is present, attach it to the FS */
+  if (r->user)
+    {
+      svn_fs_access_t *access_ctx;
+
+      /* The fs is cached in connection->pool, but the fs access
+         context lives in r->pool.  Because the username or token
+         could change on each request, we need to make sure that the
+         fs points to a NULL access context after the request is gone. */
+      cleanup_baton = apr_pcalloc(r->pool, sizeof(*cleanup_baton));
+      cleanup_baton->pool = r->pool;
+      cleanup_baton->fs = repos->fs;      
+      apr_pool_cleanup_register(r->pool, cleanup_baton, cleanup_fs_access,
+                                apr_pool_cleanup_null);      
+      
+      /* Create an access context based on the authenticated username. */
+      serr = svn_fs_create_access(&access_ctx, r->user, r->pool);
+      if (serr)
+        {
+          return dav_svn__sanitize_error(serr,
+                                         "Could not create fs access context",
+                                         HTTP_INTERNAL_SERVER_ERROR, r);
+        }
+
+      /* Attach the access context to the fs. */
+      serr = svn_fs_set_access(repos->fs, access_ctx);
+      if (serr)
+        {
+          return dav_svn__sanitize_error(serr, "Could not attach access "
+                                         "context to fs",
+                                         HTTP_INTERNAL_SERVER_ERROR, r);
+        }
+    }
+
+  /* Look for locktokens in the "If:" request header. */
+  err = dav_get_locktoken_list(r, &ltl);
+  
+  /* dav_get_locktoken_list claims to return a NULL list when no
+     locktokens are present.  But it actually throws this error
+     instead!  So we're deliberately trapping/ignoring it. 
+
+     This is a workaround for a bug in mod_dav.  Remove this when the
+     bug is fixed in mod_dav.  See Subversion Issue #2248 */
+  if (err && (err->error_id != DAV_ERR_IF_ABSENT))
+    return err;
+
+  /* If one or more locktokens are present in the header, push them
+     into the filesystem access context. */
+  if (ltl)
+    {
+      svn_fs_access_t *access_ctx;
+      dav_locktoken_list *list = ltl;
+
+      serr = svn_fs_get_access(&access_ctx, repos->fs);
+      if (serr)
+        {
+          return dav_svn__sanitize_error(serr, "Lock token is in request, "
+                                         "but no user name",
+                                         HTTP_BAD_REQUEST, r);
+        }
+
+      do {
+        serr = svn_fs_access_add_lock_token(access_ctx,
+                                            list->locktoken->uuid_str);
+        if (serr)
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Error pushing token into filesystem.",
+                                      r->pool);
+        list = list->next;
+
+      } while (list);
+    }
+
 
   /* Figure out the type of the resource. Note that we have a PARSE step
      which is separate from a PREP step. This is because the PARSE can
@@ -1179,7 +1696,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
      the type of the resource. */
 
   /* skip over the leading "/" in the relative URI */
-  if (dav_svn_parse_uri(comb, relative + 1, label, use_checked_in))
+  if (parse_uri(comb, relative + 1, label, use_checked_in))
     goto malformed_URI;
 
 #ifdef SVN_DEBUG
@@ -1193,7 +1710,7 @@ static dav_error * dav_svn_get_resource(request_rec *r,
 #endif
 
   /* prepare the resource for operation */
-  if ((err = dav_svn_prep_resource(comb)) != NULL)
+  if ((err = prep_resource(comb)) != NULL)
     return err;
 
   /* a GET request for a REGULAR collection resource MUST have a trailing
@@ -1230,9 +1747,37 @@ static dav_error * dav_svn_get_resource(request_rec *r,
                        "software.");
 }
 
-static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
-                                               dav_resource **parent_resource)
+
+/* Helper func:  return the parent of PATH, allocated in POOL. */
+static const char *
+get_parent_path(const char *path, apr_pool_t *pool)
 {
+  apr_size_t len;
+  const char *parentpath, *base_name;
+  char *tmp = apr_pstrdup(pool, path);
+
+  len = strlen(tmp);
+
+  if (len > 0)
+    {
+      /* Remove any trailing slash; else svn_path_split() asserts. */
+      if (tmp[len-1] == '/')
+        tmp[len-1] = '\0';      
+      svn_path_split(tmp, &parentpath, &base_name, pool);
+
+      return parentpath;
+    }  
+
+  return path;
+}
+
+
+static dav_error *
+get_parent_resource(const dav_resource *resource,
+                    dav_resource **parent_resource)
+{
+  dav_resource *parent;
+  dav_resource_private *parentinfo;
   svn_stringbuf_t *path = resource->info->uri_path;
 
   /* the root of the repository has no parent */
@@ -1244,6 +1789,34 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
 
   switch (resource->type)
     {
+    case DAV_RESOURCE_TYPE_REGULAR:
+
+      parent = apr_pcalloc(resource->pool, sizeof(*parent));
+      parentinfo  = apr_pcalloc(resource->pool, sizeof(*parentinfo));
+
+      parent->type = DAV_RESOURCE_TYPE_REGULAR;
+      parent->exists = 1;
+      parent->collection = 1;
+      parent->versioned = 1;
+      parent->hooks = resource->hooks;
+      parent->pool = resource->pool;
+      parent->uri = get_parent_path(resource->uri, resource->pool);
+      parent->info = parentinfo;
+
+      parentinfo->pool = resource->info->pool;
+      parentinfo->uri_path = 
+        svn_stringbuf_create(get_parent_path(resource->info->uri_path->data,
+                                             resource->pool), resource->pool);
+      parentinfo->repos = resource->info->repos;
+      parentinfo->root = resource->info->root;
+      parentinfo->r = resource->info->r;
+      parentinfo->svn_client_options = resource->info->svn_client_options;
+      parentinfo->repos_path = get_parent_path(resource->info->repos_path,
+                                               resource->pool);
+
+      *parent_resource = parent;
+      break;
+
     case DAV_RESOURCE_TYPE_WORKING:
       /* The "/" occurring within the URL of working resources is part of
          its identifier; it does not establish parent resource relationships.
@@ -1251,8 +1824,12 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
          http://host.name/path2repos/$svn/wrk/
       */
       *parent_resource =
-        dav_svn_create_private_resource(resource,
-                                        DAV_SVN_RESTYPE_WRK_COLLECTION);
+        create_private_resource(resource, DAV_SVN_RESTYPE_WRK_COLLECTION);
+      break;
+
+    case DAV_RESOURCE_TYPE_ACTIVITY:
+      *parent_resource =
+        create_private_resource(resource, DAV_SVN_RESTYPE_ACT_COLLECTION);
       break;
 
     default:
@@ -1271,9 +1848,10 @@ static dav_error * dav_svn_get_parent_resource(const dav_resource *resource,
   return NULL;
 }
 
+
 /* does RES2 live in the same repository as RES1? */
-static int is_our_resource(const dav_resource *res1,
-                           const dav_resource *res2)
+static int
+is_our_resource(const dav_resource *res1, const dav_resource *res2)
 {
   if (res1->hooks != res2->hooks
       || strcmp(res1->info->repos->fs_path, res2->info->repos->fs_path) != 0)
@@ -1285,8 +1863,8 @@ static int is_our_resource(const dav_resource *res1,
   /* coalesce the repository */
   if (res1->info->repos != res2->info->repos)
     {      
-      /* close the old, redundant filesystem */
-      (void) svn_repos_close(res2->info->repos->repos);
+      /* ### might be nice to have a pool which we can clear to toss
+         ### out the old, redundant repos/fs.  */
 
       /* have res2 point to res1's filesystem */
       res2->info->repos = res1->info->repos;
@@ -1296,31 +1874,32 @@ static int is_our_resource(const dav_resource *res1,
       if (res2->info->root.txn_name)
         {
           /* reopen the txn by name */
-          (void) svn_fs_open_txn(&(res2->info->root.txn),
-                                 res2->info->repos->fs,
-                                 res2->info->root.txn_name,
-                                 res2->info->repos->pool);
+          svn_error_clear(svn_fs_open_txn(&(res2->info->root.txn),
+                                          res2->info->repos->fs,
+                                          res2->info->root.txn_name,
+                                          res2->info->repos->pool));
 
           /* regenerate the txn "root" object */
-          (void) svn_fs_txn_root(&(res2->info->root.root),
-                                 res2->info->root.txn,
-                                 res2->info->repos->pool);
+          svn_error_clear(svn_fs_txn_root(&(res2->info->root.root),
+                                          res2->info->root.txn,
+                                          res2->info->repos->pool));
         }
       else if (res2->info->root.rev)
         {
           /* default:  regenerate the revision "root" object */
-          (void) svn_fs_revision_root(&(res2->info->root.root),
-                                      res2->info->repos->fs,
-                                      res2->info->root.rev,
-                                      res2->info->repos->pool);
+          svn_error_clear(svn_fs_revision_root(&(res2->info->root.root),
+                                               res2->info->repos->fs,
+                                               res2->info->root.rev,
+                                               res2->info->repos->pool));
         }
     }
 
   return 1;
 }
 
-static int dav_svn_is_same_resource(const dav_resource *res1,
-                                    const dav_resource *res2)
+
+static int
+is_same_resource(const dav_resource *res1, const dav_resource *res2)
 {
   if (!is_our_resource(res1, res2))
     return 0;
@@ -1330,8 +1909,9 @@ static int dav_svn_is_same_resource(const dav_resource *res1,
   return svn_stringbuf_compare(res1->info->uri_path, res2->info->uri_path);
 }
 
-static int dav_svn_is_parent_resource(const dav_resource *res1,
-                                      const dav_resource *res2)
+
+static int
+is_parent_resource(const dav_resource *res1, const dav_resource *res2)
 {
   apr_size_t len1 = strlen(res1->info->uri_path->data);
   apr_size_t len2;
@@ -1354,10 +1934,26 @@ static int dav_svn_is_parent_resource(const dav_resource *res1,
 }
 
 
-dav_error * dav_svn_resource_kind (request_rec *r,
-                                   const char *uri,
-                                   const char *root_path,
-                                   svn_node_kind_t *kind)
+#if 0
+/* Given an apache request R and a ROOT_PATH to the svn location
+   block, set *KIND to the node-kind of the URI's associated
+   (revision, path) pair, if possible.
+
+   Public uris, baseline collections, version resources, and working
+   (non-baseline) resources all have associated (revision, path)
+   pairs, and thus one of {svn_node_file, svn_node_dir, svn_node_none}
+   will be returned.
+
+   If URI is something more abstract, then set *KIND to
+   svn_node_unknown.  This is true for baselines, working baselines,
+   version controled configurations, activities, histories, and other
+   private resources.
+*/
+static dav_error *
+resource_kind(request_rec *r,
+              const char *uri,
+              const char *root_path,
+              svn_node_kind_t *kind)
 {
   dav_error *derr;
   svn_error_t *serr;
@@ -1371,7 +1967,7 @@ dav_error * dav_svn_resource_kind (request_rec *r,
      this is usually a no-op.  But sometimes the caller may pass in
      the Destination: header uri.
 
-     ### WHAT WE REALLY WANT here is to refactor dav_svn_get_resource,
+     ### WHAT WE REALLY WANT here is to refactor get_resource,
      so that some alternate interface actually allows us to specify
      the URI to process, i.e. not always process r->uri.
   */
@@ -1379,12 +1975,12 @@ dav_error * dav_svn_resource_kind (request_rec *r,
   r->uri = apr_pstrdup(r->pool, uri);
  
   /* parse the uri and prep the associated resource. */
-  derr = dav_svn_get_resource(r, root_path,
-                              /* ### I can't believe that every single
-                                 parser ignores the LABEL and USE_CHECKED_IN
-                                 args below!! */
-                              "ignored_label", 1,
-                              &resource);
+  derr = get_resource(r, root_path,
+                      /* ### I can't believe that every single
+                         parser ignores the LABEL and USE_CHECKED_IN
+                         args below!! */
+                      "ignored_label", 1,
+                      &resource);
   /* Restore r back to normal. */
   r->uri = saved_uri;
   
@@ -1408,8 +2004,12 @@ dav_error * dav_svn_resource_kind (request_rec *r,
         *kind = svn_node_unknown;
 
       else /* ver */
-        *kind = svn_fs_check_path (resource->info->root.root,
-                                   resource->info->repos_path, r->pool);
+        {
+          derr = fs_check_path(kind, resource->info->root.root,
+                               resource->info->repos_path, r->pool);
+          if (derr != NULL)
+            return derr;
+        }
     }
   
   else if (resource->type == DAV_RESOURCE_TYPE_WORKING)
@@ -1421,20 +2021,22 @@ dav_error * dav_svn_resource_kind (request_rec *r,
         {
           /* don't call fs_check_path on the txn, but on the original
              revision that the txn is based on. */
-          base_rev = svn_fs_txn_base_revision (resource->info->root.txn);
-          serr = svn_fs_revision_root (&base_rev_root,
-                                       resource->info->repos->fs,
-                                       base_rev, r->pool);
+          base_rev = svn_fs_txn_base_revision(resource->info->root.txn);
+          serr = svn_fs_revision_root(&base_rev_root,
+                                      resource->info->repos->fs,
+                                      base_rev, r->pool);
           if (serr)
-            return 
-              dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  apr_psprintf
-                                  (r->pool,
-                                   "Could not open root of revision %"
-                                   SVN_REVNUM_T_FMT, base_rev));
-      
-          *kind = svn_fs_check_path (base_rev_root,
-                                     resource->info->repos_path, r->pool);
+            return dav_svn__convert_err
+              (serr, HTTP_INTERNAL_SERVER_ERROR,
+               apr_psprintf(r->pool,
+                            "Could not open root of revision %ld",
+                            base_rev),
+               r->pool);
+
+          derr = fs_check_path(kind, base_rev_root,
+                               resource->info->repos_path, r->pool);
+          if (derr != NULL)
+            return derr;      
         }
     }
 
@@ -1444,12 +2046,16 @@ dav_error * dav_svn_resource_kind (request_rec *r,
 
   return NULL;
 }
+#endif
 
 
-static dav_error * dav_svn_open_stream(const dav_resource *resource,
-                                       dav_stream_mode mode,
-                                       dav_stream **stream)
+static dav_error *
+open_stream(const dav_resource *resource,
+            dav_stream_mode mode,
+            dav_stream **stream)
 {
+  svn_node_kind_t kind;
+  dav_error *derr;
   svn_error_t *serr;
 
   if (mode == DAV_MODE_WRITE_TRUNC || mode == DAV_MODE_WRITE_SEEKABLE)
@@ -1475,38 +2081,80 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   *stream = apr_pcalloc(resource->pool, sizeof(**stream));
   (*stream)->res = resource;
 
-  /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
-     we cannot write into an "id root". Partly because the FS may not
-     let us, but mostly that we have an id root only to deal with Version
-     Resources, and those are read only. */
+  derr = fs_check_path(&kind, resource->info->root.root,
+                       resource->info->repos_path, resource->pool); 
+  if (derr != NULL)
+    return derr;
 
+  if (kind == svn_node_none) /* No existing file. */
+    {
+      serr = svn_fs_make_file(resource->info->root.root,
+                              resource->info->repos_path,
+                              resource->pool);
+      
+      if (serr != NULL)
+        {
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Could not create file within the "
+                                      "repository.",
+                                      resource->pool);
+        }
+    }
+  
+  /* if the working-resource was auto-checked-out (i.e. came into
+     existence through the autoversioning feature), then possibly set
+     the svn:mime-type property based on whatever value mod_mime has
+     chosen.  If the path already has an svn:mime-type property
+     set, do nothing. */
+  if (resource->info->auto_checked_out
+      && resource->info->r->content_type)
+    {
+      svn_string_t *mime_type;
+
+      serr = svn_fs_node_prop(&mime_type,
+                              resource->info->root.root,
+                              resource->info->repos_path,
+                              SVN_PROP_MIME_TYPE,
+                              resource->pool);
+      
+      if (serr != NULL)
+        {
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "Error fetching mime-type property.",
+                                      resource->pool);
+        }
+
+      if (!mime_type)
+        {
+          serr = svn_fs_change_node_prop(resource->info->root.root,
+                                         resource->info->repos_path,
+                                         SVN_PROP_MIME_TYPE,
+                                         svn_string_create
+                                             (resource->info->r->content_type,
+                                              resource->pool),
+                                         resource->pool);
+          if (serr != NULL)
+            {
+              return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                          "Could not set mime-type property.",
+                                          resource->pool);
+            }
+        }
+    }
+  
   serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
                                 &(*stream)->delta_baton,
                                 resource->info->root.root,
                                 resource->info->repos_path,
+                                resource->info->base_checksum,
+                                resource->info->result_checksum,
                                 resource->pool);
-  if (serr != NULL && serr->apr_err == SVN_ERR_FS_NOT_FOUND)
-    {
-      svn_error_clear(serr);
-      serr = svn_fs_make_file(resource->info->root.root,
-                              resource->info->repos_path,
-                              resource->pool);
-      if (serr != NULL)
-        {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "Could not create file within the "
-                                     "repository.");
-        }
-      serr = svn_fs_apply_textdelta(&(*stream)->delta_handler,
-                                    &(*stream)->delta_baton,
-                                    resource->info->root.root,
-                                    resource->info->repos_path,
-                                    resource->pool);
-    }
+
   if (serr != NULL)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not prepare to write the file");
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Could not prepare to write the file",
+                                  resource->pool);
     }
 
   /* if the incoming data is an SVNDIFF, then create a stream that
@@ -1529,25 +2177,53 @@ static dav_error * dav_svn_open_stream(const dav_resource *resource,
   return NULL;
 }
 
-static dav_error * dav_svn_close_stream(dav_stream *stream, int commit)
+
+static dav_error *
+close_stream(dav_stream *stream, int commit)
 {
+  svn_error_t *serr;
+  apr_pool_t *pool = stream->res->pool;
+
   if (stream->rstream != NULL)
-    svn_stream_close(stream->rstream);
+    {
+      serr = svn_stream_close(stream->rstream);
+      if (serr)
+        return dav_svn__convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+           "mod_dav_svn close_stream: error closing read stream",
+           pool);
+    }
 
   /* if we have a write-stream, then closing it also takes care of the
      handler (so make sure not to send a NULL to it, too) */
   if (stream->wstream != NULL)
-    svn_stream_close(stream->wstream);
+    {
+      serr = svn_stream_close(stream->wstream);
+      if (serr)
+        return dav_svn__convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+           "mod_dav_svn close_stream: error closing write stream",
+           pool);
+    }
   else if (stream->delta_handler != NULL)
-    (*stream->delta_handler)(NULL, stream->delta_baton);
+    {
+      serr = (*stream->delta_handler)(NULL, stream->delta_baton);
+      if (serr)
+        return dav_svn__convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+           "mod_dav_svn close_stream: error sending final (null) delta window",
+           pool);
+    }
 
   return NULL;
 }
 
-static dav_error * dav_svn_write_stream(dav_stream *stream, const void *buf,
-                                        apr_size_t bufsize)
+
+static dav_error *
+write_stream(dav_stream *stream, const void *buf, apr_size_t bufsize)
 {
   svn_error_t *serr;
+  apr_pool_t *pool = stream->res->pool;
 
   if (stream->wstream != NULL)
     {
@@ -1577,76 +2253,152 @@ static dav_error * dav_svn_write_stream(dav_stream *stream, const void *buf,
 
   if (serr)
     {
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not write the file contents");
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "could not write the file contents",
+                                  pool);
     }
   return NULL;
 }
 
-static dav_error * dav_svn_seek_stream(dav_stream *stream,
-                                       apr_off_t abs_position)
+
+static dav_error *
+seek_stream(dav_stream *stream, apr_off_t abs_position)
 {
   /* ### fill this in */
 
   return dav_new_error(stream->res->pool, HTTP_NOT_IMPLEMENTED, 0,
                        "Resource body read/write cannot use ranges "
-                       "[at this time].");
+                       "(at this time)");
 }
 
-const char * dav_svn_getetag(const dav_resource *resource)
+/* Returns whether the DAV resource lacks potential for generation of
+   an ETag (defined as any of the following):
+   - it doesn't exist
+   - the resource type isn't REGULAR or VERSION
+   - the resource is a Baseline */
+#define RESOURCE_LACKS_ETAG_POTENTIAL(resource) \
+  (!resource->exists \
+   || (resource->type != DAV_RESOURCE_TYPE_REGULAR \
+       && resource->type != DAV_RESOURCE_TYPE_VERSION) \
+   || (resource->type == DAV_RESOURCE_TYPE_VERSION \
+       && resource->baselined))
+
+
+/* Return the last modification time of RESOURCE, or -1 if the DAV
+   resource type is not handled, or if an error occurs.  Temporary
+   allocations are made from RESOURCE->POOL. */
+static apr_time_t
+get_last_modified(const dav_resource *resource)
 {
+  apr_time_t last_modified;
   svn_error_t *serr;
   svn_revnum_t created_rev;
+  svn_string_t *date_time;
 
-  /* if the resource doesn't exist, isn't a simple REGULAR or VERSION
-     resource, or it is a Baseline, then it has no etag. */
-  /* ### we should assign etags to all resources at some point */
-  if (!resource->exists
-      || (resource->type != DAV_RESOURCE_TYPE_REGULAR
-          && resource->type != DAV_RESOURCE_TYPE_VERSION)
-      || (resource->type == DAV_RESOURCE_TYPE_VERSION && resource->baselined))
-    return "";
-
-  /* ### what kind of etag to return for collections, activities, etc? */
+  if (RESOURCE_LACKS_ETAG_POTENTIAL(resource))
+    return -1;
 
   if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
                                       resource->info->repos_path,
                                       resource->pool)))
     {
+      svn_error_clear(serr);
+      return -1;
+    }
+
+  if ((serr = svn_fs_revision_prop(&date_time, resource->info->repos->fs,
+                                   created_rev, "svn:date", resource->pool)))
+    {
+      svn_error_clear(serr);
+      return -1;
+    }
+
+  if (date_time == NULL || date_time->data == NULL)
+    return -1;
+
+  if ((serr = svn_time_from_cstring(&last_modified, date_time->data,
+                                    resource->pool)))
+    {
+      svn_error_clear(serr);
+      return -1;
+    }
+
+  return last_modified;
+}
+
+
+const char *
+dav_svn__getetag(const dav_resource *resource, apr_pool_t *pool)
+{
+  svn_error_t *serr;
+  svn_revnum_t created_rev;
+
+  if (RESOURCE_LACKS_ETAG_POTENTIAL(resource))
+    return "";
+
+  /* ### what kind of etag to return for activities, etc.? */
+
+  if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
+                                      resource->info->repos_path,
+                                      pool)))
+    {
       /* ### what to do? */
+      svn_error_clear(serr);
       return "";
     }
-  
-  return apr_psprintf(resource->pool, "\"%" SVN_REVNUM_T_FMT "/%s\"",
+
+  /* Use the "weak" format of the etag for collections because our GET
+     requests on collections include dynamic data (the HEAD revision,
+     the build version of Subversion, etc.). */
+  return apr_psprintf(pool, "%s\"%ld/%s\"",
+                      resource->collection ? "W/" : "",
                       created_rev,
-                      apr_xml_quote_string(resource->pool,
+                      apr_xml_quote_string(pool,
                                            resource->info->repos_path, 1));
 }
 
-static dav_error * dav_svn_set_headers(request_rec *r,
-                                       const dav_resource *resource)
+
+/* Since dav_svn__getetag() takes a pool argument, this wrapper is for
+   the mod_dav hooks vtable entry, which does not. */
+static const char *
+getetag_pathetic(const dav_resource *resource)
+{
+  return dav_svn__getetag(resource, resource->pool);
+}
+
+
+static dav_error *
+set_headers(request_rec *r, const dav_resource *resource)
 {
   svn_error_t *serr;
-  apr_off_t length;
+  svn_filesize_t length;
   const char *mimetype = NULL;
+  apr_time_t last_modified;
   
   if (!resource->exists)
     return NULL;
 
-  /* ### what to do for collections, activities, etc */
-
-  /* make sure the proper mtime is in the request record */
-#if 0
-  ap_update_mtime(r, resource->info->finfo.mtime);
-#endif
-
-  /* ### note that these use r->filename rather than <resource> */
-#if 0
-  ap_set_last_modified(r);
-#endif
+  last_modified = get_last_modified(resource);
+  if (last_modified != -1)
+    {
+      /* Note the modification time for the requested resource, and
+         include the Last-Modified header in the response. */
+      ap_update_mtime(r, last_modified);
+      ap_set_last_modified(r);
+    }
 
   /* generate our etag and place it into the output */
-  apr_table_setn(r->headers_out, "ETag", dav_svn_getetag(resource));
+  apr_table_setn(r->headers_out, "ETag",
+                 dav_svn__getetag(resource, resource->pool));
+
+#if 0
+  /* As version resources don't change, encourage caching. */
+  /* ### FIXME: This conditional is wrong -- type is often REGULAR,
+     ### and the resource doesn't seem to be baselined. */
+  if (resource->type == DAV_RESOURCE_TYPE_VERSION)
+    /* Cache resource for one week (specified in seconds). */
+    apr_table_setn(r->headers_out, "Cache-Control", "max-age=604800");
+#endif
 
   /* we accept byte-ranges */
   apr_table_setn(r->headers_out, "Accept-Ranges", "bytes");
@@ -1664,21 +2416,25 @@ static dav_error * dav_svn_set_headers(request_rec *r,
     }
   else if (resource->info->delta_base != NULL)
     {
-      dav_svn_uri_info info;
+      dav_svn__uri_info info;
 
       /* First order of business is to parse it. */
-      serr = dav_svn_simple_parse_uri(&info, resource,
-                                      resource->info->delta_base,
-                                      resource->pool);
+      serr = dav_svn__simple_parse_uri(&info, resource,
+                                       resource->info->delta_base,
+                                       resource->pool);
 
       /* If we successfully parse the base URL, then send an svndiff. */
       if ((serr == NULL) && (info.rev != SVN_INVALID_REVNUM))
         {
           mimetype = SVN_SVNDIFF_MIME_TYPE;
         }
+      svn_error_clear(serr);
     }
 
-  if (mimetype == NULL)
+  if ((mimetype == NULL)
+      && ((resource->type == DAV_RESOURCE_TYPE_VERSION)
+          || (resource->type == DAV_RESOURCE_TYPE_REGULAR))
+      && (resource->info->repos_path != NULL))
     {
       svn_string_t *value;
 
@@ -1688,12 +2444,19 @@ static dav_error * dav_svn_set_headers(request_rec *r,
                               SVN_PROP_MIME_TYPE,
                               resource->pool);
       if (serr != NULL)
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "could not fetch the resource's MIME type");
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "could not fetch the resource's MIME type",
+                                    resource->pool);
 
-      mimetype = value ? value->data : "text/plain";
+      if (value)
+        mimetype = value->data;
+      else if ((! resource->info->repos->is_svn_client)
+               && r->content_type)
+        mimetype = r->content_type;
+      else
+        mimetype = "text/plain";
 
-      serr = svn_mime_type_validate (mimetype, resource->pool);
+      serr = svn_mime_type_validate(mimetype, resource->pool);
       if (serr)
         {
           /* Probably serr->apr == SVN_ERR_BAD_MIME_TYPE, but
@@ -1701,6 +2464,7 @@ static dav_error * dav_svn_set_headers(request_rec *r,
              error is, we can't derive the mime type from the
              svn:mime-type property.  So we resort to the infamous
              "mime type of last resort." */
+          svn_error_clear(serr);
           mimetype = "application/octet-stream";
         }
 
@@ -1712,24 +2476,31 @@ static dav_error * dav_svn_set_headers(request_rec *r,
                                 resource->pool);
       if (serr != NULL)
         {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "could not fetch the resource length");
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "could not fetch the resource length",
+                                      resource->pool);
         }
-      ap_set_content_length(r, length);
+      ap_set_content_length(r, (apr_off_t) length);
     }
 
   /* set the discovered MIME type */
   /* ### it would be best to do this during the findct phase... */
-  r->content_type = mimetype;
+  ap_set_content_type(r, mimetype);
 
   return NULL;
 }
 
-static svn_error_t *dav_svn_write_to_filter(void *baton,
-                                            const char *buffer,
-                                            apr_size_t *len)
+
+typedef struct {
+  ap_filter_t *output;
+  apr_pool_t *pool;
+} diff_ctx_t;
+
+
+static svn_error_t *
+write_to_filter(void *baton, const char *buffer, apr_size_t *len)
 {
-  dav_svn_diff_ctx_t *dc = baton;
+  diff_ctx_t *dc = baton;
   apr_bucket_brigade *bb;
   apr_bucket *bkt;
   apr_status_t status;
@@ -1740,15 +2511,17 @@ static svn_error_t *dav_svn_write_to_filter(void *baton,
   APR_BRIGADE_INSERT_TAIL(bb, bkt);
   if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS) {
     return svn_error_create(status, NULL,
-                            "Could not write data to filter.");
+                            "Could not write data to filter");
   }
 
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *dav_svn_close_filter(void *baton)
+
+static svn_error_t *
+close_filter(void *baton)
 {
-  dav_svn_diff_ctx_t *dc = baton;
+  diff_ctx_t *dc = baton;
   apr_bucket_brigade *bb;
   apr_bucket *bkt;
   apr_status_t status;
@@ -1758,13 +2531,14 @@ static svn_error_t *dav_svn_close_filter(void *baton)
   bkt = apr_bucket_eos_create(dc->output->c->bucket_alloc);
   APR_BRIGADE_INSERT_TAIL(bb, bkt);
   if ((status = ap_pass_brigade(dc->output, bb)) != APR_SUCCESS)
-    return svn_error_create(status, NULL, "Could not write EOS to filter.");
+    return svn_error_create(status, NULL, "Could not write EOS to filter");
 
   return SVN_NO_ERROR;
 }
 
-static dav_error * dav_svn_deliver(const dav_resource *resource,
-                                   ap_filter_t *output)
+
+static dav_error *
+deliver(const dav_resource *resource, ap_filter_t *output)
 {
   svn_error_t *serr;
   apr_bucket_brigade *bb;
@@ -1774,193 +2548,244 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
   /* Check resource type */
   if (resource->type != DAV_RESOURCE_TYPE_REGULAR
       && resource->type != DAV_RESOURCE_TYPE_VERSION
-      && resource->type != DAV_RESOURCE_TYPE_WORKING) {
-    return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
-                         "Cannot GET this type of resource.");
-  }
-
-  if (resource->collection) {
-    const int gen_html = !resource->info->repos->xslt_uri;
-    apr_hash_t *entries;
-    apr_pool_t *entry_pool;
-    apr_array_header_t *sorted;
-    int i;
-
-    /* XML schema for the directory index if xslt_uri is set:
-
-       <?xml version="1.0"?>
-       <?xml-stylesheet type="text/xsl" href="[info->repos->xslt_uri]"?> */
-    static const char xml_index_dtd[] =
-      "<!DOCTYPE svn [\n"
-      "  <!ELEMENT svn   (index)>\n"
-      "  <!ATTLIST svn   version CDATA #REQUIRED\n"
-      "                  href    CDATA #REQUIRED>\n"
-      "  <!ELEMENT index (updir?, (file | dir)*)>\n"
-      "  <!ATTLIST index name    CDATA #IMPLIED\n"
-      "                  path    CDATA #IMPLIED\n"
-      "                  rev     CDATA #IMPLIED>\n"
-      "  <!ELEMENT updir EMPTY>\n"
-      "  <!ELEMENT file  (prop)*>\n"
-      "  <!ATTLIST file  name    CDATA #REQUIRED\n"
-      "                  href    CDATA #REQUIRED>\n"
-      "  <!ELEMENT dir   (prop)*>\n"
-      "  <!ATTLIST dir   name    CDATA #REQUIRED\n"
-      "                  href    CDATA #REQUIRED>\n"
-      "  <!ELEMENT prop  (#PCDATA)>\n"
-      "  <!ATTLIST prop  name    CDATA #REQUIRED>\n"
-      "]>\n";
-
-    /* <svn version="0.13.1 (dev-build)"
-            href="http://subversion.tigris.org">
-         <index name="[info->repos->repo_name]"
-                path="[info->repos_path]"
-                rev="[info->root.rev]">
-           <file name="foo">
-             <prop name="mime-type">image/png</prop>
-           </file>
-           <dir name="bar"/>
-         </index>
-       </svn> */
-
-    serr = svn_fs_dir_entries(&entries, resource->info->root.root,
-                              resource->info->repos_path, resource->pool);
-    if (serr != NULL)
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "could not fetch directory entries");
-
-    bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
-
-    if (gen_html)
-      {
-        const char *title;
-        if (resource->info->repos_path == NULL)
-          title = "unknown location";
-        else
-          title = resource->info->repos_path;
-
-        if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
-          title = apr_psprintf(resource->pool,
-                               "Revision %" SVN_REVNUM_T_FMT ": %s",
-                               resource->info->root.rev, title);
-
-        if (resource->info->repos->repo_name)
-          title = apr_psprintf(resource->pool, "%s - %s",
-                               resource->info->repos->repo_name,
-                               title);
-
-        ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
-                   "<body>\n <h2>%s</h2>\n <ul>\n", title, title);
-      }
-    else
-      {
-        ap_fputs(output, bb, "<?xml version=\"1.0\"?>\n");
-        ap_fprintf(output, bb,
-                   "<?xml-stylesheet type=\"text/xsl\" href=\"%s\"?>\n",
-                   resource->info->repos->xslt_uri);
-        ap_fputs(output, bb, xml_index_dtd);
-        ap_fputs(output, bb,
-                 "<svn version=\"" SVN_VERSION "\"\n"
-                 "     href=\"http://subversion.tigris.org/\">\n");
-
-        ap_fputs(output, bb, "  <index");
-        if (resource->info->repos->repo_name)
-            ap_fprintf(output, bb, " name=\"%s\"",
-                       resource->info->repos->repo_name);
-        if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
-          ap_fprintf(output, bb, " rev=\"%" SVN_REVNUM_T_FMT "\"",
-                     resource->info->root.rev);
-        if (resource->info->repos_path)
-          ap_fprintf(output, bb, " path=\"%s\"",
-                     ap_escape_uri(resource->pool,
-                                   resource->info->repos_path));
-        ap_fputs(output, bb, ">\n");
-      }
-
-    if (resource->info->repos_path && resource->info->repos_path[1] != '\0')
-      {
-        if (gen_html)
-          ap_fprintf(output, bb, "  <li><a href=\"../\">..</a></li>\n");
-        else
-          ap_fprintf(output, bb, "    <updir />\n");
-      }
-
-    /* get a sorted list of the entries */
-    sorted = apr_hash_sorted_keys(entries, svn_sort_compare_items_as_paths,
-                                  resource->pool);
-
-    entry_pool = svn_pool_create(resource->pool);
-
-    for (i = 0; i < sorted->nelts; ++i)
-      {
-        const svn_item_t *item = &APR_ARRAY_IDX(sorted, i, const svn_item_t);
-        /* unused: const svn_fs_dirent_t *entry = elem->value; */
-        const char *entry_path;
-        const char *name;
-        const char *href;
-        int is_dir;
-
-        /* for a REGULAR resource, the root is going to be a normal root,
-           which allows us to access it with a path. build a path for this
-           entry so that we can get information for it. */
-        entry_path = apr_pstrcat(entry_pool, resource->info->repos_path,
-                                 "/", item->key, NULL);
-
-        (void) svn_fs_is_dir(&is_dir, resource->info->root.root,
-                             entry_path, entry_pool);
-
-	name = item->key;
-	href = name;
-	
-        /* append a trailing slash onto the name for directories. we NEED
-           this for the href portion so that the relative reference will
-           descend properly. for the visible portion, it is just nice. */
-        /* ### The xml output doesn't like to see a trailing slash on
-           ### the visible portion, so avoid that. */
-        if (is_dir)
-          href = apr_pstrcat(entry_pool, href, "/", NULL);
-
-        if (gen_html)
-          name = href;
-	
-        href = ap_escape_uri(entry_pool, href);
-
-        if (gen_html)
-          ap_fprintf(output, bb,
-                     "  <li><a href=\"%s\">%s</a></li>\n",
-                     href, name);
-        else
-          {
-            const char *const tag = (is_dir ? "dir" : "file");
-
-            /* ### This is where the we could search for props */
-
-            ap_fprintf(output, bb,
-                       "    <%s name=\"%s\" href=\"%s\"></%s>\n",
-                       tag, name, href, tag);
-          }
-        svn_pool_clear(entry_pool);
-      }
-
-    svn_pool_destroy(entry_pool);
-
-    if (gen_html)
-      ap_fputs(output, bb,
-               " </ul>\n <hr noshade><em>Powered by "
-               "<a href=\"http://subversion.tigris.org/\">Subversion</a> "
-               "version " SVN_VERSION "."
-               "</em>\n</body></html>");
-    else
-      ap_fputs(output, bb, "  </index>\n</svn>\n");
-
-    bkt = apr_bucket_eos_create(output->c->bucket_alloc);
-    APR_BRIGADE_INSERT_TAIL(bb, bkt);
-    if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS) {
-      return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
-                           "Could not write EOS to filter.");
+      && resource->type != DAV_RESOURCE_TYPE_WORKING
+      && resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
+    {
+      return dav_new_error(resource->pool, HTTP_CONFLICT, 0,
+                           "Cannot GET this type of resource.");
     }
+  
+  if (resource->collection)
+    {
+      const int gen_html = !resource->info->repos->xslt_uri;
+      apr_hash_t *entries;
+      apr_pool_t *entry_pool;
+      apr_array_header_t *sorted;
+      int i;
 
-    return NULL;
-  }
+      /* XML schema for the directory index if xslt_uri is set:
+
+         <?xml version="1.0"?>
+         <?xml-stylesheet type="text/xsl" href="[info->repos->xslt_uri]"?> */
+      static const char xml_index_dtd[] =
+        "<!DOCTYPE svn [\n"
+        "  <!ELEMENT svn   (index)>\n"
+        "  <!ATTLIST svn   version CDATA #REQUIRED\n"
+        "                  href    CDATA #REQUIRED>\n"
+        "  <!ELEMENT index (updir?, (file | dir)*)>\n"
+        "  <!ATTLIST index name    CDATA #IMPLIED\n"
+        "                  path    CDATA #IMPLIED\n"
+        "                  rev     CDATA #IMPLIED>\n"
+        "  <!ELEMENT updir EMPTY>\n"
+        "  <!ELEMENT file  EMPTY>\n"
+        "  <!ATTLIST file  name    CDATA #REQUIRED\n"
+        "                  href    CDATA #REQUIRED>\n"
+        "  <!ELEMENT dir   EMPTY>\n"
+        "  <!ATTLIST dir   name    CDATA #REQUIRED\n"
+        "                  href    CDATA #REQUIRED>\n"
+        "]>\n";
+
+      /* <svn version="1.3.0 (dev-build)"
+              href="http://subversion.tigris.org">
+           <index name="[info->repos->repo_name]"
+                  path="[info->repos_path]"
+                  rev="[info->root.rev]">
+             <file name="foo" href="foo" />
+             <dir name="bar" href="bar/" />
+           </index>
+         </svn> */
+
+
+      /* ### TO-DO:  check for a new mod_dav_svn directive here also. */
+      if (resource->info->restype == DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
+        {
+          apr_hash_index_t *hi;
+          apr_hash_t *dirents;
+          const char *fs_parent_path = 
+            dav_svn__get_fs_parent_path(resource->info->r);
+
+          serr = svn_io_get_dirents2(&dirents, fs_parent_path, resource->pool);
+          if (serr != NULL)
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "couldn't fetch dirents of SVNParentPath",
+                                        resource->pool);
+
+          /* convert an io dirent hash to an fs dirent hash. */
+          entries = apr_hash_make(resource->pool);
+          for (hi = apr_hash_first(resource->pool, dirents);
+               hi; hi = apr_hash_next(hi))
+            {
+              const void *key;
+              apr_ssize_t klen;
+              void *val;
+              svn_io_dirent_t *dirent;
+              svn_fs_dirent_t *ent = apr_pcalloc(resource->pool, sizeof(*ent));
+
+              apr_hash_this(hi, &key, &klen, &val);
+              dirent = val;
+
+              if (dirent->kind != svn_node_dir)
+                continue;
+
+              ent->name = key;
+              ent->id = NULL;     /* ### does it matter? */
+              ent->kind = dirent->kind;
+
+              apr_hash_set(entries, key, APR_HASH_KEY_STRING, ent);
+            }
+
+        }
+      else
+        {
+          serr = svn_fs_dir_entries(&entries, resource->info->root.root,
+                                    resource->info->repos_path, resource->pool);
+          if (serr != NULL)
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "could not fetch directory entries",
+                                        resource->pool);
+        }
+
+      bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+
+      if (gen_html)
+        {
+          const char *title;
+          if (resource->info->repos_path == NULL)
+            title = "unknown location";
+          else
+            title = resource->info->repos_path;
+
+          if (resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION)
+            {
+              if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
+                title = apr_psprintf(resource->pool,
+                                     "Revision %ld: %s",
+                                     resource->info->root.rev, title);
+
+              if (resource->info->repos->repo_name)
+                title = apr_psprintf(resource->pool, "%s - %s",
+                                     resource->info->repos->repo_name,
+                                     title);
+            }
+
+          ap_fprintf(output, bb, "<html><head><title>%s</title></head>\n"
+                     "<body>\n <h2>%s</h2>\n <ul>\n", title, title);
+        }
+      else
+        {
+          const char *name = resource->info->repos->repo_name;
+          const char *href = resource->info->repos_path;
+
+          ap_fputs(output, bb, "<?xml version=\"1.0\"?>\n");
+          ap_fprintf(output, bb,
+                     "<?xml-stylesheet type=\"text/xsl\" href=\"%s\"?>\n",
+                     resource->info->repos->xslt_uri);
+          ap_fputs(output, bb, xml_index_dtd);
+          ap_fputs(output, bb,
+                   "<svn version=\"" SVN_VERSION "\"\n"
+                   "     href=\"http://subversion.tigris.org/\">\n");
+          ap_fputs(output, bb, "  <index");
+          if (name)
+            ap_fprintf(output, bb, " name=\"%s\"",
+                       apr_xml_quote_string(resource->pool, name, 1));
+          if (SVN_IS_VALID_REVNUM(resource->info->root.rev))
+            ap_fprintf(output, bb, " rev=\"%ld\"",
+                       resource->info->root.rev);
+          if (href)
+            ap_fprintf(output, bb, " path=\"%s\"",
+                       apr_xml_quote_string(resource->pool,
+                                            href,
+                                            1));
+          ap_fputs(output, bb, ">\n");
+        }
+
+      if ((resource->info->repos_path && resource->info->repos_path[1] != '\0')
+          && (resource->info->restype != DAV_SVN_RESTYPE_PARENTPATH_COLLECTION))
+        {
+          if (gen_html)
+            ap_fprintf(output, bb, "  <li><a href=\"../\">..</a></li>\n");
+          else
+            ap_fprintf(output, bb, "    <updir />\n");
+        }
+
+      /* get a sorted list of the entries */
+      sorted = svn_sort__hash(entries, svn_sort_compare_items_as_paths,
+                              resource->pool);
+
+      entry_pool = svn_pool_create(resource->pool);
+
+      for (i = 0; i < sorted->nelts; ++i)
+        {
+          const svn_sort__item_t *item = &APR_ARRAY_IDX(sorted, i,
+                                                        const svn_sort__item_t);
+          const svn_fs_dirent_t *entry = item->value;
+          const char *name = item->key;
+          const char *href = name;
+          svn_boolean_t is_dir = (entry->kind == svn_node_dir);
+
+          svn_pool_clear(entry_pool);
+
+          /* append a trailing slash onto the name for directories. we NEED
+             this for the href portion so that the relative reference will
+             descend properly. for the visible portion, it is just nice. */
+          /* ### The xml output doesn't like to see a trailing slash on
+             ### the visible portion, so avoid that. */
+          if (is_dir)
+            href = apr_pstrcat(entry_pool, href, "/", NULL);
+
+          if (gen_html)
+            name = href;
+
+          /* We quote special characters in both XML and HTML. */
+          name = apr_xml_quote_string(entry_pool, name, !gen_html);
+
+          /* According to httpd-2.0.54/include/httpd.h, ap_os_escape_path()
+             behaves differently on different platforms.  It claims to
+             "convert an OS path to a URL in an OS dependant way".
+             Nevertheless, there appears to be only one implementation
+             of the function in httpd, and the code seems completely
+             platform independent, so we'll assume it's appropriate for
+             mod_dav_svn to use it to quote outbound paths. */
+          href = ap_os_escape_path(entry_pool, href, 0);
+          href = apr_xml_quote_string(entry_pool, href, 1);
+
+          if (gen_html)
+            {
+              ap_fprintf(output, bb,
+                         "  <li><a href=\"%s\">%s</a></li>\n",
+                         href, name);
+            }
+          else
+            {
+              const char *const tag = (is_dir ? "dir" : "file");
+
+              /* This is where we could search for props */
+
+              ap_fprintf(output, bb,
+                         "    <%s name=\"%s\" href=\"%s\" />\n",
+                         tag, name, href);
+            }
+        }
+
+      svn_pool_destroy(entry_pool);
+
+      if (gen_html)
+        ap_fputs(output, bb,
+                 " </ul>\n <hr noshade><em>Powered by "
+                 "<a href=\"http://subversion.tigris.org/\">Subversion</a> "
+                 "version " SVN_VERSION "."
+                 "</em>\n</body></html>");
+      else
+        ap_fputs(output, bb, "  </index>\n</svn>\n");
+
+      bkt = apr_bucket_eos_create(output->c->bucket_alloc);
+      APR_BRIGADE_INSERT_TAIL(bb, bkt);
+      if ((status = ap_pass_brigade(output, bb)) != APR_SUCCESS)
+        return dav_new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                             "Could not write EOS to filter.");
+
+      return NULL;
+    }
 
 
   /* If we have a base for a delta, then we want to compute an svndiff
@@ -1968,19 +2793,19 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
      request, then we just grab the file contents. */
   if (resource->info->delta_base != NULL)
     {
-      dav_svn_uri_info info;
+      dav_svn__uri_info info;
       svn_fs_root_t *root;
-      int is_file;
+      svn_boolean_t is_file;
       svn_txdelta_stream_t *txd_stream;
       svn_stream_t *o_stream;
       svn_txdelta_window_handler_t handler;
       void * h_baton;
-      dav_svn_diff_ctx_t dc = { 0 };
+      diff_ctx_t dc = { 0 };
 
       /* First order of business is to parse it. */
-      serr = dav_svn_simple_parse_uri(&info, resource,
-                                      resource->info->delta_base,
-                                      resource->pool);
+      serr = dav_svn__simple_parse_uri(&info, resource,
+                                       resource->info->delta_base,
+                                       resource->pool);
 
       /* If we successfully parse the base URL, then send an svndiff. */
       if ((serr == NULL) && (info.rev != SVN_INVALID_REVNUM))
@@ -1990,16 +2815,18 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           serr = svn_fs_revision_root(&root, resource->info->repos->fs,
                                       info.rev, resource->pool);
           if (serr != NULL)
-            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not open a root for the base");
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "could not open a root for the base",
+                                        resource->pool);
 
           /* verify that it is a file */
           serr = svn_fs_is_file(&is_file, root, info.repos_path, 
                                 resource->pool);
           if (serr != NULL)
-            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not determine if the base "
-                                       "is really a file");
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "could not determine if the base "
+                                        "is really a file",
+                                        resource->pool);
           if (!is_file)
             return dav_new_error(resource->pool, HTTP_BAD_REQUEST, 0,
                                  "the delta base does not refer to a file");
@@ -2011,19 +2838,22 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                                               resource->info->repos_path,
                                               resource->pool);
           if (serr != NULL)
-            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not prepare to read a delta");
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "could not prepare to read a delta",
+                                        resource->pool);
 
           /* create a stream that svndiff data will be written to,
              which will copy it to the network */
           dc.output = output;
           dc.pool = resource->pool;
           o_stream = svn_stream_create(&dc, resource->pool);
-          svn_stream_set_write(o_stream, dav_svn_write_to_filter);
-          svn_stream_set_close(o_stream, dav_svn_close_filter);
+          svn_stream_set_write(o_stream, write_to_filter);
+          svn_stream_set_close(o_stream, close_filter);
 
           /* get a handler/baton for writing into the output stream */
-          svn_txdelta_to_svndiff(o_stream, resource->pool, &handler, &h_baton);
+          svn_txdelta_to_svndiff2(&handler, &h_baton,
+                                  o_stream, resource->info->svndiff_version,
+                                  resource->pool);
 
           /* got everything set up. read in delta windows and shove them into
              the handler, which pushes data into the output stream, which goes
@@ -2031,11 +2861,16 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
           serr = svn_txdelta_send_txstream(txd_stream, handler, h_baton,
                                            resource->pool);
           if (serr != NULL)
-            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not deliver the txdelta stream");
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "could not deliver the txdelta stream",
+                                        resource->pool);
 
 
           return NULL;
+        }
+      else
+        {
+          svn_error_clear(serr);
         }
     }
 
@@ -2050,23 +2885,25 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
                                   resource->pool);
       if (serr != NULL)
         {
-          return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                     "could not prepare to read the file");
+          return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                      "could not prepare to read the file",
+                                      resource->pool);
         }
 
       /* ### one day in the future, we can create a custom bucket type
          ### which will read from the FS stream on demand */
 
-      block = apr_palloc(resource->pool, SVN_STREAM_CHUNK_SIZE);
+      block = apr_palloc(resource->pool, SVN__STREAM_CHUNK_SIZE);
       while (1) {
-        apr_size_t bufsize = SVN_STREAM_CHUNK_SIZE;
+        apr_size_t bufsize = SVN__STREAM_CHUNK_SIZE;
 
         /* read from the FS ... */
         serr = svn_stream_read(stream, block, &bufsize);
         if (serr != NULL)
           {
-            return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                       "could not read the file contents");
+            return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                        "could not read the file contents",
+                                        resource->pool);
           }
         if (bufsize == 0)
           break;
@@ -2097,43 +2934,75 @@ static dav_error * dav_svn_deliver(const dav_resource *resource,
     }
 }
 
-static dav_error * dav_svn_create_collection(dav_resource *resource)
+
+static dav_error *
+create_collection(dav_resource *resource)
 {
   svn_error_t *serr;
+  dav_error *err;
 
-  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
+  if (resource->type != DAV_RESOURCE_TYPE_WORKING
+      && resource->type != DAV_RESOURCE_TYPE_REGULAR)
     {
       return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
                            "Collections can only be created within a working "
-                           "collection [at this time].");
+                           "or regular collection [at this time].");
     }
+
+  /* ...regular resources allowed only if autoversioning is turned on. */
+  if (resource->type == DAV_RESOURCE_TYPE_REGULAR
+      && ! (resource->info->repos->autoversioning))
+    return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                         "MKCOL called on regular resource, but "
+                         "autoversioning is not active.");
 
   /* ### note that the parent was checked out at some point, and this
      ### is being preformed relative to the working rsrc for that parent */
 
-  /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
-     we cannot write into an "id root". Partly because the FS may not
-     let us, but mostly that we have an id root only to deal with Version
-     Resources, and those are read only. */
+  /* Auto-versioning mkcol of regular resource: */
+  if (resource->type == DAV_RESOURCE_TYPE_REGULAR)
+    {
+      /* Change the VCR into a WR, in place.  This creates a txn and
+         changes resource->info->root from a rev-root into a txn-root. */
+      err = dav_svn__checkout(resource,
+                              1 /* auto-checkout */,
+                              0, 0, 0, NULL, NULL);
+      if (err)
+        return err;
+    }
 
   if ((serr = svn_fs_make_dir(resource->info->root.root,
                               resource->info->repos_path,
                               resource->pool)) != NULL)
     {
       /* ### need a better error */
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not create the collection.");
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Could not create the collection.",
+                                  resource->pool);
+    }
+
+  /* Auto-versioning commit of the txn. */
+  if (resource->info->auto_checked_out)
+    {
+      /* This also changes the WR back into a VCR, in place. */
+      err = dav_svn__checkin(resource, 0, NULL);
+      if (err)
+        return err;
     }
 
   return NULL;
 }
 
-static dav_error * dav_svn_copy_resource(const dav_resource *src,
-                                         dav_resource *dst,
-                                         int depth,
-                                         dav_response **response)
+
+static dav_error *
+copy_resource(const dav_resource *src,
+              dav_resource *dst,
+              int depth,
+              dav_response **response)
 {
   svn_error_t *serr;
+  dav_error *err;
+  const char *src_repos_path, *dst_repos_path;
 
   /* ### source must be from a collection under baseline control. the
      ### baseline will (implicitly) indicate the source revision, and the
@@ -2158,43 +3027,91 @@ static dav_error * dav_svn_copy_resource(const dav_resource *src,
     return dav_new_error(src->pool, HTTP_PRECONDITION_FAILED, 0,
                          "Illegal: COPY Destination is a baseline.");
 
-  
-  serr = svn_fs_copy (src->info->root.root,  /* the root object of src rev*/
-                      src->info->repos_path, /* the relative path of src */
-                      dst->info->root.root,  /* the root object of dst txn*/ 
-                      dst->info->repos_path, /* the relative path of dst */
-                      src->pool);
+  if (dst->type == DAV_RESOURCE_TYPE_REGULAR
+      && !(dst->info->repos->autoversioning))
+    return dav_new_error(dst->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                         "COPY called on regular resource, but "
+                         "autoversioning is not active.");
+
+  /* Auto-versioning copy of regular resource: */
+  if (dst->type == DAV_RESOURCE_TYPE_REGULAR)
+    {
+      /* Change the VCR into a WR, in place.  This creates a txn and
+         changes dst->info->root from a rev-root into a txn-root. */
+      err = dav_svn__checkout(dst,
+                              1 /* auto-checkout */,
+                              0, 0, 0, NULL, NULL);
+      if (err)
+        return err;
+    }
+
+  serr = svn_path_get_absolute(&src_repos_path,
+                               svn_repos_path(src->info->repos->repos, 
+                                              src->pool),
+                               src->pool);
+  if (!serr)
+    serr = svn_path_get_absolute(&dst_repos_path,
+                                 svn_repos_path(dst->info->repos->repos, 
+                                                dst->pool),
+                                 dst->pool);
+
+  if (!serr)
+    {
+      if (strcmp(src_repos_path, dst_repos_path) != 0)
+        return dav_svn__new_error_tag
+          (dst->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+           "Copy source and destination are in different repositories.",
+           SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+      serr = svn_fs_copy(src->info->root.root,  /* root object of src rev*/
+                         src->info->repos_path, /* relative path of src */
+                         dst->info->root.root,  /* root object of dst txn*/ 
+                         dst->info->repos_path, /* relative path of dst */
+                         src->pool);
+    }
   if (serr)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "Unable to make a filesystem copy.");
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Unable to make a filesystem copy.",
+                                dst->pool);
+
+  /* Auto-versioning commit of the txn. */
+  if (dst->info->auto_checked_out)
+    {
+      /* This also changes the WR back into a VCR, in place. */
+      err = dav_svn__checkin(dst, 0, NULL);
+      if (err)
+        return err;
+    }
 
   return NULL;
 }
 
-static dav_error * dav_svn_move_resource(dav_resource *src,
-                                         dav_resource *dst,
-                                         dav_response **response)
-{
-  /* NOTE: Subversion does not use the MOVE method. Strictly speaking,
-     we do not need to implement this repository function. */
 
-  /* ### fill this in */
-
-  return dav_new_error(src->pool, HTTP_NOT_IMPLEMENTED, 0,
-                       "MOVE is not available "
-                       "[at this time].");
-}
-
-static dav_error * dav_svn_remove_resource(dav_resource *resource,
-                                           dav_response **response)
+static dav_error *
+remove_resource(dav_resource *resource, dav_response **response)
 {
   svn_error_t *serr;
+  dav_error *err;
+  apr_hash_t *locks;
 
-  if (resource->type != DAV_RESOURCE_TYPE_WORKING)
+  /* Only activities, and working or regular resources can be deleted... */
+  if (resource->type != DAV_RESOURCE_TYPE_WORKING
+      && resource->type != DAV_RESOURCE_TYPE_REGULAR
+      && resource->type != DAV_RESOURCE_TYPE_ACTIVITY)
+    return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                           "DELETE called on invalid resource type.");
+
+  /* ...and regular resources only if autoversioning is turned on. */
+  if (resource->type == DAV_RESOURCE_TYPE_REGULAR
+      && ! (resource->info->repos->autoversioning))
+    return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                         "DELETE called on regular resource, but "
+                         "autoversioning is not active.");
+
+  /* Handle activity deletions (early exit). */
+  if (resource->type == DAV_RESOURCE_TYPE_ACTIVITY)
     {
-      return dav_new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED, 0,
-                           "Resources can only be deleted from within a "
-                           "working collection [at this time].");
+      return dav_svn__delete_activity(resource->info->repos,
+                                      resource->info->root.activity_id);
     }
 
   /* ### note that the parent was checked out at some point, and this
@@ -2207,25 +3124,167 @@ static dav_error * dav_svn_remove_resource(dav_resource *resource,
      this does imply we are not enforcing the "checkout the parent, then
      delete from within" semantic. */
 
-  /* note: when writing, we don't need to use DAV_SVN_REPOS_PATH since
-     we cannot write into an "id root". Partly because the FS may not
-     let us, but mostly that we have an id root only to deal with Version
-     Resources, and those are read only. */
-
-  if ((serr = svn_fs_delete_tree(resource->info->root.root,
-                                 resource->info->repos_path,
-                                 resource->pool)) != NULL)
+  /* Auto-versioning delete of regular resource: */
+  if (resource->type == DAV_RESOURCE_TYPE_REGULAR)
     {
-      /* ### need a better error */
-      return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                 "Could not delete the resource.");
+      /* Change the VCR into a WR, in place.  This creates a txn and
+         changes resource->info->root from a rev-root into a txn-root. */
+      err = dav_svn__checkout(resource,
+                              1 /* auto-checkout */,
+                              0, 0, 0, NULL, NULL);
+      if (err)
+        return err;
     }
 
-  /* ### fill this in */
+  /* Sanity check: an svn client may have sent a custom request header
+     containing the revision of the item it thinks it's deleting.  In
+     this case, we enforce the svn-specific semantic that the item
+     must be up-to-date. */
+  if (SVN_IS_VALID_REVNUM(resource->info->version_name))
+    {
+      svn_revnum_t created_rev;
+      serr = svn_fs_node_created_rev(&created_rev,
+                                     resource->info->root.root,
+                                     resource->info->repos_path,
+                                     resource->pool);
+      if (serr)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not get created rev of resource",
+                                    resource->pool);
+
+      if (resource->info->version_name < created_rev)
+        {
+          serr = svn_error_createf(SVN_ERR_RA_OUT_OF_DATE, NULL,
+                                   "Item '%s' is out of date", 
+                                   resource->info->repos_path);
+          return dav_svn__convert_err(serr, HTTP_CONFLICT,
+                                      "Can't DELETE out-of-date resource",
+                                      resource->pool);
+        }
+    }
+
+  /* Before attempting the filesystem delete, we need to push any
+     incoming lock-tokens into the filesystem's access_t.  Normally
+     they come in via 'If:' header, and get_resource()
+     automatically notices them and does this work for us.  In the
+     case of a directory deletion, however, svn clients are sending
+     'child' lock-tokens in the DELETE request body. */
+
+  err = dav_svn__build_lock_hash(&locks, resource->info->r,
+                                 resource->info->repos_path, resource->pool);
+  if (err != NULL)
+    return err;
+
+  if (apr_hash_count(locks))
+    {
+      err = dav_svn__push_locks(resource, locks, resource->pool);
+      if (err != NULL)
+        return err;
+    }
+
+  if ((serr = svn_fs_delete(resource->info->root.root,
+                            resource->info->repos_path,
+                            resource->pool)) != NULL)
+    {
+      /* ### need a better error */
+      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                  "Could not delete the resource",
+                                  resource->pool);
+    }
+
+  /* Auto-versioning commit of the txn. */
+  if (resource->info->auto_checked_out)
+    {
+      /* This also changes the WR back into a VCR, in place. */
+      err = dav_svn__checkin(resource, 0, NULL);
+      if (err)
+        return err;
+    }
+
   return NULL;
 }
 
-static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
+
+static dav_error *
+move_resource(dav_resource *src,
+              dav_resource *dst,
+              dav_response **response)
+{
+  svn_error_t *serr;
+  dav_error *err;
+
+  /* NOTE: The svn client does not call the MOVE method yet. Strictly
+     speaking, we do not need to implement this repository function.
+     But we do so anyway, so non-deltaV clients can work against the
+     repository when autoversioning is turned on.  Like the svn client,
+     itself, we define a move to be a copy + delete within a single txn. */
+
+  /* Because we have no 'atomic' move, we only allow this method on
+     two regular resources with autoversioning active.  That way we
+     can auto-checkout a single resource and do the copy + delete
+     within a single txn.  (If we had two working resources, which txn
+     would we use?) */
+  if (src->type != DAV_RESOURCE_TYPE_REGULAR
+      || dst->type != DAV_RESOURCE_TYPE_REGULAR
+      || !(src->info->repos->autoversioning))
+    return dav_new_error(dst->pool, HTTP_METHOD_NOT_ALLOWED, 0,
+                         "MOVE only allowed on two public URIs, and "
+                         "autoversioning must be active.");
+
+  /* Change the dst VCR into a WR, in place.  This creates a txn and
+     changes dst->info->root from a rev-root into a txn-root. */
+  err = dav_svn__checkout(dst,
+                          1 /* auto-checkout */,
+                          0, 0, 0, NULL, NULL);
+  if (err)
+    return err;
+
+  /* Copy the src to the dst. */
+  serr = svn_fs_copy(src->info->root.root,  /* the root object of src rev*/
+                     src->info->repos_path, /* the relative path of src */
+                     dst->info->root.root,  /* the root object of dst txn*/ 
+                     dst->info->repos_path, /* the relative path of dst */
+                     src->pool);
+  if (serr)
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Unable to make a filesystem copy.",
+                                dst->pool);
+
+  /* Notice: we're deleting the src repos path from the dst's txn_root. */
+  if ((serr = svn_fs_delete(dst->info->root.root,
+                            src->info->repos_path,
+                            dst->pool)) != NULL)
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Could not delete the src resource.",
+                                dst->pool);
+
+  /* Commit:  this also changes the WR back into a VCR, in place. */
+  err = dav_svn__checkin(dst, 0, NULL);
+  if (err)
+    return err;
+
+  return NULL;
+}
+
+
+typedef struct {
+  /* the input walk parameters */
+  const dav_walk_params *params;
+
+  /* reused as we walk */
+  dav_walk_resource wres;
+
+  /* the current resource */
+  dav_resource res;             /* wres.resource refers here */
+  dav_resource_private info;    /* the info in res */
+  svn_stringbuf_t *uri;            /* the uri within res */
+  svn_stringbuf_t *repos_path;     /* the repos_path within res */
+
+} walker_ctx_t;
+
+
+static dav_error *
+do_walk(walker_ctx_t *ctx, int depth)
 {
   const dav_walk_params *params = ctx->params;
   int isdir = ctx->res.collection;
@@ -2236,7 +3295,9 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   apr_size_t uri_len;
   apr_size_t repos_len;
   apr_hash_t *children;
-  apr_pool_t *params_subpool;
+
+  /* Clear the temporary pool. */
+  svn_pool_clear(ctx->info.pool);
 
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
@@ -2289,14 +3350,24 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
   uri_len = ctx->uri->len;
   repos_len = ctx->repos_path->len;
 
-  /* fetch this collection's children */
-  params_subpool = svn_pool_create(params->pool);
+  /* Tell our logging subsystem that we're listing a directory.
 
+     Note: if we cared, we could look at the 'User-Agent:' request
+     header and distinguish an svn client ('svn ls') from a generic
+     DAV client.  */
+  apr_table_set(ctx->info.r->subprocess_env, "SVN-ACTION",
+                apr_psprintf(params->pool,
+                             "list-dir '%s'",
+                             svn_path_uri_encode(ctx->info.repos_path,
+                                                 params->pool)));
+
+  /* fetch this collection's children */
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,
                             ctx->info.repos_path, params->pool);
   if (serr != NULL)
-    return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                               "could not fetch collection members");
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "could not fetch collection members",
+                                params->pool);
 
   /* iterate over the children in this collection */
   for (hi = apr_hash_first(params->pool, children); hi; hi = apr_hash_next(hi))
@@ -2305,7 +3376,6 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       apr_ssize_t klen;
       void *val;
       svn_fs_dirent_t *dirent;
-      int is_file;
 
       /* fetch one of the children */
       apr_hash_this(hi, &key, &klen, &val);
@@ -2326,14 +3396,7 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
       ctx->res.uri = ctx->uri->data;
       ctx->info.repos_path = ctx->repos_path->data;
 
-      serr = svn_fs_is_file(&is_file,
-                            ctx->info.root.root, ctx->info.repos_path,
-                            params_subpool);
-      if (serr != NULL)
-        return dav_svn_convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   "could not determine resource kind");
-
-      if ( is_file )
+      if (dirent->kind == svn_node_file)
         {
           err = (*params->func)(&ctx->wres, DAV_CALLTYPE_MEMBER);
           if (err != NULL)
@@ -2349,31 +3412,33 @@ static dav_error * dav_svn_do_walk(dav_svn_walker_context *ctx, int depth)
           ctx->res.uri = ctx->uri->data;
 
           /* recurse on this collection */
-          err = dav_svn_do_walk(ctx, depth - 1);
+          err = do_walk(ctx, depth - 1);
           if (err != NULL)
             return err;
 
           /* restore the data */
-          ctx->res.collection = 0;
+          ctx->res.collection = FALSE;
         }
 
       /* chop the child off the paths and uri. NOTE: no null-term. */
       ctx->info.uri_path->len = path_len;
       ctx->uri->len = uri_len;
       ctx->repos_path->len = repos_len;
-
-      svn_pool_clear(params_subpool);
     }
-
-  svn_pool_destroy(params_subpool);
-
   return NULL;
 }
 
-static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
-				dav_response **response)
+static dav_error *
+walk(const dav_walk_params *params, int depth, dav_response **response)
 {
-  dav_svn_walker_context ctx = { 0 };
+  /* Thinking about adding support for LOCKNULL resources in this
+     walker?  Check out the (working) code that was removed here:
+          Author: cmpilato
+          Date: Fri Mar 18 14:54:02 2005
+          New Revision: 13475
+     */
+
+  walker_ctx_t ctx = { 0 };
   dav_error *err;
 
   ctx.params = params;
@@ -2423,25 +3488,28 @@ static dav_error * dav_svn_walk(const dav_walk_params *params, int depth,
   /* ### is the root already/always open? need to verify */
 
   /* always return the error, and any/all multistatus responses */
-  err = dav_svn_do_walk(&ctx, depth);
+  err = do_walk(&ctx, depth);
   *response = ctx.wres.response;
 
   return err;
 }
 
+
 
 /*** Utility functions for resource management ***/
 
-dav_resource *dav_svn_create_working_resource(const dav_resource *base,
-                                              const char *activity_id,
-                                              const char *txn_name)
+dav_resource *
+dav_svn__create_working_resource(dav_resource *base,
+                                 const char *activity_id,
+                                 const char *txn_name,
+                                 int tweak_in_place)
 {
-  dav_resource_combined *comb;
   const char *path;
+  dav_resource *res;
 
   if (base->baselined)
     path = apr_psprintf(base->pool,
-                        "/%s/wbl/%s/%" SVN_REVNUM_T_FMT,
+                        "/%s/wbl/%s/%ld",
                         base->info->repos->special_uri,
                         activity_id, base->info->root.rev);
   else
@@ -2450,49 +3518,131 @@ dav_resource *dav_svn_create_working_resource(const dav_resource *base,
                         activity_id, base->info->repos_path);
   path = svn_path_uri_encode(path, base->pool);
 
-  comb = apr_pcalloc(base->pool, sizeof(*comb));
+  if (tweak_in_place)
+    res = base;
+  else
+    {
+      res = apr_pcalloc(base->pool, sizeof(*res));
+      res->info = apr_pcalloc(base->pool, sizeof(*res->info));
+    }
 
-  comb->res.type = DAV_RESOURCE_TYPE_WORKING;
-  comb->res.exists = TRUE;      /* ### not necessarily correct */
-  comb->res.versioned = TRUE;
-  comb->res.working = TRUE;
-  comb->res.baselined = base->baselined;
+  res->type = DAV_RESOURCE_TYPE_WORKING;
+  res->exists = TRUE;      /* ### not necessarily correct */
+  res->versioned = TRUE;
+  res->working = TRUE;
+  res->baselined = base->baselined;
   /* collection = FALSE.   ### not necessarily correct */
 
-  comb->res.uri = apr_pstrcat(base->pool, base->info->repos->root_path,
-                              path, NULL);
-  comb->res.info = &comb->priv;
-  comb->res.hooks = &dav_svn_hooks_repos;
-  comb->res.pool = base->pool;
+  res->uri = apr_pstrcat(base->pool, base->info->repos->root_path,
+                         path, NULL);
+  res->hooks = &dav_svn__hooks_repository;
+  res->pool = base->pool;
 
-  comb->priv.uri_path = svn_stringbuf_create(path, base->pool);
-  comb->priv.repos = base->info->repos;
-  comb->priv.repos_path = base->info->repos_path;
-  comb->priv.root.rev = base->info->root.rev;
-  comb->priv.root.activity_id = activity_id;
-  comb->priv.root.txn_name = txn_name;
+  res->info->uri_path = svn_stringbuf_create(path, base->pool);
+  res->info->repos = base->info->repos;
+  res->info->repos_path = base->info->repos_path;
+  res->info->root.rev = base->info->root.rev;
+  res->info->root.activity_id = activity_id;
+  res->info->root.txn_name = txn_name;
 
-  return &comb->res;
+  if (tweak_in_place)
+    return NULL;
+  else
+    return res;
 }
 
 
-const dav_hooks_repository dav_svn_hooks_repos =
+dav_error *
+dav_svn__working_to_regular_resource(dav_resource *resource)
+{
+  dav_resource_private *priv = resource->info;
+  dav_svn_repos *repos = priv->repos;
+  const char *path;
+  svn_error_t *serr;
+
+  /* no need to change the repos object or repos_path */
+
+  /* set type back to REGULAR */
+  resource->type = DAV_RESOURCE_TYPE_REGULAR;
+
+  /* remove the working flag */
+  resource->working = FALSE;
+
+  /* Change the URL into either a baseline-collection or a public one. */
+  if (priv->root.rev == SVN_INVALID_REVNUM)
+    {
+      serr = svn_fs_youngest_rev(&priv->root.rev, repos->fs, resource->pool);
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not determine youngest rev.",
+                                    resource->pool);
+      
+      /* create public URL */
+      path = apr_psprintf(resource->pool, "%s", priv->repos_path);
+    }
+  else
+    {
+      /* if rev was specific, create baseline-collection URL */
+      path = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_BC,
+                                priv->root.rev, priv->repos_path,
+                                0, resource->pool);
+    }
+  path = svn_path_uri_encode(path, resource->pool);
+  priv->uri_path = svn_stringbuf_create(path, resource->pool);
+
+  /* change root.root back into a revision root. */
+  serr = svn_fs_revision_root(&priv->root.root, repos->fs,
+                              priv->root.rev, resource->pool);
+  if (serr != NULL)
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Could not open revision root.",
+                                resource->pool);
+     
+  return NULL;
+}
+
+
+dav_error *
+dav_svn__create_version_resource(dav_resource **version_res,
+                                 const char *uri,
+                                 apr_pool_t *pool)
+{
+  int result;
+  dav_error *err;
+
+  dav_resource_combined *comb = apr_pcalloc(pool, sizeof(*comb));
+
+  result = parse_version_uri(comb, uri, NULL, 0);
+  if (result != 0)
+    return dav_new_error(pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+                         "Could not parse version resource uri.");
+
+  err = prep_version(comb);
+  if (err)
+    return err;
+  
+  *version_res = &comb->res;
+  return NULL;
+}
+
+
+const dav_hooks_repository dav_svn__hooks_repository =
 {
   1,                            /* special GET handling */
-  dav_svn_get_resource,
-  dav_svn_get_parent_resource,
-  dav_svn_is_same_resource,
-  dav_svn_is_parent_resource,
-  dav_svn_open_stream,
-  dav_svn_close_stream,
-  dav_svn_write_stream,
-  dav_svn_seek_stream,
-  dav_svn_set_headers,
-  dav_svn_deliver,
-  dav_svn_create_collection,
-  dav_svn_copy_resource,
-  dav_svn_move_resource,
-  dav_svn_remove_resource,
-  dav_svn_walk,
-  dav_svn_getetag,
+  get_resource,
+  get_parent_resource,
+  is_same_resource,
+  is_parent_resource,
+  open_stream,
+  close_stream,
+  write_stream,
+  seek_stream,
+  set_headers,
+  deliver,
+  create_collection,
+  copy_resource,
+  move_resource,
+  remove_resource,
+  walk,
+  getetag_pathetic
 };

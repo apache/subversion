@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 #
 # USAGE: geturl.py FILE_OR_DIR1 FILE_OR_DIR2 ...
 #
@@ -9,19 +9,19 @@ import os
 import sys
 
 import svn.wc
-import svn.util
+import svn.core
 
-def main(pool, files):
+def main(files):
   for f in files:
     dirpath = fullpath = os.path.abspath(f)
     if not os.path.isdir(dirpath):
       dirpath = os.path.dirname(dirpath)
-    adm_baton = svn.wc.svn_wc_adm_open(None, dirpath, 1, 1, pool)
+    adm_baton = svn.wc.adm_open(None, dirpath, 1, 1)
     try:
-      entry = svn.wc.svn_wc_entry(fullpath, adm_baton, 0, pool)
-      print svn.wc.svn_wc_entry_t_url_get(entry)
+      entry = svn.wc.entry(fullpath, adm_baton, 0)
+      print entry.url
     finally:
-      svn.wc.svn_wc_adm_close(adm_baton)
+      svn.wc.adm_close(adm_baton)
 
 if __name__ == '__main__':
-  svn.util.run_app(main, sys.argv[1:])
+  main(sys.argv[1:])

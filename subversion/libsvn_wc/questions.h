@@ -2,7 +2,7 @@
  * questions.h :  asking questions about working copies
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,7 +22,6 @@
 
 #include <apr_pools.h>
 #include "svn_types.h"
-#include "svn_string.h"
 #include "svn_error.h"
 
 #ifdef __cplusplus
@@ -39,6 +38,16 @@ enum svn_wc__timestamp_kind
 };
 
 
+/* Return an SVN_ERR_WC_UNSUPPORTED_FORMAT error if the working copy
+ * format WC_FORMAT is unsupported.  PATH is only used in the error
+ * message.
+ *
+ * Use POOL for any temporary allocation.
+ */
+svn_error_t *
+svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool);
+
+
 /* Set *EQUAL_P to true if PATH's TIMESTAMP_KIND timestamp is the same as
  * the one recorded in its `entries' file, else to set to false. ADM_ACCESS
  * must be an access baton for PATH.
@@ -46,24 +55,11 @@ enum svn_wc__timestamp_kind
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
-svn_wc__timestamps_equal_p (svn_boolean_t *equal_p,
-                            const char *path,
-                            svn_wc_adm_access_t *adm_access,
-                            const enum svn_wc__timestamp_kind timestamp_kind,
-                            apr_pool_t *pool);
-
-
-/* Set *SAME to non-zero if file1 and file2 have the same contents,
-   else set it to zero. 
-
-   Note: This probably belongs in the svn_io library, however, it
-   shares some private helper functions with other wc-specific
-   routines.  Moving it to svn_io would not be impossible, merely
-   non-trivial.  So far, it hasn't been worth it. */
-svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
-                                            const char *file1,
-                                            const char *file2,
-                                            apr_pool_t *pool);
+svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
+                           const char *path,
+                           svn_wc_adm_access_t *adm_access,
+                           enum svn_wc__timestamp_kind timestamp_kind,
+                           apr_pool_t *pool);
 
 
 /* Set *MODIFIED_P to true if VERSIONED_FILE is modified with respect
@@ -72,17 +68,19 @@ svn_error_t *svn_wc__files_contents_same_p (svn_boolean_t *same,
  * BASE_FILE alone (as though BASE_FILE were a text-base file, which
  * it usually is, only sometimes we're calling this on incoming
  * temporary text-bases).  ADM_ACCESS must be an access baton for
- * VERSIONED_FILE.
- * 
+ * VERSIONED_FILE.  If COMPARE_TEXTBASES is false, a clean copy of the
+ * versioned file is compared to VERSIONED_FILE.
+ *
  * If an error is returned, the effect on *MODIFIED_P is undefined.
- * 
+ *
  * Use POOL for temporary allocation.
  */
-svn_error_t *svn_wc__versioned_file_modcheck (svn_boolean_t *modified_p,
-                                              const char *versioned_file,
-                                              svn_wc_adm_access_t *adm_access,
-                                              const char *base_file,
-                                              apr_pool_t *pool);
+svn_error_t *svn_wc__versioned_file_modcheck(svn_boolean_t *modified_p,
+                                             const char *versioned_file,
+                                             svn_wc_adm_access_t *adm_access,
+                                             const char *base_file,
+                                             svn_boolean_t compare_textbases,
+                                             apr_pool_t *pool);
 
 
 #ifdef __cplusplus

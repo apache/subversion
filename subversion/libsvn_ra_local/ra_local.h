@@ -2,7 +2,7 @@
  * ra_local.h : shared internal declarations for ra_local module
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,10 +22,7 @@
 #include <apr_pools.h>
 #include <apr_tables.h>
 
-#include "svn_error.h"
-#include "svn_string.h"
-#include "svn_path.h"
-#include "svn_delta.h"
+#include "svn_types.h"
 #include "svn_fs.h"
 #include "svn_repos.h"
 #include "svn_ra.h"
@@ -40,19 +37,12 @@ extern "C" {
 /* A baton which represents a single ra_local session. */
 typedef struct svn_ra_local__session_baton_t
 {
-  /* Each ra_local session does ALL allocation from this pool!  Kind
-     of like an Apache transaction, I guess. :) */
-  apr_pool_t *pool;
-  
-  /* A `file://' URL containing a local repository and path. */
-  const char *repository_URL;
-
   /* The user accessing the repository. */
-  char *username;
+  const char *username;
 
-  /* The URL above, decoded and split into two components. */
+  /* The URL of the session, split into two components. */
   const char *repos_url;
-  const char *fs_path;
+  svn_stringbuf_t *fs_path;  /* URI-decoded. */
 
   /* A repository object. */
   svn_repos_t *repos;
@@ -61,10 +51,12 @@ typedef struct svn_ra_local__session_baton_t
      convenience). */
   svn_fs_t *fs;
 
-  /* Callback stuff. */
-  const svn_ra_callbacks_t *callbacks;
-  void *callback_baton;
+  /* The UUID associated with REPOS above (cached) */
+  const char *uuid;
 
+  /* Callbacks/baton passed to svn_ra_open. */
+  const svn_ra_callbacks2_t *callbacks;
+  void *callback_baton;
 } svn_ra_local__session_baton_t;
 
 
@@ -75,18 +67,18 @@ typedef struct svn_ra_local__session_baton_t
     
 
 
-/* Given a `file://' URL, decode it, figure out which portion
-   specifies a repository on local disk, and return in REPOS_URL;
+/* Given a `file://' URL, figure out which portion specifies a
+   repository on local disk, and return in REPOS_URL; URI-decode and
    return the remainder (the path *within* the repository's
    filesystem) in FS_PATH.  Allocate the return values in POOL.
    Currently, we are not expecting to handle `file://hostname/'-type
    URLs; hostname, in this case, is expected to be the empty string. */
 svn_error_t *
-svn_ra_local__split_URL (svn_repos_t **repos,
-                         const char **repos_url,
-                         const char **fs_path,
-                         const char *URL,
-                         apr_pool_t *pool);
+svn_ra_local__split_URL(svn_repos_t **repos,
+                        const char **repos_url,
+                        const char **fs_path,
+                        const char *URL,
+                        apr_pool_t *pool);
 
 
 

@@ -1,65 +1,75 @@
-<TABLE BORDER="0" CELLPADDING="2" WIDTH="98%" BGCOLOR="white">
-<TR>
-<TD WIDTH="100%" BGCOLOR="yellow">
-<font color="red">
-NOTE: Subversion is now self-hosting -- to obtain a working copy, you
-must use Subversion itself, not CVS.  Please see the <a
-href="/project_source.html">Project Source</a> page for instructions
-on getting a pre-packaged bootstrap distribution, and read the <a
-href="http://subversion.tigris.org/inconveniences.html"
->inconveniences page</a> to learn about some temporary annoyances and
-their workarounds. Ask questions on the <a
-href="/servlets/ProjectMailingListList">dev mailing list</a>, or on
-IRC at <b><tt>irc.freenode.net</tt></b>, channel
-<b><tt>#svn</tt></b>.  Please also read the <a
-href="/project_faq.html">FAQ page</a> and the <a
-href="http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=256"
->Subversion Book</a> for general answers on how to get started
-and/or how to use Subversion. To find out how Subversion is being used, see our list of <a href="svn-repositories.html">Active Repositories</a>
-</font>
-</TD>
-</TR>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>subversion.tigris.org</title>
+<!-- Custom stylations to hide the obnoxious project info -->
+<style type="text/css">
+#projecthome .axial { display: none; }
+#apphead h1 { display: none; }
+#longdescription { border: none; }
+#longdescription h2 { display: none; }
+#customcontent h2 { display: block; }
+</style>
+<!-- End custom stylations -->
+</head>
 
-<TR>
-<TD WIDTH="100%" BGCOLOR="#F0F0F0" ALIGN="CENTER">
-<img src="/subversion_logo_hor-468x64.png" alt="Subversion"
-     width="468" height="64" align="center"/>
-</TD>
-</TR>
+<body>
 
-<TR>
-<TD WIDTH="100%" BGCOLOR="#CCCC99"><STRONG><font color="000033"
-FACE="Arial, Helvetica, sans-serif">
-Version Control Rethought
-</font></STRONG></TD>
-</TR>
+<!-- The class h2 is included on the main div, because the HTML which the
+     server will wrap around the page includes a <div class="h2">.
+     Thus, we include one here so that the page looks right when previewed
+     locally, *but* we override the border which the CSS assigns to that
+     style, so that we do not get two borders on the live page. -->
+<div class="h2 app" style="border-left: 0px" id="customcontent">
 
-<TR>
-<TD WIDTH="100%" HEIGHT="100" BGCOLOR="#f0f0f0">
+<div style="text-align: center;">
+  <img src="./subversion_logo_hor-468x64.png" alt="Subversion" />
+</div>
 
-<p>
-The goal of the Subversion project is to build a version control
-system that is a compelling replacement for CVS in the open source
-community.  The software is released under an <a
-href="/license-1.html">Apache/BSD-style</a> open source license.
-See the <a href="/project_status.html">status page</a> for current
-progress.
-</p>
+<p>The goal of the Subversion project is to build a <strong>version
+   control system</strong> that is a compelling replacement for CVS in
+   the open source community.  The software is released under an <a
+   href="project_license.html">Apache/BSD-style</a> open source
+   license.</p>
 
-<p>
-<h2>Features planned for Subversion 1.0:</h2>
-<p>
+<h2>Latest Release</h2>
+
+<p>Subversion 1.4 is <a
+   href="http://subversion.tigris.org/servlets/NewsItemView?newsItemID=1685"
+   >now available</a>.  Please see the <a
+   href="svn_1.4_releasenotes.html" >release notes</a> for what's new
+   in the 1.4 series.</p>
+
+<h2>Got Questions?</h2>
+
+<p style="background: #dd9;">The <a
+   href="http://svnbook.red-bean.com/">Subversion Book</a> and <a
+   href="faq.html">FAQ</a> can usually answer most questions.  You can
+   also ask on the <a
+   href="/servlets/ProjectMailingListList">users@subversion.tigris.org</a>
+   mailing list, or in IRC at <tt><a href="irc://irc.freenode.net/"
+   >irc.freenode.net</a></tt>, channel <tt><a
+   href="irc://irc.freenode.net/svn" >#svn</a></tt>.  (Note that the
+   mailing lists are <a href="faq.html#moderation">moderated</a>, so
+   there may be a delay before your post shows up.)</p>
+
+<h2>Subversion's Features</h2>
 
 <ul>  <!-- list of features -->
 
 <li><strong>Most current CVS features.</strong>
-    <p>Subversion is meant to be a better CVS, so it will have most of
-    CVS's features, with as many as possible in the 1.0 release.  The
-    main exception is "svn&nbsp;blame" (i.e., "cvs annotate"), which
-    has been put off until after 1.0 for scheduling reasons.
-    Generally, Subversion's interface to a particular feature is
-    similar to CVS's, except where there's a compelling reason to do
-    otherwise.</p>
+    <p>Subversion is meant to be a better CVS, so it has most of
+    CVS's features.  Generally, Subversion's interface to a particular
+    feature is similar to CVS's, except where there's a compelling
+    reason to do otherwise.</p>
 </li>
 
 <li><strong>Directories, renames, and file meta-data are versioned.</strong>
@@ -79,13 +89,22 @@ progress.
     in CVS.</p>
 </li>
 
-<li><strong>Apache as network server, WebDAV/DeltaV for protocol</strong>
-    <p>Subversion uses the HTTP-based WebDAV/DeltaV protocol for
-    network communications, and uses the Apache web server to provide
-    repository-side network service.  This gives Subversion a big
-    advantage in stability and interoperability, and provides various
-    key features for free: authentication, basic authorization,
-    wire compression, and repository browsing, for example.</p> 
+<li><strong>Apache network server option, with WebDAV/DeltaV
+    protocol.</strong>
+    <p>Subversion can use the HTTP-based WebDAV/DeltaV protocol for network
+    communications, and the Apache web server to provide
+    repository-side network service.  This gives Subversion an
+    advantage over CVS in interoperability, and provides various key
+    features for free: authentication, wire compression, and
+    basic repository browsing. </p>
+</li>
+
+<li><strong>Standalone server option.</strong> 
+    <p>Subversion also offers a standalone server option using a
+    custom protocol (not everyone wants to run Apache 2.x).  The
+    standalone server can run as an inetd service, or in daemon mode,
+    and offers basic authentication and authorization.  It can also be
+    tunnelled over ssh.</p>
 </li>
 
 <li><strong>Branching and tagging are cheap (constant time) operations</strong>
@@ -93,7 +112,7 @@ progress.
     they aren't.</p>
 
     <p>Branches and tags are both implemented in terms of an
-    underlying "copy" operation.  An copy takes up a small, constant
+    underlying "copy" operation.  A copy takes up a small, constant
     amount of space.  Any copy is a tag; and if you start committing
     on a copy, then it's a branch as well.  (This does away with CVS's
     "branch-point tagging", by removing the distinction that made
@@ -114,11 +133,24 @@ progress.
 </li>
 
 <li><strong>Costs are proportional to change size, not data size</strong>
-    <p>In general, the time required for an Subversion operation is
+    <p>In general, the time required for a Subversion operation is
     proportional to the size of the <i>changes</i> resulting from that
     operation, not to the absolute size of the project in which the
     changes are taking place.  This is a property of the Subversion
     repository model.</p>
+</li>
+
+
+<li><strong>Choice of database or plain-file repository implementations</strong> 
+  <p>Repositories can be created with either an embedded database
+     back-end (BerkeleyDB) or with normal flat-file back-end, which
+     uses a custom format.</p>
+</li>
+
+<li><strong>Versioning of symbolic links</strong>
+  <p>Unix users can place symbolic links under version control.  The
+     links are recreated in Unix working copies, but not in win32
+     working copies.</p>
 </li>
 
 <li><strong>Efficient handling of binary files</strong>
@@ -134,82 +166,18 @@ progress.
 </p>
 </li>
 
-</ul>  <!-- end list of features -->
-
-<p>
-<h2>Features planned for after 1.0:</h2>
-<p>
-
-<ul>
-
-<li><strong>Support for symbolic links</strong>
-    <p>Subversion will handle symbolic links ("shortcuts").  It may
-    also support multiple hard links and other special file types, as
-    long as this can be done portably and with semantics that are
-    compatible with version control.</p>
-</li>
-
-<li><strong>"svn blame" (cvs annotate)</strong>
-    <p>Subversion will have a counterpart to CVS's "annotate"
-    feature, but it will most likely happen after the 1.0 release,
-    due to prioritization and scheduling.</p> 
-</li>
-
-<li><strong>Graceful handling of repeated merges</strong>
-    <p>Subversion will use its generic metadata mechanism as a way of
-    remembering what has been merged, so that repeated merges from the
-    same source do not require careful human calculation to avoid
-    spurious conflicts (anyone who's done repeated CVS merges knows
-    what we're talking about).</p>
-
-    <p>(There are some theoretical problems with remembering merge
-    sources -- knowing where the merged data came from implies some
-    sort of universal repository registry.  However, our first goal is
-    to make sure that multiple merges from branches made <i>in the
-    same repository as the original project</i> compound gracefully.
-    Remembering merges from remote sources is more difficult, due to
-    the difficulty of distinguishing remote sources, but there are
-    good "90%" solutions that will work in practice).</p>
-</li>
-
-<li><strong>Broader WebDAV compatibility</strong>
-    <p>Currently, the Subversion server only responds to a subset of
-    WebDAV requests -- the subset necessary to support Subversion's
-    own functionality.  Increased support for WebDAV is a high
-    priority after the 1.0 release, however.</p>
-</li>
-
-<li><strong>Support for plug-in client side diff programs</strong>
-    <p>Subversion knows how to show diffs for text files, and later
-    will also give the user the option to plug in external diff
-    programs for any kind of file.  The external program need merely
-    conform to some simple invocation interface (i.e., "<tt>diffprog
-    file1 file2 [file3...]</tt>", where the various files might be
-    different revisions of the same file).</p>
-</li>
-
-<li><strong>Internationalization</strong>
-    <p>Subversion will have I18N support -- commands, user messages, and
-    errors can be customized to the appropriate human language at
-    build-time.  Also, there will be I18N support for the <i>names</i>
-    as well as the contents of versioned entities.
-</li>
-
-<li><strong>Progressive multi-lingual support</strong>
-    <p>In order to support keyword expansion and platform-dependent
-    line-ending conversion, CVS makes a distinction between text and
-    binary files, and treats the text files specially.</p>
-
-    <p>Subversion makes the same distinction, but will offer a more
-    generous notion of what constitutes a text file: not only ASCII,
-    but UTF-* encodings of Unicode too.  UTF-8 is the first priority,
-    with other encodings following if needed.</p>
+<li><strong>Localized messages</strong>
+  <p>Subversion uses gettext() to display translated error,
+     informational, and help messages, based on current locale
+     settings.</p>
 </li>
 
 </ul>
 
+<h2>Future Subversion Features</h2>
 
-<br>
-</table>
+<p>See the <a href="roadmap.html">Roadmap</a> page.</p>
 
-<P>
+</div>
+</body>
+</html>

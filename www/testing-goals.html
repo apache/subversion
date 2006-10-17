@@ -1,46 +1,56 @@
-<html>
-  <head>
-    <title>SVN Test</title>
-  </head>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Subversion Testing Goals</title>
+</head>
 
-  <body bgcolor="white">
+<body>
+<div class="app">
 
-    <h1>Design goals for the SVN test suite</h1>
+    <h2>Design goals for the SVN test suite</h2>
 
     <ul>
       <li>
-	<A HREF="#WHY">Why Test?</A>
+	<a href="#WHY">Why Test?</a>
       </li>
       <li>
-	<A HREF="#AUDIENCE">Audience</A>
+	<a href="#AUDIENCE">Audience</a>
       </li>
       <li>
-	<A HREF="#REQUIREMENTS">Requirements</A>
+	<a href="#REQUIREMENTS">Requirements</a>
       </li>
       <li>
-	<A HREF="#EASEOFUSE">Ease of Use</A>
+	<a href="#EASEOFUSE">Ease of Use</a>
       </li>
       <li>
-	<A HREF="#LOCATION">Location</A>
+	<a href="#LOCATION">Location</a>
       </li>
       <li>
-	<A HREF="#EXTERNAL">External dependencies</A>
+	<a href="#EXTERNAL">External dependencies</a>
       </li>
     </ul>
 
 
 
-    <A NAME="WHY"><h2>Why Test?</h2></A>
+    <h3><a name="WHY">Why Test?</a></h3>
 
     <p>
       Regression testing is an essential element of high quality software.
       Unfortunately, some developers have not had first hand exposure to a
       high quality testing framework.  Lack of familiarity with the positive
       effects of testing can be blamed for statements like:
-      <br>
+      <br/>
     </p>
     <blockquote>
-      "I don't need to test my code, I know it works."
+      <p>"I don't need to test my code, I know it works."</p>
     </blockquote>
     <p>
       It is safe to say that the idea that developers do not introduce
@@ -48,7 +58,7 @@
     </p>
 
 
-    <A NAME="AUDIENCE"><h2>Audience</h2></A>
+    <h3><a name="AUDIENCE">Audience</a></h3>
 
     <p>
       The test suite will be used by both developers and end users.
@@ -60,7 +70,7 @@
 
     <p>
       <b><i>Fixing Bugs:</i></b>
-      <br>
+      <br/>
       Each time a bug is fixed, a test case should be added to the test
       suite. Creating a test case that reproduces a bug is a seemingly
       obvious requirement. If a bug cannot be reproduced, there is no way to
@@ -72,7 +82,7 @@
 
     <p>
       <b><i>Impact Analysis:</i></b>
-      <br>
+      <br/>
       A developer fixing a bug or adding a new feature needs to know if a
       given change breaks other parts of the code. It may seem obvious, but
       keeping a developer from introducing new bugs is one of the primary
@@ -81,7 +91,7 @@
 
     <p>
       <b><i>Regression Analysis:</i></b>
-      <br>
+      <br/>
       When a test regression occurs, a developer will need to manually
       determine what has caused the failure.  The test system is not able to
       determine why a test case failed. The test system should simply report
@@ -95,7 +105,7 @@
 
     <p>
       <b><i>Building:</i></b>
-      <br>
+      <br/>
       Building software can be a scary process.  Users that have never built
       software may be unwilling to try. Others may have tried to build a
       piece of software in the past, only to be thwarted by a difficult
@@ -107,7 +117,7 @@
 
     <p>
       <b><i>Porting:</i></b>
-      <br>
+      <br/>
       Often, users become porters when the need to run on a previously
       unsupported system arises. This porting process typically require some
       minor tweaking of include files.  It is absolutely critical that
@@ -118,7 +128,7 @@
 
     <p>
       <b><i>Testing:</i></b>
-      <br>
+      <br/>
       Different installations of the exact same OS can contain subtle
       differences that cause software to operate incorrectly.  Only testing
       on different systems will expose problems of this nature. A test suite
@@ -129,7 +139,7 @@
 
 
 
-    <A NAME="REQUIREMENTS"><h2>Requirements</h2></A>
+    <h3><a name="REQUIREMENTS">Requirements</a></h3>
 
     <p>
       Functional requirements of an acceptable test suite include:
@@ -137,7 +147,7 @@
 
     <p>
       <b><i>Unique Test Identifiers:</i></b>
-      <br>
+      <br/>
       Each test case must have a globally unique test identifier, this
       identifier is just a string. A globally unique string is
       required so that test cases can be individually identified by
@@ -150,15 +160,15 @@
 
     <p>
       <b><i>Exact Results:</i></b>
-      <br>
+      <br/>
       A test case must have one expected result. If the result of
       running the tests does not exactly match the expected result,
       the test must fail.
     </p>
 
     <p>
-      <b><i>Reproducible Results:</b></i>
-      <br>
+      <b><i>Reproducible Results:</i></b>
+      <br/>
       Test results should be reproducible.  If a test result matches
       the expected result, it should do so every time the test is
       run. External factors like time stamps must not effect the
@@ -166,8 +176,8 @@
     </p>
 
     <p>
-      <b><i>Self-Contained Tests:</b></i>
-      <br>
+      <b><i>Self-Contained Tests:</i></b>
+      <br/>
       Each test should be self-contained.  Results for one test should
       not depend on side effects of previous tests. This is obviously
       a good practice, since one is able to understand everything a
@@ -179,7 +189,7 @@
 
     <p>
       <b><i>Selective Execution:</i></b>
-      <br>
+      <br/>
       It may not be possible to run a given set of tests on certain
       systems. The suite must provide a means of selectively running
       tests cases based on the environment. The test system must also
@@ -191,7 +201,7 @@
 
     <p>
       <b><i>No Monitoring:</i></b>
-      <br>
+      <br/>
       The tests must run from start to end without operator
       intervention.  Test results must be generated automatically. It
       is critical that an operator not need to manually compare test
@@ -201,7 +211,7 @@
 
     <p>
       <b><i>Automatic Logging of Results:</i></b>
-      <br>
+      <br/>
       The system must store test results so that they can be compared
       later. This applies to machine readable results as well as human
       readable results. For example, assume we have a test named
@@ -210,24 +220,22 @@
       two distinct pieces of information. First, that the test
       failed. Second, how the test failed, meaning how the expected
       result differed from the actual result.
-    <p>
+    </p>
 
     <p>
       This following example shows the kind of results we might record
       in a results log file.
     </p>
 
-    <p>
-      <code><pre>
+      <pre><code>
    client-1 FAILED
    client-2 PASSED
    client-3 PASSED
-    </pre></code>
-  </p>
+    </code></pre>
 
     <p>
       <b><i>Automatic Recovery:</i></b>
-      <br>
+      <br/>
       The test system must be able to recover from crashes and
       unexpected delays.  For example, a child process might go into a
       infinite loop and would need to be killed. The test shell itself
@@ -257,7 +265,7 @@
 
     <p>
       <b><i>Report Results Only:</i></b>
-      <br>
+      <br/>
       When a regression is found, a developer will need to manually
       determine the reason for the regression.  The system should tell
       the developer exactly what tests have failed, when the last set
@@ -268,7 +276,7 @@
 
     <p>
       <b><i>Platform Specific Results:</i></b>
-      <br>
+      <br/>
       Each supported platform should have an associated set of test
       results. The naive approach would be to maintain a single set of
       results and compare the output for any platform to the known
@@ -284,7 +292,7 @@
       committed.
     </p>
 
-    <table BORDER=1 COLS=2>
+    <table border="1" cellspacing="2" cellpadding="2">
 
       <tr>
 	<td><b>Before</b> (Reference Platform)</td>
@@ -312,7 +320,7 @@
       results:
     </p>
 
-    <table BORDER=1 COLS=2>
+    <table border="1" cellspacing="2" cellpadding="2">
 
       <tr>
 	<td><b>Before</b> (Reference Platform)</td>
@@ -352,7 +360,7 @@
 
     <p>
       <b><i>Test Types:</i></b>
-      <br>
+      <br/>
       The test suite should support two types of tests. The first
       makes use of an external program like the svn client.  These
       kinds of tests will need to exec an external program and check
@@ -369,7 +377,7 @@
       Unix.
     </p>
 
-    <A NAME="EASEOFUSE"><h2>Ease of Use</h2></A>
+    <h3><a name="EASEOFUSE">Ease of Use</a></h3>
 
     <p>
       Developers will tend to avoid using a test suite if it is not
@@ -385,9 +393,9 @@
     </p>
 
     <blockquote>
-      <code>
+      <p><code>
 	% make check
-      </code>
+      </code></p>
     </blockquote>
 
     <p>
@@ -411,12 +419,12 @@
     </p>
 
     <blockquote>
-      <code>
+      <p><code>
 	% svntest "client-*"
-      </code>
+      </code></p>
     </blockquote>
 
-    <A NAME="LOCATION"><h2>Location</h2></A>
+    <h3><a name="LOCATION">Location</a></h3>
 
     <p>
       The test suite should be packaged along with the source code
@@ -435,7 +443,7 @@
     </p>
 
 
-    <A NAME="EXTERNAL"><h2>External program dependencies</h2></A>
+    <h3><a name="EXTERNAL">External program dependencies</a></h3>
 
     <p>
       As much as possible, the test suite should avoid depending on
@@ -454,5 +462,6 @@
       system they want to test subversion on.
     </p>
 
-  </body>
+</div>
+</body>
 </html>

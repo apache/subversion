@@ -26,7 +26,7 @@ A Little Background
    its own update procedure.  The update procedure involves describing
    the update target in the working copy to the repository using a
    "reporter".  The repository then, using an editor, modifies the
-   update target in the working copy to look as exactly as it does in
+   update target in the working copy to look exactly as it does in
    the repository (usually in the youngest revision, but optionally,
    at any revision snapshot of the tree).
 
@@ -127,7 +127,7 @@ The Status Quo
      * It requires special handling for the directory that maps
        to the root of the repository, which simply cannot be deleted
        (theoretical wrongness all over the place).  Currently, the
-       solution does has no "special cases".
+       solution has no "special cases".
 
 
 In Conclusion

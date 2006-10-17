@@ -1,14 +1,24 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
+
 import commands
 import sys, os
 import getopt
+try:
+    my_getopt = getopt.gnu_getopt
+except AttributeError:
+    my_getopt = getopt.getopt
 import re
 
-__author__ = "Gustavo Niemeyer <niemeyer@conectiva.com>"
+__author__ = "Gustavo Niemeyer <gustavo@niemeyer.net>"
 
 class Error(Exception): pass
 
-SECTION = re.compile(r'\[([^]]+)\]')
+SECTION = re.compile(r'\[([^]]+?)(?:\s+extends\s+([^]]+))?\]')
 OPTION = re.compile(r'(\S+)\s*=\s*(.*)$')
 
 class Config:
@@ -37,8 +47,19 @@ class Config:
                 m = SECTION.match(line)
                 if m:
                     sectname = m.group(1)
-                    cursectdict = self._sections_dict.setdefault(sectname, {})
-                    cursectlist = []
+                    parentsectname = m.group(2)
+                    if parentsectname is None:
+                        # No parent section defined, so start a new section
+                        cursectdict = self._sections_dict.setdefault \
+                            (sectname, {})
+                        cursectlist = []
+                    else:
+                        # Copy the parent section into the new section
+                        parentsectdict = self._sections_dict.get \
+                            (parentsectname, {})
+                        cursectdict = self._sections_dict.setdefault \
+                            (sectname, parentsectdict.copy())
+                        cursectlist = self.walk(parentsectname)
                     self._sections_list.append((sectname, cursectlist))
                     optname = None
                 elif cursectdict is None:
@@ -230,9 +251,13 @@ Options:
     -h         Show this message
 """
 
+class MissingArgumentsException(Exception):
+    "Thrown when required arguments are missing."
+    pass
+
 def parse_options():
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "f:s:r:t:R:A:h", ["help"])
+        opts, args = my_getopt(sys.argv[1:], "f:s:r:t:R:A:h", ["help"])
     except getopt.GetoptError, e:
         raise Error, e.msg
     class Options: pass
@@ -261,11 +286,12 @@ def parse_options():
             sys.exit(0)
     missingopts = []
     if not obj.repository:
-        raise Error, "you must provide a repository"
+        missingopts.append("repository")
     if not (obj.transaction or obj.revision):
-        raise Error, "you must provide a transaction or a revision"
+        missingopts.append("either transaction or a revision")
     if missingopts:
-        raise Error, "missing required options: "+" ".join(missingopts)
+        raise MissingArgumentsException, \
+              "missing required option(s): " + ", ".join(missingopts)
     obj.repository = os.path.abspath(obj.repository)
     if obj.filename is None:
         obj.filename = os.path.join(obj.repository, "conf", "svnperms.conf")
@@ -286,6 +312,10 @@ def main():
         check_perms(opts.filename, opts.section,
                     opts.repository, opts.transaction, opts.revision,
                     opts.author)
+    except MissingArgumentsException, e:
+        sys.stderr.write("%s\n" % str(e))
+        sys.stderr.write(USAGE)
+        sys.exit(1)
     except Error, e:
         sys.stderr.write("error: %s\n" % str(e))
         sys.exit(1)

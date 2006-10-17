@@ -1,35 +1,21 @@
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
-<html>
-  <head>
-    <title>Use of WebDAV in Subversion</title>
-    <style type="text/css">
-      .comment {
-        color: #900000;
-	background: #ffffc0;
-      }
-      .method {
-        font-family: courier;
-        font-weight: bold;
-      }
-      .term {
-        font-style: italic;
-      }
-      .prop {
-        font-family: courier;
-        font-weight: bold;
-      }
-      .url {
-        font-family: courier;
-      }
-      <!-- ### this dt thing isn't working... need to fix -->
-      dt {
-        font-weight: bold;
-      }
-    </style>
-  </head>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Use of WebDAV in Subversion</title>
+</head>
 
-  <body bgcolor=white>
-    <h1>Use of WebDAV in Subversion</h1>
+<body>
+<div class="app">
+
+    <h2>Use of WebDAV in Subversion</h2>
 
     <p>
       This document details how WebDAV is used within the
@@ -45,20 +31,18 @@
     </p>
     <p>
       This document heavily refers to the
-      <a href="http://subversion.tigris.org/svn-design.html">Subversion
+      <a href="http://subversion.tigris.org/files/documents/15/17/svn-design.html">Subversion
 	design document</a> and the
       <a href="http://www.webdav.org/deltav/">latest Delta-V protocol
 	draft</a>. Details of those documents will <em>not</em> be
       replicated here.
     </p>
 
-    <!-- ### put some of this stuff into a stylesheet -->
-    <center>
-      <table width="70%" border="0" bgcolor="#ff0000" cellspacing="0"
-	     cellpadding="10">
+      <table width="70%" border="0" cellspacing="0" cellpadding="10"
+      style="background-color: #ff0000; color: white;
+      margin-left: auto; margin-right: auto">
 	<tr>
 	  <td>
-	    <font color="white">
 	      <strong>NOTE:</strong> Subversion uses DeltaV for its
 	      communication, but the Subversion client is
 	      <strong>not</strong> a general-purpose DeltaV client. In
@@ -70,36 +54,29 @@
 	      well be able to interoperate with it, but only if that
 	      client operates within the narrow confines of those
 	      features the server has implemented.
-	    </font>
 	  </td>
 	</tr>
 	<tr>
 	  <td>
-	    <font color="white">
 	      Version 2.0 of Subversion will address WebDAV
 	      interoperability (Class 1, Class 2, and DeltaV
 	      features). Each of the custom features expected by the
 	      client actually has an alternate mechanism available in
 	      DeltaV, but in a much less efficient form.
-	    </font>
 	  </td>
 	</tr>
 	<tr>
 	  <td>
-	    <font color="white">
 	      It is expected that Version 1.0 will support read-only,
 	      Class 1 WebDAV clients. Any "low-hanging fruit" to
 	      increase DeltaV interoperability will be considered.
-	    </font>
 	  </td>
 	</tr>
       </table>
-    </center>
 
     <p></p>
 
-    <hr width="80&#37;">
-    <h2>Basic Concepts</h2>
+    <h3>Basic Concepts</h3>
     <p>
       Subversion uses a tree-based format to describe a change set
       against the repository. This tree is constructed on the client
@@ -141,14 +118,13 @@
       handled with the WebDAV <span class="method">COPY</span>.
     </p>
     <blockquote class="comment">
-      need to talk about copies somewhere. need to discuss how copy
+      <p>need to talk about copies somewhere. need to discuss how copy
       history is retained (svn does it automatically, but interop with
       other servers may require us to set a custom property on those
-      servers.
+      servers.</p>
     </blockquote>
 
-    <hr width="80&#37;">
-    <h2>DeltaV Concepts Used by Subversion</h2>
+    <h3>DeltaV Concepts Used by Subversion</h3>
     <p>
       Subversion uses many of the DeltaV concepts, as listed
       below. Note that many of these concepts are not fully
@@ -208,8 +184,7 @@
 
     </dl>
 
-    <hr width="80&#37;">
-    <h2>Subversion Projects as URLs</h2>
+    <h3>Subversion Projects as URLs</h3>
     <p>
       The very first concept to define is how a project is exposed to
       the client. Subversion will expose all projects as URLs on a
@@ -242,8 +217,7 @@
       <span class="url">http://subversion.tigris.org/repos/example/sub/file.c</span>.
     </p>
 
-    <hr width="80&#37;">
-    <h2>Initial Checkout</h2>
+    <h3>Initial Checkout</h3>
     <p>
       When the user performs the initial checkout of a Subversion
       project, the client will issue a series of <span
@@ -258,7 +232,7 @@
       baseline collection.
     </p>
     <p class="comment">
-      <i>(moved here from below; need to rewrite)</i><br>
+      <i>(moved here from below; need to rewrite)</i><br/>
       When the initial checkout was performed, Subversion fetched
       the <span class="prop">DAV:activity-collection-set</span> value
       and stored it as a property on each directory in the working copy.
@@ -274,8 +248,7 @@ property for each
       work.
     </p>
 
-    <hr width="80&#37;">
-    <h2>Committing a Change</h2>
+    <h3>Committing a Change</h3>
     <p>
       Subversion commits are modeled using the "activity" concept from
       DeltaV. An activity can be viewed as a transaction for a set of
@@ -298,17 +271,16 @@ property for each
     <dl>
       <dt>At checkout time:</dt>
       <dd>
-	Request: <span class="method">OPTIONS</span> for
-	<span class="prop">DAV:activity-collection-set</span>
-	<br>
-	Response: <span class="url">http://www.example.com/repos/foo/$svn/act/</span>
-      </dd>
+	<div>Request: <span class="method">OPTIONS</span> for
+	<span class="prop">DAV:activity-collection-set</span></div>
+        <div>Response: <span
+        class="url">http://www.example.com/repos/foo/$svn/act/</span></div>
+        </dd>
       <dt>At commit time:</dt>
       <dd>
-	Request: <span class="method">MKACTIVITY</span>
-	<span class="url">http://www.example.com/repos/foo/$svn/act/01234567-89ab-cdef-0123-456789abcdef</span>
-	<br>
-	Response: 201 (Created)
+	<div>Request: <span class="method">MKACTIVITY</span>
+	<span class="url">http://www.example.com/repos/foo/$svn/act/01234567-89ab-cdef-0123-456789abcdef</span></div>
+	<div>Response: 201 (Created)</div>
       </dd>
     </dl>
     <p>
@@ -388,12 +360,12 @@ property for each
 	  property referring to the ancestor's version resource.
 	</p>
 	<blockquote>
-	  <strong>Note:</strong> it appears that we will use
+	  <p><strong>Note:</strong> it appears that we will use
 	  <code>COPY</code> to copy the appropriate resource into the
 	  working collection. This will create a new version history
 	  which is then placed into the working collection. The
 	  version history will use the <code>DAV:precursor-set</code>
-	  property to specify the version resource of the ancestor.
+	  property to specify the version resource of the ancestor.</p>
 
 	  <p>
 	    Because a version resource does not specify the revision,
@@ -539,12 +511,12 @@ property for each
 	specifies that we are overwriting <code>/dir1/dir2</code> with 
 	<code>/dir1/dir3</code>.
 	<p>
-	  <code>CHECKOUT&nbsp;/dir1/dir2/</code><br>
+	  <code>CHECKOUT&nbsp;/dir1/dir2/</code><br/>
 	  <i>(returns a working resource URL for the directory)</i>
 	</p>
 	<p>
-	  <code>COPY&nbsp;/dir1/dir3/</code><br>
-	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../</code><br>
+	  <code>COPY&nbsp;/dir1/dir3/</code><br/>
+	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../</code><br/>
 	  <code>Overwrite:&nbsp;T</code>
 	</p>
       </li>
@@ -555,13 +527,15 @@ property for each
 	<code>COPY</code> the file into the target directory's working 
 	resource:
 	<p>
-	  <code>COPY&nbsp;/dir1/dir2/file3</code><br>
+	  <code>COPY&nbsp;/dir1/dir2/file3</code><br/>
 	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../file3</code>
 	</p>
       </li>
       <li>
-	<code>CHECKOUT&nbsp;/dir1/dir3/</code><br>
-	<i>(returns a working resource URL for the directory)</i>
+        <p>
+          <code>CHECKOUT&nbsp;/dir1/dir3/</code><br/>
+          <i>(returns a working resource URL for the directory)</i>
+        </p>
 	<p>
 	  <code>DELETE&nbsp;/$svn/wrk/.../</code>
 	</p>
@@ -571,7 +545,7 @@ property for each
 	<code>/dir1</code> directory. Since we don't have
 	<code>/dir1</code> checked out yet, we do so:
 	<p>
-	  <code>CHECKOUT&nbsp;/dir1/</code><br>
+	  <code>CHECKOUT&nbsp;/dir1/</code><br/>
 	  <i>(returns a working resource URL for the directory)</i>
 	</p>
 	<p>
@@ -579,7 +553,7 @@ property for each
 	  resource:
 	</p>
 	<p>
-	  <code>COPY&nbsp;/dir1/dir2/</code><br>
+	  <code>COPY&nbsp;/dir1/dir2/</code><br/>
 	  <code>Destination:&nbsp;http://www.example.com/$svn/wrk/.../dir4/</code>
 	</p>
       </li>
@@ -593,8 +567,7 @@ property for each
       </li>
     </ol>
 
-    <hr width="80&#37;">
-    <h2>URL Layout</h2>
+    <h3>URL Layout</h3>
     <p>
       The Subversion server exposes repositories at user-defined
       URLs. For example, the "foo" repository might be located at
@@ -631,9 +604,9 @@ property for each
 	  resource.
 	</p>
 	<blockquote>
-	  Note: actually, we may want to allow a <code>PROPFIND</code> 
+	  <p>Note: actually, we may want to allow a <code>PROPFIND</code> 
 	  with a <code>Depth:&nbsp;1</code> header to allow clients to 
-	  enumerate the current activities.
+	  enumerate the current activities.</p>
 	</blockquote>
 	<p>
 	  Only a subset of methods are allowed on the activities
@@ -669,13 +642,13 @@ property for each
 	  following form:
 	</p>
 	<blockquote class="url">
-	  $svn/his/<var>node-id</var>
+	  <p>$svn/his/<var>node-id</var></p>
 	</blockquote>
 	<p>
 	  The <var>node-id</var> is an internal value
 	  that Subversion uses to reference individual files and
 	  directories. This <var>node-id</var> is a single integer
-	  defined by the Subversion repository. Note that this is a an 
+	  defined by the Subversion repository. Note that this is an 
 	  undotted node id, which is the base for the entire history
 	  of a given node in the repository.
 	</p>
@@ -684,12 +657,12 @@ property for each
 	  collection is <span class="prop">DAV:version-history</span>.
 	</p>
 	<blockquote class="comment">
-	  <strong>Note:</strong> the above information is probably not 
+	  <p><strong>Note:</strong> the above information is probably not 
 	  quite correct. The issue of linking one version history to
 	  another is still open. Further, I think that node 73 and
 	  node 73.4.1 are each version histories (where the latter is
 	  linked to the former). 73.x and 73.4.1.x are the versions
-	  within the version history.
+	  within the version history.</p>
 	</blockquote>
       </dd>
 
@@ -708,7 +681,7 @@ property for each
 	  implementation), it is laid out as:
 	</p>
 	<blockquote class="url">
-	  $svn/ver/<var>node-id</var>/<var>path</var>
+	  <p>$svn/ver/<var>node-id</var>/<var>path</var></p>
 	</blockquote>
 	<p>
 	  Only read-only methods are allowed against these resources
@@ -740,7 +713,7 @@ property for each
 	  constructed as:
 	</p>
 	<blockquote class="url">
-	  $svn/wrk/<var>activity</var>/<var>path</var>
+	  <p>$svn/wrk/<var>activity</var>/<var>path</var></p>
 	</blockquote>
 	<p>
 	  Any method is allowed on the working resources, but no
@@ -801,8 +774,7 @@ property for each
       </dd>
     </dl>
 
-    <hr width="80&#37;">
-    <h2>Property Management (and History/Log Reporting)</h2>
+    <h3>Property Management (and History/Log Reporting)</h3>
     <p class="comment">
       this section needs to be reworked. the properties occur on the
       FS revisions (and exposed via baselines).
@@ -844,20 +816,19 @@ property for each
     <p>
       Based on the client design, it may be important to specify other 
       read-only live properties for information about versions. For
-      examply, how many lines were added/removed in a particular
+      example, how many lines were added/removed in a particular
       checkin for a file? Creating these live properties will be quite 
       straight-forward, and driven by the client design over time.
     </p>
     <blockquote>
-      Note: if we do this, however, then we'd end up tying the client
+      <p>Note: if we do this, however, then we'd end up tying the client
       to the server. Of course, if the client were run against another 
       DeltaV server which didn't report these properties, then we'd
       simply not display them in the UI. (e.g. graceful degradation of 
-      functionality)
+      functionality)</p>
     </blockquote>
 
-    <hr width="80&#37;">
-    <h2>Fetching Status and Updates</h2>
+    <h3>Fetching Status and Updates</h3>
     <p>
       After the initial checkout, the client can request a status
       report (what has been changed on the client, pending a commit;
@@ -897,15 +868,15 @@ property for each
       current revision number.
     </p>
     <blockquote class="comment">
-      The XML DTDs for the request and response are TBD.
+      <p>The XML DTDs for the request and response are TBD.</p>
     </blockquote>
     <blockquote>
-      <small>
+      <p><small>
 	The custom report will tie the client to only those servers
 	which support the report, but a future version of the software
 	will contain a fallback codepath, a graceful degradation, to
 	support other DeltaV servers.
-      </small>
+      </small></p>
     </blockquote>
     <p>
       When an updated is performed, the client will fetch each of the
@@ -944,8 +915,7 @@ property for each
       etag (and other properties) can be fetched using that mechanism.
     </p>
 
-    <hr width="80&#37;">
-    <h2>Tags and Branches</h2>
+    <h3>Tags and Branches</h3>
     <p>
       Tags and branches within Subversion are performed by copying
       from one area to another. For example:
@@ -972,8 +942,7 @@ property for each
       class="method">MERGE</span> request.
     </p>
 
-    <hr width="80&#37;">
-    <h2>Server Requirements</h2>
+    <h3>Server Requirements</h3>
     <p class="comment">
       <strong>Warning:</strong> this section is out of date. The
       DeltaV draft has gone through a number of revisions, and our use
@@ -1036,14 +1005,13 @@ property for each
       <li><span class="prop">DAV:checked-out</span></li>
       <li>
 	<span class="prop">DAV:predecessor-set</span>
-	<br>
-	<i>
+        <div><i>
 	  Note: the Subversion design document is not clear on the
 	  mechanics of how multiple predecessors are merged to create
 	  a single, new revision. When this clarifies, then
 	  <code>DAV:predecessor-set</code> may end up containing more
 	  than zero or one predecessor URLs
-	</i>
+	</i></div>
       </li>
 
       <!-- version resource properties -->
@@ -1116,8 +1084,7 @@ property for each
 	<span class="prop">DAV:activity-version-set</span> -
 	activities are only used for working resources, so versions
 	cannot be part of an activity.
-	<br>
-	<i>maybe this should be defined as the empty set?</i>
+	<div><i>maybe this should be defined as the empty set?</i></div>
       </li>
       <li>
 	<span class="prop">DAV:activity-checkout-set</span>
@@ -1128,8 +1095,7 @@ property for each
 	<span class="prop">DAV:activity-set</span> -
 	activities are only used for working resources, so versions
 	cannot be part of an activity.
-	<br>
-	<i>maybe this should be defined as the empty set?</i>
+	<div><i>maybe this should be defined as the empty set?</i></div>
       </li>
       <li>
 	<span class="prop">DAV:version-controlled-binding-set</span> -
@@ -1157,7 +1123,7 @@ property for each
 
     <h3>Reports</h3>
     <p>
-      The <span class="prop">DAV:supported-report-set</code> property
+      The <span class="prop">DAV:supported-report-set</span> property
       will signal support for the following reports:
     </p>
     <ul>
@@ -1174,13 +1140,13 @@ property for each
     <p>
       Discuss timeouts and auto-purge of activities (and the related
       working resources).
-      <br>
+      <br/>
       Discuss the activity database maintained by mod_dav_svn.
-      <br>
+      <br/>
       Discuss other implementation details of ra_dav and mod_dav_svn.
     </p>
 
-    <h2><a name="rationale">Appendix A: Rationale</a></h2>
+    <h3><a name="rationale">Appendix A: Rationale</a></h3>
     <p>
       Several times, people have asked, "Why choose
       HTTP/WebDAV/DeltaV? That seems awfully bloated and
@@ -1190,73 +1156,73 @@ property for each
     </p>
 
     <blockquote>
-      <small>
+      <p><small>
 	While this list could certainly be expanded with more reasons
 	(and to be fair, with a list of reasons why WebDAV was a poor
 	choice), it certainly demonstrates the basic reasons for our
 	choice.
-      </small>
+      </small></p>
     </blockquote>
 
     <blockquote>
-      <small>
+      <p><small>
 	Note: this list came from an email note, so the tone and point
 	of view might be a bit off. Further word-smithing is
 	welcome...
-      </small>
+      </small></p>
     </blockquote>
 
     <h3>Builtin web browsing of the repository</h3>
     <blockquote>
-      For example, take a
+      <p>For example, take a
       look at:
-      <a href="http://svn.collab.net/repos/svn/trunk/HACKING">http://svn.collab.net/repos/svn/trunk/HACKING</a>
+      <a href="http://svn.collab.net/repos/svn/trunk/README">http://svn.collab.net/repos/svn/trunk/README</a>
       (that's the HEAD right there; we also have URLs for every
-      previous revision of every file)
+      previous revision of every file)</p>
     </blockquote>
 
     <h3>DAV-based browsing</h3>
     <blockquote>
-      Use Web Folders or WebDrive or somesuch on
+      <p>Use Web Folders or WebDrive or somesuch on
       your Windows box (or Windows XP's native DAV mounts) to browse
       the SVN repository with Windows Explorer. Mac OS X has builtin
       DAV server mounting. Nautilus has DAV capabilities. Then you
-      have your Open Source tools such as cadaver, Goliath, etc.
+      have your Open Source tools such as cadaver, Goliath, etc.</p>
     </blockquote>
 
     <h3>People can use existing libraries</h3>
     <blockquote>
-      I couldn't even begin to count the number of HTTP tools and
+      <p>I couldn't even begin to count the number of HTTP tools and
       libraries available. If we had designed our own protocol, then
       we would have /none/ of those benefits. Heck, two HTTP library
       implementors (Joe Orton of Neon, and Daniel Stenberg of CURL)
       are regulars here. we wouldn't get that benefit. I've used
       Python's httplib (and a davlib of my own) to do a lot of testing
-      of our server. No need to go and roll new protocol libraries.
+      of our server. No need to go and roll new protocol libraries.</p>
     </blockquote>
 
     <h3>Existing tools</h3>
     <blockquote>
-      One word: Ethereal :-) When we capture network traces, Ethereal
+      <p>One word: Ethereal :-) When we capture network traces, Ethereal
       already knows about HTTP. It's quite nice, but I know there are
       even better ones out there. But we also have other tools like
-      squid and other (caching) proxies (see the next item).
+      squid and other (caching) proxies (see the next item).</p>
     </blockquote>
 
     <h3>Caching proxies</h3>
     <blockquote>
-      Subversion will work great with caching proxies. There is no
+      <p>Subversion will work great with caching proxies. There is no
       longer a need for specialized tools like "cvsup". Just drop in a
       caching proxy, and you've already got your distributed read-only
-      repository. That european dev team can just drop in the cache
+      repository. That European dev team can just drop in the cache
       between them and the US server and their checkouts/updates will
       get cached for the benefit of the other team members. Commits
-      will flow through, back to the US-based server.
+      will flow through, back to the US-based server.</p>
     </blockquote>
 
     <h3>Sophisticated and broad-choice authentication</h3>
     <blockquote>
-      We don't have to reimplement an authentication scheme for a new
+      <p>We don't have to reimplement an authentication scheme for a new
       protocol. We can use all of the various schemes that have been
       defined for HTTP. Ever look at the CVS protocol? Ever see the "I
       Love You" or "I Hate You" lines? :-) That is all part of
@@ -1264,43 +1230,45 @@ property for each
       certificate-based auth if we want. Kerberos. NTLM. or even just
       simple Basic or Digest. And our users can come from text files,
       database, LDAP, or PAM. We don't have to reinvent the wheel cuz
-      it is all available for Apache already.
+      it is all available for Apache already.</p>
     </blockquote>
 
     <h3>Awesome network server</h3>
     <blockquote>
-      We don't have to worry about how to portably set TCP_CORK for
+      <p>We don't have to worry about how to portably set TCP_CORK for
       optimal network packets. We don't have to worry about when
       sendfile() makes sense, or if it is available. We don't have to
       worry about dropped client connections, how to best use threads
       and processes to scale, request management, monitoring, logging,
       etc. Apache gives us all of that and a ton more. I *really*
       would not want to do that through xinetd. I mean... setting
-      TCP_CORK on stdout? freaky :-)
+      TCP_CORK on stdout? freaky :-)</p>
     </blockquote>
 
     <h3>Well-defined on-wire compression</h3>
     <blockquote>
-      We already have on-wire compression, similar to CVS's "-z#"
+      <p>We already have on-wire compression, similar to CVS's "-z#"
       switch. And we didn't do anything. The client library and server
       that we use just support it automatically for us, according to
-      RFC 2616.
+      RFC 2616.</p>
     </blockquote>
 
     <h3>Future interoperability</h3>
     <blockquote>
-      In the future, we'll be able to interoperate with a multitude of
+      <p>In the future, we'll be able to interoperate with a multitude of
       IDEs and other WebDAV/DeltaV clients. As DeltaV becomes more
       prevalent, IDEs could very well use it for source code
       management, and we'll be right there without needing to write
-      some MS/SCC library to interface to the tool.
+      some MS/SCC library to interface to the tool.</p>
     </blockquote>
 
-    <hr>
+    <hr/>
     <address><a href="mailto:gstein@lyra.org">Greg Stein</a></address>
 <!-- Created: Thu Aug 10 19:14:20 PDT 2000 -->
 <!-- hhmts start -->
 Last modified: Fri Jan 25 12:54:20 PST 2002
 <!-- hhmts end -->
-  </body>
+
+</div>
+</body>
 </html>

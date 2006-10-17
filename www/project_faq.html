@@ -1,896 +1,361 @@
-<h1>Subversion FAQ</h1>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "tigris-branding/css/tigris.css";
+  @import "tigris-branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="tigris-branding/css/print.css"/>
+<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+<title>Subversion FAQ Redirect Page</title>
+</head>
 
-<p>
+<body>
+<div class="app">
 
-<![CDATA[ Table of Contents ]]>
-<ol>
-<p>
-<strong>General questions:</strong>
-</p>
-<li><a href="#why">Why does this project exist?</a></li>
-<li><a href="#collab">Is Subversion proprietary?  I heard that it
-    belongs to CollabNet.</a></li> 
-<li><a href="#stable">Is Subversion stable enough for me to use for my
-    own projects?</a></li> 
-<li><a href="#portability">What operating systems does Subversion run
-    on?</a></li> 
-<li><a href="#filesystem">What's all this about a new filesystem?  Is
-    it like ext2?</a></li> 
-<li><a href="#apache-extension">I heard that Subversion is an Apache
-    extension?</a></li> 
-<li><a href="#need-apache">Does this mean I have to set up Apache to
-    use Subversion?</a></li> 
-<li><a href="#multiple-apachim">I run Apache 1.x right now, and can't
-    switch to Apache 2.0 just to serve Subversion repositories.
-    Does that mean I can't run a Subversion server?</a></li>  
-<li><a href="#feature-x">Why don't you do X, just like SCM system Y?</a></li>
-<li><a href="#globalrev">Why does the entire repository share the 
+<h2 style="text-align: center">Subversion FAQ Redirect Page</h2>
+
+<p>The Subversion FAQ has moved to <a href="faq.html">faq.html</a>.</p>
+
+<p>This page exists only to provide redirects for entries that already
+existed when the FAQ was renamed.  Each entry is redirected
+individually&nbsp;&mdash;&nbsp;doing a "META" redirect on the page as
+a whole wouldn't work, because this server strips the relevant header.</p>
+
+<hr/>
+
+<ul>
+<li><p><a name="why">Why does this project exist?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#why">faq.html#why</a>.</p>
+</li>
+<li><p><a name="collab">Is Subversion proprietary?  I heard that it
+belongs to CollabNet.</a><br/>
+    The FAQ has moved, please see <a href="faq.html#collab">faq.html#collab</a>.</p>
+</li>
+<li><p><a name="stable">Is Subversion stable enough for me to use for my
+own projects?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#stable">faq.html#stable</a>.</p>
+</li>
+<li><p><a name="interop">What is Subversion's client/server
+    interoperability policy?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#interop">faq.html#interop</a>.</p>
+</li>
+<li><p><a name="portability">What operating systems does Subversion run
+    on?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#portability">faq.html#portability</a>.</p>
+</li>
+<li><p><a name="filesystem">What's all this about a new filesystem?  Is
+it like ext2?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#filesystem">faq.html#filesystem</a>.</p>
+</li>
+<li><p><a name="apache-extension">I heard that Subversion is an Apache
+extension?  What does it use for servers?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#apache-extension">faq.html#apache-extension</a>.</p>
+</li>
+<li><p><a name="need-apache">Does this mean I have to set up Apache to
+use Subversion?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#need-apache">faq.html#need-apache</a>.</p>
+</li>
+<li><p><a name="multiple-apachim">I run Apache 1.x right now, and can't
+switch to Apache 2.0 just to serve Subversion repositories.
+Does that mean I can't run a Subversion server?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#multiple-apachim">faq.html#multiple-apachim</a>.</p>
+</li>
+<li><p><a name="feature-x">Why don't you do X, just like SCM system Y?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#feature-x">faq.html#feature-x</a>.</p>
+</li>
+<li><p><a name="globalrev">Why does the entire repository share the 
     same revision number? I want each of my projects to have their
-    own revision numbers.  </a></li>
-<li><a href="#release">When's the next release?</a></li>
-<li><a href="#more-information">I have other questions.  Where can I
-    get more information?</a></li>  
-<p>
-<strong>How-to:</strong>
-</p>
-<li><a href="#co-svn">How do I check out the Subversion code?</a></li>
-<li><a href="#repository">How do I create a repository?  How do I
-    import data into it?</a></li> 
-<li><a href="#cvs2svn">How do I convert an existing CVS repository
-    into a Subversion repository?</a></li>
-    <li><a href="#proxy">What if I'm behind a proxy?</a></li>
-<li><a href="#paranoid">My admins don't want me to have a HTTP server for
-    Subversion.  What can I do if I still want remote usage?</a></li> 
-<li><a href="#multi-proj">How do I manage several different projects
-    under Subversion?</li></a>
-<li><a href="#multi-merge">How do I merge two completely separate repositories?</li></a>
-<li><a href="#patch">How do I submit a patch for Subversion?</a></li>
-<p>
-<strong>Troubleshooting:</strong>
-</p>
-<li><a href="#wedged-repos">What the heck!  Every time I try to access
-    my repository, the process just hangs.  Is my repository
-    corrupt?</a></li>
-<li><a href="#wedged-wc">What the heck!  Every time I try to run a svn
-    command, it says my working copy is locked.  Is my working copy
-    corrupt?</a></li>
-<li><a href="#unrecognized-url-error">I just built the distribution
-    binary, and when I try to check out Subversion, I get an error
-    about an "Unrecognized URL scheme."  What's up with that?</a></li>
-<li><a href="#db-recover">I'm getting errors finding or opening a repository,
-    but I know my repository URL is correct.  What's wrong?</a></li> 
-<li><a href="#configure-sed-error">When I run `<tt>configure</tt>', I
-    get errors <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.  What's wrong?</a></li>
-<li><a href="#windows-msvc-build">I'm having trouble building
-    Subversion under Windows with MSVC++ 6.0.  What should I do?</a></li>
-<li><a href="#windows-repository">I'm running Subversion under windows
-    and I can create a repository fine, but I get errors trying to
-    import or check out from it.  What's wrong?</a></li>
-<li><a href="#write-over-dav">I'm having trouble doing write
-    operations to a Subversion repository over a network.</a></li>
-<li><a href="#windows-xp-server">Under Windows XP, the Subversion
-    server sometimes seems to send out corrupted data.  Can this really be
-    happening?</a></li>  
-<li><a href="#ethereal">What is the best method of doing a network
-    trace of the conversation between a Subversion client and server?</a></li>
-<p>
-
-<strong>References:</strong>
-</p>
-<li><a href="#http-methods">What are all the HTTP methods Subversion 
-    uses?</a></li>
-<li><a href="#bikeshed">What's a 'bikeshed'?</a></li> 
-</ol>
-
-<![CDATA[=========================================================]]>
-
-<p>
-<hr>
-<p>
-<h2>General questions:</h2>
-<p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="why">Why does this project exist?</a></h3>
-
-<p>To take over the CVS user base.  Specifically, we're writing a new
-version control system that is very similar to CVS, but fixes many
-things that are broken.  See our front page.</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="collab">Is Subversion proprietary?  I heard that it
-belongs to CollabNet.</a></h3>
-
-<p>No, Subversion is open source / free software.  CollabNet pays the
-salaries of several full-time developers, and holds the copyright on
-the code, but that copyright is <a
-href="http://subversion.tigris.org/project_license.html">an
-Apache/BSD-style license</a>
-which is fully compliant with the <a
-href="http://www.debian.org/social_contract#guidelines">Debian Free
-Software Guidelines</a>.  In other words, you are free to download,
-modify, and redistribute Subversion as you please; no permission from
-CollabNet or anyone else is required.</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="stable">Is Subversion stable enough for me to use for my
-own projects?</a></h3>
-
-<p><b>We think so!</b></p>
-
-Because:
-<ul>
-
-<li>We believe that Subversion is stable and have confidence in our
-code, in fact, we've been self-hosting since September of 2001--eating
-our own caviar so to speak. We declared alpha because we're ready for
-the world to try Subversion.</li>
-
-<li>After 10 months of self-hosting, we haven't
-lost any data <i>at all</i>.</li>
-
-<li>The filesystem schema is stable now and shouldn't undergo any
-changes before 1.0. In the off-chance that the schema does change, we
-will provide a dump/load utility to aid you in the migration.</li>
-
-<li>In order to make Subversion as stable as possible, we need more
-people to use Subversion. If you use Subversion on a day-to-day basis,
-you can help us find and fix any bugs that might turn up. It may sound
-risky at first, but odds are that if you find any bugs they will be minor
-inconveniences as opposed to data destroyers.</li>
-
-<li>For many more reasons, read the feature list on the <a
-href="http://subversion.tigris.org/">Subversion home page</a>.
- </li>
-
-</ul>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="portability">What operating systems does Subversion run
-    on?</a></h3>
-
-<p>All modern flavors of Unix, Win32, BeOS, OS/2, MacOS X.</p>
-
-<p>See <a href="http://svn.collab.net/repos/svn/trunk/PORTING">
-http://svn.collab.net/repos/svn/trunk/PORTING</a> for details about
-individual platforms.</p>
-
-<p>Subversion is written in ANSI C and uses APR, the <a
-href="http://apr.apache.org">Apache Portable Runtime</a> library, as a
-portability layer.  Although the Subversion client will compile
-anywhere APR does, the Subversion server depends on <a
-href="http://www.sleepycat.com">Berkeley DB</a> (as well as Apache
-2.X, but Apache is as portable as APR).  In theory Berkeley DB is
-portable to most of those platforms as well (except Win95/Win98, where
-it's known not to work due to shared-memory segment problems).  In
-practice, it's difficult to get the Subversion repository running on
-non-Unix platforms; if you succeed, we'd like to hear about it.</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="filesystem">What's all this about a new filesystem?  Is
-it like ext2?</a></h3>
-
-<p>No.  The "Subversion Filesystem" is not a kernel-level filesystem that
-one would install in an operating system.  Instead, it refers to the
-design of Subversion's repository.  The repository is built on a
-database (currently <a href="http://www.sleepycat.com">Berkeley
-DB</a>) and exports a C API that <i>simulates</i> a filesystem -- a
-versioned filesystem.  Thus writing a program to access the repository
-is like writing against other filesystem APIs.  The main difference is
-that this particular filesystem doesn't lose data when written to; old
-versions of files and directories are saved.</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="apache-extension">I heard that Subversion is an Apache
-extension?</a></h3>
-
-<p>No.  Subversion is a set of libraries.  It comes with a command-line
-client that uses them.  The Subversion <i>server</i> is Apache + <a
-href="http://www.webdav.org/mod_dav">mod_dav</a> + mod_dav_svn, and
-the last module uses the Subversion libraries to speak to a
-repository.  For more information about how Subversion uses WebDAV as
-its network protocol, see our <a
-href="http://subversion.tigris.org/servlets/ProjectDocumentList">docs.</a></p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="need-apache">Does this mean I have to set up Apache to
-use Subversion?</a></h3>
-
-<p>If you want to <b>host</b> a networked repository: yes.</p>
-<p>If you just want to <b>access</b> a repository with your client: no.</p>
-
-<p>For more details about setting up a network accessible Subversion
-server, please read our <a
-href="http://svn.collab.net/repos/svn/trunk/INSTALL">INSTALL</a> document.</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3>I run Apache 1.x right now, and can't switch to Apache 2.0 just to
-serve Subversion repositories.  <a name="multiple-apachim">
-Does that mean I can't run a Subversion server?</a></h3>
-
-<p> Don't worry, you can run Apache 2.0 on a different port, while
-continuing to run Apache 1.x on port 80.  Different versions of Apache
-can happily coexist on the same machine.  Just change the
-<tt>Listen</tt> directive in httpd.conf from "<tt>Listen&nbsp;80</tt>"
-to "<tt>Listen&nbsp;8080</tt>" or whatever port number you want, and
-make sure to specify that port when you publish your repository URL
-(e.g., <tt>http://svn.mydomain.com:8080/repos/blah/trunk/</tt>).</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="feature-x">Why don't you do X, just like SCM system Y?</a></h3>
-
-<p>We aren't attempting to break new ground in SCM systems, nor are we
-attempting to imitate all the best features of every SCM system out
-there.  We're trying to replace CVS.  See the first question.</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="globalrev">Why does the entire repository share the 
-    same revision number? I want each of my projects to have their
-    own revision numbers.</a></h3>
-<p>
-The global revision number attached to the repository as a whole is
-meaningless from a user's perspective. It's an internal mechanism that
-accomplishes the goal of the underlying schema design. It just so
-happens to be exposed so that the user's interface can sometimes be a
-little more convenient than always having to type obnoxiously long
-date/time strings.
-</p>
-
-<p>
-The revision number is only relevant to the repository, and user
-convenience. It has <b>no</b> impact on any other factor of what you
-store in the repository.  Repository revision number bumps aren't
-nearly useful enough to be an accurate indication of the real rate of
-change of a given code base.  There are other more complicated ways to
-get a much better picture of a code-base's rate of change.
-</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="release">When's the next release?</a></h3>
-
-<p>See our status page, <a
-href="http://subversion.tigris.org/project_status.html">
-http://subversion.tigris.org/project_status.html</a>.</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3>I have other questions.  Where can I get more<a
-name="more-information"> information?</a></h3>
-
-<p>Please send your questions or concerns to the Subversion Development <a
-href="mailto:dev@subversion.tigris.org">mailing list</a>.  Alternatively,
-several Subversion users and developers can usually be contacted via IRC on
-channel #svn on <a
-href="http://www.openprojects.net">irc.openprojects.net</a>.</p>
-
-<![CDATA[=========================================================]]>
-
-<p>
-<hr>
-<p>
-<h2>How-to:</h2>
-<p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="co-svn">How do I check out the Subversion code?</a></h3>
-<p>Use the subversion client:
-<pre>
-	$ svn co http://svn.collab.net/repos/svn/trunk subversion
-</pre>
-<p>
-That will check out a copy of the Subversion source tree into a
-directory named subversion on your local machine.
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="repository">How do I create a repository?  How do I
-import data into it?</a></h3>
-
-<p>See <a
-href="http://svn.collab.net/repos/svn/trunk/README">
-http://svn.collab.net/repos/svn/trunk/README</a>;  specifically, look
-at section IV, the "Quickstart Guide".</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="cvs2svn">How do I convert an existing CVS repository
-    into a Subversion repository?</a></h3>
-
-We are currently working on a script to convert CVS repositories to
-Subversion--It's called <a
-href="http://svn.collab.net/repos/svn/trunk/tools/cvs2svn/cvs2svn.py">cvs2svn.py</a>.
-Note that it is <b>still under development</b>, so only use it on a
-copy of your CVS repository and <b>double check your results</b>. Be
-sure to read the <a
-href="http://svn.collab.net/repos/svn/trunk/tools/cvs2svn/README">README</a>
-for cvs2svn. <p>
-
-cvs2svn.py will be completed and well tested for Subversion's 1.0
-release, but for now, use it with caution.
-
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="proxy">What if I'm behind a proxy?</a></h3>
-
-<p>The Subversion client can go through a proxy, if you configure it
-to do so.  First, edit your ~/.subversion/servers configuration file
-to indicate which proxy to use.  There are comments in the file
-explaining how to do this.  If you don't have that file, get the
-latest Subversion client and run any command; this will cause the
-configuration directory and template files to be created.</p>
-
-<p>Older versions of Subversion, including the 0.14.3 bootstrap
-tarball, use the file ~/.subversion/proxies to define the proxy
-settings.  This file is ignored by the current version of
-Subversion.</p>
-
-<p>Next, you need to make sure the proxy server itself supports all
-the HTTP methods Subversion uses.  Some proxy servers do not support
-these methods by default: PROPFIND, REPORT, MERGE, MKACTIVITY,
-CHECKOUT.  In general, solving this depends on the particular proxy
-software.  For Squid, the config option is</p>
-
-<pre>
-   #  TAG: extension_methods
-   #       Squid only knows about standardized HTTP request methods.
-   #       You can add up to 20 additional "extension" methods here.
-   #
-   #Default:
-   # none
-   extension_methods REPORT MERGE MKACTIVITY CHECKOUT
-</pre>
-
-<p>(Squid 2.4 and later already knows about PROPFIND.)</p>
-
-<p>See also "<a href="#http-methods">What are all the HTTP methods
-Subversion uses?</a>" for advice on additional HTTP methods to allow
-through your proxy.</p>
-
-<p>If it's difficult or impossible to get the proxy to allow
-Subversion traffic, but you want to check out the Subversion sources,
-you may be able to go around the proxy.  Some proxies that filter port
-80 nevertheless allow anything on port 81.  For this reason, the
-<tt>svn.collab.net</tt> repository server listens on port 81 as well
-as on port 80.  Try:</p>
-
-<pre>
-   svn checkout http://svn.collab.net:81/repos/svn/trunk subversion
-</pre>
-
-<p>and maybe the proxy will let you through.  Another strategy is to
-attempt the checkout over SSL, which many proxies allow:</p>
-
-<pre>
-   svn checkout https://svn.collab.net/repos/svn/trunk subversion
-</pre>
-
-<p>Of course, your svn client will have to have been built with ssl
-support; just pass <tt>--with-ssl</tt> to subversion's
-<tt>./configure</tt> script.  You can check to see whether the 'https'
-schema is supported by running <tt>svn --version</tt>.</p>
-
-<![CDATA[=========================================================]]>
-
-<h3><a name="paranoid"/>My admins don't want me to have a HTTP server for
-    Subversion.  What can I do if I still want remote usage?</h3>
-
-<p>If you previously used CVS, you may have used SSH to login to the
-CVS server.  The preferred solution would be to use ra_dav combined
-with an Apache HTTP server configured with mod_ssl and appropriate
-authentication support.  This should provide enough security for most
-users.  However, we realize that there are places that do not allow
-adding servers of any kind with external connectivity.</p>
-
-<p>There has been work on a ra_pipe implementation that would work
-similarly to the CVS_RSH mechanism, but it is not currently complete.
-If you wish to contribute to its development, you are more than
-welcome to do so!</p>
-
-<p>However, another solution that can be used instead is to leverage
-SSH port forwarding to connect to the protected server via ra_dav.
-You would connect via SSH to a machine behind your firewall that can
-access your Subversion server.  Note that this SSH server does
-<b>not</b> have to be the same as where Subversion is installed.  It
-can be, but it doesn't have to be.</p>
-
-<p>Then, you create a local port forward that connects to the HTTP
-server that houses your Subversion repository.  You would then
-'connect' to the Subversion repository via this local port.  Then,
-the request will be sent 'tunneled' via SSH server to your Subversion
-server.</p>
-
-<p>An example: a Subversion ra_dav setup is behind your company firewall
-at 10.1.1.50 (call it svn-server.example.com).  Your company allows SSH
-access via publicly accessible ssh-server.example.com. Internally, you
-can access the Subversion repository via
-http://svn-server.example.com/repos/ours.</p>
-
-<p><i>Example</i>: client connecting to ssh-server with port-forwarding
-and checking out via the port forward</p>
-
-<pre>
-% ssh -L 8888:svn-server.example.com:80 me@ssh-server.example.com
-% svn checkout http://localhost:8888/repos/ours
-</pre>
-
-<p>Note that your svn-server.example.com could also have its httpd
-instance running on an unpriviliged port by a non-trusted user.  This
-will allow your Subversion server not to require root access.</p>
-
-<!-- Can you use svn switch to switch your WC between your internal and
-     external Subversion server?  I think so.  -->
-
-<p>Joe Orton notes</p>
-<pre>
-The server is sensitive to the hostname used in the Destination header
-in MOVE and COPY requests, so you have to be a little careful here - a
-"ServerAlias localhost" may be required to get this working properly.
-</pre>
-
-<p>Some links on SSH port forwarding</p>
-<ul>
-<li><a href="http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html"
->http://www.onlamp.com/pub/a/onlamp/excerpt/ssh_11/index3.html</a></li>
-<li><a href="http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/"
->http://csociety.ecn.purdue.edu/~sigos/projects/ssh/forwarding/</a></li>
-<li><a href="http://www.zip.com.au/~roca/ttssh.html">TTSSH: A Win32 SSH client capable of port forwarding</a></li>
-</ul>
-
-<![CDATA[=========================================================]]>
-
-<h3><a name="multi-proj">How do I manage several different projects under Subversion?</a></h3>
-
-<p>It depends upon the projects involved.  If the projects are
-related, and are likely to share data, then it's best to create one
-repository with several subdirectories like this:
-<pre>
-	$ svnadmin create /repo/svn
-	$ svn mkdir file:///repo/svn/projA
-	$ svn mkdir file:///repo/svn/projB
-	$ svn mkdir file:///repo/svn/projC
-</pre>
-
-If the projects are completely unrelated, and not likely to share data
-between them, then it's probably best to create separate and unrelated
-repositories.
-<pre>
-	$ mkdir /repo/svn
-	$ svnadmin create /repo/svn/projA
-	$ svnadmin create /repo/svn/projB
-	$ svnadmin create /repo/svn/projC
-</pre>
-<p>
-The difference between these two approaches is this (as explained by
-Ben Collins-Sussman &lt;sussman@collab.net&gt;):
-
-<ul>
-  <li>
-    <pre>
-     In the first case, code can easily be copied or moved around
-     between projects, and the history is preserved.  ('svn cp/mv'
-     currently only works within a single repository.)
-    </pre>
-  </li>
-  <li>
-    <pre>
-     Because revision numbers are repository-wide, a commit to any
-     project in the first case causes a global revision bump.  So it
-     might seem a bit odd if somebody has 'projB' checked out, notices
-     that 10 revisions have happened, but projB hasn't changed at
-     all.  Not a big deal, really.  Just a little weird at first.
-     This already happens to svn, everytime people commit to
-     rapidsvn.  :-)
-    </pre>
-  </li>
-  <li>
-    <pre>
-     The second case might be easier to secure; it's easier to insulate
-     projects from each other (in terms of users and permissions)
-     using Apache's access control.  In the 2nd case, you'll need a
-     fancy hook script in the repository that distinguishes projects
-     ("is this user allowed to commit to this particular subdir?")  Of
-     course, we already have such a script, ready for you to use.
-    </pre>
-  </li>
-</ul>
-
-<![CDATA[=========================================================]]>
-  
-<h3><a name="multi-merge">How do I merge two completely separate repositories?</a></h3>
-
-<p>If you don't care about retaining all the history of one of the
-repositories, you can just create a new directory under one project's
-repository, then import the other.
-
-<p>If you care about retaining the history of both, then you can use
-'svnadmin dump' to dump one repository, and 'svnadmin load' to load it into
-the other repository.  The revision numbers will be off, but you'll
-still have the history.
-
-<p>Peter Davis &lt;peter@pdavis.cx&gt; also explains a method using svn's
-equivalent to CVS modules:
-
-<p><blockquote>
-
-	<p>As long as the merging takes place in separate directory
-	trees, you can use svn's version of CVS modules.
-
-	<p>Set the <em>svn:externals</em> property on a directory to checkout
-	directories from other repositories whenever the original
-	directory is checked out.  The repository remains separate,
-	but in the working copy it appears that they have been merged.
-	If you commit to the imported directory, it will affect the
-	external repository.
-
-	<p>The merge isn't completely clean: the import only affects
-	working copies, so you won't be able to use a URL in the first
-	repository to access modules imported from the second.  They
-	remain separate URLs.
-</blockquote>
-
-<![CDATA[=========================================================]]>
-
-<h3><a name="patch">How do I submit a patch for Subversion?</a></h3>
-
-<p>FIRST, read the <a href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a> document.
-
-<p>Once you've digested that, send a mail to the dev list with the
-word [PATCH] and a one-line description in the subject, and include
-the patch inline in your mail (unless your MUA munges it up
-totally). Then a committer will pick it up, apply it (making any
-formatting or content changes necessary), and check it in.
-
-<p>The basic process looks like this:
-<pre>
-<blockquote>
-	$ svn co http://svn.collab.net/repos/svn/trunk subversion
-	$ cd subversion/www
-
-		[ make changes to project_faq.html ]
-	
-	$ svn diff project_faq.html > /tmp/foo
-
-	$ Mail -s "[PATCH] FAQ updates" < /tmp/foo
-</blockquote>
-</pre>
-
-Of course, the email you send should contain a nice long
-explanation about what the patch does, as per the
-<a href="http://svn.collab.net/repos/svn/trunk/HACKING">HACKING</a>
-document, but you already know that, since you read and completely
-understood it <em>before</em> actually hacking the code, right? :)
-
-<![CDATA[=========================================================]]>
-
-<p>
-<hr>
-<p>
-<h2>Troubleshooting:</h2>
-<p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3>What the heck! Every time I try to access my repository, the
-process just hangs. Is my repository <a name="wedged-repos">corrupt?</a></h3>
-
-<p>
-Your repository is not corrupt, nor is your data lost. If your process
-accesses the repository directly (mod_dav_svn, svnlook, svnadmin, or
-if you access a `file://' URL), then it's using Berkeley DB to access
-your data.  Berkeley DB is journaling system, meaning that it logs
-everything it is about to do before it does so.  If your process is
-interrupted (Control-C, or segfault), then a lockfile is left behind,
-along with a logfile describing unfinished business.  Any other
-process that attempts to access the database will just hang, waiting
-for the lockfile to disappear.  To awaken your repository, you need to
-ask Berkeley DB to either finish the work, or rewind the database to a
-previous state that is known to be consistent.  Simply run:</p>
-
-<pre>
-svnadmin recover /path/to/repos
-</pre>
-
-<p>Make sure you disable all access to the repository before doing
-this (by shutting down Apache).  Make sure you run this command as the
-user that owns and manages the database, and not as root, else it will
-leave root-owned files in the db directory which cannot be opened by
-the non-root user that manages the database, which is typically either
-you or your Apache process.</p>
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3>What the heck! Every time I try to run a svn command, it says my
-working copy is locked. Is my working copy <a name="wedged-wc">
-corrupt?</a></h3>
-
-<p>
-Your working copy is not corrupt, nor is your data lost.  Subversion's
-working copy is journaling system, meaning that it logs everything it
-is about to do before it does so.  If the svn client program is
-interrupted (Control-C, or segfault), then one or more lockfiles are
-left behind, along with logfiles describing unfinished business.
-(The`svn status' command will show an 'L' next to locked directories.)
-Any other process that attempts to access the working copy will fail
-when it sees the locks.  To awaken your working copy, you need to tell
-the svn client to finish the work.  Simply run:</p>
-
-<pre>
-svn cleanup working-copy
-</pre>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3>I just built the distribution binary, and when I try to check out
-Subversion, I get an error about an "Unrecognized URL scheme."  What's up
-with<a name="unrecognized-url-error"> that?</a></h3>
-
-<p>Subversion uses a plugin system to allow access to repositories.  Currently
-there are two of these plugins: ra_local allows access to a local
-repository, and ra_dav which allows access to a repository via WebDAV
-When you attempt to perform an operation in subversion, the program tries
-to dynamically load a plugin based on the URL scheme.  A `file://' URL
-will try to load ra_local, and an `http://' URL will try to load
-ra_dav.</p>
-
-<p>The error you are seeing means that the dynamic linker/loader can't find
-the plugins to load.  This normally happens when you build subversion with
-shared libraries, then attempt to run it without first running 'make
-install'.  Another possible cause is that you ran make install, but the
-libraries were installed in a location that the dynamic linker/loader
-doesn't recognize.  Under Linux, you can allow the linker/loader to find the
-libraries by adding the library directory to /etc/ld.so.conf and running
-ldconfig.  If you don't wish to do this, or you don't have root access, you
-can also specify the library directory in the LD_LIBRARY_PATH environment
-variable.</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="db-recover">I'm getting errors finding or opening a repository,
-    but I know my repository URL is correct.  What's wrong?</a></h3> 
-
-<p>See <a href="#wedged-repos">this faq.</a></p>
-
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3>When I run `<tt>configure</tt>', I get errors about
+    own revision numbers.</a><br/>
+    The FAQ has moved, please see <a href="faq.html#globalrev">faq.html#globalrev</a>.</p>
+</li>
+<li><p><a name="changesets">Does Subversion have Changesets?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#changesets">faq.html#changesets</a>.</p>
+</li>
+<li><p><a name="release">When's the next release?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#release">faq.html#release</a>.</p>
+</li>
+<li><p><a name="symlinks">Does Subversion support symlinks?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#symlinks">faq.html#symlinks</a>.</p>
+</li>
+<li><p><a name="logo">I need a high resolution version of the Subversion logo,
+    where can I get it?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#logo">faq.html#logo</a>.</p>
+</li>
+<li><p>I have other questions.  Where can I get more<a
+name="more-information"> information?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#xxxxx">faq.html#xxxxx</a>.</p>
+</li>
+<li><p><a name="co-svn">How do I check out the Subversion code?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#co-svn">faq.html#co-svn</a>.</p>
+</li>
+<li><p><a name="repository">How do I create a repository?  How do I
+import data into it?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#repository">faq.html#repository</a>.</p>
+</li>
+<li><p><a name="cvs2svn">How do I convert an existing CVS repository
+    into a Subversion repository?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#cvs2svn">faq.html#cvs2svn</a>.</p>
+</li>
+<li><p><a name="proxy">What if I'm behind a proxy?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#proxy">faq.html#proxy</a>.</p>
+</li>
+<li><p><a name="paranoid">My admins don't want me to have a HTTP server for
+    Subversion.  What can I do if I still want remote usage?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#paranoid">faq.html#paranoid</a>.</p>
+</li>
+<li><p><a name="multi-proj">How do I manage several different projects under Subversion?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#multi-proj">faq.html#multi-proj</a>.</p>
+</li>
+<li><p><a name="multi-merge">How do I merge two completely separate repositories?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#multi-merge">faq.html#multi-merge</a>.</p>
+</li>
+<li><p><a name="nfs">Should I store my repository / working copy on a NFS
+server?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#nfs">faq.html#nfs</a>.</p>
+</li>
+<li><p><a name="bdblogs">Why is my repository taking up so much disk space?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#bdblogs">faq.html#bdblogs</a>.</p>
+</li>
+<li><p><a name="reposperms">How do I set repository
+permissions correctly?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#reposperms">faq.html#reposperms</a>.</p>
+</li>
+<li><p><a name="readonly">Why do read-only operations still need repository
+write access?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#readonly">faq.html#readonly</a>.</p>
+</li>
+<li><p><a name="removal">
+How do I completely remove a file from the repository's history?
+</a><br/>
+    The FAQ has moved, please see <a href="faq.html#removal">faq.html#removal</a>.</p>
+</li>
+<li><p><a name="change-log-msg">
+How do I change the log message for a revision after it's been committed?
+</a><br/>
+    The FAQ has moved, please see <a href="faq.html#change-log-msg">faq.html#change-log-msg</a>.</p>
+</li>
+<li><p><a name="patch">How do I submit a patch for Subversion?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#patch">faq.html#patch</a>.</p>
+</li>
+<li><p><a name="in-place-import">How can I do an in-place 'import'
+    (i.e. add a tree of unversioned files to subversion, and convert the
+    original tree into a working copy)?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#in-place-import">faq.html#in-place-import</a>.</p>
+</li> 
+<li><p><a name="dumpload">What is this "dump/load cycle" people
+    sometimes talk about when upgrading a Subversion server?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#dumpload">faq.html#dumpload</a>.</p>
+</li>
+<li><p><a name="sspi">How do I allow clients to authenticate against a
+    Windows domain controller using SSPI authentication?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#sspi">faq.html#sspi</a>.</p>
+</li>
+<li><p><a name="adm-dir">I don't like the ".svn" directory name, and
+    prefer "SVN" or something else.  How do I change it?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#adm-dir">faq.html#adm-dir</a>.</p>
+</li>
+<li><p><a name="case-change">How do I change the case of a filename?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#case-change">faq.html#case-change</a>.</p>
+</li>
+<li><p><a name="merge-using-tags">I can't use tags to merge changes from a 
+    branch into the trunk like I used to with CVS, can I?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#merge-using-tags">faq.html#merge-using-tags</a>.</p>
+</li>
+<li><p><a name="version-value-in-source">Why doesn't the $Revision$
+keyword do what I want?  It expands to the file's last-changed revision,
+but I want something that will expand to the file's current revision.</a><br/>
+    The FAQ has moved, please see <a href="faq.html#version-value-in-source">faq.html#version-value-in-source</a>.</p>
+</li>
+<li><p><a name="log-in-source">Does Subversion have a keyword which
+behaves like $Log$ in CVS?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#log-in-source">faq.html#log-in-source</a>.</p>
+</li>
+<li><p><a name="ignore-commit">I have a file in my project that every
+developer must change, but I don't want those local mods to ever be
+committed.  How can I make 'svn commit' ignore the file?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#ignore-commit">faq.html#ignore-commit</a>.</p>
+</li>
+<li><p><a name="ssh-auth-cache">When I access a repository using
+svn+ssh, my password is not cached in ~/.subversion/auth/.  How do
+I avoid having to type it so often?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#ssh-auth-cache">faq.html#ssh-auth-cache</a>.</p>
+</li>
+<li><p><a name="auto-props">How can I set certain properties on
+everything in the repository?  Also, how can I make sure that every
+new file coming into the repository has these properties?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#auto-props">faq.html#auto-props</a>.</p>
+</li>
+<li><p><a name="divining-bdb-version">How do I determine which version of
+Berkeley DB a repository is using?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#divining-bdb-version">faq.html#divining-bdb-version</a>.</p>
+</li>
+<li><p><a name="permissions"></a>
+    <a name="stuck-bdb-repos">My repository seems to get stuck all the
+time, giving me errors about needing recovery (DB_RUNRECOVERY).  What
+could be the cause?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#permissions">faq.html#permissions</a>.</p>
+</li>
+<li><p><a name="wedged-repos"></a>
+    <a name="bdb-recovery">Every time I try to access my repository, the
+process just hangs. Is my repository corrupt?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#wedged-repos">faq.html#wedged-repos</a>.</p>
+</li>
+<li><p><a name="wedged-wc">Every time I try to run a svn command, it says my
+working copy is locked. Is my working copy corrupt?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#wedged-wc">faq.html#wedged-wc</a>.</p>
+</li>
+<li><p><a name="wc-out-of-date">I'm trying to commit, but Subversion says my
+working copy is out of date?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#wc-out-of-date">faq.html#wc-out-of-date</a>.</p>
+</li>
+<li><p><a name="unrecognized-url-error">I just built the distribution binary,
+and when I try to check out Subversion, I get an error about an
+"Unrecognized URL scheme."  What's up with that?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#unrecognized-url-error">faq.html#unrecognized-url-error</a>.</p>
+</li>
+<li><p><a name="db-recover">I'm getting errors finding or opening a repository,
+    but I know my repository URL is correct.  What's wrong?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#db-recover">faq.html#db-recover</a>.</p>
+</li> 
+<li><p><a name="configure-sed-error">When I run `<tt>configure</tt>', I get errors about
 <tt>subs-1.sed&nbsp;line&nbsp;38:&nbsp;Unterminated&nbsp;`s'&nbsp;command</tt>.
-What<a name="configure-sed-error">'s wrong?</a></h3>
-
-<p>
-You probably have old copies of
-<tt>/usr/local/bin/apr-config</tt> and
-<tt>/usr/local/bin/apu-config</tt> on your system.  Remove them, make
-sure the <tt>apr/</tt> and <tt>apr-util/</tt> that you're
-building with are completely up-to-date, and try again.
-</p>
-
-<![CDATA[-----------------------------------------------------------]]>
- 
-<h3>I'm having trouble building Subversion under Windows with MSVC++ 6.0.
-<a name="windows-msvc-build"> What should I do?</a></h3>
-
-<p>
-Probably you just need to get the latest platform SDK.  The one that
-ships with VC++ 6.0 is not recent enough.
-</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3>I'm running Subversion under windows and I can create a repository
-fine, but <a name="windows-repository">I get errors trying to import
-or check out from it.  What's wrong?</a></h3>
-
-<p>If the error looks something like:
-<pre>
-svn_error: #21085 : <URL is not a versioned resource>
-  svn_ra_local__split_URL: Unable to find valid repository
-</pre>
-Then the problem is that Subversion doesn't yet handle file URLs that have a
-drive specification.  Try changing to that drive then doing an import without
-the drive spec.  For example:
-<pre>
-d:
-svn import file:///some/path/to/repos/on/d/drive e:\file\to\be\imported
-</pre>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3>I'm having trouble doing write <a name="write-over-dav">
-    operations to a Subversion repository over a network.</a></h3>
-
-<p>For example, one user reported that imports worked fine over local
-access:
-<ul>
-<pre>
-  $ mkdir test
-  $ touch test/testfile
-  $ svn import file:///var/svn/test test test -m "Initial import"
-  Adding         test/testfile
-  Transmitting file data .
-  Committed revision 1.
-</pre>
-</ul>
-But not from a remote host:
-<ul>
-<pre>
-  $ svn import http://svn.sabi.net/test testfile -m "import"
-  nicholas's password: xxxxxxx
-
-  svn_error: #21110 : <Activity not found>
-
-  The specified activity does not exist.
-</pre>
-</ul>
-</p>
-
-<p> We've seen this when the REPOS/dav/ directory is not writable by
-the httpd process.  Check the permissions to ensure Apache can write
-to the <tt>dav/</tt> directory (and to <tt>db/</tt>, of course).  </p>
-
-<![CDATA[=========================================================]]>
-
-
-<h3>Under Windows XP, the Subversion server sometimes seems to send
-    out corrupted data. <a name="windows-xp-server"> Can this really
-    be happening?</a></h3>
-
-<p>Yes, it seems so.  We <i>think</i> this may be due to a bug in the
-XP network code, that Apache has already run into: see</p>
-
-    <ul>
-    <a href="http://www.apache.org/dist/httpd/binaries/win32/#xpbug"
-    >http://www.apache.org/dist/httpd/binaries/win32/#xpbug</a>
-    </ul>
-<p>
-and 
-<p>
-    <ul>
-    <a href="http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949"
-    >http://support.microsoft.com/default.aspx?scid=kb;EN-US;q317949</a>
-    </ul>
-
-</p>
-
-<p>for details, and also see the thread "Question about propset" on
-the Subversion dev list.  Here's one message from late in that thread:</p>
-
-<p>
-    <ul>
-<a href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=185063"
-  >http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgId=185063</a>
-    </ul>
-</p>
-
-<p>For now, our only advice is "Don't run a Subversion server from
-Windows XP."</p>
-
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="ethereal">What is the best method of doing a network
+What's wrong?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#configure-sed-error">faq.html#configure-sed-error</a>.</p>
+</li>
+<li><p><a name="linux-bdb42-build">I'm having trouble building
+    Subversion under *NIX with BerkeleyDB 4.2.x What should I do?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#linux-bdb42-build">faq.html#linux-bdb42-build</a>.</p>
+</li>
+<li><p><a name="windows-msvc-build">I'm having trouble building Subversion
+under Windows with MSVC++ 6.0.  What should I do?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#windows-msvc-build">faq.html#windows-msvc-build</a>.</p>
+</li>
+<li><p><a name="windows-drive-letter">How can I specify a Windows drive letter in
+a <tt>file:</tt> URL?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#windows-drive-letter">faq.html#windows-drive-letter</a>.</p>
+</li>
+<li><p><a name="vs-asp-net">VS.NET/ASP.NET seems to have a problem with
+    the ".svn" directory name.  What should I do?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#vs-asp-net">faq.html#vs-asp-net</a>.</p>
+</li>
+<li><p><a name="write-over-dav">I'm having trouble doing write
+    operations to a Subversion repository over a network.</a><br/>
+    The FAQ has moved, please see <a href="faq.html#write-over-dav">faq.html#write-over-dav</a>.</p>
+</li>
+<li><p><a name="windows-xp-server">Under Windows XP, the Subversion server
+    sometimes seems to send out corrupted data.  Can this really
+    be happening?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#windows-xp-server">faq.html#windows-xp-server</a>.</p>
+</li>
+<li><p><a name="ethereal">What is the best method of doing a network
     trace of the conversation between a Subversion client and
-    server?</a></h3>
+    server?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#ethereal">faq.html#ethereal</a>.</p>
+</li>
+<li><p><a name="revert">Why does the <tt>svn revert</tt> require an
+    explicit target?  Why is it not recursive by default?  These
+    behaviors differ from almost all the other subcommands.</a><br/>
+    The FAQ has moved, please see <a href="faq.html#revert">faq.html#revert</a>.</p>
+</li>
+<li><p><a name="db3db4">When I start Apache, mod_dav_svn complains about
+    a "bad database version", that it found db-3.X, rather than
+    db-4.X.</a><br/>
+    The FAQ has moved, please see <a href="faq.html#db3db4">faq.html#db3db4</a>.</p>
+</li>
+<li><p><a name="redhat-db">I'm getting "Function not implemented" errors on RedHat
+9, and nothing works.  How do I fix this?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#redhat-db">faq.html#redhat-db</a>.</p>
+</li>
+<li><p><a name="no-author">Why does SVN log say "(no author)" for files
+    committed or imported via Apache (ra_dav)?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#no-author">faq.html#no-author</a>.</p>
+</li>
+<li><p><a name="windows-access-denied">I'm getting occasional "Access Denied"
+errors on Windows.  They seem to happen at random.  Why?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#windows-access-denied">faq.html#windows-access-denied</a>.</p>
+</li>
+<li><p><a name="freebsd-hang">On FreeBSD, certain operations (especially
+    svnadmin create) sometimes hang.  Why?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#freebsd-hang">faq.html#freebsd-hang</a>.</p>
+</li>
+<li><p><a name="301-error">I can see my repository in a web browser, but
+    'svn checkout' gives me an error about "301 Moved Permanently".
+    What's wrong?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#301-error">faq.html#301-error</a>.</p>
+</li>
+<li><p><a name="no-copy-history">I'm trying to look at an old version of my
+    file, but svn says something about "path not found".  What's going
+    on?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#no-copy-history">faq.html#no-copy-history</a>.</p>
+</li>
+<li><p><a name="digest-auth">Why doesn't HTTP Digest auth work?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#digest-auth">faq.html#digest-auth</a>.</p>
+</li>
+<li><p><a name="xlc-compile">Compiling with xlc on AIX, I get compilation
+    errors.  What's wrong?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#xlc-compile">faq.html#xlc-compile</a>.</p>
+</li>
+<li><p><a name="nonrecursive-checkout">I checked out a directory non-recursively
+    (with -N), and now I want to make certain subdirectories
+    "appear".  But <tt>svn up subdir</tt> doesn't work.</a><br/>
+    The FAQ has moved, please see <a href="faq.html#nonrecursive-checkout">faq.html#nonrecursive-checkout</a>.</p>
+</li>
+<li><p><a name="mod_dav_svn-win32">I am trying to use mod_dav_svn
+    with Apache on Win32 and I'm getting an error saying that the 
+    module cannot be found, yet the mod_dav_svn.so file is right 
+    there in <tt>\Apache\modules.</tt></a><br/>
+    The FAQ has moved, please see <a href="faq.html#mod_dav_svn-win32">faq.html#mod_dav_svn-win32</a>.</p>
+</li>
+<li><p><a name="hook-environment">Why aren't my repository hooks working?
+    They're supposed to invoke external programs, but the invocations
+    never seem to happen.</a><br/>
+    The FAQ has moved, please see <a href="faq.html#hook-environment">faq.html#hook-environment</a>.</p>
+</li>
+<li><p><a name="diff-cmd">Why does my --diff-cmd complain about '-u'?
+    I tried to override it with --extensions, but it's not working.</a><br/>
+    The FAQ has moved, please see <a href="faq.html#diff-cmd">faq.html#diff-cmd</a>.</p>
+</li>
+<li><p><a name="plaintext-passwords">Ahhh!  I just discovered that my
+    Subversion client is caching passwords in plain-text on disk!
+    AHHH!</a><br/>
+    The FAQ has moved, please see <a href="faq.html#plaintext-passwords">faq.html#plaintext-passwords</a>.</p>
+</li>
+<li><p><a name="bdb41-tabletype-bug">I'm getting the error "svn: bdb: call
+    implies an access method which is inconsistent with previous
+    calls". How do I fix this?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#bdb41-tabletype-bug">faq.html#bdb41-tabletype-bug</a>.</p>
+</li>
+<li><p><a name="hotcopy-large-repos">I can't hotbackup my repository,
+    svnadmin fails on files larger than 2Gb!</a><br/>
+    The FAQ has moved, please see <a href="faq.html#hotcopy-large-repos">faq.html#hotcopy-large-repos</a>.</p>
+</li>
+<li><p><a name="hidden-log">I cannot see the log entry for the file
+    I just committed.  Why?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#hidden-log">faq.html#hidden-log</a>.</p>
+</li>
+<li><p><a name="ramdisk-tests">How do I run the regression tests in a
+    ram disk?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#ramdisk-tests">faq.html#ramdisk-tests</a>.</p>
+</li>
+<li><p><a name="http-methods">What are all the HTTP methods Subversion
+    uses?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#http-methods">faq.html#http-methods</a>.</p>
+</li>
+<li><p><a name="bikeshed">What's a 'bikeshed'?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#bikeshed">faq.html#bikeshed</a>.</p>
+</li>
+<li><p><a name="baton">What's a 'baton'?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#baton">faq.html#baton</a>.</p>
+</li>
+<li><p><a name="def-wedged-repository">What do you mean when you say that
+    repository is 'wedged'?</a><br/>
+    The FAQ has moved, please see <a href="faq.html#def-wedged-repository">faq.html#def-wedged-repository</a>.</p>
+</li>
+</ul>
 
-<p>Use <a href="http://ethereal.ntop.org/">Ethereal</a> to eavesdrop
-on the conversation:
-
-<!-- TODO: Make these instructions less specific to ra_dav. -->
-<ol>
-<li>Pull down the <i>Capture</i> menu, and choose <i>Start</i>.</li>
-<li>Type <code>port 80</code> for <i>Filter</i>, and turn off
-    promiscuous mode.</li>
-<li>Run your Subversion client.</li>
-<li>Hit <i>Stop</i> (probably in a little box).  Now you have a
-    capture.  It looks like a huge list of lines.</li>
-<li>Click on the <i>Protocol</i> column to sort.</li>
-<li>Then, click on the first relevant TCP line to select it.</li>
-<li>Right click, and choose <i>Follow TCP Stream</i>.  You'll be
-    presented with the request/response pairs of the Subversion
-    client's HTTP conversion.</li>
-</ol>
-
-The above instructions are specific to the graphical version of
-Ethereal, and may not apply to the commandline version (whose binary
-is usually named tethereal).</p>
-
-<p>Alternatively, if you have an up-to-date client (more recent than
-the 0.16 tarball) you may set the <tt>http-debug</tt> parameter in the
-<tt>servers</tt> configuration file to cause neon's debugging output
-to appear when you run the <tt>svn</tt> client.  The numeric value of
-<tt>neon-debug</tt> is a combination of the <tt>NE_DBG_...</tt> values
-in the header file <tt>ne_utils.h</tt>.  For neon 0.23.5 setting
-<tt>http-debug</tt> to 130 (i.e. <tt>NE_DBG_HTTP+NE_DBG_HTTPBODY)</tt>
-will cause the HTTP data to be shown.</p>
-
-<p>You may well want to disable compression when doing a network
-trace, see the <tt>compression</tt> parameter in the <tt>config</tt>
-configuration file.</p>
-
-
-<![CDATA[=========================================================]]>
-
-
-<p>
-<hr>
-<p>
-<h2>References:</h2>
-<p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="http-methods">What are all the HTTP methods Subversion
-    uses?</a></h3>
-
-<p>The following email says it all.  As the author points out,
-Subversion does not actually use all of these WebDAV/DeltaV methods
-yet, but it probably will someday, so if you're configuring a proxy,
-you might as well allow all of them:</p>
-
-<p>
-<blockquote>
-<pre>
-From: Nuutti Kotivuori &lt;naked@iki.fi&gt;
-Subject: Re: list of HTTP messages used by svn?
-To: "Hamilton Link" &lt;helink@sandia.gov&gt;
-Cc: dev@subversion.tigris.org
-Date: Sat, 10 Aug 2002 13:51:52 +0300
-
-Hamilton Link wrote:
-&gt; Is there a full list of the HTTP methods svn uses somewhere, that
-&gt; someone could piont me to? From the documentation I can find (in
-&gt; particular project_faq.html and INSTALL), the list of methods svn
-&gt; uses include at least the following:
-&gt;
-&gt; GET, PROPFIND, REPORT, OPTIONS, MERGE, MKACTIVITY, and CHECKOUT
-&gt;
-&gt; But since the lists I can find are only partial lists and nowhere
-&gt; does it suggest these are all the ones used, I'm reluctant to make
-&gt; any assumptions.
-&gt;
-&gt; If I had a complete list, I could go to the corp. proxy guy once
-&gt; instead of many times, and reduce the risk of pissing him off and
-&gt; being left with inadequate svn support in the proxy.
-
-<a href="http://www.webdav.org/deltav/WWW10/deltav-intro.htm">http://www.webdav.org/deltav/WWW10/deltav-intro.htm</a>
-
-A list copied from there:
-
-HTTP/1.1: GET, HEAD, POST, PUT, DELETE, OPTIONS, TRACE, CONNECT
-
-WebDAV: LOCK, UNLOCK, PROPFIND, PROPPATCH, COPY, MOVE, MKCOL
-
-DeltaV: CHECKIN, CHECKOUT, UNCHECKOUT, VERSION-CONTROL, REPORT,
-UPDATE, LABEL, MERGE, MKWORKSPACE, BASELINE-CONTROL, MKACTIVITY
-
-Subversion uses no methods outside these. It doesn't use all of them
-either, but it's better to support the full WebDAV/DeltaV than just
-some arbitrary subset. If the proxy being configured is a recent
-Squid, it probably has everything from HTTP/1.1 and WebDAV - and then
-it only needs the DeltaV extensions added.
-
-You can give that list to your corp. proxy guy and explain to him that
-he can check the RFC's for further information.
-</pre>
-</blockquote>
-
-</p>
-
-<![CDATA[-----------------------------------------------------------]]>
-
-<h3><a name="bikeshed">What's a 'bikeshed'?</a></h3>
-
-<p>See Poul-Henning Kamp's post to freebsd-hackers: <a href="http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING">http://www.freebsd.org/doc/en_US.ISO8859-1/books/faq/misc.html#BIKESHED-PAINTING</a>.
-</p>
+</div>
+</body>
+</html>

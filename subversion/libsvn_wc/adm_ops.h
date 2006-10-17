@@ -6,7 +6,7 @@
  *        
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,8 +26,6 @@
 
 #include <apr_pools.h>
 #include "svn_types.h"
-#include "svn_string.h"
-#include "svn_error.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,19 +41,34 @@ extern "C" {
    NEW_REVISION in invalid, the working revision field is untouched.
    The modifications are mutually exclusive.
 
+   If REPOS is non-NULL, set the repository root of the entry to REPOS, but
+   only if REPOS is an ancestor of the entries URL (after possibly modifying
+   it).  IN addition to that requirement, if the PATH refers to a directory,
+   the repository root is only set if REPOS is an ancestor of the URLs all
+   file entries which don't already have a repository root set.  This prevents
+   the entries file from being corrupted by this operation.
+
    If PATH is a directory and RECURSIVE is set, then recursively walk
    over all entries files below PATH.  While doing this, if
    NEW_REVISION is valid, then tweak every entry to have this new
    working revision (excluding files that are scheduled for addition
    or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
    all urls to be "telescoping" children of the base_url.
+
+   If REMOVE_MISSING_DIRS is TRUE, then delete the entries for any 
+   missing directories.  If NOTIFY_FUNC is non-null, invoke it with 
+   NOTIFY_BATON for each missing entry deleted.
 */
-svn_error_t *svn_wc__do_update_cleanup (const char *path,
-                                        svn_wc_adm_access_t *adm_access,
-                                        const svn_boolean_t recursive,
-                                        const char *base_url,
-                                        const svn_revnum_t new_revision,
-                                        apr_pool_t *pool);
+svn_error_t *svn_wc__do_update_cleanup(const char *path,
+                                       svn_wc_adm_access_t *adm_access,
+                                       svn_boolean_t recursive,
+                                       const char *base_url,
+                                       const char *repos,
+                                       svn_revnum_t new_revision,
+                                       svn_wc_notify_func2_t notify_func,
+                                       void *notify_baton,
+                                       svn_boolean_t remove_missing_dirs,
+                                       apr_pool_t *pool);
 
 
 #ifdef __cplusplus

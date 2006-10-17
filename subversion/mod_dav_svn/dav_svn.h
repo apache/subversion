@@ -2,7 +2,7 @@
  * dav_svn.h: types, functions, macros for the DAV/SVN Apache module
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -16,13 +16,14 @@
  * ====================================================================
  */
 
-
 #ifndef DAV_SVN_H
 #define DAV_SVN_H
 
-#include <httpd.h>
 #include <apr_tables.h>
 #include <apr_xml.h>
+
+#include <httpd.h>
+#include <http_log.h>
 #include <mod_dav.h>
 
 #include "svn_error.h"
@@ -35,7 +36,12 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-#define DAV_SVN_DEFAULT_VCC_NAME        "default"
+/* what the one VCC is called */
+#define DAV_SVN__DEFAULT_VCC_NAME        "default"
+
+/* a pool-key for the shared dav_svn_root used by autoversioning  */
+#define DAV_SVN__AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
+
 
 /* dav_svn_repos
  *
@@ -87,6 +93,9 @@ typedef struct {
   /* The URI of the XSL transform for directory indexes */
   const char *xslt_uri;
 
+  /* Whether autoversioning is active for this repository. */
+  svn_boolean_t autoversioning;
+
   /* the open repository */
   svn_repos_t *repos;
 
@@ -95,6 +104,9 @@ typedef struct {
 
   /* the user operating against this repository */
   const char *username;
+
+  /* is the client a Subversion client? */
+  svn_boolean_t is_svn_client;
 
 } dav_svn_repos;
 
@@ -118,7 +130,8 @@ enum dav_svn_private_restype {
   DAV_SVN_RESTYPE_BC_COLLECTION,        /* .../!svn/bc/  */
   DAV_SVN_RESTYPE_BLN_COLLECTION,       /* .../!svn/bln/ */
   DAV_SVN_RESTYPE_WBL_COLLECTION,       /* .../!svn/wbl/ */
-  DAV_SVN_RESTYPE_VCC                   /* .../!svn/vcc/NAME */
+  DAV_SVN_RESTYPE_VCC,                  /* .../!svn/vcc/NAME */
+  DAV_SVN_RESTYPE_PARENTPATH_COLLECTION /* see SVNParentPath directive */
 };
 
 
@@ -159,6 +172,7 @@ typedef struct {
 
 } dav_svn_root;
 
+
 /* internal structure to hold information about this resource */
 struct dav_resource_private {
   /* Path from the SVN repository root to this resource. This value has
@@ -187,57 +201,60 @@ struct dav_resource_private {
   /* for PRIVATE resources: the private resource type */
   enum dav_svn_private_restype restype;
 
+  /* The request which created this resource.  We need this to
+     generate subrequests. */
+  request_rec *r;
+
   /* ### hack to deal with the Content-Type header on a PUT */
   int is_svndiff;
 
   /* ### record the base for computing a delta during a GET */
   const char *delta_base;
 
+  /* SVNDIFF version we can transmit to the client.  */
+  int svndiff_version;
+
   /* the value of any SVN_DAV_OPTIONS_HEADER that came in the request */
   const char *svn_client_options;
+
+  /* the revnum value from a possible SVN_DAV_VERSION_NAME_HEADER */
+  svn_revnum_t version_name;
+
+  /* Hex MD5 digests for base text and resultant fulltext.
+     Either or both of these may be null, in which case ignored. */
+  const char *base_checksum;
+  const char *result_checksum;
+
+  /* was this resource auto-checked-out? */
+  svn_boolean_t auto_checked_out;
 
   /* Pool to allocate temporary data from */
   apr_pool_t *pool;
 };
 
 
-/*
-  LIVE PROPERTY HOOKS
+/* Every provider needs to define an opaque locktoken type. */
+struct dav_locktoken
+{
+  /* This is identical to the 'token' field of an svn_lock_t. */
+  const char *uuid_str;
+};
 
-  These are standard hooks defined by mod_dav. We implement them to expose
-  various live properties on the resources under our control.
-
-  gather_propsets: appends URIs into the array; the property set URIs are
-                   used to specify which sets of custom properties we
-                   define/expose.
-  find_liveprop: given a namespace and name, return the hooks for the
-                 provider who defines that property.
-  insert_all_liveprops: for a given resource, insert all of the live
-                        properties defined on that resource. The properties
-                        are inserted according to the WHAT parameter.
-*/
-void dav_svn_gather_propsets(apr_array_header_t *uris);
-int dav_svn_find_liveprop(const dav_resource *resource,
-                          const char *ns_uri, const char *name,
-                          const dav_hooks_liveprop **hooks);
-void dav_svn_insert_all_liveprops(request_rec *r, const dav_resource *resource,
-                                  dav_prop_insert what, apr_text_header *phdr);
-
-/* register our live property URIs with mod_dav. */
-void dav_svn_register_uris(apr_pool_t *p);
-
-/* generate an ETag for the given resource and return it. */
-const char * dav_svn_getetag(const dav_resource *resource);
-
-/* our hooks structures; these are gathered into a dav_provider */
-extern const dav_hooks_repository dav_svn_hooks_repos;
-extern const dav_hooks_propdb dav_svn_hooks_propdb;
-extern const dav_hooks_liveprop dav_svn_hooks_liveprop;
-extern const dav_hooks_vsn dav_svn_hooks_vsn;
 
 /* for the repository referred to by this request, where is the SVN FS? */
-const char *dav_svn_get_fs_path(request_rec *r);
-const char *dav_svn_get_fs_parent_path(request_rec *r);
+const char *dav_svn__get_fs_path(request_rec *r);
+const char *dav_svn__get_fs_parent_path(request_rec *r);
+
+/* for the repository referred to by this request, is autoversioning active? */
+svn_boolean_t dav_svn__get_autoversioning_flag(request_rec *r);
+
+/* for the repository referred to by this request, are subrequests active? */
+svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
+
+/* for the repository referred to by this request, is a GET of
+   SVNParentPath allowed? */
+svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
+
 
 /* SPECIAL URI
 
@@ -267,28 +284,41 @@ const char *dav_svn_get_fs_parent_path(request_rec *r);
 */
 
 /* Return the special URI to be used for this resource. */
-const char *dav_svn_get_special_uri(request_rec *r);
+const char *dav_svn__get_special_uri(request_rec *r);
 
 /* Return a descriptive name for the repository */
-const char *dav_svn_get_repo_name(request_rec *r);
+const char *dav_svn__get_repo_name(request_rec *r);
 
 /* Return the URI of an XSL transform stylesheet */
-const char *dav_svn_get_xslt_uri(request_rec *r);
+const char *dav_svn__get_xslt_uri(request_rec *r);
 
-/* convert an svn_error_t into a dav_error, possibly pushing a message. use
-   the provided HTTP status for the DAV errors */
-dav_error * dav_svn_convert_err(const svn_error_t *serr, int status,
-                                const char *message);
 
-/* activity functions for looking up and storing ACTIVITY->TXN mappings */
-const char *dav_svn_get_txn(const dav_svn_repos *repos,
-                            const char *activity_id);
-dav_error *dav_svn_store_activity(const dav_svn_repos *repos,
-                                  const char *activity_id,
-                                  const char *txn_name);
-dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
-                                   const char **ptxn_name,
-                                   apr_pool_t *pool);
+/*** activity.c ***/
+
+/* activity functions for looking up, storing, and deleting
+   ACTIVITY->TXN mappings */
+const char *
+dav_svn__get_txn(const dav_svn_repos *repos, const char *activity_id);
+
+dav_error *
+dav_svn__delete_activity(const dav_svn_repos *repos, const char *activity_id);
+
+dav_error *
+dav_svn__store_activity(const dav_svn_repos *repos,
+                        const char *activity_id,
+                        const char *txn_name);
+
+dav_error *
+dav_svn__create_activity(const dav_svn_repos *repos,
+                         const char **ptxn_name,
+                         apr_pool_t *pool);
+
+
+/*** repos.c ***/
+
+/* generate an ETag for RESOURCE and return it, allocated in POOL. */
+const char *
+dav_svn__getetag(const dav_resource *resource, apr_pool_t *pool);
 
 /*
   Construct a working resource for a given resource.
@@ -298,168 +328,363 @@ dav_error *dav_svn_create_activity(const dav_svn_repos *repos,
   ACTIVITY_ID, and the name of the transaction is specified by
   TXN_NAME. These will be assembled into a new dav_resource and
   returned.
+
+  If TWEAK_IN_PLACE is non-zero, then directly tweak BASE into a
+  working resource and return NULL.
 */
-dav_resource *dav_svn_create_working_resource(const dav_resource *base,
-                                              const char *activity_id,
-                                              const char *txn_name);
+dav_resource *
+dav_svn__create_working_resource(dav_resource *base,
+                                 const char *activity_id,
+                                 const char *txn_name,
+                                 int tweak_in_place);
+/* 
+   Convert a working RESOURCE back into a regular one, in-place.
 
-
-enum dav_svn_build_what {
-  DAV_SVN_BUILD_URI_ACT_COLLECTION, /* the collection of activities */
-  DAV_SVN_BUILD_URI_BASELINE,   /* a Baseline */
-  DAV_SVN_BUILD_URI_BC,         /* a Baseline Collection */
-  DAV_SVN_BUILD_URI_PUBLIC,     /* the "public" VCR */
-  DAV_SVN_BUILD_URI_VERSION,    /* a Version Resource */
-  DAV_SVN_BUILD_URI_VCC         /* a Version Controlled Configuration */
-};
-
-/*
-  Construct various kinds of URIs.
-
-  REPOS is always required, as all URIs will be built to refer to elements
-  within that repository. WHAT specifies the type of URI to build. The
-  ADD_HREF flag determines whether the URI is to be wrapped inside of
-  <D:href>uri</D:href> elements (for inclusion in a response).
-
-  Different pieces of information are required for the various URI types:
-
-  ACT_COLLECTION: no additional params required
-  BASELINE:       REVISION should be specified
-  BC:             REVISION should be specified
-  PUBLIC:         PATH should be specified with a leading slash
-  VERSION:        REVISION and PATH should be specified
-  VCC:            no additional params required
+   In particular: change the resource type to regular, removing the
+   'working' flag, change the fs root from a txn-root to a rev-root,
+   and set the URL back into either a public URL or bc URL.
 */
-const char *dav_svn_build_uri(const dav_svn_repos *repos,
-                              enum dav_svn_build_what what,
-                              svn_revnum_t revision,
-                              const char *path,
-                              int add_href,
+dav_error *
+dav_svn__working_to_regular_resource(dav_resource *resource);
+
+/* 
+   Given a version-resource URI, construct a new version-resource in
+   POOL and return it in  *VERSION_RES.
+*/
+dav_error *
+dav_svn__create_version_resource(dav_resource **version_res,
+                                 const char *uri,
+                                 apr_pool_t *pool);
+
+extern const dav_hooks_repository dav_svn__hooks_repository;
+
+
+/*** deadprops.c ***/
+extern const dav_hooks_propdb dav_svn__hooks_propdb;
+
+
+/*** lock.c ***/
+extern const dav_hooks_locks dav_svn__hooks_locks;
+
+
+/*** version.c ***/
+
+/* For an autoversioning commit, a helper function which attaches an
+   auto-generated 'svn:log' property to a txn, as well as a property
+   that indicates the revision was made via autoversioning. */
+svn_error_t *
+dav_svn__attach_auto_revprops(svn_fs_txn_t *txn,
+                              const char *fs_path,
                               apr_pool_t *pool);
 
 
+/* Hook function of types 'checkout' and 'checkin', as defined in
+   mod_dav.h's versioning provider hooks table (see dav_hooks_vsn).  */
+dav_error *
+dav_svn__checkout(dav_resource *resource,
+                  int auto_checkout,
+                  int is_unreserved,
+                  int is_fork_ok,
+                  int create_activity,
+                  apr_array_header_t *activities,
+                  dav_resource **working_resource);
+
+dav_error *
+dav_svn__checkin(dav_resource *resource,
+                 int keep_checked_out,
+                 dav_resource **version_resource);
+
+
+/* Helper for reading lock-tokens out of request bodies, by looking
+   for cached body in R->pool's userdata.
+
+   Return a hash that maps (const char *) absolute fs paths to (const
+   char *) locktokens.  Allocate the hash and all keys/vals in POOL.
+   PATH_PREFIX is the prefix we need to prepend to each relative
+   'lock-path' in the xml in order to create an absolute fs-path.  */
+dav_error *
+dav_svn__build_lock_hash(apr_hash_t **locks,
+                         request_rec *r,
+                         const char *path_prefix,
+                         apr_pool_t *pool);
+
+
+/* Helper: push all of the lock-tokens (hash values) in LOCKS into
+   RESOURCE's already-open svn_fs_t. */
+dav_error *
+dav_svn__push_locks(dav_resource *resource,
+                    apr_hash_t *locks,
+                    apr_pool_t *pool);
+
+
+extern const dav_hooks_vsn dav_svn__hooks_vsn;
+
+
+/*** liveprops.c ***/
+
+extern const dav_liveprop_group dav_svn__liveprop_group;
+
+/*
+  LIVE PROPERTY HOOKS
+
+  These are standard hooks defined by mod_dav. We implement them to expose
+  various live properties on the resources under our control.
+
+  gather_propsets: appends URIs into the array; the property set URIs are
+                   used to specify which sets of custom properties we
+                   define/expose.
+  find_liveprop: given a namespace and name, return the hooks for the
+                 provider who defines that property.
+  insert_all_liveprops: for a given resource, insert all of the live
+                        properties defined on that resource. The properties
+                        are inserted according to the WHAT parameter.
+*/
+void dav_svn__gather_propsets(apr_array_header_t *uris);
+
+int
+dav_svn__find_liveprop(const dav_resource *resource,
+                       const char *ns_uri,
+                       const char *name,
+                       const dav_hooks_liveprop **hooks);
+
+void
+dav_svn__insert_all_liveprops(request_rec *r,
+                              const dav_resource *resource,
+                              dav_prop_insert what,
+                              apr_text_header *phdr);
+
+
+/*** merge.c ***/
+
+/* Generate the HTTP response body for a successful MERGE. */
+/* ### more docco */
+dav_error *
+dav_svn__merge_response(ap_filter_t *output,
+                        const dav_svn_repos *repos,
+                        svn_revnum_t new_rev,
+                        char *post_commit_err,
+                        apr_xml_elem *prop_elem,
+                        svn_boolean_t disable_merge_response,
+                        apr_pool_t *pool);
+
+
+/*** reports/ ***/
+
+/* The various report handlers, defined in reports/, and used by version.c.  */
+dav_error *
+dav_svn__update_report(const dav_resource *resource,
+                       const apr_xml_doc *doc,
+                       ap_filter_t *output);
+dav_error *
+dav_svn__log_report(const dav_resource *resource,
+                    const apr_xml_doc *doc,
+                    ap_filter_t *output);
+dav_error *
+dav_svn__dated_rev_report(const dav_resource *resource,
+                          const apr_xml_doc *doc,
+                          ap_filter_t *output);
+dav_error *
+dav_svn__get_locations_report(const dav_resource *resource,
+                              const apr_xml_doc *doc,
+                              ap_filter_t *output);
+dav_error *
+dav_svn__file_revs_report(const dav_resource *resource,
+                          const apr_xml_doc *doc,
+                          ap_filter_t *output);
+dav_error *
+dav_svn__replay_report(const dav_resource *resource,
+                       const apr_xml_doc *doc,
+                       ap_filter_t *output);
+dav_error *
+dav_svn__get_locks_report(const dav_resource *resource,
+                          const apr_xml_doc *doc,
+                          ap_filter_t *output);
+
+
+/*** authz.c ***/
+
+/* A baton needed by dav_svn__authz_read_func(). */
+typedef struct 
+{
+  /* The original request, needed to generate a subrequest. */
+  request_rec *r;
+
+  /* We need this to construct a URI based on a repository abs path. */
+  const dav_svn_repos *repos;
+
+} dav_svn__authz_read_baton;
+
+
+/* Convert incoming RESOURCE and revision REV into a version-resource URI and
+   perform a GET subrequest on it.  This will invoke any authz modules loaded
+   into apache. Return TRUE if the subrequest succeeds, FALSE otherwise.
+
+   If REV is SVN_INVALID_REVNUM, then we look at HEAD.
+   Use POOL for any temporary allocation.
+*/
+svn_boolean_t
+dav_svn__allow_read(const dav_resource *resource,
+                   svn_revnum_t rev,
+                   apr_pool_t *pool);
+
+/* If authz is enabled in the specified BATON, return a read authorization
+   function. Otherwise, return NULL. */
+svn_repos_authz_func_t
+dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
+
+
+/*** util.c ***/
+
+/* A wrapper around mod_dav's dav_new_error_tag, mod_dav_svn uses this
+   instead of the mod_dav function to enable special mod_dav_svn specific
+   processing.  See dav_new_error_tag for parameter documentation.
+   Note that DESC may be null (it's hard to track this down from
+   dav_new_error_tag()'s documentation, but see the dav_error type,
+   which says that its desc field may be NULL). */
+dav_error *
+dav_svn__new_error_tag(apr_pool_t *pool,
+                       int status,
+                       int errno_id,
+                       const char *desc,
+                       const char *namespace,
+                       const char *tagname);
+
+
+/* Convert an svn_error_t into a dav_error, pushing another error based on
+   MESSAGE if MESSAGE is not NULL.  Use the provided HTTP status for the
+   DAV errors.  Allocate new DAV errors from POOL.
+
+   NOTE: this function destroys (cleanly, of course) SERR after it has
+   copied/converted its data to the new DAV error.
+
+   NOTE: MESSAGE needs to hang around for the lifetime of the error since
+   the current implementation doesn't copy it!  Lots of callers pass static
+   string constant. */
+dav_error *
+dav_svn__convert_err(svn_error_t *serr,
+                    int status,
+                    const char *message,
+                    apr_pool_t *pool);
+
+
 /* Compare (PATH in ROOT) to (PATH in ROOT/PATH's created_rev).
-   
+
    If these nodes are identical, then return the created_rev.
 
    If the nodes aren't identical, or if PATH simply doesn't exist in
    the created_rev, then return the revision represented by ROOT.
 
    (This is a helper to functions that want to build version-urls and
-    use the CR if possible.)
-*/
-svn_revnum_t dav_svn_get_safe_cr(svn_fs_root_t *root,
-                                 const char *path,
-                                 apr_pool_t *pool);
+    use the CR if possible.) */
+svn_revnum_t
+dav_svn__get_safe_cr(svn_fs_root_t *root, const char *path, apr_pool_t *pool);
 
-/*
-** Simple parsing of a URI. This is used for URIs which appear within a
-** request body. It enables us to verify and break out the necessary pieces
-** to figure out what is being referred to.
-**
-** ### this is horribly duplicative with the parsing functions in repos.c
-** ### for now, this implements only a minor subset of the full range of
-** ### URIs which we may need to parse. it also ignores any scheme, host,
-** ### and port in the URI and simply assumes it refers to the same server.
+
+/* Construct various kinds of URIs.
+
+   REPOS is always required, as all URIs will be built to refer to elements
+   within that repository. WHAT specifies the type of URI to build. The
+   ADD_HREF flag determines whether the URI is to be wrapped inside of
+   <D:href>uri</D:href> elements (for inclusion in a response).
+
+   Different pieces of information are required for the various URI types:
+
+   ACT_COLLECTION: no additional params required
+   BASELINE:       REVISION should be specified
+   BC:             REVISION should be specified
+   PUBLIC:         PATH should be specified with a leading slash
+   VERSION:        REVISION and PATH should be specified
+   VCC:            no additional params required
+*/
+enum dav_svn__build_what {
+  DAV_SVN__BUILD_URI_ACT_COLLECTION, /* the collection of activities */
+  DAV_SVN__BUILD_URI_BASELINE,   /* a Baseline */
+  DAV_SVN__BUILD_URI_BC,         /* a Baseline Collection */
+  DAV_SVN__BUILD_URI_PUBLIC,     /* the "public" VCR */
+  DAV_SVN__BUILD_URI_VERSION,    /* a Version Resource */
+  DAV_SVN__BUILD_URI_VCC         /* a Version Controlled Configuration */
+};
+
+const char *
+dav_svn__build_uri(const dav_svn_repos *repos,
+                   enum dav_svn__build_what what,
+                   svn_revnum_t revision,
+                   const char *path,
+                   int add_href,
+                   apr_pool_t *pool);
+
+
+/* Simple parsing of a URI. This is used for URIs which appear within a
+   request body. It enables us to verify and break out the necessary pieces
+   to figure out what is being referred to.
+  
+   ### this is horribly duplicative with the parsing functions in repos.c
+   ### for now, this implements only a minor subset of the full range of
+   ### URIs which we may need to parse. it also ignores any scheme, host,
+   ### and port in the URI and simply assumes it refers to the same server.
 */
 typedef struct {
   svn_revnum_t rev;
   const char *repos_path;
   const char *activity_id;
-} dav_svn_uri_info;
+} dav_svn__uri_info;
 
-svn_error_t *dav_svn_simple_parse_uri(dav_svn_uri_info *info,
-                                      const dav_resource *relative,
-                                      const char *uri,
-                                      apr_pool_t *pool);
-
-
-/* Given an apache request R, a URI, and a ROOT_PATH to the svn
-   location block, process URI and return many things, allocated in
-   r->pool:
-
-   * CLEANED_URI:  the uri with duplicate and trailing slashes removed.
-
-   * TRAILING_SLASH:  Whether the uri had a trailing slash on it.
-
-   Three special substrings of the uri are returned for convenience:
-
-   * REPOS_NAME:      The single path component that is the directory
-                      which contains the repository.
-
-   * RELATIVE_PATH:   The remaining imaginary path components.
-
-   * REPOS_PATH:      The actual path within the repository filesystem, or
-                      NULL if no part of the uri refers to a path in
-                      the repository.  (e.g. "!svn/vcc/default" or
-                      "!svn/bln/25")
+svn_error_t *
+dav_svn__simple_parse_uri(dav_svn__uri_info *info,
+                          const dav_resource *relative,
+                          const char *uri,
+                          apr_pool_t *pool);
 
 
-   So for example, consider the uri
-
-       /svn/repos/proj1/!svn/blah/13//A/B/alpha
-
-   In the SVNPath case, this function would receive a ROOT_PATH of
-   '/svn/repos/proj1', and in the SVNParentPath case would receive a
-   ROOT_PATH of '/svn/repos'.  But either way, we would get back:
-
-     * CLEANED_URI:    /svn/repos/proj1/!svn/blah/13/A/B/alpha
-     * REPOS_NAME:     proj1
-     * RELATIVE_PATH:  /!svn/blah/13/A/B/alpha
-     * REPOS_PATH:     A/B/alpha
-     * TRAILING_SLASH: FALSE
-*/
-dav_error * dav_svn_split_uri (request_rec *r,
-                               const char *uri,
-                               const char *root_path,
-                               const char **cleaned_uri,
-                               int *trailing_slash,
-                               const char **repos_name,
-                               const char **relative_path,
-                               const char **repos_path);
+int dav_svn__find_ns(apr_array_header_t *namespaces, const char *uri);
 
 
-
-/* Given an apache request R and a ROOT_PATH to the svn location
-   block, set *KIND to the node-kind of the URI's associated
-   (revision, path) pair, if possible.
-   
-   Public uris, baseline collections, version resources, and working
-   (non-baseline) resources all have associated (revision, path)
-   pairs, and thus one of {svn_node_file, svn_node_dir, svn_node_none}
-   will be returned.
-
-   If URI is something more abstract, then set *KIND to to
-   svn_node_unknown.  This is true for baselines, working baselines,
-   version controled configurations, activities, histories, and other
-   private resources.  
-*/
-dav_error * dav_svn_resource_kind (request_rec *r,
-                                   const char *uri,
-                                   const char *root_path,
-                                   svn_node_kind_t *kind);
+/* Output XML data to OUTPUT using BB.  Use FMT as format string for the
+   output. */
+svn_error_t *
+dav_svn__send_xml(apr_bucket_brigade *bb,
+                  ap_filter_t *output,
+                  const char *fmt,
+                  ...)
+       __attribute__((format(printf, 3, 4)));
 
 
-/* Generate the HTTP response body for a successful MERGE. */
-/* ### more docco */
-dav_error * dav_svn__merge_response(ap_filter_t *output,
-                                    const dav_svn_repos *repos,
-                                    svn_revnum_t new_rev,
-                                    apr_xml_elem *prop_elem,
-                                    svn_boolean_t disable_merge_response,
-                                    apr_pool_t *pool);
+/* Test PATH for canonicalness (defined as "what won't make the
+   svn_path_* functions immediately explode"), returning an
+   HTTP_BAD_REQUEST error tag if the test fails. */
+dav_error *dav_svn__test_canonical(const char *path, apr_pool_t *pool);
 
-dav_error * dav_svn__update_report(const dav_resource *resource,
-				   const apr_xml_doc *doc,
-                                   ap_filter_t *output);
 
-/* ### todo: document this, as soon as understand what the heck it
-   does :-).  -kff */   
-dav_error * dav_svn__log_report(const dav_resource *resource,
-                                const apr_xml_doc *doc,
-                                ap_filter_t *output);
+/* Convert @a serr into a dav_error.  If @a new_msg is non-NULL, use
+   @a new_msg in the returned error, and write the original
+   @a serr->message to httpd's log.  Destroy the passed-in @a serr,
+   similarly to dav_svn__convert_err().
 
-int dav_svn_find_ns(apr_array_header_t *namespaces, const char *uri);
+   @a new_msg is usually a "sanitized" version of @a serr->message.
+   That is, if @a serr->message contains security-sensitive data,
+   @a new_msg does not.
+
+   The purpose of sanitization is to prevent security-sensitive data
+   from being transmitted over the network to the client.  The error
+   messages produced by various APIs (e.g., svn_fs, svn_repos) may
+   contain security-sensitive data such as the actual server file
+   system's path to the repository.  We don't want to send that to the
+   client, but we do want to log the real error on the server side.
+ */
+dav_error *
+dav_svn__sanitize_error(svn_error_t *serr,
+                        const char *new_msg,
+                        int http_status,
+                        request_rec *r);
+
+
+/* Return a writable generic stream that will encode its output to base64
+   and send it to the Apache filter OUTPUT using BB.  Allocate the stream in
+   POOL. */
+svn_stream_t *
+dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
+                                   ap_filter_t *output,
+                                   apr_pool_t *pool);
 
 
 #ifdef __cplusplus

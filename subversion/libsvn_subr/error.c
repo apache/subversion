@@ -1,7 +1,7 @@
 /* error.c:  common exception handling for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -20,28 +20,26 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#include <apr_lib.h>
 #include <apr_general.h>
 #include <apr_pools.h>
 #include <apr_strings.h>
-#include <apr_hash.h>
 
-#include "svn_pools.h"
+#include "svn_cmdline.h"
 #include "svn_error.h"
-#include "svn_io.h"
-#include "svn_utf.h"
 
 #ifdef SVN_DEBUG
 /* file_line for the non-debug case. */
 static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 #endif /* SVN_DEBUG */
 
+#include "svn_private_config.h"
 
 
 /*** Helpers for creating errors ***/
 #undef svn_error_create
 #undef svn_error_createf
 #undef svn_error_quick_wrap
+#undef svn_error_wrap_apr
 
 
 /* XXX FIXME: These should be protected by a thread mutex.
@@ -53,7 +51,7 @@ static const char *error_file = NULL;
 static long error_line = -1;
 
 void
-svn_error__locate (const char *file, long line)
+svn_error__locate(const char *file, long line)
 {
   /* XXX TODO: Lock mutex here */
   error_file = file;
@@ -61,9 +59,21 @@ svn_error__locate (const char *file, long line)
 }
 
 
+/* Cleanup function for errors.  svn_error_clear () removes this so
+   errors that are properly handled *don't* hit this code. */
+#if defined(SVN_DEBUG_ERROR)
+static apr_status_t err_abort(void *data)
+{
+  svn_error_t *err = data;  /* For easy viewing in a debugger */
+  abort();
+  err = err; /* Fake a use for the variable */
+}
+#endif
+
+
 static svn_error_t *
-make_error_internal (apr_status_t apr_err,
-                     svn_error_t *child)
+make_error_internal(apr_status_t apr_err,
+                    svn_error_t *child)
 {
   apr_pool_t *pool;
   svn_error_t *new_error;
@@ -71,11 +81,14 @@ make_error_internal (apr_status_t apr_err,
   /* Reuse the child's pool, or create our own. */
   if (child)
     pool = child->pool;
-  else if (apr_pool_create (&pool, NULL))
-    abort ();
+  else
+    {
+      if (apr_pool_create(&pool, NULL))
+        abort();
+    }
 
   /* Create the new error structure */
-  new_error = (svn_error_t *) apr_pcalloc (pool, sizeof (*new_error));
+  new_error = apr_pcalloc(pool, sizeof(*new_error));
 
   /* Fill 'er up. */
   new_error->apr_err = apr_err;
@@ -85,6 +98,11 @@ make_error_internal (apr_status_t apr_err,
   new_error->line    = error_line;
   /* XXX TODO: Unlock mutex here */
 
+#if defined(SVN_DEBUG_ERROR)
+  if (! child)
+      apr_pool_cleanup_register(pool, new_error, err_abort, NULL);
+#endif
+
   return new_error;
 }
 
@@ -93,51 +111,85 @@ make_error_internal (apr_status_t apr_err,
 /*** Creating and destroying errors. ***/
 
 svn_error_t *
-svn_error_create (apr_status_t apr_err,
-                  svn_error_t *child,
-                  const char *message)
+svn_error_create(apr_status_t apr_err,
+                 svn_error_t *child,
+                 const char *message)
 {
   svn_error_t *err;
 
-  err = make_error_internal (apr_err, child);
+  err = make_error_internal(apr_err, child);
 
-  err->message = (const char *) apr_pstrdup (err->pool, message);
+  if (message)
+    err->message = apr_pstrdup(err->pool, message);
 
   return err;
 }
 
 
 svn_error_t *
-svn_error_createf (apr_status_t apr_err,
-                   svn_error_t *child,
+svn_error_createf(apr_status_t apr_err,
+                  svn_error_t *child,
+                  const char *fmt,
+                  ...)
+{
+  svn_error_t *err;
+  va_list ap;
+
+  err = make_error_internal(apr_err, child);
+
+  va_start(ap, fmt);
+  err->message = apr_pvsprintf(err->pool, fmt, ap);
+  va_end(ap);
+
+  return err;
+}
+
+
+svn_error_t *
+svn_error_wrap_apr(apr_status_t status,
                    const char *fmt,
                    ...)
 {
-  svn_error_t *err;
-
+  svn_error_t *err, *utf8_err;
   va_list ap;
+  char errbuf[255];
+  const char *msg_apr, *msg;
 
-  err = make_error_internal (apr_err, child);
+  err = make_error_internal(status, NULL);
 
-  va_start (ap, fmt);
-  err->message = apr_pvsprintf (err->pool, fmt, ap);
-  va_end (ap);
+  if (fmt)
+    {
+      /* Grab the APR error message. */
+      apr_strerror(status, errbuf, sizeof(errbuf));
+      utf8_err = svn_utf_cstring_to_utf8(&msg_apr, errbuf, err->pool);
+      if (utf8_err)
+        msg_apr = NULL;
+      svn_error_clear(utf8_err);
+
+      /* Append it to the formatted message. */
+      va_start(ap, fmt);
+      msg = apr_pvsprintf(err->pool, fmt, ap);
+      va_end(ap);
+      err->message = apr_psprintf(err->pool, "%s%s%s", msg,
+                                  (msg_apr) ? ": " : "",
+                                  (msg_apr) ? msg_apr : "");
+    }
 
   return err;
 }
 
 
 svn_error_t *
-svn_error_quick_wrap (svn_error_t *child, const char *new_msg)
+svn_error_quick_wrap(svn_error_t *child, const char *new_msg)
 {
-  return svn_error_create (child->apr_err,
-                           child,
-                           new_msg);
+  return svn_error_create(child->apr_err,
+                          child,
+                          new_msg);
 }
 
 
 void
-svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
+svn_error_compose(svn_error_t *chain, svn_error_t *new_err)
 {
   apr_pool_t *pool = chain->pool;
   apr_pool_t *oldpool = new_err->pool;
@@ -145,114 +197,251 @@ svn_error_compose (svn_error_t *chain, svn_error_t *new_err)
   while (chain->child)
     chain = chain->child;
 
+#if defined(SVN_DEBUG_ERROR)
+  /* Kill existing handler since the end of the chain is going to change */
+  apr_pool_cleanup_kill(pool, chain, err_abort);
+#endif
+
   /* Copy the new error chain into the old chain's pool. */
   while (new_err)
     {
-      chain->child = apr_palloc (pool, sizeof (*chain->child));
+      chain->child = apr_palloc(pool, sizeof(*chain->child));
       chain = chain->child;
       *chain = *new_err;
-      chain->message = apr_pstrdup (pool, new_err->message);
+      if (chain->message)
+        chain->message = apr_pstrdup(pool, new_err->message);
+      chain->pool = pool;
+#if defined(SVN_DEBUG_ERROR)
+      if (! new_err->child)
+        apr_pool_cleanup_kill(oldpool, new_err, err_abort);
+#endif
       new_err = new_err->child;
     }
 
+#if defined(SVN_DEBUG_ERROR)
+  apr_pool_cleanup_register(pool, chain, err_abort, NULL);
+#endif
+
   /* Destroy the new error chain. */
-  apr_pool_destroy (oldpool);
+  apr_pool_destroy(oldpool);
 }
 
+svn_boolean_t
+svn_error_root_cause_is(svn_error_t *err, apr_status_t apr_err)
+{
+  while (err)
+    {
+      if (err->child)
+        err = err->child;
+      else
+        /* We've reached the end of the line. */
+        return (err->apr_err == apr_err);
+    }
+
+  return FALSE;
+}
+
+svn_error_t *
+svn_error_dup(svn_error_t *err)
+{
+  apr_pool_t *pool;
+  svn_error_t *new_err = NULL, *tmp_err = NULL;
+
+  if (apr_pool_create(&pool, NULL))
+    abort();
+
+  for (; err; err = err->child)
+    {
+      if (! new_err)
+        {
+          new_err = apr_palloc(pool, sizeof(*new_err));
+          tmp_err = new_err;
+        }
+      else
+        {
+          tmp_err->child = apr_palloc(pool, sizeof(*tmp_err->child));
+          tmp_err = tmp_err->child;
+        }
+      *tmp_err = *err;
+      tmp_err->pool = pool;
+      if (tmp_err->message)
+        tmp_err->message = apr_pstrdup(pool, tmp_err->message);
+    }
+
+#if defined(SVN_DEBUG_ERROR)
+  apr_pool_cleanup_register(pool, tmp_err, err_abort, NULL);
+#endif
+
+  return new_err;
+}
 
 void
-svn_error_clear (svn_error_t *err)
+svn_error_clear(svn_error_t *err)
 {
   if (err)
-    apr_pool_destroy (err->pool);
+    {
+#if defined(SVN_DEBUG_ERROR)
+      while (err->child)
+        err = err->child;
+      apr_pool_cleanup_kill(err->pool, err, err_abort);
+#endif
+      apr_pool_destroy(err->pool);
+    }
 }
 
-
 static void
-handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal,
-              int depth, apr_status_t parent_apr_err)
+print_error(svn_error_t *err, FILE *stream, const char *prefix)
 {
   char errbuf[256];
-  char utfbuf[2048];
   const char *err_string;
-
+  svn_error_t *temp_err = NULL;  /* ensure initialized even if
+                                    err->file == NULL */
   /* Pretty-print the error */
   /* Note: we can also log errors here someday. */
 
 #ifdef SVN_DEBUG
-  if (err->file)
-    fprintf (stream, "%s:%ld",
-             svn_utf_utf8_to_native (err->file, utfbuf, sizeof (utfbuf)),
-             err->line);
+  /* Note: err->file is _not_ in UTF-8, because it's expanded from
+           the __FILE__ preprocessor macro. */
+  const char *file_utf8;
+
+  if (err->file
+      && !(temp_err = svn_utf_cstring_to_utf8(&file_utf8, err->file,
+                                              err->pool)))
+    svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
+                                        "%s:%ld", err->file, err->line));
   else
-    fputs (SVN_FILE_LINE_UNDEFINED, stream);
+    {
+      svn_error_clear(svn_cmdline_fputs(SVN_FILE_LINE_UNDEFINED,
+                                        stream, err->pool));
+      svn_error_clear(temp_err);
+    }
 
-  fprintf (stream, ": (apr_err=%d)\n", err->apr_err);
+  svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
+                                      ": (apr_err=%d)\n", err->apr_err));
 #endif /* SVN_DEBUG */
-
-  /* When we're recursing, don't repeat the top-level message if its
-     the same as before. */
-  if (depth == 0 || err->apr_err != parent_apr_err)
+  
+  /* Only print the same APR error string once. */
+  if (err->message)
+    {
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool, "%s%s\n",
+                                          prefix, err->message));
+    }
+  else
     {
       /* Is this a Subversion-specific error code? */
       if ((err->apr_err > APR_OS_START_USEERR)
           && (err->apr_err <= APR_OS_START_CANONERR))
-        err_string = svn_utf_utf8_to_native
-          (svn_strerror (err->apr_err, errbuf, sizeof (errbuf)),
-           utfbuf, sizeof (utfbuf));
+        err_string = svn_strerror(err->apr_err, errbuf, sizeof(errbuf));
       /* Otherwise, this must be an APR error code. */
-      else
-        err_string = apr_strerror (err->apr_err, errbuf, sizeof (errbuf));
-
-      fprintf (stream, "svn: %s\n", err_string);
+      else if ((temp_err = svn_utf_cstring_to_utf8
+                (&err_string, apr_strerror(err->apr_err, errbuf,
+                                           sizeof(errbuf)), err->pool)))
+        {
+          svn_error_clear(temp_err);
+          err_string = _("Can't recode error string from APR");
+        }
+      
+      svn_error_clear(svn_cmdline_fprintf(stream, err->pool,
+                                          "%s%s\n", prefix, err_string));
     }
-  if (err->message)
-    fprintf (stream, "svn: %s\n",
-             svn_utf_utf8_to_native (err->message, utfbuf, sizeof (utfbuf)));
-  fflush (stream);
+}
 
-  if (err->child)
-    handle_error (err->child, stream, FALSE, depth + 1, err->apr_err);
+void
+svn_handle_error(svn_error_t *err, FILE *stream, svn_boolean_t fatal)
+{
+  svn_handle_error2(err, stream, fatal, "svn: ");
+}
 
+void
+svn_handle_error2(svn_error_t *err,
+                  FILE *stream,
+                  svn_boolean_t fatal,
+                  const char *prefix)
+{
+  /* In a long error chain, there may be multiple errors with the same
+     error code and no custom message.  We only want to print the
+     default message for that code once; printing it multiple times
+     would add no useful information.  The 'empties' array below
+     remembers the codes of empty errors already seen in the chain.
+
+     We could allocate it in err->pool, but there's no telling how
+     long err will live or how many times it will get handled.  So we
+     use a subpool. */
+  apr_pool_t *subpool;
+  apr_array_header_t *empties;
+
+  /* ### The rest of this file carefully avoids using svn_pool_*(),
+     preferring apr_pool_*() instead.  I can't remember why -- it may
+     be an artifact of r3719, or it may be for some deeper reason --
+     but I'm playing it safe and using apr_pool_*() here too. */
+  apr_pool_create(&subpool, err->pool);
+  empties = apr_array_make(subpool, 0, sizeof(apr_status_t));
+
+  while (err)
+    {
+      int i;
+      svn_boolean_t printed_already = FALSE;
+
+      if (! err->message)
+        {
+          for (i = 0; i < empties->nelts; i++)
+            {
+              if (err->apr_err == ((apr_status_t *)empties->elts)[i])
+                {
+                  printed_already = TRUE;
+                  break;
+                }
+            }
+        }
+      
+      if (! printed_already)
+        {
+          print_error(err, stream, prefix);
+          if (! err->message)
+            {
+              (*((apr_status_t *) apr_array_push(empties))) = err->apr_err;
+            }
+        }
+
+      err = err->child;
+    }
+
+  apr_pool_destroy(subpool);
+
+  fflush(stream);
   if (fatal)
     /* XXX Shouldn't we exit(1) here instead, so that atexit handlers
        get called?  --xbc */
-    abort ();
-}
-
-void
-svn_handle_error (svn_error_t *err, FILE *stream, svn_boolean_t fatal)
-{
-  handle_error (err, stream, fatal, 0, APR_SUCCESS);
+    abort();
 }
 
 
 void
-svn_handle_warning (apr_pool_t *pool, void *data, const char *fmt, ...)
+svn_handle_warning(FILE *stream, svn_error_t *err)
 {
-  va_list ap;
-  svn_stringbuf_t *msg, *msg_utf8;
-  svn_error_t *err;
-  apr_pool_t *subpool = svn_pool_create (pool);
-  FILE *stream = data;
+  svn_handle_warning2(stream, err, "svn: ");
+}
 
-  va_start (ap, fmt);
-  msg_utf8 = svn_stringbuf_create (apr_pvsprintf (subpool, fmt, ap), subpool);
-  va_end (ap);
+void
+svn_handle_warning2(FILE *stream, svn_error_t *err, const char *prefix)
+{
+  char buf[256];
 
-  err = svn_utf_stringbuf_from_utf8 (&msg, msg_utf8, subpool);
+  svn_error_clear(svn_cmdline_fprintf
+                  (stream, err->pool,
+                   _("%swarning: %s\n"),
+                   prefix, svn_err_best_message(err, buf, sizeof(buf))));
+  fflush(stream);
+}
 
-  if (err)
-    handle_error (err, stream, FALSE, 0, APR_SUCCESS);
+const char *
+svn_err_best_message(svn_error_t *err, char *buf, apr_size_t bufsize)
+{
+  if (err->message)
+    return err->message;
   else
-    {
-      fprintf (stream, "svn: warning: %s\n", msg->data);
-      fflush (stream);
-    }
-
-  svn_pool_destroy (subpool);
+    return svn_strerror(err->apr_err, buf, bufsize);
 }
-
 
 
 /* svn_strerror() and helpers */
@@ -267,16 +456,16 @@ typedef struct {
 #include "svn_error_codes.h"
 
 char *
-svn_strerror (apr_status_t statcode, char *buf, apr_size_t bufsize)
+svn_strerror(apr_status_t statcode, char *buf, apr_size_t bufsize)
 {
   const err_defn *defn;
 
   for (defn = error_table; defn->errdesc != NULL; ++defn)
-    if (defn->errcode == statcode)
+    if (defn->errcode == (svn_errno_t)statcode)
       {
-        apr_cpystrn (buf, defn->errdesc, bufsize);
+        apr_cpystrn(buf, _(defn->errdesc), bufsize);
         return buf;
       }
 
-  return apr_strerror (statcode, buf, bufsize);
+  return apr_strerror(statcode, buf, bufsize);
 }

@@ -1,8 +1,6 @@
 /*
- * svn_repos.i :  SWIG interface file for svn_repos.h
- *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,56 +12,123 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ *
+ * svn_repos.i: SWIG interface file for svn_repos.h
  */
 
-%module _repos
-%include typemaps.i
+#if defined(SWIGPYTHON)
+%module(package="libsvn") repos
+#elif defined(SWIGPERL)
+%module "SVN::_Repos"
+#elif defined(SWIGRUBY)
+%module "svn::ext::repos"
+#endif
 
-%import apr.i
-%import svn_types.i
-%import svn_string.i
+%include svn_global.swg
+%import core.i
+%import svn_delta.i
 %import svn_fs.i
 
 /* -----------------------------------------------------------------------
-   these types (as 'type **') will always be an OUT param
+   %apply-ing of typemaps defined elsewhere
 */
-%apply SWIGTYPE **OUTPARAM {
-    svn_repos_t **
+%apply const char *MAY_BE_NULL {
+    const char *src_entry,
+    const char *unused_1,
+    const char *unused_2,
+    const char *token,
+    const char *user,
+    const char *log_msg,
+    const char *lock_token,
+    const char *tgt_path,
+    const char *parent_dir
 };
 
-/* -----------------------------------------------------------------------
-   dir_delta's src_entry parameter needs to be NULL sometimes
-*/
-%typemap(python,in,parse="z") const char *src_entry "";
+#ifdef SWIGPYTHON
+%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
 
-/* -----------------------------------------------------------------------
-   get_logs takes a callback function, so we have to thunk it
-*/
-%typemap(python, in) (svn_log_message_receiver_t receiver, 
-                      void *receiver_baton) {
-    $1 = svn_swig_py_thunk_log_receiver;
-    $2 = (void *)$input;
+#ifdef SWIGRUBY
+%apply svn_stream_t *MAY_BE_NULL {
+    svn_stream_t *dumpstream_may_be_null,
+    svn_stream_t *feedback_stream
+};
+#endif
+
+%callback_typemap(svn_repos_history_func_t history_func, void *history_baton,
+                  svn_swig_py_repos_history_func,
+                  svn_swig_pl_thunk_history_func,
+                  svn_swig_rb_repos_history_func)
+
+%callback_typemap_maybenull(svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            svn_swig_py_repos_authz_func,
+                            svn_swig_pl_thunk_authz_func,
+                            svn_swig_rb_repos_authz_func)
+
+/* cause SWIG syntax error.
+#ifdef SWIGRUBY
+%typemap(in) (svn_error_t *(*)(void *baton) start_callback, void *start_callback_baton)
+{
+  $1 = svn_swig_rb_just_call;
+  $2 = (void *)svn_swig_rb_make_baton($input, _global_svn_swig_rb_pool);
 }
+#endif
+*/
+
+#ifdef SWIGRUBY
+%callback_typemap(svn_repos_file_rev_handler_t handler, void *handler_baton,
+                  ,
+                  ,
+                  svn_swig_rb_repos_file_rev_handler)
+
+%callback_typemap(svn_repos_authz_func_t authz_read_func,
+                  void *authz_read_baton,
+                  ,
+                  ,
+                  svn_swig_rb_repos_authz_func)
+
+%callback_typemap(svn_repos_authz_callback_t authz_callback, void *authz_baton,
+                  ,
+                  ,
+                  svn_swig_rb_repos_authz_callback)
+#endif
 
 /* -----------------------------------------------------------------------
-   handle the 'paths' parameter appropriately
+   handle svn_repos_get_committed_info().
 */
-%apply const apr_array_header_t *STRINGLIST {
-    const apr_array_header_t *paths
-};
+#ifdef SWIGRUBY
+%typemap(argout) const char **committed_date {
+  %append_output(svn_swig_rb_svn_date_string_to_time(*$1));
+}
+#endif
 
+/* Ruby fixups for functions not following the pool convention. */
+#ifdef SWIGRUBY
+%ignore svn_repos_fs;
+%inline %{
+static svn_fs_t *
+svn_repos_fs_wrapper(svn_repos_t *fs, apr_pool_t *pool)
+{
+  return svn_repos_fs(fs);
+}
+%}
+#endif
 
 /* ----------------------------------------------------------------------- */
 
-%include svn_repos.h
-%{
-#include "svn_repos.h"
-
-#ifdef SWIGPYTHON
-#include "swigutil_py.h"
+#ifdef SWIGRUBY
+svn_error_t *svn_repos_dump_fs2(svn_repos_t *repos,
+                                svn_stream_t *dumpstream_may_be_null,
+                                svn_stream_t *feedback_stream,
+                                svn_revnum_t start_rev,
+                                svn_revnum_t end_rev,
+                                svn_boolean_t incremental,
+                                svn_boolean_t use_deltas,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                apr_pool_t *pool);
+%ignore svn_repos_dump_fs2;
 #endif
 
-#ifdef SWIGJAVA
-#include "swigutil_java.h"
-#endif
-%}
+%include svn_repos_h.swg

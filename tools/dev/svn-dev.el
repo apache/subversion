@@ -28,6 +28,29 @@
       (save-buffer))
     (message "Reverted \"%s\"." fname)))
 
+(defun svn-resolved ()
+  "Tell Subversion that conflicts in the current buffer and its file have
+been resolved."
+  (interactive)
+  (let ((obuf (current-buffer))
+        (fname (buffer-file-name))
+        (outbuf (get-buffer-create "*svn output*")))
+    (set-buffer outbuf)
+    (delete-region (point-min) (point-max))
+    (call-process "svn" nil outbuf nil "status" fname)
+    (goto-char (point-min))
+    (search-forward fname)
+    (beginning-of-line)
+    (if (looking-at "^?")
+        (error "\"%s\" is not a Subversion-controlled file" fname))
+    (call-process "svn" nil outbuf nil "resolved" fname)
+    (set-buffer obuf)
+    ;; todo: make a backup~ file?
+    (save-excursion
+      (revert-buffer nil t)
+      (save-buffer))
+    (message "Marked \"%s\" as conflict-free." fname)))
+
 (defconst svn-adm-area ".svn"
   "The name of the Subversion administrative subdirectory.")
 
@@ -35,7 +58,7 @@
   "The path from cwd to the Subversion entries file.")
 
 (defun svn-controlled-path-p (path)
-  "Return non-nil if PATH is under Subversion revision control, else
+  "Return non-nil if PATH is under Subversion version control, else
 return nil.  If PATH does not exist, return nil.
 
 In the future, this will return an Emacs Lisp reflection of PATH's
@@ -71,7 +94,7 @@ entries file, instead of just detecting PATH among the entries."
 
 (defun svn-text-base-path (file)
   "Return the path to the text base for FILE (a string).
-If FILE is a directory or not under revision control, return nil."
+If FILE is a directory or not under version control, return nil."
   (cond
    ((not (svn-controlled-path-p file)) nil)
    ((file-directory-p file)            nil)
@@ -111,6 +134,26 @@ Inhibit backup files unless `vc-make-backup-files' is non-nil."
   (interactive "nSubversion issue number: ")
   (insert (format "http://subversion.tigris.org/issues/show_bug.cgi?id=%d" n)))
 
+;; Helper for referring to revisions in a browser-friendly way.
+(defun svn-rev-url (rev &optional transform)
+  "Insert the url for Subversion revision REV, or if TRANSFORM is not
+nil, then transform the revision at or around point into an HTML link.
+
+Interactively, if at or inside a revision number, transform it into
+full HTML link; otherwise, prompt for revision number and insert just
+the resulting URL."
+  (interactive (let ((thing (thing-at-point 'word)))
+                 (if (and thing (string-match "r[0-9]+" thing))
+                     (list thing t)
+                   (list (read-string "Subversion revision number: ") nil))))
+  (if (string-match "^r[0-9]+" rev)
+      (setq rev (substring rev 1)))
+  (if transform
+      (let* ((bounds (bounds-of-thing-at-point 'word))
+             (start (car bounds))
+             (end   (cdr bounds)))
+        (delete-region start end)))
+  (insert (format "http://svn.collab.net/viewcvs/svn?rev=%s&view=rev" rev)))
 
 
 ;;; Subversion C conventions
@@ -137,6 +180,7 @@ the Subversion project.  Python setup in other buffers will not be
 affected."
   (when (string-match "/subversion/" (buffer-file-name))
     (make-local-variable 'py-indent-offset)
+    (setq indent-tabs-mode nil)
     (setq py-indent-offset 2)
     (make-local-variable 'py-smart-indentation)
     (setq py-smart-indentation nil)))
@@ -344,7 +388,9 @@ See also the function `svn-log-message-file'."
                           (save-match-data
                             (if (eq major-mode 'c-mode)
                                 (progn
-                                  (c-beginning-of-statement)
+                                  (if (fboundp 'c-beginning-of-statement-1)
+                                      (c-beginning-of-statement-1)
+                                    (c-beginning-of-statement))
                                   (search-forward "(" nil t)
                                   (forward-char -1)
                                   (forward-sexp -1)
@@ -396,7 +442,7 @@ See also the function `svn-log-message-file'."
   "The line of dashes that separates log messages in 'svn log' output.")
 
 (defconst svn-log-msg-boundary-regexp
-  (concat "^" svn-log-msg-sep-line "\n" "rev [0-9]+:  ")
+  (concat "^" svn-log-msg-sep-line "\n" "r[0-9]+ | ")
   "Regular expression matching the start of a log msg.  The start is
 the beginning of the separator line, not the rev/author/date line that
 follows the separator line.")

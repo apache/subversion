@@ -1,216 +1,394 @@
 #!/bin/sh
 
+# USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
+#                  [-rs REVISION-VER-TAG]
+#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
+#                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
+#                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
+#                  [-zlib PATH-TO-ZLIB]
+#                  [-zip] [-sign] [-nodeps]
 #
-# USAGE: ./dist.sh [VERSION [NAME [REPOS-PATH]]]
+#   Create a distribution tarball, labelling it with the given VERSION.
+#   The REVISION will be used in the version string, unless
+#   REVISION-VER-TAG is also used to put a different revision in the
+#   version tag than is actually used.  [But why would we want to do
+#   such a weird thing? Should this feature of dist.sh be removed?]
+#   The tarball will be constructed from the root located at REPOS-PATH,
+#   in REVISION.  For example, the command line:
 #
-#   Create a distribution tarball, labelling it with the given version. If
-#   the version is not supplied, the HEAD version will be used.
+#      ./dist.sh -v 1.4.0 -r ????? -pr branches/1.4.x
 #
-#   If NAME is supplied, it will be used in the version string. From CVS
-#   trees, this is 'dev build'. By default, this will be 'r<VERSION>'.
-#   Note that you can use '' or 'HEAD' for the VERSION to be able to
-#   supply a name in the second argument.
+#   will create a 1.4.0 release tarball. Make sure you have apr,
+#   apr-util, neon and zlib subdirectories in your current working
+#   directory or specify the path to them with the -apr, -apru, -neon or
+#   -zlib options.  For example:
+#      ./dist.sh -v 1.4.0 -r ????? -pr branches/1.4.x \
+#        -apr  ~/in-tree-libraries/apr-0.9.12 \
+#        -apru ~/in-tree-libraries/apr-util-0.9.12 \
+#        -neon ~/in-tree-libraries/neon-0.25.5 \
+#        -zlib ~/in-tree-libraries/zlib-1.2.3
 #
-#   If REPOS-PATH is supplied, the tarball will be constructed from the
-#   root located at that path (e.g. /branches/foo). If REPOS-PATH is not
-#   supplied, then /trunk will be used.
-#
-#   Note: the leading slash on REPOS-PATH will be inserted if not present.
-#
+#   Note that there is _no_ need to run dist.sh from a Subversion
+#   working copy, so you may wish to create a dist-resources directory
+#   containing the apr/, apr-util/, neon/ and zlib/ dependencies, and
+#   run dist.sh from that.
+#  
+#   When building alpha, beta or rc tarballs pass the appropriate flag
+#   followed by a number.  For example "-alpha 5", "-beta 3", "-rc 2".
+# 
+#   If neither an -alpha, -beta or -rc option is specified, a release
+#   tarball will be built.
+#  
+#   To build a Windows zip file package, additionally pass -zip and the
+#   path to apr-iconv with -apri.
 
-##########################################################################
-# How to build a Subversion distribution tarball:
-#
-# Run this script in the top-level of a configured working copy that
-# has apr, apr-util, and neon subdirs, and you'll end up with
-# subversion-rXXX.tar.gz in that top-level directory.
-#
-# Unless specified otherwise (with a single REVISION argument to this
-# script), the tarball will be based on the HEAD of the repository.
-#
-# It will *not* be based on whatever set of revisions are in your
-# working copy.  However, since 
-#
-#   - the documentation will be produced by running "make doc" 
-#     on your working copy's revisions of the doc master files, and
-#
-#   - since the APR and APRUTIL trees are basically copied from your working 
-#     copy, 
-#
-# it's probably simplest if you just make sure your working copy is at
-# the same revision as that of the distribution you are trying to
-# create.  Then you won't get any unexpected results.
-#
-##########################################################################
 
-### Rolling block.
-DIST_SANDBOX=.dist_sandbox
+USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
+[-rs REVISION-VER-TAG ] \
+[-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM] \
+[-apr APR_PATH ] [-apru APR_UTIL_PATH] [-apri APR_ICONV_PATH] \
+[-neon NEON_PATH ] [-zlib ZLIB_PATH] [-zip] [-sign] [-nodeps]
+ EXAMPLES: ./dist.sh -v 0.36.0 -r 8278 -pr branches/foo
+           ./dist.sh -v 0.36.0 -r 8278 -pr trunk
+           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0
+           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -alpha 1
+           ./dist.sh -v 0.36.0 -r 8282 -rs 8278 -pr tags/0.36.0 -beta 1"
 
-### Estimated current version of your working copy
-WC_VERSION=`svn st -vN doc/README | awk '{print $1}'`
+# Let's check and set all the arguments
+ARG_PREV=""
 
-### The "REV" part of ${DISTNAME}-rREV.tar.gz
-if test -z "$1" || test "$1" = "HEAD"; then
-  VERSION="`svn st -vu README | tail -1 | awk '{print $3}'`"
-else
-  VERSION="$1"
-fi
-
-RELEASE_NAME="$2"
-if test -z "$RELEASE_NAME"; then
-  RELEASE_NAME="r$VERSION"
-fi
-
-REPOS_PATH="$3"
-if test -z "$REPOS_PATH"; then
-  REPOS_PATH="trunk"
-else
-  # remove any leading slashes
-  REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
-fi
-
-### The tarball's basename, also the name of the subdirectory into which
-### it should unpack.
-DISTNAME=subversion-${RELEASE_NAME}
-echo "Distribution will be named: ${DISTNAME}"
-echo "     constructed from path: /${REPOS_PATH}"
-
-### Warn the user if their working copy looks to be out of sync with
-### their requested (or default) revision
-if test ${WC_VERSION} != ${VERSION}; then
-  echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
-  echo "*                                                             *"
-  echo "* WARNING:  The docs/ directory in your working copy does not *"
-  echo "*           appear  to  have the same revision number  as the *"
-  echo "*           distribution revision you requested.  Since these *"
-  echo "*           documents will be the ones included in your final *"
-  echo "*           tarball, please  be  sure they reflect the proper *"
-  echo "*           state.                                            *"
-  echo "*                                                             *"
-  echo "* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *"
-fi
-
-### Clean up the old docs so we're guaranteed the latest ones.
-# This is necessary only because "make clean" doesn't appear
-# to clean up docs at the moment.
-echo "Cleaning old docs in docs/ ..."
-rm -f doc/programmer/design/svn-design.info
-rm -f doc/programmer/design/svn-design.info-*
-rm -f doc/programmer/design/svn-design.html
-rm -f doc/programmer/design/svn-design.txt
-rm -f doc/handbook/svn-handbook.info
-rm -f doc/handbook/svn-handbook.info-*
-rm -f doc/handbook/svn-handbook.html
-rm -f doc/handbook/svn-handbook.txt
-rm -f doc/handbook/translations/french/svn-handbook-french.info
-rm -f doc/handbook/translations/french/svn-handbook-french.info-*
-rm -f doc/handbook/translations/french/svn-handbook-french.html
-rm -f doc/handbook/translations/french/svn-handbook-french.txt
-
-### Build new docs.
-echo "Building new docs in docs/ ..."
-make doc
-
-### Prepare an area for constructing the dist tree.
-rm -rf ${DIST_SANDBOX}
-mkdir ${DIST_SANDBOX}
-echo "Removed and recreated ${DIST_SANDBOX}"
-
-### Export the dist tree, clean it up.
-echo "Exporting revision ${VERSION} of Subversion into sandbox..."
-(cd ${DIST_SANDBOX} && \
- svn export -q -r ${VERSION} http://svn.collab.net/repos/svn/$REPOS_PATH \
-        ${DISTNAME} --username none --password none)
-
-### Ship with (relatively) clean APRUTIL, APR, and neon working copies
-### inside the tarball, just to make people's lives easier.  Always do
-### APR-UTIL first, because it depends on APR's makefile.
-echo "Copying apr-util into sandbox, making clean..."
-cp -r apr-util ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/apr-util && make extraclean)
-# Defang the APRUTIL working copy.
-echo "Removing all CVS/ and .cvsignore files from apr-util..."
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr-util -name CVS -type d -print`
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr-util -name .cvsignore -print`
-
-echo "Copying apr into sandbox, making clean..."
-cp -r apr ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/apr && make extraclean)
-# Defang the APR working copy.
-echo "Removing all CVS/ and .cvsignore files from apr..."
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name CVS -type d -print`
-rm -rf `find ${DIST_SANDBOX}/${DISTNAME}/apr -name .cvsignore -print`
-
-# Clean most of neon.
-echo "Coping neon into sandbox, making clean..."
-cp -r neon ${DIST_SANDBOX}/${DISTNAME}
-(cd ${DIST_SANDBOX}/${DISTNAME}/neon && make distclean)
-# Then do some extra cleaning in neon, since its `make distclean'
-# rule still leaves some .o files lying around.  Better to
-# patch Neon, of course; but the fix wasn't obvious to me --
-# something to do with @NEONOBJS@ in neon/src/Makefile.in?
-echo "Cleaning *.o in neon..."
-rm -f ${DIST_SANDBOX}/${DISTNAME}/neon/src/*.o
-
-# Remove any config.nice files that may have been left behind. They aren't
-# cleaned by anything.
-files="`find ${DIST_SANDBOX}/${DISTNAME} -name config.nice -print`"
-if test -n "$files"; then
-  echo "Removing: $files"
-  rm -rf $files
-fi
-
-### Run autogen.sh in the dist, so we ship with a configure script.
-# First make sure autogen.sh is executable, because, as Mike Pilato
-# points out, until we get permission versioning working, it won't be
-# executable on export from svn.
-echo "Running ./autogen.sh in sandbox, to create ./configure ..."
-chmod a+x ${DIST_SANDBOX}/${DISTNAME}/autogen.sh
-(cd ${DIST_SANDBOX}/${DISTNAME} && ./autogen.sh)
-
-### Copy all the pre-built docs, so we ship with ready documentation.
-echo "Copying new docs into sandbox..."
-for name in doc/programmer/design/svn-design.info   \
-            doc/programmer/design/svn-design.info-* \
-            doc/programmer/design/svn-design.html   \
-            doc/programmer/design/svn-design.txt    \
-            doc/book/book/*.html                    \
-            doc/book/book/*.pdf                     \
-            doc/book/book/*.ps
+for ARG in $@
 do
-   cp ${name} ${DIST_SANDBOX}/${DISTNAME}/${name}
+  if [ -n "$ARG_PREV" ]; then
+    case $ARG_PREV in
+         -v)  VERSION="$ARG" ;;
+         -r)  REVISION="$ARG" ;;
+        -rs)  REVISION_VER_TAG="$ARG" ;;
+        -pr)  REPOS_PATH="$ARG" ;;
+     -alpha)  ALPHA="$ARG" ;;
+      -beta)  BETA="$ARG" ;;
+        -rc)  RC="$ARG" ;;
+       -apr)  APR_PATH="$ARG" ;;
+      -apru)  APRU_PATH="$ARG" ;;
+      -apri)  APRI_PATH="$ARG" ;;
+      -zlib)  ZLIB_PATH="$ARG" ;;
+      -neon)  NEON_PATH="$ARG" ;;
+    esac
+    ARG_PREV=""
+  else
+    case $ARG in
+      -v|-r|-rs|-pr|-alpha|-beta|-rc|-apr|-apru|-apri|-zlib|-neon)
+        ARG_PREV=$ARG
+        ;;
+      -zip) ZIP=1 ;;
+      -nodeps) NODEPS=1 ;;
+      -sign) SIGN=1 ;;
+      *)
+        echo " $USAGE"
+        exit 1
+        ;;
+    esac
+  fi
 done
 
-### Tell people where to find old information.
-cat > ${DIST_SANDBOX}/${DISTNAME}/ChangeLog.CVS <<EOF
-The old CVS ChangeLog is kept at 
+if [ -z "$REVISION_VER_TAG" ]; then
+  REVISION_VER_TAG=$REVISION
+fi
 
-     http://subversion.tigris.org/
+if [ -n "$ALPHA" ] && [ -n "$BETA" ] ||
+   [ -n "$ALPHA" ] && [ -n "$RC" ] ||
+   [ -n "$BETA" ] && [ -n "$RC" ] ; then
+  echo " $USAGE"
+  exit 1
+elif [ -n "$ALPHA" ] ; then
+  VER_TAG="Alpha $ALPHA"
+  VER_NUMTAG="-alpha$ALPHA" 
+elif [ -n "$BETA" ] ; then
+  VER_TAG="Beta $BETA"
+  VER_NUMTAG="-beta$BETA"
+elif [ -n "$RC" ] ; then
+  VER_TAG="Release Candidate $RC"
+  VER_NUMTAG="-rc$RC"
+else
+  VER_TAG="r$REVISION_VER_TAG"
+  VER_NUMTAG=""
+fi
+  
+if [ -n "$ZIP" ] ; then
+  EXTRA_EXPORT_OPTIONS="--native-eol CRLF"
+fi
 
-If you want to see changes since Subversion went self-hosting,
-you probably want to use the "svn log" command -- and if it 
-does not do what you need, please send in a patch!
-EOF
+if [ -z "$VERSION" ] || [ -z "$REVISION" ] || [ -z "$REPOS_PATH" ]; then
+  echo " $USAGE"
+  exit 1
+fi
 
-### Give this release a unique name, to help us interpret bug reports
-vsn_file="${DIST_SANDBOX}/${DISTNAME}/subversion/include/svn_version.h"
-sed -e \
- "/#define *SVN_VER_TAG/s/dev build/${RELEASE_NAME}/" \
-  < "$vsn_file" > "${vsn_file}.tmp"
+if [ -z "$APR_PATH" ]; then
+  APR_PATH='apr'
+fi
 
-mv "${vsn_file}.tmp" "$vsn_file"
+if [ -z "$APRU_PATH" ]; then
+  APRU_PATH='apr-util'
+fi
 
+if [ -z "$NEON_PATH" ]; then
+  NEON_PATH='neon'
+fi
 
-### Make the tarball.
-echo "Rolling ${DISTNAME}.tar.gz ..."
-(cd ${DIST_SANDBOX} && tar zcpf ${DISTNAME}.tar.gz ${DISTNAME})
+if [ -z "$APRI_PATH" ]; then
+  APRI_PATH='apr-iconv'
+fi
 
-### Copy it upstairs and clean up.
-echo "Copying tarball out, removing sandbox..."
-cp ${DIST_SANDBOX}/${DISTNAME}.tar.gz .
-rm -rf ${DIST_SANDBOX}
+if [ -z "$ZLIB_PATH" ]; then
+  ZLIB_PATH='zlib'
+fi
+
+REPOS_PATH="`echo $REPOS_PATH | sed 's/^\/*//'`"
+
+# See comment when we 'roll' the tarballs as to why pax is required.
+type pax > /dev/null 2>&1
+if [ $? -ne 0 ] && [ -z "$ZIP" ]; then
+  echo "ERROR: pax could not be found"
+  exit 1
+fi
+
+# Default to 'wget', but allow 'curl' to be used if available.
+HTTP_FETCH=wget
+HTTP_FETCH_OUTPUT="-O"
+type wget > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  type curl > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    echo "Neither curl or wget found."
+    exit 2
+  fi
+  HTTP_FETCH=curl
+  HTTP_FETCH_OUTPUT="-o"
+fi
+
+DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
+DEPSNAME="subversion-deps-${VERSION}${VER_NUMTAG}"
+DIST_SANDBOX=.dist_sandbox
+DISTPATH="$DIST_SANDBOX/$DISTNAME"
+DEPSPATH="$DIST_SANDBOX/deps/$DISTNAME"
+
+echo "Distribution will be named: $DISTNAME"
+echo "     constructed from path: /$REPOS_PATH"
+echo " constructed from revision: $REVISION"
+echo "revision in version string: $REVISION_VER_TAG"
+
+rm -rf "$DIST_SANDBOX"
+mkdir "$DIST_SANDBOX"
+mkdir -p "$DEPSPATH"
+echo "Removed and recreated $DIST_SANDBOX"
+
+LC_ALL=C
+LANG=C
+TZ=UTC
+export LC_ALL
+export LANG
+export TZ
+
+echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
+(cd "$DIST_SANDBOX" && \
+ ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
+     "http://svn.collab.net/repos/svn/$REPOS_PATH" \
+     "$DISTNAME" --username none --password none)
+
+install_dependency()
+{
+  DEP_NAME=$1
+  if [ -z $2 ]; then
+    DEP_PATH=/dev/null
+  else
+    DEP_PATH=$2
+  fi
+
+  if [ -d $DEP_PATH ]; then
+    if [ -d $DEP_PATH/.svn ]; then
+      echo "Exporting local $DEP_NAME into sandbox"
+      ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS "$DEP_PATH" "$DISTPATH/$DEP_NAME"
+    else
+      echo "Copying local $DEP_NAME into sandbox"
+      cp -r "$DEP_PATH" "$DISTPATH/$DEP_NAME" 
+      (cd "$DISTPATH/$DEP_NAME" && [ -f Makefile ] && make distclean)
+      echo "Removing all CVS/ and .cvsignore files from $DEP_NAME..."
+      find "$DISTPATH/$DEP_NAME" -name CVS -type d -print | xargs rm -fr
+      find "$DISTPATH/$DEP_NAME" -name .cvsignore -print | xargs rm -f
+      find "$DISTPATH/$DEP_NAME" -name '*.o' -print | xargs rm -f
+    fi
+  else
+    # Not having the dependency directories isn't fatal if -nodeps passed.
+    if [ -z "$NODEPS" ]; then
+      echo "Missing dependency directory!"
+      exit 2
+    fi
+  fi
+}
+
+move_dependency()
+{
+  DEP_NAME=$1
+
+  SOURCE_PATH="$DISTPATH/$DEP_NAME"
+  DEST_PATH="$DEPSPATH/$DEP_NAME"
+
+  rm -rf "$DEST_PATH"
+  mv "$SOURCE_PATH" "$DEST_PATH"
+}
+
+install_dependency apr "$APR_PATH"
+install_dependency apr-util "$APRU_PATH"
+
+if [ -n "$ZIP" ]; then
+  install_dependency apr-iconv "$APRI_PATH"
+fi
+
+install_dependency neon "$NEON_PATH"
+install_dependency zlib "$ZLIB_PATH"
+
+find "$DISTPATH" -name config.nice -print | xargs rm -f
+
+# Massage the new version number into svn_version.h.  We need to do
+# this before running autogen.sh --release on the subversion code,
+# because otherwise svn_version.h's mtime makes SWIG files regenerate
+# on end-user's systems, when they should just be compiled by the
+# Release Manager and left at that.
+
+ver_major=`echo $VERSION | cut -d '.' -f 1`
+ver_minor=`echo $VERSION | cut -d '.' -f 2`
+ver_patch=`echo $VERSION | cut -d '.' -f 3`
+
+vsn_file="$DISTPATH/subversion/include/svn_version.h"
+
+sed \
+ -e "/#define *SVN_VER_MAJOR/s/[0-9]\+/$ver_major/" \
+ -e "/#define *SVN_VER_MINOR/s/[0-9]\+/$ver_minor/" \
+ -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
+ -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
+ -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
+ -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION_VER_TAG/" \
+  < "$vsn_file" > "$vsn_file.tmp"
+
+mv -f "$vsn_file.tmp" "$vsn_file"
+
+echo "Creating svn_version.h.dist, for use in tagging matching tarball..."
+cp "$vsn_file" "svn_version.h.dist"
+
+# Don't run autogen.sh when we are building the Windows zip file.
+# Windows users don't need the files generated by this command,
+# especially not the generated projects or SWIG files.
+if [ -z "$ZIP" ] ; then
+  echo "Running ./autogen.sh in sandbox, to create ./configure ..."
+  (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
+fi
+
+echo "Removing any autom4te.cache directories that might exist..."
+find "$DISTPATH" -depth -type d -name 'autom4te*.cache' -exec rm -rf {} \;
+
+# Now that the dependencies have been configured/cleaned properly,
+# move them into their separate tree for packaging.
+move_dependency apr
+move_dependency apr-util
+if [ -n "$ZIP" ]; then
+  move_dependency apr-iconv
+fi
+move_dependency neon
+move_dependency zlib
+
+if [ -z "$ZIP" ]; then
+  # Do not use tar, it's probably GNU tar which produces tar files that are
+  # not compliant with POSIX.1 when including filenames longer than 100 chars.
+  # Platforms without a tar that understands the GNU tar extension will not
+  # be able to extract the resulting tar file.  Use pax to produce POSIX.1
+  # tar files.
+  echo "Rolling $DISTNAME.tar ..."
+  (cd "$DIST_SANDBOX" > /dev/null && pax -x ustar -w "$DISTNAME") > \
+    "$DISTNAME.tar"
+  echo "Rolling $DEPSNAME.tar ..."
+  (cd "$DIST_SANDBOX/deps" > /dev/null && pax -x ustar -w "$DISTNAME") > \
+    "$DEPSNAME.tar"
+
+  echo "Compressing to $DISTNAME.tar.bz2 ..."
+  bzip2 -9fk "$DISTNAME.tar"
+  echo "Compressing to $DEPSNAME.tar.bz2 ..."
+  bzip2 -9fk "$DEPSNAME.tar"
+
+  # Use the gzip -n flag - this prevents it from storing the original name of
+  # the .tar file, and far more importantly, the mtime of the .tar file, in the
+  # produced .tar.gz file. This is important, because it makes the gzip
+  # encoding reproducable by anyone else who has an similar version of gzip,
+  # and also uses "gzip -9n". This means that committers who want to GPG-sign
+  # both the .tar.gz and the .tar.bz2 can download the .tar.bz2 (which is
+  # smaller), and locally generate an exact duplicate of the official .tar.gz
+  # file. This metadata is data on the temporary uncompressed tarball itself,
+  # not any of its contents, so there will be no effect on end-users.
+  echo "Compressing to $DISTNAME.tar.gz ..."
+  gzip -9nf "$DISTNAME.tar"
+  echo "Compressing to $DEPSNAME.tar.gz ..."
+  gzip -9nf "$DEPSNAME.tar"
+else
+  echo "Rolling $DISTNAME.zip ..."
+  (cd "$DIST_SANDBOX" > /dev/null && zip -q -r - "$DISTNAME") > \
+    "$DISTNAME.zip"
+  echo "Rolling $DEPSNAME.zip ..."
+  (cd "$DIST_SANDBOX/deps" > /dev/null && zip -q -r - "$DISTNAME") > \
+    "$DEPSNAME.zip"
+fi
+echo "Removing sandbox..."
+rm -rf "$DIST_SANDBOX"
+
+sign_file()
+{
+  if [ -n "$SIGN" ]; then
+    type gpg > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      if test -n "$user"; then
+        args="--default-key $user"
+      fi
+      for ARG in $@
+      do
+        gpg --armor $args --detach-sign $ARG
+      done
+    else
+      type pgp > /dev/null 2>&1
+      if [ $? -eq 0 ]; then
+        if test -n "$user"; then
+          args="-u $user"
+        fi
+        for ARG in $@
+        do
+          pgp -sba $ARG $args
+        done
+      fi
+    fi
+  fi
+}
 
 echo ""
 echo "Done:"
-ls -l ${DISTNAME}.tar.gz
-echo ""
+if [ -z "$ZIP" ]; then
+  ls -l "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
+  sign_file $DISTNAME.tar.gz $DISTNAME.tar.bz2 $DEPSNAME.tar.bz2 $DEPSNAME.tar.gz
+  echo ""
+  echo "md5sums:"
+  md5sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
+  type sha1sum > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo "sha1sums:"
+    sha1sum "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz" "$DEPSNAME.tar.bz2" "$DEPSNAME.tar.gz"
+  fi
+else
+  ls -l "$DISTNAME.zip" "$DEPSNAME.zip"
+  sign_file $DISTNAME.zip $DEPSNAME.zip
+  echo ""
+  echo "md5sum:"
+  md5sum "$DISTNAME.zip" "$DEPSNAME.zip"
+  type sha1sum > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo "sha1sum:"
+    sha1sum "$DISTNAME.zip" "$DEPSNAME.zip"
+  fi
+fi

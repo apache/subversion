@@ -2,7 +2,7 @@
  * range-index-test.c: An extension for random-test.
  *
  * ====================================================================
- * Copyright (c) 2000-2002 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,14 +23,14 @@
 
 static range_index_node_t *prev_node, *prev_prev_node;
 static apr_off_t
-walk_range_index (range_index_node_t *node, const char **msg)
+walk_range_index(range_index_node_t *node, const char **msg)
 {
   apr_off_t ret;
 
   if (node == NULL)
     return 0;
 
-  ret = walk_range_index (node->left, msg);
+  ret = walk_range_index(node->left, msg);
   if (ret > 0)
     return ret;
 
@@ -56,44 +56,44 @@ walk_range_index (range_index_node_t *node, const char **msg)
   prev_prev_node = prev_node;
   prev_node = node;
 
-  return walk_range_index (node->right, msg);
+  return walk_range_index(node->right, msg);
 }
 
 
 static void
-print_node_data (range_index_node_t *node, const char *msg, apr_off_t ndx)
+print_node_data(range_index_node_t *node, const char *msg, apr_off_t ndx)
 {
   if (-node->target_offset == ndx)
     {
-      printf ("   * Node: [%3"APR_OFF_T_FMT
-              ",%3"APR_OFF_T_FMT
-              ") = %-5"APR_OFF_T_FMT"%s\n",
-              node->offset, node->limit, -node->target_offset, msg);
+      printf("   * Node: [%3"APR_OFF_T_FMT
+             ",%3"APR_OFF_T_FMT
+             ") = %-5"APR_OFF_T_FMT"%s\n",
+             node->offset, node->limit, -node->target_offset, msg);
     }
   else
     {
-      printf ("     Node: [%3"APR_OFF_T_FMT
-              ",%3"APR_OFF_T_FMT
-              ") = %"APR_OFF_T_FMT"\n",
-              node->offset, node->limit,
-              (node->target_offset < 0
-               ? -node->target_offset : node->target_offset));
+      printf("     Node: [%3"APR_OFF_T_FMT
+             ",%3"APR_OFF_T_FMT
+             ") = %"APR_OFF_T_FMT"\n",
+             node->offset, node->limit,
+             (node->target_offset < 0
+              ? -node->target_offset : node->target_offset));
     }
 }
 
 static void
-print_range_index_r (range_index_node_t *node, const char *msg, apr_off_t ndx)
+print_range_index_r(range_index_node_t *node, const char *msg, apr_off_t ndx)
 {
   if (node == NULL)
     return;
 
-  print_range_index_r (node->left, msg, ndx);
-  print_node_data (node, msg, ndx);
-  print_range_index_r (node->right, msg, ndx);
+  print_range_index_r(node->left, msg, ndx);
+  print_node_data(node, msg, ndx);
+  print_range_index_r(node->right, msg, ndx);
 }
 
 static void
-print_range_index_i (range_index_node_t *node, const char *msg, apr_off_t ndx)
+print_range_index_i(range_index_node_t *node, const char *msg, apr_off_t ndx)
 {
   if (node == NULL)
     return;
@@ -103,35 +103,35 @@ print_range_index_i (range_index_node_t *node, const char *msg, apr_off_t ndx)
 
   do
     {
-      print_node_data (node, msg, ndx);
+      print_node_data(node, msg, ndx);
       node = node->next;
     }
   while (node);
 }
 
 static void
-print_range_index (range_index_node_t *node, const char *msg, apr_off_t ndx)
+print_range_index(range_index_node_t *node, const char *msg, apr_off_t ndx)
 {
-  printf ("  (recursive)\n");
-  print_range_index_r (node, msg, ndx);
-  printf ("  (iterative)\n");
-  print_range_index_i (node, msg, ndx);
+  printf("  (recursive)\n");
+  print_range_index_r(node, msg, ndx);
+  printf("  (iterative)\n");
+  print_range_index_i(node, msg, ndx);
 }
 
 
 static void
-check_copy_count (int src_cp, int tgt_cp)
+check_copy_count(int src_cp, int tgt_cp)
 {
-  printf ("Source copies: %d  Target copies: %d\n", src_cp, tgt_cp);
+  printf("Source copies: %d  Target copies: %d\n", src_cp, tgt_cp);
   if (src_cp > tgt_cp)
-    printf ("WARN: More source than target copies; inefficient combiner?\n");
+    printf("WARN: More source than target copies; inefficient combiner?\n");
 }
 
 
 static svn_error_t *
-random_range_index_test (const char **msg,
-                         svn_boolean_t msg_only,
-                         apr_pool_t *pool)
+random_range_index_test(const char **msg,
+                        svn_boolean_t msg_only,
+                        apr_pool_t *pool)
 {
   static char msg_buff[256];
 
@@ -155,44 +155,44 @@ random_range_index_test (const char **msg,
   else
     printf("SEED: %s\n", msg_buff);
 
-  ndx = create_range_index (pool);
+  ndx = create_range_index(pool);
   for (i = 1; i <= iterations; ++i)
     {
-      apr_off_t offset = myrand (&seed) % 47;
-      apr_off_t limit = offset + myrand (&seed) % 16 + 1;
+      apr_off_t offset = myrand(&seed) % 47;
+      apr_off_t limit = offset + myrand(&seed) % 16 + 1;
       range_list_node_t *list, *r;
       apr_off_t ret;
       const char *msg2;
 
-      printf ("%3d: Inserting [%3"APR_OFF_T_FMT",%3"APR_OFF_T_FMT") ...",
-              i, offset, limit);
-      splay_range_index (offset, ndx);
-      list = build_range_list (offset, limit, ndx);
-      insert_range (offset, limit, i, ndx);
+      printf("%3d: Inserting [%3"APR_OFF_T_FMT",%3"APR_OFF_T_FMT") ...",
+             i, offset, limit);
+      splay_range_index(offset, ndx);
+      list = build_range_list(offset, limit, ndx);
+      insert_range(offset, limit, i, ndx);
       prev_prev_node = prev_node = NULL;
-      ret = walk_range_index (ndx->tree, &msg2);
+      ret = walk_range_index(ndx->tree, &msg2);
       if (ret == 0)
         {
           for (r = list; r; r = r->next)
-            printf (" %s[%3"APR_OFF_T_FMT",%3"APR_OFF_T_FMT")",
-                    (r->kind == range_from_source ?
-                     (++src_cp, "S") : (++tgt_cp, "T")),
-                    r->offset, r->limit);
-          free_range_list (list, ndx);
-          printf (" OK\n");
+            printf(" %s[%3"APR_OFF_T_FMT",%3"APR_OFF_T_FMT")",
+                   (r->kind == range_from_source ?
+                    (++src_cp, "S") : (++tgt_cp, "T")),
+                   r->offset, r->limit);
+          free_range_list(list, ndx);
+          printf(" OK\n");
         }
       else
         {
-          printf (" Ooops!\n");
-          print_range_index (ndx->tree, msg2, ret);
+          printf(" Ooops!\n");
+          print_range_index(ndx->tree, msg2, ret);
           check_copy_count(src_cp, tgt_cp);
-          return svn_error_create (SVN_ERR_TEST_FAILED, 0, NULL, pool,
-                                   "insert_range");
+          return svn_error_create(SVN_ERR_TEST_FAILED, 0, NULL, pool,
+                                  "insert_range");
         }
     }
 
-  printf ("Final tree state:\n");
-  print_range_index (ndx->tree, "", iterations + 1);
+  printf("Final tree state:\n");
+  print_range_index(ndx->tree, "", iterations + 1);
   check_copy_count(src_cp, tgt_cp);
   return SVN_NO_ERROR;
 }
