@@ -1742,13 +1742,36 @@ svn_client_diff_summarize_peg(const char *path,
  * ctx->notify_baton2 once for each merged target, passing the target's local 
  * path.
  *
+ * If @a record_only is true, the merge info for the revisions which
+ * would've been merged are recorded, without the merge actually being
+ * performed.
+ *
  * If @a dry_run is true, the merge is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
  *
  * The authentication baton cached in @a ctx is used to communicate with the 
  * repository.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_merge3(const char *source1,
+                  const svn_opt_revision_t *revision1,
+                  const char *source2,
+                  const svn_opt_revision_t *revision2,
+                  const char *target_wcpath,
+                  svn_boolean_t recurse,
+                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t force,
+                  svn_boolean_t dry_run,
+                  svn_boolean_t record_only,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+/** Similar to svn_client_merge3(), but with @a record_only set to @c FALSE.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_merge2(const char *source1,
@@ -1787,9 +1810,29 @@ svn_client_merge(const char *source1,
  * revision @a peg_revision, as it changed between @a revision1 and @a
  * revision2.  
  *
- * All other options are handled identically to svn_client_merge().
+ * All other options are handled identically to svn_client_merge3().
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_merge_peg3(const char *source,
+                      const svn_opt_revision_t *revision1,
+                      const svn_opt_revision_t *revision2,
+                      const svn_opt_revision_t *peg_revision,
+                      const char *target_wcpath,
+                      svn_boolean_t recurse,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t force,
+                      svn_boolean_t record_only,
+                      svn_boolean_t dry_run,
+                      const apr_array_header_t *merge_options,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool);
+
+/** Similar to svn_client_merge_peg3(), but with @a record_only set to
+ * @c FALSE.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_merge_peg2(const char *source,

@@ -3387,7 +3387,7 @@ svn_client_diff_summarize_peg(const char *path,
 }
 
 svn_error_t *
-svn_client_merge2(const char *source1,
+svn_client_merge3(const char *source1,
                   const svn_opt_revision_t *revision1,
                   const char *source2,
                   const svn_opt_revision_t *revision2,
@@ -3395,6 +3395,7 @@ svn_client_merge2(const char *source1,
                   svn_boolean_t recurse,
                   svn_boolean_t ignore_ancestry,
                   svn_boolean_t force,
+                  svn_boolean_t record_only,
                   svn_boolean_t dry_run,
                   const apr_array_header_t *merge_options,
                   svn_client_ctx_t *ctx,
@@ -3513,6 +3514,25 @@ svn_client_merge2(const char *source1,
 }
 
 svn_error_t *
+svn_client_merge2(const char *source1,
+                  const svn_opt_revision_t *revision1,
+                  const char *source2,
+                  const svn_opt_revision_t *revision2,
+                  const char *target_wcpath,
+                  svn_boolean_t recurse,
+                  svn_boolean_t ignore_ancestry,
+                  svn_boolean_t force,
+                  svn_boolean_t dry_run,
+                  const apr_array_header_t *merge_options,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  return svn_client_merge3(source1, revision1, source2, revision2,
+                           target_wcpath, recurse, ignore_ancestry, force,
+                           FALSE, dry_run, merge_options, ctx, pool);
+}
+
+svn_error_t *
 svn_client_merge(const char *source1,
                  const svn_opt_revision_t *revision1,
                  const char *source2,
@@ -3531,7 +3551,7 @@ svn_client_merge(const char *source1,
 }
 
 svn_error_t *
-svn_client_merge_peg2(const char *source,
+svn_client_merge_peg3(const char *source,
                       const svn_opt_revision_t *revision1,
                       const svn_opt_revision_t *revision2,
                       const svn_opt_revision_t *peg_revision,
@@ -3539,6 +3559,7 @@ svn_client_merge_peg2(const char *source,
                       svn_boolean_t recurse,
                       svn_boolean_t ignore_ancestry,
                       svn_boolean_t force,
+                      svn_boolean_t record_only,
                       svn_boolean_t dry_run,
                       const apr_array_header_t *merge_options,
                       svn_client_ctx_t *ctx,
@@ -3638,6 +3659,25 @@ svn_client_merge_peg2(const char *source,
   SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_merge_peg2(const char *source,
+                      const svn_opt_revision_t *revision1,
+                      const svn_opt_revision_t *revision2,
+                      const svn_opt_revision_t *peg_revision,
+                      const char *target_wcpath,
+                      svn_boolean_t recurse,
+                      svn_boolean_t ignore_ancestry,
+                      svn_boolean_t force,
+                      svn_boolean_t dry_run,
+                      const apr_array_header_t *merge_options,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *pool)
+{
+  return svn_client_merge_peg3(source, revision1, revision2, peg_revision,
+                               target_wcpath, recurse, ignore_ancestry, force,
+                               FALSE, dry_run, NULL, ctx, pool);
 }
 
 svn_error_t *
