@@ -771,6 +771,7 @@ diff_dir_deleted(svn_wc_adm_access_t *adm_access,
 
 struct merge_cmd_baton {
   svn_boolean_t force;
+  svn_boolean_t record_only;          /* Whether to only record merge info. */
   svn_boolean_t dry_run;
   const char *added_path;             /* Set to the dir path whenever the
                                          dir is added as a child of a
@@ -3452,6 +3453,7 @@ svn_client_merge3(const char *source1,
                              svn_path_local_style(target_wcpath, pool));
 
   merge_cmd_baton.force = force;
+  merge_cmd_baton.record_only = record_only;
   merge_cmd_baton.dry_run = dry_run;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.target = target_wcpath;
@@ -3600,6 +3602,7 @@ svn_client_merge_peg3(const char *source,
                              svn_path_local_style(target_wcpath, pool));
 
   merge_cmd_baton.force = force;
+  merge_cmd_baton.record_only = record_only;
   merge_cmd_baton.dry_run = dry_run;
   merge_cmd_baton.merge_options = merge_options;
   merge_cmd_baton.target = target_wcpath;
