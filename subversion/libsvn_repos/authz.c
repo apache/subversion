@@ -123,6 +123,28 @@ authz_access_is_determined(svn_repos_authz_access_t allow,
     return FALSE;
 }
 
+/* Return TRUE is USER equals ALIAS. The alias definitions are in the 
+   "aliases" sections of CFG. Use POOL for temporary allocations during
+   the lookup. */
+static svn_boolean_t 
+authz_alias_is_user(svn_config_t *cfg,
+                    const char *alias,
+                    const char *user,
+                    apr_pool_t *pool)
+{
+  const char *value;
+
+  svn_config_get(cfg, &value, "aliases", alias, NULL);
+  if (!value)
+    return FALSE;
+
+  if (strcmp(value, user) == 0)
+    return TRUE;
+
+  return FALSE;
+}
+
+
 /* Return TRUE if USER is in GROUP.  The group definitions are in the
    "groups" section of CFG.  Use POOL for temporary allocations during
    the lookup. */
@@ -149,6 +171,14 @@ authz_group_contains_user(svn_config_t *cfg,
         {
           if (authz_group_contains_user(cfg, &group_user[1],
                                         user, pool))
+            return TRUE;
+        }
+
+      /* If the 'user' is an alias, verify it. */
+      else if (*group_user == '&')
+        {
+          if (authz_alias_is_user(cfg, &group_user[1],
+                                  user, pool))
             return TRUE;
         }
 
@@ -182,6 +212,14 @@ authz_parse_line(const char *name, const char *value,
         {
           if (!authz_group_contains_user(b->config, &name[1],
                                          b->user, pool))
+            return TRUE;
+        }
+
+      /* Alias rule and user not alias.  Stop. */
+      else if (*name == '&')
+        {
+          if (!authz_alias_is_user(b->config, &name[1],
+                                   b->user, pool))
             return TRUE;
         }
 
@@ -427,16 +465,29 @@ authz_group_walk(svn_config_t *cfg,
           SVN_ERR(authz_group_walk(cfg, &group_user[1],
                                    checked_groups, pool));
         }
+      else if (*group_user == '&')
+        {
+          const char *alias;
+
+          svn_config_get(cfg, &alias, "aliases", &group_user[1], NULL);
+          /* Having a non-existent alias in the ACL configuration might be the
+             sign of a typo.  Refuse to perform authz on uncertain rules. */
+          if (!alias)
+            return svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                     "An authz rule refers to alias '%s', "
+                                     "which is undefined",
+                                     &group_user[1]);
+        }
     }
 
   return SVN_NO_ERROR;
 }
 
 
-/* Callback to check whether GROUP is a group name, and if so, whether
-   the group definition exists.  Return TRUE if the rule has no
-   errors.  Use BATON for context and error reporting. */
-static svn_boolean_t authz_validate_rule(const char *group,
+/* Callback to check whether NAME is a group or alias name, and if so,
+   whether the group or alias definition exists.  Return TRUE if the rule
+   has no errors.  Use BATON for context and error reporting. */
+static svn_boolean_t authz_validate_rule(const char *name,
                                          const char *value,
                                          void *baton,
                                          apr_pool_t *pool)
@@ -445,9 +496,9 @@ static svn_boolean_t authz_validate_rule(const char *group,
   struct authz_validate_baton *b = baton;
 
   /* If the rule applies to a group, check its existence. */
-  if (*group == '@')
+  if (*name == '@')
     {
-      svn_config_get(b->config, &val, "groups", &group[1], NULL);
+      svn_config_get(b->config, &val, "groups", &name[1], NULL);
       /* Having a non-existent group in the ACL configuration might be
          the sign of a typo.  Refuse to perform authz on uncertain
          rules. */
@@ -456,7 +507,21 @@ static svn_boolean_t authz_validate_rule(const char *group,
           b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
                                      "An authz rule refers to group "
                                      "'%s', which is undefined",
-                                     group);
+                                     name);
+          return FALSE;
+        }
+    }
+
+  /* If the rule applies to an alias, check its existence. */
+  if (*name == '&')
+    {
+      svn_config_get (b->config, &val, "aliases", &name[1], NULL);
+      if (!val)
+        {
+          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                     "An authz rule refers to alias "
+                                     "'%s', which is undefined",
+                                     name);
           return FALSE;
         }
     }
@@ -468,11 +533,22 @@ static svn_boolean_t authz_validate_rule(const char *group,
       if (*val != 'r' && *val != 'w' && ! svn_ctype_isspace(*val))
         b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
                                    "The character '%c' in rule '%s' is not "
-                                   "allowed in authz rules", *val, group);
+                                   "allowed in authz rules", *val, name);
 
       ++val;
     }
 
+  return TRUE;
+}
+
+/* Callback to check ALIAS's definition for validity.  Use
+   BATON for context and error reporting. */
+static svn_boolean_t authz_validate_alias(const char *alias,
+                                          const char *value,
+                                          void *baton,
+                                          apr_pool_t *pool)
+{
+  /* No checking at the moment, every alias is valid */
   return TRUE;
 }
 
@@ -506,6 +582,9 @@ static svn_boolean_t authz_validate_section(const char *name,
      callback. Otherwise, use the rule checking callback. */
   if (strncmp(name, "groups", 6) == 0)
     svn_config_enumerate2(b->config, name, authz_validate_group,
+                          baton, pool);
+  else if (strncmp(name, "aliases", 7) == 0)
+    svn_config_enumerate2(b->config, name, authz_validate_alias,
                           baton, pool);
   else
     svn_config_enumerate2(b->config, name, authz_validate_rule,
