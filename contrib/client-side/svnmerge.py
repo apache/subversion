@@ -33,6 +33,10 @@
 # $LastChangedBy$
 # $LastChangedRevision$
 #
+# Requisites:
+# svnmerge.py has been tested with all SVN major versions since 1.1 (both
+# client and server). It is unknown if it works with previous versions.
+#
 # Differences from svnmerge.sh:
 # - More portable: tested as working in FreeBSD and OS/2.
 # - Add double-verbose mode, which shows every svn command executed (-v -v).
@@ -100,10 +104,10 @@ def lstrip(s, ch):
 def rstrip(s, ch):
     """Replacement for str.rstrip (support for arbitrary chars to strip was
     added in Python 2.2.2)."""
-    if s[-1] != ch:
-        return s
-    i = -2
     try:
+        if s[-1] != ch:
+            return s
+        i = -2
         while s[i] == ch:
             i = i-1
         return s[:i+1]
@@ -228,7 +232,17 @@ def launch(cmd, split_lines=True):
 
 def launchsvn(s, show=False, pretend=False, **kwargs):
     """Launch SVN and grab its output."""
-    cmd = opts["svn"] + " " + s
+    username = opts.get("username", None)
+    password = opts.get("password", None)
+    if username:
+        username = " --username=" + username
+    else:
+        username = ""
+    if password:
+        password = " --password=" + password
+    else:
+        password = ""
+    cmd = opts["svn"] + username + password + " " + s
     if show or opts["verbose"] >= 2:
         print cmd
     if pretend:
@@ -244,7 +258,7 @@ def svn_command(s):
         print out
 
 def check_dir_clean(dir):
-    """Check the current status of dir for up-to-dateness and local mods."""
+    """Check the current status of dir for local mods."""
     if opts["force"]:
         report('skipping status check because of --force')
         return
@@ -257,9 +271,6 @@ def check_dir_clean(dir):
     out = launchsvn("status -q %s" % dir)
     if out and out[0].strip():
         error('"%s" has local modifications; it must be clean' % dir)
-    for L in launchsvn("status -u %s" % dir):
-        if len(L) > 7 and L[7] == '*':
-            error('"%s" is not up to date; please "svn update" first' % dir)
 
 class RevisionLog:
     """
@@ -283,8 +294,8 @@ class RevisionLog:
         revision_re = re.compile(r"^r(\d+)")
 
         # Look for changes which contain merge tracking information
-        rlpath = url_to_rlpath(url)
-        srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(rlpath))
+        repos_path = target_to_repos_relative_path(url)
+        srcdir_change_re = re.compile(r"\s*M\s+%s\s+$" % re.escape(repos_path))
 
         # Setup the log options (--quiet, so we don't show log messages)
         log_opts = '--quiet -r%s:%s "%s"' % (begin, end, url)
@@ -303,6 +314,16 @@ class RevisionLog:
                 self.revs.append(rev)
             elif srcdir_change_re.match(line):
                 self.propchange_revs.append(rev)
+
+        # Save the range of the log
+        self.begin = int(begin)
+        if end == "HEAD":
+            # If end is not provided, we do not know which is the latest
+            # revision in the repository. So we set 'end' to the latest
+            # known revision.
+            self.end = log.revs[-1]
+        else:
+            self.end = int(end)
 
         self._merges = None
 
@@ -368,25 +389,47 @@ class VersionedProperty:
         self.revs = [0]
         self.values = [None]
 
+        # We don't have any revisions cached
+        self._initial_value = None
+        self._changed_revs = []
+        self._changed_values = []
+
     def load(self, log):
         """
         Load the history of property changes from the specified
         RevisionLog object.
         """
 
-        # Cache the value of the property over the range of the log.
-        old_value = None
+        # Get the property value before the range of the log
+        if log.begin > 1:
+            self.revs.append(log.begin-1)
+            try:
+                self._initial_value = self.raw_get(log.begin-1)
+            except LaunchError:
+                # The specified URL might not exist before the
+                # range of the log. If so, we can safely assume
+                # that the property was empty at that time.
+                self._initial_value = { }
+            self.values.append(self._initial_value)
+        else:
+            self._initial_value = { }
+            self.values[0] = self._initial_value
+
+        # Cache the property values in the log range
+        old_value = self._initial_value
         for rev in log.propchange_revs:
-           new_value = self.raw_get(rev)
-           if new_value != old_value:
-               self.revs.append(rev)
-               self.values.append(new_value)
-               new_value = old_value
+            new_value = self.raw_get(rev)
+            if new_value != old_value:
+                self._changed_revs.append(rev)
+                self._changed_values.append(new_value)
+                self.revs.append(rev)
+                self.values.append(new_value)
+                new_value = old_value
 
         # Indicate that we know nothing about the value of the property
         # after the range of the log.
         if log.revs:
-            self.revs.append(log.revs[-1])
+            self.revs.append(log.end+1)
             self.values.append(None)
 
     def raw_get(self, rev=None):
@@ -414,11 +457,22 @@ class VersionedProperty:
         # Get the current value of the property
         return self.raw_get(rev)
 
-    def changed_revs(self):
+    def changed_revs(self, key=None):
         """
-        Get a list of the revisions in which this property changed.
+        Get a list of the revisions in which the specified dictionary
+        key was changed in this property. If key is not specified,
+        return a list of revisions in which any key was changed.
         """
-        return self.revs[1:-1]
+        if key is None:
+            return self._changed_revs
+        else:
+            changed_revs = []
+            old_val = self._initial_value
+            for rev, val in zip(self._changed_revs, self._changed_values):
+                if val.get(key) != old_val.get(key):
+                    changed_revs.append(rev)
+                    old_val = val
+            return changed_revs
 
 class RevisionSet:
     """
@@ -661,31 +715,44 @@ def target_to_url(dir):
     return dir
 
 def get_repo_root(dir):
-    """Compute the root repos URL given a working-copy path or an URL."""
-    url = target_to_url(dir)
-    assert url[-1] != '/'
+    """Compute the root repos URL given a working-copy path, or a URL."""
+    # Try using "svn info WCDIR". This works only on SVN clients >= 1.3
+    if not is_url(dir):
+        try:
+            info = get_svninfo(dir)
+            return info["Repository Root"]
+        except KeyError:
+            pass
+        url = target_to_url(dir)
+        assert url[-1] != '/'
+    else:
+        url = dir
 
     # Try using "svn info URL". This works only on SVN clients >= 1.2
     try:
         info = get_svninfo(url)
         return info["Repository Root"]
-
     except LaunchError:
-        # Constrained to older svn clients, we are stuck with this ugly
-        # trial-and-error implementation. It could be made faster with a
-        # binary search.
-        while url:
-            temp = os.path.dirname(url)
-            try:
-                launchsvn('proplist "%s"' % temp)
-            except LaunchError:
-                return url
-            url = temp
-        assert False, "svn repos root not found"
+        pass
 
-def url_to_rlpath(url):
-    """Convert a repos URL into a repo-local path."""
-    root = get_repo_root(url)
+    # Constrained to older svn clients, we are stuck with this ugly
+    # trial-and-error implementation. It could be made faster with a
+    # binary search.
+    while url:
+        temp = os.path.dirname(url)
+        try:
+            launchsvn('proplist "%s"' % temp)
+        except LaunchError:
+            return url
+        url = temp
+
+    assert False, "svn repos root not found"
+
+def target_to_repos_relative_path(target):
+    """Convert a target (either a working copy path or an URL) into a
+    repository-relative path."""
+    root = get_repo_root(target)
+    url = target_to_url(target)
     assert root[-1] != "/"
     assert url[:len(root)] == root, "url=%r, root=%r" % (url, root)
     return url[len(root):]
@@ -694,19 +761,20 @@ def get_copyfrom(dir):
     """Get copyfrom info for a given target (it represents the directory from
     where it was branched). NOTE: repos root has no copyfrom info. In this case
     None is returned."""
-    rlpath = url_to_rlpath(target_to_url(dir))
+    repos_path = target_to_repos_relative_path(dir)
     out = launchsvn('log -v --xml --stop-on-copy "%s"' % dir,
                     split_lines=False)
     out = out.replace("\n", " ")
     try:
-        m = re.search(r'(<path\s[^>]*action="A"[^>]*>%s</path>)' % rlpath, out)
+        m = re.search(r'(<path\s[^>]*action="A"[^>]*>%s</path>)'
+                      % re.escape(repos_path), out)
         head = re.search(r'copyfrom-path="([^"]*)"', m.group(1)).group(1)
         rev = re.search(r'copyfrom-rev="([^"]*)"', m.group(1)).group(1)
         return head,rev
     except AttributeError:
         return None,None
 
-def get_latestrev(url):
+def get_latest_rev(url):
     """Get the latest revision of the repository of which URL is part."""
     try:
         return get_svninfo(url)["Revision"]
@@ -717,6 +785,27 @@ def get_latestrev(url):
         rev = re.search("revision (\d+)", L).group(1)
         report('latest revision of "%s" is %s' % (url, rev))
         return rev
+
+def get_created_rev(url):
+    """Lookup the revision at which the path identified by the
+    provided URL was first created."""
+    oldest_rev = -1
+    report('determining oldest revision for URL "%s"' % url)
+    ### TODO: Refactor this to use a modified RevisionLog class.
+    lines = None
+    cmd = "log -r1:HEAD --stop-on-copy -q " + url
+    try:
+        lines = launchsvn(cmd + " --limit=1")
+    except LaunchError:
+        # Assume that --limit isn't supported by the installed 'svn'.
+        lines = launchsvn(cmd)
+    if lines and len(lines) > 1:
+        i = lines[1].find(" ")
+        if i != -1:
+            oldest_rev = int(lines[1][1:i])
+    if oldest_rev == -1:
+        error('unable to determine oldest revision for URL "%s"' % url)
+    return oldest_rev
 
 def get_commit_log(url, revnum):
     """Return the log message for a specific integer revision
@@ -756,7 +845,7 @@ def get_default_head(branch_dir, branch_props):
         error("no integration info available")
 
     props = branch_props.copy()
-    directory = url_to_rlpath(target_to_url(branch_dir))
+    directory = target_to_repos_relative_path(branch_dir)
 
     # To make bidirectional merges easier, find the target's
     # repository local path so it can be removed from the list of
@@ -768,9 +857,8 @@ def get_default_head(branch_dir, branch_props):
         err_msg = "multiple heads found. "
         err_msg += "Explicit head argument (-S/--head) required.\n"
         err_msg += "The head values available are:"
-        repo_root = get_repo_root(branch_dir)
         for prop in props:
-          err_msg += "\n  " + repo_root + prop
+          err_msg += "\n  " + prop
         error(err_msg)
 
     return props.keys()[0]
@@ -833,20 +921,11 @@ def analyze_revs(target_dir, url, begin=1, end=None,
         end = str(list(revs)[-1])
 
     phantom_revs = RevisionSet("%s-%s" % (begin, end)) - revs
-    reflected_revs = []
 
     if find_reflected:
-        merge_metadata = logs[url].merge_metadata()
-
-        report("checking for reflected changes in %d revision(s)"
-               % len(merge_metadata.changed_revs()))
-
-        old_revs = None
-        for rev in merge_metadata.changed_revs():
-            new_revs = merge_metadata.get(rev).get(target_dir)
-            if new_revs != old_revs:
-                reflected_revs.append("%s" % rev)
-            old_revs = new_revs
+        reflected_revs = logs[url].merge_metadata().changed_revs(target_dir)
+    else:
+        reflected_revs = []
 
     reflected_revs = RevisionSet(reflected_revs)
 
@@ -856,18 +935,18 @@ def analyze_head_revs(branch_dir, head_url, **kwargs):
     """For the given branch and head, extract the real and phantom
     head revisions."""
     branch_url = target_to_url(branch_dir)
-    target_dir = url_to_rlpath(branch_url)
+    target_dir = target_to_repos_relative_path(branch_dir)
 
     # Extract the latest repository revision from the URL of the branch
     # directory (which is already cached at this point).
-    end_rev = get_latestrev(branch_url)
+    end_rev = get_latest_rev(branch_url)
 
     # Calculate the base of analysis. If there is a "1-XX" interval in the
     # merged_revs, we do not need to check those.
     base = 1
     r = opts["merged-revs"].normalized()
     if r and r[0][0] == 1:
-        base = r[0][1]
+        base = r[0][1] + 1
 
     # See if the user filtered the revision set. If so, we are not
     # interested in something outside that range.
@@ -940,7 +1019,7 @@ def action_init(branch_dir, branch_props):
     check_dir_clean(branch_dir)
 
     # Get the initial revision set if not explicitly specified.
-    revs = opts["revision"] or "1-" + get_latestrev(opts["head-url"])
+    revs = opts["revision"] or "1-" + get_latest_rev(opts["head-url"])
     revs = RevisionSet(revs)
 
     report('marking "%s" as already containing revisions "%s" of "%s"' %
@@ -980,17 +1059,19 @@ def action_avail(branch_dir, branch_props):
 
     # Compose the set of revisions to show
     revs = RevisionSet("")
+    report_msg = "revisions available to be merged are:"
     if "avail" in opts["avail-showwhat"]:
         revs |= avail_revs
     if "blocked" in opts["avail-showwhat"]:
         revs |= blocked_revs
+        report_msg = "revisions blocked are:"
 
     # Limit to revisions specified by -r (if any)
     if opts["revision"]:
         revs = revs & RevisionSet(opts["revision"])
 
     display_revisions(revs, opts["avail-display"],
-                      "revisions available to be merged are:",
+                      report_msg,
                       opts["head-url"])
 
 def action_integrated(branch_dir, branch_props):
@@ -1004,23 +1085,7 @@ def action_integrated(branch_dir, branch_props):
     revs = merge_props_to_revision_set(branch_props, opts["head-path"])
 
     # Lookup the oldest revision on the branch path.
-    ### TODO: Refactor this to use a modified RevisionLog class.
-    oldest_src_rev = -1
-    lines = None
-    src_url = opts["head-url"]
-    cmd = "log -r1:HEAD --stop-on-copy -q " + src_url
-    try:
-        lines = launchsvn(cmd + " --limit=1")
-    except LaunchError:
-        # Assume that --limit isn't supported by the installed 'svn'.
-        lines = launchsvn(cmd)
-    report('determining oldest source URL revision for "%s"' % src_url)
-    if lines and len(lines) > 1:
-        i = lines[1].find(" ")
-        if i != -1:
-            oldest_src_rev = int(lines[1][1:i])
-    if oldest_src_rev == -1:
-        error("unable to determine oldest source revision")
+    oldest_src_rev = get_created_rev(opts["head-url"])
 
     # Subtract any revisions which pre-date the branch.
     report("subtracting revisions which pre-date the source URL (%d)" %
@@ -1186,6 +1251,109 @@ def action_unblock(branch_dir, branch_props):
         f.close()
         report('wrote commit message to "%s"' % opts["commit-file"])
 
+def action_rollback(branch_dir, branch_props):
+    """Rollback previously integrated revisions."""
+
+    # Make sure the revision arguments are present
+    if not opts["revision"]:
+        error("The '-r' option is mandatory for rollback")
+
+    # Check branch directory is ready for being modified
+    check_dir_clean(branch_dir)
+
+    # Extract the integration info for the branch_dir
+    branch_props = get_merge_props(branch_dir)
+    check_old_prop_version(branch_dir, branch_props)
+    # Get the list of all revisions already merged into this source-path.
+    merged_revs = merge_props_to_revision_set(branch_props, opts["head-path"])
+
+    # At which revision was the src created?
+    oldest_src_rev = get_created_rev(opts["head-url"])
+    src_pre_exist_range = RevisionSet("1-%d" % oldest_src_rev)
+
+    # Limit to revisions specified by -r (if any)
+    revs = merged_revs & RevisionSet(opts["revision"])
+
+    # make sure theres some revision to rollback
+    if not revs:
+        report("Nothing to rollback in revision range r%s" % opts["revision"])
+        return
+
+    # If even one specified revision lies outside the lifetime of the
+    # source head, error out.
+    if revs & src_pre_exist_range:
+        err_str  = "Specified revision range falls out of the rollback range.\n"
+        err_str += "%s was created at r%d" % (opts["head-path"], oldest_src_rev)
+        error(err_str)
+
+    record_only = opts["record-only"]
+
+    if record_only:
+        report('recording rollback of revision(s) %s from "%s"' %
+               (revs, opts["head-url"]))
+    else:
+        report('rollback of revision(s) %s from "%s"' %
+               (revs, opts["head-url"]))
+
+    # Do the reverse merge(s). Note: the starting revision number
+    # to 'svn merge' is NOT inclusive so we have to subtract one from start.
+    # We try to keep the number of merge operations as low as possible,
+    # because it is faster and reduces the number of conflicts.
+    rollback_intervals = minimal_merge_intervals(revs, [])
+    # rollback in the reverse order of merge
+    rollback_intervals.reverse()
+    for start, end in rollback_intervals:
+        if not record_only:
+            # Do the merge
+            svn_command("merge -r %d:%d %s %s" % \
+                        (end, start - 1, opts["head-url"], branch_dir))
+
+    # Write out commit message if desired
+    # calculate the phantom revs first
+    if opts["commit-file"]:
+        f = open(opts["commit-file"], "w")
+        if record_only:
+            print >>f, 'Recorded rollback of revisions %s via %s from ' % \
+                  (revs , NAME)
+        else:
+            print >>f, 'Rolled back revisions %s via %s from ' % \
+                  (revs , NAME)
+        print >>f, '%s' % opts["head-url"]
+
+        f.close()
+        report('wrote commit message to "%s"' % opts["commit-file"])
+
+    # Update the set of merged revisions.
+    merged_revs = merged_revs - revs 
+    branch_props[opts["head-path"]] = str(merged_revs)
+    set_merge_props(branch_dir, branch_props)
+
+def action_uninit(branch_dir, branch_props):
+    """Uninit HEAD URL."""
+    # Check branch directory is ready for being modified
+    check_dir_clean(branch_dir)
+
+    # If the head-path does not have an entry in the svnmerge-integrated
+    # property, simply error out.
+    if not branch_props.has_key(opts["head-path"]):
+        error('"%s" does not contain merge tracking information for "%s"' \
+                % (opts["head-path"], branch_dir))
+
+    del branch_props[opts["head-path"]]
+
+    # Set merge property with the selected head deleted
+    set_merge_props(branch_dir, branch_props)
+
+    # Set blocked revisions for the selected head to None
+    set_blocked_revs(branch_dir, opts["head-path"], None)
+
+    # Write out commit message if desired
+    if opts["commit-file"]:
+        f = open(opts["commit-file"], "w")
+        print >>f, 'Removed merge tracking for "%s" for ' % NAME
+        print >>f, '%s' % opts["head-url"]
+        f.close()
+        report('wrote commit message to "%s"' % opts["commit-file"])
 
 ###############################################################################
 # Command line parsing -- options and commands management
@@ -1470,7 +1638,6 @@ class CommandOpts:
     def print_version(self):
         print self.version
 
-
 ###############################################################################
 # Options and Commands description
 ###############################################################################
@@ -1486,6 +1653,12 @@ global_opts = [
            help="show subversion commands that make changes"),
     Option("-v", "--verbose",
            help="verbose mode: output more information about progress"),
+    OptionArg("-u", "--username",
+              default=None,
+              help="invoke subversion commands with the supplied username"),
+    OptionArg("-p", "--password",
+              default=None,
+              help="invoke subversion commands with the supplied password"),
 ]
 
 common_opts = [
@@ -1509,9 +1682,11 @@ common_opts = [
                    'and ranges separated by commas, e.g., "534,537-539,540"'),
     OptionArg("-S", "--head", "--source",
               default=None,
-              help="specify the head for this branch. It can be either a path "
-                   "or an URL. Needed only to disambiguate in case of "
-                   "multiple merge tracking (merging from multiple heads)"),
+              help="specify the head for this branch. It can be either a path,"
+                   " a full URL, or an unambigous substring of one the paths "
+                   "for which merge tracking was already initialized. Needed "
+                   "only to disambiguate in case of multiple merge tracking "
+                   "(merging from multiple heads)"),
 ]
 
 command_table = {
@@ -1590,6 +1765,21 @@ command_table = {
         "-S",
     ]),
 
+    "rollback": (action_rollback,
+    "rollback [OPTION...] [PATH]",
+    """Rollback previously merged in revisions from PATH.  The
+    --revision option is mandatory, and specifies which revisions
+    will be rolled back.  Only the previously integrated merges
+    will be rolled back.
+
+    When manually rolling back changes, --record-only can be used to
+    instruct %s that a manual rollback of a certain revision
+    already happened, so that it can record it and offer that
+    revision for merge henceforth.""" % (NAME),
+    [
+        "-f", "-r", "-S", "-M", # import common opts
+    ]),
+
     "merge": (action_merge,
     "merge [OPTION...] [PATH]",
     """Merge in revisions into PATH from its head. If --revision is omitted,
@@ -1634,6 +1824,17 @@ command_table = {
     blocked revisions are unblocked""" % NAME,
     [
         "-f", "-r", "-S", # import common opts
+    ]),
+
+    "uninit": (action_uninit,
+    "uninit [OPTION...] [PATH]",
+    """Remove merge tracking information from PATH. It cleans any kind of merge
+    tracking information (including the list of blocked revisions). If there
+    are multiple heads, use --head to indicate which head you want to forget
+    about.
+    """,
+    [
+        "-f", "-S", # import common opts
     ]),
 }
 
@@ -1702,9 +1903,26 @@ def main(args):
         # trailing /'s.
         head = rstrip(head, "/")
         if not is_wc(head) and not is_url(head):
-            error('"%s" is not a valid URL or working directory' % head)
+            # Check if it is a substring of a repo-relative URL recorded
+            # within the branch properties.
+            found = []
+            for repos_path in branch_props.keys():
+                if repos_path.find(head) > 0:
+                    found.append(repos_path)
+            if len(found) == 1:
+                head = get_repo_root(branch_dir) + found[0]
+            else:
+                error('"%s" is neither a valid URL (or an unambiguous '
+                      'substring), nor a working directory' % head)
+
+        head_path = target_to_repos_relative_path(head)
+        if str(cmd) == "init" and \
+               head_path == target_to_repos_relative_path("."):
+            error("cannot init integration source '%s'\nIt must "
+                  "differ from the repository-relative path of the current "
+                  "directory." % head_path)
+        opts["head-path"] = head_path
         opts["head-url"] = target_to_url(head)
-        opts["head-path"] = url_to_rlpath(opts["head-url"])
 
     # Sanity check head_url
     assert is_url(opts["head-url"])

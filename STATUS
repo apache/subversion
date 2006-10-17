@@ -57,13 +57,5 @@ Candidate changes:
     Votes:
       +1: malcolm
 
-  * r21897
-    Add validation of the HEAD argument passed to 'svnmerge.py init'.
-    Justification:
-      This common gotcha otherwise results in an ugly stack trace with
-      no meaningful feedback to the user.
-    Votes:
-      +1: dlr
-
 Approved changes:
 
