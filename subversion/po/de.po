@@ -77,7 +77,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.4.x\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-23 13:50-0500\n"
-"PO-Revision-Date: 2006-10-17 11:30+0200\n"
+"PO-Revision-Date: 2006-10-17 11:57+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -839,7 +839,7 @@ msgstr "Die Operation wurde unterbrochen"
 
 #: include/svn_error_codes.h:1002
 msgid "The specified diff option is not supported"
-msgstr "Die angegebene diff-Option wird nicht unterstützt"
+msgstr "Die angegebene Vergleichsoption wird nicht unterstützt"
 
 #: include/svn_error_codes.h:1006
 msgid "Property not found"
@@ -1312,7 +1312,7 @@ msgstr "svn_client_diff3 wurde in einer Art aufgerufen, die derzeit nicht unters
 
 #: libsvn_client/diff.c:2052
 msgid "Only diffs between a path's text-base and its working files are supported at this time"
-msgstr "Derzeit werden nur Diffs zwischen der Text-Basis und den Arbeitsdateien eines Pfades unterstützt"
+msgstr "Derzeit werden nur Vergleiche zwischen der Textbasis und den Arbeitsdateien eines Pfades unterstützt"
 
 #: libsvn_client/diff.c:2197
 #: libsvn_client/switch.c:111
@@ -3196,8 +3196,8 @@ msgstr "Fehlendes Namensattribut in 'add-file' Element"
 msgid "Missing name attr in %s element"
 msgstr "Fehlendes Namensattribut in %s Element"
 
-#: libsvn_ra_serf/serf.c:52
 # CHECKME: serf nicht mit Sklave übersetzen? Was ist das überhaupt, ein Programmiermodell?
+#: libsvn_ra_serf/serf.c:52
 msgid "Access repository via WebDAV protocol through serf."
 msgstr "Auf ein Projektarchiv über das WebDAV-Protokoll mittels 'serf' zugreifen."
 
@@ -5535,7 +5535,7 @@ msgstr "'--new' Option ist nur in Verbindung mit der '--old' Option zulässig"
 #: svn/diff-cmd.c:214
 #, c-format
 msgid "Target lists to diff may not contain both working copy paths and URLs"
-msgstr "Ziellisten für Diff dürfen nicht gleichzeitig Arbeitskopien und URLs enthalten"
+msgstr "Ziellisten für Vergleich dürfen nicht gleichzeitig Arbeitskopien und URLs enthalten"
 
 #: svn/export-cmd.c:84
 msgid "Destination directory exists; please remove the directory or use --force to overwrite"
@@ -7771,9 +7771,9 @@ msgstr ""
 "Standardausgabe aus. Rückmeldungen gehen an die Standardfehlerausgabe.\n"
 "Gibt die Revisionen VON:BIS aus. Ohne Angabe eines Bereichs werden alle\n"
 "Revisionen ausgegeben. Falls nur VON angegeben wurde, werden diese und alle\n"
-"darauf folgenden Revisionen ausgegeben. Falls '--incremental' übergeben wurde,\n"
-"ist die erste ausgegebene Revision ein diff gegen die vorhergehende Version,\n"
-"anstelle des üblichen vollständigen Inhaltes.\n"
+"darauf folgenden Revisionen ausgegeben. Falls '--incremental' übergeben\n"
+"wurde, ist die erste ausgegebene Revision ein Vergleich mit der vorher-\n"
+"gehenden Version, anstelle des üblichen vollständigen Inhaltes.\n"
 
 #: svnadmin/main.c:339
 msgid ""
@@ -8374,7 +8374,7 @@ msgid ""
 msgstr ""
 "Aufruf: svnlook diff ARCHIV_PFAD\n"
 "\n"
-"Gibt 'Diffs' von geänderten Dateien oder Eigenschaften im GNU-Stil aus.\n"
+"Gibt Unterschiede von geänderten Dateien oder Eigenschaften im GNU-Stil aus.\n"
 
 #: svnlook/main.c:164
 msgid ""
@@ -9057,3 +9057,4 @@ msgstr "exportiert %s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' nicht versioniert und nicht exportiert\n"
+
