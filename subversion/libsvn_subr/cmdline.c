@@ -354,7 +354,7 @@ svn_cmdline_setup_auth_baton(svn_auth_baton_t **ab,
 
   /* The main disk-caching auth providers, for both
      'username/password' creds and 'username' creds.  */
-#ifdef WIN32
+#if defined(WIN32) && !defined(__WIN32__)
   svn_auth_get_windows_simple_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 #endif
