@@ -13,8 +13,9 @@ http://svn.collab.net/repos/svn/tags/1.4.1
     * fixed: support 'svn co URL@{DATE}' (r21657, r21662)
     * fixed: don't crash when opening a working copy is interrupted (r21792)
     * fixed: 'svn status -u' shows props changed on the wc root (issue #2533)
-    * fixed: fix 'checksum mismatch' error on update (issue #2618)
+    * fixed: prevent 'checksum mismatch' error on update (issue #2618)
     * svnshell tool: support "setrev head" (r20992)
+    * include newest version of svnmerge.py
 
   - Server:
     * improved error checking when running hook scripts, etc (r21483)
@@ -25,6 +26,7 @@ Developer-visible-changes:
 * support Neon 0.26.x on Unix and Windows
 * compiles on architectures without APR_HAS_DSO (eg, RISC OS) (r21473)
 * improved error handling with FSFS file write errors (r21346)
+* RHEL3 package requires correct version of apache httpd (r21974)
 * fixed: pass correct argument to ne_lock_discover (r21526)
 * fixed: find closest copies correctly (issue #2600)
 * more tests
