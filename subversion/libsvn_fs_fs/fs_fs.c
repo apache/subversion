@@ -4335,7 +4335,9 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   
   SVN_ERR(svn_io_file_close(proto_file, pool));
-  SVN_ERR(unlock_proto_rev(cb->fs, cb->txn->id, proto_file_lockcookie, pool));
+  /* We don't unlock the prototype revision file immediately to avoid a
+     race with another caller writing to the prototype revision file
+     before we commit it. */
 
   /* Remove any temporary txn props representing 'flags'. */
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
@@ -4360,6 +4362,12 @@ commit_body(void *baton, apr_pool_t *pool)
   proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
   SVN_ERR(svn_fs_fs__move_into_place(proto_filename, rev_filename, 
                                      old_rev_filename, pool));
+
+  /* Now that we've moved the prototype revision file out of the way,
+     we can unlock it (since further attempts to write to the file
+     will fail as it no longer exists).  We must do this so that we can
+     remove the transaction directory later. */
+  SVN_ERR(unlock_proto_rev(cb->fs, cb->txn->id, proto_file_lockcookie, pool));
 
   /* Update commit time to ensure that svn:date revprops remain ordered. */
   date.data = svn_time_to_cstring(apr_time_now(), pool);
