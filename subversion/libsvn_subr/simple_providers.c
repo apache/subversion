@@ -544,10 +544,6 @@ svn_auth_get_simple_prompt_provider
    encrypted data were valid. */
 static const WCHAR description[] = L"auth_svn.simple.wincrypt";
 
-/* The password type used by the windows simple auth provider, passed
-   into simple_first_creds_helper and simple_save_creds_helper. */
-static const char windows_crypto_type[] = "wincrypt";
-
 /* Dynamically load the address of function NAME in PDLL into
    PFN. Return TRUE if the function name was found, otherwise
    FALSE. Equivalent to dlsym(). */
