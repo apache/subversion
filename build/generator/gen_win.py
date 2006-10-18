@@ -695,7 +695,7 @@ class WinGeneratorBase(GeneratorBase):
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_path:
-      self.apath(msvc_path_join(self.serf_path, cfg))
+      fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
