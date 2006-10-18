@@ -17,18 +17,20 @@
 # client       Client, des Client
 # commit       übertragen
 # conflicted   konfliktbehaftet
+# corrupt      beschädigt / evtl. auch defekt
 # default      Vorgabe / Standard
 # diff         Vergleich
 # diff tool    Vergleichsprogramm
 # drop         verwerfen
 # external     externer Verweis
+# FS           Dateisystem (DS)
 # hook         Aktion
 # item         Objekt
 # label        Marke / Markierung
 # lock         Sperre
 # locked       gesperrt
 # log          Log, des Logs
-# log-message  Log-Meldung
+# log-message  Logmeldung
 # merge        zusammenführen
 # merge tool   Konflikteditor
 # note         Hinweis
@@ -77,7 +79,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.4.x\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-23 13:50-0500\n"
-"PO-Revision-Date: 2006-10-17 11:57+0100\n"
+"PO-Revision-Date: 2006-10-18 09:19+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -384,7 +386,7 @@ msgstr "Name ist keine einzelne Pfadkomponente"
 
 #: include/svn_error_codes.h:474
 msgid "Attempt to change immutable filesystem node"
-msgstr "Versuch, *nicht-veränderlichen* Knoten des Dateisystems zu ändern"
+msgstr "Versuch, einen nicht-veränderlichen Knoten des Dateisystems zu ändern"
 
 #: include/svn_error_codes.h:478
 msgid "Item already exists in filesystem"
@@ -424,7 +426,7 @@ msgstr "Transaktion ist veraltet"
 
 #: include/svn_error_codes.h:514
 msgid "Berkeley DB error"
-msgstr "Berkeley DB Fehler"
+msgstr "Berkeley-DB-Fehler"
 
 #: include/svn_error_codes.h:518
 msgid "Berkeley DB deadlock error"
@@ -485,7 +487,7 @@ msgstr "Nicht unterstütztes Dateisystemformat"
 
 #: include/svn_error_codes.h:593
 msgid "Representation is being written"
-msgstr ""
+msgstr "Darstellung wird geschrieben"
 
 #: include/svn_error_codes.h:599
 msgid "The repository is locked, perhaps for db recovery"
@@ -630,7 +632,7 @@ msgstr "Netzwerkverbindung wurde unerwartet geschlossen"
 
 #: include/svn_error_codes.h:759
 msgid "Network read/write error"
-msgstr "Netzwerk Lese-/Schreibfehler"
+msgstr "Netzwerk-Lese-/-Schreibfehler"
 
 #: include/svn_error_codes.h:771
 msgid "Client/server version mismatch"
@@ -859,7 +861,7 @@ msgstr "Fehler des Client beim Einlesen der Parameter"
 
 #: include/svn_error_codes.h:1025
 msgid "Not enough arguments provided; try 'svn help' for more info"
-msgstr ""
+msgstr "Nicht genügend Parameter angegeben; versuchen Sie 'svn help' für weitere Informationen"
 
 #: include/svn_error_codes.h:1029
 msgid "Mutually exclusive arguments specified"
@@ -912,7 +914,7 @@ msgstr "Kann Binärdatei '%s' nicht annotieren"
 
 #: libsvn_client/blame.c:522
 msgid "blame of the WORKING revision is not supported"
-msgstr ""
+msgstr "Annotieren der WORKING-Revision wird nicht unterstützt"
 
 #: libsvn_client/blame.c:535
 msgid "Start revision must precede end revision"
@@ -1068,7 +1070,7 @@ msgstr "Erwartete nicht, dass '%s' Basis einer Arbeitskopie ist"
 #: libsvn_client/commit_util.c:1030
 #, c-format
 msgid "Commit item '%s' has copy flag but no copyfrom URL"
-msgstr "Übertragenes Objekt '%s' ist als Kopie markiert, besitzt aber keine Quell URL"
+msgstr "Übertragenes Objekt '%s' ist als Kopie markiert, besitzt aber keine Quell-URL"
 
 #: libsvn_client/commit_util.c:704
 #: libsvn_client/commit_util.c:835
@@ -1188,7 +1190,7 @@ msgstr "Pfad '%s' wurde in der HEAD-Revision nicht gefunden"
 #: libsvn_client/copy.c:781
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
-msgstr "Eintrag für '%s' existiert (jedoch die Arbeitsdatei fehlt)"
+msgstr "Eintrag für '%s' existiert (die Arbeitsdatei fehlt jedoch)"
 
 #: libsvn_client/copy.c:872
 #, c-format
@@ -1322,7 +1324,7 @@ msgstr "Verzeichnis '%s' hat keine URL"
 
 #: libsvn_client/diff.c:2404
 msgid "Summarizing diff can only compare repository to repository"
-msgstr ""
+msgstr "Zusammenfassender Vergleich kann nur ein Projektarchiv mit einem Projektarchiv vergleichen"
 
 #: libsvn_client/diff.c:2761
 #: libsvn_client/diff.c:2767
@@ -1410,7 +1412,7 @@ msgstr "Es wurde keine Revision angegeben"
 
 #: libsvn_client/log.c:86
 msgid "Revision type requires a working copy path, not a URL"
-msgstr ""
+msgstr "Revisionstyp erfordert einen Arbeitskopiepfad, keine URL"
 
 #: libsvn_client/log.c:139
 #: libsvn_client/status.c:261
@@ -1537,7 +1539,7 @@ msgstr "Dekompression der svndiff-Daten fehlgeschlagen"
 
 #: libsvn_delta/svndiff.c:414
 msgid "Size of uncompressed data does not match stored original length"
-msgstr ""
+msgstr "Die Größe der unkomprimierten Daten entspricht nicht der gespeicherten Originallänge"
 
 #: libsvn_delta/svndiff.c:484
 #, c-format
@@ -1599,12 +1601,12 @@ msgstr "Unerwartetes Ende der Svndiff-Eingangsdaten"
 #: libsvn_diff/diff_file.c:587
 #, c-format
 msgid "The file '%s' changed unexpectedly during diff"
-msgstr ""
+msgstr "Die Datei '%s' veränderte sich unerwartet während des Vergleichs"
 
 #: libsvn_diff/diff_file.c:707
 #, c-format
 msgid "Error parsing diff options"
-msgstr "Fehler beim Zerlegen der Vergleichsptionen"
+msgstr "Fehler beim Zerlegen der Vergleichsoptionen"
 
 #: libsvn_diff/diff_file.c:730
 #, c-format
@@ -1665,7 +1667,7 @@ msgstr "Negatives Ablaufdatum an svn_fs_lock übergeben"
 #: libsvn_fs_base/bdb/bdb-err.c:101
 #, c-format
 msgid "Berkeley DB error for filesystem '%s' while %s:\n"
-msgstr "Berkeley DB Fehler für Dateisystem '%s' während %s:\n"
+msgstr "Berkeley-DB-Fehler für Dateisystem '%s' während %s:\n"
 
 #: libsvn_fs_base/bdb/changes-table.c:87
 msgid "creating change"
@@ -1809,17 +1811,17 @@ msgstr "Setze UUID des Projektarchivs"
 #: libsvn_fs_base/dag.c:217
 #, c-format
 msgid "Corrupt DB: initial transaction id not '0' in filesystem '%s'"
-msgstr "Korrupte DB: Erste Transaktion ist nicht '0' in Dateisystem '%s'"
+msgstr "DB beschädigt: Erste Transaktion ist nicht '0' in Dateisystem '%s'"
 
 #: libsvn_fs_base/dag.c:225
 #, c-format
 msgid "Corrupt DB: initial copy id not '0' in filesystem '%s'"
-msgstr "Korrupte DB: Erste Kopie ist nicht '0' in Dateisystem '%s'"
+msgstr "DB beschädigt: Erste Kopie ist nicht '0' in Dateisystem '%s'"
 
 #: libsvn_fs_base/dag.c:234
 #, c-format
 msgid "Corrupt DB: initial revision number is not '0' in filesystem '%s'"
-msgstr "Korrupte DB: Erste Revision ist nicht '0' in Dateisystem '%s'"
+msgstr "DB beschädigt: Erste Revision ist nicht '0' in Dateisystem '%s'"
 
 #: libsvn_fs_base/dag.c:282
 #: libsvn_fs_base/dag.c:458
@@ -1838,7 +1840,7 @@ msgstr "Versuchte, Knoten mit illegalem Namen '%s' anzulegen"
 #: libsvn_fs_fs/dag.c:340
 #, c-format
 msgid "Attempted to clone child of non-mutable node"
-msgstr "Versuchte, Unterknoten eines *nicht-veränderlichen* Knotens zu klonen"
+msgstr "Versuchte, Unterknoten eines nicht-veränderlichen Knotens zu klonen"
 
 #: libsvn_fs_base/dag.c:471
 #, c-format
@@ -1853,7 +1855,7 @@ msgstr "Versuchte, Eintrag in einem *nicht* Verzeichnisknoten zu setzen"
 #: libsvn_fs_base/dag.c:528
 #: libsvn_fs_fs/dag.c:408
 msgid "Attempted to set entry in immutable node"
-msgstr "Versuchte, Eintrag in einem *nicht-veränderlichen* Knoten zu setzen"
+msgstr "Versuchte, Eintrag in einem nicht-veränderlichen Knoten zu setzen"
 
 #: libsvn_fs_base/dag.c:592
 #, c-format
@@ -1873,7 +1875,7 @@ msgstr "Versuchte, Eintrag '%s' aus einem *nicht* Verzeichnisknoten zu löschen"
 #: libsvn_fs_base/dag.c:836
 #, c-format
 msgid "Attempted to delete entry '%s' from immutable directory node"
-msgstr "Versuchte, Eintrag '%s' aus einem *nicht-veränderlichen* Verzeichnisknoten zu löschen"
+msgstr "Versuchte, Eintrag '%s' aus einem nicht-veränderlichen Verzeichnisknoten zu löschen"
 
 #: libsvn_fs_base/dag.c:843
 #, c-format
@@ -1889,7 +1891,7 @@ msgstr "Löschen fehlgeschlagen: Verzeichnis hat keinen Eintrag '%s'"
 #: libsvn_fs_base/dag.c:940
 #, c-format
 msgid "Attempted removal of immutable node"
-msgstr "Versuchte, *nicht-veränderlichen* Knoten zu entfernen"
+msgstr "Versuchte, einen nicht-veränderlichen Knoten zu entfernen"
 
 #: libsvn_fs_base/dag.c:1060
 #, c-format
@@ -1916,7 +1918,7 @@ msgstr "Versuchte, den Textinhalt eines *nicht* Dateiknotens zu setzen"
 #: libsvn_fs_base/dag.c:1212
 #, c-format
 msgid "Attempted to set textual contents of an immutable node"
-msgstr "Versuchte, den Textinhalt eines *nicht-veränderlichen* Knotens zu setzen"
+msgstr "Versuchte, den Textinhalt eines nicht-veränderlichen Knotens zu setzen"
 
 #: libsvn_fs_base/dag.c:1235
 #, c-format
@@ -1947,7 +1949,7 @@ msgstr "Dateisystemobjekt ist noch nicht geöffnet"
 #: libsvn_fs_base/err.c:51
 #, c-format
 msgid "Corrupt filesystem revision %ld in filesystem '%s'"
-msgstr "Korrupte Dateiystemrevision %ld in Dateisystem '%s'"
+msgstr "Beschädigte Dateiystemrevision %ld in Dateisystem '%s'"
 
 #: libsvn_fs_base/err.c:62
 #: libsvn_fs_fs/err.c:52
@@ -1963,12 +1965,12 @@ msgstr "Verweis auf eine nicht existierende Revision %ld im Dateisystem '%s'"
 #: libsvn_fs_base/err.c:84
 #, c-format
 msgid "Corrupt entry in 'transactions' table for '%s' in filesystem '%s'"
-msgstr "Korrupter Eintrag in 'transactions' Tabelle für '%s' in Dateisystem '%s'"
+msgstr "Beschädigter Eintrag in 'transactions' Tabelle für '%s' in Dateisystem '%s'"
 
 #: libsvn_fs_base/err.c:95
 #, c-format
 msgid "Corrupt entry in 'copies' table for '%s' in filesystem '%s'"
-msgstr "Korrupter Eintrag in 'copies' Tabelle für '%s' in Dateisystem '%s'"
+msgstr "Beschädigter Eintrag in 'copies' Tabelle für '%s' in Dateisystem '%s'"
 
 #: libsvn_fs_base/err.c:106
 #: libsvn_fs_fs/err.c:63
@@ -2017,7 +2019,7 @@ msgstr "Keine Marke für Pfad '%s' in Dateisystem '%s' angegeben"
 #: libsvn_fs_base/err.c:190
 #, c-format
 msgid "Corrupt lock in 'locks' table for '%s' in filesystem '%s'"
-msgstr "Korrupte Sperre in 'locks' Tabelle für '%s' in Dateisystem '%s'"
+msgstr "Beschädigte Sperre in 'locks' Tabelle für '%s' in Dateisystem '%s'"
 
 #: libsvn_fs_base/err.c:200
 #: libsvn_fs_fs/err.c:117
@@ -2067,17 +2069,17 @@ msgstr "Dateisystemobjekt ist bereits geöffnet"
 #: libsvn_fs_base/fs.c:189
 #, c-format
 msgid "Berkeley DB error for filesystem '%s' while closing environment:\n"
-msgstr "Berkeley DB Fehler für Dateisystem '%s' beim Schließen der Umgebung:\n"
+msgstr "Berkeley-DB-Fehler für Dateisystem '%s' beim Schließen der Umgebung:\n"
 
 #: libsvn_fs_base/fs.c:539
 #, c-format
 msgid "Berkeley DB error for filesystem '%s' while creating environment:\n"
-msgstr "Berkeley DB Fehler für Dateisystem '%s' beim Erzeugen der Umgebung:\n"
+msgstr "Berkeley-DB-Fehler für Dateisystem '%s' beim Erzeugen der Umgebung:\n"
 
 #: libsvn_fs_base/fs.c:545
 #, c-format
 msgid "Berkeley DB error for filesystem '%s' while opening environment:\n"
-msgstr "Berkeley DB Fehler für Dateisystem '%s' beim Öffnen der Umgebung:\n"
+msgstr "Berkeley-DB-Fehler für Dateisystem '%s' beim Öffnen der Umgebung:\n"
 
 #: libsvn_fs_base/fs.c:672
 #: libsvn_fs_fs/fs_fs.c:631
@@ -2110,7 +2112,7 @@ msgstr ""
 
 #: libsvn_fs_base/fs.c:1222
 msgid "Module for working with a Berkeley DB repository."
-msgstr "Modul zum Zugriff auf ein Berkeley DB (BDB) Projektarchiv."
+msgstr "Modul zum Zugriff auf ein Berkeley-DB-Projektarchiv."
 
 #: libsvn_fs_base/fs.c:1255
 #, c-format
@@ -2158,7 +2160,7 @@ msgstr "Inkonsistenzen in Diffversion in Darstellung '%s'"
 #: libsvn_fs_base/reps-strings.c:532
 #, c-format
 msgid "Corruption detected whilst reading delta chain from representation '%s' to '%s'"
-msgstr ""
+msgstr "Beim Lesen der Delta-Kette aus der Darstellung '%s' nach '%s' wurde eine Beschädigung entdeckt"
 
 #: libsvn_fs_base/reps-strings.c:780
 #, c-format
@@ -2209,7 +2211,7 @@ msgstr ""
 #: libsvn_fs_base/reps-strings.c:1487
 #, c-format
 msgid "Failed to calculate MD5 digest for '%s'"
-msgstr "Berechnen des MD5 Extrakts für '%s' fehlgeschlagen"
+msgstr "Berechnung der MD5-Summe für '%s' fehlgeschlagen"
 
 #: libsvn_fs_base/revs-txns.c:65
 #, c-format
@@ -2271,7 +2273,7 @@ msgstr "Kann Eigenschaftswert nicht zwischen verschiedenen Dateisystemen verglei
 
 #: libsvn_fs_base/tree.c:1734
 msgid "Corrupt DB: faulty predecessor count"
-msgstr "Korrupte DB: Fehlerhafte Vorgängeranzahl"
+msgstr "DB beschädigt: Fehlerhafte Vorgängeranzahl"
 
 #: libsvn_fs_base/tree.c:1789
 #: libsvn_fs_fs/tree.c:1192
@@ -2317,7 +2319,7 @@ msgstr "Kann nicht zwischen zwei verschiedenen Dateisystemen ('%s' und '%s') kop
 #: libsvn_fs_base/tree.c:2937
 #: libsvn_fs_fs/tree.c:1968
 msgid "Copy from mutable tree not currently supported"
-msgstr ""
+msgstr "Kopieren eines veränderlichen Baumes wird derzeit nicht unterstützt"
 
 #: libsvn_fs_base/tree.c:3432
 #: libsvn_fs_fs/tree.c:2392
@@ -2363,12 +2365,12 @@ msgstr ""
 #: libsvn_fs_fs/err.c:107
 #, c-format
 msgid "Corrupt lockfile for path '%s' in filesystem '%s'"
-msgstr "Korrupte Sperrdatei für Pfad '%s' in Dateisystem '%s'"
+msgstr "Beschädigte Sperrdatei für Pfad '%s' in Dateisystem '%s'"
 
 #: libsvn_fs_fs/fs.c:89
-#, fuzzy, c-format
+#, c-format
 msgid "Can't fetch FSFS shared data"
-msgstr "Kann FSFS Mutex nicht holen"
+msgstr "Kann gemeinsame FSFS-Daten nicht holen"
 
 #: libsvn_fs_fs/fs.c:105
 #, c-format
@@ -2381,9 +2383,9 @@ msgid "Can't create FSFS txn list mutex"
 msgstr "Kann FSFS Transaktions-Mutex nicht anlegen"
 
 #: libsvn_fs_fs/fs.c:119
-#, fuzzy, c-format
+#, c-format
 msgid "Can't store FSFS shared data"
-msgstr "Kann FSFS Mutex nicht speichern"
+msgstr "Kann gemeinsame FSFS-Daten nicht speichern"
 
 #: libsvn_fs_fs/fs.c:345
 msgid "Module for working with a plain file (FSFS) repository."
@@ -2456,7 +2458,7 @@ msgstr "Fehlerhafte 'text rep offset' Zeile in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1054
 msgid "Missing kind field in node-rev"
-msgstr "Fehlendes 'kind' Feld in Knotenrevision"
+msgstr "Fehlendes Feld 'kind' in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1085
 msgid "Missing cpath in node-rev"
@@ -2470,7 +2472,7 @@ msgstr "Fehlerhafte 'copyroot' Zeile in Knotenrevision"
 #: libsvn_fs_fs/fs_fs.c:1136
 #: libsvn_fs_fs/fs_fs.c:1142
 msgid "Malformed copyfrom line in node-rev"
-msgstr "Fehlerhafte 'copyfrom' Zeile in Knotenrevision"
+msgstr "Fehlerhafte 'copyfrom'-Zeile in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1251
 #: libsvn_fs_fs/fs_fs.c:3613
@@ -2487,7 +2489,7 @@ msgstr "Fehlende Knoten-Id in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1365
 msgid "Corrupt node-id in node-rev"
-msgstr "Korrupte Knoten-Id in Knotenrevision"
+msgstr "Beschädigter Knoten-Id in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1410
 #, c-format
@@ -2531,7 +2533,7 @@ msgstr "Von svndiff verlangte Position ist jenseits des Datenstromendes"
 #: libsvn_fs_fs/fs_fs.c:1905
 #: libsvn_fs_fs/fs_fs.c:1922
 msgid "svndiff window length is corrupt"
-msgstr "Svndiff Fensterlänge ist korrupt"
+msgstr "Svndiff Fensterlänge ist beschädigt"
 
 #: libsvn_fs_fs/fs_fs.c:1970
 #, c-format
@@ -2776,7 +2778,7 @@ msgstr "Ungültige Antwort des Servers auf datierte Revisionsanfrage"
 
 #: libsvn_ra_dav/fetch.c:1330
 msgid "Expected a valid revnum and path"
-msgstr ""
+msgstr "Erwartete eine gültige Revisionsnummer samt Pfad"
 
 #: libsvn_ra_dav/fetch.c:1412
 msgid "'get-locations' REPORT not implemented"
@@ -2819,9 +2821,8 @@ msgid "REPORT response handling failed to complete the editor drive"
 msgstr "Die Abwicklung der REPORT-Antwort konnte den Editorlauf nicht vollenden."
 
 #: libsvn_ra_dav/file_revs.c:279
-#, fuzzy
 msgid "Failed to write full amount to stream"
-msgstr "Kann nicht in Datenstrom schreiben"
+msgstr "Konnte nicht alles in den Datenstrom schreiben"
 
 #: libsvn_ra_dav/file_revs.c:357
 msgid "'get-file-revs' REPORT not implemented"
@@ -2953,9 +2954,9 @@ msgid "Invalid config: illegal character in debug mask value"
 msgstr "Ungültige Konfiguration: Illegales Zeichen in Debugmaske"
 
 #: libsvn_ra_dav/session.c:519
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unknown http authtype '%s'"
-msgstr "Ungültige Konfiguration: Zertifikatsdatei '%s' kann nicht geladen werden"
+msgstr "Ungültige Konfiguration: Unbekannter HTTP-Autorisationstyp '%s'"
 
 #: libsvn_ra_dav/session.c:580
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
@@ -3044,12 +3045,12 @@ msgstr "'%s' Pfad nicht gefunden"
 #: libsvn_ra_dav/util.c:832
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
-msgstr ""
+msgstr "Das Projektarchiv wurde permanent nach '%s' verschoben; bitte umplatzieren"
 
 #: libsvn_ra_dav/util.c:834
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
-msgstr ""
+msgstr "Das Projektarchiv wurde zeitweilig nach '%s' verschoben; bitte umplatzieren"
 
 #  We either have a neon error, or some other error
 #  that we didn't expect.
@@ -3135,7 +3136,7 @@ msgstr "Pfad '%s' existiert nicht"
 #: libsvn_ra_serf/commit.c:910
 #, c-format
 msgid "Failed writing updated file"
-msgstr ""
+msgstr "Fehler beim Schreiben der aktualisierten Datei"
 
 #: libsvn_ra_serf/getlocations.c:289
 msgid "File doesn't exist on HEAD"
@@ -3153,48 +3154,48 @@ msgstr "Sperrfreigabe gescheitert: %d %s"
 
 #: libsvn_ra_serf/replay.c:161
 msgid "Missing revision attr in target-revision element"
-msgstr "Fehlendes Revisionsattribut in 'target-revision' Element"
+msgstr "Fehlendes Revisionsattribut in Element 'target-revision'"
 
 #: libsvn_ra_serf/replay.c:179
 msgid "Missing revision attr in open-root element"
-msgstr "Fehlendes Revisionsattribut in 'open-root' Element"
+msgstr "Fehlendes Revisionsattribut in Element 'open-root'"
 
 #: libsvn_ra_serf/replay.c:198
 msgid "Missing name attr in delete-entry element"
-msgstr ""
+msgstr "Fehlendes Namensattribut in Element 'delete-entry'"
 
 #: libsvn_ra_serf/replay.c:204
 msgid "Missing revision attr in delete-entry element"
-msgstr "Fehlendes Revisionsattribut in 'delete-entry' Element"
+msgstr "Fehlendes Revisionsattribut in Element 'delete-entry'"
 
 #: libsvn_ra_serf/replay.c:224
 msgid "Missing name attr in open-directory element"
-msgstr "Fehlendes Revisionsattribut in 'open-directory' Element"
+msgstr "Fehlendes Namensattribut in Element 'open-directory'"
 
 #: libsvn_ra_serf/replay.c:230
 msgid "Missing revision attr in open-directory element"
-msgstr "Fehlendes Revisionsattribut in 'open-directory' Element"
+msgstr "Fehlendes Revisionsattribut in Element 'open-directory'"
 
 #: libsvn_ra_serf/replay.c:250
 msgid "Missing name attr in add-directory element"
-msgstr "Fehlendes Namensattribut in 'add-directory' Element"
+msgstr "Fehlendes Namensattribut in Element 'add-directory'"
 
 #: libsvn_ra_serf/replay.c:285
 msgid "Missing name attr in open-file element"
-msgstr "Fehlendes Namensattribut in 'open-file' Element"
+msgstr "Fehlendes Namensattribut in Element 'open-file'"
 
 #: libsvn_ra_serf/replay.c:291
 msgid "Missing revision attr in open-file element"
-msgstr "Fehlendes Revisionsattribut in 'open-file' Element"
+msgstr "Fehlendes Revisionsattribut in Element 'open-file'"
 
 #: libsvn_ra_serf/replay.c:311
 msgid "Missing name attr in add-file element"
-msgstr "Fehlendes Namensattribut in 'add-file' Element"
+msgstr "Fehlendes Namensattribut in Element 'add-file'"
 
 #: libsvn_ra_serf/replay.c:371
 #, c-format
 msgid "Missing name attr in %s element"
-msgstr "Fehlendes Namensattribut in %s Element"
+msgstr "Fehlendes Namensattribut in Element %s"
 
 # CHECKME: serf nicht mit Sklave übersetzen? Was ist das überhaupt, ein Programmiermodell?
 #: libsvn_ra_serf/serf.c:52
@@ -3383,7 +3384,7 @@ msgstr "Sperrelement ist keine Liste"
 
 #: libsvn_ra_svn/client.c:1862
 msgid "Server doesn't support the replay command"
-msgstr "Server unterstützt das 'replay' Kommando nicht"
+msgstr "Server unterstützt das Kommando 'replay' nicht"
 
 #: libsvn_ra_svn/client.c:1926
 #, c-format
@@ -3480,11 +3481,11 @@ msgstr "Unbekannter Status '%s' in Antwort auf Befehl"
 #: svnserve/sasl_auth.c:114
 #, c-format
 msgid "Could not initialize the SASL library"
-msgstr ""
+msgstr "Konnte die SASL Bibliothek nicht intialisieren"
 
 #: libsvn_ra_svn/sasl_auth.c:287
 msgid "Unhandled SASL interaction"
-msgstr ""
+msgstr "Nicht behandelte SASL Interaktion"
 
 #: libsvn_ra_svn/sasl_auth.c:549
 #: libsvn_ra_svn/simple_auth.c:58
@@ -3579,7 +3580,7 @@ msgstr "* Verifizierte Revision %ld.\n"
 #: libsvn_repos/fs-wrap.c:57
 #: libsvn_repos/load.c:1211
 msgid "Commit succeeded, but post-commit hook failed"
-msgstr "Übertragen erfolgreich, aber die 'post-commit' Aktion schlug fehl"
+msgstr "Übertragen erfolgreich, aber die 'post-commit'-Aktion schlug fehl"
 
 #: libsvn_repos/fs-wrap.c:157
 #, c-format
@@ -3680,12 +3681,12 @@ msgstr "Daten des Dateiabzugs scheinen fehlerhaft zu sein"
 #: libsvn_repos/load.c:173
 #, c-format
 msgid "Dump stream contains a malformed header (with no ':') at '%.20s'"
-msgstr ""
+msgstr "Datenstrom enthält fehlerhaften Kopf (ohne ':') in '%.20s'"
 
 #: libsvn_repos/load.c:186
 #, c-format
 msgid "Dump stream contains a malformed header (with no value) at '%.20s'"
-msgstr ""
+msgstr "Datenstrom enthält fehlerhaften Kopf (ohne Wert) in '%.20s'"
 
 #: libsvn_repos/load.c:273
 msgid "Incomplete or unterminated property block"
@@ -3913,7 +3914,7 @@ msgstr "Nichtlesbarer Pfad angetroffen; Zugriff verweigert"
 #: libsvn_subr/cmdline.c:481
 #, c-format
 msgid "Error initializing command line arguments"
-msgstr ""
+msgstr "Fehler beim Initialisieren der Kommandozeilenparameter"
 
 #: libsvn_subr/config.c:630
 #, c-format
@@ -3967,14 +3968,14 @@ msgstr "Kann Zeitangabe nicht expandieren"
 #: libsvn_subr/dso.c:71
 #, c-format
 msgid "Can't grab DSO mutex"
-msgstr "Kann DSO Mutex nicht greifen"
+msgstr "Kann DSO-Mutex nicht greifen"
 
 #: libsvn_subr/dso.c:85
 #: libsvn_subr/dso.c:107
 #: libsvn_subr/dso.c:122
 #, c-format
 msgid "Can't ungrab DSO mutex"
-msgstr "Kann DSO Mutex nicht loslassen"
+msgstr "Kann DSO-Mutex nicht loslassen"
 
 #: libsvn_subr/error.c:341
 msgid "Can't recode error string from APR"
@@ -4195,9 +4196,9 @@ msgid "Can't set process '%s' child errfile"
 msgstr "Kann Fehlerausgabe von Prozess '%s' Kind nicht setzen"
 
 #: libsvn_subr/io.c:2055
-#, fuzzy, c-format
+#, c-format
 msgid "Can't set process '%s' child errfile for error handler"
-msgstr "Kann Fehlerausgabe von Prozess '%s' Kind nicht setzen"
+msgstr "Kann Datei für die Fehlerausgabe des Kindprozesses '%s' nicht setzen"
 
 #: libsvn_subr/io.c:2061
 #, c-format
@@ -4881,9 +4882,8 @@ msgid "Entry '%s' has invalid '%s' value"
 msgstr "Eintrag '%s' hat einen ungültigen '%s' Wert"
 
 #: libsvn_wc/entries.c:111
-#, fuzzy
 msgid "Invalid escape sequence"
-msgstr "Ungültige Escapesequenz"
+msgstr "Ungültige Escape-Sequenz"
 
 #: libsvn_wc/entries.c:118
 msgid "Invalid escaped character"
@@ -5070,12 +5070,12 @@ msgstr "Kann die Existenz des Pfades '%s' nicht prüfen"
 #: libsvn_wc/lock.c:939
 #, c-format
 msgid "Expected '%s' to be a directory but found a file"
-msgstr ""
+msgstr "Erwartete, dass '%s' ein Verzeichnis ist, es ist aber eine Datei"
 
 #: libsvn_wc/lock.c:951
 #, c-format
 msgid "Expected '%s' to be a file but found a directory"
-msgstr "Erwartete, dass '%s' eine Datei ist, aber Verzeichnis gefunden"
+msgstr "Erwartete, dass '%s' eine Datei ist, es ist aber ein Verzeichnis"
 
 #: libsvn_wc/lock.c:975
 #, c-format
@@ -5085,7 +5085,7 @@ msgstr "Verzeichnis '%s' fehlt"
 #: libsvn_wc/lock.c:985
 #, c-format
 msgid "Directory '%s' containing working copy admin area is missing"
-msgstr ""
+msgstr "Verzeichnis '%s' mit Administrationsdateien der Arbeitskopie fehlt"
 
 #: libsvn_wc/lock.c:990
 #, c-format
@@ -5209,7 +5209,7 @@ msgstr "Fehler beim Bearbeiten des Eintrags von '%s'"
 
 #: libsvn_wc/log.c:1517
 msgid "Invalid 'format' attribute"
-msgstr "Ungültiges 'format' Attribut"
+msgstr "Ungültiges 'format'-Attribut"
 
 #: libsvn_wc/log.c:1552
 #, c-format
@@ -5530,7 +5530,7 @@ msgstr "Kann Standardfehlerausgabe nicht öffnen"
 
 #: svn/diff-cmd.c:184
 msgid "'--new' option only valid with '--old' option"
-msgstr "'--new' Option ist nur in Verbindung mit der '--old' Option zulässig"
+msgstr "Option '--new' ist nur in Verbindung mit der Option '--old' zulässig"
 
 #: svn/diff-cmd.c:214
 #, c-format
@@ -5870,6 +5870,8 @@ msgid ""
 "the change made by revision ARG (like -r ARG-1:ARG)\n"
 "                             If ARG is negative this is like -r ARG:ARG-1"
 msgstr ""
+"Die Änderung stammt von Revision PAR (wie -r PAR-1:PAR)\n"
+"                             Falls PAR negativ ist, gleichbedeutend zu -r PAR:PAR-1"
 
 #: svn/main.c:74
 msgid ""
@@ -5882,7 +5884,7 @@ msgid ""
 "                                'COMMITTED'  last commit at or before BASE\n"
 "                                'PREV'       revision just before COMMITTED"
 msgstr ""
-"PAR (manche Befehle akzeptieren auch PAR1:PAR2 Wertebereiche)\n"
+"PAR (manche Befehle akzeptieren auch einen Wertebereich PAR1:PAR2)\n"
 "                             Ein Revisionsparameter kann sein:\n"
 "                                NUMMER       Revisionsnummer\n"
 "                                '{'DATUM'}'  Revision zum Startdatum\n"
@@ -6124,6 +6126,9 @@ msgid ""
 "usage: 1. changelist CLNAME TARGET...\n"
 "       2. changelist --clear TARGET...\n"
 msgstr ""
+"Verknüpft (oder löst diese Verknüpfung) lokale Pfade mit Änderungsliste CLNAME.\n"
+"Verwendung: 1. changelist CLNAME ZIEL...\n"
+"            2. changelist --clear ZIEL...\n"
 
 #: svn/main.c:263
 msgid ""
@@ -6194,7 +6199,7 @@ msgstr ""
 "Aufruf: commit [PFAD...]\n"
 "\n"
 "  Eine Logmeldung muss angegeben werden; diese kann jedoch leer sein.\n"
-"  OS400 erlaubt es nicht, einen Editor zu starten, weshalb --message\n"
+"  OS400 unterstützt das Starten eines Editors nicht, so dass --message\n"
 "  oder --file benutzt werden muss. Falls Objekte gesperrt sind oder\n"
 "  gesperrte Objekte enthalten, werden diese nach einer erfolgreichen\n"
 "  Übertragung entsperrt.\n"
@@ -6490,8 +6495,8 @@ msgstr ""
 "     Falls angegeben, bestimmt REV, in welcher Revision die URL zuerst\n"
 "     durchsucht wird. Die Vorgabe für den Revisionsbereich ist HEAD:1.\n"
 "\n"
-"  Mit -v werden auch die betroffenen Pfade mit jeder Log-Meldung ausgegeben.\n"
-"  Mit -q wird die Log-Meldung selbst nicht ausgegeben (Hinweis: Diese Option\n"
+"  Mit -v werden auch die betroffenen Pfade mit jeder Logmeldung ausgegeben.\n"
+"  Mit -q wird die Logmeldung selbst nicht ausgegeben (Hinweis: Diese Option\n"
 "  ist kompatibel mit -v).\n"
 "\n"
 "  Jede Logmeldung wird nur einmal ausgegeben, selbst wenn mehr als einer\n"
@@ -6626,8 +6631,9 @@ msgstr ""
 "  1. Entfernt eine versionierte Eigenschaft aus der Arbeitskopie.\n"
 "  2. Entfernt eine nicht versionierte Eigenschaft aus dem Projektarchiv.\n"
 
+# FIXME: s/prop/properties/
+# Funktioniert 2. nicht auch lokal, z.B. für svn:log???
 #: svn/main.c:563
-#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME TARGET...\n"
@@ -6638,11 +6644,13 @@ msgid ""
 "     TARGET only determines which repository to access.\n"
 msgstr ""
 "Ändert eine Eigenschaft mit einem externen Editor.\n"
-"Aufruf: 1. propedit PROPNAME [PFAD...]\n"
-"        2. propedit PROPNAME --revprop -r REV [URL]\n"
+"Aufruf: 1. propedit PROPNAME ZIEL...\n"
+"        2. propedit PROPNAME --revprop -r REV [ZIEL]\n"
 "\n"
-"  1. Bearbeitet versionierte Eigenschaften in der Arbeitskopie.\n"
+"  1. Bearbeitet versionierte Eigenschaften in der Arbeitskopie oder im\n"
+"     Projektarchiv.\n"
 "  2. Bearbeitet nicht versionierte Eigenschaften im Projektarchiv.\n"
+"     ZIEL legt nur das Projektarchiv fest, auf das zugegriffen wird.\n"
 
 #: svn/main.c:576
 msgid ""
@@ -6664,17 +6672,18 @@ msgid ""
 msgstr ""
 "Gibt den Eigenschaftswert von Dateien, Verzeichnissen oder Revisionen aus.\n"
 "Aufruf: 1. propget PROPNAME [ZIEL[@REV]...]\n"
-"        2. propget PROPNAME --revprop -r REV [URL]\n"
+"        2. propget PROPNAME --revprop -r REV [ZIEL]\n"
 "\n"
 "  1. Gibt versionierte Eigenschaften in der Arbeitskopie aus.\n"
 "     REV bestimmt, in welcher Revision zuerst nachgeschaut wird.\n"
-"  2. Gibt eine nicht versionierte Eigenschaft im Projektarchiv.\n"
+"  2. Gibt eine nicht versionierte Eigenschaft im Projektarchiv aus.\n"
+"     ZIEL legt nur das Projektarchiv fest, auf das zugegriffen wird.\n"
 "\n"
 "  Standardmäßig hängt dieser Unterbefehl eine Leerzeile an das Ende der\n"
 "  Eigenschaftswerte an, so dass die Ausgabe hübsch aussieht. Obendrein werden,\n"
 "  wenn mehrere Pfade involviert sind, die Pfade den Eigenschaftswerten\n"
-"  vorangestellt. Verwenden Sie die '--strict' Option, um diese Formatierungen\n"
-"  abzuschalten (z.B. um Binäreigenschaften in Dateien auszulisten).\n"
+"  vorangestellt. Verwenden Sie die Option '--strict', um diese Formatierungen\n"
+"  abzuschalten (z.B. um Binäreigenschaften in Dateien umzuleiten).\n"
 
 #: svn/main.c:595
 msgid ""
@@ -6689,12 +6698,14 @@ msgid ""
 msgstr ""
 "Listet alle Eigenschaften von Dateien, Verzeichnissen oder Revisionen auf.\n"
 "Aufruf: 1. proplist [ZIEL[@REV]...]\n"
-"        2. proplist --revprop -r REV [URL]\n"
+"        2. proplist --revprop -r REV [ZIEL]\n"
 "\n"
-"  1. Listet versionierte Eigenschaften in der Arbeitskopie.\n"
+"  1. Listet versionierte Eigenschaften in der Arbeitskopie auf.\n"
 "     REV bestimmt, in welcher Revision zuerst nachgeschaut wird.\n"
-"  2. Listet nicht versionierte Eigenschaften im Projektarchiv.\n"
+"  2. Listet nicht versionierte Eigenschaften im Projektarchiv auf.\n"
+"     ZIEL legt nur das Projektarchiv fest, auf das zugegriffen wird.\n"
 
+# FIXME: propchange?
 #: svn/main.c:607
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
@@ -6738,18 +6749,20 @@ msgid ""
 "  only on the file children of the directory.\n"
 msgstr ""
 "Setzt den Wert einer Eigenschaft von Dateien, Verzeichnissen oder Revisionen\n"
-"Aufruf: 1. propset PROPNAME [PROPWERT | -F WERTDATEI] PFAD...\n"
-"        2. propset PROPNAME --revprop -r REV [PROPWERT | -F WERTDATEI] [URL]\n"
+"Aufruf: 1. propset PROPNAME PROPWERT PFAD...\n"
+"        2. propset PROPNAME --revprop -r REV PROPWERT [ZIEL]\n"
 "\n"
 "  1. Erstellt eine versionierte, lokale Eigenschaft in der Arbeitskopie.\n"
-"  2. Erstellt eine unversionierte Eigenschaft in einer Revision des\n"
+"  2. Erstellt eine nicht versionierte Eigenschaft in einer Revision des\n"
 "     Projektarchivs.\n"
+"     ZIEL legt nur das Projektarchiv fest, auf das zugegriffen wird.\n"
+"\n"
+"  Der Wert kann mit der Option --file statt PROPWERT angegeben werden.\n"
 "\n"
 "  Hinweis: svn erkennt die folgenden speziellen, versionierten Eigenschaften,\n"
 "  wird aber jede gewünschte Eigenschaft speichern:\n"
 "    svn:ignore    - Eine durch Zeilenumbruch getrennte Liste von zu\n"
 "                    ignorierenden Dateimustern.\n"
-"\n"
 "    svn:keywords  - Schlüsselworte, die expandiert werden sollen.\n"
 "                    Gültige Schlüsselworte sind:\n"
 "      URL, HeadURL           - Die URL für die Head-Version des Objektes.\n"
@@ -6759,28 +6772,24 @@ msgstr ""
 "      LastChangedRevision      geändert wurde.\n"
 "      Id                     - Eine komprimierte Zusammenfassung der vier\n"
 "                               genannten Schlüsselworte.\n"
-"\n"
 "    svn:executable - Falls vorhanden, mache die Datei ausführbar.\n"
-"\n"
 "    svn:eol-style  - Einer von 'native', 'LF', 'CR', 'CRLF'.\n"
-"\n"
 "    svn:mime-type  - Der MIME-Typ der Datei. Verwendet, um festzustellen, ob\n"
 "      die Datei zusammengeführt werden kann und wie sie von Apache übertragen\n"
 "      werden soll. Dateien ohne MIME-Typ oder deren MIME-Typ mit 'text/'\n"
 "      beginnt, werden als Text behandelt. Alles andere wird als binär angesehen.\n"
-"\n"
 "    svn:externals  - Eine durch Zeilenumbruch getrennte Liste von\n"
 "      Modulnamen, die jeder aus einem relativen Verzeichnispfad, optionalen\n"
 "      Revisionsmarkern und einer URL bestehen. Zum Beispiel:\n"
-"        foo             http://example.com/repos/zig\n"
-"        foo/bar -r 1234 http://example.com/repos/zag\n"
-"    svn:needs-lock - If present, indicates that the file should be locked\n"
-"      before it is modified.  Makes the working copy file read-only\n"
-"      when it is not locked.\n"
-"  Die svn:keywords, svn:executable, svn:eol-style, svn:mime-type und\n"
-"  svn:needs-lock Eigenschaften können nicht auf Verzeichnisse gesetzt werden.\n"
+"        foo             http://beispiel.org/repos/zig\n"
+"        foo/bar -r 1234 http://beispiel.org/repos/zag\n"
+"    svn:needs-lock - Wenn vorhanden, soll die Datei gesperrt werden, bevor sie\n"
+"      verändert wird. Setzt den Schreibschutz der Arbeitsdatei, wenn sie nicht\n"
+"      gesperrt ist.\n"
+"  Die Eigenschaften svn:keywords, svn:executable, svn:eol-style, svn:mime-type\n"
+"  und svn:needs-lock können nicht für Verzeichnisse gesetzt werden.\n"
 "  Ein nicht-rekursiver Versuch wird scheitern, und ein rekursiver Versuch wird\n"
-"  nur die Eigenschaft der Dateien in dem Verzeichnis setzen.\n"
+"  die Eigenschaft nur für die Dateien in dem Verzeichnis setzen.\n"
 
 #: svn/main.c:649
 msgid "read property value from file ARG"
@@ -6996,7 +7005,7 @@ msgid ""
 "  modification to the working copy.  All properties from the repository\n"
 "  are applied to the obstructing path.\n"
 msgstr ""
-"Platziert die Arbeitskopie auf eine andere URL um.\n"
+"Aktualisiert die Arbeitskopie auf eine andere URL.\n"
 "Aufruf: 1. switch URL [PFAD]\n"
 "        2. switch --relocate VON NACH [PFAD...]\n"
 "\n"
@@ -7130,7 +7139,7 @@ msgstr "Mehrere Revisionsparameter gefunden; bitte nicht zweimal -c oder gleichz
 #: svn/main.c:1003
 #: svn/main.c:1194
 msgid "Can't specify -c with --old"
-msgstr ""
+msgstr "-c kann nicht mit --old verwendet werden"
 
 #: svn/main.c:1010
 msgid "Non-numeric change argument given to -c"
@@ -7409,7 +7418,7 @@ msgstr "Eigenschaft '%s' wurde von '%s' gelöscht.\n"
 #: svn/propedit-cmd.c:60
 #, c-format
 msgid "'%s' is not a valid Subversion property name"
-msgstr "'%s' ist kein gültiger Subversion Eigenschaftsname"
+msgstr "'%s' ist kein gültiger Subversion-Eigenschaftsname"
 
 #: svn/propedit-cmd.c:105
 #: svn/propedit-cmd.c:241
@@ -7510,6 +7519,8 @@ msgid ""
 "\n"
 "--- Changelist '%s':\n"
 msgstr ""
+"\n"
+"--- Änderungsliste '%s':\n"
 
 #: svn/status.c:263
 #, c-format
@@ -7566,7 +7577,7 @@ msgstr "Aufruf des Editors '%s' gab Fehler %d zurück"
 
 #: svn/util.c:307
 msgid "Error normalizing edited contents to internal format"
-msgstr ""
+msgstr "Fehler beim Normalisieren des bearbeiteten Inhalts ins interne Format"
 
 #: svn/util.c:338
 #, c-format
@@ -7587,11 +7598,11 @@ msgstr "-- Diese und die folgenden Zeilen werden ignoriert --"
 
 #: svn/util.c:516
 msgid "Error normalizing log message to internal format"
-msgstr ""
+msgstr "Fehler beim Normalisieren der Logmeldung ins interne Format"
 
 #: svn/util.c:531
 msgid "Use of an external editor to fetch log message is not supported on OS400; consider using the --message (-m) or --file (-F) options"
-msgstr "Die Verwendung eines externen Editors zur Eingabe der Log-Meldung wird auf OS400 nicht unterstützt. Verwenden Sie die Option --message (-m) oder --file (-F)"
+msgstr "Die Verwendung eines externen Editors zur Eingabe der Logmeldung wird auf OS400 nicht unterstützt. Verwenden Sie die Option --message (-m) oder --file (-F)"
 
 #: svn/util.c:617
 msgid "Cannot invoke editor to get log message when non-interactive"
@@ -7679,7 +7690,7 @@ msgid ""
 "remove redundant Berkeley DB log files\n"
 "                             from source repository [Berkeley DB]"
 msgstr ""
-"entferne redundante Berkeley DB Log-Dateien\n"
+"entferne redundante Berkeley-DB-Logdateien\n"
 "                             aus dem Projektarchiv [Berkeley DB]"
 
 #: svnadmin/main.c:279
@@ -7691,14 +7702,12 @@ msgid "call post-commit hook after committing revisions"
 msgstr "die 'post-commit' Aktion nach dem Übertragen von Revisionen aufrufen"
 
 #: svnadmin/main.c:285
-#, fuzzy
 msgid "call hook before changing revision property"
-msgstr "die 'pre-commit' Aktion nach dem Übertragen von Revisionen aufrufen"
+msgstr "Aktion vor der Änderung der Revisionseigenschaft aufrufen"
 
 #: svnadmin/main.c:288
-#, fuzzy
 msgid "call hook after changing revision property"
-msgstr "die 'post-commit' Aktion nach dem Übertragen von Revisionen aufrufen"
+msgstr "Aktion nach der Änderung der Revisionseigenschaft aufrufen"
 
 #: svnadmin/main.c:291
 msgid ""
@@ -7712,7 +7721,7 @@ msgstr ""
 msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
-msgstr ""
+msgstr "Ein mit Subversion-Versionen vor 1.4 kompatibles Format verwenden"
 
 #: svnadmin/main.c:308
 msgid ""
@@ -7871,7 +7880,7 @@ msgid ""
 msgstr ""
 "Aufruf: svnadmin recover ARCHIV_PFAD\n"
 "\n"
-"Lässt die Berkeley DB Rettungsprozedur auf einem Projektarchiv laufen.\n"
+"Lässt die Berkeley-DB-Rettungsprozedur auf einem Projektarchiv laufen.\n"
 "Veranlassen Sie dass, falls Sie Fehlermeldungen erhalten haben, die Sie\n"
 "dazu auffordern. Die Wiederherstellung erfordert exklusiven Zugriff auf das\n"
 "Projektarchiv. Der Vorgang wird nicht gestartet, falls das Projektarchiv von\n"
@@ -7898,7 +7907,6 @@ msgstr ""
 "Löscht die benannte(n) Transaktion(en).\n"
 
 #: svnadmin/main.c:399
-#, fuzzy
 msgid ""
 "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
 "\n"
@@ -7915,16 +7923,15 @@ msgstr ""
 "Aufruf: svnadmin setlog ARCHIV_PFAD -r REVISION DATEI\n"
 "\n"
 "Setzt die Logmeldung der Revision REVISION auf den Inhalt der Datei DATEI.\n"
-"Benutzen Sie '--bypass-hooks' um die mit den Revisionseigenschaften zusammen-\n"
-"hängenden Aktionen (pre-revprop-change, post-revprop-change) nicht auszulösen\n"
-"(z.B. falls Sie keine E-Mail Benachrichtigung durch Ihre 'post-revprop-change'\n"
-"Aktion auslösen wollen oder die Änderung von Revisionseigenschaften in der\n"
-"'pre-revprop-change' Aktion nicht gestattet wird).\n"
-"ACHTUNG: Revisionseigenschaften werden nicht versioniert. Dieser Befehl\n"
+"Benutzen Sie '--bypass-hooks', um die mit den Revisionseigenschaften zu-\n"
+"sammenhängenden Aktionen nicht auszulösen (z.B. falls Sie keine E-Mail-\n"
+"Benachrichtigung durch Ihre 'post-revprop-change' Aktion auslösen wollen\n"
+"oder die Änderung von Revisionseigenschaften in der 'pre-revprop-change'\n"
+"Aktion nicht gestattet wird).\n"
+"ACHTUNG: Revisionseigenschaften sind nicht versioniert. Dieser Befehl\n"
 "überschreibt also die vorherige Logmeldung endgültig.\n"
 
 #: svnadmin/main.c:411
-#, fuzzy
 msgid ""
 "usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
 "\n"
@@ -7936,16 +7943,16 @@ msgid ""
 "NOTE: Revision properties are not versioned, so this command will\n"
 "overwrite the previous value of the property.\n"
 msgstr ""
-"Aufruf: svnadmin setlog ARCHIV_PFAD -r REVISION DATEI\n"
+"Aufruf: svnadmin setrevprop ARCHIV_PFAD -r REV NAME DATEI\n"
 "\n"
-"Setzt die Logmeldung der Revision REVISION auf den Inhalt der Datei DATEI.\n"
-"Benutzen Sie '--bypass-hooks' um die mit den Revisionseigenschaften zusammen-\n"
-"hängenden Aktionen (pre-revprop-change, post-revprop-change) nicht auszulösen\n"
-"(z.B. falls Sie keine E-Mail Benachrichtigung durch Ihre 'post-revprop-change'\n"
-"Aktion auslösen wollen oder die Änderung von Revisionseigenschaften in der\n"
-"'pre-revprop-change' Aktion nicht gestattet wird).\n"
-"ACHTUNG: Revisionseigenschaften werden nicht versioniert. Dieser Befehl\n"
-"überschreibt also die vorherige Logmeldung endgültig.\n"
+"Setzt die Eigenschaft NAME der Revision REV auf den Inhalt der Datei DATEI.\n"
+"Mit'--use-pre-revprop-change-hook'/'--use-post-revprop-change-hook',\n"
+"lösen Sie die mit den Revisionseigenschaften zusammenhängenden Aktionen aus\n"
+"(z.B. falls Sie E-Mail-Benachrichtigungen durch Ihre 'post-revprop-change'\n"
+"Aktion versenden wollen).\n"
+"\n"
+"ACHTUNG: Revisionseigenschaften sind nicht versioniert. Dieser Befehl\n"
+"überschreibt also den vorherigen Wert der Eigenschaft.\n"
 
 #: svnadmin/main.c:422
 msgid ""
@@ -8167,7 +8174,7 @@ msgstr "Ungültiger Quellpfad einer Kopie: '%s'"
 #: svndumpfilter/main.c:558
 #, c-format
 msgid "No valid copyfrom revision in filtered stream"
-msgstr ""
+msgstr "Keine gültige Quellrevision im gefilterten Datenstrom"
 
 #: svndumpfilter/main.c:663
 msgid "Delta property block detected - not supported by svndumpfilter"
@@ -8450,7 +8457,7 @@ msgstr ""
 "Aufruf: svnlook propget ARCHIV_PFAD PROPNAME [PFAD_IN_PROJ]\n"
 "\n"
 "Gibt den Rohwert einer Eigenschaft eines Pfades im Projektarchiv aus.\n"
-"mit --revprop wird der Rohwert einer Revisionseigenschaft ausgegeben.\n"
+"Mit --revprop wird der Rohwert einer Revisionseigenschaft ausgegeben.\n"
 
 #: svnlook/main.c:202
 msgid ""
@@ -8463,8 +8470,8 @@ msgstr ""
 "Aufruf: svnlook proplist ARCHIV_PFAD PFAD_IN_PROJ\n"
 "\n"
 "Gibt die Eigenschaften eines Pfades im Projektarchiv aus.\n"
-"mit --revprop werden Revisionseigenschaften ausgegeben.\n"
-"mit -v werden auch die Eigenschaftswerte ausgegeben.\n"
+"Mit --revprop werden Revisionseigenschaften ausgegeben.\n"
+"Mit -v werden auch die Eigenschaftswerte ausgegeben.\n"
 
 #: svnlook/main.c:209
 msgid ""
@@ -8591,8 +8598,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "Aufruf: svnlook UNTERBEFEHL ARCHIV_PFAD [Optionen & Parameter ...]\n"
-"Hinweis: Alle Unterbefehle, die die '--revision' und '--transaction'\n"
-"         Parameter akzeptieren, werden, ohne diese Parameter, die neueste\n"
+"Hinweis: Alle Unterbefehle, die die Parameter '--revision' und '--transaction'\n"
+"         akzeptieren, werden ohne diese Parameter die neueste\n"
 "         Revision des Projektarchivs verwenden.\n"
 "Geben Sie 'svnlook help <Unterbefehl>' ein, um Hilfe zu einem Unterbefehl\n"
 "         zu erhalten.\n"
@@ -8719,11 +8726,11 @@ msgstr "Einmal zuhören (nützlich zum Debuggen)"
 
 #: svnserve/main.c:162
 msgid "write server process ID to file arg"
-msgstr ""
+msgstr "Schreibe Server-Prozess-ID ins Dateiargument"
 
 #: svnserve/main.c:165
 msgid "run as a windows service (SCM only)"
-msgstr ""
+msgstr "Als Windows-Dienst starten (nur SCM)"
 
 #: svnserve/main.c:177
 #, c-format
@@ -8752,7 +8759,7 @@ msgstr "Die Option --tunnel-user ist nur im Tunnelmodus zulässig.\n"
 #: svnserve/main.c:551
 #, c-format
 msgid "svnserve: The --service flag is only valid if the process is started by the Service Control Manager.\n"
-msgstr ""
+msgstr "svnserve: Die Option --service ist nur gültig, wenn der Prozess durch den Service Control Manager gestartet wurde.\n"
 
 #: svnserve/main.c:587
 #, c-format
@@ -8796,7 +8803,7 @@ msgstr "Kann den Hostnamen nicht erhalten"
 
 #: svnserve/sasl_auth.c:299
 msgid "Could not obtain the list of SASL mechanisms"
-msgstr ""
+msgstr "Konnte die Liste der SASL-Mechanismen nicht erhalten"
 
 #: svnserve/sasl_auth.c:337
 msgid "Couldn't obtain the authenticated username"
@@ -8805,22 +8812,22 @@ msgstr "Kann den angemeldeten Benutzername nicht erhalten"
 #: svnserve/winservice.c:341
 #, c-format
 msgid "Failed to create winservice_start_event"
-msgstr ""
+msgstr "Konnte winservice_start_event nicht erzeugen"
 
 #: svnserve/winservice.c:352
 #, c-format
 msgid "The service failed to start"
-msgstr ""
+msgstr "Der Dienst konnte nicht gestartet werden"
 
 #: svnserve/winservice.c:400
 #, c-format
 msgid "Failed to connect to Service Control Manager"
-msgstr ""
+msgstr "Konnte nicht mit dem Service Control Manager verbinden"
 
 #: svnserve/winservice.c:411
 #, c-format
 msgid "The service failed to start; an internal error occurred while starting the service"
-msgstr ""
+msgstr "Der Dienst konnte nicht gestartet werden; ein interner Fehler trat beim Starten des Dienstes auf"
 
 #: svnsync/main.c:56
 msgid ""
@@ -8845,6 +8852,9 @@ msgid ""
 "\n"
 "Transfer all pending revisions from source to destination.\n"
 msgstr ""
+"Aufruf: svnsync synchronize ZIEL_URL\n"
+"\n"
+"Überträgt alle laufenden Revisionen von der Quelle zum Ziel.\n"
 
 #: svnsync/main.c:76
 msgid ""
@@ -8853,6 +8863,9 @@ msgid ""
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
+"Aufruf: svnsync copy-revprops ZIEL_URL REV\n"
+"\n"
+"Kopiert alle Revisionseigenschaften der Revision REV von der Quelle zum Ziel.\n"
 
 #: svnsync/main.c:82
 msgid ""
@@ -8873,16 +8886,18 @@ msgstr "Kann den lokalen Hostnamen nicht bekommen"
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
 msgstr ""
+"Konnte Sperre für Zielprojektarchiv nicht erhalten, die zurzeit von\n"
+"'%s' gehalten wird\n"
 
 #: svnsync/main.c:301
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
-msgstr ""
+msgstr "Basis der Sitzung ist '%s', aber die Basis des Projektarchivs ist '%s'"
 
 #: svnsync/main.c:341
 #, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
-msgstr ""
+msgstr "Kopierte Eigenschaften für Revision %ld (%s* Eigenschaften übergangen).\n"
 
 #: svnsync/main.c:346
 #, c-format
@@ -8919,26 +8934,26 @@ msgstr "Zielprojektarchiv wurde noch nicht initialisiert"
 #: svnsync/main.c:892
 #, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
-msgstr ""
+msgstr "UUID des Quellprojektarchivs (%s) entspricht nicht der erwarteten UUID (%s)"
 
 #: svnsync/main.c:954
 #, c-format
 msgid "Revision being currently copied (%ld), last merged revision (%ld), and destination HEAD (%ld) are inconsistent; have you committed to the destination without using svnsync?"
-msgstr ""
+msgstr "Die aktuell kopierte Revision (%ld), zuletzt zusammengeführte Revision (%ld) und Ziel-HEAD (%ld) sind inkonsistent. Haben Sie in das Ziel ohne Verwendung von svnsync übertragen?"
 
 #: svnsync/main.c:992
 #, c-format
 msgid "Destination HEAD (%ld) is not the last merged revision (%ld); have you committed to the destination without using svnsync?"
-msgstr ""
+msgstr "Ziel-HEAD (%ld) ist nicht die zuletzt zusammengeführte Revision (%ld). Haben Sie in das Ziel ohne Verwendung von svnsync übertragen?"
 
 #: svnsync/main.c:1069
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
-msgstr ""
+msgstr "Übertragung erzeugte Revision %ld, sollte aber %ld erzeugen"
 
 #: svnsync/main.c:1171
 msgid "Cannot copy revprops for a revision that has not been synchronized yet"
-msgstr ""
+msgstr "Kann keine Revisionseigenschaften für eine Revision kopieren, die noch nicht synchronisiert wurde"
 
 #: svnsync/main.c:1203
 msgid "Invalid revision number"
@@ -8956,7 +8971,7 @@ msgstr ""
 "Geben Sie 'svnsync help <Unterbefehl>' ein, um Hilfe zu einem\n"
 "          Unterbefehl zu erhalten.\n"
 "Geben Sie 'svnsync --version' ein, um die Programmversion und die Zugriffs-\n"
-"          module zu sehen\n"
+"          module zu sehen.\n"
 "\n"
 "Verfügbare Unterbefehle:\n"
 
@@ -8971,7 +8986,7 @@ msgstr ""
 
 #: svnsync/main.c:1490
 msgid "Not enough arguments provided; try 'svnsync help' for more info"
-msgstr ""
+msgstr "Nicht genügend Parameter angegeben; versuchen Sie 'svnsync help' für weitere Informationen"
 
 #: svnversion/main.c:39
 #, c-format
