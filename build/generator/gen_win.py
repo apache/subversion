@@ -258,6 +258,12 @@ class WinGeneratorBase(GeneratorBase):
     # Drop the serf target if we don't have it
     if not self.serf_path:
       install_targets = filter(lambda x: x.name != 'serf', install_targets)
+      install_targets = filter(lambda x: x.name != 'libsvn_ra_serf',
+                               install_targets)
+    else:
+      install_targets = filter(lambda x: x.name != 'neon', install_targets)
+      install_targets = filter(lambda x: x.name != 'libsvn_ra_dav',
+                               install_targets)
 
     for target in install_targets:
       if isinstance(target, gen_base.TargetLib) and target.msvc_fake:
@@ -622,6 +628,11 @@ class WinGeneratorBase(GeneratorBase):
     if self.neon_ver >= 26000:
       fakedefines.append("SVN_NEON_0_26=1")
 
+    if self.serf_path:
+      fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
+    else:
+      fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_DAV")
+
     # check we have sasl
     if self.sasl_path:
       fakedefines.append("SVN_HAVE_SASL")
@@ -683,6 +694,8 @@ class WinGeneratorBase(GeneratorBase):
                     self.apath(self.zlib_path) ]
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
+    if self.serf_path:
+      self.apath(msvc_path_join(self.serf_path, cfg))
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -697,7 +710,13 @@ class WinGeneratorBase(GeneratorBase):
     dblib = None
     if self.bdb_lib:
       dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
-    neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
+
+    if self.neon_lib:
+      neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
+
+    if self.serf_path:
+      serflib = 'serf.lib'
+
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
     sasllib = None
     if self.sasl_path:
@@ -732,9 +751,12 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
 
-      if dep.external_lib == '$(NEON_LIBS)':
+      if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)
         
+      if self.serf_path and dep.external_lib == '$(SVN_SERF_LIBS)':
+        nondeplibs.append(serflib)
+
       if dep.external_lib == '$(SVN_SASL_LIBS)':
         nondeplibs.append(sasllib)
         
@@ -805,6 +827,9 @@ class WinGeneratorBase(GeneratorBase):
                         ))
 
   def write_neon_project_file(self, name):
+    if self.serf_path:
+      return
+
     neon_path = os.path.abspath(self.neon_path)
     self.move_proj_file(self.neon_path, name,
                         (('neon_sources',
@@ -985,6 +1010,8 @@ class WinGeneratorBase(GeneratorBase):
           msg = 'WARNING: Neon version 0.25.5 or higher is required'
     except:
       msg = 'WARNING: Error while determining neon version\n'
+      self.neon_lib = None
+
     sys.stderr.write(msg)
     
   def _configure_apr_util(self):
