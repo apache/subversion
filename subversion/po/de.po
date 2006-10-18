@@ -57,6 +57,7 @@
 # system       System, des Systems
 # tag          Tag, des Tags
 # text-base    Textbasis
+# transaction  Transaktion
 # to dump      ausgeben
 # unlock       entsperren
 # update       aktualisieren
@@ -79,7 +80,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.4.x\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-23 13:50-0500\n"
-"PO-Revision-Date: 2006-10-18 09:19+0100\n"
+"PO-Revision-Date: 2006-10-18 10:55+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -366,11 +367,11 @@ msgstr "Dateisystem hat keinen Eintrag"
 
 #: include/svn_error_codes.h:454
 msgid "Filesystem has no such node-rev-id"
-msgstr "Dateisystem hat keine solche Knoten-Rev-Id"
+msgstr "Dateisystem hat keine solche Knotenrevisions-Id"
 
 #: include/svn_error_codes.h:458
 msgid "String does not represent a node or node-rev-id"
-msgstr "Zeichenkette repräsentiert keinen Knoten oder Knoten-Rev-Id"
+msgstr "Zeichenkette stellt keinen Knoten oder keine Knotenrevisions-Id dar"
 
 #: include/svn_error_codes.h:462
 msgid "Name does not refer to a filesystem directory"
@@ -575,7 +576,7 @@ msgstr "ZM-Schicht hat die angeforderte OPTIONS-Information nicht erhalten"
 
 #: include/svn_error_codes.h:701
 msgid "RA layer failed to fetch properties"
-msgstr "ZM-Schicht konnte keine Eigenschaften abholen"
+msgstr "ZM-Schicht konnte keine Eigenschaften bestimmen"
 
 #: include/svn_error_codes.h:705
 msgid "RA layer file already exists"
@@ -1859,6 +1860,7 @@ msgstr "Versuchte, Eintrag in einem nicht-veränderlichen Knoten zu setzen"
 
 #: libsvn_fs_base/dag.c:592
 #, c-format
+# FIXME: node-revision or node-rev (wie überall)?
 msgid "Can't set proplist on *immutable* node-revision %s"
 msgstr "Kann keine Eigenschafen für *nicht-veränderliche* Knotenrevision %s setzen."
 
@@ -2206,7 +2208,7 @@ msgstr "Konnte keinen neuen Schlüssel erzeugen"
 #: libsvn_fs_base/reps-strings.c:1416
 #, c-format
 msgid "Attempt to deltify '%s' against itself"
-msgstr ""
+msgstr "Versuch, Deltas von '%s' gegen sich selber zu erstellen"
 
 #: libsvn_fs_base/reps-strings.c:1487
 #, c-format
@@ -2411,6 +2413,7 @@ msgstr "Kann FSFS Transaktions-Mutex nicht loslassen"
 msgid "Can't unlock unknown transaction '%s'"
 msgstr "Kann unbekannte Transaktion '%s' nicht freigeben"
 
+# FIXME: Dies ist aber nicht infinitisch übersetzt (besser: kann nicht freigegeben werden?)
 #: libsvn_fs_fs/fs_fs.c:378
 #, c-format
 msgid "Can't unlock nonlocked transaction '%s'"
@@ -2419,22 +2422,22 @@ msgstr "Kann nicht gesperrte Transaktion '%s' nicht freigeben"
 #: libsvn_fs_fs/fs_fs.c:385
 #, c-format
 msgid "Can't unlock prototype revision lockfile for transaction '%s'"
-msgstr ""
+msgstr "Kann Prototyp-Revisionssperrdatei für Transaktion '%s' nicht entsperren"
 
 #: libsvn_fs_fs/fs_fs.c:391
 #, c-format
 msgid "Can't close prototype revision lockfile for transaction '%s'"
-msgstr ""
+msgstr "Kann Prototyp-Revisionssperrdatei für Transaktion '%s' nicht schließen"
 
 #: libsvn_fs_fs/fs_fs.c:453
 #, c-format
 msgid "Cannot write to the prototype revision file of transaction '%s' because a previous representation is currently being written by this process"
-msgstr ""
+msgstr "Kann nicht in die Prototyp-Revisionsdatei der Transaktion '%s' schreiben, da eine frühere Darstellung zurzeit von diesem Prozess geschrieben wird"
 
 #: libsvn_fs_fs/fs_fs.c:489
 #, c-format
 msgid "Cannot write to the prototype revision file of transaction '%s' because a previous representation is currently being written by another process"
-msgstr ""
+msgstr "Kann nicht in die Prototyp-Revisionsdatei der Transaktion '%s' schreiben, da eine frühere Darstellung zurzeit von einem anderen Prozess geschrieben wird"
 
 #: libsvn_fs_fs/fs_fs.c:496
 #: libsvn_subr/io.c:1531
@@ -2467,7 +2470,7 @@ msgstr "Fehlender 'cpath' in Knotenrevision"
 #: libsvn_fs_fs/fs_fs.c:1112
 #: libsvn_fs_fs/fs_fs.c:1118
 msgid "Malformed copyroot line in node-rev"
-msgstr "Fehlerhafte 'copyroot' Zeile in Knotenrevision"
+msgstr "Fehlerhafte 'copyroot'-Zeile in Knotenrevision"
 
 #: libsvn_fs_fs/fs_fs.c:1136
 #: libsvn_fs_fs/fs_fs.c:1142
@@ -2690,7 +2693,7 @@ msgstr "Konnte keine Anfrage (%s '%s') erzeugen"
 
 #: libsvn_ra_dav/commit.c:296
 msgid "Could not fetch the Version Resource URL (needed during an import or when it is missing from the local, cached props)"
-msgstr ""
+msgstr "Konnte die Versionsressourcen-URL nicht bestimmen (wird für einen Import oder, falls sie in den lokalen, zwischengespeicherten Eigenschaften fehlt, benötigt)"
 
 #: libsvn_ra_dav/commit.c:465
 #, c-format
@@ -2766,7 +2769,7 @@ msgstr ""
 
 #: libsvn_ra_dav/fetch.c:1086
 msgid "Server response missing the expected deadprop-count property"
-msgstr ""
+msgstr "Die Serverantwort enthält die erwartete Eigenschaft 'deadprop-count' nicht"
 
 #: libsvn_ra_dav/fetch.c:1259
 msgid "Server does not support date-based operations"
@@ -2908,15 +2911,17 @@ msgstr "Mindestens eine Eigenschaftsänderung ist fehlgeschlagen; Projektarchiv 
 
 #: libsvn_ra_dav/replay.c:271
 msgid "Got apply-textdelta element without preceding add-file or open-file"
-msgstr ""
+msgstr "Fand Element 'apply-textdelta' ohne vorhergehendes 'add-file' oder 'open-file'"
 
 #: libsvn_ra_dav/replay.c:295
 msgid "Got close-file element without preceding add-file or open-file"
-msgstr ""
+msgstr "Fand Element 'close-file' ohne vorhergehendes 'add-file' oder 'open-file'"
 
 #: libsvn_ra_dav/replay.c:310
+# FIXME: inkonsistent zu obigen Meldungen: open_directory statt opening a directory
+# (Wird Bezug zu Elementen in Dump hergestellt oder nicht?)
 msgid "Got close-directory element without ever opening a directory"
-msgstr ""
+msgstr "Fand Element 'close-directory' ohne vorhergehendes Öffnen eines Verzeichnisses"
 
 #: libsvn_ra_dav/replay.c:429
 #: libsvn_ra_serf/replay.c:491
@@ -2927,7 +2932,7 @@ msgstr "Fehler beim Schreiben in Datenstrom: unerwartetes EOF"
 #: libsvn_ra_dav/replay.c:436
 #, c-format
 msgid "Got cdata content for a prop delete"
-msgstr ""
+msgstr "Fand cdata-Inhalt für eine Eigenschaftslöschung"
 
 #: libsvn_ra_dav/session.c:456
 msgid "Invalid URL: illegal character in proxy port number"
@@ -3412,7 +3417,7 @@ msgstr "Ein Teil des Text-Delta ist keine Zeichenkette"
 #: libsvn_ra_svn/editorp.c:800
 #, c-format
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr ""
+msgstr "Das Kommando 'finish-replay' ist außerhalb von 'replay's ungültig"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -3728,6 +3733,7 @@ msgstr "Relative Quellrevision %ld ist im aktuellen Projektarchiv nicht verfügb
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
 msgstr "Fehlerhafter Dateiabzug: Revision 0 darf keine Knoteneinträge enthalten"
 
+# FIXME: Leerzeichen vor ":" ist französischer Stil!
 #: libsvn_repos/load.c:988
 #, c-format
 msgid "     * editing path : %s ..."
@@ -4173,7 +4179,7 @@ msgstr "Kann Attribute von Prozess '%s' nicht erzeugen"
 #: libsvn_subr/io.c:2009
 #, c-format
 msgid "Can't set process '%s' cmdtype"
-msgstr "Kann 'cmdtype' von Prozess '%s' nicht setzen "
+msgstr "Kann Kommandotyp von Prozess '%s' nicht setzen "
 
 #: libsvn_subr/io.c:2021
 #, c-format
@@ -4183,22 +4189,25 @@ msgstr "Kann Verzeichnis von Prozess '%s' nicht setzen"
 #: libsvn_subr/io.c:2034
 #, c-format
 msgid "Can't set process '%s' child input"
-msgstr "Kann Eingabe von Prozess '%s' Kind nicht setzen"
+msgstr "Kann Eingabe des Kindprozesses '%s' nicht setzen"
 
 #: libsvn_subr/io.c:2041
 #, c-format
 msgid "Can't set process '%s' child outfile"
-msgstr "Kann Ausgabe von Prozess '%s' Kind nicht setzen"
+msgstr "Kann Ausgabe des Kindprozesses '%s' nicht setzen"
 
 #: libsvn_subr/io.c:2048
 #, c-format
+# FIXME: Laut Code ist %s der Kindprozess. Müsste es dann nicht
+# "Can't set child process '%s' errfile" (oder ganz ohne child) heißen?
+# (Es gibt kein child von %s)
 msgid "Can't set process '%s' child errfile"
-msgstr "Kann Fehlerausgabe von Prozess '%s' Kind nicht setzen"
+msgstr "Kann Fehlerausgabe des Kindprozesses '%s' nicht setzen"
 
 #: libsvn_subr/io.c:2055
 #, c-format
 msgid "Can't set process '%s' child errfile for error handler"
-msgstr "Kann Datei für die Fehlerausgabe des Kindprozesses '%s' nicht setzen"
+msgstr "Kann Datei für die Fehlerbehandlung des Kindprozesses '%s' nicht setzen"
 
 #: libsvn_subr/io.c:2061
 #, c-format
@@ -5728,6 +5737,7 @@ msgstr "Konflikt: vorherige Arbeitsdatei: %s\n"
 msgid "Conflict Current Base File: %s\n"
 msgstr "Konflikt: aktuelle Ausgangsdatei: %s\n"
 
+# TODO: leicht inkonsistent zu obigen Strings (tritt in svn info-Ausgabe auf)
 #: svn/info-cmd.c:387
 #, c-format
 msgid "Conflict Properties File: %s\n"
@@ -7925,9 +7935,10 @@ msgstr ""
 "Setzt die Logmeldung der Revision REVISION auf den Inhalt der Datei DATEI.\n"
 "Benutzen Sie '--bypass-hooks', um die mit den Revisionseigenschaften zu-\n"
 "sammenhängenden Aktionen nicht auszulösen (z.B. falls Sie keine E-Mail-\n"
-"Benachrichtigung durch Ihre 'post-revprop-change' Aktion auslösen wollen\n"
-"oder die Änderung von Revisionseigenschaften in der 'pre-revprop-change'\n"
+"Benachrichtigung durch Ihre 'post-revprop-change'-Aktion auslösen wollen\n"
+"oder die Änderung von Revisionseigenschaften in der 'pre-revprop-change'-\n"
 "Aktion nicht gestattet wird).\n"
+"\n"
 "ACHTUNG: Revisionseigenschaften sind nicht versioniert. Dieser Befehl\n"
 "überschreibt also die vorherige Logmeldung endgültig.\n"
 
@@ -7946,9 +7957,9 @@ msgstr ""
 "Aufruf: svnadmin setrevprop ARCHIV_PFAD -r REV NAME DATEI\n"
 "\n"
 "Setzt die Eigenschaft NAME der Revision REV auf den Inhalt der Datei DATEI.\n"
-"Mit'--use-pre-revprop-change-hook'/'--use-post-revprop-change-hook',\n"
+"Mit '--use-pre-revprop-change-hook'/'--use-post-revprop-change-hook'\n"
 "lösen Sie die mit den Revisionseigenschaften zusammenhängenden Aktionen aus\n"
-"(z.B. falls Sie E-Mail-Benachrichtigungen durch Ihre 'post-revprop-change'\n"
+"(z.B. falls Sie E-Mail-Benachrichtigungen durch Ihre 'post-revprop-change'-\n"
 "Aktion versenden wollen).\n"
 "\n"
 "ACHTUNG: Revisionseigenschaften sind nicht versioniert. Dieser Befehl\n"
@@ -7981,7 +7992,7 @@ msgstr "Die erste Revision darf kann nicht größer als zweite sein"
 #: svnadmin/main.c:565
 #, c-format
 msgid "Deltifying revision %ld..."
-msgstr "Bilde Deltas für Revision %ld..."
+msgstr "Bilde Deltas für Revision %ld ..."
 
 #: svnadmin/main.c:569
 #, c-format
@@ -8021,7 +8032,7 @@ msgid ""
 "Please wait; recovering the repository may take some time...\n"
 msgstr ""
 "Exklusiven Zugriff auf das Projektarchiv erlangt\n"
-"Bitte warten, die Wiederherstellung des Projektarchivs kann einige Zeit dauern...\n"
+"Bitte warten, die Wiederherstellung des Projektarchivs kann einige Zeit dauern ...\n"
 
 #: svnadmin/main.c:795
 msgid ""
@@ -8202,7 +8213,7 @@ msgid ""
 "usage: svndumpfilter exclude PATH_PREFIX...\n"
 msgstr ""
 "Knoten mit den angegebenen Präfixen aus dem Datenstrom ausfiltern.\n"
-"Aufruf: svndumpfilter exclude PFAD_PRÄFIX...\n"
+"Aufruf: svndumpfilter exclude PFAD_PRÄFIX ...\n"
 
 #: svndumpfilter/main.c:811
 msgid ""
@@ -8210,7 +8221,7 @@ msgid ""
 "usage: svndumpfilter include PATH_PREFIX...\n"
 msgstr ""
 "Knoten, die nicht den angegebenen Präfixen entsprechen, aus dem Datenstrom ausfiltern.\n"
-"Aufruf: svndumpfilter include PFAD_PRÄFIX...\n"
+"Aufruf: svndumpfilter include PFAD_PRÄFIX ...\n"
 
 #: svndumpfilter/main.c:817
 msgid ""
