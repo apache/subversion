@@ -918,9 +918,9 @@ def status_dash_u_missing_dir(sbox):
           "Status against revision:      1\n" ]
 
   # now run status -u, we should be able to do this without crashing
-  ### FIXME: This test currently fails with --fs-type=bdb.  Use of
-  ### svntest.main.compare_unordered_output() (or equivalent) should
-  ### fix this.
+  ### FIXME: This test currently fails on some platforms with
+  ### --fs-type=bdb.  Use of svntest.main.compare_unordered_output()
+  ### (or equivalent) should fix this.
   svntest.actions.run_and_verify_svn(None,
                                      xout,
                                      [],
