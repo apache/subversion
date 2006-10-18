@@ -21,7 +21,7 @@ import sys, os.path, re, time
 
 # Our testing module
 import svntest
-from svntest import wc
+from svntest import wc, SVNAnyOutput
 
 
 # (abbreviation)
@@ -918,13 +918,12 @@ def status_dash_u_missing_dir(sbox):
           "Status against revision:      1\n" ]
 
   # now run status -u, we should be able to do this without crashing
-  ### FIXME: This test currently fails on some platforms with
-  ### --fs-type=bdb.  Use of svntest.main.compare_unordered_output()
-  ### (or equivalent) should fix this.
-  svntest.actions.run_and_verify_svn(None,
-                                     xout,
-                                     [],
-                                     "status", "-u", wc_dir)
+  output, errput = svntest.actions.run_and_verify_svn(None,
+                                                      SVNAnyOutput,
+                                                      [],
+                                                      "status", "-u", wc_dir)
+
+  svntest.main.compare_unordered_output(xout, output)
 
 def status_add_plus_conflict(sbox):
   "status on conflicted added file"
