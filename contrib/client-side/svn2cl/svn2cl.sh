@@ -36,7 +36,7 @@ set -e
 set -u
 
 # svn2cl version
-VERSION="0.7"
+VERSION="0.8"
 
 # set default parameters
 PWD=`pwd`
@@ -49,10 +49,12 @@ REPARAGRAPH="no"
 SEPARATEDAYLOGS="no"
 CHANGELOG=""
 OUTSTYLE="cl"
-SVNCMD="svn --verbose --xml log"
+SVNLOGCMD="svn --verbose --xml log"
+SVNINFOCMD="svn info"
 AUTHORSFILE=""
+TITLE="ChangeLog"
+REVISION_LINK="#r"
 TMPFILES=""
-PATHS=""
 
 # do command line checking
 prog=`basename $0`
@@ -87,12 +89,33 @@ do
       INCLUDEREV="yes";
       shift
       ;;
-    --break-before-msg)
+    --break-before-msg|--breaks-before-msg)
+      # FIXME: if next argument is numeric use that as a parameter 
       BREAKBEFOREMSG="yes"
+      shift
+      ;;
+    --break-before-msg=*|--breaks-before-msg=*)
+      BREAKBEFOREMSG=`echo "$1" | sed 's/^--[a-z-]*=//'`
       shift
       ;;
     --reparagraph)
       REPARAGRAPH="yes"
+      shift
+      ;;
+    --title)
+      TITLE="$2"
+      shift 2 || { echo "$prog: option requires an argument -- $1";exit 1; }
+      ;;
+    --title=*)
+      TITLE=`echo "$1" | sed 's/^--[a-z-]*=//'`
+      shift
+      ;;
+    --revision-link)
+      REVISION_LINK="$2"
+      shift 2 || { echo "$prog: option requires an argument -- $1";exit 1; }
+      ;;
+    --revision-link=*)
+      REVISION_LINK=`echo "$1" | sed 's/^--[a-z-]*=//'`
       shift
       ;;
     -f|--file|-o|--output)
@@ -119,21 +142,44 @@ do
       OUTSTYLE="html"
       shift
       ;;
-    -r|--revision|--targets|--username|--password|--config-dir|--limit)
+    -r|--revision|--targets|--limit)
       # add these as extra options to the command (with argument)
       arg=`echo "$2" | sed "s/'/'\"'\"'/g"`
-      SVNCMD="$SVNCMD $1 '$arg'"
+      SVNLOGCMD="$SVNLOGCMD $1 '$arg'"
       shift 2 || { echo "$prog: option requires an argument -- $1";exit 1; }
       ;;
-    --revision=*|--targets=*|--username=*|--password=*|--config-dir=*|--limit=*)
+    --username|--password|--config-dir)
+      # add these as extra options to the command (with argument)
+      arg=`echo "$2" | sed "s/'/'\"'\"'/g"`
+      SVNLOGCMD="$SVNLOGCMD $1 '$arg'"
+      # also add to svn info command
+      SVNINFOCMD="$SVNINFOCMD $1 '$arg'"
+      shift 2 || { echo "$prog: option requires an argument -- $1";exit 1; }
+      ;;
+    --revision=*|--targets=*|--limit=*)
       # these are single argument versions of the above
       arg=`echo "$1" | sed "s/'/'\"'\"'/g"`
-      SVNCMD="$SVNCMD '$arg'"
+      SVNLOGCMD="$SVNLOGCMD '$arg'"
       shift
       ;;
-    --stop-on-copy|--no-auth-cache|--non-interactive)
+    --username=*|--password=*|--config-dir=*)
+      # these are single argument versions of the above
+      arg=`echo "$1" | sed "s/'/'\"'\"'/g"`
+      SVNLOGCMD="$SVNLOGCMD '$arg'"
+      # also add to svn info command
+      SVNINFOCMD="$SVNINFOCMD '$arg'"
+      shift
+      ;;
+    --stop-on-copy)
       # add these as simple options
-      SVNCMD="$SVNCMD $1"
+      SVNLOGCMD="$SVNLOGCMD $1"
+      shift
+      ;;
+    --no-auth-cache|--non-interactive)
+      # add these as simple options
+      SVNLOGCMD="$SVNLOGCMD $1"
+      # also add to svn info command
+      SVNINFOCMD="$SVNINFOCMD $1"
       shift
       ;;
     -V|--version)
@@ -155,9 +201,11 @@ do
       echo "  --group-by-day       group changelog entries by day"
       echo "  --separate-daylogs   put a blank line between grouped by day entries"
       echo "  -i, --include-rev    include revision numbers"
-      echo "  --break-before-msg   add a line break between the log paths and"
-      echo "                       log message"
+      echo "  --break-before-msg[=NUM]  add a line break (or multiple breaks)"
+      echo "                       between the paths and the log message"
       echo "  --reparagraph        rewrap lines inside a paragraph"
+      echo "  --title=NAME         title used in html file"
+      echo "  --revision-link=NAME link revision numbers in html output"
       echo "  -o, --output=FILE    output to FILE instead of ChangeLog"
       echo "  -f, --file=FILE      alias for -o, --output"
       echo "  --stdout             output to stdout instead of ChangeLog"
@@ -179,8 +227,8 @@ do
       ;;
     *)
       arg=`echo "$1" | sed "s/'/'\"'\"'/g"`
-      SVNCMD="$SVNCMD '$arg'"
-      PATHS="$PATHS '$arg'"
+      SVNLOGCMD="$SVNLOGCMD '$arg'"
+      SVNINFOCMD="$SVNINFOCMD '$arg'"
       shift
       ;;
   esac
@@ -193,8 +241,8 @@ do
   dir=`dirname "$prog"`
   prog=`ls -ld "$prog" | sed "s/^.*-> \(.*\)/\1/;/^[^/]/s,^,$dir/,"`
 done
-dir=`dirname $prog`
-dir=`cd $dir && pwd`
+dir=`dirname "$prog"`
+dir=`cd "$dir" && pwd`
 XSL="$dir/svn2${OUTSTYLE}.xsl"
 
 # check if the authors file is formatted as a legacy
@@ -229,8 +277,8 @@ fi
 # try to determin a prefix to strip from all paths
 if [ "$STRIPPREFIX" = "AUTOMATICALLY-DETERMINED" ]
 then
-  # FIXME: this breaks with spaces in repository names
-  STRIPPREFIX=`eval "svn info $PATHS" | awk '/^URL:/{url=$2} /^Repository Root:/{root=$3} END{if(root){print substr(url,length(root)+2)}else{gsub("^.*/","",url);print url}}'`
+  STRIPPREFIX=`LANG=C eval "$SVNINFOCMD" 2> /dev/null | awk '/^URL:/{url=$2} /^Repository Root:/{root=$3} END{if(root){print substr(url,length(root)+2)}else{gsub("^.*/","",url);print url}}'`
+  STRIPPREFIX=`echo "$STRIPPREFIX" | sed 's/%20/ /g'`
 fi
 
 # redirect stdout to the changelog file if needed
@@ -240,7 +288,7 @@ then
 fi
 
 # actually run the command we need
-eval "$SVNCMD" | \
+eval "$SVNLOGCMD" | \
   xsltproc --stringparam strip-prefix "$STRIPPREFIX" \
            --stringparam linelen "$LINELEN" \
            --stringparam groupbyday "$GROUPBYDAY" \
@@ -249,6 +297,11 @@ eval "$SVNCMD" | \
            --stringparam breakbeforemsg "$BREAKBEFOREMSG" \
            --stringparam reparagraph "$REPARAGRAPH" \
            --stringparam authorsfile "$AUTHORSFILE" \
+           --stringparam title "$TITLE" \
+           --stringparam revision-link "$REVISION_LINK" \
+           --nowrite \
+           --nomkdir \
+           --nonet \
            "$XSL" -
 
 # clean up temporary files
