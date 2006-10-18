@@ -43,17 +43,19 @@ def write_restrictive_svnserve_conf(repo_dir):
     fp.write("password-db = passwd\n")
   fp.close()
 
-def write_authz_file(sbox, rules, section=None):
+def write_authz_file(sbox, rules, sections=None):
   """Write an authz file to SBOX, appropriate for the RA method used,
-with authorizations rules RULES, mapping paths to strings containing
-the rules."""
+with authorizations rules RULES mapping paths to strings containing
+the rules. You can add sections SECTIONS (ex. groups, aliases...) with 
+an appropriate list of mappings.
+"""
   fp = open(sbox.authz_file, 'w')
   if sbox.repo_url.startswith("http"):
     prefix = sbox.name + ":"
   else:
     prefix = ""
-  if section:
-    for p, r in section.items():
+  if sections:
+    for p, r in sections.items():
       fp.write("[%s]\n%s\n" % (p, r))  
 
   for p, r in rules.items():
@@ -712,7 +714,7 @@ test_list = [ None,
               authz_log_and_tracing_test,
               authz_checkout_and_update_test,
               authz_partial_export_test,
-              authz_aliases
+              authz_aliases,
              ]
 
 if __name__ == '__main__':
