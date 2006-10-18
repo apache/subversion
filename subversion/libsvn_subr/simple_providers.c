@@ -535,7 +535,7 @@ svn_auth_get_simple_prompt_provider
 /* Windows simple provider, encrypts the password on Win2k and later.    */
 /*-----------------------------------------------------------------------*/
 
-#ifdef WIN32
+#if defined(WIN32) && !defined(__MINGW32__)
 #include <wincrypt.h>
 #include <apr_base64.h>
 

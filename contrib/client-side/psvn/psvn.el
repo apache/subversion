@@ -2568,13 +2568,19 @@ The string in parentheses is shown in the status line to show the state."
 
 (defun svn-status-next-line (nr-of-lines)
   (interactive "p")
-  (next-line nr-of-lines)
+  (while (progn
+           (next-line nr-of-lines)
+           (and (not (eobp))
+                (not (svn-status-get-line-information)))))
   (when (svn-status-get-line-information)
     (goto-char (+ (svn-point-at-bol) svn-status-default-column))))
 
 (defun svn-status-previous-line (nr-of-lines)
   (interactive "p")
-  (previous-line nr-of-lines)
+  (while (progn
+           (previous-line nr-of-lines)
+           (and (not (bobp))
+                (not (svn-status-get-line-information)))))
   (when (svn-status-get-line-information)
     (goto-char (+ (svn-point-at-bol) svn-status-default-column))))
 
@@ -3033,13 +3039,20 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-log-view-mode))))
 
 (defun svn-status-version ()
-  "Show the version numbers for the svn command line client and for psvn.el"
+  "Show the version numbers for psvn.el and the svn command line client"
   (interactive)
-  (svn-run nil t 'version "--version")
-  (svn-status-show-process-output 'info t)
-  (with-current-buffer svn-status-last-output-buffer-name
-    (goto-char (point-min))
-    (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision))))
+  (let ((window-conf (current-window-configuration))
+        (version-string))
+    (svn-run nil t 'version "--version")
+    (svn-status-show-process-output 'info t)
+    (with-current-buffer svn-status-last-output-buffer-name
+      (let ((buffer-read-only nil))
+        (goto-char (point-min))
+        (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision)))
+      (setq version-string (buffer-substring-no-properties (point-min) (point-max))))
+    (unless (interactive-p)
+      (set-window-configuration window-conf)
+      version-string)))
 
 (defun svn-status-info ()
   "Run `svn info' on all selected files.
@@ -4348,8 +4361,12 @@ Currently is the output from the svn update command known."
            (beginning-of-line)
            (looking-at "Updated to revision"))
          ;; svn-info contains info from an svn update
-         (let ((file-name (buffer-substring-no-properties (+ 3 (line-beginning-position)) (line-end-position)))
+         (let ((cur-pos (point))
+               (file-name (buffer-substring-no-properties
+                           (progn (beginning-of-line) (re-search-forward " +") (point))
+                           (line-end-position)))
                (pos))
+           (goto-char cur-pos)
            (with-current-buffer svn-status-buffer-name
              (setq pos (svn-status-get-file-name-buffer-position file-name)))
            (when pos

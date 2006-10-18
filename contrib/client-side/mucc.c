@@ -9,7 +9,11 @@
     How it works: the command line arguments are parsed into an array of
     action structures.  The action structures are interpreted to build a
     tree of operation structures.  The tree of operation structures is
-    used to drive an RA commit editor to produce a single commit.  */
+    used to drive an RA commit editor to produce a single commit.
+
+    To build this client, type 'make mucc' from the root of your
+    Subversion source directory.
+*/
 
 #include "svn_cmdline.h"
 #include "svn_client.h"

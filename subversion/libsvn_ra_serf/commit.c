@@ -35,6 +35,7 @@
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "private/svn_compat.h"
 
 #include "ra_serf.h"
 
@@ -733,9 +734,16 @@ create_put_body(void *baton,
   /* We need to flush the file, make it unbuffered (so that it can be
    * zero-copied via mmap), and reset the position before attempting to
    * deliver the file.
+   *
+   * N.B. If we have APR 1.3+, we can unbuffer the file to let us use mmap
+   * and zero-copy the PUT body.  However, on older APR versions, we can't
+   * check the buffer status; but serf will fall through and create a file
+   * bucket for us on the buffered svndiff handle.
    */
   apr_file_flush(ctx->svndiff);
+#if APR_VERSION_AT_LEAST(1, 3, 0)
   apr_file_buffer_set(ctx->svndiff, NULL, 0);
+#endif
   offset = 0;
   apr_file_seek(ctx->svndiff, APR_SET, &offset);
 

@@ -654,18 +654,37 @@ class SVNTests extends TestCase
         }
 
         /**
-         * Check if the working copy has the expected status
+         * Check if the working copy has the expected status.  Does
+         * not extract "out of date" information from the repository.
+         *
+         * @exception SubversionException If there's a problem getting
+         * WC status.
+         * @exception IOException If there's a problem comparing the
+         * WC to the expected state.
+         * @see #checkStatus(boolean)
+         */
+        public void checkStatus()
+            throws SubversionException, IOException
+        {
+            checkStatus(false);
+        }
+
+        /**
+         * Check if the working copy has the expected status.
+         *
+         * @param checkRepos Whether to check the repository's "out of
+         * date" information.
          * @exception SubversionException If there's a problem getting
          * WC status.
          * @exception IOException If there's a problem comparing the
          * WC to the expected state.
          */
-        public void checkStatus()
+        public void checkStatus(boolean checkRepos)
             throws SubversionException, IOException
         {
             Status[] states = client.status(workingCopy.getAbsolutePath(),
-                                            true, false, true, true);
-            wc.check(states, workingCopy.getAbsolutePath());
+                                            true, checkRepos, true, true);
+            wc.check(states, workingCopy.getAbsolutePath(), checkRepos);
         }
     }
 

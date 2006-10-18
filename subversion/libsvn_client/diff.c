@@ -1215,14 +1215,11 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       svn_path_split(mine, &parent_path, NULL, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                   subpool));
-      {
-        /* Passing NULL for the notify_func and notify_baton because
-         * repos_diff.c:delete_entry() will do it for us. */
-        err = svn_client__wc_delete(mine, parent_access, merge_b->force,
-                                    merge_b->dry_run, 
-                                    NULL, NULL,
-                                    merge_b->ctx, subpool);
-      }
+      /* Passing NULL for the notify_func and notify_baton because
+         repos_diff.c:delete_entry() will do it for us. */
+      err = svn_client__wc_delete(mine, parent_access, merge_b->force,
+                                  merge_b->dry_run, NULL, NULL,
+                                  merge_b->ctx, subpool);
       if (err && state)
         {
           *state = svn_wc_notify_state_obstructed;
