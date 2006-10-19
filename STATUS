@@ -43,7 +43,7 @@ Candidate changes:
       +1: dlr, djh, jerenkrantz
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
-  * r21738, r21924
+  * r21738, r21924, r22026
     Prevent an API violation from corrupting FSFS repositories, as seen
     in issue #2467 and reports from users.
     Justification:
@@ -55,7 +55,7 @@ Candidate changes:
       is the cause of the corruption we've seen.
     Branch: 1.4.x-r21738 (-r21762:HEAD)
     Votes:
-      +1: malcolm
+      +1: malcolm, rooneg
 
 Approved changes:
 
