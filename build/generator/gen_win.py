@@ -40,6 +40,7 @@ class WinGeneratorBase(GeneratorBase):
     self.apr_util_path = 'apr-util'
     self.apr_iconv_path = 'apr-iconv'
     self.serf_path = None
+    self.serf_lib = None
     self.bdb_path = 'db4-win32'
     self.neon_path = 'neon'
     self.neon_ver = 25005
