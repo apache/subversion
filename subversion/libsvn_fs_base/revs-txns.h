@@ -1,7 +1,7 @@
 /* revs-txns.h : internal interface to revision and transactions operations
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -143,6 +143,20 @@ svn_error_t *svn_fs_base__set_txn_base(svn_fs_t *fs,
                                        trail_t *trail,
                                        apr_pool_t *pool);
 
+
+/* Set a PATH to VALUE for the SVN_FS_PROP_TXN_MERGEINFO property (a
+   serialized hash table) on transaction TXN_NAME's proplist in FS as
+   part of TRAIL.  Use POOL for any necessary allocations.
+
+   Return SVN_ERR_FS_TRANSACTION_NOT_MUTABLE if TXN_NAME refers to a
+   transaction that has already been committed.  */
+svn_error_t *
+svn_fs_base__set_txn_merge_info(svn_fs_t *fs,
+                                const char *txn_name,
+                                const char *path,
+                                const svn_string_t *value,
+                                trail_t *trail,
+                                apr_pool_t *pool);
 
 /* Set a property NAME to VALUE on transaction TXN_NAME in FS as part
    of TRAIL.  Use POOL for any necessary allocations.

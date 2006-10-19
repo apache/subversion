@@ -38,6 +38,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_md5.h"
+#include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "svn_sorts.h"
 #include "fs.h"
@@ -1281,6 +1282,47 @@ base_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+/* The input for txn_body_change_merge_info(). */
+struct change_merge_info_args
+{
+  svn_fs_root_t *root;
+  const char *path;
+  const svn_string_t *value;
+};
+
+/* Set the merge info on the transaction in BATON (expected to be of
+   type "struct change_merge_info_args").  Conforms to the callback
+   API used by svn_fs_base__retry_txn(). */
+static svn_error_t *
+txn_body_change_merge_info(void *baton,
+                           trail_t *trail)
+{
+  struct change_merge_info_args *args = baton;
+  SVN_ERR(svn_fs_base__set_txn_merge_info(args->root->fs, args->root->txn, 
+                                          args->path, args->value,
+                                          trail, trail->pool));
+  return SVN_NO_ERROR;
+}
+
+/* Change the merge info for the specified PATH to MERGE_INFO.  */
+static svn_error_t *
+base_change_merge_info(svn_fs_root_t *root,
+                       const char *path,
+                       apr_hash_t *merge_info,
+                       apr_pool_t *pool)
+{
+  svn_stringbuf_t *minfo_str;
+  struct change_merge_info_args args;
+
+  if (! root->is_txn_root)
+    return NOT_TXN(root);
+  SVN_ERR(svn_mergeinfo_to_string(&minfo_str, merge_info, pool));
+  args.root = root;
+  args.path = path;
+  args.value = svn_string_create_from_buf(minfo_str, pool);
+  return svn_fs_base__retry_txn(root->fs, txn_body_change_merge_info, &args,
+                                pool);
+}
 
 struct change_node_prop_args {
   svn_fs_root_t *root;
@@ -1288,6 +1330,24 @@ struct change_node_prop_args {
   const char *name;
   const svn_string_t *value;
 };
+
+
+static svn_error_t *
+change_txn_merge_info(struct change_node_prop_args *args, trail_t *trail)
+{
+  const char *txn_id = args->root->txn;
+
+  /* At least for single file merges, nodes which are direct
+     children of the root are received without a leading slash
+     (e.g. "/file.txt" is received as "file.txt"), so must be made
+     absolute. */
+  const char *canon_path = svn_fs_base__canonicalize_abspath(args->path, 
+                                                             trail->pool);
+  SVN_ERR(svn_fs_base__set_txn_merge_info(args->root->fs, txn_id, canon_path,
+                                          args->value, trail, trail->pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 static svn_error_t *
@@ -1320,6 +1380,9 @@ txn_body_change_node_prop(void *baton,
   /* Now, if there's no proplist, we know we need to make one. */
   if (! proplist)
     proplist = apr_hash_make(trail->pool);
+
+  if (strcmp(args->name, SVN_PROP_MERGE_INFO) == 0)
+    SVN_ERR(change_txn_merge_info(args, trail));
 
   /* Set the property. */
   apr_hash_set(proplist, args->name, APR_HASH_KEY_STRING, args->value);
@@ -2381,8 +2444,8 @@ txn_body_commit(void *baton, trail_t *trail)
   SVN_ERR(verify_locks(txn_name, trail, trail->pool));
 
   /* Else, commit the txn. */
-  SVN_ERR(svn_fs_base__dag_commit_txn(&(args->new_rev), fs, txn_name,
-                                      trail, trail->pool));
+  SVN_ERR(svn_fs_base__dag_commit_txn(&(args->new_rev), txn, trail,
+                                      trail->pool));
 
   return SVN_NO_ERROR;
 }
@@ -4373,7 +4436,7 @@ static root_vtable_t root_vtable = {
   base_contents_changed,
   base_get_file_delta_stream,
   base_merge,
-  NULL,
+  base_change_merge_info,
   svn_fs_merge_info__get_merge_info
 };
 
