@@ -30,7 +30,7 @@ Candidate changes:
     #2584).
     Branch: 1.4.x-r21047
     Votes:
-      +1: dlr
+      +1: dlr, rooneg
 
   * r21531, r21848, r21934
     Allow HTTP auth protocols to be configurable by way of a
