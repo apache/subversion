@@ -53,8 +53,8 @@ except ImportError:
     % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
   sys.exit(1)
 if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
-                   svn.core.SVN_VER_MINOR,
-                   svn.core.SVN_VER_PATCH]:
+                       svn.core.SVN_VER_MINOR,
+                       svn.core.SVN_VER_PATCH]:
   sys.stderr.write(
     "You need version %s or better of the Subversion Python bindings.\n" \
     % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
