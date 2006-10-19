@@ -39,7 +39,7 @@ import types
 import urllib
 
 # Minimal version of Subversion's bindings required
-_MIN_VERSION = [1, 4, 0]
+_MIN_VERSION = [1, 5, 0]
 
 # Import the Subversion Python bindings, making sure they meet our
 # minimum version requirements.
