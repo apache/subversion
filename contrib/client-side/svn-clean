@@ -24,7 +24,7 @@ use Getopt::Long;
 use Pod::Usage;
 
 # Try to use SVN module if available.
-my $use_svn_module =  eval { require SVN::Client };
+my $use_svn_module = eval { require SVN::Client };
 
 my $CWD = getcwd;
 
@@ -42,13 +42,13 @@ GetOptions(
     "print"           => \$print,
     "help|?"          => \$help,
     "man"             => \$man
-  )
-  or pod2usage(2);
+) or pod2usage(2);
 pod2usage(1) if $help;
 pod2usage( -exitstatus => 0, -verbose => 2 ) if $man;
 $path = Cwd::abs_path( $ARGV[0] ) if @ARGV;
 
-if ( $use_svn_module ) {
+if ($use_svn_module) {
+
     # Create SVN client object. No need for connection to remote server.
     my $ctx = new SVN::Client;
 
@@ -56,8 +56,8 @@ if ( $use_svn_module ) {
     $ctx->status( $path, undef, \&clean, !$nonrecursive, 1, 0, 1 );
 }
 else {
-    warn "Warning: Not using SVN Perl modules, this might be slow.\n" unless
-    $quiet;
+    warn "Warning: Not using SVN Perl modules, this might be slow.\n"
+      unless $quiet;
 
     # Build svn client command
     my @command = qw(svn status --no-ignore -v);
@@ -66,8 +66,15 @@ else {
     }
 
     # Main file-wiping loop.
-    open SVN, "-|", @command, @ARGV
-      or die "Can't call program \"svn\": $!\n";
+    if ( $^O eq 'MSWin32' ) {
+        # Perl on Windows currently doesn't have list pipe opens.
+        open SVN, join( ' ', @command, @ARGV ) . '|'
+          or die "Can't call program \"svn\": $!\n";
+    }
+    else {
+        open SVN, "-|", @command, @ARGV
+          or die "Can't call program \"svn\": $!\n";
+    }
     while (<SVN>) {
         if (/^([\?ID])/) {
             my $file = (split)[-1];
