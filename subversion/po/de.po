@@ -80,7 +80,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.4.x\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-23 13:50-0500\n"
-"PO-Revision-Date: 2006-10-19 09:20+0100\n"
+"PO-Revision-Date: 2006-10-19 11:23+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2413,11 +2413,10 @@ msgstr "Kann FSFS Transaktions-Mutex nicht loslassen"
 msgid "Can't unlock unknown transaction '%s'"
 msgstr "Kann unbekannte Transaktion »%s« nicht freigeben"
 
-# FIXME: Dies ist aber nicht infinitisch übersetzt (besser: kann nicht freigegeben werden?)
 #: libsvn_fs_fs/fs_fs.c:378
 #, c-format
 msgid "Can't unlock nonlocked transaction '%s'"
-msgstr "Kann nicht gesperrte Transaktion »%s« nicht freigeben"
+msgstr "Nicht gesperrte Transaktion »%s« kann nicht freigeben werden"
 
 #: libsvn_fs_fs/fs_fs.c:385
 #, c-format
@@ -2675,6 +2674,12 @@ msgstr "Unbekanntes URL-Schema für »%s«"
 #, c-format
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr "»%s« ist nicht im selben Projektarchiv wie »%s«"
+
+# FIXME: muss noch in libsvn_ra/ra_loader.c:699 als übersetzbar markiert werden
+# (Franzosen verwenden "* ra_%s : %s\n")
+# svn --help gibt aus: "* ra_dav: Modul"
+msgid "* ra_%s: %s\n"
+msgstr "* ra_%s: %s\n"
 
 #: libsvn_ra/ra_loader.c:707
 #, c-format
@@ -2965,7 +2970,7 @@ msgstr "Ungültige Konfiguration: Unbekannter HTTP-Autorisationstyp »%s«"
 
 #: libsvn_ra_dav/session.c:580
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
-msgstr "Modul zum Zugriff auf ein Projektarchiv über das WebDAV (DeltaV) Protokoll"
+msgstr "Modul zum Zugriff auf ein Projektarchiv über das Protokoll WebDAV (DeltaV)"
 
 #: libsvn_ra_dav/session.c:631
 msgid "Malformed URL for repository"
@@ -3505,7 +3510,7 @@ msgstr "Kein Passwort erhalten"
 
 #: libsvn_ra_svn/simple_auth.c:117
 msgid "Cannot negotiate authentication mechanism"
-msgstr "Anmeldeinformationen nicht zwischenspeichern"
+msgstr "Kann Anmeldungsmechanismus nicht aushandeln"
 
 #: libsvn_repos/commit.c:128
 #, c-format
@@ -3731,26 +3736,25 @@ msgstr "Relative Quellrevision %ld ist im aktuellen Projektarchiv nicht verfügb
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
 msgstr "Fehlerhafter Dateiabzug: Revision 0 darf keine Knoteneinträge enthalten"
 
-# FIXME: Leerzeichen vor ":" ist französischer Stil!
 #: libsvn_repos/load.c:988
 #, c-format
 msgid "     * editing path : %s ..."
-msgstr "     * Bearbeite Pfad : %s ..."
+msgstr "     * Bearbeite Pfad: %s ..."
 
 #: libsvn_repos/load.c:995
 #, c-format
 msgid "     * deleting path : %s ..."
-msgstr "     * Lösche Pfad : %s ..."
+msgstr "     * Lösche Pfad: %s ..."
 
 #: libsvn_repos/load.c:1003
 #, c-format
 msgid "     * adding path : %s ..."
-msgstr "     * Füge Pfad hinzu : %s ..."
+msgstr "     * Füge Pfad hinzu: %s ..."
 
 #: libsvn_repos/load.c:1012
 #, c-format
 msgid "     * replacing path : %s ..."
-msgstr "     * Ersetze Pfad : %s ..."
+msgstr "     * Ersetze Pfad: %s ..."
 
 #: libsvn_repos/load.c:1022
 #, c-format
@@ -5497,14 +5501,14 @@ msgstr "Kann keinerlei Verzeichnisse erzeugen"
 #: svn/blame-cmd.c:234
 #: svn/list-cmd.c:252
 msgid "'verbose' option invalid in XML mode"
-msgstr "»verbose« Option im XML Modus ungültig"
+msgstr "Option »verbose« ist im XML-Modus ungültig"
 
 #: svn/blame-cmd.c:246
 #: svn/info-cmd.c:507
 #: svn/list-cmd.c:264
 #: svn/status-cmd.c:268
 msgid "'incremental' option only valid in XML mode"
-msgstr "»incremental« Option nur im XML Modus gültig"
+msgstr "Option »incremental« ist nur im XML-Modus gültig"
 
 #: svn/blame-cmd.c:313
 #, c-format
@@ -5960,8 +5964,8 @@ msgid ""
 msgstr ""
 "Vorgabe: »-u«. Wenn Subversion ein\n"
 "                             externes Vergleichsprogramm aufruft, wird PAR nur\n"
-"                              an das Programm weitergereicht. Wenn Subversion\n"
-"                             aber sein internes Vergleichsprogramm nutzt, be-\n"
+"                             an das Programm weitergereicht. Wenn Subversion\n"
+"                             aber sein internes Vergleichsprogramm benutzt\n"
 "                             oder Annotierungen anzeigt, kann PAR einen der\n"
 "                             folgenden Werte annehmen:\n"
 "                                -u (--unified):\n"
@@ -5992,12 +5996,12 @@ msgstr "Log-Ausgabe endet bei Kopieroperationen"
 
 #: svn/main.c:136
 msgid "disregard default and svn:ignore property ignores"
-msgstr "Globale »ignore« und »svn:ignore« Einstellungen nicht beachten"
+msgstr "Globale »ignore«- und »svn:ignore«-Einstellungen nicht beachten"
 
 #: svn/main.c:138
 #: svnsync/main.c:94
 msgid "do not cache authentication tokens"
-msgstr "Anmeldeinformation nicht zwischenspeichern"
+msgstr "Anmeldeinformationen nicht zwischenspeichern"
 
 #: svn/main.c:140
 #: svnsync/main.c:92
@@ -6023,7 +6027,7 @@ msgstr "Beim Zusammenführen Vorgänger ignorieren"
 
 #: svn/main.c:150
 msgid "ignore externals definitions"
-msgstr "ignoriere »svn:externals« Definitionen"
+msgstr "ignoriere »svn:externals«-Definitionen"
 
 #: svn/main.c:153
 msgid "use ARG as diff command"
@@ -6053,6 +6057,7 @@ msgstr "Arbeite auf einer Revisionseigenschaft (mit -r verwenden)"
 msgid "relocate via URL-rewriting"
 msgstr "durch Umschreiben der URL umplatzieren"
 
+# FIXME: svn --help help gibt "--config-dir par" aus (par statt PAR)!
 #: svn/main.c:168
 #: svnadmin/main.c:272
 #: svnsync/main.c:100
@@ -6149,7 +6154,7 @@ msgid ""
 "usage: 1. changelist CLNAME TARGET...\n"
 "       2. changelist --clear TARGET...\n"
 msgstr ""
-"Verknüpft (oder löst diese Verknüpfung) lokale Pfade mit Änderungsliste CLNAME.\n"
+"Verknüpft lokale Pfade (oder löst diese Verknüpfung) mit Änderungsliste CLNAME.\n"
 "Verwendung: 1. changelist CLNAME ZIEL...\n"
 "            2. changelist --clear ZIEL...\n"
 
@@ -6189,12 +6194,12 @@ msgstr ""
 "\n"
 "  Bei Angabe von --force, lassen nicht versionierte, behindernde Objekte\n"
 "  in der Arbeitskopie den Vorgang nicht automatisch fehlschlagen. Falls\n"
-"  der behindernde Pfad vom gleichen Typ (Datei oder Verzeichnis) wie\n"
-"  der entsprechende Pfad im Projektarchiv ist, wird er versioniert,\n"
-"  behält aber seinen ursprünglichen Inhalt. Das bedeutet, dass Unterver-\n"
-"  verzeichnisse eines behindernden Verzeichnisses ebenfalls versioniert\n"
-"  werden könne. Bei Dateien werden alle Unterschiede im Inhalt wie lokale\n"
-"   Modifikationen in der Arbeitskopie behandelt. Sämtliche Eigenschaften\n"
+"  der behindernde Pfad vom gleichen Typ (Datei oder Verzeichnis) wie der\n"
+"  entsprechende Pfad im Projektarchiv ist, wird er versioniert, behält\n"
+"  aber seinen ursprünglichen Inhalt. Das bedeutet, dass nicht versionierte\n"
+"  Unterverzeichnisse eines behindernden Verzeichnisses ebenfalls versioniert\n"
+"  werden können. Bei Dateien werden alle Unterschiede im Inhalt wie lokale\n"
+"  Modifikationen in der Arbeitskopie behandelt. Sämtliche Eigenschaften\n"
 "  aus dem Projektarchiv werden auf den behindernden Pfad angewendet.\n"
 
 #: svn/main.c:288
@@ -6293,7 +6298,7 @@ msgstr ""
 "     wurden, werden sofort aus der Arbeitskopie entfernt.\n"
 "     PFAD(e), die selbst nicht versioniert oder geändert sind, bzw.\n"
 "     entsprechende Einträge enthalten, werden nur gelöscht, wenn\n"
-"     die »--force« Option angegeben wird.\n"
+"     die Option »--force« angegeben wird.\n"
 "\n"
 "  2. Jede URL wird mittels einer sofortigen Übertragung aus dem\n"
 "     Projektarchiv entfernt.\n"
@@ -6388,7 +6393,7 @@ msgstr ""
 "     lokalen Änderungen beibehalten. Objekte, die sich nicht unter\n"
 "     Versionskontrolle befinden, werden in diesem Fall auch nicht kopiert.\n"
 "\n"
-"  BASREV gibt an, in welcher Revision das Ziel zuerst nachgeschlagen wird\n"
+"  BASREV gibt an, in welcher Revision das Ziel zuerst gesucht wird.\n"
 
 #: svn/main.c:399
 msgid ""
@@ -6436,6 +6441,9 @@ msgstr ""
 "  angegeben, bestimmt REV, in welcher Revision zuerst nach dem Ziel gesucht\n"
 "  wird.\n"
 
+# FIXME: "looked up" ist überall leicht unterschiedlich übersetzt
+# Ich (Jens) bevorzuge "gesucht" statt "nachgeschlagen" oder "durchsucht", "nachgeschaut"
+# FIXME: Standardsätze sollten eigene msgid haben!
 #: svn/main.c:428
 msgid ""
 "List directory entries in the repository.\n"
@@ -8696,7 +8704,7 @@ msgstr "Ungültige Revisionsnummer angegeben"
 #: svnlook/main.c:2007
 msgid "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr ""
-"Die »--transaction« (-t) und »--revision« (-r) Parameter können nicht\n"
+"Die Parameter »--transaction« (-t) und »--revision« (-r) können nicht\n"
 "gleichzeitig angegeben werden"
 
 #: svnlook/main.c:2089
