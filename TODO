@@ -137,14 +137,6 @@ for repos dump/load, including the merge history index.
     of operation (which will be kept client-side to offload more
     processing from the server).
 
-* Refactor merge info index-related code into a module, and use this
-  from libsvn_fs_fs.  (kamesh)
-
-  * Need libsvn_fs_util to avoid cyclic dependency.  (kamesh)
-
-* Handle merge info in the BerkeleyDB FS backend using the modularized
-  merge info index API.  (kamesh/cmpilato?)
-
 * Consolidate merge info storage in the index, removing it from the FS. (?)
 
 * Move update design.html with the latest content from the design spec
