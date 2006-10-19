@@ -1063,6 +1063,8 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                 ;; `call-process' ignores `process-connection-type' and
                 ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
+                (when svn-status-wash-control-M-in-process-buffers
+                  (svn-status-remove-control-M))
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)
               (when svn-pre-run-mode-line-process
@@ -1091,6 +1093,8 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
     (setq svn-status-mode-line-process-status "")
     (svn-status-update-mode-line)
     (cond ((string= event "finished\n")
+           (when svn-status-wash-control-M-in-process-buffers
+             (svn-status-remove-control-M))
            (cond ((eq svn-process-cmd 'status)
                   ;;(message "svn status finished")
                   (svn-process-sentinel-fixup-path-seperators)
@@ -2986,8 +2990,6 @@ if no files have been marked."
         (delete-other-windows)))
     (pop-to-buffer svn-process-buffer-name)
     (svn-process-mode)
-    (when svn-status-wash-control-M-in-process-buffers
-      (svn-status-remove-control-M))
     (when scroll-to-top
       (goto-char (point-min)))
     (pop-to-buffer cur-buff)))
