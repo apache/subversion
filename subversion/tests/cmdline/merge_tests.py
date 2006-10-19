@@ -28,6 +28,14 @@ Item = wc.StateItem
 XFail = svntest.testcase.XFail
 Skip = svntest.testcase.Skip
 
+def shorten_path_kludge(path):
+  '''Search for the comment entitled "The Merge Kluge" elsewhere in
+  this file, to understand why we shorten, and subsequently chdir()
+  after calling this function.'''
+  shorten_by = len(svntest.main.work_dir) + len(os.sep)
+  return path[shorten_by:]
+
+
 ######################################################################
 # Tests
 #
@@ -441,8 +449,7 @@ def add_with_history(sbox):
   ### However, until that's settled, we still want to be able to run
   ### the tests in a ramdisk, hence this kluge.
 
-  shorten_by = len(svntest.main.work_dir) + len(os.sep)
-  short_C_path = C_path[shorten_by:]
+  short_C_path = shorten_path_kludge(C_path)
   expected_output = wc.State(short_C_path, {
     'Q'      : Item(status='A '),
     'Q2'     : Item(status='A '),
@@ -1090,8 +1097,6 @@ def merge_similar_unrelated_trees(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.sep)
-  short_apply_path = apply_path[shorten_by:]
   saved_cwd = os.getcwd()
   try:
     os.chdir(svntest.main.work_dir)
@@ -1100,7 +1105,7 @@ def merge_similar_unrelated_trees(sbox):
                                        'merge',
                                        '--ignore-ancestry',
                                        base1_url, base2_url,
-                                       short_apply_path)
+                                       shorten_path_kludge(apply_path))
   finally:
     os.chdir(saved_cwd)
 
@@ -1452,8 +1457,7 @@ def merge_binary_file (sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.sep)
-  short_other_wc = other_wc[shorten_by:]
+  short_other_wc = shorten_path_kludge(other_wc)
 
   # In second working copy, attempt to 'svn merge -r 2:3'.
   # We should *not* see a conflict during the update, but a 'U'.
@@ -1531,8 +1535,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.sep)
-  short_wc = wc_dir[shorten_by:]
+  short_wc = shorten_path_kludge(wc_dir)
 
   # In the working copy, attempt to 'svn merge branch_A_url@2 A_url@3 A'.
   # We should *not* see a conflict during the merge, but an 'A'.
@@ -1608,8 +1611,7 @@ def merge_in_new_file_and_diff(sbox):
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
   branch_path = os.path.join(wc_dir, "branch")
-  shorten_by = len(svntest.main.work_dir) + len(os.sep)
-  short_branch_path = branch_path[shorten_by:]
+  short_branch_path = shorten_path_kludge(branch_path)
 
   # Merge our addition into the branch.
   expected_output = svntest.wc.State(short_branch_path, {
@@ -1696,8 +1698,7 @@ def merge_skips_obstructions(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.sep)
-  short_C_path = C_path[shorten_by:]
+  short_C_path = shorten_path_kludge(C_path)
 
   expected_output = wc.State(short_C_path, {
     'Q'      : Item(status='A '),
@@ -1801,7 +1802,7 @@ def merge_skips_obstructions(sbox):
   
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  short_wc_dir = wc_dir[shorten_by:]
+  short_wc_dir = shorten_path_kludge(wc_dir)
 
   svntest.main.file_append(iota_path, "foo") # unversioned
   os.mkdir(G_path) # unversioned
@@ -1871,7 +1872,7 @@ def merge_skips_obstructions(sbox):
   svntest.main.file_append(lambda_path, "foo") # unversioned
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
-  # this file, to understand why we shorten and chdir() below.
+  # this file, to understand why we use short_wc_dir and chdir() below.
   expected_output = wc.State(short_wc_dir, { })
   expected_disk.add({
     'A/B/lambda'      : Item("foo"),
@@ -1914,7 +1915,7 @@ def merge_skips_obstructions(sbox):
   os.unlink(lambda_path)
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
-  # this file, to understand why we shorten and chdir() below.
+  # this file, to understand why we use short_wc_dir and chdir() below.
   expected_output = wc.State(short_wc_dir, { })
   expected_disk.remove('A/B/lambda')
   expected_status.tweak('A/B/lambda', status='! ')
@@ -2080,8 +2081,7 @@ def dry_run_adds_file_with_prop(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.sep)
-  short_F_path = F_path[shorten_by:]
+  short_F_path = shorten_path_kludge(F_path)
 
   expected_output = wc.State(short_F_path, {
     'zig'  : Item(status='A '),
@@ -2368,8 +2368,7 @@ def merge_funny_chars_on_path(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.sep)
-  short_F_path = F_path[shorten_by:]
+  short_F_path = shorten_path_kludge(F_path)
 
   expected_output = wc.State(short_F_path, expected_output_dic)
 
@@ -2463,8 +2462,7 @@ def merge_keyword_expansions(sbox):
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
-  shorten_by = len(svntest.main.work_dir) + len(os.sep)
-  short_bpath = bpath[shorten_by:]
+  short_bpath = shorten_path_kludge(bpath)
 
   expected_output = wc.State(short_bpath, {
     'f'  : Item(status='A '),
@@ -3543,6 +3541,81 @@ def merge_ignore_eolstyle(sbox):
                                        0, 0,
                                        '-x', '--ignore-eol-style')
 
+#----------------------------------------------------------------------
+# Issue 2584
+def merge_add_over_versioned_file_conflicts(sbox):
+  "conflict from merge of add over versioned file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E');
+  alpha_path = os.path.join(E_path, 'alpha')
+  new_alpha_path = os.path.join(wc_dir, 'A', 'C', 'alpha')
+  
+  # Create a new "alpha" file, with enough differences to cause a conflict.
+  fp = open(new_alpha_path, 'w')
+  fp.write('new alpha content\n')
+  fp.close()
+
+  # Add and commit the new "alpha" file, creating revision 2.
+  svntest.main.run_svn(None, "add", new_alpha_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/alpha' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
+  expected_status.add({
+    'A/C/alpha' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_E_path = shorten_path_kludge(E_path)
+
+  # Merge changes from r1:2 into our pre-existing "alpha" file,
+  # causing a conflict.
+  expected_output = wc.State(short_E_path, {
+    'alpha'   : Item(status='C '),
+    })
+  expected_disk = wc.State('', {
+    'alpha'    : Item("<<<<<<< .working\n" +
+                    "This is the file 'alpha'.\n" +
+                    "=======\n" +
+                    "new alpha content\n" +
+                    ">>>>>>> .merge-right.r2\n"),
+    'beta'    : Item("This is the file 'beta'.\n"),
+    })
+  expected_status = wc.State(short_E_path, {
+    ''       : Item(status='  ', wc_rev=1),
+    'alpha'  : Item(status='C ', wc_rev=1),
+    'beta'   : Item(status='  ', wc_rev=1),
+    })
+  expected_skip = wc.State(short_E_path, { })
+
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_E_path, '1', '2',
+                                         svntest.main.current_repo_url + \
+                                         '/A/C',
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip,
+                                         None,
+                                         detect_conflict_files,
+                                         ["alpha\.working",
+                                          "alpha\.merge-right\.r2",
+                                          "alpha\.merge-left\.r0"])
+  finally:
+    os.chdir(saved_cwd)
+
+
 ########################################################################
 # Run the tests
 
@@ -3582,7 +3655,8 @@ test_list = [ None,
               merge_file_replace_to_mixed_rev_wc,
               merge_added_dir_to_deleted_in_target,
               merge_ignore_whitespace,
-              merge_ignore_eolstyle
+              merge_ignore_eolstyle,
+              merge_add_over_versioned_file_conflicts,
              ]
 
 if __name__ == '__main__':
