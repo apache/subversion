@@ -590,7 +590,7 @@ def revert_propset__dir(sbox):
   wc_dir = sbox.wc_dir
   a_path = os.path.join(wc_dir, 'A')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
-  expected_output = "Reverted '" + a_path + "'"
+  expected_output = re.escape("Reverted '" + a_path + "'")
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      a_path)
 
@@ -601,7 +601,7 @@ def revert_propset__file(sbox):
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, 'iota')
   svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
-  expected_output = "Reverted '" + iota_path + "'"
+  expected_output = re.escape("Reverted '" + iota_path + "'")
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      iota_path)
 
@@ -614,7 +614,7 @@ def revert_propdel__dir(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
   svntest.main.run_svn(None, 'commit', '-m', 'ps', a_path)
   svntest.main.run_svn(None, 'propdel', 'foo', a_path)
-  expected_output = "Reverted '" + a_path + "'"
+  expected_output = re.escape("Reverted '" + a_path + "'")
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      a_path)
 
@@ -627,7 +627,7 @@ def revert_propdel__file(sbox):
   svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
   svntest.main.run_svn(None, 'commit', '-m', 'ps', iota_path)
   svntest.main.run_svn(None, 'propdel', 'foo', iota_path)
-  expected_output = "Reverted '" + iota_path + "'"
+  expected_output = re.escape("Reverted '" + iota_path + "'")
   svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
                                      iota_path)
 
