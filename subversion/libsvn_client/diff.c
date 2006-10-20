@@ -1830,10 +1830,6 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
      ### INVALID_REVNUM.  Copied directories cause this behaviour on
      ### their children.  It's an implementation shortcut to model
      ### wc-side copies." */
-  /* ### TODO: To completely support merge tracking with sub-tree
-     ### merge info, we need to include the list of child paths which
-     ### have locally modified merge info, and if those paths are
-     ### directories, their children as well. */
   switch ((*entry)->schedule)
     {
     case svn_wc_schedule_add:
@@ -1854,6 +1850,11 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
     }
   APR_ARRAY_PUSH(mergeinfo_paths, const char *) = repos_rel_path;
 
+  /* ### TODO: To handle sub-tree merge info, the list will need to
+     ### include the those child paths which have merge info which
+     ### differs from that of TARGET_WCPATH, and if those paths are
+     ### directories, their children as well. */
+
   SVN_ERR(svn_ra_get_merge_info(ra_session, &repos_mergeinfo, mergeinfo_paths,
                                 target_rev, TRUE, pool));
   SVN_ERR(parse_merge_info(target_mergeinfo, *entry, target_wcpath,
@@ -1863,10 +1864,22 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
       apr_hash_t *target_repos_mergeinfo =
         apr_hash_get(repos_mergeinfo, repos_rel_path, APR_HASH_KEY_STRING);
 
-      /* ### FIXME: Pre-existing WC-local changes may've reverted some
-         ### of the merge info on WC_TARGET.  How should we combine
-         ### these sets of merge info (e.g. give precedence to the WC if
-         ### it has merge info set)? */
+      /* If pre-existing local changes reverted some of the merge info
+         on TARGET_WCPATH, this should be recorded in the WC's merge
+         info as TARGET_WCPATH's complete set of merge info minus
+         whatever revisions were reverted.
+
+         If TARGET_WCPATH had no previous merge info, we currently
+         make no record of reverts (meaning that merge history isn't
+         considered).  In the future, we might want to handle this
+         using a separate, negative set of merge source -> revision
+         range mappings. */
+
+      /* ### FIXME: Avoid combining local merge info with repos merge
+         ### info for TARGET_WCPATH when its merge info has been
+         ### locally modified.  We need a variation of
+         ### libsvn_wc/props.c:svn_wc_props_modified_p() which reports
+         ### on a single property value. */
       SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, target_repos_mergeinfo,
                                   *target_mergeinfo, pool));
     }
