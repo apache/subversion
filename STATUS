@@ -48,12 +48,12 @@ Candidate changes:
     Votes:
       +1: malcolm, rooneg
 
-  * r22051
+  * r22051, r22060
     Fix improper notification on property only reverts.
     Justification:
       Tiny bug.  Tiny fix.  Comes with tests!
     Votes:
-      +1: rooneg, dlr
+      +1: rooneg (not r22060), dlr
 
 Approved changes:
 
