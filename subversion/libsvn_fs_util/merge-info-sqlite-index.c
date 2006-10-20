@@ -403,7 +403,7 @@ get_merge_info_for_path(sqlite3 *db,
   svn_boolean_t has_no_mergeinfo = FALSE;
 
   cacheresult = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
-  if (cacheresult != 0)
+  if (cacheresult != NULL)
     {
       if (cacheresult != NEGATIVE_CACHE_RESULT && result)
         apr_hash_set(result, path, APR_HASH_KEY_STRING, cacheresult);
