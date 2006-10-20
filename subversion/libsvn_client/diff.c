@@ -1813,6 +1813,7 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *pool)
 {
+  const char *repos_rel_path;
   apr_hash_t *repos_mergeinfo;
   apr_array_header_t *mergeinfo_paths = apr_array_make(pool, 1,
                                                        sizeof(target_wcpath));
@@ -1835,26 +1836,38 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
     {
     case svn_wc_schedule_add:
     case svn_wc_schedule_replace:
-      target_rev = (*entry)->copyfrom_rev;
-      /* ### TODO: Add copyfrom_url to mergeinfo_paths. */
-      break;
+      /* If we have any history, consider its merge info. */
+      if ((*entry)->copyfrom_url)
+        {
+          target_rev = (*entry)->copyfrom_rev;
+          repos_rel_path = (*entry)->copyfrom_url + strlen((*entry)->repos);
+          break;
+        }
 
     default:
+      /* Consider the merge info for the WC target. */
+      repos_rel_path = (*entry)->url + strlen((*entry)->repos);
       target_rev = (*entry)->revision;
-      /* ### TODO: Add target_wcpath to mergeinfo_paths. */
       break;
     }
+  APR_ARRAY_PUSH(mergeinfo_paths, const char *) = repos_rel_path;
+
   SVN_ERR(svn_ra_get_merge_info(ra_session, &repos_mergeinfo, mergeinfo_paths,
                                 target_rev, TRUE, pool));
   SVN_ERR(parse_merge_info(target_mergeinfo, *entry, target_wcpath,
                            adm_access, ctx, pool));
   if (repos_mergeinfo != NULL)
-    /* ### FIXME: Pre-existing WC-local changes may've reverted some
-       ### of the merge info on WC_TARGET.  How should we combine
-       ### these sets of merge info (e.g. give precedence to the WC if
-       ### it has merge info set)? */
-    SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, repos_mergeinfo,
-                                *target_mergeinfo, pool));
+    {
+      apr_hash_t *target_repos_mergeinfo =
+        apr_hash_get(repos_mergeinfo, repos_rel_path, APR_HASH_KEY_STRING);
+
+      /* ### FIXME: Pre-existing WC-local changes may've reverted some
+         ### of the merge info on WC_TARGET.  How should we combine
+         ### these sets of merge info (e.g. give precedence to the WC if
+         ### it has merge info set)? */
+      SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, target_repos_mergeinfo,
+                                  *target_mergeinfo, pool));
+    }
   return SVN_NO_ERROR;
 }
 
