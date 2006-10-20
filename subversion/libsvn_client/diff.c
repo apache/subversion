@@ -1830,8 +1830,10 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
      ### INVALID_REVNUM.  Copied directories cause this behaviour on
      ### their children.  It's an implementation shortcut to model
      ### wc-side copies." */
-  /* ### TODO: Later, we may need to include all child paths as
-     ### well. */
+  /* ### TODO: To completely support merge tracking with sub-tree
+     ### merge info, we need to include the list of child paths which
+     ### have locally modified merge info, and if those paths are
+     ### directories, their children as well. */
   switch ((*entry)->schedule)
     {
     case svn_wc_schedule_add:
