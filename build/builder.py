@@ -18,17 +18,26 @@ from SCons.Environment import Environment
 import glob
 
 class SvnBuild:
-  def __init__(self):
+  def __init__(self, build_dir="obj"):
     self.ext_libs = {}
     self.svn_libs = {}
+    self.build_dir = build_dir
     self.env = Environment(CPPPATH=['subversion/include', 'subversion'])
     self.env.SConsignFile()
-    self.env.BuildDir('obj', 'subversion')
+    self.env.BuildDir(self.build_dir, 'subversion', duplicate=0)
 
   def ext_lib(self, ext_lib):
     """Add a new external (non-svn) library to the dictionary of
     libraries available."""
     self.ext_libs[ext_lib.name] = ext_lib
+
+  def _make_src_path_list(self, svn_component):
+    """Return a list of paths that form the source for SVN_COMPONENT,
+    which must be a component living under the 'subversion/'
+    directory."""
+
+    return [p.replace("subversion", self.build_dir)
+            for p in glob.glob("subversion/%s/*.c" % svn_component)]
 
   def library(self, name, ext_libs=[], svn_libs=[]):
     """Declare a Subversion library to be built."""
@@ -43,6 +52,6 @@ class SvnBuild:
       link_libs.extend([self.svn_libs[x] for x in svn_libs])
 
     lib = lib_env.SharedLibrary(target=lib_name,
-                                source=glob.glob("subversion/%s/*.c" % lib_name),
+                                source=self._make_src_path_list(lib_name),
                                 libs = link_libs)
     self.svn_libs[name] = lib
