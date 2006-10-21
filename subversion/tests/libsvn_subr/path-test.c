@@ -142,6 +142,11 @@ test_path_split(const char **msg,
     { "X:/",             "X:/",           "X:/" },
     { "X:/foo",          "X:/",           "foo" },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",       "//srv/shr",     "//srv/shr" },
+    { "//srv",           "//srv",         "//srv" },
+    { "//srv/shr/fld",   "//srv/shr/",    "fld" },
+#endif /* WIN32 or Cygwin */
   };
   
   *msg = "test svn_path_split";
@@ -493,6 +498,13 @@ test_join(const char **msg,
     { "X:abc", "X:/", "X:/" },
     { "X:abc", "X:/def", "X:/def" },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",     "fld",     "//srv/shr/fld" },
+    { "//srv",         "shr/fld", "//srv/shr/fld" },
+    { "//srv/shr/fld", "subfld",  "//srv/shr/fld/subfld" },
+    { "//srv/shr/fld", "//srv/shr", "//srv/shr" },
+    { "//srv",         "//srv/fld", "//srv/fld" },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_join(_many)";
@@ -581,6 +593,15 @@ test_join(const char **msg,
   TEST_MANY((pool, "X:", "def", SVN_EMPTY_PATH, NULL), "X:def");
   TEST_MANY((pool, SVN_EMPTY_PATH, "X:", "ghi", NULL), "X:ghi");
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+  TEST_MANY((pool, "//srv/shr", "def", "ghi", NULL), "//srv/shr/def/ghi");
+  TEST_MANY((pool, "//srv", "shr", "def", "ghi", NULL), "//srv/shr/def/ghi");
+  TEST_MANY((pool, "//srv/shr/fld", "def", "ghi", NULL), "//srv/shr/fld/def/ghi");
+  TEST_MANY((pool, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
+  TEST_MANY((pool, "//srv", "shr", "//srv/shr", NULL), "//srv/shr");
+  TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "ghi", NULL), "//srv/shr/fld/def/ghi");
+  TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
+#endif /* WIN32 or Cygwin */
 
   /* ### probably need quite a few more tests... */
 
@@ -620,6 +641,12 @@ test_basename(const char **msg,
     { "X:", "X:" },
     { "X:abc", "abc" },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",      "//srv/shr" },
+    { "//srv",          "//srv" },
+    { "//srv/shr/fld",  "fld" },
+    { "//srv/shr/fld/subfld", "subfld" },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_basename";
@@ -675,6 +702,12 @@ test_dirname(const char **msg,
     { "X:", "" },
     { "X:abc", "" },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",      "//srv/shr" },
+    { "//srv",          "//srv" },
+    { "//srv/shr/fld",  "//srv/shr/" },
+    { "//srv/shr/fld/subfld", "//srv/shr/fld" },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_dirname";
@@ -859,6 +892,12 @@ test_remove_component(const char **msg,
     { "X:foo",                "X:" },
     { "X:",                   "X:" },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",            "//srv/shr" },
+    { "//srv",                "//srv" },
+    { "//srv/shr/fld",        "//srv/shr" },
+    { "//srv/shr/subfld",     "//srv/shr/fld" },
+#endif /* WIN32 or Cygwin */
     { NULL, NULL }
   };
   int i;
@@ -910,6 +949,12 @@ test_is_root(const char **msg,
     { "X:foo",         FALSE },
     { "X:",            TRUE },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr/",    TRUE },
+    { "//srv/shr",     TRUE },
+    { "//srv",         TRUE },
+    { "//srv/shr/fld", FALSE },
+#endif /* WIN32 or Cygwin */
     { "",              FALSE },
   };
 
@@ -959,6 +1004,12 @@ test_is_absolute(const char **msg,
     { "X:foo/bar",     TRUE },
     { "X:",            TRUE },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr/",    TRUE },
+    { "//srv/shr",     TRUE },
+    { "//srv",         TRUE },
+    { "//srv/shr/fld", TRUE },
+#endif /* WIN32 or Cygwin */
     { "",              FALSE },
   };
 
@@ -1067,6 +1118,13 @@ test_path_is_ancestor(const char **msg,
     { "X:",              "X:foo",         TRUE},
     { "X:foo",           "X:bar",         FALSE},
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr/",      "//srv",         FALSE},
+    { "//srv/shr",       "//srv/shr/fld", TRUE },
+    { "//srv",           "//srv/shr/fld", TRUE },
+    { "//srv/shr/fld",   "//srv/shr",     FALSE },
+    { "//srv/shr/fld",   "//srv2/shr/fld", FALSE },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_is_ancestor";
@@ -1171,6 +1229,12 @@ test_compare_paths(const char **msg,
     { "X:foo",        "X:",            1},
     { "X:/foo",       "X:/",           1},
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",    "//srv",         1},
+    { "//srv/shr",    "//srv/shr/fld", -1 },
+    { "//srv/shr/fld", "//srv/shr",    1 },
+    { "//srv/shr/fld", "//abc/def/ghi", 1 },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_compare_paths";
@@ -1234,6 +1298,13 @@ test_get_longest_ancestor(const char **msg,
     { "X:foo",          "X:bar",           "X:"},
     { "X:foo/bar",      "X:foo/bar/boo",   "X:foo/bar"},
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr/",      "//srv",          "//srv"},
+    { "//srv/shr",       "//srv/shr/fld",  "//srv/shr" },
+    { "//srv",           "//srv/shr/fld",  "//srv" },
+    { "//srv/shr/fld",   "//srv/shr",      "//srv/shr" },
+    { "//srv/shr/fld",   "//srv2/shr/fld", "" },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_get_longest_ancestor";
@@ -1264,25 +1335,25 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_path_is_child),
-    SVN_TEST_PASS(test_path_split),
+    SVN_TEST_XFAIL(test_path_split),
     SVN_TEST_PASS(test_is_url),
     SVN_TEST_PASS(test_is_uri_safe),
     SVN_TEST_PASS(test_uri_encode),
     SVN_TEST_PASS(test_uri_decode),
     SVN_TEST_PASS(test_uri_autoescape),
     SVN_TEST_PASS(test_uri_from_iri),
-    SVN_TEST_PASS(test_join),
+    SVN_TEST_XFAIL(test_join),
     SVN_TEST_PASS(test_basename),
-    SVN_TEST_PASS(test_dirname),
+    SVN_TEST_XFAIL(test_dirname),
     SVN_TEST_PASS(test_decompose),
     SVN_TEST_PASS(test_canonicalize),
-    SVN_TEST_PASS(test_remove_component),
+    SVN_TEST_XFAIL(test_remove_component),
     SVN_TEST_PASS(test_is_root),
     SVN_TEST_PASS(test_is_absolute),
     SVN_TEST_PASS(test_path_is_ancestor),
     SVN_TEST_PASS(test_path_check_valid),
     SVN_TEST_PASS(test_is_single_path_component),
     SVN_TEST_PASS(test_compare_paths),
-    SVN_TEST_PASS(test_get_longest_ancestor),
+    SVN_TEST_XFAIL(test_get_longest_ancestor),
     SVN_TEST_NULL
   };
