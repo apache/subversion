@@ -895,8 +895,8 @@ test_remove_component(const char **msg,
 #if defined(WIN32) || defined(__CYGWIN__)
     { "//srv/shr",            "//srv/shr" },
     { "//srv",                "//srv" },
-    { "//srv/shr/fld",        "//srv/shr" },
-    { "//srv/shr/subfld",     "//srv/shr/fld" },
+    { "//srv/shr/fld",        "//srv/shr/" },
+    { "//srv/shr/fld/subfld", "//srv/shr/fld" },
 #endif /* WIN32 or Cygwin */
     { NULL, NULL }
   };
