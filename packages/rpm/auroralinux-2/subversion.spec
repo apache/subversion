@@ -1,5 +1,5 @@
 %define apache_version 2.0.46
-%define neon_version 0.24.7
+%define neon_version 0.26.1
 %define swig_version 1.3.25
 %define apache_dir /usr
 %define pyver 2.2
