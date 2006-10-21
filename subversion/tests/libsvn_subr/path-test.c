@@ -1328,6 +1328,13 @@ test_get_longest_ancestor(const char **msg,
   return SVN_NO_ERROR;
 }
 
+/* local define to support XFail-ing tests on Windows/Cygwin only */
+#if defined(WIN32) || defined(__CYGWIN__)
+#define WINDOWS_OR_CYGWIN TRUE
+#else
+#define WINDOWS_OR_CYGWIN FALSE
+#endif /* WIN32 or Cygwin */
+
 
 /* The test table.  */
 
@@ -1335,25 +1342,25 @@ struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS(test_path_is_child),
-    SVN_TEST_XFAIL(test_path_split),
+    SVN_TEST_XFAIL_COND(test_path_split, WINDOWS_OR_CYGWIN),
     SVN_TEST_PASS(test_is_url),
     SVN_TEST_PASS(test_is_uri_safe),
     SVN_TEST_PASS(test_uri_encode),
     SVN_TEST_PASS(test_uri_decode),
     SVN_TEST_PASS(test_uri_autoescape),
     SVN_TEST_PASS(test_uri_from_iri),
-    SVN_TEST_XFAIL(test_join),
+    SVN_TEST_XFAIL_COND(test_join, WINDOWS_OR_CYGWIN),
     SVN_TEST_PASS(test_basename),
-    SVN_TEST_XFAIL(test_dirname),
+    SVN_TEST_XFAIL_COND(test_dirname, WINDOWS_OR_CYGWIN),
     SVN_TEST_PASS(test_decompose),
     SVN_TEST_PASS(test_canonicalize),
-    SVN_TEST_XFAIL(test_remove_component),
+    SVN_TEST_XFAIL_COND(test_remove_component, WINDOWS_OR_CYGWIN),
     SVN_TEST_PASS(test_is_root),
     SVN_TEST_PASS(test_is_absolute),
     SVN_TEST_PASS(test_path_is_ancestor),
     SVN_TEST_PASS(test_path_check_valid),
     SVN_TEST_PASS(test_is_single_path_component),
     SVN_TEST_PASS(test_compare_paths),
-    SVN_TEST_XFAIL(test_get_longest_ancestor),
+    SVN_TEST_XFAIL_COND(test_get_longest_ancestor, WINDOWS_OR_CYGWIN),
     SVN_TEST_NULL
   };
