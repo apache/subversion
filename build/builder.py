@@ -36,7 +36,7 @@ class SvnBuild:
     which must be a component living under the 'subversion/'
     directory."""
 
-    return [p.replace("subversion", self.build_dir)
+    return [p.replace("subversion", self.build_dir, 1)
             for p in glob.glob("subversion/%s/*.c" % svn_component)]
 
   def library(self, name, ext_libs=[], svn_libs=[]):
