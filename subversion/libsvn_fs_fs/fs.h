@@ -1,7 +1,7 @@
 /* fs.h : interface to Subversion filesystem, private to libsvn_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -45,65 +45,6 @@ extern "C" {
 #define NUM_DIR_CACHE_ENTRIES 128
 #define DIR_CACHE_ENTRIES_MASK(x) ((x) & (NUM_DIR_CACHE_ENTRIES - 1))
 
-
-/* Private FSFS-specific data shared between all svn_txn_t objects that
-   relate to a particular transaction in a filesystem (as identified
-   by transaction id and filesystem UUID).  Objects of this type are
-   allocated in their own subpool of the common pool. */
-struct fs_fs_shared_txn_data_t;
-typedef struct fs_fs_shared_txn_data_t
-{
-  /* The next transaction in the list, or NULL if there is no following
-     transaction. */
-  struct fs_fs_shared_txn_data_t *next;
-
-  /* This transaction's ID.  This is in the form <rev>-<uniqueifier>,
-     where <uniqueifier> runs from 0-99999 (see create_txn_dir() in
-     fs_fs.c). */
-  char txn_id[18];
-
-  /* Whether the transaction's prototype revision file is locked for
-     writing by any thread in this process (including the current
-     thread; recursive locks are not permitted).  This is effectively
-     a non-recursive mutex. */
-  svn_boolean_t being_written;
-
-  /* The pool in which this object has been allocated; a subpool of the
-     common pool. */
-  apr_pool_t *pool;
-} fs_fs_shared_txn_data_t;
-
-
-/* Private FSFS-specific data shared between all svn_fs_t objects that
-   relate to a particular filesystem, as identified by filesystem UUID.
-   Objects of this type are allocated in the common pool. */
-typedef struct
-{
-  /* A list of shared transaction objects for each transaction that is
-     currently active, or NULL if none are.  All access to this list,
-     including the contents of the objects stored in it, is synchronised
-     under TXN_LIST_LOCK. */
-  fs_fs_shared_txn_data_t *txns;
-
-  /* A free transaction object, or NULL if there is no free object.
-     Access to this object is synchronised under TXN_LIST_LOCK. */
-  fs_fs_shared_txn_data_t *free_txn;
-
-#if APR_HAS_THREADS
-  /* A lock for intra-process synchronization when accessing the TXNS list. */
-  apr_thread_mutex_t *txn_list_lock;
-
-  /* A lock for intra-process synchronization when grabbing the
-     repository write lock. */
-  apr_thread_mutex_t *fs_write_lock;
-#endif
-
-  /* The common pool, under which this object is allocated, subpools
-     of which are used to allocate the transaction objects. */
-  apr_pool_t *common_pool;
-} fs_fs_shared_data_t;
-
-/* Private (non-shared) FSFS-specific data for each svn_fs_t object. */
 typedef struct
 {
   /* A cache of the last directory opened within the filesystem. */
@@ -117,8 +58,12 @@ typedef struct
   /* The uuid of this FS. */
   const char *uuid;
 
-  /* Data shared between all svn_fs_t objects for a given filesystem. */
-  fs_fs_shared_data_t *shared;
+#if APR_HAS_THREADS
+  /* A lock for intra-process synchronization when grabbing the
+     repository write lock.  Common to all repositories with the same
+     uuid; discovered using the serialized_init function. */
+  apr_thread_mutex_t *lock;
+#endif
 } fs_fs_data_t;
 
 
@@ -134,9 +79,22 @@ const char *
 svn_fs_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
 
 
+/*** Transaction Kind ***/
+typedef enum
+{
+  transaction_kind_normal = 1,  /* normal, uncommitted */
+  transaction_kind_committed,   /* committed */
+  transaction_kind_dead         /* uncommitted and dead */
+
+} transaction_kind_t;
+
+
 /*** Filesystem Transaction ***/
 typedef struct
 {
+  /* kind of transaction. */
+  transaction_kind_t kind;
+
   /* property list (const char * name, svn_string_t * value).
      may be NULL if there are no properties.  */
   apr_hash_t *proplist;
@@ -222,9 +180,6 @@ typedef struct
   
   /* path at which this node first came into existence.  */
   const char *created_path;
-
-  /* is this the unmodified root of a transaction? */
-  svn_boolean_t is_fresh_txn_root;
 
 } node_revision_t;
 

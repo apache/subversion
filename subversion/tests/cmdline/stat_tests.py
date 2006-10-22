@@ -17,11 +17,11 @@
 ######################################################################
 
 # General modules
-import sys, os.path, re, time
+import string, sys, os.path, re, time
 
 # Our testing module
 import svntest
-from svntest import wc, SVNAnyOutput
+from svntest import wc
 
 
 # (abbreviation)
@@ -372,61 +372,6 @@ def status_for_nonexistent_file(sbox):
 
 #----------------------------------------------------------------------
 
-def status_nonrecursive_update_different_cwd(sbox):
-  "status -v -N -u from different current directories"
-
-  # check combination of status -u and -N
-  # create A/C/J in repository
-  # create A/C/K in working copy
-  # check status output with -u and -N on target C
-  # check status output with -u and -N on target . (in C)
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  was_cwd = os.getcwd()
-
-  J_url  = svntest.main.current_repo_url + '/A/C/J'
-  K_path = os.path.join(wc_dir, 'A', 'C', 'K' )
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mkdir', '-m', 'rev 2', J_url)
-
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mkdir', K_path)
-
-  os.chdir(wc_dir)
-  try:
-    expected_output = [
-      '       *                                C/J\n'
-      'A               0       ?   ?           C/K\n'
-      '                1        1 jrandom      C\n',
-      'Status against revision:      2\n' ]
-
-    os.chdir('A')
-    svntest.actions.run_and_verify_svn(None,
-                                       expected_output,
-                                       [],
-                                       'status', '-v', '-N', '-u', 'C')
-
-    expected_output = [
-      '       *                                J\n',
-      'A               0       ?   ?           K\n',
-      '                1        1 jrandom      .\n',
-      'Status against revision:      2\n']
-
-    os.chdir('C')
-    svntest.actions.run_and_verify_svn(None,
-                                       expected_output,
-                                       [],
-                                       'status', '-v', '-N', '-u', '.')
-
-  finally:
-    os.chdir(was_cwd)
-
-
-
-#----------------------------------------------------------------------
-
 def status_file_needs_update(sbox):
   "status -u indicates out-of-dateness"
 
@@ -553,7 +498,7 @@ def status_uninvited_parent_directory(sbox):
 def status_on_forward_deletion(sbox):
   "status -u on working copy deleted in HEAD"
   # See issue #1289.
-  sbox.build(create_wc = False)
+  sbox.build()
   wc_dir = sbox.wc_dir
   
   top_url = svntest.main.current_repo_url
@@ -918,12 +863,10 @@ def status_dash_u_missing_dir(sbox):
           "Status against revision:      1\n" ]
 
   # now run status -u, we should be able to do this without crashing
-  output, errput = svntest.actions.run_and_verify_svn(None,
-                                                      SVNAnyOutput,
-                                                      [],
-                                                      "status", "-u", wc_dir)
-
-  svntest.main.compare_unordered_output(xout, output)
+  svntest.actions.run_and_verify_svn(None,
+                                     xout,
+                                     [],
+                                     "status", "-u", wc_dir)
 
 def status_add_plus_conflict(sbox):
   "status on conflicted added file"
@@ -1025,7 +968,7 @@ def status_update_with_incoming_props(sbox):
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
     ''  : Item(verb='Sending'),
-    'A' : Item(verb='Sending'),
+    'A' : Item(verb='Sending')
     })
 
   # Created expected status tree.
@@ -1284,7 +1227,6 @@ test_list = [ None,
               status_ignored_dir,
               status_unversioned_dir,
               status_dash_u_missing_dir,
-              XFail(status_nonrecursive_update_different_cwd),
               status_add_plus_conflict,
               inconsistent_eol,
               status_update_with_incoming_props,

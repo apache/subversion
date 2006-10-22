@@ -28,7 +28,6 @@
 #include "Inputer.h"
 #include "Outputer.h"
 #include "MessageReceiver.h"
-#include "svn_props.h"
 #include "svn_private_config.h"
 
 /*
@@ -438,49 +437,6 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_rmtxns
     cl->rmtxns(path, transactions);
 }
 
-/* A helper function for setRevProp() and setLog(). */
-static void
-setRevProp(jobject jthis, jstring jpath, jobject jrevision,
-	   jstring jpropName, jstring jpropValue,
-	   jboolean jusePreRevPropChangeHook,
-	   jboolean jusePostRevPropChangeHook)
-{
-    SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if (cl == NULL)
-    {
-        JNIUtil::throwError(_("bad c++ this"));
-        return;
-    }
-
-    JNIStringHolder path(jpath);
-    if (JNIUtil::isExceptionThrown())
-    {
-        return;
-    }
-
-    Revision revision(jrevision);
-    if (JNIUtil::isExceptionThrown())
-    {
-        return;
-    }
-
-    JNIStringHolder propName(jpropName);
-    if (JNIUtil::isExceptionThrown())
-    {
-        return;
-    }
-
-    JNIStringHolder propValue(jpropValue);
-    if (JNIUtil::isExceptionThrown())
-    {
-        return;
-    }
-
-    cl->setRevProp(path, revision, propName, propValue,
-		   jusePreRevPropChangeHook ? true : false,
-		   jusePostRevPropChangeHook ? true : false);
-}
-
 /*
  * Class:     org_tigris_subversion_javahl_SVNAdmin
  * Method:    setLog
@@ -492,32 +448,33 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_setLog
    jstring jmessage, jboolean jbypassHooks)
 {
     JNIEntry(SVNAdmin, setLog);
-    jstring jlogPropName = env->NewStringUTF(SVN_PROP_REVISION_LOG);
-    setRevProp(jthis, jpath, jrevision, jlogPropName, jmessage,
-	       !jbypassHooks, !jbypassHooks);
-    env->DeleteLocalRef(jlogPropName);
-    if (JNIUtil::isJavaExceptionThrown())
+    SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
+    if(cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return;
+    }
+
+    JNIStringHolder path(jpath);
+    if(JNIUtil::isExceptionThrown())
     {
         return;
     }
-}
 
-/*
- * Class:     org_tigris_subversion_javahl_SVNAdmin
- * Method:    setRevProp
- * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;
- *             Ljava/lang/String;Ljava/lang/String;ZZ)V
- */
-JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_setRevProp
-  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevision, 
-   jstring jpropName, jstring jpropValue, jboolean jusePreRevPropChangeHook,
-   jboolean jusePostRevPropChangeHook)
-{
-    JNIEntry(SVNAdmin, setRevProp);
-    setRevProp(jthis, jpath, jrevision, jpropName, jpropValue,
-	       jusePreRevPropChangeHook, jusePostRevPropChangeHook);
-}
+    Revision revision(jrevision);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
 
+    JNIStringHolder message(jmessage);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+
+    cl->setLog(path, revision, message, jbypassHooks ? true : false);
+}
 /*
  * Class:     org_tigris_subversion_javahl_SVNAdmin
  * Method:    verify

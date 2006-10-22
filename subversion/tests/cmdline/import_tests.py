@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import re, os.path
+import string, re, os.path
 
 # Our testing module
 import svntest
@@ -68,7 +68,7 @@ def import_executable(sbox):
     '--password', svntest.main.wc_passwd,
     '-m', 'Log message for new import', xt_path, url)
 
-  lastline = output.pop().strip()
+  lastline = string.strip(output.pop())
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")
   match = cm.search (lastline)
   if not match:
@@ -150,7 +150,7 @@ def import_ignores(sbox):
     '-m', 'Log message for new import',
     dir_path, url)
 
-  lastline = output.pop().strip()
+  lastline = string.strip(output.pop())
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")
   match = cm.search (lastline)
   if not match:
@@ -219,7 +219,7 @@ def import_no_ignores(sbox):
     '-m', 'Log message for new import', '--no-ignore', 
     dir_path, url)
 
-  lastline = output.pop().strip()
+  lastline = string.strip(output.pop())
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")
   match = cm.search (lastline)
   if not match:

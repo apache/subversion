@@ -126,10 +126,7 @@ Step 3:  Install Specific Language Bindings
        of .c source files.  It will then compile and link those .c files into
        Python libraries.)
 
-   2.  Run 'make check-swig-py' from the top of the Subversion source
-       tree, to test the bindings 
-
-   3.  Run 'make install-swig-py' (as root, typically)
+   2.  Run 'make install-swig-py' (as root, typically)
        from the top of the Subversion source tree.  This will copy
        your new Python libraries into the appropriate system location.
 
@@ -143,7 +140,7 @@ Step 3:  Install Specific Language Bindings
        example of doing this for building rpms looks like
        'make install-swig-py DESTDIR=$RPM_BUILD_ROOT/usr'.
 
-   4.  Make sure that whatever directory the bindings got installed in
+   3.  Make sure that whatever directory the bindings got installed in
        is in your PYTHONPATH.  That directory depends on how you
        installed; a typical location is /usr/local/lib/svn-python/.
 
@@ -324,20 +321,27 @@ TESTING AND USING SWIG BINDINGS
 
 *  Python
 
-   You can exercise the Python bindings test suite by running 'make
-   check-swig-py' as described in the install section.
+   1.  Verify that an 'svn' package has been installed correctly.  You can
+       do this by running Python via 'python -c "from svn import client"'.
 
-   For examples of how to use the Python bindings, check out the
-   sample/demo programs found in tools/examples/ in the Subversion
-   source code tree.  Additionally, there are several third-party
-   tools that make use of these bindings, including ViewVC
-   (http://viewvc.tigris.org/) and Trac (http://trac.edgewall.org/).
+   2.  Try some demo programs.  From the top of your svn working copy,
+       cd tools/examples/ and try running 'svnlook.py'.
+
+   3.  Start writing your own scripts. Use the Subversion API definitions
+       and descriptions in:
+
+           subversion/include/svn_client.h
+           subversion/include/svn_delta.h
+           subversion/include/svn_fs.h
+           subversion/include/svn_ra.h
+           subversion/include/svn_repos.h
+           subversion/include/svn_wc.h
 
 *  Perl
 
    The Perl bindings are using the standard module testing facilities
-   to do regression tests. Simply run 'make check-swig-pl' as described in 
-   the install section.
+   to do regression tests. Simply run make check-swig-pl as described in the
+   install section.
 
 * Ruby
 

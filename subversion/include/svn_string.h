@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -150,7 +150,7 @@ svn_boolean_t svn_string_isempty(const svn_string_t *str);
 svn_string_t *svn_string_dup(const svn_string_t *original_string,
                              apr_pool_t *pool);
 
-/** Return @c TRUE iff @a str1 and @a str2 have identical length and data. */
+/** Return @c TRUE iff @a str1 and @c str2 have identical length and data. */
 svn_boolean_t svn_string_compare(const svn_string_t *str1, 
                                  const svn_string_t *str2);
 
@@ -159,7 +159,7 @@ svn_boolean_t svn_string_compare(const svn_string_t *str1,
  */
 apr_size_t svn_string_first_non_whitespace(const svn_string_t *str);
 
-/** Return position of last occurrence of @a ch in @a str, or return
+/** Return position of last occurrence of @a char in @a str, or return
  * @a str->len if no occurrence.
  */ 
 apr_size_t svn_string_find_char_backward(const svn_string_t *str, char ch);
@@ -221,7 +221,7 @@ void svn_stringbuf_setempty(svn_stringbuf_t *str);
 svn_boolean_t svn_stringbuf_isempty(const svn_stringbuf_t *str);
 
 /** Chop @a nbytes bytes off end of @a str, but not more than @a str->len. */
-void svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t nbytes);
+void svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t bytes);
 
 /** Fill bytestring @a str with character @a c. */
 void svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
@@ -284,7 +284,7 @@ svn_boolean_t svn_string_compare_stringbuf(const svn_string_t *str1,
  * @{
  */
 
-/** Divide @a input into substrings along @a sep_chars boundaries, return an
+/** Divide @a input into substrings along @a sep_char boundaries, return an
  * array of copies of those substrings, allocating both the array and
  * the copies in @a pool.
  *
@@ -314,6 +314,8 @@ void svn_cstring_split_append(apr_array_header_t *array,
 
 /** Return @c TRUE iff @a str matches any of the elements of @a list, a list 
  * of zero or more glob patterns.
+ *
+ * Use @a pool for temporary allocation.
  */
 svn_boolean_t svn_cstring_match_glob_list(const char *str,
                                           apr_array_header_t *list);

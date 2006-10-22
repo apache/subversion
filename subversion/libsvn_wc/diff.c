@@ -437,30 +437,6 @@ get_working_mimetype(const char **mimetype,
   return SVN_NO_ERROR;
 }
 
-/* Return the property hash resulting from combining PROPS and PROPCHANGES.
- *
- * A note on pool usage: The returned hash and hash keys are allocated in
- * the same pool as PROPS, but the hash values will be taken directly from
- * either PROPS or PROPCHANGES, as appropriate.  Caller must therefore
- * ensure that the returned hash is only used for as long as PROPS and
- * PROPCHANGES remain valid.
- */
-static apr_hash_t *
-apply_propchanges(apr_hash_t *props,
-                  apr_array_header_t *propchanges)
-{
-  apr_hash_t *newprops = apr_hash_copy(apr_hash_pool_get(props), props);
-  int i;
-
-  for (i = 0; i < propchanges->nelts; ++i)
-    {
-      const svn_prop_t *prop = &APR_ARRAY_IDX(propchanges, i, svn_prop_t);
-      apr_hash_set(newprops, prop->name, APR_HASH_KEY_STRING, prop->value);
-    }
-
-  return newprops;
-}
-
 
 /* Called by directory_elements_diff when a file is to be compared. At this
  * stage we are dealing with a file that does exist in the working copy.
@@ -577,12 +553,12 @@ file_diff(struct dir_baton *dir_baton,
       break;
 
     default:
-      SVN_ERR(svn_wc_text_modified_p2(&modified, path, FALSE,
-                                      FALSE, adm_access, pool));
+      SVN_ERR(svn_wc_text_modified_p(&modified, path, FALSE,
+                                     adm_access, pool));
       if (modified)
         {
           /* Note that this might be the _second_ time we translate
-             the file, as svn_wc_text_modified_p2() might have used a
+             the file, as svn_wc_text_modified_p() might have used a
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
@@ -1146,6 +1122,7 @@ close_directory(void *dir_baton,
           else
             {
               apr_hash_t *base_props, *repos_props;
+              int i;
 
               SVN_ERR(svn_wc_prop_list(&originalprops, b->path,
                                        b->edit_baton->anchor, pool));
@@ -1154,7 +1131,15 @@ close_directory(void *dir_baton,
               SVN_ERR(svn_wc_get_prop_diffs(NULL, &base_props,
                                             b->path, adm_access, pool));
 
-              repos_props = apply_propchanges(base_props, b->propchanges);
+              repos_props = apr_hash_copy(pool, base_props);
+
+              for (i = 0; i < b->propchanges->nelts; ++i)
+                {
+                  const svn_prop_t *prop = &APR_ARRAY_IDX(b->propchanges, i,
+                                                          svn_prop_t);
+                  apr_hash_set(repos_props, prop->name, APR_HASH_KEY_STRING,
+                               prop->value);
+                }
 
               /* Recalculate b->propchanges as the change between WORKING
                  and repos. */
@@ -1348,6 +1333,7 @@ close_file(void *file_baton,
   /* The BASE and repository properties of the file. */
   apr_hash_t *base_props;
   apr_hash_t *repos_props;
+  int i;
 
   /* The path to the wc file: either BASE or WORKING. */
   const char *localfile;
@@ -1373,7 +1359,15 @@ close_file(void *file_baton,
     SVN_ERR(svn_wc_get_prop_diffs(NULL, &base_props,
                                   b->path, adm_access, pool));
 
-  repos_props = apply_propchanges(base_props, b->propchanges);
+  repos_props = apr_hash_copy(pool, base_props);
+
+  for (i = 0; i < b->propchanges->nelts; ++i)
+    {
+      const svn_prop_t *prop = &APR_ARRAY_IDX(b->propchanges, i,
+                                              svn_prop_t);
+      apr_hash_set(repos_props, prop->name, APR_HASH_KEY_STRING,
+                   prop->value);
+    }
 
   repos_mimetype = get_prop_mimetype(repos_props);
 
@@ -1423,8 +1417,8 @@ close_file(void *file_baton,
      (BASE:WORKING) modifications. */
   modified = (b->temp_file_path != NULL);
   if (!modified && !eb->use_text_base)
-    SVN_ERR(svn_wc_text_modified_p2(&modified, b->path, FALSE,
-                                    FALSE, adm_access, pool));
+    SVN_ERR(svn_wc_text_modified_p(&modified, b->path, FALSE,
+                                   adm_access, pool));
 
   if (modified)
     {

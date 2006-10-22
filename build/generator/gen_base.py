@@ -852,18 +852,6 @@ def _swig_include_wrapper(fname):
   return native_path(_re_public_include.sub(
     r"subversion/bindings/swig/proxy/\1_h.swg", build_path(fname)))
 
-def _path_endswith(path, subpath):
-  """Check if SUBPATH is a true path suffix of PATH.
-  """
-  path_len = len(path)
-  subpath_len = len(subpath)
-
-  return (subpath_len > 0 and path_len >= subpath_len
-          and path[-subpath_len:] == subpath
-          and (path_len == subpath_len
-               or (subpath[0] == os.sep and path[-subpath_len] == os.sep)
-               or path[-subpath_len - 1] == os.sep))
-
 class IncludeDependencyInfo:
   """Finds all dependencies between a named set of headers, and computes
   closure, so that individual C and SWIG source files can then be scanned, and
@@ -1011,9 +999,7 @@ class IncludeDependencyInfo:
       domain_fnames = self._domain.get(os.path.basename(include_param), [])
       if direct_possibility_fname in domain_fnames:
         self._upd_dep_hash(hdrs, direct_possibility_fname, type_code)
-      elif (len(domain_fnames) == 1
-            and (include_param.find(os.sep) == -1
-                 or _path_endswith(domain_fnames[0], include_param))):
+      elif include_param.find(os.sep) == -1 and len(domain_fnames) == 1:
         self._upd_dep_hash(hdrs, domain_fnames[0], type_code)
       else:
         # None found

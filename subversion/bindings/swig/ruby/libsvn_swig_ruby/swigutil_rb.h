@@ -42,8 +42,6 @@ void svn_swig_rb_handle_svn_error(svn_error_t *error);
 void *svn_swig_rb_to_swig_type(VALUE value, void *ctx, apr_pool_t *pool);
 VALUE svn_swig_rb_from_swig_type(void *value, void *ctx);
 
-VALUE svn_swig_rb_svn_date_string_to_time(const char *date);
-
 VALUE svn_swig_rb_apr_hash_to_hash_string(apr_hash_t *hash);
 VALUE svn_swig_rb_apr_hash_to_hash_svn_string(apr_hash_t *hash);
 VALUE svn_swig_rb_apr_hash_to_hash_swig_type(apr_hash_t *hash,

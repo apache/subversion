@@ -2,7 +2,7 @@
  * update.c:  wrappers around wc update functionality
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -44,7 +44,6 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             const svn_opt_revision_t *revision,
                             svn_boolean_t recurse,
                             svn_boolean_t ignore_externals,
-                            svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
                             svn_client_ctx_t *ctx,
                             apr_pool_t *pool)
@@ -126,9 +125,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
   /* Fetch the update editor.  If REVISION is invalid, that's okay;
      the RA driver will call editor->set_target_revision later on. */
-  SVN_ERR(svn_wc_get_update_editor3(&revnum, adm_access, target,
+  SVN_ERR(svn_wc_get_update_editor2(&revnum, adm_access, target,
                                     use_commit_times, recurse,
-                                    allow_unver_obstructions,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     ctx->cancel_func, ctx->cancel_baton,
                                     diff3_cmd,
@@ -196,12 +194,11 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 }
 
 svn_error_t *
-svn_client_update3(apr_array_header_t **result_revs,
+svn_client_update2(apr_array_header_t **result_revs,
                    const apr_array_header_t *paths,
                    const svn_opt_revision_t *revision,
                    svn_boolean_t recurse,
                    svn_boolean_t ignore_externals,
-                   svn_boolean_t allow_unver_obstructions,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -224,8 +221,7 @@ svn_client_update3(apr_array_header_t **result_revs,
         break;
 
       err = svn_client__update_internal(&result_rev, path, revision,
-                                        recurse, ignore_externals,
-                                        allow_unver_obstructions,
+                                        recurse, ignore_externals, 
                                         &sleep, ctx, subpool);
       if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
         {
@@ -254,19 +250,6 @@ svn_client_update3(apr_array_header_t **result_revs,
 }
 
 svn_error_t *
-svn_client_update2(apr_array_header_t **result_revs,
-                   const apr_array_header_t *paths,
-                   const svn_opt_revision_t *revision,
-                   svn_boolean_t recurse,
-                   svn_boolean_t ignore_externals,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  return svn_client_update3(result_revs, paths, revision, recurse,
-                            ignore_externals, FALSE, ctx, pool);
-}
-
-svn_error_t *
 svn_client_update(svn_revnum_t *result_rev,
                   const char *path,
                   const svn_opt_revision_t *revision,
@@ -275,5 +258,5 @@ svn_client_update(svn_revnum_t *result_rev,
                   apr_pool_t *pool)
 {
   return svn_client__update_internal(result_rev, path, revision, recurse, 
-                                     FALSE, FALSE, NULL, ctx, pool);
+                                     FALSE, NULL, ctx, pool);
 }

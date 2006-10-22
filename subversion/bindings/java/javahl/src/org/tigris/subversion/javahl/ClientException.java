@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,21 +18,49 @@
 package org.tigris.subversion.javahl;
 
 /**
- * This exception is thrown whenever something goes wrong in the
- * Subversion JavaHL binding's JNI interface.
+ * Subversion client exception class.
+ * This exception is throw whenever something goes wrong in the jni-interface
  */
-public class ClientException extends NativeException
+public class ClientException extends Exception
 {
     /**
-     * This constructor is only used by the native library.
-     *
-     * @param message A description of the problem.
-     * @param source The error's source.
-     * @param aprError Any associated APR error code for a wrapped
-     * <code>svn_error_t</code>.
+     * The constructor is only used by the native library.
+     * @param message message 
+     * @param source source
+     * @param aprError APR error code
      */
     ClientException(String message, String source, int aprError)
     {
-        super(message, source, aprError);
+    	super(message);
+        this.source = source;
+		this.aprError = aprError;
+    }
+    /**
+     * the exception message
+     */
+    private String message;
+
+    /**
+     * the error source
+     */
+    private String source;
+    /**
+     * the APR error id
+     */
+    private int aprError;
+
+    /**
+     * Returns the error source.
+     */
+    public String getSource()
+    {
+        return source;
+    }
+    /**
+     * Returns the APR error id.
+     */
+    public int getAprError()
+    {
+        return aprError;
     }
 }

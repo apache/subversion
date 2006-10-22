@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, sys, re, os
+import shutil, string, sys, re, os
 import warnings
 
 # Our testing module

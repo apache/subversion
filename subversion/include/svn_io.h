@@ -610,8 +610,6 @@ svn_stream_t *svn_stream_from_stringbuf(svn_stringbuf_t *str,
  * svn_stream_compressed() returns @a stream unmodified. Make sure you
  * call svn_stream_close() on the stream returned by this function,
  * so that all data are flushed and cleaned up.
- *
- * @note From 1.4, compression support is always compiled in.
  */
 svn_stream_t *svn_stream_compressed(svn_stream_t *stream, 
                                     apr_pool_t *pool);
@@ -906,7 +904,7 @@ svn_error_t *svn_io_run_diff(const char *dir,
                              apr_pool_t *pool);
 
 
-/** Invoke the configured @c diff3 program, in utf8-encoded @a dir
+/** Invoke @c the configured diff3 program, in utf8-encoded @a dir
  * like this:
  *
  *          diff3 -E -m @a mine @a older @a yours > @a merged
@@ -916,12 +914,11 @@ svn_error_t *svn_io_run_diff(const char *dir,
  * If @a user_args is non-NULL, replace "-E" with the <tt>const char*</tt>
  * elements that @a user_args contains.
  *
- * @a mine, @a older and @a yours are utf8-encoded paths (relative to
- * @a dir or absolute) to three files that already exist.
- *
- * @a merged is an open file handle, and is left open after the merge
- * result is written to it. (@a merged should *not* be the same file
- * as @a mine, or nondeterministic things may happen!)
+ * @a mine, @a older, and @a yours are utf8-encoded paths, relative to @a dir, 
+ * to three files that already exist.  @a merged is an open file handle, and
+ * is left open after the merge result is written to it. (@a merged
+ * should *not* be the same file as @a mine, or nondeterministic things
+ * may happen!)
  *
  * @a mine_label, @a older_label, @a yours_label are utf8-encoded label
  * parameters for diff3's -L option.  Any of them may be @c NULL, in
@@ -953,7 +950,7 @@ svn_error_t *svn_io_run_diff3_2(int *exitcode,
                                 const apr_array_header_t *user_args,
                                 apr_pool_t *pool);
 
-/** Similar to svn_io_run_diff3_2(), but with @a user_args set to @c NULL.
+/** Similar to @a svn_io_run_diff3_2(), but with @a user_args set to @c NULL.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  */

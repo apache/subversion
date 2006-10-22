@@ -155,15 +155,15 @@ Name: full; Description: Full installation - Binaries and debugging symbols
 Name: custom; Description: Custom Installation; Flags: iscustom
 
 [Components]
-Name: main; Description: Subversion application files; Types: standard custom full; Flags: disablenouninstallwarning
+Name: main; Description: Subversion application files; Types: standard custom full; flags: disablenouninstallwarning
 ;or
 ;Name: main; Description: Subversion application files; Types: standard custom full; flags: fixed
 
-Name: pdb; Description: Debug Symbol Files; Types: full custom; Flags: disablenouninstallwarning
+Name: pdb; Description: Debug Symbol Files; Types: full custom; flags: disablenouninstallwarning
 
 [InstallDelete]
 
-;If the "disablenouninstallwarning" flag is present for the "main" entry in [Components], use these lines:
+;If add "disablenouninstallwarning" flag to "main" in [Components], use these lines:
 Type: files; Name: {app}\Readme.txt
 Type: files; Name: {app}\W32notes.txt
 Type: files; Name: {app}\svn-proxy-template.reg

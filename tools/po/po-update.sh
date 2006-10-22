@@ -65,11 +65,6 @@ function update_po()
   (cd $svn_base/subversion/po &&
   for i in $1.po; do
     echo "Updating $i..."
-    # In a display of truly bizarre behaviour, msgmerge (at least, the
-    # GNU gettext-tools 0.14.6 implementation) inverts the order of obsolete
-    # messages every time it is run. Therefore, run it twice, to invert and
-    # then re-invert, to minimize spurious diffs.
-    $MSGMERGE --sort-by-file --update $i subversion.pot 
     $MSGMERGE --sort-by-file --update $i subversion.pot 
   done )
 }

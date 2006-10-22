@@ -5,12 +5,12 @@ use SVN::Core;
 use SVN::Wc;
 
 package SVN::Client;
-use SVN::Base qw(Client svn_client_ checkout update switch add mkdir delete
+use SVN::Base(qw(Client svn_client_ checkout update switch add mkdir delete
                  commit status log blame diff merge cleanup relocate
                  revert resolved copy move revprop_set propset
                  proplist revvprop_list export ls cat import propget
                  uuid_from_url uuid_from_path url_from_path revprop_get
-                 revprop_list info); 
+                 revprop_list info)); 
 
 =head1 NAME
 

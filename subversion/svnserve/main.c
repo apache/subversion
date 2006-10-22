@@ -326,12 +326,8 @@ int main(int argc, const char *argv[])
   const char *pid_filename = NULL;
 
   /* Initialize the app. */
-  if (svn_cmdline_init("svnserve", stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svn", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
-
-#ifdef SVN_HAVE_SASL
-  SVN_INT_ERR(sasl_init());
-#endif
 
   /* Create our top-level pool. */
   pool = svn_pool_create(NULL);
@@ -383,11 +379,8 @@ int main(int argc, const char *argv[])
           break;
           
         case 'd':
-          if (run_mode != run_mode_daemon)
-            {
-              run_mode = run_mode_daemon;
-              mode_opt_count++;
-            }
+          run_mode = run_mode_daemon;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_FOREGROUND:
@@ -395,11 +388,8 @@ int main(int argc, const char *argv[])
           break;
 
         case 'i':
-          if (run_mode != run_mode_inetd)
-            {
-              run_mode = run_mode_inetd;
-              mode_opt_count++;
-            }
+          run_mode = run_mode_inetd;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_LISTEN_PORT:
@@ -411,11 +401,8 @@ int main(int argc, const char *argv[])
           break;
 
         case 't':
-          if (run_mode != run_mode_tunnel)
-            {
-              run_mode = run_mode_tunnel;
-              mode_opt_count++;
-            }
+          run_mode = run_mode_tunnel;
+          mode_opt_count++;
           break;
 
         case SVNSERVE_OPT_TUNNEL_USER:
@@ -423,11 +410,8 @@ int main(int argc, const char *argv[])
           break;
 
         case 'X':
-          if (run_mode != run_mode_listen_once)
-            {
-              run_mode = run_mode_listen_once;
-              mode_opt_count++;
-            }
+          run_mode = run_mode_listen_once;
+          mode_opt_count++;
           break;
 
         case 'r':
@@ -446,11 +430,8 @@ int main(int argc, const char *argv[])
 
 #ifdef WIN32
         case SVNSERVE_OPT_SERVICE:
-          if (run_mode != run_mode_service)
-            {
-              run_mode = run_mode_service;
-              mode_opt_count++;
-            }
+          run_mode = run_mode_service;
+          mode_opt_count++;
           break;
 #endif
 

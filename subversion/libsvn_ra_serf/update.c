@@ -1388,8 +1388,6 @@ start_report(svn_ra_serf__xml_parser_t *parser,
           abort();
         }
 
-      info = parser->state->private;
-
       SVN_ERR(open_dir(info->dir));
 
       ctx->update_editor->absent_directory(file_name,

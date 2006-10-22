@@ -2,7 +2,7 @@
  * delta.c:   an editor driver for expressing differences between two trees
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -517,9 +517,12 @@ delta_proplists(struct context *c,
 
           /* Transmit the UUID. */
           SVN_ERR(svn_fs_get_uuid(fs, &uuid, subpool));
-          SVN_ERR(change_fn(c, object, SVN_PROP_ENTRY_UUID,
-                            svn_string_create(uuid, subpool),
-                            subpool));
+          if (uuid || source_path)
+            {
+              SVN_ERR(change_fn(c, object, SVN_PROP_ENTRY_UUID,
+                                svn_string_create(uuid, subpool),
+                                subpool));
+            }
         }
     }
 

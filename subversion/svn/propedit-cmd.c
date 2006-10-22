@@ -55,10 +55,6 @@ svn_cl__propedit(apr_getopt_t *os,
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
   pname = ((const char **) (args->elts))[0];
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
-  if (! svn_prop_name_is_valid(pname_utf8))
-    return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
-                             _("'%s' is not a valid Subversion property name"),
-                             pname_utf8);
 
   /* Suck up all the remaining arguments into a targets array */
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
@@ -165,53 +161,45 @@ svn_cl__propedit(apr_getopt_t *os,
           svn_wc_adm_access_t *adm_access;
           const svn_wc_entry_t *entry;
           svn_opt_revision_t peg_revision;
-          svn_revnum_t base_rev = SVN_INVALID_REVNUM;
           
           svn_pool_clear(subpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
+          if (svn_path_is_url(target))
+            {
+              /* ### If/when svn_client_propset2() supports setting
+                 properties remotely, this guard can go away. */
+              return svn_error_createf
+                (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                 _("Editing property on non-local target '%s' "
+                 "not yet supported"), target);
+            }
 
           /* Propedits can only happen on HEAD or the working copy, so
              the peg revision can be as unspecified. */
           peg_revision.kind = svn_opt_revision_unspecified;
           
           /* Fetch the current property. */
-          SVN_ERR(svn_client_propget3(&props, pname_utf8, target,
+          SVN_ERR(svn_client_propget2(&props, pname_utf8, target,
                                       &peg_revision,
                                       &(opt_state->start_revision),
-                                      &base_rev,
                                       FALSE, ctx, subpool));
           
           /* Get the property value. */
           propval = apr_hash_get(props, target, APR_HASH_KEY_STRING);
           if (! propval)
             propval = svn_string_create("", subpool);
-
-          if (svn_path_is_url(target))
-            {
-              /* For URLs, put the temporary file in the current directory. */
-              base_dir = ".";
-            }
-          else
-            {
-              if (opt_state->message || opt_state->filedata)
-                {
-                  return svn_error_create
-                    (SVN_ERR_CL_UNNECESSARY_LOG_MESSAGE, NULL,
-                     _("Local, non-commit operations do not take a log message"));
-                }
-              
-              /* Split the path if it is a file path. */
-              SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
-                                             FALSE, 0, ctx->cancel_func,
-                                             ctx->cancel_baton, subpool));
-              SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, subpool));
-              if (! entry)
-                return svn_error_createf
-                  (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
-                   _("'%s' does not appear to be a working copy path"), target);
-              if (entry->kind == svn_node_file)
-                svn_path_split(target, &base_dir, NULL, subpool);
-            }
+          
+          /* Split the path if it is a file path. */
+          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target,
+                                         FALSE, 0, ctx->cancel_func,
+                                         ctx->cancel_baton, subpool));
+          SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, subpool));
+          if (! entry)
+            return svn_error_createf
+              (SVN_ERR_ENTRY_NOT_FOUND, NULL, 
+               _("'%s' does not appear to be a working copy path"), target);
+          if (entry->kind == svn_node_file)
+            svn_path_split(target, &base_dir, NULL, subpool);
           
           /* Run the editor on a temporary file which contains the
              original property value... */
@@ -222,50 +210,27 @@ svn_cl__propedit(apr_getopt_t *os,
                                           "svn-prop",
                                           ctx->config,
                                           svn_prop_needs_translation
-                                            (pname_utf8), opt_state->encoding,
+                                          (pname_utf8), opt_state->encoding,
                                           subpool));
           
-          target_local = svn_path_is_url(target) ? target
-            : svn_path_local_style(target, subpool);
+          target_local = svn_path_local_style(target, subpool);
 
           /* ...and re-set the property's value accordingly. */
           if (propval)
             {
-              svn_commit_info_t *commit_info = NULL;
-              svn_error_t *err = SVN_NO_ERROR;
-
               if (! svn_prop_needs_translation(pname_utf8)
                   && opt_state->encoding)
                 return svn_error_create 
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Bad encoding option: prop value not stored as UTF8"));
-
-              if (ctx->log_msg_func2)
-                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2),
-                                                   opt_state, NULL, ctx->config,
-                                                   subpool));
-
-              err = svn_client_propset3(&commit_info,
-                                        pname_utf8, propval, target, 
-                                        FALSE, opt_state->force,
-                                        base_rev,
-                                        ctx, subpool);
-              if (ctx->log_msg_func2)
-                SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
-              else if (err)
-                return err;
               
-              /* Print a message if we successfully committed or if it
-                 was just a wc propset (but not if the user aborted an URL
-                 propedit). */
-              if (commit_info || ! svn_path_is_url(target))
-                SVN_ERR
-                  (svn_cmdline_printf
-                   (subpool, _("Set new value for property '%s' on '%s'\n"),
-                    pname_utf8, target_local));
-
-              if (commit_info && ! opt_state->quiet)
-                SVN_ERR(svn_cl__print_commit_info(commit_info, subpool));
+              SVN_ERR(svn_client_propset2(pname_utf8, propval, target, 
+                                          FALSE, opt_state->force,
+                                          ctx, subpool));
+              SVN_ERR
+                (svn_cmdline_printf
+                 (subpool, _("Set new value for property '%s' on '%s'\n"),
+                  pname_utf8, target_local));
             }
           else
             {

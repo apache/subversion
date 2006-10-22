@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os, os.path, shutil
+import string, sys, re, os, os.path, shutil
 
 # Our testing module
 import svntest
@@ -36,7 +36,7 @@ def check_proplist(path, exp_out):
 
   out2 = []
   for line in out[1:]:
-    out2 = out2 + [line.strip()]
+    out2 = out2 + [string.strip(line)]
   out2.sort()
   exp_out.sort()
   if out2 != exp_out:

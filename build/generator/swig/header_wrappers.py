@@ -63,74 +63,23 @@ class Generator(generator.swig.Generator):
     """Write includes to a SWIG interface file"""
 
     self.ofile.write('\n/* Includes */\n')
+
+    # Include dependencies
+    self.ofile.write('#ifdef SWIGPYTHON\n');
+    apr_included = None
+    self.ofile.write('%import proxy.swg\n')
+    for include in includes:
+      if include in self.header_basenames:
+        self.ofile.write('%%include %s\n' % self.proxy_filename(include))
+      elif include[:3] == "apr" and not apr_included:
+        apr_included = 1
+        self.ofile.write('%import apr.swg\n')
+    self.ofile.write('#endif\n');
+
+    # Include the headerfile itself
     self.ofile.write('%%{\n#include "%s"\n%%}\n' % base_fname)
     if base_fname not in self._ignores:
       self.ofile.write('%%include %s\n' % base_fname)
-
-
-  def _write_callback(self, type, return_type, module, function, params,
-                      callee):
-    """Write out an individual callback"""
-
-    # Get rid of any extra spaces or newlines
-    return_type = string.join(string.split(return_type))
-    params = string.join(string.split(params))
-
-    # Calculate parameters
-    if params == "void":
-      param_names = ""
-      params = "%s _obj" % type
-    else:
-      param_names = string.join(self._re_param_names.findall(params), ", ")
-      params = "%s _obj, %s" % (type, params)
-
-    # Write out the declaration
-    self.ofile.write(
-      "static %s %s_invoke_%s(\n" % (return_type, module, function) +
-      "  %s) {\n" % params +
-      "  return %s(%s);\n" % (callee, param_names) +
-      "}\n\n")
-
-
-  def _write_callback_typemaps(self, callbacks):
-    """Apply the CALLABLE_CALLBACK typemap to all callbacks"""
-
-    self.ofile.write('\n/* Callback typemaps */\n')
-    types = [];
-    for match in callbacks:
-      if match[0] and match[1]:
-        # Callbacks declared as a typedef
-        return_type, module, function, params = match
-        type = "%s_%s_t" % (module, function)
-        types.append(type)
-
-    if types:
-      self.ofile.write(
-        "#ifdef SWIGPYTHON\n"
-        "%%apply CALLABLE_CALLBACK {\n"
-        "  %s\n"
-        "};\n"
-        "%%apply CALLABLE_CALLBACK * {\n"
-        "  %s *\n"
-        "};\n"
-        "#endif\n" % ( ",\n  ".join(types), " *,\n  ".join(types) )
-      );
-
-
-  def _write_baton_typemaps(self, batons):
-    """Apply the PY_AS_VOID typemap to all batons"""
-
-    self.ofile.write('\n/* Baton typemaps */\n')
-
-    if batons:
-      self.ofile.write(
-        "#ifdef SWIGPYTHON\n"
-        "%%apply void *PY_AS_VOID {\n"
-        "  void *%s\n"
-        "};\n"
-        "#endif\n" % ( ",\n  void *".join(batons) )
-      )
-
 
   def _write_callbacks(self, callbacks):
     """Write invoker functions for callbacks"""
@@ -140,49 +89,24 @@ class Generator(generator.swig.Generator):
     struct = None
     for match in callbacks:
 
-      if match[0] and not match[1]:
-        # Struct definitions
+      if match[0]:
         struct = match[0]
-      elif not match[0] and struct not in self._ignores:
-        # Struct member callbacks
-        return_type, name, params = match[1:]
-        type = "%s *" % struct
+      elif struct not in self._ignores:
+        name, params = match[1:]
 
-        self._write_callback(type, return_type, struct[:-2], name, params,
-                             "_obj->%s" % name)
+        if params == "void":
+          param_names = ""
+        else:
+          param_names = string.join(self._re_param_names.findall(params), ", ")
 
-      elif match[0] and match[1]:
-        # Callbacks declared as a typedef
-        return_type, module, function, params = match
-        type = "%s_%s_t" % (module, function)
-
-        self._write_callback(type, return_type, module, function, params,
-                             "_obj")
-
+        params = string.join(string.split(params))
+        self.ofile.write(
+          "static svn_error_t *%s_invoke_%s(\n" % (struct[:-2], name) +
+          "  %s *_obj, %s) {\n" % (struct, params) +
+          "  return _obj->%s(%s);\n" % (name, param_names) +
+          "}\n\n")
 
     self.ofile.write("%}\n")
-
-    self.ofile.write("\n#ifdef SWIGPYTHON\n")
-    for match in callbacks:
-
-      if match[0] and not match[1]:
-        # Struct definitions
-        struct = match[0]
-      elif not match[0] and struct not in self._ignores:
-        # Using funcptr_member_proxy, add proxy methods to anonymous
-        # struct member callbacks, so that they can be invoked directly.
-        return_type, name, params = match[1:]
-        self.ofile.write('%%funcptr_member_proxy(%s, %s, %s_invoke_%s);\n'
-          % (struct, name, struct[:-2], name))
-      elif match[0] and match[1]:
-        # Using funcptr_proxy, create wrapper objects for each typedef'd
-        # callback, so that they can be invoked directly. The
-        # CALLABLE_CALLBACK typemap (used in _write_callback_typemaps)
-        # ensures that these wrapper objects are actually used.
-        return_type, module, function, params = match
-        self.ofile.write('%%funcptr_proxy(%s_%s_t, %s_invoke_%s);\n'
-          % (module, function, module, function))
-    self.ofile.write("\n#endif\n")
 
   def _write_proxy_definitions(self, structs):
     """Write proxy definitions to a SWIG interface file"""
@@ -202,23 +126,10 @@ class Generator(generator.swig.Generator):
   _re_structs = re.compile(r'\btypedef\s+(?:struct|union)\s+'
                            r'(svn_[a-z_0-9]+)\b\s*(\{?)')
 
-  """Regular expression for parsing callbacks declared inside structs
-     from a C header file"""
-  _re_struct_callbacks = re.compile(r'\btypedef\s+(?:struct|union)\s+'
-                                    r'(svn_[a-z_0-9]+)\b|'
-                                    r'\n[ \t]+((?!typedef)[a-z_0-9\s*]+)'
-                                    r'\(\*(\w+)\)'
-                                    r'\s*\(([^)]+)\);')
-
-
-  """Regular expression for parsing callbacks declared as a typedef
-     from a C header file"""
-  _re_typed_callbacks = re.compile(r'typedef\s+([a-z_0-9\s*]+)'
-                                   r'\(\*(svn_[a-z]+)_([a-z_0-9]+)_t\)\s*'
-                                   r'\(([^)]+)\);');
-
-  """Regular expression for parsing batons"""
-  _re_batons = re.compile(r'void\s*\*\s*(\w*baton\w*)');
+  """Regular expression for parsing callbacks from a C header file"""
+  _re_callbacks = re.compile(r'\btypedef\s+(?:struct|union)\s+'
+                             r'(svn_[a-z_0-9]+)\b|'
+                             r'\n\s*svn_error_t\s*\*\(\*(\w+)\)\s*\(([^)]+)\);')
 
   """Regular expression for parsing parameter names from a parameter list"""
   _re_param_names = re.compile(r'\b(\w+)\s*\)*\s*(?:,|$)')
@@ -226,8 +137,8 @@ class Generator(generator.swig.Generator):
   """Regular expression for parsing comments"""
   _re_comments = re.compile(r'/\*.*?\*/')
 
-  def _write_swig_interface_file(self, base_fname, batons, includes, structs,
-                                 callbacks):
+  def _write_swig_interface_file(self, base_fname, includes, structs,
+      callbacks):
     """Convert a header file into a SWIG header file"""
 
     # Calculate output filename from base filename
@@ -242,12 +153,6 @@ class Generator(generator.swig.Generator):
     # Write list of structs for which we shouldn't define constructors
     # by default
     self._write_nodefault_calls(structs)
-
-    # Write typemaps for the callbacks
-    self._write_callback_typemaps(callbacks)
-
-    # Write typemaps for the batons
-    self._write_baton_typemaps(batons)
 
     # Write includes into the SWIG interface file
     self._write_includes(includes, base_fname)
@@ -276,19 +181,14 @@ class Generator(generator.swig.Generator):
     # Get list of structs
     structs = unique(self._re_structs.findall(contents))
 
-    # Get list of batons
-    batons = unique(self._re_batons.findall(contents))
-
     # Get list of callbacks
-    callbacks = (self._re_struct_callbacks.findall(contents) +
-                 self._re_typed_callbacks.findall(contents))
+    callbacks = self._re_callbacks.findall(contents)
 
     # Get the location of the output file
     base_fname = os.path.basename(fname)
 
     # Write the SWIG interface file
-    self._write_swig_interface_file(base_fname, batons, includes, structs,
-                                    callbacks)
+    self._write_swig_interface_file(base_fname, includes, structs, callbacks)
 
   def write(self):
     """Generate wrappers for all header files"""
@@ -300,8 +200,7 @@ if __name__ == "__main__":
   if len(sys.argv) < 3:
     print """Usage: %s build.conf swig [ subversion/include/header_file.h ]
 Generates SWIG proxy wrappers around Subversion header files. If no header
-files are specified, generate wrappers for subversion/include/*.h. """ % \
-    os.path.basename(sys.argv[0])
+files are specified, generate wrappers for subversion/include/*.h. """
   else:
     gen = Generator(sys.argv[1], sys.argv[2])
     if len(sys.argv) > 3:

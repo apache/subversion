@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 #  main.py: a shared, automated test suite for Subversion
 #
@@ -114,9 +115,6 @@ svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
 svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
 svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
 
-# The location of our mock svneditor script.
-svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
-
 # Username and password used by the working copies
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
@@ -130,9 +128,6 @@ verbose_mode = 0
 
 # Global variable indicating if we want test data cleaned up after success
 cleanup_mode = 0
-
-# Global variable indicating if svnserve should use Cyrus SASL
-enable_sasl = 0
 
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
@@ -164,12 +159,8 @@ temp_dir = os.path.join(work_dir, 'local_tmp')
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
 config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
-pristine_wc_dir = os.path.join(temp_dir, "wc")
 default_config_dir = config_dir
 
-# Location to the pristine repository, will be calculated from test_area_url
-# when we know what the user specified for --url.
-pristine_url = None
 
 #
 # Our pristine greek-tree state.
@@ -415,14 +406,6 @@ def file_append(path, new_text):
   fp.write(new_text)
   fp.close()
 
-# Append in binary mode
-def file_append_binary(path, new_text):
-  "Append NEW_TEXT to file at PATH in binary mode"
-
-  fp = open(path, 'ab')  # open in (a)ppend mode
-  fp.write(new_text)
-  fp.close()
-
 # For making local mods to files
 def file_write(path, new_text):
   "Replace contents of file at PATH with NEW_TEXT"
@@ -436,7 +419,7 @@ def create_repos(path):
   """Create a brand-new SVN repository at PATH.  If PATH does not yet
   exist, create it."""
 
-  if not os.path.exists(path):
+  if not(os.path.exists(path)):
     os.makedirs(path) # this creates all the intermediate dirs, if neccessary
 
   opts = ("--bdb-txn-nosync",)
@@ -454,15 +437,10 @@ def create_repos(path):
     raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
 
   # Allow unauthenticated users to write to the repos, for ra_svn testing.
-  file_write(get_svnserve_conf_file_path(path),
-             "[general]\nauth-access = write\n");
-  if enable_sasl == 1:
-    file_append(get_svnserve_conf_file_path(path),
-                "realm = svntest\n[sasl]\nuse-sasl = true\n")
-  else:
-    file_append(get_svnserve_conf_file_path(path), "password-db = passwd\n")
-    file_append(os.path.join(path, "conf", "passwd"),
-                "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
+  file_append(os.path.join(path, "conf", "svnserve.conf"),
+              "[general]\nauth-access = write\npassword-db = passwd\n");
+  file_append(os.path.join(path, "conf", "passwd"),
+               "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
   # make the repos world-writeable, for mod_dav_svn's sake.
   chmod_tree(path, 0666, 0666)
 
@@ -470,70 +448,64 @@ def create_repos(path):
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
-  # If the copy may have the same uuid, then hotcopy the repos files on disk.
-  if not ignore_uuid:
-    if not os.path.exists(general_repo_dir):
-      os.makedirs(general_repo_dir) # this also creates all the intermediate dirs
-      
-    output, errput = run_svnadmin('hotcopy', src_path, dst_path)
-  else:
-    # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that 
-    # the displayed CMDs can be run by hand
-    create_repos(dst_path)
-    dump_args = ' dump "' + src_path + '"'
-    load_args = ' load "' + dst_path + '"'
-  
-    if ignore_uuid:
-      load_args = load_args + " --ignore-uuid"
-    if verbose_mode:
-      print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-            '|', os.path.basename(svnadmin_binary) + load_args,
-    start = time.time()
-    dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
-    load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
-    stop = time.time()
-    if verbose_mode:
-      print '<TIME = %.6f>' % (stop - start)
-  
-    while 1:
-      data = dump_out.read(1024*1024)  # Arbitrary buffer size
-      if data == "":
-        break
-      load_in.write(data)
-    load_in.close() # Tell load we are done
-  
-    dump_lines = dump_err.readlines()
-    load_lines = load_out.readlines()
-    dump_in.close()
-    dump_out.close()
-    dump_err.close()
-    load_out.close()
-    load_err.close()
-  
-    dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
-    expect_revision = 0
-    for dump_line in dump_lines:
-      match = dump_re.match(dump_line)
-      if not match or match.group(1) != str(expect_revision):
-        print 'ERROR:  dump failed:', dump_line,
+  # A BDB hot-backup procedure would be more efficient, but that would
+  # require access to the BDB tools, and this doesn't.  Print a fake
+  # pipe command so that the displayed CMDs can be run by hand
+  create_repos(dst_path)
+  dump_args = ' dump "' + src_path + '"'
+  load_args = ' load "' + dst_path + '"'
+
+  if ignore_uuid:
+    load_args = load_args + " --ignore-uuid"
+  if verbose_mode:
+    print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
+          '|', os.path.basename(svnadmin_binary) + load_args,
+  start = time.time()
+  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
+  load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
+  stop = time.time()
+  if verbose_mode:
+    print '<TIME = %.6f>' % (stop - start)
+
+  while 1:
+    data = dump_out.read(1024*1024)  # Arbitrary buffer size
+    if data == "":
+      break
+    load_in.write(data)
+  load_in.close() # Tell load we are done
+
+  dump_lines = dump_err.readlines()
+  load_lines = load_out.readlines()
+  dump_in.close()
+  dump_out.close()
+  dump_err.close()
+  load_out.close()
+  load_err.close()
+
+  dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
+  expect_revision = 0
+  for dump_line in dump_lines:
+    match = dump_re.match(dump_line)
+    if not match or match.group(1) != str(expect_revision):
+      print 'ERROR:  dump failed:', dump_line,
+      raise SVNRepositoryCopyFailure
+    expect_revision += 1
+  if expect_revision != head_revision + 1:
+    print 'ERROR:  dump failed; did not see revision', head_revision
+    raise SVNRepositoryCopyFailure
+
+  load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
+  expect_revision = 1
+  for load_line in load_lines:
+    match = load_re.match(load_line)
+    if match:
+      if match.group(1) != str(expect_revision):
+        print 'ERROR:  load failed:', load_line,
         raise SVNRepositoryCopyFailure
       expect_revision += 1
-    if expect_revision != head_revision + 1:
-      print 'ERROR:  dump failed; did not see revision', head_revision
-      raise SVNRepositoryCopyFailure
-  
-    load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
-    expect_revision = 1
-    for load_line in load_lines:
-      match = load_re.match(load_line)
-      if match:
-        if match.group(1) != str(expect_revision):
-          print 'ERROR:  load failed:', load_line,
-          raise SVNRepositoryCopyFailure
-        expect_revision += 1
-    if expect_revision != head_revision + 1:
-      print 'ERROR:  load failed; did not see revision', head_revision
-      raise SVNRepositoryCopyFailure
+  if expect_revision != head_revision + 1:
+    print 'ERROR:  load failed; did not see revision', head_revision
+    raise SVNRepositoryCopyFailure
 
 
 def set_repos_paths(repo_dir):
@@ -586,23 +558,6 @@ def compare_unordered_output(expected, actual):
     except ValueError:
       raise Failure("Expected output does not match actual output")
 
-def use_editor(func):
-  os.environ['SVN_EDITOR'] = svneditor_script
-  os.environ['SVNTEST_EDITOR_FUNC'] = func
-
-######################################################################
-# Functions which check the test configuration
-# (useful for conditional XFails)
-
-def is_ra_type_dav():
-  return test_area_url.startswith('http')
-
-def is_fs_type_fsfs():
-  # This assumes that fsfs is the default fs implementation.
-  return (fs_type == 'fsfs' or fs_type is None)
-
-def is_os_windows():
-  return (os.name == 'nt')
 
 ######################################################################
 # Sandbox handling
@@ -629,7 +584,7 @@ class Sandbox:
     # contents.
     if self.repo_url.startswith("http"):
       # this dir doesn't exist out of the box, so we may have to make it
-      if not os.path.exists(work_dir):
+      if not(os.path.exists(work_dir)):
         os.makedirs(work_dir)
       self.authz_file = os.path.join(work_dir, "authz")
       fp = open(self.authz_file, "w")
@@ -744,12 +699,6 @@ class TestRunner:
       sandbox = None
       args = ()
 
-    # Explicitly set this so that commands that commit but don't supply a
-    # log message will fail rather than invoke an editor.
-    # Tests that want to use an editor should invoke svntest.main.use_editor.
-    os.environ['SVN_EDITOR'] = ''
-    os.environ['SVNTEST_EDITOR_FUNC'] = ''
-
     try:
       rc = self.pred.run(args)
       if rc is not None:
@@ -854,18 +803,19 @@ def run_tests(test_list):
   """
 
   global test_area_url
-  global pristine_url
   global fs_type
   global verbose_mode
   global cleanup_mode
-  global enable_sasl
   testnums = []
   # Should the tests be listed (as opposed to executed)?
   list_tests = 0
 
+  # Explicitly set this so that commands that commit but don't supply a
+  # log message will fail rather than invoke an editor.
+  os.environ['SVN_EDITOR'] = ''
+
   opts, args = my_getopt(sys.argv[1:], 'v',
-                         ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
-                          'enable-sasl'])
+                         ['url=', 'fs-type=', 'verbose', 'cleanup', 'list'])
 
   for arg in args:
     if arg == "list":
@@ -892,17 +842,9 @@ def run_tests(test_list):
     elif opt == "--list":
       list_tests = 1
 
-    elif opt == "--enable-sasl":
-      enable_sasl = 1
-
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
-  # Calculate pristine_url from test_area_url.
-  pristine_url = test_area_url + '/' + pristine_dir
-  if windows == 1:
-    pristine_url = string.replace(pristine_url, '\\', '/')  
-  
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
     testnums = range(1, len(test_list))

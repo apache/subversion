@@ -2,7 +2,7 @@
  * info.c:  return system-generated metadata about paths or URLs.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -51,7 +51,7 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->repos_root_URL       = repos_root;
   tmpinfo->last_changed_rev     = dirent->created_rev;
   tmpinfo->last_changed_date    = dirent->time;
-  tmpinfo->last_changed_author  = dirent->last_author;
+  tmpinfo->last_changed_author  = dirent->last_author;;
   tmpinfo->lock                 = lock;
 
   *info = tmpinfo;
@@ -89,7 +89,6 @@ build_info_from_entry(svn_info_t **info,
   tmpinfo->conflict_new         = entry->conflict_new;
   tmpinfo->conflict_wrk         = entry->conflict_wrk;
   tmpinfo->prejfile             = entry->prejfile;
-  tmpinfo->changelist           = entry->changelist;
 
   /* lock stuff */
   if (entry->lock_token)  /* the token is the critical bit. */
@@ -377,7 +376,7 @@ svn_client_info(const char *path_or_url,
       SVN_ERR(svn_ra_check_path(ra_session, "", rev, &url_kind, pool));      
       if (url_kind == svn_node_none)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' non-existent in revision %ld"),
+                                 _("URL '%s' non-existent in revision '%ld'"),
                                  url, rev);
 
       if (strcmp(url, repos_root_URL) == 0)
@@ -402,7 +401,7 @@ svn_client_info(const char *path_or_url,
       the_ent = apr_hash_get(parent_ents, base_name, APR_HASH_KEY_STRING);
       if (the_ent == NULL)
         return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                                 _("URL '%s' non-existent in revision %ld"),
+                                 _("URL '%s' non-existent in revision '%ld'"),
                                  url, rev);
     }
   else if (err)
@@ -412,7 +411,7 @@ svn_client_info(const char *path_or_url,
   
   if (! the_ent)
     return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                             _("URL '%s' non-existent in revision %ld"),
+                             _("URL '%s' non-existent in revision '%ld'"),
                              url, rev);
 
   /* Check if the URL exists in HEAD and refers to the same resource.

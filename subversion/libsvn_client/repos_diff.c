@@ -2,7 +2,7 @@
  * repos_diff.c -- The diff editor for comparing two repository versions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -27,7 +27,6 @@
  * each file have been created the diff callback is invoked to display
  * the difference between the two files.  */
 
-#include "svn_hash.h"
 #include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_path.h"
@@ -415,7 +414,7 @@ open_root(void *edit_baton,
   struct dir_baton *b = make_dir_baton("", NULL, eb, FALSE, pool);
 
   /* Override the wcpath in our baton. */
-  b->wcpath = apr_pstrdup(pool, eb->target);
+  b->wcpath = eb->target ? apr_pstrdup(pool, eb->target) : "";
 
   SVN_ERR(get_dirprops_from_ra(b));
 
@@ -438,7 +437,11 @@ delete_entry(const char *path,
   svn_wc_notify_action_t action = svn_wc_notify_skip;
 
   /* We need to know if this is a directory or a file */
-  SVN_ERR(svn_ra_check_path(eb->ra_session, path, eb->revision, &kind, pool));
+  SVN_ERR(svn_ra_check_path(pb->edit_baton->ra_session,
+                            path,
+                            pb->edit_baton->revision,
+                            &kind,
+                            pool));
   SVN_ERR(get_path_access(&adm_access, eb->adm_access, pb->wcpath,
                           TRUE, pool));
   if ((! eb->adm_access) || adm_access)
@@ -451,13 +454,13 @@ delete_entry(const char *path,
             struct file_baton *b;
             
             /* Compare a file being deleted against an empty file */
-            b = make_file_baton(path, FALSE, eb, pool);
+            b = make_file_baton(path, FALSE, pb->edit_baton, pool);
             SVN_ERR(get_file_from_ra(b));
             SVN_ERR(get_empty_file(b->edit_baton, &(b->path_end_revision)));
             
             get_file_mime_types(&mimetype1, &mimetype2, b);
             
-            SVN_ERR(eb->diff_callbacks->file_deleted 
+            SVN_ERR(pb->edit_baton->diff_callbacks->file_deleted 
                     (adm_access, &state, b->wcpath,
                      b->path_start_revision,
                      b->path_end_revision,
@@ -469,10 +472,10 @@ delete_entry(const char *path,
           }
         case svn_node_dir:
           {
-            SVN_ERR(eb->diff_callbacks->dir_deleted 
+            SVN_ERR(pb->edit_baton->diff_callbacks->dir_deleted 
                     (adm_access, &state, 
                      svn_path_join(eb->target, path, pool),
-                     eb->diff_cmd_baton));
+                     pb->edit_baton->diff_cmd_baton));
             break;
           }
         default:
@@ -497,7 +500,7 @@ delete_entry(const char *path,
         }
     }
 
-  if (eb->notify_func)
+  if (pb->edit_baton->notify_func)
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(svn_path_join(eb->target, path, pool),
@@ -505,7 +508,8 @@ delete_entry(const char *path,
       notify->kind = kind;
       notify->content_state = notify->prop_state = state;
       notify->lock_state = svn_wc_notify_lock_state_inapplicable;
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
+      (*pb->edit_baton->notify_func)(pb->edit_baton->notify_baton, notify,
+                                     pool);
     }
   return SVN_NO_ERROR;
 }
@@ -528,16 +532,17 @@ add_directory(const char *path,
 
   /* ### TODO: support copyfrom? */
 
-  b = make_dir_baton(path, pb, eb, TRUE, pool);
-  b->pristine_props = eb->empty_hash;
+  b = make_dir_baton(path, pb, pb->edit_baton, TRUE, pool);
+  b->pristine_props = pb->edit_baton->empty_hash;
   *child_baton = b;
 
-  SVN_ERR(get_path_access(&adm_access, eb->adm_access, pb->wcpath, TRUE,
-                          pool));
+  SVN_ERR(get_path_access(&adm_access,
+                          pb->edit_baton->adm_access, pb->wcpath,
+                          TRUE, pool));
 
-  SVN_ERR(eb->diff_callbacks->dir_added 
+  SVN_ERR(pb->edit_baton->diff_callbacks->dir_added 
           (adm_access, &state, b->wcpath, eb->target_revision,
-           eb->diff_cmd_baton));
+           pb->edit_baton->diff_cmd_baton));
 
   if ((state == svn_wc_notify_state_missing)
       || (state == svn_wc_notify_state_obstructed))
@@ -545,11 +550,12 @@ add_directory(const char *path,
   else
     action = svn_wc_notify_update_add;
 
-  if (eb->notify_func)
+  if (pb->edit_baton->notify_func)
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(b->wcpath, action, pool);
       notify->kind = svn_node_dir;
-      (*eb->notify_func)(eb->notify_baton, notify, pool);
+      (*pb->edit_baton->notify_func)(pb->edit_baton->notify_baton, notify,
+                                     pool);
     }
 
   return SVN_NO_ERROR;
@@ -794,7 +800,19 @@ close_directory(void *dir_baton,
   svn_error_t *err;
 
   if (eb->dry_run)
-    svn_hash__clear(svn_client__dry_run_deletions(eb->diff_cmd_baton));
+    {
+      apr_hash_index_t *hi;
+      apr_hash_t *wc_paths =
+        svn_client__dry_run_deletions(eb->diff_cmd_baton);
+
+      /* FUTURE: Someday, we'll have apr_hash_clear() instead. */
+      for (hi = apr_hash_first(NULL, wc_paths); hi; hi = apr_hash_next(hi))
+        {
+          const void *path;
+          apr_hash_this(hi, &path, NULL, NULL);
+          apr_hash_set(wc_paths, path, APR_HASH_KEY_STRING, NULL);
+        }
+    }
 
   if (b->propchanges->nelts > 0)
     {

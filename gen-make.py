@@ -7,11 +7,8 @@
 import os
 import sys
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 import ConfigParser
+
 
 # for the generator modules
 sys.path.insert(0, os.path.join('build', 'generator'))
@@ -140,9 +137,6 @@ def _usage_exit():
   print "  --with-swig=DIR"
   print "           look for the swig program in DIR"
   print
-  print "  --with-sasl=DIR"
-  print "           look for the sasl headers and libs in DIR"
-  print
   print "  --enable-pool-debug"
   print "           turn on APR pool debugging"
   print
@@ -179,31 +173,30 @@ class Options:
 
 if __name__ == '__main__':
   try:
-    opts, args = my_getopt(sys.argv[1:], 'st:',
-                           ['debug',
-                            'release',
-                            'reload',
-                            'assume-shared-libs',
-                            'with-apr=',
-                            'with-apr-util=',
-                            'with-apr-iconv=',
-                            'with-berkeley-db=',
-                            'with-neon=',
-                            'with-serf=',
-                            'with-httpd=',
-                            'with-libintl=',
-                            'with-openssl=',
-                            'with-zlib=',
-                            'with-junit=',
-                            'with-swig=',
-                            'with-sasl=',
-                            'enable-pool-debug',
-                            'enable-purify',
-                            'enable-quantify',
-                            'enable-nls',
-                            'enable-bdb-in-apr-util',
-                            'vsnet-version=',
-                            ])
+    opts, args = getopt.getopt(sys.argv[1:], 'st:',
+                               ['debug',
+                                'release',
+                                'reload',
+                                'assume-shared-libs',
+                                'with-apr=',
+                                'with-apr-util=',
+                                'with-apr-iconv=',
+                                'with-berkeley-db=',
+                                'with-neon=',
+                                'with-serf=',
+                                'with-httpd=',
+                                'with-libintl=',
+                                'with-openssl=',
+                                'with-zlib=',
+                                'with-junit=',
+                                'with-swig=',
+                                'enable-pool-debug',
+                                'enable-purify',
+                                'enable-quantify',
+                                'enable-nls',
+                                'enable-bdb-in-apr-util',
+                                'vsnet-version=',
+                                ])
     if len(args) > 1:
       _usage_exit()
   except getopt.GetoptError:

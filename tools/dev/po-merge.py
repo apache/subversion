@@ -63,7 +63,7 @@ def main(argv):
         sys.exit('Usage: %s <lang.po>\n'
                  '\n'
                  'This script will replace the translations and flags in lang.po with\n'
-                 'the translations and flags in the source po file read from standard\n'
+                 'with the translations and flags in the source po file read from standard\n'
                  'input.  Strings that are not found in the source file are left untouched.\n'
                  'A backup copy of lang.po is saved as lang.po.bak.\n'
                  '\n'

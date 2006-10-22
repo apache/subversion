@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, sys, re, os
+import shutil, string, sys, re, os
 
 # Our testing module
 import svntest
@@ -1066,231 +1066,12 @@ def switch_change_repos_root(sbox):
   # Make sure we didn't break the WC.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
+                                        
 
-# Issue 2578.
-def relocate_and_propset(sbox):
-  "out of date propset should fail after a relocate"
-
-  # Create virgin repos and working copy
-  svntest.main.safe_rmtree(sbox.repo_dir, 1)
-  svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
-
-  wc_dir = sbox.wc_dir
-  repo_dir = sbox.repo_dir
-  repo_url = sbox.repo_url
-
-  # import the greek tree
-  svntest.main.greek_state.write_to_disk(svntest.main.greek_dump_dir)
-  output, errput = svntest.main.run_svn(None, 'import',
-                                '--username', svntest.main.wc_author,
-                                '--password', svntest.main.wc_passwd,
-                                '-m', 'Log message for revision 1.',
-                                svntest.main.greek_dump_dir, sbox.repo_url)
-
-  # checkout
-  svntest.main.safe_rmtree(wc_dir, 1)
-  svntest.actions.run_and_verify_svn (None,
-                                      None, [],
-                                      'checkout',
-                                      '--username', svntest.main.wc_author,
-                                      '--password', svntest.main.wc_passwd,
-                                      repo_url, wc_dir)
-
-  # Relocate
-  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  svntest.main.copy_repos(repo_dir, other_repo_dir, 2)
-  svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
-                                     repo_url, other_repo_url, wc_dir)
-
-  # Remove gamma from the working copy.
-  D_path = os.path.join(wc_dir, 'A', 'D')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma') 
-  svntest.main.run_svn(None, 'rm', gamma_path)
-
-  # Create expected commit output.
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/gamma' : Item(verb='Deleting'),
-    })
-
-  # After committing, status should show no sign of gamma.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
-  expected_status.remove('A/D/gamma')
-
-  # Commit the deletion of gamma and verify.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
-
-  # Now gamma should be marked as `deleted' under the hood, at
-  # revision 2.  Meanwhile, A/D is still lagging at revision 1.
-
-  # Make a propchange on A/D
-  svntest.main.run_svn(None, 'ps', 'foo', 'bar', D_path)
-
-  # Commit and *expect* a repository Merge failure:
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         None,
-                                         None,
-                                         "[Oo]ut.of.date",
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
-
-#----------------------------------------------------------------------
-
-def forced_switch(sbox):
-  "forced switch tolerates obstructions to adds"
-  sbox.build()
-
-  # Dir obstruction
-  G_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'G')
-  os.mkdir(G_path)
-
-  # Faux file obstructions
-  shutil.copyfile(os.path.join(sbox.wc_dir, 'A', 'D', 'gamma'),
-                  os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'gamma'))
-  shutil.copyfile(os.path.join(sbox.wc_dir, 'A', 'D', 'G', 'tau'),
-                  os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'G', 'tau'))
-
-  # Real file obstruction
-  pi_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'G', 'pi')  
-  svntest.main.file_write(pi_path,
-                          "This is the OBSTRUCTING file 'pi'.\n")
-
-  # Non-obstructing dir and file
-  I_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'I')
-  os.mkdir(I_path)
-  upsilon_path = os.path.join(G_path, 'upsilon')
-  svntest.main.file_write(upsilon_path,
-                          "This is the unversioned file 'upsilon'.\n")
-
-  # Setup expected results of switch.
-  expected_output = svntest.wc.State(sbox.wc_dir, {
-    "A/B/F/gamma"   : Item(status='E '),
-    "A/B/F/G"       : Item(status='E '),
-    "A/B/F/G/pi"    : Item(status='E '),
-    "A/B/F/G/rho"   : Item(status='A '),
-    "A/B/F/G/tau"   : Item(status='E '),
-    "A/B/F/H"       : Item(status='A '),
-    "A/B/F/H/chi"   : Item(status='A '),
-    "A/B/F/H/omega" : Item(status='A '),
-    "A/B/F/H/psi"   : Item(status='A '),
-    })
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.add({
-    "A/B/F/gamma"     : Item("This is the file 'gamma'.\n"),
-    "A/B/F/G"         : Item(),
-    "A/B/F/G/pi"      : Item("This is the OBSTRUCTING file 'pi'.\n"),
-    "A/B/F/G/rho"     : Item("This is the file 'rho'.\n"),
-    "A/B/F/G/tau"     : Item("This is the file 'tau'.\n"),
-    "A/B/F/G/upsilon" : Item("This is the unversioned file 'upsilon'.\n"),
-    "A/B/F/H"         : Item(),
-    "A/B/F/H/chi"     : Item("This is the file 'chi'.\n"),
-    "A/B/F/H/omega"   : Item("This is the file 'omega'.\n"),
-    "A/B/F/H/psi"     : Item("This is the file 'psi'.\n"),
-    "A/B/F/I"         : Item(),
-    })
-  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  expected_status.tweak('A/B/F', switched='S')
-  expected_status.add({
-    "A/B/F/gamma"     : Item(status='  ', wc_rev=1),
-    "A/B/F/G"         : Item(status='  ', wc_rev=1),
-    "A/B/F/G/pi"      : Item(status='M ', wc_rev=1),
-    "A/B/F/G/rho"     : Item(status='  ', wc_rev=1),
-    "A/B/F/G/tau"     : Item(status='  ', wc_rev=1),
-    "A/B/F/H"         : Item(status='  ', wc_rev=1),
-    "A/B/F/H/chi"     : Item(status='  ', wc_rev=1),
-    "A/B/F/H/omega"   : Item(status='  ', wc_rev=1),
-    "A/B/F/H/psi"     : Item(status='  ', wc_rev=1),
-    })
-
-  # Do the switch and check the results in three ways.
-  F_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F')
-  AD_url = svntest.main.current_repo_url + '/A/D'
-  svntest.actions.run_and_verify_switch(sbox.wc_dir, F_path, AD_url,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status, None,
-                                        None, None, None, None, 0,
-                                        '--force')
-
-#----------------------------------------------------------------------
-
-def forced_switch_failures(sbox):
-  "forced switch fails with some types of obstuctions"
-  sbox.build()
-
-  # Add a directory to obstruct a file.
-  pi_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'pi')
-  os.mkdir(pi_path)
-
-  # Add a file to obstruct a directory.
-  H_path = os.path.join(sbox.wc_dir, 'A', 'C', 'H')
-  svntest.main.file_write(H_path, "The file 'H'\n")
-
-  # Test three cases where forced switch should fail:
-
-  # 1) A forced switch that tries to add a file when an unversioned
-  #    directory of the same name already exists should fail.
-  svntest.actions.run_and_verify_switch(sbox.wc_dir,
-                                        os.path.join(sbox.wc_dir, 'A', 'C'),
-                                        sbox.repo_url + "/A/D",
-                                        None, None, None,
-                                        ".*Failed to add directory .*" + \
-                                        ": a non-directory object of the" + \
-                                        " same name already exists\n",
-                                        None, None, None, None, 0, '--force')
-
-  # 2) A forced switch that tries to add a dir when a file of the same
-  #    name already exists should fail.
-  svntest.actions.run_and_verify_switch(sbox.wc_dir,
-                                        os.path.join(sbox.wc_dir,
-                                                     'A', 'B', 'F'),
-                                        sbox.repo_url + "/A/D/G",
-                                        None, None, None,
-                                        ".*Failed to add file .*" + \
-                                        ": a non-file object of the " + \
-                                        "same name already exists\n",
-                                        None, None, None, None, 0, '--force')
-
-  # 3) A forced update that tries to add a directory when a versioned
-  #    directory of the same name already exists should fail.
-
-  # Make dir A/D/H/I in repos.
-  I_url = sbox.repo_url + "/A/D/H/I"
-  so, se = svntest.actions.run_and_verify_svn("Unexpected error during mkdir",
-                                              ['\n', 'Committed revision 2.\n'],
-                                              [], "mkdir", I_url,
-                                              "-m", "Log Message")
-
-  # Make A/D/G/I and co A/D/H/I into it.
-  I_path = os.path.join(sbox.wc_dir, 'A', 'D', 'G', 'I')
-  os.mkdir(I_path)
-  so, se = svntest.actions.run_and_verify_svn("Unexpected error during co",
-                                              ['Checked out revision 2.\n'],
-                                              [], "co", I_url, I_path)
-
-  # Try the forced switch.  A/D/G/I obstructs the dir A/D/G/I coming
-  # from the repos.  Normally this isn't a problem, but A/D/G/I is already
-  # versioned so this should fail.
-  svntest.actions.run_and_verify_switch(sbox.wc_dir,
-                                        os.path.join(sbox.wc_dir,
-                                                     'A', 'D', 'G'),
-                                        sbox.repo_url + "/A/D/H",
-                                        None, None, None,
-                                        ".*Failed to forcibly add " + \
-                                        "directory .*: a versioned " + \
-                                        "directory of the same name " + \
-                                        "already exists\n",
-                                        None, None, None, None, 0, '--force')
 
 ########################################################################
 # Run the tests
+
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -1312,9 +1093,6 @@ test_list = [ None,
               relocate_beyond_repos_root,
               refresh_read_only_attribute,
               switch_change_repos_root,
-              XFail(relocate_and_propset, svntest.main.is_ra_type_dav),
-              forced_switch,
-              forced_switch_failures,
              ]
 
 if __name__ == '__main__':

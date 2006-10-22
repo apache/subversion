@@ -2,7 +2,7 @@
  * prompt.c -- ask the user for authentication information.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -305,13 +305,13 @@ svn_cmdline_auth_ssl_server_trust_prompt
     }
   SVN_ERR(prompt(&choice, buf->data, FALSE, pb, pool));
 
-  if (choice[0] == 't' || choice[0] == 'T')
+  if (choice && (choice[0] == 't' || choice[0] == 'T'))
     {
       *cred_p = apr_pcalloc(pool, sizeof(**cred_p));
       (*cred_p)->may_save = FALSE;
       (*cred_p)->accepted_failures = failures;
     }
-  else if (may_save && (choice[0] == 'p' || choice[0] == 'P'))
+  else if (may_save && choice && (choice[0] == 'p' || choice[0] == 'P'))
     {
       *cred_p = apr_pcalloc(pool, sizeof(**cred_p));
       (*cred_p)->may_save = TRUE;

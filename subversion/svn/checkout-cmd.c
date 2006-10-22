@@ -156,12 +156,11 @@ svn_cl__checkout(apr_getopt_t *os,
           revision.kind = svn_opt_revision_head;
       }
 
-      SVN_ERR(svn_client_checkout3(NULL, true_url, target_dir,
+      SVN_ERR(svn_client_checkout2(NULL, true_url, target_dir,
                                    &peg_revision,
                                    &revision,
                                    opt_state->nonrecursive ? FALSE : TRUE,
                                    opt_state->ignore_externals,
-                                   opt_state->force,
                                    ctx, subpool));
     }
   svn_pool_destroy(subpool);

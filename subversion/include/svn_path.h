@@ -161,7 +161,6 @@ void svn_path_remove_components(svn_stringbuf_t *path, apr_size_t n);
  *             - <pre>"/foo/bar/baz"  ==>  "/foo/bar" and "baz"</pre>
  *             - <pre>"/bar"          ==>  "/"  and "bar"</pre>
  *             - <pre>"/"             ==>  "/"  and "/"</pre>
- *             - <pre>"X:/"           ==>  "X:/" and "X:/"</pre>
  *             - <pre>"bar"           ==>  ""   and "bar"</pre>
  *             - <pre>""              ==>  ""   and ""</pre>
  */
@@ -177,20 +176,6 @@ void svn_path_split(const char *path,
  */
 int svn_path_is_empty(const char *path);
 
-/** Return TRUE if @a path is considered a root path on the platform at 
- * hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/', 
- * '\\\\.\\..', '\\\\server\\share' on Windows.
- */
-svn_boolean_t svn_path_is_root(const char *path, apr_size_t len, 
-                               apr_pool_t *pool);
-
-
-/** Return TRUE if @a path is considered absolute on the platform at 
- * hand, amongst which '/foo' on all platforms or 'X:/foo', '\\\\?\\X:/foo',
- * '\\\\server\\share\\foo' on Windows.
- */
-svn_boolean_t svn_path_is_absolute(const char *path, apr_size_t len, 
-                                   apr_pool_t *pool);
 
 /** Return a new path (or URL) like @a path, but transformed such that
  * some types of path specification redundancies are removed.
@@ -250,7 +235,7 @@ svn_path_split_if_file(const char *path,
                        apr_pool_t *pool);
 
 /** Find the common prefix of the canonicalized paths in @a targets
- * (an array of <tt>const char *</tt>'s), and remove redundant paths if @a
+ * (an array of @a const char *'s), and remove redundant paths if @a
  * remove_redundancies is true.
  *
  *   - Set @a *pcommon to the absolute path of the path or URL common to

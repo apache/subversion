@@ -146,29 +146,8 @@ or, to run individual tests,
 
 $ ./basic_tests.py --url=svn://localhost 3
 
-To enable Cyrus SASL on the server side you should either set the
-ENABLE_SASL variable when calling make:
 
-$ make check BASE_URL=svn://localhost ENABLE_SASL=true
 
-or if you're running an individual test,
-
-$ ./basic_tests.py --url=svn://localhost --enable-sasl 3
-
-Note that to do this you'll have to have a subversion.conf file in your
-SASL lib dir (i.e. something like /usr/lib/sasl2/subversion.conf), it
-should contain something like:
-
-pwcheck_method: auxprop
-mech_list: CRAM-MD5
-
-And then you'll have to add the users jrandom and jconstant to your
-SASL password db,
-
-$ saslpasswd2 -c -u svntest jrandom
-$ saslpasswd2 -c -u svntest jconstant
-
-As usual, both users should use the password 'rayjandom'.
 
 Directory Contents
 ==================

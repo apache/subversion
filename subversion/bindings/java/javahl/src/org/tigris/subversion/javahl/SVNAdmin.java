@@ -36,34 +36,28 @@ public class SVNAdmin
     {
         cppAddr = ctNative();
     }
-
     /**
      * Build the native peer
      * @return the adress of the peer
      */
     private native long ctNative();
-
-    /**
+     /**
      * release the native peer (should not depend on finalize)
      */
     public native void dispose();
-
     /**
      * release the native peer (should use dispose instead)
      */
     protected native void finalize();
-
     /**
      * slot for the adress of the native peer. The JNI code is the only user
      * of this member
      */
     protected long cppAddr;
-
     /**
      * Filesystem in a Berkeley DB
      */
     public static final String BDB = "bdb";
-
     /**
      * Filesystem in the filesystem
      */
@@ -90,7 +84,6 @@ public class SVNAdmin
     public native void create(String path, boolean disableFsyncCommit, 
                               boolean keepLog, String configPath,
                               String fstype) throws ClientException;
-
     /**
      * deltify the revisions in the repository
      * @param path              the path to the repository
@@ -100,7 +93,6 @@ public class SVNAdmin
      */
     public native void deltify(String path, Revision start, Revision end)
             throws ClientException;
-
     /**
      * dump the data in a repository
      * @param path              the path to the repository
@@ -115,7 +107,6 @@ public class SVNAdmin
                             OutputInterface errorOut, Revision start,
                             Revision end, boolean incremental)
             throws ClientException;
-
     /**
      * make a hot copy of the repository
      * @param path              the path to the source repository
@@ -135,7 +126,6 @@ public class SVNAdmin
      */
     public native void listDBLogs(String path, MessageReceiver receiver)
             throws ClientException;
-
     /**
      * list unused logfiles
      * @param path              the path to the repository
@@ -156,7 +146,6 @@ public class SVNAdmin
          */
         public void receiveMessageLine(String message);
     }
-
     /**
      * load the data of a dump into a repository,
      * @param path              the path to the repository
@@ -182,14 +171,12 @@ public class SVNAdmin
      */
     public native void lstxns(String path, MessageReceiver receiver)
             throws ClientException;
-
     /**
      * recover the berkeley db of a repository, returns youngest revision
      * @param path              the path to the repository
      * @throws ClientException  throw in case of problem
      */
     public native long recover(String path) throws ClientException;
-
     /**
      * remove open transaction in a repository
      * @param path              the path to the repository
@@ -198,7 +185,6 @@ public class SVNAdmin
      */
     public native void rmtxns(String path, String [] transactions)
             throws ClientException;
-
     /**
      * set the log message of a revision
      * @param path              the path to the repository
@@ -206,34 +192,10 @@ public class SVNAdmin
      * @param message           the message to be set
      * @param bypassHooks       if to bypass all repository hooks
      * @throws ClientException  throw in case of problem
-     * @deprecated Use setRevProp() instead.
      */
     public native void setLog(String path, Revision rev, String message,
                               boolean bypassHooks)
             throws ClientException;
-
-    /**
-     * Change the value of the revision property <code>propName</code>
-     * to <code>propValue</code>.  By default, does not run
-     * pre-/post-revprop-change hook scripts.
-     *
-     * @param path The path to the repository.
-     * @param rev The revision for which to change a property value.
-     * @param propName The name of the property to change.
-     * @param propValue The new value to set for the property.
-     * @param usePreRevPropChangeHook Whether to run the
-     * <i>pre-revprop-change</i> hook script.
-     * @param usePostRevPropChangeHook Whether to run the
-     * <i>post-revprop-change</i> hook script.
-     * @exception SubversionException If a problem occurs.
-     * @since 1.5.0
-     */
-    public native void setRevProp(String path, Revision rev,
-                                  String propName, String propValue,
-                                  boolean usePreRevPropChangeHook,
-                                  boolean usePostRevPropChangeHook)
-            throws SubversionException;
-
     /**
      * verify the repository
      * @param path              the path to the repository
@@ -253,7 +215,6 @@ public class SVNAdmin
      * @since 1.2
      */ 
     public native Lock[] lslocks(String path) throws ClientException;
-
     /**
      * remove multiple locks from the repository
      * @param path              the path to the repository

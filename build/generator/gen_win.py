@@ -40,10 +40,9 @@ class WinGeneratorBase(GeneratorBase):
     self.apr_util_path = 'apr-util'
     self.apr_iconv_path = 'apr-iconv'
     self.serf_path = None
-    self.serf_lib = None
     self.bdb_path = 'db4-win32'
     self.neon_path = 'neon'
-    self.neon_ver = 25005
+    self.neon_ver = 24007
     self.httpd_path = None
     self.libintl_path = None
     self.zlib_path = 'zlib'
@@ -60,7 +59,6 @@ class WinGeneratorBase(GeneratorBase):
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
     self.have_gen_uri = None
-    self.sasl_path = None
 
     # NLS options
     self.enable_nls = None
@@ -92,8 +90,6 @@ class WinGeneratorBase(GeneratorBase):
         self.zlib_path = val
       elif opt == '--with-swig':
         self.swig_path = val
-      elif opt == '--with-sasl':
-        self.sasl_path = val
       elif opt == '--with-openssl':
         self.openssl_path = val
       elif opt == '--enable-purify':
@@ -151,11 +147,7 @@ class WinGeneratorBase(GeneratorBase):
     # Find neon version
     if self.neon_path:
       self._find_neon()
-
-    # Find serf and its dependencies
-    if self.serf_path:
-      self._find_serf()
-
+      
     # Check for gen_uri_delims project in apr-util
     gen_uri_path = os.path.join(self.apr_util_path, 'uri',
                                 'gen_uri_delims.dsp')
@@ -246,7 +238,11 @@ class WinGeneratorBase(GeneratorBase):
     # Don't create projects for scripts
     install_targets = filter(lambda x: not isinstance(x, gen_base.TargetScript),
                              install_targets)
-    
+
+    # Drop the serf target if we don't have it
+    if not self.serf_path:
+      install_targets = filter(lambda x: x.name != 'serf', install_targets)
+
     # Drop the gen_uri_delims target unless we're on an old apr-util
     if not self.have_gen_uri:
       install_targets = filter(lambda x: x.name != 'gen_uri_delims',
@@ -258,16 +254,6 @@ class WinGeneratorBase(GeneratorBase):
                                install_targets)
       install_targets = filter(lambda x: not (isinstance(x, gen_base.TargetExe)
                                               and x.install == 'bdb-test'),
-                               install_targets)
-      
-    # Drop the serf target if we don't have both serf and openssl 
-    if not self.serf_lib:
-      install_targets = filter(lambda x: x.name != 'serf', install_targets)
-      install_targets = filter(lambda x: x.name != 'libsvn_ra_serf',
-                               install_targets)
-    else:
-      install_targets = filter(lambda x: x.name != 'neon', install_targets)
-      install_targets = filter(lambda x: x.name != 'libsvn_ra_dav',
                                install_targets)
 
     for target in install_targets:
@@ -485,7 +471,7 @@ class WinGeneratorBase(GeneratorBase):
       path = self.apr_path + target.external_project[3:]
     elif target.external_project[:5] == 'neon/':
       path = self.neon_path + target.external_project[4:]
-    elif target.external_project[:5] == 'serf/' and self.serf_lib:
+    elif target.external_project[:5] == 'serf/' and self.serf_path:
       path = self.serf_path + target.external_project[4:]
     else:
       path = target.external_project
@@ -629,18 +615,12 @@ class WinGeneratorBase(GeneratorBase):
     if self.enable_nls:
       fakedefines.append("ENABLE_NLS")
       
+    # check if we have a newer neon (0.25.x)
+    if self.neon_ver >= 25000:
+      fakedefines.append("SVN_NEON_0_25=1")
     # check for neon 0.26.x or newer
     if self.neon_ver >= 26000:
       fakedefines.append("SVN_NEON_0_26=1")
-
-    if self.serf_lib:
-      fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_SERF")
-    else:
-      fakedefines.append("SVN_LIBSVN_CLIENT_LINKS_RA_DAV")
-
-    # check we have sasl
-    if self.sasl_path:
-      fakedefines.append("SVN_HAVE_SASL")
 
     return fakedefines
 
@@ -673,8 +653,8 @@ class WinGeneratorBase(GeneratorBase):
     if self.libintl_path:
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
     
-    if self.serf_lib:
-      fakeincludes.append(self.apath(self.serf_path, ""))
+    if self.serf_path:
+       fakeincludes.append(self.apath(self.serf_path, ""))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
@@ -682,9 +662,6 @@ class WinGeneratorBase(GeneratorBase):
       fakeincludes.append(self.swig_libdir)
 
     fakeincludes.append(self.apath(self.zlib_path))
-
-    if self.sasl_path:
-      fakeincludes.append(self.apath(self.sasl_path, 'include'))
     
     return fakeincludes
 
@@ -697,10 +674,6 @@ class WinGeneratorBase(GeneratorBase):
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
                     self.apath(self.zlib_path) ]
-    if self.sasl_path:
-      fakelibdirs.append(self.apath(self.sasl_path, "lib"))
-    if self.serf_lib:
-      fakelibdirs.append(self.apath(msvc_path_join(self.serf_path, cfg)))
     if isinstance(target, gen_base.TargetApacheMod):
       fakelibdirs.append(self.apath(self.httpd_path, cfg))
       if target.name == 'mod_dav_svn':
@@ -715,17 +688,8 @@ class WinGeneratorBase(GeneratorBase):
     dblib = None
     if self.bdb_lib:
       dblib = self.bdb_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
-
-    if self.neon_lib:
-      neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
-
-    if self.serf_lib:
-      serflib = 'serf.lib'
-
+    neonlib = self.neon_lib+(cfg == 'Debug' and 'd.lib' or '.lib')
     zlib = (cfg == 'Debug' and 'zlibstatD.lib' or 'zlibstat.lib')
-    sasllib = None
-    if self.sasl_path:
-      sasllib = 'libsasl.lib'
 
     if not isinstance(target, gen_base.TargetLinked):
       return []
@@ -756,14 +720,8 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
 
-      if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
+      if dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)
-        
-      if self.serf_lib and dep.external_lib == '$(SVN_SERF_LIBS)':
-        nondeplibs.append(serflib)
-
-      if dep.external_lib == '$(SVN_SASL_LIBS)':
-        nondeplibs.append(sasllib)
         
     return gen_base.unique(nondeplibs)
 
@@ -832,9 +790,6 @@ class WinGeneratorBase(GeneratorBase):
                         ))
 
   def write_neon_project_file(self, name):
-    if self.serf_lib:
-      return
-
     neon_path = os.path.abspath(self.neon_path)
     self.move_proj_file(self.neon_path, name,
                         (('neon_sources',
@@ -852,7 +807,7 @@ class WinGeneratorBase(GeneratorBase):
                         ))
 
   def write_serf_project_file(self, name):
-    if not self.serf_lib:
+    if not self.serf_path:
       return
 
     serf_path = os.path.abspath(self.serf_path)
@@ -1011,26 +966,10 @@ class WinGeneratorBase(GeneratorBase):
         # build/ac-macros/swig.m4 explains the next incantation
         self.neon_ver = int('%d%02d%03d' % version)
         msg = 'Found neon version %d.%d.%d\n' % version
-        if self.neon_ver < 25005:
-          msg = 'WARNING: Neon version 0.25.5 or higher is required'
     except:
       msg = 'WARNING: Error while determining neon version\n'
-      self.neon_lib = None
-
     sys.stderr.write(msg)
-
-  def _find_serf(self):
-    "Check if serf and its dependencies are available"
-
-    self.serf_lib = None
-    if self.serf_path and os.path.exists(self.serf_path):
-      if self.openssl_path and os.path.exists(self.openssl_path):
-        self.serf_lib = 'serf'
-      else:
-        sys.stderr.write('openssl not found, ra_serf will not be built\n')
-    else:
-      sys.stderr.write('serf not found, ra_serf will not be built\n')
-
+    
   def _configure_apr_util(self):
     if not self.configure_apr_util:
       return

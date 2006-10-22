@@ -3,12 +3,6 @@ require "fileutils"
 require "svn/client"
 require "svn/repos"
 
-class Time
-  unless instance_methods.include?("to_int")
-    alias to_int to_i
-  end
-end
-
 module SvnTestUtil
 
   def setup_basic
@@ -32,11 +26,9 @@ module SvnTestUtil
     setup_config
     setup_wc
     add_authentication
-    GC.stress = true if GC.respond_to?(:stress=) and $DEBUG
   end
 
   def teardown_basic
-    GC.stress = false if GC.respond_to?(:stress=)
     teardown_svnserve
     teardown_repository
     teardown_wc
@@ -51,9 +43,7 @@ module SvnTestUtil
       puts
       puts "before pools: #{before_pools}"
     end
-    gc_enable do
-      GC.start
-    end
+    GC.start
     if $DEBUG
       after_pools = Svn::Core::Pool.number_of_pools
       puts "after pools: #{after_pools}"

@@ -27,20 +27,18 @@ class SvnDeltaTest < Test::Unit::TestCase
     target = StringIO.new(t)
     stream = Svn::Delta::TextDeltaStream.new(source, target)
     assert_nil(stream.md5_digest)
-    _wrap_assertion do
-      stream.each do |window|
-        window.ops.each do |op|
-          op_size = op.offset + op.length
-          case op.action_code
-          when Svn::Delta::TXDELTA_SOURCE
-            assert_operator(op_size, :<=, window.sview_len)
-          when Svn::Delta::TXDELTA_NEW
-            assert_operator(op_size, :<=, window.new_data.length)
-          when Svn::Delta::TXDELTA_TARGET
-            assert_operator(op_size, :<=, window.tview_len)
-          else
-            flunk
-          end
+    stream.each do |window|
+      window.ops.each do |op|
+        op_size = op.offset + op.length
+        case op.action_code
+        when Svn::Delta::TXDELTA_SOURCE
+          assert_operator(op_size, :<=, window.sview_len)
+        when Svn::Delta::TXDELTA_NEW
+          assert_operator(op_size, :<=, window.new_data.length)
+        when Svn::Delta::TXDELTA_TARGET
+          assert_operator(op_size, :<=, window.tview_len)
+        else
+          flunk
         end
       end
     end
@@ -62,19 +60,17 @@ class SvnDeltaTest < Test::Unit::TestCase
       end
     end
 
-    _wrap_assertion do
-      composed_window.ops.each do |op|
-        op_size = op.offset + op.length
-        case op.action_code
-        when Svn::Delta::TXDELTA_SOURCE
-          assert_operator(op_size, :<=, composed_window.sview_len)
-        when Svn::Delta::TXDELTA_NEW
-          assert_operator(op_size, :<=, composed_window.new_data.length)
-        when Svn::Delta::TXDELTA_TARGET
-          assert_operator(op_size, :<=, composed_window.tview_len)
-        else
-          flunk
-        end
+    composed_window.ops.each do |op|
+      op_size = op.offset + op.length
+      case op.action_code
+      when Svn::Delta::TXDELTA_SOURCE
+        assert_operator(op_size, :<=, composed_window.sview_len)
+      when Svn::Delta::TXDELTA_NEW
+        assert_operator(op_size, :<=, composed_window.new_data.length)
+      when Svn::Delta::TXDELTA_TARGET
+        assert_operator(op_size, :<=, composed_window.tview_len)
+      else
+        flunk
       end
     end
   end
@@ -178,26 +174,17 @@ class SvnDeltaTest < Test::Unit::TestCase
 
   def test_path_driver
     editor = Svn::Delta::BaseEditor.new
-    sorted_paths = []
+    data = []
     callback = Proc.new do |parent_baton, path|
-      sorted_paths << path
+      if /\/\z/ =~ path
+        data << [:dir, path]
+        parent_baton
+      else
+        data << [:file, path]
+      end
     end
-
-    targets = [
-      "/",
-      "/file1",
-      "/dir1",
-      "/dir2/file2",
-      "/dir2/dir3/file3",
-      "/dir2/dir3/file4"
-    ]
-    10.times do
-      x = rand(targets.size)
-      y = rand(targets.size)
-      targets[x], targets[y] = targets[y], targets[x]
-    end
-    Svn::Delta.path_driver(editor, 0, targets, &callback)
-    assert_equal(targets.sort, sorted_paths)
+    Svn::Delta.path_driver(editor, 0, ["/"], &callback)
+    assert_equal([[:dir, '/']], data)
   end
   
   def test_changed

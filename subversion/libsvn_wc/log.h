@@ -124,20 +124,13 @@ svn_wc__loggy_delete_entry(svn_stringbuf_t **log_accum,
 /* Extend **LOG_ACCUM with log instructions to delete lock related
    fields from the entry belonging to PATH.
 */
+
 svn_error_t *
 svn_wc__loggy_delete_lock(svn_stringbuf_t **log_accum,
                           svn_wc_adm_access_t *adm_access,
                           const char *path,
                           apr_pool_t *pool);
 
-/* Extend **LOG_ACCUM with log instructions to delete changelist
-   from the entry belonging to PATH.
-*/
-svn_error_t *
-svn_wc__loggy_delete_changelist(svn_stringbuf_t **log_accum,
-                                svn_wc_adm_access_t *adm_access,
-                                const char *path,
-                                apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with commands to modify the entry associated with NAME
    according to the flags specified in MODIFY_FLAGS, based on the values
@@ -151,7 +144,7 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                            svn_wc_adm_access_t *adm_access,
                            const char *name,
                            svn_wc_entry_t *entry,
-                           apr_uint64_t modify_flags,
+                           apr_uint32_t modify_flags,
                            apr_pool_t *pool);
 
 /* Extend **LOG_ACCUM with log instructions to modify wcprop PROPNAME
@@ -165,6 +158,21 @@ svn_wc__loggy_modify_wcprop(svn_stringbuf_t **log_accum,
                             const char *propname,
                             const char *propval,
                             apr_pool_t *pool);
+
+/* Extend **LOG_ACCUM with log instructions to merge changes between
+   LEFT and RIGHT into TARGET, marking conflicts with the appropriate labels.
+*/
+
+svn_error_t *
+svn_wc__loggy_merge(svn_stringbuf_t **log_accum,
+                    svn_wc_adm_access_t *adm_access,
+                    const char *target,
+                    const char *left,
+                    const char *right,
+                    const char *left_label,
+                    const char *right_label,
+                    const char *target_label,
+                    apr_pool_t *pool);
 
 
 /* Extend **LOG_ACCUM with log instructions to move the file SRC_PATH to

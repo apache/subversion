@@ -51,6 +51,7 @@ module Svn
 
       def commit_editor(log_msg, lock_tokens={}, keep_lock=false)
         callback = Proc.new do |new_revision, date, author|
+          date = Time.from_svn_format(date) if date
           yield(new_revision, date, author)
         end
         editor, editor_baton = Ra.get_commit_editor(self, log_msg, callback,
@@ -159,6 +160,7 @@ module Svn
               strict_node_history=false)
         paths = [paths] unless paths.is_a?(Array)
         receiver = Proc.new do |changed_paths, revision, author, date, message|
+          date = Time.parse_svn_format(date) if date
           yield(changed_paths, revision, author, date, message)
         end
         Ra.get_log(self, paths, start_rev, end_rev, limit,

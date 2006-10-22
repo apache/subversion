@@ -587,11 +587,6 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 43,
              "Unsupported FS format")
 
-  /** @since New in 1.5. */
-  SVN_ERRDEF(SVN_ERR_FS_REP_BEING_WRITTEN,
-             SVN_ERR_FS_CATEGORY_START + 44,
-             "Representation is being written")
-
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -725,11 +720,6 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS,
              SVN_ERR_RA_DAV_CATEGORY_START + 10,
              "Unable to extract data from response header")
-
-  /** @since New in 1.5 */
-  SVN_ERRDEF(SVN_ERR_RA_DAV_RELOCATED,
-             SVN_ERR_RA_DAV_CATEGORY_START + 11,
-             "Repository has been moved")
 
   /* ra_local errors */
 

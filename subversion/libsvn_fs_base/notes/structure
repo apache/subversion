@@ -372,26 +372,23 @@ change the representation pretty much as we please to optimize
 whatever parameter we care about --- storage size, speed, robustness,
 etc.
 
-Representations never share strings - every string is referred to by
-exactly one representation.  This is so that when we change a
-representation to a different form (e.g. during deltification), we can
-delete the strings containing the old form, and know that we're not
-messing up any other reps by doing so.
+Representations never share strings.  Every string is represented by
+exactly one representation; every representation represents exactly
+one string.  This is so we can replace a string with deltified version
+of itself, change the representation referring to it, and know that
+we're not messing up any other reps by doing so.
 
 
 Further Notes On Deltifying:
 ----------------------------
 
-When a representation is deltified, it is changed in place.
-New strings are created containing the new delta, the representation
-is changed to refer to the new strings, and the original (usually
-fulltext) string or strings are deleted.
-
-The node revisions referring to that representation will not be
-changed; instead, the same rep key will now be associated with
-different value.  That way, we get reader locking for free: if someone
-is reading a file while Subversion is deltifying that file, one of the
-two sides will get a DB_DEADLOCK and svn_fs__retry_txn() will retry.
+When a representation is deltified, it is changed in place, along with
+its underlying string.  That is, the node revision referring to that
+representation will not be changed; instead, the same rep key will now
+be associated with different value.  That way, we get reader locking
+for free: if someone is reading a file while Subversion is deltifying
+that file, one of the two sides will get a DB_DEADLOCK and
+svn_fs__retry_txn() will retry.
 
 ### todo: add a note about cycle-checking here, too.
 
@@ -454,11 +451,10 @@ following forms:
 where:
 
    * ROOT-ID is the node revision ID of the transaction's root
-     directory.  This is of the form 0.0.THIS-TXN-ID.
+     directory.
 
    * BASE-ID is the node revision ID of the root of the transaction's
-     base revision.  This is of the form 0.0.BASE-TXN-ID - the base
-     transaction is, of course, the transaction of the base revision.
+     base revision.
 
    * PROPLIST is a skel giving the revision properties for the
      transaction.
@@ -518,17 +514,8 @@ where:
 
    * PATH is the path that was operated on to enact this change.
 
-   * ID is the node revision ID of the node changed.  The precise
-     meaning varies based on the kind of the change:
-      - "add" or "modify": a new node revision created in the current
-        txn.
-      - "delete": a node revision from a previous txn.
-      - "replace": a replace operation actually acts on two node
-        revisions, one being deleted, one being added.  Only the added
-        node-revision ID is recorded in the `changes' table - this is
-        a design flaw.
-      - "reset": no node revision applies.  A zero atom is used as a
-        placeholder.
+   * ID is the node revision ID of the node changed (may be a zero
+     atom, but only in the "reset" kind case).
 
    * CHANGE-KIND is one of the following:
 
@@ -537,9 +524,6 @@ where:
      - "replace" : PATH/ID was removed, then re-added to the filesystem.
      - "modify"  : PATH/ID was otherwise modified.
      - "reset"   : Ignore any previous changes for PATH/ID in this txn.
-                   This kind is no longer created by Subversion 1.3.0
-                   and later, and can probably be removed at the next
-                   schema bump.
 
    * TEXT-MOD is a bit specifying whether or not the contents of
      this node was modified.

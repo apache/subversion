@@ -71,7 +71,7 @@ file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
   const char *buf, *buf_apr;
 
   va_start(ap, format);
-  buf = apr_pvsprintf(apr_file_pool_get(fptr), format, ap);
+  buf = apr_pvsprintf(apr_file_pool_get(fptr), format, ap); 
   va_end(ap);
 
   SVN_ERR(svn_utf_cstring_from_utf8_ex2(&buf_apr, buf, encoding,
@@ -322,7 +322,7 @@ diff_props_changed(svn_wc_adm_access_t *adm_access,
 /* Show differences between TMPFILE1 and TMPFILE2. PATH, REV1, and REV2 are
    used in the headers to indicate the file and revisions.  If either
    MIMETYPE1 or MIMETYPE2 indicate binary content, don't show a diff,
-   but instead print a warning message. */
+   but instread print a warning message. */
 static svn_error_t *
 diff_content_changed(const char *path,
                      const char *tmpfile1,
@@ -346,7 +346,7 @@ diff_content_changed(const char *path,
   int i;
 
   /* Get a stream from our output file. */
-  os = svn_stream_from_aprfile(diff_cmd_baton->outfile, subpool);
+  os = svn_stream_from_aprfile(diff_cmd_baton->outfile, subpool); 
 
   /* Assemble any option args. */
   nargs = diff_cmd_baton->options->nelts;
@@ -726,9 +726,9 @@ svn_client__dry_run_deletions(void *merge_cmd_baton)
 static APR_INLINE svn_boolean_t
 dry_run_deleted_p(struct merge_cmd_baton *merge_b, const char *wcpath)
 {
-  return (merge_b->dry_run &&
-          apr_hash_get(merge_b->dry_run_deletions, wcpath,
-                       APR_HASH_KEY_STRING) != NULL);
+    return (merge_b->dry_run &&
+            apr_hash_get(merge_b->dry_run_deletions, wcpath,
+                         APR_HASH_KEY_STRING) != NULL);
 }
 
 
@@ -763,7 +763,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
           if (state)
             *state = svn_wc_notify_state_missing;
           svn_error_clear(err);
-          return SVN_NO_ERROR;
+          return SVN_NO_ERROR;        
         }
       else if (err)
         return err;
@@ -791,6 +791,15 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 {
   struct merge_cmd_baton *merge_b = baton;
   apr_pool_t *subpool = svn_pool_create(merge_b->pool);
+  /* xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
+     strings are used to tag onto a filename in case of a merge conflict */
+  const char *target_label = _(".working");
+  const char *left_label = apr_psprintf(subpool,
+                                        _(".merge-left.r%ld"),
+                                        older_rev);
+  const char *right_label = apr_psprintf(subpool,
+                                         _(".merge-right.r%ld"),
+                                         yours_rev);
   svn_boolean_t has_local_mods;
   svn_boolean_t merge_required = TRUE;
   enum svn_wc_merge_outcome_t merge_outcome;
@@ -845,8 +854,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
   if (older)
     {
-      SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, mine, FALSE,
-                                      FALSE, adm_access, subpool));
+      SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, FALSE,
+                                     adm_access, subpool));
 
       /* Special case:  if a binary file isn't locally modified, and is
          exactly identical to the 'left' side of the merge, then don't
@@ -875,20 +884,10 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
               merge_outcome = svn_wc_merge_merged;
               merge_required = FALSE;
             }
-        }
+        }  
 
       if (merge_required)
         {
-          /* xgettext: the '.working', '.merge-left.r%ld' and
-             '.merge-right.r%ld' strings are used to tag onto a file
-             name in case of a merge conflict */
-          const char *target_label = _(".working");
-          const char *left_label = apr_psprintf(subpool,
-                                                _(".merge-left.r%ld"),
-                                                older_rev);
-          const char *right_label = apr_psprintf(subpool,
-                                                 _(".merge-right.r%ld"),
-                                                 yours_rev);
           SVN_ERR(svn_wc_merge2(&merge_outcome,
                                 older, yours, mine, adm_access,
                                 left_label, right_label, target_label,
@@ -1041,7 +1040,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
         const svn_wc_entry_t *entry;
         SVN_ERR(svn_wc_entry(&entry, mine, adm_access, FALSE, subpool));
 
-        /* If it's an unversioned file, don't touch it.  If it's scheduled
+        /* If it's an unversioned file, don't touch it.  If its scheduled
            for deletion, then rm removed it from the working copy and the
            user must have recreated it, don't touch it */
         if (!entry || entry->schedule == svn_wc_schedule_delete)
@@ -1075,7 +1074,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
                   merge_b->add_necessitated_merge = FALSE;
               }
           }
-        break;
+        break;      
       }
     default:
       if (content_state)
@@ -1124,11 +1123,14 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       svn_path_split(mine, &parent_path, NULL, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                   subpool));
-      /* Passing NULL for the notify_func and notify_baton because
-         repos_diff.c:delete_entry() will do it for us. */
-      err = svn_client__wc_delete(mine, parent_access, merge_b->force,
-                                  merge_b->dry_run, NULL, NULL,
-                                  merge_b->ctx, subpool);
+      {
+        /* Passing NULL for the notify_func and notify_baton because
+         * repos_diff.c:delete_item will do it for us. */
+        err = svn_client__wc_delete(mine, parent_access, merge_b->force,
+                                    merge_b->dry_run, 
+                                    NULL, NULL,
+                                    merge_b->ctx, subpool);
+      }
       if (err && state)
         {
           *state = svn_wc_notify_state_obstructed;
@@ -1225,7 +1227,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
     case svn_node_dir:
       /* Adding an unversioned directory doesn't destroy data */
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, TRUE, subpool));
-      if (! entry || entry->schedule == svn_wc_schedule_delete)
+      if (! entry || (entry && entry->schedule == svn_wc_schedule_delete))
         {
           if (!merge_b->dry_run)
             SVN_ERR(svn_wc_add2(path, adm_access,
@@ -1442,7 +1444,7 @@ convert_to_url(const char **url,
                apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
-  const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry;      
 
   if (svn_path_is_url(path))
     {
@@ -1491,7 +1493,7 @@ struct diff_parameters
   /* Recurse */
   svn_boolean_t recurse;
 
-  /* Ignore ancestry */
+  /* Ignore acestry */
   svn_boolean_t ignore_ancestry;
 
   /* Ignore deleted */
@@ -1671,9 +1673,9 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
   drr->target2 = "";
   if ((kind1 == svn_node_file) || (kind2 == svn_node_file))
     {
-      svn_path_split(drr->url1, &drr->anchor1, &drr->target1, pool);
+      svn_path_split(drr->url1, &drr->anchor1, &drr->target1, pool); 
       drr->target1 = svn_path_uri_decode(drr->target1, pool);
-      svn_path_split(drr->url2, &drr->anchor2, &drr->target2, pool);
+      svn_path_split(drr->url2, &drr->anchor2, &drr->target2, pool); 
       drr->target2 = svn_path_uri_decode(drr->target2, pool);
       if (drr->base_path)
         drr->base_path = svn_path_dirname(drr->base_path, pool);
@@ -1706,8 +1708,10 @@ do_merge(const char *initial_URL1,
          svn_wc_adm_access_t *adm_access,
          svn_boolean_t recurse,
          svn_boolean_t ignore_ancestry,
+         svn_boolean_t dry_run,
          const svn_wc_diff_callbacks2_t *callbacks,
-         struct merge_cmd_baton *merge_b,
+         void *callback_baton,
+         svn_client_ctx_t *ctx,
          apr_pool_t *pool)
 {
   svn_revnum_t start_revnum, end_revnum;
@@ -1716,7 +1720,7 @@ do_merge(const char *initial_URL1,
   void *report_baton;
   const svn_delta_editor_t *diff_editor;
   void *diff_edit_baton;
-  svn_client_ctx_t *ctx = merge_b->ctx;
+  struct merge_cmd_baton *merge_b = callback_baton;
   const char *URL1, *URL2, *path1, *path2;
   svn_opt_revision_t *revision1, *revision2;
 
@@ -1783,9 +1787,9 @@ do_merge(const char *initial_URL1,
   SVN_ERR(svn_client__get_diff_editor(target_wcpath,
                                       adm_access,
                                       callbacks,
-                                      merge_b,
+                                      callback_baton,
                                       recurse,
-                                      merge_b->dry_run,
+                                      dry_run,
                                       ra_session2,
                                       start_revnum,
                                       ctx->notify_func2,
@@ -2837,8 +2841,10 @@ svn_client_merge2(const char *source1,
                        adm_access,
                        recurse,
                        ignore_ancestry,
+                       dry_run,
                        &merge_callbacks,
                        &merge_cmd_baton,
+                       ctx,
                        pool));
     }
 
@@ -2965,8 +2971,10 @@ svn_client_merge_peg2(const char *source,
                        adm_access,
                        recurse,
                        ignore_ancestry,
+                       dry_run,
                        &merge_callbacks,
                        &merge_cmd_baton,
+                       ctx,
                        pool));
     }
 

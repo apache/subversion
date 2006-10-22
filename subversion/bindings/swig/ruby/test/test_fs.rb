@@ -62,7 +62,7 @@ class SvnFsTest < Test::Unit::TestCase
     FileUtils.mv(@fs.path, backup_path)
     FileUtils.mv(dest_fs.path, @fs.path)
 
-    assert_raises(Svn::Error::FsNoSuchRevision) do
+    assert_raises(Svn::Error::FS_NO_SUCH_REVISION) do
       assert_equal(log, ctx.log_message(path, rev))
     end
 
@@ -126,7 +126,7 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal(rev2, @fs.root.node_created_rev(path_in_repos))
     assert_equal(path_in_repos, @fs.root.node_created_path(path_in_repos))
 
-    assert_raises(Svn::Error::FsNotTxnRoot) do
+    assert_raises(Svn::Error::FS_NOT_TXN_ROOT) do
       @fs.root.set_node_prop(path_in_repos, "name", "value")
     end
   end
@@ -145,16 +145,16 @@ class SvnFsTest < Test::Unit::TestCase
     ctx.add(path)
     ctx.commit(@wc_path)
     
-    assert_raises(Svn::Error::FsNoSuchTransaction) do
+    assert_raises(Svn::Error::FS_NO_SUCH_TRANSACTION) do
       @fs.open_txn("NOT-EXIST")
     end
-
-    start_time = Time.now
+    
     txn1 = @fs.transaction
     assert_equal([Svn::Core::PROP_REVISION_DATE], txn1.proplist.keys)
     assert_instance_of(Time, txn1.proplist[Svn::Core::PROP_REVISION_DATE])
     date = txn1.prop(Svn::Core::PROP_REVISION_DATE)
-    assert_operator(start_time..(Time.now), :include?, date)
+    assert_operator(date, :>=, Time.now - 1)
+    assert_operator(date, :<=, Time.now + 1)
     txn1.set_prop(Svn::Core::PROP_REVISION_DATE, nil)
     assert_equal([], txn1.proplist.keys)
     assert_equal(youngest_rev, txn1.base_revision)
@@ -317,7 +317,7 @@ class SvnFsTest < Test::Unit::TestCase
       checksum = MD5.new(result).hexdigest
       handler = txn.root.apply_textdelta(path_in_repos,
                                          base_checksum, checksum)
-      assert_raises(Svn::Error::ChecksumMismatch) do
+      assert_raises(Svn::Error::CHECKSUM_MISMATCH) do
         handler.call(nil)
       end
     end
@@ -328,13 +328,13 @@ class SvnFsTest < Test::Unit::TestCase
     ctx = make_context(log)
     ctx.checkout(@repos_uri, @wc_path)
     ctx.mkdir(["#{@wc_path}/new_dir"])
-
-    start_time = Time.now
+    past_time = Time.parse(Time.new.iso8601)
     info = ctx.commit([@wc_path])
 
     assert_equal(@author, info.author)
     assert_equal(@fs.youngest_rev, info.revision)
-    assert_operator(start_time..(Time.now), :include?, info.date)
+    assert(past_time <= info.date)
+    assert(info.date <= Time.now)
 
     assert_equal(@author, @fs.prop(Svn::Core::PROP_REVISION_AUTHOR))
     assert_equal(log, @fs.prop(Svn::Core::PROP_REVISION_LOG))

@@ -24,7 +24,7 @@
 .\" IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
 .\" OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 .\" IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-.TH "svn2cl" "1" "Sep 2006" "Version 0.8" "User Commands"
+.TH "svn2cl" "1" "Apr 2006" "Version 0.7" "User Commands"
 .nh
 .SH "NAME"
 svn2cl \- Create a ChangeLog from a subversion log.
@@ -69,9 +69,9 @@ Include the subversion revision number in the ChangeLog.
 If the \-\-html option is specified this is implied, edit \fBsvn2html.css\fP to turn it off.
 
 .TP
-\fB\-\-break-before-msg\fR[=\fINUM\fR]
-Add a line break (or multiple line breadks) between the paths and the log message.
-If the \-\-html option is specified this option is ignored, edit \fBsvn2html.css\fP to set spacing.
+\fB\-\-break-before-msg\fR
+Add a line break between the log paths and the log message.
+If the \-\-html option is specified this is implied, edit \fBsvn2html.css\fP to turn it off.
 
 .TP
 \fB\-\-reparagraph\fR
@@ -79,21 +79,8 @@ Newlines inside paragraphs are ignored and paragraphs are re-wrapped.
 Paragraphs are separated by empty lines.
 
 .TP
-\fB\-\-title\fR=\fINAME\fR
-If outputting an HTML file the \fINAME\fR is used as the title.
-This option is ignored for normal text output.
-
-.TP
-\fB\-\-revision\-link\fR=\fINAME\fR
-This option is used to generate links from the revision numbers in the generated HTML file.
-If \fINAME\fR contains two hashes `\fB##\fP' that part will be replaced by the revision number, otherwise the revision number will be appended to \fINAME\fR.
-Only the first occurrence of `\fB##\fP' will be replaced.
-.br
-This option is ignored for normal text output.
-
-.TP
 \fB\-o\fR, \fB\-f\fR, \fB\-\-output\fR=\fIFILE\fR, \fB\-\-file\fR=\fIFILE\fR
-Output ChangeLog to \fIFILE\fR instead of the default \fBChangeLog\fP (or \fBChangeLog.html\fP for HTML output).
+Output ChangeLog to \fIFILE\fR instead of the default \fBChangeLog\fP (or \fBChangeLog.html\fP for html output).
 
 .TP
 \fB\-\-stdout\fR
@@ -102,15 +89,28 @@ Output ChangeLog to stdout instead of to a file.
 .TP
 \fB\-\-authors\fR=\fIFILE\fR
 The \fIFILE\fR is used to map author names as exported by svn to full names.
-See the section on AUTHORS FILES below for more information.
+An author file should look something like:
+.ft B
+    <?xml version="1.0" encoding="utf-8"?>
+    <authors>
+      <author uid="arthur">
+        Arthur de Jong &lt;arthur@ch.tudelft.nl&gt;
+      </author>
+    </authors>
+.ft R
 .br
-Note that the \-\-authors option can have poor performance in some cases.
+As a bonus an authors file that looks like the following is internally converted to the xml represantation:
+.ft B
+    arthur:Arthur de Jong <arthur@ch.tudelft.nl>
+.ft R
+.br
+Note that the \-\-authors option has pretty poor performance at the moment.
 
 .TP
 \fB\-\-html\fR
-Generate an HTML file containing a ChangeLog instead of the default text ChangeLog file.
+Generate an html file containing a ChangeLog instead of the default text ChangeLog file.
 This feature is still experimental.
-The \fBsvn2html.css\fP file that is included in the distribution can be used to format the HTML.
+The \fBsvn2html.css\fP file that is included in the distribution can be used to format the html.
 
 .TP
 \fB\-h\fR, \fB\-\-help\fR
@@ -125,39 +125,6 @@ Optional PATH arguments and the following options are passed directly to the `\f
 \fB\-r\fR, \fB\-\-revision\fR, \fB\-\-targets\fR, \fB\-\-stop\-on\-copy\fR, \fB\-\-username\fR, \fB\-\-password\fR, \fB\-\-no\-auth\-cache\fR, \fB\-\-non\-interactive\fR, \fB\-\-config\-dir\fR and \fB\-\-limit\fR.
 .br
 See `\fBsvn help log\fP' for more information on these options.
-
-.SH "AUTHORS FILES"
-
-An authors file is basically an XML file that should look something like:
-.ft B
-    <?xml version="1.0" encoding="utf-8"?>
-    <authors>
-      <author uid="arthur">
-        Arthur de Jong &lt;arthur@ch.tudelft.nl&gt;
-      </author>
-    </authors>
-.ft R
-.br
-svn2cl searches for <author> tags with the specified uid attribute.
-The content from the author tag is substituted for the author name.
-
-The <author> tag may also contain XML child tags which can be useful for embedding HTML into the result.
-For this to work namespace information should be included for HTML output:
-.ft B
-    <?xml version="1.0" encoding="utf-8"?>
-    <authors xmlns:html="http://www.w3.org/1999/xhtml">
-      <author uid="arthur">
-        Arthur de Jong &lt;<html:b>arthur@ch.tudelft.nl</html:b>&gt;
-      </author>
-    </authors>
-.ft R
-.br
-The svn2cl distribution contains a sample authors.xml file.
-
-As a bonus a plain text authors file that looks like the following is automatically converted to the XML representation:
-.ft B
-    arthur:Arthur de Jong <arthur@ch.tudelft.nl>
-.ft R
 
 .SH "EXAMPLES"
 

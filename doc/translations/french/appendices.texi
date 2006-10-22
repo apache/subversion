@@ -1,0 +1,662 @@
+@node Appendices
+@chapter Appendices
+
+Un certain nombre d'autres documents utiles en rapport avec Subversion.
+
+@menu
+* SVN pour les utilisateurs de CVS::
+* Versionnement des répertoires::
+* Compilation et installation::
+* Feuille de référence rapide::
+* FAQ::
+* Contribuer::
+* License::
+@end menu
+
+@c ------------------------------------------------------------------
+@node SVN pour les utilisateurs de CVS
+@section SVN pour les utilisateurs de CVS
+
+Ce document se veut un quide de démarrage rapide pour les utilisateurs
+de CVS qui désirent utiliser Subversion. Ce n'est pas un substitut à la
+``vraie'' documentation ni aux manuals; mais il peut vous donner rapidement
+les différences conceptuelles lorsque vous basculerez vers Subversion.
+
+L'objectif de Subversion est de ``récupérer'' la base actuelle et futur des
+utilisateurs de CVS. Non seulement Subversion inclut de nouvelles
+fonctionnalités, mais tente aussi de corriger comportement ``bloquant'' de
+CVS. Ceci signifie que vous êtes encouragé à perdre certaines habitudes.
+
+@menu
+* Les numéros de révision sont différents maintenant::
+* Plus d opérations déconnectés::
+* Distinction entre état et mise à jour::
+* Méta-données propriétés::
+* Version de répertoire::
+* Conflits::                
+* Fichiers binaires::
+* Authorisation::
+* Modules versionnés::            
+* Branches et étiquetage::
+@end menu
+
+
+@node Les numéros de révision sont différents maintenant
+@subsection Les numéros de révision sont différents maintenant
+
+Avec CVS, les numéros de révision sont par fichier. C'est parce que CVS
+utilise RCS comme ``moteur''; chaque fichier a son fichier RCS correspondant
+dans le dépôt et le dépôt est en gros organisé comme la structure de
+l'arborescence de votre projet.
+
+Dans Subversion, le dépôt ressemble à un unique système de fichier. Chaque
+remontée resulte en une totalement nouvelle arborescence du système de
+fichier; par essence, le dépôt est un tableau d'arborescences.  Chaqu'une
+de ces arborescences est libéllée avec un numéro de révision.  Lorsque
+quelqu'un parle de la ``révision 54'', il parle d'une arborescence
+particuliaire (et indirectement, de l'apparence du système de fichier à la
+54ième remontée).
+
+Techniquement, il n'est pas correcte de parler de la ``révision 5 de
+@file{foo.c}''. Au lieu de celà, il faudrait dire ``@file{foo.c} comme il
+apparait à la révision 5 de l'arborescence''. Ainsi, faites attention
+lorsque vous faites des suppositions sur l'évolution d'un fichier. Avec
+CVS, les révisions 5 et 6 de @file{foo.c} sont toujours différentes. Avec
+Subversion, il est probable que @file{foo.c} n'est pas de modification entre la
+révistion 5 et la 6.
+
+@node Plus d opérations déconnectés
+@subsection Plus d opérations déconnectés
+
+Ces dernières années, l'espace disque est devenu outrageusement bon marché
+et abondant contrairement à la bande passante des réseaux. Par conséquent,
+la copie de travail a été optimisée en tenant comme de la pénurie de cette
+ressource.
+
+Le répertoire administratif @file{.svn} sert le même objectif que le
+répertoire @file{CVS}, sauf qu'il stocke également une copie de référence
+du fichier. Celà vous permet de réaliser de nombreuse chose hors-ligne:
+
+@itemize @bullet
+@item @samp{svn status}
+Vous montre les modifications locales (voir plus bas)
+@item @samp{svn diff}
+Vous montre les details de vos modifications
+@item @samp{svn ci}
+Envoit les différences au dépôts (CVS envoit toujours les fichiers
+complets !)
+@item @samp{svn revert}
+Supprime vos modifications.
+@end itemize
+
+Cette dernière sous-commande est nouvelle; non seulement elle supprime les
+modifications locales, mais elle déprogramme aussi des opérations comme
+l'ajout et la suppression. C'est la méthode préférée pour restaurer un
+fichier; néanmoins exécution de @samp{rm file; svn up} continue de fonctionner
+mais çà détourne le propos de la mise à jour.  Et, pendant que nous somme
+sur ce sujet@dots{}
+
+@node Distinction entre état et mise à jour
+@subsection Distinction entre état et mise à jour
+
+Dans Subversion, nous avons essayez de supprimer beaucoup de confusion
+entre les sous-commandes @samp{status} (état) et @samp{update} (mise à
+jour).
+
+La commande @samp{status} a deux objectif: (1) montrer à l'utilisateur toutes
+les modifications locales sans sa copie de travail, et (2) montrer à
+l'utilisateur quel fichier est dépassé. Malheureusement, parce que
+l'affichage de CVS est difficile à lire, beaucoup d'utilisateur de CVS ne
+tire pas du tout avantage de cette commande. Au lieu de celà, ils ont
+développé l'habitude de lancer @samp{cvs up} pour rapidement voir leurs
+modifications. Bien sûr, ceci à l'effet de bord d'importer les
+modifications du dépôt que vous n'attendiez peut-être pas.
+
+Avec Subversion, nous avons essayé de supprimer ces confusions en fesant
+un affichage de @samp{svn status} facile à lire pour les humains et les
+parseurs (programmes).  Ainsi, @samp{svn update} affiche uniquement des
+informations sur les fichiers qui sont mise à jour et n'affiche rien sur
+les modifications locales.
+
+Voici un quide rapide de @samp{svn status}. Nous encouragons les nouveaux
+utilisateur de Subversion a l'utiliser tôt et souvent:
+
+@itemize @bullet
+@item @samp{svn status}
+Affiche tous les fichiers qui ont des modifications locales; par défaut
+il n'y a pas d'accès au réseau.
+@itemize @bullet
+@item drapeau @option{-u}
+Ajoute les fichiers qui ne sont pas à jour par rapport au dépôt.
+@item drapeau @option{-v}
+Montre @emph{toutes} les entrées sous contrôle de version.
+@item drapeau @option{-n}
+Fonctionnement non récursif.
+@end itemize
+@end itemize
+
+La commande status à deux formats d'affichage. Par défaut, le format
+``court'', les modifications locales ressemble à çà:
+
+@example
+    % svn status
+    M     ./foo.c
+    M     ./bar/baz.c
+@end example
+
+Si vous spécifiez l'option @option{-u} ou @option{-v}, le format ``long''
+est utilisé:
+
+@example
+    % svn status
+    M             1047    ./foo.c
+    _      *      1045    ./faces.html
+    _      *         -    ./bloo.png
+    M             1050    ./bar/baz.c
+    Head revision:   1066
+@end example
+
+Dans ce cas, deux nouvelles colonnes apparaissent. La seconde colonne a un
+astérique si le fichier ou le répertoire est dépassé. La troisième colonne
+montre le numéros de révision du fichier de la copie de travail.  Dans
+l'exemple précédent, l'astérisque indique que @file{faces.html} doit être
+patché si nous faisons une mise à jour, et que @file{bloo.png} est un
+fichier nouvellement ajouté au dépôt (le @samp{-} près de ./bloo.png
+signifie qu'il n'existe pas encore dans la copie de travail).
+
+Enfin, voici un résumé des codes d'état que vous pourrez voir:
+
+@example
+   A    Ajouté
+   D    supprimé (Delete)
+   R    Remplacé  (supprimé, puis rajouté)
+   M    Modification locale
+   U    mise à jour (Updated)
+   G    fusionné (merGed)
+   C    Conflit
+@end example
+
+Subversion a combiné les codes @samp{P} et @samp{U} de CVS dans @samp{U}
+uniquement. Quand une fusion ou un conflit apparait, Subversion affiche
+simplement @samp{G} ou @samp{C}, au lieu d'une phrase complète.
+
+@node Méta-données propriétés
+@subsection Méta-données propriétés
+
+Une nouvelle fonctionnalité de subversion est que vous pouvez attacher des
+méta-données arbitraires à un fichier ou un répertoire. Nous appèlerons
+ces données des @dfn{propriétés}, et qui peuvent être vues comme une
+collection de paire nom/valeur attaché à chaque élément de votre copie de
+travail.
+  
+Pour renseigner ou obtenir une propriété, utilisez les sous-commandes
+@samp{svn propset} et @samp{svn propget}. Pour lister toutes les
+propriétés d'un objet, utilisez @samp{svn proplist}.
+
+Pour plus d'informations, @xref{Propriétés}.
+
+@node Version de répertoire
+@subsection Version de répertoire
+
+Subversion trace les structures d'arborescence et non seulement le contenu
+des fichiers. C'est principalement pour cette raison que Subversion a été
+écrit pour remplacer CVS.
+Voici ce que celà signifie pour vous:
+
+@itemize @bullet
+@item
+Les commandes @samp{svn add} et @samp{svn rm} marche sur les répertoires
+maintenant, comme elle marche sur des fichiers. C'est aussi le cas des
+commandes @samp{svn cp} et @samp{svn mv}. Cependant, ces commandes ne font
+pas de modifications immédiates sur le dépôt. Au lieu de celà, le
+répertoire de travail est récursivement ``programmé'' pour ajout ou
+suppression. Aucune modification de dépôt n'est possible sans que vous
+fassiez une remontée.
+@item
+Les répertoires ne sont plus des containers muets; ils ont des nombres de
+révision comme les fichiers (Il est maintenant correcte de parler du
+``répertoire @file{foo/} à la révision 5'').
+@end itemize
+
+Allons un peu plus loin sur ce sujet. Le versionnement de répertoire est
+un problème difficile. Parce que nous voulons permettre des numéros de
+révisions différents dans un copie de travail, il y a quelque limitations
+jusqu'ou on peut abuser de ce model.
+
+D'un point de vue théorique, nous définissons ``révision 5 du répertoire
+@file{foo}'' une collection spécifique d'entrée de répertoire et de
+propriétés.  Maintenant supposons que nous ajoutons et supprimons des
+fichiers de @file{foo}, et qu'enfin nous remontions ces modificiations. Ce
+serait un mensonge de dire que nous somme toujours à la révision 5 de
+@file{foo}. Cependant, si nous augmentons le numéros de révision de
+@file{foo} après la remontée, c'est toujours incorrecte; il y a peut-être
+d'autre modification à @file{foo} que nous n'avons pas encore reçu parce
+que nous n'avons pas encore mise à jour.
+
+Subversion traite ce problème silencieusement en tracant les remontées
+d'ajout et de suppression dans l'espace .svn. Lorsqu'éventuellement vous
+exécuté 'svn update', tous les ``compteurs'' sont comparés avec le dépôt,
+et le nouveau numéros de révision est mis correctement. @b{Donc,
+uniquement après une mise à jour il est sûr de dire que vous avez une
+``parfaite'' révision du répertoire.}
+
+De façon similaire, un problème se produit si vous essayez de remonter des
+modifications de propriétés d'un répertoire. Normalement, une remontée
+doit augmenter le numéros de révision locale du répertoire de travail.
+Mais encore une fois, c'est incorrecte car il peut y avoir des ajout et
+suppression que le répertoire n'a pas encore parce qu'il n'y a pas eu de
+mise à jour. @b{Donc, vous ne pouvez pas remonter des modifications de
+propriétés sur un répertoire tant que le répertoire n'est pas été mise à
+jour.}
+
+Pour plus de discussion et d'exemples spécifiques: @xref{Versionnement des
+répertoires}.
+
+
+
+@node Conflits
+@subsection Conflits
+
+CVS marque les conflits avec des ``marqueurs de conflit'' en ligne, et
+affiche un @samp{C} durant la mise à jour. Historiquement, ceci a pausé des
+problèmes. Beaucoup d'utilisateur oubliaient (ou ne voyaient pas) le
+@samp{C} après qu'il ait défillé sur leur terminal. Ils oubliaient souvent
+que les marqueurs de conflit pouvaient être présents, et accidentellement
+remontaient des fichiers pollués.
+
+Subversion résoud ce problème en marquant les conflits de façon plus
+tangible. Pour en savoir plus lisez: @xref{Cycle de Travail Classique}.
+En particulier, lisez la section à propos de ``Fusionner les modifications
+des autres''.
+
+
+@node Fichiers binaires
+@subsection Fichiers binaires
+
+Les utilisateurs de CVS devaient marquer les fichiers binaires avec le
+drapeau @option{-kb} pour prévenir de modifications non désirées (à cause
+des substitutions de mots-clé et des translations de fin de ligne). Ils
+oubliaient parfois de faire çà.
+
+Subversion examine la propriété @samp{svn:mime-type} pour décider si le
+fichier est de type texte ou binaire. Si le fichier n'a pas de propriété
+@samp{svn:mime-type}, Subversion considère qu'il est de type texte. Si le
+fichier a la propriété @samp{svn:mime-type} mise à autre chose que
+@samp{test/*}, Subversion considère que le fichier est binaire.
+
+Subversion aide aussi l'utilisateur en tentant de détecter la présence
+d'un fichier binaire lors d'un @samp{svn import} ou @samp{svn add}. Si le
+fichier est considéré comme binaire par ces commandes, elles mettent la
+propriété @samp{svn:mime-type} à @samp{application/octet-stream} au
+fichier qui vient d'être ajouté. Si Subversion s'est trompé lors de sa
+détection, vous pouvez toujours supprimer ou éditer la propriété.
+
+Comme avec CVS, les fichiers binaires ne sont pas sujet à l'expansion des
+mots-clé ou à une conversion des fins de ligne. Et lorsqu'un fichier
+binaire est ``fusionné'' durant une mise à jour, il n'y a pas de réelle
+fusion de réalisée. Au lieu de celà, Subversion crée deux fichiers dans
+votre copie de travail (un fichier correspondant au dépôt et un autre à
+votre copie de travail).  Celui avec vos modifications locales est renommé
+avec l'extension ``.orig''.
+
+@node Authorisation
+@subsection Authorisation
+
+Contrairement à CVS, SVN gère les utilisateurs authorisés et les anonymes
+avec le même dépôt. Il n'y a pas de nécessité de créer un utilisateur
+anonyme ou un dépôt séparé. Si le serveur SVN demande une authorisation
+lors d'une remontée, le client vous demandera votre authorisation (mot
+de passe).
+
+
+@node Modules versionnés
+@subsection Modules versionnés
+
+Contrairement à CVS, une copie de travail de Subversion à conscience
+d'avoir sorti un module. Ceci signifie que si quelqu'un change la
+définition d'un module, alors la commende @samp{svn up} mettra à jour
+la copie de travail de façon appropriée.
+
+Subversion défini les modules comme une liste de répertoire dans une
+propriété d'un répertoire. @xref{Modules}.
+
+
+@node Branches et étiquetage
+@subsection Branches et étiquetage
+
+Subversion ne fait pas de distinction entre l'espace du système de fichier
+et l'espace des ``branches''; les branches et les étiquettes sont des
+répertoires ordinaires dans le système de fichier. C'est probablement le
+seule gros obstacle mental qu'un utilisateur de CVS doit surmonter.
+Lisez tout à propos de çà: @xref{Branche et Etiquetage}.
+
+
+@c ------------------------------------------------------------------
+@node Versionnement des répertoires
+@section Versionnement des répertoires
+
+@quotation
+@emph{``The three cardinal virtues of a master technologist are:
+laziness, impatience, and hubris.'' -- Larry Wall}
+@end quotation
+
+Cette appendice décrit quelques pièges théoriques autour de la notion
+(peut-être arrogante) qu'un répertoire peut-être aussi simplement 
+versionné qu'un fichier.
+
+@subsection Révision de répertoire
+
+Pour commencer, rappelez vous que le dépôt de Subversion est un tableau
+d'arborescences. Chaque arborescence représente l'application d'une
+nouvelle remontée atomique et est appelée une @dfn{révision}. C'est très
+différent du dépôt de CVS qui stocke l'historique des fichiers dans une
+collection de fichiers RCS (et qui ne peut pas tracer les modifications de
+structure de l'arborescence).
+
+Ainsi, lorsque nous nous référons à la ``révision 4 de @file{foo.c}''
+(aussi écrit @dfn{foo.c:4}) dans CVS, celà signifie la quatrième version
+distincte de @file{foo.c} -- mais dans Subversion celà signifie ``la
+version de @file{foo.c} à la quatrième révision (de l'arborescence)''.
+Alors qu'il est probable que @file{foo.c} n'est jamais changé depuis la
+révision 1! En d'autres termes, avec Subversion, différents numéros de
+révision du même élément versionné n'impliquent @emph{pas} différents
+contenus.
+
+Néanmoins, le contenu de @file{foo.c:4} reste parfaitement défini. Le
+fichier @file{foo.c} dans la révision 4 a un contenu et des propriétés
+spécifiques.
+
+Supposons, maintenant, que nous étendions ce concept aux répertoires. Si
+nous avons un répertoire @file{DIR}, défini @dfn{DIR:4} comme ``le
+répertoire DIR à la quatrième révision''. Le contenu est défini comme étant
+un ensemble particulier d'entrées de répertoire (@dfn{dirents}) et de
+propriétés.
+
+Le concept de versionnement de répertoire semble bon dans le dépôt -- le
+dépôt est basée sur une théorie très pûre. Cependant, à cause des copies
+de travail qui authorisent le mixage de révisions, il est simple de créer
+des cas utilisateurs problématiques.
+
+@subsection Le répertoire à la traine
+
+@subsubsection Problème
+
+@c This is the first part of the ``Greg Hudson'' problem, so named
+@c because he was the first one to bring it up and define it well.  :-)
+
+Supposons que votre copie de travail a un répertoire @samp{DIR:1}
+contenant le fichier @samp{foo:1} avec quelques autres fichiers. Nous
+supprimons @file{foo} et remontons la modification.
+
+Immédiatement, nous avons un problème: notre copie de travail continue de
+prétendre avoir @samp{DIR:1}. Mais sur le dépôt, la révision 1 de
+@file{DIR} est @emph{définie} comme contenant @samp{foo} -- et notre copie
+de travail ne l'a manifestement plus. Comment puis-je dire que nous avons
+encore @samp{DIR:1}?
+
+Une réponse à ce problème, est de forcer @file{DIR} à être mise à jour
+lorsque nous remontons la suppression de @file{foo}. En considérant que
+notre remontée créée la révision 2, nous devons immédiatement mettre à
+jour notre copie de travail à @samp{DIR:2}. Alors le client et le serveur
+sont tous les deux d'accords que @samp{DIR:2} ne contient pas foo et que
+@samp{DIR:2} est exactement ce qu'il est dans la copie de travail.
+
+Cette solution est mauvaise car avec des effets du bord sur la
+convivialité à l'utilisation. Imaginons que d'autres personnes remontent
+des modifications avant nous, en ajoutant de nouvelles propriétés à
+@file{DIR} ou en ajoutant un nouveau fichier @file{bar}. Maintenant
+supposons que notre remontée de suppression ait créé la révision 5 dans le
+dépôt. Si nous mettons à jours instantanément notre répertoire @file{DIR}
+local à la révision 5, ceci signifie la réception non prévue d'une copie
+de @file{bar} et des changements de propriétés. Ceci viole clairement un
+principe l'interface utilisateur: ``le client n'a jamais de changements de
+sa copie de travail tant qu'il ne l'a pas demandé.'' . Remonter des
+modifications au dépôt est une opération d'écriture sur le serveur
+uniquement; ceci ne doit @emph{pas} modifier nos données de travail !
+
+Une autre solution, est de faire cette chose naïve: après la remontée de
+la suppression de @file{foo}, arrêter tout simplement de tracer le fichier
+dans le répertoire administratif @file{.svn}. Le client perd alors toute
+connaissance du fichier.
+
+Mais çà ne marche pas non plus: si maintenant nous mettons à jour notre
+copie de travail, la communication entre le client et le serveur est
+incorrecte. Le client continue de croire qu'il a @samp{DIR:1} -- ce qui
+est faut, puisque le ``vrai'' @samp{DIR:1} contient @file{foo}. Le client
+donne ce rapport incorrect au dépôt, et le dépôt décide que pour mettre à
+jour à la révision 2, @file{foo} doit être supprimé. Ainsi le dépôt envoie
+une commande de suppression bugguée (ou au moins inutile).
+
+@subsubsection Solution
+
+Après la suppresion de @file{foo} et sa remontée, le fichier n'est
+@emph{pas} totalement oublié par le répertoire @file{.svn}. Alors que le
+fichier n'est plus considéré comme étant sous contrôle de révision, il est
+secrètement conservé comme ayant été `supprimé'.
+
+Lorsque l'utilisateur met à jour sa copie de travail, le client informe
+correctement le serveur que le fichier est actuellement manquant dans
+son répertoire @samp{DIR:1} local; donc le dépôt n'essaie pas de le
+supprimer à nouveau lorsqu'il patch le client vers la révision 2.
+
+@c Notes, for coders, about how the `deleted' flag works under the hood:
+
+@c   * the @samp{svn status} command won't display a deleted item, unless
+@c     you make the deleted item the specific target of status.
+@c
+@c   * when a deleted item's parent is updated, one of two things will happen:
+@c
+@c       (1) the repository will re-add the item, thereby overwriting
+@c           the entire entry.  (no more `deleted' flag)
+@c
+@c       (2) the repository will say nothing about the item, which means
+@c           that it's fully aware that your item is gone, and this is 
+@c           the correct state to be in.  In this case, the entire entry
+@c           is removed.  (no more `deleted' flag)
+@c
+@c   * if a user schedules an item for addition that has the same name
+@c     as a `deleted' entry, then entry will have both flags
+@c     simultaneously.  This is perfectly fine:
+@c
+@c         * the commit-crawler will notice both flags and do a delete()
+@c           and then an add().  This ensures that the transaction is
+@c           built correctly. (without the delete(), the add() would be
+@c           on top of an already-existing  item.)
+@c
+@c         * when the commit completes, the client rewrites the entry as
+@c           normal.  (no more `deleted' flag)
+
+
+@subsection Le répertoire en avance
+
+@c This is the 2nd part of the ``Greg Hudson'' problem.
+
+@subsubsection Problème
+
+Supposons que notre copie de travail a le répertoire @samp{DIR:1}
+contenant @samp{foo:1} ainsi que d'autres fichiers.
+
+Maintenant, sans que nous le sachions, quelqu'un d'autre ajoute un nouveau
+fichier @file{bar} à ce répertoire, créant ainsi la révision 2 (et
+@samp{DIR:2}).
+
+Maintenant nous ajoutons une propriété à @file{DIR} et le remontons, ce
+qui crée la révision 3. Notre copie de travail de @file{DIR} est marquée
+comme étant la révision 3.
+
+Bien sûr, c'est faut; notre copie de travail n'est @emph{pas}
+@samp{DIR:3}, car le ``vrai'' @samp{DIR:3} dans le dépôt contient un
+nouveau fichier @file{bar}. Notre copie de travail n'a pas du tout
+connaissance de @file{bar}.
+
+Encore un fois, nous ne pouvons faire suivre notre remontée de @file{DIR}
+par une mise à jour automatique (donc avec l'ajout de @file{bar}). comme
+indiqué précédament, les remontées sont des opérations décritures à un
+seul sens; elles ne doivent pas modifier les données de la copie de
+travail.
+
+@subsubsection Solution
+
+Enumérons exactement quand un numéros de révision d'un répertoire local
+change:
+
+@itemize @bullet
+@item
+@b{quand un répertoire est mise à jour}: si le répertoire est soit la
+cible directe d'une commande de mise à jour, soit le fils d'un répertoire
+mise à jour, il est alors augmenté (avec d'autres frère et fils) à un
+numéros de révision uniforme.
+@item
+@b{quand un répertoire est remonté}: un répertoire peut-être considéré 
+comme un ``objet remonté'' uniquement s'il a une nouvelle modification de
+propriété. (autrement, ``remonter un répertoire'' implique que ces fils
+modifiés ait été remontés, et uniquement de tel fils auront leur révision
+augmenté.)
+@end itemize
+
+A la lumière de ces explications, il est claire que notre problème de
+``répertoire en avance'' apparait uniquement dans la seconde situation --
+aux moments où nous remontons des modifications de propriété d'un
+répertoire.
+
+Donc la réponse est simplement de ne pas permettre la remontée de
+propriété d'un répertoire qui est dépassé. Celà semble un peu restrictif,
+mais il n'y a pas d'autre moyen pour conserver les révisions de répertoire
+cohérentes.
+
+@c  Note to developers:  this restriction is enforced by the filesystem
+@c  merge() routine.
+
+@c  Once merge() has established that {ancestor, source, target} are all
+@c  different node-rev-ids, it examines the property-keys of ancestor
+@c  and target.  If they're *different*, it returns a conflict error.
+
+
+@subsection User impact
+
+Donc, le client Subversion semble avoir deux difficiles --- et
+principalement contradictoires --- objectifs.
+
+Premièrement, il doit rendre sont utilisation conviviale, ce qui
+généralement signifie une système de décision peu claire quant à ce que
+peut ou non faire l'utilisateur. C'est pourquoi il permet une copie de
+travail avec plusieurs révisions, et pourquoi il essaie de laisser
+l'utilisateur réaliser des opérations de modification locale de
+l'arborescence (suppression, ajout, déplacement, copie) dans des
+situations qui ne sont pas toujour parfaites, théoriquement ``sûres'' ou
+pures.
+
+Deuxièment, le client essaie de conserver la copie de travail cohérente et
+synchronisée avec le dépôt en utilisant le minimum de communication
+possible. Bien sûr, ceci est rendu plus difficile avec le premier
+objectif!
+
+Finallement, il y a quelques tensions ici, et la résolutions des problèmes
+peut varier. Dans un cas (le ``répertoire en avance''), le problème peut
+être résoud avec un peu d'astuce dans le traçage des entrées par le
+client. Dans l'autre cas (``le répertoire dépassé''), la seule solution est
+de restreindre quelques négligences théoriques authorisées par le client.
+
+@c ------------------------------------------------------------------
+@node Compilation et installation
+@section Compilation et installation
+
+Les dernières instructions pour compiler et installer Subversion (et
+httpd-2.0) sont maintenues dans le fichier @file{INSTALL} à la racine des
+sources de Subversion.
+
+En général, vous devrez aussi être capable de trouver la dernière version
+de ce fichier en le récupérant directement depuis notre dépôt de
+Subversion:
+@uref{http://svn.collab.net/repos/svn/trunk/INSTALL}
+
+
+@c ------------------------------------------------------------------
+@node Feuille de référence rapide
+@section Feuille de référence rapide
+
+Une feuille de référence rapide (Ndt : il doit exister mieux comme
+traduction ?) est téléchargable sur le site web de Subversion, qui est
+compilé depuis le fichier @file{doc/user/svn-ref.tex} des sources de
+Subversion.
+Il y a-t-il un volontaire pour la réécrire en texinfo ?
+
+
+
+@c ------------------------------------------------------------------
+@node FAQ
+@section FAQ
+
+La FAQ principale du projet peut être vue directement dans le dépôt de
+Subversion:
+
+@uref{http://svn.collab.net/repos/svn/trunk/www/project_faq.html}
+
+
+@c ------------------------------------------------------------------
+@node Contribuer
+@section Contribuer
+
+Pour une description complète sur comment contribuer à Subversion, lisez
+le fichier @file{HACKING} à la racine des sources de Subversion. Il est
+aussi disponible à @uref{http://svn.collab.net/repos/svn/trunk/HACKING}.
+
+Subversion est comme beaucoup de projets open-source. Commencez par
+participer aux discussions sur les mailling listes, puis en proposant des
+patchs à la critique. Eventuellement, on vous accordera les droits pour
+accéder en écriture au dépôt.
+
+@c ------------------------------------------------------------------
+@node License
+@section License
+
+Copyright @copyright{} 2000-2004 Collab.Net.  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are
+met:
+
+@enumerate
+@item
+Redistributions of source code must retain the above copyright notice,
+this list of conditions and the following disclaimer.
+
+@item
+Redistributions in binary form must reproduce the above copyright
+notice, this list of conditions and the following disclaimer in the
+documentation and/or other materials provided with the distribution.
+
+@item
+The end-user documentation included with the redistribution, if
+any, must include the following acknowledgment: ``This product includes
+software developed by CollabNet (@uref{http://www.Collab.Net/}).''
+Alternately, this acknowledgment may appear in the software itself, if
+and wherever such third-party acknowledgments normally appear.
+
+@item
+The hosted project names must not be used to endorse or promote
+products derived from this software without prior written
+permission. For written permission, please contact info@@collab.net.
+
+@item
+Products derived from this software may not use the ``Tigris'' name
+nor may ``Tigris'' appear in their names without prior written
+permission of CollabNet.
+
+@item
+THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESSED OR IMPLIED
+WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+IN NO EVENT SHALL COLLABNET OR ITS CONTRIBUTORS BE LIABLE FOR ANY
+DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER
+IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+@end enumerate
+
+This software consists of voluntary contributions made by many
+individuals on behalf of CollabNet.

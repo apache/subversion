@@ -64,8 +64,6 @@ SOURCE=[sources.path][if-any sources.reldir]
 !ENDIF
 [end][for sources.user_deps][if-index sources.user_deps first]
 USERDEP__=[else] [end]"[sources.user_deps]"[end][if-any sources.custom_build]
-[for platforms][for configs]
-![if-index platforms first][if-index configs first][else]ELSE[end][else]ELSE[end]IF  "$(CFG)" == "[target.proj_name] - [platforms] [configs.name]"
 
 # Begin Custom Build
 
@@ -75,8 +73,7 @@ InputPath=[sources.path]
 [if-any sources.custom_build]	[sources.custom_build]
 [end]
 # End Custom Build
-[end][end]
-!ENDIF
+
 [end]
 # End Source File
 [end]

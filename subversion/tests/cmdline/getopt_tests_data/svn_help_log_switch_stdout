@@ -59,17 +59,6 @@ usage: 1. switch URL [PATH]
      or hostname change) but your working copy still reflects the same
      directory within the same repository.
 
-  If --force is used, unversioned obstructing paths in the working
-  copy do not automatically cause a failure if the switch attempts to
-  add the same path.  If the obstructing path is the same type (file
-  or directory) as the corresponding path in the repository it becomes
-  versioned but its contents are left 'as-is' in the working copy.
-  This means that an obstructing directory's unversioned children may
-  also obstruct and become versioned.  For files, any content differences
-  between the obstruction and the repository are treated like a local
-  modification to the working copy.  All properties from the repository
-  are applied to the obstructing path.
-
 Valid options:
   -r [--revision] arg      : ARG (some commands also take ARG1:ARG2 range)
                              A revision argument can be one of:
@@ -88,5 +77,4 @@ Valid options:
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting
   --config-dir arg         : read user configuration files from directory ARG
-  --force                  : force operation to run
 

@@ -576,7 +576,7 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
  * (i.e. nothing was committed);
  *
  * @a lock_tokens, if non-NULL, is a hash mapping <tt>const char
- * *</tt> paths (relative to the URL of @a session) to <tt>
+ * *</tt> paths (relative to the URL of @a session_baton) to <tt>
  * const char *</tt> lock tokens.  The server checks that the
  * correct token is provided for each committed, locked path.  @a lock_tokens
  * must live during the whole commit operation.
@@ -620,13 +620,13 @@ svn_error_t *svn_ra_get_commit_editor(svn_ra_session_t *session,
 
 /**
  * Fetch the contents and properties of file @a path at @a revision.
- * @a revision may be SVN_INVALID_REVNUM, indicating that the HEAD
- * revision should be used.  Interpret @a path relative to the URL in
- * @a session.  Use @a pool for all allocations.
+ * Interpret @a path relative to the URL in @a session.  Use
+ * @a pool for all allocations.
  *
- * If @a revision is @c SVN_INVALID_REVNUM and @a fetched_rev is not
- * @c NULL, then set @a *fetched_rev to the actual revision that was
- * retrieved.
+ * If @a revision is @c SVN_INVALID_REVNUM (meaning 'head') and
+ * @a *fetched_rev is not @c NULL, then this function will set
+ * @a *fetched_rev to the actual revision that was retrieved.  (Some
+ * callers want to know, and some don't.) 
  *
  * If @a stream is non @c NULL, push the contents of the file at @a
  * stream, do not call svn_stream_close() when finished.
@@ -706,7 +706,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
 /**
  * Ask the RA layer to update a working copy.
  *
- * The client initially provides an @a update_editor/@a update_baton to the 
+ * The client initially provides an @a update_editor/@a baton to the 
  * RA layer; this editor contains knowledge of where the change will
  * begin in the working copy (when @c open_root() is called).
  *
@@ -756,14 +756,14 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
  * Ask the RA layer to 'switch' a working copy to a new
  * @a switch_url;  it's another form of svn_ra_do_update().
  *
- * The client initially provides a @a switch_editor/@a switch_baton to the RA
+ * The client initially provides a @a switch_editor/@a baton to the RA
  * layer; this editor contains knowledge of where the change will
  * begin in the working copy (when open_root() is called). 
  *
  * In return, the client receives a @a reporter/@a report_baton.  The
  * client then describes its working-copy revision numbers by making
  * calls into the @a reporter structure; the RA layer assumes that all
- * paths are relative to the URL used to open @a session.
+ * paths are relative to the URL used to create @a session_baton.
  *
  * When finished, the client calls @a reporter->finish_report().  The
  * RA layer then does a complete drive of @a switch_editor, ending with
@@ -783,7 +783,7 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
  *
  * The caller may not perform any RA operations using
  * @a session before finishing the report, and may not perform
- * any RA operations using @a session from within the editing
+ * any RA operations using @a session_baton from within the editing
  * operations of @a switch_editor.
  *
  * Use @a pool for memory allocation.
@@ -808,7 +808,7 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
  * Ask the RA layer to describe the status of a working copy with respect
  * to @a revision of the repository (or HEAD, if @a revision is invalid).
  *
- * The client initially provides a @a status_editor/@a status_baton to the RA
+ * The client initially provides a @a status_editor/@a baton to the RA
  * layer; this editor contains knowledge of where the change will
  * begin in the working copy (when open_root() is called).
  *
@@ -823,8 +823,8 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
  * the working copy were the client to call do_update().
  * @a status_target is an optional single path component will restrict
  * the scope of the status report to an entry in the directory
- * represented by the @a session's URL, or empty if the entire directory
- * is meant to be examined.
+ * represented by the @a session_baton's URL, or empty if the entire
+ * directory is meant to be examined.
  *
  * If @a recurse is true and the target is a directory, get status
  * recursively; otherwise, get status for just the target and its
@@ -859,7 +859,7 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  * working copy directory.  See the svn_ra_do_switch() function 
  * for more details.
  *
- * The client initially provides a @a diff_editor/@a diff_baton to the RA
+ * The client initially provides a @a diff_editor/@a baton to the RA
  * layer; this editor contains knowledge of where the common diff
  * root is in the working copy (when open_root() is called). 
  *
@@ -1155,7 +1155,7 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
  * the client, if it hasn't done so already.
  *
  * If @a token points to a lock, but the RA username doesn't match the
- * lock's owner, call @a lock_func/@a lock_baton with an error.  If @a
+ * lock's owner, call @a lockfunc/@a lock_baton with an error.  If @a
  * break_lock is true, however, instead allow the lock to be "broken"
  * by the RA user.
  *

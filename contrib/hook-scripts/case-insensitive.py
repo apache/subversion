@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 # A pre-commit hook to detect case-insensitive filename clashes.
 #

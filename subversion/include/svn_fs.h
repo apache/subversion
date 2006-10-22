@@ -176,7 +176,7 @@ svn_error_t *svn_fs_create(svn_fs_t **fs_p, const char *path,
  * @since New in 1.1.
  */
 svn_error_t *svn_fs_open(svn_fs_t **fs_p, const char *path,
-                         apr_hash_t *fs_config, apr_pool_t *pool);
+                         apr_hash_t *config, apr_pool_t *pool);
 
 /**
  * Return, in @a *fs_type, a string identifying the back-end type of
@@ -546,15 +546,6 @@ svn_string_t *svn_fs_unparse_id(const svn_fs_id_t *id,
  * transaction you already have open.  You can also list all the
  * transactions currently present in the database.
  *
- * You may assign properties to transactions; these are name/value
- * pairs.  When you commit a transaction, all of its properties become
- * unversioned revision properties of the new revision.  (There is one
- * exception: the svn:date property will be automatically set on new
- * transactions to the date that the transaction was created, and will
- * be overwritten when the transaction is committed by the current
- * time; changes to a transaction's svn:date property will not affect
- * its committed value.)
- * 
  * Transaction names are guaranteed to contain only letters (upper-
  * and lower-case), digits, `-', and `.', from the ASCII character
  * set.
@@ -729,9 +720,10 @@ svn_error_t *svn_fs_txn_prop(svn_string_t **value_p,
                              apr_pool_t *pool);
 
 
-/** Set @a *table_p to the entire property list of transaction @a txn, as
- * an APR hash table allocated in @a pool.  The resulting table maps property
- * names to pointers to @c svn_string_t objects containing the property value.
+/** Set @a *table_p to the entire property list of transaction @a txn in
+ * filesystem @a fs, as an APR hash table allocated in @a pool.  The
+ * resulting table maps property names to pointers to @c svn_string_t
+ * objects containing the property value.
  */
 svn_error_t *svn_fs_txn_proplist(apr_hash_t **table_p,
                                  svn_fs_txn_t *txn,
@@ -898,7 +890,7 @@ svn_error_t *svn_fs_paths_changed(apr_hash_t **changed_paths_p,
 /* Operations appropriate to all kinds of nodes.  */
 
 /** Set @a *kind_p to the type of node present at @a path under @a
- * root.  If @a path does not exist under @a root, set @a *kind_p to @c
+ * root.  If @a path does not exist under @a root, set @a *kind to @c
  * svn_node_none.  Use @a pool for temporary allocation.
  */
 svn_error_t *svn_fs_check_path(svn_node_kind_t *kind_p,
@@ -921,12 +913,12 @@ svn_error_t *svn_fs_node_history(svn_fs_history_t **history_p,
                                  apr_pool_t *pool);
 
 
-/** Set @a *prev_history_p to an opaque node history object which
+/** Set @a *prev_history_t to an opaque node history object which
  * represents the previous (or "next oldest") interesting history
  * location for the filesystem node represented by @a history, or @c
  * NULL if no such previous history exists.  If @a cross_copies is @c
  * FALSE, also return @c NULL if stepping backwards in history to @a
- * *prev_history_p would cross a filesystem copy operation.  
+ * prev_history_t would cross a filesystem copy operation.  
  *
  * @note If this is the first call to svn_fs_history_prev() for the @a
  * history object, it could return a history object whose location is
@@ -998,9 +990,7 @@ svn_error_t *svn_fs_node_id(const svn_fs_id_t **id_p,
 /** Set @a *revision to the revision in which @a path under @a root was 
  * created.  Use @a pool for any temporary allocations.  @a *revision will 
  * be set to @c SVN_INVALID_REVNUM for uncommitted nodes (i.e. modified nodes 
- * under a transaction root).  Note that the root of an unmodified transaction
- * is not itself considered to be modified; in that case, return the revision
- * upon which the transaction was based.
+ * under a transaction root).
  */
 svn_error_t *svn_fs_node_created_rev(svn_revnum_t *revision,
                                      svn_fs_root_t *root,
@@ -1415,8 +1405,7 @@ svn_error_t *svn_fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
  *
  * Set @a *contents_p to a stream ready to receive full textual data.
  * When the caller closes this stream, the data replaces the previous
- * contents of the file.  The caller must write all file data and close
- * the stream before making further changes to the transaction.
+ * contents of the file.
  *
  * If @a path does not exist in @a root, return an error.  (You cannot use
  * this routine to create new files;  use svn_fs_make_file() to create

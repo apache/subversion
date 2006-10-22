@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,6 +18,7 @@
 package org.tigris.subversion.javahl.tests;
 
 import junit.framework.TestCase;
+import junit.framework.TestSuite;
 import org.tigris.subversion.javahl.*;
 
 import java.io.File;
@@ -27,11 +28,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-
 /**
  * common base class for the javahl binding tests
  */
-class SVNTests extends TestCase
+public class SVNTests extends TestCase
 {
     /**
      * our admin object, mostly used for creating,dumping and loading
@@ -43,10 +43,10 @@ class SVNTests extends TestCase
      */
     protected SVNClientInterface client;
     /**
-     * The root directory for the test data. All other files and
-     * directories will created under here.
+     * the root directory. All other files and directories will created in
+     * here
      */
-    protected final File rootDir;
+    protected File rootDir;
     /**
      * the base name of the test. Together with the testCounter this will make
      * up the directory name of the test.
@@ -73,22 +73,22 @@ class SVNTests extends TestCase
      * will be used for the sample repository and its dumpfile and for
      * the config directory
      */
-    protected final File localTmp;
+    protected File localTmp;
     /**
      * the directory "repositories" in the rootDir. All test repositories will
      * be created here.
      */
-    protected final File repositories;
+    protected File repositories;
     /**
      * the directory "working_copies" in the rootDir. All test working copies
      * will be created here.
      */
-    protected final File workingCopies;
+    protected File workingCopies;
     /**
      * the directory "config" in the localTmp. It will be used as the
      * configuration directory for all the tests.
      */
-    protected final File conf;
+    protected File conf;
     /**
      * standard log message. Used for all commits.
      */
@@ -100,18 +100,68 @@ class SVNTests extends TestCase
     protected Map expectedCommitItems;
 
     /**
-     * Common root directory for all tests. Can be set by the command
-     * line or by the system property <code>test.rootdir</code>.  If
-     * not set, the current working directory of this process is used.
+     * common root directory for all tests. Can be set by the command line or
+     * by the system property "test.rootdir". If not set, the current directory
+     * of this process is used
      */
     protected static String rootDirectoryName;
-
     /**
      * common root URL for all tests. Can be set by the command line or by the
      * system property "test.rooturl". If not set, the file url of the
      * rootDirectoryName is used.
      */
     protected static String rootUrl;
+
+    /**
+     * retrieve the root directory and the root url from the command line
+     * arguments
+     * @param args  command line arguments
+     */
+    protected static void processArgs(String[] args)
+    {
+        if (args == null)
+            return;
+        for (int i = 0; i < args.length; i++)
+        {
+            String arg = args[i];
+            if ("-d".equals(arg))
+            {
+                if (i + 1 < args.length)
+                {
+                    rootDirectoryName = args[++i];
+                }
+            }
+            if ("-u".equals(arg))
+            {
+                if (i + 1 < args.length)
+                {
+                    rootUrl = args[++i];
+                }
+            }
+        }
+    }
+
+    /**
+     * Main method, will call all tests of all test classes
+     * @param args command line arguments
+     */
+    public static void main(String[] args)
+    {
+        processArgs(args);
+        junit.textui.TestRunner.run(suite());
+    }
+
+    /**
+     * build a test suite with all test of all test classes known
+     * @return complete test suite
+     */
+    public static TestSuite suite()
+    {
+        TestSuite suite = new TestSuite();
+        suite.addTestSuite(BasicTests.class);
+        suite.addTestSuite(SVNAdminTests.class);
+        return suite;
+    }
 
     /**
      * Initialize one test object
@@ -141,15 +191,6 @@ class SVNTests extends TestCase
             else if(rootUrl.startsWith("file:/"))
                 rootUrl = rootUrl.replaceFirst("file:/", "file:///");
         }
-
-        // ### The paths for the command-line tests are now
-        // ### "svn-test-work/local_tmp", "svn-test-work/repositories"
-        // ### and "svn-test-work/repositories".  The JavaHL tests
-        // ### have not been updated to match.
-        this.localTmp = new File(this.rootDir, "local_tmp");
-        this.conf = new File(this.localTmp, "config");
-        this.repositories = new File(this.rootDir, "repositories");
-        this.workingCopies = new File(this.rootDir, "working_copies");
     }
 
     /**
@@ -160,11 +201,27 @@ class SVNTests extends TestCase
     {
         super.setUp();
 
-        createDirectories();
+        // create a clean directory for the config files and the sample
+        // repository
+        //
+        // ### The path is now "svn-test-work/local_tmp", however, I'm
+        // ### not sure how to update this code for that.
+        localTmp = new File(rootDir, "local_tmp");
+        if(localTmp.exists())
+            removeDirectoryWithContent(localTmp);
+        localTmp.mkdir();
+        conf = new File(localTmp, "config");
+        conf.mkdir();
 
         // create and configure the needed subversion objects
         admin = new SVNAdmin();
-        initClient();
+        client = new SVNClientSynchronized();
+        client.notification2(new MyNotifier());
+        client.commitMessageHandler(new MyCommitMessage());
+        client.username("jrandom");
+        client.password("rayjandom");
+        client.setConfigDirectory(conf.getAbsolutePath());
+        expectedCommitItems = new HashMap();
 
         // build and dump the sample repository
         File greekFiles = buildGreekFiles();
@@ -178,42 +235,16 @@ class SVNTests extends TestCase
                 null, true );
         admin.dump(greekRepos.getAbsolutePath(), new FileOutputer(greekDump),
                 new IgnoreOutputer(), null, null, false);
-    }
 
-    /**
-     * Create a directory for the sample (Greek) repository, config
-     * files, repositories and working copies.
-     */
-    private void createDirectories()
-    {
-        this.rootDir.mkdirs();
-
-        if (this.localTmp.exists())
-        {
-            removeDirOrFile(this.localTmp);
-        }
-        this.localTmp.mkdir();
-        this.conf.mkdir();
-
-        this.repositories.mkdir();
-        this.workingCopies.mkdir();
-    }
-
-    /**
-     * Initialize {@link #client}, setting up its notifier, commit
-     * message handler, user name, password, config directory, and
-     * expected commit items.
-     */
-    private void initClient()
-        throws SubversionException
-    {
-        this.client = new SVNClientSynchronized();
-        this.client.notification2(new MyNotifier());
-        this.client.commitMessageHandler(new MyCommitMessage());
-        this.client.username("jrandom");
-        this.client.password("rayjandom");
-        this.client.setConfigDirectory(this.conf.getAbsolutePath());
-        this.expectedCommitItems = new HashMap();
+        // create the directory for the repositories and the working copies
+        //
+        // ### The paths are now "svn-test-work/repositories" and
+        // ### "svn-test-work/repositories".  However, I'm not sure
+        // ### how to update this code for that. 
+        repositories = new File(rootDir, "repositories");
+        repositories.mkdirs();
+        workingCopies = new File(rootDir, "working_copies");
+        workingCopies.mkdirs();
     }
 
     /**
@@ -253,28 +284,18 @@ class SVNTests extends TestCase
     }
 
     /**
-     * Remove a file or a directory and all its content.
-     *
-     * @param path The file or directory to be removed.
+     * Remove a directory with all files and directories it may contain.
+     * @param localTmp
      */
-    static final void removeDirOrFile(File path)
+    protected void removeDirectoryWithContent(File localTmp)
     {
-        if (!path.exists())
+        if(localTmp.isDirectory())
         {
-            return;
+            File[] content = localTmp.listFiles();
+            for(int i = 0; i < content.length; i++)
+                removeDirectoryWithContent(content[i]);
         }
-
-        if (path.isDirectory())
-        {
-            // Recurse (depth-first), deleting contents.
-            File[] dirContents = path.listFiles();
-            for (int i = 0; i < dirContents.length; i++)
-            {
-                removeDirOrFile(dirContents[i]);
-            }
-        }
-
-        path.delete();
+        localTmp.delete();
     }
 
     /**
@@ -287,7 +308,7 @@ class SVNTests extends TestCase
         admin.dispose();
         client.dispose();
         // remove the temporary directory
-        removeDirOrFile(localTmp);
+        removeDirectoryWithContent(localTmp);
         super.tearDown();
     }
 
@@ -437,12 +458,10 @@ class SVNTests extends TestCase
          * input file stream
          */
         FileInputStream myStream;
-
         /**
          * create a new object
          * @param inputName     the file from which the data is read
-         * @exception IOException If <code>inputName</code> is not
-         * found.
+         * @throws IOException
          */
         public FileInputer(File inputName) throws IOException
         {
@@ -470,7 +489,8 @@ class SVNTests extends TestCase
     }
 
     /**
-     * Represents the repository and the working copy for one test.
+     * this internal class represent the repository and the working copy for
+     * one test.
      */
     protected class OneTest
     {
@@ -491,47 +511,19 @@ class SVNTests extends TestCase
          * command
          */
         protected WC wc;
-
         /**
-         * Build a new test setup with a new repository.  If
-         * <code>createWC</code> is <code>true</code>, create a
-         * corresponding working copy and expected working copy
-         * layout.
-         *
-         * @param createWC Whether to create the working copy on disk,
-         * and initialize the expected working copy layout.
-         * @exception SubversionException If there is a problem
-         * creating or loading the repository.
-         * @exception IOException If there is a problem finding the
-         * dump file.
+         * build a new test setup with a new repository, a new working and a
+         * new expected working layout
+         * @throws Exception
          */
-        protected OneTest(boolean createWC)
-            throws SubversionException, IOException
+        protected OneTest() throws Exception
         {
             String testName = testBaseName + ++testCounter;
-            this.wc = greekWC.copy();
-            this.repository = createInitialRepository(testName);
-            this.url = makeReposUrl(repository);
-
-            if (createWC)
-            {
-                workingCopy = createInitialWorkingCopy(repository, testName);
-            }
+            wc = greekWC.copy();
+            repository = createStartRepository(testName);
+            url = makeReposUrl(repository);
+            workingCopy = createStartWorkingCopy(repository, testName);
         }
-
-        /**
-         * Build a new test setup with a new repository.  Create a
-         * corresponding working copy and expected working copy
-         * layout.
-         *
-         * @see #OneTest
-         */
-        protected OneTest()
-            throws SubversionException, IOException
-        {
-            this(true);
-        }
-
         /**
          * Copy the working copy and the expected working copy layout for tests
          * which need multiple working copy
@@ -539,12 +531,10 @@ class SVNTests extends TestCase
          * @return second test object.
          * @throws Exception
          */
-        protected OneTest copy(String append)
-            throws SubversionException, IOException
+        protected OneTest copy(String append) throws Exception
         {
             return new OneTest(this, append);
         }
-
         /**
          * constructor for create a copy
          * @param orig      original test
@@ -552,16 +542,14 @@ class SVNTests extends TestCase
          *                  test
          * @throws Exception
          */
-        private OneTest(OneTest orig, String append)
-            throws SubversionException, IOException
+        private OneTest(OneTest orig, String append) throws Exception
         {
             String testName = testBaseName + testCounter +append;
             repository = orig.getRepository();
             url = orig.getUrl();
             wc = orig.wc.copy();
-            workingCopy = createInitialWorkingCopy(repository, testName);
+            workingCopy = createStartWorkingCopy(repository, testName);
         }
-
         /**
          * Return the directory of the repository
          * @return the repository directory name
@@ -614,17 +602,13 @@ class SVNTests extends TestCase
          * Create the repository for the beginning of the test
          * @param testName      the name of the test
          * @return  the repository directory
-         * @exception SubversionException If there is a problem
-         * creating or loading the repository.
-         * @exception IOException If there is a problem finding the
-         * dump file.
+         * @throws Exception
          */
-        protected File createInitialRepository(String testName)
-            throws SubversionException, IOException
+        protected File createStartRepository(String testName) throws Exception
         {
             // build a clean repository directory
             File repos = new File(repositories, testName);
-            removeDirOrFile(repos);
+            removeDirectoryWithContent(repos);
             // create and load the repository from the default repository dump
             admin.create(repos.getAbsolutePath(), true, false,
                     conf.getAbsolutePath(), SVNAdmin.BDB);
@@ -639,52 +623,28 @@ class SVNTests extends TestCase
          * @return the directory of the working copy
          * @throws Exception
          */
-        protected File createInitialWorkingCopy(File repos, String testName)
-            throws SubversionException, IOException
+        protected File createStartWorkingCopy(File repos, String testName)
+                throws Exception
         {
             // build a clean working directory
             String uri = makeReposUrl(repos);
             workingCopy = new File(workingCopies, testName);
-            removeDirOrFile(workingCopy);
+            removeDirectoryWithContent(workingCopy);
             // checkout the repository
             client.checkout(uri, workingCopy.getAbsolutePath(), null, true);
             // sanity check the working with its expected status
             checkStatus();
             return workingCopy;
         }
-
         /**
-         * Check if the working copy has the expected status.  Does
-         * not extract "out of date" information from the repository.
-         *
-         * @exception SubversionException If there's a problem getting
-         * WC status.
-         * @exception IOException If there's a problem comparing the
-         * WC to the expected state.
-         * @see #checkStatus(boolean)
+         * Check if the working copy has the expected status
+         * @throws Exception
          */
-        public void checkStatus()
-            throws SubversionException, IOException
+        public void checkStatus() throws Exception
         {
-            checkStatus(false);
-        }
-
-        /**
-         * Check if the working copy has the expected status.
-         *
-         * @param checkRepos Whether to check the repository's "out of
-         * date" information.
-         * @exception SubversionException If there's a problem getting
-         * WC status.
-         * @exception IOException If there's a problem comparing the
-         * WC to the expected state.
-         */
-        public void checkStatus(boolean checkRepos)
-            throws SubversionException, IOException
-        {
-            Status[] states = client.status(workingCopy.getAbsolutePath(),
-                                            true, checkRepos, true, true);
-            wc.check(states, workingCopy.getAbsolutePath(), checkRepos);
+            Status[] states = client.status(workingCopy.getAbsolutePath(), true,
+                    false, true, true);
+            wc.check(states, workingCopy.getAbsolutePath());
         }
     }
 

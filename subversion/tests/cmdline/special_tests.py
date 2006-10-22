@@ -354,118 +354,6 @@ def remove_symlink(sbox):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
   
-def merge_symlink_into_file(sbox):
-  "merge symlink into file"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  d_url = sbox.repo_url + '/A/D'
-  dprime_url = sbox.repo_url + '/A/Dprime'
-
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  gamma_prime_path = os.path.join(wc_dir, 'A', 'Dprime', 'gamma')
-
-  # create a copy of the D directory to play with
-  svntest.main.run_svn(None, 'copy', d_url, dprime_url, '-m', 'copy')
-  svntest.main.run_svn(None, 'update', sbox.wc_dir)
-
-  # remove A/Dprime/gamma
-  svntest.main.run_svn(None, 'delete', gamma_prime_path)
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/Dprime/gamma' : Item(verb='Deleting'),
-    })
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
-
-  # Commit a symlink in its place
-  linktarget_path = os.path.join(wc_dir, 'linktarget')
-  svntest.main.file_append(linktarget_path, 'this is just a link target')
-  os.symlink('linktarget', gamma_prime_path)
-  svntest.main.run_svn(None, 'add', gamma_prime_path)
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/Dprime/gamma' : Item(verb='Adding'),
-    })
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
-
-  # merge the creation of the symlink into the original directory
-  svntest.main.run_svn(None, 'merge', '-r', '2:4', dprime_url,
-                       os.path.join(wc_dir, 'A', 'D'))
-
-  # now revert, and we'll get a strange error
-  svntest.main.run_svn(None, 'revert', '-R', wc_dir)
-
-  # assuming we got past the revert because someone fixed that bug, lets
-  # try the merge and a commit, since that apparently used to throw us for
-  # a loop, see issue 2530
-  svntest.main.run_svn(None, 'merge', '-r', '2:4', dprime_url,
-                       os.path.join(wc_dir, 'A', 'D'))
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/gamma' : Item(verb='Replacing'),
-    })
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
-
-
-
-def merge_file_into_symlink(sbox):
-  "merge file into symlink"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  d_url = sbox.repo_url + '/A/D'
-  dprime_url = sbox.repo_url + '/A/Dprime'
-
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  gamma_prime_path = os.path.join(wc_dir, 'A', 'Dprime', 'gamma')
-
-  # create a copy of the D directory to play with
-  svntest.main.run_svn(None, 'copy', d_url, dprime_url, '-m', 'copy')
-  svntest.main.run_svn(None, 'update', sbox.wc_dir)
-
-  # remove A/Dprime/gamma
-  svntest.main.run_svn(None, 'delete', gamma_prime_path)
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/Dprime/gamma' : Item(verb='Deleting'),
-    })
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
-
-  # Commit a symlink in its place
-  linktarget_path = os.path.join(wc_dir, 'linktarget')
-  svntest.main.file_append(linktarget_path, 'this is just a link target')
-  os.symlink('linktarget', gamma_prime_path)
-  svntest.main.run_svn(None, 'add', gamma_prime_path)
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/Dprime/gamma' : Item(verb='Adding'),
-    })
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
-
-  open(gamma_path, 'w+').write("changed file")
-
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/gamma' : Item(verb='Sending'),
-    })
-
-  svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
-                                        None, None, None, None, wc_dir)
-
-  # ok, now merge the change to the file into the symlink we created, this
-  # gives us a weird error
-  svntest.main.run_svn(None, 'merge', '-r', '4:5', d_url,
-                       os.path.join(wc_dir, 'A', 'Dprime'))
-
 
 ########################################################################
 # Run the tests
@@ -479,8 +367,6 @@ test_list = [ None,
               Skip(copy_tree_with_symlink, (os.name != 'posix')),
               Skip(replace_symlink_with_file, (os.name != 'posix')),
               Skip(remove_symlink, (os.name != 'posix')),
-              Skip(merge_symlink_into_file, (os.name != 'posix')),
-              XFail(Skip(merge_file_into_symlink, (os.name != 'posix'))),
              ]
 
 if __name__ == '__main__':

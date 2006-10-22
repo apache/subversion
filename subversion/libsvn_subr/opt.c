@@ -1008,7 +1008,9 @@ svn_opt_print_help2(apr_getopt_t *os,
   if (os)
     SVN_ERR(svn_opt_parse_all_args(&targets, os, pool));
 
-  if (os && targets->nelts)  /* help on subcommand(s) requested */
+  if (cmd_table
+      && targets
+      && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
         svn_opt_subcommand_help2(((const char **) (targets->elts))[i],
@@ -1049,7 +1051,9 @@ svn_opt_print_help(apr_getopt_t *os,
   if (os)
     SVN_ERR(svn_opt_parse_all_args(&targets, os, pool));
 
-  if (os && targets->nelts)  /* help on subcommand(s) requested */
+  if (cmd_table
+      && targets
+      && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
         svn_opt_subcommand_help(((const char **) (targets->elts))[i],

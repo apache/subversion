@@ -153,8 +153,8 @@ svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
  * Return pointer to an @c apr_getopt_option_t for the option whose 
  * option code is @a code, or @c NULL if no match.  @a option_table must end
  * with an element whose every field is zero.  If @c command is non-NULL,
- * then return the subcommand-specific option description instead of the
- * generic one, if a specific description is defined.
+ * then the subcommand-specific option description instead of the generic one,
+ * if a specific description is defined.
  *
  * The returned value may be statically allocated, or allocated in @a pool.
  *
@@ -227,8 +227,7 @@ svn_opt_print_generic_help2(const char *header,
                             FILE *stream);
 
 
-/**
- * Same as svn_opt_print_generic_help2(), but acts on
+/* Same as svn_opt_print_generic_help2(), but acts on
  * #svn_opt_subcommand_desc_t.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
@@ -496,27 +495,21 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
                    apr_pool_t *pool);
 
 /**
- * Central dispatcher function for various kinds of help message.
- * Prints one of:
- *   * subcommand-specific help (svn_opt_subcommand_help)
- *   * generic help (svn_opt_print_generic_help)
- *   * version info
- *   * simple usage complaint: "Type '@a pgm_name help' for usage."
+ * Print either generic help, or command-specific help for @a pgm_name.
+ * If there are arguments in @a os, then try printing help for them as
+ * though they are subcommands, using  @a cmd_table and @a option_table 
+ * for option information.
  *
- * If @a os is not @c NULL and it contains arguments, then try printing
- * help for them as though they are subcommands, using @a cmd_table
- * and @a option_table for option information.
+ * If @a os is @c NULL, or there are no targets in @a os, then:
  *
- * Else, if @a print_version is true, then print version info, in
- * brief form if @a quiet is also true; if @a quiet is false, then if
- * @a version_footer is non-null, print it following the version
- * information.
+ *    - If @a print_version is true, then print version info, in brief
+ *      form if @a quiet is also true; if @a quiet is false, then if
+ *      @a version_footer is non-null, print it following the version
+ *      information.
  *
- * Else, if @a os is not @c NULL and does not contain arguments, print
- * generic help, via svn_opt_print_generic_help2() with the @a header,
- * @a cmd_table, @a option_table, and @a footer arguments.
- *
- * Else, when @a os is @c NULL, print the simple usage complaint.
+ *    - Else if @a print_version is not true, then print generic help,
+ *      via svn_opt_print_generic_help2() with the @a header, @a cmd_table,
+ *      @a option_table, and @a footer arguments.
  *
  * Use @a pool for temporary allocations.
  *
@@ -540,8 +533,7 @@ svn_opt_print_help2(apr_getopt_t *os,
                     apr_pool_t *pool);
 
 
-/**
- * Same as svn_opt_print_help2(), but acts on #svn_opt_subcommand_desc_t.
+/* Same as vn_opt_print_help2), but acts on #svn_opt_subcommand_desc_t.
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */

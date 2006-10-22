@@ -80,10 +80,6 @@ extern struct svn_test_descriptor_t test_funcs[];
 /* Initializer for XFAIL tests */
 #define SVN_TEST_XFAIL(func) {func, svn_test_xfail}
 
-/* Initializer for conditional XFAIL tests */
-#define SVN_TEST_XFAIL_COND(func, p)\
-                                {func, (p) ? svn_test_xfail : svn_test_pass}
-
 /* Initializer for SKIP tests */
 #define SVN_TEST_SKIP(func, p) {func, ((p) ? svn_test_skip : svn_test_pass)}
 

@@ -647,11 +647,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_failed_lock,
 
   /** Failed to unlock a path. @since New in 1.2. */
-  svn_wc_notify_failed_unlock,
-
-  /** Tried adding a path that already exists. @since New in 1.5. */
-  svn_wc_notify_exists
-
+  svn_wc_notify_failed_unlock
 } svn_wc_notify_action_t;
 
 
@@ -1103,31 +1099,9 @@ svn_error_t *svn_wc_has_binary_prop(svn_boolean_t *has_binary_prop,
  * that if the text base is much longer than the working file, every
  * byte of the text base will still be examined.)
  *
- * If @a use_tmp_base is true, then use the text-base in the local tmp
- * area, if false use the 'normal' base revision.
- *
  * If @a filename does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error @c SVN_ERR_ENTRY_NOT_FOUND.
- *
- * If @a filename is unmodified but has a timestamp variation then this
- * function may "repair" @a filename's text-time by setting it to
- * @a filename's last modification time.
- *
- * @since New in 1.5.
- */
-svn_error_t *svn_wc_text_modified_p2(svn_boolean_t *modified_p,
-                                     const char *filename,
-                                     svn_boolean_t force_comparison,
-                                     svn_boolean_t use_tmp_base,
-                                     svn_wc_adm_access_t *adm_access,
-                                     apr_pool_t *pool);
-
-
-/** Similar to svn_wc_text_modified_p2() but with the use_tmp_base
- * parameter always set to false.
- *
- * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_text_modified_p(svn_boolean_t *modified_p,
                                     const char *filename,
@@ -1318,11 +1292,6 @@ typedef struct svn_wc_entry_t
    * @since New in 1.4. */
   const char *present_props;
 
-  /** which changelist this item is part of, or NULL if not part of any.
-   * @since New in 1.5.
-   */
-  const char *changelist;
-
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
 } svn_wc_entry_t;
@@ -1429,29 +1398,7 @@ svn_error_t *svn_wc_get_ancestry(char **url,
                                  apr_pool_t *pool);
 
 
-/** A callback vtable invoked by the generic entry-walker function.
- * @since New in 1.5.
- */
-typedef struct svn_wc_entry_callbacks2_t
-{
-  /** An @a entry was found at @a path. */
-  svn_error_t *(*found_entry)(const char *path,
-                              const svn_wc_entry_t *entry,
-                              void *walk_baton,
-                              apr_pool_t *pool);
-
-  /** Handle the error @a err encountered while processing @a path.
-   * Wrap or squelch @a err as desired, and return an @c svn_error_t
-   * *, or @c SVN_NO_ERROR.
-   */
-  svn_error_t *(*handle_error)(const char *path,
-                               svn_error_t *err,
-                               void *walk_baton,
-                               apr_pool_t *pool);
-
-} svn_wc_entry_callbacks2_t;
-
-/** @deprecated Provided for backward compatibility with the 1.4 API. */
+/** A callback vtable invoked by the generic entry-walker function. */
 typedef struct svn_wc_entry_callbacks_t
 {
   /** An @a entry was found at @a path. */
@@ -1460,7 +1407,10 @@ typedef struct svn_wc_entry_callbacks_t
                               void *walk_baton,
                               apr_pool_t *pool);
 
+  /* ### add more callbacks as new callers need them. */
+
 } svn_wc_entry_callbacks_t;
+
 
 /**
  * A generic entry-walker.
@@ -1487,23 +1437,7 @@ typedef struct svn_wc_entry_callbacks_t
  * distinguished by looking for @c SVN_WC_ENTRY_THIS_DIR in the 'name'
  * field of the entry.
  *
- * @since New in 1.5.
- */
-svn_error_t *svn_wc_walk_entries3(const char *path,
-                                  svn_wc_adm_access_t *adm_access,
-                                  const svn_wc_entry_callbacks2_t 
-                                  *walk_callbacks,
-                                  void *walk_baton,
-                                  svn_boolean_t show_hidden,
-                                  svn_cancel_func_t cancel_func,
-                                  void *cancel_baton,
-                                  apr_pool_t *pool);
-
-/**
- * Similar to svn_wc_walk_entries3(), but without cancellation support
- * or error handling from @a walk_callbacks.
- *
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @since New in 1.2.
  */
 svn_error_t *svn_wc_walk_entries2(const char *path,
                                   svn_wc_adm_access_t *adm_access,
@@ -2343,70 +2277,6 @@ svn_error_t *svn_wc_resolved_conflict(const char *path,
 
 /* Commits. */
 
-
-/**
- * Storage type for queued post-commit data.
- *
- * @since New in 1.5.
- */
-typedef struct svn_wc_committed_queue_t svn_wc_committed_queue_t;
-
-
-/**
- * Create a queue for use with svn_wc_queue_committed() and
- * svn_wc_process_committed_queue().
- *
- * The returned queue and all further
- * allocations required for queueing new items will also be done
- * from @a pool.
- */
-svn_wc_committed_queue_t *
-svn_wc_committed_queue_create(apr_pool_t *pool);
-
-
-
-/**
- * Queue committed items to be processed later by
- * svn_wc_process_committed_queue().
- *
- * The first time this function is called, @a *queue should
- * be @c NULL to signal that initialization is required.
- *
- * All pointer data passed to this function
- * (@a path, @adm_access, @a wcprop_changes
- * and @a digest) should remain valid until the queue has been
- * processed by svn_wc_process_committed_queue().
- *
- * The parameters have the same meaning as those
- * for svn_wc_process_committed4().
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_wc_queue_committed(svn_wc_committed_queue_t **queue,
-                       const char *path,
-                       svn_wc_adm_access_t *adm_access,
-                       svn_boolean_t recurse,
-                       apr_array_header_t *wcprop_changes,
-                       svn_boolean_t remove_lock,
-                       svn_boolean_t remove_changelist,
-                       const unsigned char *digest,
-                       apr_pool_t *pool);
-
-
-/**
- * Like svn_wc_process_committed4(), but batch processes
- * items queued with svn_wc_queue_committed().
- */
-svn_error_t *
-svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
-                               svn_wc_adm_access_t *adm_access,
-                               svn_revnum_t new_revnum,
-                               const char *rev_date,
-                               const char *rev_author,
-                               apr_pool_t *pool);
-
-
 /**
  * Bump a successfully committed absolute @a path to @a new_revnum after a
  * commit succeeds.  @a rev_date and @a rev_author are the (server-side)
@@ -2420,11 +2290,6 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.
  *
- * If @a remove_changelist is @c TRUE, any association with a
- * changelist will be removed.
- *
- * If @a path is a member of a changelist, remove that association.
- *
  * If @a path is a file and @a digest is non-null, use @a digest as
  * the checksum for the new text base.  Else, calculate the checksum
  * if needed.
@@ -2433,26 +2298,7 @@ svn_wc_process_committed_queue(svn_wc_committed_queue_t *queue,
  * versioned object at or under @a path.  This is usually done for
  * copied trees.
  *
- * @since New in 1.5.
- */
-svn_error_t *svn_wc_process_committed4(const char *path,
-                                       svn_wc_adm_access_t *adm_access,
-                                       svn_boolean_t recurse,
-                                       svn_revnum_t new_revnum,
-                                       const char *rev_date,
-                                       const char *rev_author,
-                                       apr_array_header_t *wcprop_changes,
-                                       svn_boolean_t remove_lock,
-                                       svn_boolean_t remove_changelist,
-                                       const unsigned char *digest,
-                                       apr_pool_t *pool);
-
-/** Similar to svn_wc_process_committed4(), but with @a
- * remove_changelist set to FALSE.
- *
  * @since New in 1.4.
- *
- * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_process_committed3(const char *path,
                                        svn_wc_adm_access_t *adm_access,
@@ -2633,33 +2479,7 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
- * If @a allow_unver_obstructions is true, then allow unversioned
- * obstructions when adding a path.
- *
- * @since New in 1.5.
- */
-svn_error_t *svn_wc_get_update_editor3(svn_revnum_t *target_revision,
-                                       svn_wc_adm_access_t *anchor,
-                                       const char *target,
-                                       svn_boolean_t use_commit_times,
-                                       svn_boolean_t recurse,
-                                       svn_boolean_t allow_unver_obstructions,
-                                       svn_wc_notify_func2_t notify_func,
-                                       void *notify_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       const char *diff3_cmd,
-                                       const svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       svn_wc_traversal_info_t *ti,
-                                       apr_pool_t *pool);
-
-
-/**
- * Similar to svn_wc_get_update_editor3() but with the
- * allow_unver_obstructions parameter always set to false.
- *
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @since New in 1.2.
  */
 svn_error_t *svn_wc_get_update_editor2(svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
@@ -2734,33 +2554,7 @@ svn_error_t *svn_wc_get_update_editor(svn_revnum_t *target_revision,
  * have their working timestamp set to the last-committed-time.  If
  * FALSE, the working files will be touched with the 'now' time.
  *
- * If @a allow_unver_obstructions is true, then allow unversioned
- * obstructions when adding a path.
- *
- * @since New in 1.5.
- */
-svn_error_t *svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
-                                       svn_wc_adm_access_t *anchor,
-                                       const char *target,
-                                       const char *switch_url,
-                                       svn_boolean_t use_commit_times,
-                                       svn_boolean_t recurse,
-                                       svn_boolean_t allow_unver_obstructions,
-                                       svn_wc_notify_func2_t notify_func,
-                                       void *notify_baton,
-                                       svn_cancel_func_t cancel_func,
-                                       void *cancel_baton,
-                                       const char *diff3_cmd,
-                                       const svn_delta_editor_t **editor,
-                                       void **edit_baton,
-                                       svn_wc_traversal_info_t *ti,
-                                       apr_pool_t *pool);
-
-/**
- * Similar to svn_wc_get_switch_editor3() but with the
- * allow_unver_obstructions parameter always set to false.
- *
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @since New in 1.2.
  */
 svn_error_t *svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
                                        svn_wc_adm_access_t *anchor,
@@ -2907,51 +2701,6 @@ svn_boolean_t svn_wc_is_wc_prop(const char *name);
 /** Return true iff @a name is a 'entry' property name. */
 svn_boolean_t svn_wc_is_entry_prop(const char *name);
 
-/** Callback type used by @c svn_wc_canonicalize_svn_prop.
- *  
- * It should set @a mime_type to the value of @a SVN_PROP_MIME_TYPE
- * for the path passed to @c svn_prop_mime_type (allocated from @a
- * pool), and then write the contents of the file to @a stream.
- *
- * (Currently, this is used if you are attempting to set the @a
- * SVN_PROP_EOL_STYLE property, to make sure that the value matches
- * the mime type and contents.)
- */
-typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)
-  (const svn_string_t **mime_type,
-   svn_stream_t *stream,
-   void *baton,
-   apr_pool_t *pool);
-
-
-/** Canonicalize the value of an svn:* property @a propname with
- * value @propval.
- *
- * If the property is not appropriate for a node of kind @a kind, or
- * is otherwise invalid, throw an error.  Otherwise, set @a *propval_p
- * to a canonicalized version of the property value.  If @a
- * skip_some_checks is true, only some validity checks are taken.
- *
- * Some validity checks require access to the contents and MIME type
- * of the target if it is a file; they will call @a getter with @a
- * getter_baton, which then needs to set the MIME type and print the
- * contents of the file to the given stream.
- *
- * @a path should be the path of the file in question; it is only used
- * for error messages.
- *
- * ### This is not actually related to the WC, but it does need to call
- * ### svn_wc_parse_externals_description2.
- */
-svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
-                                          const char *propname,
-                                          const svn_string_t *propval,
-                                          const char *path,
-                                          svn_node_kind_t kind,
-                                          svn_boolean_t skip_some_checks,
-                                          svn_wc_canonicalize_svn_prop_get_file_t getter,
-                                          void *getter_baton,
-                                          apr_pool_t *pool);
 
 
 
@@ -2980,7 +2729,7 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * the working copy's text-base files, rather than the working files.
  *
  * Normally, the difference from repository->working_copy is shown.
- * If @a reverse_order is true, then show working_copy->repository diffs.
+ * If @ reverse_order is true, then show working_copy->repository diffs.
  *
  * If @a cancel_func is non-null, it will be used along with @a cancel_baton 
  * to periodically check if the client has canceled the operation.
@@ -3635,15 +3384,6 @@ svn_error_t *svn_wc_get_ignores(apr_array_header_t **patterns,
                                 svn_wc_adm_access_t *adm_access,
                                 apr_pool_t *pool);
 
-/** Return true iff @a str matches any of the elements of @a list, a
- * list of zero or more ignore patterns.
- *
- * @since New in 1.5.
- */
-svn_boolean_t
-svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
-                         apr_pool_t *pool);
-
 
 /** Add @a lock to the working copy for @a path.  @a adm_access must contain
  * a write lock for @a path.  If @a path is read-only, due to locking
@@ -3715,23 +3455,6 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *pool);
-
-
-/**
- * Associate @a path with changelist @a changelist by setting the
- * 'changelist' attribute in its entry.  Obviously, this will
- * overwrite any existing value of the attribute.  If @a changelist is
- * NULL, then remove any 'changelist' attribute in @a path's entry.
- *
- * @note This metadata is purely a client-side "bookkeeping"
- * convenience, and is entirely managed by the working copy.
- *
- * @since New in 1.5.
- */
-svn_error_t *
-svn_wc_set_changelist(const char *path,
-                      const char *changelist,
-                      apr_pool_t *pool);
 
 
 #ifdef __cplusplus

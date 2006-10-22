@@ -717,37 +717,17 @@ sub safe_read_from_pipe
       croak "$0: safe_read_from_pipe passed no arguments.\n";
     }
 
-  my $openfork_available = $^O ne "MSWin32"; 
-  if ($openfork_available) # We can fork on this system.
+  my $pid = open(SAFE_READ, '-|');
+  unless (defined $pid)
     {
-      my $pid = open(SAFE_READ, '-|');
-      unless (defined $pid)
-        {
-          die "$0: cannot fork: $!\n";
-        }
-      unless ($pid)
-        {
-          open(STDERR, ">&STDOUT")
-            or die "$0: cannot dup STDOUT: $!\n";
-          exec(@_)
-            or die "$0: cannot exec `@_': $!\n";
-        }
+      die "$0: cannot fork: $!\n";
     }
-  else  # Running on Windows.  No fork. 
+  unless ($pid)
     {
-      my @commandline = ();
-      my $arg;
-      
-      while ($arg = shift)
-        {
-          $arg =~ s/\"/\\\"/g;
-          if ($arg eq "" or $arg =~ /\s/) { $arg = "\"$arg\""; }
-          push(@commandline, $arg);
-        }
-        
-      # Now do the pipe.
-      open(SAFE_READ, "@commandline |")
-        or die "$0: cannot pipe to command: $!\n";
+      open(STDERR, ">&STDOUT")
+        or die "$0: cannot dup STDOUT: $!\n";
+      exec(@_)
+        or die "$0: cannot exec `@_': $!\n";
     }
   my @output;
   while (<SAFE_READ>)

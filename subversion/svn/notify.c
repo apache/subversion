@@ -98,12 +98,6 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         }
       break;
 
-    case svn_wc_notify_exists:
-      nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf(pool, "E    %s\n", path_local)))
-        goto print_error;
-      break;
-
     case svn_wc_notify_restore:
       if ((err = svn_cmdline_printf(pool, _("Restored '%s'\n"),
                                     path_local)))

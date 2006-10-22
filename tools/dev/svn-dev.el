@@ -388,9 +388,7 @@ See also the function `svn-log-message-file'."
                           (save-match-data
                             (if (eq major-mode 'c-mode)
                                 (progn
-                                  (if (fboundp 'c-beginning-of-statement-1)
-                                      (c-beginning-of-statement-1)
-                                    (c-beginning-of-statement))
+                                  (c-beginning-of-statement)
                                   (search-forward "(" nil t)
                                   (forward-char -1)
                                   (forward-sexp -1)

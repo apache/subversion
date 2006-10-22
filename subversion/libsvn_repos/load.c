@@ -251,7 +251,6 @@ parse_property_block(svn_stream_t *stream,
                      apr_pool_t *pool)
 {
   svn_stringbuf_t *strbuf;
-  apr_pool_t *proppool = svn_pool_create(pool);
 
   *actual_length = 0;
   while (content_length != *actual_length)
@@ -259,10 +258,8 @@ parse_property_block(svn_stream_t *stream,
       char *buf;  /* a pointer into the stringbuf's data */
       svn_boolean_t eof;
 
-      svn_pool_clear(proppool);
-      
       /* Read a key length line.  (Actually, it might be PROPS_END). */
-      SVN_ERR(svn_stream_readline(stream, &strbuf, "\n", &eof, proppool));
+      SVN_ERR(svn_stream_readline(stream, &strbuf, "\n", &eof, pool));
 
       if (eof)
         {
@@ -284,10 +281,10 @@ parse_property_block(svn_stream_t *stream,
           char *keybuf;
 
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
-                                  stream, atoi(buf + 2), proppool));
+                                  stream, atoi(buf + 2), pool));
 
           /* Read a val length line */
-          SVN_ERR(svn_stream_readline(stream, &strbuf, "\n", &eof, proppool));
+          SVN_ERR(svn_stream_readline(stream, &strbuf, "\n", &eof, pool));
           if (eof)
             return stream_ran_dry();
 
@@ -301,7 +298,7 @@ parse_property_block(svn_stream_t *stream,
 
               propstring.len = atoi(buf + 2);
               SVN_ERR(read_key_or_val(&valbuf, actual_length,
-                                      stream, propstring.len, proppool));
+                                      stream, propstring.len, pool));
               propstring.data = valbuf;
 
               /* Now, send the property pair to the vtable! */
@@ -322,7 +319,7 @@ parse_property_block(svn_stream_t *stream,
           char *keybuf;
 
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
-                                  stream, atoi(buf + 2), proppool));
+                                  stream, atoi(buf + 2), pool));
 
           /* We don't expect these in revision properties, and if we see
              one when we don't have a delete_node_property callback,
@@ -337,7 +334,6 @@ parse_property_block(svn_stream_t *stream,
       
     } /* while (1) */
 
-  svn_pool_destroy(proppool);
   return SVN_NO_ERROR;
 }                  
 
@@ -1174,7 +1170,7 @@ close_revision(void *baton)
     return SVN_NO_ERROR;
 
   /* Prepare memory for saving dump-rev -> in-repos-rev mapping. */
-  old_rev = apr_palloc(pb->pool, sizeof(*old_rev) * 2);
+  old_rev = apr_palloc(pb->pool, sizeof(svn_revnum_t) * 2);
   new_rev = old_rev + 1;
   *old_rev = rb->rev;
 

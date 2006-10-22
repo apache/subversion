@@ -242,7 +242,7 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt
 
 /** Initialize auth baton @a ab with the standard set of authentication
  * providers used by the command line client.  @a non_interactive,
- * @a username, @a password, @a config_dir, and @a no_auth_cache are the 
+ * @a username, @a password, @a config_dir, and @a auth_cache are the 
  * values of the command line options of the same names.  @a cfg is the
  * @c SVN_CONFIG_CATEGORY_CONFIG configuration, and @a cancel_func and
  * @a cancel_baton control the cancellation of the prompting providers

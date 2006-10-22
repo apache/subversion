@@ -40,10 +40,8 @@ public:
 	jobjectArray lslocks(const char *path);
     void verify(const char *path, Outputer &messageOut,
                     Revision &revisionStart, Revision &revisionEnd);
-    void setRevProp(const char *path, Revision &revision,
-                    const char *propName, const char *propValue,
-                    bool usePreRevPropChangeHook,
-                    bool usePostRevPropChangeHook);
+    void setLog(const char *path, Revision &revision,
+                    const char *message, bool bypassHooks);
     void rmtxns(const char *path, Targets &transactions);
     jlong recover(const char *path);
     void lstxns(const char *path, MessageReceiver &messageReceiver);

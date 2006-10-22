@@ -358,8 +358,7 @@ import_dir(const svn_delta_editor_t *editor,
       if (apr_hash_get(excludes, abs_path, APR_HASH_KEY_STRING))
         continue;
 
-      if ((!no_ignore) && svn_wc_match_ignore_list(filename, ignores,
-                                                   subpool))
+      if ((!no_ignore) && svn_cstring_match_glob_list(filename, ignores))
         continue;
 
       /* We only import subdirectories when we're doing a regular
@@ -527,7 +526,7 @@ import(const char *path,
       if (!no_ignore)
         {
           SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, pool));
-          ignores_match = svn_wc_match_ignore_list(path, ignores, pool);
+          ignores_match = svn_cstring_match_glob_list(path, ignores);
         }
       if (!ignores_match) 
         SVN_ERR(import_file(editor, root_baton, path, edit_path,
@@ -740,7 +739,7 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
   if (new_entries->nelts
       /* What's this, what's this?  This assignment is here because we
          use the value to construct the error message just below.  It
-         may not be aesthetically pleasing, but it's less ugly than
+         may not be asethetically pleasing, but it's less ugly than
          calling APR_ARRAY_IDX twice. */
       && svn_wc_is_adm_dir(temp = APR_ARRAY_IDX(new_entries,
                                                 new_entries->nelts - 1,
@@ -910,8 +909,29 @@ reconcile_errors(svn_error_t *commit_err,
   return err;
 }
 
+/* Return TRUE if one of the first PROCESSED items in COMMIT_ITEMS is a
+   parent of PATH, return FALSE otherwise. */
+static svn_boolean_t
+have_processed_parent(apr_array_header_t *commit_items,
+                      int processed,
+                      const char *path,
+                      apr_pool_t *pool)
+{
+  int i;
+  for (i = 0; i < processed && i < commit_items->nelts; ++i)
+    {
+      svn_client_commit_item2_t *item
+        = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
+
+      if (svn_path_is_child(item->path, path, pool))
+        return TRUE;
+    }
+  return FALSE;
+}
+
+
 /* Remove redundancies by removing duplicates from NONRECURSIVE_TARGETS,
- * and removing any target that either is, or is a descendant of, a path in
+ * and removing any target that either is, a decendant of, a path in
  * RECURSIVE_TARGETS.  Return the result in *PUNIQUE_TARGETS.
  */
 static svn_error_t *
@@ -1149,12 +1169,10 @@ collect_lock_tokens(apr_hash_t **result,
 
 
 svn_error_t *
-svn_client_commit4(svn_commit_info_t **commit_info_p,
+svn_client_commit3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *targets,
                    svn_boolean_t recurse,
                    svn_boolean_t keep_locks,
-                   svn_boolean_t keep_changelist,
-                   const char *changelist_name,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -1288,9 +1306,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
               while (strcmp(target, base_dir) != 0)
                 {
-                  if ((target[0] == '\0') || 
-                      svn_path_is_root(target, strlen(target), subpool)
-                     )
+                  if ((target[0] == '/' && target[1] == '\0') ||
+                     (target[0] == '\0'))
                     abort();
 
                   APR_ARRAY_PUSH(dirs_to_lock,
@@ -1412,7 +1429,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
                                                   rel_targets, 
                                                   recurse ? FALSE : TRUE,
                                                   ! keep_locks,
-                                                  changelist_name,
                                                   ctx,
                                                   pool)))
     goto cleanup;
@@ -1501,8 +1517,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
   if ((! cmt_err)
       || (cmt_err->apr_err == SVN_ERR_REPOS_POST_COMMIT_HOOK_FAILED))
     {
-      apr_pool_t *iterpool = svn_pool_create(pool);
-      svn_wc_committed_queue_t *queue = svn_wc_committed_queue_create(pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       /* Make a note that our commit is finished. */
       commit_in_progress = FALSE;
@@ -1514,39 +1529,62 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           svn_boolean_t loop_recurse = FALSE;
           const char *adm_access_path;
           svn_wc_adm_access_t *adm_access;
+          const svn_wc_entry_t *entry;
           svn_boolean_t remove_lock;
 
           /* Clear the subpool here because there are some 'continue'
              statements in this loop. */
-          svn_pool_clear(iterpool);
+          svn_pool_clear(subpool);
 
           if (item->kind == svn_node_dir)
             adm_access_path = item->path;
           else
-            svn_path_split(item->path, &adm_access_path, NULL, iterpool);
+            svn_path_split(item->path, &adm_access_path, NULL, subpool);
 
           bump_err = svn_wc_adm_retrieve(&adm_access, base_dir_access,
-                                         adm_access_path, iterpool);
-          if (bump_err
-              && bump_err->apr_err == SVN_ERR_WC_NOT_LOCKED)
+                                         adm_access_path, subpool);
+          if (bump_err)
             {
-              /* Is it a directory that was deleted in the commit?
-                 Then we probably committed a missing directory. */
-              if (item->kind == svn_node_dir
-                  && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+              if (bump_err->apr_err == SVN_ERR_WC_NOT_LOCKED)
                 {
-                  /* Mark it as deleted in the parent. */
-                  svn_error_clear(bump_err);
-                  bump_err = svn_wc_mark_missing_deleted(item->path,
-                                                         base_dir_access,
-                                                         iterpool);
-                  if (bump_err)
-                    goto cleanup;
-                  continue;
-                }
+                  if (have_processed_parent(commit_items, i,
+                                            item->path, subpool))
+                    {
+                      /* This happens when the item is a directory that is
+                         deleted, and it has been processed as a child of an
+                         earlier item. */
+                      svn_error_clear(bump_err);
+                      bump_err = SVN_NO_ERROR;
+                      continue;
+                    }
 
-              goto cleanup;
+                  /* Is it a directory that was deleted in the commit? */
+                  if (item->kind == svn_node_dir
+                      && item->state_flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+                    {
+                      /* It better be missing then.  Assuming it is,
+                         mark as deleted in parent.  If not, then
+                         something is way bogus. */
+                      svn_error_clear(bump_err);
+                      bump_err = svn_wc_mark_missing_deleted(item->path,
+                                                             base_dir_access,
+                                                             subpool);
+                      if (bump_err)
+                        goto cleanup;
+                      continue;                      
+                    }                  
+                }
+              goto cleanup;              
             }
+          if ((bump_err = svn_wc_entry(&entry, item->path, adm_access, TRUE,
+                                       subpool)))
+            goto cleanup;
+
+          if (! entry
+              && have_processed_parent(commit_items, i, item->path, subpool))
+            /* This happens when the item is a file that is deleted, and it
+               has been processed as a child of an earlier item. */
+            continue;
 
           if ((item->state_flags & SVN_CLIENT_COMMIT_ITEM_ADD) 
               && (item->kind == svn_node_dir)
@@ -1555,30 +1593,23 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
           remove_lock = (! keep_locks && (item->state_flags
                                           & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN));
-
           assert(*commit_info_p);
-          /* Allocate the queue in pool instead of iterpool:
-             we want it to survive the next iteration. */
-          if ((bump_err = svn_wc_queue_committed
-               (&queue,
-                item->path, adm_access, loop_recurse,
+          if ((bump_err = svn_wc_process_committed3
+               (item->path, adm_access,
+                loop_recurse,
+                (*commit_info_p)->revision,
+                (*commit_info_p)->date,
+                (*commit_info_p)->author,
                 item->wcprop_changes,
-                remove_lock, (! keep_changelist),
+                remove_lock,
                 apr_hash_get(digests, item->path, APR_HASH_KEY_STRING),
-                pool)))
+                subpool)))
             break;
 
         }
 
-      bump_err
-        = svn_wc_process_committed_queue(queue, base_dir_access,
-                                         (*commit_info_p)->revision,
-                                         (*commit_info_p)->date,
-                                         (*commit_info_p)->author,
-                                         iterpool);
-
       /* Destroy the subpool. */
-      svn_pool_destroy(iterpool);
+      svn_pool_destroy(subpool);
     }
 
   /* Sleep to ensure timestamp integrity. */
@@ -1603,18 +1634,6 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
     }
 
   return reconcile_errors(cmt_err, unlock_err, bump_err, cleanup_err, pool);
-}
-
-svn_error_t *
-svn_client_commit3(svn_commit_info_t **commit_info_p,
-                   const apr_array_header_t *targets,
-                   svn_boolean_t recurse,
-                   svn_boolean_t keep_locks,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
-{
-  return svn_client_commit4(commit_info_p, targets, recurse, keep_locks,
-                            FALSE, NULL, ctx, pool);
 }
 
 svn_error_t *

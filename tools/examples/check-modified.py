@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 #
 # USAGE: check-modified.py FILE_OR_DIR1 FILE_OR_DIR2 ...
 #

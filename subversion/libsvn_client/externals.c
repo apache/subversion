@@ -143,8 +143,9 @@ relegate_external(const char *path,
          no big deal.
       */
       err = svn_io_remove_file(new_path, pool);
-      svn_error_clear(err);  /* It's not clear why this is ignored, is
-                                 it because the rename will catch it? */
+      if (err)
+        svn_error_clear(err);  /* It's not clear why this is ignored, is
+                                   it because the rename will catch it? */
 
       /* Rename. */
       SVN_ERR(svn_io_file_rename(path, new_path, pool));
@@ -176,7 +177,7 @@ switch_external(const char *path,
                                            pool), pool);
   
   /* If path is a directory, try to update/switch to the correct URL
-     and revision. */
+     and revison. */
   SVN_ERR(svn_io_check_path(path, &kind, pool));
   if (kind == svn_node_dir)
     {
@@ -197,9 +198,8 @@ switch_external(const char *path,
           if (strcmp(entry->url, url) == 0)
             {
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
-                                                  TRUE, FALSE, FALSE,
-                                                  timestamp_sleep, ctx,
-                                                  pool));
+                                                  TRUE, FALSE, timestamp_sleep,
+                                                  ctx, pool));
               return SVN_NO_ERROR;
             }
           else if (entry->repos)
@@ -236,8 +236,8 @@ switch_external(const char *path,
                 }
 
               SVN_ERR(svn_client__switch_internal(NULL, path, url, revision,
-                                                  TRUE, timestamp_sleep,
-                                                  FALSE, ctx, subpool));
+                                                  TRUE, timestamp_sleep, ctx,
+                                                  subpool));
 
               return SVN_NO_ERROR;
             }
@@ -268,7 +268,7 @@ switch_external(const char *path,
 
   /* ... Hello, new hotness. */
   SVN_ERR(svn_client__checkout_internal(NULL, url, path, revision, revision,
-                                        TRUE, FALSE, FALSE, timestamp_sleep,
+                                        TRUE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
   return SVN_NO_ERROR;
@@ -362,7 +362,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,
                                               &(new_item->revision),
                                               &(new_item->revision),
-                                              TRUE, FALSE, FALSE,
+                                              TRUE, FALSE,
                                               ib->timestamp_sleep,
                                               ib->ctx, ib->pool));
     }

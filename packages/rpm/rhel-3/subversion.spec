@@ -1,16 +1,12 @@
 %define apache_version 2.0.46-61.1
-%define neon_version 0.26.1
+%define neon_version 0.24.7
 %define swig_version 1.3.25
 %define apache_dir /usr
 %define pyver 2.2
 # If you don't want to take time for the tests then set make_*_check to 0.
-# RHEL 3 doesn't build BDB, so don't try to check it
-%define make_ra_local_bdb_check 0
-%define make_ra_svn_bdb_check 0
-%define make_ra_dav_bdb_check 0
-%define make_ra_local_fsfs_check 1
-%define make_ra_svn_fsfs_check 1
-%define make_ra_dav_fsfs_check 1
+%define make_ra_local_check 1
+%define make_ra_svn_check 1
+%define make_ra_dav_check 1
 Summary: A Concurrent Versioning system similar to but better than CVS.
 Name: subversion
 Version: @VERSION@
@@ -483,6 +479,22 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
+# Figure out version and release number for command and documentation display.
+case "%{release}" in
+   1)
+      # Build an official release
+      RELEASE_NAME="%{version}"
+      ;;
+   alpha*|beta*|gamma*)
+      # Build an alpha, beta, gamma release.
+      RELEASE_NAME="%{version} (%{release})"
+      ;;
+   *)
+      # Build a working copy release
+      RELEASE_NAME="%{version} (dev build, r%{release})"
+      ;;
+esac
+
 # Delete apr, apr-util, and neon from the tree as those packages should already
 # be installed.
 rm -rf apr apr-util neon
@@ -508,47 +520,25 @@ make swig-py
 make swig-pl DESTDIR=$RPM_BUILD_ROOT
 make check-swig-pl
 
-%if %{make_ra_local_bdb_check}
+%if %{make_ra_local_check}
 echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
-make check CLEANUP=true FS_TYPE=bdb
+make check CLEANUP=true
 echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
 %endif
 
-%if %{make_ra_svn_bdb_check}
+%if %{make_ra_svn_check}
 echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
 killall lt-svnserve || true
 sleep 1
 ./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-make svncheck CLEANUP=true FS_TYPE=bdb
+make svncheck CLEANUP=true
 killall lt-svnserve
 echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
-%if %{make_ra_dav_bdb_check}
+%if %{make_ra_dav_check}
 echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-make davautocheck CLEANUP=true FS_TYPE=bdb
-echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
-%endif
-
-%if %{make_ra_local_fsfs_check}
-echo "*** Running regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
-make check CLEANUP=true FS_TYPE=fsfs
-echo "*** Finished regression tests on RA_LOCAL (FILE SYSTEM) layer ***"
-%endif
-
-%if %{make_ra_svn_fsfs_check}
-echo "*** Running regression tests on RA_SVN (SVN method) layer ***"
-killall lt-svnserve || true
-sleep 1
-./subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
-make svncheck CLEANUP=true FS_TYPE=fsfs
-killall lt-svnserve
-echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
-%endif
-
-%if %{make_ra_dav_fsfs_check}
-echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
-make davautocheck CLEANUP=true FS_TYPE=fsfs
+make davautocheck CLEANUP=true
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif
 

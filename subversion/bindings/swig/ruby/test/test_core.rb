@@ -206,14 +206,6 @@ class SvnCoreTest < Test::Unit::TestCase
       true
     end
     assert_equal([section], section_names)
-
-    infos = options.collect {|key, value| [section, key, value]}
-    config_infos = []
-    config.each do |section, name, value|
-      config_infos << [section, name, value]
-    end
-    assert_equal(infos.sort, config_infos.sort)
-    assert_equal(infos.sort, config.collect {|args| args}.sort)
   end
 
   def test_config_find_group
@@ -281,44 +273,6 @@ class SvnCoreTest < Test::Unit::TestCase
                  Svn::Core::Config.read_auth_data(cred_kind,
                                                   realm_string,
                                                   @config_path))
-  end
-
-  def test_config_to_s
-    config = Svn::Core::Config.read(@config_file)
-    section = Svn::Core::CONFIG_SECTION_HELPERS
-    options = {
-      Svn::Core::CONFIG_OPTION_DIFF_CMD => "diff",
-      Svn::Core::CONFIG_OPTION_DIFF3_CMD => "diff3",
-    }
-
-    options.each do |option, value|
-      config[section, option] = value
-    end
-
-    temp_config = Tempfile.new("svn-test-config")
-    temp_config.open
-    temp_config.print(config.to_s)
-    temp_config.close
-
-    parsed_config = Svn::Core::Config.read(temp_config.path)
-    assert_equal({section => options}, parsed_config.to_hash)
-  end
-
-  def test_config_to_hash
-    config = Svn::Core::Config.read(@config_file)
-    section = Svn::Core::CONFIG_SECTION_HELPERS
-    options = {
-      Svn::Core::CONFIG_OPTION_DIFF_CMD => "diff",
-      Svn::Core::CONFIG_OPTION_DIFF3_CMD => "diff3",
-    }
-
-    assert_equal({}, config.to_hash)
-
-    options.each do |option, value|
-      config[section, option] = value
-    end
-
-    assert_equal({section => options}, config.to_hash)
   end
 
   def test_diff_version
@@ -507,5 +461,11 @@ EOD
     now = Time.now.gmtime
     Svn::Core.time_to_human_cstring(now.to_apr_time, pool)
     pool
+  end
+
+  def gc
+    gc_enable do
+      GC.start
+    end
   end
 end

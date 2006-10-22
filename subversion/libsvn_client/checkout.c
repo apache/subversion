@@ -2,7 +2,7 @@
  * checkout.c:  wrappers around wc checkout functionality
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -49,7 +49,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const svn_opt_revision_t *revision,
                               svn_boolean_t recurse,
                               svn_boolean_t ignore_externals,
-                              svn_boolean_t allow_unver_obstructions,
                               svn_boolean_t *timestamp_sleep,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
@@ -120,7 +119,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         /* Have update fix the incompleteness. */
         err = svn_client__update_internal(result_rev, path, revision,
                                           recurse, ignore_externals,
-                                          allow_unver_obstructions,
                                           use_sleep, ctx, pool);
       }
     else if (kind == svn_node_dir)
@@ -137,7 +135,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                        repos, revnum, pool));
             err = svn_client__update_internal(result_rev, path, revision,
                                               recurse, ignore_externals,
-                                              allow_unver_obstructions,
                                               use_sleep, ctx, pool);
             goto done;
           }
@@ -156,8 +153,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
           {
             err = svn_client__update_internal(result_rev, path, revision,
                                               recurse, ignore_externals,
-                                              allow_unver_obstructions, use_sleep,
-                                              ctx, pool);
+                                              use_sleep, ctx, pool);
           }
         else
           {
@@ -208,24 +204,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 }
 
 svn_error_t *
-svn_client_checkout3(svn_revnum_t *result_rev,
-                     const char *URL,
-                     const char *path,
-                     const svn_opt_revision_t *peg_revision,
-                     const svn_opt_revision_t *revision,
-                     svn_boolean_t recurse,
-                     svn_boolean_t ignore_externals,
-                     svn_boolean_t allow_unver_obstructions,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
-{
-  return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
-                                       revision, recurse, ignore_externals,
-                                       allow_unver_obstructions, NULL, ctx,
-                                       pool);
-}
-
-svn_error_t *
 svn_client_checkout2(svn_revnum_t *result_rev,
                      const char *URL,
                      const char *path,
@@ -238,7 +216,7 @@ svn_client_checkout2(svn_revnum_t *result_rev,
 {
   return svn_client__checkout_internal(result_rev, URL, path, peg_revision,
                                        revision, recurse, ignore_externals,
-                                       FALSE, NULL, ctx, pool);
+                                       NULL, ctx, pool);
 }
 
 svn_error_t *
@@ -255,6 +233,6 @@ svn_client_checkout(svn_revnum_t *result_rev,
   peg_revision.kind = svn_opt_revision_unspecified;
   
   return svn_client__checkout_internal(result_rev, URL, path, &peg_revision,
-                                       revision, recurse, FALSE, FALSE, NULL,
+                                       revision, recurse, FALSE, NULL, 
                                        ctx, pool);
 }

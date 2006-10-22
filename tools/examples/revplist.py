@@ -18,10 +18,6 @@
 import sys
 import os
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 
 from svn import fs, core
 
@@ -56,7 +52,7 @@ def usage():
 
 def main():
   ### how to invoke usage() ?
-  opts, args = my_getopt(sys.argv[1:], 'r:h:')
+  opts, args = getopt.getopt(sys.argv[1:], 'r:h:')
   rev = None
   home = '.'
   for name, value in opts:

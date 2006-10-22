@@ -167,15 +167,9 @@ svn_path_condense_targets(const char **pcommon,
           if (basedir_len > 0)
             {
               /* Only advance our pointer past a path separator if
-                 REL_ITEM isn't the same as *PCOMMON.  
-                 
-                 If *PCOMMON is a root path, basedir_len will already 
-                 include the closing '/', so never advance the pointer 
-                 here.
-                 */
+                 REL_ITEM isn't the same as *PCOMMON.  */
               rel_item += basedir_len;
-              if (rel_item[0] && 
-                  ! svn_path_is_root(*pcommon, basedir_len, pool))
+              if (rel_item[0])
                 rel_item++;
             }
           

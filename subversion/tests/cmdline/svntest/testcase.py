@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 #
 #  testcase.py:  Control of test case execution.
 #

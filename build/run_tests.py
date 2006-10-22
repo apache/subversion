@@ -1,16 +1,15 @@
-#!/usr/bin/env python
 #
 # run_tests.py - run the tests in the regression test suite.
 #
 
 '''usage: python run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
-                    [--verbose] [--cleanup] [--enable-sasl]
+                    [--verbose] [--cleanup]
                     <abs_srcdir> <abs_builddir>
                     <prog ...>
 
 The optional base-url, fs-type, verbose, and cleanup options, and
-the first two parameters are passed unchanged to the TestHarness
-constructor.  All other parameters are names of test programs.
+the first four parameters are passed unchanged to the TestHarness
+constuctor.  All other parameters are names of test programs.
 '''
 
 import os, sys
@@ -26,8 +25,7 @@ class TestHarness:
   '''
 
   def __init__(self, abs_srcdir, abs_builddir, logfile,
-               base_url=None, fs_type=None, verbose=None, cleanup=None,
-               enable_sasl=None):
+               base_url=None, fs_type=None, verbose=None, cleanup=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -42,17 +40,14 @@ class TestHarness:
     self.fs_type = fs_type
     self.verbose = verbose
     self.cleanup = cleanup
-    self.enable_sasl = enable_sasl
     self.log = None
 
   def run(self, list):
     'Run all test programs given in LIST.'
     self._open_log('w')
     failed = 0
-    cnt = 0
     for prog in list:
-      failed = self._run_test(prog, cnt, len(list)) or failed
-      cnt += 1
+      failed = self._run_test(prog) or failed
     self._open_log('r')
     log_lines = self.log.readlines()
     skipped = filter(lambda x: x[:6] == 'SKIP: ', log_lines)
@@ -77,7 +72,7 @@ class TestHarness:
       self.log.close()
       self.log = None
 
-  def _run_test(self, prog, test_nr, total_tests):
+  def _run_test(self, prog):
     'Run a single test.'
 
     def quote(arg):
@@ -88,32 +83,34 @@ class TestHarness:
 
     progdir, progbase = os.path.split(prog)
     # Using write here because we don't want even a trailing space
-    sys.stdout.write('Running all tests in %s [%d/%d]...' % (
-      progbase, test_nr + 1, total_tests))
+    sys.stdout.write('Running all tests in ' + progbase + '...')
     print >> self.log, 'START: ' + progbase
 
     if progbase[-3:] == '.py':
       progname = sys.executable
       cmdline = [quote(progname),
                  quote(os.path.join(self.srcdir, prog))]
+      if self.verbose is not None:
+        cmdline.append('--verbose')
+      if self.cleanup is not None:
+        cmdline.append('--cleanup')
       if self.base_url is not None:
         cmdline.append(quote('--url=' + self.base_url))
-      if self.enable_sasl is not None:
-        cmdline.append('--enable-sasl')
+      if self.fs_type is not None:
+        cmdline.append(quote('--fs-type=' + self.fs_type))
     elif os.access(prog, os.X_OK):
       progname = './' + progbase
       cmdline = [quote(progname),
                  quote('--srcdir=' + os.path.join(self.srcdir, progdir))]
+      if self.verbose is not None:
+        cmdline.append('--verbose')
+      if self.cleanup is not None:
+        cmdline.append('--cleanup')
+      if self.fs_type is not None:
+        cmdline.append(quote('--fs-type=' + self.fs_type))
     else:
       print 'Don\'t know what to do about ' + progbase
       sys.exit(1)
-
-    if self.verbose is not None:
-      cmdline.append('--verbose')
-    if self.cleanup is not None:
-      cmdline.append('--cleanup')
-    if self.fs_type is not None:
-      cmdline.append(quote('--fs-type=' + self.fs_type))
 
     old_cwd = os.getcwd()
     try:
@@ -125,13 +122,7 @@ class TestHarness:
     else:
       os.chdir(old_cwd)
 
-    # We always return 1 for failed tests, if some other failure than 1
-    # probably means the test didn't run at all and probably didn't
-    # output any failure info.
-    if failed == 1:
-      print 'FAILURE'
-    elif failed:
-      print >> self.log, 'FAIL:  ' + progbase + ': Unknown test failure see tests.log.\n'
+    if failed:
       print 'FAILURE'
     else:
       print 'success'
@@ -166,8 +157,7 @@ class TestHarness:
 def main():
   try:
     opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
-                           ['url=', 'fs-type=', 'verbose', 'cleanup', 
-                            'enable-sasl'])
+                           ['url=', 'fs-type=', 'verbose', 'cleanup'])
   except getopt.GetoptError:
     args = []
 
@@ -175,8 +165,7 @@ def main():
     print __doc__
     sys.exit(2)
 
-  base_url, fs_type, verbose, cleanup, enable_sasl = None, None, None, None, \
-                                                     None
+  base_url, fs_type, verbose, cleanup = None, None, None, None
   for opt, val in opts:
     if opt in ('-u', '--url'):
       base_url = val
@@ -186,14 +175,12 @@ def main():
       verbose = 1
     elif opt in ('-c', '--cleanup'):
       cleanup = 1
-    elif opt in ('--enable-sasl'):
-      enable_sasl = 1
     else:
       raise getopt.GetoptError
 
   th = TestHarness(args[0], args[1],
                    os.path.abspath('tests.log'),
-                   base_url, fs_type, verbose, cleanup, enable_sasl)
+                   base_url, fs_type, verbose, cleanup)
 
   failed = th.run(args[2:])
   if failed:

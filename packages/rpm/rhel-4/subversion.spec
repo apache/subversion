@@ -1,6 +1,6 @@
 %define apache_version 2.0.52
 %define apr_version 0.9.7
-%define neon_version 0.26.1
+%define neon_version 0.24.7
 %define swig_version 1.3.25
 %define apache_dir /usr
 %define pyver 2.3
@@ -488,6 +488,22 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
    export AUTOCONF AUTOHEADER
 fi
 sh autogen.sh
+
+# Figure out version and release number for command and documentation display.
+case "%{release}" in
+   1)
+      # Build an official release
+      RELEASE_NAME="%{version}"
+      ;;
+   alpha*|beta*|gamma*)
+      # Build an alpha, beta, gamma release.
+      RELEASE_NAME="%{version} (%{release})"
+      ;;
+   *)
+      # Build a working copy release
+      RELEASE_NAME="%{version} (dev build, r%{release})"
+      ;;
+esac
 
 # Delete apr, apr-util, and neon from the tree as those packages should already
 # be installed.

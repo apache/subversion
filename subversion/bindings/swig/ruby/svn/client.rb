@@ -57,7 +57,7 @@ module Svn
         undef new
         def new
           obj = Client.create_context
-          obj.funcall("initialize")
+          obj.__send__("initialize")
           obj
         end
       end
@@ -330,6 +330,7 @@ module Svn
               peg_rev=nil)
         paths = [paths] unless paths.is_a?(Array)
         receiver = Proc.new do |changed_paths, rev, author, date, message|
+          date = Time.from_svn_format(date) if date
           yield(changed_paths, rev, author, date, message)
         end
         Client.log3(paths, peg_rev, start_rev, end_rev, limit,
@@ -365,6 +366,7 @@ module Svn
         peg_rev ||= end_rev
         diff_options ||= Svn::Core::DiffFileOptions.new
         receiver = Proc.new do |line_no, revision, author, date, line|
+          date = Time.from_svn_format(date) if date
           yield(line_no, revision, author, date, line)
         end
         Client.blame3(path_or_uri, peg_rev, start_rev,
@@ -532,15 +534,7 @@ module Svn
       def set_cancel_func(callback=Proc.new)
         @cancel_baton = Client.set_cancel_func(self, callback)
       end
-
-      def config=(new_config)
-        Client.set_config(self, new_config)
-      end
-
-      def config
-        Client.get_config(self)
-      end
-
+      
       private
       def init_callbacks
         set_log_msg_func(nil)

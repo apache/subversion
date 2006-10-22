@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 # ====================================================================
 # Copyright (c) 2000-2005 CollabNet.  All rights reserved.
 #
@@ -60,6 +60,7 @@ if SVNLIB_DIR:
   sys.path.insert(0, SVNLIB_DIR)
 
 import os.path
+import string
 from svn import fs, core, repos, delta
 
 # Set this True for debug output.
@@ -182,7 +183,7 @@ class Editor(delta.Editor):
 
 
   def add_directory(self, path, *args):
-    lpath = path.decode("utf-8").lower()
+    lpath = string.lower(path.decode("utf-8"))
     if self.paths.has_key(lpath):
       self.paths[lpath] += 1
     else:
@@ -192,7 +193,7 @@ class Editor(delta.Editor):
   open_directory = add_directory
 
   def add_file(self, path, *args):
-    lpath = path.decode("utf-8").lower()
+    lpath = string.lower(path.decode("utf-8"))
     if self.paths.has_key(lpath):
       self.paths[lpath] += 1
     else:
@@ -287,17 +288,17 @@ class CheckCase:
     else:
       changedpath = changedroot + '/' + path
     for added in changed.added:
-      if added.lower() == changedpath.lower():
+      if (string.lower(added) == string.lower(changedpath)):
         return added
     for added in changed.addeddir:
-      if added.lower() == changedpath.lower():
+      if (string.lower(added) == string.lower(changedpath)):
         return added
     return ''
 
 if __name__ == "__main__":
   # Check for sane usage.
   if len(sys.argv) != 3:
-    sys.stderr.write("Usage: %s REPOS TXN\n"
+    sys.stderr.write("Usage: REPOS TXN\n"
                      % (os.path.basename(sys.argv[0])))
     sys.exit(1)
 

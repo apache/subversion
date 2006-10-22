@@ -35,9 +35,9 @@ for i in candidate_xsldirs:
   globs.sort() 
   globs.reverse()
   for j in globs:
-    if os.path.exists(os.path.join(j, 'html', 'docbook.xsl')):
-      os.symlink(j, xsl_dir)
-      print "Found and linked %s" % (j,)
+    if os.path.exists(os.path.join(i, 'html', 'docbook.xsl')):
+      os.symlink(i, xsl_dir)
+      print "Found and linked %s" % (i,)
       sys.exit(0)
 
 sys.stderr.write('ERROR: Failed to find a DocBook XSL directory\n')

@@ -135,19 +135,15 @@ svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
 
 
 
-/*** svn_wc_text_modified_p2 ***/
+/*** svn_wc_text_modified_p ***/
 
-/* svn_wc_text_modified_p2 answers the question:
+/* svn_wc_text_modified_p answers the question:
 
    "Are the contents of F different than the contents of
-   .svn/text-base/F.svn-base or .svn/tmp/text-base/F.svn-base?"
+   .svn/text-base/F.svn-base?"
 
-   In the first case, we're looking to see if a user has made local
-   modifications to a file since the last update or commit.  In the
-   second, the file may not be versioned yet (it doesn't exist in
-   entries).  Support for the latter case came about to facilitate
-   forced checkouts, updates, and switches, where an unversioned file
-   may obstruct a file about to be added.
+   In other words, we're looking to see if a user has made local
+   modifications to a file since the last update or commit.
 
    Note: Assuming that F lives in a directory D at revision V, please
    notice that we are *NOT* answering the question, "are the contents
@@ -269,11 +265,6 @@ compare_and_verify(svn_boolean_t *modified_p,
 
   need_translation = svn_subst_translation_required(eol_style, eol_str,
                                                     keywords, special, TRUE);
-  /* Special files can only be compared through their text bases:
-     they have no working copy representation
-     for example: symlinks aren't guaranteed to be valid, nor does
-                  it make sense to compare with the linked file-or-directory. */
-  compare_textbases |= special;
   if (verify_checksum || need_translation)
     {
       /* Reading files is necessary. */
@@ -284,7 +275,7 @@ compare_and_verify(svn_boolean_t *modified_p,
       const svn_wc_entry_t *entry;
       
       SVN_ERR(svn_io_file_open(&b_file_h, base_file, APR_READ,
-                               APR_OS_DEFAULT, pool));
+                              APR_OS_DEFAULT, pool));
 
       b_stream = svn_stream_from_aprfile2(b_file_h, FALSE, pool);
 
@@ -383,7 +374,6 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                  svn_boolean_t force_comparison,
                                  svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t compare_textbases,
-                                 svn_boolean_t use_tmp_textbase,
                                  apr_pool_t *pool)
 {
   const char *textbase_filename;
@@ -432,8 +422,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
   /* If there's no text-base file, we have to assume the working file
      is modified.  For example, a file scheduled for addition but not
      yet committed. */
-  textbase_filename = svn_wc__text_base_path(filename, use_tmp_textbase,
-                                             subpool);
+  textbase_filename = svn_wc__text_base_path(filename, 0, subpool);
   SVN_ERR(svn_io_check_path(textbase_filename, &kind, subpool));
   if (kind != svn_node_file)
     {
@@ -474,28 +463,15 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc_text_modified_p2(svn_boolean_t *modified_p,
-                        const char *filename,
-                        svn_boolean_t force_comparison,
-                        svn_boolean_t use_tmp_base,
-                        svn_wc_adm_access_t *adm_access,
-                        apr_pool_t *pool)
-{
-  return svn_wc__text_modified_internal_p(modified_p, filename,
-                                          force_comparison, adm_access,
-                                          TRUE, use_tmp_base, pool);
-}
-
-
-svn_error_t *
 svn_wc_text_modified_p(svn_boolean_t *modified_p,
                        const char *filename,
                        svn_boolean_t force_comparison,
                        svn_wc_adm_access_t *adm_access,
                        apr_pool_t *pool)
 {
-  return svn_wc_text_modified_p2(modified_p, filename, force_comparison,
-                                 FALSE, adm_access, pool);
+  return svn_wc__text_modified_internal_p(modified_p, filename,
+                                          force_comparison, adm_access,
+                                          TRUE, pool);
 }
 
 

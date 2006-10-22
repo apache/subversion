@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 #
 # This is a pretty-printer for subversion BDB repository databases.
 #

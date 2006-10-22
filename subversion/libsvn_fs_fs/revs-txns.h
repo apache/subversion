@@ -1,7 +1,7 @@
 /* revs-txns.h : internal interface to revision and transactions operations
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -56,6 +56,15 @@ svn_error_t *svn_fs_fs__change_rev_prop(svn_fs_t *fs, svn_revnum_t rev,
 
 
 /*** Transactions ***/
+
+/* Set *REVISION to the revision which was created when FS transaction
+   TXN_NAME was committed, or to SVN_INVALID_REVNUM if the transaction
+   has not been committed.  Do all allocations in POOL.  */
+svn_error_t *svn_fs_fs__txn_get_revision(svn_revnum_t *revision,
+                                         svn_fs_t *fs,
+                                         const char *txn_name,
+                                         apr_pool_t *pool);
+
 
 /* Retrieve information about the Subversion transaction SVN_TXN from
    the `transactions' table of FS, allocating from POOL.  Set

@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, sys, re, os
+import shutil, string, sys, re, os
 
 # Our testing module
 import svntest
@@ -1552,6 +1552,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
                    props={"svn:mime-type" : "application/octet-stream"}),
     })
   expected_status = svntest.actions.get_virginal_state(short_wc, 1)
+  #expected_status.tweak(wc_rev=1)
   expected_status.add({
     "A/theta" : Item(status="  ", wc_rev=3),
     })
@@ -1931,7 +1932,7 @@ def merge_skips_obstructions(sbox):
     os.chdir(saved_cwd)
 
 #----------------------------------------------------------------------
-# At one time, a merge that added items with the same name as missing
+# At one stage a merge that added items with the same name as missing
 # items would attempt to add the items and fail, leaving the working
 # copy locked and broken.
 
@@ -1954,7 +1955,8 @@ def merge_into_missing(sbox):
     'A/B/F/Q'       : Item(verb='Adding'),
     'A/B/F/foo'     : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak(wc_rev=1)
   expected_status.add({
     'A/B/F/Q'       : Item(status='  ', wc_rev=2),
     'A/B/F/foo'     : Item(status='  ', wc_rev=2),
@@ -2123,7 +2125,7 @@ def merge_binary_with_common_ancestry(sbox):
   fp = open(os.path.join(sys.path[0], "theta.bin"))
   theta_contents = fp.read()
   fp.close()
-  theta_I_path = os.path.join(I_path, 'theta')
+  theta_I_path = os.path.join(wc_dir, 'I', 'theta')
   fp = open(theta_I_path, 'w')
   fp.write(theta_contents)
   fp.close()
@@ -2192,7 +2194,7 @@ def merge_binary_with_common_ancestry(sbox):
                                         wc_dir)
 
   # Copy 'I/theta' to 'K/'. This file will be merged later.
-  theta_K_path = os.path.join(K_path, 'theta')
+  theta_K_path = os.path.join(wc_dir, 'K', 'theta')
   svntest.main.run_svn(None, 'copy', theta_I_path, theta_K_path)
 
   # Commit the new file
@@ -2733,7 +2735,7 @@ def merge_dir_branches(sbox):
   # Merge from C to F onto the wc_dir
   # We can't use run_and_verify_merge because it doesn't support this
   # syntax of the merge command.  
-  ### TODO: We can use run_and_verify_merge2() here now.
+  # XXX: Change this if run_and_verify_merge ever gets fixed
   expected_output = ["A    " + foo_path + "\n"]
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'merge', C_url, F_url, wc_dir)
@@ -2752,6 +2754,24 @@ def merge_dir_branches(sbox):
 
 
 #----------------------------------------------------------------------
+
+# Helper for safe_property_merge() and property_merge_from_branch() --
+# a custom singleton handler.
+def detect_conflict_files(node, extra_files):
+  """NODE has been discovered an extra file on disk.  Verify that it
+  matches one of the regular expressions in the EXTRA_FILES list.  If
+  it matches, remove the match from the list.  If it doesn't match,
+  raise an exception."""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern)) # delete pattern from list
+      break
+  else:
+    print "Found unexpected disk object:", node.name
+    raise svntest.tree.SVNTreeUnequal
+
 
 def safe_property_merge(sbox):
   "property merges don't overwrite existing prop-mods"
@@ -2870,8 +2890,7 @@ def safe_property_merge(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # expected error string
-                                       svntest.tree.detect_conflict_files,
-                                       extra_files,
+                                       detect_conflict_files, extra_files,
                                        None, None, # no B singleton handler
                                        1, # check props
                                        0) # dry_run
@@ -2998,8 +3017,7 @@ def property_merge_from_branch(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # expected error string
-                                       svntest.tree.detect_conflict_files,
-                                       extra_files,
+                                       detect_conflict_files, extra_files,
                                        None, None, # no B singleton handler
                                        1, # check props
                                        0) # dry_run
@@ -3184,7 +3202,7 @@ def cherry_pick_text_conflict(sbox):
                                        expected_status,
                                        expected_skip,
                                        None, # no error expected
-                                       svntest.tree.detect_conflict_files,
+                                       detect_conflict_files,
                                        ["mu\.working",
                                         "mu\.merge-right\.r4",
                                         "mu\.merge-left\.r3"],
@@ -3590,239 +3608,13 @@ def merge_add_over_versioned_file_conflicts(sbox):
                                          expected_status,
                                          expected_skip,
                                          None,
-                                         svntest.tree.detect_conflict_files,
+                                         detect_conflict_files,
                                          ["alpha\.working",
                                           "alpha\.merge-right\.r2",
                                           "alpha\.merge-left\.r0"])
   finally:
     os.chdir(saved_cwd)
 
-#----------------------------------------------------------------------
-# eol-style handling during merge with conflicts, scenario 1:
-# when a merge creates a conflict on a file, make sure the file and files
-# r<left>, r<right> and .mine are in the eol-style defined for that file.
-#
-# This test for 'svn update' can be found in update_tests.py as 
-# conflict_markers_matching_eol.
-def merge_conflict_markers_matching_eol(sbox):
-  "conflict markers should match the file's eol style"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  filecount = 1
-
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-
-  if os.name == 'nt':
-    crlf = '\n'
-  else:
-    crlf = '\r\n'
-
-  # Checkout a second working copy
-  wc_backup = sbox.add_wc_path('backup')
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout', 
-                                     sbox.repo_url, wc_backup)
-
-  # set starting revision
-  cur_rev = 1
-
-  expected_disk = svntest.main.greek_state.copy()
-  expected_status = svntest.actions.get_virginal_state(wc_dir, cur_rev)
-  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 
-                                                              cur_rev)
-
-  path_backup = os.path.join(wc_backup, 'A', 'mu')
-
-  # do the test for each eol-style
-  for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
-                          [crlf, '\015', '\n', '\012']):
-    # rewrite file mu and set the eol-style property.
-    open(mu_path, 'wb').write("This is the file 'mu'."+ eolchar)
-    svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
-
-    expected_disk.add({
-      'A/mu' : Item("This is the file 'mu'." + eolchar)
-    })
-    expected_output = svntest.wc.State(wc_dir, {
-      'A/mu' : Item(verb='Sending'),
-    })
-    expected_status.tweak(wc_rev = cur_rev)
-    expected_status.add({
-      'A/mu' : Item(status='  ', wc_rev = cur_rev + 1),
-    })
-
-    # Commit the original change and note the 'base' revision number 
-    svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                          expected_status, None,
-                                          None, None, None, None, wc_dir)
-    cur_rev = cur_rev + 1
-    base_rev = cur_rev
-
-    svntest.main.run_svn(None, 'update', wc_backup)
-
-    # Make a local mod to mu
-    svntest.main.file_append(mu_path, 
-                             'Original appended text for mu' + eolchar)
-
-    # Commit the original change and note the 'theirs' revision number 
-    svntest.main.run_svn(None, 'commit', '-m', 'test log', wc_dir)
-    cur_rev = cur_rev + 1
-    theirs_rev = cur_rev
-
-    # Make a local mod to mu, will conflict with the previous change
-    svntest.main.file_append (path_backup,
-                              'Conflicting appended text for mu' + eolchar)
-
-    # Create expected output tree for an update of the wc_backup.
-    expected_backup_output = svntest.wc.State(wc_backup, {
-      'A/mu' : Item(status='C '),
-      })
-
-    # Create expected disk tree for the update.
-    expected_backup_disk = expected_disk.copy()
-
-    # verify content of resulting conflicted file
-    expected_backup_disk.add({
-    'A/mu' : Item(contents= "This is the file 'mu'." + eolchar +
-      "<<<<<<< .working" + eolchar +
-      "Conflicting appended text for mu" + eolchar +
-      "=======" + eolchar +
-      "Original appended text for mu" + eolchar +
-      ">>>>>>> .merge-right.r" + str(cur_rev) + eolchar),
-    })
-    # verify content of base(left) file
-    expected_backup_disk.add({
-    'A/mu.merge-left.r' + str(base_rev) : 
-      Item(contents= "This is the file 'mu'." + eolchar)
-    })
-    # verify content of theirs(right) file
-    expected_backup_disk.add({
-    'A/mu.merge-right.r' + str(theirs_rev) : 
-      Item(contents= "This is the file 'mu'." + eolchar +
-      "Original appended text for mu" + eolchar)
-    })
-    # verify content of mine file
-    expected_backup_disk.add({
-    'A/mu.working' : Item(contents= "This is the file 'mu'." +
-      eolchar +
-      "Conflicting appended text for mu" + eolchar)
-    })
-
-    # Create expected status tree for the update.
-    expected_backup_status.add({
-      'A/mu'   : Item(status='  ', wc_rev=cur_rev),
-    })
-    expected_backup_status.tweak('A/mu', status='C ')
-    expected_backup_status.tweak(wc_rev = cur_rev - 1)
-
-    expected_backup_skip = wc.State('', { })
-
-    svntest.actions.run_and_verify_merge(wc_backup, cur_rev - 1, cur_rev, 
-                                         sbox.repo_url,
-                                         expected_backup_output,
-                                         expected_backup_disk,
-                                         expected_backup_status,
-                                         expected_backup_skip)    
-
-    # cleanup for next run
-    svntest.main.run_svn(None, 'revert', '-R', wc_backup)
-    svntest.main.run_svn(None, 'update', wc_dir)
-
-# eol-style handling during merge, scenario 2:
-# if part of that merge is a propchange (add, change, delete) of
-# svn:eol-style, make sure the correct eol-style is applied before
-# calculating the merge (and conflicts if any)
-#
-# This test for 'svn update' can be found in update_tests.py as 
-# update_eolstyle_handling.
-def merge_eolstyle_handling(sbox):
-  "handle eol-style propchange during merge"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  mu_path = os.path.join(wc_dir, 'A', 'mu')
-
-  if os.name == 'nt':
-    crlf = '\n'
-  else:
-    crlf = '\r\n'
-
-  # Checkout a second working copy
-  wc_backup = sbox.add_wc_path('backup')
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
-                                     sbox.repo_url, wc_backup)
-  path_backup = os.path.join(wc_backup, 'A', 'mu')
-
-  # Test 1: add the eol-style property and commit, change mu in the second
-  # working copy and merge the last revision; there should be no conflict!
-  svntest.main.run_svn(None, 'propset', 'svn:eol-style', "CRLF", mu_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'set eol-style property', wc_dir)
-
-  svntest.main.file_append_binary(path_backup, 'Added new line of text.\012')
-
-  expected_backup_disk = svntest.main.greek_state.copy()
-  expected_backup_disk.tweak(
-  'A/mu', contents= "This is the file 'mu'." + crlf +
-    "Added new line of text." + crlf)
-  expected_backup_output = svntest.wc.State(wc_backup, {
-    'A/mu' : Item(status='GU'),
-    })
-  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 2)
-  expected_backup_status.tweak('A/mu', status='M ')
-
-  expected_backup_skip = wc.State('', { })
-
-  svntest.actions.run_and_verify_merge(wc_backup, '1', '2', sbox.repo_url,
-                                       expected_backup_output,
-                                       expected_backup_disk,
-                                       expected_backup_status,
-                                       expected_backup_skip)
-
-  # Test 2: now change the eol-style property to another value and commit,
-  # merge this revision in the still changed mu in the second working copy; 
-  # there should be no conflict!
-  svntest.main.run_svn(None, 'propset', 'svn:eol-style', "CR", mu_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'set eol-style property', wc_dir)
-
-  expected_backup_disk = svntest.main.greek_state.copy()
-  expected_backup_disk.add({
-  'A/mu' : Item(contents= "This is the file 'mu'.\015" +
-    "Added new line of text.\015")
-  })
-  expected_backup_output = svntest.wc.State(wc_backup, {
-    'A/mu' : Item(status='GU'),
-    })
-  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 3)
-  expected_backup_status.tweak('A/mu', status='M ')
-  svntest.actions.run_and_verify_merge(wc_backup, '2', '3', sbox.repo_url,
-                                        expected_backup_output,
-                                        expected_backup_disk,
-                                        expected_backup_status,
-                                        expected_backup_skip)
-
-  # Test 3: now delete the eol-style property and commit, merge this revision
-  # in the still changed mu in the second working copy; there should be no 
-  # conflict!
-  # EOL of mu should be unchanged (=CR).
-  svntest.main.run_svn(None, 'propdel', 'svn:eol-style', mu_path)
-  svntest.main.run_svn(None, 'commit', '-m', 'del eol-style property', wc_dir)
-
-  expected_backup_disk = svntest.main.greek_state.copy()
-  expected_backup_disk.add({
-  'A/mu' : Item(contents= "This is the file 'mu'.\015" +
-    "Added new line of text.\015")
-  })
-  expected_backup_output = svntest.wc.State(wc_backup, {
-    'A/mu' : Item(status=' U'),
-    })
-  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, 4)
-  expected_backup_status.tweak('A/mu', status='M ')
-  svntest.actions.run_and_verify_merge(wc_backup, '3', '4', sbox.repo_url,
-                                       expected_backup_output,
-                                       expected_backup_disk,
-                                       expected_backup_status,
-                                       expected_backup_skip)
 
 ########################################################################
 # Run the tests
@@ -3865,8 +3657,6 @@ test_list = [ None,
               merge_ignore_whitespace,
               merge_ignore_eolstyle,
               merge_add_over_versioned_file_conflicts,
-              merge_conflict_markers_matching_eol,
-              XFail(merge_eolstyle_handling),
              ]
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/python
 
 # log-police.py: Ensure that log messages end with a single newline.
 # See usage() function for details, or just run with no arguments.
@@ -6,10 +6,6 @@
 import os
 import sys
 import getopt
-try:
-  my_getopt = getopt.gnu_getopt
-except AttributeError:
-  my_getopt = getopt.getopt
 
 import svn
 import svn.fs
@@ -81,7 +77,7 @@ def main(ignored_pool, argv):
   all_revs = False
 
   try:
-    opts, args = my_getopt(argv[1:], 't:r:h?', ["help", "all-revs"])
+    opts, args = getopt.getopt(argv[1:], 't:r:h?', ["help", "all-revs"])
   except:
     usage_and_exit("problem processing arguments / options.")
   for opt, value in opts:

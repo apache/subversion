@@ -48,7 +48,7 @@ relocate_entry(svn_wc_adm_access_t *adm_access,
                apr_pool_t *pool)
 {
   svn_wc_entry_t entry2;
-  apr_uint64_t flags = 0;
+  apr_uint32_t flags = 0;
   apr_size_t from_len = strlen(from);
 
   if (entry->repos)

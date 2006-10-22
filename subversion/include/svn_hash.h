@@ -188,22 +188,6 @@ svn_error_t *svn_hash_diff(apr_hash_t *hash_a,
 
 /** @} */
 
-
-/**
- * @defgroup svn_hash_misc Miscellaneous hash APIs
- * @{
- */
-
-/**
- * Clear any key/value pairs in the hash table.  A wrapper for a
- * apr_hash_clear(), which isn't available until APR 1.3.0.
- *
- * @since New in 1.5.
- */
-svn_error_t *svn_hash__clear(apr_hash_t *hash);
-
-/** @} */
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

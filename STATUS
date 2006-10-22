@@ -1,0 +1,59 @@
+This file tracks the status of releases in the 1.4.x line.
+
+See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
+details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+NOTE:  This branch uses svnmerge.py for merge tracking.  Please familiarize
+yourself with that tool if you plan to actually merge changes here.
+
+For example, to merge a number of revisions from trunk into branch,
+you can use the svnmerge.py script that is in the branch.
+
+$ contrib/client-side/svnmerge.py merge -r 21000-21006,21008,21876
+$ svn diff
+$ svn commit
+
+Do not run svnmerge.py N separate times for each revision to merge
+over, since svnmerge.py will not merge into a WC with uncommitted
+changes.
+
+Status of 1.4.1:
+================
+
+Candidate changes:
+
+  * r21531, r21848, r21934
+    Allow HTTP auth protocols to be configurable by way of a
+    "http-auth-types" parameter.
+    Justification:
+      Allow GSSAPI/SSPI auth to be enabled/disabled on Windows with
+      Neon 0.26.1+, addressesing numerous bug reports from
+      TortoiseSVN, Subversion, Subclipse, etc.
+    Votes:
+      +1: dlr, djh, jerenkrantz
+      -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
+
+  * r21738, r21924, r22026
+    Prevent an API violation from corrupting FSFS repositories, as seen
+    in issue #2467 and reports from users.
+    Justification:
+      Silently corrupting the repository is a Bad Thing.
+    Notes:
+      Branch needed to avoid the backport of a new error code.
+    Concerns:
+      This isn't exactly a trivial fix.  We are also assuming that this
+      is the cause of the corruption we've seen.
+    Branch: 1.4.x-r21738 (-r21762:HEAD)
+    Votes:
+      +1: malcolm, rooneg
+
+  * r22051, r22060
+    Fix improper notification on property only reverts.
+    Justification:
+      Tiny bug.  Tiny fix.  Comes with tests!
+    Votes:
+      +1: rooneg (not r22060), dlr
+
+Approved changes:
+

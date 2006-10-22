@@ -14,10 +14,6 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ==============================================================================
 
-##########################################################################
-# INCLUDED LIBRARY FILES
-use File::Basename;
-
 #-------------------------------------------------------------------------------
 # FUNCTION   cmn_IniDir
 # DOES       Returns the directory where the initialization file is. The
@@ -130,68 +126,6 @@ sub cmn_ValuePathfile
     close (FH_ISSFILE);
 
     return $RetVal;
-}
-
-#-------------------------------------------------------------------------
-# FUNCTION   MkDirP
-# DOES       Making a directory. Similar to unix's mkdir -p
-sub MkDirP
-{
-    my $Dir=$_[0];
-    my @SubPaths;
-
-    
-    
-    if (! -e $Dir)
-      {
-        @SubPaths = split (/\\/, $Dir);
-        my $Dir2Make='';
-        for (@SubPaths)
-          {
-            if ($Dir2Make)
-              {
-                $Dir2Make = "$Dir2Make\\$_";
-              }
-            else
-              {
-                $Dir2Make = $_;
-              }
-
-            if (! -e $Dir2Make)
-              {
-                system ("mkdir $Dir2Make");
-              }
-          }
-      }
-}
-
-#-------------------------------------------------------------------------------
-# FUNCTION PathSetupOut
-# DOES     Finding and returning the current svn.exe path as of
-#          ..\svn_iss_dyn.iss
-sub PathSetupOut
-{
-    my $PathWinIsPack='';
-    my $Pwd='';
-
-    # Get absolute path of the current PWD's parent
-    $PathWinIsPack=getcwd;
-    $Pwd=basename($PathWinIsPack);
-    $PathWinIsPack =~ s/\//\\/g;
-    $PathWinIsPack =~ s/\\$Pwd$//;
-
-    my $SetupOut = "$PathWinIsPack\\" . &cmn_ValuePathfile('path_setup_out');
-
-    #Make the out dir in "$RootSvnBook\src if needed
-    &MkDirP ("$SetupOut") unless (-e "$SetupOut");
-
-#    if ( ! -e "../$SetupOut")
-    if ( ! -e "$SetupOut")
-      {
-        die "ERROR: Could not find $SetupOut in ..\\svn_dynamics.iss\n";
-      }
-    
-    return $SetupOut;
 }
 
 1;

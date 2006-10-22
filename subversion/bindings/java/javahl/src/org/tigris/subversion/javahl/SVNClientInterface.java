@@ -1,9 +1,8 @@
 package org.tigris.subversion.javahl;
-
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -30,12 +29,10 @@ public interface SVNClientInterface
      * release the native peer (should not depend on finalize)
      */
     void dispose();
-
     /**
      * @return Version information about the underlying native libraries.
      */
     public Version getVersion();
-
     /**
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
@@ -46,7 +43,6 @@ public interface SVNClientInterface
      * @since 1.3
      */
     public String getAdminDirectoryName();
-
     /**
      * @param name The name of the directory to compare.
      * @return Whether <code>name</code> is that of a working copy
@@ -54,55 +50,50 @@ public interface SVNClientInterface
      * @since 1.3
      */
     public boolean isAdminDirectory(String name);
-
     /**
       * Returns the last destination path submitted.
       * @deprecated
       * @return path in Subversion format.
       */
     String getLastPath();
-
     /**
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
      * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
-     * @param getAll    get status for uninteresting (unchanged) files.
+     * @param getAll    get status for uninteristing files (unchanged).
      * @return Array of Status entries.
      */
-    Status[] status(String path, boolean descend, boolean onServer,
-                    boolean getAll) throws ClientException;
-
+    Status[]status(String path, boolean descend, boolean onServer,
+                   boolean getAll) throws ClientException;
     /**
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
      * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
-     * @param getAll    get status for uninteresting (unchanged) files.
+     * @param getAll    get status for uninteristing files (unchanged).
      * @param noIgnore  get status for normaly ignored files and directories.
      * @return Array of Status entries.
      */
-    Status[] status(String path, boolean descend, boolean onServer,
-                    boolean getAll, boolean noIgnore) throws ClientException;
-
+    Status[]status(String path, boolean descend, boolean onServer,
+                   boolean getAll, boolean noIgnore) throws ClientException;
     /**
      * List a directory or file of the working copy.
      *
      * @param path      Path to explore.
      * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
-     * @param getAll    get status for uninteresting (unchanged) files.
+     * @param getAll    get status for uninteristing files (unchanged).
      * @param noIgnore  get status for normaly ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
      * @return Array of Status entries.
      * @since 1.2
      */
-    Status[] status(String path, boolean descend, boolean onServer,
-                    boolean getAll, boolean noIgnore, boolean ignoreExternals)
+    Status[]status(String path, boolean descend, boolean onServer,
+                   boolean getAll, boolean noIgnore, boolean ignoreExternals)
             throws ClientException;
-
     /**
      * Lists the directory entries of an url on the server.
      * @param url       the url to list
@@ -110,9 +101,8 @@ public interface SVNClientInterface
      * @param recurse   recurse into subdirectories
      * @return  Array of DirEntry objects.
      */
-    DirEntry[] list(String url, Revision revision, boolean recurse)
+    DirEntry[]list(String url, Revision revision, boolean recurse)
             throws ClientException;
-
     /**
      * Lists the directory entries of an url on the server.
      * @param url       the url to list
@@ -122,10 +112,9 @@ public interface SVNClientInterface
      * @return  Array of DirEntry objects.
      * @since 1.2
      */
-    DirEntry[] list(String url, Revision revision, Revision pegRevision,
-                    boolean recurse)
+    DirEntry[]list(String url, Revision revision, Revision pegRevision,
+                   boolean recurse)
             throws ClientException;
-
     /**
      * Returns the status of a single file in the path.
      *
@@ -134,7 +123,6 @@ public interface SVNClientInterface
      * @return  the subversion status of the file.
      */
     Status singleStatus(String path, boolean onServer) throws ClientException;
-
     /**
      * Sets the username used for authentication.
      * @param username The username, ignored if the empty string.  Set
@@ -144,7 +132,6 @@ public interface SVNClientInterface
      * @see #password(String)
      */
     void username(String username);
-
     /**
      * Sets the password used for authentication.
      * @param password The password, ignored if the empty string.  Set
@@ -154,13 +141,11 @@ public interface SVNClientInterface
      * @see #username(String)
      */
     void password(String password);
-
     /**
      * Register callback interface to supply username and password on demand
      * @param prompt the callback interface
      */
     void setPrompt(PromptUserPassword prompt);
-
     /**
      * Retrieve the log messages for an item
      * @param path          path or url to get the log message for.
@@ -170,7 +155,6 @@ public interface SVNClientInterface
      */
     LogMessage[] logMessages(String path, Revision revisionStart,
                              Revision revisionEnd) throws ClientException;
-
     /**
      * Retrieve the log messages for an item
      * @param path          path or url to get the log message for.
@@ -182,7 +166,6 @@ public interface SVNClientInterface
     LogMessage[] logMessages(String path, Revision revisionStart,
                              Revision revisionEnd, boolean stopOnCopy)
             throws ClientException;
-
     /**
      * Retrieve the log messages for an item
      * @param path          path or url to get the log message for.
@@ -197,7 +180,6 @@ public interface SVNClientInterface
                              Revision revisionEnd, boolean stopOnCopy,
                              boolean discoverPath)
             throws ClientException;
-
     /**
      * Retrieve the log messages for an item
      * @param path          path or url to get the log message for.
@@ -215,7 +197,6 @@ public interface SVNClientInterface
                              Revision revisionEnd, boolean stopOnCopy,
                              boolean discoverPath, long limit)
             throws ClientException;
-
     /**
      * Executes a revision checkout.
      * @param moduleName name of the module to checkout.
@@ -230,7 +211,6 @@ public interface SVNClientInterface
     long checkout(String moduleName, String destPath, Revision revision,
                   Revision pegRevision, boolean recurse,
                   boolean ignoreExternals) throws ClientException;
-
     /**
      * Executes a revision checkout.
      * @param moduleName name of the module to checkout.
@@ -242,7 +222,6 @@ public interface SVNClientInterface
     long checkout(String moduleName, String destPath, Revision revision,
                   boolean recurse)
             throws ClientException;
-
     /**
      * Sets the notification callback used to send processing information back
      * to the calling program.
@@ -251,7 +230,6 @@ public interface SVNClientInterface
      * @deprecated use notification2 instead
      */
     void notification(Notify notify);
-
     /**
      * Sets the notification callback used to send processing information back
      * to the calling program.
@@ -260,7 +238,6 @@ public interface SVNClientInterface
      * @since 1.2
      */
     void notification2(Notify2 notify);
-
     /**
      * Sets the commit message handler. This allows more complex commit message
      * with the list of the elements to be commited as input.
@@ -268,7 +245,6 @@ public interface SVNClientInterface
      *                          if this is set the message parameter is ignored.
      */
     void commitMessageHandler(CommitMessage messageHandler);
-
     /**
      * Sets a file for deletion.
      * @param path      path or url to be deleted
@@ -278,23 +254,20 @@ public interface SVNClientInterface
      */
     void remove(String[] path, String message, boolean force)
             throws ClientException;
-
     /**
      * Reverts a file to a pristine state.
      * @param path      path of the file.
      * @param recurse   recurse into subdirectories
      * @exception ClientException
      */
-    void revert(String path, boolean recurse) throws ClientException;
-
+    void revert(String path, boolean recurse)throws ClientException;
     /**
      * Adds a file to the repository.
      * @param path      path to be added.
      * @param recurse   recurse into subdirectories
      * @exception ClientException
      */
-    void add(String path, boolean recurse) throws ClientException;
-
+    void add(String path, boolean recurse)throws ClientException;
     /**
      * Adds a file to the repository.
      * @param path      path to be added.
@@ -304,9 +277,7 @@ public interface SVNClientInterface
      * @exception ClientException
      * @since 1.2
      */
-    void add(String path, boolean recurse, boolean force)
-        throws ClientException;
-
+    void add(String path, boolean recurse, boolean force)throws ClientException;
     /**
      * Updates the directory or file from repository
      * @param path target file.
@@ -318,7 +289,6 @@ public interface SVNClientInterface
      */
     long update(String path, Revision revision, boolean recurse)
             throws ClientException;
-
     /**
      * Updates the directories or files from repository
      * @param path array of target files.
@@ -332,7 +302,6 @@ public interface SVNClientInterface
      */
     long[] update(String[] path, Revision revision, boolean recurse,
                   boolean ignoreExternals) throws ClientException;
-
     /**
      * Commits changes to the repository.
      * @param path      files to commit.
@@ -344,7 +313,6 @@ public interface SVNClientInterface
      */
     long commit(String[] path, String message, boolean recurse)
             throws ClientException;
-
     /**
      * Commits changes to the repository.
      * @param path      files to commit.
@@ -357,7 +325,6 @@ public interface SVNClientInterface
      */
     long commit(String[] path, String message, boolean recurse,
                 boolean noUnlock) throws ClientException;
-
     /**
      * Copies a versioned file with the history preserved.
      * @param srcPath   source path or url
@@ -368,7 +335,6 @@ public interface SVNClientInterface
      */
     void copy(String srcPath, String destPath, String message,
               Revision revision) throws ClientException;
-
     /**
      * Moves or renames a file.
      * @param srcPath   source path or url
@@ -380,7 +346,6 @@ public interface SVNClientInterface
      */
     void move(String srcPath, String destPath, String message,
               Revision revision, boolean force) throws ClientException;
-
     /**
      * Moves or renames a file.
      * @param srcPath   source path or url
@@ -392,7 +357,6 @@ public interface SVNClientInterface
      */
     void move(String srcPath, String destPath, String message,
               boolean force) throws ClientException;
-
     /**
      * Creates a directory directly in a repository or creates a
      * directory on disk and schedules it for addition.
@@ -401,7 +365,6 @@ public interface SVNClientInterface
      * @exception ClientException
      */
     void mkdir(String[] path, String message) throws ClientException;
-
     /**
      * Recursively cleans up a local directory, finishing any
      * incomplete operations, removing lockfiles, etc.
@@ -409,7 +372,6 @@ public interface SVNClientInterface
      * @exception ClientException
      */
     void cleanup(String path) throws ClientException;
-
     /**
      * Removes the 'conflicted' state on a file.
      * @param path      path to cleanup
@@ -417,7 +379,6 @@ public interface SVNClientInterface
      * @exception ClientException
      */
     void resolved(String path, boolean recurse) throws ClientException;
-
     /**
      * Exports the contents of either a subversion repository into a
      * 'clean' directory (meaning a directory with no administrative
@@ -430,7 +391,6 @@ public interface SVNClientInterface
      */
     long doExport(String srcPath, String destPath, Revision revision,
                   boolean force) throws ClientException;
-
     /**
      * Exports the contents of either a subversion repository into a
      * 'clean' directory (meaning a directory with no administrative
@@ -449,7 +409,6 @@ public interface SVNClientInterface
     long doExport(String srcPath, String destPath, Revision revision,
                   Revision pegRevision, boolean force, boolean ignoreExternals,
                   boolean recurse, String nativeEOL) throws ClientException;
-
     /**
      * Update local copy to mirror a new url.
      * @param path      the working copy path
@@ -460,7 +419,6 @@ public interface SVNClientInterface
      */
     long doSwitch(String path, String url, Revision revision, boolean recurse)
             throws ClientException;
-
     /**
      * Import a file or directory into a repository directory  at
      * head.
@@ -472,7 +430,6 @@ public interface SVNClientInterface
      */
     void doImport(String path, String url, String message, boolean recurse)
             throws ClientException;
-
     /**
      * Merge changes from two paths into a new local path.
      * @param path1         first path or url
@@ -487,7 +444,6 @@ public interface SVNClientInterface
     void merge(String path1, Revision revision1, String path2,
                Revision revision2, String localPath, boolean force,
                boolean recurse) throws ClientException;
-
     /**
      * Merge changes from two paths into a new local path.
      * @param path1         first path or url
@@ -506,7 +462,6 @@ public interface SVNClientInterface
                Revision revision2, String localPath, boolean force,
                boolean recurse, boolean ignoreAncestry, boolean dryRun)
             throws ClientException;
-
     /**
      * Merge changes from two paths into a new local path.
      * @param path          path or url
@@ -525,7 +480,6 @@ public interface SVNClientInterface
                Revision revision2, String localPath, boolean force,
                boolean recurse, boolean ignoreAncestry, boolean dryRun)
             throws ClientException;
-
     /**
      * Display the differences between two paths
      * @param target1       first path or url
@@ -539,7 +493,6 @@ public interface SVNClientInterface
     void diff(String target1, Revision revision1, String target2,
               Revision revision2, String outFileName, boolean recurse)
             throws ClientException;
-
     /**
      * Display the differences between two paths
      * @param target1       first path or url
@@ -558,7 +511,6 @@ public interface SVNClientInterface
               Revision revision2, String outFileName, boolean recurse, 
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force)
             throws ClientException;
-
     /**
      * Display the differences between two paths
      * @param target        path or url
@@ -584,7 +536,6 @@ public interface SVNClientInterface
      * @return array of property objects
      */
     PropertyData[] properties(String path) throws ClientException;
-
     /**
      * Retrieves the properties of an item
      * @param path      the path of the item
@@ -594,7 +545,6 @@ public interface SVNClientInterface
      */
     PropertyData[] properties(String path, Revision revision)
             throws ClientException;
-
     /**
      * Retrieves the properties of an item
      * @param path      the path of the item
@@ -606,7 +556,6 @@ public interface SVNClientInterface
     PropertyData[] properties(String path, Revision revision, 
                               Revision pegRevision)
             throws ClientException;
-
     /**
      * Sets one property of an item with a String value
      * @param path      path of the item
@@ -617,7 +566,6 @@ public interface SVNClientInterface
      */
     void propertySet(String path, String name, String value, boolean recurse)
             throws ClientException;
-
     /**
      * Sets one property of an item with a String value
      * @param path      path of the item
@@ -631,7 +579,6 @@ public interface SVNClientInterface
     void propertySet(String path, String name, String value, boolean recurse,
                      boolean force)
             throws ClientException;
-
     /**
      * Sets one property of an item with a byte array value
      * @param path      path of the item
@@ -642,7 +589,6 @@ public interface SVNClientInterface
      */
     void propertySet(String path, String name, byte[] value, boolean recurse)
             throws ClientException;
-
     /**
      * Sets one property of an item with a byte array value
      * @param path      path of the item
@@ -656,7 +602,6 @@ public interface SVNClientInterface
     void propertySet(String path, String name, byte[] value, boolean recurse,
                      boolean force)
             throws ClientException;
-
     /**
      * Remove one property of an item.
      * @param path      path of the item
@@ -666,7 +611,6 @@ public interface SVNClientInterface
      */
     void propertyRemove(String path, String name, boolean recurse)
             throws ClientException;
-
     /**
      * Create and sets one property of an item with a String value
      * @param path      path of the item
@@ -675,10 +619,8 @@ public interface SVNClientInterface
      * @param recurse   set property also on the subdirectories
      * @throws ClientException
      */
-    void propertyCreate(String path, String name, String value,
-                        boolean recurse)
+    void propertyCreate(String path, String name, String value, boolean recurse)
             throws ClientException;
-
     /**
      * Create and sets one property of an item with a String value
      * @param path      path of the item
@@ -689,10 +631,9 @@ public interface SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    void propertyCreate(String path, String name, String value,
-                        boolean recurse, boolean force)
+    void propertyCreate(String path, String name, String value, boolean recurse,
+                        boolean force)
             throws ClientException;
-
     /**
      * Create and sets one property of an item with a byte array value
      * @param path      path of the item
@@ -701,10 +642,8 @@ public interface SVNClientInterface
      * @param recurse   set property also on the subdirectories
      * @throws ClientException
      */
-    void propertyCreate(String path, String name, byte[] value,
-                        boolean recurse)
+    void propertyCreate(String path, String name, byte[] value, boolean recurse)
             throws ClientException;
-
     /**
      * Create and sets one property of an item with a byte array value
      * @param path      path of the item
@@ -715,10 +654,9 @@ public interface SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    void propertyCreate(String path, String name, byte[] value,
-                        boolean recurse, boolean force)
+    void propertyCreate(String path, String name, byte[] value, boolean recurse,
+                        boolean force)
             throws ClientException;
-
     /**
      * Retrieve one revsision property of one item
      * @param path      path of the item
@@ -729,7 +667,6 @@ public interface SVNClientInterface
      */
     PropertyData revProperty(String path, String name, Revision rev)
             throws ClientException;
-
     /**
      * Retrieve all revsision properties of one item
      * @param path      path of the item
@@ -740,7 +677,6 @@ public interface SVNClientInterface
      */
     PropertyData[] revProperties(String path, Revision rev)
             throws ClientException;
-
     /**
      * set one revsision property of one item
      * @param path      path of the item
@@ -754,7 +690,6 @@ public interface SVNClientInterface
     void setRevProperty(String path, String name, Revision rev, String value,
                         boolean force)
             throws ClientException;
-
     /**
      * Retrieve one property of one iten
      * @param path      path of the item
@@ -763,7 +698,6 @@ public interface SVNClientInterface
      * @throws ClientException
      */
     PropertyData propertyGet(String path, String name) throws ClientException;
-
     /**
      * Retrieve one property of one iten
      * @param path      path of the item
@@ -775,7 +709,6 @@ public interface SVNClientInterface
      */
     PropertyData propertyGet(String path, String name, Revision revision)
             throws ClientException;
-
     /**
      * Retrieve one property of one iten
      * @param path      path of the item
@@ -789,7 +722,6 @@ public interface SVNClientInterface
     PropertyData propertyGet(String path, String name, Revision revision,
                              Revision pegRevision)
             throws ClientException;
-
     /**
      *  Retrieve the content of a file
      * @param path      the path of the file
@@ -798,7 +730,6 @@ public interface SVNClientInterface
      * @throws ClientException
      */
     byte[] fileContent(String path, Revision revision) throws ClientException;
-
     /**
      *  Retrieve the content of a file
      * @param path      the path of the file
@@ -810,7 +741,6 @@ public interface SVNClientInterface
      */
     byte[] fileContent(String path, Revision revision, Revision pegRevision)
             throws ClientException;
-
     /**
      * Write the file's content to the specified output stream.  If
      * you need an InputStream, use a
@@ -838,7 +768,6 @@ public interface SVNClientInterface
      */
     void relocate(String from, String to, String path, boolean recurse)
             throws ClientException;
-
     /**
      * Return for each line of the file, the author and the revision of the
      * last together with the content.
@@ -851,7 +780,6 @@ public interface SVNClientInterface
      */
     byte[] blame(String path, Revision revisionStart, Revision revisionEnd)
             throws ClientException;
-
     /**
      * Retrieve the content together with the author, the revision and the date
      * of the last change of each line
@@ -864,7 +792,6 @@ public interface SVNClientInterface
      */
     void blame(String path, Revision revisionStart, Revision revisionEnd,
                BlameCallback callback) throws ClientException;
-
     /**
      * Retrieve the content together with the author, the revision and the date
      * of the last change of each line
@@ -880,7 +807,6 @@ public interface SVNClientInterface
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd,
                BlameCallback callback) throws ClientException;
-
     /**
      * Set directory for the configuration information, taking the
      * usual steps to ensure that Subversion's config file templates
@@ -890,14 +816,12 @@ public interface SVNClientInterface
      * @throws ClientException
      */
     void setConfigDirectory(String configDir) throws ClientException;
-
     /**
      * Get the configuration directory
      * @return  the directory
      * @throws ClientException
      */
     String getConfigDirectory() throws ClientException;
-
     /**
      * cancel the active operation
      * @throws ClientException

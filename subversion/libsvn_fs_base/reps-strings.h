@@ -156,6 +156,14 @@ svn_error_t *svn_fs_base__rep_deltify(svn_fs_t *fs,
                                       apr_pool_t *pool);
 
 
+/* Ensure that REP_KEY refers to storage that is maintained as fulltext,
+   not as a delta against other strings, in FS, as part of TRAIL.  */
+svn_error_t *svn_fs_base__rep_undeltify(svn_fs_t *fs,
+                                        const char *rep_key,
+                                        trail_t *trail,
+                                        apr_pool_t *pool);
+
+
 
 #ifdef __cplusplus
 }

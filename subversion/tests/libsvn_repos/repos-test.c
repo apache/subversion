@@ -1561,7 +1561,7 @@ commit_editor_authz  (const char **msg,
   /* Open directory /A, to which we have read/write access. */
   SVN_ERR(editor->open_directory("/A", root_baton,
                                  SVN_INVALID_REVNUM,
-                                 subpool, &dir_baton));
+                                 pool, &dir_baton));
 
   /* Test denied file addition.  Denied because of a conflicting rule
      on the file path itself. */

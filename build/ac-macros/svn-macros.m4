@@ -12,6 +12,7 @@ AC_DEFUN([SVN_CONFIG_NICE], [
   # This little dance satisfies Cygwin, which cannot overwrite in-use files.
   if test -f "$1"; then
     mv "$1" "$1.old"
+    rm -f "$1.old"
   fi
 
   cat >"$1" <<EOF
@@ -23,7 +24,6 @@ AC_DEFUN([SVN_CONFIG_NICE], [
 EOF
 
   chmod +x "$1"
-  rm -f "$1.old"
 ])
 
 

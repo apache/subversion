@@ -262,11 +262,6 @@ svn_error_t *svn_repos_recover(const char *path, apr_pool_t *pool);
  * start_callback_baton as argument before the recovery starts, but
  * after the exclusive lock has been acquired.
  *
- * @note On some platforms the exclusive lock does not exclude other
- * threads in the same process so this function should only be called
- * by a single threaded process, or by a multi-threaded process when
- * no other threads are accessing the repository.
- *
  * @since New in 1.1.
  */
 svn_error_t *svn_repos_recover2(const char *path,
@@ -433,7 +428,7 @@ svn_repos_begin_report(void **report_baton,
  * drive.
  *
  * If @a start_empty is true and @a path is a directory, then require the
- * caller to explicitly provide all the children of @a path - do not assume
+ * caller to explicitly provide all the children of @path - do not assume
  * that the tree also contains all the children of @a path at @a revision.
  * This is for 'low confidence' client reporting.
  * 
@@ -464,7 +459,7 @@ svn_error_t *svn_repos_set_path(void *report_baton,
 
 /**
  * Given a @a report_baton constructed by svn_repos_begin_report(), 
- * record the presence of @a path in the current tree, containing the contents
+ * record the presence of @path in the current tree, containing the contents
  * of @a link_path at @a revision.
  *
  * Note that while @a path is relative to the anchor/target used in the
@@ -472,7 +467,7 @@ svn_error_t *svn_repos_set_path(void *report_baton,
  * path!
  *
  * If @a start_empty is true and @a path is a directory, then require the
- * caller to explicitly provide all the children of @a path - do not assume
+ * caller to explicitly provide all the children of @path - do not assume
  * that the tree also contains all the children of @a link_path at
  * @a revision.  This is for 'low confidence' client reporting.
  *
@@ -552,7 +547,7 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * @a tgt_root.  @a src_entry is the node to update.  If @a src_entry
  * is empty, then compute the difference between the entire tree
  * anchored at @a src_parent_dir under @a src_root and @a tgt_path
- * under @a tgt_root.  Else, describe the changes needed to update
+ * under @a target_root.  Else, describe the changes needed to update
  * only that entry in @a src_parent_dir.  Typically, callers of this
  * function will use a @a tgt_path that is the concatenation of @a
  * src_parent_dir and @a src_entry.
@@ -850,7 +845,7 @@ typedef svn_error_t *(*svn_repos_history_func_t)(void *baton,
 /**
  * Call @a history_func (with @a history_baton) for each interesting
  * history location in the lifetime of @a path in @a fs, from the
- * youngest of @a end and @a start to the oldest.  Only cross
+ * youngest of @a end and @ start to the oldest.  Only cross
  * filesystem copy history if @a cross_copies is @c TRUE.  And do all
  * of this in @a pool.
  *
@@ -1037,7 +1032,7 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /* ---------------------------------------------------------------*/
 
-/* Retrieving multiple revisions of a file. */
+/* Retreiving multiple revisions of a file. */
 
 /**
  * Retrieve a subset of the interesting revisions of a file @a path in
@@ -1201,10 +1196,9 @@ svn_error_t *svn_repos_fs_get_locks(apr_hash_t **locks,
 /** @} */
 
 /**
- * Like svn_fs_change_rev_prop2(), but invoke the @a repos's pre- and
- * post-revprop-change hooks around the change as specified by @a
- * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
- * (respectively).  Use @a pool for temporary allocations.
+ * Like svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
+ * post-revprop-change hooks around the change.  Use @a pool for
+ * temporary allocations.
  *
  * @a rev is the revision whose property to change, @a name is the
  * name of the property, and @a new_value is the new value of the
@@ -1216,28 +1210,7 @@ svn_error_t *svn_repos_fs_get_locks(apr_hash_t **locks,
  * rev.  If the revision contains any unreadable changed paths, then
  * return SVN_ERR_AUTHZ_UNREADABLE.
  * 
- * @since New in 1.5.
- */
-svn_error_t *svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
-                                           svn_revnum_t rev,
-                                           const char *author,
-                                           const char *name,
-                                           const svn_string_t *new_value,
-                                           svn_boolean_t
-                                           use_pre_revprop_change_hook,
-                                           svn_boolean_t
-                                           use_post_revprop_change_hook,
-                                           svn_repos_authz_func_t
-                                           authz_read_func,
-                                           void *authz_read_baton,
-                                           apr_pool_t *pool);
-
-/**
- * Similar to svn_repos_fs_change_rev_prop3(), but with the @a
- * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
- * always set to @c TRUE.
- * 
- * @deprecated Provided for backward compatibility with the 1.4 API.
+ * @since New in 1.1.
  */
 svn_error_t *svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
                                            svn_revnum_t rev,

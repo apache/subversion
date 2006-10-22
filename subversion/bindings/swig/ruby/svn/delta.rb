@@ -17,7 +17,7 @@ module Svn
     module_function
     def svndiff_handler(output, version=nil)
       args = [output, version || 0]
-      handler, handler_baton = Delta.txdelta_to_svndiff2(*args)
+      handler, handler_baton = Delta.txdelta_to_svndiff2_wrapper(*args)
       handler.baton = handler_baton
       handler
     end
@@ -124,7 +124,7 @@ module Svn
       attr_accessor :baton
 
       def call(window)
-        Delta.txdelta_invoke_window_handler(self, window, @baton)
+        Delta.txdelta_invoke_window_handler(self, window)
       end
       
       def send(string_or_stream)

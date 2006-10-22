@@ -8,10 +8,6 @@
 import commands
 import sys, os
 import getopt
-try:
-    my_getopt = getopt.gnu_getopt
-except AttributeError:
-    my_getopt = getopt.getopt
 import re
 
 __author__ = "Gustavo Niemeyer <gustavo@niemeyer.net>"
@@ -257,7 +253,7 @@ class MissingArgumentsException(Exception):
 
 def parse_options():
     try:
-        opts, args = my_getopt(sys.argv[1:], "f:s:r:t:R:A:h", ["help"])
+        opts, args = getopt.getopt(sys.argv[1:], "f:s:r:t:R:A:h", ["help"])
     except getopt.GetoptError, e:
         raise Error, e.msg
     class Options: pass

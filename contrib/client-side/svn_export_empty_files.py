@@ -73,9 +73,9 @@ def check_url_for_export(ctx, url, revision, client_ctx):
     try:
         if ctx.verbose:
             print "Trying to list '%s'" % url
-        svn.client.ls(url, revision, 0, client_ctx)
+        svn.client.svn_client_ls(url, revision, 0, client_ctx)
 
-        # Given a URL, the ls command does not tell you if
+        # Given a URL, the svn_client_ls command does not tell you if
         # you have a directory or a non-directory, so try doing a
         # listing on the parent URL.  If the listing on the parent URL
         # fails, then assume that the given URL was the top of the
@@ -92,10 +92,10 @@ def check_url_for_export(ctx, url, revision, client_ctx):
         try:
             if ctx.verbose:
                 print "Trying to list '%s'" % parent_url
-            remote_ls = svn.client.ls(parent_url,
-                                      revision,
-                                      0,
-                                      client_ctx)
+            remote_ls = svn.client.svn_client_ls(parent_url,
+                                                 revision,
+                                                 0,
+                                                 client_ctx)
         except libsvn._core.SubversionException:
             if ctx.verbose:
                 print "Listing of '%s' failed, assuming URL is top of repos" \
@@ -167,10 +167,10 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx):
         print "Creating directory '%s'" % dir_name
         os.mkdir(dir_name)
 
-    remote_ls = svn.client.ls(url,
-                              revision,
-                              0,
-                              client_ctx)
+    remote_ls = svn.client.svn_client_ls(url,
+                                         revision,
+                                         0,
+                                         client_ctx)
 
     if ctx.verbose:
         print "Syncing '%s' to '%s'" % (url, dir_name)
@@ -259,16 +259,16 @@ def synchronize_dir(ctx, url, dir_name, revision, client_ctx):
 def main(ctx, url, export_pathname):
     # Create a client context to run all Subversion client commands
     # with.
-    client_ctx = svn.client.create_context()
+    client_ctx = svn.client.svn_client_create_context()
 
     # Give the client context baton a suite of authentication
     # providers.
     providers = [
-        svn.client.get_simple_provider(),
-        svn.client.get_ssl_client_cert_file_provider(),
-        svn.client.get_ssl_client_cert_pw_file_provider(),
-        svn.client.get_ssl_server_trust_file_provider(),
-        svn.client.get_username_provider(),
+        svn.client.svn_client_get_simple_provider(),
+        svn.client.svn_client_get_ssl_client_cert_file_provider(),
+        svn.client.svn_client_get_ssl_client_cert_pw_file_provider(),
+        svn.client.svn_client_get_ssl_server_trust_file_provider(),
+        svn.client.svn_client_get_username_provider(),
         ]
     client_ctx.auth_baton = svn.core.svn_auth_open(providers)
 

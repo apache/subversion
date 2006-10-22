@@ -72,7 +72,7 @@ alloc_entry(apr_pool_t *pool)
  * false.  ENTRY_NAME is the name of the WC-entry. */
 static svn_error_t *
 do_bool_attr(svn_boolean_t *entry_flag,
-             apr_uint64_t *modify_flags, apr_uint64_t modify_flag,
+             apr_uint32_t *modify_flags, apr_uint32_t modify_flag,
              apr_hash_t *atts, const char *attr_name,
              const char *entry_name)
 {
@@ -445,12 +445,8 @@ read_entry(svn_wc_entry_t **new_entry,
 
   /* Lock creation date. */
   SVN_ERR(read_time(&entry->lock_creation_date, buf, end, pool));
-  MAYBE_DONE;
-
-  /* Changelist. */
-  SVN_ERR(read_str(&entry->changelist, buf, end, pool));
-
- done:
+  
+ done:;
   *new_entry = entry;
   return SVN_NO_ERROR;
 }
@@ -458,7 +454,7 @@ read_entry(svn_wc_entry_t **new_entry,
 
 svn_error_t *
 svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
-                      apr_uint64_t *modify_flags,
+                      apr_uint32_t *modify_flags,
                       apr_hash_t *atts,
                       apr_pool_t *pool)
 {
@@ -469,6 +465,12 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 
   /* Find the name and set up the entry under that name. */
   name = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
+  /* XXX Replace the obsolete "svn:this_dir".
+     XXX This code should go away by 1.0 */
+  {
+    if (name && strcmp(name, "svn:this_dir") == 0)
+      name = SVN_WC_ENTRY_THIS_DIR;
+  }
   entry->name = name ? apr_pstrdup(pool, name) : SVN_WC_ENTRY_THIS_DIR;
 
   /* Attempt to set revision (resolve_to_defaults may do it later, too) */
@@ -782,15 +784,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
         *modify_flags |= SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE;
       }
   }
-
-  /* changelist */
-  entry->changelist = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_CHANGELIST,
-                                   APR_HASH_KEY_STRING);
-  if (entry->changelist)
-    {
-      *modify_flags |= SVN_WC__ENTRY_MODIFY_CHANGELIST;
-      entry->changelist = apr_pstrdup(pool, entry->changelist);
-    }
   
   /* has-props flag. */
   SVN_ERR(do_bool_attr(&entry->has_props,
@@ -870,7 +863,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   apr_hash_t *attributes;
   svn_wc_entry_t *entry;
   svn_error_t *err;
-  apr_uint64_t modify_flags = 0;
+  apr_uint32_t modify_flags = 0;
 
   /* We only care about the `entry' tag; all other tags, such as `xml'
      and `wc-entries', are ignored. */
@@ -1308,10 +1301,8 @@ svn_wc_entries_read(apr_hash_t **entries,
   return SVN_NO_ERROR;
 }
 
-/* If STR is non-null, append STR to BUF, terminating it with a
-   newline, escaping bytes that needs escaping, using POOL for
-   temporary allocations.  Else if STR is null, just append the
-   terminating newline. */
+/* Append STR to BUF, terminating it with a newline.  Escape bytes that
+   needs escaping.  Use POOL for temporary allocations. */
 static void
 write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
 {
@@ -1336,8 +1327,7 @@ write_str(svn_stringbuf_t *buf, const char *str, apr_pool_t *pool)
 }
 
 /* Append the string VAL of length LEN to BUF, without escaping any
-   bytes, followed by a terminator.  If VAL is NULL, ignore LEN and
-   append just the terminator. */ 
+   bytes. */
 static void
 write_val(svn_stringbuf_t *buf, const char *val, apr_size_t len)
 {
@@ -1346,7 +1336,7 @@ write_val(svn_stringbuf_t *buf, const char *val, apr_size_t len)
   svn_stringbuf_appendbytes(buf, "\n", 1);
 }
 
-/* If VAL is true, append FIELD_NAME followed by a terminator to BUF.
+/* If VAL is true, append FIELD_NAME followede by a terminator to BUF.
    Else, just append the terminator. */
 static void
 write_bool(svn_stringbuf_t *buf, const char *field_name, svn_boolean_t val)
@@ -1354,9 +1344,8 @@ write_bool(svn_stringbuf_t *buf, const char *field_name, svn_boolean_t val)
   write_val(buf, val ? field_name : NULL, val ? strlen(field_name) : 0);
 }
 
-/* If REVNUM is valid, append the representation of REVNUM to BUF
-   followed by a terminator, using POOL for temporary allocations. 
-   Otherwise, just append the terminator. */
+/* Append the representation of REVNUM to BUF and a terminator, using
+   POOL for temporary allocations. */
 static void
 write_revnum(svn_stringbuf_t *buf, svn_revnum_t revnum, apr_pool_t *pool)
 {
@@ -1538,10 +1527,7 @@ write_entry(svn_stringbuf_t *buf,
 
   /* Lock creation date. */
   write_time(buf, entry->lock_creation_date, pool);
-
-  /* Changelist. */
-  write_str(buf, entry->changelist, pool);
-
+  
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -1725,11 +1711,6 @@ write_entry_xml(svn_stringbuf_t **output,
     apr_hash_set(atts, SVN_WC__ENTRY_ATTR_LOCK_CREATION_DATE, 
                  APR_HASH_KEY_STRING,
                  svn_time_to_cstring(entry->lock_creation_date, pool));
-
-  /* Changelist */
-  if (entry->changelist)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_CHANGELIST, APR_HASH_KEY_STRING,
-                 entry->changelist);
 
   /* Has-props flag. */
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_HAS_PROPS, APR_HASH_KEY_STRING,
@@ -1988,7 +1969,7 @@ svn_wc__entries_write(apr_hash_t *entries,
 static void
 fold_entry(apr_hash_t *entries,
            const char *name,
-           apr_uint64_t modify_flags,
+           apr_uint32_t modify_flags,
            svn_wc_entry_t *entry,
            apr_pool_t *pool)
 {
@@ -2121,12 +2102,6 @@ fold_entry(apr_hash_t *entries,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_LOCK_CREATION_DATE)
     cur_entry->lock_creation_date = entry->lock_creation_date;
 
-  /* Changelist */
-  if (modify_flags & SVN_WC__ENTRY_MODIFY_CHANGELIST)
-    cur_entry->changelist = (entry->changelist
-                             ? apr_pstrdup(pool, entry->changelist)
-                             : NULL);
-
   /* has-props flag */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_HAS_PROPS)
     cur_entry->has_props = entry->has_props;
@@ -2206,7 +2181,7 @@ svn_wc__entry_remove(apr_hash_t *entries, const char *name)
 static svn_error_t *
 fold_scheduling(apr_hash_t *entries,
                 const char *name,
-                apr_uint64_t *modify_flags,
+                apr_uint32_t *modify_flags,
                 svn_wc_schedule_t *schedule,
                 apr_pool_t *pool)
 {
@@ -2426,7 +2401,7 @@ svn_error_t *
 svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                      const char *name,
                      svn_wc_entry_t *entry,
-                     apr_uint64_t modify_flags,
+                     apr_uint32_t modify_flags,
                      svn_boolean_t do_sync,
                      apr_pool_t *pool)
 {
@@ -2447,7 +2422,7 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
       svn_wc_entry_t *entry_before, *entry_after;
-      apr_uint64_t orig_modify_flags = modify_flags;
+      apr_uint32_t orig_modify_flags = modify_flags;
       svn_wc_schedule_t orig_schedule = entry->schedule;
 
       /* Keep a copy of the unmodified entry on hand. */
@@ -2536,8 +2511,6 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry, apr_pool_t *pool)
     dupentry->lock_owner = apr_pstrdup(pool, entry->lock_owner);
   if (entry->lock_comment)
     dupentry->lock_comment = apr_pstrdup(pool, entry->lock_comment);
-  if (entry->changelist)
-    dupentry->changelist = apr_pstrdup(pool, entry->changelist);
   if (entry->cachable_props)
     dupentry->cachable_props = apr_pstrdup(pool, entry->cachable_props);
   if (entry->present_props)
@@ -2708,7 +2681,7 @@ svn_wc__entries_init(const char *path,
 static svn_error_t *
 walker_helper(const char *dirpath,
               svn_wc_adm_access_t *adm_access,
-              const svn_wc_entry_callbacks2_t *walk_callbacks,
+              const svn_wc_entry_callbacks_t *walk_callbacks,
               void *walk_baton,
               svn_boolean_t show_hidden,
               svn_cancel_func_t cancel_func,
@@ -2720,24 +2693,17 @@ walker_helper(const char *dirpath,
   apr_hash_index_t *hi;
   svn_wc_entry_t *dot_entry;
 
-  SVN_ERR(walk_callbacks->handle_error
-          (dirpath, svn_wc_entries_read(&entries, adm_access, show_hidden,
-                                        pool), walk_baton, pool));
+  SVN_ERR(svn_wc_entries_read(&entries, adm_access, show_hidden, pool));
   
   /* As promised, always return the '.' entry first. */
   dot_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, 
                            APR_HASH_KEY_STRING);
   if (! dot_entry)
-    return walk_callbacks->handle_error
-      (dirpath, svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                  _("Directory '%s' has no THIS_DIR entry"),
-                                  svn_path_local_style(dirpath, pool)),
-       walk_baton, pool);
+    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                             _("Directory '%s' has no THIS_DIR entry"),
+                             svn_path_local_style(dirpath, pool));
 
-  SVN_ERR(walk_callbacks->handle_error
-          (dirpath,
-           walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool),
-           walk_baton, pool));
+  SVN_ERR(walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool));
 
   /* Loop over each of the other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
@@ -2759,25 +2725,18 @@ walker_helper(const char *dirpath,
         continue;
 
       entrypath = svn_path_join(dirpath, key, subpool);
-      SVN_ERR(walk_callbacks->handle_error
-              (entrypath, walk_callbacks->found_entry(entrypath, current_entry,
-                                                      walk_baton, subpool),
-               walk_baton, pool));
+      SVN_ERR(walk_callbacks->found_entry(entrypath, current_entry,
+                                          walk_baton, subpool));
 
       if (current_entry->kind == svn_node_dir)
         {
           svn_wc_adm_access_t *entry_access;
-          SVN_ERR(walk_callbacks->handle_error
-                  (entrypath,
-                   svn_wc_adm_retrieve(&entry_access, adm_access, entrypath,
-                                       subpool),
-                   walk_baton, pool));
-
-          if (entry_access)
-            SVN_ERR(walker_helper(entrypath, entry_access,
-                                  walk_callbacks, walk_baton,
-                                  show_hidden, cancel_func, cancel_baton,
-                                  subpool));
+          SVN_ERR(svn_wc_adm_retrieve(&entry_access, adm_access, entrypath,
+                                      subpool));
+          SVN_ERR(walker_helper(entrypath, entry_access,
+                                walk_callbacks, walk_baton,
+                                show_hidden, cancel_func, cancel_baton,
+                                subpool));
         }
 
       svn_pool_clear(subpool);
@@ -2788,6 +2747,7 @@ walker_helper(const char *dirpath,
 }
 
 
+/* The public function */
 svn_error_t *
 svn_wc_walk_entries(const char *path,
                     svn_wc_adm_access_t *adm_access,
@@ -2801,36 +2761,10 @@ svn_wc_walk_entries(const char *path,
                               pool);
 }
 
-static svn_error_t *
-walker_default_error_handler(const char *path,
-                             svn_error_t *err,
-                             void *walk_baton,
-                             apr_pool_t *pool)
-{
-  return err;
-}
-
 svn_error_t *
 svn_wc_walk_entries2(const char *path,
                      svn_wc_adm_access_t *adm_access,
                      const svn_wc_entry_callbacks_t *walk_callbacks,
-                     void *walk_baton,
-                     svn_boolean_t show_hidden,
-                     svn_cancel_func_t cancel_func,
-                     void *cancel_baton,
-                     apr_pool_t *pool)
-{
-  svn_wc_entry_callbacks2_t walk_cb2 = { walk_callbacks->found_entry,
-                                         walker_default_error_handler };
-  return svn_wc_walk_entries3(path, adm_access, &walk_cb2, walk_baton,
-                              show_hidden, cancel_func, cancel_baton, pool);
-}
-
-/* The public API. */
-svn_error_t *
-svn_wc_walk_entries3(const char *path,
-                     svn_wc_adm_access_t *adm_access,
-                     const svn_wc_entry_callbacks2_t *walk_callbacks,
                      void *walk_baton,
                      svn_boolean_t show_hidden,
                      svn_cancel_func_t cancel_func,
@@ -2842,27 +2776,21 @@ svn_wc_walk_entries3(const char *path,
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, show_hidden, pool));
 
   if (! entry)
-    return walk_callbacks->handle_error
-      (path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                               _("'%s' is not under version control"),
-                               svn_path_local_style(path, pool)),
-       walk_baton, pool);
+    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                             _("'%s' is not under version control"),
+                             svn_path_local_style(path, pool));
 
   if (entry->kind == svn_node_file)
-    return walk_callbacks->handle_error
-      (path, walk_callbacks->found_entry(path, entry, walk_baton, pool),
-       walk_baton, pool);
+    return walk_callbacks->found_entry(path, entry, walk_baton, pool);
 
   else if (entry->kind == svn_node_dir)
     return walker_helper(path, adm_access, walk_callbacks, walk_baton,
                          show_hidden, cancel_func, cancel_baton, pool);
 
   else
-    return walk_callbacks->handle_error
-      (path, svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                               _("'%s' has an unrecognized node kind"),
-                               svn_path_local_style(path, pool)),
-       walk_baton, pool);
+    return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                             _("'%s' has an unrecognized node kind"),
+                             svn_path_local_style(path, pool));
 }
 
 

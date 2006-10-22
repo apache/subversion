@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, stat, sys, re, os.path
+import shutil, stat, string, sys, re, os.path
 
 # Our testing module
 import svntest
@@ -27,6 +27,19 @@ from svntest import wc, SVNAnyOutput
 Skip = svntest.testcase.Skip
 XFail = svntest.testcase.XFail
 Item = wc.StateItem
+
+#----------------------------------------------------------------------
+
+def expect_extra_files(node, extra_files):
+  """singleton handler for expected singletons"""
+
+  for pattern in extra_files:
+    mo = re.match(pattern, node.name)
+    if mo:
+      extra_files.pop(extra_files.index(pattern))
+      return
+  print "Found unexpected object:", node.name
+  raise svntest.main.SVNTreeUnequal
 
 ######################################################################
 # Tests
@@ -556,13 +569,13 @@ Original appended text for rho
                  'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
   
   # Do the update and check the results in three ways.
-  # All "extra" files are passed to detect_conflict_files().
+  # All "extra" files are passed to expect_extra_files().
   svntest.actions.run_and_verify_update(wc_backup,
                                         expected_output,
                                         expected_disk,
                                         expected_status,
                                         None,
-                                        svntest.tree.detect_conflict_files,
+                                        expect_extra_files,
                                         extra_files)
   
   # verify that the extra_files list is now empty.
@@ -1209,7 +1222,7 @@ def basic_import(sbox):
     '--password', svntest.main.wc_passwd,
     '-m', 'Log message for new import', new_path, url)
 
-  lastline = output.pop().strip()
+  lastline = string.strip(output.pop())
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")
   match = cm.search (lastline)
   if not match:
@@ -1374,7 +1387,7 @@ def nonexistent_repository(sbox):
 def basic_auth_cache(sbox):
   "basic auth caching"
 
-  sbox.build(create_wc = False)
+  sbox.build()
   wc_dir         = sbox.wc_dir
   
   repo_dir       = sbox.repo_dir
@@ -1500,7 +1513,7 @@ def uri_syntax(sbox):
 
   # Revision 6638 made 'svn co http://host' seg fault, this tests the fix.
   url = svntest.main.current_repo_url
-  scheme = url[:url.find(":")]
+  scheme = url[:string.find(url, ":")]
   url = scheme + "://some_nonexistent_host_with_no_trailing_slash"
   svntest.actions.run_and_verify_svn("No error where one expected",
                                      None, SVNAnyOutput,
@@ -1521,7 +1534,7 @@ def basic_checkout_file(sbox):
   output, errput = svntest.main.run_svn(1, 'co', iota_url)
 
   for line in errput:
-    if line.find("refers to a file") != -1:
+    if string.find(line, "refers to a file") != -1:
       break
   else:
     raise svntest.Failure
@@ -1700,29 +1713,55 @@ def cat_added_PREV(sbox):
                                      None, ".*has no committed revision.*",
                                      'cat', '-rPREV', f_path)
 
-# Isue #1869.
-def move_relative_paths(sbox):
-  "move file using relative path names"
+def checkout_creates_intermediate_folders(sbox):
+  "checkout and create some intermediate folders"
+
+  sbox.build(create_wc = False)
+
+  checkout_target = os.path.join(sbox.wc_dir, 'a', 'b', 'c')
+  
+  # checkout a working copy in a/b/c, should create these intermediate 
+  # folders
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = checkout_target
+  expected_output.tweak(status='A ', contents=None)
+
+  expected_wc = svntest.main.greek_state
+  
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                          checkout_target,
+                          expected_output,
+                          expected_wc)
+
+# Test that, if a peg revision is provided without an explicit revision, 
+# svn will checkout the directory as it was at rPEG, rather than at HEAD.
+def checkout_peg_rev(sbox):
+  "checkout with peg revision"
 
   sbox.build()
   wc_dir = sbox.wc_dir
-  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
-  rel_path = os.path.join('..', '..', '..')
+  # create a new revision
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  svntest.main.file_append (mu_path, 'appended mu text')
 
-  current_dir = os.getcwd()
-  os.chdir(E_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                    'ci', '-m', 'changed file mu', wc_dir)
+
+  # now checkout the repo@1 in another folder, this should create our initial
+  # wc without the change in mu.
+  checkout_target = sbox.add_wc_path('checkout')
+  os.mkdir(checkout_target)
+
+  expected_output = svntest.main.greek_state.copy()
+  expected_output.wc_dir = checkout_target
+  expected_output.tweak(status='A ', contents=None)
   
-  try:
-    svntest.main.run_svn(None, 'mv', 'beta', rel_path)
-  finally:
-    os.chdir(current_dir)
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'beta'        : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
-  })
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+  expected_wc = svntest.main.greek_state.copy()
+  
+  svntest.actions.run_and_verify_checkout(sbox.repo_url + '@1',
+                                          checkout_target, 
+                                          expected_output,
+                                          expected_wc)
 
 # Issue #2612.
 def ls_space_in_repo_name(sbox):
@@ -1740,6 +1779,7 @@ def ls_space_in_repo_name(sbox):
 
 ########################################################################
 # Run the tests
+
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -1773,7 +1813,8 @@ test_list = [ None,
               info_nonhead,
               ls_nonhead,
               cat_added_PREV,
-              XFail(move_relative_paths, svntest.main.is_os_windows),
+              checkout_creates_intermediate_folders,
+              checkout_peg_rev,
               ls_space_in_repo_name,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"

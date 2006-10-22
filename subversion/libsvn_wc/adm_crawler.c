@@ -237,8 +237,8 @@ report_revisions(svn_wc_adm_access_t *adm_access,
          knows it's gone... */
       if (current_entry->deleted || current_entry->absent)
         {
-          /* ...unless we're reporting everything, in which case we're
-             going to report it missing later anyway. */
+          /* ...unless we're reporting everything, in which case it's already
+             missing on the server.  */
           if (! report_everything)
             SVN_ERR(reporter->delete_path(report_baton, this_path, iterpool));
           continue;
@@ -447,12 +447,6 @@ svn_wc_crawl_revisions2(const char *path,
                            svn_path_dirname(path, pool),
                            adm_access,
                            FALSE, pool));
-
-      if (! parent_entry) 
-        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
-
       base_rev = parent_entry->revision;
       SVN_ERR(reporter->set_path(report_baton, "", base_rev,
                                  entry ? entry->incomplete : TRUE, 

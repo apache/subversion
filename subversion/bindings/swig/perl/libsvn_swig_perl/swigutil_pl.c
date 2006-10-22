@@ -291,7 +291,6 @@ SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
    * S: swigtype
    * r: svn_revnum_t
    * b: svn_boolean_t
-   * t: svn_string_t
    * z: apr_size_t
    
    Please do not add C types here.  Add a new format code if needed.
@@ -324,7 +323,6 @@ svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
 	void *o;
 	SV *obj;
 	swig_type_info *t;
-	svn_string_t *str;
 
 	switch (*fp++) {
 	case 'O':
@@ -358,12 +356,6 @@ svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
 
 	case 'b': /* svn_boolean_t */
 	    XPUSHs(sv_2mortal(newSViv(va_arg(ap, svn_boolean_t))));
-	    break;
-
-	case 't': /* svn_string_t */
-	    str = va_arg(ap, svn_string_t *);
-	    XPUSHs(str ? sv_2mortal(newSVpv(str->data, str->len))
-	           : &PL_sv_undef);
 	    break;
 	    
 	case 'L': /* apr_int64_t */
@@ -562,8 +554,9 @@ static svn_error_t * thunk_change_dir_prop(void *dir_baton,
 
     SVN_ERR(svn_swig_pl_callback_thunk(CALL_METHOD,
                                        (void *)"change_dir_prop", NULL,
-                                       "OOstS", ib->editor, ib->baton, name,
-                                       value, pool, POOLINFO));
+                                       "OOssS", ib->editor, ib->baton, name,
+                                       value ? value->data : NULL,
+                                       pool, POOLINFO));
 
     return SVN_NO_ERROR;
 }
@@ -699,8 +692,9 @@ static svn_error_t * thunk_change_file_prop(void *file_baton,
 
     SVN_ERR(svn_swig_pl_callback_thunk(CALL_METHOD,
                                        (void *)"change_file_prop", NULL,
-                                       "OOstS", ib->editor, ib->baton, name,
-                                       value, pool, POOLINFO));
+                                       "OOssS", ib->editor, ib->baton, name,
+                                       value ? value->data : NULL,
+                                       pool, POOLINFO));
   
     return SVN_NO_ERROR;
 }
@@ -880,8 +874,6 @@ svn_error_t *thunk_get_wc_prop(void *baton,
                                apr_pool_t *pool)
 {
     SV *result;
-    char *data;
-    STRLEN len;
 
     svn_swig_pl_callback_thunk(CALL_METHOD, (void *)"get_wc_prop",
                                &result, "OssS", baton, relpath, name,
@@ -892,8 +884,7 @@ svn_error_t *thunk_get_wc_prop(void *baton,
 	*value = NULL;
     }
     else if (SvPOK(result)) {
-        data = SvPV(result, len);
-        *value = svn_string_ncreate(data, len, pool);
+      *value = svn_string_create(SvPV_nolen(result), pool);
     }
     else {
 	SvREFCNT_dec(result);

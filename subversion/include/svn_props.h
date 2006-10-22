@@ -91,9 +91,9 @@ typedef enum svn_prop_kind
   svn_prop_regular_kind 
 } svn_prop_kind_t;
 
-/** Return the prop kind of a property named @a prop_name, and
- * (if @a prefix_len is non-@c NULL) set @a *prefix_len to the length of
- * the prefix of @a prop_name that was sufficient to distinguish its kind.
+/** Return the prop kind of a property named @a name, and (if @a prefix_len
+ * is non-@c NULL) set @a *prefix_len to the length of the prefix of @a name
+ * that was sufficient to distinguish its kind.
  */
 svn_prop_kind_t svn_property_kind(int *prefix_len,
                                   const char *prop_name);
@@ -105,14 +105,14 @@ svn_prop_kind_t svn_property_kind(int *prefix_len,
 svn_boolean_t svn_prop_is_svn_prop(const char *prop_name);
 
 
-/** If @a prop_name requires that its value be stored as UTF8/LF in the
+/** If @a propname requires that its value be stored as UTF8/LF in the
  * repository, then return @c TRUE.  Else return @c FALSE.  This is for
  * users of libsvn_client or libsvn_fs, since it their responsibility
  * to do this translation in both directions.  (See
  * svn_subst_translate_string()/svn_subst_detranslate_string() for
  * help with this task.)
  */
-svn_boolean_t svn_prop_needs_translation(const char *prop_name);
+svn_boolean_t svn_prop_needs_translation(const char *propname);
 
 
 /** Given a @a proplist array of @c svn_prop_t structures, allocate
@@ -156,17 +156,6 @@ svn_error_t *svn_prop_diffs(apr_array_header_t **propdiffs,
                             apr_hash_t *target_props,
                             apr_hash_t *source_props,
                             apr_pool_t *pool);
-
-
-/**
- * Return @c TRUE iff @a prop_name is a valid property name.
- *
- * For now, "valid" means the ASCII subset of an XML "Name".
- * XML "Name" is defined at http://www.w3.org/TR/REC-xml#sec-common-syn
- *
- * @since New in 1.5.
- */
-svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
 
 
 
@@ -249,7 +238,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  * @{
  */
 
-/** The property name *prefix* that makes a property a "WC property". 
+/** The propname *prefix* that makes a propname a "WC property". 
  *
  * For example, ra_dav might store a versioned-resource url as a WC
  * prop like this:
@@ -294,7 +283,7 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
 /**
  * These are reserved properties attached to a "revision" object in
  * the repository filesystem.  They can be queried by using
- * svn_fs_revision_prop().
+ * svn_fs_revision_prop().  They are invisible to svn clients.
  *
  * @defgroup svn_props_revision_props Revision properties
  * @{

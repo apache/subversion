@@ -888,7 +888,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
     _("general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
       "Type 'svndumpfilter help <subcommand>' for help on a "
       "specific subcommand.\n"
-      "Type 'svndumpfilter --version' to see the program version.\n"
+      "Type 'svndumpfilter --version' to see the program version number.\n"
       "\n"
       "Available subcommands:\n");
 

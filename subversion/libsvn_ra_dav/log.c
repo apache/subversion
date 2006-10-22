@@ -452,7 +452,9 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
   
   if (lb.err)
     {
-      svn_error_clear(err);
+      if (err)
+        svn_error_clear(err);
+
       return lb.err;
     }
 

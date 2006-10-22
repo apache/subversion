@@ -149,6 +149,7 @@ module Svn
         paths = [paths] unless paths.is_a?(Array)
         infos = []
         receiver = Proc.new do |changed_paths, revision, author, date, message|
+          date = Time.parse_svn_format(date) if date
           if block_given?
             yield(changed_paths, revision, author, date, message)
           end
@@ -264,10 +265,9 @@ module Svn
                        use_deltas, cancel_func)
       end
 
-      def load_fs(dumpstream, feedback_stream=nil, uuid_action=nil,
-                  parent_dir=nil, use_pre_commit_hook=true,
+      def load_fs(dumpstream, feedback_stream, uuid_action,
+                  parent_dir, use_pre_commit_hook=true,
                   use_post_commit_hook=true, &cancel_func)
-        uuid_action ||= Svn::Repos::LOAD_UUID_DEFAULT
         Repos.load_fs2(self, dumpstream, feedback_stream,
                        uuid_action, parent_dir,
                        use_pre_commit_hook, use_post_commit_hook,

@@ -2,7 +2,7 @@
  * reporter.c : `reporter' vtable routines for updates.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -392,8 +392,9 @@ delta_proplists(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
       /* Transmit the UUID. */
       SVN_ERR(svn_fs_get_uuid(b->repos->fs, &uuid, pool));
-      SVN_ERR(change_fn(b, object, SVN_PROP_ENTRY_UUID,
-                        svn_string_create(uuid, pool), pool));
+      if (uuid || s_path)
+        SVN_ERR(change_fn(b, object, SVN_PROP_ENTRY_UUID,
+                          svn_string_create(uuid, pool), pool));
     }
 
   /* Update lock properties. */

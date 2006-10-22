@@ -50,8 +50,7 @@ BEGIN {
     SVN::_Core::apr_initialize();
 }
 
-my $gpool = SVN::Pool->new_default;
-sub gpool { $gpool } # holding the reference to gpool
+our $gpool = SVN::Pool->new_default;
 SVN::Core::utf_initialize($gpool);
 
 END {
@@ -295,7 +294,7 @@ sub DESTROY {
 }
 
 package SVN::Pool;
-use SVN::Base qw(Core svn_pool_);
+use SVN::Base qw/Core svn_pool_/;
 
 =head2 svn_pool_t - SVN::Pool
 
@@ -304,9 +303,9 @@ still being manually adjustable.
 
 Functions requiring pool as the last argument (which are, almost all
 of the subversion functions), the pool is optionally. The default pool
-is used if it is omitted. When C<SVN::Core> is loaded, it creates a
-pool as the default one, which is also available from
-C<SVN::Core-E<gt>gpool>.
+is used if it is omitted. If default pool is not set, a new root pool
+will be created and set as default automatically when the first
+function requiring a default pool is called.
 
 For callback functions providing pool to your subroutine, you could
 also use $pool-E<gt>default to make it the default pool in the scope.
@@ -405,15 +404,11 @@ sub _wrap {
     $npool;
 }
 
-use Scalar::Util 'reftype';
-
 sub DESTROY {
     return if $globaldestroy;
     my $self = shift;
-    # for some reason, REF becomes SCALAR in perl -c or after apr_terminate
-    return if reftype($self) eq 'SCALAR';
     if ($$self eq $SVN::_Core::current_pool) {
-        $SVN::_Core::current_pool = pop @POOLSTACK;
+	$SVN::_Core::current_pool = pop @POOLSTACK;
     }
     if (exists $WRAPPOOL{$self}) {
         delete $WRAPPOOL{$self};
@@ -685,13 +680,11 @@ use SVN::Base qw(Core svn_log_changed_path_t_);
 
 =item $lcp-E<gt>copyfrom_path()
 
-Source path of copy, or C<undef> if there isn't any previous revision
-history.
+Source path of copy (if any).
 
 =item $lcp-E<gt>copyfrom_rev()
 
-Source revision of copy, or C<$SVN::Core::INVALID_REVNUM> if there is
-no previous history.
+Source revision of copy (if any).
 
 =back
 
@@ -737,7 +730,7 @@ use SVN::Base qw(Core svn_dirent_t_);
 
 =item $dirent-E<gt>kind()
 
-Node kind.  A number which matches one of these constants:
+Node kind.  One of these constants:
 $SVN::Node::none, $SVN::Node::file,
 $SVN::Node::dir, $SVN::Node::unknown.
 
@@ -747,11 +740,11 @@ Length of file text, or 0 for directories.
 
 =item $dirent-E<gt>has_props()
 
-Does the node have properties?
+Does the node have props?
 
 =item $dirent-E<gt>created_rev()
 
-Last revision in which this node changed.
+Last rev in which this node changed.
 
 =item $dirent-E<gt>time()
 
@@ -935,47 +928,6 @@ use SVN::Base qw(Core SVN_AUTH_SSL_);
 
 package _p_svn_lock_t;
 use SVN::Base qw(Core svn_lock_t_);
-
-=head2 _p_svn_lock_t
-
-Objects of this class contain information about locks placed on files
-in a repository.  It has the following accessor methods:
-
-=over
-
-=item path
-
-The full path to the file which is locked, starting with a forward slash (C</>).
-
-=item token
-
-A string containing the lock token, which is a unique URI.
-
-=item owner
-
-The username of whoever owns the lock.
-
-=item comment
-
-A comment associated with the lock, or undef if there isn't one.
-
-=item is_dav_comment
-
-True if the comment was made by a generic DAV client.
-
-=item creation_date
-
-Time at which the lock was created, as the number of microseconds since
-00:00:00 S<January 1>, 1970 UTC.  Divide it by 1_000_000 to get a Unix
-time_t value.
-
-=item expiration_date
-
-When the lock will expire.  Has the value '0' if the lock will never expire.
-
-=back
-
-=cut
 
 package SVN::MD5;
 use overload

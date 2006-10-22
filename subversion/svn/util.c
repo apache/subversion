@@ -230,21 +230,6 @@ svn_cl__edit_externally(svn_string_t **edited_contents /* UTF-8! */,
   /* Get information about the temporary file before the user has
      been allowed to edit its contents. */
   apr_err = apr_stat(&finfo_before, tmpfile_apr,
-                     APR_FINFO_MTIME, pool);
-  if (apr_err)
-    {
-      err = svn_error_wrap_apr(apr_err, _("Can't stat '%s'"), tmpfile_name);
-      goto cleanup;
-    }
-
-  /* Backdate the file a little bit in case the editor is very fast
-     and doesn't change the size.  (Use two seconds, since some
-     filesystems have coarse granularity.)  It's OK if this call
-     fails, so we don't check its return value.*/
-  apr_file_mtime_set(tmpfile_apr, finfo_before.mtime - 2000, pool);
-  
-  /* Stat it again to get the mtime we actually set. */
-  apr_err = apr_stat(&finfo_before, tmpfile_apr,
                      APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
   if (apr_err)
     {
@@ -301,12 +286,7 @@ svn_cl__edit_externally(svn_string_t **edited_contents /* UTF-8! */,
           err = svn_subst_translate_string(edited_contents, *edited_contents,
                                            encoding, pool);
           if (err)
-            {
-              err = svn_error_quick_wrap
-                (err, 
-                 _("Error normalizing edited contents to internal format"));
-              goto cleanup;
-            }
+            goto cleanup;
         }
     }
   else
@@ -511,9 +491,8 @@ svn_cl__get_log_message(const char **log_msg,
     {
       svn_string_t *log_msg_string = svn_string_create(lmb->message, pool);
 
-      SVN_ERR_W(svn_subst_translate_string(&log_msg_string, log_msg_string,
-                                           lmb->message_encoding, pool),
-                _("Error normalizing log message to internal format"));
+      SVN_ERR(svn_subst_translate_string(&log_msg_string, log_msg_string,
+                                         lmb->message_encoding, pool));
 
       *log_msg = log_msg_string->data;
 
@@ -588,11 +567,7 @@ svn_cl__get_log_message(const char **log_msg,
           svn_stringbuf_appendbytes(tmp_message, &text_mod, 1); 
           svn_stringbuf_appendbytes(tmp_message, &prop_mod, 1); 
           svn_stringbuf_appendbytes(tmp_message, &unlock, 1); 
-          if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            /* History included via copy/move. */
-            svn_stringbuf_appendcstr(tmp_message, "+ ");
-          else
-            svn_stringbuf_appendcstr(tmp_message, "  ");
+          svn_stringbuf_appendcstr(tmp_message, "  ");
           svn_stringbuf_appendcstr(tmp_message, path);
           svn_stringbuf_appendcstr(tmp_message, APR_EOL_STR);
         }

@@ -177,7 +177,7 @@ def get_youngest_revision():
     if readfile(os.path.join('db', 'fs-type')) != 'fsfs':
         raise SystemExit("Path '%s' doesn't contain a FSFS repository"%options.repo_dir)
 
-    return pipe([svnlook,"youngest","."])
+    return pipe(["svnlook","youngest","."])
 
 def list_repo_backups():
     '''Return a sorted list of backups for this repository.'''
@@ -254,7 +254,7 @@ def do_rsync_backup():
     rsync_dest = os.path.join(backup_tmpdir,'')
 
     # copy db/current.  -R tells rsync to use relative pathnames.
-    if runcmd([rsync, '-aR', 'db/current', rsync_dest]):
+    if runcmd(['rsync', '-aR', 'db/current', rsync_dest]):
         raise "%s: rsync failed" %sys.argv[0]
 
     # Now copy everything else.

@@ -216,18 +216,12 @@ Transaction layout
 A transaction directory has the following layout:
 
   rev                        Prototype rev file with new text reps
-  rev-lock                   Lockfile for writing to the above
   props                      Transaction props
   next-ids                   Next temporary node-ID and copy-ID
   changes                    Changed-path information so far
   node.<nid>.<cid>           New node-rev data for node
   node.<nid>.<cid>.props     Props for new node-rev, if changed
   node.<nid>.<cid>.children  Directory contents for node-rev
-
-The prototype rev file is used to store the text representations as
-they are received from the client.  To ensure that only one client is
-writing to the file at a given time, the "rev-lock" file is locked for
-the duration of each write.
 
 The two kinds of props files are both in hash dump format.
 

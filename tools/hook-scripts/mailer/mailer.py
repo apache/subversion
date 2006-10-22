@@ -21,8 +21,9 @@
 #   in Subversion 1.2.0.  Its value is one of 'A', 'M' or 'D' to indicate
 #   if the property was added, modified or deleted, respectively.
 #
-#   See _MIN_SVN_VERSION below for which version of Subversion's Python
-#   bindings are required by this version of mailer.py.
+#   This version of mailer.py requires the python bindings from
+#   subversion 1.2.0 or later.
+#
 
 import os
 import sys
@@ -37,31 +38,13 @@ import tempfile
 import types
 import urllib
 
-# Minimal version of Subversion's bindings required
-_MIN_SVN_VERSION = [1, 5, 0]
-
-# Import the Subversion Python bindings, making sure they meet our
-# minimum version requirements.
-try:
-  import svn.fs
-  import svn.delta
-  import svn.repos
-  import svn.core
-except ImportError:
-  sys.stderr.write(
-    "You need version %s or better of the Subversion Python bindings.\n" \
-    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
-  sys.exit(1)
-if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
-                       svn.core.SVN_VER_MINOR,
-                       svn.core.SVN_VER_PATCH]:
-  sys.stderr.write(
-    "You need version %s or better of the Subversion Python bindings.\n" \
-    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
-  sys.exit(1)
-
+import svn.fs
+import svn.delta
+import svn.repos
+import svn.core
 
 SEPARATOR = '=' * 78
+
 
 def main(pool, cmd, config_fname, repos_dir, cmd_args):
   ### TODO:  Sanity check the incoming args
@@ -128,11 +111,6 @@ except AttributeError:
       rv = self.fromchild.close()
       rv = self.tochild.close() or rv
       return rv
-
-def remove_leading_slashes(path):
-  while path and path[0] == '/':
-    path = path[1:]
-  return path
 
 
 class OutputBase:
@@ -205,31 +183,12 @@ class MailedOutput(OutputBase):
     OutputBase.__init__(self, cfg, repos, prefix_param)
 
   def start(self, group, params):
-    # whitespace (or another character) separated list of addresses
-    # which must be split into a clean list
-    to_addr_in = self.cfg.get('to_addr', group, params)
-    # if list of addresses starts with '[.]'
-    # use the character between the square brackets as split char
-    # else use whitespaces
-    if len(to_addr_in) >= 3 and to_addr_in[0] == '[' \
-                            and to_addr_in[2] == ']':
-      self.to_addrs = \
-        filter(None, string.split(to_addr_in[3:], to_addr_in[1]))
-    else:
-      self.to_addrs = filter(None, string.split(to_addr_in))
+    # whitespace-separated list of addresses; split into a clean list:
+    self.to_addrs = \
+        filter(None, string.split(self.cfg.get('to_addr', group, params)))
     self.from_addr = self.cfg.get('from_addr', group, params) \
                      or self.repos.author or 'no_author'
-    # if the from_addr (also) starts with '[.]' (may happen if one
-    # map is used for both to_addr and from_addr) remove '[.]'
-    if len(self.from_addr) >= 3 and self.from_addr[0] == '[' \
-                                and self.from_addr[2] == ']':
-      self.from_addr = self.from_addr[3:]
     self.reply_to = self.cfg.get('reply_to', group, params)
-    # if the reply_to (also) starts with '[.]' (may happen if one
-    # map is used for both to_addr and reply_to) remove '[.]'
-    if len(self.reply_to) >= 3 and self.reply_to[0] == '[' \
-                               and self.reply_to[2] == ']':
-      self.reply_to = self.reply_to[3:]
 
   def mail_headers(self, group, params):
     subject = self.make_subject(group, params)
@@ -340,8 +299,7 @@ class Commit(Messenger):
     Messenger.__init__(self, pool, cfg, repos, 'commit_subject_prefix')
 
     # get all the changes and sort by path
-    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, \
-                                       self.pool)
+    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, self.pool)
     e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
     svn.repos.replay(repos.root_this, e_ptr, e_baton, self.pool)
 
@@ -487,7 +445,7 @@ def get_commondir(dirlist):
   a commondir is found, the dirlist returned is rooted in that
   commondir.  If no commondir is found, dirlist is returned unchanged,
   and commondir is the empty string."""
-  if len(dirlist) < 2 or '/' in dirlist:
+  if len(dirlist) == 1 or '/' in dirlist:
     commondir = ''
     newdirs = dirlist
   else:
@@ -613,62 +571,6 @@ class DiffSelections:
         self.add = False
 
 
-class PropSelections:
-  def __init__(self, cfg, group, params):
-    self.add_path = False
-    self.add = False
-    self.copy_path = False
-    self.delete_path = False
-    self.delete = False
-    self.modify = False
-
-    show_props = cfg.get('show_props', group, params)
-
-    if len(show_props):
-      list = string.split(show_props, " ")
-      for item in list:
-        if item == 'add_path':
-          self.add_path = True
-        if item == 'add':
-          self.add = True
-        if item == 'copy_path':
-          self.copy_path = True
-        if item == 'delete_path':
-          self.delete_path = True
-        if item == 'delete':
-          self.delete = True
-        if item == 'modify':
-          self.modify = True
-
-
-class PropDiffSelections:
-  def __init__(self, cfg, group, params):
-    self.add_path = False
-    self.add = False
-    self.copy_path = False
-    self.delete_path = False
-    self.delete = False
-    self.modify = False
-
-    gen_propdiffs = cfg.get('generate_propdiffs', group, params)
-
-    if len(gen_propdiffs):
-      list = string.split(gen_propdiffs, " ")
-      for item in list:
-        if item == 'add_path':
-          self.add_path = True
-        if item == 'add':
-          self.add = True
-        if item == 'copy_path':
-          self.copy_path = True
-        if item == 'delete_path':
-          self.delete_path = True
-        if item == 'delete':
-          self.delete = True
-        if item == 'modify':
-          self.modify = True
-
-
 class DiffURLSelections:
   def __init__(self, cfg, group, params):
     self.cfg = cfg
@@ -681,8 +583,7 @@ class DiffURLSelections:
     # KeyError exceptions.
     params = self.params.copy()
     params['path'] = change.path and urllib.quote(change.path) or None
-    params['base_path'] = change.base_path and urllib.quote(change.base_path) \
-                          or None
+    params['base_path'] = change.base_path and urllib.quote(change.base_path) or None
     params['rev'] = repos_rev
     params['base_rev'] = change.base_rev
 
@@ -708,11 +609,7 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
 
   diffsels = DiffSelections(cfg, group, params)
-  propsels = PropSelections(cfg, group, params)
-  propdiffsels = PropDiffSelections(cfg, group, params)
   diffurls = DiffURLSelections(cfg, group, params)
-  ignore_props = cfg.get('ignore_props', group, params)
-  ignore_propdiffs = cfg.get('ignore_propdiffs', group, params)
 
   show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
       or 'yes'
@@ -722,24 +619,17 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
   commit_url = cfg.get('commit_url', group, params_with_rev)
 
   # figure out the lists of changes outside the selected path-space
-  other_added_data = other_replaced_data = other_deleted_data = \
-      other_modified_data = [ ]
+  other_added_data = other_removed_data = other_modified_data = [ ]
   if len(paths) != len(changelist) and show_nonmatching_paths != 'no':
     other_added_data = generate_list('A', changelist, paths, False)
-    other_replaced_data = generate_list('R', changelist, paths, False)
-    other_deleted_data = generate_list('D', changelist, paths, False)
+    other_removed_data = generate_list('R', changelist, paths, False)
     other_modified_data = generate_list('M', changelist, paths, False)
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
                                 group, params, diffsels, diffurls, pool)
-    other_props = PropDiffGenerator(changelist, paths, False, cfg, repos, date,
-                                    group, propsels, ignore_props,
-                                    propdiffsels, ignore_propdiffs, pool)
   else:
     other_diffs = None
-    other_props = None
-    other_propdiffs = None
 
   data = _data(
     author=repos.author,
@@ -748,34 +638,26 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     log=repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or '',
     commit_url=commit_url,
     added_data=generate_list('A', changelist, paths, True),
-    replaced_data=generate_list('R', changelist, paths, True),
-    deleted_data=generate_list('D', changelist, paths, True),
+    removed_data=generate_list('R', changelist, paths, True),
     modified_data=generate_list('M', changelist, paths, True),
     show_nonmatching_paths=show_nonmatching_paths,
     other_added_data=other_added_data,
-    other_replaced_data=other_replaced_data,
-    other_deleted_data=other_deleted_data,
+    other_removed_data=other_removed_data,
     other_modified_data=other_modified_data,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
                         params, diffsels, diffurls, pool),
-    props=PropDiffGenerator(changelist, paths, True, cfg, repos, date,
-                            group, propsels, ignore_props,
-                            propdiffsels, ignore_propdiffs, pool),
     other_diffs=other_diffs,
-    other_props=other_props,
     )
   renderer.render(data)
 
 
 def generate_list(changekind, changelist, paths, in_paths):
   if changekind == 'A':
-    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_ADD
+    selection = lambda change: change.added
   elif changekind == 'R':
-    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_REPLACE
-  elif changekind == 'D':
-    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_DELETE
+    selection = lambda change: change.path is None
   elif changekind == 'M':
-    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_MODIFY
+    selection = lambda change: not change.added and change.path is not None
 
   items = [ ]
   for path, change in changelist:
@@ -785,10 +667,8 @@ def generate_list(changekind, changelist, paths, in_paths):
         is_dir=change.item_kind == svn.core.svn_node_dir,
         props_changed=change.prop_changes,
         text_changed=change.text_changed,
-        copied=(change.action == svn.repos.CHANGE_ACTION_ADD \
-                or change.action == svn.repos.CHANGE_ACTION_REPLACE) \
-               and change.base_path,
-        base_path=remove_leading_slashes(change.base_path),
+        copied=change.added and change.base_path,
+        base_path=change.base_path,
         base_rev=change.base_rev,
         )
       items.append(item)
@@ -847,18 +727,9 @@ class DiffGenerator:
       if self.paths.has_key(path) != self.in_paths:
         continue
 
-      if change.base_rev != -1:
-        svndate = self.repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE,
-                                          change.base_rev)
-        ### pick a different date format?
-        base_date = time.ctime(svn.core.secs_from_timestr(svndate, self.pool))
-      else:
-        base_date = ''
-
       # figure out if/how to generate a diff
 
-      base_path = remove_leading_slashes(change.base_path)
-      if change.action == svn.repos.CHANGE_ACTION_DELETE:
+      if not change.path:
         # it was delete.
         kind = 'D'
 
@@ -868,46 +739,31 @@ class DiffGenerator:
         # show the diff?
         if self.diffsels.delete:
           diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                                 base_path, None, None, self.pool)
+                                 change.base_path, None, None, self.pool)
 
-          label1 = '%s\t%s\t(r%s)' % (base_path, self.date, change.base_rev)
-          label2 = '/dev/null\tThu Jan  1 00:00:00 1970\t(deleted)'
+          label1 = '%s\t%s' % (change.base_path, self.date)
+          label2 = '(empty file)'
           singular = True
 
-      elif change.action == svn.repos.CHANGE_ACTION_ADD \
-           or change.action == svn.repos.CHANGE_ACTION_REPLACE:
-        if base_path and (change.base_rev != -1):
+      elif change.added:
+        if change.base_path and (change.base_rev != -1):
+          # this file was copied.
+          kind = 'C'
 
           # any diff of interest?
           if change.text_changed:
-            # this file was copied and modified.
-            kind = 'W'
 
             # get the diff url, if any is specified
             diff_url = self.diffurls.get_copy_url(self.repos.rev, change)
 
             # show the diff?
-            if self.diffsels.modify:
+            if self.diffsels.copy:
               diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                                     base_path,
+                                     change.base_path,
                                      self.repos.root_this, change.path,
                                      self.pool)
-              label1 = '%s\t%s\t(r%s, copy source)' \
-                       % (base_path, base_date, change.base_rev)
-              label2 = '%s\t%s\t(r%s)' \
-                       % (change.path, self.date, self.repos.rev)
-              singular = False
-          else:
-            # this file was copied.
-            kind = 'C'
-            if self.diffsels.copy:
-              diff = svn.fs.FileDiff(None, None, self.repos.root_this,
-                                     change.path, self.pool)
-              label1 = '/dev/null\tThu Jan  1 00:00:00 1970\t' \
-                       '(empty, because file is newly added)'
-              label2 = '%s\t%s\t(r%s, copy of r%s, %s)' \
-                       % (change.path, self.date, self.repos.rev, \
-                          change.base_rev, base_path)
+              label1 = change.base_path + '\t(original)'
+              label2 = '%s\t%s' % (change.path, self.date)
               singular = False
         else:
           # the file was added.
@@ -920,10 +776,8 @@ class DiffGenerator:
           if self.diffsels.add:
             diff = svn.fs.FileDiff(None, None, self.repos.root_this,
                                    change.path, self.pool)
-            label1 = '/dev/null\tThu Jan  1 00:00:00 1970\t' \
-                     '(empty, because file is newly added)'
-            label2 = '%s\t%s\t(r%s)' \
-                     % (change.path, self.date, self.repos.rev)
+            label1 = '(empty file)'
+            label2 = '%s\t%s' % (change.path, self.date)
             singular = True
 
       elif not change.text_changed:
@@ -939,13 +793,11 @@ class DiffGenerator:
         # show the diff?
         if self.diffsels.modify:
           diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                                 base_path,
+                                 change.base_path,
                                  self.repos.root_this, change.path,
                                  self.pool)
-          label1 = '%s\t%s\t(r%s)' \
-                   % (base_path, base_date, change.base_rev)
-          label2 = '%s\t%s\t(r%s)' \
-                   % (change.path, self.date, self.repos.rev)
+          label1 = change.base_path + '\t(original)'
+          label2 = '%s\t%s' % (change.path, self.date)
           singular = False
 
       if diff:
@@ -964,7 +816,7 @@ class DiffGenerator:
       # return a data item for this diff
       return _data(
         path=change.path,
-        base_path=base_path,
+        base_path=change.base_path,
         base_rev=change.base_rev,
         diff=diff,
         diff_url=diff_url,
@@ -977,254 +829,6 @@ class DiffGenerator:
         singular=singular,
         content=content,
         )
-
-
-class PropDiffGenerator:
-  "This is a generator-like object returning changed properties."
-
-  def __init__(self, changelist, paths, in_paths, cfg, repos, date,
-               group, propsels, ignore_props,
-               propdiffsels, ignore_propdiffs, pool):
-    self.changelist = changelist
-    self.paths = paths
-    self.in_paths = in_paths
-    self.cfg = cfg
-    self.repos = repos
-    self.date = date
-    self.group = group
-    self.propsels = propsels
-    self.ignore_props = ignore_props
-    self.propdiffsels = propdiffsels
-    self.ignore_propdiffs = ignore_propdiffs
-    self.pool = pool
-
-    self.idx = 0
-
-  def __getitem__(self, idx):
-    while 1:
-      if self.idx == len(self.changelist):
-        raise IndexError
-
-      path, change = self.changelist[self.idx]
-      self.idx = self.idx + 1
-
-      # is this change in (or out of) the set of matched paths?
-      if self.paths.has_key(path) != self.in_paths:
-        continue
-
-      if change.base_rev != -1:
-        svndate = self.repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE,
-                                          change.base_rev)
-        ### pick a different date format?
-        base_date = time.ctime(svn.core.secs_from_timestr(svndate, self.pool))
-      else:
-        base_date = ''
-
-      src_props = { }
-      dst_props = { }
-      path = change.path
-      base_rev = change.base_rev
-      if change.base_rev != -1:
-        base_path = remove_leading_slashes(change.base_path)
-        src_props = svn.fs.node_proplist(self.repos.get_root(base_rev), base_path, self.pool)
-      else:
-        base_path = None
-      if change.path:
-        dst_props = svn.fs.node_proplist(self.repos.root_this, change.path, self.pool)
-      else:
-        path = base_path
-      added_path_props_tmp = { }
-      added_props_tmp = { }
-      copied_path_props_tmp = { }
-      deleted_path_props_tmp = { }
-      deleted_props_tmp = { }
-      modified_props_tmp = { }
-
-      if not change.path:
-      # it was delete.
-        if self.propsels.delete_path or self.propdiffsels.delete_path:
-          for src_prop in src_props:
-            deleted_path_props_tmp[src_prop]=(src_props[src_prop], None)
-      elif change.added and base_rev == -1:
-      # it was add (no copy)
-        if self.propsels.add_path or self.propdiffsels.add_path:
-          for dst_prop in dst_props:
-            added_path_props_tmp[dst_prop]=(None, dst_props[dst_prop])
-      else:
-        if dst_props:
-          for dst_prop in dst_props:
-            if src_props.has_key(dst_prop):
-              if src_props[dst_prop] != dst_props[dst_prop]:
-                if self.propsels.modify or self.propdiffsels.modify:
-                  modified_props_tmp[dst_prop]=(src_props[dst_prop], dst_props[dst_prop])
-              else:
-                if (change.added and base_rev != -1) \
-                   and (self.propsels.copy_path or self.propdiffsels.copy_path):
-                  copied_path_props_tmp[dst_prop]=(None, dst_props[dst_prop])
-            elif self.propsels.add or self.propdiffsels.add:
-              added_props_tmp[dst_prop]=(None, dst_props[dst_prop])
-        if src_props:
-          for src_prop in src_props:
-            if not dst_props.has_key(src_prop) \
-               and (self.propsels.delete or self.propdiffsels.delete):
-              deleted_props_tmp[src_prop]=(src_props[src_prop], None)
-
-      added_path_props = self._get_sorted_list(added_path_props_tmp)
-      added_props = self._get_sorted_list(added_props_tmp)
-      copied_path_props = self._get_sorted_list(copied_path_props_tmp)
-      deleted_path_props = self._get_sorted_list(deleted_path_props_tmp)
-      deleted_props = self._get_sorted_list(deleted_props_tmp)
-      modified_props = self._get_sorted_list(modified_props_tmp)
-
-      if self.propdiffsels.add_path:
-        added_path_content, added_path_count = self._get_diff(path, self.repos.rev, self.date,
-                                                 base_path, base_rev, base_date,
-                                                 added_path_props, self.ignore_propdiffs, 'A')
-      else:
-        added_path_content, added_path_count = [ ], 0
-      if self.propdiffsels.add:
-        added_content, added_count = self._get_diff(path, self.repos.rev, self.date,
-                                       base_path, base_rev, base_date,
-                                       added_props, self.ignore_propdiffs, 'A')
-      else:
-        added_content, added_count = [ ], 0
-      if self.propdiffsels.copy_path:
-        copied_path_content, copied_path_count = self._get_diff(path, self.repos.rev, self.date,
-                                                   base_path, base_rev, base_date,
-                                                   copied_path_props, self.ignore_propdiffs, 'C')
-      else:
-        copied_path_content, copied_path_count = [ ], 0
-      if self.propdiffsels.delete:
-        deleted_path_content, deleted_path_count = self._get_diff(path, self.repos.rev, self.date,
-                                                     base_path, base_rev, base_date,
-                                                     deleted_path_props, self.ignore_propdiffs, 'D')
-      else:
-        deleted_path_content, deleted_path_count = [ ], 0
-      if self.propdiffsels.delete:
-        deleted_content, deleted_count = self._get_diff(path, self.repos.rev, self.date,
-                                           base_path, base_rev, base_date,
-                                           deleted_props, self.ignore_propdiffs, 'D')
-      else:
-        deleted_content, deleted_count = [ ], 0
-      if self.propdiffsels.modify:
-        if change.added and base_rev != -1:
-          action_type = 'W'
-        else:
-          action_type = 'M'
-        modified_content, modified_count = self._get_diff(path, self.repos.rev, self.date,
-                                             base_path, base_rev, base_date,
-                                             modified_props, self.ignore_propdiffs, action_type)
-      else:
-        modified_content, modified_count = [ ], 0
-
-      added_path_props = self._get_final_list(added_path_props, self.propsels.add_path, self.ignore_props)
-      added_props = self._get_final_list(added_props, self.propsels.add, self.ignore_props)
-      copied_path_props = self._get_final_list(copied_path_props, self.propsels.copy_path, self.ignore_props)
-      deleted_path_props = self._get_final_list(deleted_path_props, self.propsels.delete_path, self.ignore_props)
-      deleted_props = self._get_final_list(deleted_props, self.propsels.delete, self.ignore_props)
-      modified_props = self._get_final_list(modified_props, self.propsels.modify, self.ignore_props)
-
-      return _data(
-        path=path,
-        base_path=base_path,
-        base_rev=base_rev,
-        item_kind=change.item_kind,
-        added_path_props=added_path_props,
-        added_props=added_props,
-        copied_path_props=copied_path_props,
-        deleted_path_props=deleted_path_props,
-        deleted_props=deleted_props,
-        modified_props=modified_props,
-        added_path_content=added_path_content,
-        added_path_count=added_path_count,
-        added_content=added_content,
-        added_count=added_count,
-        copied_path_content=copied_path_content,
-        copied_path_count=copied_path_count,
-        deleted_path_content=deleted_path_content,
-        deleted_path_count=deleted_path_count,
-        deleted_content=deleted_content,
-        deleted_count=deleted_count,
-        modified_content=modified_content,
-        modified_count=modified_count,
-        )
-
-  def _get_sorted_list(self, props):
-    list=[ ]
-    if not props:
-      return list
-    keys=props.keys()
-    keys.sort()
-    for prop in keys:
-      src_val, dst_val = props[prop]
-      list.append((prop, src_val, dst_val))
-    return list
-
-  def _get_final_list(self, props, propsel, ignore_props):
-    list=[ ]
-    if not props or not propsel:
-      return list
-    for prop, src_val, dst_val in props:
-      if ignore_props and re.match(ignore_props, prop):
-        continue
-      list.append((prop, src_val, dst_val))
-    return list
-
-  def _get_diff(self, path, rev, date, base_path, base_rev, base_date,
-                props, ignore_propdiffs, action_type):
-    content = ''
-    count = 0
-    for prop, src_val, dst_val in props:
-      if ignore_propdiffs and re.match(ignore_propdiffs, prop):
-        continue
-      src_fname = tempfile.mktemp()
-      dst_fname = tempfile.mktemp()
-      fp = open(src_fname, 'w+')
-      if src_val:
-        fp.write(src_val)
-        fp.write('\n')
-      fp.close()
-      fp = open(dst_fname, 'w+')
-      if dst_val:
-        fp.write(dst_val)
-        fp.write('\n')
-      fp.close()
-      if action_type == 'A' or action_type == 'C':
-        label_from = '/dev/null\tThu Jan  1 00:00:00 1970\t' \
-                     '(empty, because property is newly added)'
-      elif action_type == 'W':
-        label_from = '%s|%s\t%s\t(r%s, copy source)' \
-                     % (base_path, prop, base_date, base_rev)
-      else:
-        label_from = '%s|%s\t%s\t(r%s)' \
-                     % (path, prop, base_date, base_rev)
-      if action_type == 'C':
-        label_to = '%s|%s\t%s\t(r%s, copy of r%s, %s)' % \
-                   (path, prop, date, rev, base_rev, base_path)
-      elif action_type == 'D':
-        label_to = '/dev/null\tThu Jan  1 00:00:00 1970\t(deleted)'
-      else:
-        label_to = '%s|%s\t%s\t(r%s)' % (path, prop, date, rev)
-      diff = DiffContent(self.cfg.get_diff_cmd(self.group, {
-        'label_from' : label_from,
-        'label_to' : label_to,
-        'from' : src_fname,
-        'to' : dst_fname,
-        }))
-      if diff:
-        count += 1
-        line = diff[0]
-        if line.type == 'B':
-          if src_val and dst_val:
-            content += '\nBinary property (source and/or target). ' + \
-                       'No diff available.\n'
-          else:
-            content += '\nBinary property. No diff available.\n'
-        else:
-          content += line.raw
-      for line in diff:
-        content += line.raw
-    return content, count
 
 
 class DiffContent:
@@ -1268,13 +872,8 @@ class DiffContent:
         ltype = 'T'
     elif first == ' ':
       ltype = 'C'
-    elif line.startswith('File ') or line.startswith('Files '):
-      ltype = 'B'
     else:
       ltype = 'U'
-
-    if line[-2] == '\r':
-      line=line[0:-2] + '\n' # remove carriage return
 
     return _data(
       raw=line,
@@ -1288,7 +887,6 @@ class TextCommitRenderer:
 
   def __init__(self, output):
     self.output = output
-    self.other_areas_written = False
 
   def render(self, data):
     "Render the commit defined by 'data'."
@@ -1304,76 +902,28 @@ class TextCommitRenderer:
     else:
       w('\n')
 
-    w('Log:\n%s\n\n' % data.log.strip())
+    w('Log:\n%s\n\n' % data.log)
 
     # print summary sections
     self._render_list('Added', data.added_data)
-    self._render_list('Replaced', data.replaced_data)
-    self._render_list('Deleted', data.deleted_data)
+    self._render_list('Removed', data.removed_data)
     self._render_list('Modified', data.modified_data)
 
-    if data.other_added_data or data.other_replaced_data \
-           or data.other_deleted_data or data.other_modified_data:
+    if data.other_added_data or data.other_removed_data \
+           or data.other_modified_data:
       if data.show_nonmatching_paths:
         w('\nChanges in other areas also in this revision:\n')
         self._render_list('Added', data.other_added_data)
-        self._render_list('Replaced', data.other_replaced_data)
-        self._render_list('Deleted', data.other_deleted_data)
+        self._render_list('Removed', data.other_removed_data)
         self._render_list('Modified', data.other_modified_data)
       else:
         w('and changes in other areas\n')
 
-    data_props = self._get_prop_list(data.props)
-    data_other_props = self._get_prop_list(data.other_props)
-    if data_props:
-      self._render_props(data_props, 'Property Changes')
-    if data_other_props:
-      self._render_props(data_other_props, 'Property Changes in other areas '
-                                           'also in this revision')
-    if data.diffs:
-      self._render_diffs(data.diffs, None)
-    if data_props:
-      self._render_propdiffs(data_props, None)
+    self._render_diffs(data.diffs, '')
     if data.other_diffs:
       self._render_diffs(data.other_diffs,
-                         'Diffs of changes in other areas also '
-                         'in this revision')
-    if data_other_props:
-      self._render_propdiffs(data_other_props,
-                             'Diffs of changes in other areas also '
-                             'in this revision')
-
-  def _get_prop_list(self, props):
-    if not props:
-      return [ ]
-    prop_list = [ ]
-    for prop in props:
-      prop_list.append(_data(
-        path=prop.path,
-        base_path=prop.base_path,
-        base_rev=prop.base_rev,
-        item_kind=prop.item_kind,
-        added_path_props=prop.added_path_props,
-        added_props=prop.added_props,
-        copied_path_props=prop.copied_path_props,
-        deleted_path_props=prop.deleted_path_props,
-        deleted_props=prop.deleted_props,
-        modified_props=prop.modified_props,
-        added_path_content=prop.added_path_content,
-        added_path_count=prop.added_path_count,
-        added_content=prop.added_content,
-        added_count=prop.added_count,
-        copied_path_content=prop.copied_path_content,
-        copied_path_count=prop.copied_path_count,
-        deleted_path_content=prop.deleted_path_content,
-        deleted_path_count=prop.deleted_path_count,
-        deleted_content=prop.deleted_content,
-        deleted_count=prop.deleted_count,
-        modified_content=prop.modified_content,
-        modified_count=prop.modified_count,
-        ))
-    return prop_list
-
+                         '\nDiffs of changes in other areas also'
+                         ' in this revision:\n')
 
   def _render_list(self, header, data_list):
     if not data_list:
@@ -1404,63 +954,25 @@ class TextCommitRenderer:
         w('      - copied%s from r%d, %s%s\n'
           % (text, d.base_rev, d.base_path, is_dir))
 
-  def _render_props(self, props, section_header):
-    if not props:
-      return
-    w = self.output.write
-    section_header_printed = False
-
-    for prop in props:
-      if prop.item_kind == svn.core.svn_node_dir:
-        prop.path += '/'
-      if prop.added_path_props or prop.added_props \
-         or prop.copied_path_props or prop.deleted_path_props \
-         or prop.deleted_props or prop.modified_props:
-        if not section_header_printed:
-          w('\n%s:\n' % section_header)
-          section_header_printed = True
-        w('   %s\n' % prop.path)
-        self.__render_props('Added path', prop.added_path_props)
-        self.__render_props('Added', prop.added_props)
-        self.__render_props('Copied path', prop.copied_path_props)
-        self.__render_props('Deleted path', prop.deleted_path_props)
-        self.__render_props('Deleted', prop.deleted_props)
-        self.__render_props('Modified', prop.modified_props)
-
-  def __render_props(self, header, props):
-    w = self.output.write
-    if props:
-      w('      %s:\n' % header)
-      for prop, src_val, dst_val in props:
-        w('         %s\n' % prop)
-
   def _render_diffs(self, diffs, section_header):
-    """Render diffs. Write the SECTION_HEADER if there are actually
+    """Render diffs. Write the SECTION_HEADER iff there are actually
     any diffs to render."""
-    if not diffs:
-      return
     w = self.output.write
     section_header_printed = False
-    if not section_header:
-      section_header_printed = True
 
     for diff in diffs:
       if not diff.diff and not diff.diff_url:
         continue
-      if not section_header_printed and not self.other_areas_written:
-        w('\n%s:\n' % section_header)
-        self.other_areas_written = True
-        section_header_printed = False
+      if not section_header_printed:
+        w(section_header)
+        section_header_printed = True
       if diff.kind == 'D':
         w('\nDeleted: %s\n' % diff.base_path)
-      elif diff.kind == 'A':
-        w('\nAdded: %s\n' % diff.path)
       elif diff.kind == 'C':
         w('\nCopied: %s (from r%d, %s)\n'
           % (diff.path, diff.base_rev, diff.base_path))
-      elif diff.kind == 'W':
-        w('\nCopied and modified: %s (from r%d, %s)\n'
-          % (diff.path, diff.base_rev, diff.base_path))
+      elif diff.kind == 'A':
+        w('\nAdded: %s\n' % diff.path)
       else:
         # kind == 'M'
         w('\nModified: %s\n' % diff.path)
@@ -1477,63 +989,12 @@ class TextCommitRenderer:
         if diff.singular:
           w('Binary file. No diff available.\n')
         else:
-          w('Binary file (source and/or target). No diff available.\n')
+          w('Binary files. No diff available.\n')
         continue
 
       for line in diff.content:
         w(line.raw)
 
-  def _render_propdiffs(self, props, section_header):
-    """Render property diffs. Write the SECTION_HEADER if there are
-    actually any diffs to render."""
-    if not props:
-      return
-    w = self.output.write
-    section_header_printed = False
-
-    for prop in props:
-      if prop.added_path_count+prop.added_count+prop.copied_path_count \
-         +prop.deleted_path_count+prop.deleted_count+prop.modified_count > 0:
-        if not section_header_printed and not self.other_areas_written \
-          and section_header:
-          w('\n%s:\n' % section_header)
-          self.other_areas_written = True
-          section_header_printed = True
-      self.__render_propdiffs(prop.path, 'Added path', prop.base_path, prop.base_rev,
-                              prop.added_path_content, prop.added_path_count)
-      self.__render_propdiffs(prop.path, 'Added', prop.base_path, prop.base_rev,
-                              prop.added_content, prop.added_count)
-      self.__render_propdiffs(prop.path, 'Copied path', prop.base_path, prop.base_rev,
-                              prop.copied_path_content, prop.copied_path_count)
-      self.__render_propdiffs(prop.path, 'Deleted path', prop.base_path, prop.base_rev,
-                              prop.deleted_path_content, prop.deleted_path_count)
-      self.__render_propdiffs(prop.path, 'Deleted', prop.base_path, prop.base_rev,
-                              prop.deleted_content, prop.deleted_count)
-      if prop.base_rev == -1:
-        type = 'Modified'
-      else:
-        type = 'Copied path and modified'
-      self.__render_propdiffs(prop.path, type, prop.base_path, prop.base_rev,
-                              prop.modified_content, prop.modified_count)
-
-  def __render_propdiffs(self, path, type, base_path, base_rev,
-                         content, count):
-    if count == 0:
-      return
-
-    w = self.output.write
-    if count == 1:
-      prophead = "property"
-    else:
-      prophead = "properties"
-    w('\n')
-    if not base_path:
-      w('%s %s for: %s\n' % (type, prophead, path))
-    else:
-      w('%s %s for: %s (from r%s, %s)\n' % (type, prophead, path,
-                                            base_rev, base_path))
-    w(SEPARATOR + '\n')
-    w('%s' % content)
 
 class Repository:
   "Hold roots and other information about the repository."
@@ -1552,10 +1013,8 @@ class Repository:
 
     self.author = self.get_rev_prop(svn.core.SVN_PROP_REVISION_AUTHOR)
 
-  def get_rev_prop(self, propname, rev = None):
-    if not rev:
-      rev = self.rev
-    return svn.fs.revision_prop(self.fs_ptr, rev, propname, self.pool)
+  def get_rev_prop(self, propname):
+    return svn.fs.revision_prop(self.fs_ptr, self.rev, propname, self.pool)
 
   def get_root(self, rev):
     try:
@@ -1672,8 +1131,7 @@ class Config:
         # then just return the value unchanged.
         setattr(self.maps, optname,
                 lambda value,
-                       sect=getattr(self, sectname): getattr(sect,
-                                                             value.lower(),
+                       sect=getattr(self, sectname): getattr(sect, value,
                                                              value))
         # mark for removal when all optnames are done
         if sectname not in mapsections:

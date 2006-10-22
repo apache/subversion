@@ -184,15 +184,3 @@ void svn_wc__compat_call_notify_func(void *baton,
     (*nb->func)(nb->baton, n->path, n->action, n->kind, n->mime_type,
                 n->content_state, n->prop_state, n->revision);
 }
-
-svn_boolean_t
-svn_wc_match_ignore_list(const char *str, apr_array_header_t *list,
-                         apr_pool_t *pool)
-{
-  /* For now, we simply forward to svn_cstring_match_glob_list. In the
-     future, if we support more complex ignore patterns, we would iterate
-     over 'list' ourselves, and decide for each pattern how to handle
-     it. */
-
-  return svn_cstring_match_glob_list(str, list);
-}

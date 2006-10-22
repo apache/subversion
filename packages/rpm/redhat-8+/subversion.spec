@@ -1,6 +1,6 @@
 %define apache_version 2.0.48-0.1
 %define apr_version 0.9.7
-%define neon_version 0.26.1
+%define neon_version 0.24.7
 %define swig_version 1.3.25
 %define apache_dir /usr
 %define pyver 2.2
@@ -528,7 +528,6 @@ echo "*** Finished regression tests on RA_SVN (SVN method) layer ***"
 %endif
 
 %if %{make_ra_dav_bdb_check}
-echo "*** Running regression tests on RA_DAV (HTTP method) layer ***"
 make davautocheck CLEANUP=true FS_TYPE=bdb
 echo "*** Finished regression tests on RA_DAV (HTTP method) layer ***"
 %endif

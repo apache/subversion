@@ -42,6 +42,9 @@
 /* Link local repos access library to client */
 #define SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
 
+/* Link DAV repos access library to client */
+#define SVN_LIBSVN_CLIENT_LINKS_RA_DAV
+
 /* Link pipe repos access library to client */
 #define SVN_LIBSVN_CLIENT_LINKS_RA_SVN
 

@@ -2023,34 +2023,9 @@ def commit_same_folder_in_targets(sbox):
                                          wc_dir,
                                          iota_path)
 
-#----------------------------------------------------------------------
-# test for issue 2459: verify that commit fails when a file with mixed
-# eol-styles is included, and show an error message which includes the
-# filename.
-def commit_inconsistent_eol(sbox):
-  "commit files with inconsistent eol should fail"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-
-  iota_path = os.path.join(wc_dir, 'iota')
-  mu_path = os.path.join(wc_dir, 'A', 'mu') 
-
-  svntest.main.run_svn(None, 'propset', 'svn:eol-style', 'native', iota_path)
-  svntest.main.file_append_binary(iota_path, 
-                                  "added extra line to file iota\012"
-                                  "added extra line to file iota\015")
-  svntest.main.file_append (mu_path, "added extra line to file mu\n"
-                                     "added extra line to file mu\n")
-
-  expected_err = ".*iota.*"
-
-  svntest.actions.run_and_verify_svn(None, None, expected_err,
-                                     'commit', '-m', 'log message',
-                                     wc_dir)
-
 ########################################################################
 # Run the tests
+
 
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2066,8 +2041,7 @@ test_list = [ None,
               hudson_part_1,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
-              # issue #2578 causes the hudson_part_2 test to fail.
-              XFail(hudson_part_2, svntest.main.is_ra_type_dav),
+              hudson_part_2,
               hudson_part_2_1,
               XFail(hook_test),
               merge_mixed_revisions,
@@ -2090,7 +2064,6 @@ test_list = [ None,
               local_mods_are_not_commits,
               post_commit_hook_test,
               commit_same_folder_in_targets,
-              commit_inconsistent_eol
              ]
 
 if __name__ == '__main__':

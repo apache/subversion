@@ -1,7 +1,7 @@
 /* revs-txns.c : operations on revision and transactions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -35,6 +35,33 @@
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
+
+
+/*** Helpers ***/
+
+/* Set *TXN_P to a transaction object allocated in POOL for the
+   transaction in FS whose id is TXN_ID.  If EXPECT_DEAD is set, this
+   transaction must be a dead one, else an error is returned.  If
+   EXPECT_DEAD is not set, an error is thrown if the transaction is
+   *not* dead. */
+static svn_error_t *
+get_txn(transaction_t **txn_p,
+        svn_fs_t *fs,
+        const char *txn_id,
+        svn_boolean_t expect_dead,
+        apr_pool_t *pool)
+{
+  transaction_t *txn;
+  SVN_ERR(svn_fs_fs__get_txn(&txn, fs, txn_id, pool));
+  if (expect_dead && (txn->kind != transaction_kind_dead))
+    return svn_error_createf(SVN_ERR_FS_TRANSACTION_NOT_DEAD, 0,
+                             _("Transaction is not dead: '%s'"), txn_id);
+  if ((! expect_dead) && (txn->kind == transaction_kind_dead))
+    return svn_error_createf(SVN_ERR_FS_TRANSACTION_DEAD, 0,
+                             _("Transaction is dead: '%s'"), txn_id);
+  *txn_p = txn;
+  return SVN_NO_ERROR;
+}
 
 
 /*** Revisions ***/
@@ -102,7 +129,11 @@ svn_fs_fs__get_txn_ids(const svn_fs_id_t **root_id_p,
                        apr_pool_t *pool)
 {
   transaction_t *txn;
-  SVN_ERR(svn_fs_fs__get_txn(&txn, fs, txn_name, pool));
+  
+  SVN_ERR(get_txn(&txn, fs, txn_name, FALSE, pool));
+  if (txn->kind != transaction_kind_normal)
+    return svn_fs_fs__err_txn_not_mutable(fs, txn_name);
+
   *root_id_p = txn->root_id;
   *base_root_id_p = txn->base_id;
   return SVN_NO_ERROR;

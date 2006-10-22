@@ -40,12 +40,10 @@ svn_error_t *svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
                                           apr_pool_t *pool);
 
 /* Store NODEREV as the node-revision for the node whose id is ID in
-   FS, after setting its is_fresh_txn_root to FRESH_TXN_ROOT.  Do any
-   necessary temporary allocation in POOL. */
+   FS.  Do any necessary temporary allocation in POOL. */
 svn_error_t *svn_fs_fs__put_node_revision(svn_fs_t *fs,
                                           const svn_fs_id_t *id,
                                           node_revision_t *noderev,
-                                          svn_boolean_t fresh_txn_root,
                                           apr_pool_t *pool);
 
 /* Set *YOUNGEST to the youngest revision in filesystem FS.  Do any
@@ -156,10 +154,10 @@ svn_error_t *svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 /* Create a new transaction in filesystem FS, based on revision REV,
    and store it in *TXN_P.  Allocate all necessary variables from
    POOL. */
-svn_error_t *svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
-                                   svn_fs_t *fs,
-                                   svn_revnum_t rev,
-                                   apr_pool_t *pool);
+svn_error_t *svn_fs_fs__create_txn  (svn_fs_txn_t **txn_p,
+                                     svn_fs_t *fs,
+                                     svn_revnum_t rev,
+                                     apr_pool_t *pool);
 
 /* Set the transaction property NAME to the value VALUE in transaction
    TXN.  Perform temporary allocations from POOL. */

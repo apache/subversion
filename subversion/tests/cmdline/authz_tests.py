@@ -36,30 +36,7 @@ def write_restrictive_svnserve_conf(repo_dir):
   
   fp = open(svntest.main.get_svnserve_conf_file_path(repo_dir), 'w')
   fp.write("[general]\nanon-access = none\nauth-access = write\n"
-           "authz-db = authz\n")
-  if svntest.main.enable_sasl == 1:
-    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
-  else:
-    fp.write("password-db = passwd\n")
-  fp.close()
-
-def write_authz_file(sbox, rules, sections=None):
-  """Write an authz file to SBOX, appropriate for the RA method used,
-with authorizations rules RULES mapping paths to strings containing
-the rules. You can add sections SECTIONS (ex. groups, aliases...) with 
-an appropriate list of mappings.
-"""
-  fp = open(sbox.authz_file, 'w')
-  if sbox.repo_url.startswith("http"):
-    prefix = sbox.name + ":"
-  else:
-    prefix = ""
-  if sections:
-    for p, r in sections.items():
-      fp.write("[%s]\n%s\n" % (p, r))  
-
-  for p, r in rules.items():
-    fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+           "password-db = passwd\nauthz-db = authz\n")
   fp.close()
 
 def skip_test_when_no_authz_available():
@@ -83,8 +60,10 @@ def authz_open_root(sbox):
   
   skip_test_when_no_authz_available()
   
-  write_authz_file(sbox, {"/": "", "/A": "jrandom = rw"})
-
+  fp = open(sbox.authz_file, 'w')
+  fp.write("[/]\n\n[/A]\njrandom = rw\n")
+  fp.close()
+  
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
   # we have write access in folder /A, but not in root. Test on too
@@ -118,7 +97,9 @@ def authz_open_directory(sbox):
   
   skip_test_when_no_authz_available()
   
-  write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
+  fp = open(sbox.authz_file, 'w')
+  fp.write("[/]\n*=rw\n[/A/B]\n*=\n[/A/B/E]\njrandom = rw\n")
+  fp.close()
   
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir) 
 
@@ -153,7 +134,9 @@ def broken_authz_file(sbox):
   
   skip_test_when_no_authz_available()
   
-  write_authz_file(sbox, {"/": "jrandom = rw zot"})
+  fp = open(sbox.authz_file, 'w')
+  fp.write("[/]\njrandom = rw zot\n")
+  fp.close()
   
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
@@ -174,23 +157,49 @@ def authz_read_access(sbox):
   
   skip_test_when_no_authz_available()
 
-  sbox.build(create_wc = False)
+  sbox.build("authz_read_access", create_wc = False)
 
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
-  if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
-  else:
-    expected_err = ".*svn: Authorization failed.*"
+  fp = open(sbox.authz_file, 'w')
 
-  write_authz_file(sbox, { "/": "* = r",
-                           "/A/B": "* =",
-                           "/A/D": "* = rw",
-                           "/A/D/G": ("* = rw\n" +
-                                      svntest.main.wc_author + " ="),
-                           "/A/D/H": ("* = \n" +
-                                      svntest.main.wc_author + " = rw")})
+  # For mod_dav_svn's parent path setup we need per-repos permissions in
+  # the authz file...
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_read_access:/]\n" +
+             "* = r\n" +
+             "[authz_read_access:/A/B]\n" +
+             "* = \n" +
+             "[authz_read_access:/A/D]\n" +
+             "* = rw\n" +
+             "[authz_read_access:/A/D/G]\n" +
+             "* = rw\n" +
+             svntest.main.wc_author + " = \n" +
+             "[authz_read_access:/A/D/H]\n" +
+             "* = \n" +
+             svntest.main.wc_author + " = rw\n")
+
+    expected_err = ".*403 Forbidden.*"
+    
+  # Otherwise we can just go with the permissions needed for the source
+  # repository.
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "[/A/B]\n" +
+             "* =\n" +
+             "[/A/D]\n" +
+             "* = rw\n" +
+             "[/A/D/G]\n" +
+             "* = rw\n" +
+             svntest.main.wc_author + " =\n" +
+             "[/A/D/H]\n" +
+             "* = \n" +
+             svntest.main.wc_author + " = rw\n")
+    expected_err = ".*svn: Authorization failed.*"
          
+  fp.close()
+
   root_url = svntest.main.current_repo_url
   A_url = root_url + '/A'
   B_url = A_url + '/B'
@@ -303,19 +312,38 @@ def authz_write_access(sbox):
   
   skip_test_when_no_authz_available()
   
-  sbox.build(create_wc = False)
+  sbox.build("authz_write_access", create_wc = False)
   
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
+  fp = open(sbox.authz_file, 'w')
+  
+  # For mod_dav_svn's parent path setup we need per-repos permissions in
+  # the authz file...
   if sbox.repo_url.startswith('http'):
+    fp.write("[authz_write_access:/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[authz_write_access:/A/B]\n" +
+             "* = rw\n" +
+             "\n" +
+             "[authz_write_access:/A/C]\n" +
+             "* = rw")
     expected_err = ".*403 Forbidden.*"
+
+  # Otherwise we can just go with the permissions needed for the source
+  # repository.
   else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "[/A/B]\n" +
+             "* = rw\n" +
+             "[/A/C]\n" +
+             "* = rw\n")
     expected_err = ".*svn: Access denied.*"
 
-  write_authz_file(sbox, { "/": "* = r",
-                           "/A/B": "* = rw",
-                           "/A/C": "* = rw"})
-
+  fp.close()
+  
   root_url = svntest.main.current_repo_url
   A_url = root_url + '/A'
   B_url = A_url + '/B'
@@ -426,7 +454,7 @@ def authz_checkout_test(sbox):
 
   skip_test_when_no_authz_available()
 
-  sbox.build(create_wc = False)
+  sbox.build("authz_checkout_test", create_wc = False)
   local_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
@@ -434,12 +462,18 @@ def authz_checkout_test(sbox):
   # 1st part: disable all read access, checkout should fail
   
   # write an authz file with *= on /
+  fp = open(sbox.authz_file, 'w')
+
   if sbox.repo_url.startswith('http'):
+    fp.write("[authz_checkout_test:/]\n" +
+             "* =\n")
     expected_err = ".*403 Forbidden.*"
   else:
+    fp.write("[/]\n" +
+             "* =\n")
     expected_err = ".*svn: Authorization failed.*"
          
-  write_authz_file(sbox, { "/": "* ="})
+  fp.close()
   
   # checkout a working copy, should fail
   svntest.actions.run_and_verify_svn(None, None, expected_err,
@@ -447,8 +481,20 @@ def authz_checkout_test(sbox):
                           
   # 2nd part: now enable read access
   
-  write_authz_file(sbox, { "/": "* = r"})
+  # write an authz file with *=r on /
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_checkout_test:/]\n" +
+             "* = r\n")
+    expected_err = ".*403 Forbidden.*"
+  else:
+    fp.write("[/]\n" +
+             "* = r\n")
+    expected_err = ".*svn: Authorization failed.*"
          
+  fp.close()
+  
   # checkout a working copy, should succeed because we have read access
   expected_output = svntest.main.greek_state.copy()
   expected_output.wc_dir = local_dir
@@ -466,7 +512,7 @@ def authz_checkout_and_update_test(sbox):
 
   skip_test_when_no_authz_available()
 
-  sbox.build(create_wc = False)
+  sbox.build("authz_checkout_and_update_test", create_wc = False)
   local_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
@@ -475,9 +521,21 @@ def authz_checkout_and_update_test(sbox):
   # download this folder
   
   # write an authz file with *= on /A/B
-  write_authz_file(sbox, { "/": "* = r",
-                           "/A/B": "* ="})
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_checkout_and_update_test:/]\n" +
+             "* = r\n" +
+             "[authz_checkout_and_update_test:/A/B]\n" +
+             "* =\n")
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "[/A/B]\n" +
+             "* =\n")
          
+  fp.close()
+  
   # checkout a working copy, should not dl /A/B
   expected_output = svntest.main.greek_state.copy()
   expected_output.wc_dir = local_dir
@@ -496,8 +554,17 @@ def authz_checkout_and_update_test(sbox):
   # 2nd part: now enable read access
   
   # write an authz file with *=r on /
-  write_authz_file(sbox, { "/": "* = r"})
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_checkout_and_update_test:/]\n" +
+             "* = r\n")
+  else:
+    fp.write("[/]\n" +
+             "* = r\n")
          
+  fp.close()
+  
   # update the working copy, should download /A/B because we now have read
   # access
   expected_output = svntest.wc.State(local_dir, {
@@ -525,7 +592,7 @@ def authz_partial_export_test(sbox):
 
   skip_test_when_no_authz_available()
 
-  sbox.build(create_wc = False)
+  sbox.build("authz_partial_export_test", create_wc = False)
   local_dir = sbox.wc_dir
 
   # cleanup remains of a previous test run.
@@ -537,8 +604,21 @@ def authz_partial_export_test(sbox):
   # download this folder
   
   # write an authz file with *= on /A/B
-  write_authz_file(sbox, { "/": "* = r", "/A/B": "* =" })
+  fp = open(sbox.authz_file, 'w')
+
+  if sbox.repo_url.startswith('http'):
+    fp.write("[authz_partial_export_test:/]\n" +
+             "* = r\n" +
+             "[authz_partial_export_test:/A/B]\n" +
+             "* =\n")
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "[/A/B]\n" +
+             "* =\n")
          
+  fp.close()
+  
   # export a working copy, should not dl /A/B
   expected_output = svntest.main.greek_state.copy()
   expected_output.wc_dir = local_dir
@@ -562,19 +642,25 @@ def authz_log_and_tracing_test(sbox):
 
   skip_test_when_no_authz_available()
 
-  sbox.build()
+  sbox.build("authz_log_test")
   wc_dir = sbox.wc_dir
 
   write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
 
   # write an authz file with *=rw on /
+  fp = open(sbox.authz_file, 'w')
+
   if sbox.repo_url.startswith('http'):
+    fp.write("[authz_log_test:/]\n" +
+             "* = rw\n")
     expected_err = ".*403 Forbidden.*"
   else:
+    fp.write("[/]\n" +
+             "* = rw\n")
     expected_err = ".*svn: Authorization failed.*"
-
-  write_authz_file(sbox, { "/": "* = rw\n" })
          
+  fp.close()
+  
   root_url = svntest.main.current_repo_url
   D_url = root_url + '/A/D'
   G_url = D_url + '/G'
@@ -600,14 +686,23 @@ def authz_log_and_tracing_test(sbox):
                                                                                                        
   # now disable read access on the first version of rho, keep the copy in 
   # /A/D readable.
+  fp = open(sbox.authz_file, 'w')
+
   if sbox.repo_url.startswith('http'):
+    fp.write("[authz_log_test:/]\n" +
+             "* = rw\n" +
+             "[authz_log_test:/A/D/G]\n" +
+             "* =\n")
     expected_err = ".*403 Forbidden.*"
   else:
+    fp.write("[/]\n" +
+             "* = rw\n" +
+             "[/A/D/G]\n" +
+             "* =\n")
     expected_err = ".*svn: Authorization failed.*"
-
-  write_authz_file(sbox, { "/": "* = rw",
-                           "/A/D/G": "* ="})
      
+  fp.close()
+  
   ## log
   
   # changed file in this rev. is not readable anymore, so author and date
@@ -657,56 +752,17 @@ def authz_log_and_tracing_test(sbox):
 
   svntest.actions.run_and_verify_svn("", None, expected_err,
                                     'diff', '-r', '2:4', D_url+'/rho')  
-
-# test whether read access is correctly granted and denied
-def authz_aliases(sbox):
-  "test authz for aliases"
-
-  skip_test_when_no_authz_available()
-
-  sbox.build(create_wc = False)
-
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
-
-  if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
-  else:
-    expected_err = ".*svn: Authorization failed.*"
-
-  write_authz_file(sbox, { "/" : "* = r",
-                           "/A/B" : "&jray = rw" },
-                         { "aliases" : 'jray = jrandom' } )
-
-  root_url = svntest.main.current_repo_url
-  A_url = root_url + '/A'
-  B_url = A_url + '/B'
-  iota_url = root_url + '/iota'
-
-  # copy a remote file, target is readonly for jconstant: should fail
-  svntest.actions.run_and_verify_svn("",
-                                     None, expected_err,
-                                     'cp',
-                                     '--username', svntest.main.wc_author2,
-                                     '--password', svntest.main.wc_passwd,
-                                     '-m', 'logmsg',
-                                     iota_url, B_url)
-
-  # try the same action, but as user jray (alias of jrandom), should work.
-  svntest.actions.run_and_verify_svn("",
-                                     None, [],
-                                     'cp',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     '-m', 'logmsg',
-                                     iota_url, B_url)
-
+  
 ########################################################################
 # Run the tests
+
+def is_this_dav():
+  return svntest.main.test_area_url.startswith('http')
 
 # list all tests here, starting with None:
 test_list = [ None,
               authz_open_root,
-              XFail(authz_open_directory, svntest.main.is_ra_type_dav),
+              XFail(authz_open_directory, is_this_dav),
               broken_authz_file,
               authz_read_access,
               authz_write_access,
@@ -714,7 +770,6 @@ test_list = [ None,
               authz_log_and_tracing_test,
               authz_checkout_and_update_test,
               authz_partial_export_test,
-              authz_aliases,
              ]
 
 if __name__ == '__main__':

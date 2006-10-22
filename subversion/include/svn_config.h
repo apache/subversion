@@ -67,7 +67,6 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_TIMEOUT              "http-timeout"
 #define SVN_CONFIG_OPTION_HTTP_COMPRESSION          "http-compression"
 #define SVN_CONFIG_OPTION_NEON_DEBUG_MASK           "neon-debug-mask"
-#define SVN_CONFIG_OPTION_HTTP_AUTH_TYPES           "http-auth-types"
 #define SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES       "ssl-authority-files"
 #define SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA      "ssl-trust-default-ca"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE      "ssl-client-cert-file"
@@ -105,8 +104,6 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_PASSWORD_DB               "password-db"
 #define SVN_CONFIG_OPTION_REALM                     "realm"
 #define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
-#define SVN_CONFIG_SECTION_SASL                 "sasl"
-#define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"
@@ -242,7 +239,8 @@ typedef svn_boolean_t (*svn_config_section_enumerator2_t)(const char *name,
  * ### See kff's comment to svn_config_enumerate2().  It applies to this
  * function, too. ###
  *
- * @a callback's @a name parameter is only valid for the duration of the call.
+ * @a callback's @a name and @a name parameters are only valid for the
+ * duration of the call.
  *
  * @since New in 1.3.
  */
@@ -303,7 +301,7 @@ int svn_config_enumerate2(svn_config_t *cfg, const char *section,
                           apr_pool_t *pool);
 
 /**
- * Return @c TRUE if @a section exists in @a cfg, @c FALSE otherwise.
+ * Return @c TRUE if @a section exists in @a config, @c FALSE otherwise.
  *
  * @since New in 1.4.
  */
