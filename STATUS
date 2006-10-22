@@ -55,5 +55,14 @@ Candidate changes:
     Votes:
       +1: rooneg (not r22060), dlr
 
+  * r21885, r22076
+    Add a new RPM package for the AuroraLinux 2.0 SPARC distribution.
+    Justification:
+      It is a combination of RHEL3 and RHEL4 distributions with
+      characteristics matching both, so we need a new directory.
+    Branch: 1.4.x-r22076 (-r22079:HEAD)
+    Votes:
+      +1: dws
+
 Approved changes:
 
