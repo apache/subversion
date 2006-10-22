@@ -38,12 +38,14 @@ test_path_is_child(const char **msg,
 /* The path checking code is platform specific, so we shouldn't run 
    the Windows path handling testcases on non-Windows platforms.
    */
+#define NUM_TEST_PATHS 24
+
 #if defined(WIN32)
-#define NUM_TEST_PATHS 16
 #define RUN_NUM_TEST_PATHS NUM_TEST_PATHS
+#elif defined(__CYGWIN__)
+#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS - 10
 #else
-#define NUM_TEST_PATHS 16
-#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS - 7
+#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS - 10 - 4
 #endif
 
   static const char * const paths[NUM_TEST_PATHS] = { 
@@ -56,34 +58,79 @@ test_path_is_child(const char **msg,
     "foo",
     ".foo",
     "/",
+    "foo2",
+    /* Win32 and Cygwin */
+    "//srv",
+    "//srv2",
+    "//srv/shr",
+    "//srv/shr/fld",
+    /* Win32 only */
     "H:/foo/bar",
     "H:/foo/baz",
     "H:/foo/bar/baz",
     "H:/flu/blar/blaz",
     "H:/foo/bar/baz/bing/boom",
     "H:/",
-    "H:/iota"
+    "H:/iota",
+    "H:",
+    "H:foo",
+    "H:foo/baz",
     };
   
   static const char * const remainders[NUM_TEST_PATHS][NUM_TEST_PATHS] = {
-    { 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, "foo2", 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { "foo/bar", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
-      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "bing/boom", 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, "foo/bar", "foo/baz", "foo/bar/baz", 
-      "flu/blar/blaz", "foo/bar/baz/bing/boom", 0, "iota" },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    /* //srv paths */
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, "shr", "shr/fld", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, "fld", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    /* H:/ paths */
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, "foo/bar", "foo/baz", "foo/bar/baz", "flu/blar/blaz", 
+      "foo/bar/baz/bing/boom", 0, "iota", 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    /* H: paths */
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "foo", "foo/baz" },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "baz" },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   };
   
   *msg = "test svn_path_is_child";
@@ -1341,7 +1388,7 @@ test_get_longest_ancestor(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_path_is_child),
+    SVN_TEST_XFAIL_COND(test_path_is_child, WINDOWS_OR_CYGWIN),
     SVN_TEST_XFAIL_COND(test_path_split, WINDOWS_OR_CYGWIN),
     SVN_TEST_PASS(test_is_url),
     SVN_TEST_PASS(test_is_uri_safe),
