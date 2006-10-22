@@ -1340,8 +1340,11 @@ test_get_longest_ancestor(const char **msg,
 #if defined(WIN32)
     { "X:/",            "X:/",             "X:/"},
     { "X:/foo",         "X:/",             "X:/"},
+    { "X:/foo/bar/A/D/H/psi", "X:/foo/bar/A/B", "X:/foo/bar/A" },
+    { "X:/foo/bar/boo", "X:/foo/bar/baz/boz", "X:/foo/bar"},
     { "X:/",            "X:/foo",          "X:/"},
     { "X:",             "X:foo",           "X:"},
+    { "X:",             "X:/",             ""},
     { "X:foo",          "X:bar",           "X:"},
     { "X:foo/bar",      "X:foo/bar/boo",   "X:foo/bar"},
 #endif /* WIN32 */
@@ -1371,6 +1374,16 @@ test_get_longest_ancestor(const char **msg,
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_get_longest_ancestor (%s, %s) returned %s instead of %s",
            tests[i].path1, tests[i].path2, retval, tests[i].result);
+
+      /* changing the order of the paths should return the same results */
+      retval = svn_path_get_longest_ancestor(tests[i].path2, tests[i].path1, 
+                                             pool);
+
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_get_longest_ancestor (%s, %s) returned %s instead of %s",
+           tests[i].path2, tests[i].path1, retval, tests[i].result);
     }
   return SVN_NO_ERROR;
 }
