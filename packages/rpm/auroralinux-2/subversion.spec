@@ -1,8 +1,9 @@
-%define apache_version 2.0.46
+%define apache_version 2.0.52
+%define apr_version 0.9.7
 %define neon_version 0.24.7
 %define swig_version 1.3.25
 %define apache_dir /usr
-%define pyver 2.2
+%define pyver 2.3
 # If you don't want to take time for the tests then set make_*_check to 0.
 %define make_ra_local_check 1
 %define make_ra_svn_check 1
@@ -20,8 +21,9 @@ Patch1: subversion-0.31.0-rpath.patch
 Vendor: Summersoft
 Packager: David Summers <david@summersoft.fay.ar.us>
 Requires: neon >= %{neon_version}
+BuildPreReq: apr-devel >= %{apr_version}
+BuildPreReq: apr-util-devel >= %{apr_version}
 BuildPreReq: autoconf >= 2.53
-BuildPreReq: db4-devel
 BuildPreReq: docbook-style-xsl >= 1.58.1
 BuildPreReq: doxygen
 BuildPreReq: expat-devel
@@ -36,8 +38,6 @@ BuildPreReq: python
 BuildPreReq: python-devel
 BuildPreReq: swig >= %{swig_version}
 BuildPreReq: zlib-devel
-Conflicts: db42
-Obsoletes: subversion-server
 BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}
 Prefix: /usr
 %description
@@ -67,6 +67,8 @@ for developers interacting with the subversion package.
 %package -n mod_dav_svn
 Group: Utilities/System
 Summary: Apache server module for Subversion server.
+Requires: apr >= %{apr_version}
+Requires: apr-util >= %{apr_version}
 Requires: subversion = %{version}-%{release}
 Requires: httpd >= %{apache_version}
 BuildPreReq: httpd-devel >= %{apache_version}
@@ -95,6 +97,9 @@ Summary: Tools for Subversion
 Tools for Subversion.
 
 %changelog
+* Wed Oct 11 2006 David Summers <david@summersoft.fay.ar.us> r21885
+- [AL2] Added Aurora Linux 2.0 support.
+
 * Fri Jul 07 2006 David Summers <david@summersoft.fay.ar.us> r20468
 - [RH8,RH9,RHEL3,RHEL4] Updated to APR/APR-UTIL 0.9.12.
   RHEL3 requires httpd-2.0.46-56.ent.centos.2.1 or higher which includes
@@ -479,22 +484,6 @@ if [ -f /usr/bin/autoconf-2.53 ]; then
 fi
 sh autogen.sh
 
-# Figure out version and release number for command and documentation display.
-case "%{release}" in
-   1)
-      # Build an official release
-      RELEASE_NAME="%{version}"
-      ;;
-   alpha*|beta*|gamma*)
-      # Build an alpha, beta, gamma release.
-      RELEASE_NAME="%{version} (%{release})"
-      ;;
-   *)
-      # Build a working copy release
-      RELEASE_NAME="%{version} (dev build, r%{release})"
-      ;;
-esac
-
 # Delete apr, apr-util, and neon from the tree as those packages should already
 # be installed.
 rm -rf apr apr-util neon
@@ -549,7 +538,7 @@ make install DESTDIR="$RPM_BUILD_ROOT"
 
 # Add subversion.conf configuration file into httpd/conf.d directory.
 mkdir -p $RPM_BUILD_ROOT/etc/httpd/conf.d
-cp packages/rpm/rhel-3/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
+cp packages/rpm/auroralinux-2/subversion.conf $RPM_BUILD_ROOT/etc/httpd/conf.d
 
 # Install Python SWIG bindings.
 make install-swig-py DESTDIR=$RPM_BUILD_ROOT DISTUTIL_PARAM=--prefix=$RPM_BUILD_ROOT
