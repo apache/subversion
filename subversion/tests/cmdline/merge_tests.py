@@ -1220,10 +1220,12 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
       raise svntest.Failure
 
     if record_only:
-      expected_output = ['\n']
+      expected_output = []
       merge_cmd.append('--record-only')
+      rho_expected_status = ' M'
     else:
       expected_output = ['U    rho\n']
+      rho_expected_status = 'MM'
     merge_cmd.append(rho_url)
 
     svntest.actions.run_and_verify_svn(None, expected_output, [], *merge_cmd)
@@ -1240,7 +1242,7 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
   finally:
     os.chdir(saved_cwd)
 
-  expected_status.tweak('A/D/G/rho', status='MM')
+  expected_status.tweak('A/D/G/rho', status=rho_expected_status)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 def merge_one_file_using_r(sbox):
@@ -3907,7 +3909,7 @@ test_list = [ None,
               three_way_merge_add_of_existing_binary_file,
               merge_one_file_using_r,
               merge_one_file_using_c,
-              XFail(merge_record_only),
+              merge_record_only,
               merge_in_new_file_and_diff,
               merge_skips_obstructions,
               merge_into_missing,

@@ -2297,6 +2297,10 @@ do_merge(const char *initial_URL1,
                                                ctx, pool));
 
   notify_b.same_urls = (strcmp(URL1, URL2) == 0);
+  if (!notify_b.same_urls && merge_b->record_only)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("Use of two URLs is not compatible with "
+                              "merge info modification"));
   SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type,
                                              notify_b.same_urls,
                                              ra_session, path1, revision1,
@@ -2323,6 +2327,22 @@ do_merge(const char *initial_URL1,
       is_revert = (merge_type == merge_type_revert);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
                                                 ra_session, adm_access, pool));
+
+      /* When only recording merge info, we don't perform an actual
+         merge for the specified range. */
+      if (merge_b->record_only)
+        {
+          /* ### TODO: Support sub-tree merge info. */
+          /* ### Handle WC-local reverts which have modified our merge
+             ### info. */
+          apr_hash_t *merges;
+          SVN_ERR(determine_merges_performed(&merges, target_wcpath, &range,
+                                             &notify_b, pool));
+          return update_wc_merge_info(target_wcpath, entry, rel_path,
+                                      merges, is_revert, ra_session,
+                                      adm_access, ctx, pool);
+        }
+
       SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path,
                                      target_mergeinfo, &range, is_revert,
                                      pool));
@@ -2538,6 +2558,10 @@ do_single_file_merge(const char *initial_URL1,
                                                ctx, pool));
 
   notify_b.same_urls = (strcmp(URL1, URL2) == 0);
+  if (!notify_b.same_urls && merge_b->record_only)
+    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
+                            _("Use of two URLs is not compatible with "
+                              "merge info modification"));
   SVN_ERR(grok_range_info_from_opt_revisions(&range, &merge_type,
                                              notify_b.same_urls,
                                              ra_session1, path1, revision1,
@@ -2553,7 +2577,23 @@ do_single_file_merge(const char *initial_URL1,
 
       is_revert = (merge_type == merge_type_revert);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
-                                                ra_session1, adm_access, pool));
+                                                ra_session1, adm_access,
+                                                pool));
+      /* When only recording merge info, we don't perform an actual
+         merge for the specified range. */
+      if (merge_b->record_only)
+        {
+          /* ### TODO: Support sub-tree merge info. */
+          /* ### Handle WC-local reverts which have modified our merge
+             ### info. */
+          apr_hash_t *merges;
+          SVN_ERR(determine_merges_performed(&merges, target_wcpath, &range,
+                                             &notify_b, pool));
+          return update_wc_merge_info(target_wcpath, entry, rel_path,
+                                      merges, is_revert, ra_session1,
+                                      adm_access, ctx, pool);
+        }
+
       SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path,
                                      target_mergeinfo, &range, is_revert,
                                      pool));
