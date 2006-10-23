@@ -8,21 +8,21 @@ ensure ()
 }
 
 # Download files necessary to preview the web pages locally.
-if [ ! -r "$WWWDIR/tigris-branding/.download-complete" ]; then
+if [ ! -r "$WWWDIR/branding/.download-complete" ]; then
   BRANDING_URL="http://subversion.tigris.org/branding"
-  mkdir -p "$WWWDIR/tigris-branding/"{css,scripts,images}
+  mkdir -p "$WWWDIR/branding/"{css,scripts,images}
   for i in tigris inst print; do
-    ensure "$BRANDING_URL/css/$i.css" "tigris-branding/css"
+    ensure "$BRANDING_URL/css/$i.css" "branding/css"
   done
-  ensure "$BRANDING_URL/scripts/tigris.js" "tigris-branding/scripts"
+  ensure "$BRANDING_URL/scripts/tigris.js" "branding/scripts"
   for f in `sed -n -e 's,.*url(\.\./images/\([^)]*\).*,\1,;tp' \
-    -etp -ed -e:p -ep $WWWDIR/tigris-branding/css/*.css`; do
+    -etp -ed -e:p -ep $WWWDIR/branding/css/*.css`; do
     case $f in
       collapsed_big.gif|expanded_big.gif) ;; # 404!
-      *) ensure "$BRANDING_URL/images/$f" "tigris-branding/images" ;;
+      *) ensure "$BRANDING_URL/images/$f" "branding/images" ;;
     esac
   done
-  touch "$WWWDIR/tigris-branding/.download-complete"
+  touch "$WWWDIR/branding/.download-complete"
 fi
 
 # Check we have DTDs available
