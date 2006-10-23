@@ -301,22 +301,18 @@ svn_fs_fs__revision_root(svn_fs_root_t **root_p,
 
 /* Return the error SVN_ERR_FS_NOT_FOUND, with a detailed error text,
    for PATH in ROOT. */
-static svn_error_t *
-not_found(svn_fs_root_t *root, const char *path)
-{
-  if (root->is_txn_root)
-    return
-      svn_error_createf
-      (SVN_ERR_FS_NOT_FOUND, 0,
-       _("File not found: transaction '%s', path '%s'"),
-       root->txn, path);
-  else
-    return
-      svn_error_createf
-      (SVN_ERR_FS_NOT_FOUND, 0,
-       _("File not found: revision %ld, path '%s'"),
-       root->rev, path);
-}
+#define NOT_FOUND(root, path) (                          \
+  root->is_txn_root ?                                    \
+    svn_error_createf                                    \
+      (SVN_ERR_FS_NOT_FOUND, 0,                          \
+       _("File not found: transaction '%s', path '%s'"), \
+         root->txn, path)                                \
+  :                                                      \
+    svn_error_createf                                    \
+      (SVN_ERR_FS_NOT_FOUND, 0,                          \
+       _("File not found: revision %ld, path '%s'"),     \
+         root->rev, path)                                \
+  )
 
 
 /* Return a detailed `file already exists' message for PATH in ROOT.  */
@@ -725,7 +721,7 @@ open_path(parent_path_t **parent_path_p,
                 {
                   /* Build a better error message than svn_fs_fs__dag_open
                      can provide, giving the root and full path name.  */
-                  return not_found(root, path);
+                  return NOT_FOUND(root, path);
                 }
             }
           
@@ -2747,7 +2743,7 @@ fs_node_history(svn_fs_history_t **history_p,
   /* And we require that the path exist in the root. */
   SVN_ERR(svn_fs_fs__check_path(&kind, root, path, pool));
   if (kind == svn_node_none)
-    return not_found(root, path);
+    return NOT_FOUND(root, path);
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history(root->fs,
