@@ -56,6 +56,12 @@ Candidate changes:
     Branch: 1.4.x-r22076 (-r22079:HEAD)
     Votes:
       +1: dws
+      -1: maxb (It appears that the auroralinux-2 directory has been based
+                on an old version of the rhel-3 directory, pre-dating some
+                of the difference-reduction work I did to try to minimize the
+                unnecessary inconsistencies between the various distro
+                flavours. Its introduction therefore represents a regression
+                in the maintainability of the RPM packaging area as a whole.)
 
   * r22092
     Fix svnsync of paths copied from locations with non-uri-safe characters.
