@@ -573,7 +573,8 @@ add_directory(const char *path,
   node_baton_t *b = apr_palloc(pool, sizeof(*b));
 
   if (copyfrom_path)
-    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url, copyfrom_path);
+    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url,
+                                 svn_path_uri_encode(copyfrom_path, pool));
 
   SVN_ERR(eb->wrapped_editor->add_directory(path, pb->wrapped_node_baton,
                                             copyfrom_path,
@@ -620,7 +621,8 @@ add_file(const char *path,
   node_baton_t *fb = apr_palloc(pool, sizeof(*fb));
 
   if (copyfrom_path)
-    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url, copyfrom_path);
+    copyfrom_path = apr_psprintf(pool, "%s%s", eb->to_url,
+                                 svn_path_uri_encode(copyfrom_path, pool));
 
   SVN_ERR(eb->wrapped_editor->add_file(path, pb->wrapped_node_baton,
                                        copyfrom_path, copyfrom_rev,

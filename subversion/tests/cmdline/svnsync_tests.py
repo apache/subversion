@@ -422,6 +422,9 @@ def copy_from_unreadable_dir(sbox):
                                      'baz',
                                      dest_sbox.repo_url + '/A/P')
 
+def url_encoding(sbox):
+  "test url encoding issues"
+  run_test(sbox, "url-encoding-bug.dump")
 
 
 ########################################################################
@@ -445,6 +448,7 @@ test_list = [ None,
               detect_meddling,
               basic_authz,
               copy_from_unreadable_dir,
+              url_encoding,
              ]
 
 if __name__ == '__main__':
