@@ -1336,6 +1336,8 @@ test_get_longest_ancestor(const char **msg,
     { "http://test",    "http://taste",    ""},
     { "http://test",    "http://test/foo", "http://test"},
     { "http://test",    "file://test/foo", ""},
+    { "file:///A/C",    "file:///B/D",     ""},
+    { "file:///A/C",    "file:///A/D",     "file:///A"},
 
 #if defined(WIN32)
     { "X:/",            "X:/",             "X:/"},
