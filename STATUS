@@ -53,7 +53,7 @@ Candidate changes:
     Justification:
       Tiny bug.  Tiny fix.  Comes with tests!
     Votes:
-      +1: rooneg (not r22060), dlr
+      +1: rooneg, dlr
 
   * r21885, r22076
     Add a new RPM package for the AuroraLinux 2.0 SPARC distribution.
