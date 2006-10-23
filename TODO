@@ -79,31 +79,8 @@ for repos dump/load, including the merge history index.
 
   * Update design spec.  (dberlin?)
 
-  * Handle all 'copy' operation types.  (madanus)
-
-    * WC -> WC: While a typical operation for refactoring tools
-      (e.g. IDEs like Eclipse), this complicates offline operation.  A
-      RA call to determine the oldest "appeared rev" for a copy source
-      is necessary to calculate the portion of the the merge info for
-      the destination which represents the copy source.  While some
-      state indicating delayed merge info retrieval and handling could
-      be stored in WC to preserve offline operation, there are
-      complications with this when subsequent uncommited revert
-      operations should change the merge info.  Instead, this form of
-      'copy' will not replicate non-local merge info unless the -u
-      switch (new) is used (a la 'status -u').
-
-    * WC -> URL
-
-    * URL -> WC
-
-    * URL -> URL
-
-  * Handle all 'move' operation types.  (madanus?)
-
-    * WC -> WC: Same problems as for 'copy'.
-
-    * URL -> URL
+  * Handle all 'copy'/'move' operation types.  (madanus)
+    http://subversion.tigris.org/merge-tracking/func-spec.html#copy-move
 
 * Handle three-way merges (e.g. 'svn merge URL1 URL2 WC_TARGET').
   We'll likely need to use a different method of calculating the set
