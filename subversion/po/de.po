@@ -79,12 +79,12 @@ msgstr ""
 # update       aktualisieren
 # usage        Aufruf
 # working copy (WC) Arbeitskopie (AK)
-# -
+# ------
 # Verwende den 'Indikativ' anstelle des 'Imperativ'. Zum Beispiel:
 # "Gibt die Daten aus" anstatt "Gib die Daten aus"
 # "Stellt die Arbeitskopie um" anstatt "Stelle die Arbeitskopie um"
 # Alternativ kann auch der Infinitiv verwendet werden. Zum Beispiel:
-# -
+# ------
 # Original:  "do no interactive prompting"
 # Infinitiv: "Keine interaktiven Rückfragen ausgeben"
 # Indikativ: "Gibt keine interaktiven Rückfragen aus"
@@ -1290,7 +1290,7 @@ msgstr "Es sind nicht alle erforderlichen Revisionen angegeben"
 # Gemeint ist, wenn bei einem svn diff ein @REV angegeben wurde (also die Revision, in der die Datei zuerst gesucht wird)
 #: libsvn_client/diff.c:1542
 msgid "At least one revision must be non-local for a pegged diff"
-msgstr "Wenn eine Basisrevision angegeben wurde, muss zumindest eine Revision auf dem Server sein."
+msgstr "Wenn eine Basisrevision angegeben wurde, muss zumindest eine Revision auf dem Server sein"
 
 #: libsvn_client/diff.c:1654
 #: libsvn_client/diff.c:1666
@@ -3470,17 +3470,17 @@ msgstr "Startrevision %ld ist größer als Endrevision %ld"
 #: libsvn_repos/dump.c:938
 #, c-format
 msgid "End revision %ld is invalid (youngest revision is %ld)"
-msgstr "Endrevision %ld ist ungültig (neuste Revision ist %ld)"
+msgstr "Endrevision %ld ist ungültig (neueste Revision ist %ld)"
 
 #: libsvn_repos/dump.c:1045
 #, c-format
 msgid "* Dumped revision %ld.\n"
-msgstr "* Ausgegeben Revision %ld.\n"
+msgstr "* Revision %ld ausgegeben.\n"
 
 #: libsvn_repos/dump.c:1046
 #, c-format
 msgid "* Verified revision %ld.\n"
-msgstr "* Verifizierte Revision %ld.\n"
+msgstr "* Revision %ld verifiziert.\n"
 
 #: libsvn_repos/fs-wrap.c:57
 #: libsvn_repos/load.c:1207
@@ -7270,7 +7270,7 @@ msgstr "»%s« scheint kein Pfad einer Arbeitskopie zu sein"
 #: svn/propedit-cmd.c:232
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
-msgstr "Neuer Wert für Eigenschaft »%s« auf »%s« gesetzt\n"
+msgstr "Neuer Wert für Eigenschaft »%s« für »%s« gesetzt\n"
 
 #: svn/propedit-cmd.c:239
 #, c-format
