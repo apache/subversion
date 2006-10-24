@@ -10,7 +10,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.4.x\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-23 13:50-0500\n"
-"PO-Revision-Date: 2006-10-19 11:23+0200\n"
+"PO-Revision-Date: 2006-10-23 13:51+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: German <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -20,11 +20,13 @@ msgstr ""
 "X-Poedit-Basepath: ..\n"
 
 # Translation dictionary / Übersetzungswörterbuch:
+# ------
 # Bitte aus Konsistenzgründen die folgenden Terme und Schreibweisen verwenden
+# ------
 # argument     Parameter
 # ARG          PAR
 # authentication Anmeldung
-# authorisation Berechtigung
+# authorization Berechtigung
 # bleeding-edge brandheiß/allerneueste[r|s]
 # bogus        ungültig
 # checkout     auschecken (denglisch, ich weiß, aber akzeptabel)
@@ -77,10 +79,12 @@ msgstr ""
 # update       aktualisieren
 # usage        Aufruf
 # working copy (WC) Arbeitskopie (AK)
+# ------
 # Verwende den 'Indikativ' anstelle des 'Imperativ'. Zum Beispiel:
 # "Gibt die Daten aus" anstatt "Gib die Daten aus"
 # "Stellt die Arbeitskopie um" anstatt "Stelle die Arbeitskopie um"
 # Alternativ kann auch der Infinitiv verwendet werden. Zum Beispiel:
+# ------
 # Original:  "do no interactive prompting"
 # Infinitiv: "Keine interaktiven Rückfragen ausgeben"
 # Indikativ: "Gibt keine interaktiven Rückfragen aus"
@@ -1268,8 +1272,8 @@ msgstr "%s\t(Arbeitskopie)"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "Kann nicht anzeigen: Dateityp ist als binär angegeben.%s"
 
-#  xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
-#  strings are used to tag onto a filename in case of a merge conflict
+# Lustig: .working wird nicht übersetzt, .merge-left aber schon
+# und das auch noch inkonsistent...
 #. xgettext: the '.working', '.merge-left.r%ld' and
 #. '.merge-right.r%ld' strings are used to tag onto a file
 #. name in case of a merge conflict
@@ -1296,7 +1300,7 @@ msgstr "Es sind nicht alle erforderlichen Revisionen angegeben"
 # Gemeint ist, wenn bei einem svn diff ein @REV angegeben wurde (also die Revision, in der die Datei zuerst gesucht wird)
 #: libsvn_client/diff.c:1543
 msgid "At least one revision must be non-local for a pegged diff"
-msgstr "Wenn eine Basisrevision angegeben wurde, muss zumindest eine Revision auf dem Server sein."
+msgstr "Wenn eine Basisrevision angegeben wurde, muss zumindest eine Revision auf dem Server sein"
 
 #: libsvn_client/diff.c:1655
 #: libsvn_client/diff.c:1667
@@ -2413,6 +2417,7 @@ msgstr "Kann unbekannte Transaktion »%s« nicht freigeben"
 msgid "Can't unlock nonlocked transaction '%s'"
 msgstr "Nicht gesperrte Transaktion »%s« kann nicht freigeben werden"
 
+# FIXME: Dies ist aber nicht infinitisch übersetzt (siehe umliegenden Meldungen)
 #: libsvn_fs_fs/fs_fs.c:385
 #, c-format
 msgid "Can't unlock prototype revision lockfile for transaction '%s'"
@@ -3568,17 +3573,17 @@ msgstr "Startrevision %ld ist größer als Endrevision %ld"
 #: libsvn_repos/dump.c:938
 #, c-format
 msgid "End revision %ld is invalid (youngest revision is %ld)"
-msgstr "Endrevision %ld ist ungültig (neuste Revision ist %ld)"
+msgstr "Endrevision %ld ist ungültig (neueste Revision ist %ld)"
 
 #: libsvn_repos/dump.c:1045
 #, c-format
 msgid "* Dumped revision %ld.\n"
-msgstr "* Ausgegeben Revision %ld.\n"
+msgstr "* Revision %ld ausgegeben.\n"
 
 #: libsvn_repos/dump.c:1046
 #, c-format
 msgid "* Verified revision %ld.\n"
-msgstr "* Verifizierte Revision %ld.\n"
+msgstr "* Revision %ld verifiziert.\n"
 
 #: libsvn_repos/fs-wrap.c:57
 #: libsvn_repos/load.c:1211
@@ -7407,6 +7412,7 @@ msgstr "Status bezogen auf Revision: %6ld\n"
 msgid "Sending        %s\n"
 msgstr "Sende          %s\n"
 
+# CHECKME: Warum wird "Hinzuf." nicht ausgeschrieben? (Einfach 1. Spalte verbreitern)
 #: svn/notify.c:324
 #, c-format
 msgid "Adding  (bin)  %s\n"
@@ -7502,7 +7508,7 @@ msgstr "»%s« scheint kein Pfad einer Arbeitskopie zu sein"
 #: svn/propedit-cmd.c:264
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
-msgstr "Neuer Wert für Eigenschaft »%s« auf »%s« gesetzt\n"
+msgstr "Neuer Wert für Eigenschaft »%s« für »%s« gesetzt\n"
 
 #: svn/propedit-cmd.c:274
 #, c-format
