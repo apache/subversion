@@ -468,7 +468,6 @@ diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
                      const svn_string_t *from_prop_val,
                      const svn_string_t *to_prop_val, apr_pool_t *pool)
 {
-  /* ### This check only seems to be necessary in one spot.  Dump it? */
   if (svn_string_compare(from_prop_val, to_prop_val))
     {
       /* Don't bothering parsing identical merge info. */
@@ -519,7 +518,9 @@ combine_mergeinfo_props(const svn_string_t **output,
   return SVN_NO_ERROR;
 }
 
-/* Perform a 3-way merge operation on merge info. */
+/* Perform a 3-way merge operation on merge info.  FROM_PROP_VAL is
+   the "base" property value, WORKING_PROP_VAL is the current value,
+   and TO_PROP_VAL is the new value. */
 static svn_error_t *
 combine_forked_mergeinfo_props(const svn_string_t **output,
                                const svn_string_t *from_prop_val,
@@ -824,9 +825,9 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                   if (strcmp(propname, SVN_PROP_MERGE_INFO) == 0)
                     {
                       /* We have base, WC, and new values.  Discover
-                        deltas between base <-> WC, and base <->
-                        incoming.  Combine those deltas, and apply
-                        them to base to get the new value. */
+                         deltas between base <-> WC, and base <->
+                         incoming.  Combine those deltas, and apply
+                         them to base to get the new value. */
                       combine_forked_mergeinfo_props(&to_val, from_val,
                                                      working_val, to_val,
                                                      pool);
