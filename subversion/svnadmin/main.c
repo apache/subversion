@@ -421,7 +421,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
-   {0} },
+   {'r', 'q'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -613,9 +613,13 @@ recode_stream_create(FILE *std_stream, apr_pool_t *pool)
   return rw_stream;
 }
 
-/* This implements `svn_opt_subcommand_t'. */
+
+/* Common implementation for dump and verify.  First three parameters mirror
+   the 'svn_opt_subcommand_t' type.  The DUMP_CONTENTS parameter determines
+   whether to send the dump to stdout or an empty stream. */
 static svn_error_t *
-subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+dump_repo(apr_getopt_t *os, void *baton,
+          apr_pool_t *pool, svn_boolean_t dump_contents)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
@@ -652,7 +656,10 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Run the dump to STDOUT.  Let the user redirect output into
      a file if they want.  :-)  */
-  SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
+  if (dump_contents)
+    SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
+  else
+    stdout_stream = NULL;
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
@@ -664,6 +671,14 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                              pool));
 
   return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  return dump_repo(os, baton, pool, TRUE);
 }
 
 
@@ -1044,23 +1059,7 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_error_t *
 subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
-  struct svnadmin_opt_state *opt_state = baton;
-  svn_repos_t *repos;
-  svn_stream_t *stderr_stream = NULL;
-  svn_revnum_t youngest;
-
-  /* This whole process is basically just a dump of the repository
-     with no interest in the output. */
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
-  SVN_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs(repos), pool));
-
-  /* Progress feedback goes to STDERR. */
-  stderr_stream = recode_stream_create(stderr, pool);
-        
-  SVN_ERR(svn_repos_dump_fs2(repos, NULL, stderr_stream, 
-                             0, youngest, FALSE, FALSE, check_cancel, NULL,
-                             pool));
-  return SVN_NO_ERROR;
+  return dump_repo(os, baton, pool, FALSE);
 }
 
 
