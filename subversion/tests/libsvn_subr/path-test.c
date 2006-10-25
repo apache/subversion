@@ -38,12 +38,14 @@ test_path_is_child(const char **msg,
 /* The path checking code is platform specific, so we shouldn't run 
    the Windows path handling testcases on non-Windows platforms.
    */
+#define NUM_TEST_PATHS 24
+
 #if defined(WIN32)
-#define NUM_TEST_PATHS 16
 #define RUN_NUM_TEST_PATHS NUM_TEST_PATHS
+#elif defined(__CYGWIN__)
+#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS - 10
 #else
-#define NUM_TEST_PATHS 16
-#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS - 7
+#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS - 10 - 4
 #endif
 
   static const char * const paths[NUM_TEST_PATHS] = { 
@@ -56,34 +58,79 @@ test_path_is_child(const char **msg,
     "foo",
     ".foo",
     "/",
+    "foo2",
+    /* Win32 and Cygwin */
+    "//srv",
+    "//srv2",
+    "//srv/shr",
+    "//srv/shr/fld",
+    /* Win32 only */
     "H:/foo/bar",
     "H:/foo/baz",
     "H:/foo/bar/baz",
     "H:/flu/blar/blaz",
     "H:/foo/bar/baz/bing/boom",
     "H:/",
-    "H:/iota"
+    "H:/iota",
+    "H:",
+    "H:foo",
+    "H:foo/baz",
     };
   
   static const char * const remainders[NUM_TEST_PATHS][NUM_TEST_PATHS] = {
-    { 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, "foo", ".foo", 0, "foo2", 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
     { "foo/bar", "foo/baz", "foo/bar/baz", "flu/blar/blaz",
-      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "bing/boom", 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, "foo/bar", "foo/baz", "foo/bar/baz", 
-      "flu/blar/blaz", "foo/bar/baz/bing/boom", 0, "iota" },
-    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 }
+      "foo/bar/baz/bing/boom", 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    /* //srv paths */
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, "shr", "shr/fld", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, "fld", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    /* H:/ paths */
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, "baz", 0, "baz/bing/boom", 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, "bing/boom", 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, "foo/bar", "foo/baz", "foo/bar/baz", "flu/blar/blaz", 
+      "foo/bar/baz/bing/boom", 0, "iota", 0, 0, 0 },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+    /* H: paths */
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "foo", "foo/baz" },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "baz" },
+    { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 
+      0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
   };
   
   *msg = "test svn_path_is_child";
@@ -142,6 +189,11 @@ test_path_split(const char **msg,
     { "X:/",             "X:/",           "X:/" },
     { "X:/foo",          "X:/",           "foo" },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",       "//srv/shr",     "//srv/shr" },
+    { "//srv",           "//srv",         "//srv" },
+    { "//srv/shr/fld",   "//srv/shr/",    "fld" },
+#endif /* WIN32 or Cygwin */
   };
   
   *msg = "test svn_path_split";
@@ -493,6 +545,13 @@ test_join(const char **msg,
     { "X:abc", "X:/", "X:/" },
     { "X:abc", "X:/def", "X:/def" },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",     "fld",     "//srv/shr/fld" },
+    { "//srv",         "shr/fld", "//srv/shr/fld" },
+    { "//srv/shr/fld", "subfld",  "//srv/shr/fld/subfld" },
+    { "//srv/shr/fld", "//srv/shr", "//srv/shr" },
+    { "//srv",         "//srv/fld", "//srv/fld" },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_join(_many)";
@@ -581,6 +640,15 @@ test_join(const char **msg,
   TEST_MANY((pool, "X:", "def", SVN_EMPTY_PATH, NULL), "X:def");
   TEST_MANY((pool, SVN_EMPTY_PATH, "X:", "ghi", NULL), "X:ghi");
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+  TEST_MANY((pool, "//srv/shr", "def", "ghi", NULL), "//srv/shr/def/ghi");
+  TEST_MANY((pool, "//srv", "shr", "def", "ghi", NULL), "//srv/shr/def/ghi");
+  TEST_MANY((pool, "//srv/shr/fld", "def", "ghi", NULL), "//srv/shr/fld/def/ghi");
+  TEST_MANY((pool, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
+  TEST_MANY((pool, "//srv", "shr", "//srv/shr", NULL), "//srv/shr");
+  TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "ghi", NULL), "//srv/shr/fld/def/ghi");
+  TEST_MANY((pool, SVN_EMPTY_PATH, "//srv/shr/fld", "def", "//srv/shr", NULL), "//srv/shr");
+#endif /* WIN32 or Cygwin */
 
   /* ### probably need quite a few more tests... */
 
@@ -620,6 +688,12 @@ test_basename(const char **msg,
     { "X:", "X:" },
     { "X:abc", "abc" },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",      "//srv/shr" },
+    { "//srv",          "//srv" },
+    { "//srv/shr/fld",  "fld" },
+    { "//srv/shr/fld/subfld", "subfld" },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_basename";
@@ -675,6 +749,12 @@ test_dirname(const char **msg,
     { "X:", "" },
     { "X:abc", "" },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",      "//srv/shr" },
+    { "//srv",          "//srv" },
+    { "//srv/shr/fld",  "//srv/shr/" },
+    { "//srv/shr/fld/subfld", "//srv/shr/fld" },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_dirname";
@@ -859,6 +939,12 @@ test_remove_component(const char **msg,
     { "X:foo",                "X:" },
     { "X:",                   "X:" },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",            "//srv/shr" },
+    { "//srv",                "//srv" },
+    { "//srv/shr/fld",        "//srv/shr/" },
+    { "//srv/shr/fld/subfld", "//srv/shr/fld" },
+#endif /* WIN32 or Cygwin */
     { NULL, NULL }
   };
   int i;
@@ -910,6 +996,12 @@ test_is_root(const char **msg,
     { "X:foo",         FALSE },
     { "X:",            TRUE },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr/",    TRUE },
+    { "//srv/shr",     TRUE },
+    { "//srv",         TRUE },
+    { "//srv/shr/fld", FALSE },
+#endif /* WIN32 or Cygwin */
     { "",              FALSE },
   };
 
@@ -959,6 +1051,12 @@ test_is_absolute(const char **msg,
     { "X:foo/bar",     TRUE },
     { "X:",            TRUE },
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr/",    TRUE },
+    { "//srv/shr",     TRUE },
+    { "//srv",         TRUE },
+    { "//srv/shr/fld", TRUE },
+#endif /* WIN32 or Cygwin */
     { "",              FALSE },
   };
 
@@ -1067,6 +1165,13 @@ test_path_is_ancestor(const char **msg,
     { "X:",              "X:foo",         TRUE},
     { "X:foo",           "X:bar",         FALSE},
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr/",      "//srv",         FALSE},
+    { "//srv/shr",       "//srv/shr/fld", TRUE },
+    { "//srv",           "//srv/shr/fld", TRUE },
+    { "//srv/shr/fld",   "//srv/shr",     FALSE },
+    { "//srv/shr/fld",   "//srv2/shr/fld", FALSE },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_is_ancestor";
@@ -1171,6 +1276,12 @@ test_compare_paths(const char **msg,
     { "X:foo",        "X:",            1},
     { "X:/foo",       "X:/",           1},
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr",    "//srv",         1},
+    { "//srv/shr",    "//srv/shr/fld", -1 },
+    { "//srv/shr/fld", "//srv/shr",    1 },
+    { "//srv/shr/fld", "//abc/def/ghi", 1 },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_compare_paths";
@@ -1225,15 +1336,27 @@ test_get_longest_ancestor(const char **msg,
     { "http://test",    "http://taste",    ""},
     { "http://test",    "http://test/foo", "http://test"},
     { "http://test",    "file://test/foo", ""},
+    { "file:///A/C",    "file:///B/D",     ""},
+    { "file:///A/C",    "file:///A/D",     "file:///A"},
 
 #if defined(WIN32)
     { "X:/",            "X:/",             "X:/"},
     { "X:/foo",         "X:/",             "X:/"},
+    { "X:/foo/bar/A/D/H/psi", "X:/foo/bar/A/B", "X:/foo/bar/A" },
+    { "X:/foo/bar/boo", "X:/foo/bar/baz/boz", "X:/foo/bar"},
     { "X:/",            "X:/foo",          "X:/"},
     { "X:",             "X:foo",           "X:"},
+    { "X:",             "X:/",             ""},
     { "X:foo",          "X:bar",           "X:"},
     { "X:foo/bar",      "X:foo/bar/boo",   "X:foo/bar"},
 #endif /* WIN32 */
+#if defined(WIN32) || defined(__CYGWIN__)
+    { "//srv/shr/",      "//srv",          "//srv"},
+    { "//srv/shr",       "//srv/shr/fld",  "//srv/shr" },
+    { "//srv",           "//srv/shr/fld",  "//srv" },
+    { "//srv/shr/fld",   "//srv/shr",      "//srv/shr" },
+    { "//srv/shr/fld",   "//srv2/shr/fld", "" },
+#endif /* WIN32 or Cygwin */
   };
 
   *msg = "test svn_path_get_longest_ancestor";
@@ -1253,9 +1376,26 @@ test_get_longest_ancestor(const char **msg,
           (SVN_ERR_TEST_FAILED, NULL,
            "svn_path_get_longest_ancestor (%s, %s) returned %s instead of %s",
            tests[i].path1, tests[i].path2, retval, tests[i].result);
+
+      /* changing the order of the paths should return the same results */
+      retval = svn_path_get_longest_ancestor(tests[i].path2, tests[i].path1, 
+                                             pool);
+
+      if (strcmp(tests[i].result, retval))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_get_longest_ancestor (%s, %s) returned %s instead of %s",
+           tests[i].path2, tests[i].path1, retval, tests[i].result);
     }
   return SVN_NO_ERROR;
 }
+
+/* local define to support XFail-ing tests on Windows/Cygwin only */
+#if defined(WIN32) || defined(__CYGWIN__)
+#define WINDOWS_OR_CYGWIN TRUE
+#else
+#define WINDOWS_OR_CYGWIN FALSE
+#endif /* WIN32 or Cygwin */
 
 
 /* The test table.  */
@@ -1263,26 +1403,26 @@ test_get_longest_ancestor(const char **msg,
 struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS(test_path_is_child),
-    SVN_TEST_PASS(test_path_split),
+    SVN_TEST_XFAIL_COND(test_path_is_child, WINDOWS_OR_CYGWIN),
+    SVN_TEST_XFAIL_COND(test_path_split, WINDOWS_OR_CYGWIN),
     SVN_TEST_PASS(test_is_url),
     SVN_TEST_PASS(test_is_uri_safe),
     SVN_TEST_PASS(test_uri_encode),
     SVN_TEST_PASS(test_uri_decode),
     SVN_TEST_PASS(test_uri_autoescape),
     SVN_TEST_PASS(test_uri_from_iri),
-    SVN_TEST_PASS(test_join),
+    SVN_TEST_XFAIL_COND(test_join, WINDOWS_OR_CYGWIN),
     SVN_TEST_PASS(test_basename),
-    SVN_TEST_PASS(test_dirname),
+    SVN_TEST_XFAIL_COND(test_dirname, WINDOWS_OR_CYGWIN),
     SVN_TEST_PASS(test_decompose),
     SVN_TEST_PASS(test_canonicalize),
-    SVN_TEST_PASS(test_remove_component),
+    SVN_TEST_XFAIL_COND(test_remove_component, WINDOWS_OR_CYGWIN),
     SVN_TEST_PASS(test_is_root),
     SVN_TEST_PASS(test_is_absolute),
     SVN_TEST_PASS(test_path_is_ancestor),
     SVN_TEST_PASS(test_path_check_valid),
     SVN_TEST_PASS(test_is_single_path_component),
     SVN_TEST_PASS(test_compare_paths),
-    SVN_TEST_PASS(test_get_longest_ancestor),
+    SVN_TEST_XFAIL_COND(test_get_longest_ancestor, WINDOWS_OR_CYGWIN),
     SVN_TEST_NULL
   };

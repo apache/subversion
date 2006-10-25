@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<authors>
+<authors xmlns:html="http://www.w3.org/1999/xhtml">
  <author uid="arthur">
-  Arthur de Jong &lt;arthur@ch.tudelft.nl&gt;
+  Arthur de Jong &lt;<html:a href="mailto:arthur@ch.tudelft.nl">arthur@ch.tudelft.nl</html:a>&gt;
  </author>
  <author uid="nobody">
   Who's this &lt;nobody@example.com&gt;

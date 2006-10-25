@@ -699,7 +699,7 @@ def simple_property_merges(sbox):
   B2_url = svntest.main.current_repo_url + '/A/B2'
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'copy', '-m', 'fumble',
+                                     'copy', '-m', 'copy B to B2',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      B_url, B2_url)
@@ -829,7 +829,7 @@ def simple_property_merges(sbox):
   # Copy to make revision 5
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 5.\n'], [],
-                                     'copy', '-m', 'fumble',
+                                     'copy', '-m', 'copy A to A2',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      A_url, A2_url)
@@ -2848,7 +2848,7 @@ def safe_property_merge(sbox):
   B2_url = svntest.main.current_repo_url + '/A/B2'
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'copy', '-m', 'fumble',
+                                     'copy', '-m', 'copy B to B2',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      B_url, B2_url)
@@ -2974,7 +2974,7 @@ def property_merge_from_branch(sbox):
   B2_url = svntest.main.current_repo_url + '/A/B2'
 
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'copy', '-m', 'fumble',
+                                     'copy', '-m', 'copy B to B2',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      B_url, B2_url)

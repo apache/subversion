@@ -5,12 +5,28 @@
 # Copyright (C) 2004-2006 CollabNet.
 # This file is distributed under the same license as the subversion package.
 #
-# Translation dictionary:
-#
+msgid ""
+msgstr ""
+"Project-Id-Version: subversion 1.4.x\n"
+"Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
+"POT-Creation-Date: 2006-08-23 13:50-0500\n"
+"PO-Revision-Date: 2006-10-23 13:51+0200\n"
+"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
+"Language-Team: German <dev@subversion.tigris.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Poedit-Basepath: ..\n"
+
+# Translation dictionary / Übersetzungswörterbuch:
+# ------
+# Bitte aus Konsistenzgründen die folgenden Terme und Schreibweisen verwenden
+# ------
 # argument     Parameter
 # ARG          PAR
 # authentication Anmeldung
-# authorisation Berechtigung
+# authorization Berechtigung
 # bleeding-edge brandheiß/allerneueste[r|s]
 # bogus        ungültig
 # checkout     auschecken (denglisch, ich weiß, aber akzeptabel)
@@ -63,32 +79,15 @@
 # update       aktualisieren
 # usage        Aufruf
 # working copy (WC) Arbeitskopie (AK)
-#
-#
+# ------
 # Verwende den 'Indikativ' anstelle des 'Imperativ'. Zum Beispiel:
 # "Gibt die Daten aus" anstatt "Gib die Daten aus"
 # "Stellt die Arbeitskopie um" anstatt "Stelle die Arbeitskopie um"
-#
 # Alternativ kann auch der Infinitiv verwendet werden. Zum Beispiel:
+# ------
 # Original:  "do no interactive prompting"
 # Infinitiv: "Keine interaktiven Rückfragen ausgeben"
 # Indikativ: "Gibt keine interaktiven Rückfragen aus"
-#
-#
-msgid ""
-msgstr ""
-"Project-Id-Version: subversion 1.4.x\n"
-"Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-08-23 13:50-0500\n"
-"PO-Revision-Date: 2006-10-18 10:55+0200\n"
-"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
-"Language-Team: German <dev@subversion.tigris.org>\n"
-"MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=UTF-8\n"
-"Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=2; plural=(n != 1);\n"
-"X-Poedit-Basepath: ..\n"
-
 #: include/svn_error_codes.h:154
 msgid "Bad parent pool passed to svn_make_pool()"
 msgstr "Falscher Elternpool an svn_make_pool() übergeben"
@@ -1273,8 +1272,8 @@ msgstr "%s\t(Arbeitskopie)"
 msgid "Cannot display: file marked as a binary type.%s"
 msgstr "Kann nicht anzeigen: Dateityp ist als binär angegeben.%s"
 
-#  xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
-#  strings are used to tag onto a filename in case of a merge conflict
+# Lustig: .working wird nicht übersetzt, .merge-left aber schon
+# und das auch noch inkonsistent...
 #. xgettext: the '.working', '.merge-left.r%ld' and
 #. '.merge-right.r%ld' strings are used to tag onto a file
 #. name in case of a merge conflict
@@ -1301,7 +1300,7 @@ msgstr "Es sind nicht alle erforderlichen Revisionen angegeben"
 # Gemeint ist, wenn bei einem svn diff ein @REV angegeben wurde (also die Revision, in der die Datei zuerst gesucht wird)
 #: libsvn_client/diff.c:1543
 msgid "At least one revision must be non-local for a pegged diff"
-msgstr "Wenn eine Basisrevision angegeben wurde, muss zumindest eine Revision auf dem Server sein."
+msgstr "Wenn eine Basisrevision angegeben wurde, muss zumindest eine Revision auf dem Server sein"
 
 #: libsvn_client/diff.c:1655
 #: libsvn_client/diff.c:1667
@@ -1389,7 +1388,7 @@ msgstr "Kein gemeinsamer Vorgänger gefunden. Kann nicht mit disjunkten Pfaden a
 
 #: libsvn_client/locking_commands.c:287
 msgid "Unable to lock/unlock across multiple repositories"
-msgstr "Umnöglich über mehrere Projektarchive zu (ent)sperren"
+msgstr "Unmöglich über mehrere Projektarchive zu (ent)sperren"
 
 #: libsvn_client/locking_commands.c:328
 #, c-format
@@ -1858,11 +1857,11 @@ msgstr "Versuchte, Eintrag in einem *nicht* Verzeichnisknoten zu setzen"
 msgid "Attempted to set entry in immutable node"
 msgstr "Versuchte, Eintrag in einem nicht-veränderlichen Knoten zu setzen"
 
+# FIXME: node-revision or node-rev (wie überall)?
 #: libsvn_fs_base/dag.c:592
 #, c-format
-# FIXME: node-revision or node-rev (wie überall)?
 msgid "Can't set proplist on *immutable* node-revision %s"
-msgstr "Kann keine Eigenschafen für *nicht-veränderliche* Knotenrevision %s setzen."
+msgstr "Kann keine Eigenschaften für *nicht-veränderliche* Knotenrevision %s setzen."
 
 #: libsvn_fs_base/dag.c:704
 #, c-format
@@ -1951,7 +1950,7 @@ msgstr "Dateisystemobjekt ist noch nicht geöffnet"
 #: libsvn_fs_base/err.c:51
 #, c-format
 msgid "Corrupt filesystem revision %ld in filesystem '%s'"
-msgstr "Beschädigte Dateiystemrevision %ld in Dateisystem »%s«"
+msgstr "Beschädigte Dateisystemrevision %ld in Dateisystem »%s«"
 
 #: libsvn_fs_base/err.c:62
 #: libsvn_fs_fs/err.c:52
@@ -2096,8 +2095,8 @@ msgid ""
 "the problem persists, try deactivating this feature \n"
 "in DB_CONFIG"
 msgstr ""
-"Fehler beim Kopieren der Logdatei; die DB_LOG_AUTOREMOVE Funktion \n"
-"könnte den Hotcopy-Algorithmus stören.  Wenn das Problem weiterhin \n"
+"Fehler beim Kopieren der Logdatei; die Funktion DB_LOG_AUTOREMOVE\n"
+"könnte den Hotcopy-Algorithmus stören. Wenn das Problem weiterhin\n"
 "besteht, versuchen Sie diese Funktion in DB_CONFIG abzuschalten."
 
 #: libsvn_fs_base/fs.c:1113
@@ -2107,9 +2106,9 @@ msgid ""
 "hotcopy algorithm.  If the problem persists, try deactivating \n"
 "this feature in DB_CONFIG"
 msgstr ""
-"Fehler beim Ausführen der Katastrophen-Wiederherstellung im \n"
-"laufenden Betrieb (hotcopy);  Die DB_LOG_AUTOREMOVE Funktion \n"
-"könnte den Hotcopy-Algorithmus stören. Wenn das Problem weiterhin \n"
+"Fehler beim Ausführen der Katastrophen-Wiederherstellung im\n"
+"laufenden Betrieb (hotcopy); die Funktion DB_LOG_AUTOREMOVE\n"
+"könnte den Hotcopy-Algorithmus stören. Wenn das Problem weiterhin\n"
 "besteht, versuchen Sie diese Funktion in DB_CONFIG abzuschalten."
 
 #: libsvn_fs_base/fs.c:1222
@@ -2266,7 +2265,7 @@ msgstr "Basisobjekt muss eine Transaktionsbasis sein"
 #: libsvn_fs_fs/tree.c:757
 #, c-format
 msgid "Failure opening '%s'"
-msgstr "Fehler beim Öffent von »%s«"
+msgstr "Fehler beim Öffnen von »%s«"
 
 #: libsvn_fs_base/tree.c:1401
 #: libsvn_fs_fs/tree.c:1155
@@ -2413,12 +2412,12 @@ msgstr "Kann FSFS Transaktions-Mutex nicht loslassen"
 msgid "Can't unlock unknown transaction '%s'"
 msgstr "Kann unbekannte Transaktion »%s« nicht freigeben"
 
-# FIXME: Dies ist aber nicht infinitisch übersetzt (besser: kann nicht freigegeben werden?)
 #: libsvn_fs_fs/fs_fs.c:378
 #, c-format
 msgid "Can't unlock nonlocked transaction '%s'"
-msgstr "Kann nicht gesperrte Transaktion »%s« nicht freigeben"
+msgstr "Nicht gesperrte Transaktion »%s« kann nicht freigeben werden"
 
+# FIXME: Dies ist aber nicht infinitisch übersetzt (siehe umliegenden Meldungen)
 #: libsvn_fs_fs/fs_fs.c:385
 #, c-format
 msgid "Can't unlock prototype revision lockfile for transaction '%s'"
@@ -2676,6 +2675,12 @@ msgstr "Unbekanntes URL-Schema für »%s«"
 msgid "'%s' isn't in the same repository as '%s'"
 msgstr "»%s« ist nicht im selben Projektarchiv wie »%s«"
 
+# FIXME: muss noch in libsvn_ra/ra_loader.c:699 als übersetzbar markiert werden
+# (Franzosen verwenden "* ra_%s : %s\n")
+# svn --help gibt aus: "* ra_dav: Modul"
+msgid "* ra_%s: %s\n"
+msgstr "* ra_%s: %s\n"
+
 #: libsvn_ra/ra_loader.c:707
 #, c-format
 msgid "  - handles '%s' scheme\n"
@@ -2744,7 +2749,7 @@ msgstr "Konnte die URL der versionierten Ressource nicht speichern"
 #: libsvn_ra_dav/fetch.c:397
 #, c-format
 msgid "Could not get content-type from response"
-msgstr "Konte »content-type« nicht aus der Antwort lesen."
+msgstr "Konnte »content-type« nicht aus der Antwort lesen"
 
 #: libsvn_ra_dav/fetch.c:438
 #, c-format
@@ -2843,7 +2848,7 @@ msgstr "Protokollfehler: Wir haben dem Server mitgeteilt, Ressourcen nicht autom
 #: libsvn_ra_dav/merge.c:229
 #, c-format
 msgid "Internal error: there is an unknown parent (%d) for the 'DAV:response' element within the MERGE response"
-msgstr "Interner Fehler: Es gibt ein unbekanntes Elternteil (%d) für das »DAV:respose« Element innerhalb der MERGE-Antwort"
+msgstr "Interner Fehler: Es gibt ein unbekanntes Elternteil (%d) für das »DAV:response« Element innerhalb der MERGE-Antwort"
 
 #: libsvn_ra_dav/merge.c:244
 #, c-format
@@ -2917,9 +2922,9 @@ msgstr "Fand Element »apply-textdelta« ohne vorhergehendes »add-file« oder �
 msgid "Got close-file element without preceding add-file or open-file"
 msgstr "Fand Element »close-file« ohne vorhergehendes »add-file« oder »open-file«"
 
-#: libsvn_ra_dav/replay.c:310
 # FIXME: inkonsistent zu obigen Meldungen: open_directory statt opening a directory
 # (Wird Bezug zu Elementen in Dump hergestellt oder nicht?)
+#: libsvn_ra_dav/replay.c:310
 msgid "Got close-directory element without ever opening a directory"
 msgstr "Fand Element »close-directory« ohne vorhergehendes Öffnen eines Verzeichnisses"
 
@@ -2965,7 +2970,7 @@ msgstr "Ungültige Konfiguration: Unbekannter HTTP-Autorisationstyp »%s«"
 
 #: libsvn_ra_dav/session.c:580
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
-msgstr "Modul zum Zugriff auf ein Projektarchiv über das WebDAV (DeltaV) Protokoll"
+msgstr "Modul zum Zugriff auf ein Projektarchiv über das Protokoll WebDAV (DeltaV)"
 
 #: libsvn_ra_dav/session.c:631
 msgid "Malformed URL for repository"
@@ -3057,8 +3062,6 @@ msgstr "Das Projektarchiv wurde permanent nach »%s« verschoben; bitte umplatzi
 msgid "Repository moved temporarily to '%s'; please relocate"
 msgstr "Das Projektarchiv wurde zeitweilig nach »%s« verschoben; bitte umplatzieren"
 
-#  We either have a neon error, or some other error
-#  that we didn't expect.
 #. We either have a neon error, or some other error
 #. that we didn't expect.
 #: libsvn_ra_dav/util.c:844
@@ -3299,7 +3302,7 @@ msgstr "Modul zum Zugriff auf ein Projektarchiv über das svn-Netzwerkprotokoll"
 
 #: libsvn_ra_svn/client.c:739
 msgid "Server did not send repository root"
-msgstr "Server gab keine Projekarchivbasis zurück"
+msgstr "Server gab keine Projektarchivbasis zurück"
 
 #: libsvn_ra_svn/client.c:880
 msgid "Non-string as part of file contents"
@@ -3486,11 +3489,11 @@ msgstr "Unbekannter Status »%s« in Antwort auf Befehl"
 #: svnserve/sasl_auth.c:114
 #, c-format
 msgid "Could not initialize the SASL library"
-msgstr "Konnte die SASL Bibliothek nicht intialisieren"
+msgstr "Konnte die SASL-Bibliothek nicht initialisieren"
 
 #: libsvn_ra_svn/sasl_auth.c:287
 msgid "Unhandled SASL interaction"
-msgstr "Nicht behandelte SASL Interaktion"
+msgstr "Nicht behandelte SASL-Interaktion"
 
 #: libsvn_ra_svn/sasl_auth.c:549
 #: libsvn_ra_svn/simple_auth.c:58
@@ -3507,7 +3510,7 @@ msgstr "Kein Passwort erhalten"
 
 #: libsvn_ra_svn/simple_auth.c:117
 msgid "Cannot negotiate authentication mechanism"
-msgstr "Anmeldeinformationen nicht zwischenspeichern"
+msgstr "Kann Anmeldungsmechanismus nicht aushandeln"
 
 #: libsvn_repos/commit.c:128
 #, c-format
@@ -3558,8 +3561,8 @@ msgid ""
 "WARNING: dumped revision (%ld).  Loading this dump into an empty repository\n"
 "WARNING: will fail.\n"
 msgstr ""
-"WARNUNG: Verweis auf Daten in Revision %ld, welche älter als die älteste \n"
-"WARNUNG: ausgegebene Revision (%ld) ist.  Das Laden diese Datei in ein\n"
+"WARNUNG: Verweis auf Daten in Revision %ld, welche älter als die älteste\n"
+"WARNUNG: ausgegebene Revision (%ld) ist. Das Laden diese Datei in ein\n"
 "WARNUNG: leeres Projektarchiv wird fehlschlagen.\n"
 
 #: libsvn_repos/dump.c:933
@@ -3570,17 +3573,17 @@ msgstr "Startrevision %ld ist größer als Endrevision %ld"
 #: libsvn_repos/dump.c:938
 #, c-format
 msgid "End revision %ld is invalid (youngest revision is %ld)"
-msgstr "Endrevision %ld ist ungültig (neuste Revision ist %ld)"
+msgstr "Endrevision %ld ist ungültig (neueste Revision ist %ld)"
 
 #: libsvn_repos/dump.c:1045
 #, c-format
 msgid "* Dumped revision %ld.\n"
-msgstr "* Ausgegeben Revision %ld.\n"
+msgstr "* Revision %ld ausgegeben.\n"
 
 #: libsvn_repos/dump.c:1046
 #, c-format
 msgid "* Verified revision %ld.\n"
-msgstr "* Verifizierte Revision %ld.\n"
+msgstr "* Revision %ld verifiziert.\n"
 
 #: libsvn_repos/fs-wrap.c:57
 #: libsvn_repos/load.c:1211
@@ -3733,26 +3736,25 @@ msgstr "Relative Quellrevision %ld ist im aktuellen Projektarchiv nicht verfügb
 msgid "Malformed dumpstream: Revision 0 must not contain node records"
 msgstr "Fehlerhafter Dateiabzug: Revision 0 darf keine Knoteneinträge enthalten"
 
-# FIXME: Leerzeichen vor ":" ist französischer Stil!
 #: libsvn_repos/load.c:988
 #, c-format
 msgid "     * editing path : %s ..."
-msgstr "     * Bearbeite Pfad : %s ..."
+msgstr "     * Bearbeite Pfad: %s ..."
 
 #: libsvn_repos/load.c:995
 #, c-format
 msgid "     * deleting path : %s ..."
-msgstr "     * Lösche Pfad : %s ..."
+msgstr "     * Lösche Pfad: %s ..."
 
 #: libsvn_repos/load.c:1003
 #, c-format
 msgid "     * adding path : %s ..."
-msgstr "     * Füge Pfad hinzu : %s ..."
+msgstr "     * Füge Pfad hinzu: %s ..."
 
 #: libsvn_repos/load.c:1012
 #, c-format
 msgid "     * replacing path : %s ..."
-msgstr "     * Ersetze Pfad : %s ..."
+msgstr "     * Ersetze Pfad: %s ..."
 
 #: libsvn_repos/load.c:1022
 #, c-format
@@ -4196,11 +4198,11 @@ msgstr "Kann Eingabe des Kindprozesses »%s« nicht setzen"
 msgid "Can't set process '%s' child outfile"
 msgstr "Kann Ausgabe des Kindprozesses »%s« nicht setzen"
 
-#: libsvn_subr/io.c:2048
-#, c-format
 # FIXME: Laut Code ist %s der Kindprozess. Müsste es dann nicht
 # "Can't set child process '%s' errfile" (oder ganz ohne child) heißen?
 # (Es gibt kein child von %s)
+#: libsvn_subr/io.c:2048
+#, c-format
 msgid "Can't set process '%s' child errfile"
 msgstr "Kann Fehlerausgabe des Kindprozesses »%s« nicht setzen"
 
@@ -4530,7 +4532,7 @@ msgid ""
 "   fingerprint to validate the certificate manually!\n"
 msgstr ""
 " - Das Zertifikat ist nicht von einer vertrauenswürdigen Instanz ausgestellt\n"
-"   Überprüfen Sie den Fingerabduck, um das Zertifikat zu validieren!\n"
+"   Überprüfen Sie den Fingerabdruck, um das Zertifikat zu validieren!\n"
 
 #: libsvn_subr/prompt.c:262
 msgid " - The certificate hostname does not match.\n"
@@ -4681,7 +4683,7 @@ msgstr "MIME-Typ »%s« endet mit einem nicht-alphanumerischen Zeichen"
 #: libsvn_subr/version.c:74
 #, c-format
 msgid "Version mismatch in '%s': found %d.%d.%d%s, expected %d.%d.%d%s"
-msgstr "Version von »%s«  ist unerwartet: gefunden %d.%d.%d%s, erwartet %d.%d.%d%s"
+msgstr "Version von »%s« ist unerwartet: gefunden %d.%d.%d%s, erwartet %d.%d.%d%s"
 
 #: libsvn_subr/xml.c:400
 #, c-format
@@ -5430,7 +5432,7 @@ msgstr ""
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr ""
-"Konnte Verzeichnis »%s« nicht hinzufügen: Parameter »copyfrom« wird noch nicht \n"
+"Konnte Verzeichnis »%s« nicht hinzufügen: Parameter »copyfrom« wird noch nicht\n"
 "unterstützt"
 
 #: libsvn_wc/update_editor.c:1164
@@ -5499,14 +5501,14 @@ msgstr "Kann keinerlei Verzeichnisse erzeugen"
 #: svn/blame-cmd.c:234
 #: svn/list-cmd.c:252
 msgid "'verbose' option invalid in XML mode"
-msgstr "»verbose« Option im XML Modus ungültig"
+msgstr "Option »verbose« ist im XML-Modus ungültig"
 
 #: svn/blame-cmd.c:246
 #: svn/info-cmd.c:507
 #: svn/list-cmd.c:264
 #: svn/status-cmd.c:268
 msgid "'incremental' option only valid in XML mode"
-msgstr "»incremental« Option nur im XML Modus gültig"
+msgstr "Option »incremental« ist nur im XML-Modus gültig"
 
 #: svn/blame-cmd.c:313
 #, c-format
@@ -5960,6 +5962,21 @@ msgid ""
 "                                --ignore-eol-style:\n"
 "                                   Ignore changes in EOL style"
 msgstr ""
+"Vorgabe: »-u«. Wenn Subversion ein\n"
+"                             externes Vergleichsprogramm aufruft, wird PAR nur\n"
+"                             an das Programm weitergereicht. Wenn Subversion\n"
+"                             aber sein internes Vergleichsprogramm benutzt\n"
+"                             oder Annotierungen anzeigt, kann PAR einen der\n"
+"                             folgenden Werte annehmen:\n"
+"                                -u (--unified):\n"
+"                                   Gibt 3 Zeilen Standardkontext aus.\n"
+"                                -b (--ignore-space-change):\n"
+"                                   Ignoriert Änderungen in der Anzahl von Leer-\n"
+"                                   zeichen.\n"
+"                                -w (--ignore-all-space):\n"
+"                                   Ignoriert sämtliche Leerzeichen.\n"
+"                                --ignore-eol-style:\n"
+"                                   Ignoriert Änderungen im EOL-Stil"
 
 #: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
@@ -5979,12 +5996,12 @@ msgstr "Log-Ausgabe endet bei Kopieroperationen"
 
 #: svn/main.c:136
 msgid "disregard default and svn:ignore property ignores"
-msgstr "Globale »ignore« und »svn:ignore« Einstellungen nicht beachten"
+msgstr "Globale »ignore«- und »svn:ignore«-Einstellungen nicht beachten"
 
 #: svn/main.c:138
 #: svnsync/main.c:94
 msgid "do not cache authentication tokens"
-msgstr "Anmeldeinformation nicht zwischenspeichern"
+msgstr "Anmeldeinformationen nicht zwischenspeichern"
 
 #: svn/main.c:140
 #: svnsync/main.c:92
@@ -6010,7 +6027,7 @@ msgstr "Beim Zusammenführen Vorgänger ignorieren"
 
 #: svn/main.c:150
 msgid "ignore externals definitions"
-msgstr "ignoriere »svn:externals« Definitionen"
+msgstr "ignoriere »svn:externals«-Definitionen"
 
 #: svn/main.c:153
 msgid "use ARG as diff command"
@@ -6040,6 +6057,7 @@ msgstr "Arbeite auf einer Revisionseigenschaft (mit -r verwenden)"
 msgid "relocate via URL-rewriting"
 msgstr "durch Umschreiben der URL umplatzieren"
 
+# FIXME: svn --help help gibt "--config-dir par" aus (par statt PAR)!
 #: svn/main.c:168
 #: svnadmin/main.c:272
 #: svnsync/main.c:100
@@ -6112,7 +6130,7 @@ msgid ""
 "  looked up.\n"
 msgstr ""
 "Gibt den Inhalt der angegebenen Dateien oder URLs mit\n"
-"den Revisons- und Autoreninformationen für jede Zeile aus.\n"
+"den Revisions- und Autoreninformationen für jede Zeile aus.\n"
 "Aufruf: blame ZIEL[@REV]...\n"
 "\n"
 "  Falls angegeben, bestimmt REV, in welcher Revision zuerst nachgeschaut wird.\n"
@@ -6136,7 +6154,7 @@ msgid ""
 "usage: 1. changelist CLNAME TARGET...\n"
 "       2. changelist --clear TARGET...\n"
 msgstr ""
-"Verknüpft (oder löst diese Verknüpfung) lokale Pfade mit Änderungsliste CLNAME.\n"
+"Verknüpft lokale Pfade (oder löst diese Verknüpfung) mit Änderungsliste CLNAME.\n"
 "Verwendung: 1. changelist CLNAME ZIEL...\n"
 "            2. changelist --clear ZIEL...\n"
 
@@ -6164,6 +6182,25 @@ msgid ""
 "  to the working copy.  All properties from the repository are applied\n"
 "  to the obstructing path.\n"
 msgstr ""
+"Checkt eine Arbeitskopie aus einem Projektarchiv aus.\n"
+"Aufruf: checkout URL[@REV]... [PFAD]\n"
+"\n"
+"  Falls angegeben, legt REV fest, in welcher Revision die URL zuerst\n"
+"  nachgeschlagen wird.\n"
+"\n"
+"  Ohne Angabe von PFAD wird der Basisname der URL als Ziel verwendet.\n"
+"  Sind mehrere URLs angegeben, wird jede in ein Unterverzeichnis von\n"
+"  PFAD ausgecheckt, dessen Name der Basisname der URL ist.\n"
+"\n"
+"  Bei Angabe von --force, lassen nicht versionierte, behindernde Objekte\n"
+"  in der Arbeitskopie den Vorgang nicht automatisch fehlschlagen. Falls\n"
+"  der behindernde Pfad vom gleichen Typ (Datei oder Verzeichnis) wie der\n"
+"  entsprechende Pfad im Projektarchiv ist, wird er versioniert, behält\n"
+"  aber seinen ursprünglichen Inhalt. Das bedeutet, dass nicht versionierte\n"
+"  Unterverzeichnisse eines behindernden Verzeichnisses ebenfalls versioniert\n"
+"  werden können. Bei Dateien werden alle Unterschiede im Inhalt wie lokale\n"
+"  Modifikationen in der Arbeitskopie behandelt. Sämtliche Eigenschaften\n"
+"  aus dem Projektarchiv werden auf den behindernden Pfad angewendet.\n"
 
 #: svn/main.c:288
 msgid ""
@@ -6189,7 +6226,7 @@ msgstr ""
 "Aufruf: commit [PFAD...]\n"
 "\n"
 "  Eine Logmeldung muss angegeben werden; diese kann jedoch leer sein. Wird\n"
-"  sie nicht mittels einer --message oder --file Option übergeben, wird ein\n"
+"  sie nicht mittels einer --message- oder --file-Option übergeben, wird ein\n"
 "  Editor gestartet.\n"
 "  Falls Objekte gesperrt sind oder gesperrte Objekte enthalten, werden diese\n"
 "  nach einer erfolgreichen Übertragung entsperrt.\n"
@@ -6261,7 +6298,7 @@ msgstr ""
 "     wurden, werden sofort aus der Arbeitskopie entfernt.\n"
 "     PFAD(e), die selbst nicht versioniert oder geändert sind, bzw.\n"
 "     entsprechende Einträge enthalten, werden nur gelöscht, wenn\n"
-"     die »--force« Option angegeben wird.\n"
+"     die Option »--force« angegeben wird.\n"
 "\n"
 "  2. Jede URL wird mittels einer sofortigen Übertragung aus dem\n"
 "     Projektarchiv entfernt.\n"
@@ -6352,11 +6389,11 @@ msgstr ""
 "  2. Exportiert einen sauberen Verzeichnisbaum aus PFAD1 heraus in das\n"
 "     Verzeichnis PFAD2. Ohne Angabe von REV wird WORKING exportiert,\n"
 "     sonst REV. Ohne Angabe von PFAD2 wird der letzte Abschnitt von PFAD1\n"
-"     als lokaler Verzeichnisname verwendet. Ohne Angabe von REV werden alle \n"
+"     als lokaler Verzeichnisname verwendet. Ohne Angabe von REV werden alle\n"
 "     lokalen Änderungen beibehalten. Objekte, die sich nicht unter\n"
 "     Versionskontrolle befinden, werden in diesem Fall auch nicht kopiert.\n"
 "\n"
-"  BASREV gibt an, in welcher Revision das Ziel zuerst nachgeschlagen wird\n"
+"  BASREV gibt an, in welcher Revision das Ziel zuerst gesucht wird.\n"
 
 #: svn/main.c:399
 msgid ""
@@ -6404,6 +6441,9 @@ msgstr ""
 "  angegeben, bestimmt REV, in welcher Revision zuerst nach dem Ziel gesucht\n"
 "  wird.\n"
 
+# FIXME: "looked up" ist überall leicht unterschiedlich übersetzt
+# Ich (Jens) bevorzuge "gesucht" statt "nachgeschlagen" oder "durchsucht", "nachgeschaut"
+# FIXME: Standardsätze sollten eigene msgid haben!
 #: svn/main.c:428
 msgid ""
 "List directory entries in the repository.\n"
@@ -6421,7 +6461,7 @@ msgid ""
 "\n"
 "    Revision number of the last commit\n"
 "    Author of the last commit\n"
-"    If locked, the letter 'O'.  (Use »svn info URL« to see details)\n"
+"    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
 "    Size (in bytes)\n"
 "    Date and time of the last commit\n"
 msgstr ""
@@ -6466,6 +6506,7 @@ msgstr "Lies Sperrkommentar aus Datei PAR"
 msgid "specify lock comment ARG"
 msgstr "Verwende PAR als Sperrkommentar"
 
+# FIXME: behaviour oder behavior?
 #: svn/main.c:462
 msgid ""
 "Show the log messages for a set of revision(s) and/or file(s).\n"
@@ -6520,6 +6561,7 @@ msgstr ""
 "    svn log http://www.beispiel.de/repo/projekt/foo.c\n"
 "    svn log http://www.beispiel.de/repo/projekt foo.c bar.c\n"
 
+# FIXME: WCPATH oder WC_PATH?
 #: svn/main.c:492
 msgid ""
 "Apply the differences between two sources to a working copy path.\n"
@@ -6835,7 +6877,7 @@ msgstr ""
 "Änderungen rückgängig).\n"
 "Aufruf: revert PFAD...\n"
 "\n"
-"  Hinweis: Dieser Unterbefehl erfordert keinen Netzwerkzugriff, und er löst\n"
+"  Hinweis: Dieser Unterbefehl erfordert keinen Netzwerkzugriff und löst\n"
 "  Konfliktzustände auf. Er kann jedoch keine gelöschten Verzeichnisse wieder\n"
 "  herstellen.\n"
 
@@ -6921,7 +6963,7 @@ msgstr ""
 "  »-v« gibt vollständige Revisionsinformationen jedes Objektes aus.\n"
 "\n"
 "Die ersten sechs Spalten der Ausgabe sind jeweils einen Buchstaben breit:\n"
-"    Erste Spalte: Sagt aus, ob das Objekt hinzugefügt, gelöscht, oder\n"
+"    Erste Spalte: Sagt aus, ob das Objekt hinzugefügt, gelöscht oder\n"
 "                  in sonstiger Weise verändert wurde\n"
 "      » « keine Änderungen\n"
 "      »A« Added      - hinzugefügt\n"
@@ -7370,6 +7412,7 @@ msgstr "Status bezogen auf Revision: %6ld\n"
 msgid "Sending        %s\n"
 msgstr "Sende          %s\n"
 
+# CHECKME: Warum wird "Hinzuf." nicht ausgeschrieben? (Einfach 1. Spalte verbreitern)
 #: svn/notify.c:324
 #, c-format
 msgid "Adding  (bin)  %s\n"
@@ -7465,7 +7508,7 @@ msgstr "»%s« scheint kein Pfad einer Arbeitskopie zu sein"
 #: svn/propedit-cmd.c:264
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
-msgstr "Neuer Wert für Eigenschaft »%s« auf »%s« gesetzt\n"
+msgstr "Neuer Wert für Eigenschaft »%s« für »%s« gesetzt\n"
 
 #: svn/propedit-cmd.c:274
 #, c-format
@@ -7770,7 +7813,7 @@ msgstr ""
 "Führt Vorgängerdeltifizierung auf den geänderten Pfaden innerhalb der\n"
 "Revisionsspanne VON:BIS durch. Kurz gefasst komprimiert die Deltifizierung\n"
 "das Projektarchiv, indem nur die Unterschiede oder Deltas zur vorigen\n"
-"Revision gespeichert werden.  Falls keine Revisionen angegeben wurden, wird\n"
+"Revision gespeichert werden. Falls keine Revisionen angegeben wurden, wird\n"
 "nur die HEAD-Revision deltifiziert.\n"
 
 #: svnadmin/main.c:329
@@ -8662,7 +8705,7 @@ msgstr "Ungültige Revisionsnummer angegeben"
 #: svnlook/main.c:2007
 msgid "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr ""
-"Die »--transaction« (-t) und »--revision« (-r) Parameter können nicht\n"
+"Die Parameter »--transaction« (-t) und »--revision« (-r) können nicht\n"
 "gleichzeitig angegeben werden"
 
 #: svnlook/main.c:2089
@@ -8856,6 +8899,19 @@ msgid ""
 "In other words, the destination repository should be a read-only\n"
 "mirror of the source repository.\n"
 msgstr ""
+"Aufruf: svnsync initialize ZIEL_URL QUELL_URL\n"
+"\n"
+"Bereitet ein Zielprojektarchiv auf die Synchronisation mit einem\n"
+"anderen Projektarchiv vor.\n"
+"\n"
+"Die Ziel-URL muss auf die Basis eines leeren Projektarchivs ohne\n"
+"übertragene Revisionen zeigen. Das Zielprojektarchiv muss Änderungen\n"
+"an Revisionseigenschaften zulassen.\n"
+"\n"
+"Übertragungen in das oder Eigenschaftsänderungen im Zielprojektarchiv\n"
+"sollten ausschließlich mit »svnsync« vorgenommen werden.\n"
+"Anders ausgedrückt stellt das Zielprojektarchiv einen Spiegel des\n"
+"Quellprojektarchivs dar, auf den nur lesend zugegriffen werden darf.\n"
 
 #: svnsync/main.c:71
 msgid ""
@@ -9044,7 +9100,7 @@ msgstr ""
 "  nicht von ANGEH_URL ab). Die Versionsnummer wird auf die\n"
 "  Standardausgabe ausgegeben. Ein Beispiel:\n"
 "\n"
-"    $ svnversion . /repos/svn/trunk \n"
+"    $ svnversion . /repos/svn/trunk\n"
 "    4168\n"
 "\n"
 "  Die Versionsnummer ist eine einzelne Nummer, falls die Arbeitskopie\n"

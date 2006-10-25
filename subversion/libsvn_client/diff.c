@@ -817,9 +817,9 @@ svn_client__dry_run_deletions(void *merge_cmd_baton)
 static APR_INLINE svn_boolean_t
 dry_run_deleted_p(struct merge_cmd_baton *merge_b, const char *wcpath)
 {
-    return (merge_b->dry_run &&
-            apr_hash_get(merge_b->dry_run_deletions, wcpath,
-                         APR_HASH_KEY_STRING) != NULL);
+  return (merge_b->dry_run &&
+          apr_hash_get(merge_b->dry_run_deletions, wcpath,
+                       APR_HASH_KEY_STRING) != NULL);
 }
 
 

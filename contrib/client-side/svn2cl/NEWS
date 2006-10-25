@@ -1,3 +1,19 @@
+changes from 0.7 to 0.8
+-----------------------
+
+* added --title option for setting html page title (thanks Matt Doar)
+* added --revision-link option to make the revision numbers in the html
+  output link to some url
+* updated --break-before option to have an optional number of breaks
+* authors file format improvements (see manual)
+* fixes to the svn info command to guess working directory (thanks Iwasa
+  Kazmi)
+* miscellaneous fixes (thanks Max Bane and Iwasa Kazmi)
+* document calling svn2cl from ant by Rob Moore
+* some wrapping fixes
+* fixes for having directories and/or repositories with spaces in them
+
+
 changes from 0.6 to 0.7
 -----------------------
 

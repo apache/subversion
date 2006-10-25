@@ -43,7 +43,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-10-16 08:57+0200\n"
-"PO-Revision-Date: 2006-10-17 20:04+0200\n"
+"PO-Revision-Date: 2006-10-25 09:19+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -2307,12 +2307,12 @@ msgstr "Kan inte låsa upp olåst transaktion \"%s\""
 #: libsvn_fs_fs/fs_fs.c:385
 #, c-format
 msgid "Can't unlock prototype revision lockfile for transaction '%s'"
-msgstr ""
+msgstr "Kan inte låsa upp låsfilen för revisionsprototypfilen i transaktionen \"%s\""
 
 #: libsvn_fs_fs/fs_fs.c:391
 #, c-format
 msgid "Can't close prototype revision lockfile for transaction '%s'"
-msgstr ""
+msgstr "Kan inte stänga revisionsprototypfilens låsfil i transaktionen \"%s\""
 
 #: libsvn_fs_fs/fs_fs.c:453
 #, c-format
@@ -2320,6 +2320,8 @@ msgid ""
 "Cannot write to the prototype revision file of transaction '%s' because a "
 "previous representation is currently being written by this process"
 msgstr ""
+"Kan inte skriva till revisionsprototypfilen i transaktionen \"%s\" då en\n"
+"tidigare representation just skrivs av denna process"
 
 #: libsvn_fs_fs/fs_fs.c:489
 #, c-format
@@ -2327,6 +2329,8 @@ msgid ""
 "Cannot write to the prototype revision file of transaction '%s' because a "
 "previous representation is currently being written by another process"
 msgstr ""
+"Kan inte skriva till revisionsprototypfilen i transaktionen \"%s\" då en\n"
+"tidigare representation just skrivs av en annan process<"
 
 #: libsvn_fs_fs/fs_fs.c:496 libsvn_subr/io.c:1531
 #, c-format
@@ -2938,12 +2942,12 @@ msgstr "Sökvägen \"%s\" finns inte"
 #: libsvn_ra_dav/util.c:832
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
-msgstr ""
+msgstr "Arkivet har flyttats permanent till \"%s\"; vänligen omlokalisera"
 
 #: libsvn_ra_dav/util.c:834
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
-msgstr ""
+msgstr "Arkivet har flyttats temporärt till \"%s\"; vänligen omlokalisera<"
 
 #. We either have a neon error, or some other error
 #. that we didn't expect.
@@ -3293,7 +3297,7 @@ msgstr "Icke-sträng var del av textdelta"
 #: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
 #, c-format
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr ""
+msgstr "Kommandot finish-replay ej tillåtet om replay inte är aktivt"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -3361,9 +3365,11 @@ msgstr "Okänd status \"%s\" i kommandorespons"
 msgid "Could not initialize the SASL library"
 msgstr "Kunde inte initiera SASL-biblioteket"
 
+# Don't spend time on improving this, since the code says it should never
+# happen anyway:-)
 #: libsvn_ra_svn/sasl_auth.c:287
 msgid "Unhandled SASL interaction"
-msgstr ""
+msgstr "Ej hanterad SASL-interaktion"
 
 #: libsvn_ra_svn/sasl_auth.c:549 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
@@ -5024,9 +5030,9 @@ msgid "Error removing lock from entry for '%s'"
 msgstr "Fel vid borttagning av lås från posten för \"%s\""
 
 #: libsvn_wc/log.c:879
-#, fuzzy, c-format
+#, c-format
 msgid "Error removing changelist from entry '%s'"
-msgstr "Fel vid läsning av ändringar för nyckeln \"%s\""
+msgstr "Fel vid borttagning av ändringslista för posten \"%s\""
 
 #: libsvn_wc/log.c:1011
 #, c-format
@@ -5643,14 +5649,14 @@ msgstr ""
 "%s\n"
 
 #: svn/info-cmd.c:425
-#, fuzzy, c-format
+#, c-format
 msgid "Changelist: %s\n"
-msgstr "Kontrollsumma: %s\n"
+msgstr "Ändringslista: %s\n"
 
 #: svn/info-cmd.c:477 svn/revert-cmd.c:59
-#, fuzzy, c-format
+#, c-format
 msgid "no such changelist '%s'"
-msgstr "Ingen post med namnet: \"%s\""
+msgstr "ingen ändringslista med namnet: \"%s\""
 
 #: svn/info-cmd.c:539
 #, c-format
@@ -5821,6 +5827,20 @@ msgid ""
 "                                --ignore-eol-style:\n"
 "                                   Ignore changes in EOL style"
 msgstr ""
+"Ingångsvärde: \"-u\". När Subversion kör ett\n"
+"                             externt diff-program, skickas ARG till programmet.\n"
+"                             Men när Subversion använder den inbygda diff-\n"
+"                             implementationen, eller visar radvis revisions-\n"
+"                             information (blame), kan ARG vara något av\n"
+"                             följande:\n"
+"                                -u (--unified):\n"
+"                                   Visa tre rader av sammanhang\n"
+"                                -b (--ignore-space-change):\n"
+"                                   Bortse från ändringar av mängden tomrum\n"
+"                                -w (--ignore-all-space):\n"
+"                                   Bortse från allt tomrum\n"
+"                                --ignore-eol-style\n"
+"                                   Bortse från ändringar av radbrytningstecken"
 
 #: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
@@ -5941,15 +5961,15 @@ msgstr "visa en sammanfattning av resultatet"
 
 #: svn/main.c:188
 msgid "remove changelist association"
-msgstr ""
+msgstr "ta bort koppling till ändringslista"
 
 #: svn/main.c:190
 msgid "operate only on members of changelist ARG"
-msgstr ""
+msgstr "arbeta endast med medlemmar av ändringslistan ARG"
 
 #: svn/main.c:192
 msgid "don't delete changelist after commit"
-msgstr ""
+msgstr "ta inte bort ändringslistan efter arkivering"
 
 #: svn/main.c:231
 msgid ""
@@ -6020,6 +6040,25 @@ msgid ""
 "  to the working copy.  All properties from the repository are applied\n"
 "  to the obstructing path.\n"
 msgstr ""
+"Checka ut en arbetskopia från ett arkiv.\n"
+"användning: checkout URL[@REV]... SÖKVÄG\n"
+"\n"
+"  Om den anges, bestämmer REV i vilken revision URL först letas upp.\n"
+"\n"
+"  Om SÖKVÄG utelämnas, används URL:s basnamn som destination. Om flera\n"
+"  URL:er anges, kommer varje URL att checkas ut i en underkatalog till\n"
+"  SÖKVÄG som får URL:ens basnamn som katalognamn.\n"
+"\n"
+"  Om --force används, orsakar icke versionshanterade sökvägar som är i\n"
+"  vägen inte automatiskt att utcheckningen misslyckas vid försök att lägga till\n"
+"  dem. Om sökvägen som är i vägen är av samma typ (fil eller katalog)\n"
+"  som motsvarande sökväg i arkivet, kommer den att bli versionshanterad,\n"
+"  men innehållet lämnas som det är i arbetskopian. Detta medför att en\n"
+"  katalog som är i vägen även kan ha barn som är i vägen, vilka följaktligen\n"
+"  också blir versionshanterade. Vad gäller filer kommer skillnader\n"
+"  mellan de filer som är i vägen och arkivets filer att betraktas som lokala\n"
+"  ändringar i arbetskopian. Samtliga egenskaper i arkivet läggs till för\n"
+"  sökvägar som är i vägen.\n"
 
 #: svn/main.c:288
 msgid ""
@@ -7411,7 +7450,7 @@ msgstr "Försök med \"svn revert --recursive\" istället?"
 msgid ""
 "\n"
 "--- Changelist '%s':\n"
-msgstr ""
+msgstr "\n--- Ändringslista '%s':\n"
 
 #: svn/status.c:263
 #, c-format
@@ -7471,7 +7510,7 @@ msgstr "system(\"%s\") returnerade %d"
 
 #: svn/util.c:307
 msgid "Error normalizing edited contents to internal format"
-msgstr ""
+msgstr "Fel vid normalisering av det redigerade innehållet till det interna formatet"
 
 #: svn/util.c:338
 #, c-format
@@ -7492,7 +7531,7 @@ msgstr "--Denna och nedanstående rader kommer inte med i loggmeddelandet--"
 
 #: svn/util.c:516
 msgid "Error normalizing log message to internal format"
-msgstr ""
+msgstr "Fel vid normalisering av loggmeddelande till det interna formatet"
 
 #: svn/util.c:531
 msgid ""
@@ -7634,6 +7673,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"använd ett format kompatibelt med Subversion-\n"
+"                             versioner äldre än 1.4"
 
 #: svnadmin/main.c:308
 msgid ""
@@ -7820,7 +7861,6 @@ msgstr ""
 "Ta bort namngivna transaktion(er).\n"
 
 #: svnadmin/main.c:399
-#, fuzzy
 msgid ""
 "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
 "\n"
@@ -7839,15 +7879,13 @@ msgstr ""
 "Sätt loggmeddelandet för revisionen REVISION till innehållet i filen FIL.\n"
 "Använd --bypass-hooks för att revisionsegenskapsrelaterade hookskript inte\n"
 "ska aktiveras (om du till exempel vill undvika att e-post skickas från\n"
-"ditt post-revprop-change-hookskript, eller om ändring av "
-"revisionsegenskaper\n"
+"ditt post-revprop-change-hookskript, eller om ändring av revisionsegenskaper\n"
 "ej är påslaget i pre-revprop-change-hookskriptet).\n"
 "\n"
 "ANMÄRKNING: Historik lagras inte för revisionsegenskaper, så detta kommando\n"
 "skriver för alltid över det befintliga loggmeddelandet.\n"
 
 #: svnadmin/main.c:411
-#, fuzzy
 msgid ""
 "usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
 "\n"
@@ -7859,17 +7897,15 @@ msgid ""
 "NOTE: Revision properties are not versioned, so this command will\n"
 "overwrite the previous value of the property.\n"
 msgstr ""
-"användning: svnadmin setlog ARKIV_SÖKVÄG -r REVISION FIL\n"
+"användning: svnadmin setrevprop ARKIV_SÖKVÄG -r REVISION NAMN FIL\n"
 "\n"
-"Sätt loggmeddelandet för revisionen REVISION till innehållet i filen FIL.\n"
-"Använd --bypass-hooks för att revisionsegenskapsrelaterade hookskript inte\n"
-"ska aktiveras (om du till exempel vill undvika att e-post skickas från\n"
-"ditt post-revprop-change-hookskript, eller om ändring av "
-"revisionsegenskaper\n"
-"ej är påslaget i pre-revprop-change-hookskriptet).\n"
+"Sätt egenskapen NAMN på revisionen REVISION till innehållet i FIL. Använd\n"
+"--use-pre-revprop-change-hook/--use-post-revprop-change-hook för att starta\n"
+"hookskripten för revisionsegenskaper (om du exempelvis vill att epost ska\n"
+"skickas från port+revprop+change+hookskriptet.\n"
 "\n"
-"ANMÄRKNING: Historik lagras inte för revisionsegenskaper, så detta kommando\n"
-"skriver för alltid över det befintliga loggmeddelandet.\n"
+"ANMÄRKNING: Historik sparas ej för revisionsegenskaper, så detta kommando\n"
+"skriver över egenskapens tidigare värde.\n"
 
 #: svnadmin/main.c:422
 msgid ""
@@ -7905,7 +7941,6 @@ msgid "done.\n"
 msgstr "klart.\n"
 
 #: svnadmin/main.c:676
-#, fuzzy
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -7913,10 +7948,10 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"allmän användning: svnadmin UNDERKOMMANDO ARKIV_SÖKVÄG\n"
-"                   [ ARGUMENT & FLAGGOR ...]\n"
-"Skriv \"svnadmin help <UNDERKOMMANDO>\" för att få hjälp om ett specifikt\n"
+"allmän användning: svnadmin UNDERKOMMANDO ARKIV_SÖKVÄG [ARGUMENT & FLAGGOR...]\n"
+"Skriv \"svnadmin help <underkommando>\" för att få hjälp om ett specifikt\n"
 "underkommando.\n"
+"Skriv \"svnadmin --version\" för att se programversion och filsystemsmoduler.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
@@ -8132,7 +8167,6 @@ msgstr ""
 "användning: svndumpfilter help [SUBCOMMAND...]\n"
 
 #: svndumpfilter/main.c:888
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -8141,9 +8175,9 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "allmän användning: svndumpfilter UNDERKOMMANDO [ARGUMENT & FLAGGOR ...]\n"
-"Skriv \"svndumpfilter help <UNDERKOMMANDO>\" för att få hjälp om ett "
-"specifikt\n"
+"Skriv \"svndumpfilter help <UNDERKOMMANDO>\" för att få hjälp om ett specifikt\n"
 "underkommando.\n"
+"Skriv \"svndumpfilter --version\" för att se programversion.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
@@ -8497,7 +8531,6 @@ msgid "Missing repository path argument"
 msgstr "Arkivargument saknas"
 
 #: svnlook/main.c:1653
-#, fuzzy
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -8508,12 +8541,12 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"allmän användning: svnlook UNDERKOMMANDO ARKIV_SÖKVÄG [ARGUMENT & "
-"FLAGGOR ...]\n"
+"allmän användning: svnlook UNDERKOMMANDO ARKIV_SÖKVÄG [ARGUMENT & FLAGGOR ...]\n"
 "Anmärkning: De kommandon som tar --revision- och --transaction-flaggor\n"
-"använder arkivets yngsta revision om ingen av dessa anges.\n"
-"Skriv \"svnlook help <subcommand>\" för att få hjälp om ett specifikt\n"
+"            använder arkivets yngsta revision om ingen av dessa anges.\n"
+"Skriv \"svnlook help <underkommando>\" för att få hjälp om ett specifikt\n"
 "underkommando.\n"
+"Skriv \"svnlook --version\" för att se programversion och filsystemsmoduler.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
@@ -8718,7 +8751,7 @@ msgstr "Kan inte erhålla värdnamn"
 
 #: svnserve/sasl_auth.c:299
 msgid "Could not obtain the list of SASL mechanisms"
-msgstr ""
+msgstr "Kunde inte erhålla listan med SASL-mekanismer"
 
 #: svnserve/sasl_auth.c:337
 msgid "Couldn't obtain the authenticated username"
@@ -8766,7 +8799,6 @@ msgid ""
 msgstr ""
 
 #: svnsync/main.c:71
-#, fuzzy
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
@@ -8776,25 +8808,24 @@ msgstr ""
 "Överför väntande revisioner från källa till destination.\n"
 
 #: svnsync/main.c:76
-#, fuzzy
 msgid ""
 "usage: svnsync copy-revprops DEST_URL REV\n"
 "\n"
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
-"användning: svnsync copy-revprops DEST_URL --revision REV\n"
+"användning: svnsync copy-revprops DEST_URL REV\n"
 "Kopiera alla revisionsegenskaper för revisionen REV från källan till\n"
 "destinationen.\n"
 
 #: svnsync/main.c:82
-#, fuzzy
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
 "användning: svnsync help [UNDERKOMMANDO...]\n"
+"\n"
 "Visa hur detta program eller dess underkommandon används.\n"
 
 #: svnsync/main.c:184
@@ -8816,7 +8847,7 @@ msgstr "Sessionens rot är \"%s\", men arkivets rot är \"%s\""
 #: svnsync/main.c:341
 #, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
-msgstr ""
+msgstr "Kopierade egenskaper för revision %ld (%s*-egenskaper hoppades över).\n"
 
 #: svnsync/main.c:346
 #, c-format
@@ -8883,7 +8914,6 @@ msgid "Invalid revision number"
 msgstr "Ogiltigt revisionsnummer"
 
 #: svnsync/main.c:1239
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -8892,8 +8922,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "allmän användning: svnsync UNDERKOMMANDO DEST_URL  [ARGUMENT & FLAGGOR ...]\n"
-"Skriv \"svnsync help <underkommando>\" för hjälp med ett visst "
-"underkommando.\n"
+"Skriv \"svnsync help <underkommando>\" för hjälp med ett visst underkommando.\n"
+"Skriv @svnsync --version\" för att se programversion och arkivåtkomstmoduler.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
