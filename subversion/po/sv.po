@@ -42,8 +42,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-10-17 20:15+0200\n"
-"PO-Revision-Date: 2006-10-17 20:18+0200\n"
+"POT-Creation-Date: 2006-10-25 09:27+0200\n"
+"PO-Revision-Date: 2006-10-25 09:32+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Swedish <sv@li.org>\n"
 "MIME-Version: 1.0\n"
@@ -1011,16 +1011,16 @@ msgstr ""
 
 #: libsvn_client/commit_util.c:686 libsvn_client/commit_util.c:816
 #: libsvn_client/copy.c:1002 libsvn_client/delete.c:67
-#: libsvn_client/diff.c:1409 libsvn_client/diff.c:2141
-#: libsvn_client/diff.c:2736 libsvn_client/diff.c:2865
+#: libsvn_client/diff.c:1462 libsvn_client/diff.c:2194
+#: libsvn_client/diff.c:2789 libsvn_client/diff.c:2919
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
 #: libsvn_client/prop_commands.c:213 libsvn_client/prop_commands.c:446
 #: libsvn_client/prop_commands.c:609 libsvn_client/prop_commands.c:958
 #: libsvn_client/ra.c:181 libsvn_client/revisions.c:89
 #: libsvn_client/status.c:256 libsvn_client/switch.c:106
 #: libsvn_wc/adm_crawler.c:471 libsvn_wc/adm_crawler.c:764
-#: libsvn_wc/adm_ops.c:1050 libsvn_wc/adm_ops.c:2335 libsvn_wc/adm_ops.c:2361
-#: libsvn_wc/adm_ops.c:2397 libsvn_wc/copy.c:349 libsvn_wc/copy.c:430
+#: libsvn_wc/adm_ops.c:1050 libsvn_wc/adm_ops.c:2338 libsvn_wc/adm_ops.c:2364
+#: libsvn_wc/adm_ops.c:2400 libsvn_wc/copy.c:349 libsvn_wc/copy.c:430
 #: libsvn_wc/copy.c:437 libsvn_wc/diff.c:1787 libsvn_wc/entries.c:2225
 #: libsvn_wc/entries.c:2780 libsvn_wc/props.c:479 libsvn_wc/props.c:1088
 #: libsvn_wc/props.c:1506 libsvn_wc/questions.c:182 libsvn_wc/questions.c:291
@@ -1198,38 +1198,38 @@ msgstr "Kan inte visa: filen markerad som binär.%s"
 
 #. xgettext: the '.working', '.merge-left.r%ld' and '.merge-right.r%ld'
 #. strings are used to tag onto a filename in case of a merge conflict
-#: libsvn_client/diff.c:772
+#: libsvn_client/diff.c:796
 msgid ".working"
 msgstr ".arbetskopia"
 
-#: libsvn_client/diff.c:774
+#: libsvn_client/diff.c:798
 #, c-format
 msgid ".merge-left.r%ld"
 msgstr ".sammanslagning-vänster.r%ld"
 
-#: libsvn_client/diff.c:777
+#: libsvn_client/diff.c:801
 #, c-format
 msgid ".merge-right.r%ld"
 msgstr ".sammanslagning-höger.r%ld"
 
-#: libsvn_client/diff.c:1474 libsvn_client/diff.c:1680
+#: libsvn_client/diff.c:1527 libsvn_client/diff.c:1733
 msgid "Not all required revisions are specified"
 msgstr "Alla revisioner som krävs angavs inte"
 
-#: libsvn_client/diff.c:1489
+#: libsvn_client/diff.c:1542
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr "Åtminstone en revision måste vara icke-lokal för fixerad diff"
 
-#: libsvn_client/diff.c:1601 libsvn_client/diff.c:1613
+#: libsvn_client/diff.c:1654 libsvn_client/diff.c:1666
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
 msgstr "\"%s\" fanns inte i revision %ld i arkivet"
 
-#: libsvn_client/diff.c:1961
+#: libsvn_client/diff.c:2014
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
 msgstr "Tyvärr anropades svn_client_diff3 på ett sätt som inte stöds ännu"
 
-#: libsvn_client/diff.c:2000
+#: libsvn_client/diff.c:2053
 msgid ""
 "Only diffs between a path's text-base and its working files are supported at "
 "this time"
@@ -1237,17 +1237,17 @@ msgstr ""
 "Endast skillnader mellan en arbetskopias textbas och arbetsfilerna stöds för "
 "närvarande"
 
-#: libsvn_client/diff.c:2145 libsvn_client/switch.c:110
+#: libsvn_client/diff.c:2198 libsvn_client/switch.c:110
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "Katalogen \"%s\" saknar URL"
 
-#: libsvn_client/diff.c:2352
+#: libsvn_client/diff.c:2405
 msgid "Summarizing diff can only compare repository to repository"
 msgstr "Summerande diff kan endast jämföra arkiv med arkiv"
 
-#: libsvn_client/diff.c:2709 libsvn_client/diff.c:2715
-#: libsvn_client/diff.c:2850 libsvn_client/locking_commands.c:263
+#: libsvn_client/diff.c:2762 libsvn_client/diff.c:2768
+#: libsvn_client/diff.c:2904 libsvn_client/locking_commands.c:263
 #: libsvn_client/ra.c:373 libsvn_client/ra.c:739 libsvn_client/ra.c:876
 #, c-format
 msgid "'%s' has no URL"
@@ -3218,7 +3218,7 @@ msgstr "Icke-sträng var del av textdelta"
 #: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
 #, c-format
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr ""
+msgstr "Kommandot finish-replay ej tillåtet om replay inte är aktivt"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -4547,27 +4547,27 @@ msgstr ""
 msgid "The URL '%s' has a different repository root than its parent"
 msgstr "URL:en \"%s\" har annan arkivrot än sin förälder"
 
-#: libsvn_wc/adm_ops.c:1501
+#: libsvn_wc/adm_ops.c:1504
 #, c-format
 msgid "Error restoring text for '%s'"
 msgstr "Fel vid återställande av texten för \"%s\""
 
-#: libsvn_wc/adm_ops.c:1632
+#: libsvn_wc/adm_ops.c:1635
 #, c-format
 msgid "Cannot revert: '%s' is not under version control"
 msgstr "Kan inte återställa: \"%s\" är inte versionshanterad"
 
-#: libsvn_wc/adm_ops.c:1660
+#: libsvn_wc/adm_ops.c:1663
 #, c-format
 msgid "Cannot revert '%s': unsupported entry node kind"
 msgstr "Kan inte återställa \"%s\": nodtypen stöds inte"
 
-#: libsvn_wc/adm_ops.c:1671
+#: libsvn_wc/adm_ops.c:1674
 #, c-format
 msgid "Cannot revert '%s': unsupported node kind in working copy"
 msgstr "Kan inte återställa \"%s\": nodtyp som inte stöds i arbetskopian"
 
-#: libsvn_wc/adm_ops.c:1718
+#: libsvn_wc/adm_ops.c:1721
 msgid ""
 "Cannot revert addition of current directory; please try again from the "
 "parent directory"
@@ -4575,12 +4575,12 @@ msgstr ""
 "Kan inte återställa tillägg av aktuell katalog; försök igen från "
 "föräldrakatalogen"
 
-#: libsvn_wc/adm_ops.c:1740
+#: libsvn_wc/adm_ops.c:1743
 #, c-format
 msgid "Unknown or unexpected kind for path '%s'"
 msgstr "Okänd eller oväntad typ för sökvägen \"%s\""
 
-#: libsvn_wc/adm_ops.c:1902
+#: libsvn_wc/adm_ops.c:1905
 #, c-format
 msgid "File '%s' has local modifications"
 msgstr "Filen \"%s\" har lokala ändringar"
@@ -5679,6 +5679,20 @@ msgid ""
 "                                --ignore-eol-style:\n"
 "                                   Ignore changes in EOL style"
 msgstr ""
+"Ingångsvärde: \"-u\". När Subversion kör ett\n"
+"                             externt diff-program, skickas ARG till programmet.\n"
+"                             Men när Subversion använder den inbygda diff-\n"
+"                             implementationen, eller visar radvis revisions-\n"
+"                             information (blame), kan ARG vara något av\n"
+"                             följande:\n"
+"                                -u (--unified):\n"
+"                                   Visa tre rader av sammanhang\n"
+"                                -b (--ignore-space-change):\n"
+"                                   Bortse från ändringar av mängden tomrum\n"
+"                                -w (--ignore-all-space):\n"
+"                                   Bortse från allt tomrum\n"
+"                                --ignore-eol-style\n"
+"                                   Bortse från ändringar av radbrytningstecken"
 
 #: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
@@ -6926,27 +6940,27 @@ msgstr "Hoppade över saknat mål: \"%s\"\n"
 msgid "Skipped '%s'\n"
 msgstr "Hoppade över \"%s\"\n"
 
-#: svn/notify.c:94
+#: svn/notify.c:102
 #, c-format
 msgid "Restored '%s'\n"
 msgstr "Återskapade \"%s\"\n"
 
-#: svn/notify.c:100
+#: svn/notify.c:108
 #, c-format
 msgid "Reverted '%s'\n"
 msgstr "Återställde \"%s\"\n"
 
-#: svn/notify.c:106
+#: svn/notify.c:114
 #, c-format
 msgid "Failed to revert '%s' -- try updating instead.\n"
 msgstr "Misslyckades med att återställa \"%s\" -- försök uppdatera istället.\n"
 
-#: svn/notify.c:114
+#: svn/notify.c:122
 #, c-format
 msgid "Resolved conflicted state of '%s'\n"
 msgstr "Löste konflikttillståndet för \"%s\"\n"
 
-#: svn/notify.c:195
+#: svn/notify.c:203
 #, c-format
 msgid ""
 "\n"
@@ -6955,77 +6969,77 @@ msgstr ""
 "\n"
 "Hämtar externt objekt till \"%s\"\n"
 
-#: svn/notify.c:210
+#: svn/notify.c:218
 #, c-format
 msgid "Exported external at revision %ld.\n"
 msgstr "Exporterade extern katalog vid revision %ld.\n"
 
-#: svn/notify.c:211
+#: svn/notify.c:219
 #, c-format
 msgid "Exported revision %ld.\n"
 msgstr "Exporterade revision %ld.\n"
 
-#: svn/notify.c:219
+#: svn/notify.c:227
 #, c-format
 msgid "Checked out external at revision %ld.\n"
 msgstr "Checkade ut extern katalog vid revision %ld.\n"
 
-#: svn/notify.c:220
+#: svn/notify.c:228
 #, c-format
 msgid "Checked out revision %ld.\n"
 msgstr "Checkade ut revision %ld.\n"
 
-#: svn/notify.c:230
+#: svn/notify.c:238
 #, c-format
 msgid "Updated external to revision %ld.\n"
 msgstr "Uppdaterade extern katalog till revision %ld.\n"
 
-#: svn/notify.c:231
+#: svn/notify.c:239
 #, c-format
 msgid "Updated to revision %ld.\n"
 msgstr "Uppdaterade till revision %ld.\n"
 
-#: svn/notify.c:239
+#: svn/notify.c:247
 #, c-format
 msgid "External at revision %ld.\n"
 msgstr "Extern katalog är på revision %ld.\n"
 
-#: svn/notify.c:240
+#: svn/notify.c:248
 #, c-format
 msgid "At revision %ld.\n"
 msgstr "Är på revision %ld.\n"
 
-#: svn/notify.c:252
+#: svn/notify.c:260
 #, c-format
 msgid "External export complete.\n"
 msgstr "Extern export klar.\n"
 
-#: svn/notify.c:253
+#: svn/notify.c:261
 #, c-format
 msgid "Export complete.\n"
 msgstr "Export klar.\n"
 
-#: svn/notify.c:260
+#: svn/notify.c:268
 #, c-format
 msgid "External checkout complete.\n"
 msgstr "Extern utcheckning klar.\n"
 
-#: svn/notify.c:261
+#: svn/notify.c:269
 #, c-format
 msgid "Checkout complete.\n"
 msgstr "Utcheckning klar.\n"
 
-#: svn/notify.c:268
+#: svn/notify.c:276
 #, c-format
 msgid "External update complete.\n"
 msgstr "Extern uppdatering klar.\n"
 
-#: svn/notify.c:269
+#: svn/notify.c:277
 #, c-format
 msgid "Update complete.\n"
 msgstr "Uppdatering klar.\n"
 
-#: svn/notify.c:285
+#: svn/notify.c:293
 #, c-format
 msgid ""
 "\n"
@@ -7034,47 +7048,47 @@ msgstr ""
 "\n"
 "Utför statuskontroll av extern katalog på \"%s\"\n"
 
-#: svn/notify.c:293
+#: svn/notify.c:301
 #, c-format
 msgid "Status against revision: %6ld\n"
 msgstr "Status gentemot revision: %6ld\n"
 
-#: svn/notify.c:301
+#: svn/notify.c:309
 #, c-format
 msgid "Sending        %s\n"
 msgstr "Skickar             %s\n"
 
-#: svn/notify.c:310
+#: svn/notify.c:318
 #, c-format
 msgid "Adding  (bin)  %s\n"
 msgstr "Lägger till (binär) %s\n"
 
-#: svn/notify.c:317
+#: svn/notify.c:325
 #, c-format
 msgid "Adding         %s\n"
 msgstr "Lägger till         %s\n"
 
-#: svn/notify.c:324
+#: svn/notify.c:332
 #, c-format
 msgid "Deleting       %s\n"
 msgstr "Raderar             %s\n"
 
-#: svn/notify.c:331
+#: svn/notify.c:339
 #, c-format
 msgid "Replacing      %s\n"
 msgstr "Ersätter            %s\n"
 
-#: svn/notify.c:341
+#: svn/notify.c:349
 #, c-format
 msgid "Transmitting file data "
 msgstr "Skickar filinnehåll "
 
-#: svn/notify.c:350
+#: svn/notify.c:358
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
 msgstr "'%s' låstes av användaren '%s'.\n"
 
-#: svn/notify.c:356
+#: svn/notify.c:364
 #, c-format
 msgid "'%s' unlocked.\n"
 msgstr "'%s' låstes upp.\n"
@@ -7404,6 +7418,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"använd ett format kompatibelt med Subversion-\n"
+"                             versioner äldre än 1.4"
 
 #: svnadmin/main.c:299
 msgid ""
@@ -7649,7 +7665,6 @@ msgid "done.\n"
 msgstr "klart.\n"
 
 #: svnadmin/main.c:654
-#, fuzzy
 msgid ""
 "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
 "Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
@@ -7657,10 +7672,10 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"allmän användning: svnadmin UNDERKOMMANDO ARKIV_SÖKVÄG\n"
-"                   [ ARGUMENT & FLAGGOR ...]\n"
-"Skriv \"svnadmin help <UNDERKOMMANDO>\" för att få hjälp om ett specifikt\n"
+"allmän användning: svnadmin UNDERKOMMANDO ARKIV_SÖKVÄG [ARGUMENT & FLAGGOR...]\n"
+"Skriv \"svnadmin help <underkommando>\" för att få hjälp om ett specifikt\n"
 "underkommando.\n"
+"Skriv \"svnadmin --version\" för att se programversion och filsystemsmoduler.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
@@ -7871,7 +7886,6 @@ msgstr ""
 "användning: svndumpfilter help [SUBCOMMAND...]\n"
 
 #: svndumpfilter/main.c:888
-#, fuzzy
 msgid ""
 "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
 "Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
@@ -7880,9 +7894,9 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "allmän användning: svndumpfilter UNDERKOMMANDO [ARGUMENT & FLAGGOR ...]\n"
-"Skriv \"svndumpfilter help <UNDERKOMMANDO>\" för att få hjälp om ett "
-"specifikt\n"
+"Skriv \"svndumpfilter help <UNDERKOMMANDO>\" för att få hjälp om ett specifikt\n"
 "underkommando.\n"
+"Skriv \"svndumpfilter --version\" för att se programversion.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
@@ -8236,7 +8250,6 @@ msgid "Missing repository path argument"
 msgstr "Arkivargument saknas"
 
 #: svnlook/main.c:1653
-#, fuzzy
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -8247,12 +8260,12 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"allmän användning: svnlook UNDERKOMMANDO ARKIV_SÖKVÄG [ARGUMENT & "
-"FLAGGOR ...]\n"
+"allmän användning: svnlook UNDERKOMMANDO ARKIV_SÖKVÄG [ARGUMENT & FLAGGOR ...]\n"
 "Anmärkning: De kommandon som tar --revision- och --transaction-flaggor\n"
-"använder arkivets yngsta revision om ingen av dessa anges.\n"
-"Skriv \"svnlook help <subcommand>\" för att få hjälp om ett specifikt\n"
+"            använder arkivets yngsta revision om ingen av dessa anges.\n"
+"Skriv \"svnlook help <underkommando>\" för att få hjälp om ett specifikt\n"
 "underkommando.\n"
+"Skriv \"svnlook --version\" för att se programversion och filsystemsmoduler.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
@@ -8492,7 +8505,6 @@ msgid ""
 msgstr ""
 
 #: svnsync/main.c:71
-#, fuzzy
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
@@ -8502,25 +8514,24 @@ msgstr ""
 "Överför väntande revisioner från källa till destination.\n"
 
 #: svnsync/main.c:76
-#, fuzzy
 msgid ""
 "usage: svnsync copy-revprops DEST_URL REV\n"
 "\n"
 "Copy all revision properties for revision REV from source to\n"
 "destination.\n"
 msgstr ""
-"användning: svnsync copy-revprops DEST_URL --revision REV\n"
+"användning: svnsync copy-revprops DEST_URL REV\n"
 "Kopiera alla revisionsegenskaper för revisionen REV från källan till\n"
 "destinationen.\n"
 
 #: svnsync/main.c:82
-#, fuzzy
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "\n"
 "Describe the usage of this program or its subcommands.\n"
 msgstr ""
 "användning: svnsync help [UNDERKOMMANDO...]\n"
+"\n"
 "Visa hur detta program eller dess underkommandon används.\n"
 
 #: svnsync/main.c:184
@@ -8542,7 +8553,7 @@ msgstr "Sessionens rot är \"%s\", men arkivets rot är \"%s\""
 #: svnsync/main.c:341
 #, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
-msgstr ""
+msgstr "Kopierade egenskaper för revision %ld (%s*-egenskaper hoppades över).\n"
 
 #: svnsync/main.c:346
 #, c-format
@@ -8609,7 +8620,6 @@ msgid "Invalid revision number"
 msgstr "Ogiltigt revisionsnummer"
 
 #: svnsync/main.c:1239
-#, fuzzy
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -8618,8 +8628,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "allmän användning: svnsync UNDERKOMMANDO DEST_URL  [ARGUMENT & FLAGGOR ...]\n"
-"Skriv \"svnsync help <underkommando>\" för hjälp med ett visst "
-"underkommando.\n"
+"Skriv \"svnsync help <underkommando>\" för hjälp med ett visst underkommando.\n"
+"Skriv @svnsync --version\" för att se programversion och arkivåtkomstmoduler.\n"
 "\n"
 "Tillgängliga underkommandon:\n"
 
