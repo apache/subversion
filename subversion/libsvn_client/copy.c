@@ -31,6 +31,7 @@
 #include "svn_opt.h"
 #include "svn_time.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 
 #include "client.h"
 
@@ -185,6 +186,93 @@ struct path_driver_cb_baton
   svn_string_t *mergeinfo;
 };
 
+/* A log callback conforming to the svn_log_message_receiver_t
+   interface for obtaining the copyfrom revision of a given path and
+   storing it in *BATON (an svn_revnum_t). */
+static svn_error_t *
+copyfrom_revision_receiver(void *baton,
+                           apr_hash_t *changed_paths,
+                           svn_revnum_t revision,
+                           const char *author,
+                           const char *date,
+                           const char *message,
+                           apr_pool_t *pool)
+{
+  *((svn_revnum_t *) baton) = revision;
+  return SVN_NO_ERROR;
+}
+
+/* Obtain the implied merge info of repository-relative path REL_PATH
+   in *IMPLIED_MERGEINFO (e.g. every revision of the node at REL_PATH
+   since it last appeared). */
+static svn_error_t *
+get_implied_merge_info(svn_ra_session_t *ra_session,
+                       apr_hash_t **implied_mergeinfo,
+                       const char *rel_path,
+                       const char *copyfrom_path,
+                       svn_revnum_t rev,
+                       apr_pool_t *pool)
+{
+  svn_revnum_t oldest_rev = SVN_INVALID_REVNUM;
+  svn_merge_range_t *copyfrom_range;
+  apr_array_header_t *copyfrom_rangelist;
+  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
+
+  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
+
+  /* Trace back in history to find the revision at which this node
+     was created (copied or added). */
+  SVN_ERR(svn_ra_get_log(ra_session, rel_paths, 1, rev,
+                         1, FALSE, TRUE, copyfrom_revision_receiver,
+                         &oldest_rev, pool));
+
+  copyfrom_range = apr_palloc(pool, sizeof(*copyfrom_range));
+  copyfrom_range->start = oldest_rev;
+  copyfrom_range->end = rev;
+  copyfrom_rangelist = apr_array_make(pool, 1, sizeof(copyfrom_range));
+  APR_ARRAY_PUSH(copyfrom_rangelist, svn_merge_range_t *) = copyfrom_range;
+  *implied_mergeinfo = apr_hash_make(pool);
+  apr_hash_set(*implied_mergeinfo, copyfrom_path,
+               APR_HASH_KEY_STRING, copyfrom_rangelist);
+
+  return SVN_NO_ERROR;
+}
+
+/* Obtain the copyfrom merge info and the existing merge info of
+   the source path, merge them and set as a svn_string_t in
+   TARGET_MERGEINFO. */
+static svn_error_t *
+calculate_target_merge_info(svn_ra_session_t *ra_session,
+                            svn_string_t **target_mergeinfo,
+                            const char *copyfrom_url,
+                            const char *src_rel_path,
+                            svn_revnum_t src_revnum,
+                            apr_pool_t *pool)
+{
+  const char *repos_root;
+  const char *copyfrom_path = copyfrom_url;
+  apr_hash_t *copyfrom_mergeinfo;
+  svn_stringbuf_t *mergeinfo;
+
+  /* Find src path relative to the repository root. */
+  /* ### Why not use svn_client__path_relative_to_root() here? */
+  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
+  while (*copyfrom_path++ == *repos_root++);
+  copyfrom_path--;
+
+  SVN_ERR(get_implied_merge_info(ra_session, &copyfrom_mergeinfo,
+                                 src_rel_path, copyfrom_path,
+                                 src_revnum, pool));
+
+  /* TODO: Obtain existing mergeinfo via svn_ra_get_merge_info() */
+  /* TODO: Merge copyfrom and existing mergeinfo to fill target_mergeinfo 
+           using svn_mergeinfo_merge() */
+  /* For now, stringify copyfrom_mergeinfo and return */
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo, copyfrom_mergeinfo, pool));
+  *target_mergeinfo = svn_string_create_from_buf(mergeinfo, pool);
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
@@ -458,8 +546,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   cb_baton.is_move = is_move;
   cb_baton.src_revnum = src_revnum;
   cb_baton.resurrection = resurrection;
-  /* ### TODO: calculate the mergeinfo to set on the target */
-  cb_baton.mergeinfo = NULL;
+  SVN_ERR(calculate_target_merge_info(ra_session, &(cb_baton.mergeinfo),
+                                      src_url, src_rel, src_revnum, pool));
 
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver(editor, edit_baton, youngest, paths,
