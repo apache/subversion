@@ -306,25 +306,51 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
   const svn_string_t *arg = NULL, *in;
   int result;
   unsigned int outlen;
+  svn_boolean_t again;
 
   do
     {
-      result = sasl_client_start(sasl_ctx,
-                                 mechstring,
-                                 &client_interact,
-                                 &out,
-                                 &outlen,
-                                 &mech);
+      again = FALSE;
+      do
+        {
+          result = sasl_client_start(sasl_ctx,
+                                     mechstring,
+                                     &client_interact,
+                                     &out,
+                                     &outlen,
+                                     &mech);
 
-      /* Fill in username and password, if required */
-      if (result == SASL_INTERACT)
-        SVN_ERR(handle_interact(creds, client_interact, *last_err, pool));
+          /* Fill in username and password, if required. */
+          if (result == SASL_INTERACT)
+            SVN_ERR(handle_interact(creds, client_interact, *last_err, pool));
+        }
+      while (result == SASL_INTERACT);
+
+      switch (result)
+        {
+          case SASL_OK:
+          case SASL_CONTINUE:
+            /* Success. */
+            break;
+          case SASL_NOMECH:
+          case SASL_BADPARAM:
+          case SASL_NOMEM:
+            /* Fatal error.  Fail the authentication. */
+            return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                    sasl_errdetail(sasl_ctx));
+          default:
+            /* For anything else, delete the mech from the list
+               and try again. */
+            {
+              char *dst = strstr(mechstring, mech);
+              char *src = dst + strlen(mech);
+              while ((*dst++ = *src++) != '\0') 
+                ;
+              again = TRUE;
+            }
+        }
     }
-  while (result == SASL_INTERACT);
-
-  if (result != SASL_OK && result != SASL_CONTINUE)
-    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            sasl_errdetail(sasl_ctx));
+  while (again);
 
   /* Prepare the initial authentication token. */
   if (outlen > 0 || strcmp(mech, "EXTERNAL") == 0) 
