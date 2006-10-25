@@ -299,6 +299,68 @@ svn_repos_history2(svn_fs_t *fs,
 }
 
 
+svn_error_t *
+svn_repos_deleted_rev(svn_fs_t *fs,
+                      const char *path,
+                      svn_revnum_t start,
+                      svn_revnum_t end,
+                      svn_revnum_t *deleted,
+                      apr_pool_t *pool)
+{
+  apr_pool_t *subpool;
+  svn_fs_root_t *root;
+  svn_revnum_t curr_rev;
+  *deleted = SVN_INVALID_REVNUM;
+
+  /* Validate the revision range. */
+  if (! SVN_IS_VALID_REVNUM(start))
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
+       _("Invalid start revision %ld"), start);
+  if (! SVN_IS_VALID_REVNUM(end))
+    return svn_error_createf 
+      (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
+       _("Invalid end revision %ld"), end);
+
+  subpool = svn_pool_create(pool);
+
+  /* Ensure that the input is ordered. */
+  if (start > end)
+    {
+      svn_revnum_t tmprev = start;
+      start = end;
+      end = tmprev;
+    }
+
+  curr_rev = end;
+
+  while (curr_rev >= start)
+    {
+      svn_node_kind_t kind_p;
+      svn_pool_clear(subpool);
+
+      /* Get a revision root for curr_rev. */
+      SVN_ERR(svn_fs_revision_root(&root, fs, curr_rev, subpool));
+
+      SVN_ERR(svn_fs_check_path(&kind_p, root, path, subpool));
+
+      if (kind_p == svn_node_none)
+        {
+          curr_rev--;
+        }
+      else
+        {
+          if (curr_rev != end)
+            *deleted = curr_rev + 1;
+          break;
+        }
+  }
+
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+
 /* Helper func:  return SVN_ERR_AUTHZ_UNREADABLE if ROOT/PATH is
    unreadable. */
 static svn_error_t *

@@ -471,18 +471,7 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemOODInfo("", psiCommitRev, psiAuthor,
                                         psiCommitDate, NodeKind.dir);
 
-        try
-        {
-            thisTest.checkStatus(true);
-        }
-        catch (junit.framework.AssertionFailedError xfail)
-        {
-            // FIXME: This test is currently expected to fail.
-            return;
-        }
-        fail("XPASS: Expected AssertionFailedError due to a bug in " +
-             "libsvn_client regarding retrieval of 'out of date' info " +
-             "from the repos");
+        thisTest.checkStatus(true);
     }
 
     /**
