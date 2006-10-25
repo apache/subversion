@@ -115,6 +115,7 @@ Contents
    addition to whatever statuses are being currently listed.
    
    The 'svn info' command should list the depth, IFF invoked on a directory.
+   [I believe it already does, on this branch.  -kfogel]
    
 3. Examples
 ===========
