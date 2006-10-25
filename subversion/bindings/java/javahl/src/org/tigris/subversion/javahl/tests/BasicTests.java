@@ -477,10 +477,12 @@ public class BasicTests extends SVNTests
         }
         catch (junit.framework.AssertionFailedError xfail)
         {
-            // FIXME: This test is currently expected to fail due to a
-            // bug in libsvn_client regarding retrieval of "out of
-            // date" information from the repository.
+            // FIXME: This test is currently expected to fail.
+            return;
         }
+        fail("XPASS: Expected AssertionFailedError due to a bug in " +
+             "libsvn_client regarding retrieval of 'out of date' info " +
+             "from the repos");
     }
 
     /**
