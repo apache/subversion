@@ -64,6 +64,7 @@
 ;; E     - svn-status-ediff-with-revision
 ;; X X   - svn-status-resolve-conflicts
 ;; s     - svn-status-show-process-buffer
+;; h     - svn-status-pop-to-partner-buffer
 ;; e     - svn-status-toggle-edit-cmd-flag
 ;; ?     - svn-status-toggle-hide-unknown
 ;; _     - svn-status-toggle-hide-unmodified
@@ -97,7 +98,7 @@
 ;; P k   - svn-status-property-set-keyword-list
 ;; P y   - svn-status-property-set-eol-style
 ;; P x   - svn-status-property-set-executable
-;; h     - svn-status-use-history
+;; H     - svn-status-use-history
 ;; x     - svn-status-update-buffer
 ;; q     - svn-status-bury-buffer
 
@@ -570,6 +571,9 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-ediff-result)
 (defvar svn-status-last-diff-options nil)
 (defvar svn-admin-last-repository-dir nil "The last repository url for various operations.")
+
+(defvar svn-status-partner-buffer nil "The partner buffer for this svn related buffer")
+(make-variable-buffer-local 'svn-status-partner-buffer)
 
 ;; Emacs 21 defines these in ediff-init.el but it seems more robust
 ;; to just declare the variables here than try to load that file.
@@ -1059,6 +1063,8 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                 ;; `call-process' ignores `process-connection-type' and
                 ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
+                (when svn-status-wash-control-M-in-process-buffers
+                  (svn-status-remove-control-M))
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)
               (when svn-pre-run-mode-line-process
@@ -1087,6 +1093,8 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
     (setq svn-status-mode-line-process-status "")
     (svn-status-update-mode-line)
     (cond ((string= event "finished\n")
+           (when svn-status-wash-control-M-in-process-buffers
+             (svn-status-remove-control-M))
            (cond ((eq svn-process-cmd 'status)
                   ;;(message "svn status finished")
                   (svn-process-sentinel-fixup-path-seperators)
@@ -1507,6 +1515,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "<mouse-2>") 'svn-status-mouse-find-file-or-examine-directory)
   (define-key svn-status-mode-map (kbd "^") 'svn-status-examine-parent)
   (define-key svn-status-mode-map (kbd "s") 'svn-status-show-process-buffer)
+  (define-key svn-status-mode-map (kbd "h") 'svn-status-pop-to-partner-buffer)
   (define-key svn-status-mode-map (kbd "f") 'svn-status-find-files)
   (define-key svn-status-mode-map (kbd "o") 'svn-status-find-file-other-window)
   (define-key svn-status-mode-map (kbd "C-o") 'svn-status-find-file-other-window-noselect)
@@ -1516,7 +1525,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "M-s") 'svn-status-update) ;; PCL-CVS compatibility
   (define-key svn-status-mode-map (kbd "q") 'svn-status-bury-buffer)
   (define-key svn-status-mode-map (kbd "x") 'svn-status-update-buffer)
-  (define-key svn-status-mode-map (kbd "h") 'svn-status-use-history)
+  (define-key svn-status-mode-map (kbd "H") 'svn-status-use-history)
   (define-key svn-status-mode-map (kbd "m") 'svn-status-set-user-mark)
   (define-key svn-status-mode-map (kbd "u") 'svn-status-unset-user-mark)
   ;; This matches a binding of `dired-unmark-all-files' in `dired-mode-map'
@@ -2568,13 +2577,19 @@ The string in parentheses is shown in the status line to show the state."
 
 (defun svn-status-next-line (nr-of-lines)
   (interactive "p")
-  (next-line nr-of-lines)
+  (while (progn
+           (next-line nr-of-lines)
+           (and (not (eobp))
+                (not (svn-status-get-line-information)))))
   (when (svn-status-get-line-information)
     (goto-char (+ (svn-point-at-bol) svn-status-default-column))))
 
 (defun svn-status-previous-line (nr-of-lines)
   (interactive "p")
-  (previous-line nr-of-lines)
+  (while (progn
+           (previous-line nr-of-lines)
+           (and (not (bobp))
+                (not (svn-status-get-line-information)))))
   (when (svn-status-get-line-information)
     (goto-char (+ (svn-point-at-bol) svn-status-default-column))))
 
@@ -2975,8 +2990,6 @@ if no files have been marked."
         (delete-other-windows)))
     (pop-to-buffer svn-process-buffer-name)
     (svn-process-mode)
-    (when svn-status-wash-control-M-in-process-buffers
-      (svn-status-remove-control-M))
     (when scroll-to-top
       (goto-char (point-min)))
     (pop-to-buffer cur-buff)))
@@ -3033,13 +3046,20 @@ See `svn-status-marked-files' for what counts as selected."
       (svn-log-view-mode))))
 
 (defun svn-status-version ()
-  "Show the version numbers for the svn command line client and for psvn.el"
+  "Show the version numbers for psvn.el and the svn command line client"
   (interactive)
-  (svn-run nil t 'version "--version")
-  (svn-status-show-process-output 'info t)
-  (with-current-buffer svn-status-last-output-buffer-name
-    (goto-char (point-min))
-    (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision))))
+  (let ((window-conf (current-window-configuration))
+        (version-string))
+    (svn-run nil t 'version "--version")
+    (svn-status-show-process-output 'info t)
+    (with-current-buffer svn-status-last-output-buffer-name
+      (let ((buffer-read-only nil))
+        (goto-char (point-min))
+        (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision)))
+      (setq version-string (buffer-substring-no-properties (point-min) (point-max))))
+    (unless (interactive-p)
+      (set-window-configuration window-conf)
+      version-string)))
 
 (defun svn-status-info ()
   "Run `svn info' on all selected files.
@@ -3189,6 +3209,20 @@ Commands:
   "Show the content of the `svn-process-buffer-name' buffer"
   (interactive)
   (svn-status-show-process-output nil))
+
+(defun svn-status-pop-to-partner-buffer ()
+  "Pop to the `svn-status-partner-buffer' if that variable is set."
+  (interactive)
+  (when svn-status-partner-buffer
+    (let ((cur-buf (current-buffer)))
+      (pop-to-buffer svn-status-partner-buffer)
+      (setq svn-status-partner-buffer cur-buf))))
+
+(defun svn-status-pop-to-new-partner-buffer (buffer)
+  "Call `pop-to-buffer' and register the current buffer as partner buffer for BUFFER."
+  (let ((cur-buf (current-buffer)))
+    (pop-to-buffer buffer)
+    (setq svn-status-partner-buffer cur-buf)))
 
 (defun svn-status-add-file-recursively (arg)
   "Run `svn add' on all selected files.
@@ -4326,6 +4360,9 @@ When called with a prefix argument, ask the user for the revision."
 (when (not svn-info-mode-map)
   (setq svn-info-mode-map (make-sparse-keymap))
   (define-key svn-info-mode-map [?s] 'svn-status-pop-to-status-buffer)
+  (define-key svn-info-mode-map (kbd "h") 'svn-status-pop-to-partner-buffer)
+  (define-key svn-info-mode-map (kbd "n") 'next-line)
+  (define-key svn-info-mode-map (kbd "p") 'previous-line)
   (define-key svn-info-mode-map (kbd "RET") 'svn-info-show-context)
   (define-key svn-info-mode-map [?q] 'bury-buffer))
 
@@ -4348,12 +4385,16 @@ Currently is the output from the svn update command known."
            (beginning-of-line)
            (looking-at "Updated to revision"))
          ;; svn-info contains info from an svn update
-         (let ((file-name (buffer-substring-no-properties (+ 3 (line-beginning-position)) (line-end-position)))
+         (let ((cur-pos (point))
+               (file-name (buffer-substring-no-properties
+                           (progn (beginning-of-line) (re-search-forward ".. +") (point))
+                           (line-end-position)))
                (pos))
+           (goto-char cur-pos)
            (with-current-buffer svn-status-buffer-name
              (setq pos (svn-status-get-file-name-buffer-position file-name)))
            (when pos
-             (pop-to-buffer svn-status-buffer-name)
+             (svn-status-pop-to-new-partner-buffer svn-status-buffer-name)
              (goto-char pos))))))
 
 ;; --------------------------------------------------------------------------------

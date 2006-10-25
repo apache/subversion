@@ -21,9 +21,8 @@
 #   in Subversion 1.2.0.  Its value is one of 'A', 'M' or 'D' to indicate
 #   if the property was added, modified or deleted, respectively.
 #
-#   This version of mailer.py requires the python bindings from
-#   subversion 1.2.0 or later.
-#
+#   See _MIN_SVN_VERSION below for which version of Subversion's Python
+#   bindings are required by this version of mailer.py.
 
 import os
 import sys
@@ -38,13 +37,31 @@ import tempfile
 import types
 import urllib
 
-import svn.fs
-import svn.delta
-import svn.repos
-import svn.core
+# Minimal version of Subversion's bindings required
+_MIN_SVN_VERSION = [1, 5, 0]
+
+# Import the Subversion Python bindings, making sure they meet our
+# minimum version requirements.
+try:
+  import svn.fs
+  import svn.delta
+  import svn.repos
+  import svn.core
+except ImportError:
+  sys.stderr.write(
+    "You need version %s or better of the Subversion Python bindings.\n" \
+    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
+  sys.exit(1)
+if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
+                       svn.core.SVN_VER_MINOR,
+                       svn.core.SVN_VER_PATCH]:
+  sys.stderr.write(
+    "You need version %s or better of the Subversion Python bindings.\n" \
+    % string.join(map(lambda x: str(x), _MIN_SVN_VERSION), '.'))
+  sys.exit(1)
+
 
 SEPARATOR = '=' * 78
-
 
 def main(pool, cmd, config_fname, repos_dir, cmd_args):
   ### TODO:  Sanity check the incoming args

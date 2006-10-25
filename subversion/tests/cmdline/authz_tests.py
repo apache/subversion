@@ -43,15 +43,21 @@ def write_restrictive_svnserve_conf(repo_dir):
     fp.write("password-db = passwd\n")
   fp.close()
 
-def write_authz_file(sbox, rules):
+def write_authz_file(sbox, rules, sections=None):
   """Write an authz file to SBOX, appropriate for the RA method used,
-with authorizations rules RULES, mapping paths to strings containing
-the rules."""
+with authorizations rules RULES mapping paths to strings containing
+the rules. You can add sections SECTIONS (ex. groups, aliases...) with 
+an appropriate list of mappings.
+"""
   fp = open(sbox.authz_file, 'w')
   if sbox.repo_url.startswith("http"):
     prefix = sbox.name + ":"
   else:
     prefix = ""
+  if sections:
+    for p, r in sections.items():
+      fp.write("[%s]\n%s\n" % (p, r))  
+
   for p, r in rules.items():
     fp.write("[%s%s]\n%s\n" % (prefix, p, r))
   fp.close()
@@ -651,7 +657,49 @@ def authz_log_and_tracing_test(sbox):
 
   svntest.actions.run_and_verify_svn("", None, expected_err,
                                     'diff', '-r', '2:4', D_url+'/rho')  
-  
+
+# test whether read access is correctly granted and denied
+def authz_aliases(sbox):
+  "test authz for aliases"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build(create_wc = False)
+
+  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+
+  if sbox.repo_url.startswith("http"):
+    expected_err = ".*403 Forbidden.*"
+  else:
+    expected_err = ".*svn: Access denied.*"
+
+  write_authz_file(sbox, { "/" : "* = r",
+                           "/A/B" : "&jray = rw" },
+                         { "aliases" : 'jray = jrandom' } )
+
+  root_url = svntest.main.current_repo_url
+  A_url = root_url + '/A'
+  B_url = A_url + '/B'
+  iota_url = root_url + '/iota'
+
+  # copy a remote file, target is readonly for jconstant: should fail
+  svntest.actions.run_and_verify_svn("",
+                                     None, expected_err,
+                                     'cp',
+                                     '--username', svntest.main.wc_author2,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     iota_url, B_url)
+
+  # try the same action, but as user jray (alias of jrandom), should work.
+  svntest.actions.run_and_verify_svn("",
+                                     None, [],
+                                     'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     iota_url, B_url)
+
 ########################################################################
 # Run the tests
 
@@ -666,6 +714,7 @@ test_list = [ None,
               authz_log_and_tracing_test,
               authz_checkout_and_update_test,
               authz_partial_export_test,
+              authz_aliases,
              ]
 
 if __name__ == '__main__':

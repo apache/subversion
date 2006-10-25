@@ -89,8 +89,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-10-13 05:00+0200\n"
-"PO-Revision-Date: 2006-10-13 09:03+0200\n"
+"POT-Creation-Date: 2006-10-15 09:55+0200\n"
+"PO-Revision-Date: 2006-10-17 11:14+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1326,7 +1326,7 @@ msgstr ""
 
 #: libsvn_client/diff.c:2761 libsvn_client/diff.c:2767
 #: libsvn_client/diff.c:2901 libsvn_client/locking_commands.c:263
-#: libsvn_client/ra.c:372 libsvn_client/ra.c:738 libsvn_client/ra.c:875
+#: libsvn_client/ra.c:373 libsvn_client/ra.c:739 libsvn_client/ra.c:876
 #, c-format
 msgid "'%s' has no URL"
 msgstr "'%s' non ha URL"
@@ -1474,33 +1474,33 @@ msgstr ""
 "Tentativo di impostare la proprietà '%s' in copia locale su '%s' in "
 "un'operazione non di commit"
 
-#: libsvn_client/ra.c:349
+#: libsvn_client/ra.c:350
 #, c-format
 msgid "Can't find entry for '%s'"
 msgstr "Non trovo una voce per '%s'"
 
-#: libsvn_client/ra.c:493
+#: libsvn_client/ra.c:494
 #, c-format
 msgid "Missing changed-path information for '%s' in revision %ld"
 msgstr ""
 "Informazioni di cambiamento di percorso per '%s' alla revisione %ld mancanti"
 
-#: libsvn_client/ra.c:613
+#: libsvn_client/ra.c:614
 #, c-format
 msgid "path '%s' doesn't exist in revision %ld"
 msgstr "il percorso '%s' non esiste alla revisione %ld"
 
-#: libsvn_client/ra.c:660 libsvn_client/ra.c:823
+#: libsvn_client/ra.c:661 libsvn_client/ra.c:824
 #, c-format
 msgid "Unable to find repository location for '%s' in revision %ld"
 msgstr "Non trovo la locazione del repository per '%s' alla revisione %ld"
 
-#: libsvn_client/ra.c:671
+#: libsvn_client/ra.c:672
 #, c-format
 msgid "'%s' in revision %ld is an unrelated object"
 msgstr "'%s' nella revisione %ld è un oggetto non correlato"
 
-#: libsvn_client/ra.c:828
+#: libsvn_client/ra.c:829
 #, c-format
 msgid ""
 "The location for '%s' for revision %ld does not exist in the repository or "
@@ -6674,7 +6674,6 @@ msgstr ""
 "     OBBIETTIVO determina semplicemente a quale repository accedere.\n"
 
 #: svn/main.c:563
-#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME TARGET...\n"
@@ -6690,9 +6689,9 @@ msgstr ""
 "\n"
 "  1. Modifica delle proprietà sotto controllo di versione nella copia\n"
 "     di lavoro o nel repository.\n"
-"  2. Modifica una proprietà non sotto controllo di versione nella\n"
-"     copia di lavoro o nel repository; OBBIETTIVO determina\n"
-"     semplicemente a quale repository accedere.\n"
+"  2. Modifica una proprietà remota non sotto controllo di versione nel\n"
+"     repository; OBBIETTIVO determina semplicemente a quale repository\n"
+"     accedere.\n"
 
 #: svn/main.c:576
 msgid ""

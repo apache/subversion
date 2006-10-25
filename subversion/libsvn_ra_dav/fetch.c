@@ -1479,8 +1479,6 @@ typedef struct {
                                       'encoding' attribute on cdata's tag.*/
   apr_hash_t *lock_hash;           /* the final hash returned */
 
-  svn_error_t *err;                /* if the parse needs to return an err */
-
   apr_pool_t *scratchpool;         /* temporary stuff goes in here */
   apr_pool_t *pool;                /* permanent stuff goes in here */
 
@@ -1700,7 +1698,6 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
   baton.lock_hash = apr_hash_make(pool);
   baton.pool = pool;
   baton.scratchpool = svn_pool_create(pool);
-  baton.err = NULL;
   baton.current_lock = NULL;
   baton.encoding = NULL;
   baton.cdata_accum = svn_stringbuf_create("", pool);
@@ -1740,23 +1737,6 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
   /* ### Should svn_ra_dav__parsed_request() take care of storing auth
      ### info itself? */
   err = svn_ra_dav__maybe_store_auth_info_after_result(err, ras, pool);
-
-  /* At this point, 'err' might represent a local error (neon choked,
-     or maybe something went wrong storing auth creds).  But if
-     'baton.err' exists, that's an error coming right from the server,
-     marshalled over the network.  We give that top priority. */
-  if (baton.err)
-    {
-      svn_error_clear(err);
-      
-      /* mod_dav_svn is known to return "unsupported feature" on
-         unknown REPORT requests, but it's our svn_ra.h promise to
-         return a similar, specific error code.  */
-      if (baton.err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
-        return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, baton.err,
-                                _("Server does not support locking features"));
-      return baton.err;
-    }
 
   /* Map status 501: Method Not Implemented to our not implemented error.
      1.0.x servers and older don't support this report. */

@@ -3,12 +3,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
-  @import "tigris-branding/css/tigris.css";
-  @import "tigris-branding/css/inst.css";
+  @import "../branding/css/tigris.css";
+  @import "../branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="tigris-branding/css/print.css"/>
-<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+  href="../branding/css/print.css"/>
+<script type="text/javascript" src="../branding/scripts/tigris.js"></script>
 <title>Merge Tracking Functional Specification</title>
 </head>
 
@@ -25,6 +25,91 @@ specification.</p>
 href="summit.html">CollabNet Summit findings</a>.  Describe how each
 <a href="requirements.html">requirement</a> will actually function for
 Subversion.  Remove redundancies.</p>
+
+<div class="h2" id="diff-status">
+<h2>Diff/Status operations</h2>
+
+<p>Output is shown the same as pre-Merge Tracking, except for:</p>
+
+<ul>
+  <li>Diffs pretty-print changes to merge info in an easily
+    human-readable form.</li>
+
+  <li>Status represents changes to the merge info for the root of a
+    tree as a property change.</li>
+</ul>
+
+</div>  <!-- diff-status -->
+
+
+<div class="h2" id="copy-move">
+<h2>Copy/Move operations</h2>
+
+<p>Copy and move operations handle two types of merge info:</p>
+
+<dl>
+  <dt>Explicit</dt>
+  <dd>The pre-existing value of the <code>svn:mergeinfo</code>
+    property on the source path.</dd>
+
+  <dt>Implicit</dt>
+  <dd>All revisions represented by the object at the source path (from
+    its "appeared in" revision to its current revision).</dd>
+</dl>
+
+<div class="h3" id="ra-copy-move">
+<h3>Repository Access operation</h3>
+
+<p>Copy/move operations which contact the repository include:</p>
+
+<ul>
+  <li>WC to URL</li>
+  <li>URL to WC</li>
+  <li>URL to URL</li>
+</ul>
+
+<p>These operations always propogate both explicit and implicit merge
+info.  Other than the inclusion of merge info, operation is
+effectively the same as pre-Merge Tracking.</p>
+
+</div>  <!-- ra-copy-move -->
+
+<div class="h3" id="wc-wc-copy-move">
+<h3>Working Copy to Working Copy operation</h3>
+
+<p>Pre-Merge Tracking, WC to WC operations occurred offline (e.g. with
+no repository access).  This is a typical behavior of refactoring
+tools (e.g. IDEs like Eclipse), and is very useful when offline
+(e.g. on an airplane or subway, or at a cafe).</p>
+
+<p>However, to propogate merge info during copy/move operations,
+access to both a path's comprehensive merge info and its history is
+necessary.  To preserve offline operation, the Merge Tracking
+implementation supports two modes:</p>
+
+<ul>
+  <li>A compatibility mode, which neither contacts the repository, nor
+    does any merge info propogation (unless a copy source's merge info
+    has been locally modified, in which its value is propogated the as
+    any Subversion revision property).</li>
+
+  <li>A mode which requires repository access (e.g. isn't offline),
+    but which propogates all merge info from source path to
+    destination.</li>
+</ul>
+
+<p>This behavior is comparable to the difference between <code>svn
+status</code> and <code>svn status -u</code>.</p>
+
+<p>While some state indicating delayed merge info retrieval and
+handling could instead be stored in WC to preserve offline operation,
+there are complications with this when subsequent uncommited revert
+operations should change the merge info (we'd have to store negative
+merge info in the WC).</p>
+
+</div>  <!-- wc-wc-copy-move -->
+
+</div>  <!-- copy-move -->
 
 <div class="h2" id="repeated-merge">
 <h2>Repeated Merge</h2>

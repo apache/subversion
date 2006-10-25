@@ -57,7 +57,7 @@ void svn_client_get_simple_provider(svn_auth_provider_object_t **provider,
   svn_auth_get_simple_provider(provider, pool);
 }
 
-#if defined(WIN32)
+#if defined(WIN32) && !defined(__MINGW32__)
 void
 svn_client_get_windows_simple_provider(svn_auth_provider_object_t **provider,
                                        apr_pool_t *pool)

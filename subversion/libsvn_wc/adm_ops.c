@@ -1713,10 +1713,13 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
   /* Reinstall props if we need to.  Only rewrite the baseprops,
      if we're reverting a replacement.  This is just an optimization. */
   if (baseprops)
-    SVN_ERR(svn_wc__install_props(&log_accum, adm_access, name, baseprops,
-                                  baseprops,
-                                  entry->schedule == svn_wc_schedule_replace,
-                                  pool));
+    {
+      SVN_ERR(svn_wc__install_props(&log_accum, adm_access, name, baseprops,
+                                    baseprops,
+                                    entry->schedule == svn_wc_schedule_replace,
+                                    pool));
+      *reverted = TRUE;
+    }
 
   /* Clean up the copied state if this is a replacement. */
   if (entry->schedule == svn_wc_schedule_replace
