@@ -1511,7 +1511,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### section, to an alias defined in a special [aliases] section or"
       APR_EOL_STR
-      "to anyone using the '*' wildcard.  Each definition can"
+      "### to anyone using the '*' wildcard.  Each definition can"
       APR_EOL_STR
       "### grant read ('r') access, read-write ('rw') access, or no access"
       APR_EOL_STR
