@@ -187,92 +187,92 @@ struct path_driver_cb_baton
 };
 
 /* A log callback conforming to the svn_log_message_receiver_t
-   interface for obtaining the copyfrom revision of a given path and
+   interface for obtaining the last revision of a node at a path and
    storing it in *BATON (an svn_revnum_t). */
 static svn_error_t *
-copyfrom_revision_receiver(void *baton,
-                           apr_hash_t *changed_paths,
-                           svn_revnum_t revision,
-                           const char *author,
-                           const char *date,
-                           const char *message,
-                           apr_pool_t *pool)
+revnum_receiver(void *baton,
+                apr_hash_t *changed_paths,
+                svn_revnum_t revision,
+                const char *author,
+                const char *date,
+                const char *message,
+                apr_pool_t *pool)
 {
   *((svn_revnum_t *) baton) = revision;
   return SVN_NO_ERROR;
 }
 
-/* Obtain the implied merge info of repository-relative path REL_PATH
-   in *IMPLIED_MERGEINFO (e.g. every revision of the node at REL_PATH
-   since it last appeared). */
+/* Obtain the implied merge info of repository-relative path PATH in
+   *IMPLIED_MERGEINFO (e.g. every revision of the node at PATH since
+   it last appeared).  REL_PATH corresponds to PATH, but is relative
+   to RA_SESSION. */
 static svn_error_t *
 get_implied_merge_info(svn_ra_session_t *ra_session,
                        apr_hash_t **implied_mergeinfo,
                        const char *rel_path,
-                       const char *copyfrom_path,
+                       const char *path,
                        svn_revnum_t rev,
                        apr_pool_t *pool)
 {
   svn_revnum_t oldest_rev = SVN_INVALID_REVNUM;
-  svn_merge_range_t *copyfrom_range;
-  apr_array_header_t *copyfrom_rangelist;
+  svn_merge_range_t *range;
+  apr_array_header_t *rangelist;
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
 
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
 
   /* Trace back in history to find the revision at which this node
      was created (copied or added). */
-  SVN_ERR(svn_ra_get_log(ra_session, rel_paths, 1, rev,
-                         1, FALSE, TRUE, copyfrom_revision_receiver,
-                         &oldest_rev, pool));
+  SVN_ERR(svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
+                         revnum_receiver, &oldest_rev, pool));
 
-  copyfrom_range = apr_palloc(pool, sizeof(*copyfrom_range));
-  copyfrom_range->start = oldest_rev;
-  copyfrom_range->end = rev;
-  copyfrom_rangelist = apr_array_make(pool, 1, sizeof(copyfrom_range));
-  APR_ARRAY_PUSH(copyfrom_rangelist, svn_merge_range_t *) = copyfrom_range;
+  range = apr_palloc(pool, sizeof(*range));
+  range->start = oldest_rev;
+  range->end = rev;
+  rangelist = apr_array_make(pool, 1, sizeof(range));
+  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
   *implied_mergeinfo = apr_hash_make(pool);
-  apr_hash_set(*implied_mergeinfo, copyfrom_path,
-               APR_HASH_KEY_STRING, copyfrom_rangelist);
+  apr_hash_set(*implied_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
 
   return SVN_NO_ERROR;
 }
 
-/* Obtain the copyfrom merge info and the existing merge info of the
-   source path, merge them and set as a svn_string_t in
-   TARGET_MERGEINFO.  SRC_REL_PATH is relative to RA_SESSION. */
+/* Obtain the implied merge info and the existing merge info of the
+   source path, combine them, and set as a svn_string_t * in
+   *TARGET_MERGEINFO.  SRC_REL_PATH corresponds to SRC_URL, but is
+   relative to RA_SESSION. */
 static svn_error_t *
 calculate_target_merge_info(svn_ra_session_t *ra_session,
                             svn_string_t **target_mergeinfo,
-                            const char *copyfrom_url,
+                            const char *src_url,
                             const char *src_rel_path,
                             svn_revnum_t src_revnum,
                             apr_pool_t *pool)
 {
   const char *repos_root;
-  const char *copyfrom_path = copyfrom_url;
+  const char *src_path;
   apr_hash_t *implied_mergeinfo, *src_mergeinfo;
-  svn_stringbuf_t *mergeinfo;
+  svn_stringbuf_t *mergeinfo_buf;
 
   /* Find src path relative to the repository root. */
   /* ### Why not use svn_client__path_relative_to_root() here? */
   SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
-  copyfrom_path = copyfrom_url + strlen(repos_root);
+  src_path = src_url + strlen(repos_root);
 
   /* Obtain any implied and/or existing (explicit) merge info. */
   SVN_ERR(get_implied_merge_info(ra_session, &implied_mergeinfo,
-                                 src_rel_path, copyfrom_path,
-                                 src_revnum, pool));
+                                 src_rel_path, src_path, src_revnum, pool));
   SVN_ERR(svn_client__get_merge_info_for_path(ra_session, &src_mergeinfo,
-                                              copyfrom_path, src_revnum,
-                                              pool));
+                                              src_path, src_revnum, pool));
 
   /* Combine, stringify, and return all merge info. */
   if (src_mergeinfo)
-    SVN_ERR(svn_mergeinfo_merge(&implied_mergeinfo, src_mergeinfo,
+    SVN_ERR(svn_mergeinfo_merge(&src_mergeinfo, src_mergeinfo,
                                 implied_mergeinfo, pool));
-  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo, implied_mergeinfo, pool));
-  *target_mergeinfo = svn_string_create_from_buf(mergeinfo, pool);
+  else
+    src_mergeinfo = implied_mergeinfo;
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_buf, src_mergeinfo, pool));
+  *target_mergeinfo = svn_string_create_from_buf(mergeinfo_buf, pool);
 
   return SVN_NO_ERROR;
 }
