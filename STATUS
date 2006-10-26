@@ -56,7 +56,7 @@ Candidate changes:
       of 1.5.23.  A small, localised fix to version detection during
       autogen appears to be all that's needed to support it.
     Votes:
-      +1: malcolm
+      +1: malcolm, dlr
 
 
 Approved changes:
