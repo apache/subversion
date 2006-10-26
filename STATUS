@@ -75,10 +75,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r22092
-    Fix svnsync of paths copied from locations with non-uri-safe characters.
-    Justification:
-      Small fix, bug in new 1.4 specific functionality we want people to use.
-    Votes:
-      +1: rooneg, dlr, malcolm
-
