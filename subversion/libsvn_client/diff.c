@@ -1815,8 +1815,6 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
 {
   const char *repos_rel_path;
   apr_hash_t *repos_mergeinfo;
-  apr_array_header_t *mergeinfo_paths = apr_array_make(pool, 1,
-                                                       sizeof(target_wcpath));
   svn_revnum_t target_rev;
 
   SVN_ERR(svn_wc_entry(entry, target_wcpath, adm_access, FALSE, pool));
@@ -1848,22 +1846,19 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
       target_rev = (*entry)->revision;
       break;
     }
-  APR_ARRAY_PUSH(mergeinfo_paths, const char *) = repos_rel_path;
 
   /* ### TODO: To handle sub-tree merge info, the list will need to
      ### include the those child paths which have merge info which
      ### differs from that of TARGET_WCPATH, and if those paths are
      ### directories, their children as well. */
 
-  SVN_ERR(svn_ra_get_merge_info(ra_session, &repos_mergeinfo, mergeinfo_paths,
-                                target_rev, TRUE, pool));
+  SVN_ERR(svn_client__get_merge_info_for_path(ra_session, &repos_mergeinfo,
+                                              repos_rel_path, target_rev,
+                                              pool));
   SVN_ERR(parse_merge_info(target_mergeinfo, *entry, target_wcpath,
                            adm_access, ctx, pool));
   if (repos_mergeinfo != NULL)
     {
-      apr_hash_t *target_repos_mergeinfo =
-        apr_hash_get(repos_mergeinfo, repos_rel_path, APR_HASH_KEY_STRING);
-
       /* If pre-existing local changes reverted some of the merge info
          on TARGET_WCPATH, this should be recorded in the WC's merge
          info as TARGET_WCPATH's complete set of merge info minus
@@ -1880,7 +1875,7 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
          ### locally modified.  We need a variation of
          ### libsvn_wc/props.c:svn_wc_props_modified_p() which reports
          ### on a single property value. */
-      SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, target_repos_mergeinfo,
+      SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, repos_mergeinfo,
                                   *target_mergeinfo, pool));
     }
   return SVN_NO_ERROR;

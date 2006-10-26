@@ -211,6 +211,17 @@ svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
                              apr_pool_t *pool);
 
 
+/* Obtain any inherited/direct merge info for the session-relative
+   path REL_PATH from the repository, and set it in *TARGET_MERGEINFO.
+   If there is no merge info available for REL_PATH, set
+   *TARGET_MERGEINFO to NULL. */
+svn_error_t *
+svn_client__get_merge_info_for_path(svn_ra_session_t *ra_session,
+                                    apr_hash_t **target_mergeinfo,
+                                    const char *rel_path,
+                                    svn_revnum_t rev,
+                                    apr_pool_t *pool);
+
 /* ---------------------------------------------------------------- */
 
 /*** RA callbacks ***/

@@ -168,3 +168,26 @@ svn_client__path_relative_to_root(const char **rel_path,
     }
   return err;
 }
+
+svn_error_t *
+svn_client__get_merge_info_for_path(svn_ra_session_t *ra_session,
+                                    apr_hash_t **target_mergeinfo,
+                                    const char *rel_path,
+                                    svn_revnum_t rev,
+                                    apr_pool_t *pool)
+{
+  apr_hash_t *repos_mergeinfo;
+  apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
+  APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
+  SVN_ERR(svn_ra_get_merge_info(ra_session, &repos_mergeinfo, rel_paths,
+                                rev, TRUE, pool));
+
+  /* Grab only the merge info provided for REL_PATH. */
+  if (repos_mergeinfo)
+    *target_mergeinfo = apr_hash_get(repos_mergeinfo, rel_path,
+                                     APR_HASH_KEY_STRING);
+  else
+    *target_mergeinfo = NULL;
+
+  return SVN_NO_ERROR;
+}
