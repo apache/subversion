@@ -63,13 +63,6 @@ Candidate changes:
                 flavours. Its introduction therefore represents a regression
                 in the maintainability of the RPM packaging area as a whole.)
 
-  * r22092
-    Fix svnsync of paths copied from locations with non-uri-safe characters.
-    Justification:
-      Small fix, bug in new 1.4 specific functionality we want people to use.
-    Votes:
-      +1: rooneg, dlr
-
   * r22120
     Support libtool post-1.5.22.
     Justification:
@@ -81,4 +74,11 @@ Candidate changes:
 
 
 Approved changes:
+
+  * r22092
+    Fix svnsync of paths copied from locations with non-uri-safe characters.
+    Justification:
+      Small fix, bug in new 1.4 specific functionality we want people to use.
+    Votes:
+      +1: rooneg, dlr, malcolm
 
