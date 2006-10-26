@@ -34,20 +34,6 @@ Candidate changes:
       +1: dlr, djh, jerenkrantz
       -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
 
-  * r21738, r21924, r22026
-    Prevent an API violation from corrupting FSFS repositories, as seen
-    in issue #2467 and reports from users.
-    Justification:
-      Silently corrupting the repository is a Bad Thing.
-    Notes:
-      Branch needed to avoid the backport of a new error code.
-    Concerns:
-      This isn't exactly a trivial fix.  We are also assuming that this
-      is the cause of the corruption we've seen.
-    Branch: 1.4.x-r21738 (-r21762:HEAD)
-    Votes:
-      +1: malcolm, rooneg
-
   * r21885, r22076
     Add a new RPM package for the AuroraLinux 2.0 SPARC distribution.
     Justification:
@@ -74,4 +60,18 @@ Candidate changes:
 
 
 Approved changes:
+
+  * r21738, r21924, r22026
+    Prevent an API violation from corrupting FSFS repositories, as seen
+    in issue #2467 and reports from users.
+    Justification:
+      Silently corrupting the repository is a Bad Thing.
+    Notes:
+      Branch needed to avoid the backport of a new error code.
+    Concerns:
+      This isn't exactly a trivial fix.  We are also assuming that this
+      is the cause of the corruption we've seen.
+    Branch: 1.4.x-r21738 (-r21762:HEAD)
+    Votes:
+      +1: malcolm, rooneg, dannyb
 
