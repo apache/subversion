@@ -70,5 +70,15 @@ Candidate changes:
     Votes:
       +1: rooneg, dlr
 
+  * r22120
+    Support libtool post-1.5.22.
+    Justification:
+      Developer convenience: Cygwin is currently shipping a CVS version
+      of 1.5.23.  A small, localised fix to version detection during
+      autogen appears to be all that's needed to support it.
+    Votes:
+      +1: malcolm
+
+
 Approved changes:
 
