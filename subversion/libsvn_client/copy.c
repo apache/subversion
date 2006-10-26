@@ -238,9 +238,9 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-/* Obtain the copyfrom merge info and the existing merge info of
-   the source path, merge them and set as a svn_string_t in
-   TARGET_MERGEINFO. */
+/* Obtain the copyfrom merge info and the existing merge info of the
+   source path, merge them and set as a svn_string_t in
+   TARGET_MERGEINFO.  SRC_REL_PATH is relative to RA_SESSION. */
 static svn_error_t *
 calculate_target_merge_info(svn_ra_session_t *ra_session,
                             svn_string_t **target_mergeinfo,
@@ -251,24 +251,27 @@ calculate_target_merge_info(svn_ra_session_t *ra_session,
 {
   const char *repos_root;
   const char *copyfrom_path = copyfrom_url;
-  apr_hash_t *copyfrom_mergeinfo;
+  apr_hash_t *implied_mergeinfo, *src_mergeinfo;
   svn_stringbuf_t *mergeinfo;
 
   /* Find src path relative to the repository root. */
   /* ### Why not use svn_client__path_relative_to_root() here? */
   SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
-  while (*copyfrom_path++ == *repos_root++);
-  copyfrom_path--;
+  copyfrom_path = copyfrom_url + strlen(repos_root);
 
-  SVN_ERR(get_implied_merge_info(ra_session, &copyfrom_mergeinfo,
+  /* Obtain any implied and/or existing (explicit) merge info. */
+  SVN_ERR(get_implied_merge_info(ra_session, &implied_mergeinfo,
                                  src_rel_path, copyfrom_path,
                                  src_revnum, pool));
+  SVN_ERR(svn_client__get_merge_info_for_path(ra_session, &src_mergeinfo,
+                                              copyfrom_path, src_revnum,
+                                              pool));
 
-  /* TODO: Obtain existing mergeinfo via svn_ra_get_merge_info() */
-  /* TODO: Merge copyfrom and existing mergeinfo to fill target_mergeinfo 
-           using svn_mergeinfo_merge() */
-  /* For now, stringify copyfrom_mergeinfo and return */
-  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo, copyfrom_mergeinfo, pool));
+  /* Combine, stringify, and return all merge info. */
+  if (src_mergeinfo)
+    SVN_ERR(svn_mergeinfo_merge(&implied_mergeinfo, src_mergeinfo,
+                                implied_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo, implied_mergeinfo, pool));
   *target_mergeinfo = svn_string_create_from_buf(mergeinfo, pool);
 
   return SVN_NO_ERROR;
