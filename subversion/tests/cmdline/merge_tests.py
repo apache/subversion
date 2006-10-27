@@ -128,8 +128,7 @@ def textual_merges_galore(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
   
   # Initial commit.
