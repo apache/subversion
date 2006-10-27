@@ -3530,7 +3530,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  E_path = os.path.join(wc_dir, 'A', 'B', 'E');
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   alpha_path = os.path.join(E_path, 'alpha')
   new_alpha_path = os.path.join(wc_dir, 'A', 'C', 'alpha')
   
