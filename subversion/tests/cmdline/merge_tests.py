@@ -172,8 +172,7 @@ def textual_merges_galore(sbox):
     })
 
   # Create expected status tree.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   expected_status.tweak('A/B/lambda', 'A/D/G/pi', 'A/D/G/tau', 'A/D/G/rho',
                         wc_rev=3)
@@ -397,8 +396,7 @@ def add_with_history(sbox):
     'A/B/F/foo'   : Item(verb='Adding'),
     'A/B/F/foo2'  : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/Q'     : Item(status='  ', wc_rev=2),
     'A/B/F/Q2'    : Item(status='  ', wc_rev=2),
@@ -497,8 +495,7 @@ def add_with_history(sbox):
     'A/C/foo'   : Item(verb='Adding'),
     'A/C/foo2'  : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/Q'     : Item(status='  ', wc_rev=2),
     'A/B/F/Q2'    : Item(status='  ', wc_rev=2),
@@ -540,8 +537,7 @@ def delete_file_and_dir(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B2'       : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B2'         : Item(status='  ', wc_rev=2),
     'A/B2/E'       : Item(status='  ', wc_rev=2),
@@ -872,8 +868,7 @@ def merge_catches_nonexistent_target(sbox):
     'A/D/Q'          : Item(verb='Adding'),
     'A/D/Q/newfile'  : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/Q'         : Item(status='  ', wc_rev=2),
     'A/D/Q/pi'      : Item(status='  ', wc_rev=2),
@@ -1136,8 +1131,7 @@ def merge_one_file_helper(sbox, arg_flav):
   svntest.main.file_append(rho_path, 'A new line in rho.\n')
 
   expected_output = wc.State(wc_dir, { rho_rel_path : Item(verb='Sending'), })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', wc_rev=2)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output,
@@ -1240,8 +1234,7 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   
   # Initial commit.
@@ -1333,8 +1326,7 @@ def merge_with_prev (sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   expected_status.add({'A/zot' : Item(status='  ', wc_rev=2)})
   
@@ -1427,8 +1419,7 @@ def merge_binary_file (sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/theta' : Item(verb='Adding  (bin)'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=2),
     })
@@ -1445,8 +1436,7 @@ def merge_binary_file (sbox):
   expected_output = wc.State(wc_dir, {
     'A/theta' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=3),
     })
@@ -1469,8 +1459,7 @@ def merge_binary_file (sbox):
     'A/theta' : Item(theta_contents + "some extra junk",
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
-  expected_status = svntest.actions.get_virginal_state(short_other_wc, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(short_other_wc, 1)
   expected_status.add({
     'A/theta' : Item(status='M ', wc_rev=2),
     })
@@ -1523,8 +1512,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     "A/theta" : Item(verb="Adding  (bin)"),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)  # "and nothing else matters..."
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     "A/theta" : Item(status="  ", wc_rev=3),
     })
@@ -1672,8 +1660,7 @@ def merge_skips_obstructions(sbox):
     'A/B/F/Q/bar' : Item(verb='Adding'),
     'A/B/F/foo'   : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/Q'     : Item(status='  ', wc_rev=2),
     'A/B/F/Q/bar' : Item(status='  ', wc_rev=2),
@@ -2558,8 +2545,7 @@ def merge_dir_replace(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo' : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/foo'    : Item(status='  ', wc_rev=2),
     })
@@ -2591,8 +2577,7 @@ def merge_dir_replace(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/foo'    : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/foo'  : Item(status='  ', wc_rev=2),
     'A/C/foo'    : Item(status='  ', wc_rev=3),
@@ -2608,8 +2593,7 @@ def merge_dir_replace(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/F/foo'   : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/C/foo'     : Item(status='  ', wc_rev=3),
     })
@@ -2625,8 +2609,7 @@ def merge_dir_replace(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo' : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 5)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/foo'    : Item(status='  ', wc_rev=5),
     'A/C/foo'     : Item(status='  ', wc_rev=3),
@@ -2714,8 +2697,7 @@ def merge_dir_branches(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo' : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/foo'    : Item(status='  ', wc_rev=2),
     })
@@ -3545,8 +3527,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/alpha' : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/C/alpha' : Item(status='  ', wc_rev=2),
     })
