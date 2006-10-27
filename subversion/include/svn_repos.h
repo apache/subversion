@@ -836,11 +836,12 @@ svn_repos_stat(svn_dirent_t **dirent,
 
 
 /**
- * Set @a *deleted to the revision @a path was most recently deleted
- * in @a fs, within the inclusive revision bounds set by @a start and
- * @a end.  If @a path does not exist in @a root within the @a start and
- * @a end bounds, or is not deleted within those bounds, set @a *deleted
- * to SVN_INVALID_REVNUM.  Use @a pool for memory allocation.
+ * Given @a path which exists at revision @a start in @a fs, set
+ * @a *deleted to the revision @a path was deleted, within the
+ * inclusive revision bounds set by @a start and @a end.  If @a path
+ * does not exist at revision @a start or is not deleted within the
+ * specified bounds, set @a *deleted to SVN_INVALID_REVNUM.
+ * Use @a pool for memory allocation.
  *
  * @since New in 1.5.
  */

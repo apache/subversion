@@ -309,8 +309,9 @@ svn_repos_deleted_rev(svn_fs_t *fs,
 {
   apr_pool_t *subpool;
   svn_fs_root_t *root;
-  svn_revnum_t curr_rev;
-  *deleted = SVN_INVALID_REVNUM;
+  svn_revnum_t mid_rev;
+  const svn_fs_id_t *path_node_id, *curr_node_id;
+  svn_error_t *err;
 
   /* Validate the revision range. */
   if (! SVN_IS_VALID_REVNUM(start))
@@ -322,8 +323,6 @@ svn_repos_deleted_rev(svn_fs_t *fs,
       (SVN_ERR_FS_NO_SUCH_REVISION, 0, 
        _("Invalid end revision %ld"), end);
 
-  subpool = svn_pool_create(pool);
-
   /* Ensure that the input is ordered. */
   if (start > end)
     {
@@ -332,31 +331,99 @@ svn_repos_deleted_rev(svn_fs_t *fs,
       end = tmprev;
     }
 
-  curr_rev = end;
-
-  while (curr_rev >= start)
+  /* Ensure that path exists in fs at revision start. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, start, pool));
+  err = svn_fs_node_id(&path_node_id, root, path, pool);
+  if (err)
     {
-      svn_node_kind_t kind_p;
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+        {
+          /* Path must exist in fs at start rev. */
+          *deleted = SVN_INVALID_REVNUM;
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      return err;
+    }
+
+  /* Ensure node path doesn't exist in fs at revision end or
+     if it does that it's not an equivalent node. */
+  SVN_ERR(svn_fs_revision_root(&root, fs, end, pool));
+  err = svn_fs_node_id(&curr_node_id, root, path, pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+    }
+  else if (err)
+    {
+      return err;
+    }
+  else
+    {
+      SVN_ERR(svn_fs_node_id(&curr_node_id, root, path, pool));
+
+      /* If path exists at end and is equivalent
+         to path at start it was never deleted. */
+      if (svn_fs_compare_ids(path_node_id, curr_node_id) == 0)
+        {
+          *deleted = SVN_INVALID_REVNUM;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  mid_rev = (start + end) / 2;
+  subpool = svn_pool_create(pool);
+
+  while (mid_rev >= start)
+    {
       svn_pool_clear(subpool);
 
-      /* Get a revision root for curr_rev. */
-      SVN_ERR(svn_fs_revision_root(&root, fs, curr_rev, subpool));
+      /* Get revision root for mid_rev. */
+      SVN_ERR(svn_fs_revision_root(&root, fs, mid_rev, subpool));
 
-      SVN_ERR(svn_fs_check_path(&kind_p, root, path, subpool));
+      err = svn_fs_node_id(&curr_node_id, root, path, subpool);
 
-      if (kind_p == svn_node_none)
+      if (err)
         {
-          curr_rev--;
+          if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+            {
+              /* There is no node, look lower in the range. */
+              svn_error_clear(err);
+              end = mid_rev;
+              mid_rev = (start + mid_rev) / 2;
+            }
+          else
+            return err;
         }
       else
         {
-          if (curr_rev != end)
-            *deleted = curr_rev + 1;
-          break;
+          if (svn_fs_compare_ids(path_node_id, curr_node_id) == 0)
+            {
+              if (end - mid_rev == 1)
+                {
+                  /* Found the node path was deleted. */
+                  *deleted = end;
+                  break;  
+                }
+              else
+                {
+                  /* Nodes are related, look at higher revs. */
+                  start = mid_rev;
+                  mid_rev = (start + end) / 2;
+                }
+            }
+          else
+            {
+              /* Nodes are not equivalent, look lower. */
+              end = mid_rev;
+              mid_rev = (start + mid_rev) / 2;
+            }
         }
   }
 
   svn_pool_destroy(subpool);
+
+  /* path was never deleted between start and end. */
   return SVN_NO_ERROR;
 }
 
