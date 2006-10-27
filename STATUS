@@ -49,6 +49,8 @@ Candidate changes:
                 flavours. Its introduction therefore represents a regression
                 in the maintainability of the RPM packaging area as a whole.)
 
+Approved changes:
+
   * r22120
     Support libtool post-1.5.22.
     Justification:
@@ -56,8 +58,5 @@ Candidate changes:
       of 1.5.23.  A small, localised fix to version detection during
       autogen appears to be all that's needed to support it.
     Votes:
-      +1: malcolm, dlr
-
-
-Approved changes:
+      +1: malcolm, dlr, danderson
 
