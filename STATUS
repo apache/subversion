@@ -18,7 +18,7 @@ Do not run svnmerge.py N separate times for each revision to merge
 over, since svnmerge.py will not merge into a WC with uncommitted
 changes.
 
-Status of 1.4.1:
+Status of 1.4.2:
 ================
 
 Candidate changes:
