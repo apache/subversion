@@ -506,8 +506,8 @@ class WinGeneratorBase(GeneratorBase):
     if self.enable_nls and name == '__ALL__':
       depends.extend(self.sections['locale'].get_targets())
 
-    # Build ZLib as a dependency of Neon if we have it
-    if  self.zlib_path and name == 'neon':
+    # Build ZLib as a dependency of Neon or Serf if we have it
+    if self.zlib_path and (name == 'neon' or name == 'serf'):
       depends.extend(self.sections['zlib'].get_targets())
 
     return depends
