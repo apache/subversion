@@ -51,8 +51,7 @@ def cat_traces_renames(sbox):
     'A/D/G/rho' : Item(verb='Deleting'),
     'A/D/G/bloo' : Item(verb='Adding')
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/G/rho');
   expected_status.add({ 'A/D/G/bloo' :
                         Item(wc_rev=2, status='  ') })
@@ -77,8 +76,7 @@ def cat_traces_renames(sbox):
     'A/D/G/pi' : Item(verb='Deleting'),
     'A/D/G/rho' : Item(verb='Adding')
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/G/pi');
   expected_status.tweak('A/D/G/rho', wc_rev=3)
   expected_status.add({ 'A/D/G/bloo' :

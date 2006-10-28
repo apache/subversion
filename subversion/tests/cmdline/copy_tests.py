@@ -314,8 +314,7 @@ def basic_copy_and_move_files(sbox):
   # Create expected status tree; all local revisions should be at 1,
   # but several files should be at revision 2.  Also, two files should
   # be missing.  
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', 'A/mu', wc_rev=2)
 
   expected_status.add({
@@ -388,8 +387,7 @@ def receive_copy_in_update(sbox):
     })
 
   # Create expected status tree.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/newG' : Item(status='  ', wc_rev=2),
     'A/B/newG/pi' : Item(status='  ', wc_rev=2),
@@ -1950,8 +1948,7 @@ def copy_copied_file_and_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/rho_copy_1'       : Item(status='  ', wc_rev=2),
     'A/B/F/rho_copy_2'     : Item(status='  ', wc_rev=2),
@@ -2012,8 +2009,7 @@ def move_copied_file_and_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/rho_copy_moved'     : Item(status='  ', wc_rev=2),
     'A/D/G/E_copy_moved'       : Item(status='  ', wc_rev=2),
@@ -2069,8 +2065,7 @@ def move_moved_file_and_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/G/E_move_moved/'      : Item(status='  ', wc_rev=2),
     'A/D/G/E_move_moved/alpha' : Item(status='  ', wc_rev=2),
@@ -2128,8 +2123,7 @@ def move_file_within_moved_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/D_moved'                   : Item(status='  ', wc_rev=2),
     'A/B/F/D_moved/gamma'             : Item(status='  ', wc_rev=2),
@@ -2199,8 +2193,7 @@ def move_file_out_of_moved_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/D_moved'         : Item(status='  ', wc_rev=2),
     'A/B/F/D_moved/gamma'   : Item(status='  ', wc_rev=2),
@@ -2270,8 +2263,7 @@ def move_dir_within_moved_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/D_moved'                     : Item(status='  ', wc_rev=2),
     'A/B/F/D_moved/gamma'               : Item(status='  ', wc_rev=2),
@@ -2340,8 +2332,7 @@ def move_dir_out_of_moved_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/D_moved'           : Item(status='  ', wc_rev=2),
     'A/B/F/D_moved/gamma'     : Item(status='  ', wc_rev=2),
@@ -2398,8 +2389,7 @@ def move_file_back_and_forth(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/G/rho' : Item(status='  ', wc_rev=2),
     })
@@ -2537,8 +2527,7 @@ def copy_move_added_paths(sbox):
     })
 
   # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/H/I'         : Item(status='  ', wc_rev=2),
     'A/D/H/I/J'       : Item(status='  ', wc_rev=2),
