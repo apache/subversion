@@ -7,6 +7,7 @@ Usage: python win-tests.py [option] [test-path]
                        svnserve for ra_svn tests
     -v, --verbose      talk more
     -f, --fs-type=type filesystem type to use (bdb is default)
+    -c, --cleanup      cleanup after running a test
 
     --svnserve-args=list   comma-separated list of arguments for svnserve;
                            default is '-d,-r,<test-path-root>'
