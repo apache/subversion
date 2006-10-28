@@ -1,20 +1,7 @@
-"""Driver for running the tests on Windows.
+"""
+Driver for running the tests on Windows.
 
-Usage: python win-tests.py [option] [test-path]
-    -r, --release      test the Release configuration
-    -d, --debug        test the Debug configuration (default)
-    -u URL, --url=URL  run ra_dav or ra_svn tests against URL; will start
-                       svnserve for ra_svn tests
-    -v, --verbose      talk more
-    -f, --fs-type=type filesystem type to use (bdb is default)
-    -c, --cleanup      cleanup after running a test
-
-    --svnserve-args=list   comma-separated list of arguments for svnserve;
-                           default is '-d,-r,<test-path-root>'
-    --asp.net-hack     use '_svn' instead of '.svn' for the admin dir name
-    --httpd-dir        location where Apache HTTPD installed
-    --httpd-port       port for Apache HTTPD; random port number will be
-                       used, if not specified
+For a list of options, run this script with the --help option.
 """
 
 import os, sys
@@ -30,6 +17,31 @@ try:
     my_getopt = getopt.gnu_getopt
 except AttributeError:
     my_getopt = getopt.getopt
+
+def _usage_exit():
+  "print usage, exit the script"
+  
+  print "Driver for running the tests on Windows."
+  print "Usage: python win-tests.py [option] [test-path]"
+  print
+  print "Valid options:"
+  print "  -r, --release        : test the Release configuration"
+  print "  -d, --debug          : test the Debug configuration (default)"
+  print "  -u URL, --url=URL    : run ra_dav or ra_svn tests against URL; will"
+  print "                         start svnserve for ra_svn tests"
+  print "  -v, --verbose        : talk more"
+  print "  -f, --fs-type=type   : filesystem type to use (bdb is default)"
+  print "  -c, --cleanup        : cleanup after running a test"
+
+  print "  --svnserve-args=list : comma-separated list of arguments for"
+  print "                         svnserve"
+  print "                         default is '-d,-r,<test-path-root>'"
+  print "  --asp.net-hack       : use '_svn' instead of '.svn' for the admin"
+  print "                         dir name"
+  print "  --httpd-dir          : location where Apache HTTPD is installed"
+  print "  --httpd-port         : port for Apache HTTPD; random port number"
+  print "                         will be used, if not specified"
+  sys.exit(0)
 
 CMDLINE_TEST_SCRIPT_PATH = 'subversion/tests/cmdline/'
 CMDLINE_TEST_SCRIPT_NATIVE_PATH = CMDLINE_TEST_SCRIPT_PATH.replace('/', os.sep)
@@ -48,7 +60,7 @@ client_tests = filter(lambda x: x.startswith(CMDLINE_TEST_SCRIPT_PATH),
 opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
-                        'httpd-dir=', 'httpd-port='])
+                        'httpd-dir=', 'httpd-port=', 'help'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -63,7 +75,9 @@ run_httpd = None
 httpd_port = None
 
 for opt, val in opts:
-  if opt in ('-u', '--url'):
+  if opt in ('-h', '--help'):
+    _usage_exit()
+  elif opt in ('-u', '--url'):
     base_url = val
   elif opt in ('-f', '--fs-type'):
     fs_type = val
