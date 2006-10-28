@@ -717,8 +717,7 @@ def dont_diff_binary_file(sbox):
     })
 
   # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=2),
     })
@@ -782,8 +781,7 @@ def dont_diff_binary_file(sbox):
     'A/theta' : Item(verb='Sending'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=3),
     })
@@ -868,8 +866,7 @@ def diff_base_to_repos(sbox):
     'iota' : Item(verb='Sending'),
     })
   
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -1012,8 +1009,7 @@ def diff_base_to_repos(sbox):
     'A/mu' : Item(verb='Deleting'),
     'A/D/newfile' : Item(verb='Adding')
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('iota', wc_rev=3)
   expected_status.remove('A/mu')
   expected_status.add({
@@ -1085,8 +1081,7 @@ def diff_deleted_in_head(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -1106,8 +1101,7 @@ def diff_deleted_in_head(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A' : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.remove('A', 'A/B', 'A/B/E', 'A/B/E/beta', 'A/B/E/alpha',
                          'A/B/F', 'A/B/lambda', 'A/D', 'A/D/G', 'A/D/G/rho',
                          'A/D/G/pi', 'A/D/G/tau', 'A/D/H', 'A/D/H/psi',
@@ -1747,8 +1741,7 @@ def diff_force(sbox):
     })
 
   # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'iota' : Item(status='  ', wc_rev=2),
     })
@@ -1766,8 +1759,7 @@ def diff_force(sbox):
     'iota' : Item(verb='Sending'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'iota' : Item(status='  ', wc_rev=3),
     })

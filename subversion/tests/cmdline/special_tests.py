@@ -66,8 +66,7 @@ def general_symlink(sbox):
     raise svntest.Failure
   
   # Commit and make sure everything is good
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'newfile' : Item(status='  ', wc_rev=2),
     'linktarget' : Item(status='  ', wc_rev=2),
@@ -110,8 +109,7 @@ def general_symlink(sbox):
     'newfile' : Item(verb='Sending'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
     'newfile' : Item(status='  ', wc_rev=3),
     'linktarget' : Item(status='  ', wc_rev=2),
@@ -227,8 +225,7 @@ def copy_tree_with_symlink(sbox):
     'A/D/H/linktarget' : Item(verb='Adding'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/H/newfile' : Item(status='  ', wc_rev=2),
     'A/D/H/linktarget' : Item(status='  ', wc_rev=2),
@@ -272,8 +269,7 @@ def replace_symlink_with_file(sbox):
     'linktarget' : Item(verb='Adding'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'newfile' : Item(status='  ', wc_rev=2),
     'linktarget' : Item(status='  ', wc_rev=2),
@@ -325,8 +321,7 @@ def remove_symlink(sbox):
     'linktarget' : Item(verb='Adding'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'newfile' : Item(status='  ', wc_rev=2),
     'linktarget' : Item(status='  ', wc_rev=2),
@@ -344,8 +339,7 @@ def remove_symlink(sbox):
     'newfile' : Item(verb='Deleting'),
     })
   
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'linktarget' : Item(status='  ', wc_rev=2),
     })

@@ -303,8 +303,7 @@ def revert_replaced_file_without_props(sbox):
     'file1' : Item(verb='Adding')
     })
   
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'file1' : Item(status='  ', wc_rev=2),
     })

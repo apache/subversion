@@ -86,8 +86,7 @@ def status_update_with_nested_adds(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but newdir and newfile should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'newdir' : Item(status='  ', wc_rev=2),
     'newdir/newfile' : Item(status='  ', wc_rev=2),
@@ -104,8 +103,7 @@ def status_update_with_nested_adds(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but newdir and newfile should be present with 'blank' attributes.
-  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 1)
 
   # Verify status.  Notice that we're running status *without* the
   # --quiet flag, so the unversioned items will appear.

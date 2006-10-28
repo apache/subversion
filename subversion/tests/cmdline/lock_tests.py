@@ -127,8 +127,7 @@ def commit_file_keep_lock(sbox):
   svntest.main.file_append(file_path, "Tweak!\n")
   svntest.main.run_svn(None, 'commit', '-m', '', '--no-unlock', file_path)
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
   expected_status.tweak(fname, writelocked='K')
 
@@ -154,8 +153,7 @@ def commit_file_unlock(sbox):
   svntest.main.file_append(file_path, "Tweak!\n")
   svntest.main.run_svn(None, 'commit', '-m', '', file_path)
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
 
   # Make sure the file is unlocked
@@ -181,8 +179,7 @@ def commit_propchange(sbox):
   svntest.main.run_svn(None, 'propset', 'blue', 'azul', file_path)
   svntest.main.run_svn(None, 'commit', '-m', '', file_path)
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
 
   # Make sure the file is unlocked
@@ -616,8 +613,7 @@ def lock_status(sbox):
                        '--password', svntest.main.wc_passwd,
                        '-m', '', file_path) 
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)  
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)  
   expected_status.tweak(fname, wc_rev=2)
   expected_status.tweak(fname, writelocked='K')
 
@@ -666,8 +662,7 @@ def stolen_lock_status (sbox):
                        '--password', svntest.main.wc_passwd,
                        '-m', '', file_path)
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
   expected_status.tweak(fname, writelocked='K')
 
@@ -712,8 +707,7 @@ def broken_lock_status (sbox):
                        '--password', svntest.main.wc_passwd,
                        '-m', '', file_path)
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(fname, wc_rev=2)
   expected_status.tweak(fname, writelocked='K')
 
@@ -813,8 +807,7 @@ def revert_lock(sbox):
     raise svntest.Failure
 
   # verify status is as we expect
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1195,8 +1188,7 @@ def commit_xml_unsafe_file_unlock(sbox):
   svntest.main.file_append(file_path, "Followup data.\n")
   svntest.main.run_svn(None, 'commit', '-m', '', file_path)
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({ fname : Item(status='  ', wc_rev=3), })
 
   # Make sure the file is unlocked

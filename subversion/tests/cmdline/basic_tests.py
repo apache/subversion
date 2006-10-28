@@ -131,8 +131,7 @@ def basic_commit(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   svntest.actions.run_and_verify_commit (wc_dir,
@@ -170,8 +169,7 @@ def basic_update(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   # Commit.
@@ -283,8 +281,7 @@ def basic_corruption(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
 
   # Modify mu's text-base, so we get a checksum failure the first time
@@ -397,8 +394,7 @@ def basic_merging_update(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
   
   # Initial commit.
@@ -425,8 +421,7 @@ def basic_merging_update(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 3.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=3)
 
   # Commit.
@@ -514,8 +509,7 @@ def basic_conflict(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   # Commit.
@@ -1106,8 +1100,7 @@ def basic_checkout_deleted(sbox):
     'A/D' : Item(verb='Deleting'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D', 'A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',
                          'A/D/H', 'A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega',
                          'A/D/gamma')
@@ -1160,8 +1153,7 @@ def basic_node_kind_change(sbox):
   expected_output = wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
