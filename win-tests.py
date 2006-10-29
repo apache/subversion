@@ -30,7 +30,7 @@ def _usage_exit():
   print "  -u URL, --url=URL    : run ra_dav or ra_svn tests against URL; will"
   print "                         start svnserve for ra_svn tests"
   print "  -v, --verbose        : talk more"
-  print "  -f, --fs-type=type   : filesystem type to use (bdb is default)"
+  print "  -f, --fs-type=type   : filesystem type to use (fsfs is default)"
   print "  -c, --cleanup        : cleanup after running a test"
 
   print "  --svnserve-args=list : comma-separated list of arguments for"
@@ -109,7 +109,11 @@ if len(args) == 0:
 else:
   abs_builddir = os.path.abspath(args[0])
   create_dirs = 1
-  
+
+# Default to fsfs explicitly
+if not fs_type:
+  fs_type = 'fsfs'
+
 # Don't run bdb tests if they want to test fsfs
 if fs_type == 'fsfs':
   all_tests = gen_obj.test_progs + gen_obj.scripts
