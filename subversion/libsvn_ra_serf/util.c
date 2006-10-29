@@ -118,6 +118,15 @@ svn_ra_serf__cleanup_serf_session(void *data)
   svn_ra_serf__session_t *serf_sess = data;
   int i;
 
+  /* If we are cleaning up due to an error, don't call connection_close
+   * as we're already on our way out of here and we'll defer to serf's
+   * cleanups.
+   */
+  if (serf_sess->pending_error)
+    {
+      return APR_SUCCESS;
+    }
+
   for (i = 0; i < serf_sess->num_conns; i++)
     {
       if (serf_sess->conns[i])
