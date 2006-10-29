@@ -57,7 +57,7 @@ all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
 client_tests = filter(lambda x: x.startswith(CMDLINE_TEST_SCRIPT_PATH),
                       all_tests)
 
-opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
+opts, args = my_getopt(sys.argv[1:], 'hrdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
                         'httpd-dir=', 'httpd-port=', 'help'])
