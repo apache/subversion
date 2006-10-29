@@ -119,7 +119,6 @@ or a url (when false) copy source is used."""
 
   # Verify props having been set
   expected_disk = svntest.main.greek_state.copy()
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_disk.tweak('A/D/G/pi',
                       props={ 'phony-prop': '*' })
   expected_disk.tweak('A/D/G/rho',
