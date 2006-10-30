@@ -288,7 +288,7 @@ def blame_eol_styles(sbox):
 
   # do the test for each eol-style
   for eol in ['CR', 'LF', 'CRLF', 'native']:
-    open(file_path, 'wb').write("This is no longer the file 'iota'.\n.encode("utf-8")")
+    open(file_path, 'wb').write("This is no longer the file 'iota'.\n".encode("utf-8"))
 
     for i in range (1,3):
       line_to_append = "Extra line %d" % (i) + "\n"
@@ -322,8 +322,8 @@ def blame_ignore_whitespace(sbox):
   file_name = "iota"
   file_path = os.path.join(wc_dir, file_name)
 
-  open(file_path, 'wb').write("Aa\n".encode("utf-8")
-                              "Bb\n".encode("utf-8")
+  open(file_path, 'wb').write("Aa\n".encode("utf-8") +
+                              "Bb\n".encode("utf-8") +
                               "Cc\n".encode("utf-8"))
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
@@ -333,8 +333,8 @@ def blame_ignore_whitespace(sbox):
                                         None, None, wc_dir)
 
   # commit only whitespace changes
-  open(file_path, 'wb').write(" A  a   \n".encode("utf-8")
-                              "   B b  \n".encode("utf-8")
+  open(file_path, 'wb').write(" A  a   \n".encode("utf-8") +
+                              "   B b  \n".encode("utf-8") +
                               "    C    c    \n".encode("utf-8"))
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
@@ -356,9 +356,9 @@ def blame_ignore_whitespace(sbox):
                                      'blame', '-x', '-w', file_path)
 
   # commit some changes
-  open(file_path, 'wb').write(" A  a   \n".encode("utf-8")
-                              "Xxxx X\n".encode("utf-8")
-                              "   Bb b  \n".encode("utf-8")
+  open(file_path, 'wb').write(" A  a   \n".encode("utf-8")  +
+                              "Xxxx X\n".encode("utf-8")    +
+                              "   Bb b  \n".encode("utf-8") +
                               "    C    c    \n".encode("utf-8"))
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
@@ -386,8 +386,8 @@ def blame_ignore_eolstyle(sbox):
   file_name = "iota"
   file_path = os.path.join(wc_dir, file_name)
 
-  open(file_path, 'wb').write("Aa\n".encode("utf-8")
-                              "Bb\n".encode("utf-8")
+  open(file_path, 'wb').write("Aa\n".encode("utf-8") +
+                              "Bb\n".encode("utf-8") +
                               "Cc\n".encode("utf-8"))
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
@@ -397,8 +397,8 @@ def blame_ignore_eolstyle(sbox):
                                         None, None, wc_dir)
 
   # commit only eol changes
-  open(file_path, 'wb').write("Aa\r".encode("utf-8")
-                              "Bb\r".encode("utf-8")
+  open(file_path, 'wb').write("Aa\r".encode("utf-8") +
+                              "Bb\r".encode("utf-8") +
                               "Cc".encode("utf-8"))
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),

@@ -2644,8 +2644,8 @@ def diff_ignore_whitespace(sbox):
   file_name = "iota"
   file_path = os.path.join(wc_dir, file_name)
 
-  open(file_path, 'wb').write("Aa\n".encode("utf-8")
-                              "Bb\n".encode("utf-8")
+  open(file_path, 'wb').write("Aa\n".encode("utf-8") +
+                              "Bb\n".encode("utf-8") +
                               "Cc\n".encode("utf-8"))
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
@@ -2655,17 +2655,17 @@ def diff_ignore_whitespace(sbox):
                                         None, None, wc_dir)
 
   # only whitespace changes, should return no changes
-  open(file_path, 'wb').write(" A  a   \n".encode("utf-8")
-                              "   B b  \n".encode("utf-8")
+  open(file_path, 'wb').write(" A  a   \n".encode("utf-8") +
+                              "   B b  \n".encode("utf-8") +
                               "    C    c    \n".encode("utf-8"))
 
   svntest.actions.run_and_verify_svn(None, [], [],
                                      'diff', '-x', '-w', file_path)
   
   # some changes + whitespace
-  open(file_path, 'wb').write(" A  a   \n".encode("utf-8")
-                              "Xxxx X\n".encode("utf-8")
-                              "   Bb b  \n".encode("utf-8")
+  open(file_path, 'wb').write(" A  a   \n".encode("utf-8")  +
+                              "Xxxx X\n".encode("utf-8")    +
+                              "   Bb b  \n".encode("utf-8") +
                               "    C    c    \n".encode("utf-8"))
   expected_output = [
     "Index: svn-test-work/working_copies/diff_tests-39/iota\n",
@@ -2691,8 +2691,8 @@ def diff_ignore_eolstyle(sbox):
   file_name = "iota"
   file_path = os.path.join(wc_dir, file_name)
 
-  open(file_path, 'wb').write("Aa\n".encode("utf-8")
-                             "Bb\n".encode("utf-8")
+  open(file_path, 'wb').write("Aa\n".encode("utf-8") +
+                             "Bb\n".encode("utf-8")  +
                              "Cc\n".encode("utf-8"))
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
@@ -2702,8 +2702,8 @@ def diff_ignore_eolstyle(sbox):
                                         None, None, wc_dir)
 
   # commit only eol changes
-  open(file_path, 'wb').write("Aa\r".encode("utf-8")
-                              "Bb\r".encode("utf-8")
+  open(file_path, 'wb').write("Aa\r".encode("utf-8") +
+                              "Bb\r".encode("utf-8") +
                               "Cc".encode("utf-8"))
 
   expected_output = [
