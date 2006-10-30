@@ -35,7 +35,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-08-23 13:50-0500\n"
-"PO-Revision-Date: 2006-08-22 17:03+0200\n"
+"PO-Revision-Date: 2006-10-30 14:18+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Polish <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -640,9 +640,8 @@ msgid "Svndiff data ends unexpectedly"
 msgstr "Nieoczekiwany koniec danych svndiff"
 
 #: include/svn_error_codes.h:832
-#, fuzzy
 msgid "Svndiff compressed data is invalid"
-msgstr "Błędny nagłówek danych svndiff"
+msgstr "Błędny nagłówek skompresowanych danych svndiff"
 
 #: include/svn_error_codes.h:838
 #, fuzzy
@@ -1072,9 +1071,9 @@ msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "Element '%s' zaznaczony do skopiowania, lecz wersja jest niewłaściwa"
 
 #: libsvn_client/copy.c:95 libsvn_client/copy.c:768
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is not a directory"
-msgstr "'%s' nie jest katalogiem"
+msgstr "Ścieżka '%s' nie jest katalogiem"
 
 #: libsvn_client/copy.c:138
 msgid "Move will not be attempted unless forced"
@@ -1440,9 +1439,8 @@ msgid "Compression of svndiff data failed"
 msgstr "niepowiodła się kompresja danych svndiff"
 
 #: libsvn_delta/svndiff.c:407
-#, fuzzy
 msgid "Decompression of svndiff data failed"
-msgstr "niepowiodła się dekompresja danych svndiff"
+msgstr "Dekompresja danych svndiff nie powiodła się"
 
 #: libsvn_delta/svndiff.c:414
 #, fuzzy
