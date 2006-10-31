@@ -942,6 +942,12 @@ svn_ra_serf__get_file_revs(svn_ra_session_t *session,
                            apr_pool_t *pool);
 
 svn_error_t *
+svn_ra_serf__get_dated_revision(svn_ra_session_t *session,
+                                svn_revnum_t *revision,
+                                apr_time_t tm,
+                                apr_pool_t *pool);
+
+svn_error_t *
 svn_ra_serf__get_commit_editor(svn_ra_session_t *session,
                                const svn_delta_editor_t **editor,
                                void **edit_baton,
