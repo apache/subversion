@@ -383,10 +383,11 @@ append_component_to_paths(apr_hash_t **output,
   return SVN_NO_ERROR;
 }
 
-/* Helper for get_merge_info that will recursively get merge info for
- * a single path.  Pass RESULT as NULL if you do not want the result
- * to be updated.
- */
+/* A helper for get_merge_info() that retrieves merge info recursively
+   (when INCLUDE_PARENTS is TRUE) for a single path.  Pass NULL for
+   RESULT if you only want CACHE to be updated.  Otherwise, both
+   RESULT and CACHE are updated with the appropriate merge info for
+   PATH. */
 static svn_error_t *
 get_merge_info_for_path(sqlite3 *db,
                         const char *path,
@@ -396,17 +397,16 @@ get_merge_info_for_path(sqlite3 *db,
                         svn_boolean_t include_parents,
                         apr_pool_t *pool)
 {
-  apr_hash_t *cacheresult;
+  apr_hash_t *path_mergeinfo;
   sqlite3_stmt *stmt;
   int sqlite_result;
   sqlite_int64 count;
-  svn_boolean_t has_no_mergeinfo = FALSE;
 
-  cacheresult = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
-  if (cacheresult != NULL)
+  path_mergeinfo = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
+  if (path_mergeinfo != NULL)
     {
-      if (cacheresult != NEGATIVE_CACHE_RESULT && result)
-        apr_hash_set(result, path, APR_HASH_KEY_STRING, cacheresult);
+      if (path_mergeinfo != NEGATIVE_CACHE_RESULT && result)
+        apr_hash_set(result, path, APR_HASH_KEY_STRING, path_mergeinfo);
       return SVN_NO_ERROR;
     }
 
@@ -430,25 +430,22 @@ get_merge_info_for_path(sqlite3 *db,
      mergeinfo hash */
   if (count > 0)
     {
-      apr_hash_t *pathresult = NULL;
-
-      SVN_ERR(parse_mergeinfo_from_db(db, path, rev, &pathresult, pool));
-      if (pathresult)
+      SVN_ERR(parse_mergeinfo_from_db(db, path, rev, &path_mergeinfo, pool));
+      if (path_mergeinfo)
         {
           if (result)
-            apr_hash_set(result, path, APR_HASH_KEY_STRING, pathresult);
-          apr_hash_set(cache, path, APR_HASH_KEY_STRING, pathresult);
+            apr_hash_set(result, path, APR_HASH_KEY_STRING, path_mergeinfo);
+          apr_hash_set(cache, path, APR_HASH_KEY_STRING, path_mergeinfo);
         }
       else
-        has_no_mergeinfo = TRUE;
+        apr_hash_set(cache, path, APR_HASH_KEY_STRING, NEGATIVE_CACHE_RESULT);
+      return SVN_NO_ERROR;
     }
 
   /* If this path has no mergeinfo, and we are asked to, check our parent */
-  if ((count == 0 || has_no_mergeinfo) && include_parents)
+  if (count == 0 && include_parents)
     {
       svn_stringbuf_t *parentpath;
-
-      apr_hash_set(cache, path, APR_HASH_KEY_STRING, NEGATIVE_CACHE_RESULT);
 
       /* It is possible we are already at the root.  */
       if (strcmp(path, "") == 0)
@@ -457,36 +454,34 @@ get_merge_info_for_path(sqlite3 *db,
       parentpath = svn_stringbuf_create(path, pool);
       svn_path_remove_component(parentpath);
 
-      /* The repository, and the mergeinfo index, internally refer to
-         "/" as "" */
+      /* The repository and the merge info index internally refer to
+         the root path as "" rather than "/". */
       if (strcmp(parentpath->data, "/") == 0)
         parentpath->data = "";
 
       SVN_ERR(get_merge_info_for_path(db, parentpath->data, rev,
                                       NULL, cache, include_parents,
                                       pool));
-      if (result)
+      path_mergeinfo = apr_hash_get(cache, parentpath->data,
+                                    APR_HASH_KEY_STRING);
+      if (path_mergeinfo == NEGATIVE_CACHE_RESULT)
+        apr_hash_set(cache, path, APR_HASH_KEY_STRING, NULL);
+      else if (path_mergeinfo)
         {
-          /* Now translate the result for our parent to our path */
-          cacheresult = apr_hash_get(cache, parentpath->data,
-                                     APR_HASH_KEY_STRING);
-          if (cacheresult == NEGATIVE_CACHE_RESULT)
-            apr_hash_set(result, path, APR_HASH_KEY_STRING, NULL);
-          else if (cacheresult)
-            {
-              apr_hash_t *translatedhash;
-              const char *toappend = &path[parentpath->len + 1];
+          /* Now translate the result for our parent to our path. */
+          apr_hash_t *translated_mergeinfo;
+          const char *to_append = &path[parentpath->len + 1];
 
-              append_component_to_paths(&translatedhash, cacheresult,
-                                        toappend, pool);
-              apr_hash_set(result, path, APR_HASH_KEY_STRING,
-                           translatedhash);
-            }
+          append_component_to_paths(&translated_mergeinfo, path_mergeinfo,
+                                    to_append, pool);
+          apr_hash_set(cache, path, APR_HASH_KEY_STRING, translated_mergeinfo);
+          if (result)
+            apr_hash_set(result, path, APR_HASH_KEY_STRING,
+                         translated_mergeinfo);
         }
     }
   return SVN_NO_ERROR;
 }
-
 
 
 /* Get the merge info for a set of paths.  */
