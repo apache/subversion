@@ -55,7 +55,7 @@ Candidate changes:
       Minor bug in svnsync, it's nice to fix things users report, low impact.
     Notes: It would be great to get this bug fix into 1.4.1!
     Votes:
-      +1: rooneg, dlr
+      +1: rooneg, dlr, jerenkrantz
 
 Approved changes:
 
