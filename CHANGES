@@ -19,6 +19,7 @@ http://svn.collab.net/repos/svn/tags/1.4.2
     * fixed: 'svn status -u' not showing props changed on wc root (issue #2533)
     * fixed: 'svn status -u' fails in a read-only working copy (r21904, -19)
     * fixed: 'svn up' failing with checksum mismatch error (issue #2618)
+    * fixed: 'svnsync sync' copying missing implicit revprops (issue #2613)
     * fixed: svnsync unable to synchronise copies of URL-unsafe paths (r22092)
     * svnshell tool: support "setrev head" (r20992)
     * include newest version of svnmerge.py
