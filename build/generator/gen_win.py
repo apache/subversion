@@ -65,6 +65,8 @@ class WinGeneratorBase(GeneratorBase):
     # NLS options
     self.enable_nls = None
 
+    # ML (assembler) is disabled by default; use --enable-ml to detect
+    self.enable_ml = None
 
     for opt, val in options:
       if opt == '--with-berkeley-db':
@@ -107,6 +109,8 @@ class WinGeneratorBase(GeneratorBase):
         self.enable_nls = 1
       elif opt == '--enable-bdb-in-apr-util':
         self.configure_apr_util = 1
+      elif opt == '--enable-ml':
+        self.enable_ml = 1
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?', val):
           self.vsnet_version = '7.00'
@@ -981,6 +985,9 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_ml(self):
     "Check if the ML assembler is in the path"
+    if not self.enable_ml:
+      self.have_ml = 0
+      return
     fp = os.popen('ml /help', 'r')
     try:
       line = fp.readline()
