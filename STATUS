@@ -53,8 +53,9 @@ Candidate changes:
     Fix bug in svnsync when copying revisions that lack a svn:author revprop.
     Justification:
       Minor bug in svnsync, it's nice to fix things users report, low impact.
+    Notes: It would be great to get this bug fix into 1.4.1!
     Votes:
-      +1: rooneg
+      +1: rooneg, dlr
 
 Approved changes:
 
