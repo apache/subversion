@@ -822,27 +822,28 @@ def simple_property_merges(sbox):
                                      'revert', '--recursive', wc_dir)
   svntest.actions.run_and_verify_status(wc_dir, pristine_status)
   
+  # Copy A at rev 4 to A2 to make revision 5.
   A_url = svntest.main.current_repo_url + '/A'
   A2_url = svntest.main.current_repo_url + '/A2'
- 
-  # Copy to make revision 5
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 5.\n'], [],
                                      'copy', '-m', 'copy A to A2',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      A_url, A2_url)
-  
+
+  # Re-root the WC at A2.
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', A2_url, wc_dir)
-  
+
+  # Attempt to re-merge rev 4 of the original A's alpha.  Merge info
+  # inherited from A2 (created by its copy from A) allows us to avoid
+  # a repeated merge.
   alpha_url = svntest.main.current_repo_url + '/A/B/E/alpha'
   alpha_path = os.path.join(wc_dir, 'B', 'E', 'alpha')
 
   # Cannot use run_and_verify_merge with a file target
-  svntest.actions.run_and_verify_svn(None,
-                                     [' G   ' + alpha_path + '\n'], [],
-                                     'merge',
-                                     '-r', '3:4', alpha_url, alpha_path)
+  svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-r', '3:4',
+                                     alpha_url, alpha_path)
   
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'pl', alpha_path)
