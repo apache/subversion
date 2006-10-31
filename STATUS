@@ -22,14 +22,14 @@ Status of 1.4.1:
 ================
 Candidate changes:
 
-  * 20666
+  * 20666, 22167
     Fix svn_ra_replay for Perl bindings.
     Justification:
       Binding correctness for 1.4 major feature.  Low impact for main
-      library and binary.
+      library and binary.  Includes test.
     Branch: 1.4.x-r20666
     Votes:
-      +1: clkao
+      +1: clkao (r20666 only), glasser
 
 Status of 1.4.2:
 ================
