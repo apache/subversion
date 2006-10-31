@@ -176,14 +176,15 @@ do_url_propset(const char *propname,
       SVN_ERR(editor->open_file("", root_baton, base_revision_for_url,
                                 pool, &file_baton));
       SVN_ERR(editor->change_file_prop(file_baton, propname, propval, pool));
+      SVN_ERR(editor->close_file(file_baton, NULL, pool));
     }
   else
     {
-      void *dir_baton;
-      SVN_ERR(editor->open_directory("", root_baton, base_revision_for_url,
-                                     pool, &dir_baton));
-      SVN_ERR(editor->change_dir_prop(dir_baton, propname, propval, pool));
+      SVN_ERR(editor->change_dir_prop(root_baton, propname, propval, pool));
     }
+
+  SVN_ERR(editor->close_directory(root_baton, pool));
+
   return SVN_NO_ERROR;
 }
 
