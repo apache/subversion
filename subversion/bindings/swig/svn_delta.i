@@ -250,13 +250,3 @@ svn_txdelta_md5_digest_as_cstring(svn_txdelta_stream_t *stream,
  
 %}
 #endif
-
-
-/* -----------------------------------------------------------------------
-   editor callback invokers
-*/
-
-/* Cancel the typemap as they aren't returned valued in member functions
-   if editor. */
-%typemap(perl5, in) (const svn_delta_editor_t *editor, void *edit_baton);
-

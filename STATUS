@@ -18,19 +18,6 @@ Do not run svnmerge.py N separate times for each revision to merge
 over, since svnmerge.py will not merge into a WC with uncommitted
 changes.
 
-Status of 1.4.1:
-================
-Candidate changes:
-
-  * 20666, 22167
-    Fix svn_ra_replay for Perl bindings.
-    Justification:
-      Binding correctness for 1.4 major feature.  Low impact for main
-      library and binary.  Includes test.
-    Branch: 1.4.x-r20666
-    Votes:
-      +1: clkao (r20666 only), glasser
-
 Status of 1.4.2:
 ================
 
