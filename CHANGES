@@ -1,6 +1,6 @@
-Version 1.4.1
-(28 October 2006, from /branches/1.4.x)
-http://svn.collab.net/repos/svn/tags/1.4.1
+Version 1.4.2
+(31 October 2006, from /branches/1.4.x)
+http://svn.collab.net/repos/svn/tags/1.4.2
 
  User-visible-changes:
   - Client:
@@ -45,6 +45,12 @@ Developer-visible-changes:
 * SWIG/python bindings:
     - fixed: crash when using an apr_hash_t typemap (issue #2606)
     - fixed: in tests, use URLs that work on Windows (r21392)
+* SWIG/perl bindings:
+    - fixed: ra_replay works with Perl delta editors (r20666)
+
+
+Version 1.4.1
+(Not released, see changes for 1.4.2.)
 
 
 Version 1.4.0
