@@ -79,9 +79,8 @@ or a url (when false) copy source is used."""
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  expected_status.tweak(repos_rev='2')
   expected_status.tweak('A/D/G/rho', status='  ', copied=None,
-                        repos_rev='2', wc_rev='2')
+                        wc_rev='2')
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho': Item(verb='Replacing'),
     })
@@ -133,7 +132,6 @@ or a url (when false) copy source is used."""
     'A/D/G/rho': Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev='2')
   expected_status.tweak('A/D/G/pi',  wc_rev='2')
   expected_status.tweak('A/D/G/rho', wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -173,9 +171,8 @@ or a url (when false) copy source is used."""
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  expected_status.tweak(repos_rev='3')
   expected_status.tweak('A/D/G/rho', status='  ', copied=None,
-                        repos_rev='3', wc_rev='3')
+                        wc_rev='3')
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho': Item(verb='Replacing'),
     })
@@ -1875,7 +1872,6 @@ def force_move(sbox):
     'dest': Item(verb='Adding'),
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev='2')
   expected_status.remove("iota")
   expected_status.add({
     'dest': Item(status='  ', wc_rev='2'),

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -75,7 +75,6 @@ def revert_replacement_with_props(sbox, wc_copy):
     'A/D/G/rho': Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev='2')
   expected_status.tweak('A/D/G/pi',  wc_rev='2')
   expected_status.tweak('A/D/G/rho', wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -115,9 +114,8 @@ def revert_replacement_with_props(sbox, wc_copy):
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  expected_status.tweak(repos_rev='3')
   expected_status.tweak('A/D/G/rho', status='  ', copied=None,
-                        repos_rev='3', wc_rev='3')
+                        wc_rev='3')
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho': Item(verb='Replacing'),
     })
