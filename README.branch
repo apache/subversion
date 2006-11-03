@@ -32,6 +32,9 @@ Contents
       Date: Thu, 22 Jun 2006 22:35:06 -0700
       Message-ID: <25668.1151040906@gould.diplodocus.org>
 
+   [The design has evolved since then; the text below is not exactly
+   the same as what Eric posted, but has the same general ideas.]
+
    I'd like to propose a new solution to this issue, and hopefully get
    it into 1.5.  What i'm really looking for is the kind of
    flexibility Perforce has with its client specs in which parts of a
@@ -60,22 +63,27 @@ Contents
 
    Depth:
    
-   We have a new "depth" field in .svn/entries, which has three
-   possible values: 0, 1, or infinity.  Only this_dir entries may
-   have depth:0 or depth:1; all others have depth:inf.
+   We have a new "depth" field in .svn/entries, which has (currently)
+   four possible values: depth-empty, depth-files, depth-immediates,
+   and depth-infinity.  Only this_dir entries may have depths other
+   than depth-infinity.
    
-      depth:0 ---------->  Updates will not pull in any files or
+      depth-empty ------>  Updates will not pull in any files or
                            subdirectories not already present.
    
-      depth:1 ---------->  Updates will pull in any files or
+      depth-files ------>  Updates will pull in any files not already
+                           present, but not subdirectories.
+   
+      depth-immediates ->  Updates will pull in any files or
                            subdirectories not already present; those
                            subdirectories' this_dir entries will
                            have depth:0.
    
-      depth:inf -------->  Updates will pull in any files or
+      depth-infinity --->  Updates will pull in any files or
                            subdirectories not already present; those
                            subdirectories' this_dir entries will
-                           have depth:inf.
+                           have depth:inf.  Equivalent to today's
+                           default update behavior.
    
    The --depth option sets depth values as it updates the working
    copy, setting any new subdirectories' this_dir depth values as
@@ -92,23 +100,24 @@ Contents
        * status
        * info
    
-   The -N option becomes a synonym for --depth 1 for these commands.
+   The -N option becomes a synonym for --depth=files for these commands.
    This changes the existing -N behavior for these commands, but in a
    trivial way (see below).
    
    checkout without --depth or -N behaves the same as it does today.
    switch and update without --depth or -N behave the same way as
-   today IFF the working copy is fully depth:inf.  switch and update
-   without --depth or -N will NOT change depth values (exception: a
-   missing directory specified on the command line will be pulled in).
+   today IFF the working copy is fully depth-infinity.  switch and
+   update without --depth or -N will NOT change depth values
+   (exception: a missing directory specified on the command line will
+   be pulled in).
    
    Thus, 'checkout' is identical to 'checkout --depth inf', but
    'switch' and 'update' are not the same as 'switch --depth inf' and
    'update --depth inf'.  The former update entries according to
    existing depth values, while the latter pull in everything.
    
-   To get started, run checkout with --depth 0 or --depth 1.  If
-   additional files or directories are desired, pull them in with
+   To get started, run checkout with --depth=empty or --depth=files.
+   If additional files or directories are desired, pull them in with
    update commands using appropriate --depth options.
    
    The 'svn status' should list the depth status of the directories, in
@@ -129,29 +138,37 @@ Contents
        Today, this creates wc containing only mu.  Now, this will be
        identical to 'svn co --depth 1 /A'.
    
-   svn co --depth 0 http://.../A Awc
+   svn co --depth=empty http://.../A Awc
    
        Creates wc Awc, but *empty*.
    
-       Awc/.svn/entries                this_dir    depth:0
+       Awc/.svn/entries                this_dir    depth:empty
    
-   svn co --depth 1 http://.../A Awc1
+   svn co --depth=files http://.../A Awc1
    
-       Creates wc Awc1 with all files and all subdirectories, but
+       Creates wc Awc1 with all files (i.e., Awc1/mu) but no
+       subdirectories.
+   
+       Awc1/.svn/entries               this_dir    depth:immediates
+       ...
+   
+   svn co --depth=immediates http://.../A Awc2
+   
+       Creates wc Awc2 with all files and all subdirectories, but
        subdirectories are *empty*.
    
-       Awc1/.svn/entries               this_dir    depth:1
+       Awc2/.svn/entries               this_dir    depth:immediates
                                        B
                                        C
-       Awc1/B/.svn/entries             this_dir    depth:0
-       Awc1/C/.svn/entries             this_dir    depth:0
+       Awc2/B/.svn/entries             this_dir    depth:empty
+       Awc2/C/.svn/entries             this_dir    depth:empty
        ...
    
    svn up Awc/B:
    
        Since B is not yet checked out, add it at depth infinity.
    
-       Awc/.svn/entries                this_dir    depth:0
+       Awc/.svn/entries                this_dir    depth:empty
                                        B
        Awc/B/.svn/entries              this_dir    depth:inf
                                        ...
@@ -165,58 +182,58 @@ Contents
        update it.  B and everything under it is at depth:inf, so it
        will be updated just as today.
    
-   svn up --depth 1 Awc/D
+   svn up --depth=immediates Awc/D
    
-       Since D is not yet checked out, add it at depth 1.
+       Since D is not yet checked out, add it at depth:immediates.
    
-       Awc/.svn/entries                this_dir    depth:0
+       Awc/.svn/entries                this_dir    depth:empty
                                        B
                                        D
-       Awc/D/.svn/entries              this_dir    depth:1
+       Awc/D/.svn/entries              this_dir    depth:immediates
                                        ...
-       Awc/D/G/.svn/entries            this_dir    depth:0
+       Awc/D/G/.svn/entries            this_dir    depth:empty
        ...
    
-   svn up --depth 0 Awc/B/E
+   svn up --depth=empty Awc/B/E
    
        Remove everything under E, but leave E as an empty directory
        since B is depth:inf.
    
-       Awc/.svn/entries                this_dir    depth:0
+       Awc/.svn/entries                this_dir    depth:empty
                                        B
                                        D
        Awc/B/.svn/entries              this_dir    depth:inf
                                        ...
-       Awc/B/E/.svn/entries            this_dir    depth:0
+       Awc/B/E/.svn/entries            this_dir    depth:empty
        ...
    
    svn up --depth 0 Awc/D
    
-       Remove everything under D, and D itself since A is depth:0.
+       Remove everything under D, and D itself since A is depth:empty.
    
-       Awc/.svn/entries                this_dir    depth:0
+       Awc/.svn/entries                this_dir    depth:empty
                                        B
    
    svn up Awc/D
    
        Bring D back at depth:inf.
    
-       Awc/.svn/entries                this_dir    depth:0
+       Awc/.svn/entries                this_dir    depth:empty
                                        ...
        Awc/D/.svn/entries              this_dir    depth:inf
                                        ...
        ...
    
-   svn up --depth 1 Awc
+   svn up --depth=immediates Awc
    
        Bring in everything that's missing (C/ and mu) and empty all
-       subdirectories (and set their this_dir to depth:0).
+       subdirectories (and set their this_dir to depth:empty).
    
-       Awc/.svn/entries                this_dir    depth:1
+       Awc/.svn/entries                this_dir    depth:immediates
                                        B
                                        C
-       Awc/B/.svn/entries              this_dir    depth:0
-       Awc/C/.svn/entries              this_dir    depth:0
+       Awc/B/.svn/entries              this_dir    depth:empty
+       Awc/C/.svn/entries              this_dir    depth:empty
        ...
    
 4. Implementation Strategy
@@ -226,18 +243,19 @@ Contents
    tweaks to how we drive the update reporter (svn_ra_reporter2_t).
    However, it looks like it's not going to be that easy.
    
-   Handling 'checkout --depth=0' would be easy.  It should get us an
-   empty directory at depth 0, with no files and no subdirs, and if we
-   just report it as at HEAD every time, the server will never send
-   updates down (hmmm, this could be a problem for getting dir
-   property updates, though).  Then any files or subdirs we have
+   Handling 'checkout --depth=empty' would be easy.  It should get us
+   an empty directory at depth:empty, with no files and no subdirs,
+   and if we just report it as at HEAD every time, the server will
+   never send updates down (hmmm, this could be a problem for getting
+   dir property updates, though).  Then any files or subdirs we have
    explicitly included we can just report at their respective
    revisions, and get proper updates; at least that'll work for the
    depth infinity ones.
    
-   But consider 'checkout -N'.  The desired state is a depth 1
-   directory D, with all files up-to-date, and with skeleton subdirs
-   at depth 0.  Plain updates should preserve this state of affairs.
+   But consider 'checkout --depth=immediates'.  The desired state is a
+   depth:files directory D, with all files up-to-date, and with
+   skeleton subdirs at depth 0.  Plain updates should preserve this
+   state of affairs.
    
    If we report D as at its BASE revision, files at their BASE
    revisions, and subdirs at HEAD, then:
@@ -251,7 +269,8 @@ Contents
    BASE revision (note that we *can* get updates for files we already
    have, though, by continuing to report them at their respective BASEs).
    
-   The same logic applies to subdirectories at depth 1.
+   The same logic applies to subdirectories at depth:files or
+   depth:immediates.
    
    So, I think this means that for efficient depth handling, we'll
    need to have the client directly reporting the desired depth to the
@@ -269,6 +288,10 @@ Contents
 
    http://svn.collab.net/repos/svn/branches/incomplete-directories/
    contains the latest code.
+
+   *** The most important thing to know is that the branch code  ***
+   *** implements an earlier three-depth scheme (0, 1, infinity) ***
+   *** and does not yet reflect the new four-depth universe.     ***
 
    A new enum type 'svn_depth_t depth' is defined in svn_types.h.
    Both client and server side now understand the concept of depth,
@@ -316,7 +339,7 @@ Contents
         brought it into your working copy -- no "exclusion" interface,
         in other words.  So you can do this:
 
-           $ svn co --depth=0 http://.../repos/greek-tree/
+           $ svn co --depth=empty http://.../repos/greek-tree/
            $ cd greek-tree
            $ svn up A
 
@@ -327,7 +350,7 @@ Contents
 
         In fact, you can't yet even do:
 
-           $ svn up --depth=0 A
+           $ svn up --depth=empty A
 
         ...to at least "fold up" A/ and save the disk space.
 
@@ -365,7 +388,7 @@ Contents
 
       * Small bug in how depth is stored in entries file format:
 
-        Suppose we have A at depth 0 and A/B at depth 1.
+        Suppose we have A at depth:empty and A/B at depth:files.
         A/.svn/entries will have a short "dir" entry for B.
         Naturally, that entry does not mention B's revision or other
         details, because that stuff should live in A/B/.svn/entries.
