@@ -678,7 +678,7 @@ class WinGeneratorBase(GeneratorBase):
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
     
     if self.serf_lib:
-      fakeincludes.append(self.apath(self.serf_path, ""))
+      fakeincludes.append(self.apath(self.serf_path))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
