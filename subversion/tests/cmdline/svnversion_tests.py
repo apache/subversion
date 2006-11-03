@@ -56,8 +56,7 @@ def svnversion_test(sbox):
                                             [ "1M\n" ], [])
 
   expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   if svntest.actions.run_and_verify_commit (wc_dir,
                                             expected_output, expected_status,

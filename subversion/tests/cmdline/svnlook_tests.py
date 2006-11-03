@@ -72,8 +72,7 @@ def test_misc(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   svntest.actions.run_and_verify_commit (wc_dir,
@@ -189,8 +188,7 @@ def delete_file_in_moved_dir(sbox):
     'A/B/E2' : Item(verb='Adding'),
     'A/B/E2/alpha' : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.add({
     'A/B/E2'      : Item(status='  ', wc_rev=2),

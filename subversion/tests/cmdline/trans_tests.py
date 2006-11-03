@@ -423,8 +423,7 @@ def update_modified_with_translation(sbox):
     'A/D/G/rho' : Item(verb='Sending'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   # rho has props
   expected_status.tweak('A/D/G/rho', wc_rev=2, status='  ')
 
@@ -441,8 +440,7 @@ def update_modified_with_translation(sbox):
   f.close()
 
   # Commit revision 3 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', wc_rev=3, status='  ')
 
   svntest.actions.run_and_verify_commit (wc_dir,
@@ -614,8 +612,7 @@ def cat_keyword_expansion(sbox):
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output, expected_status,
@@ -704,8 +701,7 @@ def propset_commit_checkout_nocrash(sbox):
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
@@ -718,8 +714,7 @@ def propset_commit_checkout_nocrash(sbox):
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,

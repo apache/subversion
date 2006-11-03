@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 37;
+use Test::More tests => 40;
 use File::Temp qw(tempdir);
 use File::Path qw(rmtree);
 use strict;
@@ -134,6 +134,14 @@ ok(!exists $ed->{'trunk/filea'}{props}{'test-prop'},
    'do_update: deleted property');
 is($ed->{'trunk/filea'}{props}{'binary-prop'}, $BINARY_DATA,
    'do_update: binary-prop');
+
+# replay
+$ed = MockEditor->new;
+$ra->replay(1, 0, 1, $ed);
+is($ed->{trunk}{type}, 'dir', "replay: got trunk");
+is($ed->{trunk}{props}{'dir-prop'}, 'frob', 'replay: dir-prop');
+is($ed->{'trunk/filea'}{props}{'binary-prop'}, $BINARY_DATA,
+   'replay: binary-prop');
 
 END {
 diag "cleanup";

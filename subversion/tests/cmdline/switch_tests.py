@@ -521,8 +521,7 @@ def relocate_deleted_missing_copied(sbox):
   # Delete A/mu to create a deleted entry for mu in A/.svn/entries
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu_path)
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/mu')
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(verb='Deleting'),
@@ -760,8 +759,7 @@ def failed_anchor_is_target(sbox):
   # which changes are received, but since the new psi is a dir, it
   # appears we can count on it being received last.  But if this test
   # ever starts failing, you read it here first :-).
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H', status='! ', switched='S', wc_rev=2)
   expected_status.remove('A/D/H/psi', 'A/D/H/chi', 'A/D/H/omega')
   expected_status.add({
@@ -853,8 +851,7 @@ def obstructed_switch(sbox):
   E_path     = os.path.join(wc_dir, 'A', 'B', 'E')
   alpha_path = os.path.join(E_path, 'alpha')
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E/alpha')
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Deleting'),
@@ -1005,8 +1002,7 @@ def refresh_read_only_attribute(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
@@ -1115,8 +1111,7 @@ def relocate_and_propset(sbox):
     })
 
   # After committing, status should show no sign of gamma.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma')
 
   # Commit the deletion of gamma and verify.

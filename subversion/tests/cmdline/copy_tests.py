@@ -79,9 +79,8 @@ or a url (when false) copy source is used."""
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  expected_status.tweak(repos_rev='2')
   expected_status.tweak('A/D/G/rho', status='  ', copied=None,
-                        repos_rev='2', wc_rev='2')
+                        wc_rev='2')
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho': Item(verb='Replacing'),
     })
@@ -119,7 +118,6 @@ or a url (when false) copy source is used."""
 
   # Verify props having been set
   expected_disk = svntest.main.greek_state.copy()
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_disk.tweak('A/D/G/pi',
                       props={ 'phony-prop': '*' })
   expected_disk.tweak('A/D/G/rho',
@@ -134,7 +132,6 @@ or a url (when false) copy source is used."""
     'A/D/G/rho': Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev='2')
   expected_status.tweak('A/D/G/pi',  wc_rev='2')
   expected_status.tweak('A/D/G/rho', wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -174,9 +171,8 @@ or a url (when false) copy source is used."""
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  expected_status.tweak(repos_rev='3')
   expected_status.tweak('A/D/G/rho', status='  ', copied=None,
-                        repos_rev='3', wc_rev='3')
+                        wc_rev='3')
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/rho': Item(verb='Replacing'),
     })
@@ -271,15 +267,10 @@ def basic_copy_and_move_files(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
   D_path = os.path.join(wc_dir, 'A', 'D')
-  C_path = os.path.join(wc_dir, 'A', 'C')
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-
-  new_mu_path = os.path.join(H_path, 'mu')
-  new_iota_path = os.path.join(F_path, 'iota')
-  rho_copy_path = os.path.join(D_path, 'rho')
-  alpha2_path = os.path.join(C_path, 'alpha2')
+  alpha2_path = os.path.join(wc_dir, 'A', 'C', 'alpha2')
 
   # Make local mods to mu and rho
   svntest.main.file_append (mu_path, 'appended mu text')
@@ -314,8 +305,7 @@ def basic_copy_and_move_files(sbox):
   # Create expected status tree; all local revisions should be at 1,
   # but several files should be at revision 2.  Also, two files should
   # be missing.  
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', 'A/mu', wc_rev=2)
 
   expected_status.add({
@@ -371,13 +361,6 @@ def receive_copy_in_update(sbox):
   # Define a zillion paths in both working copies.
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   newG_path = os.path.join(wc_dir, 'A', 'B', 'newG')
-  newGpi_path = os.path.join(wc_dir, 'A', 'B', 'newG', 'pi')
-  newGrho_path = os.path.join(wc_dir, 'A', 'B', 'newG', 'rho')
-  newGtau_path = os.path.join(wc_dir, 'A', 'B', 'newG', 'tau')
-  b_newG_path = os.path.join(wc_backup, 'A', 'B', 'newG')
-  b_newGpi_path = os.path.join(wc_backup, 'A', 'B', 'newG', 'pi')
-  b_newGrho_path = os.path.join(wc_backup, 'A', 'B', 'newG', 'rho')
-  b_newGtau_path = os.path.join(wc_backup, 'A', 'B', 'newG', 'tau')
 
   # Copy directory A/D to A/B/newG  
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', G_path, newG_path)
@@ -388,8 +371,7 @@ def receive_copy_in_update(sbox):
     })
 
   # Create expected status tree.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/newG' : Item(status='  ', wc_rev=2),
     'A/B/newG/pi' : Item(status='  ', wc_rev=2),
@@ -928,7 +910,6 @@ def repos_to_wc(sbox):
   # We have a standard repository and working copy.  Now we create a
   # second repository with the same greek tree, but different UUID.
   repo_dir       = sbox.repo_dir
-  repo_url       = sbox.repo_url
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
 
@@ -1128,7 +1109,7 @@ def wc_copy_parent_into_child(sbox):
   # error, and also B) copying root of a working copy attempted to
   # lock the non-working copy parent directory.
   was_cwd = os.getcwd()
-  os.chdir(sbox.wc_dir)
+  os.chdir(wc_dir)
   try:
     svntest.actions.run_and_verify_svn(None,
                                        ['\n', 'Committed revision 2.\n'], [],
@@ -1450,7 +1431,6 @@ def double_uri_escaping_1814(sbox):
   "check for double URI escaping in svn ls -R"
 
   sbox.build()
-  wc_dir = sbox.wc_dir
   
   base_url = svntest.main.current_repo_url + '/base'
 
@@ -1693,7 +1673,7 @@ def wc_copy_dir_to_itself(sbox):
   dnames = ['A','A/B']
 
   for dirname in dnames:
-    dir_path = os.path.join(sbox.wc_dir, dirname)
+    dir_path = os.path.join(wc_dir, dirname)
 
     # try to copy dir to itself
     svntest.actions.run_and_verify_svn(None, [],
@@ -1716,8 +1696,6 @@ def mixed_wc_to_url(sbox):
   sbox.build()
 
   wc_dir = sbox.wc_dir
-  url = svntest.main.current_repo_url
-  G_url = svntest.main.current_repo_url + '/A/D/G'
   Z_url = svntest.main.current_repo_url + '/A/D/Z'
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
@@ -1870,7 +1848,7 @@ def force_move(sbox):
                   "D         iota\n",
                 ]
   was_cwd = os.getcwd()
-  os.chdir(sbox.wc_dir)
+  os.chdir(wc_dir)
   try:
     svntest.actions.run_and_verify_svn(None, move_output,
                                        [],
@@ -1880,7 +1858,7 @@ def force_move(sbox):
     os.chdir(was_cwd)
 
   # check for the new content
-  file_handle = file(os.path.join(sbox.wc_dir, "dest"), "r")
+  file_handle = file(os.path.join(wc_dir, "dest"), "r")
   modified_file_content = file_handle.readlines()
   file_handle.close()
   # Error if we dont find the modified contents...
@@ -1894,7 +1872,6 @@ def force_move(sbox):
     'dest': Item(verb='Adding'),
   })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev='2')
   expected_status.remove("iota")
   expected_status.add({
     'dest': Item(status='  ', wc_rev='2'),
@@ -1950,8 +1927,7 @@ def copy_copied_file_and_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/rho_copy_1'       : Item(status='  ', wc_rev=2),
     'A/B/F/rho_copy_2'     : Item(status='  ', wc_rev=2),
@@ -2012,8 +1988,7 @@ def move_copied_file_and_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/rho_copy_moved'     : Item(status='  ', wc_rev=2),
     'A/D/G/E_copy_moved'       : Item(status='  ', wc_rev=2),
@@ -2069,8 +2044,7 @@ def move_moved_file_and_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/G/E_move_moved/'      : Item(status='  ', wc_rev=2),
     'A/D/G/E_move_moved/alpha' : Item(status='  ', wc_rev=2),
@@ -2128,8 +2102,7 @@ def move_file_within_moved_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/D_moved'                   : Item(status='  ', wc_rev=2),
     'A/B/F/D_moved/gamma'             : Item(status='  ', wc_rev=2),
@@ -2199,8 +2172,7 @@ def move_file_out_of_moved_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/D_moved'         : Item(status='  ', wc_rev=2),
     'A/B/F/D_moved/gamma'   : Item(status='  ', wc_rev=2),
@@ -2270,8 +2242,7 @@ def move_dir_within_moved_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/D_moved'                     : Item(status='  ', wc_rev=2),
     'A/B/F/D_moved/gamma'               : Item(status='  ', wc_rev=2),
@@ -2340,8 +2311,7 @@ def move_dir_out_of_moved_dir(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/D_moved'           : Item(status='  ', wc_rev=2),
     'A/B/F/D_moved/gamma'     : Item(status='  ', wc_rev=2),
@@ -2398,8 +2368,7 @@ def move_file_back_and_forth(sbox):
     })
 
   # Create expected status tree 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/G/rho' : Item(status='  ', wc_rev=2),
     })
@@ -2537,8 +2506,7 @@ def copy_move_added_paths(sbox):
     })
 
   # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/H/I'         : Item(status='  ', wc_rev=2),
     'A/D/H/I/J'       : Item(status='  ', wc_rev=2),

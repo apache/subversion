@@ -98,8 +98,7 @@ def update_binary_file(sbox):
     })
 
   # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=2),
     })
@@ -124,8 +123,7 @@ def update_binary_file(sbox):
     })
 
   # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=3),
     })
@@ -229,8 +227,7 @@ def update_binary_file_2(sbox):
     })
 
   # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=2),
     'A/zeta' : Item(status='  ', wc_rev=2),
@@ -254,8 +251,7 @@ def update_binary_file_2(sbox):
     })
 
   # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=3),
     'A/zeta' : Item(status='  ', wc_rev=3),
@@ -283,8 +279,7 @@ def update_binary_file_2(sbox):
     })
 
   # Create expected status tree for the update.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=2),
     'A/zeta' : Item(status='  ', wc_rev=2),
@@ -476,8 +471,7 @@ def receive_overlapping_same_change(sbox):
     })
 
   # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
 
   # Commit the change, creating revision 2.
@@ -540,8 +534,7 @@ def update_to_resolve_text_conflicts(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   expected_status.tweak('A/D/G/rho', wc_rev=2, status='  ')
 
@@ -707,8 +700,7 @@ def update_after_add_rm_deleted(sbox):
     'A/B/E/alpha' : Item(verb='Deleting'),
     'A/B/F'       : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E/alpha')
   expected_status.remove('A/B/F')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -829,8 +821,7 @@ def update_replace_dir(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/F'       : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/F')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
@@ -843,8 +834,7 @@ def update_replace_dir(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/F'       : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/F', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
@@ -897,8 +887,7 @@ def update_single_file(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
@@ -941,8 +930,7 @@ def prop_update_on_scheduled_delete(sbox):
     })
 
   # Create expected status tree
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
 
   # Commit the change, creating revision 2.
@@ -1044,10 +1032,9 @@ def update_deleted_missing_dir(sbox):
   expected_disk.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
 
   # Create expected status tree for the update.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
-  expected_status.tweak(wc_rev=1)
 
   # Do the update, specifying the deleted paths explicitly. 
   svntest.actions.run_and_verify_update(wc_dir,
@@ -1091,8 +1078,7 @@ def another_hudson_problem(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma')
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output,
@@ -1148,8 +1134,7 @@ def update_deleted_targets(sbox):
     'A/D/gamma' : Item(verb='Deleting'),
     'A/B/F'     : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma', 'A/B/F')
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output,
@@ -1169,9 +1154,8 @@ def update_deleted_targets(sbox):
     'A/D/gamma' : Item(status='A '),
     'A/B/F'     : Item(status='A '),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_disk = svntest.main.greek_state.copy()
-  expected_status.tweak(wc_rev=1)
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
@@ -1231,8 +1215,7 @@ def non_recursive_update(sbox):
     'A/mu' : Item(verb='Sending'),
     'A/D/G/rho' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
   svntest.actions.run_and_verify_commit (wc_dir, expected_output,
                                          expected_status,
@@ -1504,8 +1487,7 @@ def nested_in_read_only(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E/alpha')
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None,
@@ -1595,8 +1577,7 @@ def update_xml_unsafe_dir(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but 'foo & bar' should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     ' foo & bar' : Item(status='  ', wc_rev=2),
     })
@@ -1933,8 +1914,7 @@ def forced_update(sbox):
     })
 
   # Create expected status tree.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/nu'      : Item(status='  ', wc_rev=2),
     'kappa'         : Item(status='  ', wc_rev=2),
@@ -2054,8 +2034,7 @@ def forced_update_failures(sbox):
     })
 
   # Create expected status tree.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/nu'      : Item(status='  ', wc_rev=2),
     'A/C/I'         : Item(status='  ', wc_rev=2),
@@ -2237,7 +2216,6 @@ def update_wc_on_windows_drive(sbox):
       'dir1/file1' : Item(status='A '),      
       })    
     expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-    expected_status.tweak(wc_rev=3)
     expected_status.add({
       'dir1' : Item(status='  ', wc_rev=3),
       'dir1/file1' : Item(status='  ', wc_rev=3),

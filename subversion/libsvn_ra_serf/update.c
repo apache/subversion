@@ -2255,16 +2255,18 @@ finish_report(void *report_baton,
                  (!cur_dir->fetch_props ||
                   svn_ra_serf__propfind_is_done(cur_dir->propfind)))
             {
+              report_dir_t *parent = cur_dir->parent_dir;
+
               SVN_ERR(close_dir(cur_dir));
-              if (cur_dir->parent_dir)
+              if (parent)
                 {
-                  cur_dir->parent_dir->ref_count--;
+                  parent->ref_count--;
                 }
               else
                 {
                   closed_root = TRUE;
                 }
-              cur_dir = cur_dir->parent_dir;
+              cur_dir = parent;
             }
         }
       report->done_fetches = NULL;

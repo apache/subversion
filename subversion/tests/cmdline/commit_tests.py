@@ -263,8 +263,7 @@ def commit_multiple_targets(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but our three targets should be at 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H/psi', 'A/B/lambda', 'A/D/G/pi', wc_rev=2)
 
   # rho and omega should still display as locally modified:
@@ -321,8 +320,7 @@ def commit_multiple_targets_2(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but our four targets should be at 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H/psi', 'A/B/lambda', 'A/D/G/pi', 'A/D/H/omega',
                         wc_rev=2)
 
@@ -534,8 +532,7 @@ def nested_dir_replacements(sbox):
     })
 
   # Created expected status tree.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D', 'A/D/H', wc_rev=2)
   expected_status.add({
     'A/D/bloo' : Item(status='  ', wc_rev=2),
@@ -575,8 +572,7 @@ def hudson_part_1(sbox):
     })
   
   # After committing, status should show no sign of gamma.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma')
   
   # Commit the deletion of gamma and verify.
@@ -628,8 +624,7 @@ def hudson_part_1_variation_1(sbox):
     })
   
   # After committing, status should show no sign of H or its contents
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/H', 'A/D/H/chi', 'A/D/H/omega', 'A/D/H/psi')
   
   # Commit the deletion of H and verify.
@@ -681,8 +676,7 @@ def hudson_part_1_variation_2(sbox):
     })
   
   # After committing, status should show no sign of gamma.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma')
   
   # Commit the deletion of gamma and verify.
@@ -699,8 +693,7 @@ def hudson_part_1_variation_2(sbox):
 
   # For sanity, examine status: it should show a revision 2 tree with
   # gamma scheduled for addition.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', wc_rev=0, status='A ')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -711,8 +704,7 @@ def hudson_part_1_variation_2(sbox):
     })
   
   # After committing, status should show only gamma at revision 3.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', wc_rev=3)
 
   svntest.actions.run_and_verify_commit (wc_dir,
@@ -746,8 +738,7 @@ def hudson_part_2(sbox):
     })
   
   # After committing, status should show no sign of gamma.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma')
   
   # Commit the deletion of gamma and verify.
@@ -808,8 +799,7 @@ def hudson_part_2_1(sbox):
     'A/D/G/psi' : Item(verb='Adding'),
     })
   
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/H/chi')
   expected_status.remove('A/D/H/omega')
   expected_status.remove('A/D/H/psi')
@@ -927,8 +917,7 @@ def merge_mixed_revisions(sbox):
     'A/D/H/chi' : Item(verb='Sending'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', 'A/D/H/chi', wc_rev=2)
 
   svntest.actions.run_and_verify_commit (wc_dir,
@@ -962,8 +951,7 @@ def merge_mixed_revisions(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H', 'A/D/H/omega', 'A/D/H/chi', 'A/D/H/psi',
                         wc_rev=2)
   expected_status.tweak('iota', wc_rev=3)
@@ -980,8 +968,7 @@ def merge_mixed_revisions(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/chi' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H/chi', wc_rev=4)
   expected_status.tweak('A/D/H', 'A/D/H/omega', 'A/D/H/psi', wc_rev=2)
   expected_status.tweak('iota', wc_rev=3)
@@ -996,8 +983,7 @@ def merge_mixed_revisions(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 5)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H', 'A/D/H/omega', 'A/D/H/psi', wc_rev=2)
   expected_status.tweak('A/D/H/chi', wc_rev=4)
   expected_status.tweak('iota', wc_rev=5)
@@ -1040,8 +1026,7 @@ def merge_mixed_revisions(sbox):
     'iota' : Item(verb='Sending'),
     'A/D/H/omega' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 6)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', 'A/D/H/omega', wc_rev=6)
   expected_status.tweak('A/D/H', 'A/D/H/psi', wc_rev=2)
   expected_status.tweak('A/D/H/chi', wc_rev=4)
@@ -1118,10 +1103,7 @@ def commit_uri_unsafe(sbox):
     'A/' + nasty_name : Item(verb='Adding'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  
-  # Items in the status list are all at rev 1
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
 
   # Items in our add list will be at rev 2
   for item in expected_output.desc.keys():
@@ -1162,9 +1144,8 @@ def commit_deleted_edited(sbox):
 
   # Items in the status list are all at rev 1, except the two things
   # we changed...but then, they don't exist at all.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('iota', 'A/mu')
-  expected_status.tweak(wc_rev=1)
 
   svntest.actions.run_and_verify_commit (wc_dir,
                                          expected_output,
@@ -1716,8 +1697,7 @@ def commit_out_of_date_deletions(sbox):
     'A/D/H/omega' : Item(verb='Sending'),
     'A/C' : Item(verb='Sending'),
     })
-  expected_status =  svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status =  svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/H/omega', 'A/C', wc_rev=2, status='  ')
 
   svntest.actions.run_and_verify_commit (wc_dir,
@@ -2008,8 +1988,7 @@ def commit_same_folder_in_targets(sbox):
     })
 
   # Created expected status tree.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', wc_rev=2)
 
   # Commit the wc_dir and iota.
