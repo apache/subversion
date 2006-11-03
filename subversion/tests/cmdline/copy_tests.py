@@ -1025,7 +1025,8 @@ def repos_to_wc(sbox):
 def copy_to_root(sbox):
   'copy item to root of repository'
 
-  sbox.build(create_wc = False)
+  sbox.build()
+  wc_dir = sbox.wc_dir
 
   root = svntest.main.current_repo_url
   mu = root + '/A/mu'
@@ -1035,6 +1036,28 @@ def copy_to_root(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', '',
                                      mu, root)
+
+  # Update to HEAD, and check to see if the files really were copied in the
+  # repo
+
+  expected_output = svntest.wc.State(wc_dir, { 
+    'mu': Item(status='A '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'mu': Item(contents="This is the file 'mu'.\n")
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'mu': Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
 
 #----------------------------------------------------------------------
 def url_copy_parent_into_child(sbox):
