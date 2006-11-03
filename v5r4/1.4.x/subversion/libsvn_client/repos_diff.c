@@ -484,7 +484,20 @@ delete_entry(const char *path,
       
       if ((state != svn_wc_notify_state_missing)
           && (state != svn_wc_notify_state_obstructed))
-        action = svn_wc_notify_update_delete;
+        {
+          action = svn_wc_notify_update_delete;
+          if (eb->dry_run)
+            {
+              /* Remember what we _would've_ deleted (issue #2584). */
+              const char *wcpath = svn_path_join(eb->target, path, pb->pool);
+              apr_hash_set(svn_client__dry_run_deletions(eb->diff_cmd_baton),
+                           wcpath, APR_HASH_KEY_STRING, wcpath);
+
+              /* ### TODO: if (kind == svn_node_dir), record all
+                 ### children as deleted to avoid collisions from
+                 ### subsequent edits. */
+            }
+        }
     }
 
   if (pb->edit_baton->notify_func)
@@ -785,6 +798,21 @@ close_directory(void *dir_baton,
   struct edit_baton *eb = b->edit_baton;
   svn_wc_notify_state_t prop_state = svn_wc_notify_state_unknown;
   svn_error_t *err;
+
+  if (eb->dry_run)
+    {
+      apr_hash_index_t *hi;
+      apr_hash_t *wc_paths =
+        svn_client__dry_run_deletions(eb->diff_cmd_baton);
+
+      /* FUTURE: Someday, we'll have apr_hash_clear() instead. */
+      for (hi = apr_hash_first(NULL, wc_paths); hi; hi = apr_hash_next(hi))
+        {
+          const void *path;
+          apr_hash_this(hi, &path, NULL, NULL);
+          apr_hash_set(wc_paths, path, APR_HASH_KEY_STRING, NULL);
+        }
+    }
 
   if (b->propchanges->nelts > 0)
     {

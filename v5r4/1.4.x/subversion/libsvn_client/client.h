@@ -198,6 +198,10 @@ typedef struct
   const char *base_dir;
   svn_wc_adm_access_t *base_access;
 
+  /* When true, makes sure temporary files are created
+     outside the working copy. */
+  svn_boolean_t read_only_wc;
+
   /* An array of svn_client_commit_item2_t * structures, present only
      during working copy commits. */
   apr_array_header_t *commit_items;
@@ -312,6 +316,12 @@ svn_error_t * svn_client__wc_delete(const char *path,
                                     void *notify_baton,
                                     svn_client_ctx_t *ctx,
                                     apr_pool_t *pool);
+
+/* Return the list of WC paths to entries which would have been
+   deleted by an update/merge if not in "dry run" mode, or NULL if not
+   in "dry run" mode.  MERGE_CMD_BATON contains the list, which is
+   intended for direct modification. */
+apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
 
 /* ---------------------------------------------------------------- */
 

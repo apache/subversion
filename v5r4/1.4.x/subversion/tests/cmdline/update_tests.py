@@ -1676,6 +1676,181 @@ def checkout_broken_eol(sbox):
                                           expected_output,
                                           expected_wc)
 
+def conflict_markers_matching_eol(sbox):
+  "conflict markers should match the file's eol style"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  filecount = 1
+
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  if os.name == 'nt':
+    crlf = '\n'
+  else:
+    crlf = '\r\n'.encode('utf-8')
+
+  # Checkout a second working copy of
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout', sbox.repo_url, wc_backup)
+
+  # set starting revision
+  cur_rev = 1
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, cur_rev)
+  expected_backup_status = svntest.actions.get_virginal_state(wc_backup, cur_rev)
+
+  # do the test for each eol-style
+  for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
+                          [crlf, '\015', '\n'.encode('utf-8'), '\012']):
+    path_backup = os.path.join(wc_backup, 'A', 'mu')
+
+    # add a new file with the eol-style property set.
+    open(mu_path, 'wb').write("This is the file 'mu'.".encode('utf-8') + eolchar)
+    svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
+
+    expected_disk.add({
+      'A/mu' : Item("This is the file 'mu'.".encode('utf-8') + eolchar)
+    })
+    expected_output = svntest.wc.State(wc_dir, {
+      'A/mu' : Item(verb='Sending'),
+    })
+    expected_status.tweak(wc_rev = cur_rev)
+    expected_status.add({
+      'A/mu' : Item(status='  ', wc_rev = cur_rev + 1),
+    })
+
+    # Commit the original change and note the 'base' revision number 
+    svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                          expected_status, None,
+                                          None, None, None, None, wc_dir)
+    cur_rev = cur_rev + 1
+    base_rev = cur_rev
+
+    svntest.main.run_svn(None, 'update', wc_backup)
+
+    # Make a local mod to mu
+    svntest.main.file_append(mu_path, 'Original appended text for mu' +
+                             eolchar.decode('utf-8').encode('cp037'))
+
+    # Commit the original change and note the 'theirs' revision number 
+    svntest.main.run_svn(None, 'commit', '-m', 'test log', wc_dir)
+    cur_rev = cur_rev + 1
+    theirs_rev = cur_rev
+
+    # Make a local mod to mu, will conflict with the previous change
+    svntest.main.file_append (path_backup,
+                              'Conflicting appended text for mu' +
+                              eolchar.decode('utf-8').encode('cp037'))
+
+    # Create expected output tree for an update of the wc_backup.
+    expected_backup_output = svntest.wc.State(wc_backup, {
+      'A/mu' : Item(status='C '),
+      })
+
+    # Create expected disk tree for the update.
+    expected_backup_disk = expected_disk.copy()
+
+    # verify content of resulting conflicted file
+    expected_backup_disk.add({
+    'A/mu' : Item(contents= "This is the file 'mu'.".encode('utf-8') +
+                  eolchar +
+      "<<<<<<< .mine".encode('utf-8') + eolchar +
+      "Conflicting appended text for mu".encode('utf-8') + eolchar +
+      "=======".encode('utf-8') + eolchar +
+      "Original appended text for mu".encode('utf-8') + eolchar +
+      ">>>>>>> .r".encode('utf-8') + str(cur_rev).encode('utf-8') + eolchar),
+    })
+    # verify content of base(left) file
+    expected_backup_disk.add({
+    'A/mu.r' + str(base_rev ) :
+    Item(contents= "This is the file 'mu'.".encode('utf-8') + eolchar)
+    })
+    # verify content of theirs(right) file
+    expected_backup_disk.add({
+    'A/mu.r' + str(theirs_rev ) :
+    Item(contents= "This is the file 'mu'.".encode('utf-8') + eolchar +
+      "Original appended text for mu".encode('utf-8') + eolchar)
+    })
+    # verify content of mine file
+    expected_backup_disk.add({
+    'A/mu.mine' : Item(contents= "This is the file 'mu'.".encode('utf-8') +
+      eolchar +
+      "Conflicting appended text for mu".encode('utf-8') + eolchar)
+    })
+
+    # Create expected status tree for the update.
+    expected_backup_status.add({
+      'A/mu'   : Item(status='  ', wc_rev=cur_rev),
+    })
+    expected_backup_status.tweak('A/mu', status='C ')
+    expected_backup_status.tweak(wc_rev = cur_rev)
+
+    # Do the update and check the results in three ways.
+    svntest.actions.run_and_verify_update(wc_backup,
+                                          expected_backup_output,
+                                          expected_backup_disk,
+                                          expected_backup_status,
+                                          None,
+                                          None,
+                                          None)
+
+    # cleanup for next run
+    svntest.main.run_svn(None, 'revert', '-R', wc_backup)
+    svntest.main.run_svn(None, 'update', wc_dir)        
+
+# Issue #2618: update a working copy with replacedwith-history file.
+def update_wc_with_replaced_file(sbox):
+  "update wc containing a replaced-with-history file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy.
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # we need a change in the repository
+  iota_path = os.path.join(wc_dir, 'iota')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  iota_bu_path = os.path.join(wc_backup, 'iota')
+  svntest.main.file_append(iota_bu_path, "New line in 'iota'\n")
+  svntest.main.run_svn(None, 'ci', wc_backup, '-m', 'changed file')
+
+  # Make us a working copy with a 'replace-with-history' file.
+  svntest.main.run_svn(None, 'rm', iota_path)
+  svntest.main.run_svn(None, 'cp', mu_path, iota_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='R ', copied='+', wc_rev='-')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Now update the wc
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='C '),
+    })    
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'iota' : Item(status='C ', wc_rev='-', copied='+'),
+    })
+  expected_disk = svntest.main.greek_state.copy()    
+  expected_disk.tweak('iota', contents =
+    """<<<<<<< .mine
+This is the file 'mu'.
+=======
+This is the file 'iota'.
+New line in 'iota'
+>>>>>>> .r2
+""".encode('utf-8'))
+  conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        detect_conflict_files,
+                                        conflict_files)
 
 ########################################################################
 # Run the tests
@@ -1710,6 +1885,8 @@ test_list = [ None,
               obstructed_update_alters_wc_props,
               update_xml_unsafe_dir,
               checkout_broken_eol,
+              conflict_markers_matching_eol,
+              update_wc_with_replaced_file,
              ]
 
 if __name__ == '__main__':

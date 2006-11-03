@@ -1787,7 +1787,21 @@ def checkout_peg_rev(sbox):
                                           checkout_target, 
                                           expected_output,
                                           expected_wc)
-  
+
+# Issue #2612.
+def ls_space_in_repo_name(sbox):
+  'basic ls of repos with space in name'
+
+  sbox.build(name = "repo with spaces")
+  wc_dir = sbox.wc_dir
+
+  svntest.actions.run_and_verify_svn('ls the root of the repository',
+                                     ['A/\n', 'iota\n'],
+                                     [], 'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     sbox.repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -1826,6 +1840,7 @@ test_list = [ None,
               cat_added_PREV,
               checkout_creates_intermediate_folders,
               checkout_peg_rev,
+              ls_space_in_repo_name,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

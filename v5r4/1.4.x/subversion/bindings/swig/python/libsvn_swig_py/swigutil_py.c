@@ -604,8 +604,6 @@ apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
       PyObject *value = PyDict_GetItem(dict, key);
       const char *propname = make_string_from_ob(key, pool);
       const char *propval = make_string_from_ob(value, pool);
-      Py_DECREF(key);
-      Py_DECREF(value);
       if (! (propname && propval))
         {
           PyErr_SetString(PyExc_TypeError, 
@@ -644,8 +642,6 @@ apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
       PyObject *value = PyDict_GetItem(dict, key);
       const char *propname = make_string_from_ob(key, pool);
       svn_string_t *propval = make_svn_string_from_ob(value, pool);
-      Py_DECREF(key);
-      Py_DECREF(value);
       if (! (propname && propval))
         {
           PyErr_SetString(PyExc_TypeError, 

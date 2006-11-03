@@ -21,6 +21,7 @@ import string, sys, os.path, re, time
 
 # Our testing module
 import svntest
+from svntest import wc
 
 
 # (abbreviation)
@@ -877,6 +878,7 @@ def status_ignored_dir(sbox):
   # run_and_verify_status doesn't handle this weird kind of entry.
   svntest.actions.run_and_verify_svn(None,
                                      ['I      *            ' + new_dir + "\n",
+                                      '       *        1   ' + wc_dir + "\n",
                                       'Status against revision:      2\n'], [],
                                      "status", "-u", wc_dir)
 
@@ -1014,6 +1016,281 @@ def inconsistent_eol(sbox):
   open(iota_path, "wb").write("line 1\nline 2\r\n".encode('utf-8'))
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
+#----------------------------------------------------------------------
+# Test for issue #2533
+def status_update_with_incoming_props(sbox):
+  "run 'status -u' variations w/ incoming propchanges"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+
+  # Add a property to the root folder and a subdir
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo', wc_dir)
+  svntest.main.run_svn(None, 'propset', 'black', 'bobo', A_path)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    ''  : Item(verb='Sending'),
+    'A' : Item(verb='Sending')
+    })
+
+  # Created expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('', wc_rev=2, status='  ')
+  expected_status.tweak('A', wc_rev=2, status='  ')
+
+  # Commit the working copy
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Create expected trees for an update to revision 1.
+  expected_output = svntest.wc.State(wc_dir, {
+    ''  : Item(status=' U'),
+    'A' : Item(status=' U'),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Do the update and check the results in three ways... INCLUDING PROPS
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1,
+                                        '-r', '1', wc_dir)
+
+  # Can't use run_and_verify_status here because the out-of-date 
+  # information in the status output isn't copied in the status tree.
+  xout = ["       *        1   " + A_path + "\n",
+          "       *        1   " + wc_dir + "\n",
+          "Status against revision:      2\n" ]
+
+  output, errput = svntest.actions.run_and_verify_svn(None,
+                                                      None,
+                                                      [],
+                                                      "status", "-u",
+                                                      wc_dir)
+
+  svntest.main.compare_unordered_output(xout, output)
+
+  xout = ["                1        1 jrandom      " +
+          os.path.join(wc_dir, "iota") + "\n",
+          "                1        1 jrandom      " + A_path + "\n",
+          "       *        1        1 jrandom      " + wc_dir + "\n",
+          "Status against revision:      2\n" ]
+
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
+                                                       "status", "-uvN",
+                                                       wc_dir)
+
+  svntest.main.compare_unordered_output(xout, output)
+
+  # Retrieve last changed date from svn log
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'log', wc_dir,
+                                                     '--xml', '-r1')
+
+  info_msg = "<date>"
+  for line in output:
+    if line.find(info_msg) >= 0:
+      time_str = line[:len(line)]
+      break
+  else:
+    raise svntest.Failure
+  if not sys.platform == 'AS/400':  
+    xout = ["<?xml version=\"1.0\"?>\n",
+            "<status>\n",
+            "<target\n",
+            "   path=\"%s\">\n" % (wc_dir),
+            "<entry\n",
+            "   path=\"%s\">\n" % (wc_dir),
+            "<wc-status\n",
+            "   props=\"none\"\n",
+            "   item=\"normal\"\n",
+            "   revision=\"1\">\n",
+            "<commit\n",
+            "   revision=\"1\">\n",
+            "<author>%s</author>\n" % svntest.main.wc_author,
+            time_str,
+            "</commit>\n",
+            "</wc-status>\n",
+            "<repos-status\n",
+            "   props=\"modified\"\n",
+            "   item=\"none\">\n",
+            "</repos-status>\n",
+            "</entry>\n",
+            "<against\n",
+            "   revision=\"2\"/>\n",
+            "</target>\n",
+            "</status>\n",]
+  else:
+    xout = ["<?xml version=\"1.0\"?>\n",
+            "<status>\n",
+            "<target\n",
+            "   path=\"%s\">\n" % (wc_dir),
+            "<entry\n",
+            "   path=\"%s\">\n" % (wc_dir),
+            "<wc-status\n",
+            "   revision=\"1\"\n",
+            "   item=\"normal\"\n",
+            "   props=\"none\">\n",
+            "<commit\n",
+            "   revision=\"1\">\n",
+            "<author>%s</author>\n" % svntest.main.wc_author,
+            time_str,
+            "</commit>\n",
+            "</wc-status>\n",
+            "<repos-status\n",
+            "   item=\"none\"\n",
+            "   props=\"modified\">\n",
+            "</repos-status>\n",
+            "</entry>\n",
+            "<against\n",
+            "   revision=\"2\"/>\n",
+            "</target>\n",
+            "</status>\n",]
+
+  output, error = svntest.actions.run_and_verify_svn (None, xout, [],
+                                                      'status', wc_dir,
+                                                      '--xml', '-uN')
+
+# more incoming prop updates.
+def status_update_verbose_with_incoming_props(sbox):
+  "run 'status -uv' w/ incoming propchanges"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  D_path = os.path.join(A_path, 'D')
+  B_path = os.path.join(A_path, 'B')
+  E_path = os.path.join(A_path, 'B', 'E')
+  G_path = os.path.join(A_path, 'D', 'G')
+  H_path = os.path.join(A_path, 'D', 'H')
+  # Add a property to the root folder and a subdir
+  svntest.main.run_svn(None, 'propset', 'red', 'rojo', D_path)
+  svntest.main.run_svn(None, 'propset', 'black', 'bobo', E_path)
+  svntest.main.run_svn(None, 'propset', 'black', 'bobo', wc_dir)
+
+  # Create expected output tree.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D'   : Item(verb='Sending'),
+    'A/B/E' : Item(verb='Sending'),
+    ''      : Item(verb='Sending'),
+    })
+  # Created expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/D', wc_rev=2, status='  ')
+  expected_status.tweak('A/B/E', wc_rev=2, status='  ')
+  expected_status.tweak('', wc_rev=2, status='  ')
+
+  # Commit the working copy
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Create expected trees for an update to revision 1.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D'   : Item(status=' U'),
+    'A/B/E' : Item(status=' U'),
+    ''      : Item(status=' U'),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Do the update and check the results in three ways... INCLUDING PROPS
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1,
+                                        '-r', '1', wc_dir)
+
+  # Can't use run_and_verify_status here because the out-of-date 
+  # information in the status output isn't copied in the status tree.
+  common = "        1        1 jrandom      "
+  xout = ["        " + common + os.path.join(E_path, 'alpha') + "\n",
+          "        " + common + os.path.join(E_path, 'beta') + "\n",
+          "       *" + common + os.path.join(E_path) + "\n",
+          "        " + common + os.path.join(B_path, 'lambda') + "\n",
+          "        " + common + os.path.join(B_path, 'F') + "\n",
+          "        " + common + B_path + "\n",
+          "        " + common + os.path.join(G_path, 'pi') + "\n",
+          "        " + common + os.path.join(G_path, 'rho') + "\n",
+          "        " + common + os.path.join(G_path, 'tau') + "\n",
+          "        " + common + G_path + "\n",
+          "        " + common + os.path.join(H_path, 'chi') + "\n",
+          "        " + common + os.path.join(H_path, 'omega') + "\n",
+          "        " + common + os.path.join(H_path, 'psi') + "\n",
+          "        " + common + H_path + "\n",
+          "        " + common + os.path.join(D_path, 'gamma') + "\n",
+          "       *" + common + D_path + "\n",
+          "        " + common + os.path.join(A_path, 'mu') + "\n",
+          "        " + common + os.path.join(A_path, 'C') + "\n",
+          "        " + common + A_path + "\n",
+          "        " + common + os.path.join(wc_dir, 'iota') + "\n",
+          "       *" + common + wc_dir  + "\n",
+          "Status against revision:      2\n" ]      
+
+  output, errput = svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     "status", "-uv", wc_dir)
+
+  svntest.main.compare_unordered_output(xout, output)
+
+#----------------------------------------------------------------------
+# Test for issue #2468
+def status_nonrecursive_update(sbox):
+  "run 'status -uN' with incoming changes"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  mu_path = os.path.join(A_path, 'mu')
+
+  # Change file in A and commit
+  svntest.main.file_append(mu_path, "new line of text")
+
+  # Create expected trees for commit
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('A/mu', wc_rev=2, status='  ')
+
+  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
+                                         expected_status,
+                                         None, None, None, None, None,
+                                         wc_dir)
+
+  # Create expected trees for an update to revision 1.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(status='U '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Do the update and check the results in three ways
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 0,
+                                        '-r', '1', wc_dir)
+
+  # Check the remote status of folder A (non-recursively)
+  xout = ["       *        1   " + os.path.join(wc_dir, "A", "mu") + "\n",
+          "Status against revision:      2\n" ]
+
+  svntest.actions.run_and_verify_svn(None,
+                                     xout,
+                                     [],
+                                     "status", "-uN", A_path)
+
 ########################################################################
 # Run the tests
 
@@ -1042,6 +1319,9 @@ test_list = [ None,
               status_dash_u_missing_dir,
               status_add_plus_conflict,
               inconsistent_eol,
+              status_update_with_incoming_props,
+              status_update_verbose_with_incoming_props,
+              XFail(status_nonrecursive_update),
              ]
 
 if __name__ == '__main__':

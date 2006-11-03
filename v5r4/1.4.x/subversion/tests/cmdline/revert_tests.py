@@ -591,6 +591,54 @@ def revert_after_manual_conflict_resolution__prop(sbox):
   svntest.actions.run_and_verify_svn(None, [], [], "diff", wc_dir_2)
   svntest.actions.run_and_verify_svn(None, [], [], "revert", "-R", wc_dir_2)
 
+def revert_propset__dir(sbox):
+  "revert a simple propset on a dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  a_path = os.path.join(wc_dir, 'A')
+  svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
+  expected_output = re.escape("Reverted '" + a_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     a_path)
+
+def revert_propset__file(sbox):
+  "revert a simple propset on a file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
+  expected_output = re.escape("Reverted '" + iota_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     iota_path)
+
+def revert_propdel__dir(sbox):
+  "revert a simple propdel on a dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  a_path = os.path.join(wc_dir, 'A')
+  svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'ps', a_path)
+  svntest.main.run_svn(None, 'propdel', 'foo', a_path)
+  expected_output = re.escape("Reverted '" + a_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     a_path)
+
+def revert_propdel__file(sbox):
+  "revert a simple propdel on a file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'ps', iota_path)
+  svntest.main.run_svn(None, 'propdel', 'foo', iota_path)
+  expected_output = re.escape("Reverted '" + iota_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     iota_path)
+
 
 ########################################################################
 # Run the tests
@@ -608,6 +656,10 @@ test_list = [ None,
               revert_after_second_replace,
               revert_after_manual_conflict_resolution__text,
               revert_after_manual_conflict_resolution__prop,
+              revert_propset__dir,
+              revert_propset__file,
+              revert_propdel__dir,
+              revert_propdel__file,
              ]
 
 if __name__ == '__main__':

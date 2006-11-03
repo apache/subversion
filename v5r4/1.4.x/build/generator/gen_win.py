@@ -315,7 +315,8 @@ class WinGeneratorBase(GeneratorBase):
 
           sourcepath = self.path(source.sourcepath)
 
-          cbuild = "javac -g -classpath %s -d %s -sourcepath %s $(InputPath)" \
+          cbuild = "javac -g -target 1.2 -source 1.3 -classpath %s -d %s " \
+                   "-sourcepath %s $(InputPath)" \
                    % tuple(map(self.quote, (classes, targetdir, sourcepath)))
 
           ctarget = self.path(object.filename)
@@ -617,6 +618,9 @@ class WinGeneratorBase(GeneratorBase):
     # check if we have a newer neon (0.25.x)
     if self.neon_ver >= 25000:
       fakedefines.append("SVN_NEON_0_25=1")
+    # check for neon 0.26.x or newer
+    if self.neon_ver >= 26000:
+      fakedefines.append("SVN_NEON_0_26=1")
 
     return fakedefines
 
