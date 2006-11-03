@@ -49,5 +49,13 @@ Candidate changes:
                 flavours. Its introduction therefore represents a regression
                 in the maintainability of the RPM packaging area as a whole.)
 
+  * r22203:
+    Allow svn_load_dirs.pl to work with filenames containing @
+      characters.
+    Justification:
+      Simple fix for a contrib tool.
+    Votes:
+      +1: blair
+
 Approved changes:
 
