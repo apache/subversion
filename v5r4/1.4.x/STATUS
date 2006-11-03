@@ -4,14 +4,50 @@ See "Stabilizing and maintaining releases" in trunk/www/hacking.html for
 details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
 
-Status of 1.4.0:
+NOTE:  This branch uses svnmerge.py for merge tracking.  Please familiarize
+yourself with that tool if you plan to actually merge changes here.
+
+For example, to merge a number of revisions from trunk into branch,
+you can use the svnmerge.py script that is in the branch.
+
+$ contrib/client-side/svnmerge.py merge -r 21000-21006,21008,21876
+$ svn diff
+$ svn commit
+
+Do not run svnmerge.py N separate times for each revision to merge
+over, since svnmerge.py will not merge into a WC with uncommitted
+changes.
+
+Status of 1.4.3:
 ================
 
 Candidate changes:
+
+  * r21531, r21848, r21934
+    Allow HTTP auth protocols to be configurable by way of a
+    "http-auth-types" parameter.
+    Justification:
+      Allow GSSAPI/SSPI auth to be enabled/disabled on Windows with
+      Neon 0.26.1+, addressesing numerous bug reports from
+      TortoiseSVN, Subversion, Subclipse, etc.
+    Votes:
+      +1: dlr, djh, jerenkrantz
+      -1: cmpilato (new features showing up in patch releases?  nuh-uh.)
+
+  * r21885, r22076
+    Add a new RPM package for the AuroraLinux 2.0 SPARC distribution.
+    Justification:
+      It is a combination of RHEL3 and RHEL4 distributions with
+      characteristics matching both, so we need a new directory.
+    Branch: 1.4.x-r22076 (-r22079:HEAD)
+    Votes:
+      +1: dws
+      -1: maxb (It appears that the auroralinux-2 directory has been based
+                on an old version of the rhel-3 directory, pre-dating some
+                of the difference-reduction work I did to try to minimize the
+                unnecessary inconsistencies between the various distro
+                flavours. Its introduction therefore represents a regression
+                in the maintainability of the RPM packaging area as a whole.)
 
 Approved changes:
 
-Status of 1.4.1:
-================
-
-Candidate changes:

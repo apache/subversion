@@ -208,6 +208,8 @@ echo "Exporting revision $REVISION of Subversion into sandbox..."
      "http://svn.collab.net/repos/svn/$REPOS_PATH" \
      "$DISTNAME" --username none --password none)
 
+rm -f "$DISTPATH/STATUS"
+
 install_dependency()
 {
   DEP_NAME=$1

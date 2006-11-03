@@ -427,6 +427,14 @@ def url_encoding(sbox):
   run_test(sbox, "url-encoding-bug.dump")
 
 
+# A test for copying revisions that lack a property that already exists
+# on the destination rev as part of the commit (i.e. svn:author in this
+# case, but svn:date would also work).
+def no_author(sbox):
+  "test copying revs with no svn:author revprops"
+  run_test(sbox, "no-author.dump")
+
+
 ########################################################################
 # Run the tests
 
@@ -449,6 +457,7 @@ test_list = [ None,
               basic_authz,
               copy_from_unreadable_dir,
               url_encoding,
+              no_author,
              ]
 
 if __name__ == '__main__':
