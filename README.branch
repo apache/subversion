@@ -105,7 +105,7 @@ Contents
    Thus, 'checkout' is identical to 'checkout --depth inf', but
    'switch' and 'update' are not the same as 'switch --depth inf' and
    'update --depth inf'.  The former update entries according to
-   existing depth values, while the latter pulls in everything.
+   existing depth values, while the latter pull in everything.
    
    To get started, run checkout with --depth 0 or --depth 1.  If
    additional files or directories are desired, pull them in with
