@@ -1183,7 +1183,18 @@ while (defined (my $load_dir = &get_next_load_dir))
                         keys %upd_files;
         foreach my $upd_file (@upd_files)
           {
-            my @command = ($svn, 'propget', 'svn:eol-style', $upd_file);
+            # Always append @BASE to a filename in case they contain a
+            # @ character, in which case the Subversion command line
+            # client will attempt to parse the characters after the @
+            # as a revision and most likely fail, or if the characters
+            # after the @ are a valid revision, then it'll possibly
+            # get the incorrect information.  So always append @BASE
+            # and any preceding @'s will be treated normally and the
+            # correct information will be retrieved.
+            my @command = ($svn,
+                           'propget',
+                           'svn:eol-style',
+                           "$upd_file\@BASE");
             my @lines = read_from_process(@command);
             next unless @lines;
             if (@lines > 1)
