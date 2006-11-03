@@ -260,8 +260,20 @@ sleep 2
 
 say "HTTPD started and listening on '$BASE_URL'..."
 
-# use wget to download configuration file through HTTPD and compare it to the original
-wget -q -O "$HTTPD_CFG-copy" "$BASE_URL/cfg"
+# use wget or curl to download configuration file through HTTPD and
+# compare it to the original
+HTTP_FETCH=wget
+HTTP_FETCH_OUTPUT="-q -o"
+type wget > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  type curl > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    fail "Neither curl or wget found."
+  fi
+  HTTP_FETCH=curl
+  HTTP_FETCH_OUTPUT="-s -o"
+fi
+$HTTP_FETCH $HTTP_FETCH_OUTPUT "$HTTPD_CFG-copy" "$BASE_URL/cfg"
 diff -q "$HTTPD_CFG" "$HTTPD_CFG-copy" \
   || fail "HTTPD doesn't operate according to the configuration"
 rm "$HTTPD_CFG-copy"
