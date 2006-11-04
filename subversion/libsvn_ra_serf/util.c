@@ -706,6 +706,32 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   /* not reached */
 }
 
+svn_error_t *
+svn_ra_serf__handle_server_error(serf_request_t *request,
+                                 serf_bucket_t *response,
+                                 apr_pool_t *pool)
+{
+  svn_ra_serf__server_error_t server_err;
+  apr_status_t status;
+
+  memset(&server_err, 0, sizeof(server_err));
+  status = svn_ra_serf__handle_discard_body(request, response,
+                                            &server_err, pool);
+
+  if (APR_STATUS_IS_EOF(status))
+    {
+      status = svn_ra_serf__is_conn_closing(response);
+      if (status == SERF_ERROR_CLOSING)
+        {
+          serf_connection_reset(serf_request_get_conn(request));
+        }
+    }
+
+  SVN_ERR(server_err.error);
+
+  return svn_error_create(APR_EGENERAL, NULL, _("Unspecified error message"));
+}
+
 static apr_status_t
 handler_default(serf_request_t *request,
                 serf_bucket_t *response,
@@ -777,31 +803,9 @@ handler_default(serf_request_t *request,
     }
   else if (sl.code >= 500)
     {
-      svn_ra_serf__server_error_t server_err;
-      apr_status_t status;
-
-      memset(&server_err, 0, sizeof(server_err));
-      status = svn_ra_serf__handle_discard_body(request, response,
-                                                &server_err, pool);
-
-      if (APR_STATUS_IS_EOF(status))
-        {
-          status = svn_ra_serf__is_conn_closing(response);
-          if (status == SERF_ERROR_CLOSING)
-            {
-              serf_connection_reset(ctx->conn->conn);
-            }
-        }
-
-      if (server_err.error)
-        {
-          ctx->session->pending_error = server_err.error;
-          return server_err.error->apr_err;
-        }
-      else
-        {
-          return APR_EGENERAL;
-        }
+      ctx->session->pending_error =
+          svn_ra_serf__handle_server_error(request, response, pool);
+      return ctx->session->pending_error->apr_err;
     }
   else
     {

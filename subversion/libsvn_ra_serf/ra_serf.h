@@ -545,6 +545,17 @@ svn_ra_serf__handle_discard_body(serf_request_t *request,
                                  apr_pool_t *pool);
 
 /*
+ * Handler that retrieves the embedded XML error response from the
+ * the @a response body associated with a @a request.
+ *
+ * All temporary allocations will be made in a @a pool.
+ */
+svn_error_t *
+svn_ra_serf__handle_server_error(serf_request_t *request,
+                                 serf_bucket_t *response,
+                                 apr_pool_t *pool);
+
+/*
  * This function will feed the RESPONSE body into XMLP.  When parsing is
  * completed (i.e. an EOF is received), *DONE is set to TRUE.
  *

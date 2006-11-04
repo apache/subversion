@@ -82,6 +82,8 @@ typedef struct {
   /* are we done? */
   svn_boolean_t done;
 
+  /* Any errors. */
+  svn_error_t *error;
 } lock_info_t;
 
 
@@ -361,13 +363,9 @@ handle_lock(serf_request_t *request,
       /* 423 == Locked */
       if (sl.code == 423)
         {
-          svn_error_t *err;
-
-          err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                 _("Lock request failed: %d %s"),
-                                 sl.code, sl.reason);
-          xml_ctx->error = err;
-          return err->apr_err;
+          ctx->error = svn_ra_serf__handle_server_error(request, response,
+                                                        pool);
+          return ctx->error->apr_err;
         }
 
       headers = serf_bucket_response_get_headers(response);
@@ -601,8 +599,13 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       error = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
       if (error)
         {
-          SVN_ERR(parser_ctx->error);
-          return error;
+          if (parser_ctx->error != SVN_NO_ERROR)
+            error = parser_ctx->error;
+          if (lock_ctx->error != SVN_NO_ERROR)
+            error = lock_ctx->error;
+
+          return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, error,
+                                  _("Lock request failed"));
         }
 
       SVN_ERR(lock_func(lock_baton, lock_ctx->path, TRUE, lock_ctx->lock, NULL,
