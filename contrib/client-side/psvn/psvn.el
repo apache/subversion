@@ -2601,7 +2601,7 @@ The string in parentheses is shown in the status line to show the state."
     (let ((default-directory
             (file-name-as-directory
              (expand-file-name (svn-status-line-info->directory-containing-line-info line-info t)))))
-      (dired-jump))
+      (if (fboundp 'dired-jump-back) (dired-jump-back) (dired-jump))) ;; Xemacs uses dired-jump-back
     (dired-goto-file file-full-path)))
 
 (defun svn-status-possibly-negate-meaning-of-arg (arg &optional command)
