@@ -66,7 +66,7 @@ extern "C" {
  * 
  * @since New in 1.1.
  */
-#define SVN_VER_PATCH      1
+#define SVN_VER_PATCH      2
 
 
 /** @deprecated Provided for backward compatibility with the 1.0 API. */
@@ -89,7 +89,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_NUMTAG.
  */
-#define SVN_VER_TAG        " (dev build)"
+#define SVN_VER_TAG        " (r22196)"
 
 
 /** Number tag: a string describing the version.
@@ -104,7 +104,7 @@ extern "C" {
  *
  * Always change this at the same time as SVN_VER_TAG.
  */
-#define SVN_VER_NUMTAG     "-dev"
+#define SVN_VER_NUMTAG     ""
 
 
 /** Revision number: The repository revision number of this release.
@@ -115,7 +115,7 @@ extern "C" {
  * When rolling a tarball, we automatically replace it with what we
  * guess to be the correct revision number.
  */
-#define SVN_VER_REVISION   0
+#define SVN_VER_REVISION   22196
 
 
 /* Version strings composed from the above definitions. */
