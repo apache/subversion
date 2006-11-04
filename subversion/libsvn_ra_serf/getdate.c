@@ -56,8 +56,10 @@ typedef struct {
 typedef struct {
   apr_pool_t *pool;
 
+  /* The time asked about. */
   apr_time_t time;
 
+  /* What was the youngest revision at that time? */
   svn_revnum_t *revision;
 
   /* are we done? */
@@ -77,10 +79,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     {
       date_info_t *info;
 
-      info = apr_palloc(parser->state->pool, sizeof(*info));
-
-      info->tmp = NULL;
-      info->tmp_len = 0;
+      info = apr_pcalloc(parser->state->pool, sizeof(*info));
 
       parser->state->private = info;
     }
@@ -110,8 +109,8 @@ start_getdate(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_getdate(svn_ra_serf__xml_parser_t *parser,
-             void *userData,
-             svn_ra_serf__dav_props_t name)
+            void *userData,
+            svn_ra_serf__dav_props_t name)
 {
   date_context_t *date_ctx = userData;
   date_state_e state;
@@ -197,7 +196,6 @@ svn_ra_serf__get_dated_revision(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets, *tmp;
   const char *vcc_url;
   int status_code;
 
