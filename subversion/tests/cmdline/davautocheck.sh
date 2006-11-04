@@ -99,6 +99,15 @@ function get_prog_name() {
 # dont assume sbin is in the PATH
 PATH="/usr/sbin:/usr/local/sbin:$PATH"
 
+# Remove any proxy environmental variables that effect wget or curl.
+# We don't need a proxy to connect to localhost and having the proxy
+# environmental variables set breaks the Apache configuration file
+# test below, since wget or curl will ask the proxy to connect to
+# localhost.
+export -n PROXY
+export -n http_proxy
+export -n HTTPS_PROXY
+
 # Pick up value from environment or PATH (also try apxs2 - for Debian)
 [ ${APXS:+set} ] \
  || APXS=$(which apxs) \
