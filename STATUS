@@ -23,6 +23,15 @@ Status of 1.4.3:
 
 Candidate changes:
 
+  * r19842
+    Synchronize (and improve readability of ) the various instances of our 
+    license text + upgrade to 2006.
+    Justification:
+     Preparing to release 1.4.2 windows installer, license now on 1.4 branch
+     is now difficult to read. Actual license text isn't changed.
+    Votes:
+     +0: lgo
+
   * r21531, r21848, r21934
     Allow HTTP auth protocols to be configurable by way of a
     "http-auth-types" parameter.
