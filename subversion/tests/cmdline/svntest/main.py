@@ -872,6 +872,9 @@ def run_tests(test_list):
   if windows == 1:
     pristine_url = string.replace(pristine_url, '\\', '/')  
   
+  # Setup the pristine repository (and working copy)
+  actions.setup_pristine_repository()
+
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
     testnums = range(1, len(test_list))

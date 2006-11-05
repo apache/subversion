@@ -51,20 +51,9 @@ class SVNIncorrectDatatype(SVNUnexpectedOutput):
   pass
 
 
-######################################################################
-# Used by every test, so that they can run independently of
-# one another.  The first time it's run, it executes 'svnadmin' to
-# create a repository and then 'svn imports' the greek tree.
-# Thereafter, every time this routine is called, it recursively copies
-# the `pristine repos' to a new location.
-
-def guarantee_greek_repository(path):
-  """Guarantee that a local svn repository exists at PATH, containing
-  nothing but the greek-tree at revision 1."""
-
-  if path == main.pristine_dir:
-    print "ERROR:  attempt to overwrite the pristine repos!  Aborting."
-    sys.exit(1)
+def setup_pristine_repository():
+  """Create the pristine repository, 'svn import' the greek tree and 
+  checkout the pristine working copy"""
 
   # If there's no pristine repos, create one.
   if not os.path.exists(main.pristine_dir):
@@ -115,15 +104,6 @@ def guarantee_greek_repository(path):
                     'OUTPUT TREE', expected_output_tree, output_tree)
       sys.exit(1)
 
-  # Now that the pristine repos exists, copy it to PATH.
-  main.safe_rmtree(path)
-  if main.copy_repos(main.pristine_dir, path, 1):
-    print "ERROR:  copying repository failed."
-    sys.exit(1)
-
-  # make the repos world-writeable, for mod_dav_svn's sake.
-  main.chmod_tree(path, 0666, 0666)
-
   # If there's no pristine wc, create one.
   if not os.path.exists(main.pristine_wc_dir):
     # Generate the expected output tree.
@@ -139,7 +119,32 @@ def guarantee_greek_repository(path):
                             main.pristine_wc_dir,
                             expected_output,
                             expected_wc)
-  
+
+######################################################################
+# Used by every test, so that they can run independently of  one 
+# another. Every time this routine is called, it recursively copies
+# the `pristine repos' to a new location.
+# Note: make sure setup_pristine_repository was called once before
+# using this function.
+
+def guarantee_greek_repository(path):
+  """Guarantee that a local svn repository exists at PATH, containing
+  nothing but the greek-tree at revision 1."""
+
+  if path == main.pristine_dir:
+    print "ERROR:  attempt to overwrite the pristine repos!  Aborting."
+    sys.exit(1)
+
+  # copy the pristine repository to PATH.
+  main.safe_rmtree(path)
+  if main.copy_repos(main.pristine_dir, path, 1):
+    print "ERROR:  copying repository failed."
+    sys.exit(1)
+
+  # make the repos world-writeable, for mod_dav_svn's sake.
+  main.chmod_tree(path, 0666, 0666)
+
+
 def run_and_verify_svnversion(message, wc_dir, repo_url,
                               expected_stdout, expected_stderr):
   "Run svnversion command and check its output"
