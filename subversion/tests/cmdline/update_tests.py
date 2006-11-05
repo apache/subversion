@@ -969,8 +969,8 @@ def update_receive_illegal_name(sbox):
 
   # This tests the revision 4334 fix for issue #1068.
   
-  legal_url = svntest.main.current_repo_url + '/A/D/G/svn'
-  illegal_url = (svntest.main.current_repo_url
+  legal_url = sbox.repo_url + '/A/D/G/svn'
+  illegal_url = (sbox.repo_url
                  + '/A/D/G/' + svntest.main.get_admin_name())
   # Ha!  The client doesn't allow us to mkdir a '.svn' but it does
   # allow us to copy to a '.svn' so ...
@@ -1090,7 +1090,7 @@ def another_hudson_problem(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 3.\n'], [],
                                      'rm', '-m', 'log msg',
-                                     svntest.main.current_repo_url + '/A/D/G')
+                                     sbox.repo_url + '/A/D/G')
 
   # Remove corresponding tree from working copy
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
@@ -1177,7 +1177,7 @@ def new_dir_with_spaces(sbox):
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg',
-                                     svntest.main.current_repo_url
+                                     sbox.repo_url
                                      + '/A/spacey%20dir')
 
   # Update, and make sure ra_dav doesn't choke on the space.
@@ -1255,7 +1255,7 @@ def checkout_empty_dir(sbox):
   sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   
-  C_url = svntest.main.current_repo_url + '/A/C'
+  C_url = sbox.repo_url + '/A/C'
 
   svntest.main.safe_rmtree(wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'checkout', C_url, wc_dir)
@@ -1356,7 +1356,7 @@ def update_schedule_add_dir(sbox):
 
   # Delete directory A/D/G in the repository via immediate commit
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  G_url = svntest.main.current_repo_url + '/A/D/G'
+  G_url = sbox.repo_url + '/A/D/G'
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', G_url, '-m', 'rev 2')
 
@@ -1514,7 +1514,7 @@ def nested_in_read_only(sbox):
   # Replace the deleted directory with a new checkout of an old
   # version of the directory, this gives it a "plausible" URL that
   # could be part of the containing wc
-  B_url = svntest.main.current_repo_url + '/A/B'
+  B_url = sbox.repo_url + '/A/B'
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout', '-r', '1', B_url + "@1",
                                      B_path)
@@ -2078,7 +2078,7 @@ def forced_update_failures(sbox):
   # of the same name already exists should fail.
 
   # Remove the file A/C/I and make it a versioned directory.
-  I_url = svntest.main.current_repo_url + "/A/C/I"
+  I_url = sbox.repo_url + "/A/C/I"
   os.remove(I_path)
   os.mkdir(I_path)
   so, se = svntest.actions.run_and_verify_svn("Unexpected error during co",

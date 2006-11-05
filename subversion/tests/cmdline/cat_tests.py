@@ -50,7 +50,7 @@ def cat_remote_directory(sbox):
   "cat a remote directory"
   sbox.build(create_wc = False)
  
-  A_url = svntest.main.current_repo_url + '/A'
+  A_url = sbox.repo_url + '/A'
   
   svntest.actions.run_and_verify_svn('No error where one is expected',
                                      None, svntest.SVNAnyOutput, 'cat', A_url)

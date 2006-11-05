@@ -151,10 +151,6 @@ work_dir = "svn-test-work"
 general_repo_dir = os.path.join(work_dir, "repositories")
 general_wc_dir = os.path.join(work_dir, "working_copies")
 
-# A relative path that will always point to latest repository
-current_repo_dir = None
-current_repo_url = None
-
 # temp directory in which we will create our 'pristine' local
 # repository and other scratch data.  This should be removed when we
 # quit and when we startup.
@@ -536,15 +532,6 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
       raise SVNRepositoryCopyFailure
 
 
-def set_repos_paths(repo_dir):
-  "Set current_repo_dir and current_repo_url from a relative path to the repo."
-  global current_repo_dir, current_repo_url
-  current_repo_dir = repo_dir
-  current_repo_url = test_area_url + '/' + repo_dir
-  if windows == 1:
-    current_repo_url = string.replace(current_repo_url, '\\', '/')
-
-
 def canonicalize_url(input):
   "Canonicalize the url, if the scheme is unknown, returns intact input"
 
@@ -809,11 +796,6 @@ def run_one_test(n, test_list):
   if (n < 1) or (n > len(test_list) - 1):
     print "There is no test", `n` + ".\n"
     return 1
-
-  # Clear the repos paths for this test
-  global current_repo_dir, current_repo_url
-  current_repo_dir = None
-  current_repo_url = None
 
   # Run the test.
   exit_code = TestRunner(test_list[n], n).run()

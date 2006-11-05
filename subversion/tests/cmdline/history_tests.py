@@ -174,7 +174,7 @@ def cat_avoids_false_identities(sbox):
   # Now do you see the evil that lies within us?
 
   iota_path = os.path.join(wc_dir, 'iota')
-  iota_url = svntest.main.current_repo_url + '/iota'
+  iota_url = sbox.repo_url + '/iota'
 
   # r2
   svntest.main.run_svn(None, 'del', iota_path)

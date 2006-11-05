@@ -923,9 +923,6 @@ def make_repo_and_wc(sbox, create_wc = True):
   'general_wc_dir' (variables defined at the top of this test
   suite.)  Returns on success, raises on failure."""
 
-  # Store the path of the current repository.
-  main.set_repos_paths(sbox.repo_dir)
-
   # Create (or copy afresh) a new repos with a greek tree in it.
   guarantee_greek_repository(sbox.repo_dir)
 
@@ -941,7 +938,7 @@ def make_repo_and_wc(sbox, create_wc = True):
                                '--username', main.wc_author,
                                '--password', main.wc_passwd,
                                main.pristine_url,
-                               main.current_repo_url, sbox.wc_dir)
+                               sbox.repo_url, sbox.wc_dir)
   else:
     # just make sure the parent folder of our working copy is created
     try:

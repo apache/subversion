@@ -506,7 +506,7 @@ def deleted_path_lock(sbox):
   wc_dir = sbox.wc_dir
 
   iota_path = os.path.join(wc_dir, 'iota')
-  iota_url = svntest.main.current_repo_url + '/iota'
+  iota_url = sbox.repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
@@ -868,7 +868,7 @@ def examine_lock_via_url(sbox):
   fname = 'iota'
   comment = 'This is a lock test.'
   file_path = os.path.join(sbox.wc_dir, fname)
-  file_url = svntest.main.current_repo_url + '/' + fname
+  file_url = sbox.repo_url + '/' + fname
 
   # lock the file url and check the contents of lock
   svntest.actions.run_and_validate_lock(file_url,
@@ -916,8 +916,8 @@ def lock_switched_files(sbox):
 
   gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
-  iota_URL = svntest.main.current_repo_url + '/iota'
-  alpha_URL = svntest.main.current_repo_url + '/A/B/E/alpha'
+  iota_URL = sbox.repo_url + '/iota'
+  alpha_URL = sbox.repo_url + '/A/B/E/alpha'
 
   svntest.actions.run_and_verify_svn(None, None, [], 'switch',
                                      iota_URL, gamma_path)
@@ -997,7 +997,7 @@ def lock_uri_encoded(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # And now the URL case.
-  file_url = svntest.main.current_repo_url + '/' + fname
+  file_url = sbox.repo_url + '/' + fname
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -1204,7 +1204,7 @@ def repos_lock_with_info(sbox):
   fname = 'iota'
   comment = 'This is a lock test.'
   file_path = os.path.join(sbox.wc_dir, fname)
-  file_url = svntest.main.current_repo_url + '/' + fname
+  file_url = sbox.repo_url + '/' + fname
 
   # lock wc file
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
@@ -1453,7 +1453,7 @@ def unlock_wrong_token(sbox):
   # lock a file as wc_author
   fname = 'iota'
   file_path = os.path.join(sbox.wc_dir, fname)
-  file_url = svntest.main.current_repo_url + "/iota"
+  file_url = sbox.repo_url + "/iota"
 
   svntest.actions.run_and_verify_svn(None, ".*locked by user", [], 'lock',
                                      '--username', svntest.main.wc_author,

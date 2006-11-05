@@ -85,7 +85,7 @@ def authz_open_root(sbox):
   
   write_authz_file(sbox, {"/": "", "/A": "jrandom = rw"})
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   # we have write access in folder /A, but not in root. Test on too
   # restrictive access needed in open_root by modifying a file in /A
@@ -120,7 +120,7 @@ def authz_open_directory(sbox):
   
   write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
   
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir) 
+  write_restrictive_svnserve_conf(sbox.repo_dir) 
 
   # we have write access in folder /A/B/E, but not in /A/B. Test on too
   # restrictive access needed in open_directory by moving file /A/mu to
@@ -155,7 +155,7 @@ def broken_authz_file(sbox):
   
   write_authz_file(sbox, {"/": "jrandom = rw zot"})
   
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   out, err = svntest.main.run_svn(1,
                                   "delete",
@@ -176,7 +176,7 @@ def authz_read_access(sbox):
 
   sbox.build(create_wc = False)
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith("http"):
     expected_err = ".*403 Forbidden.*"
@@ -191,7 +191,7 @@ def authz_read_access(sbox):
                            "/A/D/H": ("* = \n" +
                                       svntest.main.wc_author + " = rw")})
          
-  root_url = svntest.main.current_repo_url
+  root_url = sbox.repo_url
   A_url = root_url + '/A'
   B_url = A_url + '/B'
   C_url = A_url + '/C'
@@ -305,7 +305,7 @@ def authz_write_access(sbox):
   
   sbox.build(create_wc = False)
   
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith('http'):
     expected_err = ".*403 Forbidden.*"
@@ -316,7 +316,7 @@ def authz_write_access(sbox):
                            "/A/B": "* = rw",
                            "/A/C": "* = rw"})
 
-  root_url = svntest.main.current_repo_url
+  root_url = sbox.repo_url
   A_url = root_url + '/A'
   B_url = A_url + '/B'
   C_url = A_url + '/C'
@@ -429,7 +429,7 @@ def authz_checkout_test(sbox):
   sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   # 1st part: disable all read access, checkout should fail
   
@@ -469,7 +469,7 @@ def authz_checkout_and_update_test(sbox):
   sbox.build(create_wc = False)
   local_dir = sbox.wc_dir
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   # 1st part: disable read access on folder A/B, checkout should not
   # download this folder
@@ -531,7 +531,7 @@ def authz_partial_export_test(sbox):
   # cleanup remains of a previous test run.
   svntest.main.safe_rmtree(local_dir)
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   # 1st part: disable read access on folder A/B, export should not
   # download this folder
@@ -565,7 +565,7 @@ def authz_log_and_tracing_test(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   # write an authz file with *=rw on /
   if sbox.repo_url.startswith('http'):
@@ -575,7 +575,7 @@ def authz_log_and_tracing_test(sbox):
 
   write_authz_file(sbox, { "/": "* = rw\n" })
          
-  root_url = svntest.main.current_repo_url
+  root_url = sbox.repo_url
   D_url = root_url + '/A/D'
   G_url = D_url + '/G'
   
@@ -666,7 +666,7 @@ def authz_aliases(sbox):
 
   sbox.build(create_wc = False)
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   if sbox.repo_url.startswith("http"):
     expected_err = ".*403 Forbidden.*"
@@ -677,7 +677,7 @@ def authz_aliases(sbox):
                            "/A/B" : "&jray = rw" },
                          { "aliases" : 'jray = jrandom' } )
 
-  root_url = svntest.main.current_repo_url
+  root_url = sbox.repo_url
   A_url = root_url + '/A'
   B_url = A_url + '/B'
   iota_url = root_url + '/iota'
