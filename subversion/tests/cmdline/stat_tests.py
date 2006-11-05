@@ -383,7 +383,7 @@ def status_nonrecursive_update_different_cwd(sbox):
   wc_dir = sbox.wc_dir
   was_cwd = os.getcwd()
 
-  J_url  = svntest.main.current_repo_url + '/A/C/J'
+  J_url  = sbox.repo_url + '/A/C/J'
   K_path = os.path.join(wc_dir, 'A', 'C', 'K' )
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -554,7 +554,7 @@ def status_on_forward_deletion(sbox):
   sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   
-  top_url = svntest.main.current_repo_url
+  top_url = sbox.repo_url
   A_url = top_url + '/A'
 
   svntest.main.run_svn(None, 'rm', '-m', 'Remove A.', A_url)
@@ -687,7 +687,7 @@ use-commit-times = yes
 
   other_wc = sbox.add_wc_path('other')
   svntest.actions.run_and_verify_svn("checkout failed", None, [],
-                                     'co', svntest.main.current_repo_url,
+                                     'co', sbox.repo_url,
                                      '--username',
                                      svntest.main.wc_author,
                                      '--password',
@@ -764,7 +764,7 @@ def status_on_partially_nonrecursive_wc(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  top_url = svntest.main.current_repo_url
+  top_url = sbox.repo_url
   A_url = top_url + '/A'
   D_url = top_url + '/A/D'
   G_url = top_url + '/A/D/G'
@@ -870,7 +870,7 @@ def status_ignored_dir(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   new_dir = os.path.join(wc_dir, "dir.o")
-  new_dir_url = svntest.main.current_repo_url + "/dir.o"
+  new_dir_url = sbox.repo_url + "/dir.o"
 
   svntest.actions.run_and_verify_svn("Create dir", "Committed revision 2.", [],
                                      'mkdir', new_dir_url, '-m', 'msg',
@@ -929,8 +929,8 @@ def status_add_plus_conflict(sbox):
 
   wc_dir = sbox.wc_dir
 
-  branch_url  = svntest.main.current_repo_url + '/branch'
-  trunk_url  = svntest.main.current_repo_url + '/trunk'
+  branch_url  = sbox.repo_url + '/branch'
+  trunk_url  = sbox.repo_url + '/trunk'
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'mkdir', '-m', 'rev 2',

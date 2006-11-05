@@ -70,7 +70,7 @@ or a url (when false) copy source is used."""
   if wc_copy:
     pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   else:
-    pi_src = svntest.main.current_repo_url + '/A/D/G/pi'
+    pi_src = sbox.repo_url + '/A/D/G/pi'
 
   svntest.actions.run_and_verify_svn("", None, [],
                                      'cp', pi_src, rho_path)
@@ -155,7 +155,7 @@ or a url (when false) copy source is used."""
   if wc_copy:
     pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   else:
-    pi_src = svntest.main.current_repo_url + '/A/D/G/pi'
+    pi_src = sbox.repo_url + '/A/D/G/pi'
 
   svntest.actions.run_and_verify_svn("", None, [],
                                      'cp', pi_src, rho_path)
@@ -464,7 +464,7 @@ def resurrect_deleted_dir(sbox):
 
   # Use 'svn cp -r 1 URL URL' to resurrect the deleted directory, where
   # the two URLs are identical.  This used to trigger a failure.  
-  url = svntest.main.current_repo_url + '/A/D/G'
+  url = sbox.repo_url + '/A/D/G'
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -514,8 +514,8 @@ def copy_deleted_dir_into_prefix(sbox):
 
   # Ok, copy from a deleted URL into a prefix of that URL, this used to
   # result in an assert failing.
-  url1 = svntest.main.current_repo_url + '/A/D/G'
-  url2 = svntest.main.current_repo_url + '/A/D'
+  url1 = sbox.repo_url + '/A/D/G'
+  url2 = sbox.repo_url + '/A/D'
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -539,10 +539,10 @@ def no_copy_overwrites(sbox):
 
   wc_dir = sbox.wc_dir
 
-  fileURL1 =  svntest.main.current_repo_url + "/A/B/E/alpha"
-  fileURL2 =  svntest.main.current_repo_url + "/A/B/E/beta"
-  dirURL1  =  svntest.main.current_repo_url + "/A/D/G"
-  dirURL2  =  svntest.main.current_repo_url + "/A/D/H"
+  fileURL1 =  sbox.repo_url + "/A/B/E/alpha"
+  fileURL2 =  sbox.repo_url + "/A/B/E/beta"
+  dirURL1  =  sbox.repo_url + "/A/D/G"
+  dirURL2  =  sbox.repo_url + "/A/D/H"
 
   # Expect out-of-date failure if 'svn cp URL URL' tries to overwrite a file  
   svntest.actions.run_and_verify_svn("Whoa, I was able to overwrite a file!",
@@ -667,7 +667,7 @@ def copy_files_with_properties(sbox):
 
   # REPOS to WC copy of file with properties
   rho_url_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho_url')
-  rho_url = svntest.main.current_repo_url + '/A/D/G/rho'
+  rho_url = sbox.repo_url + '/A/D/G/rho'
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', rho_url, rho_url_path)
 
@@ -838,9 +838,9 @@ def wc_to_repos(sbox):
   wc_dir = sbox.wc_dir
 
   beta_path = os.path.join(wc_dir, "A", "B", "E", "beta")
-  beta2_url = svntest.main.current_repo_url + "/A/B/E/beta2"
+  beta2_url = sbox.repo_url + "/A/B/E/beta2"
   H_path = os.path.join(wc_dir, "A", "D", "H")
-  H2_url = svntest.main.current_repo_url + "/A/D/H2"
+  H2_url = sbox.repo_url + "/A/D/H2"
 
   # modify some items to be copied
   svntest.main.file_append(os.path.join(wc_dir, 'A', 'D', 'H', 'omega'),
@@ -916,8 +916,8 @@ def repos_to_wc(sbox):
   # URL->wc copy:
   # copy a file and a directory from the same repository.
   # we should get some scheduled additions *with history*.
-  E_url = svntest.main.current_repo_url + "/A/B/E"
-  pi_url = svntest.main.current_repo_url + "/A/D/G/pi"
+  E_url = sbox.repo_url + "/A/B/E"
+  pi_url = sbox.repo_url + "/A/D/G/pi"
   pi_path = os.path.join (wc_dir, 'pi')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', E_url, wc_dir)
@@ -958,7 +958,7 @@ def repos_to_wc(sbox):
 
   # URL->wc copy:
   # Copy an empty directory from the same repository, see issue #1444.
-  C_url = svntest.main.current_repo_url + "/A/C"
+  C_url = sbox.repo_url + "/A/C"
 
   svntest.actions.run_and_verify_svn(None, None, [], 'copy', C_url, wc_dir)
 
@@ -1002,7 +1002,7 @@ def repos_to_wc(sbox):
   # URL->wc copy:
   # Copy a directory to a pre-existing WC directory.
   # The source directory should be copied *under* the target directory.
-  B_url = svntest.main.current_repo_url + "/A/B"
+  B_url = sbox.repo_url + "/A/B"
   D_dir = os.path.join (wc_dir, 'A', 'D')
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1028,7 +1028,7 @@ def copy_to_root(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  root = svntest.main.current_repo_url
+  root = sbox.repo_url
   mu = root + '/A/mu'
 
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
@@ -1066,8 +1066,8 @@ def url_copy_parent_into_child(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  B_url = svntest.main.current_repo_url + "/A/B"
-  F_url = svntest.main.current_repo_url + "/A/B/F"
+  B_url = sbox.repo_url + "/A/B"
+  F_url = sbox.repo_url + "/A/B/F"
 
   # Issue 1367 parent/child URL-to-URL was rejected.
   svntest.actions.run_and_verify_svn(None,
@@ -1117,8 +1117,8 @@ def wc_copy_parent_into_child(sbox):
   sbox.build(create_wc = False)
   wc_dir = sbox.wc_dir
   
-  B_url = svntest.main.current_repo_url + "/A/B"
-  F_B_url = svntest.main.current_repo_url + "/A/B/F/B"
+  B_url = sbox.repo_url + "/A/B"
+  F_B_url = sbox.repo_url + "/A/B/F/B"
 
   # Want a smaller WC
   svntest.main.safe_rmtree(wc_dir)
@@ -1197,7 +1197,7 @@ def resurrect_deleted_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Delete a file in the repository via immediate commit
-  rho_url = svntest.main.current_repo_url + '/A/D/G/rho'
+  rho_url = sbox.repo_url + '/A/D/G/rho'
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', rho_url, '-m', 'rev 2')
 
@@ -1235,7 +1235,7 @@ def diff_repos_to_wc_copy(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  iota_repos_path = svntest.main.current_repo_url + '/iota'
+  iota_repos_path = sbox.repo_url + '/iota'
   target_wc_path = os.path.join(wc_dir, 'new_file')
 
   # Copy a file from the repository to the working copy.
@@ -1259,7 +1259,7 @@ def repos_to_wc_copy_eol_keywords(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  iota_repos_path = svntest.main.current_repo_url + '/iota'
+  iota_repos_path = sbox.repo_url + '/iota'
   iota_wc_path = os.path.join(wc_dir, 'iota')
   target_wc_path = os.path.join(wc_dir, 'new_file')
 
@@ -1381,7 +1381,7 @@ def copy_over_missing_file(sbox):
   
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   iota_path = os.path.join(wc_dir, 'iota')
-  iota_url = svntest.main.current_repo_url + "/iota"
+  iota_url = sbox.repo_url + "/iota"
 
   # Make the target missing.
   os.remove(mu_path)
@@ -1428,7 +1428,7 @@ def repos_to_wc_1634(sbox):
                                          wc_dir)
 
   # Now copy the directory back.
-  E_url = svntest.main.current_repo_url + "/A/B/E"
+  E_url = sbox.repo_url + "/A/B/E"
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', '-r1', E_url, E_path)
   expected_status.add({
@@ -1455,7 +1455,7 @@ def double_uri_escaping_1814(sbox):
 
   sbox.build()
   
-  base_url = svntest.main.current_repo_url + '/base'
+  base_url = sbox.repo_url + '/base'
 
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'mybase',
                                      base_url)
@@ -1616,8 +1616,8 @@ def url_to_non_existent_url_path(sbox):
 
   sbox.build(create_wc = False)
 
-  dirURL1 = svntest.main.current_repo_url + "/A/B/E"
-  dirURL2 = svntest.main.current_repo_url + "/G/C/E/I"
+  dirURL1 = sbox.repo_url + "/A/B/E"
+  dirURL2 = sbox.repo_url + "/G/C/E/I"
 
   # Look for both possible versions of the error message, as the DAV
   # error is worded differently from that of other RA layers.
@@ -1646,9 +1646,9 @@ def non_existent_url_to_url(sbox):
 
   sbox.build(create_wc = False)
 
-  adg_url = svntest.main.current_repo_url + '/A/D/G'
-  pi_url = svntest.main.current_repo_url + '/A/D/G/pi'
-  new_url = svntest.main.current_repo_url + '/newfile'
+  adg_url = sbox.repo_url + '/A/D/G'
+  pi_url = sbox.repo_url + '/A/D/G/pi'
+  new_url = sbox.repo_url + '/newfile'
 
   svntest.actions.run_and_verify_svn(None, None, [], 'delete',
                                      adg_url, '-m', '')
@@ -1663,10 +1663,10 @@ def old_dir_url_to_url(sbox):
 
   sbox.build(create_wc = False)
 
-  adg_url = svntest.main.current_repo_url + '/A/D/G'
-  pi_url = svntest.main.current_repo_url + '/A/D/G/pi'
-  iota_url = svntest.main.current_repo_url + '/iota'
-  new_url = svntest.main.current_repo_url + '/newfile'
+  adg_url = sbox.repo_url + '/A/D/G'
+  pi_url = sbox.repo_url + '/A/D/G/pi'
+  iota_url = sbox.repo_url + '/iota'
+  new_url = sbox.repo_url + '/newfile'
 
   # Delete a directory
   svntest.actions.run_and_verify_svn(None, None, [], 'delete',
@@ -1719,7 +1719,7 @@ def mixed_wc_to_url(sbox):
   sbox.build()
 
   wc_dir = sbox.wc_dir
-  Z_url = svntest.main.current_repo_url + '/A/D/Z'
+  Z_url = sbox.repo_url + '/A/D/Z'
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
@@ -1906,7 +1906,7 @@ def force_move(sbox):
                                         wc_dir)
   svntest.actions.run_and_verify_svn('Cat file', expected_file_content, [],
                                      'cat',
-                                     svntest.main.current_repo_url + '/dest')
+                                     sbox.repo_url + '/dest')
 
 
 def copy_copied_file_and_dir(sbox):

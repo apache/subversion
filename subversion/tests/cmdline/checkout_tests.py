@@ -80,7 +80,7 @@ def make_local_tree(sbox, mod_files=False, add_unversioned=False):
   expected_output.tweak(contents=None, status="A ")
 
   # Export an unversioned tree to sbox.wc_dir.
-  svntest.actions.run_and_verify_export(svntest.main.current_repo_url,
+  svntest.actions.run_and_verify_export(sbox.repo_url,
                                         export_target,
                                         expected_output,
                                         svntest.main.greek_state.copy())
@@ -144,7 +144,7 @@ def checkout_with_obstructions(sbox):
 
   svntest.actions.run_and_verify_svn("No error where some expected",
                                      None, SVNAnyOutput, "co",
-                                     svntest.main.current_repo_url,
+                                     sbox.repo_url,
                                      sbox.wc_dir)
 
 #----------------------------------------------------------------------
@@ -202,7 +202,7 @@ def forced_checkout_with_faux_obstructions(sbox):
 
   expected_wc = svntest.main.greek_state.copy()
 
-  svntest.actions.run_and_verify_checkout(svntest.main.current_repo_url,
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
                                           sbox.wc_dir, expected_output,
                                           expected_wc, None, None, None,
                                           None, '--force')
@@ -223,7 +223,7 @@ def forced_checkout_with_real_obstructions(sbox):
   expected_wc.tweak('iota',
                     contents="This is the local version of the file 'iota'.\n")
 
-  svntest.actions.run_and_verify_checkout(svntest.main.current_repo_url,
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
                                           sbox.wc_dir, expected_output,
                                           expected_wc, None, None, None,
                                           None, '--force')
@@ -248,7 +248,7 @@ def forced_checkout_with_real_obstructions_and_unversioned_files(sbox):
                    'A/Z'       : Item(),
                    })
 
-  svntest.actions.run_and_verify_checkout(svntest.main.current_repo_url,
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
                                           sbox.wc_dir, expected_output,
                                           expected_wc, None, None, None,
                                           None, '--force')
@@ -301,7 +301,7 @@ def import_and_checkout(sbox):
   expected_output.wc_dir = import_from_dir
   expected_output.desc[''] = Item()
   expected_output.tweak(contents=None, status='A ')
-  svntest.actions.run_and_verify_export(svntest.main.current_repo_url,
+  svntest.actions.run_and_verify_export(sbox.repo_url,
                                         import_from_dir,
                                         expected_output,
                                         svntest.main.greek_state.copy())
@@ -361,9 +361,8 @@ def checkout_broken_eol(sbox):
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
 
-  URL = svntest.main.current_repo_url
+  URL = sbox.repo_url
 
   # Load the dumpfile into the repos.
   output, errput = \

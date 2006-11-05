@@ -61,7 +61,7 @@ def import_executable(sbox):
   os.chmod(other_path, 0667)
 
   # import new files into repository
-  url = svntest.main.current_repo_url
+  url = sbox.repo_url
   output, errput =   svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
     '--username', svntest.main.wc_author,
@@ -141,7 +141,7 @@ def import_ignores(sbox):
   open(foo_o_path, 'w')
 
   # import new dir into repository
-  url = svntest.main.current_repo_url + '/dir'
+  url = sbox.repo_url + '/dir'
 
   output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
@@ -210,7 +210,7 @@ def import_no_ignores(sbox):
   open(foo_rej_path, 'w')
 
   # import new dir into repository
-  url = svntest.main.current_repo_url + '/dir'
+  url = sbox.repo_url + '/dir'
 
   output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
@@ -275,7 +275,7 @@ def import_avoid_empty_revision(sbox):
   empty_dir = os.path.join(wc_dir, "empty_dir")
   os.makedirs(empty_dir)
 
-  url = svntest.main.current_repo_url  
+  url = sbox.repo_url  
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -323,7 +323,7 @@ enable-auto-props = yes
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'Log message for new import', 
                                      imp_dir_path, 
-                                     svntest.main.current_repo_url)
+                                     sbox.repo_url)
 
   svntest.main.run_svn(None, 'update', wc_dir)
 

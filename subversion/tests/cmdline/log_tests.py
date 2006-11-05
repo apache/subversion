@@ -449,13 +449,12 @@ def log_with_empty_repos(sbox):
   # Create virgin repos
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
 
   svntest.actions.run_and_verify_svn ("", None, [],
                                       'log',
                                       '--username', svntest.main.wc_author,
                                       '--password', svntest.main.wc_passwd,
-                                      svntest.main.current_repo_url)
+                                      sbox.repo_url)
 
 #----------------------------------------------------------------------
 def log_where_nothing_changed(sbox):
@@ -505,7 +504,7 @@ def log_with_path_args(sbox):
   try:
     output, err = svntest.actions.run_and_verify_svn(
       None, None, [],
-      'log', svntest.main.current_repo_url, 'A/D/G', 'A/D/H')
+      'log', sbox.repo_url, 'A/D/G', 'A/D/H')
 
     log_chain = parse_log_output (output)
     check_log_chain(log_chain, [8, 6, 5, 3, 1])
@@ -542,7 +541,7 @@ def url_missing_in_head(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  my_url = svntest.main.current_repo_url + "/A/B/E/alpha" + "@8"
+  my_url = sbox.repo_url + "/A/B/E/alpha" + "@8"
   
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'log', my_url)
@@ -558,8 +557,8 @@ def log_through_copyfrom_history(sbox):
 
   mu_path = os.path.join (wc_dir, 'A', 'mu')
   mu2_path = os.path.join (wc_dir, 'A', 'mu2')
-  mu_URL = svntest.main.current_repo_url + '/A/mu'
-  mu2_URL = svntest.main.current_repo_url + '/A/mu2'
+  mu_URL = sbox.repo_url + '/A/mu'
+  mu2_URL = sbox.repo_url + '/A/mu2'
    
   msg2=""" Log message for revision 2 
   but with multiple lines
@@ -681,9 +680,8 @@ PROPS-END
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
 
-  URL = svntest.main.current_repo_url
+  URL = sbox.repo_url
 
   # load dumpfile with control character into repos to get
   # a log with control char content
@@ -717,7 +715,7 @@ def log_xml_empty_date(sbox):
   sbox.build()
 
   # Create the revprop-change hook for this test
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
   date_re = re.compile('<date');
 
@@ -751,13 +749,13 @@ def log_limit(sbox):
 
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
-                                                svntest.main.current_repo_url)
+                                                sbox.repo_url)
   log_chain = parse_log_output (out)
   check_log_chain(log_chain, [9, 8])
 
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
-                                                svntest.main.current_repo_url,
+                                                sbox.repo_url,
                                                 'A/B')
   log_chain = parse_log_output (out)
   check_log_chain(log_chain, [9, 6])
@@ -765,7 +763,7 @@ def log_limit(sbox):
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
                                                 '--revision', '2:HEAD',
-                                                svntest.main.current_repo_url,
+                                                sbox.repo_url,
                                                 'A/B')
   log_chain = parse_log_output (out)
   check_log_chain(log_chain, [3, 6])
@@ -773,7 +771,7 @@ def log_limit(sbox):
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
                                                 '--revision', '1',
-                                                svntest.main.current_repo_url,
+                                                sbox.repo_url,
                                                 'A/B')
   log_chain = parse_log_output (out)
   check_log_chain(log_chain, [1])
@@ -783,11 +781,11 @@ def log_limit(sbox):
   # error expected when limit <= 0
   svntest.actions.run_and_verify_svn(None, None, must_be_positive,
                                      'log', '--limit', '0', '--revision', '1',
-                                     svntest.main.current_repo_url, 'A/B')
+                                     sbox.repo_url, 'A/B')
                                                 
   svntest.actions.run_and_verify_svn(None, None, must_be_positive,
                                      'log', '--limit', '-1', '--revision', '1',
-                                     svntest.main.current_repo_url, 'A/B')
+                                     sbox.repo_url, 'A/B')
                                                                                                 
 def log_base_peg(sbox):
   "run log on an @BASE target"

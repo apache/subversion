@@ -99,7 +99,7 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
   wc_dir = sbox.wc_dir
   tmp_dir = os.path.abspath(svntest.main.temp_dir)
   config_dir = os.path.join(tmp_dir, 'autoprops_config')
-  repos_url = svntest.main.current_repo_url
+  repos_url = sbox.repo_url
   svntest.main.set_config_dir(config_dir)
 
   # initialize parameters

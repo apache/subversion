@@ -580,7 +580,7 @@ def keyword_expanded_on_checkout(sbox):
   svntest.actions.run_and_verify_svn (None, None, [], 'checkout',
                                       '--username', svntest.main.wc_author,
                                       '--password', svntest.main.wc_passwd,
-                                      svntest.main.current_repo_url,
+                                      sbox.repo_url,
                                       other_wc_dir)
 
   # Check keyword got expanded (and thus the mkdir, add, ps, commit
@@ -622,7 +622,7 @@ def cat_keyword_expansion(sbox):
   # Change the author to value which will get truncated on expansion
   full_author = "x" * 400 
   key_author = "x" * 244
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svn("", None, [],
                                      'propset', '--revprop', '-r2',
                                      'svn:author', full_author,
@@ -728,7 +728,7 @@ def propset_commit_checkout_nocrash(sbox):
   svntest.actions.run_and_verify_svn (None, None, [], 'checkout',
                                       '--username', svntest.main.wc_author,
                                       '--password', svntest.main.wc_passwd,
-                                      svntest.main.current_repo_url,
+                                      sbox.repo_url,
                                       other_wc_dir)
 
   mu_other_contents = open(mu_other_path).read()

@@ -1439,7 +1439,7 @@ def commit_multiple_wc(sbox):
 
   # Checkout a second working copy
   wc2_dir = os.path.join(wc_dir, 'A', 'wc2')
-  url = svntest.main.current_repo_url
+  url = sbox.repo_url
   svntest.actions.run_and_verify_svn ("Output on stderr where none expected",
                                       SVNAnyOutput, [],
                                       'checkout',
@@ -1845,8 +1845,8 @@ def tab_test(sbox):
 
   tab_file = os.path.join(wc_dir, 'A', "tab\tfile")
   tab_dir  = os.path.join(wc_dir, 'A', "tab\tdir")
-  source_url = svntest.main.current_repo_url + "/source_dir"
-  tab_url = svntest.main.current_repo_url + "/tab%09dir"
+  source_url = sbox.repo_url + "/source_dir"
+  tab_url = sbox.repo_url + "/tab%09dir"
 
   svntest.main.file_append(tab_file, "This file has a tab in it.")
   os.mkdir(tab_dir)
@@ -1915,7 +1915,7 @@ def local_mods_are_not_commits(sbox):
                                      svntest.main.wc_author,
                                      '--password',
                                      svntest.main.wc_passwd,
-                                     svntest.main.current_repo_url + "/iota",
+                                     sbox.repo_url + "/iota",
                                      os.path.join(wc_dir, 'iota2'))
 
   # delete

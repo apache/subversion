@@ -85,7 +85,7 @@ def get_routine_disk_state(wc_dir):
 
 #----------------------------------------------------------------------
 
-def do_routine_switching(wc_dir, verify):
+def do_routine_switching(wc_dir, repo_url, verify):
   """perform some routine switching of the working copy WC_DIR for
   other tests to use.  If VERIFY, then do a full verification of the
   switching, else don't bother."""
@@ -94,7 +94,7 @@ def do_routine_switching(wc_dir, verify):
 
   # Construct some paths for convenience
   iota_path = os.path.join(wc_dir, 'iota')
-  gamma_url = svntest.main.current_repo_url + '/A/D/gamma'
+  gamma_url = repo_url + '/A/D/gamma'
 
   if verify:
     # Create expected output tree
@@ -126,7 +126,7 @@ def do_routine_switching(wc_dir, verify):
 
   # Construct some paths for convenience
   AB_path = os.path.join(wc_dir, 'A', 'B')
-  ADG_url = svntest.main.current_repo_url + '/A/D/G'
+  ADG_url = repo_url + '/A/D/G'
 
   if verify:
     # Create expected output tree
@@ -229,7 +229,7 @@ def routine_switching(sbox):
   sbox.build()
 
   # Setup (and verify) some switched things
-  do_routine_switching(sbox.wc_dir, 1)
+  do_routine_switching(sbox.wc_dir, sbox.repo_url, 1)
 
 
 #----------------------------------------------------------------------
@@ -241,7 +241,7 @@ def commit_switched_things(sbox):
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  do_routine_switching(wc_dir, 0)
+  do_routine_switching(wc_dir, sbox.repo_url, 0)
 
   # Commit some stuff (and verify)
   commit_routine_switching(wc_dir, 1)
@@ -256,7 +256,7 @@ def full_update(sbox):
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  do_routine_switching(wc_dir, 0)
+  do_routine_switching(wc_dir, sbox.repo_url, 0)
 
   # Copy wc_dir to a backup location
   wc_backup = sbox.add_wc_path('backup')
@@ -325,7 +325,7 @@ def full_rev_update(sbox):
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  do_routine_switching(wc_dir, 0)
+  do_routine_switching(wc_dir, sbox.repo_url, 0)
 
   # Commit some stuff (don't bother verifying)
   commit_routine_switching(wc_dir, 0)
@@ -375,7 +375,7 @@ def update_switched_things(sbox):
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  do_routine_switching(wc_dir, 0)
+  do_routine_switching(wc_dir, sbox.repo_url, 0)
 
   # Copy wc_dir to a backup location
   wc_backup = sbox.add_wc_path('backup')
@@ -435,7 +435,7 @@ def rev_update_switched_things(sbox):
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  do_routine_switching(wc_dir, 0)
+  do_routine_switching(wc_dir, sbox.repo_url, 0)
 
   # Commit some stuff (don't bother verifying)
   commit_routine_switching(wc_dir, 0)
@@ -494,7 +494,7 @@ def log_switched_file(sbox):
   wc_dir = sbox.wc_dir
   
   # Setup some switched things (don't bother verifying)
-  do_routine_switching(wc_dir, 0)
+  do_routine_switching(wc_dir, sbox.repo_url, 0)
 
   # edit and commit switched file 'iota'
   iota_path = os.path.join(wc_dir, 'iota')
@@ -605,9 +605,9 @@ def delete_subdir(sbox):
   wc_dir = sbox.wc_dir
 
   A_path = os.path.join(wc_dir, 'A')
-  A_url = svntest.main.current_repo_url + '/A'
-  A2_url = svntest.main.current_repo_url + '/A2'
-  A2_B_F_url = svntest.main.current_repo_url + '/A2/B/F'
+  A_url = sbox.repo_url + '/A'
+  A2_url = sbox.repo_url + '/A2'
+  A2_B_F_url = sbox.repo_url + '/A2/B/F'
 
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
@@ -642,8 +642,8 @@ def file_dir_file(sbox):
   wc_dir = sbox.wc_dir
 
   file_path = os.path.join(wc_dir, 'iota')
-  file_url = svntest.main.current_repo_url + '/iota'
-  dir_url = svntest.main.current_repo_url + '/A/C'
+  file_url = sbox.repo_url + '/iota'
+  dir_url = sbox.repo_url + '/A/C'
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', dir_url, file_path)
@@ -666,8 +666,8 @@ def nonrecursive_switching(sbox):
   # "wc1" will hold the whole repository (including trunk and branch).
   # "wc2" will hold the "trunk" and then be switched to the "branch".
   # It is irrelevant that wc2 is located on disk as a sub-directory of wc1.
-  trunk_url = svntest.main.current_repo_url + '/A'
-  branch_url = svntest.main.current_repo_url + '/branch'
+  trunk_url = sbox.repo_url + '/A'
+  branch_url = sbox.repo_url + '/branch'
   version1_url = branch_url + '/version1'
   wc1_new_file = os.path.join(wc1_dir, 'branch', 'version1', 'newfile')
   wc2_new_file = os.path.join(wc2_dir, 'newfile')
@@ -733,7 +733,7 @@ def failed_anchor_is_target(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  G_url = svntest.main.current_repo_url + '/A/D/G'
+  G_url = sbox.repo_url + '/A/D/G'
   G_psi_url = G_url + '/psi'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
@@ -804,9 +804,9 @@ def bad_intermediate_urls(sbox):
   
   # First, make an extra subdirectory in C to match one in the root, plus
   # another one inside of that.
-  C_url = svntest.main.current_repo_url + '/A/C'
-  C_A_url = svntest.main.current_repo_url + '/A/C/A'
-  C_A_Z_url = svntest.main.current_repo_url + '/A/C/A/Z'
+  C_url = sbox.repo_url + '/A/C'
+  C_A_url = sbox.repo_url + '/A/C/A'
+  C_A_Z_url = sbox.repo_url + '/A/C/A/Z'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
                                      'mkdir', '-m', 'log msg',
@@ -842,8 +842,8 @@ def obstructed_switch(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  E_url      = svntest.main.current_repo_url + '/A/B/E'
-  E_url2     = svntest.main.current_repo_url + '/A/B/Esave'
+  E_url      = sbox.repo_url + '/A/B/E'
+  E_url2     = sbox.repo_url + '/A/B/Esave'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
                                      'cp', '-m', 'msgcopy', E_url, E_url2)
@@ -885,7 +885,7 @@ def commit_mods_below_switch(sbox):
   wc_dir = sbox.wc_dir
 
   C_path = os.path.join(wc_dir, 'A', 'C')
-  B_url = svntest.main.current_repo_url + '/A/B'
+  B_url = sbox.repo_url + '/A/B'
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/E'       : Item(status='A '),
     'A/C/E/alpha' : Item(status='A '),
@@ -985,8 +985,8 @@ def refresh_read_only_attribute(sbox):
   wc_dir = sbox.wc_dir
 
   # Create a branch.
-  url = svntest.main.current_repo_url + '/A'
-  branch_url = svntest.main.current_repo_url + '/A-branch'
+  url = sbox.repo_url + '/A'
+  branch_url = sbox.repo_url + '/A-branch'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 2.\n'], [],
                                      'cp', '-m', 'svn:needs-lock not set',
@@ -1070,7 +1070,6 @@ def relocate_and_propset(sbox):
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
 
   wc_dir = sbox.wc_dir
   repo_dir = sbox.repo_dir
@@ -1206,7 +1205,7 @@ def forced_switch(sbox):
 
   # Do the switch and check the results in three ways.
   F_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F')
-  AD_url = svntest.main.current_repo_url + '/A/D'
+  AD_url = sbox.repo_url + '/A/D'
   svntest.actions.run_and_verify_switch(sbox.wc_dir, F_path, AD_url,
                                         expected_output,
                                         expected_disk,

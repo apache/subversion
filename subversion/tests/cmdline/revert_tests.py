@@ -98,7 +98,7 @@ def revert_replacement_with_props(sbox, wc_copy):
   if wc_copy:
     pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   else:
-    pi_src = svntest.main.current_repo_url + '/A/D/G/pi'
+    pi_src = sbox.repo_url + '/A/D/G/pi'
 
   svntest.actions.run_and_verify_svn("", None, [],
                                      'cp', pi_src, rho_path)
@@ -440,7 +440,7 @@ def revert_file_merge_replace_with_history(sbox):
   expected_skip = wc.State(wc_dir, { })
   expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
-                                       svntest.main.current_repo_url,
+                                       sbox.repo_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,

@@ -582,7 +582,7 @@ def diff_pure_repository_update_a_file(sbox):
 
     svntest.main.run_svn(None, 'up', '-r', '2')
 
-    url = svntest.main.current_repo_url
+    url = sbox.repo_url
 
     diff_output, err_output = svntest.main.run_svn(None, 'diff', '-c', '2',
                                                    '--username',
@@ -1134,8 +1134,8 @@ def diff_targets(sbox):
     update_path = os.path.join('A', 'B', 'E', 'alpha')
     add_path = os.path.join('A', 'B', 'E', 'theta')
     parent_path = os.path.join('A', 'B', 'E')
-    update_url = svntest.main.current_repo_url + '/A/B/E/alpha'
-    parent_url = svntest.main.current_repo_url + '/A/B/E'
+    update_url = sbox.repo_url + '/A/B/E/alpha'
+    parent_url = sbox.repo_url + '/A/B/E'
 
     diff_output, err_output = svntest.main.run_svn(None, 'diff',
                                                    update_path, add_path)
@@ -1205,8 +1205,8 @@ def diff_branches(sbox):
 
   sbox.build()
 
-  A_url = svntest.main.current_repo_url + '/A'
-  A2_url = svntest.main.current_repo_url + '/A2'
+  A_url = sbox.repo_url + '/A'
+  A2_url = sbox.repo_url + '/A2'
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', '-m', 'log msg',
@@ -1274,8 +1274,8 @@ def diff_repos_and_wc(sbox):
 
   sbox.build()
 
-  A_url = svntest.main.current_repo_url + '/A'
-  A2_url = svntest.main.current_repo_url + '/A2'
+  A_url = sbox.repo_url + '/A'
+  A2_url = sbox.repo_url + '/A2'
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', '-m', 'log msg',
@@ -1326,10 +1326,10 @@ def diff_file_urls(sbox):
   sbox.build()
 
   iota_path = os.path.join(sbox.wc_dir, 'iota')
-  iota_url = svntest.main.current_repo_url + '/iota'
+  iota_url = sbox.repo_url + '/iota'
   iota_copy_path = os.path.join(sbox.wc_dir, 'A', 'iota')
-  iota_copy_url = svntest.main.current_repo_url + '/A/iota'
-  iota_copy2_url = svntest.main.current_repo_url + '/A/iota2'
+  iota_copy_url = sbox.repo_url + '/A/iota'
+  iota_copy2_url = sbox.repo_url + '/A/iota2'
 
   # Put some different text into iota, and commit.
   os.remove(iota_path)
@@ -1383,7 +1383,7 @@ def diff_prop_change_local_edit(sbox):
   sbox.build()
 
   iota_path = os.path.join(sbox.wc_dir, 'iota')
-  iota_url = svntest.main.current_repo_url + '/iota'
+  iota_url = sbox.repo_url + '/iota'
 
   # Change a property on iota, and commit.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1445,8 +1445,8 @@ def check_for_omitted_prefix_in_path_component(sbox):
                                      'ci', '-m', 'log msg', sbox.wc_dir)
 
 
-  prefix_url = svntest.main.current_repo_url + "/prefix_mydir"
-  other_prefix_url = svntest.main.current_repo_url + "/prefix_other/mytag"
+  prefix_url = sbox.repo_url + "/prefix_mydir"
+  other_prefix_url = sbox.repo_url + "/prefix_other/mytag"
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', '-m', 'log msg', prefix_url,
                                      other_prefix_url)
@@ -2290,7 +2290,7 @@ def diff_nonrecursive_checkout_deleted_dir(sbox):
   "nonrecursive diff + deleted directories"
   sbox.build()
 
-  url = svntest.main.current_repo_url
+  url = sbox.repo_url
   A_url = url + '/A'
   A_prime_url = url + '/A_prime'
 
@@ -2492,7 +2492,7 @@ def diff_weird_author(sbox):
 
   sbox.build()
 
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
   open(os.path.join(sbox.wc_dir, 'A', 'mu'), 'w').write("new content\n")
 

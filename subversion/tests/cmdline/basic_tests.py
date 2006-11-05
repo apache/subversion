@@ -42,7 +42,7 @@ def basic_checkout(sbox):
   wc_dir = sbox.wc_dir
 
   # Checkout of a different URL into a working copy fails
-  A_url = svntest.main.current_repo_url + '/A'
+  A_url = sbox.repo_url + '/A'
   svntest.actions.run_and_verify_svn("No error where some expected",
                                       None, SVNAnyOutput,
                                      # "Obstructed update",
@@ -73,7 +73,7 @@ def basic_checkout(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
   # Repeat checkout of original URL into working copy with modifications
-  url = svntest.main.current_repo_url
+  url = sbox.repo_url
 
   svntest.actions.run_and_verify_svn("Repeat checkout failed", None, [],
                                      'co', url,
@@ -217,8 +217,8 @@ def basic_mkdir_url(sbox):
 
   sbox.build()
 
-  Y_url = svntest.main.current_repo_url + '/Y'
-  Y_Z_url = svntest.main.current_repo_url + '/Y/Z'
+  Y_url = sbox.repo_url + '/Y'
+  Y_Z_url = sbox.repo_url + '/Y/Z'
 
   svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
                                      ["\n", "Committed revision 2.\n"], [],
@@ -795,7 +795,7 @@ def basic_switch(sbox):
 
   # Construct some paths for convenience
   iota_path = os.path.join(wc_dir, 'iota')
-  gamma_url = svntest.main.current_repo_url + '/A/D/gamma'
+  gamma_url = sbox.repo_url + '/A/D/gamma'
 
   # Create expected output tree
   expected_output = wc.State(wc_dir, {
@@ -827,7 +827,7 @@ def basic_switch(sbox):
   pi_path = os.path.join(ADH_path, 'pi')
   tau_path = os.path.join(ADH_path, 'tau')
   rho_path = os.path.join(ADH_path, 'rho')
-  ADG_url = svntest.main.current_repo_url + '/A/D/G'
+  ADG_url = sbox.repo_url + '/A/D/G'
 
   # Create expected output tree
   expected_output = wc.State(wc_dir, {
@@ -1074,7 +1074,7 @@ def basic_delete(sbox):
   verify_file_deleted("Failed to remove unversioned file foo", foo_path)
 
   # At one stage deleting an URL dumped core
-  iota_URL = svntest.main.current_repo_url + '/iota'
+  iota_URL = sbox.repo_url + '/iota'
 
   svntest.actions.run_and_verify_svn(None,
                                      ["\n", "Committed revision 2.\n"], [],
@@ -1111,7 +1111,7 @@ def basic_checkout_deleted(sbox):
                                         wc_dir)
 
   # Now try to checkout revision 1 of A/D.
-  url = svntest.main.current_repo_url + '/A/D'
+  url = sbox.repo_url + '/A/D'
   wc2 = os.path.join (sbox.wc_dir, 'new_D')
   svntest.actions.run_and_verify_svn("error checking out r1 of A/D",
                                      None, [], 'co', '-r', '1',
@@ -1194,7 +1194,7 @@ def basic_import(sbox):
   svntest.main.file_append(new_path, "some text")
 
   # import new files into repository
-  url = svntest.main.current_repo_url + "/dirA/dirB/new_file"
+  url = sbox.repo_url + "/dirA/dirB/new_file"
   output, errput =   svntest.actions.run_and_verify_svn(
     'Cannot change node kind', None, [], 'import',
     '--username', svntest.main.wc_author,
@@ -1491,7 +1491,7 @@ def uri_syntax(sbox):
   local_dir = sbox.wc_dir
 
   # Revision 6638 made 'svn co http://host' seg fault, this tests the fix.
-  url = svntest.main.current_repo_url
+  url = sbox.repo_url
   scheme = url[:url.find(":")]
   url = scheme + "://some_nonexistent_host_with_no_trailing_slash"
   svntest.actions.run_and_verify_svn("No error where one expected",
@@ -1508,7 +1508,7 @@ def basic_checkout_file(sbox):
 
   sbox.build()
 
-  iota_url = svntest.main.current_repo_url + '/iota'
+  iota_url = sbox.repo_url + '/iota'
 
   output, errput = svntest.main.run_svn(1, 'co', iota_url)
 
@@ -1555,7 +1555,7 @@ def repos_root(sbox):
 
   def check_repos_root(lines):
     for line in lines:
-      if line == "Repository Root: " + svntest.main.current_repo_url + "\n":
+      if line == "Repository Root: " + sbox.repo_url + "\n":
         break
     else:
       print "Bad or missing repository root"

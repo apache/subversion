@@ -307,7 +307,6 @@ text
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
 
   # load dumpfile with inconsistent newlines into repos.
   output, errput = \

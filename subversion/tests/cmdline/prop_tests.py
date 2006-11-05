@@ -742,7 +742,7 @@ def revprop_change(sbox):
   sbox.build()
 
   # Create the revprop-change hook for this test
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--revprop', '-r', '0',
@@ -1067,9 +1067,9 @@ def url_props_ops(sbox):
   propval2 = 'propval2'
 
   iota_path = os.path.join(sbox.wc_dir, 'iota')
-  iota_url = svntest.main.current_repo_url + '/iota'
+  iota_url = sbox.repo_url + '/iota'
   A_path = os.path.join(sbox.wc_dir, 'A')
-  A_url = svntest.main.current_repo_url + '/A'
+  A_url = sbox.repo_url + '/A'
 
   # Add a couple of properties
   svntest.main.run_svn(None, 'propset', prop1, propval1, iota_path)
