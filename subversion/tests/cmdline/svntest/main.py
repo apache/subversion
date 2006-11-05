@@ -159,9 +159,8 @@ temp_dir = os.path.join(work_dir, 'local_tmp')
 # (derivatives of the tmp dir.)
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
-config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 pristine_wc_dir = os.path.join(temp_dir, "wc")
-default_config_dir = config_dir
+default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -306,20 +305,6 @@ def run_command_stdin(command, error_expected, binary_mode=0,
 
   return stdout_lines, stderr_lines
 
-def set_config_dir(cfgdir):
-  "Set the config directory."
-
-  global config_dir
-  config_dir = cfgdir
-
-def reset_config_dir():
-  "Reset the config directory to the default value."
-
-  global config_dir
-  global default_config_dir
-
-  config_dir = default_config_dir
-
 def create_config_dir(cfgdir,
                       config_contents = '#\n',
                       server_contents = '#\n'):
@@ -348,9 +333,12 @@ def run_svn(error_expected, *varargs):
   If ERROR_EXPECTED is None, any stderr also will be printed.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  global config_dir
-  return run_command(svn_binary, error_expected, 0,
-                     *varargs + ('--config-dir', config_dir))
+  if '--config-dir' in varargs:
+    return run_command(svn_binary, error_expected, 0,
+                       *varargs)
+  else:
+    return run_command(svn_binary, error_expected, 0,
+                       *varargs + ('--config-dir', default_config_dir))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -799,7 +787,6 @@ def run_one_test(n, test_list):
 
   # Run the test.
   exit_code = TestRunner(test_list[n], n).run()
-  reset_config_dir()
   return exit_code
 
 def _internal_run_tests(test_list, testnums):

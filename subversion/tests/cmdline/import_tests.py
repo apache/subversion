@@ -307,7 +307,9 @@ enable-auto-props = yes
 [auto-props]
 *.dsp = svn:eol-style=CRLF
 '''
-  svntest.main.create_config_dir(svntest.main.config_dir, config_contents)
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  config_dir = os.path.join(tmp_dir, 'autoprops_config')
+  svntest.main.create_config_dir(config_dir, config_contents)
 
   # create a new file and import it
   file_name = "test.dsp"
@@ -323,9 +325,10 @@ enable-auto-props = yes
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'Log message for new import', 
                                      imp_dir_path, 
-                                     sbox.repo_url)
+                                     sbox.repo_url, 
+                                     '--config-dir', config_dir)
 
-  svntest.main.run_svn(None, 'update', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir, '--config-dir', config_dir)
 
   # change part of the file
   svntest.main.file_append(file_path, "Extra line\n")
@@ -356,7 +359,8 @@ enable-auto-props = yes
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', 
-                                     file_path)
+                                     file_path,
+                                     '--config-dir', config_dir)
 
 #----------------------------------------------------------------------
 ########################################################################
