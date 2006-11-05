@@ -881,13 +881,10 @@ def verify_file_deleted(message, path):
   ###TODO We should raise a less generic error here. which?
   raise Failure
   
-def can_cd_to_dir(path):
-  current_dir = os.getcwd()
-  try:
-    os.chdir(path)
-  except OSError:
+def verify_dir_deleted(path):
+  if not os.path.isdir(path):
     return 0
-  os.chdir(current_dir)
+
   return 1
   
 def basic_delete(sbox):
@@ -1051,17 +1048,17 @@ def basic_delete(sbox):
                       os.path.join(E_path, 'alpha'))
 
   # check versioned dir is not removed
-  if not can_cd_to_dir(F_path):
+  if not verify_dir_deleted(F_path):
     print "Removed versioned dir"
     ### we should raise a less generic error here. which?
     raise svntest.Failure
   
   # check unversioned and added dirs has been removed
-  if can_cd_to_dir(Q_path):
+  if verify_dir_deleted(Q_path):
     print "Failed to remove unversioned dir"
     ### we should raise a less generic error here. which?
     raise svntest.Failure
-  if can_cd_to_dir(X_path):
+  if verify_dir_deleted(X_path):
     print "Failed to remove added dir"
     ### we should raise a less generic error here. which?
     raise svntest.Failure
