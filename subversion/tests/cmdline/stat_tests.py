@@ -683,7 +683,6 @@ def timestamp_behaviour(sbox):
 use-commit-times = yes
 '''
   svntest.main.create_config_dir(config_dir, config_contents)
-  svntest.main.set_config_dir(config_dir)
 
   other_wc = sbox.add_wc_path('other')
   svntest.actions.run_and_verify_svn("checkout failed", None, [],
@@ -692,7 +691,8 @@ use-commit-times = yes
                                      svntest.main.wc_author,
                                      '--password',
                                      svntest.main.wc_passwd,
-                                     other_wc)
+                                     other_wc,
+                                     '--config-dir', config_dir)
 
   other_iota_path = os.path.join(other_wc, 'iota')
   iota_text_timestamp = get_text_timestamp(other_iota_path)
