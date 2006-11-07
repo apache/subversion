@@ -55,6 +55,13 @@ def setup_pristine_repository():
   """Create the pristine repository, 'svn import' the greek tree and 
   checkout the pristine working copy"""
 
+  # these directories don't exist out of the box, so we may have to create them
+  if not os.path.exists(main.general_wc_dir):
+    os.makedirs(main.general_wc_dir)
+
+  if not os.path.exists(main.general_repo_dir):
+    os.makedirs(main.general_repo_dir) # this also creates all the intermediate dirs
+
   # If there's no pristine repos, create one.
   if not os.path.exists(main.pristine_dir):
     main.create_repos(main.pristine_dir)
@@ -932,10 +939,6 @@ def make_repo_and_wc(sbox, create_wc = True):
   guarantee_greek_repository(sbox.repo_dir)
 
   if create_wc:
-    # this dir doesn't exist out of the box, so we may have to make it
-    if not os.path.exists(main.general_wc_dir):
-      os.makedirs(main.general_wc_dir)
-        
     # copy the pristine wc and relocate it to our new repository.
     duplicate_dir(main.pristine_wc_dir, sbox.wc_dir)
 
