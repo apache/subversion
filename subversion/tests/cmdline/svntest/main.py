@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -456,9 +456,6 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
 
   # If the copy may have the same uuid, then hotcopy the repos files on disk.
   if not ignore_uuid:
-    if not os.path.exists(general_repo_dir):
-      os.makedirs(general_repo_dir) # this also creates all the intermediate dirs
-      
     output, errput = run_svnadmin('hotcopy', src_path, dst_path)
   else:
     # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that 
