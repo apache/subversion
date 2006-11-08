@@ -49,6 +49,7 @@ Blanket commit access:
        malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
         pburba   Paul Burba <PaulB@softlanding.com>
        glasser   David Glasser <glasser@mit.edu>
+           lgo   Lieven Govaerts <lgo@mobsol.be>
 
 Commit access for specific areas:
 
@@ -96,7 +97,6 @@ Commit access for specific areas:
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
        mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
-           lgo   Lieven Govaerts <lgo@mobsol.be>             (tests)
        madanus   Madan U S <madan@collab.net>                (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
