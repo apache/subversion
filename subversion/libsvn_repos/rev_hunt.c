@@ -308,9 +308,10 @@ svn_repos_deleted_rev(svn_fs_t *fs,
                       apr_pool_t *pool)
 {
   apr_pool_t *subpool;
-  svn_fs_root_t *root;
+  svn_fs_root_t *root, *copy_root;
+  const char *copy_path;
   svn_revnum_t mid_rev;
-  const svn_fs_id_t *path_node_id, *curr_node_id;
+  const svn_fs_id_t *start_node_id, *curr_node_id;
   svn_error_t *err;
 
   /* Validate the revision range. */
@@ -331,9 +332,9 @@ svn_repos_deleted_rev(svn_fs_t *fs,
       end = tmprev;
     }
 
-  /* Ensure that path exists in fs at revision start. */
+  /* Ensure path exists in fs at start revision. */
   SVN_ERR(svn_fs_revision_root(&root, fs, start, pool));
-  err = svn_fs_node_id(&path_node_id, root, path, pool);
+  err = svn_fs_node_id(&start_node_id, root, path, pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -346,8 +347,7 @@ svn_repos_deleted_rev(svn_fs_t *fs,
       return err;
     }
 
-  /* Ensure node path doesn't exist in fs at revision end or
-     if it does that it's not an equivalent node. */
+  /* Ensure path was deleted at or before end revision. */
   SVN_ERR(svn_fs_revision_root(&root, fs, end, pool));
   err = svn_fs_node_id(&curr_node_id, root, path, pool);
   if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
@@ -360,34 +360,102 @@ svn_repos_deleted_rev(svn_fs_t *fs,
     }
   else
     {
-      SVN_ERR(svn_fs_node_id(&curr_node_id, root, path, pool));
+      /* path exists in the end node and the end node is equivalent
+         or otherwise equivalent to the start node.  This can mean
+         a few things:
 
-      /* If path exists at end and is equivalent
-         to path at start it was never deleted. */
-      if (svn_fs_compare_ids(path_node_id, curr_node_id) == 0)
+           1) The end node *is* simply the start node, uncopied
+              and unmodified in the start to end range.
+
+           2) The start node was modified, but never copied.
+
+           3) The start node was copied, but this copy occurred at
+              start or some rev *previous* to start, this is
+              effectively the same situation as 1 if the node was
+              never modified or 2 if it was.
+
+         In the first three cases the path was not deleted in
+         the specified range and we are done, but in the following
+         cases the start node must have been deleted at least once:
+
+           4) The start node was deleted and replaced by a copy of
+              itself at some rev between start and end.  This copy
+              may itself have been replaced with copies of itself.
+
+           5) The start node was deleted and replaced by a node which
+              it does not share any history with.
+      */
+      SVN_ERR(svn_fs_node_id(&curr_node_id, root, path, pool));
+      if (svn_fs_compare_ids(start_node_id, curr_node_id) != -1)
         {
-          *deleted = SVN_INVALID_REVNUM;
-          return SVN_NO_ERROR;
+          SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
+                                      path, pool));
+          if (!copy_root ||
+              (svn_fs_revision_root_revision(copy_root) <= start))
+            {
+              /* Case 1,2 or 3, nothing more to do. */
+              *deleted = SVN_INVALID_REVNUM;
+              return SVN_NO_ERROR;
+            }
         }
     }
+
+  /* If we get here we know that path exists in rev start and was deleted
+     at least once before rev end.  To find the revision path was first
+     deleted we use a binary search.  The rules for the determining if
+     the deletion comes before or after a given median revision are
+     described by this matrix:
+
+                   |             Most recent copy event that
+                   |               caused mid node to exist.
+                   |-----------------------------------------------------
+     Compare path  |                   |                |               |
+     at start and  |   Copied at       |  Copied at     | Never copied  |
+     mid nodes.    |   rev > start     |  rev <= start  |               |
+                   |                   |                |               |
+     -------------------------------------------------------------------|
+     Mid node is   |  A) Start node    |                                |
+     equivalent to |     replaced with |  E) Mid node == start node,    |
+     start node    |     an unmodified |     look HIGHER.               |
+                   |     copy of       |                                |
+                   |     itself,       |                                |
+                   |     look LOWER.   |                                |
+     -------------------------------------------------------------------|
+     Mid node is   |  B) Start node    |                                |
+     otherwise     |     replaced with |  F) Mid node is a modified     |
+     related to    |     a modified    |     version of start node,     |
+     start node    |     copy of       |     look HIGHER.               |
+                   |     itself,       |                                |
+                   |     look LOWER.   |                                |
+     -------------------------------------------------------------------|
+     Mid node is   |                                                    |
+     unrelated to  |  C) Start node replaced with unrelated mid node,   |
+     start node    |     look LOWER.                                    |
+                   |                                                    |
+     -------------------------------------------------------------------|
+     Path doesn't  |                                                    |
+     exist at mid  |  D) Start node deleted before mid node,            |
+     node          |     look LOWER                                     |
+                   |                                                    |
+     --------------------------------------------------------------------
+  */
 
   mid_rev = (start + end) / 2;
   subpool = svn_pool_create(pool);
 
-  while (mid_rev >= start)
+  while (1)
     {
       svn_pool_clear(subpool);
 
-      /* Get revision root for mid_rev. */
+      /* Get revision root and node id for mid_rev at that revision. */
       SVN_ERR(svn_fs_revision_root(&root, fs, mid_rev, subpool));
-
       err = svn_fs_node_id(&curr_node_id, root, path, subpool);
 
       if (err)
         {
           if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
             {
-              /* There is no node, look lower in the range. */
+              /* Case D: Look lower in the range. */
               svn_error_clear(err);
               end = mid_rev;
               mid_rev = (start + mid_rev) / 2;
@@ -397,33 +465,35 @@ svn_repos_deleted_rev(svn_fs_t *fs,
         }
       else
         {
-          if (svn_fs_compare_ids(path_node_id, curr_node_id) == 0)
+          /* Determine the relationship between the start node
+             and the current node. */
+          int cmp = svn_fs_compare_ids(start_node_id, curr_node_id);
+          SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, root,
+                                      path, subpool));
+          if (cmp == -1 ||
+              (copy_root &&
+               (svn_fs_revision_root_revision(copy_root) > start)))
             {
-              if (end - mid_rev == 1)
-                {
-                  /* Found the node path was deleted. */
-                  *deleted = end;
-                  break;  
-                }
-              else
-                {
-                  /* Nodes are related, look at higher revs. */
-                  start = mid_rev;
-                  mid_rev = (start + end) / 2;
-                }
-            }
-          else
-            {
-              /* Nodes are not equivalent, look lower. */
+              /* Cases A, B, C: Look at lower revs. */
               end = mid_rev;
               mid_rev = (start + mid_rev) / 2;
             }
+          else if (end - mid_rev == 1)
+            {
+              /* Found the node path was deleted. */
+              *deleted = end;
+              break;  
+            }
+          else
+            {
+              /* Cases E, F: Look at higher revs. */
+              start = mid_rev;
+              mid_rev = (start + end) / 2;
+            }
         }
-  }
+    }
 
   svn_pool_destroy(subpool);
-
-  /* path was never deleted between start and end. */
   return SVN_NO_ERROR;
 }
 
