@@ -1094,7 +1094,7 @@ def relocate_and_propset(sbox):
 
   # Relocate
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  svntest.main.copy_repos(repo_dir, other_repo_dir, 2)
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1)
   svntest.main.safe_rmtree(repo_dir, 1)
   svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
