@@ -5,7 +5,7 @@ use strict;
 # ====================================================================
 # Show the log message and diff for a revision.
 #
-#    $ showchange.pl REVISION [PATH|URL]
+#    $ showchange.pl REVISION [WC_PATH|URL]
 
 
 if ((scalar(@ARGV) == 0)
@@ -14,7 +14,7 @@ if ((scalar(@ARGV) == 0)
     or ($ARGV[0] eq '--help')) {
     print <<EOF;
 Show the log message and diff for a revision.
-usage: $0 REVISION [PATH|URL]
+usage: $0 REVISION [WC_PATH|URL]
 EOF
     exit 0;
 }
