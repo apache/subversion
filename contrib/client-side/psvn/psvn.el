@@ -71,7 +71,7 @@
 ;; m     - svn-status-set-user-mark
 ;; u     - svn-status-unset-user-mark
 ;; $     - svn-status-toggle-elide
-;; w     - svn-status-copy-filename-as-kill
+;; w     - svn-status-copy-current-line-info
 ;; DEL   - svn-status-unset-user-mark-backwards
 ;; * !   - svn-status-unset-all-usermarks
 ;; * ?   - svn-status-mark-unknown
@@ -1551,7 +1551,7 @@ A and B must be line-info's."
                 (kbd "DEL"))            ; GNU Emacs
               'svn-status-unset-user-mark-backwards)
   (define-key svn-status-mode-map (kbd "$") 'svn-status-toggle-elide)
-  (define-key svn-status-mode-map (kbd "w") 'svn-status-copy-filename-as-kill)
+  (define-key svn-status-mode-map (kbd "w") 'svn-status-copy-current-line-info)
   (define-key svn-status-mode-map (kbd ".") 'svn-status-goto-root-or-return)
   (define-key svn-status-mode-map (kbd "I") 'svn-status-parse-info)
   (define-key svn-status-mode-map (kbd "V") 'svn-status-svnversion)
@@ -1973,6 +1973,18 @@ The result will be \"K\", \"O\", \"T\", \"B\" or nil."
 
 (defun svn-status-line-info->set-repo-locked (line-info value)
   (setcar (nthcdr 11 line-info) value))
+
+(defun svn-status-copy-current-line-info (arg)
+  "Copy the current file name at point, using `svn-status-copy-filename-as-kill'.
+If no file is at point, copy everything starting from ':' to the end of line."
+  (interactive "P")
+  (if (svn-status-get-line-information)
+      (svn-status-copy-filename-as-kill arg)
+    (save-excursion
+      (goto-char (line-beginning-position))
+      (when (looking-at ".+?: *\\(.+\\)$")
+        (kill-new (match-string-no-properties 1))
+        (message "Copied: %s" (match-string-no-properties 1))))))
 
 (defun svn-status-copy-filename-as-kill (arg)
   "Copy the actual file name to the kill-ring.
