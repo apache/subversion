@@ -3431,7 +3431,9 @@ See `svn-status-marked-files' for what counts as selected."
 (defun svn-status-rm (force)
   "Run `svn rm' on all selected files.
 See `svn-status-marked-files' for what counts as selected.
-When called with a prefix argument add the command line switch --force."
+When called with a prefix argument add the command line switch --force.
+
+Forcing the deletion can also be used to delete files not under svn control."
   (interactive "P")
   (let* ((marked-files (svn-status-marked-files))
          (num-of-files (length marked-files)))
@@ -3442,7 +3444,14 @@ When called with a prefix argument add the command line switch --force."
       (message "removing: %S" (svn-status-marked-file-names))
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
       (if force
-          (svn-run t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
+          (save-excursion
+            (svn-run t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
+            (dolist (to-delete (svn-status-marked-files))
+              (when (eq (svn-status-line-info->filemark to-delete) ??)
+                (svn-status-goto-file-name (svn-status-line-info->filename to-delete))
+                (let ((buffer-read-only nil))
+                  (delete-region (svn-point-at-bol) (+ 1 (svn-point-at-eol)))
+                  (delete to-delete svn-status-info)))))
         (svn-run t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
 
 (defun svn-status-update-cmd (arg)
