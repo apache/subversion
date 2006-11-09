@@ -1580,8 +1580,6 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "~") 'svn-status-get-specific-revision)
   (define-key svn-status-mode-map (kbd "E") 'svn-status-ediff-with-revision)
 
-  (define-key svn-status-mode-map (kbd "C-n") 'svn-status-next-line)
-  (define-key svn-status-mode-map (kbd "C-p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "n") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "<down>") 'svn-status-next-line)
@@ -2576,6 +2574,8 @@ The string in parentheses is shown in the status line to show the state."
     (svn-status-goto-file-name ".")))
 
 (defun svn-status-next-line (nr-of-lines)
+  "Go to the next line that holds a file information.
+When called with a prefix argument advance the given number of lines."
   (interactive "p")
   (while (progn
            (next-line nr-of-lines)
@@ -2585,6 +2585,8 @@ The string in parentheses is shown in the status line to show the state."
     (goto-char (+ (svn-point-at-bol) svn-status-default-column))))
 
 (defun svn-status-previous-line (nr-of-lines)
+  "Go to the previous line that holds a file information.
+When called with a prefix argument go back the given number of lines."
   (interactive "p")
   (while (progn
            (previous-line nr-of-lines)
