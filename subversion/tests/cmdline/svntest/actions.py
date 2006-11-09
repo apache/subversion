@@ -118,21 +118,6 @@ def setup_pristine_repository():
                     'OUTPUT TREE', expected_output_tree, output_tree)
       sys.exit(1)
 
-  # If there's no pristine wc, create one.
-  if not os.path.exists(main.pristine_wc_dir):
-    # Generate the expected output tree.
-    expected_output = main.greek_state.copy()
-    expected_output.wc_dir = main.pristine_wc_dir
-    expected_output.tweak(status='A ', contents=None)
-  
-    # Generate an expected wc tree.
-    expected_wc = main.greek_state
-  
-    # Do a checkout, and verify the resulting output and disk contents.
-    run_and_verify_checkout(main.pristine_url, 
-                            main.pristine_wc_dir,
-                            expected_output,
-                            expected_wc)
 
 ######################################################################
 # Used by every test, so that they can run independently of  one 
@@ -946,14 +931,19 @@ def make_repo_and_wc(sbox, create_wc = True):
   guarantee_greek_repository(sbox.repo_dir)
 
   if create_wc:
-    # copy the pristine wc and relocate it to our new repository.
-    duplicate_dir(main.pristine_wc_dir, sbox.wc_dir)
+    # Generate the expected output tree.
+    expected_output = main.greek_state.copy()
+    expected_output.wc_dir = sbox.wc_dir
+    expected_output.tweak(status='A ', contents=None)
 
-    output, errput = main.run_svn (None, 'switch', '--relocate',
-                               '--username', main.wc_author,
-                               '--password', main.wc_passwd,
-                               main.pristine_url,
-                               sbox.repo_url, sbox.wc_dir)
+    # Generate an expected wc tree.
+    expected_wc = main.greek_state
+
+    # Do a checkout, and verify the resulting output and disk contents.
+    run_and_verify_checkout(sbox.repo_url,
+                            sbox.wc_dir,
+                            expected_output,
+                            expected_wc)
   else:
     # just make sure the parent folder of our working copy is created
     try:
