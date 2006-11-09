@@ -159,7 +159,6 @@ temp_dir = os.path.join(work_dir, 'local_tmp')
 # (derivatives of the tmp dir.)
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
-pristine_wc_dir = os.path.join(temp_dir, "wc")
 default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 
 # Location to the pristine repository, will be calculated from test_area_url
@@ -454,67 +453,63 @@ def create_repos(path):
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
-  # If the copy may have the same uuid, then hotcopy the repos files on disk.
-  if not ignore_uuid:
-    output, errput = run_svnadmin('hotcopy', src_path, dst_path)
-  else:
-    # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that 
-    # the displayed CMDs can be run by hand
-    create_repos(dst_path)
-    dump_args = ' dump "' + src_path + '"'
-    load_args = ' load "' + dst_path + '"'
-  
-    if ignore_uuid:
-      load_args = load_args + " --ignore-uuid"
-    if verbose_mode:
-      print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-            '|', os.path.basename(svnadmin_binary) + load_args,
-    start = time.time()
-    dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
-    load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
-    stop = time.time()
-    if verbose_mode:
-      print '<TIME = %.6f>' % (stop - start)
-  
-    while 1:
-      data = dump_out.read(1024*1024)  # Arbitrary buffer size
-      if data == "":
-        break
-      load_in.write(data)
-    load_in.close() # Tell load we are done
-  
-    dump_lines = dump_err.readlines()
-    load_lines = load_out.readlines()
-    dump_in.close()
-    dump_out.close()
-    dump_err.close()
-    load_out.close()
-    load_err.close()
-  
-    dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
-    expect_revision = 0
-    for dump_line in dump_lines:
-      match = dump_re.match(dump_line)
-      if not match or match.group(1) != str(expect_revision):
-        print 'ERROR:  dump failed:', dump_line,
+  # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that 
+  # the displayed CMDs can be run by hand
+  create_repos(dst_path)
+  dump_args = ' dump "' + src_path + '"'
+  load_args = ' load "' + dst_path + '"'
+
+  if ignore_uuid:
+    load_args = load_args + " --ignore-uuid"
+  if verbose_mode:
+    print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
+          '|', os.path.basename(svnadmin_binary) + load_args,
+  start = time.time()
+  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
+  load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
+  stop = time.time()
+  if verbose_mode:
+    print '<TIME = %.6f>' % (stop - start)
+
+  while 1:
+    data = dump_out.read(1024*1024)  # Arbitrary buffer size
+    if data == "":
+      break
+    load_in.write(data)
+  load_in.close() # Tell load we are done
+
+  dump_lines = dump_err.readlines()
+  load_lines = load_out.readlines()
+  dump_in.close()
+  dump_out.close()
+  dump_err.close()
+  load_out.close()
+  load_err.close()
+
+  dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
+  expect_revision = 0
+  for dump_line in dump_lines:
+    match = dump_re.match(dump_line)
+    if not match or match.group(1) != str(expect_revision):
+      print 'ERROR:  dump failed:', dump_line,
+      raise SVNRepositoryCopyFailure
+    expect_revision += 1
+  if expect_revision != head_revision + 1:
+    print 'ERROR:  dump failed; did not see revision', head_revision
+    raise SVNRepositoryCopyFailure
+
+  load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
+  expect_revision = 1
+  for load_line in load_lines:
+    match = load_re.match(load_line)
+    if match:
+      if match.group(1) != str(expect_revision):
+        print 'ERROR:  load failed:', load_line,
         raise SVNRepositoryCopyFailure
       expect_revision += 1
-    if expect_revision != head_revision + 1:
-      print 'ERROR:  dump failed; did not see revision', head_revision
-      raise SVNRepositoryCopyFailure
-  
-    load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
-    expect_revision = 1
-    for load_line in load_lines:
-      match = load_re.match(load_line)
-      if match:
-        if match.group(1) != str(expect_revision):
-          print 'ERROR:  load failed:', load_line,
-          raise SVNRepositoryCopyFailure
-        expect_revision += 1
-    if expect_revision != head_revision + 1:
-      print 'ERROR:  load failed; did not see revision', head_revision
-      raise SVNRepositoryCopyFailure
+  if expect_revision != head_revision + 1:
+    print 'ERROR:  load failed; did not see revision', head_revision
+    raise SVNRepositoryCopyFailure
 
 
 def canonicalize_url(input):
