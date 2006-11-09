@@ -69,7 +69,7 @@ def cat_base(sbox):
   # Verify the expected output
   expected_output = svntest.main.greek_state.desc['A/mu'].contents
   if len(outlines) != 1 or outlines[0] != expected_output:
-    raise svntest.Failure ('Cat failed: expected "%s", but received "%s"' % \
+    raise svntest.Failure('Cat failed: expected "%s", but received "%s"' % \
       (expected_output, outlines[0]))
 
 def cat_nonexistent_file(sbox):

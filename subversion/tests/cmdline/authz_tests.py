@@ -581,12 +581,12 @@ def authz_log_and_tracing_test(sbox):
   
   # check if log doesn't spill any info on which you don't have read access
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append (rho_path, 'new appended text for rho')
+  svntest.main.file_append(rho_path, 'new appended text for rho')
   
   svntest.actions.run_and_verify_svn(None, None, [],
                                  'ci', '-m', 'add file rho', sbox.wc_dir)
 
-  svntest.main.file_append (rho_path, 'extra change in rho')
+  svntest.main.file_append(rho_path, 'extra change in rho')
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                  'ci', '-m', 'changed file rho', sbox.wc_dir)

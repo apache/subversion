@@ -119,10 +119,10 @@ def blame_directory(sbox):
 
   # Verify expected error message is output
   for line in errlines:
-    if re.match (expected_error, line):
+    if re.match(expected_error, line):
       break
   else:
-    raise svntest.Failure ('Failed to find %s in %s' %
+    raise svntest.Failure('Failed to find %s in %s' %
       (expected_error, str(errlines)))
 
 
@@ -206,7 +206,7 @@ def blame_on_unknown_revision(sbox):
   file_name = "iota"
   file_path = os.path.join(wc_dir, file_name)
 
-  for i in range (1,3):
+  for i in range(1,3):
     svntest.main.file_append(file_path, "\nExtra line %d" % (i))
     expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
@@ -286,7 +286,7 @@ def blame_eol_styles(sbox):
   for eol in ['CR', 'LF', 'CRLF', 'native']:
     open(file_path, 'w').write("This is no longer the file 'iota'.\n")
 
-    for i in range (1,3):
+    for i in range(1,3):
       svntest.main.file_append(file_path, "Extra line %d" % (i) + "\n")
       svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                             None, None, None, None,
@@ -305,8 +305,8 @@ def blame_eol_styles(sbox):
 
     # output is a list of lines, there should be 3 lines
     if len(output) != 3:
-      raise svntest.Failure ('Expected 3 lines in blame output but got %d: \n' %
-                             len(output) + str(output))
+      raise svntest.Failure('Expected 3 lines in blame output but got %d: \n' %
+                            len(output) + str(output))
 
 def blame_ignore_whitespace(sbox):
   "ignore whitespace when blaming"

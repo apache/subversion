@@ -248,7 +248,7 @@ def copy_tree_with_symlink(sbox):
     'A/D/H2/linktarget' : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/H2/newfile' : Item(status='  ', copied='+', wc_rev='-'),
     })
-  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 def replace_symlink_with_file(sbox):

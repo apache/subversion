@@ -39,6 +39,109 @@
 
 /*** Hook drivers. ***/
 
+#ifndef AS400
+/* Helper function for run_hook_cmd().  Wait for a hook to finish
+   executing and return either SVN_NO_ERROR if the hook script executed
+   without error, or an error containing a description of the reason
+   for failure.
+
+   NAME and CMD are the name and path of the hook program, CMD_PROC
+   is a pointer to the structure representing the running process,
+   and READ_ERRHANDLE is an open handle to the hook's stderr.
+
+   Generally, hooks will fail if they fail to exit cleanly (due to a
+   coredump, for example) or if they return a non-zero return code.
+   Any error output returned by the hook's stderr will be included in
+   any error message, but the presence of output on stderr is not itself
+   a reason to fail a hook. */
+static svn_error_t *
+check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
+                  apr_file_t *read_errhandle, apr_pool_t *pool)
+{
+  svn_error_t *err, *err2;
+  svn_stringbuf_t *native_stderr, *failure_message;
+  const char *utf8_stderr;
+  int exitcode;
+  apr_exit_why_e exitwhy;
+
+  err2 = svn_stringbuf_from_aprfile(&native_stderr, read_errhandle, pool);
+
+  err = svn_io_wait_for_cmd(cmd_proc, cmd, &exitcode, &exitwhy, pool);
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+
+  if (APR_PROC_CHECK_EXIT(exitwhy) && exitcode == 0)
+    {
+      /* The hook exited cleanly.  However, if we got an error reading the
+         hook's stderr, fail the hook anyway, because this might be
+         symptomatic of another problem. */
+      if (err2)
+        {
+          return svn_error_createf
+            (SVN_ERR_REPOS_HOOK_FAILURE, err2,
+             _("'%s' hook succeeded, but error output could not be read"),
+             name);
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  /* The hook script failed. */
+
+  /* If we got the stderr output okay, try to translate it into UTF-8.
+     Ensure there is something sensible in the UTF-8 stderr string
+     regardless. */
+  if (!err2)
+    {
+      err2 = svn_utf_cstring_to_utf8(&utf8_stderr, native_stderr->data, pool);
+      if (err2)
+        utf8_stderr = _("[Error output could not be translated from the "
+                        "native locale to UTF-8.]");
+    }
+  else
+    {
+      utf8_stderr = _("[Error output could not be read.]");
+    }
+  /*### It would be a good idea to include the text of any error in the
+        messages above before we clear it here. */
+  svn_error_clear(err2);
+
+  if (!APR_PROC_CHECK_EXIT(exitwhy))
+    {
+      failure_message = svn_stringbuf_createf(pool,
+        _("'%s' hook failed because it did not exit cleanly (exitwhy was %d, "
+          "exitcode %d).  "),
+         name, exitwhy, exitcode);
+    }
+  else
+    {
+      failure_message = svn_stringbuf_createf(pool,
+        _("'%s' hook failed because it exited with a non-zero exitcode "
+          "(exitcode was %d).  "),
+         name, exitcode);
+    }
+
+  if (utf8_stderr[0])
+    {
+      svn_stringbuf_appendcstr(failure_message,
+                               _("The following error output was produced by "
+                                 "the hook:\n"));
+      svn_stringbuf_appendcstr(failure_message, utf8_stderr);
+    }
+  else
+    {
+      svn_stringbuf_appendcstr(failure_message,
+                               _("No error output was produced by the hook."));
+    }
+
+  return svn_error_create(SVN_ERR_REPOS_HOOK_FAILURE, err,
+                          failure_message->data);
+}
+#endif /* AS400 */
+
 /* NAME, CMD and ARGS are the name, path to and arguments for the hook
    program that is to be run.  The hook's exit status will be checked,
    and if an error occurred the hook's stderr output will be added to
@@ -57,8 +160,6 @@ run_hook_cmd(const char *name,
   apr_file_t *read_errhandle, *write_errhandle, *null_handle;
   apr_status_t apr_err;
   svn_error_t *err;
-  int exitcode;
-  apr_exit_why_e exitwhy;
   apr_proc_t cmd_proc;
 
   /* Create a pipe to access stderr of the child. */
@@ -113,42 +214,7 @@ run_hook_cmd(const char *name,
     }
   else
     {
-      svn_stringbuf_t *native_error;
-      const char *error;
-      svn_error_t *err2;
-
-      err2 = svn_stringbuf_from_aprfile(&native_error, read_errhandle, pool);
-
-      err = svn_io_wait_for_cmd(&cmd_proc, cmd, &exitcode, &exitwhy, pool);
-      if (! err)
-        {
-          if (! APR_PROC_CHECK_EXIT(exitwhy) || exitcode != 0)
-            {
-              if (! err2)
-                {
-                  err2 = svn_utf_cstring_to_utf8(&error, native_error->data,
-                                                 pool);
-                  if (! err2)
-                    err = svn_error_createf
-                      (SVN_ERR_REPOS_HOOK_FAILURE, err,
-                       _("'%s' hook failed with error output:\n%s"),
-                       name, error);
-                }
-              else
-                {
-                  err = svn_error_createf
-                    (SVN_ERR_REPOS_HOOK_FAILURE, err,
-                     _("'%s' hook failed; no error output available"), name);
-                }
-            }
-        }
-      if (err2)
-        {
-          if (err)
-            svn_error_clear(err2);
-          else
-            err = err2;
-        }
+      err = check_hook_result(name, cmd, &cmd_proc, read_errhandle, pool);
     }
 
   /* Hooks are fallible, and so hook failure is "expected" to occur at

@@ -62,7 +62,7 @@ def detect_extra_files(node, extra_files):
       if contents is None:
         return
       else:
-        fp = open(os.path.join (wc_dir, node.path))
+        fp = open(os.path.join(wc_dir, node.path))
         real_contents = fp.read()  # suck up contents of a test .png file
         fp.close()
         if real_contents == contents:
@@ -239,9 +239,9 @@ def update_binary_file_2(sbox):
                                         None, None, None, None, wc_dir)
 
   # Make some mods to the binary files.
-  svntest.main.file_append (theta_path, "foobar")
+  svntest.main.file_append(theta_path, "foobar")
   new_theta_contents = theta_contents + "foobar"
-  svntest.main.file_append (zeta_path, "foobar")
+  svntest.main.file_append(zeta_path, "foobar")
   new_zeta_contents = zeta_contents + "foobar"
   
   # Created expected output tree for 'svn ci'
@@ -513,18 +513,18 @@ def update_to_resolve_text_conflicts(sbox):
   # Make a couple of local mods to files which will be committed
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append (mu_path, 'Original appended text for mu\n')
-  svntest.main.file_append (rho_path, 'Original appended text for rho\n')
-  svntest.main.run_svn (None, 'propset', 'Kubla', 'Khan', rho_path)
+  svntest.main.file_append(mu_path, 'Original appended text for mu\n')
+  svntest.main.file_append(rho_path, 'Original appended text for rho\n')
+  svntest.main.run_svn(None, 'propset', 'Kubla', 'Khan', rho_path)
 
   # Make a couple of local mods to files which will be conflicted
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append (mu_path_backup,
-                             'Conflicting appended text for mu\n')
-  svntest.main.file_append (rho_path_backup,
-                             'Conflicting appended text for rho\n')
-  svntest.main.run_svn (None, 'propset', 'Kubla', 'Xanadu', rho_path_backup)
+  svntest.main.file_append(mu_path_backup,
+                           'Conflicting appended text for mu\n')
+  svntest.main.file_append(rho_path_backup,
+                           'Conflicting appended text for rho\n')
+  svntest.main.run_svn(None, 'propset', 'Kubla', 'Xanadu', rho_path_backup)
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -881,7 +881,7 @@ def update_single_file(sbox):
 
   # Make a local mod to a file which will be committed
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append (mu_path, '\nAppended text for mu')
+  svntest.main.file_append(mu_path, '\nAppended text for mu')
 
   # Commit.
   expected_output = svntest.wc.State(wc_dir, {
@@ -922,7 +922,7 @@ def prop_update_on_scheduled_delete(sbox):
   iota_path = os.path.join(wc_dir, 'iota')
   other_iota_path = os.path.join(other_wc, 'iota')
 
-  svntest.main.run_svn (None, 'propset', 'foo', 'bar', iota_path)
+  svntest.main.run_svn(None, 'propset', 'foo', 'bar', iota_path)
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -938,7 +938,7 @@ def prop_update_on_scheduled_delete(sbox):
                                         expected_status, None,
                                         None, None, None, None, wc_dir)
 
-  svntest.main.run_svn (None, 'rm', other_iota_path)
+  svntest.main.run_svn(None, 'rm', other_iota_path)
 
   # Expected output tree for update of other_wc.
   expected_output = svntest.wc.State(other_wc, {
@@ -1080,11 +1080,11 @@ def another_hudson_problem(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # Delete directory G from the repository
   svntest.actions.run_and_verify_svn(None,
@@ -1136,11 +1136,11 @@ def update_deleted_targets(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/D/gamma', 'A/B/F')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # Explicit update must not remove the 'deleted=true' entries
   svntest.actions.run_and_verify_svn(None, ['At revision 2.\n'], [],
@@ -1217,10 +1217,10 @@ def non_recursive_update(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # Update back to revision 1
   expected_output = svntest.wc.State(wc_dir, {
@@ -1386,14 +1386,14 @@ def update_schedule_add_dir(sbox):
     'A/D/G/rho' : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/G/tau' : Item(status='  ', copied='+', wc_rev='-'),
     })
-  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now update with the schedule-add dir as the target.
   svntest.actions.run_and_verify_svn(None, None, [], 'up', G_path)
 
   # The update should be a no-op, and the schedule-add directory
   # should still exist!  'svn status' shouldn't change at all.
-  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
   
 
 #----------------------------------------------------------------------
@@ -1583,9 +1583,9 @@ def update_xml_unsafe_dir(sbox):
     })
 
   # Commit.
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status, None,
-                                         None, None, None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
 
   # chdir into the funky path, and update from there.
   was_cwd = os.getcwd()
@@ -1677,8 +1677,8 @@ def conflict_markers_matching_eol(sbox):
     theirs_rev = cur_rev
 
     # Make a local mod to mu, will conflict with the previous change
-    svntest.main.file_append (path_backup,
-                              'Conflicting appended text for mu' + eolchar)
+    svntest.main.file_append(path_backup,
+                             'Conflicting appended text for mu' + eolchar)
 
     # Create expected output tree for an update of the wc_backup.
     expected_backup_output = svntest.wc.State(wc_backup, {
@@ -1880,8 +1880,8 @@ def forced_update(sbox):
   # Make a couple of local mods to files
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append (mu_path, 'appended mu text')
-  svntest.main.file_append (rho_path, 'new appended text for rho')
+  svntest.main.file_append(mu_path, 'appended mu text')
+  svntest.main.file_append(rho_path, 'new appended text for rho')
 
   # Add some files
   nu_path = os.path.join(wc_dir, 'A', 'B', 'F', 'nu')
@@ -1925,13 +1925,13 @@ def forced_update(sbox):
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
   # Commit.
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status, None,
-                                         None, None, None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
 
   # Make a local mod to mu that will merge cleanly.
   backup_mu_path = os.path.join(wc_backup, 'A', 'mu')
-  svntest.main.file_append (backup_mu_path, 'appended mu text')
+  svntest.main.file_append(backup_mu_path, 'appended mu text')
 
   # Create unversioned files and dir that will obstruct A/B/F/nu, kappa,
   # A/C/I, and A/C/I/upsilon coming from repos during update.
@@ -2145,7 +2145,7 @@ def update_wc_on_windows_drive(sbox):
 
     # Make some local modifications
     mu_path = os.path.join(wc_dir, 'A', 'mu')
-    svntest.main.file_append (mu_path, '\nAppended text for mu')
+    svntest.main.file_append(mu_path, '\nAppended text for mu')
     zeta_path = os.path.join(wc_dir, 'zeta')
     svntest.main.file_append(zeta_path, "This is the file 'zeta'\n")
     svntest.main.run_svn(None, 'add', zeta_path)

@@ -411,7 +411,7 @@ def checkout_peg_rev(sbox):
   wc_dir = sbox.wc_dir
   # create a new revision
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append (mu_path, 'appended mu text')
+  svntest.main.file_append(mu_path, 'appended mu text')
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                     'ci', '-m', 'changed file mu', wc_dir)
@@ -449,7 +449,7 @@ def checkout_peg_rev_date(sbox):
 
   # create a new revision
   mu_path = os.path.join(wc_dir, 'A', 'mu')
-  svntest.main.file_append (mu_path, 'appended mu text')
+  svntest.main.file_append(mu_path, 'appended mu text')
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                     'ci', '-m', 'changed file mu', wc_dir)

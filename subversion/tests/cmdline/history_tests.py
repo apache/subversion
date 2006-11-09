@@ -56,21 +56,21 @@ def cat_traces_renames(sbox):
   expected_status.add({ 'A/D/G/bloo' :
                         Item(wc_rev=2, status='  ') })
 
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
   
   # rename pi to rho.  commit r3.
   svntest.main.run_svn(None, 'mv', pi_path, rho_path)
 
   # svn cat -r1 rho  --> should show pi's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'.\n"], [],
-                                      'cat',  '-r', '1', rho_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [ "This is the file 'pi'.\n"], [],
+                                     'cat',  '-r', '1', rho_path)
   
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G/pi' : Item(verb='Deleting'),
@@ -82,13 +82,13 @@ def cat_traces_renames(sbox):
   expected_status.add({ 'A/D/G/bloo' :
                         Item(wc_rev=2, status='  ') })
 
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
 
   # update whole wc to HEAD
   expected_output = svntest.wc.State(wc_dir, { }) # no output
@@ -107,19 +107,19 @@ def cat_traces_renames(sbox):
                                         expected_status)  
 
   # 'svn cat bloo' --> should show rho's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'.\n"], [],
-                                      'cat',  bloo_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [ "This is the file 'rho'.\n"], [],
+                                     'cat',  bloo_path)
   
   # svn cat -r1 bloo --> should still show rho's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'rho'.\n"], [],
-                                      'cat',  '-r', '1', bloo_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [ "This is the file 'rho'.\n"], [],
+                                     'cat',  '-r', '1', bloo_path)
 
   # svn cat -r1 rho  --> should show pi's contents.
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'pi'.\n"], [],
-                                      'cat',  '-r', '1', rho_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [ "This is the file 'pi'.\n"], [],
+                                     'cat',  '-r', '1', rho_path)
   
   # svn up -r1
   svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r', '1', wc_dir)
@@ -127,9 +127,9 @@ def cat_traces_renames(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # svn cat -rHEAD rho --> should see 'unrelated object' error.
-  svntest.actions.run_and_verify_svn ("unrelated object",
-                                      None, SVNAnyOutput,
-                                      'cat',  '-r', 'HEAD', rho_path)
+  svntest.actions.run_and_verify_svn("unrelated object",
+                                     None, SVNAnyOutput,
+                                     'cat',  '-r', 'HEAD', rho_path)
 
 def cat_avoids_false_identities(sbox):
   "verify that 'svn cat' avoids false identities"
