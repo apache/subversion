@@ -132,12 +132,12 @@ def textual_merges_galore(sbox):
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
   
   # Initial commit.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Make the "other" working copy
   other_wc = sbox.add_wc_path('other')
@@ -674,10 +674,10 @@ def simple_property_merges(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
                         wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Copy B to B2 as rev 3
@@ -717,10 +717,10 @@ def simple_property_merges(sbox):
     'A/B2/F'       : Item(status='  ', wc_rev=3),
     'A/B2/lambda'  : Item(status='  ', wc_rev=3),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   pristine_status = expected_status
@@ -1133,12 +1133,12 @@ def merge_one_file_helper(sbox, arg_flav):
   expected_output = wc.State(wc_dir, { rho_rel_path : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', wc_rev=2)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
   
   # Backdate rho to revision 1, so we can merge in the rev 2 changes.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1238,12 +1238,12 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
   expected_status.tweak('A/mu', wc_rev=2)
   
   # Initial commit.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Make the "other" working copy
   other_wc = sbox.add_wc_path('other')
@@ -1331,12 +1331,12 @@ def merge_with_prev (sbox):
   expected_status.add({'A/zot' : Item(status='  ', wc_rev=2)})
   
   # Initial commit.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Make some other working copies
   other_wc = sbox.add_wc_path('other')
@@ -2491,10 +2491,10 @@ def merge_prop_change_to_deleted_target(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E/alpha', wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Remove alpha entirely.
@@ -2760,10 +2760,10 @@ def safe_property_merge(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
                         wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Copy B to B2 as rev 3  (making a branch)
@@ -2792,10 +2792,10 @@ def safe_property_merge(sbox):
     'A/B/E/alpha' : Item(verb='Sending'),
     'A/B/E/beta'  : Item(verb='Sending'),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, None,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Make local propchanges to E, alpha and beta in the branch.
@@ -2885,10 +2885,10 @@ def property_merge_from_branch(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Copy B to B2 as rev 3  (making a branch)
@@ -2913,10 +2913,10 @@ def property_merge_from_branch(sbox):
     'A/B/E'       : Item(verb='Sending'),
     'A/B/E/alpha' : Item(verb='Sending'),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, None,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Make different propchanges changes to the B2 branch and commit as r5.
@@ -2933,10 +2933,10 @@ def property_merge_from_branch(sbox):
     'A/B2/E'       : Item(verb='Sending'),
     'A/B2/E/alpha' : Item(verb='Sending'),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, None,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Now merge the recent B change to the branch.  There are no local
@@ -3007,10 +3007,10 @@ def property_merge_undo_redo(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E/alpha', wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Use 'svn merge' to undo the commit.  ('svn merge -r2:1')
@@ -3396,12 +3396,12 @@ def merge_ignore_whitespace(sbox):
   expected_output = wc.State(wc_dir, { file_name : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(file_name, wc_rev=3)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Backdate iota to revision 2, so we can merge in the rev 3 changes.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -3465,12 +3465,12 @@ def merge_ignore_eolstyle(sbox):
   expected_output = wc.State(wc_dir, { file_name : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(file_name, wc_rev=3)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Backdate iota to revision 2, so we can merge in the rev 3 changes.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -3650,8 +3650,8 @@ def merge_conflict_markers_matching_eol(sbox):
     theirs_rev = cur_rev
 
     # Make a local mod to mu, will conflict with the previous change
-    svntest.main.file_append (path_backup,
-                              'Conflicting appended text for mu' + eolchar)
+    svntest.main.file_append(path_backup,
+                             'Conflicting appended text for mu' + eolchar)
 
     # Create expected output tree for an update of the wc_backup.
     expected_backup_output = svntest.wc.State(wc_backup, {

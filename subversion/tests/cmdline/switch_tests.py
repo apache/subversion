@@ -331,7 +331,7 @@ def full_rev_update(sbox):
   commit_routine_switching(wc_dir, 0)
 
   # Update to HEAD (tested elsewhere)
-  svntest.main.run_svn (None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
 
   # Some convenient path variables
   iota_path = os.path.join(wc_dir, 'iota')
@@ -445,7 +445,7 @@ def rev_update_switched_things(sbox):
   B_path = os.path.join(wc_dir, 'A', 'B')
 
   # Update to HEAD (tested elsewhere)
-  svntest.main.run_svn (None, 'up', wc_dir)
+  svntest.main.run_svn(None, 'up', wc_dir)
 
   # Now, reverse update, back to the pre-commit state.
   expected_output = svntest.wc.State(wc_dir, {
@@ -498,13 +498,13 @@ def log_switched_file(sbox):
 
   # edit and commit switched file 'iota'
   iota_path = os.path.join(wc_dir, 'iota')
-  svntest.main.run_svn (None, 'ps', 'x', 'x', iota_path)
-  svntest.main.run_svn (None, 'ci', '-m', 
-                        'set prop on switched iota', 
-                        iota_path)
+  svntest.main.run_svn(None, 'ps', 'x', 'x', iota_path)
+  svntest.main.run_svn(None, 'ci', '-m', 
+                       'set prop on switched iota', 
+                       iota_path)
 
   # log switched file 'iota'
-  output, error = svntest.main.run_svn (None, 'log', iota_path)
+  output, error = svntest.main.run_svn(None, 'log', iota_path)
   for line in output:
     if line.find("set prop on switched iota") != -1:
       break
@@ -526,11 +526,11 @@ def relocate_deleted_missing_copied(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/mu' : Item(verb='Deleting'),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # Remove A/B/F to create a missing entry
   svntest.main.safe_rmtree(os.path.join(wc_dir, 'A', 'B', 'F'))
@@ -591,10 +591,10 @@ def relocate_deleted_missing_copied(sbox):
     })
   expected_status.tweak('A/D/H2', 'A/D/H2/chi', 'A/D/H2/omega', 'A/D/H2/psi',
                         status='  ', wc_rev='3', copied=None)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
 
 #----------------------------------------------------------------------
@@ -1085,12 +1085,12 @@ def relocate_and_propset(sbox):
 
   # checkout
   svntest.main.safe_rmtree(wc_dir, 1)
-  svntest.actions.run_and_verify_svn (None,
-                                      None, [],
-                                      'checkout',
-                                      '--username', svntest.main.wc_author,
-                                      '--password', svntest.main.wc_passwd,
-                                      repo_url, wc_dir)
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     repo_url, wc_dir)
 
   # Relocate
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
@@ -1114,12 +1114,12 @@ def relocate_and_propset(sbox):
   expected_status.remove('A/D/gamma')
 
   # Commit the deletion of gamma and verify.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
-
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+  
   # Now gamma should be marked as `deleted' under the hood, at
   # revision 2.  Meanwhile, A/D is still lagging at revision 1.
 
@@ -1127,13 +1127,13 @@ def relocate_and_propset(sbox):
   svntest.main.run_svn(None, 'ps', 'foo', 'bar', D_path)
 
   # Commit and *expect* a repository Merge failure:
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         None,
-                                         None,
-                                         "[Oo]ut.of.date",
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        None,
+                                        None,
+                                        "[Oo]ut.of.date",
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 

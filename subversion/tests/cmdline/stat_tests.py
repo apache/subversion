@@ -73,7 +73,7 @@ def status_update_with_nested_adds(sbox):
   newdir_path = os.path.join(wc_dir, 'newdir')
   newfile_path = os.path.join(wc_dir, 'newdir', 'newfile')
   os.makedirs(newdir_path)
-  svntest.main.file_append (newfile_path, 'new text')
+  svntest.main.file_append(newfile_path, 'new text')
 
   # Schedule newdir and newfile for addition (note that the add is recursive)
   svntest.main.run_svn(None, 'add', newdir_path)
@@ -93,9 +93,9 @@ def status_update_with_nested_adds(sbox):
     })
 
   # Commit.
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status, None,
-                                         None, None, None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
 
   # Now we go to the backup working copy, still at revision 1.
   # We will run 'svn st -u', and make sure that newdir/newfile is reported
@@ -317,7 +317,7 @@ def status_for_unignored_file(sbox):
   try:
     # use a temp file to set properties with wildcards in their values
     # otherwise Win32/VS2005 will expand them
-    svntest.main.file_append ('proptmp', 'new*')
+    svntest.main.file_append('proptmp', 'new*')
     svntest.main.file_append('newfile', 'this is a new file')
     os.makedirs('newdir')
     svntest.main.run_svn(None, 'propset', 'svn:ignore', '-F', 'proptmp', '.')
@@ -621,7 +621,7 @@ def text_time_behaviour(wc_dir, wc_path, status_path, expected_status, cmd):
   pre_text_time = get_text_timestamp(wc_path)
 
   # Modifying the text does not affect text-time
-  svntest.main.file_append (wc_path, "some mod")
+  svntest.main.file_append(wc_path, "some mod")
   expected_status.tweak(status_path, status='M ')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   text_time = get_text_timestamp(wc_path)
@@ -816,7 +816,7 @@ def status_in_xml(sbox):
   wc_dir = sbox.wc_dir
 
   file_name = "iota"
-  file_path = os.path.join (wc_dir, file_name)
+  file_path = os.path.join(wc_dir, file_name)
   svntest.main.file_append(file_path, "test status --xml\n")
 
   # Retrieve last changed date from svn log
@@ -854,9 +854,9 @@ def status_in_xml(sbox):
               "</status>\n",
              ]
 
-  output, error = svntest.actions.run_and_verify_svn (None, None, [],
-                                                      'status', file_path,
-                                                      '--xml', '-u')
+  output, error = svntest.actions.run_and_verify_svn(None, None, [],
+                                                     'status', file_path,
+                                                     '--xml', '-u')
 
   for i in range(0, len(output)):
     if output[i] != template[i]:
@@ -1032,10 +1032,10 @@ def status_update_with_incoming_props(sbox):
   expected_status.tweak('A', wc_rev=2, status='  ')
 
   # Commit the working copy
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1118,9 +1118,9 @@ def status_update_with_incoming_props(sbox):
           "</target>\n",
           "</status>\n",]
 
-  output, error = svntest.actions.run_and_verify_svn (None, xout, [],
-                                                      'status', wc_dir,
-                                                      '--xml', '-uN')
+  output, error = svntest.actions.run_and_verify_svn(None, xout, [],
+                                                     'status', wc_dir,
+                                                     '--xml', '-uN')
 
 # more incoming prop updates.
 def status_update_verbose_with_incoming_props(sbox):
@@ -1152,10 +1152,10 @@ def status_update_verbose_with_incoming_props(sbox):
   expected_status.tweak('', wc_rev=2, status='  ')
 
   # Commit the working copy
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -1227,10 +1227,10 @@ def status_nonrecursive_update(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2, status='  ')
 
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # Create expected trees for an update to revision 1.
   expected_output = svntest.wc.State(wc_dir, {

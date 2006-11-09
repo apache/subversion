@@ -124,13 +124,13 @@ def commit_props(sbox):
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
   # Commit the one file.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
   
   
 
@@ -164,10 +164,10 @@ def update_props(sbox):
   expected_status.tweak('A/mu', 'A/D/H', wc_rev=2, status='  ')
 
   # Commit the one file.
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # Overwrite mu_path and H_path to refer to the backup copies from
   # here on out.
@@ -221,13 +221,13 @@ def downdate_props(sbox):
   expected_status.tweak('iota', wc_rev=2, status='  ')
 
   # Commit the one file.
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # Make some mod (something to commit)
-  svntest.main.file_append (mu_path, "some mod")
+  svntest.main.file_append(mu_path, "some mod")
 
   # Create expected output tree.
   expected_output = svntest.wc.State(wc_dir, {
@@ -240,10 +240,10 @@ def downdate_props(sbox):
   expected_status.tweak('A/mu', wc_rev=3, status='  ')
 
   # Commit the one file.
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   
   # Create expected output tree for an update.
   expected_output = svntest.wc.State(wc_dir, {
@@ -294,10 +294,10 @@ def remove_props(sbox):
   expected_status.tweak('iota', wc_rev=3, status='  ')
 
   # Commit the one file.
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -422,8 +422,8 @@ def commit_replacement_props(sbox):
 
   # Now recreate the files, and schedule them for addition.
   # Poof, the 'new' files don't have any properties at birth.
-  svntest.main.file_append (iota_path, 'iota TNG')
-  svntest.main.file_append (lambda_path, 'lambda TNG')
+  svntest.main.file_append(iota_path, 'iota TNG')
+  svntest.main.file_append(lambda_path, 'lambda TNG')
   svntest.main.run_svn(None, 'add', iota_path, lambda_path)
 
   # Sanity check:  the two files should be scheduled for (R)eplacement.
@@ -449,10 +449,10 @@ def commit_replacement_props(sbox):
   expected_status.tweak('iota', wc_rev=3)
   expected_status.tweak('A/B/lambda', wc_rev=3, status='  ')
 
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -478,8 +478,8 @@ def revert_replacement_props(sbox):
 
   # Now recreate the files, and schedule them for addition.
   # Poof, the 'new' files don't have any properties at birth.
-  svntest.main.file_append (iota_path, 'iota TNG')
-  svntest.main.file_append (lambda_path, 'lambda TNG')
+  svntest.main.file_append(iota_path, 'iota TNG')
+  svntest.main.file_append(lambda_path, 'lambda TNG')
   svntest.main.run_svn(None, 'add', iota_path, lambda_path)
 
   # Sanity check:  the two files should be scheduled for (R)eplacement.
@@ -941,13 +941,13 @@ def binary_props(sbox):
                         wc_rev=2, status='  ')
   
   # Commit the propsets.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
   
   # Create expected output, disk, and status trees for an update of
   # the wc_backup.
@@ -1199,10 +1199,10 @@ def update_props_on_wc_root(sbox):
   expected_status.tweak('', wc_rev=2, status='  ')
 
   # Commit the working copy
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
  # Create expected output tree for an update of the wc_backup.
   expected_output = svntest.wc.State(wc_backup, {

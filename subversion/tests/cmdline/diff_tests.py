@@ -875,9 +875,9 @@ def diff_base_to_repos(sbox):
 
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak ('iota',
-                       contents=\
-                       "This is the file 'iota'.\nsome rev2 iota text.\n")
+  expected_disk.tweak('iota',
+                      contents=\
+                      "This is the file 'iota'.\nsome rev2 iota text.\n")
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
@@ -970,7 +970,7 @@ def diff_base_to_repos(sbox):
     })
   expected_output.tweak('A/mu', status='D ')
   expected_output.tweak('iota', status='M ')
-  svntest.actions.run_and_verify_status (wc_dir, expected_output)
+  svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
   # once again, verify that -r1:2 and -r1:BASE look the same, as do
   # -r2:1 and -rBASE:1.  None of these diffs should mention the
@@ -1025,7 +1025,7 @@ def diff_base_to_repos(sbox):
                       contents="This is the file 'iota'.\n" + \
                       "some rev2 iota text.\nan iota local mod.\n")
   expected_disk.add({'A/D/newfile' : Item("Contents of newfile\n")})
-  expected_disk.remove ('A/mu')
+  expected_disk.remove('A/mu')
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
   expected_status.remove('A/mu')
@@ -1090,8 +1090,8 @@ def diff_deleted_in_head(sbox):
 
   expected_output = svntest.wc.State(wc_dir, {})
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak ('A/mu',
-                       contents="This is the file 'mu'.\nsome rev2 mu text.\n")
+  expected_disk.tweak('A/mu',
+                      contents="This is the file 'mu'.\nsome rev2 mu text.\n")
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   svntest.actions.run_and_verify_update(wc_dir, expected_output,
                                         expected_disk, expected_status)
