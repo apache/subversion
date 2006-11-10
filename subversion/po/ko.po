@@ -2241,12 +2241,12 @@ msgstr "잠겨있지 않은 트랜잭션('%s')을 해제할 수 없습니다"
 #: libsvn_fs_fs/fs_fs.c:385
 #, c-format
 msgid "Can't unlock prototype revision lockfile for transaction '%s'"
-msgstr ""
+msgstr "트랜잭션('%s')용 프로토타입 리비전 잠금파일을 해제할 수 없습니다"
 
 #: libsvn_fs_fs/fs_fs.c:391
 #, c-format
 msgid "Can't close prototype revision lockfile for transaction '%s'"
-msgstr ""
+msgstr "트랜잭션('%s')용 프로토타입 리비전 잠금파일을 닫을 수 없습니다"
 
 #: libsvn_fs_fs/fs_fs.c:453
 #, c-format
@@ -2254,6 +2254,8 @@ msgid ""
 "Cannot write to the prototype revision file of transaction '%s' because a "
 "previous representation is currently being written by this process"
 msgstr ""
+"이전 내용이 현재 이 프로세스에 의해 쓰여지고 있으므로,"
+"트랜잭션('%s')의 프로토타입 리비전 파일에 쓸 수 없습니다"
 
 #: libsvn_fs_fs/fs_fs.c:489
 #, c-format
@@ -2261,6 +2263,8 @@ msgid ""
 "Cannot write to the prototype revision file of transaction '%s' because a "
 "previous representation is currently being written by another process"
 msgstr ""
+"이전 내용이 현재 다른 프로세스에 의해 쓰여지고 있으므로,"
+"트랜잭션('%s')의 프로토타입 리비전 파일에 쓸 수 없습니다"
 
 #: libsvn_fs_fs/fs_fs.c:496 libsvn_subr/io.c:1531
 #, c-format
@@ -2577,7 +2581,7 @@ msgstr "dated-rev 요청에 대한 서버의 응답이 올바르지 않습니다
 
 #: libsvn_ra_dav/fetch.c:1330
 msgid "Expected a valid revnum and path"
-msgstr ""
+msgstr "정상적인 리비전번호와 경로가 아닙니다"
 
 #: libsvn_ra_dav/fetch.c:1412
 msgid "'get-locations' REPORT not implemented"
@@ -2858,12 +2862,12 @@ msgstr "'%s': 경로가 존재하지 않습니다."
 #: libsvn_ra_dav/util.c:832
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
-msgstr ""
+msgstr "저장소가 영구히 '%s'로 옮겨졌습니다. svn switch --relocate를 사용하여 바꾸십시오"
 
 #: libsvn_ra_dav/util.c:834
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
-msgstr ""
+msgstr "저장소가 잠시 '%s'로 옮겨졌습니다. svn switch --relocate를 사용하여 바꾸십시오"
 
 #. We either have a neon error, or some other error
 #. that we didn't expect.
@@ -3207,7 +3211,7 @@ msgstr "텍스트 조각의 일부가 문자열이 아닙니다."
 
 #: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr ""
+msgstr "'finish-replay' 명령은 replay 없이 수행할 수 없습니다"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -3263,11 +3267,11 @@ msgstr "명령의 응답안에 알 수 없는 상태 값 '%s'"
 #: libsvn_ra_svn/sasl_auth.c:179 svnserve/sasl_auth.c:104
 #: svnserve/sasl_auth.c:114
 msgid "Could not initialize the SASL library"
-msgstr ""
+msgstr "SASL 라이브러리를 초기화 할 수 없습니다"
 
 #: libsvn_ra_svn/sasl_auth.c:287
 msgid "Unhandled SASL interaction"
-msgstr ""
+msgstr "처리할 수 없는 SASL 명령"
 
 #: libsvn_ra_svn/sasl_auth.c:575 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
@@ -5681,6 +5685,23 @@ msgid ""
 "                                --ignore-eol-style:\n"
 "                                   Ignore changes in EOL style"
 msgstr ""
+"기본값: '-u'. Subversion이 외부 diff 프로그램을 실행할 때\n"
+"                             ARG가 프로그램의 인자로 넘겨집니다\n"
+"                             to the program. But when Subversion is using "
+"its\n"
+"                             default internal diff implementation, or when\n"
+"                             Subversion is displaying blame annotations, "
+"ARG\n"
+"                             could be any of the following:\n"
+"                                -u (--unified):\n"
+"                                   Output 3 lines of unified context.\n"
+"                                -b (--ignore-space-change):\n"
+"                                   Ignore changes in the amount of white "
+"space.\n"
+"                                -w (--ignore-all-space):\n"
+"                                   Ignore all white space.\n"
+"                                --ignore-eol-style:\n"
+"                                   Ignore changes in EOL style"
 
 #: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
@@ -5881,6 +5902,27 @@ msgid ""
 "  to the working copy.  All properties from the repository are applied\n"
 "  to the obstructing path.\n"
 msgstr ""
+"작업사본을 저장소로부터 꺼냅니다.\n"
+"사용법: checkout URL[@REV]... [PATH]\n"
+"\n"
+"  REV가 지정되면, 지정된 REV에서부터 찾아 체크아웃합니다.\n"
+"  \n"
+"  PATH가 생략되면, URL의 맨마지막 디렉토리명이 꺼내어 저장될 디렉토리\n"
+"  이름으로 사용됩니다. 만약, 여러개의 URL이 지정되면 PATH의 하위 디렉토리에\n"
+"  저장됩니다. 이때는 각 URL의 맨 마지막 디렉토리명이 하위 디렉토리 이름으로\n"
+"  사용됩니다.\n"
+"  \n"
+"  현 작업 사본에 관리대상으로 추가되지 않은 파일이 존재하고, checkout 할\n"
+"  URL에 같은 이름의 파일이 관리대상으로 이미 존재하는 경우 오류를 내게 됩니다.\n"
+"  이 경우 --force 를 주게되면, 오류가 나지 않으며, 저장소의 관리대상으로\n"
+"  취급하게 됩니다. 두 대응되는 대상이 같은 형식(파일 또는 디렉토리)이면,\n"
+"  파일의 경우 저장소의 내용과 다른 것이 작업사본에 있는 경우 저장소에서 \n"
+"  꺼내온 뒤 수정한 것으로 봅니다. 즉, 현 작업 사본의 내용이 바뀌지\n"
+"  않은 채 저장소의 메타 정보가 추가되며, 내용은 수정된 것으로 취급합니다.\n"
+"  디렉토리의 경우 하위의 모든 파일이 버전 관리 대상으로 추가됩니다.\n"
+"  또한, 저장소에 있는 대상의 속성들이 모두 작업사본에 적용됩니다.\n"
+"  이렇게 충돌나는 대상에 대해서는 처음 컬럼에 'E'가 나타나게 됩니다.\n"
+"\n"
 
 #: svn/main.c:288
 msgid ""
@@ -7305,7 +7347,7 @@ msgstr "system('%s') 가 %d 을/를 반환합니다."
 
 #: svn/util.c:307
 msgid "Error normalizing edited contents to internal format"
-msgstr ""
+msgstr "수정된 내용을 내부 포맷으로 정규화 도중 오류 발생"
 
 #: svn/util.c:338
 msgid "Can't restore working directory"
@@ -7326,7 +7368,7 @@ msgstr "--이 줄 이하는 자동으로 제거됩니다--"
 
 #: svn/util.c:516
 msgid "Error normalizing log message to internal format"
-msgstr ""
+msgstr "로그를 내부 포맷으로 정규화 도중 오류 발생"
 
 #: svn/util.c:531
 msgid ""
@@ -7457,6 +7499,8 @@ msgid ""
 "use format compatible with Subversion versions\n"
 "                             earlier than 1.4"
 msgstr ""
+"Subversion 1.4 버전 이전과 호환되는 포맷 이용\n"
+" "
 
 #: svnadmin/main.c:308
 msgid ""
@@ -8492,7 +8536,7 @@ msgstr "호스트 이름을 얻을 수 없습니다."
 
 #: svnserve/sasl_auth.c:299
 msgid "Could not obtain the list of SASL mechanisms"
-msgstr ""
+msgstr "SASL 메커니즘 리스트를 얻을 수 없습니다."
 
 #: svnserve/sasl_auth.c:337
 msgid "Couldn't obtain the authenticated username"
@@ -8534,6 +8578,19 @@ msgid ""
 "In other words, the destination repository should be a read-only\n"
 "mirror of the source repository.\n"
 msgstr ""
+"사용법: svnsync initialize DEST_URL SOURCE_URL\n"
+"\n"
+"대상 저장소를 다른 저장소와 동기를 맞추기 위해 초기화 합니다\n"
+"\n"
+"대상 저장소의 URL이 가리키는 곳의 루트는 커밋된 리비전이\n"
+"없어야합니다. 대상 저장소의 리비전 속성은 수정 가능하도록 설정\n"
+"되어 있어야합니다.\n"
+"\n"
+"대상 저장소는 읽기 모드로만 사용하여야합니다. 즉, 다른 커밋을 하거나\n"
+"리버전 속성을 수정하여서는 안됩니다. 오직, 'svnsync'를 통해서만\n"
+"수정되어야합니다.\n"
+"\n"
+"\n"
 
 #: svnsync/main.c:71
 msgid ""
@@ -8627,6 +8684,9 @@ msgid ""
 "destination HEAD (%ld) are inconsistent; have you committed to the "
 "destination without using svnsync?"
 msgstr ""
+"현재 복사중인 리비전(%ld), 마지막으로 병합된 리비전(%ld), 그리고 "
+"대상 HEAD (%ld)의 정보가 일치하지 않습니다. svnsync를 수행하지 않고 "
+"커밋하셨습니까?"
 
 #: svnsync/main.c:1021
 #, c-format
@@ -8634,6 +8694,8 @@ msgid ""
 "Destination HEAD (%ld) is not the last merged revision (%ld); have you "
 "committed to the destination without using svnsync?"
 msgstr ""
+"대상 HEAD (%ld)가 마지막으로 병합된 리비전(%ld)이 아닙니다. "
+"svnsync를 수행하지 않고 커밋하셨습니까?"
 
 #: svnsync/main.c:1098
 #, c-format
@@ -8754,88 +8816,3 @@ msgstr "익스포트됨%s"
 #, c-format
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' 는 관리대상이 아니며, 익스포트 되지 않았습니다\n"
-
-#~ msgid "Editing property on non-local target '%s' not yet supported"
-#~ msgstr "원격 대상 '%s' 에 대하여 속성 변경이 아직 지원되지 않습니다."
-
-#~ msgid "Lock request failed: %d %s"
-#~ msgstr "잠금 요청 실패: %d %s"
-
-#~ msgid "Missing rev attr in delete-entry element"
-#~ msgstr "delete-entry 요소에서 rev 속성이 빠졌습니다"
-
-#~ msgid "GET request failed for '%s'"
-#~ msgstr "'%s'에 대한 GET 요청이 실패하였습니다."
-
-#~ msgid "Move will not be attempted unless forced"
-#~ msgstr "강제로 하지 않으면 이동되지 않습니다."
-
-#~ msgid "Can't change executability of file '%s'"
-#~ msgstr "파일 '%s'에 대해 실행 속성 변경을 할 수 없습니다"
-
-#~ msgid "print client version info"
-#~ msgstr "클라이언트의 버전 정보를 출력합니다."
-
-#~ msgid "Committing rev %ld\n"
-#~ msgstr "리비전 %ld 커밋 중\n"
-
-#~ msgid "Missing path attr in open-directory element"
-#~ msgstr "open-directory 요소에서 path 속성이 빠졌습니다."
-
-#~ msgid "Expected format '%d' of repository; found format '%d'"
-#~ msgstr "예상되는 저장소의 포맷 '%d', 발견된 포맷 '%d'"
-
-#~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
-#~ msgstr "arg를 diff 로 넘길 인자들을 지정함 (생략값: '-u')"
-
-#~ msgid ""
-#~ "Check out a working copy from a repository.\n"
-#~ "usage: checkout URL[@REV]... [PATH]\n"
-#~ "\n"
-#~ "  If specified, REV determines in which revision the URL is first\n"
-#~ "  looked up.\n"
-#~ "\n"
-#~ "  If PATH is omitted, the basename of the URL will be used as\n"
-#~ "  the destination. If multiple URLs are given each will be checked\n"
-#~ "  out into a sub-directory of PATH, with the name of the sub-directory\n"
-#~ "  being the basename of the URL.\n"
-#~ msgstr ""
-#~ "작업사본을 저장소로부터 꺼냅니다.\n"
-#~ "usage: checkout URL[@REV]... [PATH]\n"
-#~ "\n"
-#~ "  REV가 지정되면, 지정된 REV에서부터 찾아 체크아웃합니다.\n"
-#~ "  \n"
-#~ "  PATH가 생략되면, URL의 맨마지막 디렉토리명이 꺼내어 저장될\n"
-#~ "  디렉토리 이름으로 사용됩니다. 만약, 여러개의 URL이 지정되면\n"
-#~ "  PATH의 하위 디렉토리에 꺼내어져 저장됩니다. 이 때는 각 URL의\n"
-#~ "  맨 마지막 디렉토리명이 하위 디렉토리 이름으로 사용됩니다.\n"
-#~ "  \n"
-
-#~ msgid ""
-#~ "disallow use of SVNDIFF1 in on-disk storage,\n"
-#~ "                             for backwards compatibility"
-#~ msgstr ""
-#~ "하위 호완성을 위해 on-disk 저장소에서 SVNDIFF1의 사용은,\n"
-#~ "                            허용하지 않습니다"
-
-#~ msgid ""
-#~ "usage: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-#~ "Initialize a destination repository.\n"
-#~ msgstr ""
-#~ "사용법: svnsync initialize DEST_URL --source-url SOURCE_URL\n"
-#~ "대상 저장소를 초기화 함.\n"
-
-#~ msgid "The url to synchronize from"
-#~ msgstr "동기화할 원본 저장소 URL"
-
-#~ msgid "You must supply a source URL; try 'svnsync help' for more info"
-#~ msgstr "원본 URL을 지정해야합니다. 'svnsync help'를 참조하세요"
-
-#~ msgid ""
-#~ "Currently copying rev %ld in source is less than latest rev in "
-#~ "destination (%ld)"
-#~ msgstr "복사할 소스의 리비전 %ld이 대상 리비전 %ld 보다 더 작은 값입니다."
-
-#~ msgid ""
-#~ "You must supply a valid revision number; try 'svnsync help' for more info"
-#~ msgstr "올바른 리비전 번호가 아닙니다. 'svnsync help'를 참조하세요."
