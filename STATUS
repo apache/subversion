@@ -30,7 +30,7 @@ Candidate changes:
      Preparing to release 1.4.2 windows installer, license now on 1.4 branch
      is now difficult to read. Actual license text isn't changed.
     Votes:
-     +0: lgo
+     +1: lgo
 
   * r21516, r22155, r22224
     Fixes for the Windows installer script: add license files of the
@@ -38,7 +38,7 @@ Candidate changes:
     Justification:
      Preparing to release 1.4.2 windows installer.
     Votes:
-     +0: lgo
+     +1: lgo
 
   * r21531, r21848, r21934
     Allow HTTP auth protocols to be configurable by way of a
