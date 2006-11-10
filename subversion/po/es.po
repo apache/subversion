@@ -4887,7 +4887,7 @@ msgstr "Inesperadamente se encontró '%s': la ruta se marca como faltante"
 #: libsvn_wc/lock.c:356 libsvn_wc/lock.c:562
 #, c-format
 msgid "Working copy '%s' locked"
-msgstr "La copia de trabajo '%s' está lockeada"
+msgstr "La copia de trabajo '%s' está bloqueada"
 
 #: libsvn_wc/lock.c:481
 #, c-format
@@ -4928,7 +4928,7 @@ msgstr "No se pudo lockear '%s'"
 #: libsvn_wc/lock.c:978
 #, c-format
 msgid "Working copy '%s' is not locked"
-msgstr "La copia de trabajo '%s' no está lockeada"
+msgstr "La copia de trabajo '%s' no está bloqueada"
 
 #: libsvn_wc/lock.c:1371
 #, c-format
