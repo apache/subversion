@@ -729,7 +729,7 @@ def propset_commit_checkout_nocrash(sbox):
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      sbox.repo_url,
-                                     1other_wc_dir)
+                                     other_wc_dir)
 
   mu_other_contents = open(mu_other_path).read()
   if mu_other_contents != "This is the file 'mu'.\n$Rev: 3 $":
