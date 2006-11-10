@@ -90,7 +90,7 @@ Candidate changes:
     the Perl API's $limit parameter.
     Justification:
       Failure to pass this parameter is incorrect API usage, and
-      results in broken script.
+      results in a broken script.
     Votes:
       +1: dlr
 
