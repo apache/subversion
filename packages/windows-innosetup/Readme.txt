@@ -223,7 +223,7 @@ Programs used for the Subversion Windows installer
   This package is needed for making documentation.
   
   Unzip the files inside docbook-xsl-*.**.*.zip to a folder named xsl which
-  resides under doc\book\tools in your working copy of the svnbook repository.
+  resides under src\tools in your working copy of the svnbook repository.
   Rename the unpacked top level folder from "docbook-xsl-x.xx.x" to "xsl", the
   result should be like this:
     src\tools\xsl
