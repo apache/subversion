@@ -100,7 +100,17 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_exists:
       nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf(pool, "E    %s\n", path_local)))
+      if (n->content_state == svn_wc_notify_state_conflicted)
+        statchar_buf[0] = 'C';
+      else
+        statchar_buf[0] = 'E';
+
+      if (n->prop_state == svn_wc_notify_state_conflicted)
+        statchar_buf[1] = 'C';
+      else if (n->prop_state == svn_wc_notify_state_merged)
+        statchar_buf[1] = 'G';
+      
+      if ((err = svn_cmdline_printf(pool, "%s %s\n", statchar_buf, path_local)))
         goto print_error;
       break;
 

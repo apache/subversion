@@ -1277,11 +1277,108 @@ def forced_switch_failures(sbox):
                                                      'A', 'D', 'G'),
                                         sbox.repo_url + "/A/D/H",
                                         None, None, None,
-                                        ".*Failed to forcibly add " + \
+                                        ".*Failed to add " + \
                                         "directory .*: a versioned " + \
                                         "directory of the same name " + \
                                         "already exists\n",
                                         None, None, None, None, 0, '--force')
+
+def switch_with_obstructing_local_adds(sbox):
+  "switch tolerates WC adds"
+  sbox.build()
+
+  # Dir obstruction scheduled for addition without history.
+  G_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'G')
+  os.mkdir(G_path)
+
+  # File obstructions scheduled for addition without history.
+  # Contents identical to additions from switch.
+  gamma_copy_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'gamma')
+  shutil.copyfile(os.path.join(sbox.wc_dir, 'A', 'D', 'gamma'),
+                  gamma_copy_path)
+  shutil.copyfile(os.path.join(sbox.wc_dir, 'A', 'D', 'G', 'tau'),
+                  os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'G', 'tau'))
+
+  # File obstruction scheduled for addition without history.
+  # Contents conflict with addition from switch.
+  pi_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'G', 'pi')  
+  svntest.main.file_write(pi_path,
+                          "This is the OBSTRUCTING file 'pi'.\n")
+
+  # Non-obstructing dir and file scheduled for addition without history.
+  I_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F', 'I')
+  os.mkdir(I_path)
+  upsilon_path = os.path.join(G_path, 'upsilon')
+  svntest.main.file_write(upsilon_path,
+                          "This is the unversioned file 'upsilon'.\n")
+
+  # Add the above obstructions.
+  svntest.actions.run_and_verify_svn("Add error:", None, [],
+                                     'add', G_path, I_path,
+                                     gamma_copy_path)
+
+  # Setup expected results of switch.
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    "A/B/F/gamma"   : Item(status='E '),
+    "A/B/F/G"       : Item(status='E '),
+    "A/B/F/G/pi"    : Item(status='C '),
+    "A/B/F/G/rho"   : Item(status='A '),
+    "A/B/F/G/tau"   : Item(status='E '),
+    "A/B/F/H"       : Item(status='A '),
+    "A/B/F/H/chi"   : Item(status='A '),
+    "A/B/F/H/omega" : Item(status='A '),
+    "A/B/F/H/psi"   : Item(status='A '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    "A/B/F/gamma"     : Item("This is the file 'gamma'.\n"),
+    "A/B/F/G"         : Item(),
+    "A/B/F/G/pi"      : Item("""<<<<<<< .mine
+This is the OBSTRUCTING file 'pi'.
+=======
+This is the file 'pi'.
+>>>>>>> .r1
+"""),
+    "A/B/F/G/rho"     : Item("This is the file 'rho'.\n"),
+    "A/B/F/G/tau"     : Item("This is the file 'tau'.\n"),
+    "A/B/F/G/upsilon" : Item("This is the unversioned file 'upsilon'.\n"),
+    "A/B/F/H"         : Item(),
+    "A/B/F/H/chi"     : Item("This is the file 'chi'.\n"),
+    "A/B/F/H/omega"   : Item("This is the file 'omega'.\n"),
+    "A/B/F/H/psi"     : Item("This is the file 'psi'.\n"),
+    "A/B/F/I"         : Item(),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak('A/B/F', switched='S')
+  expected_status.add({
+    "A/B/F/gamma"     : Item(status='  ', wc_rev=1),
+    "A/B/F/G"         : Item(status='  ', wc_rev=1),
+    "A/B/F/G/pi"      : Item(status='C ', wc_rev=1),
+    "A/B/F/G/rho"     : Item(status='  ', wc_rev=1),
+    "A/B/F/G/tau"     : Item(status='  ', wc_rev=1),
+    "A/B/F/G/upsilon" : Item(status='A ', wc_rev=0),
+    "A/B/F/H"         : Item(status='  ', wc_rev=1),
+    "A/B/F/H/chi"     : Item(status='  ', wc_rev=1),
+    "A/B/F/H/omega"   : Item(status='  ', wc_rev=1),
+    "A/B/F/H/psi"     : Item(status='  ', wc_rev=1),
+    "A/B/F/I"         : Item(status='A ', wc_rev=0),
+    })
+
+  # "Extra" files that we expect to result from the conflicts.
+  extra_files = ['pi\.r0', 'pi\.r1', 'pi\.mine']
+  
+  # Do the switch and check the results in three ways.
+  F_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F')
+  D_url = svntest.main.current_repo_url + '/A/D'
+
+  svntest.actions.run_and_verify_switch(sbox.wc_dir, F_path, D_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files, None, None, 0)
 
 ########################################################################
 # Run the tests

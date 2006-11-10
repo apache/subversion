@@ -986,7 +986,8 @@ def update_receive_illegal_name(sbox):
   for n in range(2):
     out, err = svntest.main.run_svn(1, 'up', wc_dir)
     for line in err:
-      if line.find("object of the same name already exists") != -1:
+      if line.find("an unversioned directory of the same " \
+                   "name already exists") != -1:
         break
     else:
       raise svntest.Failure
@@ -2086,7 +2087,7 @@ def forced_update_failures(sbox):
                                               [], "co", I_url, I_path)
 
   svntest.actions.run_and_verify_update(C_Path, None, None, None,
-                                        ".*Failed to forcibly add " + \
+                                        ".*Failed to add " + \
                                         "directory.*a versioned directory " + \
                                         "of the same name already exists",
                                         None, None, None, None, 0, C_Path,
@@ -2289,6 +2290,317 @@ New line in 'iota'
                                         svntest.tree.detect_conflict_files,
                                         conflict_files)
 
+#----------------------------------------------------------------------
+def update_with_obstructing_additions(sbox):
+  "update handles obstructing paths scheduled for add"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
+  # Add files and dirs to the repos via the first WC.  Each of these
+  # will be added to the backup WC via an update:
+  #
+  #  A/B/upsilon:   Identical to the file scheduled for addition in
+  #                 the backup WC.
+  #
+  #  A/C/nu:        A "normal" add, won't exist in the backup WC.
+  #
+  #  A/D/kappa:     Textual and property conflict with the file scheduled
+  #                 for addition in the backup WC.
+  #
+  #  A/D/epsilon:   Textual conflict with the file scheduled for addition.
+  #
+  #  A/D/zeta:      Prop conflict with the file scheduled for addition.
+  #
+  #                 Three new dirs that will also be scheduled for addition:
+  #  A/D/H/I:         No props on either WC or REPOS.
+  #  A/D/H/I/J:       Prop conflict with the scheduled add.
+  #  A/D/H/I/K:       Same (mergeable) prop on WC and REPOS.
+  #
+  #  A/D/H/I/K/xi:  Identical to the file scheduled for addition in
+  #                 the backup WC. No props.
+  #
+  #  A/D/H/I/L:     A "normal" dir add, won't exist in the backup WC.
+  #
+  #  A/D/H/I/J/eta: Conflicts with the file scheduled for addition in
+  #                 the backup WC.  No props.
+  upsilon_path = os.path.join(wc_dir, 'A', 'B', 'upsilon')
+  svntest.main.file_append(upsilon_path, "This is the file 'upsilon'\n")
+  nu_path = os.path.join(wc_dir, 'A', 'C', 'nu')
+  svntest.main.file_append(nu_path, "This is the file 'nu'\n")
+  kappa_path = os.path.join(wc_dir, 'A', 'D', 'kappa')
+  svntest.main.file_append(kappa_path, "This is REPOS file 'kappa'\n")
+  epsilon_path = os.path.join(wc_dir, 'A', 'D', 'epsilon')
+  svntest.main.file_append(epsilon_path, "This is REPOS file 'epsilon'\n")
+  zeta_path = os.path.join(wc_dir, 'A', 'D', 'zeta')
+  svntest.main.file_append(zeta_path, "This is the file 'zeta'\n")
+  I_path = os.path.join(wc_dir, 'A', 'D', 'H', 'I')
+  os.mkdir(I_path)
+  J_path = os.path.join(I_path, 'J')
+  os.mkdir(J_path)
+  K_path = os.path.join(I_path, 'K')
+  os.mkdir(K_path)
+  L_path = os.path.join(I_path, 'L')
+  os.mkdir(L_path)
+  xi_path = os.path.join(K_path, 'xi')
+  svntest.main.file_append(xi_path, "This is the file 'xi'\n")
+  eta_path = os.path.join(J_path, 'eta')
+  svntest.main.file_append(eta_path, "This is REPOS file 'eta'\n")
+  svntest.main.run_svn(None, 'add', upsilon_path, nu_path,
+                       kappa_path, epsilon_path, zeta_path, I_path)
+
+  # Set props that will conflict with scheduled adds.
+  svntest.main.run_svn(None, 'propset', 'propname1', 'propval-REPOS',
+                       kappa_path)
+  svntest.main.run_svn(None, 'propset', 'propname1', 'propval-REPOS',
+                       zeta_path)
+  svntest.main.run_svn(None, 'propset', 'propname1', 'propval-REPOS',
+                       J_path)
+
+  # Set prop that will match with scheduled add.
+  svntest.main.run_svn(None, 'propset', 'propname1', 'propval-SAME',
+                       epsilon_path)
+  svntest.main.run_svn(None, 'propset', 'propname1', 'propval-SAME',
+                       K_path)
+
+  # Created expected output tree for 'svn ci'
+  expected_output = wc.State(wc_dir, {
+    'A/B/upsilon'   : Item(verb='Adding'),
+    'A/C/nu'        : Item(verb='Adding'),
+    'A/D/kappa'     : Item(verb='Adding'),
+    'A/D/epsilon'   : Item(verb='Adding'),
+    'A/D/zeta'      : Item(verb='Adding'),
+    'A/D/H/I'       : Item(verb='Adding'),
+    'A/D/H/I/J'     : Item(verb='Adding'),
+    'A/D/H/I/J/eta' : Item(verb='Adding'),
+    'A/D/H/I/K'     : Item(verb='Adding'),
+    'A/D/H/I/K/xi'  : Item(verb='Adding'),
+    'A/D/H/I/L'     : Item(verb='Adding'),
+    })
+
+  # Create expected status tree.
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/upsilon'   : Item(status='  ', wc_rev=2),
+    'A/C/nu'        : Item(status='  ', wc_rev=2),
+    'A/D/kappa'     : Item(status='  ', wc_rev=2),
+    'A/D/epsilon'   : Item(status='  ', wc_rev=2),
+    'A/D/zeta'      : Item(status='  ', wc_rev=2),
+    'A/D/H/I'       : Item(status='  ', wc_rev=2),
+    'A/D/H/I/J'     : Item(status='  ', wc_rev=2),
+    'A/D/H/I/J/eta' : Item(status='  ', wc_rev=2),
+    'A/D/H/I/K'     : Item(status='  ', wc_rev=2),
+    'A/D/H/I/K/xi'  : Item(status='  ', wc_rev=2),
+    'A/D/H/I/L'     : Item(status='  ', wc_rev=2),
+    })
+
+  # Commit.
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Create various paths scheduled for addition which will obstruct
+  # the adds coming from the repos.
+  upsilon_backup_path = os.path.join(wc_backup, 'A', 'B', 'upsilon')
+  svntest.main.file_append(upsilon_backup_path,
+                           "This is the file 'upsilon'\n")
+  kappa_backup_path = os.path.join(wc_backup, 'A', 'D', 'kappa')
+  svntest.main.file_append(kappa_backup_path,
+                           "This is WC file 'kappa'\n")
+  epsilon_backup_path = os.path.join(wc_backup, 'A', 'D', 'epsilon')
+  svntest.main.file_append(epsilon_backup_path,
+                           "This is WC file 'epsilon'\n")
+  zeta_backup_path = os.path.join(wc_backup, 'A', 'D', 'zeta')
+  svntest.main.file_append(zeta_backup_path, "This is the file 'zeta'\n")
+  I_backup_path = os.path.join(wc_backup, 'A', 'D', 'H', 'I')
+  os.mkdir(I_backup_path)
+  J_backup_path = os.path.join(I_backup_path, 'J')
+  os.mkdir(J_backup_path)
+  K_backup_path = os.path.join(I_backup_path, 'K')
+  os.mkdir(K_backup_path)
+  xi_backup_path = os.path.join(K_backup_path, 'xi')
+  svntest.main.file_append(xi_backup_path, "This is the file 'xi'\n")
+  eta_backup_path = os.path.join(J_backup_path, 'eta')
+  svntest.main.file_append(eta_backup_path, "This is WC file 'eta'\n")
+
+  svntest.main.run_svn(None, 'add', upsilon_backup_path, kappa_backup_path,
+                       epsilon_backup_path, zeta_backup_path, I_backup_path)
+
+  # Set prop that will conflict with add from repos.
+  svntest.main.run_svn(None, 'propset', 'propname1', 'propval-WC',
+                       kappa_backup_path)
+  svntest.main.run_svn(None, 'propset', 'propname1', 'propval-WC',
+                       zeta_backup_path)
+  svntest.main.run_svn(None, 'propset', 'propname1', 'propval-WC',
+                       J_backup_path)
+
+  # Set prop that will match add from repos.
+  svntest.main.run_svn(None, 'propset', 'propname1', 'propval-SAME',
+                       epsilon_backup_path)
+  svntest.main.run_svn(None, 'propset', 'propname1', 'propval-SAME',
+                       K_backup_path)
+
+  # Create expected output tree for an update of the wc_backup.
+  expected_output = wc.State(wc_backup, {
+    'A/B/upsilon'   : Item(status='E '),
+    'A/C/nu'        : Item(status='A '),
+    'A/D/H/I'       : Item(status='E '),
+    'A/D/H/I/J'     : Item(status='EC'),
+    'A/D/H/I/J/eta' : Item(status='C '),
+    'A/D/H/I/K'     : Item(status='EG'),
+    'A/D/H/I/K/xi'  : Item(status='E '),
+    'A/D/H/I/L'     : Item(status='A '),
+    'A/D/kappa'     : Item(status='CC'),
+    'A/D/epsilon'   : Item(status='CG'),
+    'A/D/zeta'      : Item(status='EC'),
+    })
+
+  # Create expected disk for update of wc_backup.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/B/upsilon'   : Item("This is the file 'upsilon'\n"),
+    'A/C/nu'        : Item("This is the file 'nu'\n"),
+    'A/D/H/I'       : Item(),
+    'A/D/H/I/J'     : Item(props={'propname1' : 'propval-WC'}),
+    'A/D/H/I/J/eta' : Item("""<<<<<<< .mine
+This is WC file 'eta'
+=======
+This is REPOS file 'eta'
+>>>>>>> .r2
+"""),
+    'A/D/H/I/K'     : Item(props={'propname1' : 'propval-SAME'}),
+    'A/D/H/I/K/xi'  : Item("This is the file 'xi'\n"),
+    'A/D/H/I/L'     : Item(),
+    'A/D/kappa'     : Item("""<<<<<<< .mine
+This is WC file 'kappa'
+=======
+This is REPOS file 'kappa'
+>>>>>>> .r2
+""", props={'propname1' : 'propval-WC'}),
+    'A/D/epsilon'     : Item("""<<<<<<< .mine
+This is WC file 'epsilon'
+=======
+This is REPOS file 'epsilon'
+>>>>>>> .r2
+""", props={'propname1' : 'propval-SAME'}),
+    'A/D/zeta'   : Item("This is the file 'zeta'\n",
+                        props={'propname1' : 'propval-WC'}),
+    })
+
+  # Create expected status tree for the update.  Since the obstructing
+  # kappa and upsilon differ from the repos, they should show as modified.
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status.add({
+    'A/B/upsilon'   : Item(status='  ', wc_rev=2),
+    'A/C/nu'        : Item(status='  ', wc_rev=2),
+    'A/D/H/I'       : Item(status='  ', wc_rev=2),
+    'A/D/H/I/J'     : Item(status=' C', wc_rev=2),
+    'A/D/H/I/J/eta' : Item(status='C ', wc_rev=2),
+    'A/D/H/I/K'     : Item(status='  ', wc_rev=2),
+    'A/D/H/I/K/xi'  : Item(status='  ', wc_rev=2),
+    'A/D/H/I/L'     : Item(status='  ', wc_rev=2),
+    'A/D/kappa'     : Item(status='CC', wc_rev=2),
+    'A/D/epsilon'   : Item(status='C ', wc_rev=2),
+    'A/D/zeta'      : Item(status=' C', wc_rev=2),
+    })
+
+  # "Extra" files that we expect to result from the conflicts.
+  extra_files = ['eta\.r0', 'eta\.r2', 'eta\.mine',
+                 'kappa\.r0', 'kappa\.r2', 'kappa\.mine',
+                 'epsilon\.r0', 'epsilon\.r2', 'epsilon\.mine',
+                 'kappa.prej', 'zeta.prej', 'dir_conflicts.prej']
+
+  # Perform forced update and check the results in three
+  # ways (including props).
+  svntest.actions.run_and_verify_update(wc_backup,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        extra_files, None, None, 1,
+                                        wc_backup)
+
+  # Some obstructions are still not permitted:
+  #
+  # Test that file and dir obstructions scheduled for addition *with*
+  # history fail when update tries to add the same path.
+
+  # URL to URL copy of A/D/G to A/M.
+  G_URL = sbox.repo_url + '/A/D/G'
+  M_URL = sbox.repo_url + '/A/M'
+  svntest.actions.run_and_verify_svn("Copy error:", None, [],
+                                     'cp', G_URL, M_URL, '-m', '')
+
+  # WC to WC copy of A/D/H to A/M, M now scheduled for addition with
+  # history in WC and pending addition from the repos.
+  H_path = os.path.join(wc_dir, 'A', 'D', 'H')
+  A_path = os.path.join(wc_dir, 'A')
+  M_path = os.path.join(wc_dir, 'A', 'M')
+
+  svntest.actions.run_and_verify_svn("Copy error:", None, [],
+                                     'cp', H_path, M_path)
+
+  # URL to URL copy of A/D/H/omega to omicron.
+  omega_URL = sbox.repo_url + '/A/D/H/omega'
+  omicron_URL = sbox.repo_url + '/omicron'
+  svntest.actions.run_and_verify_svn("Copy error:", None, [],
+                                     'cp', omega_URL, omicron_URL,
+                                     '-m', '')
+
+  # WC to WC copy of A/D/H/chi to omicron, omicron now scheduled for
+  # addition with history in WC and pending addition from the repos.
+  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
+  omicron_path = os.path.join(wc_dir, 'omicron')
+
+  svntest.actions.run_and_verify_svn("Copy error:", None, [],
+                                     'cp', chi_path,
+                                     omicron_path)
+
+  # Try to update M's Parent.
+  svntest.actions.run_and_verify_update(A_path, expected_output,
+                                        expected_disk, expected_status,
+                                        "svn: Failed to add " \
+                                        "directory '.*M': a versioned " \
+                                        "directory of the same name " \
+                                        "already exists",
+                                        None, None, None, None, 0)
+
+  # --force shouldn't help either.
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        "svn: Failed to add " \
+                                        "directory '.*M': a versioned " \
+                                        "directory of the same name " \
+                                        "already exists",
+                                        None, None, None, None, 0,
+                                        A_path, '--force')
+
+  # Try to update omicron's parent, non-recusively so as not to
+  # try and update M first.
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        "Failed to add file '.*omicron': " \
+                                        "a file of the same name is " \
+                                        "already scheduled for addition " \
+                                        "with history",
+                                        None, None, None, None, 0,
+                                        wc_dir, '-N')
+
+  # Again, --force shouldn't matter.
+  svntest.actions.run_and_verify_update(wc_dir, expected_output,
+                                        expected_disk, expected_status,
+                                        "Failed to add file '.*omicron': " \
+                                        "a file of the same name is " \
+                                        "already scheduled for addition " \
+                                        "with history",
+                                        None, None, None, None, 0,
+                                        wc_dir, '-N', '--force')
+
 ########################################################################
 # Run the tests
 
@@ -2328,6 +2640,7 @@ test_list = [ None,
               forced_update_failures,
               update_wc_on_windows_drive,
               update_wc_with_replaced_file,
+              update_with_obstructing_additions,
              ]
 
 if __name__ == '__main__':
