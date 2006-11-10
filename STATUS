@@ -87,11 +87,3 @@ Candidate changes:
       +1: dlr
 
 Approved changes:
-
-  * r22203
-    Allow svn_load_dirs.pl to work with filenames containing @
-      characters.
-    Justification:
-      Simple fix for a contrib tool.
-    Votes:
-      +1: blair, dlr
