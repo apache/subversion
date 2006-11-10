@@ -48,6 +48,7 @@ typedef struct {
   apr_pool_t *pool;
 } file_baton_t;
 
+/* Returns TRUE if PFD has pending data, FALSE otherwise. */
 static svn_boolean_t pending(apr_pollfd_t *pfd, apr_pool_t *pool)
 {
   apr_status_t status;
@@ -63,6 +64,9 @@ static svn_boolean_t pending(apr_pollfd_t *pfd, apr_pool_t *pool)
   return (status == APR_SUCCESS && n);
 }
 
+/* Functions to implement a file backed svn_ra_svn__stream_t. */
+
+/* Implements svn_read_fn_t */
 static svn_error_t *
 file_read_cb(void *baton, char *buffer, apr_size_t *len)
 {
@@ -77,6 +81,7 @@ file_read_cb(void *baton, char *buffer, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_write_fn_t */
 static svn_error_t *
 file_write_cb(void *baton, const char *buffer, apr_size_t *len)
 {
@@ -87,6 +92,7 @@ file_write_cb(void *baton, const char *buffer, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
+/* Implements ra_svn_timeout_fn_t */
 static void 
 file_timeout_cb(void *baton, apr_interval_time_t interval)
 {
@@ -94,6 +100,7 @@ file_timeout_cb(void *baton, apr_interval_time_t interval)
   apr_file_pipe_timeout_set(b->out_file, interval);
 }
 
+/* Implements ra_svn_pending_fn_t */
 static svn_boolean_t
 file_pending_cb(void *baton)
 {
@@ -122,6 +129,9 @@ svn_ra_svn__stream_from_files(apr_file_t *in_file,
                                    pool);
 }
 
+/* Functions to implement a socket backed svn_ra_svn__stream_t. */
+
+/* Implements svn_read_fn_t */
 static svn_error_t *
 sock_read_cb(void *baton, char *buffer, apr_size_t *len)
 {
@@ -146,6 +156,7 @@ sock_read_cb(void *baton, char *buffer, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
+/* Implements svn_write_fn_t */
 static svn_error_t *
 sock_write_cb(void *baton, const char *buffer, apr_size_t *len)
 {
@@ -156,6 +167,7 @@ sock_write_cb(void *baton, const char *buffer, apr_size_t *len)
   return SVN_NO_ERROR;
 }
 
+/* Implements ra_svn_timeout_fn_t */
 static void
 sock_timeout_cb(void *baton, apr_interval_time_t interval)
 {
@@ -163,6 +175,7 @@ sock_timeout_cb(void *baton, apr_interval_time_t interval)
   apr_socket_timeout_set(b->sock, interval);
 }
 
+/* Implements ra_svn_pending_fn_t */
 static svn_boolean_t
 sock_pending_cb(void *baton)
 {
