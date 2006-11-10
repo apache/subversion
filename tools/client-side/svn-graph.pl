@@ -124,7 +124,7 @@ sub process_revision {
 # And we can do it all with just one call to SVN :)
 print "digraph tree {\n";
 
-$ra->get_log(['/'], $startrev, $youngest, 1, 0, \&process_revision); 
+$ra->get_log(['/'], $startrev, $youngest, 0, 1, 0, \&process_revision);
 
 # Now ensure that everything is linked.
 foreach my $codeline_change (keys %codeline_changes_forward) {
