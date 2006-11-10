@@ -18,8 +18,8 @@
 # ====================================================================
 #
 # TODO:
-#   - take some command line parameters (url, start & end revs, 
-#     node we're tracking, etc)
+#   - take some command line parameters (url, start & end revs,
+#     node we're tracking, etc.)
 #   - calculate the repository root at runtime so the user can pass
 #     the node of interest as a single URL
 #   - produce the graphical output ourselves (SVG?) instead
@@ -56,7 +56,7 @@ my $startpath = "/trunk";
 #   following as we move through time.  If we hit a delete of a path
 #   we remove it from the tracking array (i.e. we're no longer interested
 #   in it).
-my %interesting = ("$startpath:$startrev",1);
+my %interesting = ("$startpath:$startrev", 1);
 my %tracking = ("$startpath", $startrev);
 
 my %codeline_changes_forward = ();
@@ -82,7 +82,7 @@ sub process_revision {
     my $action = $$changed_paths{$path}->action;
 
     # See if we're deleting one of our tracking nodes
-    if ($action eq "D" and exists($tracking{$path})) 
+    if ($action eq "D" and exists($tracking{$path}))
     {
       print "\t\"$path:$tracking{$path}\" ";
       print "[label=\"$path:$tracking{$path}\\nDeleted in r$revision\",color=red];\n";
@@ -92,9 +92,9 @@ sub process_revision {
 
     # If this is a copy, work out if it was from somewhere interesting
     if (defined($copyfrom_path) && 
-        exists($interesting{$copyfrom_path.":".$copyfrom_rev})) 
+        exists($interesting{$copyfrom_path . ':' . $copyfrom_rev}))
     {
-      $interesting{$path.":".$revision} = 1;
+      $interesting{$path . ':' . $revision} = 1;
       $tracking{$path} = $revision;
       print "\t\"$copyfrom_path:$copyfrom_rev\" -> ";
       print " \"$path:$revision\" [label=\"copy at r$revision\",weight=1,color=green];\n";
@@ -112,7 +112,7 @@ sub process_revision {
           "$path:$revision";
         $codeline_changes_back{"$path:$revision"} =
           "$path:$tracking{$path}";
-        $interesting{$path.":".$revision} = 1;
+        $interesting{$path . ':' . $revision} = 1;
         $tracking{$path} = $revision;
       }
       $path =~ s:/[^/]+$::;
