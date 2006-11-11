@@ -4,7 +4,7 @@
 #                of a node
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -18,15 +18,15 @@
 # ====================================================================
 #
 # TODO:
-#   - take some command line parameters (url, start & end revs,
-#     node we're tracking, etc.)
 #   - calculate the repository root at runtime so the user can pass
 #     the node of interest as a single URL
 #   - produce the graphical output ourselves (SVG?) instead
 #     of using .dot?
+#   - display svnmerge.py/Subversion merge history
 #
 
 use strict;
+use Getopt::Std;
 
 # Turn off output buffering
 $|=1;
@@ -34,21 +34,29 @@ $|=1;
 require SVN::Core;
 require SVN::Ra;
 
-# CONFIGURE ME:  The URL of the Subversion repository we wish to graph.
-# See TODO.
-my $REPOS_URL = 'file:///some/repository';
-#my $REPOS_URL = 'http://svn.collab.net/repos/svn';
+# The URL of the Subversion repository we wish to graph
+# (e.g. "http://svn.collab.net/repos/svn").
+my $repos_url;
 
-# Point at the root of a repository so we get can look at
-# every revision.  
-my $ra = SVN::Ra->new($REPOS_URL);
-
-# We're going to look at all revisions
-my $youngest = $ra->get_latest_revnum();
-my $startrev = 1;
+# The revision range we operate on, from $startrev -> $youngest.
+my $youngest;
+my $startrev;
 
 # This is the node we're interested in
-my $startpath = "/trunk";
+my $startpath;
+
+# Set the variables declared above.
+parse_commandline();
+
+# Point at the root of a repository so we get can look at
+# every revision.
+my $ra = SVN::Ra->new($repos_url);
+
+# Handle identifier for the aboslutely youngest revision.
+if ($youngest eq 'HEAD')
+{
+  $youngest = $ra->get_latest_revnum();
+}
 
 # The "interesting" nodes are potential sources for copies.  This list
 #   grows as we move through time.
@@ -64,17 +72,62 @@ my %codeline_changes_back = ();
 my %copysource = ();
 my %copydest = ();
 
+# Validate the command-line arguments, and set the global variables
+# $repos_url, $youngest, $startrev, and $startpath.
+sub parse_commandline
+{
+  my %cmd_opts;
+  my $usage = "
+usage: svn-graph.pl [-r START_REV:END_REV] [-p PATH] REPOS_URL
+
+  -r the revision range (defaults to 0 through HEAD)
+  -p the repository-relative path (defaults to /trunk)
+  -h show this help information (other options will be ignored)
+";
+
+  # Defaults.
+  $cmd_opts{'r'} = '1:HEAD';
+  $cmd_opts{'p'} = '/trunk';
+
+  getopts('r:p:h', \%cmd_opts) or die $usage;
+
+  die $usage if scalar(@ARGV) < 1;
+  $repos_url = $ARGV[0];
+
+  $cmd_opts{'r'} =~ m/(\d+)(:(.+))?/;
+  if ($3)
+  {
+    $youngest = ($3 eq 'HEAD' ? $3 : int($3));
+    $startrev = int($1);
+  }
+  else
+  {
+    $youngest = ($3 eq 'HEAD' ? $1 : int($1));
+    $startrev = 1;
+  }
+
+  $startpath = $cmd_opts{'p'};
+
+  # Print help info (and exit nicely) if requested.
+  if ($cmd_opts{'h'})
+  {
+    print($usage);
+    exit 0;
+  }
+}
+
 # This function is a callback which is called for every revision
 # as we traverse
-sub process_revision {
+sub process_revision
+{
   my $changed_paths = shift;
-  my $revision = shift || "";
-  my $author = shift || "";
-  my $date = shift || "";
-  my $message = shift || "";
+  my $revision = shift || '';
+  my $author = shift || '';
+  my $date = shift || '';
+  my $message = shift || '';
   my $pool = shift;
 
-  print STDERR "$revision\r";
+  #print STDERR "$revision\r";
 
   foreach my $path (keys %$changed_paths) {
     my $copyfrom_path = $$changed_paths{$path}->copyfrom_path;
@@ -82,7 +135,7 @@ sub process_revision {
     my $action = $$changed_paths{$path}->action;
 
     # See if we're deleting one of our tracking nodes
-    if ($action eq "D" and exists($tracking{$path}))
+    if ($action eq 'D' and exists($tracking{$path}))
     {
       print "\t\"$path:$tracking{$path}\" ";
       print "[label=\"$path:$tracking{$path}\\nDeleted in r$revision\",color=red];\n";
@@ -158,4 +211,4 @@ foreach my $codeline_change (keys %codeline_changes_forward) {
 }
 
 print "}\n";
-print STDERR "\n";
+#print STDERR "\n";
