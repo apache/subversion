@@ -565,6 +565,22 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
   (const svn_client_diff_summarize_t *diff,
    void *baton,
    apr_pool_t *pool);
+
+
+/** A callback used in svn_client_merge3() for resolving merge
+ * conflicts during the application of a tree delta.
+ *
+ * All allocations should be performed in @a pool.
+ *
+ * @a baton is a closure object; it should be provided by the implementation,
+ * and passed by the caller.
+ *
+ * @since New in 1.5.
+ */
+typedef svn_error_t *(*svn_client_conflict_resolver_func_t)
+  (const char *path,
+   void *baton,
+   apr_pool_t *pool);
  
 
 /** A client context structure, which holds client specific callbacks, 
@@ -636,6 +652,9 @@ typedef struct svn_client_ctx_t
   /** Callback baton for progress_func.
    * @since New in 1.3. */
   void *progress_baton;
+
+  /* @since New in 1.5. */
+  svn_client_conflict_resolver_func_t conflict_resolver_func;
 } svn_client_ctx_t;
 
 

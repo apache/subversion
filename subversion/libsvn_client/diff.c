@@ -1979,29 +1979,22 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
           apr_hash_set(notify_b->skipped_paths, skipped_path,
                        APR_HASH_KEY_STRING, skipped_path);
         }
-
-      if (notify->content_state == svn_wc_notify_state_conflicted)
-        {
-          /* TODO: Determine whether the path is already conflicted. */
-          svn_boolean_t path_already_conflicted = FALSE;
-          if (path_already_conflicted)
-            {
-              /* TODO: Invoke any provided conflict resolution callback.
-              void *conflict_resolver = NULL;
-              if (conflict_resolver)
-                (*conflict_resolver)(notify_b->path, notify_b->pool);
-              */
-            }
-          else
-            {
-              /* Note the path in conflict. */
-              /* ### We might be able to use the entries cache instead. */
-            }
-        }
     }
 
   if (notify_b->wrapped_func)
     (*notify_b->wrapped_func)(notify_b->wrapped_baton, notify, pool);
+}
+
+/* An implementation of the svn_client_conflict_resolver_func_t
+   interface.  Our default conflict resolution approach is to
+   complain, and error out. */
+static svn_error_t *
+default_conflict_resolver(const char *path, void *baton, apr_pool_t *pool)
+{
+  return svn_error_createf(SVN_ERR_WC_FOUND_CONFLICT, NULL,
+                           _("Path '%s' is in conflict, and must be resolved "
+                             "before the remainder of the requested merge "
+                             "can be applied"), path);
 }
 
 /* Create merge info describing the merge of RANGE into our target,
