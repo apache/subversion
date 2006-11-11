@@ -149,7 +149,7 @@ sub process_revision
     }
 
     ### TODO: Display a commit which was the result of a merge
-    ### operation with [sytle=dashed,weight=1,color=blue]
+    ### operation with [sytle=dashed,color=blue]
 
     # If this is a copy, work out if it was from somewhere interesting
     if (defined($copyfrom_path) && 
@@ -158,7 +158,7 @@ sub process_revision
       $interesting{$path . ':' . $revision} = 1;
       $tracking{$path} = $revision;
       print "\t\"$copyfrom_path:$copyfrom_rev\" -> ";
-      print " \"$path:$revision\" [label=\"copy at r$revision\",weight=1,color=green];\n";
+      print " \"$path:$revision\" [label=\"copy at r$revision\",color=green];\n";
       $copysource{"$copyfrom_path:$copyfrom_rev"} = 1;
       $copydest{"$path:$revision"} = 1;
     }
@@ -182,9 +182,14 @@ sub process_revision
 
 }
 
-# And we can do it all with just one call to SVN :)
+# Begin writing the graph descriptor.
 print "digraph tree {\n";
+print "\tgraph [bgcolor=white];\n";
+print "\tnode [color=lightblue2, style=filled];\n";
+print "\tedge [color=black, labeljust=r];\n";
+print "\n";
 
+# Retrieve the requested history.
 $ra->get_log(['/'], $startrev, $youngest, 0, 1, 0, \&process_revision);
 
 # Now ensure that everything is linked.
@@ -208,7 +213,7 @@ foreach my $codeline_change (keys %codeline_changes_forward) {
     while (defined($nextchange)) {
       if (exists($copysource{$nextchange}) or
           !exists($codeline_changes_forward{$nextchange}) ) {
-        print "\"$nextchange\" [weight=100,label=\"$changecount change(s)\",style=bold];";
+        print "\"$nextchange\" [label=\"$changecount change(s)\"];";
         last;
       }
       $changecount++;
@@ -218,5 +223,7 @@ foreach my $codeline_change (keys %codeline_changes_forward) {
   }
 }
 
+#my $graph_description = "Family Tree\n$startpath, $startrev through $youngest";
+#print "\tgraph [label=\"$graph_description\", fontsize=18];\n";
 print "}\n";
 #print STDERR "\n";
