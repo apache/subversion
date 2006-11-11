@@ -17,12 +17,17 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 #
+# View graphs using a command like:
+#
+#   svn-graph.pl file:///tmp/repos | dotty -
+#
 # TODO:
-#   - calculate the repository root at runtime so the user can pass
-#     the node of interest as a single URL
-#   - produce the graphical output ourselves (SVG?) instead
-#     of using .dot?
-#   - display svnmerge.py/Subversion merge history
+#  - Calculate the repository root at runtime so the user can pass
+#    the node of interest as a single URL.
+#  - (Also?) produce the graphical output ourselves (SVG?) instead
+#    of writing a GraphViz ".dot" data file.  This can be done with
+#    GraphViz using 'dot'.
+#  - Display svnmerge.py/Subversion merge history.
 #
 
 use strict;
@@ -142,6 +147,9 @@ sub process_revision
       delete($tracking{$path});
       next;
     }
+
+    ### TODO: Display a commit which was the result of a merge
+    ### operation with [sytle=dashed,weight=1,color=blue]
 
     # If this is a copy, work out if it was from somewhere interesting
     if (defined($copyfrom_path) && 
