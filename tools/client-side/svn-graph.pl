@@ -77,6 +77,11 @@ my %codeline_changes_back = ();
 my %copysource = ();
 my %copydest = ();
 
+write_graph_descriptor();
+#print STDERR "\n";
+
+
+
 # Validate the command-line arguments, and set the global variables
 # $repos_url, $youngest, $startrev, and $startpath.
 sub parse_commandline
@@ -182,48 +187,53 @@ sub process_revision
 
 }
 
-# Begin writing the graph descriptor.
-print "digraph tree {\n";
-print "\tgraph [bgcolor=white];\n";
-print "\tnode [color=lightblue2, style=filled];\n";
-print "\tedge [color=black, labeljust=r];\n";
-print "\n";
+# Write a descriptor for the graph in GraphViz .dot format to stdout.
+sub write_graph_descriptor
+{
+  # Begin writing the graph descriptor.
+  print "digraph tree {\n";
+  print "\tgraph [bgcolor=white];\n";
+  print "\tnode [color=lightblue2, style=filled];\n";
+  print "\tedge [color=black, labeljust=r];\n";
+  print "\n";
 
-# Retrieve the requested history.
-$ra->get_log(['/'], $startrev, $youngest, 0, 1, 0, \&process_revision);
+  # Retrieve the requested history.
+  $ra->get_log(['/'], $startrev, $youngest, 0, 1, 0, \&process_revision);
 
-# Now ensure that everything is linked.
-foreach my $codeline_change (keys %codeline_changes_forward) {
+  # Now ensure that everything is linked.
+  foreach my $codeline_change (keys %codeline_changes_forward) {
 
-  # If this node is not the first in its codeline chain, and it isn't
-  # the source of a copy, it won't be the source of an edge
-  if (exists($codeline_changes_back{$codeline_change}) &&
-      !exists($copysource{$codeline_change})) {
-    next;
-  }
-
-  # If this node is the first in it's chain, or the source of
-  # a copy, then we'll print it, and then find the next in
-  # the chain that needs to be printed too
-  if (!exists($codeline_changes_back{$codeline_change}) or
-       exists($copysource{$codeline_change}) ) {
-    print "\t\"$codeline_change\" -> ";
-    my $nextchange = $codeline_changes_forward{$codeline_change};
-    my $changecount = 1;
-    while (defined($nextchange)) {
-      if (exists($copysource{$nextchange}) or
-          !exists($codeline_changes_forward{$nextchange}) ) {
-        print "\"$nextchange\" [label=\"$changecount change(s)\"];";
-        last;
-      }
-      $changecount++;
-      $nextchange = $codeline_changes_forward{$nextchange};
+    # If this node is not the first in its codeline chain, and it isn't
+    # the source of a copy, it won't be the source of an edge
+    if (exists($codeline_changes_back{$codeline_change}) &&
+        !exists($copysource{$codeline_change})) {
+      next;
     }
-    print "\n";
-  }
-}
 
-#my $graph_description = "Family Tree\n$startpath, $startrev through $youngest";
-#print "\tgraph [label=\"$graph_description\", fontsize=18];\n";
-print "}\n";
-#print STDERR "\n";
+    # If this node is the first in it's chain, or the source of
+    # a copy, then we'll print it, and then find the next in
+    # the chain that needs to be printed too
+    if (!exists($codeline_changes_back{$codeline_change}) or
+         exists($copysource{$codeline_change}) ) {
+      print "\t\"$codeline_change\" -> ";
+      my $nextchange = $codeline_changes_forward{$codeline_change};
+      my $changecount = 1;
+      while (defined($nextchange)) {
+        if (exists($copysource{$nextchange}) or
+            !exists($codeline_changes_forward{$nextchange}) ) {
+          print "\"$nextchange\" [label=\"$changecount change(s)\"];";
+          last;
+        }
+        $changecount++;
+        $nextchange = $codeline_changes_forward{$nextchange};
+      }
+      print "\n";
+    }
+  }
+
+  # Complete the descriptor (delaying write of font size to avoid
+  # inheritance by any subgraphs).
+  #my $title = "Family Tree\n$startpath, $startrev through $youngest";
+  #print "\tgraph [label=\"$title\", fontsize=18];\n";
+  print "}\n";
+}
