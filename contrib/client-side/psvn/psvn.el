@@ -22,7 +22,7 @@
 ;;; Commentary
 
 ;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux,
-;; freebsd5, red hat el3 with svn 1.2.3
+;; freebsd5, red hat el3 with svn 1.3.1
 
 ;; psvn.el is an interface for the revision control tool subversion
 ;; (see http://subversion.tigris.org)
@@ -380,6 +380,10 @@ In either case the mark gets the face
 The higher the number, the more debug messages are shown.
 
 See `svn-status-message' for the meaning of values for that variable.")
+
+(defvar svn-bookmark-list "A list of locations for a quick access via `svn-status-via-bookmark'" nil)
+;;(setq svn-bookmark-list '(("proj1" . "~/work/proj1")
+;;                          ("doc1" . "~/docs/doc1")))
 
 (defvar svn-status-buffer-name "*svn-status*" "Name for the svn status buffer")
 (defvar svn-process-buffer-name "*svn-process*" "Name for the svn process buffer")
@@ -787,6 +791,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (setq svn-global-keymap (make-sparse-keymap))
   (define-key svn-global-keymap (kbd "v") 'svn-status-version)
   (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
+  (define-key svn-global-keymap (kbd "b") 'svn-status-via-bookmark)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
@@ -3504,6 +3509,21 @@ If no files have been marked, commit recursively the file at point."
   "Pop to the `svn-status-buffer-name' buffer."
   (interactive)
   (pop-to-buffer svn-status-buffer-name))
+
+(defun svn-status-via-bookmark (bookmark)
+  "Allows a quick selection of a bookmark in `svn-bookmark-list'.
+Run `svn-status' on the selected bookmark."
+  (interactive
+   (list
+    (let ((completion-ignore-case t)
+          (completion-function (if (fboundp 'ido-completing-read) 'ido-completing-read 'completing-read)))
+      (funcall completion-function "SVN status bookmark: " svn-bookmark-list))))
+  (unless bookmark
+    (error "No bookmark specified"))
+  (let ((directory (cdr (assoc bookmark svn-bookmark-list))))
+    (if (file-directory-p directory)
+        (svn-status directory)
+      (error "%s is not a directory" directory))))
 
 (defun svn-status-export ()
   "Run `svn export' for the current working copy.
