@@ -1138,7 +1138,9 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (when svn-status-pre-run-svn-buffer
                     (with-current-buffer svn-status-pre-run-svn-buffer
                       (unless (eq major-mode 'svn-status-mode)
-                        (goto-line (line-number-at-pos) (get-buffer svn-status-last-output-buffer-name)))))
+                        (let ((src-line-number (line-number-at-pos)))
+                          (pop-to-buffer (get-buffer svn-status-last-output-buffer-name))
+                          (goto-line src-line-number)))))
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
                   (svn-process-sentinel-fixup-path-seperators)
