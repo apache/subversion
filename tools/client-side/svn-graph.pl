@@ -1,4 +1,5 @@
 #!/usr/bin/perl -w
+# vim:ts=2:sw=2:expandtab
 #
 # svn-graph.pl - produce a GraphViz .dot graph for the branch history
 #                of a node
