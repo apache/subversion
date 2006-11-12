@@ -180,7 +180,7 @@ sub process_revision
     # /trunk/asdf/foo updates /trunk).  We mark that parent as
     # interesting (a potential source for copies), draw a link, and
     # update its tracking revision.
-    while ($path =~ m:/:)
+    do
     {
       if (exists($tracking{$path}) && $tracking{$path} != $revision)
       {
@@ -191,8 +191,8 @@ sub process_revision
         $interesting{$path . ':' . $revision} = 1;
         $tracking{$path} = $revision;
       }
-      $path =~ s:/[^/]+$::;
-    }
+      $path =~ s:/[^/]*$::;
+    } until ($path eq '');
   }
 }
 
