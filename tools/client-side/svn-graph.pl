@@ -126,8 +126,8 @@ usage: svn-graph.pl [-r START_REV:END_REV] [-p PATH] REPOS_URL
   }
 }
 
-# This function is a callback which is called for every revision
-# as we traverse
+# This function is a callback which is invoked for every revision as
+# we traverse change log messages.
 sub process_revision
 {
   my $changed_paths = shift;
@@ -139,7 +139,8 @@ sub process_revision
 
   #print STDERR "$revision\r";
 
-  foreach my $path (keys %$changed_paths) {
+  foreach my $path (keys %$changed_paths)
+  {
     my $copyfrom_path = $$changed_paths{$path}->copyfrom_path;
     my $copyfrom_rev = undef;
     my $action = $$changed_paths{$path}->action;
@@ -157,7 +158,8 @@ sub process_revision
     ### operation with [sytle=dashed,color=blue]
 
     # If this is a copy, work out if it was from somewhere interesting
-    if (defined($copyfrom_path)) {
+    if (defined($copyfrom_path))
+    {
       $copyfrom_rev = $tracking{$copyfrom_path};
     }
     if (defined($copyfrom_rev) &&
@@ -166,7 +168,9 @@ sub process_revision
       $interesting{$path . ':' . $revision} = 1;
       $tracking{$path} = $revision;
       print "\t\"$copyfrom_path:$copyfrom_rev\" -> ";
-      print " \"$path:$revision\" [label=\"copy at r$revision\",color=green];\n";
+      print " \"$path:$revision\"";
+      print " [label=\"copy at r$revision\",color=green];\n";
+
       $copysource{"$copyfrom_path:$copyfrom_rev"} = 1;
       $copydest{"$path:$revision"} = 1;
     }
@@ -175,8 +179,10 @@ sub process_revision
     # that we're tracking (i.e. a change to /trunk/asdf/foo updates
     # /trunk).  We mark that parent as interesting (a potential source
     # for copies), draw a link, and update it's tracking revision.
-    while ($path =~ m:/:) {
-      if (exists($tracking{$path}) && $tracking{$path} != $revision) {
+    while ($path =~ m:/:)
+    {
+      if (exists($tracking{$path}) && $tracking{$path} != $revision)
+      {
         $codeline_changes_forward{"$path:$tracking{$path}"} =
           "$path:$revision";
         $codeline_changes_back{"$path:$revision"} =
@@ -187,7 +193,6 @@ sub process_revision
       $path =~ s:/[^/]+$::;
     }
   }
-
 }
 
 # Write a descriptor for the graph in GraphViz .dot format to stdout.
@@ -204,12 +209,13 @@ sub write_graph_descriptor
   $ra->get_log(['/'], $startrev, $youngest, 0, 1, 0, \&process_revision);
 
   # Now ensure that everything is linked.
-  foreach my $codeline_change (keys %codeline_changes_forward) {
-
+  foreach my $codeline_change (keys %codeline_changes_forward)
+  {
     # If this node is not the first in its codeline chain, and it isn't
     # the source of a copy, it won't be the source of an edge
     if (exists($codeline_changes_back{$codeline_change}) &&
-        !exists($copysource{$codeline_change})) {
+        !exists($copysource{$codeline_change}))
+    {
       next;
     }
 
@@ -217,13 +223,16 @@ sub write_graph_descriptor
     # a copy, then we'll print it, and then find the next in
     # the chain that needs to be printed too
     if (!exists($codeline_changes_back{$codeline_change}) or
-         exists($copysource{$codeline_change}) ) {
+         exists($copysource{$codeline_change}) )
+    {
       print "\t\"$codeline_change\" -> ";
       my $nextchange = $codeline_changes_forward{$codeline_change};
       my $changecount = 1;
-      while (defined($nextchange)) {
+      while (defined($nextchange))
+      {
         if (exists($copysource{$nextchange}) or
-            !exists($codeline_changes_forward{$nextchange}) ) {
+            !exists($codeline_changes_forward{$nextchange}) )
+        {
           print "\"$nextchange\" [label=\"$changecount change(s)\"];";
           last;
         }
