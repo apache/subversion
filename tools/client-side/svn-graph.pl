@@ -141,7 +141,7 @@ sub process_revision
 
   foreach my $path (keys %$changed_paths) {
     my $copyfrom_path = $$changed_paths{$path}->copyfrom_path;
-    my $copyfrom_rev = $$changed_paths{$path}->copyfrom_rev;
+    my $copyfrom_rev = undef;
     my $action = $$changed_paths{$path}->action;
 
     # See if we're deleting one of our tracking nodes
@@ -157,7 +157,10 @@ sub process_revision
     ### operation with [sytle=dashed,color=blue]
 
     # If this is a copy, work out if it was from somewhere interesting
-    if (defined($copyfrom_path) && 
+    if (defined($copyfrom_path)) {
+      $copyfrom_rev = $tracking{$copyfrom_path};
+    }
+    if (defined($copyfrom_rev) &&
         exists($interesting{$copyfrom_path . ':' . $copyfrom_rev}))
     {
       $interesting{$path . ':' . $revision} = 1;
