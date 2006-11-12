@@ -235,7 +235,12 @@ sub write_graph_descriptor
         if (exists($copysource{$nextchange}) or
             !exists($codeline_changes_forward{$nextchange}) )
         {
-          print "\"$nextchange\" [label=\"$changecount change(s)\"];";
+          print "\"$nextchange\" [label=\"$changecount change";
+          if ($changecount > 1)
+          {
+            print 's';
+          }
+          print '"];';
           last;
         }
         $changecount++;
