@@ -175,10 +175,11 @@ sub process_revision
       $copydest{"$path:$revision"} = 1;
     }
 
-    # For each change, we'll move up the path, updating any parents
-    # that we're tracking (i.e. a change to /trunk/asdf/foo updates
-    # /trunk).  We mark that parent as interesting (a potential source
-    # for copies), draw a link, and update it's tracking revision.
+    # For each change, we'll walk up the path one component at a time,
+    # updating any parents that we're tracking (i.e. a change to
+    # /trunk/asdf/foo updates /trunk).  We mark that parent as
+    # interesting (a potential source for copies), draw a link, and
+    # update its tracking revision.
     while ($path =~ m:/:)
     {
       if (exists($tracking{$path}) && $tracking{$path} != $revision)
