@@ -58,7 +58,10 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   const char *path_local;
   svn_error_t *err;
 
-  path_local = svn_path_local_style(n->path, pool);
+  if (svn_path_is_url(n->path))
+    path_local = n->path;
+  else
+    path_local = svn_path_local_style(n->path, pool);
 
   switch (n->action)
     {

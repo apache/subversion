@@ -211,6 +211,13 @@ def basic_update(sbox):
                                                 [], [],
                                                 'update', '--quiet', xx_path)
 
+  # URL's are also skipped.
+  urls = ('http://localhost/a/b/c', 'http://localhost', 'svn://localhost')
+  for url in urls:
+    out, err = svntest.actions.run_and_verify_svn("update " + url,
+                                                  ["Skipped '"+url+"'\n"], [],
+                                                  'update', url)
+
 #----------------------------------------------------------------------
 def basic_mkdir_url(sbox):
   "basic mkdir URL"
