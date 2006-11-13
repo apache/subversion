@@ -1,0 +1,439 @@
+/*
+ * ====================================================================
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ *
+ * This software is licensed as described in the file COPYING, which
+ * you should have received as part of this distribution.  The terms
+ * are also available at http://subversion.tigris.org/license-1.html.
+ * If newer versions of this license are posted there, you may use a
+ * newer version instead, at your option.
+ *
+ * This software consists of voluntary contributions made by many
+ * individuals.  For exact contribution history, see the revision
+ * history and logs, available at http://subversion.tigris.org/.
+ * ====================================================================
+ *
+ * svn_containers.swg: This is a child file of svn_types.swg, and
+ *   should not be included directly.  This file should contain
+ *   typemaps that deal container types
+ *   - i.e. apr_hash_t, apr_array_header_t .
+ */
+
+/* =======================================================================
+   %typemap(argout) apr_hash_t **
+*/
+
+#ifdef SWIGPYTHON
+%define %hash_argout_typemap(ParamName, ValueType)
+%typemap(argout) apr_hash_t **ParamName {
+  %append_output(svn_swig_py_convert_hash(*$1,
+                                          $descriptor(ValueType),
+                                          _global_py_pool));
+}
+%enddef
+#endif
+#ifdef SWIGPERL
+%define %hash_argout_typemap(ParamName, ValueType)
+%typemap(argout) apr_hash_t **ParamName {
+  %append_output(svn_swig_pl_convert_hash(*$1, $descriptor(ValueType)));
+}
+%enddef
+#endif
+#ifdef SWIGRUBY
+%define %hash_argout_typemap(ParamName, ValueType)
+%typemap(argout) apr_hash_t **ParamName {
+  %append_output(svn_swig_rb_apr_hash_to_hash_swig_type(*$1,
+                                                        #ValueType));
+}
+%enddef
+#endif
+
+%hash_argout_typemap(dirents, svn_dirent_t *)
+%hash_argout_typemap(locks, svn_lock_t *)
+#ifdef SWIGPYTHON
+/* FIXME: We are effectively treating this hash as an opaque blob...
+   this is because we currently do not have suitable typemaps to convert
+   it back to an apr_hash_t * for use. */
+%typemap(argout) apr_hash_t **cfg_hash {
+  %append_output(svn_swig_NewPointerObj(*$1, $descriptor(apr_hash_t *),
+                                        _global_py_pool, args));
+}
+#else
+%hash_argout_typemap(cfg_hash, svn_config_t *)
+#endif
+
+/* -----------------------------------------------------------------------
+   Output of apr_hash_t * <const char *, svn_string_t *>
+   (commonly used for property name and value pairs)
+*/
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **HASH_SVN_STRING {
+  %append_output(svn_swig_py_prophash_to_dict(*$1));
+}
+%typemap(argout) apr_hash_t **HASH_SVN_STRING_MAYBENULL {
+  %append_output(!*$1 ? Py_None : svn_swig_py_prophash_to_dict(*$1));
+}
+#endif
+#ifdef SWIGPERL
+%typemap(argout) apr_hash_t **HASH_SVN_STRING {
+  %append_output(svn_swig_pl_prophash_to_hash(*$1));
+}
+%typemap(argout) apr_hash_t **HASH_SVN_STRING_MAYBENULL {
+  %append_output(!*$1 ? &PL_sv_undef : svn_swig_pl_prophash_to_hash(*$1));
+}
+#endif
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **HASH_SVN_STRING {
+  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
+}
+%typemap(argout) apr_hash_t **HASH_SVN_STRING_MAYBENULL {
+  %append_output(!*$1 ? Qnil : svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
+}
+#endif
+%apply apr_hash_t **HASH_SVN_STRING {
+  apr_hash_t **props,
+  apr_hash_t **original_props,
+  apr_hash_t **table_p
+};
+%apply apr_hash_t **HASH_SVN_STRING_MAYBENULL {
+  /* svn_config_read_auth_data() */
+  apr_hash_t **hash
+};
+
+
+/* -----------------------------------------------------------------------
+   apr_hash_t **locations
+   svn_repos_trace_node_locations()
+   svn_ra_get_locations()
+*/
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **locations {
+  %append_output(svn_swig_py_locationhash_to_dict(*$1));
+}
+#endif
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **locations
+{
+  %append_output(svn_swig_rb_apr_revnum_key_hash_to_hash_string(*$1));
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   apr_hash_t **externals_old
+   apr_hash_t **externals_new
+   svn_wc_edited_externals()
+*/
+
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **externals_old, apr_hash_t **externals_new {
+  %append_output(svn_swig_rb_apr_hash_to_hash_string(*$1));
+}
+#endif
+
+
+/* =======================================================================
+   %typemap(in) apr_hash_t *
+*/
+
+/* -----------------------------------------------------------------------
+   Input of apr_hash_t * <const char *, svn_string_t *>
+   (commonly used for property name and value pairs)
+*/
+
+#ifdef SWIGPYTHON
+%typemap(in) apr_hash_t *PROPHASH
+{
+  $1 = svn_swig_py_prophash_from_dict($input, _global_pool);
+}
+#endif
+
+#ifdef SWIGRUBY
+%typemap(in) apr_hash_t *PROPHASH
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
+}
+#endif
+
+#if defined(SWIGPYTHON) || defined(SWIGRUBY)
+%apply apr_hash_t *PROPHASH {
+  apr_hash_t *target_props,
+  apr_hash_t *source_props,
+  apr_hash_t *hash
+};
+#endif
+
+/* -----------------------------------------------------------------------
+   Input of scripting hash/dictionary (string => string)
+   converted to apr_hash_t (const char * => const char *)
+*/
+#ifdef SWIGPYTHON
+%typemap(in) apr_hash_t *HASH_CSTRING {
+  $1 = svn_swig_py_stringhash_from_dict($input, _global_pool);
+}
+%typemap(in) apr_hash_t *HASH_CSTRING_MAYBENULL {
+  /* PYTHON-FIXME: Handle None -> NULL. */
+  $1 = svn_swig_py_stringhash_from_dict($input, _global_pool);
+}
+#endif
+#ifdef SWIGPERL
+%typemap(in) apr_hash_t *HASH_CSTRING {
+  $1 = svn_swig_pl_strings_to_hash($input, _global_pool);
+}
+%typemap(in) apr_hash_t *HASH_CSTRING_MAYBENULL {
+  /* PERL-FIXME: Handle undef -> NULL. */
+  $1 = svn_swig_pl_strings_to_hash($input, _global_pool);
+}
+#endif
+#ifdef SWIGRUBY
+%typemap(in) apr_hash_t *HASH_CSTRING {
+  $1 = svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+}
+%typemap(in) apr_hash_t *HASH_CSTRING_MAYBENULL {
+  $1 = (NIL_P($input)) ? NULL : 
+    svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
+}
+#endif
+
+%apply apr_hash_t *HASH_CSTRING {
+  apr_hash_t *path_tokens
+};
+%apply apr_hash_t *HASH_CSTRING_MAYBENULL {
+  apr_hash_t *fs_config,
+  apr_hash_t *lock_tokens
+};
+
+/* -----------------------------------------------------------------------
+   handle config and fs_config in svn_{fs,repos}_create
+*/
+
+#ifdef SWIGPERL
+%typemap(in) apr_hash_t *config {
+    $1 = svn_swig_pl_objs_to_hash_by_name ($input, "svn_config_t *",
+                                           _global_pool);
+}
+#endif
+#ifdef SWIGRUBY
+%typemap(in) apr_hash_t *config
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = svn_swig_rb_hash_to_apr_hash_swig_type($input, "svn_config_t *", _global_pool);
+  }
+}
+#endif
+
+#ifdef SWIGRUBY
+%typemap(in) apr_hash_t *path_revs
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_revnum($input, _global_pool);
+}
+#endif
+
+/* =======================================================================
+   %typemap(argout) apr_array_header_t **
+*/
+
+/* -----------------------------------------------------------------------
+   Output of apr_array_header_t * <svn_prop_t *>
+*/
+#ifdef SWIGRUBY
+%typemap(argout) apr_array_header_t **OUTPUT_OF_PROP {
+  %append_output(svn_swig_rb_apr_array_to_array_prop(*$1));
+}
+
+%apply apr_array_header_t **OUTPUT_OF_PROP {
+  apr_array_header_t **entry_props,
+  apr_array_header_t **wc_props,
+  apr_array_header_t **regular_props,
+  apr_array_header_t **propdiffs
+};
+#endif
+
+/* -----------------------------------------------------------------------
+   Output of apr_array_header_t * <const char *>
+*/
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  %append_output(svn_swig_py_array_to_list(*$1));
+}
+#endif
+#ifdef SWIGPERL
+%typemap(argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  %append_output(svn_swig_pl_array_to_list(*$1));
+}
+#endif
+#ifdef SWIGRUBY
+%typemap(argout) apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  %append_output(svn_swig_rb_apr_array_to_array_string(*$1));
+}
+#endif
+
+%apply apr_array_header_t **OUTPUT_OF_CONST_CHAR_P {
+  apr_array_header_t **patterns,
+  apr_array_header_t **logfiles,
+  apr_array_header_t **names_p
+};
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t **externals_p
+   svn_wc_parse_externals_description2()
+*/
+
+#ifdef SWIGRUBY
+%typemap(argout) apr_array_header_t **externals_p {
+  %append_output(svn_swig_rb_apr_array_to_array_external_item(*$1));
+}
+#endif
+
+/* svn_client_update2 */
+#ifdef SWIGRUBY
+%typemap(argout) apr_array_header_t **result_revs {
+  %append_output(svn_swig_rb_apr_array_to_array_svn_rev(*$1));
+}
+#endif
+
+/* =======================================================================
+   %typemap(in) apr_array_header_t *
+*/
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t *location_revisions
+   svn_repos_trace_node_locations()
+   svn_ra_get_locations()
+*/
+
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *location_revisions {
+    $1 = (apr_array_header_t *) svn_swig_py_revnums_to_array($input,
+                                                             _global_pool);
+    if ($1 == NULL)
+        SWIG_fail;
+}
+#endif
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *location_revisions {
+  $1 = svn_swig_rb_array_to_apr_array_revnum($input, _global_pool);
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   define a general INPUT param of an array of const char * items.
+ */
+
+#ifdef SWIGPYTHON
+%typemap(in) const apr_array_header_t *STRINGLIST {
+    $1 = (apr_array_header_t *) svn_swig_py_strings_to_array($input,
+                                                             _global_pool);
+    if ($1 == NULL)
+        SWIG_fail;
+}
+#endif
+#ifdef SWIGPERL
+%typemap(in) const apr_array_header_t *STRINGLIST {
+    $1 = (apr_array_header_t *) svn_swig_pl_strings_to_array($input,
+                                                             _global_pool);
+}
+#endif
+#ifdef SWIGRUBY
+%typemap(in) const apr_array_header_t *STRINGLIST {
+  $1 = svn_swig_rb_strings_to_apr_array($input, _global_pool);
+}
+#endif
+
+/* svn_delta_path_driver() mutates its 'paths' argument (by sorting it),
+   despite the fact that it is notionally an input parameter - hence, the
+   lack of 'const' in that one case. */
+%apply const apr_array_header_t *STRINGLIST {
+  const apr_array_header_t *args,
+  const apr_array_header_t *diff_options,
+  apr_array_header_t *paths,
+  const apr_array_header_t *targets
+};
+
+/* -----------------------------------------------------------------------
+   auth provider convertors
+*/
+#ifdef SWIGPERL
+%typemap(in) apr_array_header_t *providers {
+    $1 = (apr_array_header_t *) svn_swig_pl_objs_to_array($input,
+      $descriptor(svn_auth_provider_object_t *), _global_pool);
+}
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *providers {
+    svn_auth_provider_object_t *provider;
+    int targlen;
+    if (!PySequence_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "not a sequence");
+        SWIG_fail;
+    }
+    targlen = PySequence_Length($input);
+    $1 = apr_array_make(_global_pool, targlen, sizeof(provider));
+    ($1)->nelts = targlen;
+    while (targlen--) {
+        provider = svn_swig_MustGetPtr(PySequence_GetItem($input, targlen),
+          $descriptor(svn_auth_provider_object_t *), $svn_argnum);
+        if (PyErr_Occurred()) {
+          SWIG_fail;
+        }
+        APR_ARRAY_IDX($1, targlen, svn_auth_provider_object_t *) = provider;
+    }
+}
+#endif
+
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *providers
+{
+  $1 = svn_swig_rb_array_to_auth_provider_object_apr_array($input, _global_pool);
+}
+#endif
+
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *proplist
+{
+  $1 = svn_swig_rb_array_to_apr_array_prop($input, _global_pool);
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t *wcprop_changes svn_wc_process_committed2()
+   apr_array_header_t *propchanges svn_wc_merge_props()
+*/
+
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *wcprop_changes,
+             apr_array_header_t *propchanges
+{
+  VALUE rb_pool;
+  apr_pool_t *pool;
+
+  svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
+
+  $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t *merge_options
+   svn_wc_merge2()
+*/
+#ifdef SWIGRUBY
+%typemap(in) apr_array_header_t *merge_options
+{
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    VALUE rb_pool;
+    apr_pool_t *pool;
+
+    svn_swig_rb_get_pool(argc, argv, self, &rb_pool, &pool);
+    $1 = svn_swig_rb_array_to_apr_array_prop($input, pool);
+  }
+}
+#endif
+

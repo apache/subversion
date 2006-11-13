@@ -1,0 +1,211 @@
+Windows Service Support for svnserve
+====================================
+
+svnserve can now be run as a native Windows service.  This means that the
+service can be started at system boot, or at any other time, without the
+need for any wrapper code to start the service.  The service can be managed
+like any other Windows service, using command-line tools ("net start",
+"net stop", or sc.exe) or GUI tools (the Services administrative tool).
+
+
+Installation
+------------
+
+For now, no means is provided to install the service.  Most Windows
+OSes derived from Windows NT (such as Windows XP, Windows 2000,
+Windows 2003 Server) provide a command-line tool for installing
+services, called SC.EXE for "Service Control". To create a service for
+svnserve, use SC.EXE:
+
+   sc create <name>
+      binpath= "c:\svn\bin\svnserve.exe --service <svn-args>"
+      displayname= "Subversion Repository"
+      depend= Tcpip
+
+where <name> is any service name you want, e.g. "svnserve", and
+<svn-args> are the arguments to svnserve, such as --root,
+--listen-port, etc.  (All of this should be specified on a single
+line, of course.)
+
+In order for svnserve to run as a Windows service, you MUST specify
+the --service argument, and you must NOT specify any other run mode
+argument, such as --daemon, --tunnel, --inetd, or any of their short
+forms.  There is no short form for --service.
+
+If the path to svnserve.exe contains spaces or other characters that
+must be escaped, then you must enclose the path to svnserve.exe with
+double-quotes, which themselves must be quoted using a backslash.
+Fortunately the syntax is similar to that on Unix platforms:
+
+   sc create <name>
+      binpath= "\"c:\program files\subversion\bin\svnserve.exe\" ..."
+
+SC has many options; use "sc /?".  The most relevant are:
+
+   sc create <name>     create a new service
+   sc qc <name>         query config for a service
+   sc query <name>      query status
+   sc delete <name>     delete any service -- BE CAREFUL!
+   sc config <name> ... update service config; same args as sc create
+   sc start <name>      start a service (does NOT wait for completion!)
+   sc stop <name>       stop a service (does NOT wait for it to stop!)
+
+Note that the command-line syntax for SC is rather odd.  Key/value
+pairs are specified as "key= value" (without the double-quotes).  The
+"key=" part must not have any spaces, and the "value" part MUST be
+separated from the "key=" by a space.
+
+If you want to be able to see the command shell, add these arguments
+to the "sc create" command-line:
+
+   type= own type= interact
+
+This sets the "interactive" bit on the service, which allows it to
+interact with the local console session.
+
+You can create as many services as you need; there is no restriction
+on the number of services, or their names.  I use a prefix, like
+"svn.foo", "svn.bar", etc.  Each service runs in a separate process.
+As usual, it is your responsbility as an administrator to make sure
+that no two service instances use the same repository root path, or
+the same combination of --listen-port and --listen-host.
+
+
+Uninstalling
+------------
+
+To uninstall a service, stop the service, then delete it, using "sc
+delete <name>".  Be very careful with this command, since you can
+delete any system service, including essential Windows services,
+accidentally.
+
+Also, make sure that you stop the service before you delete it.  If
+you delete the service before stopping it, the Service Control Manager
+will mark the service "deleted", but will intentionally not stop the
+service.  The service will be deleted when the system reboots, or when
+the service finally exits.  After all, you only asked to delete the
+service, not to stop it.
+
+That's all there is to it.
+
+
+Automatically Starting Service on System Boot
+---------------------------------------------
+
+By default, SC creates the service with the start mode set to "demand"
+(manual).  If you want the service to start automatically when the
+system boots, add "start= auto" to the command line.  You can change
+the start mode for an existing service using "sc config <name> start=
+auto", or also by using the Windows GUI interface for managing
+services.  (Start, All Programs, Administrative Tools, Services, or
+just run "services.msc" from Start/Run or from a command-line.)
+
+Note: In order for svnserve to start correctly on system boot, you
+must properly declare its startup dependencies.  The Service Control
+Manager will start services as early as it can, and if you do not
+properly declare its startup dependencies, it can potentially start
+before the TCP/IP stack has been started.  This is why you must
+provide specify 'depend= Tcpip' to SC.EXE when creating the service.
+
+
+Starting and Stopping the Service
+---------------------------------
+
+You start and stop the service like any other Windows service.  You
+can use the command-line "net start <name>", use the GUI Services
+interface.
+
+
+Debugging
+---------
+
+Debugging a Windows service can be difficult, because the service runs
+in a very different context than a user who is logged in.  By default,
+services run in a "null" desktop environment.  They cannot interact
+with the user (desktop) in any way, and vice versa.
+
+Also, by default, services run as a special user, called LocalSystem.
+LocalSystem is not a "user" in the normal sense; it is an NT security
+ID (SID) that is sort of like root, but different.  LocalSystem
+typically does NOT have access to any network shares, even if you use
+"net use" to connect to a remote file server.  Again, this is because
+services run in a different login session.
+
+Depending on which OS you are running, you may have difficulty
+attaching a debugger to a running service process.  Also, if you are
+having trouble *starting* a service, then you can't attach to the
+process early enough to debug it.
+
+So what's a developer to do?  Well, there are several ways you can
+debug services.  First, you'll want to enable "interactive" access for
+the service.  This allows the service to interact with the local
+desktop -- you'll be able to see the command shell that the service
+runs in, see console output, etc.  To do this, you can either use the
+standard Windows Services tool (services.msc), or you can do it using
+sc.exe.
+
+   * With the GUI tool, open the properties page for a service, and go
+     to the "Log On" page.  Select "Local System account", and make
+     sure the "Allow service to interact with desktop" box is checked.
+
+   * With SC.EXE, configure the service using the command:
+
+         sc <name> config type= own type= interact
+
+     Yes, you must specify type= twice, and with exactly the spacing
+     shown.
+
+In both cases, you'll need to restart the service.  When you do, if
+the service started successfully, you'll see the console window of the
+service.  By default, it doesn't print anything out.
+
+Next, you'll want to attach a debugger, or configure the service to
+start under a debugger.  Attaching a debugger should be
+straightforward -- just find the process ID.  But if you need to debug
+something in the service startup path, you'll need to have a debugger
+attached from the very beginning.  There are two ways to do this.
+
+In the first method, you alter the command-line of the service (called
+the "binary path").  To do this, use SC.EXE to set the binary path to
+whatever debugger you are going to use.  I use the most recent version
+of WinDbg, which is excellent, and is available at:
+
+   http://www.microsoft.com/whdc/devtools/debugging/installx86.mspx
+
+For example, this command would configure the service to start under a
+debugger:
+
+   sc config <name> binpath= "d:\dbg\windbg.exe -g -G d:\svn\bin\svnserve.exe
+      --root d:\path\root --listen-port 9000"
+      depend= Tcpip
+
+The entire command must be on a single line, of course, and the binary
+path must be in double-quotes.  Also, the spacing MUST be: binpath= "..."
+
+Substitute whatever debugger you want, with whatever command-line you
+want, in place of windbg.exe.  Then start the service (sc start
+<name>), and the Service Control Manager should execute the
+command-line you provided as the binary path.  Then your debugger
+should start, and should launch the svnserve process.
+
+
+Known Issues
+------------
+
+* No management tool (installer, etc.).  For the first version, this
+  is intentional; we just want to get the service functionality tested
+  and committed before dealing with installation.
+
+* Right now, I don't know of a way to cleanly stop the svnserve
+  process.  Instead, the implementation closes the listen socket,
+  which causes the main loop to exit.  This isn't as bad as it sounds,
+  and is a LOT better than other options (such as terminating a
+  thread).
+
+
+To Do
+-----
+
+* The support for running svnserve as a Windows service is complete,
+  but there is still more work to be done for installing and managing
+  services.

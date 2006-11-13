@@ -1,0 +1,313 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<style type="text/css"> /* <![CDATA[ */
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
+  /* ]]> */</style>
+<link rel="stylesheet" type="text/css" media="print"
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
+<title>Subversion 1.4 Release Notes</title>
+</head>
+
+<body>
+<div class="app">
+
+<h1 style="text-align: center">Subversion 1.4 Release Notes</h1>
+
+<div class="h2" id="news" title="news">
+<h2>What's New in Subversion 1.4</h2>
+
+<ul>
+  <li><tt>svnsync</tt>, a new repository mirroring tool</li>
+  <li>Huge working-copy performance improvements</li>
+  <li>Support for BerkeleyDB 4.4 and its "auto recovery" feature</li>
+  <li>Size improvements to the binary delta algorithm</li>
+  <li>A handful of new command switches</li>
+  <li>Many improved APIs</li>
+  <li>More than 40 new bugfixes</li>
+</ul>
+
+<p>Details are described below.</p>
+
+<p>Subversion 1.4 is a superset of all previous Subversion releases,
+and is considered the current "best" release.  Anything in 1.0.x,
+1.1.x, 1.2.x or 1.3.x is also in 1.4, but 1.4 contains features and
+bugfixes not present in any earlier release.  The new features will
+eventually be documented in a 1.4 version of the free Subversion book,
+see <a
+href="http://svnbook.red-bean.com">svnbook.red-bean.com</a>.</p>
+
+</div>  <!-- news -->
+
+<div class="h2" id="compatibility" title="compatibility">
+<h2>Compatibility Concerns</h2>
+
+<p>Older clients and servers interoperate transparently with 1.4
+servers and clients.  Of course, some of the new 1.4 features may not
+be available unless both client and server are the latest version.
+There is <strong>no need</strong> to dump and reload your
+repositories; Subversion 1.4 can read repositories created by earlier
+versions.  To upgrade an existing installation, just install the
+newest libraries and binaries on top of the older ones.</p>
+
+<p>Subversion 1.4 maintains API/ABI compatibility with earlier
+releases, by only adding new functions.  A program written to the 1.0,
+1.1, 1.2 or 1.3 API can both compile and run using 1.4 libraries.
+However, a program written for 1.4 cannot necessarily compile or run
+against older libraries.</p>
+
+<div class="h3" id="wc-format-change" title="wc-format-change">
+<h3>Working Copy and Repository Format Changes</h3>
+
+<p>Due to certain improvements and bugfixes made to the working copy
+library, the version number of the working copy format has been
+incremented. This means that Subversion clients earlier than 1.4 will
+<em>not</em> be able to work with working copies produced by Subversion
+1.4.  Similarly, the repository format has changed as well, meaning
+that pre-1.4 Subversion tools that normally access a repository
+directly
+(e.g. <tt>svnserve</tt>, <tt>mod_dav_svn</tt>, <tt>svnadmin</tt>)
+won't be able to read a repository originally created by Subversion
+1.4. </p>
+
+<p><strong>WARNING:</strong> if a Subversion 1.4 client encounters a pre-1.4
+working copy, it will <em>automatically</em> upgrade the working copy
+format as soon as it touches it, making it unreadable by older
+Subversion clients.  If you are using several versions of Subversion
+on your machine, you need to be careful about which version you use in
+which working copy, to avoid accidentally upgrading the working copy
+format.  This "auto upgrade" feature, however, does <em>not</em> occur
+with the new repository format.  </p>
+
+</div>  <!-- wc-format-change -->
+
+<div class="h3" id="output-changes" title="output-changes">
+<h3>Command Line Output Changes</h3>
+
+<p>Although the Subversion developers try hard to keep output from the
+command line programs compatible between releases, new information
+sometimes has to be added.  This might break scripts that rely on the
+exact format of the output.  In 1.4, the following changes have been
+made to the output:</p>
+
+<ul>
+
+<li><p>Conflict markers in files now match the file's defined eol-style.</p></li>
+
+</ul>
+
+</div>  <!-- output-changes -->
+
+</div>  <!-- compatibility -->
+
+<div class="h2" id="new-features" title="new-features">
+<h2>New Features</h2>
+
+<div class="h3" id="svnsync" title="svnsync">
+<h3>svnsync (<em>some features require a 1.4 server</em>)</h3>
+
+<p>A new tool &mdash; <a
+href="http://svn.collab.net/repos/svn/trunk/notes/svnsync.txt"
+><tt>svnsync</tt></a> &mdash; is now installed as part of the standard
+distribution.  This tool provides the ability to replicate history
+from one repository to another.  The replication can happen all at
+once, or can be done incrementally through repeated 'sync' operations.
+Because the tool uses the abstract network (RA) API, the source and
+destination repositories can be either local, remote, or any
+combination thereof.</p>
+
+<p><em>Compatibility note</em>: in order to "push" information into a
+destination repository, any version of the server will suffice.  The
+pushing is done through ordinary network commits.  To "pull" history
+from the source repository, however, requires a 1.4 (or later)
+server.</p>
+
+<p>Usage of this tool will be documented in the Subversion book soon,
+but for now, running <tt>svnsync help</tt> should suffice; the number
+of subcommands is very small, and the help system documents them
+all.</p>
+
+</div> <!-- svnsync -->
+
+<div class="h3" id="wc-improvements" title="wc-improvements">
+<h3>Working copy performance improvements (<em>client</em>)</h3>
+
+<p>The way in which the Subversion client manages your working copy
+has undergone radical changes.  The <tt>.svn/entries</tt> file is no
+longer XML, and the client has become smarter about the way it manages
+and stores property metadata.</p>
+
+<p>As a result, there are substantial performance improvements.  The
+new working copy format allows the client to more quickly search a
+working copy, detect file modifications, manage property metadata, and
+deal with large files.  The overall disk footprint is smaller as well,
+with fewer inodes being used.  Additionally, a number of long standing
+bugs related to merging and copying have been fixed.</p>
+
+<p><strong>WARNING:</strong> A Subversion 1.4 client will upgrade
+older working copies to the new format WITHOUT WARNING, rendering them
+unreadable by older Subersion clients.  See the section above, titled
+'Working Copy Format Changes'.</p>
+
+</div> <!-- wc-improvements -->
+
+<div class="h3" id="bdb-4.4" title="bdb-4.4">
+<h3>BerkeleyDB 4.4 and auto-recovery (<em>server</em>)</h3>
+
+<p>A common problem with previous versions of Subversion is that
+crashed server processes could leave BerkeleyDB-based repositories in
+an unusable "wedged" state, requiring administrators to manually
+intervene and bring back online.  (Note: this is not due to bugs in
+BerkeleyDB, but due to the unorthodox way in which Subversion uses
+it!)</p>
+
+<p>Subversion 1.4 can now be compiled against BerkeleyDB 4.4, which
+has a new "auto-recovery" feature.  If a Subversion server process
+crashes and leaves the repository in an inconsistent state, the next
+process which attempts to access the repository will notice the
+problem, grab exclusive control of the repository, and automatically
+recover it.  In theory (and in our testing), this new feature makes
+BerkeleyDB-based repositories just as wedge-proof as FSFS
+repositories.</p>
+
+<p><strong>WARNING:</strong> While upgrading to a new version of Berkeley DB
+will not require you to dump and reload your repository, you
+<em>will</em> still need to follow the Berkeley DB upgrade regimen to
+ensure that your repository is accessible by the new version of those
+libraries.  Please see <a
+href="http://sleepycat.com/docs/ref/upgrade/process.html">http://sleepycat.com/docs/ref/upgrade/process.html</a>
+for instructions on upgrading Berkeley DB environments.</p>
+
+</div>  <!-- bdb-4.4 -->
+
+<div class="h3" id="svndiff1" title="svndiff1">
+<h3>Binary Delta Encoding Improvements (<em>client and server</em>)</h3>
+
+<p>Subversion uses the xdelta algorithm to compute differences between
+strings of bytes.  The output of this algorithm is stored in a custom
+format called 'svndiff'.  svndiff data is what's stored in the
+repository to represent the difference between successive versions of
+files, and svndiff data is also transmitted over the wire between
+client and server (e.g. during updates and commits.)</p>
+
+<p>In Subversion 1.4, the svndiff format has been improved to use much
+less disk space &mdash; up to 50% less on plain text files in some
+cases.  Thus, if you choose to dump and reload your repository, the
+new repository should be noticeably smaller on disk.  (Make sure
+to <tt>svnadmin create</tt> the new repository using svnadmin 1.4.)
+Additionally, if a client and server are both version 1.4 , then
+network traffic becomes smaller and faster.</p>
+
+<p><strong>WARNING:</strong> A repository created by svnadmin 1.4 will not be
+readable by earlier Subversion libraries or tools.  However, in order
+to experience the smaller data format, you'll have to dump and reload
+your data.  If you <em>don't</em> recreate your repository with
+svnadmin 1.4, it will continue writing data in the older, larger
+format, and will still be readable by older Subversion tools.</p>
+
+</div> <!-- svndiff1 -->
+
+
+<div class="h3" id="new-switches" title="new-switches">
+<h3>New subcommand switches</h3>
+
+This release of Subversion adds a few new switches and options to the
+command line client. These are:
+
+   <dl>
+      <dt><tt>svn blame --force</tt></dt>
+      <dd>Displays the output of blame, even if the file is binary.</dd>
+
+      <dt><tt>svn merge/blame -x</tt></dt>
+      <dd>Merge and blame commands can now pass options to an external
+      diff3 program.</dd>
+
+      <dt><tt>svn diff/merge -c/--change</tt></dt>
+      <dd>You can now simply write -c N to view or merge a single
+      revision, instead of the cumbersome -r N-1:N.</dd>
+
+      <dt><tt>svn diff --summarize</tt></dt>
+      <dd>Prints only the list of changed files, in the output format
+      of 'svn status'. This lets you retrieve summaries of changes
+      directly from a repository, whereas 'svn status' operates only
+      on the local changes of your working copy.</dd>
+
+      <dt><tt>svn diff -x [-u | -b | -w | --ignore-eol-style]</tt></dt>
+      <dd>The diff engine internal to Subversion can now ignore
+      whitespace and eol-style when computing the diff.</dd>
+
+   </dl>
+
+</div>  <!-- new-switches -->
+
+</div>  <!-- new-features -->
+
+<div class="h2" id="enhancements" title="enhancements">
+<h2>Enhancements and Bugfixes</h2>
+
+<div class="h3" id="svnserve" title="svnserve">
+<h3>svnserve as native Windows service (<em>server</em>)</h3>
+
+The <tt>svnserve</tt> server can now be run as a Windows service. This
+allows svnserve to start automatically, at system boot time, without
+having a user logged in and without the need for an external service
+'wrapper' program. See <a
+href="http://svn.collab.net/repos/svn/tags/1.4.0/notes/windows-service.txt"><tt>notes/windows-service.txt</tt></a>
+for information on setting up <tt>svnserve</tt> as a Windows service.
+
+</div>  <!-- svnserve -->
+
+<div class="h3" id="keychain" title="keychain">
+<h3>OS X Keychain support (<em>client</em>)</h3>
+
+On OS X, the <tt>svn</tt> client now caches passwords in Keychain,
+rather than in <tt>~/.subversion/auth/</tt>.
+
+</div> <!-- keychain -->
+
+<div class="h3" id="apis" title="apis">
+<h3>API improvements (<em>client and server</em>)</h3>
+
+<p>If you develop a 3rd-party client application that uses Subversion
+  APIs, you may want to take notice of some new APIs:</p>
+
+<ul>
+  <li>The RA replay API, used by <tt>svnsync</tt>, lets you retrieve
+  all the data associated with a set of revisions in a single
+  operation.</li>
+
+  <li>Many APIs have been revised to newer versions.</li>
+</ul>
+
+</div>  <!-- apis -->
+
+<div class="h3" id="bugfixes" title="bugfixes">
+<h3>Other bugfixes (<em>client and server</em>)</h3>
+
+<p>The usual slew of heretofore-unreleased bugfixes, more than 40
+overall. See the
+<a href="http://svn.collab.net/repos/svn/trunk/CHANGES">CHANGES</a>
+file for full details.</p>
+
+</div>  <!-- bugfixes -->
+
+</div>  <!-- enhancements -->
+
+<div class="h2" id="svn-1.2-deprecation" title="svn-1.2-deprecation">
+<h2>Subversion 1.2.x series no longer supported</h2>
+
+<p>The Subversion 1.2.x line is no longer supported.  This doesn't
+mean that your 1.2 installation is doomed; if it works well and is all
+you need, that's fine.  "No longer supported" just means we've stopped
+accepting bug reports against 1.2.x versions, and will not make any
+more 1.2.x bugfix releases, except perhaps for absolutely critical
+security or data-loss bugs.</p>
+
+</div>  <!-- svn-1.2-deprecation -->
+
+</div>  <!-- app -->
+</body>
+</html>

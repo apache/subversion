@@ -1,0 +1,30 @@
+# XML RELAX NG schema for Subversion command-line client output
+# For "svn log"
+
+include "common.rnc"
+
+start = log
+
+log = element log { logentry* }
+
+logentry =
+  element logentry { attlist.logentry, author?, date?, paths?, msg? }
+attlist.logentry &=
+  attribute revision { revnum.type }
+
+## Changed paths information.
+paths = element paths { path+ }
+
+## Path within repository.
+path = element path { attlist.path, text }
+attlist.path &=
+  ## "action code": A)dd, D)elete, R)eplace or M)odify
+  attribute action { "A" | "D" | "R" | "M" },
+  (
+   ## The copyfrom path within repository.
+   attribute copyfrom-path { text },
+   ## Copyfrom revision number.
+   attribute copyfrom-rev { revnum.type })?
+
+## Log message.
+msg = element msg { text }

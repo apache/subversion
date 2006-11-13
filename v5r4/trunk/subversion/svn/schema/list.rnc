@@ -1,0 +1,27 @@
+# XML RELAX NG schema for Subversion command-line client output
+# For "svn list"
+
+include "common.rnc"
+
+start = lists
+
+lists = element lists { \list+ }
+
+## A target to the list command.
+\list = element list { attlist.list, entry* }
+attlist.list &=
+  ## Local path or repository URL.
+  attribute path { target.type }
+
+## A directory entry.
+entry = element entry { attlist.entry, name, size?, commit, lock? }
+attlist.entry &=
+  ## The kind of the entry.
+  attribute kind { "dir" | "file" }
+
+## Name of the file or directory.
+name = element name { string }
+
+## File size in bytes.
+size = element size { xsd:nonNegativeInteger }
+

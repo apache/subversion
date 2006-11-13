@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding = "Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="[version]"
+	Name="zlib"
+	SccProjectName=""
+	SccLocalPath=""
+	Keyword="MakeFileProj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="[zlib_path]\Debug"
+			IntermediateDirectory="[zlib_path]\Debug"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cmd /c build_zlib.bat debug"
+				ReBuildCommandLine="cmd /c build_zlib.bat debug rebuild"
+				CleanCommandLine="cmd /c build_zlib.bat debug clean"
+				Output="[zlib_path]\zlibstatD.lib"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="[zlib_path]\Release"
+			IntermediateDirectory="[zlib_path]\Release"
+			ConfigurationType="0"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="cmd /c build_zlib.bat release"
+				ReBuildCommandLine="cmd /c build_zlib.bat release rebuild"
+				CleanCommandLine="cmd /c build_zlib.bat release clean"
+				Output="[zlib_path]\zlibstat.lib"/>
+		</Configuration>
+	</Configurations>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			[for zlib_sources]<File
+				RelativePath="[zlib_sources]">
+			</File>
+[end]
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl">
+			[for zlib_headers]<File
+				RelativePath="[zlib_headers]">
+			</File>
+[end]
+		</Filter>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

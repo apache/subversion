@@ -1,0 +1,92 @@
+From: Alex Holst <a@area51.dk>
+Sent: 18 April 2002 03:49
+To: dev@subversion.tigris.org
+Subject:  Subversion and assurance.
+
+
+Hi. I've been bribed with bananas again. This time the guilty party is
+gstein who requested that I post a note with my thoughts about security
+and assurance, and what steps can be taken to reduce the possible number
+of security flaws in subversion 1.0.
+
+First, a brief introduction: When people ask you, as a developer, about
+security in Subversion, you might say Subversion is secure. Subversion
+has access control, it supports SSL, committers need no system accounts,
+and other nice things. These are _security_ features, not nessesarily
+_secure_ features.
+
+You may have access control, but what if the code implementing this
+access control was written poorly, and contains a buffer overflow?  2
+hours ago you worried about who could read or write to a document in
+your repository. Now you discover that an attacker can execute arbitary
+code as the userid your service is running as. This is not ideal. 
+
+Hence, we distinquish between "security features" and assurance. Brian
+Snow, a technical director at the NSA, defines assurance as follows:
+
+        "Confidence-building activities that demonstrate that a system
+        possesses the desired properties and only these properties and
+        that functions are implemented correctly. Assurance can be
+        provided through a structured design process, documentation, and
+        testing."
+
+Assurance is what protects the user in the case of misuse or when faced
+with malice. Today, cars come with safety functions such as seatbelts,
+ABS breaks, airbags, etc, all of which means that you have a very good
+chance of walking away from accidents. This was not so 50 years ago. I
+strongly recommend listening to Brian Snow's full talk on assurance,
+which is available as a RealPlayer stream from Blackhat.com:
+
+<http://media.blackhat.com:5554/ramgen/blackhat/bh-usa-00/audio/bh-usa-00-brian-snow-audio.rm>
+
+The two most important steps that Subversion can take are:
+
+        Establish secure coding guidelines that are communicated to all
+        developers and enforced by the project leads. 
+
+        Improve the documentation: A diagram much like qmail's Big
+        Picture which shows how code and data flows within the program.
+        It allows for fast identification of security boundaries.
+
+These steps will enable greatly improved looks into the Subversion code
+for someone who has not spent the last few months getting familiar with
+the Subversion code.
+
+Additional steps include:
+
+       Establish a QA section on the website containing documentation
+       about the tests that are run against Subversion. 
+
+       Document how new tests for both server and client can be written
+       and encourage users who are in need of assurance to participate
+       in the QA process. The tests against the server should
+       specifically include things like attempting to break ACLs,
+       attempt to issue legal commands in an inproper order, use very
+       long strings for filenames and arguments, etc.
+
+       The more you document, the more likely it is that someone with
+       the knowledge to spot problems will take a look at what you have
+       done.
+
+Websites that help:
+
+        "Secure Programming for Linux and UNIX" by David Wheeler
+        http://www.dwheeler.com/secure-programs/
+
+        Software Quality Assurance: Documentation and Review
+        http://hissa.ncsl.nist.gov/publications/nistir4909/
+
+Books that help:
+
+        "Safer C" by Les Hatton
+        "Solid Software" by Hatton, Howell & Pfleeger
+        "Building Secure Software" by Viega & McGraw
+        "Writing Secure Code" by Howard & LeBlanc
+        "Writing Solid Software" by Maguire
+
+
+I'll be delighted to answer any questions. Thanks for your time.
+
+--
+I prefer the dark of the night, after midnight and before four-thirty,
+when it's more bare, more hollow.                  http://a.area51.dk/

@@ -1,0 +1,195 @@
+Anyone who has worked on the libsvn_wc code will have discovered that
+the current code is a complicated mess of special cases, and that it
+is difficult to understand, inconsistent, slow and buggy.  I know this
+because I wrote some of it.  It's possible that the libsvn_wc code
+will gradually evolve into an elegant, efficient, code base; on the
+other hand comments like "when we rewrite libsvn_wc" regularly appear
+on the dev list.  This document is *not* a plan or design for a
+rewrite, it's just some of the thoughts of a libsvn_wc hacker.
+
+From Past to Present
+====================
+
+The original code for libsvn_wc used an implementation that stored
+more or less all state information on disk in the .svn area on disk,
+so during most operations the entries files were read and written many
+times.  This led to the development of an API that passed around a lot
+of path parameters (as svn_string_t* originally, as const char* now)
+and to the development of the svn_io_xxx functions, which also accept
+path parameters.  The implementation was slow, and didn't scale
+particularly well as working copies got larger.  To improve things the
+current access baton and entries caching system was gradually hacked
+in, and libsvn_wc is now faster and scales a bit better, but problems
+still remain.
+
+A good example of the problems caused by the "path as parameter" API
+is svn_wc_text_modified_p.  Its basic function is to determine if the
+base text file and the working file are the same or different, but
+physical IO operations have to be repeated because they are buried
+behind several layers of API.  It's difficult to fix without
+rewriting, or duplicating, a number of svn_io_xxx and svn_wc_xxx
+functions.  Aside from the repeated IO itself, each IO operation also
+has to repeat the UTF-8 to native path conversion.
+
+The current entries caching makes things faster than in the past, but
+has it's own problems.  Most operations now cache the entire entries
+hierarchy in memory which limits the size of the working copies that
+can be handled.  The problem is difficult to solve as some operations
+make multiple passes--commit for instance makes a first pass searching
+for modifications, a second pass reporting to the repository, and a
+third pass to do post-commit processing.
+
+The original code also did not always make a distinction between the
+versioned hierarchy in the entries file and the physical hierarchy on
+disk.  Things like using stat() or svn_io_check_path() calls to
+determine whether an item was versioned as file or directory do not
+work when the working copy on disk is obstructed or incomplete.
+
+The Future
+==========
+
+Some of these ideas are trivial, some of them are difficult to
+implement, some of them may not work at all.
+
+- Have an svn_wc_t context object, opaque outside the library, that
+  would replace the access batons.  This would get passed through most
+  of the libsvn_wc functions and could read/cache the entries files on
+  demand as the working copy was traversed.  It could also cache the
+  UTF-8 xlate handle.
+
+- Have an API to svn_wc_entry_t, perhaps make the struct opaque, so
+  that things like URL need not be constructed when the entries file
+  is read but can be created on demand if required and possibly cached
+  once created.  The aim would be to reduce the memory used by the
+  entries cache.
+
+- Consider caching physical IO results in svn_wc_entry_t/svn_wc_t.
+  Should we really stat() any file more than once?  This becomes less
+  important as we reduce the number of IO operations.
+
+- Consider caching UTF-8 to native path conversions either in
+  svn_wc_t, or svn_wc_entry_t, or locally in functions and using
+  svn_io_xxx equivalents that accept native paths.  This becomes less
+  important as we reduce the number of IO operations.
+
+- Make interfaces pass svn_wc_entry_t* rather than simple paths.  The
+  public API using const char* paths would remain to be used by
+  libsvn_client et al.
+
+- Maintain a clear distinction between the versioned hierarchy and the
+  physical hierarchy when writing code, it's usually a mistake to use
+  one when the other should be used.  To this end, audit the use of
+  svn_io_check_path().
+
+- Avoid using stat() to determine if an item is present on disk before
+  using the item, just use it straight away and handle the error if it
+  doesn't exist.
+
+- Search out and destroy functions that read and discard entries files
+  e.g. the apparently "simple" functions like svn_wc_is_wc_root or
+  check_wc_root.  Such overhead is expensive when used by operations
+  that are not going to do much other work, running status on a single
+  file for example.  The overhead may not matter to a command line
+  client, but it can matter to a GUI that makes many such calls.
+
+- Consider supporting out of tree .svn directories.
+
+- In the present code most operations are IO bound and have CPU to
+  spare.  Perhaps compressed text-bases would make things faster
+  rather than slower, by trading spare CPU for reduced IO?
+
+- Keep track of the last text time written into an entries file and
+  store it in svn_wc_t.  Then when we come to do a timestamp sleep
+  we can do it from that time rather than the current time.
+
+- Store working file size in the entries file and use it as another
+  shortcut to detect modifications.  This should not need any extra
+  system calls, the stat() for timestamp can also return the size.
+  When it triggers it will be much faster than possibly detranslating
+  and then doing a byte-by-byte comparison.
+  ### Problem: This doesn't work when the file needs translation, because the
+  ### file might be modified in such a way that these modifications disappear
+  ### when the file is detranslated.
+
+- Consider using the translated stream API to get a (de)translated
+  version of a file, when the temp file is not needed.
+
+- Make the entries file smaller.  The properties committed-date 
+  committed-rev and last-author are really only needed for keyword
+  expansion, so only store them if the appropriate svn:keywords value
+  is present.  Note that committed-rev has a more general use as rPREV,
+  however just about all uses of rPREV involve repository access so
+  rPREV could be determined via an RA call.  Removing the three
+  properties could reduce entries file size by as much as one third,
+  it's possible that might make reading, writing and parsing faster.
+  It would reduce the memory used to cache the entries, an ABI change
+  to svn_wc_entry_t might reduce it further.
+
+- Look at calls to svn_wc__get_keywords and svn_wc__get_eol_style
+  Each of those reads the properties file.  If they occur together
+  then consider replacing them with a single call to svn_wc_prop_list,
+  and perhaps write some functions that accept the properties hash
+  as an argument.  Alternatively, consider caching the existence of
+  these two properties in the entries file to avoid reading the props
+  file at all in some cases.
+
+- Optimise update/incomplete handling to reduce the number of times
+  the entry file gets written.
+  http://svn.haxx.se/dev/archive-2005-03/0060.shtml
+
+  * Avoid adding incomplete="true" if the revision is not changing.
+
+  * Don't write incomplete="true" immediately, cache it in the access
+    baton and only write it when next writing the entries file.
+
+  * Combine removing incomplete="true", and revision bumping, with the
+    last change due to the update.
+
+- The svn_wc_t context could work in conjunction with a more advanced
+  svn_wc_crawl_revisions system.  This would provide a way of plugging
+  multiple callbacks into a queue, probably with some sort of ordering
+  and filtering ability, the aim being to replace most/all of the
+  existing explicit loops.  This would put more of the pool handling in
+  one central location, it may even be possible to provide different
+  entry caching schemes.  I don't know how practical this idea is, or
+  even if it is desirable.
+
+- Have a .svn/deleted directory so that schedule delete directories
+  can be moved out of the working copy. At present a skeleton hierarchy
+  of schedule delete directories remains in the working copy until the
+  delete is committed.
+
+- When handling a delete received during update/switch perhaps do it
+  in two stages.  First move the item into a holding area within .svn
+  and finally delete all such items at the end of the update.  This
+  would allow adds-with-history to use the deleted item and so might
+  be a way to handle moves (implemented as delete plus add) in the
+  presence of local modifications.  Thought would have to be given to
+  the revision of the local deleted item, what happens if it doesn't
+  match the copyfrom revision?  Perhaps we could get diffs, rather
+  than full text, for adds-with-history if the copyfrom source is
+  reported to the repository?
+
+- Consider implementing atomic move for wc-to-wc moves, rather than
+  using copy+delete.  This would be considerably faster for big
+  directories, would lead to better revert behaviour, and avoid
+  case-insensitivity problems (and if we ever get atomic mv in
+  libsvn_fs then the wc code would be ready for it).
+
+- Consider writing some libsvn_wc compiled C regression tests to allow
+  more complete coverage.  Most of the current libsvn_wc testing is
+  done via the command line client and it can be hard to get a working
+  copy into the state necessary to test all code paths.
+
+- There are some basic features that are fragile.  Switch has some
+  bugs that can break a working copy, see issue 1906.  I don't know
+  how the system is supposed to work in theory, let alone how it
+  should be implemented.  Non-recursive checkout is broken, see issue
+  695; this probably applies to non-recursive update and switch as well.
+
+- Use absolute paths within libsvn_wc so that "." is not automatically
+  a wc root.
+
+- Read notes/entries-caching for some details of the logging/caching
+  in the current libsvn_wc.  It's important that writing the entries
+  file is handled efficiently.

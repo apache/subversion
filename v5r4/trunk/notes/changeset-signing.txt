@@ -1,0 +1,97 @@
+Changeset Signing
+=================
+
+1. Goals
+
+Allow repository users to digitally sign committed changes, so that:
+
+  - Others can verify the authenticity of a commit;
+
+  - Hacked modification and (optionally) deletions of historical
+    revisions can be detected.
+
+
+2. Features
+
+2.1 Client-side signing of committed changesets
+
+If changeset signing is enabled, the client sends a signed hash of the
+changes to the server as part of the commit. This signature is stored
+in a new revprop, svn:signature.
+
+Implementation:
+
+Modify the commit editor to calculate a hash of the committables
+during generation of the commit report. The input data for the hash
+could be an incremental dump of the pending commit (without revision
+and date info), generated on the fly.
+
+As the last act of the commit, the client would add a digital
+signature of this hash as the svn:signature revprop.
+
+[Optional]
+
+The client could add the value of current HEAD's svn:signature to the
+signed data stream. This would let us verify that the sequence of
+revisions in the repository hasn't changed, giving an extra layer of
+anti-hack protection. The problem is that commits would have to be
+serialized, but the client could silently retry the txn-commit if HEAD
+changed from the time when the commit txn was created. This has
+interesting effects on the RA protocol, especially the stateless DAV;
+it implies complete control over txn props on uncommitted
+transactions.
+
+Issues:
+
+  - The RA API must be revved to allow setting the svn:signature
+    revprop during commit. This would be a natural spin-off of issue
+    #1976.
+
+  - The client needs a library that can handle digital certificates
+    and create signatures. OpenSSL can do that, and SVN already
+    depends on it via Neon, but not directly. The svnadmin-ssl project
+    will change that.
+
+  - Changeset signing should be a repository requirement, so we'd
+    really need server-side configuration to control it. As a
+    workaround, a post-commit hook could reject the commit if a
+    svn:signature property wasn't present.
+
+
+2.2 Server-side changeset signature verification
+
+The server can verify the signature of a changeset:
+
+  - Online check during post-commit, an invalid signature causes the
+    commit to be rejected.
+
+  - Offline check for database consistency, perhaps in "svnadmin
+    verify".
+
+Implementation: TODO
+
+Issues:
+
+  - The server needs a list of commit author certificates. Ideally
+    this list would be the same as the one used for client
+    authentication, although cert-based authentication shouldn't be
+    required for changeset signing to work.
+
+  - The server must maintain a list of expired and revoked client
+    certificates. While these are no longer valid for new commits,
+    they may be needed for verifying signatures on historical
+    revisions.
+
+
+
+2.3 Client-side verification of changeset signatures
+
+The client verifies the changeset signature during update.
+
+Implementation:
+
+??? How on earth do you do that? What the server sends during "svn
+update" is not necessarily the same as one changeset...
+
+Perhaps some variant of "svn info URL" or "svn st -u" could do the
+right thing.

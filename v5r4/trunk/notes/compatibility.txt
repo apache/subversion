@@ -1,0 +1,86 @@
+NOTES ON VERSION COMPATIBILITY
+
+This file attempts to document the compatibility issues between
+different Subversion clients and servers. More specifically, where we
+want to change our (WebDAV) protocol usage in an incomptabile way, and
+our stepwise plan towards rolling out that change.
+
+
+BINARY PROPERTIES
+=================
+
+Change: to signify that a property is binary, we will add an attribute
+        onto the property element that specifies its encoding (base64
+        or standard XML entity escaping).
+
+Problem: old clients and servers will not be looking for this
+         attribute, and will not decode the contents appropriately.
+
+The current plan from issue 1015:
+---------------
+Okay, I've decided to propogate this functionality in three stages,
+with a couple of milestones between each stage:
+
+   (1) server and client learn to recognize and handle the new
+   'V:encoding' attribute on properties.  at this point, no binary
+   properties will actually be coming across the ra-dav wire.  (0.20
+   milestone)
+
+   (2) server starts to transmit non-XML-safe properties with the
+   'V:encoding="base64"' attribute and the property value
+   base64-encoded.  during this interim period, clients will be to get
+   binary properties from the server, but will not be able to commit
+   new or modified binary properties.  (0.21 milestone)
+
+   (3) clients starts to transmit non-XML-safe properties with the
+   'V:encoding="base64"' attribute and the property value
+   base64-encoded.  this is the moment of full support.  (0.22
+   milestone)
+
+All the code for full support will be in place, but disabled
+functionality will be wrapped in SVN_DAV_FEATURE_BINARY_PROPS
+#defines.
+
+When stage 2 is ready to go into 0.21, we just remove the #defines
+from the code in mod_dav_svn, commit, and reset this issue to have a
+0.24 milestone.
+
+When stage 3 is ready to go into 0.22, we just remove the #defines
+from the code in libsvn_ra_dav, lose the #define itself from
+svn_dav.h, commit, and close this issue.
+---------------
+
+
+REPOSITORY UUIDS
+================
+
+Change:
+
+Problem:
+
+Plan:
+
+
+PROPERTY NAMESPACES
+===================
+
+Change:
+
+Problem:
+
+Plan:
+
+
+HANDLING OF UNKNOWN XML ELEMENTS
+================================
+
+Change:
+
+Problem:
+
+Plan:
+
+  [note: need to review any "else" conditions to ensure we don't fall
+   into them for unknown/future props; some if constructs might have
+   assumed only (say) three elements were possible, so only tested for
+   two of them, and fell to the else for the third]
