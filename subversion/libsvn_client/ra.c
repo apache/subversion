@@ -259,6 +259,14 @@ invalidate_wc_props(void *baton,
 }
 
 
+static svn_error_t *
+cancel_callback(void *baton)
+{
+  svn_client__callback_baton_t *b = baton;
+
+  return (b->ctx->cancel_func)(b->ctx->cancel_baton);
+}
+
 svn_error_t * 
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
@@ -281,6 +289,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->auth_baton = ctx->auth_baton; /* new-style */
   cbtable->progress_func = ctx->progress_func;
   cbtable->progress_baton = ctx->progress_baton;
+  cbtable->cancel_func = ctx->cancel_func ? cancel_callback : NULL;
 
   cb->base_dir = base_dir;
   cb->base_access = base_access;
