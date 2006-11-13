@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-11-04 14:58-0200\n"
+"POT-Creation-Date: 2006-11-12 22:46-0200\n"
 "PO-Revision-Date: 2004-07-26 19:19-300\n"
 "Last-Translator: dev@subversion.tigris.org\n"
 "Language-Team: Brazilian Portuguese <dev@subversion.tigris.org>\n"
@@ -519,8 +519,8 @@ msgid "Failed to execute WebDAV PROPPATCH"
 msgstr "Falhou ao executar WebDAV PROPPATCH"
 
 #: include/svn_error_codes.h:722 include/svn_error_codes.h:763
-#: libsvn_ra_svn/marshal.c:609 libsvn_ra_svn/marshal.c:717
-#: libsvn_ra_svn/marshal.c:744
+#: libsvn_ra_svn/marshal.c:574 libsvn_ra_svn/marshal.c:682
+#: libsvn_ra_svn/marshal.c:709
 msgid "Malformed network data"
 msgstr "Dado de rede mal formado"
 
@@ -994,7 +994,7 @@ msgstr "item de commit '%s' possui flag de cópia mas não copyfrom URL"
 #: libsvn_wc/entries.c:2250 libsvn_wc/entries.c:2847 libsvn_wc/props.c:483
 #: libsvn_wc/props.c:1092 libsvn_wc/props.c:1543 libsvn_wc/questions.c:186
 #: libsvn_wc/questions.c:300 libsvn_wc/status.c:729 libsvn_wc/translate.c:199
-#: libsvn_wc/update_editor.c:2194 libsvn_wc/update_editor.c:3038
+#: libsvn_wc/update_editor.c:2299 libsvn_wc/update_editor.c:3150
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "'%s' não está sobre controle de versão"
@@ -1243,8 +1243,8 @@ msgstr "'%s' existe e não é um diretório"
 msgid "'%s' already exists"
 msgstr "'%s' já existe"
 
-#: libsvn_client/export.c:687 libsvn_wc/update_editor.c:1684
-#: libsvn_wc/update_editor.c:2324
+#: libsvn_client/export.c:687 libsvn_wc/update_editor.c:1759
+#: libsvn_wc/update_editor.c:2429
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "Checksum não bate para '%s'; esperado: '%s', obtido: '%s'"
@@ -2916,23 +2916,23 @@ msgstr "estourou o tempo de espera ao aguardar o servidor"
 msgid "Can't calculate the request body size"
 msgstr "Não é possível calcular o tamanho do corpo da requisição"
 
-#: libsvn_ra_dav/util.c:795
+#: libsvn_ra_dav/util.c:799
 #, c-format
 msgid "Error spooling the %s request response to disk"
 msgstr "Erro enfileirando a resposta do pedido %s no disco"
 
-#: libsvn_ra_dav/util.c:823
+#: libsvn_ra_dav/util.c:827
 #, c-format
 msgid "'%s' path not found"
 msgstr "Caminho '%s' não encontrado"
 
-#: libsvn_ra_dav/util.c:832
+#: libsvn_ra_dav/util.c:836
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
 msgstr ""
 "Repositório movido permanentemente para '%s'; por favor execute 'relocate'"
 
-#: libsvn_ra_dav/util.c:834
+#: libsvn_ra_dav/util.c:838
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
 msgstr ""
@@ -2940,28 +2940,28 @@ msgstr ""
 
 #. We either have a neon error, or some other error
 #. that we didn't expect.
-#: libsvn_ra_dav/util.c:844 libsvn_ra_dav/util.c:1074
+#: libsvn_ra_dav/util.c:848 libsvn_ra_dav/util.c:1078
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s de '%s'"
 
-#: libsvn_ra_dav/util.c:865
+#: libsvn_ra_dav/util.c:869
 #, c-format
 msgid "Error reading spooled %s request response"
 msgstr "Erro lendo resposta de pedido %s enfileirada"
 
-#: libsvn_ra_dav/util.c:876
+#: libsvn_ra_dav/util.c:880
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "A requisição %s retornou XML inválido na resposta: %s (%s)"
 
-#: libsvn_ra_dav/util.c:896
+#: libsvn_ra_dav/util.c:900
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "Requisição %s falhou em '%s'"
 
 #: libsvn_ra_local/ra_plugin.c:103 libsvn_ra_local/ra_plugin.c:588
-#: libsvn_wc/update_editor.c:2491
+#: libsvn_wc/update_editor.c:2603
 #, c-format
 msgid ""
 "'%s'\n"
@@ -3298,50 +3298,41 @@ msgstr "Apply-textdelta já ativo"
 msgid "Apply-textdelta not active"
 msgstr "Apply-textdelta não ativo"
 
-#: libsvn_ra_svn/editorp.c:891 libsvn_ra_svn/marshal.c:842
+#: libsvn_ra_svn/editorp.c:891 libsvn_ra_svn/marshal.c:807
 #, c-format
 msgid "Unknown command '%s'"
 msgstr "Comando desconhecido '%s'"
 
-#: libsvn_ra_svn/marshal.c:78
+#: libsvn_ra_svn/marshal.c:84
 msgid "Capability entry is not a word"
 msgstr "Entrada de capacidade não é uma palavra"
 
-#: libsvn_ra_svn/marshal.c:166
-#, c-format
-msgid "Can't write to connection"
-msgstr "Não é possível escrever na conexão"
-
-#: libsvn_ra_svn/marshal.c:259
-#, c-format
-msgid "Can't read from connection"
-msgstr "Não é possível ler da conexão"
-
-#: libsvn_ra_svn/marshal.c:262
+#: libsvn_ra_svn/marshal.c:227 libsvn_ra_svn/streams.c:80
+#: libsvn_ra_svn/streams.c:155
 msgid "Connection closed unexpectedly"
 msgstr "Conexão fechada inesperadamente"
 
-#: libsvn_ra_svn/marshal.c:506
+#: libsvn_ra_svn/marshal.c:471
 msgid "String length larger than maximum"
 msgstr "Tamanho da string maior que o máximo"
 
-#: libsvn_ra_svn/marshal.c:543
+#: libsvn_ra_svn/marshal.c:508
 msgid "Too many nested items"
 msgstr "Muitos itens aninhados"
 
-#: libsvn_ra_svn/marshal.c:562
+#: libsvn_ra_svn/marshal.c:527
 msgid "Number is larger than maximum"
 msgstr "Número é maior que o máximo"
 
-#: libsvn_ra_svn/marshal.c:765
+#: libsvn_ra_svn/marshal.c:730
 msgid "Empty error list"
 msgstr "Lista de erro vazia"
 
-#: libsvn_ra_svn/marshal.c:774
+#: libsvn_ra_svn/marshal.c:739
 msgid "Malformed error list"
 msgstr "Lista de erro mal formada"
 
-#: libsvn_ra_svn/marshal.c:813
+#: libsvn_ra_svn/marshal.c:778
 #, c-format
 msgid "Unknown status '%s' in command response"
 msgstr "Status '%s' desconhecido em resposta de comando"
@@ -3370,6 +3361,21 @@ msgstr "Não foi possível obter senha"
 #: libsvn_ra_svn/simple_auth.c:117
 msgid "Cannot negotiate authentication mechanism"
 msgstr "Não foi possível negociar mecanismo de autenticação"
+
+#: libsvn_ra_svn/streams.c:77 libsvn_ra_svn/streams.c:152
+#, c-format
+msgid "Can't read from connection"
+msgstr "Não é possível ler da conexão"
+
+#: libsvn_ra_svn/streams.c:91 libsvn_ra_svn/streams.c:166
+#, c-format
+msgid "Can't write to connection"
+msgstr "Não é possível escrever na conexão"
+
+#: libsvn_ra_svn/streams.c:144
+#, c-format
+msgid "Can't get socket timeout"
+msgstr "Não foi possível obter timeout de socket"
 
 #: libsvn_repos/commit.c:128
 #, c-format
@@ -5248,22 +5254,22 @@ msgstr ""
 msgid "Relocate can only change the repository part of an URL"
 msgstr "Relocação só pode mudar a parte repositório de uma URL"
 
-#: libsvn_wc/update_editor.c:389
+#: libsvn_wc/update_editor.c:399
 #, c-format
 msgid "No '.' entry in: '%s'"
 msgstr "Não há entrada '.' em: '%s'"
 
-#: libsvn_wc/update_editor.c:895
+#: libsvn_wc/update_editor.c:923
 #, c-format
 msgid "Won't delete locally modified directory '%s'"
 msgstr "Diretório localmente modificado '%s' não será apagado"
 
-#: libsvn_wc/update_editor.c:969
+#: libsvn_wc/update_editor.c:997
 #, c-format
 msgid "Error writing log file for '%s'"
 msgstr "Erro gravando arquivo de log para '%s'"
 
-#: libsvn_wc/update_editor.c:1077
+#: libsvn_wc/update_editor.c:1101
 #, c-format
 msgid ""
 "Failed to add directory '%s': a non-directory object of the same name "
@@ -5272,21 +5278,25 @@ msgstr ""
 "Falhou ao adicionar diretório '%s': objeto não-diretório com o mesmo nome já "
 "existe"
 
-#: libsvn_wc/update_editor.c:1107
+#: libsvn_wc/update_editor.c:1134
 #, c-format
 msgid ""
-"Failed to forcibly add directory '%s': a versioned directory of the same "
-"name already exists"
+"Failed to add directory '%s': an unversioned directory of the same name "
+"already exists"
 msgstr ""
-"Falhou ao forçosamente adicionar diretório '%s': um diretório versionado com "
-"o mesmo nome já existe"
+"Falhou ao adicionar diretório '%s': um diretório não versionado com o mesmo "
+"nome já existe"
 
-#: libsvn_wc/update_editor.c:1120
+#: libsvn_wc/update_editor.c:1156
 #, c-format
-msgid "Failed to add directory '%s': object of the same name already exists"
-msgstr "Falhou ao adicionar diretório '%s': objeto com o mesmo nome já existe"
+msgid ""
+"Failed to add directory '%s': a versioned directory of the same name already "
+"exists"
+msgstr ""
+"Falhou ao adicionar diretório '%s': um diretório versionado com o mesmo nome "
+"já existe"
 
-#: libsvn_wc/update_editor.c:1129
+#: libsvn_wc/update_editor.c:1167
 #, c-format
 msgid ""
 "Failed to add directory '%s': object of the same name as the administrative "
@@ -5295,26 +5305,17 @@ msgstr ""
 "Falhou ao adicionar o diretório '%s': objeto do mesmo nome como diretório "
 "administrativo"
 
-#: libsvn_wc/update_editor.c:1143
+#: libsvn_wc/update_editor.c:1181
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr ""
 "Falhou ao adicionar diretório '%s': argumentos copyfrom ainda não suportados"
 
-#: libsvn_wc/update_editor.c:1164
-#, c-format
-msgid ""
-"Failed to add directory '%s': object of the same name is already scheduled "
-"for addition"
-msgstr ""
-"Falhou ao adicionar diretório '%s': objeto com o mesmo nome já agendado para "
-"inclusão"
-
-#: libsvn_wc/update_editor.c:1369
+#: libsvn_wc/update_editor.c:1435
 msgid "Couldn't do property merge"
 msgstr "Não foi possível mesclar propriedades"
 
-#: libsvn_wc/update_editor.c:1433
+#: libsvn_wc/update_editor.c:1505
 #, c-format
 msgid ""
 "Failed to mark '%s' absent: item of the same name is already scheduled for "
@@ -5323,7 +5324,16 @@ msgstr ""
 "Falhou ao marcar '%s' ausente: item com o mesmo nome está agendado para "
 "inclusão"
 
-#: libsvn_wc/update_editor.c:1533
+#: libsvn_wc/update_editor.c:1605
+#, c-format
+msgid ""
+"Failed to add file '%s': a file of the same name is already scheduled for "
+"addition with history"
+msgstr ""
+"Falhou ao adicionar arquivo '%s': um arquivo com o mesmo nome já está "
+"agendado para inclusão"
+
+#: libsvn_wc/update_editor.c:1617
 #, c-format
 msgid ""
 "Failed to add file '%s': a non-file object of the same name already exists"
@@ -5331,36 +5341,27 @@ msgstr ""
 "Falhou ao adicionar arquivo '%s': um objeto não-arquivo com o mesmo nome já "
 "existe"
 
-#: libsvn_wc/update_editor.c:1544
+#: libsvn_wc/update_editor.c:1632
 #, c-format
 msgid "Failed to add file '%s': object of the same name already exists"
 msgstr "Falhou ao adicionar arquivo '%s': objeto com o mesmo nome já existe"
 
-#: libsvn_wc/update_editor.c:1566
-#, c-format
-msgid ""
-"Failed to add file '%s': object of the same name is already scheduled for "
-"addition"
-msgstr ""
-"Falhou ao adicionar arquivo '%s': objeto com o mesmo nome já agendado para "
-"inclusão"
-
-#: libsvn_wc/update_editor.c:1574
+#: libsvn_wc/update_editor.c:1649
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "Arquivo '%s' no diretório '%s' não é um recurso versionado"
 
-#: libsvn_wc/update_editor.c:1692
+#: libsvn_wc/update_editor.c:1767
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "Checksum não bate para '%s'; gravado: '%s', obtido: '%s'"
 
-#: libsvn_wc/update_editor.c:2883
+#: libsvn_wc/update_editor.c:2995
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "'%s' não possui informação de ancestral"
 
-#: libsvn_wc/update_editor.c:3046
+#: libsvn_wc/update_editor.c:3158
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "Copyfrom-url '%s' possui raiz de repositório diferente de '%s'"
@@ -7168,27 +7169,27 @@ msgstr "Pulando alvo perdido: '%s'\n"
 msgid "Skipped '%s'\n"
 msgstr "Pulou '%s'\n"
 
-#: svn/notify.c:108
+#: svn/notify.c:118
 #, c-format
 msgid "Restored '%s'\n"
 msgstr "Restaurado '%s'\n"
 
-#: svn/notify.c:114
+#: svn/notify.c:124
 #, c-format
 msgid "Reverted '%s'\n"
 msgstr "Revertido '%s'\n"
 
-#: svn/notify.c:120
+#: svn/notify.c:130
 #, c-format
 msgid "Failed to revert '%s' -- try updating instead.\n"
 msgstr "Falhou ao reverter '%s' -- tente atualizar ao invés.\n"
 
-#: svn/notify.c:128
+#: svn/notify.c:138
 #, c-format
 msgid "Resolved conflicted state of '%s'\n"
 msgstr "Estado de conflito resolvido para '%s'\n"
 
-#: svn/notify.c:209
+#: svn/notify.c:219
 #, c-format
 msgid ""
 "\n"
@@ -7197,77 +7198,77 @@ msgstr ""
 "\n"
 "Buscando item externo em '%s'\n"
 
-#: svn/notify.c:224
+#: svn/notify.c:234
 #, c-format
 msgid "Exported external at revision %ld.\n"
 msgstr "Externo exportado na revisão %ld.\n"
 
-#: svn/notify.c:225
+#: svn/notify.c:235
 #, c-format
 msgid "Exported revision %ld.\n"
 msgstr "Exportada revisão %ld.\n"
 
-#: svn/notify.c:233
+#: svn/notify.c:243
 #, c-format
 msgid "Checked out external at revision %ld.\n"
 msgstr "Gerado externo para cópia de trabalho na revisão %ld.\n"
 
-#: svn/notify.c:234
+#: svn/notify.c:244
 #, c-format
 msgid "Checked out revision %ld.\n"
 msgstr "Gerado cópia de trabalho para revisão %ld.\n"
 
-#: svn/notify.c:244
+#: svn/notify.c:254
 #, c-format
 msgid "Updated external to revision %ld.\n"
 msgstr "Externo atualizado para revisão %ld.\n"
 
-#: svn/notify.c:245
+#: svn/notify.c:255
 #, c-format
 msgid "Updated to revision %ld.\n"
 msgstr "Atualizado para revisão %ld.\n"
 
-#: svn/notify.c:253
+#: svn/notify.c:263
 #, c-format
 msgid "External at revision %ld.\n"
 msgstr "Externo na revisão %ld.\n"
 
-#: svn/notify.c:254
+#: svn/notify.c:264
 #, c-format
 msgid "At revision %ld.\n"
 msgstr "Na revisão %ld.\n"
 
-#: svn/notify.c:266
+#: svn/notify.c:276
 #, c-format
 msgid "External export complete.\n"
 msgstr "Exportação de externo completa.\n"
 
-#: svn/notify.c:267
+#: svn/notify.c:277
 #, c-format
 msgid "Export complete.\n"
 msgstr "Exportação completa.\n"
 
-#: svn/notify.c:274
+#: svn/notify.c:284
 #, c-format
 msgid "External checkout complete.\n"
 msgstr "Geração de cópia de trabalho de externo completa.\n"
 
-#: svn/notify.c:275
+#: svn/notify.c:285
 #, c-format
 msgid "Checkout complete.\n"
 msgstr "Geração de cópia de trabalho completa.\n"
 
-#: svn/notify.c:282
+#: svn/notify.c:292
 #, c-format
 msgid "External update complete.\n"
 msgstr "Atualização de externo completa.\n"
 
-#: svn/notify.c:283
+#: svn/notify.c:293
 #, c-format
 msgid "Update complete.\n"
 msgstr "Atualização compelta.\n"
 
-#: svn/notify.c:299
+#: svn/notify.c:309
 #, c-format
 msgid ""
 "\n"
@@ -7276,47 +7277,47 @@ msgstr ""
 "\n"
 "Executando status em item externo em '%s'\n"
 
-#: svn/notify.c:307
+#: svn/notify.c:317
 #, c-format
 msgid "Status against revision: %6ld\n"
 msgstr "Status contra revisão: %6ld\n"
 
-#: svn/notify.c:315
+#: svn/notify.c:325
 #, c-format
 msgid "Sending        %s\n"
 msgstr "Enviando       %s\n"
 
-#: svn/notify.c:324
+#: svn/notify.c:334
 #, c-format
 msgid "Adding  (bin)  %s\n"
 msgstr "Adic.    (bin) %s\n"
 
-#: svn/notify.c:331
+#: svn/notify.c:341
 #, c-format
 msgid "Adding         %s\n"
 msgstr "Adicionando    %s\n"
 
-#: svn/notify.c:338
+#: svn/notify.c:348
 #, c-format
 msgid "Deleting       %s\n"
 msgstr "Apagando       %s\n"
 
-#: svn/notify.c:345
+#: svn/notify.c:355
 #, c-format
 msgid "Replacing      %s\n"
 msgstr "Substituíndo   %s\n"
 
-#: svn/notify.c:355
+#: svn/notify.c:365
 #, c-format
 msgid "Transmitting file data "
 msgstr "Transmitindo dados do arquivo "
 
-#: svn/notify.c:364
+#: svn/notify.c:374
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
 msgstr "'%s' travado pelo usuário '%s'.\n"
 
-#: svn/notify.c:370
+#: svn/notify.c:380
 #, c-format
 msgid "'%s' unlocked.\n"
 msgstr "'%s' destravado.\n"
@@ -9028,41 +9029,52 @@ msgstr "exportado%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' não versionado, e não exportado\n"
 
-#~ msgid "Missing rev attr in delete-entry element"
-#~ msgstr "Faltando atributo revisão em elemento delete-entry"
+#~ msgid ""
+#~ "Failed to add directory '%s': object of the same name is already "
+#~ "scheduled for addition"
+#~ msgstr ""
+#~ "Falhou ao adicionar diretório '%s': objeto com o mesmo nome já agendado "
+#~ "para inclusão"
 
-#~ msgid "Got unexpected XML element"
-#~ msgstr "Elemento XML inesperado obtido"
+#~ msgid "Failed to add directory '%s': object of the same name already exists"
+#~ msgstr ""
+#~ "Falhou ao adicionar diretório '%s': objeto com o mesmo nome já existe"
 
-#~ msgid "Element is missing name attr"
-#~ msgstr "Falta atributo de nome em elemento"
-
-#~ msgid "file-rev element is missing path attr"
-#~ msgstr "falta atributo de caminho em elemento file-rev"
-
-#~ msgid "file-rev element is missing rev attr"
-#~ msgstr "falta atributo de revisão em elemento file-rev"
-
-#~ msgid "Got unexpected element"
-#~ msgstr "Elemento inesperado recebido"
-
-#~ msgid "Got unexpected element '%s:%s'"
-#~ msgstr "Elemento inesperado recebido '%s:%s'"
-
-#~ msgid "Got element at an unexpected location"
-#~ msgstr "Elemento obtido em local inesperado"
-
-#~ msgid "Got lock element in the wrong location"
-#~ msgstr "Elemento de trava obtido em local errado"
-
-#~ msgid "Move will not be attempted unless forced"
-#~ msgstr "Mudança não será tentada a menos que forçada"
-
-#~ msgid "GET request failed for '%s'"
-#~ msgstr "Requisição GET falhou para '%s'"
+#~ msgid "Lock request failed: %d %s"
+#~ msgstr "Requisição de travamento falhou: %d %s"
 
 #~ msgid "Editing property on non-local target '%s' not yet supported"
 #~ msgstr "Editar propriedade em alvo não local '%s' ainda não está suportado"
 
-#~ msgid "Lock request failed: %d %s"
-#~ msgstr "Requisição de travamento falhou: %d %s"
+#~ msgid "GET request failed for '%s'"
+#~ msgstr "Requisição GET falhou para '%s'"
+
+#~ msgid "Move will not be attempted unless forced"
+#~ msgstr "Mudança não será tentada a menos que forçada"
+
+#~ msgid "Got lock element in the wrong location"
+#~ msgstr "Elemento de trava obtido em local errado"
+
+#~ msgid "Got element at an unexpected location"
+#~ msgstr "Elemento obtido em local inesperado"
+
+#~ msgid "Got unexpected element '%s:%s'"
+#~ msgstr "Elemento inesperado recebido '%s:%s'"
+
+#~ msgid "Got unexpected element"
+#~ msgstr "Elemento inesperado recebido"
+
+#~ msgid "file-rev element is missing rev attr"
+#~ msgstr "falta atributo de revisão em elemento file-rev"
+
+#~ msgid "file-rev element is missing path attr"
+#~ msgstr "falta atributo de caminho em elemento file-rev"
+
+#~ msgid "Element is missing name attr"
+#~ msgstr "Falta atributo de nome em elemento"
+
+#~ msgid "Got unexpected XML element"
+#~ msgstr "Elemento XML inesperado obtido"
+
+#~ msgid "Missing rev attr in delete-entry element"
+#~ msgstr "Faltando atributo revisão em elemento delete-entry"
