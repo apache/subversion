@@ -528,7 +528,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * At the start of traversal, the consumer provides @a edit_baton, a
  * baton global to the entire delta edit.  If there is a target
  * revision that needs to be set for this operation, the producer
- * should called the @c set_target_revision function at this point.
+ * should call the @c set_target_revision function at this point.
  *
  * Next, if there are any tree deltas to express, the producer should
  * pass the @a edit_baton to the @c open_root function, to get a baton
