@@ -294,7 +294,7 @@ run_hook_cmd(const char *name,
     }
 
   /* Close the read end of the stderr pipe. */
-  if (read_errstream && close(stderr_pipe[0]) == -1)
+  if (close(stderr_pipe[0]) == -1)
     return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
                              "Error closing read end of stderr "
                              "pipe to hook script '%s'", cmd);
