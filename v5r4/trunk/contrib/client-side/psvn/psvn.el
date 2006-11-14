@@ -381,7 +381,7 @@ The higher the number, the more debug messages are shown.
 
 See `svn-status-message' for the meaning of values for that variable.")
 
-(defvar svn-bookmark-list "A list of locations for a quick access via `svn-status-via-bookmark'" nil)
+(defvar svn-bookmark-list nil "A list of locations for a quick access via `svn-status-via-bookmark'")
 ;;(setq svn-bookmark-list '(("proj1" . "~/work/proj1")
 ;;                          ("doc1" . "~/docs/doc1")))
 
@@ -453,6 +453,12 @@ svn-status-coding-system is used in svn-run, if it is not nil.")
 (defcustom svn-status-wash-control-M-in-process-buffers
   (eq system-type 'windows-nt)
   "*Remove any trailing ^M from the `svn-process-buffer-name' buffer."
+  :type 'boolean
+  :group 'psvn)
+
+(defcustom svn-status-use-ido-completion
+  (fboundp 'ido-completing-read)
+  "*Use ido completion functionality."
   :type 'boolean
   :group 'psvn)
 
@@ -721,8 +727,8 @@ Otherwise, return \"\"."
       (svn-add-face string face)
     ""))
 
-; compatibility
-; emacs 20
+;; compatibility
+;; emacs 20
 (defalias 'svn-point-at-eol
   (if (fboundp 'point-at-eol) 'point-at-eol 'line-end-position))
 (defalias 'svn-point-at-bol
@@ -734,6 +740,20 @@ Otherwise, return \"\"."
   (if (not (fboundp 'gethash))
       (require 'cl-macs)))
 (defalias 'svn-puthash (if (fboundp 'puthash) 'puthash 'cl-puthash))
+
+;; emacs 21
+(if (fboundp 'line-number-at-pos)
+    (defalias 'svn-line-number-at-pos 'line-number-at-pos)
+  (defun svn-line-number-at-pos (&optional pos)
+    "Return (narrowed) buffer line number at position POS.
+If POS is nil, use current buffer location."
+    (let ((opoint (or pos (point))) start)
+      (save-excursion
+        (goto-char (point-min))
+        (setq start (point))
+        (goto-char opoint)
+        (forward-line 0)
+        (1+ (count-lines start (point)))))))
 
 ; xemacs
 ;; Evaluate the defsubst at compile time, so that the byte compiler
@@ -857,14 +877,9 @@ inside loops."
         if (listp item) nconc (svn-status-flatten-list item)
         else collect item))
 
-;; no idea, if there is a simpler way to achieve this...
 (defun svn-status-window-line-position ()
   "Return the window line at point."
-  (when (fboundp 'window-inside-edges)
-    (let ((edges (window-inside-edges))
-          (x-y (posn-x-y (posn-at-point))))
-      (+ (car (cdr edges))
-         (/ (or (cdr x-y) 0) (frame-char-height))))))
+  (count-lines (window-start) (point)))
 
 ;;;###autoload
 (defun svn-checkout (repos-url path)
@@ -1143,7 +1158,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (when svn-status-pre-run-svn-buffer
                     (with-current-buffer svn-status-pre-run-svn-buffer
                       (unless (eq major-mode 'svn-status-mode)
-                        (let ((src-line-number (line-number-at-pos)))
+                        (let ((src-line-number (svn-line-number-at-pos)))
                           (pop-to-buffer (get-buffer svn-status-last-output-buffer-name))
                           (goto-line src-line-number)))))
                   (message "svn blame finished"))
@@ -3516,7 +3531,7 @@ Run `svn-status' on the selected bookmark."
   (interactive
    (list
     (let ((completion-ignore-case t)
-          (completion-function (if (fboundp 'ido-completing-read) 'ido-completing-read 'completing-read)))
+          (completion-function (if svn-status-use-ido-completion 'ido-completing-read 'completing-read)))
       (funcall completion-function "SVN status bookmark: " svn-bookmark-list))))
   (unless bookmark
     (error "No bookmark specified"))
