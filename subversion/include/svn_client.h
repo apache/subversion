@@ -568,7 +568,8 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
 
 
 /** A callback used in svn_client_merge3() for resolving merge
- * conflicts during the application of a tree delta.
+ * conflicts to content or properties during the application of a tree
+ * delta.
  *
  * All allocations should be performed in @a pool.
  *
