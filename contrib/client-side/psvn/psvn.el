@@ -98,6 +98,7 @@
 ;; P k   - svn-status-property-set-keyword-list
 ;; P y   - svn-status-property-set-eol-style
 ;; P x   - svn-status-property-set-executable
+;; P m   - svn-status-property-set-mime-type
 ;; H     - svn-status-use-history
 ;; x     - svn-status-update-buffer
 ;; q     - svn-status-bury-buffer
@@ -1637,6 +1638,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-property-map (kbd "k") 'svn-status-property-set-keyword-list)
   (define-key svn-status-mode-property-map (kbd "y") 'svn-status-property-set-eol-style)
   (define-key svn-status-mode-property-map (kbd "x") 'svn-status-property-set-executable)
+  (define-key svn-status-mode-property-map (kbd "m") 'svn-status-property-set-mime-type)
   ;; TODO: Why is `svn-status-select-line' in `svn-status-mode-property-map'?
   (define-key svn-status-mode-property-map (kbd "RET") 'svn-status-select-line)
   (define-key svn-status-mode-map (kbd "P") svn-status-mode-property-map))
@@ -1704,6 +1706,7 @@ A and B must be line-info's."
      ["Edit svn:keywords List" svn-status-property-set-keyword-list t]
      ["Select svn:eol-style" svn-status-property-set-eol-style t]
      ["Set svn:executable" svn-status-property-set-executable t]
+     ["Set svn:mime-type" svn-status-property-set-mime-type t]
      )
     ("Options"
      ["Save Options" svn-status-save-state t]
@@ -4053,6 +4056,22 @@ When called with a prefix argument, it is possible to enter a new property."
   "Set the svn:executable property on the marked files."
   (interactive)
   (svn-status-property-set-property (svn-status-marked-files) "svn:executable" "*"))
+
+(defun svn-status-property-set-mime-type ()
+  "Set the svn:mime-type property on the marked files."
+  (interactive)
+  (require 'mailcap nil t)
+  (let ((completion-ignore-case t)
+        (completion-function (if svn-status-use-ido-completion
+                                 'ido-completing-read
+                               'completing-read))
+        (mime-types (when (fboundp 'mailcap-mime-types)
+                      (mailcap-mime-types))))
+    (svn-status-property-set-property
+     (svn-status-marked-files) "svn:mime-type"
+     (funcall completion-function "Set svn:mime-type for the marked files: "
+              (mapcar (lambda (x) (cons x x)) ; for Emacs 21
+                      (sort mime-types 'string<))))))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-prop-edit-mode:
