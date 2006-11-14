@@ -326,9 +326,11 @@ parse_mergeinfo_from_db(sqlite3 *db,
           mergedfrom = (char *) sqlite3_column_text(stmt, 0);
           startrev = sqlite3_column_int64(stmt, 1);
           endrev = sqlite3_column_int64(stmt, 2);
+
+          mergedfrom = apr_pstrdup(pool, mergedfrom);
           if (lastmergedfrom && strcmp(mergedfrom, lastmergedfrom) != 0)
             {
-              apr_hash_set(*result, mergedfrom, APR_HASH_KEY_STRING,
+              apr_hash_set(*result, lastmergedfrom, APR_HASH_KEY_STRING,
                            pathranges);
               pathranges = apr_array_make(pool, 1,
                                           sizeof(svn_merge_range_t *));
@@ -337,6 +339,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
           temprange->start = startrev;
           temprange->end = endrev;
           APR_ARRAY_PUSH(pathranges, svn_merge_range_t *) = temprange;
+
           sqlite_result = sqlite3_step(stmt);
           lastmergedfrom = mergedfrom;
         }
