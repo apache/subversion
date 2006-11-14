@@ -126,19 +126,19 @@ def setup_working_copy(wc_dir, value_len):
   id_with_space_path = os.path.join(wc_dir, 'id with space')
   id_exp_with_dollar_path = os.path.join(wc_dir, 'id_exp with_$_sign')
 
-  svntest.main.file_append (author_rev_unexp_path, "$Author$\n$Rev$")
-  svntest.main.file_append (author_rev_exp_path, "$Author: blah $\n$Rev: 0 $")
-  svntest.main.file_append (url_unexp_path, "$URL$")
-  svntest.main.file_append (url_exp_path, "$URL: blah $")
-  svntest.main.file_append (id_unexp_path, "$Id$")
-  svntest.main.file_append (id_exp_path, "$Id: blah $")
-  svntest.main.file_append (bogus_keywords_path, "$Arthur$\n$Rev0$")
-  svntest.main.file_append (embd_author_rev_unexp_path,
-                            "one\nfish\n$Author$ two fish\n red $Rev$\n fish")
-  svntest.main.file_append (embd_author_rev_exp_path,
-                            "blue $Author: blah $ fish$Rev: 0 $\nI fish")
-  svntest.main.file_append (embd_bogus_keywords_path,
-                            "you fish $Arthur$then\n we$Rev0$ \n\nchew fish")
+  svntest.main.file_append(author_rev_unexp_path, "$Author$\n$Rev$")
+  svntest.main.file_append(author_rev_exp_path, "$Author: blah $\n$Rev: 0 $")
+  svntest.main.file_append(url_unexp_path, "$URL$")
+  svntest.main.file_append(url_exp_path, "$URL: blah $")
+  svntest.main.file_append(id_unexp_path, "$Id$")
+  svntest.main.file_append(id_exp_path, "$Id: blah $")
+  svntest.main.file_append(bogus_keywords_path, "$Arthur$\n$Rev0$")
+  svntest.main.file_append(embd_author_rev_unexp_path,
+                           "one\nfish\n$Author$ two fish\n red $Rev$\n fish")
+  svntest.main.file_append(embd_author_rev_exp_path,
+                           "blue $Author: blah $ fish$Rev: 0 $\nI fish")
+  svntest.main.file_append(embd_bogus_keywords_path,
+                           "you fish $Arthur$then\n we$Rev0$ \n\nchew fish")
 
   keyword_test_targets = [
     # User tries to shoot him or herself on the foot
@@ -159,10 +159,10 @@ def setup_working_copy(wc_dir, value_len):
     ]
 
   for i in keyword_test_targets:
-    svntest.main.file_append (fixed_length_keywords_path, i)
+    svntest.main.file_append(fixed_length_keywords_path, i)
 
-  svntest.main.file_append (id_with_space_path, "$Id$")
-  svntest.main.file_append (id_exp_with_dollar_path, 
+  svntest.main.file_append(id_with_space_path, "$Id$")
+  svntest.main.file_append(id_exp_with_dollar_path, 
                    "$Id: id_exp with_$_sign 1 2006-06-10 11:10:00Z jrandom $")
 
 
@@ -204,7 +204,7 @@ def keywords_from_birth(sbox):
   else:
     url_expand_test_data = canonical_repo_url + 'fixed_length_keywords'
   
-  setup_working_copy (wc_dir, len(url_expand_test_data))
+  setup_working_copy(wc_dir, len(url_expand_test_data))
 
   # Add all the files
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -224,32 +224,32 @@ def keywords_from_birth(sbox):
     'id_exp with_$_sign' : Item(status='A ', wc_rev=0),
     })
 
-  svntest.main.run_svn (None, 'add', author_rev_unexp_path)
-  svntest.main.run_svn (None, 'add', author_rev_exp_path)
-  svntest.main.run_svn (None, 'add', url_unexp_path)
-  svntest.main.run_svn (None, 'add', url_exp_path)
-  svntest.main.run_svn (None, 'add', id_unexp_path)
-  svntest.main.run_svn (None, 'add', id_exp_path)
-  svntest.main.run_svn (None, 'add', bogus_keywords_path)
-  svntest.main.run_svn (None, 'add', embd_author_rev_unexp_path)
-  svntest.main.run_svn (None, 'add', embd_author_rev_exp_path)
-  svntest.main.run_svn (None, 'add', embd_bogus_keywords_path)
-  svntest.main.run_svn (None, 'add', fixed_length_keywords_path)
-  svntest.main.run_svn (None, 'add', id_with_space_path)
-  svntest.main.run_svn (None, 'add', id_exp_with_dollar_path)
+  svntest.main.run_svn(None, 'add', author_rev_unexp_path)
+  svntest.main.run_svn(None, 'add', author_rev_exp_path)
+  svntest.main.run_svn(None, 'add', url_unexp_path)
+  svntest.main.run_svn(None, 'add', url_exp_path)
+  svntest.main.run_svn(None, 'add', id_unexp_path)
+  svntest.main.run_svn(None, 'add', id_exp_path)
+  svntest.main.run_svn(None, 'add', bogus_keywords_path)
+  svntest.main.run_svn(None, 'add', embd_author_rev_unexp_path)
+  svntest.main.run_svn(None, 'add', embd_author_rev_exp_path)
+  svntest.main.run_svn(None, 'add', embd_bogus_keywords_path)
+  svntest.main.run_svn(None, 'add', fixed_length_keywords_path)
+  svntest.main.run_svn(None, 'add', id_with_space_path)
+  svntest.main.run_svn(None, 'add', id_exp_with_dollar_path)
 
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Add the keyword properties.
-  keywords_on (author_rev_unexp_path)
-  keywords_on (url_unexp_path)
-  keywords_on (url_exp_path)
-  keywords_on (id_unexp_path)
-  keywords_on (id_exp_path)
-  keywords_on (embd_author_rev_exp_path)
-  keywords_on (fixed_length_keywords_path)
-  keywords_on (id_with_space_path)
-  keywords_on (id_exp_with_dollar_path)
+  keywords_on(author_rev_unexp_path)
+  keywords_on(url_unexp_path)
+  keywords_on(url_exp_path)
+  keywords_on(id_unexp_path)
+  keywords_on(id_exp_path)
+  keywords_on(embd_author_rev_exp_path)
+  keywords_on(fixed_length_keywords_path)
+  keywords_on(id_with_space_path)
+  keywords_on(id_exp_with_dollar_path)
 
   # Commit.
   expected_output = svntest.wc.State(wc_dir, {
@@ -268,9 +268,9 @@ def keywords_from_birth(sbox):
     'id_exp with_$_sign' : Item(verb='Adding'),
     })
 
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         None, None,
-                                         None, None, None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        None, None,
+                                        None, None, None, None, wc_dir)
 
   # Make sure the unexpanded URL keyword got expanded correctly.
   fp = open(url_unexp_path, 'r')
@@ -428,11 +428,11 @@ def update_modified_with_translation(sbox):
   expected_status.tweak('A/D/G/rho', wc_rev=2, status='  ')
 
   # Commit revision 2:  it has the new rho.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         rho_path)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        rho_path)
 
   # Change rho again
   f = open(rho_path, "w")
@@ -443,11 +443,11 @@ def update_modified_with_translation(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', wc_rev=3, status='  ')
 
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None, None, None, None, None,
-                                         rho_path)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        rho_path)
 
   # Locally modify rho again.
   f = open(rho_path, "w")
@@ -564,12 +564,12 @@ def keyword_expanded_on_checkout(sbox):
   # The bug didn't occur if there were multiple files in the
   # directory, so setup an empty directory.
   Z_path = os.path.join(wc_dir, 'Z')
-  svntest.actions.run_and_verify_svn (None, None, [], 'mkdir', Z_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', Z_path)
   
   # Add the file that has the keyword to be expanded
   url_path = os.path.join(Z_path, 'url')
-  svntest.main.file_append (url_path, "$URL$")
-  svntest.actions.run_and_verify_svn (None, None, [], 'add', url_path)
+  svntest.main.file_append(url_path, "$URL$")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', url_path)
   keywords_on(url_path)
 
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -577,11 +577,11 @@ def keyword_expanded_on_checkout(sbox):
 
   other_wc_dir = sbox.add_wc_path('other')
   other_url_path = os.path.join(other_wc_dir, 'Z', 'url')
-  svntest.actions.run_and_verify_svn (None, None, [], 'checkout',
-                                      '--username', svntest.main.wc_author,
-                                      '--password', svntest.main.wc_passwd,
-                                      svntest.main.current_repo_url,
-                                      other_wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     sbox.repo_url,
+                                     other_wc_dir)
 
   # Check keyword got expanded (and thus the mkdir, add, ps, commit
   # etc. worked)
@@ -604,7 +604,7 @@ def cat_keyword_expansion(sbox):
   lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
 
   # Set up A/mu to do $Rev$ keyword expansion
-  svntest.main.file_append (mu_path , "$Rev$\n$Author$")
+  svntest.main.file_append(mu_path , "$Rev$\n$Author$")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:keywords', 'Rev Author',
                                      mu_path)
@@ -614,15 +614,15 @@ def cat_keyword_expansion(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # Change the author to value which will get truncated on expansion
   full_author = "x" * 400 
   key_author = "x" * 244
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
   svntest.actions.run_and_verify_svn("", None, [],
                                      'propset', '--revprop', '-r2',
                                      'svn:author', full_author,
@@ -640,18 +640,18 @@ def cat_keyword_expansion(sbox):
     'A/B/lambda' : Item(verb='Sending'),
     })
   expected_status.tweak('A/B/lambda', wc_rev=3)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
   # At one stage the keywords were expanded to values for the requested
   # revision, not to those committed revision
-  svntest.actions.run_and_verify_svn (None,
-                                      [ "This is the file 'mu'.\n",
-                                        "$Rev: 2 $\n",
-                                        "$Author: " + key_author + " $"], [],
-                                      'cat', '-r', 'HEAD', mu_path)
+  svntest.actions.run_and_verify_svn(None,
+                                     [ "This is the file 'mu'.\n",
+                                       "$Rev: 2 $\n",
+                                       "$Author: " + key_author + " $"], [],
+                                     'cat', '-r', 'HEAD', mu_path)
   
 
 #----------------------------------------------------------------------
@@ -679,10 +679,10 @@ def copy_propset_commit(sbox):
     'A/mu2' : Item(verb='Adding'),
     })
   expected_status.tweak('A/mu2', status='  ', wc_rev=2, copied=None)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 #      Create a greek tree, commit a keyword into one file,
@@ -697,7 +697,7 @@ def propset_commit_checkout_nocrash(sbox):
   mu_path = os.path.join(wc_dir, 'A', 'mu')
 
   # Put a keyword in A/mu, commit
-  svntest.main.file_append (mu_path, "$Rev$")
+  svntest.main.file_append(mu_path, "$Rev$")
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
     })
@@ -725,11 +725,11 @@ def propset_commit_checkout_nocrash(sbox):
   other_wc_dir = sbox.add_wc_path('other')
   mu_other_path = os.path.join(other_wc_dir, 'A', 'mu')
   
-  svntest.actions.run_and_verify_svn (None, None, [], 'checkout',
-                                      '--username', svntest.main.wc_author,
-                                      '--password', svntest.main.wc_passwd,
-                                      svntest.main.current_repo_url,
-                                      other_wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     sbox.repo_url,
+                                     other_wc_dir)
 
   mu_other_contents = open(mu_other_path).read()
   if mu_other_contents != "This is the file 'mu'.\n$Rev: 3 $":

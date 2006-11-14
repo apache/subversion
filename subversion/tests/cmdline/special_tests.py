@@ -162,7 +162,7 @@ def import_export_symlink(sbox):
   os.symlink('linktarget', new_path)
 
   # import this symlink into the repository
-  url = svntest.main.current_repo_url + "/dirA/dirB/new_link"
+  url = sbox.repo_url + "/dirA/dirB/new_link"
   output, errput = svntest.actions.run_and_verify_svn(
     'Import a symlink', None, [], 'import',
     '-m', 'log msg', new_path, url)
@@ -248,7 +248,7 @@ def copy_tree_with_symlink(sbox):
     'A/D/H2/linktarget' : Item(status='  ', copied='+', wc_rev='-'),
     'A/D/H2/newfile' : Item(status='  ', copied='+', wc_rev='-'),
     })
-  svntest.actions.run_and_verify_status (wc_dir, expected_status)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
 def replace_symlink_with_file(sbox):

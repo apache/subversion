@@ -30,6 +30,21 @@ extern "C" {
 #include <apr_thread_proc.h>
 #include "svn_ra_svn.h"
 
+/* Callback function that indicates if a svn_ra_svn__stream_t has pending
+ * data.
+ */
+typedef svn_boolean_t (*ra_svn_pending_fn_t)(void *baton);
+
+/* Callback function that sets the timeout value for a svn_ra_svn__stream_t. */
+typedef void (*ra_svn_timeout_fn_t)(void *baton, apr_interval_time_t timeout);
+
+/* A stream abstraction for ra_svn.
+ *
+ * This is different from svn_stream_t in that it provides timeouts and
+ * the ability to check for pending data.
+ */
+typedef struct svn_ra_svn__stream_st svn_ra_svn__stream_t;
+
 /* Handler for blocked writes. */
 typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
                                                apr_pool_t *pool,
@@ -42,10 +57,13 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
 /* This structure is opaque to the server.  The client pokes at the
  * first few fields during setup and cleanup. */
 struct svn_ra_svn_conn_st {
-  apr_socket_t *sock;     /* NULL if using in_file/out_file */
-  apr_file_t *in_file;
-  apr_file_t *out_file;
-  apr_proc_t *proc;       /* Used by client.c when sock is NULL */
+  svn_ra_svn__stream_t *stream;
+#ifdef SVN_HAVE_SASL
+  /* Although all reads and writes go through the svn_ra_svn__stream_t
+     interface, SASL still needs direct access to the underlying socket
+     for stuff like IP addresses and port numbers. */
+  apr_socket_t *sock;
+#endif
   char read_buf[SVN_RA_SVN__READBUF_SIZE];
   char *read_ptr;
   char *read_end;
@@ -109,6 +127,44 @@ svn_error_t *svn_ra_svn__cram_client(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
  * @a pool for temporary allocations. */
 svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
                                                apr_pool_t *pool);
+
+/* Returns a stream that reads/writes from/to SOCK. */
+svn_ra_svn__stream_t *svn_ra_svn__stream_from_sock(apr_socket_t *sock,
+                                                   apr_pool_t *pool);
+
+/* Returns a stream that reads from IN_FILE and writes to OUT_FILE.  */
+svn_ra_svn__stream_t *svn_ra_svn__stream_from_files(apr_file_t *in_file,
+                                                    apr_file_t *out_file,
+                                                    apr_pool_t *pool);
+
+/* Create an svn_ra_svn__stream_t using READ_CB, WRITE_CB, TIMEOUT_CB,
+ * PENDING_CB, and BATON.
+ */
+svn_ra_svn__stream_t *svn_ra_svn__stream_create(void *baton,
+                                                svn_read_fn_t read_cb,
+                                                svn_write_fn_t write_cb,
+                                                ra_svn_timeout_fn_t timeout_cb,
+                                                ra_svn_pending_fn_t pending_cb,
+                                                apr_pool_t *pool);
+
+/* Write *LEN bytes from DATA to STREAM, returning the number of bytes
+ * written in *LEN.
+ */
+svn_error_t *svn_ra_svn__stream_write(svn_ra_svn__stream_t *stream,
+                                      const char *data, apr_size_t *len);
+
+/* Read *LEN bytes from STREAM into DATA, returning the number of bytes
+ * read in *LEN.
+ */
+svn_error_t *svn_ra_svn__stream_read(svn_ra_svn__stream_t *stream,
+                                     char *data, apr_size_t *len);
+
+/* Set the timeout for operations on STREAM to INTERVAL. */
+void svn_ra_svn__stream_timeout(svn_ra_svn__stream_t *stream,
+                                apr_interval_time_t interval);
+
+/* Return whether or not there is data pending on STREAM. */
+svn_boolean_t svn_ra_svn__stream_pending(svn_ra_svn__stream_t *stream);
 
 /* Respond to an auth request and perform authentication.  REALM may
  * be NULL for the initial authentication exchange of protocol version

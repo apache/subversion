@@ -514,6 +514,18 @@ class WinGeneratorBase(GeneratorBase):
     if self.zlib_path and (name == 'neon' or name == 'serf'):
       depends.extend(self.sections['zlib'].get_targets())
 
+    # To set the correct build order of the JavaHL targets, the javahl-javah 
+    # and libsvnjavahl targets are defined with extra dependencies in build.conf
+    # like this:
+    # add-deps = $(javahl_javah_DEPS) $(javahl_java_DEPS)
+    #
+    # This section parses those dependencies and adds them to the dependency list
+    # for this target.
+    if name == 'javahl-javah' or name == 'libsvnjavahl':
+      for dep in re.findall('\$\(([^\)]*)_DEPS\)', target.add_deps):
+        dep = string.replace(dep, '_', '-')
+        depends.extend(self.sections[dep].get_targets())
+
     return depends
 
   def get_win_depends(self, target, mode):
@@ -678,7 +690,7 @@ class WinGeneratorBase(GeneratorBase):
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
     
     if self.serf_lib:
-      fakeincludes.append(self.apath(self.serf_path, ""))
+      fakeincludes.append(self.apath(self.serf_path))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)

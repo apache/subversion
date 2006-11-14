@@ -420,6 +420,15 @@ typedef struct svn_ra_callbacks2_t
 
   /** Notification callback baton, used with progress_func. */
   void *progress_baton;
+
+  /** Cancelation function
+   *
+   * As its baton, the general callback baton is used
+   *
+   * @since New in 1.5
+   */
+  svn_cancel_func_t cancel_func;
+
 } svn_ra_callbacks2_t;
 
 /** Similar to svn_ra_callbacks2_t, except that the progress

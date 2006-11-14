@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -151,10 +151,6 @@ work_dir = "svn-test-work"
 general_repo_dir = os.path.join(work_dir, "repositories")
 general_wc_dir = os.path.join(work_dir, "working_copies")
 
-# A relative path that will always point to latest repository
-current_repo_dir = None
-current_repo_url = None
-
 # temp directory in which we will create our 'pristine' local
 # repository and other scratch data.  This should be removed when we
 # quit and when we startup.
@@ -163,9 +159,7 @@ temp_dir = os.path.join(work_dir, 'local_tmp')
 # (derivatives of the tmp dir.)
 pristine_dir = os.path.join(temp_dir, "repos")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
-config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
-pristine_wc_dir = os.path.join(temp_dir, "wc")
-default_config_dir = config_dir
+default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -310,20 +304,6 @@ def run_command_stdin(command, error_expected, binary_mode=0,
 
   return stdout_lines, stderr_lines
 
-def set_config_dir(cfgdir):
-  "Set the config directory."
-
-  global config_dir
-  config_dir = cfgdir
-
-def reset_config_dir():
-  "Reset the config directory to the default value."
-
-  global config_dir
-  global default_config_dir
-
-  config_dir = default_config_dir
-
 def create_config_dir(cfgdir,
                       config_contents = '#\n',
                       server_contents = '#\n'):
@@ -352,9 +332,12 @@ def run_svn(error_expected, *varargs):
   If ERROR_EXPECTED is None, any stderr also will be printed.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  global config_dir
-  return run_command(svn_binary, error_expected, 0,
-                     *varargs + ('--config-dir', config_dir))
+  if '--config-dir' in varargs:
+    return run_command(svn_binary, error_expected, 0,
+                       *varargs)
+  else:
+    return run_command(svn_binary, error_expected, 0,
+                       *varargs + ('--config-dir', default_config_dir))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -470,79 +453,63 @@ def create_repos(path):
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 0):
   "Copy the repository SRC_PATH, with head revision HEAD_REVISION, to DST_PATH"
 
-  # If the copy may have the same uuid, then hotcopy the repos files on disk.
-  if not ignore_uuid:
-    if not os.path.exists(general_repo_dir):
-      os.makedirs(general_repo_dir) # this also creates all the intermediate dirs
-      
-    output, errput = run_svnadmin('hotcopy', src_path, dst_path)
-  else:
-    # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that 
-    # the displayed CMDs can be run by hand
-    create_repos(dst_path)
-    dump_args = ' dump "' + src_path + '"'
-    load_args = ' load "' + dst_path + '"'
-  
-    if ignore_uuid:
-      load_args = load_args + " --ignore-uuid"
-    if verbose_mode:
-      print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
-            '|', os.path.basename(svnadmin_binary) + load_args,
-    start = time.time()
-    dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
-    load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
-    stop = time.time()
-    if verbose_mode:
-      print '<TIME = %.6f>' % (stop - start)
-  
-    while 1:
-      data = dump_out.read(1024*1024)  # Arbitrary buffer size
-      if data == "":
-        break
-      load_in.write(data)
-    load_in.close() # Tell load we are done
-  
-    dump_lines = dump_err.readlines()
-    load_lines = load_out.readlines()
-    dump_in.close()
-    dump_out.close()
-    dump_err.close()
-    load_out.close()
-    load_err.close()
-  
-    dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
-    expect_revision = 0
-    for dump_line in dump_lines:
-      match = dump_re.match(dump_line)
-      if not match or match.group(1) != str(expect_revision):
-        print 'ERROR:  dump failed:', dump_line,
+  # Do an svnadmin dump|svnadmin load cycle. Print a fake pipe command so that 
+  # the displayed CMDs can be run by hand
+  create_repos(dst_path)
+  dump_args = ' dump "' + src_path + '"'
+  load_args = ' load "' + dst_path + '"'
+
+  if ignore_uuid:
+    load_args = load_args + " --ignore-uuid"
+  if verbose_mode:
+    print 'CMD:', os.path.basename(svnadmin_binary) + dump_args, \
+          '|', os.path.basename(svnadmin_binary) + load_args,
+  start = time.time()
+  dump_in, dump_out, dump_err = os.popen3(svnadmin_binary + dump_args, 'b')
+  load_in, load_out, load_err = os.popen3(svnadmin_binary + load_args, 'b')
+  stop = time.time()
+  if verbose_mode:
+    print '<TIME = %.6f>' % (stop - start)
+
+  while 1:
+    data = dump_out.read(1024*1024)  # Arbitrary buffer size
+    if data == "":
+      break
+    load_in.write(data)
+  load_in.close() # Tell load we are done
+
+  dump_lines = dump_err.readlines()
+  load_lines = load_out.readlines()
+  dump_in.close()
+  dump_out.close()
+  dump_err.close()
+  load_out.close()
+  load_err.close()
+
+  dump_re = re.compile(r'^\* Dumped revision (\d+)\.\r?$')
+  expect_revision = 0
+  for dump_line in dump_lines:
+    match = dump_re.match(dump_line)
+    if not match or match.group(1) != str(expect_revision):
+      print 'ERROR:  dump failed:', dump_line,
+      raise SVNRepositoryCopyFailure
+    expect_revision += 1
+  if expect_revision != head_revision + 1:
+    print 'ERROR:  dump failed; did not see revision', head_revision
+    raise SVNRepositoryCopyFailure
+
+  load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
+  expect_revision = 1
+  for load_line in load_lines:
+    match = load_re.match(load_line)
+    if match:
+      if match.group(1) != str(expect_revision):
+        print 'ERROR:  load failed:', load_line,
         raise SVNRepositoryCopyFailure
       expect_revision += 1
-    if expect_revision != head_revision + 1:
-      print 'ERROR:  dump failed; did not see revision', head_revision
-      raise SVNRepositoryCopyFailure
-  
-    load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
-    expect_revision = 1
-    for load_line in load_lines:
-      match = load_re.match(load_line)
-      if match:
-        if match.group(1) != str(expect_revision):
-          print 'ERROR:  load failed:', load_line,
-          raise SVNRepositoryCopyFailure
-        expect_revision += 1
-    if expect_revision != head_revision + 1:
-      print 'ERROR:  load failed; did not see revision', head_revision
-      raise SVNRepositoryCopyFailure
-
-
-def set_repos_paths(repo_dir):
-  "Set current_repo_dir and current_repo_url from a relative path to the repo."
-  global current_repo_dir, current_repo_url
-  current_repo_dir = repo_dir
-  current_repo_url = test_area_url + '/' + repo_dir
-  if windows == 1:
-    current_repo_url = string.replace(current_repo_url, '\\', '/')
+  if expect_revision != head_revision + 1:
+    print 'ERROR:  load failed; did not see revision', head_revision
+    raise SVNRepositoryCopyFailure
 
 
 def canonicalize_url(input):
@@ -810,14 +777,8 @@ def run_one_test(n, test_list):
     print "There is no test", `n` + ".\n"
     return 1
 
-  # Clear the repos paths for this test
-  global current_repo_dir, current_repo_url
-  current_repo_dir = None
-  current_repo_url = None
-
   # Run the test.
   exit_code = TestRunner(test_list[n], n).run()
-  reset_config_dir()
   return exit_code
 
 def _internal_run_tests(test_list, testnums):
@@ -903,6 +864,9 @@ def run_tests(test_list):
   if windows == 1:
     pristine_url = string.replace(pristine_url, '\\', '/')  
   
+  # Setup the pristine repository (and working copy)
+  actions.setup_pristine_repository()
+
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
     testnums = range(1, len(test_list))

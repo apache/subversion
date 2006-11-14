@@ -30,9 +30,11 @@ Item = svntest.wc.StateItem
 
 
 # Helper function
-def check_proplist(path, exp_out):
+def check_proplist(path, exp_out, config_dir):
   """Verify that property list on PATH has a value of EXP_OUT"""
-  out, err = svntest.main.run_svn(None, 'proplist', '--verbose', path)
+  
+  out, err = svntest.main.run_svn(None, 'proplist', '--verbose', path,
+                                  '--config-dir', config_dir)
 
   out2 = []
   for line in out[1:]:
@@ -98,9 +100,8 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
   # some directories
   wc_dir = sbox.wc_dir
   tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'autoprops_config')
-  repos_url = svntest.main.current_repo_url
-  svntest.main.set_config_dir(config_dir)
+  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
+  repos_url = sbox.repo_url
 
   # initialize parameters
   if cmd == 'import':
@@ -162,25 +163,27 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
 
   # do an svn co if needed
   if cmd == 'import':
-    svntest.main.run_svn(None, 'checkout', repos_url, files_wc_dir)
+    svntest.main.run_svn(None, 'checkout', repos_url, files_wc_dir, 
+                        '--config-dir', config_dir)
 
   # check the properties
   if enable_flag:
     filename = os.path.join(files_wc_dir, 'foo.h')
-    check_proplist(filename, ['auto : oui'])
+    check_proplist(filename, ['auto : oui'], config_dir)
     filename = os.path.join(files_wc_dir, 'foo.c')
-    check_proplist(filename, ['auto : oui', 'cfile : yes'])
+    check_proplist(filename, ['auto : oui', 'cfile : yes'], config_dir)
     filename = os.path.join(files_wc_dir, 'foo.jpg')
-    check_proplist(filename, ['auto : oui', 'jpgfile : ja'])
+    check_proplist(filename, ['auto : oui', 'jpgfile : ja'], config_dir)
     filename = os.path.join(files_wc_dir, 'fubar.tar')
-    check_proplist(filename, ['auto : oui', 'tarfile : si'])
+    check_proplist(filename, ['auto : oui', 'tarfile : si'], config_dir)
     filename = os.path.join(files_wc_dir, 'foobar.lha')
-    check_proplist(filename, ['auto : oui', 'lhafile : da', 'lzhfile : niet'])
+    check_proplist(filename, ['auto : oui', 'lhafile : da', 'lzhfile : niet'],
+                   config_dir)
     filename = os.path.join(files_wc_dir, 'spacetest')
-    check_proplist(filename, ['auto : oui', 'abc : def', 'ghi :'])
+    check_proplist(filename, ['auto : oui', 'abc : def', 'ghi :'], config_dir)
   else:
     for filename in filenames:
-      check_proplist(os.path.join(files_wc_dir, filename), [])
+      check_proplist(os.path.join(files_wc_dir, filename), [], config_dir)
 
 
 #----------------------------------------------------------------------

@@ -219,21 +219,27 @@ I.    BUILD REQUIREMENTS
       or if you are building a Subversion client that will only speak
       to remote (networked) repositories, you don't need it.
 
-      The current recommended version is 4.3.27. We *strongly* recommend
-      using 4.3 or 4.2 over 4.1 or 4.0.  Not only are these the fastest
-      and most stable we've seen, but they also enable Subversion
-      repositories to automatically clean up database journal files to
-      save disk space.
+      The current recommended version is 4.4.20, which brings
+      auto-recovery functionality to the Berkeley DB database
+      environment.  (Preliminary testing indicates that Subversion
+      will also work with Berkeley DB 4.5 once APR grows support for
+      that release.)
+
+      If you must use an older version of Berkeley DB, we *strongly*
+      recommend using 4.3 or 4.2 over the 4.1 or 4.0 versions.  Not
+      only are these significantly faster and more stable, but they
+      also enable Subversion repositories to automatically clean up
+      database journal files to save disk space.
 
       You'll need Berkeley DB installed on your system.  You can
       get it from:
 
-          http://www.sleepycat.com/download/index.shtml
+          http://www.oracle.com/technology/software/products/berkeley-db/index.html
 
       If you have Berkeley DB installed in a place not searched by default
       for includes and libraries, add something like this:
 
-          --with-berkeley-db=/usr/local/BerkeleyDB.4.3
+          --with-berkeley-db=/usr/local/BerkeleyDB.4.4
 
       to your `configure' switches, and the build process will use the
       Berkeley library in the named directory.  You may need to use a

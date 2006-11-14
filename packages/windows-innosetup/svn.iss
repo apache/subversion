@@ -22,7 +22,6 @@ AppSupportURL=http://subversion.tigris.org/project_faq.html
 AppUpdatesURL=http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=91
 DefaultDirName={pf}\Subversion
 DefaultGroupName=Subversion
-LicenseFile={#= path_setup_in}\subversion\SubversionLicense.txt
 OutputDir={#= path_setup_out}
 OutputBaseFilename=svn-{#= svn_version}-setup
 Compression=lzma
@@ -71,7 +70,6 @@ Source: {#= path_iconv}\*.so; DestDir: {app}\iconv; Flags: ignoreversion
 #ifdef inc_locale
 Source: {#= path_locale}\*.*; DestDir: {app}\share\locale; Flags: ignoreversion recursesubdirs
 #endif
-Source: {#= path_setup_in}\berkeley\BerkeleyLicense.txt; DestDir: {app}
 Source: {#= path_setup_in}\doc\svn-book.chm; DestDir: {app}\doc
 
 ; APR DLLs
@@ -117,6 +115,10 @@ Source: {#= path_authzsvn_pdb}\mod_authz_svn.pdb; DestDir: {app}\httpd; Flags: i
 Source: {#= path_iconv_pdb}\*.pdb; DestDir: {app}\iconv; Flags: ignoreversion; Components: pdb
 #endif
 
+; License files;
+Source: {#= path_licenses}\*.*; DestDir: {app}\licenses; Flags: ignoreversion recursesubdirs
+Source: {#= path_setup_in}\subversion\SubversionLicense.txt; DestDir: {app}\licenses; Flags: ignoreversion
+
 ; Internet Shortcuts ----------------------------------------------------------
 Source: svn.url; DestDir: {app}
 
@@ -135,8 +137,7 @@ FileName: {app}\UninsHs.dat; Section: Common; Key: Components; String: {code:Com
 [Icons]
 Name: {group}\Subversion on the Web; Filename: {app}\svn.url
 Name: {group}\Uninstall Subversion; Filename: {app}\UninsHs.exe
-Name: {group}\Licenses\Subversion; Filename: {app}\SubversionLicense.txt
-Name: {group}\Licenses\Berkeley DB Licence; Filename: {app}\BerkeleyLicense.txt
+Name: {group}\Licenses; Filename: {app}\Licenses\
 Name: {group}\Subversion Documentation; Filename: {app}\doc\svn-book.chm; IconFilename: {app}\bin\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0
 Name: {userdesktop}\Subversion Documentation; Filename: {app}\doc\svn-book.chm; IconFilename: {app}\bin\svn.exe; Comment: The standard Subversion documentation; IconIndex: 0; Tasks: desktopicon
 Name: {userappdata}\Microsoft\Internet Explorer\Quick Launch\Subversion Documentation; Filename: {app}\doc\svn-book.chm; Comment: The standard Subversion Documentation; IconFilename: {app}\bin\svn.exe; IconIndex: 0; MinVersion: 4.01.1998,5.00.2195; Tasks: quicklaunchicon
@@ -174,10 +175,10 @@ Type: filesandordirs; Name: {app}\iconv
 #ifdef inc_locale
 Type: filesandordirs; Name: {app}\share\locale
 #endif
-Type: files; Name: {app}\BerkeleyLicense.txt
 Type: filesandordirs; Name: {app}\doc
 Type: filesandordirs; Name: {app}\helpers
 Type: filesandordirs; Name: {app}\httpd
+Type: filesandordirs; Name: {app}\licenses
 
 ;If add "fixed" flag to "main" in [Components], use these lines:
 ;Type: files; Name: {app}\svn.pdb
