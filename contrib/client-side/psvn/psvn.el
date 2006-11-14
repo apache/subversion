@@ -877,9 +877,10 @@ inside loops."
         if (listp item) nconc (svn-status-flatten-list item)
         else collect item))
 
-(defun svn-status-window-line-position ()
-  "Return the window line at point."
-  (count-lines (window-start) (point)))
+(defun svn-status-window-line-position (w)
+  "Return the window line at point for window W, or nil if W is nil."
+  (svn-status-message 3 "About to count lines; selected window is %s" (selected-window))
+  (and w (count-lines (window-start w) (point))))
 
 ;;;###autoload
 (defun svn-checkout (repos-url path)
@@ -2446,7 +2447,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (first-line t)
         (fname (svn-status-line-info->filename (svn-status-get-line-information)))
         (fname-pos (point))
-        (window-line-pos (svn-status-window-line-position))
+        (window-line-pos (svn-status-window-line-position (get-buffer-window (current-buffer))))
         (header-line-string)
         (column (current-column)))
     (delete-region (point-min) (point-max))
