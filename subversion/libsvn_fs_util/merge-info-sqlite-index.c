@@ -319,7 +319,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
       *result = apr_hash_make(pool);
       pathranges = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
 
-      while (sqlite_result == SQLITE_ROW)
+      do
         {
           svn_merge_range_t *temprange;
 
@@ -343,6 +343,8 @@ parse_mergeinfo_from_db(sqlite3 *db,
           sqlite_result = sqlite3_step(stmt);
           lastmergedfrom = mergedfrom;
         }
+      while (sqlite_result == SQLITE_ROW);
+
       apr_hash_set(*result, mergedfrom, APR_HASH_KEY_STRING, pathranges);
 
       if (sqlite_result != SQLITE_DONE)
