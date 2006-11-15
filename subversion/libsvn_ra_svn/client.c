@@ -498,8 +498,9 @@ static svn_error_t *parse_url(const char *url, apr_uri_t *uri,
 static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  const char *url,
                                  const apr_uri_t *uri,
-                                 svn_auth_baton_t *auth_baton,
                                  const char **tunnel_argv,
+                                 const svn_ra_callbacks2_t *callbacks,
+                                 void *callbacks_baton,
                                  apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess;
@@ -507,7 +508,17 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist;
-  
+
+  sess = apr_palloc(pool, sizeof(*sess));
+  sess->pool = pool;
+  sess->is_tunneled = (tunnel_argv != NULL);
+  sess->user = uri->user;
+  sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
+                                    uri->port);
+  sess->tunnel_argv = tunnel_argv;
+  sess->callbacks = callbacks;
+  sess->callbacks_baton = callbacks_baton;
+
   if (tunnel_argv)
     SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
   else
@@ -515,6 +526,11 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
       SVN_ERR(make_connection(uri->hostname, uri->port, &sock, pool));
       conn = svn_ra_svn_create_conn(sock, NULL, NULL, pool);
     }
+
+  /* Make sure we set conn->session before reading from it,
+   * because the reader and writer functions expect a non-NULL value. */
+  sess->conn = conn;
+  conn->session = sess;
 
   /* Read server's greeting. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "nnll", &minver, &maxver,
@@ -526,16 +542,7 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                              (int) minver);
   SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
 
-  sess = apr_palloc(pool, sizeof(*sess));
-  sess->pool = pool;
-  sess->conn = conn;
   sess->protocol_version = (maxver > 2) ? 2 : maxver;
-  sess->is_tunneled = (tunnel_argv != NULL);
-  sess->auth_baton = auth_baton;
-  sess->user = uri->user;
-  sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
-                                    uri->port);
-  sess->tunnel_argv = tunnel_argv;
 
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
@@ -615,7 +622,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   svn_ra_svn__session_baton_t *sess;
   const char *tunnel, **tunnel_argv;
   apr_uri_t uri;
-  
+
   SVN_ERR(parse_url(url, &uri, sess_pool));
 
   parse_tunnel(url, &tunnel, pool);
@@ -628,8 +635,8 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
 
   /* We open the session in a subpool so we can get rid of it if we
      reparent with a server that doesn't support reparenting. */
-  SVN_ERR(open_session(&sess, url, &uri, callbacks->auth_baton, tunnel_argv,
-                       sess_pool));
+  SVN_ERR(open_session(&sess, url, &uri, tunnel_argv,
+                       callbacks, callback_baton, sess_pool));
   session->priv = sess;
 
   return SVN_NO_ERROR;
@@ -660,8 +667,8 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   sess_pool = svn_pool_create(ra_session->pool);
   err = parse_url(url, &uri, sess_pool);
   if (! err)
-    err = open_session(&new_sess, url, &uri, sess->auth_baton,
-                       sess->tunnel_argv, sess_pool);
+    err = open_session(&new_sess, url, &uri, sess->tunnel_argv,
+                       sess->callbacks, sess->callbacks_baton, sess_pool);
   /* We destroy the new session pool on error, since it is allocated in
      the main session pool. */
   if (err)
