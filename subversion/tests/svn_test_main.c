@@ -253,6 +253,12 @@ main(int argc, const char *argv[])
   /* set up the global pool */
   pool = svn_pool_create(NULL);
 
+  /* Remember the command line */
+  test_argc = argc;
+  test_argv = argv;
+
+  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
+
   /* Strip off any leading path components from the program name.  */
   prog_name = strrchr(argv[0], '/');
   if (prog_name)
@@ -268,11 +274,6 @@ main(int argc, const char *argv[])
         prog_name = argv[0];
     }
 
-  /* Remember the command line */
-  test_argc = argc;
-  test_argv = argv;
-
-  err = svn_cmdline__getopt_init(&os, argc, argv, pool);
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, prog_name);
   while (1)
