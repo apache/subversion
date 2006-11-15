@@ -330,6 +330,8 @@ parse_mergeinfo_from_db(sqlite3 *db,
           mergedfrom = apr_pstrdup(pool, mergedfrom);
           if (lastmergedfrom && strcmp(mergedfrom, lastmergedfrom) != 0)
             {
+              /* This iteration over the result set starts a group of
+                 merge info with a different merge source. */
               apr_hash_set(*result, lastmergedfrom, APR_HASH_KEY_STRING,
                            pathranges);
               pathranges = apr_array_make(pool, 1,
