@@ -263,32 +263,18 @@ svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
   return SVN_NO_ERROR;
 }
 
-/* Helper for get_merge_info that retrieves merge info for a single
-   revision from the database and puts it into a mergeinfo hash.  */
+/* Helper for get_merge_info_for_path() that retrieves merge info for
+   PATH at the revision LASTMERGED_REV, returning it in the the merge
+   info hash *RESULT. */
 static svn_error_t *
 parse_mergeinfo_from_db(sqlite3 *db,
                         const char *path,
-                        svn_revnum_t rev,
+                        svn_revnum_t lastmerged_rev,
                         apr_hash_t **result,
                         apr_pool_t *pool)
 {
   sqlite3_stmt *stmt;
-  sqlite_int64 lastchanged_rev;
   int sqlite_result;
-
-  SQLITE_ERR(sqlite3_prepare(db, "SELECT MAX(revision) from mergeinfo_changed"
-                             " where path = ? and revision <= ?;",
-                             -1, &stmt, NULL), db);
-  SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
-  SQLITE_ERR(sqlite3_bind_int64(stmt, 2, rev), db);
-  sqlite_result = sqlite3_step(stmt);
-  if (sqlite_result != SQLITE_ROW)
-    return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
-                            sqlite3_errmsg(db));
-
-  lastchanged_rev = sqlite3_column_int64(stmt, 0);
-
-  SQLITE_ERR(sqlite3_finalize(stmt), db);
 
   SQLITE_ERR(sqlite3_prepare(db,
                              "SELECT mergedfrom, mergedrevstart,"
@@ -297,7 +283,7 @@ parse_mergeinfo_from_db(sqlite3 *db,
                              "order by mergedfrom;",
                              -1, &stmt, NULL), db);
   SQLITE_ERR(sqlite3_bind_text(stmt, 1, path, -1, SQLITE_TRANSIENT), db);
-  SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastchanged_rev), db);
+  SQLITE_ERR(sqlite3_bind_int64(stmt, 2, lastmerged_rev), db);
   sqlite_result = sqlite3_step(stmt);
 
   /* It is possible the mergeinfo changed because of a delete, and
@@ -407,7 +393,7 @@ get_merge_info_for_path(sqlite3 *db,
   apr_hash_t *path_mergeinfo;
   sqlite3_stmt *stmt;
   int sqlite_result;
-  sqlite_int64 count;
+  sqlite_int64 lastmerged_rev;
 
   path_mergeinfo = apr_hash_get(cache, path, APR_HASH_KEY_STRING);
   if (path_mergeinfo != NULL)
@@ -419,7 +405,7 @@ get_merge_info_for_path(sqlite3 *db,
 
   /* See if we have a mergeinfo_changed record for this path. If not,
      then it can't have mergeinfo.  */
-  SQLITE_ERR(sqlite3_prepare(db, "SELECT COUNT(*) from mergeinfo_changed"
+  SQLITE_ERR(sqlite3_prepare(db, "SELECT MAX(revision) from mergeinfo_changed"
                              " where path = ? and revision <= ?;",
                              -1, &stmt, NULL), db);
 
@@ -430,14 +416,15 @@ get_merge_info_for_path(sqlite3 *db,
     return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                             sqlite3_errmsg(db));
 
-  count = sqlite3_column_int64(stmt, 0);
+  lastmerged_rev = sqlite3_column_int64(stmt, 0);
   SQLITE_ERR(sqlite3_finalize(stmt), db);
 
   /* If we've got mergeinfo data, transform it from the db into a
      mergeinfo hash */
-  if (count > 0)
+  if (lastmerged_rev > 0)
     {
-      SVN_ERR(parse_mergeinfo_from_db(db, path, rev, &path_mergeinfo, pool));
+      SVN_ERR(parse_mergeinfo_from_db(db, path, lastmerged_rev, 
+                                      &path_mergeinfo, pool));
       if (path_mergeinfo)
         {
           if (result)
@@ -450,7 +437,7 @@ get_merge_info_for_path(sqlite3 *db,
     }
 
   /* If this path has no mergeinfo, and we are asked to, check our parent */
-  if (count == 0 && include_parents)
+  if (lastmerged_rev == 0 && include_parents)
     {
       svn_stringbuf_t *parentpath;
 
