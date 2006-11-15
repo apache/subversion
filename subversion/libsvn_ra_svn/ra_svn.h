@@ -28,6 +28,7 @@ extern "C" {
 #include <apr_network_io.h>
 #include <apr_file_io.h>
 #include <apr_thread_proc.h>
+#include "svn_ra.h"
 #include "svn_ra_svn.h"
 
 /* Callback function that indicates if a svn_ra_svn__stream_t has pending
@@ -54,10 +55,14 @@ typedef svn_error_t *(*ra_svn_block_handler_t)(svn_ra_svn_conn_t *conn,
 #define SVN_RA_SVN__READBUF_SIZE 4096
 #define SVN_RA_SVN__WRITEBUF_SIZE 4096
 
+/* Create forward reference */
+typedef struct svn_ra_svn__session_baton_t svn_ra_svn__session_baton_t;
+
 /* This structure is opaque to the server.  The client pokes at the
  * first few fields during setup and cleanup. */
 struct svn_ra_svn_conn_st {
   svn_ra_svn__stream_t *stream;
+  svn_ra_svn__session_baton_t *session;
 #ifdef SVN_HAVE_SASL
   /* Although all reads and writes go through the svn_ra_svn__stream_t
      interface, SASL still needs direct access to the underlying socket
@@ -77,16 +82,17 @@ struct svn_ra_svn_conn_st {
   apr_pool_t *pool;
 };
 
-typedef struct svn_ra_svn__session_baton_t {
+struct svn_ra_svn__session_baton_t {
   apr_pool_t *pool;
   svn_ra_svn_conn_t *conn;
   int protocol_version;
   svn_boolean_t is_tunneled;
-  struct svn_auth_baton_t *auth_baton;
   const char *user;
   const char *realm_prefix;
   const char **tunnel_argv;
-} svn_ra_svn__session_baton_t;
+  const svn_ra_callbacks2_t *callbacks;
+  void *callbacks_baton;
+};
 
 /* Set a callback for blocked writes on conn.  This handler may
  * perform reads on the connection in order to prevent deadlock due to
