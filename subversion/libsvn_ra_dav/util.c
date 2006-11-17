@@ -627,18 +627,18 @@ wrapper_endelm_cb(void *baton,
 }
 
 
-typedef struct cancelation_baton_t
+typedef struct cancellation_baton_t
 {
   svn_ra_dav__session_t *ras;
   ne_block_reader real_cb;
   void *real_userdata;
   svn_error_t *err;
-} cancelation_baton_t;
+} cancellation_baton_t;
 
 static int
-cancelation_callback(void *userdata, const char *block, size_t len)
+cancellation_callback(void *userdata, const char *block, size_t len)
 {
-  cancelation_baton_t *b = userdata;
+  cancellation_baton_t *b = userdata;
 
   if (b->ras->callbacks->cancel_func)
     b->err = (b->ras->callbacks->cancel_func)(b->ras->callback_baton);
@@ -650,13 +650,13 @@ cancelation_callback(void *userdata, const char *block, size_t len)
 }
 
 
-static cancelation_baton_t *
-get_cancelation_baton(svn_ra_dav__session_t *ras,
+static cancellation_baton_t *
+get_cancellation_baton(svn_ra_dav__session_t *ras,
                       ne_block_reader real_cb,
                       void *real_userdata,
                       apr_pool_t *pool)
 {
-  cancelation_baton_t *b = apr_pcalloc(pool, sizeof(*b));
+  cancellation_baton_t *b = apr_pcalloc(pool, sizeof(*b));
 
   b->real_cb = real_cb;
   b->real_userdata = real_userdata;
@@ -704,7 +704,7 @@ parsed_request(ne_session *sess,
   int expected_code;
   const char *msg;
   spool_reader_baton_t spool_reader_baton;
-  cancelation_baton_t *cancel_baton;
+  cancellation_baton_t *cancel_baton;
   svn_error_t *err = SVN_NO_ERROR;
   svn_ra_dav__session_t *ras = ne_get_session_private(sess, 
                                                       SVN_RA_NE_SESSION_ID);
@@ -801,29 +801,29 @@ parsed_request(ne_session *sess,
       spool_reader_baton.pool = pool;
       spool_reader_baton.error = SVN_NO_ERROR;
 
-      cancel_baton = get_cancelation_baton(ras, spool_reader,
+      cancel_baton = get_cancellation_baton(ras, spool_reader,
                                            &spool_reader_baton, pool);
 
       if (ras->compression)
         decompress_main = ne_decompress_reader(req, ne_accept_2xx,
-                                               cancelation_callback,
+                                               cancellation_callback,
                                                cancel_baton);
       else
         ne_add_response_body_reader(req, ne_accept_2xx,
-                                    cancelation_callback, cancel_baton);
+                                    cancellation_callback, cancel_baton);
     }
   else
     {
-      cancel_baton = get_cancelation_baton(ras, ne_xml_parse_v,
+      cancel_baton = get_cancellation_baton(ras, ne_xml_parse_v,
                                            success_parser, pool);
 
       if (ras->compression)
         decompress_main = ne_decompress_reader(req, ne_accept_2xx,
-                                               cancelation_callback,
+                                               cancellation_callback,
                                                cancel_baton);
       else
         ne_add_response_body_reader(req, ne_accept_2xx,
-                                    cancelation_callback, cancel_baton);
+                                    cancellation_callback, cancel_baton);
     }
 
   /* Register the "error" accepter and body-reader with the request --

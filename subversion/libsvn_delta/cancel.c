@@ -1,8 +1,8 @@
 /*
- * cancel.c :  Routines to support cancelation of running subversion functions.
+ * cancel.c:  Routines to support cancellation of running subversion functions.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
