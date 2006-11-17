@@ -696,9 +696,23 @@ svn_stream_readline(svn_stream_t *stream,
 
 /**
  * Read the contents of the readable stream @a from and write them to the
- * writable stream @a to.
+ * writable stream @a to calling @a cancel_func before copying each chunk.
+ *
+ * @a cancel_func may be @c NULL.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool);
+
+
+/**
+ * Same as svn_stream_copy2(), but without the cancellation function.
  *
  * @since New in 1.1.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
                              apr_pool_t *pool);
