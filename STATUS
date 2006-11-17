@@ -86,4 +86,13 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r22329
+    Report the first error found when parsing rule values from an
+    authz file, rather than the last.
+    Justification:
+      This both returns a more useful error, and doesn't leak a bunch
+      of errors in the middle.
+    Votes:
+      +1: dlr
+
 Approved changes:
