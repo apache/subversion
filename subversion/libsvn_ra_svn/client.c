@@ -492,9 +492,10 @@ static svn_error_t *parse_url(const char *url, apr_uri_t *uri,
 }
 
 /* Open a session to URL, returning it in *SESS_P, allocating it in POOL.
-   URI is a parsed version of URL.  AUTH_BATON is provided by the caller of
-   ra_svn_open.  If tunnel_argv is non-null, it points to a program
-   argument list to use when invoking the tunnel agent. */
+   URI is a parsed version of URL.  CALLBACKS and CALLBACKS_BATON
+   are provided by the caller of ra_svn_open. If tunnel_argv is non-null,
+   it points to a program argument list to use when invoking the tunnel agent.
+*/
 static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  const char *url,
                                  const apr_uri_t *uri,
