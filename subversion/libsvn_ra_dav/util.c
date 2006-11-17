@@ -2,7 +2,7 @@
  * util.c :  utility functions for the RA/DAV library
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -535,7 +535,8 @@ parse_spool_file(svn_ra_dav__session_t *ras,
   spool_stream = svn_stream_from_aprfile(spool_file, pool);
   while (1)
     {
-      if (ras->callbacks->cancel_func)
+      if (ras->callbacks &&
+          ras->callbacks->cancel_func)
         SVN_ERR((ras->callbacks->cancel_func)(ras->callback_baton));
 
       len = SVN__STREAM_CHUNK_SIZE;
