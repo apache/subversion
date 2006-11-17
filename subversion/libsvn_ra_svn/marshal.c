@@ -53,6 +53,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
 #ifdef SVN_HAVE_SASL
   conn->sock = sock;
 #endif
+  conn->session = NULL;
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf;
   conn->write_pos = 0;
@@ -136,10 +137,17 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *end = data + len;
   apr_size_t count;
   apr_pool_t *subpool = NULL;
+  svn_ra_svn__session_baton_t *session = conn->session;
 
   while (data < end)
     {
       count = end - data;
+
+      if (session && session->callbacks &&
+          session->callbacks->cancel_func)
+        SVN_ERR((session->callbacks->cancel_func)
+                   (session->callbacks_baton));
+
       SVN_ERR(svn_ra_svn__stream_write(conn->stream, data, &count));
       if (count == 0)
         {
@@ -221,6 +229,13 @@ static char *readbuf_drain(svn_ra_svn_conn_t *conn, char *data, char *end)
 static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
                                   apr_size_t *len)
 {
+  svn_ra_svn__session_baton_t *session = conn->session;
+
+  if (session && session->callbacks &&
+      session->callbacks->cancel_func)
+    SVN_ERR((session->callbacks->cancel_func)
+              (session->callbacks_baton));
+
   SVN_ERR(svn_ra_svn__stream_read(conn->stream, data, len));
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
