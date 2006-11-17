@@ -153,7 +153,9 @@ def broken_authz_file(sbox):
   
   skip_test_when_no_authz_available()
   
-  write_authz_file(sbox, {"/": "jrandom = rw zot"})
+  # No characters but 'r', 'w', and whitespace are allowed as a value
+  # in an authz rule.
+  write_authz_file(sbox, {"/": "jrandom = rw  # End-line comments disallowed"})
   
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
