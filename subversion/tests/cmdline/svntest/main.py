@@ -795,18 +795,27 @@ def _internal_run_tests(test_list, testnums):
   return exit_code
 
 
+def usage():
+  prog_name = os.path.basename(sys.argv[0])
+  print "%s [--fs-type] [--verbose] [--enable-sasl] [--cleanup] " \
+        "[<test> ...]" % prog_name
+  print "%s [--list] [<test> ...]\n" % prog_name
+  print "Arguments:"
+  print " test          The number of the test to run (multiple okay), " \
+        "or all tests\n"
+  print "Options:"
+  print " --list        Print test doc strings instead of running them"
+  print " --fs-type     Subversion file system type (fsfs or bdb)"
+  print " --verbose     Print binary command-lines"
+  print " --cleanup     Whether to clean up"
+  print " --enable-sasl Whether to enable SASL authentication"
+  print " --help        This information"
+
+
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
-# This routine parses sys.argv to decide what to do.  Basic usage:
-#
-# test-script.py [--list] [<testnum>]...
-#
-# --list : Option to print the docstrings for the chosen tests
-# instead of running them.
-#
-# [<testnum>]... : the numbers of the tests that should be run.  If no
-# testnums are specified, then all tests in TEST_LIST are run.
+# This routine parses sys.argv to decide what to do.
 def run_tests(test_list):
   """Main routine to run all tests in TEST_LIST.
 
@@ -824,9 +833,9 @@ def run_tests(test_list):
   # Should the tests be listed (as opposed to executed)?
   list_tests = 0
 
-  opts, args = my_getopt(sys.argv[1:], 'v',
+  opts, args = my_getopt(sys.argv[1:], 'vh',
                          ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
-                          'enable-sasl'])
+                          'enable-sasl', 'help'])
 
   for arg in args:
     if arg == "list":
@@ -855,6 +864,10 @@ def run_tests(test_list):
 
     elif opt == "--enable-sasl":
       enable_sasl = 1
+
+    elif opt == "-h" or opt == "--help":
+      usage()
+      sys.exit(0)
 
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
