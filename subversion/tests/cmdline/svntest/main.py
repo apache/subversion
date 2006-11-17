@@ -806,6 +806,7 @@ def usage():
   print "Options:"
   print " --list        Print test doc strings instead of running them"
   print " --fs-type     Subversion file system type (fsfs or bdb)"
+  print " --url         Base url to the repos (e.g. svn://localhost)"
   print " --verbose     Print binary command-lines"
   print " --cleanup     Whether to clean up"
   print " --enable-sasl Whether to enable SASL authentication"
