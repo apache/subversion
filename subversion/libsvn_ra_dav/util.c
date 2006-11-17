@@ -652,9 +652,9 @@ cancellation_callback(void *userdata, const char *block, size_t len)
 
 static cancellation_baton_t *
 get_cancellation_baton(svn_ra_dav__session_t *ras,
-                      ne_block_reader real_cb,
-                      void *real_userdata,
-                      apr_pool_t *pool)
+                       ne_block_reader real_cb,
+                       void *real_userdata,
+                       apr_pool_t *pool)
 {
   cancellation_baton_t *b = apr_pcalloc(pool, sizeof(*b));
 
@@ -802,7 +802,7 @@ parsed_request(ne_session *sess,
       spool_reader_baton.error = SVN_NO_ERROR;
 
       cancel_baton = get_cancellation_baton(ras, spool_reader,
-                                           &spool_reader_baton, pool);
+                                            &spool_reader_baton, pool);
 
       if (ras->compression)
         decompress_main = ne_decompress_reader(req, ne_accept_2xx,
@@ -815,7 +815,7 @@ parsed_request(ne_session *sess,
   else
     {
       cancel_baton = get_cancellation_baton(ras, ne_xml_parse_v,
-                                           success_parser, pool);
+                                            success_parser, pool);
 
       if (ras->compression)
         decompress_main = ne_decompress_reader(req, ne_accept_2xx,
