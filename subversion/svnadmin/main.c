@@ -1534,6 +1534,14 @@ main(int argc, const char *argv[])
   err = (*subcommand->cmd_func)(os, &opt_state, pool);
   if (err)
     {
+      /* For argument-related problems, suggest using the 'help'
+         subcommand. */
+      if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
+          || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
+        {
+          err = svn_error_quick_wrap(err, 
+                                     _("Try 'svnadmin help' for more info"));
+        }
       svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
       svn_error_clear(err);
       svn_pool_destroy(pool);
