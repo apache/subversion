@@ -1,7 +1,7 @@
 About JavaHL
 ------------
 
-JavaHL provides a (mostly native) implemention of a high level Java
+JavaHL provides a (mostly native) implementation of a high level Java
 API for Subversion, which was originally targeted for implementors of
 GUI clients and IDE plug-ins for Subversion.  JavaHL currently
 provides a minimal-but-complete set of APIs which expose the core
@@ -14,32 +14,42 @@ Build system
 JavaHL should compile and run under Linux, Win32, and Mac OS X with a
 JDK 1.3+.
 
-Its build will produce libsvnjavahl.so or libsvnjavahl.dll (the native
-library for Unix or win32, respectively) and svnjavahl.jar (platform
-independent archive of Java bytecode).
+Its build will produce both a native library (libsvnjavahl.so on Unix
+or libsvnjavahl.dll on Win32) and a platform independent archive of
+Java bytecode (svnjavahl.jar).
 
-For build non win32 platforms, add "--enable-javahl" to the configure
-script's parameters. "--with-jdk" can be provided to specify the path
-to a jdk.  "--with-junit" can be provided to specify the path to a
-junit.jar. JUnit version 3.8.1 has been tested.
+To build JavaHL on non-Win32 platforms, just add "--enable-javahl" to
+the configure script's parameters.  "--with-jdk" can be provided to
+specify the path to a jdk.
 
-The following make target are provided:
+The following make targets are provided:
 
 javahl                build javahl
 install-javahl        install javahl
-check-javahl          run javahl tests. JUnit and installation is needed.
+check-javahl          run javahl tests
+
+(In order to run check-javahl, you must have already installed JavaHL,
+and you must have specified a path to a JUnit jar file with
+--with-junit when running configure; JUnit version 3.8.1 has been
+tested.  JUnit can be downloaded from http://junit.sf.net/ .)
+
 
 MacOS X:
-After building libsvnjavahl.dynlib it has to be renamed to
-libsvnjavahl.jnilib.
+
+After building libsvnjavahl.dynlib, you must rename it to
+libsvnjavahl.jnilib.  Additionally, it should probably be installed in
+/Library/Java/Extensions instead of wherever the build system chose to
+install it; patches to our build system to do this automatically are
+welcome.
 
 Windows:
-You need the bin directory of the JDK in your path and the include and
-the include\win32 directory have to be in the include path of your MS
-Visual Studio.
 
-To build use the project/target "__JAVAHL__" of the main subversion workspace.
-The private project/workspace is not used anymore.
+In MS Visual Studio, make sure that the bin directory of the JDK is in
+your path and that the include and the include\win32 directories are
+in the include path.
+
+To build, use the project/target "__JAVAHL__" of the main subversion
+workspace.  The private project/workspace is not used anymore.
 
 
 Success stories
@@ -55,14 +65,17 @@ Why not 100% pure Java?
 -----------------------
 
 Though 100% pure Java is often preferred by Java programmers, such an
-impelementation would require re-writing _at least_ the entire
+implementation would require re-writing _at least_ the entire
 Subversion client library in Java, resulting in tons of duplicate
-code, a take the maintainer's time away from improving Subversion
+code, and taking the maintainer's time away from improving Subversion
 itself.
 
-The JavaSVN <http://tmate.org/svn/> client library has produced a 100%
-pure Java implementation, and attempts to track the latest changes to
-Subversion's core libraries.
+The SVNKit <http://svnkit.com/> client library (formerly known as
+JavaSVN) has produced a 100% pure Java implementation, and attempts to
+track the latest changes to Subversion's core libraries; however, this
+is an independent project and the Subversion project cannot make any
+promises as to its compatibility with the official Subversion
+implementation.
 
 
 TODO
