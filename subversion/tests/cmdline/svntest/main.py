@@ -845,7 +845,12 @@ def run_tests(test_list):
     elif arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
-      testnums.append(int(arg))
+      try:
+        testnums.append(int(arg))
+      except ValueError:
+        print "ERROR:  invalid test number '%s'\n" % arg
+        usage()
+        sys.exit(1)
 
   for opt, val in opts:
     if opt == "--url":
