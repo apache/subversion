@@ -37,8 +37,6 @@
 
 #include "ra_dav.h"
 
-#define WOOTWOOT 1
-
 
 
 typedef struct {
