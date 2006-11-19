@@ -477,26 +477,20 @@ svn_path_is_root(const char *path, apr_size_t len, apr_pool_t *pool)
 svn_boolean_t
 svn_path_is_absolute(const char *path, apr_size_t len, apr_pool_t *pool)
 {
-  const char *root_path = NULL;
-  const char *rel_path = apr_pstrmemdup(pool, path, len);
-  const char *rel_path_apr;
-
-  /* svn_path_cstring_from_utf8 will create a copy of path.
-    
-     It should be safe to convert this error to a false return value. An error
-     in this case would indicate that the path isn't encoded in UTF-8, which 
-     will cause problems elsewhere, anyway. */  
-  svn_error_t *err = svn_path_cstring_from_utf8(&rel_path_apr, rel_path, 
-                                                pool);
-  if (err)
-    {
-      svn_error_clear(err);
-      return FALSE;
-    }
-
-  if (apr_filepath_root(&root_path, &rel_path_apr, 0, pool) != APR_ERELATIVE)
+  /* path is absolute if it starts with '/' */
+  if (len > 0 && path[0] == '/')
     return TRUE;
-
+ 
+  /* On Windows, path is also absolute when it starts with 'H:' or 'H:/' 
+     where 'H' is any letter. */
+#if defined (WIN32)
+  if (len >= 2 && 
+      (path[1] == ':') &&
+      ((path[0] >= 'A' && path[0] <= 'Z') || 
+       (path[0] >= 'a' && path[0] <= 'z')))
+     return TRUE;
+#endif /* WIN32 */
+ 
   return FALSE;
 }
 
