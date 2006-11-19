@@ -576,8 +576,19 @@ path_driver_cb_func(void **dir_baton,
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;
-          /* ### Provide checksum if sending deltas. */
-          SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool, 
+          const char *checksum = NULL;
+
+          if (cb->compare_root && source_root && source_path)
+            {
+              unsigned char digest[APR_MD5_DIGESTSIZE];
+              SVN_ERR(svn_fs_file_md5_checksum(digest,
+                                               source_root,
+                                               source_path,
+                                               pool));
+              checksum = svn_md5_digest_to_cstring(digest, pool);
+            }
+
+          SVN_ERR(editor->apply_textdelta(file_baton, checksum, pool, 
                                           &delta_handler, 
                                           &delta_handler_baton));
           if (cb->compare_root)
