@@ -81,7 +81,7 @@
    with each change item, and whose values are arrays of changes made
    to that path, again preserving the chronological ordering.
 
-   Once our hash it built, we then sort all the keys of the hash (the
+   Once our hash is built, we then sort all the keys of the hash (the
    paths) using a depth-first directory sort routine.
 
    Finally, we drive an editor, moving down our list of sorted paths,
@@ -89,8 +89,8 @@
    and closures) needed to navigate between each successive path.  For
    each path, we replay the sorted actions that occurred at that path.
 
-   We we've finished the editor drive, we should have fully replayed
-   the filesystem events that occurred in that revision or transactions
+   When we've finished the editor drive, we should have fully replayed
+   the filesystem events that occurred in that revision or transaction
    (though not necessarily in the same order in which they
    occurred). */
    
