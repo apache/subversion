@@ -706,10 +706,10 @@ class TestRunner:
     if self.pred.need_sandbox():
       # ooh! this function takes a sandbox argument
       sandbox = Sandbox(self.pred.get_sandbox_name(), self.index)
-      args = (sandbox,)
+      kw = { 'sandbox' : sandbox }
     else:
       sandbox = None
-      args = ()
+      kw = {}
 
     # Explicitly set this so that commands that commit but don't supply a
     # log message will fail rather than invoke an editor.
@@ -718,7 +718,7 @@ class TestRunner:
     os.environ['SVNTEST_EDITOR_FUNC'] = ''
 
     try:
-      rc = self.pred.run(args)
+      rc = apply(self.pred.run, (), kw)
       if rc is not None:
         print 'STYLE ERROR in',
         self._print_name()
