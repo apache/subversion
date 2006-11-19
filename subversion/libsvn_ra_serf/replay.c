@@ -350,8 +350,12 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, "close-file") == 0)
     {
       replay_info_t *info = parser->state->private;
+      const char *checksum;
 
-      SVN_ERR(ctx->editor->close_file(info->baton, NULL, parser->state->pool));
+      checksum = svn_ra_serf__find_attr(attrs, "checksum");
+
+      SVN_ERR(ctx->editor->close_file(info->baton, checksum, 
+                                      parser->state->pool));
 
       svn_ra_serf__xml_pop_state(parser);
     }

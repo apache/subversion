@@ -296,8 +296,10 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
                      "add-file or open-file"));
       else
         {
+          const char *checksum = svn_xml_get_attr_value("checksum", atts);
+
           SVN_ERR(rb->editor->close_file(rb->file_baton,
-                                         NULL, /* XXX text checksum */
+                                         checksum,
                                          TOP_DIR(rb).file_pool));
           rb->file_baton = NULL;
         }
