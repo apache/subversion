@@ -466,9 +466,12 @@ static svn_boolean_t authz_validate_rule(const char *group,
   while (*val)
     {
       if (*val != 'r' && *val != 'w' && ! svn_ctype_isspace(*val))
-        b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-                                   "The character '%c' in rule '%s' is not "
-                                   "allowed in authz rules", *val, group);
+        {
+          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                     "The character '%c' in rule '%s' is not "
+                                     "allowed in authz rules", *val, group);
+          return FALSE;
+        }
 
       ++val;
     }
