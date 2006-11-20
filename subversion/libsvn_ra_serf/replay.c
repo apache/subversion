@@ -519,8 +519,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
-  apr_hash_t *props;
-  svn_revnum_t peg_rev;
 
   replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
   replay_ctx->pool = pool;
@@ -562,8 +560,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
                                       sizeof("</S:replay-report>")-1,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
-
-  props = apr_hash_make(pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 
