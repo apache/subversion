@@ -193,6 +193,10 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
     {
       int i;
 
+      if (sess->wc_callbacks &&
+          sess->wc_callbacks->cancel_func)
+        SVN_ERR((sess->wc_callbacks->cancel_func)(sess->wc_callback_baton));
+
       status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
       if (APR_STATUS_IS_TIMEUP(status))
         {

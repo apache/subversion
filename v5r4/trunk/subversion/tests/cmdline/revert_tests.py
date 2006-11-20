@@ -114,13 +114,11 @@ def revert_replacement_with_props(sbox, wc_copy):
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  expected_status.tweak('A/D/G/rho', status='  ', copied=None,
-                        wc_rev='3')
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho': Item(verb='Replacing'),
-    })
-  svntest.actions.run_and_verify_svn("", None, [],
+  expected_status.tweak('A/D/G/rho', status='  ', copied=None, wc_rev='2')
+  expected_output = ["Reverted '" + rho_path + "'\n"]
+  svntest.actions.run_and_verify_svn("", expected_output, [],
                                      'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Check disk status
   expected_disk = svntest.main.greek_state.copy()

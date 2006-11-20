@@ -204,8 +204,10 @@ svn_stream_readline(svn_stream_t *stream,
 }
 
 
-svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
-                             apr_pool_t *pool)
+svn_error_t *svn_stream_copy2(svn_stream_t *from, svn_stream_t *to,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
 {
   char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t len;
@@ -216,6 +218,10 @@ svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
   while (1)
     {
       len = SVN__STREAM_CHUNK_SIZE;
+
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
       SVN_ERR(svn_stream_read(from, buf, &len));
       if (len > 0)
         SVN_ERR(svn_stream_write(to, buf, &len));
@@ -225,6 +231,11 @@ svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *svn_stream_copy(svn_stream_t *from, svn_stream_t *to,
+                             apr_pool_t *pool)
+{
+  return svn_stream_copy2(from, to, NULL, NULL, pool);
+}
 
 svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,

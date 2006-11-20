@@ -546,7 +546,7 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
       SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
                                          SVN_AUTH_CRED_SIMPLE, 
                                          realmstring,
-                                         sess->auth_baton, pool));
+                                         sess->callbacks->auth_baton, pool));
     }
 
   subpool = svn_pool_create(pool);

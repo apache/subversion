@@ -53,6 +53,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
 #ifdef SVN_HAVE_SASL
   conn->sock = sock;
 #endif
+  conn->session = NULL;
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf;
   conn->write_pos = 0;
@@ -136,10 +137,17 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *end = data + len;
   apr_size_t count;
   apr_pool_t *subpool = NULL;
+  svn_ra_svn__session_baton_t *session = conn->session;
 
   while (data < end)
     {
       count = end - data;
+
+      if (session && session->callbacks &&
+          session->callbacks->cancel_func)
+        SVN_ERR((session->callbacks->cancel_func)
+                   (session->callbacks_baton));
+
       SVN_ERR(svn_ra_svn__stream_write(conn->stream, data, &count));
       if (count == 0)
         {
@@ -150,6 +158,16 @@ static svn_error_t *writebuf_output(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           SVN_ERR(conn->block_handler(conn, subpool, conn->block_baton));
         }
       data += count;
+
+      if (session)
+        {
+          const svn_ra_callbacks2_t *cb = session->callbacks;
+          session->bytes_written += count;
+
+          if (cb && cb->progress_func)
+            (cb->progress_func)(session->bytes_written + session->bytes_read,
+                                -1, cb->progress_baton, subpool);
+        }
     }
 
   if (subpool)
@@ -219,12 +237,30 @@ static char *readbuf_drain(svn_ra_svn_conn_t *conn, char *data, char *end)
 
 /* Read data from socket or input file as appropriate. */
 static svn_error_t *readbuf_input(svn_ra_svn_conn_t *conn, char *data,
-                                  apr_size_t *len)
+                                  apr_size_t *len, apr_pool_t *pool)
 {
+  svn_ra_svn__session_baton_t *session = conn->session;
+
+  if (session && session->callbacks &&
+      session->callbacks->cancel_func)
+    SVN_ERR((session->callbacks->cancel_func)
+              (session->callbacks_baton));
+
   SVN_ERR(svn_ra_svn__stream_read(conn->stream, data, len));
   if (*len == 0)
     return svn_error_create(SVN_ERR_RA_SVN_CONNECTION_CLOSED, NULL,
                             _("Connection closed unexpectedly"));
+
+  if (session)
+    {
+      const svn_ra_callbacks2_t *cb = session->callbacks;
+      session->bytes_read += *len;
+
+      if (cb && cb->progress_func)
+        (cb->progress_func)(session->bytes_read + session->bytes_written,
+                            -1, cb->progress_baton, pool);
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -236,7 +272,7 @@ static svn_error_t *readbuf_fill(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   assert(conn->read_ptr == conn->read_end);
   SVN_ERR(writebuf_flush(conn, pool));
   len = sizeof(conn->read_buf);
-  SVN_ERR(readbuf_input(conn, conn->read_buf, &len));
+  SVN_ERR(readbuf_input(conn, conn->read_buf, &len, pool));
   conn->read_ptr = conn->read_buf;
   conn->read_end = conn->read_buf + len;
   return SVN_NO_ERROR;
@@ -275,7 +311,7 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     {
       SVN_ERR(writebuf_flush(conn, pool));
       count = end - data;
-      SVN_ERR(readbuf_input(conn, data, &count));
+      SVN_ERR(readbuf_input(conn, data, &count, pool));
       data += count;
     }
 
@@ -290,7 +326,8 @@ static svn_error_t *readbuf_read(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn)
+static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn,
+                                                 apr_pool_t *pool)
 {
   char buf[256];  /* Must be smaller than sizeof(conn->read_buf) - 1. */
   const char *p, *end;
@@ -302,7 +339,7 @@ static svn_error_t *readbuf_skip_leading_garbage(svn_ra_svn_conn_t *conn)
     {
       /* Read some data directly from the connection input source. */
       len = sizeof(buf);
-      SVN_ERR(readbuf_input(conn, buf, &len));
+      SVN_ERR(readbuf_input(conn, buf, &len, pool));
       end = buf + len;
 
       /* Scan the data for '(' WS with a very simple state machine. */
@@ -590,7 +627,7 @@ svn_error_t *svn_ra_svn_read_item(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 svn_error_t *svn_ra_svn_skip_leading_garbage(svn_ra_svn_conn_t *conn,
                                              apr_pool_t *pool)
 {
-  return readbuf_skip_leading_garbage(conn);
+  return readbuf_skip_leading_garbage(conn, pool);
 }
 
 /* --- READING AND PARSING TUPLES --- */

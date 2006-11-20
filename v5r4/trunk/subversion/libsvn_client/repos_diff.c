@@ -66,8 +66,9 @@ struct edit_baton {
      set_target_revision(). */
   svn_revnum_t target_revision;
 
-  /* A temporary empty file. Used for add/delete differences. This is
-     cached here so that it can be reused, all empty files are the same. */
+  /* The path to a temporary empty file used for add/delete
+     differences.  The path is cached here so that it can be reused,
+     since all empty files are the same. */
   const char *empty_file;
 
   /* Empty hash used for adds. */
@@ -291,21 +292,21 @@ get_dirprops_from_ra(struct dir_baton *b)
 }
 
 
-/* Create an empty file, the path to the file is returned in EMPTY_FILE.
- * If ADM_ACCESS is not NULL and a lock is held, create the file in the
- * adm tmp/ area, otherwise use a system temp dir.
- *
- * If FILE is non-NULL, an open file is returned in *FILE.
- */
+/* Create an empty file, the path to the file is returned in
+   EMPTY_FILE_PATH.  If ADM_ACCESS is not NULL and a lock is held,
+   create the file in the adm tmp/ area, otherwise use a system temp
+   directory.
+ 
+   If FILE is non-NULL, an open file is returned in *FILE. */
 static svn_error_t *
 create_empty_file(apr_file_t **file,
-                  const char **empty_file,
+                  const char **empty_file_path,
                   svn_wc_adm_access_t *adm_access,
                   svn_io_file_del_t delete_when,
                   apr_pool_t *pool)
 {
   if (adm_access && svn_wc_adm_locked(adm_access))
-    SVN_ERR(svn_wc_create_tmp_file2(file, empty_file,
+    SVN_ERR(svn_wc_create_tmp_file2(file, empty_file_path,
                                     svn_wc_adm_access_path(adm_access),
                                     delete_when, pool));
   else
@@ -313,7 +314,7 @@ create_empty_file(apr_file_t **file,
       const char *temp_dir;
 
       SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
-      SVN_ERR(svn_io_open_unique_file2(file, empty_file,
+      SVN_ERR(svn_io_open_unique_file2(file, empty_file_path,
                                        svn_path_join(temp_dir, "tmp", pool),
                                        "", delete_when, pool));
     }
@@ -376,18 +377,18 @@ get_parent_access(svn_wc_adm_access_t **parent_access,
  * that it can be reused, all empty files are the same.
  */
 static svn_error_t *
-get_empty_file(struct edit_baton *b,
-               const char **empty_file)
+get_empty_file(struct edit_baton *eb,
+               const char **empty_file_path)
 {
   /* Create the file if it does not exist */
   /* Note that we tried to use /dev/null in r17220, but
      that won't work on Windows: it's impossible to stat NUL */
-  if (!b->empty_file)
-    SVN_ERR(create_empty_file(NULL, &(b->empty_file), b->adm_access,
-                              svn_io_file_del_on_pool_cleanup, b->pool));
+  if (!eb->empty_file)
+    SVN_ERR(create_empty_file(NULL, &(eb->empty_file), eb->adm_access,
+                              svn_io_file_del_on_pool_cleanup, eb->pool));
 
 
-  *empty_file = b->empty_file;
+  *empty_file_path = eb->empty_file;
 
   return SVN_NO_ERROR;
 }
