@@ -174,7 +174,7 @@ directories will still be deleted along with all their contents.
 
 Do not print progress info. In particular, do not print a message each time a
 file is examined, giving the name of the file, and indicating whether "rmdir" or
-"unlink" is used to remove it, or that it’s skipped.
+"unlink" is used to remove it, or that it's skipped.
 
 =item B<-p>, B<--print>
 
