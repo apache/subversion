@@ -92,8 +92,7 @@ Candidate changes:
     Justification:
       This both returns a more useful error, and doesn't leak a bunch
       of errors in the middle.
-    NOTE:
-      Causes conflicts, so needs an integration branch.
+    Branch: 1.4.x-r22329
     Votes:
       +1: dlr
       +0: lundblad
