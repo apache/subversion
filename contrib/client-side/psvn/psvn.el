@@ -22,7 +22,7 @@
 ;;; Commentary
 
 ;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux,
-;; freebsd5, red hat el3 with svn 1.2.3
+;; freebsd5, red hat el3 with svn 1.3.1
 
 ;; psvn.el is an interface for the revision control tool subversion
 ;; (see http://subversion.tigris.org)
@@ -71,7 +71,7 @@
 ;; m     - svn-status-set-user-mark
 ;; u     - svn-status-unset-user-mark
 ;; $     - svn-status-toggle-elide
-;; w     - svn-status-copy-filename-as-kill
+;; w     - svn-status-copy-current-line-info
 ;; DEL   - svn-status-unset-user-mark-backwards
 ;; * !   - svn-status-unset-all-usermarks
 ;; * ?   - svn-status-mark-unknown
@@ -98,6 +98,7 @@
 ;; P k   - svn-status-property-set-keyword-list
 ;; P y   - svn-status-property-set-eol-style
 ;; P x   - svn-status-property-set-executable
+;; P m   - svn-status-property-set-mime-type
 ;; H     - svn-status-use-history
 ;; x     - svn-status-update-buffer
 ;; q     - svn-status-bury-buffer
@@ -381,6 +382,10 @@ The higher the number, the more debug messages are shown.
 
 See `svn-status-message' for the meaning of values for that variable.")
 
+(defvar svn-bookmark-list nil "A list of locations for a quick access via `svn-status-via-bookmark'")
+;;(setq svn-bookmark-list '(("proj1" . "~/work/proj1")
+;;                          ("doc1" . "~/docs/doc1")))
+
 (defvar svn-status-buffer-name "*svn-status*" "Name for the svn status buffer")
 (defvar svn-process-buffer-name "*svn-process*" "Name for the svn process buffer")
 (defvar svn-log-edit-buffer-name "*svn-log-edit*" "Name for the svn log-edit buffer")
@@ -449,6 +454,12 @@ svn-status-coding-system is used in svn-run, if it is not nil.")
 (defcustom svn-status-wash-control-M-in-process-buffers
   (eq system-type 'windows-nt)
   "*Remove any trailing ^M from the `svn-process-buffer-name' buffer."
+  :type 'boolean
+  :group 'psvn)
+
+(defcustom svn-status-use-ido-completion
+  (fboundp 'ido-completing-read)
+  "*Use ido completion functionality."
   :type 'boolean
   :group 'psvn)
 
@@ -717,8 +728,8 @@ Otherwise, return \"\"."
       (svn-add-face string face)
     ""))
 
-; compatibility
-; emacs 20
+;; compatibility
+;; emacs 20
 (defalias 'svn-point-at-eol
   (if (fboundp 'point-at-eol) 'point-at-eol 'line-end-position))
 (defalias 'svn-point-at-bol
@@ -730,6 +741,20 @@ Otherwise, return \"\"."
   (if (not (fboundp 'gethash))
       (require 'cl-macs)))
 (defalias 'svn-puthash (if (fboundp 'puthash) 'puthash 'cl-puthash))
+
+;; emacs 21
+(if (fboundp 'line-number-at-pos)
+    (defalias 'svn-line-number-at-pos 'line-number-at-pos)
+  (defun svn-line-number-at-pos (&optional pos)
+    "Return (narrowed) buffer line number at position POS.
+If POS is nil, use current buffer location."
+    (let ((opoint (or pos (point))) start)
+      (save-excursion
+        (goto-char (point-min))
+        (setq start (point))
+        (goto-char opoint)
+        (forward-line 0)
+        (1+ (count-lines start (point)))))))
 
 ; xemacs
 ;; Evaluate the defsubst at compile time, so that the byte compiler
@@ -787,6 +812,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (setq svn-global-keymap (make-sparse-keymap))
   (define-key svn-global-keymap (kbd "v") 'svn-status-version)
   (define-key svn-global-keymap (kbd "s") 'svn-status-this-directory)
+  (define-key svn-global-keymap (kbd "b") 'svn-status-via-bookmark)
   (define-key svn-global-keymap (kbd "u") 'svn-status-update-cmd)
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
@@ -852,14 +878,10 @@ inside loops."
         if (listp item) nconc (svn-status-flatten-list item)
         else collect item))
 
-;; no idea, if there is a simpler way to achieve this...
-(defun svn-status-window-line-position ()
-  "Return the window line at point."
-  (when (fboundp 'window-inside-edges)
-    (let ((edges (window-inside-edges))
-          (x-y (posn-x-y (posn-at-point))))
-      (+ (car (cdr edges))
-         (/ (or (cdr x-y) 0) (frame-char-height))))))
+(defun svn-status-window-line-position (w)
+  "Return the window line at point for window W, or nil if W is nil."
+  (svn-status-message 3 "About to count lines; selected window is %s" (selected-window))
+  (and w (count-lines (window-start w) (point))))
 
 ;;;###autoload
 (defun svn-checkout (repos-url path)
@@ -1138,7 +1160,9 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (when svn-status-pre-run-svn-buffer
                     (with-current-buffer svn-status-pre-run-svn-buffer
                       (unless (eq major-mode 'svn-status-mode)
-                        (goto-line (line-number-at-pos) (get-buffer svn-status-last-output-buffer-name)))))
+                        (let ((src-line-number (svn-line-number-at-pos)))
+                          (pop-to-buffer (get-buffer svn-status-last-output-buffer-name))
+                          (goto-line src-line-number)))))
                   (message "svn blame finished"))
                  ((eq svn-process-cmd 'commit)
                   (svn-process-sentinel-fixup-path-seperators)
@@ -1551,7 +1575,7 @@ A and B must be line-info's."
                 (kbd "DEL"))            ; GNU Emacs
               'svn-status-unset-user-mark-backwards)
   (define-key svn-status-mode-map (kbd "$") 'svn-status-toggle-elide)
-  (define-key svn-status-mode-map (kbd "w") 'svn-status-copy-filename-as-kill)
+  (define-key svn-status-mode-map (kbd "w") 'svn-status-copy-current-line-info)
   (define-key svn-status-mode-map (kbd ".") 'svn-status-goto-root-or-return)
   (define-key svn-status-mode-map (kbd "I") 'svn-status-parse-info)
   (define-key svn-status-mode-map (kbd "V") 'svn-status-svnversion)
@@ -1580,8 +1604,6 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "~") 'svn-status-get-specific-revision)
   (define-key svn-status-mode-map (kbd "E") 'svn-status-ediff-with-revision)
 
-  (define-key svn-status-mode-map (kbd "C-n") 'svn-status-next-line)
-  (define-key svn-status-mode-map (kbd "C-p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "n") 'svn-status-next-line)
   (define-key svn-status-mode-map (kbd "p") 'svn-status-previous-line)
   (define-key svn-status-mode-map (kbd "<down>") 'svn-status-next-line)
@@ -1616,6 +1638,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-property-map (kbd "k") 'svn-status-property-set-keyword-list)
   (define-key svn-status-mode-property-map (kbd "y") 'svn-status-property-set-eol-style)
   (define-key svn-status-mode-property-map (kbd "x") 'svn-status-property-set-executable)
+  (define-key svn-status-mode-property-map (kbd "m") 'svn-status-property-set-mime-type)
   ;; TODO: Why is `svn-status-select-line' in `svn-status-mode-property-map'?
   (define-key svn-status-mode-property-map (kbd "RET") 'svn-status-select-line)
   (define-key svn-status-mode-map (kbd "P") svn-status-mode-property-map))
@@ -1683,6 +1706,7 @@ A and B must be line-info's."
      ["Edit svn:keywords List" svn-status-property-set-keyword-list t]
      ["Select svn:eol-style" svn-status-property-set-eol-style t]
      ["Set svn:executable" svn-status-property-set-executable t]
+     ["Set svn:mime-type" svn-status-property-set-mime-type t]
      )
     ("Options"
      ["Save Options" svn-status-save-state t]
@@ -1975,6 +1999,18 @@ The result will be \"K\", \"O\", \"T\", \"B\" or nil."
 
 (defun svn-status-line-info->set-repo-locked (line-info value)
   (setcar (nthcdr 11 line-info) value))
+
+(defun svn-status-copy-current-line-info (arg)
+  "Copy the current file name at point, using `svn-status-copy-filename-as-kill'.
+If no file is at point, copy everything starting from ':' to the end of line."
+  (interactive "P")
+  (if (svn-status-get-line-information)
+      (svn-status-copy-filename-as-kill arg)
+    (save-excursion
+      (goto-char (line-beginning-position))
+      (when (looking-at ".+?: *\\(.+\\)$")
+        (kill-new (match-string-no-properties 1))
+        (message "Copied: %s" (match-string-no-properties 1))))))
 
 (defun svn-status-copy-filename-as-kill (arg)
   "Copy the actual file name to the kill-ring.
@@ -2414,7 +2450,7 @@ Symbolic links to directories count as directories (see `file-directory-p')."
         (first-line t)
         (fname (svn-status-line-info->filename (svn-status-get-line-information)))
         (fname-pos (point))
-        (window-line-pos (svn-status-window-line-position))
+        (window-line-pos (svn-status-window-line-position (get-buffer-window (current-buffer))))
         (header-line-string)
         (column (current-column)))
     (delete-region (point-min) (point-max))
@@ -2576,6 +2612,8 @@ The string in parentheses is shown in the status line to show the state."
     (svn-status-goto-file-name ".")))
 
 (defun svn-status-next-line (nr-of-lines)
+  "Go to the next line that holds a file information.
+When called with a prefix argument advance the given number of lines."
   (interactive "p")
   (while (progn
            (next-line nr-of-lines)
@@ -2585,6 +2623,8 @@ The string in parentheses is shown in the status line to show the state."
     (goto-char (+ (svn-point-at-bol) svn-status-default-column))))
 
 (defun svn-status-previous-line (nr-of-lines)
+  "Go to the previous line that holds a file information.
+When called with a prefix argument go back the given number of lines."
   (interactive "p")
   (while (progn
            (previous-line nr-of-lines)
@@ -2601,7 +2641,7 @@ The string in parentheses is shown in the status line to show the state."
     (let ((default-directory
             (file-name-as-directory
              (expand-file-name (svn-status-line-info->directory-containing-line-info line-info t)))))
-      (dired-jump))
+      (if (fboundp 'dired-jump-back) (dired-jump-back) (dired-jump))) ;; Xemacs uses dired-jump-back
     (dired-goto-file file-full-path)))
 
 (defun svn-status-possibly-negate-meaning-of-arg (arg &optional command)
@@ -3417,7 +3457,9 @@ See `svn-status-marked-files' for what counts as selected."
 (defun svn-status-rm (force)
   "Run `svn rm' on all selected files.
 See `svn-status-marked-files' for what counts as selected.
-When called with a prefix argument add the command line switch --force."
+When called with a prefix argument add the command line switch --force.
+
+Forcing the deletion can also be used to delete files not under svn control."
   (interactive "P")
   (let* ((marked-files (svn-status-marked-files))
          (num-of-files (length marked-files)))
@@ -3428,7 +3470,14 @@ When called with a prefix argument add the command line switch --force."
       (message "removing: %S" (svn-status-marked-file-names))
       (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
       (if force
-          (svn-run t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
+          (save-excursion
+            (svn-run t t 'rm "rm" "--force" "--targets" svn-status-temp-arg-file)
+            (dolist (to-delete (svn-status-marked-files))
+              (when (eq (svn-status-line-info->filemark to-delete) ??)
+                (svn-status-goto-file-name (svn-status-line-info->filename to-delete))
+                (let ((buffer-read-only nil))
+                  (delete-region (svn-point-at-bol) (+ 1 (svn-point-at-eol)))
+                  (delete to-delete svn-status-info)))))
         (svn-run t t 'rm "rm" "--targets" svn-status-temp-arg-file)))))
 
 (defun svn-status-update-cmd (arg)
@@ -3479,6 +3528,21 @@ If no files have been marked, commit recursively the file at point."
   "Pop to the `svn-status-buffer-name' buffer."
   (interactive)
   (pop-to-buffer svn-status-buffer-name))
+
+(defun svn-status-via-bookmark (bookmark)
+  "Allows a quick selection of a bookmark in `svn-bookmark-list'.
+Run `svn-status' on the selected bookmark."
+  (interactive
+   (list
+    (let ((completion-ignore-case t)
+          (completion-function (if svn-status-use-ido-completion 'ido-completing-read 'completing-read)))
+      (funcall completion-function "SVN status bookmark: " svn-bookmark-list))))
+  (unless bookmark
+    (error "No bookmark specified"))
+  (let ((directory (cdr (assoc bookmark svn-bookmark-list))))
+    (if (file-directory-p directory)
+        (svn-status directory)
+      (error "%s is not a directory" directory))))
 
 (defun svn-status-export ()
   "Run `svn export' for the current working copy.
@@ -3992,6 +4056,22 @@ When called with a prefix argument, it is possible to enter a new property."
   "Set the svn:executable property on the marked files."
   (interactive)
   (svn-status-property-set-property (svn-status-marked-files) "svn:executable" "*"))
+
+(defun svn-status-property-set-mime-type ()
+  "Set the svn:mime-type property on the marked files."
+  (interactive)
+  (require 'mailcap nil t)
+  (let ((completion-ignore-case t)
+        (completion-function (if svn-status-use-ido-completion
+                                 'ido-completing-read
+                               'completing-read))
+        (mime-types (when (fboundp 'mailcap-mime-types)
+                      (mailcap-mime-types))))
+    (svn-status-property-set-property
+     (svn-status-marked-files) "svn:mime-type"
+     (funcall completion-function "Set svn:mime-type for the marked files: "
+              (mapcar (lambda (x) (cons x x)) ; for Emacs 21
+                      (sort mime-types 'string<))))))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-prop-edit-mode:

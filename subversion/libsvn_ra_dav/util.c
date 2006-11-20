@@ -2,7 +2,7 @@
  * util.c :  utility functions for the RA/DAV library
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -520,7 +520,8 @@ spool_reader(void *userdata,
 
 
 static svn_error_t *
-parse_spool_file(const char *spool_file_name,
+parse_spool_file(svn_ra_dav__session_t *ras,
+                 const char *spool_file_name,
                  ne_xml_parser *success_parser,
                  apr_pool_t *pool)
 {
@@ -528,16 +529,24 @@ parse_spool_file(const char *spool_file_name,
   svn_stream_t *spool_stream;
   char *buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
   apr_size_t len;
-  
+
   SVN_ERR(svn_io_file_open(&spool_file, spool_file_name,
                            (APR_READ | APR_BUFFERED), APR_OS_DEFAULT, pool));
   spool_stream = svn_stream_from_aprfile(spool_file, pool);
   while (1)
     {
+      if (ras->callbacks &&
+          ras->callbacks->cancel_func)
+        SVN_ERR((ras->callbacks->cancel_func)(ras->callback_baton));
+
       len = SVN__STREAM_CHUNK_SIZE;
       SVN_ERR(svn_stream_read(spool_stream, buf, &len));
       if (len > 0)
-        ne_xml_parse(success_parser, buf, len);
+        if (ne_xml_parse(success_parser, buf, len) != 0)
+          /* The parse encountered an error or
+             was aborted by a user defined callback */
+          break;
+
       if (len != SVN__STREAM_CHUNK_SIZE)
         break;
     }
@@ -618,6 +627,44 @@ wrapper_endelm_cb(void *baton,
 }
 
 
+typedef struct cancellation_baton_t
+{
+  svn_ra_dav__session_t *ras;
+  ne_block_reader real_cb;
+  void *real_userdata;
+  svn_error_t *err;
+} cancellation_baton_t;
+
+static int
+cancellation_callback(void *userdata, const char *block, size_t len)
+{
+  cancellation_baton_t *b = userdata;
+
+  if (b->ras->callbacks->cancel_func)
+    b->err = (b->ras->callbacks->cancel_func)(b->ras->callback_baton);
+
+  if (b->err)
+    return 1;
+  else
+    return (b->real_cb)(b->real_userdata, block, len);
+}
+
+
+static cancellation_baton_t *
+get_cancellation_baton(svn_ra_dav__session_t *ras,
+                       ne_block_reader real_cb,
+                       void *real_userdata,
+                       apr_pool_t *pool)
+{
+  cancellation_baton_t *b = apr_pcalloc(pool, sizeof(*b));
+
+  b->real_cb = real_cb;
+  b->real_userdata = real_userdata;
+  b->ras = ras;
+
+  return b;
+}
+
 /* See doc string for svn_ra_dav__parsed_request.  The only new
    parameter here is use_neon_shim, which if true, means that
    VALIDATE_CB, STARTELM_CB, and ENDELM_CB are expecting the old,
@@ -657,6 +704,7 @@ parsed_request(ne_session *sess,
   int expected_code;
   const char *msg;
   spool_reader_baton_t spool_reader_baton;
+  cancellation_baton_t *cancel_baton;
   svn_error_t *err = SVN_NO_ERROR;
   svn_ra_dav__session_t *ras = ne_get_session_private(sess, 
                                                       SVN_RA_NE_SESSION_ID);
@@ -752,23 +800,30 @@ parsed_request(ne_session *sess,
         goto cleanup;
       spool_reader_baton.pool = pool;
       spool_reader_baton.error = SVN_NO_ERROR;
+
+      cancel_baton = get_cancellation_baton(ras, spool_reader,
+                                            &spool_reader_baton, pool);
+
       if (ras->compression)
         decompress_main = ne_decompress_reader(req, ne_accept_2xx,
-                                               spool_reader, 
-                                               &spool_reader_baton);
+                                               cancellation_callback,
+                                               cancel_baton);
       else
-        ne_add_response_body_reader(req, ne_accept_2xx, 
-                                    spool_reader, &spool_reader_baton);
+        ne_add_response_body_reader(req, ne_accept_2xx,
+                                    cancellation_callback, cancel_baton);
     }
   else
     {
+      cancel_baton = get_cancellation_baton(ras, ne_xml_parse_v,
+                                            success_parser, pool);
+
       if (ras->compression)
         decompress_main = ne_decompress_reader(req, ne_accept_2xx,
-                                               ne_xml_parse_v, 
-                                               success_parser);
+                                               cancellation_callback,
+                                               cancel_baton);
       else
-        ne_add_response_body_reader(req, ne_accept_2xx, 
-                                    ne_xml_parse_v, success_parser);
+        ne_add_response_body_reader(req, ne_accept_2xx,
+                                    cancellation_callback, cancel_baton);
     }
 
   /* Register the "error" accepter and body-reader with the request --
@@ -782,6 +837,8 @@ parsed_request(ne_session *sess,
 
   /* run the request and get the resulting status code. */
   rv = ne_request_dispatch(req);
+
+  SVN_ERR(cancel_baton->err);
 
   if (spool_response)
     {
@@ -855,7 +912,7 @@ parsed_request(ne_session *sess,
   if (spool_response)
     {
       apr_pool_t *subpool = svn_pool_create(pool);
-      err = parse_spool_file(spool_reader_baton.spool_file_name, 
+      err = parse_spool_file(ras, spool_reader_baton.spool_file_name,
                              success_parser, subpool);
       svn_pool_destroy(subpool);
       if (err)

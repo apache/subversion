@@ -1,45 +1,57 @@
-Version 1.4.1
-(?? ?? 2006, from /branches/1.4.x)
-http://svn.collab.net/repos/svn/tags/1.4.1
+Version 1.4.2
+(2 November 2006, from /branches/1.4.x)
+http://svn.collab.net/repos/svn/tags/1.4.2
 
  User-visible-changes:
   - Client:
-    * install svnsync under windows (r21387, r21424)
-    * install a manpage for svnsync (r21403)
     * new "notes/svnsync.txt" file explains common svnsync usage
-    * translation updates for de, es, fr, it, ko, nb, pl, pt_BR, sv, zh_TW
-    * much faster commits after working copy to working copy copies (r21471)
-    * can run 'svn status -u' in a read-only working copy (r21904, -19)
-    * fixed: support 'svn co URL@{DATE}' (r21657, r21662)
-    * fixed: don't crash when opening a working copy is interrupted (r21792)
-    * fixed: 'svn status -u' shows props changed on the wc root (issue #2533)
-    * fixed: prevent 'checksum mismatch' error on update (issue #2618)
-    * fixed: conflict/delete handling for 'svn merge --dry-run' (issue #2584)
+    * install a manpage for svnsync (r21403)
+    * install/package svnsync on Windows (r21387, r21424)
+    * translation updates for all languages
+    * dramatically speed up commit of wc-to-wc copy (r21471)
+    * fixed: support 'svn co URL@{DATE}' (issue #2602)
+    * fixed: cannot access repositories with spaces via svn:// (issue #2612)
+    * fixed: passing full URL in some DAV requests, breaking proxies (r21526)
+    * fixed: history-tracing can fail for renamed directories (issue #2600)
+    * fixed: crash if interrupted while opening a working copy (r21792)
+    * fixed: 'svn merge' should notify about conflicted files (issue #2584)
+    * fixed: 'svn revert' should notify about prop-only reverts (issue #2517)
+    * fixed: 'svn status -u' not showing props changed on wc root (issue #2533)
+    * fixed: 'svn status -u' fails in a read-only working copy (r21904, -19)
+    * fixed: 'svn up' failing with checksum mismatch error (issue #2618)
+    * fixed: 'svnsync sync' copying missing implicit revprops (issue #2613)
+    * fixed: svnsync unable to synchronise copies of URL-unsafe paths (r22092)
     * svnshell tool: support "setrev head" (r20992)
     * include newest version of svnmerge.py
 
   - Server:
+    * FSFS: improve detection of disk write errors (r21346)
+    * FSFS: prevent API violation from corrupting repository (issue #2467)
     * improved error checking when running hook scripts, etc (r21483)
     * mailer.py: new commit_url option links to web page for a commit (r21333)
-    * fixed: can check out repositories with spaces from svnserve (r21609)
 
 Developer-visible-changes:
-* support Neon 0.26.x on Unix and Windows
-* compiles on architectures without APR_HAS_DSO (eg, RISC OS) (r21473)
-* improved error handling with FSFS file write errors (r21346)
-* RHEL3 package requires correct version of apache httpd (r21974)
-* fixed: pass correct argument to ne_lock_discover (r21526)
-* fixed: find closest copies correctly (issue #2600)
-* more tests
+* support Neon 0.26.0 and 0.26.1 (r21289, r21293, r21956)
+* support current CVS versions of libtool (post-1.5.22) (r22120)
+* now compiles on architectures without APR_HAS_DSO (e.g. RISC OS) (r21473)
+* fixed: build error on FreeBSD due to missing svnsync manpage (r21403)
+* RHEL3 RPM package requires correct version of Apache httpd (r21974)
+* numerous improvements to coverage of the test suite
 * javahl bindings:
     - compile Java bytecode for Java 1.2 VM (r21765, -7, r21814)
-    - fixed: don't crash if using 1.4.x bindings with older libraries
-    - fixed: don't crash when empty string passed to checkout (r21770)
+    - fixed: crash if using 1.4.x bindings with older libraries (r21316, -429)
+    - fixed: crash when empty destination path passed to checkout (r21770)
 * SWIG/ruby bindings:
-    - accept nil for Svn::Repos#load_fs's parent_dir argument (r21793)
+    - fixed: accept nil for Svn::Repos#load_fs's parent_dir argument (r21793)
 * SWIG/python bindings:
-    - fixed: don't crash when using an apr_hash_t typemap (r21357)
+    - fixed: crash when using an apr_hash_t typemap (issue #2606)
     - fixed: in tests, use URLs that work on Windows (r21392)
+* SWIG/perl bindings:
+    - fixed: ra_replay works with Perl delta editors (r20666)
+
+
+Version 1.4.1
+(Not released, see changes for 1.4.2.)
 
 
 Version 1.4.0

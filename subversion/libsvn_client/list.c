@@ -31,7 +31,7 @@
 
 /* Get the directory entries of DIR at REV (relative to the root of
    RA_SESSION), getting at least the fields specified by DIRENT_FIELDS.
-   Use the cancelation function/baton of CTX to check for cancellation.
+   Use the cancellation function/baton of CTX to check for cancellation.
    If RECURSE is TRUE, recurse into child directories.
    LOCKS, if non-NULL, is a hash mapping const char * paths to svn_lock_t
    objects and FS_PATH is the absolute filesystem path of the RA session.

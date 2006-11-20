@@ -144,14 +144,13 @@ def test_create(sbox):
   svntest.main.safe_rmtree(wc_dir)
 
   svntest.main.create_repos(repo_dir)
-  svntest.main.set_repos_paths(repo_dir)
 
   svntest.actions.run_and_verify_svn("Creating rev 0 checkout",
                                      ["Checked out revision 0.\n"], [],
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      "checkout",
-                                     svntest.main.current_repo_url, wc_dir)
+                                     sbox.repo_url, wc_dir)
 
 
   svntest.actions.run_and_verify_svn(

@@ -118,6 +118,15 @@ svn_ra_serf__cleanup_serf_session(void *data)
   svn_ra_serf__session_t *serf_sess = data;
   int i;
 
+  /* If we are cleaning up due to an error, don't call connection_close
+   * as we're already on our way out of here and we'll defer to serf's
+   * cleanups.
+   */
+  if (serf_sess->pending_error)
+    {
+      return APR_SUCCESS;
+    }
+
   for (i = 0; i < serf_sess->num_conns; i++)
     {
       if (serf_sess->conns[i])
@@ -183,6 +192,10 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
   while (!*done)
     {
       int i;
+
+      if (sess->wc_callbacks &&
+          sess->wc_callbacks->cancel_func)
+        SVN_ERR((sess->wc_callbacks->cancel_func)(sess->wc_callback_baton));
 
       status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
       if (APR_STATUS_IS_TIMEUP(status))
@@ -697,6 +710,32 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
   /* not reached */
 }
 
+svn_error_t *
+svn_ra_serf__handle_server_error(serf_request_t *request,
+                                 serf_bucket_t *response,
+                                 apr_pool_t *pool)
+{
+  svn_ra_serf__server_error_t server_err;
+  apr_status_t status;
+
+  memset(&server_err, 0, sizeof(server_err));
+  status = svn_ra_serf__handle_discard_body(request, response,
+                                            &server_err, pool);
+
+  if (APR_STATUS_IS_EOF(status))
+    {
+      status = svn_ra_serf__is_conn_closing(response);
+      if (status == SERF_ERROR_CLOSING)
+        {
+          serf_connection_reset(serf_request_get_conn(request));
+        }
+    }
+
+  SVN_ERR(server_err.error);
+
+  return svn_error_create(APR_EGENERAL, NULL, _("Unspecified error message"));
+}
+
 static apr_status_t
 handler_default(serf_request_t *request,
                 serf_bucket_t *response,
@@ -768,31 +807,9 @@ handler_default(serf_request_t *request,
     }
   else if (sl.code >= 500)
     {
-      svn_ra_serf__server_error_t server_err;
-      apr_status_t status;
-
-      memset(&server_err, 0, sizeof(server_err));
-      status = svn_ra_serf__handle_discard_body(request, response,
-                                                &server_err, pool);
-
-      if (APR_STATUS_IS_EOF(status))
-        {
-          status = svn_ra_serf__is_conn_closing(response);
-          if (status == SERF_ERROR_CLOSING)
-            {
-              serf_connection_reset(ctx->conn->conn);
-            }
-        }
-
-      if (server_err.error)
-        {
-          ctx->session->pending_error = server_err.error;
-          return server_err.error->apr_err;
-        }
-      else
-        {
-          return APR_EGENERAL;
-        }
+      ctx->session->pending_error =
+          svn_ra_serf__handle_server_error(request, response, pool);
+      return ctx->session->pending_error->apr_err;
     }
   else
     {

@@ -1104,7 +1104,7 @@ delete_entry(const char *path,
       SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->progress.done,
                                             dir->commit->session, pool));
     }
-  else
+  else if (err)
     {
       return err;
     }

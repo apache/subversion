@@ -61,8 +61,8 @@ def test_misc(sbox):
   # Make a couple of local mods to files
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append (mu_path, 'appended mu text')
-  svntest.main.file_append (rho_path, 'new appended text for rho')
+  svntest.main.file_append(mu_path, 'appended mu text')
+  svntest.main.file_append(rho_path, 'new appended text for rho')
 
   # Created expected output tree for 'svn ci'
   expected_output = svntest.wc.State(wc_dir, {
@@ -72,17 +72,16 @@ def test_misc(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
 
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
 
   # give the repo a new UUID
   uuid = "01234567-89ab-cdef-89ab-cdef01234567"
@@ -189,20 +188,19 @@ def delete_file_in_moved_dir(sbox):
     'A/B/E2' : Item(verb='Adding'),
     'A/B/E2/alpha' : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E', 'A/B/E/alpha', 'A/B/E/beta')
   expected_status.add({
     'A/B/E2'      : Item(status='  ', wc_rev=2),
     'A/B/E2/beta' : Item(status='  ', wc_rev=2),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
 
   output, errput = svntest.main.run_svnlook("dirs-changed", repo_dir)
   if errput:
@@ -309,7 +307,6 @@ text
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
 
   # load dumpfile with inconsistent newlines into repos.
   output, errput = \
@@ -342,13 +339,13 @@ def changed_copy_info(sbox):
   expected_status.add({
     'A/alpha2'      : Item(status='  ', wc_rev=2),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
 
   output, errput = svntest.main.run_svnlook("changed", repo_dir)
   if errput:

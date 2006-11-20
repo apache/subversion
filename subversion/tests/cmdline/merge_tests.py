@@ -131,17 +131,16 @@ def textual_merges_galore(sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu and rho should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', 'A/D/G/rho', wc_rev=2)
   
   # Initial commit.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Make the "other" working copy
   other_wc = sbox.add_wc_path('other')
@@ -176,8 +175,7 @@ def textual_merges_galore(sbox):
     })
 
   # Create expected status tree.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   expected_status.tweak('A/B/lambda', 'A/D/G/pi', 'A/D/G/tau', 'A/D/G/rho',
                         wc_rev=3)
@@ -262,7 +260,7 @@ def textual_merges_galore(sbox):
       raise svntest.main.SVNTreeUnequal
 
   svntest.actions.run_and_verify_merge(other_wc, '1', '3',
-                                       svntest.main.current_repo_url,
+                                       sbox.repo_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -353,7 +351,7 @@ def textual_merges_galore(sbox):
   svntest.actions.run_and_verify_merge(
     os.path.join(other_wc, 'A', 'D', 'G'),
     '2', '3',
-    svntest.main.current_repo_url + '/A/D/G',
+    sbox.repo_url + '/A/D/G',
     expected_output,
     expected_disk,
     expected_status,
@@ -374,7 +372,7 @@ def add_with_history(sbox):
 
   C_path = os.path.join(wc_dir, 'A', 'C')
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  F_url = svntest.main.current_repo_url + '/A/B/F'
+  F_url = sbox.repo_url + '/A/B/F'
 
   Q_path = os.path.join(F_path, 'Q')
   Q2_path = os.path.join(F_path, 'Q2')
@@ -402,8 +400,7 @@ def add_with_history(sbox):
     'A/B/F/foo'   : Item(verb='Adding'),
     'A/B/F/foo2'  : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/Q'     : Item(status='  ', wc_rev=2),
     'A/B/F/Q2'    : Item(status='  ', wc_rev=2),
@@ -504,8 +501,7 @@ def add_with_history(sbox):
     'A/C/foo'   : Item(verb='Adding'),
     'A/C/foo2'  : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/C'         : Item(status='  ', wc_rev=3),
     'A/B/F/Q'     : Item(status='  ', wc_rev=2),
@@ -540,7 +536,7 @@ def delete_file_and_dir(sbox):
   # Rev 2 copy B to B2
   B_path = os.path.join(wc_dir, 'A', 'B')
   B2_path = os.path.join(wc_dir, 'A', 'B2')
-  B_url = svntest.main.current_repo_url + '/A/B'
+  B_url = sbox.repo_url + '/A/B'
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', B_path, B2_path)
@@ -548,8 +544,7 @@ def delete_file_and_dir(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B2'       : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B2'         : Item(status='  ', wc_rev=2),
     'A/B2/E'       : Item(status='  ', wc_rev=2),
@@ -688,15 +683,15 @@ def simple_property_merges(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
                         wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Copy B to B2 as rev 3
-  B_url = svntest.main.current_repo_url + '/A/B'
-  B2_url = svntest.main.current_repo_url + '/A/B2'
+  B_url = sbox.repo_url + '/A/B'
+  B2_url = sbox.repo_url + '/A/B2'
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', '-m', 'copy B to B2',
@@ -731,10 +726,10 @@ def simple_property_merges(sbox):
     'A/B2/F'       : Item(status='  ', wc_rev=3),
     'A/B2/lambda'  : Item(status='  ', wc_rev=3),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   pristine_status = expected_status
@@ -823,8 +818,8 @@ def simple_property_merges(sbox):
   svntest.actions.run_and_verify_status(wc_dir, pristine_status)
   
   # Copy A at rev 4 to A2 to make revision 5.
-  A_url = svntest.main.current_repo_url + '/A'
-  A2_url = svntest.main.current_repo_url + '/A2'
+  A_url = sbox.repo_url + '/A'
+  A2_url = sbox.repo_url + '/A2'
   svntest.actions.run_and_verify_svn(None,
                                      ['\n', 'Committed revision 5.\n'], [],
                                      'copy', '-m', 'copy A to A2',
@@ -838,7 +833,7 @@ def simple_property_merges(sbox):
   # Attempt to re-merge rev 4 of the original A's alpha.  Merge info
   # inherited from A2 (created by its copy from A) allows us to avoid
   # a repeated merge.
-  alpha_url = svntest.main.current_repo_url + '/A/B/E/alpha'
+  alpha_url = sbox.repo_url + '/A/B/E/alpha'
   alpha_path = os.path.join(wc_dir, 'B', 'E', 'alpha')
 
   # Cannot use run_and_verify_merge with a file target
@@ -876,7 +871,7 @@ def merge_catches_nonexistent_target(sbox):
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
   Q_path = os.path.join(wc_dir, 'A', 'D', 'Q')
   newfile_path = os.path.join(Q_path, 'newfile')
-  Q_url = svntest.main.current_repo_url + '/A/D/Q'
+  Q_url = sbox.repo_url + '/A/D/Q'
 
   # Copy dir A/D/G to A/D/Q, creating r1.
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', G_path, Q_path)
@@ -889,8 +884,7 @@ def merge_catches_nonexistent_target(sbox):
     'A/D/Q'          : Item(verb='Adding'),
     'A/D/Q/newfile'  : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/D/Q'         : Item(status='  ', wc_rev=2),
     'A/D/Q/pi'      : Item(status='  ', wc_rev=2),
@@ -959,8 +953,8 @@ def merge_tree_deleted_in_target(sbox):
   B_path = os.path.join(wc_dir, 'A', 'B')
   I_path = os.path.join(wc_dir, 'A', 'I')
   alpha_path = os.path.join(B_path, 'E', 'alpha')
-  B_url = svntest.main.current_repo_url + '/A/B'
-  I_url = svntest.main.current_repo_url + '/A/I'
+  B_url = sbox.repo_url + '/A/B'
+  I_url = sbox.repo_url + '/A/I'
 
 
   # Copy B to I, creating r1.
@@ -974,7 +968,7 @@ def merge_tree_deleted_in_target(sbox):
                                      'ci', '-m', 'rev 3', B_path)
 
   # Remove E, creating r3.
-  E_url = svntest.main.current_repo_url + '/A/I/E'
+  E_url = sbox.repo_url + '/A/I/E'
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'rm', E_url, '-m', 'rev 4')
 
@@ -1020,10 +1014,10 @@ def merge_added_dir_to_deleted_in_target(sbox):
   # add J to B/F.
   # merge add to I.
 
-  B_url = svntest.main.current_repo_url + '/A/B'
-  I_url = svntest.main.current_repo_url + '/A/I'
-  F_url = svntest.main.current_repo_url + '/A/I/F'
-  J_url = svntest.main.current_repo_url + '/A/B/F/J'
+  B_url = sbox.repo_url + '/A/B'
+  I_url = sbox.repo_url + '/A/I'
+  F_url = sbox.repo_url + '/A/I/F'
+  J_url = sbox.repo_url + '/A/B/F/J'
   I_path = os.path.join(wc_dir, 'A', 'I')
 
   
@@ -1078,8 +1072,8 @@ def merge_similar_unrelated_trees(sbox):
   base2_path = os.path.join(wc_dir, 'base2')
   apply_path = os.path.join(wc_dir, 'apply')
 
-  base1_url = os.path.join(svntest.main.current_repo_url + '/base1')
-  base2_url = os.path.join(svntest.main.current_repo_url + '/base2')
+  base1_url = os.path.join(sbox.repo_url + '/base1')
+  base2_url = os.path.join(sbox.repo_url + '/base2')
 
   # Make a tree of stuff ...
   os.mkdir(base1_path)
@@ -1152,21 +1146,20 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
   rho_rel_path = os.path.join('A', 'D', 'G', 'rho')
   rho_path = os.path.join(wc_dir, rho_rel_path)
   G_path = os.path.join(wc_dir, 'A', 'D', 'G')
-  rho_url = svntest.main.current_repo_url + '/A/D/G/rho'
+  rho_url = sbox.repo_url + '/A/D/G/rho'
   
   # Change rho for revision 2
   svntest.main.file_append(rho_path, 'A new line in rho.\n')
 
   expected_output = wc.State(wc_dir, { rho_rel_path : Item(verb='Sending'), })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/G/rho', wc_rev=2)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
   
   # Backdate rho to revision 1, so we can merge in the rev 2 changes.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -1279,17 +1272,16 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   
   # Initial commit.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Make the "other" working copy
   other_wc = sbox.add_wc_path('other')
@@ -1297,7 +1289,7 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
 
   # Try the merge without an explicit target; it should succeed.
   # Can't use run_and_verify_merge cuz it expects a directory argument.
-  mu_url = svntest.main.current_repo_url + '/A/mu'
+  mu_url = sbox.repo_url + '/A/mu'
   was_cwd = os.getcwd()
   try:
     os.chdir(os.path.join(other_wc, 'A'))
@@ -1372,18 +1364,17 @@ def merge_with_prev (sbox):
 
   # Create expected status tree; all local revisions should be at 1,
   # but mu should be at revision 2.
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
   expected_status.add({'A/zot' : Item(status='  ', wc_rev=2)})
   
   # Initial commit.
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Make some other working copies
   other_wc = sbox.add_wc_path('other')
@@ -1466,8 +1457,7 @@ def merge_binary_file (sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/theta' : Item(verb='Adding  (bin)'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=2),
     })
@@ -1484,8 +1474,7 @@ def merge_binary_file (sbox):
   expected_output = wc.State(wc_dir, {
     'A/theta' : Item(verb='Sending'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/theta' : Item(status='  ', wc_rev=3),
     })
@@ -1509,8 +1498,7 @@ def merge_binary_file (sbox):
     'A/theta' : Item(theta_contents + "some extra junk",
                      props={'svn:mime-type' : 'application/octet-stream'}),
     })
-  expected_status = svntest.actions.get_virginal_state(short_other_wc, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(short_other_wc, 1)
   expected_status.add({
     ''        : Item(status=' M', wc_rev=1),
     'A/theta' : Item(status='M ', wc_rev=2),
@@ -1521,7 +1509,7 @@ def merge_binary_file (sbox):
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_other_wc, '2', '3',
-                                         svntest.main.current_repo_url,
+                                         sbox.repo_url,
                                          expected_output,
                                          expected_disk,
                                          expected_status,
@@ -1542,8 +1530,8 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   wc_dir = sbox.wc_dir
 
   # Create a branch of A, creating revision 2.
-  A_url = svntest.main.current_repo_url + "/A"
-  branch_A_url = svntest.main.current_repo_url + "/copy-of-A"
+  A_url = sbox.repo_url + "/A"
+  branch_A_url = sbox.repo_url + "/copy-of-A"
   svntest.actions.run_and_verify_svn(None, None, [], "cp",
                                      A_url, branch_A_url,
                                      "-m", "Creating copy-of-A")
@@ -1564,8 +1552,7 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     "A/theta" : Item(verb="Adding  (bin)"),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)  # "and nothing else matters..."
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     "A/theta" : Item(status="  ", wc_rev=3),
     })
@@ -1631,12 +1618,12 @@ def merge_in_new_file_and_diff(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
   
-  trunk_url = svntest.main.current_repo_url + '/A/B/E'
+  trunk_url = sbox.repo_url + '/A/B/E'
 
   # Create a branch
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', 
                                      trunk_url,
-                                     svntest.main.current_repo_url + '/branch',
+                                     sbox.repo_url + '/branch',
                                      '-m', "Creating the Branch")
  
   # Update to revision 2.
@@ -1710,7 +1697,7 @@ def merge_skips_obstructions(sbox):
 
   C_path = os.path.join(wc_dir, 'A', 'C')
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  F_url = svntest.main.current_repo_url + '/A/B/F'
+  F_url = sbox.repo_url + '/A/B/F'
 
   Q_path = os.path.join(F_path, 'Q')
   foo_path = os.path.join(F_path, 'foo')
@@ -1726,8 +1713,7 @@ def merge_skips_obstructions(sbox):
     'A/B/F/Q/bar' : Item(verb='Adding'),
     'A/B/F/foo'   : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/Q'     : Item(status='  ', wc_rev=2),
     'A/B/F/Q/bar' : Item(status='  ', wc_rev=2),
@@ -1878,7 +1864,7 @@ def merge_skips_obstructions(sbox):
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_wc_dir, '2', '3', 
-                                         svntest.main.current_repo_url,
+                                         sbox.repo_url,
                                          expected_output,
                                          expected_disk,
                                          expected_status.copy(short_wc_dir),
@@ -1938,7 +1924,7 @@ def merge_skips_obstructions(sbox):
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_wc_dir, '3', '4',
-                                         svntest.main.current_repo_url,
+                                         sbox.repo_url,
                                          expected_output,
                                          expected_disk,
                                          expected_status.copy(short_wc_dir),
@@ -1975,7 +1961,7 @@ def merge_skips_obstructions(sbox):
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_wc_dir, '3', '4',
-                                         svntest.main.current_repo_url,
+                                         sbox.repo_url,
                                          expected_output,
                                          expected_disk,
                                          expected_status.copy(short_wc_dir),
@@ -1995,7 +1981,7 @@ def merge_into_missing(sbox):
   wc_dir = sbox.wc_dir
 
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  F_url = svntest.main.current_repo_url + '/A/B/F'
+  F_url = sbox.repo_url + '/A/B/F'
   Q_path = os.path.join(F_path, 'Q')
   foo_path = os.path.join(F_path, 'foo')
 
@@ -2128,7 +2114,7 @@ def dry_run_adds_file_with_prop(sbox):
 
   # Do a regular merge of that change into a different dir.
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  E_url = svntest.main.current_repo_url + '/A/B/E'
+  E_url = sbox.repo_url + '/A/B/E'
 
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
@@ -2308,8 +2294,8 @@ def merge_binary_with_common_ancestry(sbox):
   saved_cwd = os.getcwd()
   try:
     os.chdir(K_path)
-    theta_J_url = svntest.main.current_repo_url + '/J/theta'
-    theta_L_url = svntest.main.current_repo_url + '/L/theta'
+    theta_J_url = sbox.repo_url + '/J/theta'
+    theta_L_url = sbox.repo_url + '/L/theta'
     svntest.actions.run_and_verify_svn(None, ['U    theta\n'], [],
                                        'merge', theta_J_url, theta_L_url)
   finally:
@@ -2397,7 +2383,7 @@ def merge_funny_chars_on_path(sbox):
 
   # Do a regular merge of that change into a different dir.
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  E_url = svntest.main.current_repo_url + '/A/B/E'
+  E_url = sbox.repo_url + '/A/B/E'
 
   expected_output_dic = {}
   expected_disk_dic = {}
@@ -2535,7 +2521,7 @@ def merge_keyword_expansions(sbox):
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_bpath, '2', 'HEAD',
-                                         svntest.main.current_repo_url + '/t',
+                                         sbox.repo_url + '/t',
                                          expected_output,
                                          expected_disk,
                                          expected_status,
@@ -2562,10 +2548,10 @@ def merge_prop_change_to_deleted_target(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E/alpha', wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Remove alpha entirely.
@@ -2606,7 +2592,7 @@ def merge_dir_replace(sbox):
 
   C_path = os.path.join(wc_dir, 'A', 'C')
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  F_url = svntest.main.current_repo_url + '/A/B/F'
+  F_url = sbox.repo_url + '/A/B/F'
 
   foo_path = os.path.join(F_path, 'foo')
 
@@ -2616,8 +2602,7 @@ def merge_dir_replace(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo' : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/foo'    : Item(status='  ', wc_rev=2),
     })
@@ -2650,8 +2635,7 @@ def merge_dir_replace(sbox):
     'A/C'        : Item(verb='Sending'),
     'A/C/foo'    : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/foo'  : Item(status='  ', wc_rev=2),
     'A/C'        : Item(status='  ', wc_rev=3),
@@ -2668,8 +2652,7 @@ def merge_dir_replace(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/F/foo'   : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 4)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/C'         : Item(status='  ', wc_rev=3),
     'A/C/foo'     : Item(status='  ', wc_rev=3),
@@ -2686,8 +2669,7 @@ def merge_dir_replace(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo' : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 5)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/foo'    : Item(status='  ', wc_rev=5),
     'A/C'          : Item(status='  ', wc_rev=3),
@@ -2748,7 +2730,7 @@ def merge_file_with_space_in_its_name(sbox):
   saved_cwd = os.getcwd()
   try:
     os.chdir(wc_dir)
-    target_url = svntest.main.current_repo_url + '/new%20file'
+    target_url = sbox.repo_url + '/new%20file'
     svntest.actions.run_and_verify_svn(None, None, [],
                                        "merge", "-r3:2", target_url)
   finally:
@@ -2766,8 +2748,8 @@ def merge_dir_branches(sbox):
   wc_dir = sbox.wc_dir
 
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
-  F_url = svntest.main.current_repo_url + '/A/B/F'
-  C_url = svntest.main.current_repo_url + '/A/C'
+  F_url = sbox.repo_url + '/A/B/F'
+  C_url = sbox.repo_url + '/A/C'
 
   # Create foo in F
   foo_path = os.path.join(F_path, 'foo')
@@ -2776,8 +2758,7 @@ def merge_dir_branches(sbox):
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo' : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/B/F/foo'    : Item(status='  ', wc_rev=2),
     })
@@ -2801,8 +2782,8 @@ def merge_dir_branches(sbox):
 
   # Run info to check the copied rev to make sure it's right
   expected_output = ["Path: " + foo_path + "\n",
-                     "URL: " + svntest.main.current_repo_url + "/foo\n",
-                     "Repository Root: " + svntest.main.current_repo_url + "\n",
+                     "URL: " + sbox.repo_url + "/foo\n",
+                     "Repository Root: " + sbox.repo_url + "\n",
                      "Revision: 2\n",
                      "Node Kind: directory\n",
                      "Schedule: add\n",
@@ -2840,15 +2821,15 @@ def safe_property_merge(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
                         wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Copy B to B2 as rev 3  (making a branch)
-  B_url = svntest.main.current_repo_url + '/A/B'
-  B2_url = svntest.main.current_repo_url + '/A/B2'
+  B_url = sbox.repo_url + '/A/B'
+  B2_url = sbox.repo_url + '/A/B2'
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', '-m', 'copy B to B2',
@@ -2872,10 +2853,10 @@ def safe_property_merge(sbox):
     'A/B/E/alpha' : Item(verb='Sending'),
     'A/B/E/beta'  : Item(verb='Sending'),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, None,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Make local propchanges to E, alpha and beta in the branch.
@@ -2966,15 +2947,15 @@ def property_merge_from_branch(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Copy B to B2 as rev 3  (making a branch)
-  B_url = svntest.main.current_repo_url + '/A/B'
-  B2_url = svntest.main.current_repo_url + '/A/B2'
+  B_url = sbox.repo_url + '/A/B'
+  B2_url = sbox.repo_url + '/A/B2'
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'copy', '-m', 'copy B to B2',
@@ -2994,10 +2975,10 @@ def property_merge_from_branch(sbox):
     'A/B/E'       : Item(verb='Sending'),
     'A/B/E/alpha' : Item(verb='Sending'),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, None,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Make different propchanges changes to the B2 branch and commit as r5.
@@ -3014,10 +2995,10 @@ def property_merge_from_branch(sbox):
     'A/B2/E'       : Item(verb='Sending'),
     'A/B2/E/alpha' : Item(verb='Sending'),
     })
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, None,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, None,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Now merge the recent B change to the branch.  There are no local
@@ -3089,10 +3070,10 @@ def property_merge_undo_redo(sbox):
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E/alpha', wc_rev=2, status='  ')
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output, expected_status,
-                                         None, None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
   svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # Use 'svn merge' to undo the commit.  ('svn merge -r2:1')
@@ -3107,7 +3088,7 @@ def property_merge_undo_redo(sbox):
   expected_skip = wc.State('', { })
   
   svntest.actions.run_and_verify_merge(wc_dir, '2', '1',
-                                       svntest.main.current_repo_url,
+                                       sbox.repo_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3132,7 +3113,7 @@ def property_merge_undo_redo(sbox):
   expected_skip = wc.State('', { })
   
   svntest.actions.run_and_verify_merge(wc_dir, '1', '2',
-                                       svntest.main.current_repo_url,
+                                       sbox.repo_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3153,9 +3134,9 @@ def cherry_pick_text_conflict(sbox):
   wc_dir = sbox.wc_dir
   
   A_path = os.path.join(wc_dir, 'A')
-  A_url = svntest.main.current_repo_url + '/A'
+  A_url = sbox.repo_url + '/A'
   mu_path = os.path.join(A_path, 'mu')
-  branch_A_url = svntest.main.current_repo_url + '/copy-of-A'
+  branch_A_url = sbox.repo_url + '/copy-of-A'
   branch_mu_path = os.path.join(wc_dir, 'copy-of-A', 'mu')
 
   # Create a branch of A.
@@ -3329,7 +3310,7 @@ def merge_file_replace(sbox):
   expected_skip = wc.State(wc_dir, { })
   expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
-                                       svntest.main.current_repo_url,
+                                       sbox.repo_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3422,7 +3403,7 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
   expected_skip = wc.State(wc_dir, { })
   expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
-                                       svntest.main.current_repo_url,
+                                       sbox.repo_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3460,7 +3441,7 @@ def merge_ignore_whitespace(sbox):
   # commit base version of iota
   file_name = "iota"
   file_path = os.path.join(wc_dir, file_name)
-  file_url = svntest.main.current_repo_url + '/iota'
+  file_url = sbox.repo_url + '/iota'
 
   open(file_path, 'w').write("Aa\n"
                              "Bb\n"
@@ -3480,12 +3461,12 @@ def merge_ignore_whitespace(sbox):
   expected_output = wc.State(wc_dir, { file_name : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(file_name, wc_rev=3)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Backdate iota to revision 2, so we can merge in the rev 3 changes.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -3511,7 +3492,7 @@ def merge_ignore_whitespace(sbox):
   expected_skip = wc.State('', { })
 
   svntest.actions.run_and_verify_merge(sbox.wc_dir, '2', '3', 
-                                       svntest.main.current_repo_url,
+                                       sbox.repo_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3530,7 +3511,7 @@ def merge_ignore_eolstyle(sbox):
   # commit base version of iota
   file_name = "iota"
   file_path = os.path.join(wc_dir, file_name)
-  file_url = svntest.main.current_repo_url + '/iota'
+  file_url = sbox.repo_url + '/iota'
 
   open(file_path, 'wb').write("Aa\r\n"
                               "Bb\r\n"
@@ -3550,12 +3531,12 @@ def merge_ignore_eolstyle(sbox):
   expected_output = wc.State(wc_dir, { file_name : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(file_name, wc_rev=3)
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None, None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
 
   # Backdate iota to revision 2, so we can merge in the rev 3 changes.
   svntest.actions.run_and_verify_svn(None, None, [],
@@ -3581,7 +3562,7 @@ def merge_ignore_eolstyle(sbox):
   expected_skip = wc.State('', { })
 
   svntest.actions.run_and_verify_merge(sbox.wc_dir, '2', '3', 
-                                       svntest.main.current_repo_url,
+                                       sbox.repo_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -3598,7 +3579,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  E_path = os.path.join(wc_dir, 'A', 'B', 'E');
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   alpha_path = os.path.join(E_path, 'alpha')
   new_alpha_path = os.path.join(wc_dir, 'A', 'C', 'alpha')
   
@@ -3613,8 +3594,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/C/alpha' : Item(verb='Adding'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'A/C/alpha' : Item(status='  ', wc_rev=2),
     })
@@ -3650,7 +3630,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_E_path, '1', '2',
-                                         svntest.main.current_repo_url + \
+                                         sbox.repo_url + \
                                          '/A/C',
                                          expected_output,
                                          expected_disk,
@@ -3737,8 +3717,8 @@ def merge_conflict_markers_matching_eol(sbox):
     theirs_rev = cur_rev
 
     # Make a local mod to mu, will conflict with the previous change
-    svntest.main.file_append (path_backup,
-                              'Conflicting appended text for mu' + eolchar)
+    svntest.main.file_append(path_backup,
+                             'Conflicting appended text for mu' + eolchar)
 
     # Create expected output tree for an update of the wc_backup.
     expected_backup_output = svntest.wc.State(wc_backup, {

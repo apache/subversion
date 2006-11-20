@@ -86,7 +86,11 @@ else
 fi
 
 libtool=`./build/PrintPath glibtool libtool libtool15`
-lt_pversion=`$libtool --version 2>/dev/null|sed -e 's/^[^0-9]*//' -e 's/[- ].*//' -e 1q`
+# Extract the libtool version number: everything from the first number in
+# the version text until a hyphen or space.
+lt_pversion=`$libtool --version 2>/dev/null |
+  sed -e 's/^[^0-9]*//' -e 's/[- ].*//' -e '/^$/d' |
+  sed -e 1q`
 if test -z "$lt_pversion"; then
   echo "buildcheck: libtool not found."
   echo "            You need libtool version $LIBTOOL_WANTED_VERSION or newer installed"

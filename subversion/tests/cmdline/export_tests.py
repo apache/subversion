@@ -43,7 +43,7 @@ def export_empty_directory(sbox):
   
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = sbox.wc_dir
-  empty_dir_url = svntest.main.current_repo_url + '/A/C'
+  empty_dir_url = sbox.repo_url + '/A/C'
   svntest.main.run_svn(None, 'export', empty_dir_url, export_target)
   if not os.path.exists(export_target):
     raise svntest.Failure
@@ -59,7 +59,7 @@ def export_greek_tree(sbox):
   expected_output.desc[''] = Item()
   expected_output.tweak(contents=None, status='A ')
 
-  svntest.actions.run_and_verify_export(svntest.main.current_repo_url,
+  svntest.actions.run_and_verify_export(sbox.repo_url,
                                         export_target,
                                         expected_output,
                                         svntest.main.greek_state.copy())
@@ -353,8 +353,7 @@ def export_with_state_deleted(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E/alpha' : Item(verb='Deleting'),
     })
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.remove('A/B/E/alpha')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output, expected_status,
@@ -381,7 +380,7 @@ def export_creates_intermediate_folders(sbox):
   expected_output.desc[''] = Item()
   expected_output.tweak(contents=None, status='A ')
 
-  svntest.actions.run_and_verify_export(svntest.main.current_repo_url,
+  svntest.actions.run_and_verify_export(sbox.repo_url,
                                         export_target,
                                         expected_output,
                                         svntest.main.greek_state.copy())

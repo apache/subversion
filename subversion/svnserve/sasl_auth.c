@@ -329,7 +329,7 @@ svn_error_t *sasl_auth_request(svn_ra_svn_conn_t *conn,
 
       if ((p = strchr(user, '@')) != NULL)
         /* Drop the realm part. */
-        b->user = apr_pstrndup(pool, user, p - (char *)user);
+        b->user = apr_pstrndup(b->pool, user, p - (char *)user);
       else
         {
           svn_error_t *err;

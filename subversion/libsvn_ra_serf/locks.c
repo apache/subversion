@@ -52,6 +52,7 @@ typedef enum {
   DEPTH,
   TIMEOUT,
   LOCK_TOKEN,
+  COMMENT,
 } lock_state_e;
 
 typedef struct {
@@ -65,11 +66,6 @@ typedef struct {
   const char *path;
 
   svn_lock_t *lock;
-
-  const char *owner;
-  const char *creation_date;
-  const char *lock_token;
-  const char *comment;
 
   svn_boolean_t force;
   svn_revnum_t revision;
@@ -86,6 +82,8 @@ typedef struct {
   /* are we done? */
   svn_boolean_t done;
 
+  /* Any errors. */
+  svn_error_t *error;
 } lock_info_t;
 
 
@@ -102,6 +100,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     case DEPTH:
     case TIMEOUT:
     case LOCK_TOKEN:
+    case COMMENT:
         parser->state->private = apr_pcalloc(parser->state->pool,
                                              sizeof(lock_prop_info_t));
         break;
@@ -161,6 +160,10 @@ start_lock(svn_ra_serf__xml_parser_t *parser,
       else if (strcmp(name.name, "locktoken") == 0)
         {
           push_state(parser, ctx, LOCK_TOKEN);
+        }
+      else if (strcmp(name.name, "owner") == 0)
+        {
+          push_state(parser, ctx, COMMENT);
         }
     }
   else if (state == LOCK_TYPE)
@@ -261,6 +264,17 @@ end_lock(svn_ra_serf__xml_parser_t *parser,
       /* We don't actually need the lock token. */
       svn_ra_serf__xml_pop_state(parser);
     }
+  else if (state == COMMENT &&
+           strcmp(name.name, "owner") == 0)
+    {
+      lock_prop_info_t *info = parser->state->private;
+
+      if (info->len)
+        {
+          ctx->lock->comment = apr_pstrndup(ctx->pool, info->data, info->len);
+        }
+      svn_ra_serf__xml_pop_state(parser);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -285,6 +299,7 @@ cdata_lock(svn_ra_serf__xml_parser_t *parser,
     case DEPTH:
     case TIMEOUT:
     case LOCK_TOKEN:
+    case COMMENT:
         svn_ra_serf__expand_string(&info->data, &info->len,
                                    data, len, parser->state->pool);
         break;
@@ -348,13 +363,9 @@ handle_lock(serf_request_t *request,
       /* 423 == Locked */
       if (sl.code == 423)
         {
-          svn_error_t *err;
-
-          err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                 _("Lock request failed: %d %s"),
-                                 sl.code, sl.reason);
-          xml_ctx->error = err;
-          return err->apr_err;
+          ctx->error = svn_ra_serf__handle_server_error(request, response,
+                                                        pool);
+          return ctx->error->apr_err;
         }
 
       headers = serf_bucket_response_get_headers(response);
@@ -437,13 +448,13 @@ create_lock_body(void *baton,
 
   svn_ra_serf__add_tag_buckets(buckets, "locktype", "<write/>", alloc);
 
-  if (ctx->comment)
+  if (ctx->lock->comment)
     {
       svn_stringbuf_t *xml_esc = NULL;
       svn_string_t val;
 
-      val.data = ctx->comment;
-      val.len = strlen(ctx->comment);
+      val.data = ctx->lock->comment;
+      val.len = strlen(ctx->lock->comment);
 
       svn_xml_escape_cdata_string(&xml_esc, &val, pool);
       svn_ra_serf__add_tag_buckets(buckets, "owner", xml_esc->data, alloc);
@@ -551,7 +562,6 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_ctx->path = key;
       lock_ctx->revision = *((svn_revnum_t*)val);
       lock_ctx->lock = svn_lock_create(subpool);
-      lock_ctx->comment = comment;
       lock_ctx->lock->path = key;
       lock_ctx->lock->comment = comment;
 
@@ -589,8 +599,13 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       error = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
       if (error)
         {
-          SVN_ERR(parser_ctx->error);
-          return error;
+          if (parser_ctx->error != SVN_NO_ERROR)
+            error = parser_ctx->error;
+          if (lock_ctx->error != SVN_NO_ERROR)
+            error = lock_ctx->error;
+
+          return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, error,
+                                  _("Lock request failed"));
         }
 
       SVN_ERR(lock_func(lock_baton, lock_ctx->path, TRUE, lock_ctx->lock, NULL,
