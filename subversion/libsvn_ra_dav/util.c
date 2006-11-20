@@ -37,8 +37,6 @@
 
 #include "ra_dav.h"
 
-#define WOOTWOOT 1
-
 
 
 typedef struct {
@@ -477,8 +475,6 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
   apr_status_t status;
   apr_finfo_t finfo;
 
-  /* ### APR bug? apr_file_info_get won't always return the correct
-         size for buffered files. */
   status = apr_file_info_get(&finfo, APR_FINFO_SIZE, body_file);
   if (status)
     return svn_error_wrap_apr(status,

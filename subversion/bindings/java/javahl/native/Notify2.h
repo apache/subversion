@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -40,24 +40,28 @@ private:
      */
     jobject m_notify;
     Notify2(jobject p_notify);
+
 public:
     static Notify2 * makeCNotify(jobject notify);
     ~Notify2();
-  /**
-   * notification function passed as svn_wc_notify_func_t
-   * @param baton notification instance is passed using this parameter
-   * @param notify all the information about the event
-   * @param pool an apr pool to allocated memory
-   */
+
+    /**
+     * Implementation of the svn_wc_notify_func_t API.
+     *
+     * @param baton notification instance is passed using this parameter
+     * @param notify all the information about the event
+     * @param pool An APR pool from which to allocate memory.
+     */
     static void notify(void *baton,
                        const svn_wc_notify_t *notify,
                        apr_pool_t *pool);
-  /**
-   * Handler for Subversion notifications.
-   *
-   * @param notify all the information about the event
-   * @param pool an apr pool to allocated memory
-   */
+
+    /**
+     * Handler for Subversion notifications.
+     *
+     * @param notify all the information about the event
+     * @param pool An APR pool from which to allocate memory.
+     */
     void onNotify(const svn_wc_notify_t *notify,
                   apr_pool_t *pool);
 
