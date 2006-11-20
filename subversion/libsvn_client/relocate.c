@@ -106,7 +106,7 @@ validator_func(void *baton,
     return svn_error_createf
       (SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
        _("The repository at '%s' has uuid '%s', but the WC has '%s'"),
-       url, uuid, url_uuid->uuid);
+       url, url_uuid->uuid, uuid);
 
   return SVN_NO_ERROR;
 }
