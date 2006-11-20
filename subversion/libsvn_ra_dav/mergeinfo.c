@@ -133,9 +133,20 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
     case ELEM_merge_info_path:
       mb->curr_path = apr_pstrndup(mb->pool, cdata, nlen);
       break;
+
     case ELEM_merge_info_info:
-      mb->curr_info = apr_pstrndup(mb->pool, cdata, nlen);
+      if (mb->curr_info)
+        {
+          char *to_append = apr_pstrmemdup(mb->pool, cdata, len);
+          mb->curr_info = apr_pstrcat(mb->pool, mb->curr_info, to_append,
+                                      NULL);
+        }
+      else
+        {
+          mb->curr_info = apr_pstrndup(mb->pool, cdata, nlen);
+        }
       break;
+
     default:
       break;
     }
@@ -159,7 +170,7 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
   int i;
   svn_ra_dav__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
-  struct mergeinfo_baton mb;
+  struct mergeinfo_baton mb = { NULL, NULL, NULL, NULL, NULL };
 
   /* ### todo: I don't understand why the static, file-global
      variables shared by update and status are called `report_head'
