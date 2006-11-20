@@ -92,7 +92,10 @@ Candidate changes:
     Justification:
       This both returns a more useful error, and doesn't leak a bunch
       of errors in the middle.
+    NOTE:
+      Causes conflicts, so needs an integration branch.
     Votes:
       +1: dlr
+      +0: lundblad
 
 Approved changes:
