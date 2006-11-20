@@ -630,6 +630,23 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
+                            apr_hash_t **mergeinfo,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t revision,
+                            svn_boolean_t include_parents,
+                            apr_pool_t *pool)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+
+  /* ### FIXME: Implement me! */
+  *mergeinfo = NULL;
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
                             const char **url,
@@ -691,6 +708,7 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__get_commit_editor,
   svn_ra_serf__get_file,
   svn_ra_serf__get_dir,
+  svn_ra_serf__get_merge_info,
   svn_ra_serf__do_update,
   svn_ra_serf__do_switch,
   svn_ra_serf__do_status,
