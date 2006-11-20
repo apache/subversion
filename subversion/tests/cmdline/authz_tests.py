@@ -178,21 +178,6 @@ def authz_read_access(sbox):
 
   sbox.build(create_wc = False)
 
-  write_restrictive_svnserve_conf(sbox.repo_dir)
-
-  if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
-  else:
-    expected_err = ".*svn: Authorization failed.*"
-
-  write_authz_file(sbox, { "/": "* = r",
-                           "/A/B": "* =",
-                           "/A/D": "* = rw",
-                           "/A/D/G": ("* = rw\n" +
-                                      svntest.main.wc_author + " ="),
-                           "/A/D/H": ("* = \n" +
-                                      svntest.main.wc_author + " = rw")})
-         
   root_url = sbox.repo_url
   A_url = root_url + '/A'
   B_url = A_url + '/B'
@@ -207,6 +192,32 @@ def authz_read_access(sbox):
   pi_url = G_url + '/pi'
   H_url = D_url + '/H'
   chi_url = H_url + '/chi'
+
+  if sbox.repo_url.startswith("http"):
+    expected_err = ".*403 Forbidden.*"
+  else:
+    expected_err = ".*svn: Authorization failed.*"
+
+  # create some folders with spaces in their names
+  svntest.actions.run_and_verify_svn("", None, [],
+                                     'mkdir',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     B_url+'/folder with spaces',
+                                     B_url+'/folder with spaces/empty folder')
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  write_authz_file(sbox, { "/": "* = r",
+                           "/A/B": "* =",
+                           "/A/D": "* = rw",
+                           "/A/D/G": ("* = rw\n" +
+                                      svntest.main.wc_author + " ="),
+                           "/A/D/H": ("* = \n" +
+                                      svntest.main.wc_author + " = rw"),
+                           "/A/B/folder with spaces":
+                                     (svntest.main.wc_author + " = r")})
 
   # read a remote file
   svntest.actions.run_and_verify_svn(None, ["This is the file 'iota'.\n"],
@@ -258,6 +269,13 @@ def authz_read_access(sbox):
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      B_url)
+
+  # open a remote folder(ls) with spaces, should succeed
+  svntest.actions.run_and_verify_svn("",
+                                     None, [], 'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     B_url+'/folder with spaces/empty folder')
 
   # open a remote folder(ls), unreadable through recursion: should fail
   svntest.actions.run_and_verify_svn("",
