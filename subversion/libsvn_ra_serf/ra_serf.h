@@ -267,7 +267,7 @@ typedef serf_bucket_t*
                                         serf_bucket_alloc_t *alloc,
                                         apr_pool_t *pool);
 
-/* Callback for when a request headers are needed. */
+/* Callback for when request headers are needed. */
 typedef apr_status_t
 (*svn_ra_serf__request_header_delegate_t)(serf_bucket_t *headers,
                                           void *baton,
