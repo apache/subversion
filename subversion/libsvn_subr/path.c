@@ -118,7 +118,7 @@ char *svn_path_join(const char *base,
   assert(is_canonical(component, clen));
 
   /* If the component is absolute, then return it.  */
-  if (svn_path_is_absolute(component, clen, pool))
+  if (svn_path_is_absolute(component, clen))
     return apr_pmemdup(pool, component, clen + 1);
 
   /* If either is empty return the other */
@@ -185,7 +185,7 @@ char *svn_path_join_many(apr_pool_t *pool, const char *base, ...)
       if (nargs++ < MAX_SAVED_LENGTHS)
         saved_lengths[nargs] = len;
 
-      if (svn_path_is_absolute(s, len, pool))
+      if (svn_path_is_absolute(s, len))
         {
           /* an absolute path. skip all components to this point and reset
              the total length. */
@@ -475,7 +475,7 @@ svn_path_is_root(const char *path, apr_size_t len, apr_pool_t *pool)
 
 
 svn_boolean_t
-svn_path_is_absolute(const char *path, apr_size_t len, apr_pool_t *pool)
+svn_path_is_absolute(const char *path, apr_size_t len)
 {
   /* path is absolute if it starts with '/' */
   if (len > 0 && path[0] == '/')
@@ -660,7 +660,7 @@ svn_path_is_child(const char *path1,
         return NULL;
       
       /* check if this is an absolute path */
-      if (svn_path_is_absolute(path2, strlen(path2), pool))
+      if (svn_path_is_absolute(path2, strlen(path2)))
         return NULL;
       else
         return apr_pstrdup(pool, path2);      /* everything else is child */
