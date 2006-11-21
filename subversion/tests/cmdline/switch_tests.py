@@ -981,6 +981,13 @@ def relocate_beyond_repos_root(sbox):
 # Issue 2306.
 def refresh_read_only_attribute(sbox):
   "refresh the WC file system read-only attribute "
+
+  # This test will fail when run as root. Since that's normal behavior, just skip 
+  # the test.
+  if os.name == 'posix':
+    if os.geteuid() == 0:
+      raise svntest.Skip
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
