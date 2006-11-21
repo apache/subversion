@@ -821,9 +821,10 @@ handle_response(serf_request_t *request,
                                      pool);
     }
 
-  if (APR_STATUS_IS_EOF(status)) {
+  if (APR_STATUS_IS_EOF(status))
+    {
       status = svn_ra_serf__is_conn_closing(response);
-  }
+    }
 
   return status;
 }
