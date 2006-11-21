@@ -79,9 +79,10 @@ def skip_test_when_no_authz_available():
 
 def authz_open_root(sbox):
   "authz issue #2486 - open root"
-  sbox.build()
   
   skip_test_when_no_authz_available()
+  
+  sbox.build()
   
   write_authz_file(sbox, {"/": "", "/A": "jrandom = rw"})
 
@@ -114,9 +115,10 @@ def authz_open_root(sbox):
 
 def authz_open_directory(sbox):
   "authz issue #2486 - open directory"
-  sbox.build()
   
   skip_test_when_no_authz_available()
+  
+  sbox.build()
   
   write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
   
@@ -149,9 +151,10 @@ def authz_open_directory(sbox):
 
 def broken_authz_file(sbox):
   "broken authz files cause errors"
-  sbox.build(create_wc = False)
-  
+
   skip_test_when_no_authz_available()
+
+  sbox.build(create_wc = False)
   
   # No characters but 'r', 'w', and whitespace are allowed as a value
   # in an authz rule.
