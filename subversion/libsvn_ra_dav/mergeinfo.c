@@ -43,7 +43,7 @@ struct mergeinfo_baton
 {
   apr_pool_t *pool;
   const char *curr_path;
-  const char *curr_info;
+  svn_stringbuf_t *curr_info;
   apr_hash_t *result;
   svn_error_t *err;
 };
@@ -84,7 +84,7 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
 
   if (elm->id == ELEM_merge_info_item)
     {
-      mb->curr_info = NULL;
+      svn_stringbuf_setempty(mb->curr_info);
       mb->curr_path = NULL;
     }
 
@@ -109,13 +109,14 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
     {
       if (mb->curr_info && mb->curr_path)
         {
-          apr_hash_t *temp;
+          apr_hash_t *path_mergeinfo;
 
-          mb->err = svn_mergeinfo_parse(mb->curr_info, &temp, mb->pool);
+          mb->err = svn_mergeinfo_parse(mb->curr_info->data, &path_mergeinfo,
+                                        mb->pool);
           SVN_ERR(mb->err);
 
           apr_hash_set(mb->result, mb->curr_path,  APR_HASH_KEY_STRING,
-                       temp);
+                       path_mergeinfo);
         }
     }
 
@@ -136,15 +137,7 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
 
     case ELEM_merge_info_info:
       if (mb->curr_info)
-        {
-          char *to_append = apr_pstrmemdup(mb->pool, cdata, len);
-          mb->curr_info = apr_pstrcat(mb->pool, mb->curr_info, to_append,
-                                      NULL);
-        }
-      else
-        {
-          mb->curr_info = apr_pstrndup(mb->pool, cdata, nlen);
-        }
+        svn_stringbuf_appendbytes(mb->curr_info, cdata, nlen);
       break;
 
     default:
@@ -170,7 +163,7 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
   int i;
   svn_ra_dav__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
-  struct mergeinfo_baton mb = { NULL, NULL, NULL, NULL, NULL };
+  struct mergeinfo_baton mb;
 
   /* ### todo: I don't understand why the static, file-global
      variables shared by update and status are called `report_head'
@@ -213,10 +206,10 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
   svn_stringbuf_appendcstr(request_body, minfo_request_tail);
 
   mb.pool = pool;
-  mb.err = SVN_NO_ERROR;
   mb.curr_path = NULL;
-  mb.curr_info = NULL;
+  mb.curr_info = svn_stringbuf_create("", pool);
   mb.result = apr_hash_make(pool);
+  mb.err = SVN_NO_ERROR;
 
   SVN_ERR (svn_ra_dav__parsed_request(ras->sess,
                                       "REPORT",
