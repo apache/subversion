@@ -912,6 +912,7 @@ parsed_request(ne_session *sess,
 
   if (spool_response)
     {
+      apr_pool_t *subpool = svn_pool_create(pool);
       /* All done with the temporary file we spooled the response
          into. */
       (void) apr_file_close(spool_reader_baton.spool_file);
@@ -920,7 +921,6 @@ parsed_request(ne_session *sess,
           (SVN_ERR_RA_DAV_REQUEST_FAILED, spool_reader_baton.error,
            _("Error spooling the %s request response to disk"), method);
 
-      apr_pool_t *subpool = svn_pool_create(pool);
       err = parse_spool_file(ras, spool_reader_baton.spool_file_name,
                              success_parser, subpool);
       svn_pool_destroy(subpool);
