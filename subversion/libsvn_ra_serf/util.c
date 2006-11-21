@@ -736,6 +736,7 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
   return svn_error_create(APR_EGENERAL, NULL, _("Unspecified error message"));
 }
 
+/* Implements the serf_response_handler_t interface. */
 static apr_status_t
 handler_default(serf_request_t *request,
                 serf_bucket_t *response,
@@ -825,6 +826,7 @@ handler_default(serf_request_t *request,
 
 }
 
+/* Implements the serf_request_setup_t interface. */
 static apr_status_t
 setup_default(serf_request_t *request,
               void *setup_baton,
@@ -887,7 +889,7 @@ setup_default(serf_request_t *request,
   return APR_SUCCESS;
 }
 
-serf_request_t*
+serf_request_t *
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
   return serf_connection_request_create(handler->conn->conn,
