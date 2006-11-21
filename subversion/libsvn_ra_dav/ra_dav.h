@@ -2,7 +2,7 @@
  * ra_dav.h :  private declarations for the RA/DAV module
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -177,6 +177,53 @@ typedef struct {
 
 } svn_ra_dav__session_t;
 
+
+typedef struct {
+  ne_request *req;                      /* neon request structure */
+  ne_session *ne_sess;                  /* neon session structure */
+  svn_ra_dav__session_t *sess;          /* DAV session structure */
+  svn_error_t *err;                     /* error encountered while executing
+                                           the request */
+  apr_pool_t *pool;                     /* where this struct is allocated */
+  apr_pool_t *iterpool;                 /* iteration pool
+                                           for use within callbacks */
+} svn_ra_dav__request_t;
+
+/* Allocate an internal request structure allocated in a newly created
+ * subpool of POOL.  Create an associated neon request with the parameters
+ * given.
+ *
+ * Register a pool cleanup for any allocated Neon resources.
+ */
+svn_ra_dav__request_t *
+svn_ra_dav__request_create(ne_session *ne_sess, svn_ra_dav__session_t *sess,
+                           const char *method, const char *url,
+                           apr_pool_t *pool);
+
+/* Add a response body reader function to REQ.
+ *
+ * Use the associated session parameters to determine the use of
+ * compression.
+ *
+ * Register a pool cleanup on the pool of REQ to clean up any allocated
+ * Neon resources.
+ */
+void
+svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
+                                     ne_accept_response accpt,
+                                     ne_block_reader reader,
+                                     void *userdata);
+
+/* Create an xml parser for use with REQ.
+ *
+ * Register a pool cleanup on the pool of REQ to clean up any allocated
+ * Neon resources
+ */
+ne_xml_parser *
+svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req);
+
+/* Destroy request REQ and any associated resources */
+#define svn_ra_dav__request_destroy(req) svn_pool_destroy((req)->pool)
 
 /* Id used with ne_set_session_private() and ne_get_session_private()
    to retrieve the userdata (which is currently the RA session baton!) */
@@ -529,6 +576,12 @@ svn_error_t * svn_ra_dav__get_activity_collection
 svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
                                                 apr_file_t *body_file);
 
+
+/* Allocate a Neon xml parser.
+ *
+ * Register a pool cleanup for any allocated Neon resources.
+ */
+ne_xml_parser *svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req);
 
 /** Find a given element in the table of elements.
  *
