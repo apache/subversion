@@ -404,6 +404,20 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Set the progress callback.
+     *
+     * @param listener The progress callback.
+     * @since 1.5
+     */
+    public void setProgressListener(ProgressListener listener)
+    {
+        synchronized (clazz)
+        {
+            worker.setProgressListener(listener);
+        }
+    }
+
+    /**
      * Sets the commit message handler. This allows more complex commit message
      * with the list of the elements to be commited as input.
      * @param messageHandler    callback for entering commit messages
