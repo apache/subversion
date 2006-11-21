@@ -182,6 +182,8 @@ typedef struct {
   ne_request *req;                      /* neon request structure */
   ne_session *ne_sess;                  /* neon session structure */
   svn_ra_dav__session_t *sess;          /* DAV session structure */
+  const char *method;
+  const char *url;
   svn_error_t *err;                     /* error encountered while executing
                                            the request */
   apr_pool_t *pool;                     /* where this struct is allocated */
@@ -914,10 +916,7 @@ svn_ra_dav__request_interrogator(ne_request *request,
  */
 svn_error_t *
 svn_ra_dav__request_dispatch(int *code_p,
-                             ne_request *request,
-                             ne_session *session,
-                             const char *method,
-                             const char *url,
+                             svn_ra_dav__request_t *request,
                              int okay_1,
                              int okay_2,
                              svn_ra_dav__request_interrogator interrogator,

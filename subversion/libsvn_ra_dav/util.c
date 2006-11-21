@@ -65,6 +65,8 @@ svn_ra_dav__request_create(ne_session *ne_sess, svn_ra_dav__session_t *sess,
   req->sess = sess;
   req->pool = reqpool;
   req->iterpool = svn_pool_create(req->pool);
+  req->method = apr_pstrdup(req->pool, method);
+  req->url = apr_pstrdup(req->pool, url);
 
   apr_pool_cleanup_register(reqpool, req, dav_request_cleanup, NULL);
 
@@ -879,18 +881,12 @@ parsed_request(ne_session *sess,
 
   /* run the request and get the resulting status code. */
   err = svn_ra_dav__request_dispatch(&code,
-                                     req->req,
-                                     sess,
-                                     method,
-                                     url,
+                                     req,
                                      (strcmp(method, "PROPFIND") == 0)
                                      ? 207 : 200,
                                      0, /* not used */
                                      NULL, NULL, /* interrogator not used */
                                      pool);
-  /*### We haven't shifted to the new paradigm completely yet:
-    svn_ra_dav__request_dispatch destroyed our request */
-  req->req = NULL;
   if (err)
     {
       svn_error_clear(cancel_baton->err);
@@ -942,7 +938,6 @@ parsed_request(ne_session *sess,
                                "in the response: %s (%s)"),
                              method, msg, url);
 
-  svn_ra_dav__request_destroy(req);
   return SVN_NO_ERROR;
 }
 
@@ -1066,10 +1061,7 @@ svn_ra_dav__add_error_handler(ne_request *request,
 
 svn_error_t *
 svn_ra_dav__request_dispatch(int *code_p,
-                             ne_request *request,
-                             ne_session *session,
-                             const char *method,
-                             const char *url,
+                             svn_ra_dav__request_t *req,
                              int okay_1,
                              int okay_2,
                              svn_ra_dav__request_interrogator interrogator,
@@ -1084,41 +1076,31 @@ svn_ra_dav__request_dispatch(int *code_p,
   const char *msg;
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *err2 = SVN_NO_ERROR;
-  ne_decompress *decompress_err = NULL;
-  svn_ra_dav__session_t *ras = ne_get_session_private(session,
-                                                      SVN_RA_NE_SESSION_ID);
-
 
   /* attach a standard <D:error> body parser to the request */
-  error_parser = ne_xml_create();
+  error_parser = svn_ra_dav__xml_parser_create(req);
   shim_xml_push_handler(error_parser, error_elements,
                         validate_error_elements, start_err_element,
                         end_err_element, &err, pool);
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
-  if (ras->compression)
-    decompress_err = ne_decompress_reader(request, ra_dav_error_accepter,
-                                          ne_xml_parse_v, error_parser);
-  else
-    ne_add_response_body_reader(request, ra_dav_error_accepter,
-                                ne_xml_parse_v, error_parser);
+  svn_ra_dav__add_response_body_reader(req, ra_dav_error_accepter,
+                                       ne_xml_parse_v, error_parser);
 
   /* run the request, see what comes back. */
-  rv = ne_request_dispatch(request);
+  rv = ne_request_dispatch(req->req);
 
-  statstruct = ne_get_status(request);
+  /* Save values from the request */
+  statstruct = ne_get_status(req->req);
   code_desc = apr_pstrdup(pool, statstruct->reason_phrase);
   code = statstruct->code;
+
   if (code_p)
      *code_p = code;
 
   if (interrogator)
-    err2 = (*interrogator)(request, rv, interrogator_baton);
-
-  ne_decompress_destroy(decompress_err);
-  ne_request_destroy(request);
-  ne_xml_destroy(error_parser);
+    err2 = (*interrogator)(req->req, rv, interrogator_baton);
 
   /* If the request interrogator returned error, pass that along now. */
   if (err2)
@@ -1130,7 +1112,11 @@ svn_ra_dav__request_dispatch(int *code_p,
   /* If the status code was one of the two that we expected, then go
      ahead and return now. IGNORE any marshalled error. */
   if (rv == NE_OK && (code == okay_1 || code == okay_2))
-    return SVN_NO_ERROR;
+    {
+      svn_ra_dav__request_destroy(req);
+
+      return SVN_NO_ERROR;
+    }
 
   /* next, check to see if a <D:error> was discovered */
   if (err)
@@ -1141,14 +1127,15 @@ svn_ra_dav__request_dispatch(int *code_p,
     {
       if (code == 404)
         {
-          msg = apr_psprintf(pool, _("'%s' path not found"), url);
+          msg = apr_psprintf(pool, _("'%s' path not found"), req->url);
           return svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL, msg);
         }
       else if (code == 301 || code == 302)
         {
           char *location;
 
-          SVN_ERR(svn_ra_dav__interrogate_for_location(request, rv, &location));
+          SVN_ERR(svn_ra_dav__interrogate_for_location(req->req,
+                                                       rv, &location));
           msg = apr_psprintf(pool,
                              (code == 301)
                               ? _("Repository moved permanently to '%s';"
@@ -1164,8 +1151,8 @@ svn_ra_dav__request_dispatch(int *code_p,
     }
   /* We either have a neon error, or some other error
      that we didn't expect. */
-  msg = apr_psprintf(pool, _("%s of '%s'"), method, url);
-  return svn_ra_dav__convert_error(session, msg, rv, pool);
+  msg = apr_psprintf(pool, _("%s of '%s'"), req->method, req->url);
+  return svn_ra_dav__convert_error(req->ne_sess, msg, rv, pool);
 }
 
 

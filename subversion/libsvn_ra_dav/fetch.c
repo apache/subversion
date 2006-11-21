@@ -2,7 +2,7 @@
  * fetch.c :  routines for fetching updates and checkouts
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -412,11 +412,11 @@ static svn_error_t *custom_get_request(ne_session *sess,
 {
   custom_get_ctx_t cgc = { 0 };
   const char *delta_base;
+  svn_ra_dav__request_t *request;
   ne_request *req;
-  ne_decompress *decompress;
   svn_error_t *err;
   svn_ra_dav__session_t *ras = ne_get_session_private(sess,
-                                                     SVN_RA_NE_SESSION_ID);
+                                                      SVN_RA_NE_SESSION_ID);
 
   if (use_base)
     {
@@ -431,7 +431,8 @@ static svn_error_t *custom_get_request(ne_session *sess,
       delta_base = NULL;
     }
 
-  req = ne_request_create(sess, "GET", url);
+  request = svn_ra_dav__request_create(sess, ras, "GET", url, pool);
+  req = request->req;
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
@@ -452,29 +453,17 @@ static svn_error_t *custom_get_request(ne_session *sess,
       ne_add_request_header(req, SVN_DAV_DELTA_BASE_HEADER, delta_base);
     }
 
-  /* add in a reader to capture the body of the response. */
-  if (ras->compression) 
-    {
-      decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
-    }
-  else 
-    {
-      decompress = NULL;
-      ne_add_response_body_reader(req, ne_accept_2xx, reader, &cgc);
-    }
+  svn_ra_dav__add_response_body_reader(request, ne_accept_2xx, reader, &cgc);
 
   /* complete initialization of the body reading context */
   cgc.subctx = subctx;
 
   /* run the request */
-  err = svn_ra_dav__request_dispatch(NULL, req, sess, "GET", url,
+  err = svn_ra_dav__request_dispatch(NULL, request,
                                      200 /* OK */,
                                      226 /* IM Used */,
                                      interrogate_for_content_type, &cgc.ctype,
                                      pool);
-
-  if (decompress)
-    ne_decompress_destroy(decompress);
 
   /* we no longer need this */
   if (cgc.ctype.value != NULL)
