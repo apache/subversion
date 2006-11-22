@@ -186,10 +186,27 @@ typedef struct {
   const char *url;
   svn_error_t *err;                     /* error encountered while executing
                                            the request */
+  svn_boolean_t marshalled_error;       /* TRUE if the error was server-side */
   apr_pool_t *pool;                     /* where this struct is allocated */
   apr_pool_t *iterpool;                 /* iteration pool
                                            for use within callbacks */
 } svn_ra_dav__request_t;
+
+
+/* Statement macro to set the request error,
+ * making sure we don't leak any in case we encounter more than one error.
+ *
+ * Sets the 'err' field of REQ to the value obtained by evaluating NEW_ERR.
+ */
+#define SVN_RA_DAV__REQ_ERR(req, new_err)    \
+   do {                                      \
+     svn_error_t *svn_err__tmp = (new_err);  \
+     if ((req)->err)                         \
+       svn_error_clear(svn_err__tmp);        \
+     else                                    \
+       (req)->err = svn_err__tmp;            \
+   } while (0)
+
 
 /* Allocate an internal request structure allocated in a newly created
  * subpool of POOL.  Create an associated neon request with the parameters

@@ -462,10 +462,18 @@ static int validate_error_elements(void *userdata,
 }
 
 
+typedef struct error_parser_baton
+{
+  svn_ra_dav__request_t *req;
+  svn_error_t *err;
+} error_parser_baton_t;
+
+
 static int start_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                              const char **atts)
 {
-  svn_error_t **err = userdata;
+  error_parser_baton_t *b = userdata;
+  svn_error_t **err = &(b->err);
 
   switch (elm->id)
     {
@@ -502,7 +510,8 @@ static int start_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
 static int end_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                            const char *cdata)
 {
-  svn_error_t **err = userdata;
+  error_parser_baton_t *b = userdata;
+  svn_error_t **err = &(b->err);
 
   switch (elm->id)
     {
@@ -525,11 +534,55 @@ static int end_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
         break;
       }
 
+    case ELEM_svn_error:
+      {
+        if (b->req->err)
+          svn_error_clear(b->err);
+        else
+          {
+            b->req->err = b->err;
+            b->req->marshalled_error = TRUE;
+          }
+        b->err = NULL;
+        break;
+      }
+
     default:
       break;
     }
 
   return SVN_RA_DAV__XML_VALID;
+}
+
+static apr_status_t
+error_parser_baton_cleanup(void *baton)
+{
+  error_parser_baton_t *b = baton;
+
+  if (b->err)
+    svn_error_clear(b->err);
+
+  return APR_SUCCESS;
+}
+
+static ne_xml_parser *
+error_parser_create(svn_ra_dav__request_t *req)
+{
+  error_parser_baton_t *b = apr_palloc(req->pool, sizeof(*b));
+  ne_xml_parser *error_parser;
+
+  b->req = req;
+  b->err = NULL;
+
+  /* attach a standard <D:error> body parser to the request */
+  error_parser = svn_ra_dav__xml_parser_create(req);
+  shim_xml_push_handler(error_parser, error_elements,
+                        validate_error_elements, start_err_element,
+                        end_err_element, b, req->pool);
+
+  apr_pool_cleanup_register(req->pool, b, error_parser_baton_cleanup, NULL);
+
+  return error_parser;
 }
 
 
@@ -584,9 +637,7 @@ typedef struct spool_reader_baton_t
 {
   const char *spool_file_name;
   apr_file_t *spool_file;
-  apr_pool_t *pool;
-  svn_error_t *error;
-
+  svn_ra_dav__request_t *req;
 } spool_reader_baton_t;
 
 
@@ -597,11 +648,13 @@ spool_reader(void *userdata,
              size_t len)
 {
   spool_reader_baton_t *baton = userdata;
-  if (! baton->error)
-    baton->error = svn_io_file_write_full(baton->spool_file, buf, 
-                                          len, NULL, baton->pool);
 
-  if (baton->error)
+  if (! baton->req->err)
+    baton->req->err = svn_io_file_write_full(baton->spool_file, buf,
+                                             len, NULL, baton->req->iterpool);
+  svn_pool_clear(baton->req->iterpool);
+
+  if (baton->req->err)
     /* ### Call ne_set_error(), as ne_block_reader doc implies? */
     return 1;
   else
@@ -653,10 +706,9 @@ parse_spool_file(svn_ra_dav__session_t *ras,
  * error code is returned to the parser.
  */
 typedef struct {
-  svn_error_t *err;
+  svn_ra_dav__request_t *req;
 
   void *baton;
-
   svn_ra_dav__startelm_cb_t startelm_cb;
   svn_ra_dav__cdata_cb_t cdata_cb;
   svn_ra_dav__endelm_cb_t endelm_cb;
@@ -674,9 +726,11 @@ wrapper_startelm_cb(void *baton,
 
   if (pwb->startelm_cb)
     {
-      pwb->err = pwb->startelm_cb(&elem, pwb->baton, parent, nspace, name,
-                                  atts);
-      if (pwb->err)
+      SVN_RA_DAV__REQ_ERR
+        (pwb->req,
+         pwb->startelm_cb(&elem, pwb->baton, parent, nspace, name, atts));
+
+      if (pwb->req->err)
         return NE_XML_ABORT;
     }
 
@@ -690,8 +744,11 @@ wrapper_cdata_cb(void *baton, int state, const char *cdata, size_t len)
 
   if (pwb->cdata_cb)
     {
-      pwb->err = pwb->cdata_cb(pwb->baton, state, cdata, len);
-      if (pwb->err)
+      SVN_RA_DAV__REQ_ERR
+        (pwb->req,
+         pwb->cdata_cb(pwb->baton, state, cdata, len));
+
+      if (pwb->req->err)
         return NE_XML_ABORT;
     }
 
@@ -708,8 +765,11 @@ wrapper_endelm_cb(void *baton,
 
   if (pwb->endelm_cb)
     {
-      pwb->err = pwb->endelm_cb(pwb->baton, state, nspace, name);
-      if (pwb->err)
+      SVN_RA_DAV__REQ_ERR
+        (pwb->req,
+         pwb->endelm_cb(pwb->baton, state, nspace, name));
+
+      if (pwb->req->err)
         return NE_XML_ABORT;
     }
 
@@ -719,21 +779,23 @@ wrapper_endelm_cb(void *baton,
 
 typedef struct cancellation_baton_t
 {
-  svn_ra_dav__session_t *ras;
   ne_block_reader real_cb;
   void *real_userdata;
-  svn_error_t *err;
+  svn_ra_dav__request_t *req;
 } cancellation_baton_t;
 
 static int
 cancellation_callback(void *userdata, const char *block, size_t len)
 {
   cancellation_baton_t *b = userdata;
+  svn_ra_dav__session_t *ras = b->req->sess;
 
-  if (b->ras->callbacks->cancel_func)
-    b->err = (b->ras->callbacks->cancel_func)(b->ras->callback_baton);
+  if (ras->callbacks->cancel_func)
+    SVN_RA_DAV__REQ_ERR
+      (b->req,
+       (ras->callbacks->cancel_func)(ras->callback_baton));
 
-  if (b->err)
+  if (b->req->err)
     return 1;
   else
     return (b->real_cb)(b->real_userdata, block, len);
@@ -741,16 +803,16 @@ cancellation_callback(void *userdata, const char *block, size_t len)
 
 
 static cancellation_baton_t *
-get_cancellation_baton(svn_ra_dav__session_t *ras,
+get_cancellation_baton(svn_ra_dav__request_t *req,
                        ne_block_reader real_cb,
                        void *real_userdata,
                        apr_pool_t *pool)
 {
-  cancellation_baton_t *b = apr_pcalloc(pool, sizeof(*b));
+  cancellation_baton_t *b = apr_palloc(pool, sizeof(*b));
 
   b->real_cb = real_cb;
   b->real_userdata = real_userdata;
-  b->ras = ras;
+  b->req = req;
 
   return b;
 }
@@ -823,7 +885,7 @@ parsed_request(ne_session *sess,
   /* create a parser to read the normal response body */
   success_parser = svn_ra_dav__xml_parser_create(req);
 
-  pwb.err = NULL;
+  pwb.req = req;
 
   if (use_neon_shim)
     {
@@ -864,15 +926,14 @@ parsed_request(ne_session *sess,
                                        tmpfile_path, "",
                                        svn_io_file_del_on_pool_cleanup,
                                        req->pool));
-      spool_reader_baton.pool = pool;
-      spool_reader_baton.error = SVN_NO_ERROR;
+      spool_reader_baton.req = req;
 
-      cancel_baton = get_cancellation_baton(ras, spool_reader,
+      cancel_baton = get_cancellation_baton(req, spool_reader,
                                             &spool_reader_baton, pool);
 
     }
   else
-    cancel_baton = get_cancellation_baton(ras, ne_xml_parse_v,
+    cancel_baton = get_cancellation_baton(req, ne_xml_parse_v,
                                           success_parser, pool);
 
   svn_ra_dav__add_response_body_reader(req, ne_accept_2xx,
@@ -888,19 +949,6 @@ parsed_request(ne_session *sess,
                                      NULL, NULL, /* interrogator not used */
                                      pool);
   if (err)
-    {
-      svn_error_clear(cancel_baton->err);
-      svn_error_clear(pwb.err);
-      return err;
-    }
-
-  if ((err = cancel_baton->err))
-    {
-      svn_error_clear(pwb.err);
-      return err;
-    }
-
-  if ((err = pwb.err))
     return err;
 
   if (status_code)
@@ -909,20 +957,17 @@ parsed_request(ne_session *sess,
   if (spool_response)
     {
       apr_pool_t *subpool = svn_pool_create(pool);
-      /* All done with the temporary file we spooled the response
-         into. */
+      /* All done with the temporary file we spooled the response into. */
       (void) apr_file_close(spool_reader_baton.spool_file);
-      if (spool_reader_baton.error)
-        return svn_error_createf
-          (SVN_ERR_RA_DAV_REQUEST_FAILED, spool_reader_baton.error,
-           _("Error spooling the %s request response to disk"), method);
 
-      err = parse_spool_file(ras, spool_reader_baton.spool_file_name,
-                             success_parser, subpool);
+      /* The success parser may set an error value in req->err */
+      SVN_RA_DAV__REQ_ERR
+        (req, parse_spool_file(ras, spool_reader_baton.spool_file_name,
+                               success_parser, subpool));
       svn_pool_destroy(subpool);
-      if (err)
+      if (req->err)
         {
-          svn_error_compose(err, svn_error_createf
+          svn_error_compose(req->err, svn_error_createf
                             (SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                              _("Error reading spooled %s request response"),
                              method));
@@ -1076,14 +1121,9 @@ svn_ra_dav__request_dispatch(int *code_p,
   const char *code_desc;
   int code;
   const char *msg;
-  svn_error_t *err = SVN_NO_ERROR;
-  svn_error_t *err2 = SVN_NO_ERROR;
 
   /* attach a standard <D:error> body parser to the request */
-  error_parser = svn_ra_dav__xml_parser_create(req);
-  shim_xml_push_handler(error_parser, error_elements,
-                        validate_error_elements, start_err_element,
-                        end_err_element, &err, pool);
+  error_parser = error_parser_create(req);
 
   /* Register the "error" accepter and body-reader with the request --
      the one to use when HTTP status is *not* 2XX */
@@ -1102,23 +1142,18 @@ svn_ra_dav__request_dispatch(int *code_p,
      *code_p = code;
 
   if (interrogator)
-    err2 = (*interrogator)(req->req, rv, interrogator_baton);
+    SVN_ERR((*interrogator)(req->req, rv, interrogator_baton));
 
-  /* If the request interrogator returned error, pass that along now. */
-  if (err2)
-    {
-      svn_error_clear(err);
-      return err2;
-    }
+  if (!req->marshalled_error)
+    SVN_ERR(req->err);
 
   /* If the status code was one of the two that we expected, then go
      ahead and return now. IGNORE any marshalled error. */
   if (rv == NE_OK && (code == okay_1 || code == okay_2))
     return SVN_NO_ERROR;
 
-  /* next, check to see if a <D:error> was discovered */
-  if (err)
-    return err;
+  /* Any other errors? Report them */
+  SVN_ERR(req->err);
 
   /* We either have a neon error or an unexpected HTTP response code */
   if (rv == NE_OK)
