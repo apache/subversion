@@ -106,4 +106,14 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r22346, r22351, r22352
+    Calculate checksums in ra_replay and repos_replay.
+    Justification:
+      Integrity checks for svnsync and SVK are good, and this
+      is fixing things marked as "###".  While it's arguably
+      a feature, is fully compatible and is more a matter of
+      filling in unfinished work.
+    Votes:
+      +1: glasser
+
 Approved changes:
