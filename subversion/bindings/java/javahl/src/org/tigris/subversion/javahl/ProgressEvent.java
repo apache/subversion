@@ -17,8 +17,6 @@
  */
 package org.tigris.subversion.javahl;
 
-import java.util.EventObject;
-
 /**
  * The event passed to the {@link
  * ProgressListener.onProgress(ProgressEvent)} API to inform {@link
