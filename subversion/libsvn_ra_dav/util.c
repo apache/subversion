@@ -956,15 +956,13 @@ parsed_request(ne_session *sess,
 
   if (spool_response)
     {
-      apr_pool_t *subpool = svn_pool_create(pool);
       /* All done with the temporary file we spooled the response into. */
       (void) apr_file_close(spool_reader_baton.spool_file);
 
       /* The success parser may set an error value in req->err */
       SVN_RA_DAV__REQ_ERR
         (req, parse_spool_file(ras, spool_reader_baton.spool_file_name,
-                               success_parser, subpool));
-      svn_pool_destroy(subpool);
+                               success_parser, req->pool));
       if (req->err)
         {
           svn_error_compose(req->err, svn_error_createf
