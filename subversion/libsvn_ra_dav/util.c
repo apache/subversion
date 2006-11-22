@@ -605,7 +605,8 @@ static ssize_t ra_dav_body_provider(void *userdata,
   svn_ra_dav__request_t *req = b->req;
   apr_file_t *body_file = b->body_file;
 
-  if (req->sess->callbacks->cancel_func)
+  if (req->sess->callbacks &&
+      req->sess->callbacks->cancel_func)
     SVN_RA_DAV__REQ_ERR
       (req, (req->sess->callbacks->cancel_func)(req->sess->callback_baton));
 
@@ -659,7 +660,7 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(svn_ra_dav__request_t *req,
   b->body_file = body_file;
   b->req = req;
 
-  ne_set_request_body_provider(req, (size_t) finfo.size,
+  ne_set_request_body_provider(req->req, (size_t) finfo.size,
                                ra_dav_body_provider, b);
   return SVN_NO_ERROR;
 }
@@ -894,7 +895,7 @@ parsed_request(ne_session *sess,
   if (body != NULL)
     ne_set_request_body_buffer(req->req, body, strlen(body));
   else
-    SVN_ERR(svn_ra_dav__set_neon_body_provider(req->req, body_file));
+    SVN_ERR(svn_ra_dav__set_neon_body_provider(req, body_file));
 
   /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req->req, "Content-Type", "text/xml");

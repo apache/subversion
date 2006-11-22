@@ -592,7 +592,7 @@ svn_error_t * svn_ra_dav__get_activity_collection
 /* Call ne_set_request_body_pdovider on REQ with a provider function
  * that pulls data from BODY_FILE.
  */
-svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
+svn_error_t *svn_ra_dav__set_neon_body_provider(svn_ra_dav__request_t *req,
                                                 apr_file_t *body_file);
 
 

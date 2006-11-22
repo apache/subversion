@@ -1399,7 +1399,7 @@ static svn_error_t * commit_close_file(void *file_baton,
           (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
       
       /* Give the file to neon. The provider will rewind the file. */
-      err = svn_ra_dav__set_neon_body_provider(req, pb->tmpfile);
+      err = svn_ra_dav__set_neon_body_provider(request, pb->tmpfile);
       if (err)
         {
           apr_file_close(pb->tmpfile);
