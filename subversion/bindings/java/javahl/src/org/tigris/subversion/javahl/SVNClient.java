@@ -647,9 +647,6 @@ public class SVNClient implements SVNClientInterface
                        Revision revision2, String outFileName, boolean recurse,
                        boolean ignoreAncestry, boolean noDiffDeleted,
                        boolean force) throws ClientException;
-    {
-        //To change body of implemented methods use File | Settings | File Templates.
-    }
 
     /**
      * Display the differences between two paths
