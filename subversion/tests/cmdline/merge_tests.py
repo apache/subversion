@@ -3968,7 +3968,7 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_copy_of_B_path, '3', '4',
-                                         svntest.main.current_repo_url + \
+                                         sbox.repo_url + \
                                          '/A/B',
                                          expected_output,
                                          expected_disk,
@@ -4020,7 +4020,7 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   try:
     os.chdir(svntest.main.work_dir)
     svntest.actions.run_and_verify_merge(short_copy_of_B_F_E_path, '3', '4',
-                                         svntest.main.current_repo_url + \
+                                         sbox.repo_url + \
                                          '/A/B/F/E',
                                          expected_output,
                                          expected_disk,
