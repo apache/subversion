@@ -464,6 +464,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
                                      226 /* IM Used */,
                                      interrogate_for_content_type, &cgc.ctype,
                                      pool);
+  svn_ra_dav__request_destroy(request);
 
   /* we no longer need this */
   if (cgc.ctype.value != NULL)
