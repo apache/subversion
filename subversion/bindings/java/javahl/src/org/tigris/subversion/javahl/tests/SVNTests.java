@@ -470,7 +470,8 @@ class SVNTests extends TestCase
     }
 
     /**
-     * Represents the repository and the working copy for one test.
+     * Represents the repository and (possibly) the working copy for
+     * one test.
      */
     protected class OneTest
     {
