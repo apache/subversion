@@ -590,45 +590,77 @@ error_parser_create(svn_ra_dav__request_t *req)
  * from an APR file. See ne_request.h for a description of the
  * interface.
  */
+
+typedef struct
+{
+  svn_ra_dav__request_t *req;
+  apr_file_t *body_file;
+} body_provider_baton_t;
+
 static ssize_t ra_dav_body_provider(void *userdata,
                                     char *buffer,
                                     size_t buflen)
 {
-  apr_file_t *body_file = userdata;
-  apr_status_t status;
+  body_provider_baton_t *b = userdata;
+  svn_ra_dav__request_t *req = b->req;
+  apr_file_t *body_file = b->body_file;
 
+  if (req->sess->callbacks->cancel_func)
+    SVN_RA_DAV__REQ_ERR
+      (req, (req->sess->callbacks->cancel_func)(req->sess->callback_baton));
+
+  if (req->err)
+    return -1;
+
+  svn_pool_clear(req->iterpool);
   if (buflen == 0)
     {
       /* This is the beginning of a new body pull. Rewind the file. */
       apr_off_t offset = 0;
-      status = apr_file_seek(body_file, APR_SET, &offset);
-      return (status ? -1 : 0);
+      SVN_RA_DAV__REQ_ERR
+        (b->req,
+         svn_io_file_seek(body_file, APR_SET, &offset, req->iterpool));
+      return (req->err ? -1 : 0);
     }
   else
     {
       apr_size_t nbytes = buflen;
-      status = apr_file_read(body_file, buffer, &nbytes);
-      if (status)
-        return (APR_STATUS_IS_EOF(status) ? 0 : -1);
+      svn_error_t *err = svn_io_file_read(body_file, buffer, &nbytes,
+                                          req->iterpool);
+      if (err)
+        {
+          if (APR_STATUS_IS_EOF(err->apr_err))
+            {
+              svn_error_clear(err);
+              return 0;
+            }
+
+          SVN_RA_DAV__REQ_ERR(req, err);
+          return -1;
+        }
       else
         return nbytes;
     }
 }
 
 
-svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
+svn_error_t *svn_ra_dav__set_neon_body_provider(svn_ra_dav__request_t *req,
                                                 apr_file_t *body_file)
 {
   apr_status_t status;
   apr_finfo_t finfo;
+  body_provider_baton_t *b = apr_palloc(req->pool, sizeof(*b));
 
   status = apr_file_info_get(&finfo, APR_FINFO_SIZE, body_file);
   if (status)
     return svn_error_wrap_apr(status,
                               _("Can't calculate the request body size"));
 
+  b->body_file = body_file;
+  b->req = req;
+
   ne_set_request_body_provider(req, (size_t) finfo.size,
-                               ra_dav_body_provider, body_file);
+                               ra_dav_body_provider, b);
   return SVN_NO_ERROR;
 }
 
