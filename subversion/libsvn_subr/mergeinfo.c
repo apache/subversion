@@ -788,14 +788,12 @@ svn_error_t*
 svn_mergeinfo_sort(apr_hash_t *input, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-
-  const void *key;
   void *val;
 
   for (hi = apr_hash_first(pool, input); hi; hi = apr_hash_next(hi))
     {
       apr_array_header_t *rl;
-      apr_hash_this(hi, &key, NULL, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
 
       rl = val;
       qsort(rl->elts, rl->nelts, rl->elt_size, svn_sort_compare_ranges);
