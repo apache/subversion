@@ -938,6 +938,8 @@ parsed_request(ne_session *sess,
                                "in the response: %s (%s)"),
                              method, msg, url);
 
+  svn_ra_dav__request_destroy(req);
+
   return SVN_NO_ERROR;
 }
 
@@ -1112,11 +1114,7 @@ svn_ra_dav__request_dispatch(int *code_p,
   /* If the status code was one of the two that we expected, then go
      ahead and return now. IGNORE any marshalled error. */
   if (rv == NE_OK && (code == okay_1 || code == okay_2))
-    {
-      svn_ra_dav__request_destroy(req);
-
-      return SVN_NO_ERROR;
-    }
+    return SVN_NO_ERROR;
 
   /* next, check to see if a <D:error> was discovered */
   if (err)

@@ -217,9 +217,12 @@ static svn_error_t * simple_request(svn_ra_dav__session_t *ras,
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  return svn_ra_dav__request_dispatch(code, request, okay_1, okay_2,
-                                      NULL, NULL,
-                                      pool);
+  SVN_ERR(svn_ra_dav__request_dispatch(code, request, okay_1, okay_2,
+                                       NULL, NULL,
+                                       pool));
+  svn_ra_dav__request_destroy(request);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -452,7 +455,6 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   svn_ra_dav__request_t *request;
   ne_request *req;
   const char *body;
-  svn_error_t *err;
 
   /* assert: vsn_url != NULL */
 
@@ -488,13 +490,14 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(code, request,
-                                     201 /* Created */,
-                                     allow_404 ? 404 /* Not Found */ : 0,
-                                     svn_ra_dav__interrogate_for_location,
-                                     locn, pool);
+  SVN_ERR(svn_ra_dav__request_dispatch(code, request,
+                                       201 /* Created */,
+                                       allow_404 ? 404 /* Not Found */ : 0,
+                                       svn_ra_dav__interrogate_for_location,
+                                       locn, pool));
+  svn_ra_dav__request_destroy(request);
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
@@ -864,12 +867,12 @@ static svn_error_t * commit_delete_entry(const char *path,
       
       /* Don't use SVN_ERR() here because some preprocessors can't
          handle a compile-time conditional inside a macro call. */
-      serr = svn_ra_dav__request_dispatch(&code, request,
-                                          204 /* Created */,
-                                          404 /* Not Found */,
-                                          NULL, NULL,
-                                          pool);
-      SVN_ERR(serr);
+      SVN_ERR(svn_ra_dav__request_dispatch(&code, request,
+                                           204 /* Created */,
+                                           404 /* Not Found */,
+                                           NULL, NULL,
+                                           pool));
+      svn_ra_dav__request_destroy(request);
     }
   else if (serr)
     return serr;
@@ -1404,17 +1407,15 @@ static svn_error_t * commit_close_file(void *file_baton,
         }
       
       /* run the request and get the resulting status code (and svn_error_t) */
-      err = svn_ra_dav__request_dispatch(&code, request,
-                                         201 /* Created */,
-                                         204 /* No Content */,
-                                         NULL, NULL,
-                                         pool);
+      SVN_ERR(svn_ra_dav__request_dispatch(&code, request,
+                                           201 /* Created */,
+                                           204 /* No Content */,
+                                           NULL, NULL,
+                                           pool));
+      svn_ra_dav__request_destroy(request);
       
       /* we're done with the file.  this should delete it. */
       (void) apr_file_close(pb->tmpfile);
-      
-      if (err)
-        return err;
     }
 
   /* Perform all of the property changes on the file. Note that we

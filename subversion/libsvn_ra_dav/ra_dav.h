@@ -892,7 +892,6 @@ svn_ra_dav__request_interrogator(ne_request *request,
    non-null, return the http status code in *CODE_P.  Return any
    resulting error (from neon, a <D:error> body response, or any
    non-2XX status code) as an svn_error_t, otherwise return NULL.  
-   The request will be freed either way.
 
    SESSION, METHOD, and URL are required as well, as they are used to
    describe the possible error.  The error will be allocated in POOL.
