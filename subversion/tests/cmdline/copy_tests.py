@@ -2854,7 +2854,30 @@ def copy_multiple_repo_wc(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      chi_url, psi_url, omega_url, E_url,
                                      C_path)
-                                     
+ 
+  # Commit the changes, and verify the content actually got copied
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/chi'     : Item(verb='Adding'),
+    'A/C/psi'     : Item(verb='Adding'),
+    'A/C/omega'   : Item(verb='Adding'),
+    'A/C/E'       : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/C/chi'     : Item(status='  ', wc_rev=2),
+    'A/C/psi'     : Item(status='  ', wc_rev=2),
+    'A/C/omega'   : Item(status='  ', wc_rev=2),
+    'A/C/E'       : Item(status='  ', wc_rev=2),
+    'A/C/E/alpha' : Item(status='  ', wc_rev=2),
+    'A/C/E/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, 
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 
