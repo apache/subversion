@@ -98,6 +98,16 @@ def make_local_props(sbox):
   # Compare actual vs. expected disk trees.
   svntest.tree.compare_trees(actual_disk_tree, expected_disk.old_tree())
 
+  # Edit without actually changing the property
+  svntest.main.use_editor('identity')
+  svntest.actions.run_and_verify_svn(None,
+                                     "No changes to property 'editme' on '.*'",
+                                     [],
+                                     'propedit', 'editme',
+                                     os.path.join(wc_dir, 'A', 'mu'))
+                                     
+                                     
+
 #----------------------------------------------------------------------
 
 def commit_props(sbox):
@@ -1136,6 +1146,16 @@ def url_props_ops(sbox):
                                      'propget', prop1, iota_url)
   svntest.actions.run_and_verify_svn(None, [ propval1 + '\n' ], [],
                                      'propget', prop1, A_url)
+
+  # Edit without actually changing the property
+  svntest.main.use_editor('identity')
+  svntest.actions.run_and_verify_svn(None,
+                                     "No changes to property '%s' on '.*'"
+                                       % prop1,
+                                     [],
+                                     'propedit', prop1, '-m', 'nocommit',
+                                     iota_url)
+
 
 
 #----------------------------------------------------------------------
