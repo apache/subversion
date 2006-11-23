@@ -323,7 +323,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
   if (svn_path_is_url(target))
     {
         /* The rationale for requiring the base_revision_for_url
-           argument is that without it, it' too easy to possibly
+           argument is that without it, it's too easy to possibly
            overwrite someone else's change without noticing.  (See
            also tools/examples/svnput.c). */
       if (! SVN_IS_VALID_REVNUM(base_revision_for_url))
