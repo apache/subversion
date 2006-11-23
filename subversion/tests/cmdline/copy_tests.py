@@ -2881,7 +2881,7 @@ def copy_multiple_repo_wc(sbox):
 
 #----------------------------------------------------------------------
 
-# Test moving copying multiple files from a repo to a wc
+# Test moving copying multiple files from a wc to a repo
 
 def copy_multiple_wc_repo(sbox):
   "copy multiple files from a wc to a repo"
