@@ -1107,6 +1107,25 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
 }
 
 svn_error_t *
+svn_client_copy_into(svn_commit_info_t **commit_info_p,
+                     const apr_array_header_t *src_paths,
+                     const svn_opt_revision_t *src_revision,
+                     const char *dst_dir,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  const char *src_path = ((const char **) (src_paths->elts))[0];
+  const char *src_basename = svn_path_basename(src_path, pool);
+  const char *dst_path = svn_path_join(dst_dir, src_basename, pool);
+
+  return setup_copy(commit_info_p, src_path, src_revision, dst_path,
+                    FALSE /* is_move */,
+                    TRUE /* force, set to avoid deletion check */,
+                    ctx,
+                    pool);
+}
+
+svn_error_t *
 svn_client_move4(svn_commit_info_t **commit_info_p,
                  const char *src_path,
                  const char *dst_path,
@@ -1208,4 +1227,25 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
+}
+
+svn_error_t *
+svn_client_move_into(svn_commit_info_t **commit_info_p,
+                     apr_array_header_t *src_paths,
+                     const char *dst_dir,
+                     svn_boolean_t force,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  const svn_opt_revision_t src_revision
+    = { svn_opt_revision_unspecified, { 0 } };
+  const char *src_path = ((const char **) (src_paths->elts))[0];
+  const char *src_basename = svn_path_basename(src_path, pool);
+  const char *dst_path = svn_path_join(dst_dir, src_basename, pool);
+
+  return setup_copy(commit_info_p, src_path, &src_revision, dst_path,
+                    TRUE /* is_move */,
+                    force,
+                    ctx,
+                    pool);
 }

@@ -1976,6 +1976,33 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
 
 
 /**
+ * Copy all @a src_paths into @a dst_dir.
+ *
+ * Use the same semantics as svn_client_copy3(), but with the following
+ * changes:
+ *
+ *   - @a dst_dir must be a directory.
+ *
+ *   - @a src_paths must be all URLs or all WC paths.  If not, fail with
+ *     @c SVN_ERR_UNSUPPORTED_FEATURE.
+ *
+ *   - Copy all of the paths in @a src_paths into @a dst_dir.  If any of 
+ *     these paths already exists, fail with @c SVN_ERR_ENTRY_EXISTS.
+ *
+ * Other arguments are the same as svn_client_copy3().
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_copy_into(svn_commit_info_t **commit_info_p,
+                     const apr_array_header_t *src_paths,
+                     const svn_opt_revision_t *src_revision,
+                     const char *dst_dir,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+
+/**
  * Move @a src_path to @a dst_path.
  *
  * @a src_path must be a file or directory under version control, or the
@@ -2089,6 +2116,25 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
                 svn_boolean_t force,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
+
+/** 
+ * Move all @a src_paths into @a dst_dir.
+ *
+ * Each one of @a src_paths must be a file or directory under version
+ * control, or the URL of a versioned item in the repository.  They
+ * must also all be of the same type, e.g., all URLs or all WC paths.
+ *
+ * @a dst_path must be a directory.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_move_into(svn_commit_info_t **commit_info_p,
+                     apr_array_header_t *src_paths,
+                     const char *dst_dir,
+                     svn_boolean_t force,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
 
 
 /** Properties
