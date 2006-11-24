@@ -30,6 +30,7 @@
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_time.h"
+#include "svn_pools.h"
 
 #include "client.h"
 
@@ -930,37 +931,107 @@ repos_to_wc_copy(const char *src_url,
 
 static svn_error_t *
 setup_copy(svn_commit_info_t **commit_info_p,
-           const char *src_path,
+           const apr_array_header_t *src_paths,
            const svn_opt_revision_t *src_revision,
-           const char *dst_path,
+           const char *dst_path_in,
            svn_boolean_t is_move,
            svn_boolean_t force,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
 {
-  svn_boolean_t src_is_url, dst_is_url;
+  apr_pool_t *subpool;
+  apr_array_header_t *copy_pairs = apr_array_make(pool, src_paths->nelts,
+                                                  sizeof(struct copy_pair *));
+  svn_boolean_t srcs_are_urls, dst_is_url;
+  const char *src, *dst;
+  int i;
 
-  /* Are either of our paths URLs? */
-  src_is_url = svn_path_is_url(src_path);
-  dst_is_url = svn_path_is_url(dst_path);
+  /* Are either of our paths URLs?
+   * Just check the first src_path.  If there are more than one, we'll check
+   * for homogeneity amoung them down below. */
+  srcs_are_urls = svn_path_is_url(((const char **) (src_paths->elts))[0]);
+  dst_is_url = svn_path_is_url(dst_path_in);
 
-  if (!src_is_url && !dst_is_url
-      && svn_path_is_child(src_path, dst_path, pool))
-    return svn_error_createf
-      (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-       _("Cannot copy path '%s' into its own child '%s'"),
-       svn_path_local_style(src_path, pool),
-       svn_path_local_style(dst_path, pool));
+  /* If we have multiple source paths, it implies the dst_path is a directory
+   * we are moving or copying into.  Populate the dst_paths array to contain
+   * a destination path for each of the source paths. */
+  if (src_paths->nelts > 1)
+    {
+      subpool = svn_pool_create(pool);
+
+      for ( i = 0; i < src_paths->nelts; i++)
+        {
+          const char *src_path = ((const char **) (src_paths->elts))[i];
+          const char *src_basename;
+          copy_pair *pair = apr_palloc(pool, sizeof(*pair));
+          svn_boolean_t src_is_url;
+
+          svn_pool_clear(subpool);
+          src_basename = svn_path_basename(src_path, subpool);
+
+          /* Check to see if all the sources are urls or all working copy 
+           * paths. */
+          src_is_url = svn_path_is_url(src_path);
+          if (src_is_url != srcs_are_urls)
+            return svn_error_create
+              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+               _("Cannot mix repository and working copy paths in source list"));
+
+          pair->src = src_path;
+          pair->dst = svn_path_join(dst_path_in, src_basename, pool);
+          APR_ARRAY_PUSH(copy_pairs, copy_pair *) = pair;
+        }
+
+      svn_pool_destroy(subpool);
+    }
+  else
+    {
+      copy_pair *pair = apr_palloc(pool, sizeof(*pair));
+
+      pair->src = ((const char **) (src_paths->elts))[0];
+      pair->dst = dst_path_in;
+      APR_ARRAY_PUSH(copy_pairs, copy_pair *) = pair;
+    }
+
+  if (!srcs_are_urls && !dst_is_url)
+    {
+      subpool = svn_pool_create(pool);
+
+      for ( i = 0; i < copy_pairs->nelts; i++ )
+        {
+          const char *src_path = ((copy_pair **) (copy_pairs->elts))[i]->src;
+          const char *dst_path = ((copy_pair **) (copy_pairs->elts))[i]->dst;
+
+          svn_pool_clear(subpool);
+          
+          if (svn_path_is_child(src_path, dst_path, subpool))
+            return svn_error_createf
+              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+               _("Cannot copy path '%s' into its own child '%s'"),
+               svn_path_local_style(src_path, pool),
+               svn_path_local_style(dst_path, pool));
+        }
+
+      svn_pool_destroy(subpool);
+    }
 
   if (is_move)
     {
-      if (src_is_url == dst_is_url)
+      if (srcs_are_urls == dst_is_url)
         {
-          if (strcmp(src_path, dst_path) == 0)
-            return svn_error_createf
-              (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-               _("Cannot move path '%s' into itself"),
-               svn_path_local_style(src_path, pool));
+          for ( i = 0; i < copy_pairs->nelts; i++)
+            {
+              const char *src_path = 
+                  ((copy_pair **) (copy_pairs->elts))[i]->src;
+              const char *dst_path = 
+                  ((copy_pair **) (copy_pairs->elts))[i]->dst;
+
+              if (strcmp(src_path, dst_path) == 0)
+                return svn_error_createf
+                  (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                   _("Cannot move path '%s' into itself"),
+                   svn_path_local_style(src_path, pool));
+            }
         }
       else
         {
@@ -972,65 +1043,72 @@ setup_copy(svn_commit_info_t **commit_info_p,
     }
   else
     {
-      if (!src_is_url)
+      if (!srcs_are_urls)
         {
           if (src_revision->kind != svn_opt_revision_unspecified
               && src_revision->kind != svn_opt_revision_working)
             {
-              /* We can convert the working copy path to a URL based on the
-                 entries file. */
-              svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
-              const svn_wc_entry_t *entry;
-              SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
-                                             src_path, FALSE, 0,
-                                             ctx->cancel_func,
-                                             ctx->cancel_baton, 
-                                             pool));
-              SVN_ERR(svn_wc_entry(&entry, src_path, adm_access, FALSE,
-                                   pool));
-              SVN_ERR(svn_wc_adm_close(adm_access));
 
-              if (! entry)
-                return svn_error_createf
-                  (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                   _("'%s' is not under version control"),
-                   svn_path_local_style(src_path, pool));
+              for ( i = 0; i < copy_pairs->nelts; i++)
+                {
+                  const char *src_path = 
+                      ((copy_pair **) (copy_pairs->elts))[i]->src;
 
-              if (! entry->url)
-                return svn_error_createf
-                  (SVN_ERR_ENTRY_MISSING_URL, NULL,
-                   _("'%s' does not seem to have a URL associated with it"),
-                   svn_path_local_style(src_path, pool));
+                  /* We can convert the working copy path to a URL based on the
+                     entries file. */
+                  svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
+                  const svn_wc_entry_t *entry;
+                  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
+                                                 src_path, FALSE, 0,
+                                                 ctx->cancel_func,
+                                                 ctx->cancel_baton, 
+                                                 pool));
+                  SVN_ERR(svn_wc_entry(&entry, src_path, adm_access, FALSE,
+                                       pool));
+                  SVN_ERR(svn_wc_adm_close(adm_access));
 
-              src_path = entry->url;
-              src_is_url = TRUE;
+                  if (! entry)
+                    return svn_error_createf
+                      (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                       _("'%s' is not under version control"),
+                       svn_path_local_style(src_path, pool));
+
+                  if (! entry->url)
+                    return svn_error_createf
+                      (SVN_ERR_ENTRY_MISSING_URL, NULL,
+                       _("'%s' does not seem to have a URL associated with it"),
+                       svn_path_local_style(src_path, pool));
+
+                  ((copy_pair **) (copy_pairs->elts))[i]->src = entry->url;
+                  srcs_are_urls = TRUE;
+                }
             }
         }
     }
 
+  src = ((copy_pair **) (copy_pairs->elts))[0]->src;
+  dst = ((copy_pair **) (copy_pairs->elts))[0]->dst;
+
   /* Now, call the right handler for the operation. */
-  if ((! src_is_url) && (! dst_is_url))
+  if ((! srcs_are_urls) && (! dst_is_url))
     {
-      SVN_ERR(wc_to_wc_copy(src_path, dst_path,
-                            is_move,
-                            ctx,
-                            pool));
+      SVN_ERR(wc_to_wc_copy(src, dst, is_move,
+                            ctx, pool));
     }
-  else if ((! src_is_url) && (dst_is_url))
+  else if ((! srcs_are_urls) && (dst_is_url))
     {
-      SVN_ERR(wc_to_repos_copy(commit_info_p, src_path, dst_path, 
+      SVN_ERR(wc_to_repos_copy(commit_info_p, src, dst,
                                ctx, pool));
     }
-  else if ((src_is_url) && (! dst_is_url))
+  else if ((srcs_are_urls) && (! dst_is_url))
     {
-      SVN_ERR(repos_to_wc_copy(src_path, src_revision, 
-                               dst_path, ctx,
-                               pool));
+      SVN_ERR(repos_to_wc_copy(src, src_revision, dst,
+                               ctx, pool));
     }
   else
     {
-      SVN_ERR(repos_to_repos_copy(commit_info_p, src_path, src_revision,
-                                  dst_path, ctx, is_move, pool));
+      SVN_ERR(repos_to_repos_copy(commit_info_p, src, src_revision, dst,
+                                  ctx, is_move, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1048,8 +1126,11 @@ svn_client_copy3(svn_commit_info_t **commit_info_p,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
+  apr_array_header_t *src_paths = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(src_paths, const char *) = src_path;
+
   return setup_copy(commit_info_p,
-                    src_path, src_revision, dst_path,
+                    src_paths, src_revision, dst_path,
                     FALSE /* is_move */,
                     TRUE /* force, set to avoid deletion check */,
                     ctx,
@@ -1114,11 +1195,23 @@ svn_client_copy_into(svn_commit_info_t **commit_info_p,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  const char *src_path = ((const char **) (src_paths->elts))[0];
-  const char *src_basename = svn_path_basename(src_path, pool);
-  const char *dst_path = svn_path_join(dst_dir, src_basename, pool);
+  const char *dst_path;
 
-  return setup_copy(commit_info_p, src_path, src_revision, dst_path,
+  /* If we have only one source, then setup_copy is going to think the
+   * destination is explicit, so we had better make sure that it is. */
+  if (src_paths->nelts == 1)
+    {
+      const char *src_path = ((const char **) (src_paths->elts))[0];
+      const char *src_basename = svn_path_basename(src_path, pool);
+      dst_path = svn_path_join(dst_dir, src_basename, pool);
+    }
+  else
+    {
+      dst_path = dst_dir;
+    }
+
+  return setup_copy(commit_info_p,
+                    src_paths, src_revision, dst_path,
                     FALSE /* is_move */,
                     TRUE /* force, set to avoid deletion check */,
                     ctx,
@@ -1135,9 +1228,11 @@ svn_client_move4(svn_commit_info_t **commit_info_p,
 {
   const svn_opt_revision_t src_revision
     = { svn_opt_revision_unspecified, { 0 } };
+  apr_array_header_t *src_paths = apr_array_make(pool, 1, sizeof(const char *));
+  APR_ARRAY_PUSH(src_paths, const char *) = src_path;
 
   return setup_copy(commit_info_p,
-                    src_path, &src_revision, dst_path,
+                    src_paths, &src_revision, dst_path,
                     TRUE /* is_move */,
                     force,
                     ctx,
@@ -1203,6 +1298,7 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
 {
   svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
+  apr_array_header_t *src_paths = apr_array_make(pool, 1, sizeof(const char *));
   /* It doesn't make sense to specify revisions in a move. */
 
   /* ### todo: this check could fail wrongly.  For example,
@@ -1218,8 +1314,11 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
  
+ 
+  APR_ARRAY_PUSH(src_paths, const char *) = src_path;
+
   err = setup_copy(&commit_info,
-                   src_path, src_revision, dst_path,
+                   src_paths, src_revision, dst_path,
                    TRUE /* is_move */,
                    force,
                    ctx,
@@ -1239,11 +1338,22 @@ svn_client_move_into(svn_commit_info_t **commit_info_p,
 {
   const svn_opt_revision_t src_revision
     = { svn_opt_revision_unspecified, { 0 } };
-  const char *src_path = ((const char **) (src_paths->elts))[0];
-  const char *src_basename = svn_path_basename(src_path, pool);
-  const char *dst_path = svn_path_join(dst_dir, src_basename, pool);
+  const char *dst_path;
 
-  return setup_copy(commit_info_p, src_path, &src_revision, dst_path,
+  /* If we have only one source, then setup_copy is going to think the
+   * destination is explicit, so we had better make sure that it is. */
+  if (src_paths->nelts == 1)
+    {
+      const char *src_path = ((const char **) (src_paths->elts))[0];
+      const char *src_basename = svn_path_basename(src_path, pool);
+      dst_path = svn_path_join(dst_dir, src_basename, pool);
+    }
+  else
+    {
+      dst_path = dst_dir;
+    }
+
+  return setup_copy(commit_info_p, src_paths, &src_revision, dst_path,
                     TRUE /* is_move */,
                     force,
                     ctx,

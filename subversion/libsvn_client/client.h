@@ -472,6 +472,36 @@ svn_client__get_diff_summarize_editor(const char *target,
 
 /* ---------------------------------------------------------------- */
 
+/*** Copy Stuff ***/
+
+/* This structure is used to associate a specific copy or move SRC with a
+   specific copy or move destination.  It also contains information which
+   various helper functions may need.  Not every copy function uses every
+   field.
+*/
+typedef struct
+{
+    /* The source path or url */
+    const char *src;
+
+    /* The source path relative to the wc root */
+    const char *src_rel;
+
+    /* The absolute path of the source. */
+    const char *src_abs;
+
+    /* The node kind of the source */
+    svn_node_kind_t src_kind;
+
+    /* The destination path or url */
+    const char *dst;
+
+    /* The destination path relative to the repository root */
+    const char *dst_rel;
+} copy_pair;
+
+/* ---------------------------------------------------------------- */
+
 /*** Commit Stuff ***/
 
 /* WARNING: This is all new, untested, un-peer-reviewed conceptual
