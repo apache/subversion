@@ -68,7 +68,9 @@ svn_ra_dav__request_create(ne_session *ne_sess, svn_ra_dav__session_t *sess,
   req->method = apr_pstrdup(req->pool, method);
   req->url = apr_pstrdup(req->pool, url);
 
-  apr_pool_cleanup_register(reqpool, req, dav_request_cleanup, NULL);
+  apr_pool_cleanup_register(reqpool, req,
+                            dav_request_cleanup,
+                            apr_pool_cleanup_null);
 
   return req;
 }
@@ -97,7 +99,7 @@ svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
       apr_pool_cleanup_register(req->pool,
                                 decompress,
                                 compressed_body_reader_cleanup,
-                                NULL);
+                                apr_pool_cleanup_null);
     }
   else
     ne_add_response_body_reader(req->req, accpt, reader, userdata);
@@ -125,7 +127,9 @@ svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req)
      something non-empty (the API promises non-NULL, at least). */
   ne_xml_set_error(p, "");
 
-  apr_pool_cleanup_register(req->pool, p, xml_parser_cleanup, NULL);
+  apr_pool_cleanup_register(req->pool, p,
+                            xml_parser_cleanup,
+                            apr_pool_cleanup_null);
 
   return p;
 }
@@ -583,7 +587,9 @@ error_parser_create(svn_ra_dav__request_t *req)
                         validate_error_elements, start_err_element,
                         end_err_element, b, req->pool);
 
-  apr_pool_cleanup_register(req->pool, b, error_parser_baton_cleanup, NULL);
+  apr_pool_cleanup_register(req->pool, b,
+                            error_parser_baton_cleanup,
+                            apr_pool_cleanup_null);
 
   return error_parser;
 }
@@ -1133,7 +1139,9 @@ svn_ra_dav__add_error_handler(ne_request *request,
   /* The error parser depends on the error being NULL to start with */
   *err = NULL;
 
-  apr_pool_cleanup_register(pool, b, error_parser_baton_cleanup, NULL);
+  apr_pool_cleanup_register(pool, b,
+                            error_parser_baton_cleanup,
+                            apr_pool_cleanup_null);
 
   shim_xml_push_handler(parser,
                         error_elements,
