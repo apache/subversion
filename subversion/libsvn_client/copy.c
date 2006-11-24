@@ -987,15 +987,13 @@ setup_copy(svn_commit_info_t **commit_info_p,
           const char *src_path = ((const char **) (src_paths->elts))[i];
           const char *src_basename;
           copy_pair *pair = apr_palloc(pool, sizeof(*pair));
-          svn_boolean_t src_is_url;
 
           svn_pool_clear(subpool);
           src_basename = svn_path_basename(src_path, subpool);
 
           /* Check to see if all the sources are urls or all working copy 
            * paths. */
-          src_is_url = svn_path_is_url(src_path);
-          if (src_is_url != srcs_are_urls)
+          if (svn_path_is_url(src_path) != srcs_are_urls)
             return svn_error_create
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot mix repository and working copy paths in source list"));
