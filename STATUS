@@ -130,6 +130,6 @@ Candidate changes:
     Justification:
       Simple fix to prevent crashes on Win32 at least.
     Votes:
-      +1: djh
+      +1: djh, zhakov
 
 Approved changes:
