@@ -1140,7 +1140,7 @@ svn_ra_dav__add_error_handler(ne_request *request,
                         validate_error_elements,
                         start_err_element,
                         end_err_element,
-                        err,
+                        b,
                         pool);
 
   ne_add_response_body_reader(request,
