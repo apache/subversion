@@ -44,7 +44,6 @@ svn_cl__copy(apr_getopt_t *os,
   const char *src_path, *dst_path;
   svn_boolean_t srcs_are_urls, dst_is_url;
   svn_commit_info_t *commit_info = NULL;
-  int i;
   svn_error_t *err;
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
@@ -52,20 +51,10 @@ svn_cl__copy(apr_getopt_t *os,
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  /* Check that all the src_paths are urls or all wc paths. */
+  /* Figure out which type of trace editor to use.
+     If the src_paths are not homogeneous, setup_copy will return an error. */
   src_path = ((const char **) (targets->elts))[0];
   srcs_are_urls = svn_path_is_url(src_path);
-  for ( i = 1 ; i < targets->nelts - 1; i++ )
-    {
-      src_path = ((const char **) (targets->elts))[i];
-      if ( svn_path_is_url(src_path) != srcs_are_urls)
-        return svn_error_create
-          (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-          _("Cannot mix repo and working copy paths in source list"));
-      
-    }
-
-  /* Figure out which type of trace editor to use. */
   dst_path = ((const char **) (targets->elts))[targets->nelts - 1];
   apr_array_pop(targets);
   dst_is_url = svn_path_is_url(dst_path);
