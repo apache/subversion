@@ -2724,7 +2724,7 @@ def move_multiple_wc(sbox):
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   C_path = os.path.join(wc_dir, 'A', 'C')
 
-  # Move chi, psi and omega to A/C
+  # Move chi, psi, omega and E to A/C
   svntest.actions.run_and_verify_svn(None, None, [], 'mv', chi_path, psi_path,
                                      omega_path, E_path, C_path)
 
@@ -2781,7 +2781,7 @@ def copy_multiple_wc(sbox):
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   C_path = os.path.join(wc_dir, 'A', 'C')
 
-  # Move chi, psi and omega to A/C
+  # Copy chi, psi, omega and E to A/C
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', chi_path, psi_path,
                                      omega_path, E_path, C_path)
 
@@ -2830,7 +2830,8 @@ def move_multiple_repo(sbox):
   E_url = sbox.repo_url + '/A/B/E'
   C_url = sbox.repo_url + '/A/C'
 
-  # Move three files in the repo to a different location in the repo
+  # Move three files and a directory in the repo to a different location 
+  # in the repo
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -2897,7 +2898,8 @@ def copy_multiple_repo(sbox):
   E_url = sbox.repo_url + '/A/B/E'
   C_url = sbox.repo_url + '/A/C'
 
-  # Move three files in the repo to a different location in the repo
+  # Copy three files and a directory in the repo to a different location 
+  # in the repo
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
