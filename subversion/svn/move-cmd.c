@@ -51,12 +51,7 @@ svn_cl__move(apr_getopt_t *os,
 
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-  if (targets->nelts > 2)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  src_path = ((const char **) (targets->elts))[0];
-  dst_path = ((const char **) (targets->elts))[1];
-  
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
@@ -72,26 +67,38 @@ svn_cl__move(apr_getopt_t *os,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
 
-  err = svn_client_move4(&commit_info, src_path, dst_path,
-                         opt_state->force, ctx, pool);
+  dst_path = ((const char **) (targets->elts))[targets->nelts - 1];
+  apr_array_pop(targets);
 
-  /* If dst_path already exists, try to move src_path as a child of it. */
-  if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
-              || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+  if (targets->nelts == 1)
     {
-      const char *src_basename = svn_path_basename(src_path, pool);
-
-      svn_error_clear(err);
-      
-      err = svn_client_move4(&commit_info, src_path,
-                             svn_path_join(dst_path, src_basename, pool),
+      /* A simple move, move the source to the destination. */
+      src_path = ((const char **) (targets->elts))[0];
+  
+      err = svn_client_move4(&commit_info, src_path, dst_path,
                              opt_state->force, ctx, pool);
 
+      /* If dst_path already exists, try to move src_path as a child of it, by
+       * using move_into. */
+      if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
+                  || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+        {
+          svn_error_clear(err);
+
+          err = svn_client_move_into(&commit_info, targets, dst_path,
+                                     opt_state->force, ctx, pool);
+        }
+    }
+  else
+    {
+      /* If there are multiple sources, move the targets into dst_path. */
+      err = svn_client_move_into(&commit_info, targets, dst_path,
+                                 opt_state->force, ctx, pool);
     }
 
   if (err)
     err = svn_cl__may_need_force(err);
-  SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
+    SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
 
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));

@@ -316,13 +316,17 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "copy", svn_cl__copy, {"cp"}, N_
     ("Duplicate something in working copy or repository, remembering history.\n"
-     "usage: copy SRC DST\n"
+     "usage: copy SRC... DST\n"
+     "\n"
+     "When copying multiple sources, they will be added as children of DST, \n"
+     "which must be a directory.\n"
      "\n"
      "  SRC and DST can each be either a working copy (WC) path or URL:\n"
      "    WC  -> WC:   copy and schedule for addition (with history)\n"
      "    WC  -> URL:  immediately commit a copy of WC to URL\n"
      "    URL -> WC:   check out URL into WC, schedule for addition\n"
-     "    URL -> URL:  complete server-side copy;  used to branch & tag\n"),
+     "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
+     "  All the SRCs must be of the same type.\n"),
     {'r', 'q',
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
@@ -536,14 +540,18 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "move", svn_cl__move, {"mv", "rename", "ren"}, N_
     ("Move and/or rename something in working copy or repository.\n"
-     "usage: move SRC DST\n"
+     "usage: move SRC... DST\n"
+     "\n"
+     "When moving multiple sources, they will be added as children of DST, \n"
+     "which must be a directory.\n"
      "\n"
      "  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n"
      "  Note:  the --revision option has no use and is deprecated.\n"
      "\n"
      "  SRC and DST can both be working copy (WC) paths or URLs:\n"
      "    WC  -> WC:   move and schedule for addition (with history)\n"
-     "    URL -> URL:  complete server-side rename.\n"),
+     "    URL -> URL:  complete server-side rename.\n"
+     "  All the SRCs must be of the same type.\n"),
     {'r', 'q', svn_cl__force_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 

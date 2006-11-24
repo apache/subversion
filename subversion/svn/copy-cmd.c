@@ -42,32 +42,42 @@ svn_cl__copy(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *src_path, *dst_path;
-  svn_boolean_t src_is_url, dst_is_url;
+  svn_boolean_t srcs_are_urls, dst_is_url;
   svn_commit_info_t *commit_info = NULL;
+  int i;
   svn_error_t *err;
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
                                         opt_state->targets, pool));
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-  if (targets->nelts > 2)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
+  /* Check that all the src_paths are urls or all wc paths. */
   src_path = ((const char **) (targets->elts))[0];
-  dst_path = ((const char **) (targets->elts))[1];
+  srcs_are_urls = svn_path_is_url(src_path);
+  for ( i = 1 ; i < targets->nelts - 1; i++ )
+    {
+      src_path = ((const char **) (targets->elts))[i];
+      if ( svn_path_is_url(src_path) != srcs_are_urls)
+        return svn_error_create
+          (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+          _("Cannot mix repo and working copy paths in source list"));
+      
+    }
 
   /* Figure out which type of trace editor to use. */
-  src_is_url = svn_path_is_url(src_path);
+  dst_path = ((const char **) (targets->elts))[targets->nelts - 1];
+  apr_array_pop(targets);
   dst_is_url = svn_path_is_url(dst_path);
 
-  if ((! src_is_url) && (! dst_is_url))
+  if ((! srcs_are_urls) && (! dst_is_url))
     {
       /* WC->WC */
       if (! opt_state->quiet)
         svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
                              FALSE, FALSE, FALSE, pool);
     }
-  else if ((! src_is_url) && (dst_is_url))
+  else if ((! srcs_are_urls) && (dst_is_url))
     {
       /* WC->URL : Use notification. */
       /* ### todo:
@@ -88,7 +98,7 @@ svn_cl__copy(apr_getopt_t *os,
             bogus path. 
       */
     }
-  else if ((src_is_url) && (! dst_is_url))
+  else if ((srcs_are_urls) && (! dst_is_url))
     {
       /* URL->WC : Use checkout-style notification. */
       if (! opt_state->quiet)
@@ -112,22 +122,32 @@ svn_cl__copy(apr_getopt_t *os,
     SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2), opt_state,
                                        NULL, ctx->config, pool));
 
-  err = svn_client_copy3(&commit_info, src_path,
-                         &(opt_state->start_revision),
-                         dst_path, ctx, pool);
-
-  /* If dst_path already exists, try to copy src_path as a child of it. */
-  if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
-              || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+  if (targets->nelts == 1)
     {
-      const char *src_basename = svn_path_basename(src_path, pool);
+      /* Standard copy, try to copy the source onto the destination. */
+      src_path = ((const char **) (targets->elts))[0];
 
-      svn_error_clear(err);
-      
       err = svn_client_copy3(&commit_info, src_path,
                              &(opt_state->start_revision),
-                             svn_path_join(dst_path, src_basename, pool),
-                             ctx, pool);
+                             dst_path, ctx, pool);
+
+      /* If dst_path already exists, try to copy src_path as a child of it,
+       * by using copy_into. */
+      if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
+                  || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+        {
+          svn_error_clear(err);
+      
+          err = svn_client_copy_into(&commit_info, targets,
+                                     &(opt_state->start_revision),
+                                     dst_path, ctx, pool);
+        }
+    }
+  else
+    {
+      err = svn_client_copy_into(&commit_info, targets,
+                                 &(opt_state->start_revision),
+                                 dst_path, ctx, pool);
     }
 
   if (ctx->log_msg_func2)
