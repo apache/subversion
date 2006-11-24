@@ -464,8 +464,9 @@ static int validate_error_elements(void *userdata,
 
 typedef struct error_parser_baton
 {
-  svn_ra_dav__request_t *req;
-  svn_error_t *err;
+  svn_error_t **dst_err;
+  svn_error_t *tmp_err;
+  svn_boolean_t *marshalled_error;
 } error_parser_baton_t;
 
 
@@ -473,7 +474,7 @@ static int start_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                              const char **atts)
 {
   error_parser_baton_t *b = userdata;
-  svn_error_t **err = &(b->err);
+  svn_error_t **err = &(b->tmp_err);
 
   switch (elm->id)
     {
@@ -511,7 +512,7 @@ static int end_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
                            const char *cdata)
 {
   error_parser_baton_t *b = userdata;
-  svn_error_t **err = &(b->err);
+  svn_error_t **err = &(b->tmp_err);
 
   switch (elm->id)
     {
@@ -536,14 +537,15 @@ static int end_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
 
     case ELEM_svn_error:
       {
-        if (b->req->err)
-          svn_error_clear(b->err);
+        if (*(b->dst_err))
+          svn_error_clear(b->tmp_err);
         else
           {
-            b->req->err = b->err;
-            b->req->marshalled_error = TRUE;
+            *(b->dst_err) = b->tmp_err;
+            if (b->marshalled_error)
+              *(b->marshalled_error) = TRUE;
           }
-        b->err = NULL;
+        b->tmp_err = NULL;
         break;
       }
 
@@ -559,8 +561,8 @@ error_parser_baton_cleanup(void *baton)
 {
   error_parser_baton_t *b = baton;
 
-  if (b->err)
-    svn_error_clear(b->err);
+  if (b->tmp_err)
+    svn_error_clear(b->tmp_err);
 
   return APR_SUCCESS;
 }
@@ -571,8 +573,9 @@ error_parser_create(svn_ra_dav__request_t *req)
   error_parser_baton_t *b = apr_palloc(req->pool, sizeof(*b));
   ne_xml_parser *error_parser;
 
-  b->req = req;
-  b->err = NULL;
+  b->dst_err = &(req->err);
+  b->marshalled_error = &(req->marshalled_error);
+  b->tmp_err = NULL;
 
   /* attach a standard <D:error> body parser to the request */
   error_parser = svn_ra_dav__xml_parser_create(req);
@@ -1121,6 +1124,17 @@ svn_ra_dav__add_error_handler(ne_request *request,
                               svn_error_t **err,
                               apr_pool_t *pool)
 {
+  error_parser_baton_t *b = apr_palloc(pool, sizeof(*b));
+
+  b->dst_err = err;
+  b->marshalled_error = NULL;
+  b->tmp_err = NULL;
+
+  /* The error parser depends on the error being NULL to start with */
+  *err = NULL;
+
+  apr_pool_cleanup_register(pool, b, error_parser_baton_cleanup, NULL);
+
   shim_xml_push_handler(parser,
                         error_elements,
                         validate_error_elements,
@@ -1128,11 +1142,11 @@ svn_ra_dav__add_error_handler(ne_request *request,
                         end_err_element,
                         err,
                         pool);
-  
+
   ne_add_response_body_reader(request,
                               ra_dav_error_accepter,
                               ne_xml_parse_v,
-                              parser);  
+                              parser);
 }
 
 
