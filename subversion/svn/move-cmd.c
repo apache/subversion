@@ -98,7 +98,7 @@ svn_cl__move(apr_getopt_t *os,
 
   if (err)
     err = svn_cl__may_need_force(err);
-    SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
+  SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
 
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
