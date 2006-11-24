@@ -58,11 +58,11 @@
    allocations.
 */
 static svn_error_t *
-wc_to_wc_copy(const char *src_path,
-              const char *dst_path,
-              svn_boolean_t is_move,
-              svn_client_ctx_t *ctx,
-              apr_pool_t *pool)
+wc_to_wc_copy_single(const char *src_path,
+                     const char *dst_path,
+                     svn_boolean_t is_move,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
 {
   svn_node_kind_t src_kind, dst_kind, dst_parent_kind;
   const char *dst_parent, *base_name;
@@ -166,6 +166,29 @@ wc_to_wc_copy(const char *src_path,
     {
       SVN_ERR(svn_wc_adm_close(adm_access));
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+wc_to_wc_copy(const apr_array_header_t *copy_pairs,
+              svn_boolean_t is_move,
+              svn_client_ctx_t *ctx,
+              apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  for ( i = 0; i < copy_pairs->nelts; i++)
+    {
+      copy_pair *pair = ((copy_pair **) (copy_pairs->elts))[i];
+      svn_pool_clear(subpool);
+      SVN_ERR(wc_to_wc_copy_single(pair->src, pair->dst, is_move, ctx,
+                                   subpool));
+    }
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -1092,7 +1115,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
   /* Now, call the right handler for the operation. */
   if ((! srcs_are_urls) && (! dst_is_url))
     {
-      SVN_ERR(wc_to_wc_copy(src, dst, is_move,
+      SVN_ERR(wc_to_wc_copy(copy_pairs, is_move,
                             ctx, pool));
     }
   else if ((! srcs_are_urls) && (dst_is_url))
