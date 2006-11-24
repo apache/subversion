@@ -1978,6 +1978,9 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
 /**
  * Copy all @a src_paths into @a dst_dir.
  *
+ * This function is currently a stub, and only copies the first argument to
+ * the destination.
+ *
  * Use the same semantics as svn_client_copy3(), but with the following
  * changes:
  *
@@ -2120,11 +2123,14 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
 /** 
  * Move all @a src_paths into @a dst_dir.
  *
+ * This function is currently a stub, and only moves the first argument to
+ * the destination.
+ *
  * Each one of @a src_paths must be a file or directory under version
  * control, or the URL of a versioned item in the repository.  They
  * must also all be of the same type, e.g., all URLs or all WC paths.
  *
- * @a dst_path must be a directory.
+ * @a dst_dir must be a directory.
  *
  * @since New in 1.5.
  */
