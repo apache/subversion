@@ -988,7 +988,6 @@ parsed_request(ne_session *sess,
                                      (strcmp(method, "PROPFIND") == 0)
                                      ? 207 : 200,
                                      0, /* not used */
-                                     NULL, NULL, /* interrogator not used */
                                      pool);
   if (err)
     return err;
@@ -1164,8 +1163,6 @@ svn_ra_dav__request_dispatch(int *code_p,
                              svn_ra_dav__request_t *req,
                              int okay_1,
                              int okay_2,
-                             svn_ra_dav__request_interrogator interrogator,
-                             void *interrogator_baton,
                              apr_pool_t *pool)
 {
   ne_xml_parser *error_parser;
@@ -1194,9 +1191,6 @@ svn_ra_dav__request_dispatch(int *code_p,
   if (code_p)
      *code_p = code;
 
-  if (interrogator)
-    SVN_ERR((*interrogator)(req->req, rv, interrogator_baton));
-
   if (!req->marshalled_error)
     SVN_ERR(req->err);
 
@@ -1218,10 +1212,8 @@ svn_ra_dav__request_dispatch(int *code_p,
         }
       else if (code == 301 || code == 302)
         {
-          char *location;
+          const char *location = svn_ra_dav__request_get_location(req, pool);
 
-          SVN_ERR(svn_ra_dav__interrogate_for_location(req->req,
-                                                       rv, &location));
           msg = apr_psprintf(pool,
                              (code == 301)
                               ? _("Repository moved permanently to '%s';"
@@ -1229,8 +1221,6 @@ svn_ra_dav__request_dispatch(int *code_p,
                               : _("Repository moved temporarily to '%s';"
                                   " please relocate"),
                              location);
-          if (location)
-            ne_free(location);
 
           return svn_error_create(SVN_ERR_RA_DAV_RELOCATED, NULL, msg);
         }
@@ -1242,19 +1232,10 @@ svn_ra_dav__request_dispatch(int *code_p,
 }
 
 
-svn_error_t *
-svn_ra_dav__interrogate_for_location(ne_request *request,
-                                     int dispatch_return_val,
-                                     void *userdata)
+const char *
+svn_ra_dav__request_get_location(svn_ra_dav__request_t *request,
+                                 apr_pool_t *pool)
 {
-  char **location = userdata;
-
-  if (location)
-    {
-      const char *val = ne_get_response_header(request, "Location");
-      if (val)
-        *location = ne_strdup(val);
-    }
-
-  return SVN_NO_ERROR;
+  const char *val = ne_get_response_header(request->req, "Location");
+  return val ? apr_pstrdup(pool, val) : NULL;
 }
