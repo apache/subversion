@@ -864,9 +864,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                           "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
                           locks_list->data);
       ne_set_request_body_buffer(req, body, strlen(body));
-      
-      /* Don't use SVN_ERR() here because some preprocessors can't
-         handle a compile-time conditional inside a macro call. */
+
       SVN_ERR(svn_ra_dav__request_dispatch(&code, request,
                                            204 /* Created */,
                                            404 /* Not Found */,
