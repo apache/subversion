@@ -85,7 +85,7 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   if (! ras->callbacks->auth_baton)
     return -1;
 
-  if (attempt == 0)
+  if (attempt == 0 || ras->auth_iterstate == NULL)
     {
       const char *realmstring;
 
