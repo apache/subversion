@@ -217,9 +217,7 @@ static svn_error_t * simple_request(svn_ra_dav__session_t *ras,
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  SVN_ERR(svn_ra_dav__request_dispatch(code, request, okay_1, okay_2,
-                                       NULL, NULL,
-                                       pool));
+  SVN_ERR(svn_ra_dav__request_dispatch(code, request, okay_1, okay_2, pool));
   svn_ra_dav__request_destroy(request);
 
   return SVN_NO_ERROR;
@@ -449,7 +447,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                                  svn_boolean_t allow_404,
                                  const char *token,
                                  int *code,
-                                 char **locn,
+                                 const char **locn,
                                  apr_pool_t *pool)
 {
   svn_ra_dav__request_t *request;
@@ -493,8 +491,9 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   SVN_ERR(svn_ra_dav__request_dispatch(code, request,
                                        201 /* Created */,
                                        allow_404 ? 404 /* Not Found */ : 0,
-                                       svn_ra_dav__interrogate_for_location,
-                                       locn, pool));
+                                       pool));
+
+  *locn = svn_ra_dav__request_get_location(request, pool);
   svn_ra_dav__request_destroy(request);
 
   return SVN_NO_ERROR;
@@ -508,7 +507,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
                                        apr_pool_t *pool)
 {
   int code;
-  char *locn = NULL;
+  const char *locn = NULL;
   ne_uri parse;
   svn_error_t *err;
 
@@ -524,9 +523,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* possibly run the request again, with a re-fetched Version Resource */
   if (err == NULL && allow_404 && code == 404)
     {
-      /* free the LOCN if it got assigned. */
-      if (locn)
-        free(locn);
       locn = NULL;
 
       /* re-fetch, forcing a query to the server */
@@ -539,10 +535,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* special-case when conflicts occur */
   if (err)
     {
-      /* free the LOCN if it got assigned. */
-      if (locn)
-        free(locn);
-      
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
           (err->apr_err, err,
@@ -563,7 +555,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   ne_uri_parse(locn, &parse);
   rsrc->wr_url = apr_pstrdup(rsrc->pool, parse.path);
   ne_uri_free(&parse);
-  free(locn);
 
   return SVN_NO_ERROR;
 }
@@ -868,7 +859,6 @@ static svn_error_t * commit_delete_entry(const char *path,
       SVN_ERR(svn_ra_dav__request_dispatch(&code, request,
                                            204 /* Created */,
                                            404 /* Not Found */,
-                                           NULL, NULL,
                                            pool));
       svn_ra_dav__request_destroy(request);
     }
@@ -1408,7 +1398,6 @@ static svn_error_t * commit_close_file(void *file_baton,
       SVN_ERR(svn_ra_dav__request_dispatch(&code, request,
                                            201 /* Created */,
                                            204 /* No Content */,
-                                           NULL, NULL,
                                            pool));
       svn_ra_dav__request_destroy(request);
       

@@ -445,7 +445,6 @@ static svn_error_t *custom_get_request(ne_session *sess,
   err = svn_ra_dav__request_dispatch(NULL, request,
                                      200 /* OK */,
                                      226 /* IM Used */,
-                                     NULL, NULL,
                                      pool);
   svn_ra_dav__request_destroy(request);
 

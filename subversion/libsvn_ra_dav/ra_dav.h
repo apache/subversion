@@ -894,21 +894,10 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                attr, \
                                elem))
 
-/* Callback to get data from a Neon request after it has been sent.
-
-   REQUEST is the request, DISPATCH_RETURN_VAL is the value that
-   ne_request_dispatch(REQUEST) returned to the caller.
-
-   USERDATA is a closure baton. */
-typedef svn_error_t *
-svn_ra_dav__request_interrogator(ne_request *request,
-                                 int dispatch_return_val,
-                                 void *userdata);
-
 /* Given a neon REQUEST and SESSION, run the request; if CODE_P is
    non-null, return the http status code in *CODE_P.  Return any
    resulting error (from neon, a <D:error> body response, or any
-   non-2XX status code) as an svn_error_t, otherwise return NULL.  
+   non-2XX status code) as an svn_error_t, otherwise return NULL.
 
    SESSION, METHOD, and URL are required as well, as they are used to
    describe the possible error.  The error will be allocated in POOL.
@@ -917,12 +906,6 @@ svn_ra_dav__request_interrogator(ne_request *request,
    than one of these will generate an error. OKAY_1 should always be
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
-
-   If INTERROGATOR is non-NULL, invoke it with the Neon request, the
-   dispatch result, and INTERROGATOR_BATON.  This is done regardless of
-   whether the request appears successful or not.  If the interrogator
-   has an error result, return that error immediately, after freeing the
-   request.
 
    ### not super sure on this "okay" stuff, but it means that the request
    ### dispatching code can generate much better errors than the callers
@@ -935,18 +918,16 @@ svn_ra_dav__request_dispatch(int *code_p,
                              svn_ra_dav__request_t *request,
                              int okay_1,
                              int okay_2,
-                             svn_ra_dav__request_interrogator interrogator,
-                             void *interrogator_baton,
                              apr_pool_t *pool);
 
-/* Grab the Location HTTP header from the Neon's REQUEST structure,
-   and return it in *LOCATION (expected to be passed in as type char **).
-   Implements the svn_ra_dav__request_interrogator interface (ignoring
-   the DISPATCH_RETURN_VAL parameter). */
-svn_error_t *
-svn_ra_dav__interrogate_for_location(ne_request *request,
-                                     int dispatch_return_val,
-                                     void *location);
+/* Return the Location HTTP header or NULL if none was sent.
+ *
+ * Do allocations in POOL.
+ */
+const char *
+svn_ra_dav__request_get_location(svn_ra_dav__request_t *request,
+                                 apr_pool_t *pool);
+
 
 /* Give PARSER the ability to parse a mod_dav_svn <D:error> response
    body in the case of a non-2XX response to REQUEST.  If a <D:error>
