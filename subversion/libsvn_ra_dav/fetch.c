@@ -19,6 +19,7 @@
 
 
 #include <assert.h>
+#include <stdlib.h> /* for free() */
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
@@ -87,10 +88,8 @@ typedef struct {
 } file_write_ctx_t;
 
 typedef struct {
-  svn_error_t *err;             /* propagate an error out of the reader */
-
+  svn_ra_dav__request_t *req;   /* Used to propagate errors out of the reader */
   int checked_type;             /* have we processed ctype yet? */
-  ne_content_type ctype;        /* the Content-Type header */
 
   void *subctx;
 } custom_get_ctx_t;
@@ -381,23 +380,6 @@ static svn_error_t *add_props(apr_hash_t *props,
     }
   return SVN_NO_ERROR;
 }
-                      
-
-/* This implements the svn_ra_dav__request_interrogator() interface.
-   USERDATA is 'ne_content_type *'. */
-static svn_error_t *interrogate_for_content_type(ne_request *req,
-                                                 int dispatch_return_val,
-                                                 void *userdata)
-{
-  ne_content_type *ctype = userdata;
-
-  if (ne_get_content_type(req, ctype) != 0)
-    return svn_error_createf
-      (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
-       _("Could not get content-type from response"));
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *custom_get_request(ne_session *sess,
@@ -456,27 +438,19 @@ static svn_error_t *custom_get_request(ne_session *sess,
   svn_ra_dav__add_response_body_reader(request, ne_accept_2xx, reader, &cgc);
 
   /* complete initialization of the body reading context */
+  cgc.req = request;
   cgc.subctx = subctx;
 
   /* run the request */
   err = svn_ra_dav__request_dispatch(NULL, request,
                                      200 /* OK */,
                                      226 /* IM Used */,
-                                     interrogate_for_content_type, &cgc.ctype,
+                                     NULL, NULL,
                                      pool);
   svn_ra_dav__request_destroy(request);
 
-  /* we no longer need this */
-  if (cgc.ctype.value != NULL)
-    free(cgc.ctype.value);
-
-  /* if there was an error writing the contents, then return it rather
-     than Neon-related errors */
-  if (cgc.err)
-    {
-      svn_error_clear(err);
-      return cgc.err;
-    }
+  /* The request runner raises internal errors before Neon errors,
+     pass a returned error to our callers */
 
   return err;
 }
@@ -488,7 +462,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   custom_get_ctx_t *cgc = userdata;
   file_read_ctx_t *frc = cgc->subctx;
 
-  if (cgc->err)
+  if (cgc->req->err)
     {
       /* We must have gotten an error during the last read. */
       /* Abort the rest of the read. */
@@ -505,11 +479,21 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
   if (!cgc->checked_type)
     {
+      ne_content_type ctype = { 0 };
+      int rv = ne_get_content_type(cgc->req->req, &ctype);
 
-      if (cgc->ctype.type
-          && cgc->ctype.subtype
-          && !strcmp(cgc->ctype.type, "application") 
-          && !strcmp(cgc->ctype.subtype, "vnd.svn-svndiff"))
+      if (rv != 0)
+        {
+          SVN_RA_DAV__REQ_ERR
+            (cgc->req,
+             svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
+                              _("Could not get content-type from response")));
+          return 1;
+        }
+
+      /* Neon guarantees non-NULL values when rv==0 */
+      if (!strcmp(ctype.type, "application")
+          && !strcmp(ctype.subtype, "vnd.svn-svndiff"))
         {
           /* we are receiving an svndiff. set things up. */
           frc->stream = svn_txdelta_parse_svndiff(frc->handler,
@@ -517,6 +501,9 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
                                                   TRUE,
                                                   frc->pool);
         }
+
+      if (ctype.value)
+        free(ctype.value);
 
       cgc->checked_type = 1;
     }
@@ -543,7 +530,9 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
       /* We can't really do anything useful if we get an error here.  Pass
          it off to someone who can. */
-      cgc->err = (*frc->handler)(&window, frc->handler_baton);
+      SVN_RA_DAV__REQ_ERR
+        (cgc->req,
+         (*frc->handler)(&window, frc->handler_baton));
     }
   else
     {
@@ -551,7 +540,9 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
       apr_size_t written = len;
 
-      cgc->err = svn_stream_write(frc->stream, buf, &written);
+      SVN_RA_DAV__REQ_ERR
+        (cgc->req,
+         svn_stream_write(frc->stream, buf, &written));
 
       /* ### the svndiff stream parser does not obey svn_stream semantics
          ### in its write handler. it does not output the number of bytes
