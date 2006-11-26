@@ -543,7 +543,7 @@ static int end_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       {
         if (*(b->dst_err))
           svn_error_clear(b->tmp_err);
-        else
+        else if (b->tmp_err)
           {
             *(b->dst_err) = b->tmp_err;
             if (b->marshalled_error)
