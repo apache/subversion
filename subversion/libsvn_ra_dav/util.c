@@ -539,7 +539,7 @@ static int end_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
         break;
       }
 
-    case ELEM_svn_error:
+    case ELEM_error:
       {
         if (*(b->dst_err))
           svn_error_clear(b->tmp_err);
