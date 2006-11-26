@@ -194,17 +194,22 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
 }
 
 
+typedef struct {
+  const char *src_url;
+  const char *src_path;
+  const char *dst_path;
+  svn_node_kind_t src_kind;
+  svn_boolean_t resurrection;
+} path_driver_info;
+
+
 struct path_driver_cb_baton
 {
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_node_kind_t src_kind;
-  const char *src_url;
-  const char *src_path;
-  const char *dst_path;
-  svn_boolean_t is_move;
-  svn_boolean_t resurrection;
+  apr_hash_t *action_hash;
   svn_revnum_t src_revnum;
+  svn_boolean_t is_move;
 };
 
 
@@ -217,6 +222,9 @@ path_driver_cb_func(void **dir_baton,
 {
   struct path_driver_cb_baton *cb_baton = callback_baton;
   svn_boolean_t do_delete = FALSE, do_add = FALSE;
+  path_driver_info *path_info = apr_hash_get(cb_baton->action_hash,
+                                             path,
+                                             APR_HASH_KEY_STRING);
 
   /* Initialize return value. */
   *dir_baton = NULL;
@@ -228,7 +236,7 @@ path_driver_cb_func(void **dir_baton,
 
   /* If this is a resurrection, we know the source and dest paths are
      the same, and that our driver will only be calling us once.  */
-  if (cb_baton->resurrection)
+  if (path_info->resurrection)
     {
       /* If this is a move, we do nothing.  Otherwise, we do the copy.  */
       if (! cb_baton->is_move)
@@ -241,7 +249,7 @@ path_driver_cb_func(void **dir_baton,
          or the destination of the move. */
       if (cb_baton->is_move)
         {
-          if (strcmp(cb_baton->src_path, path) == 0)
+          if (strcmp(path_info->src_path, path) == 0)
             do_delete = TRUE;
           else
             do_add = TRUE;
@@ -262,11 +270,11 @@ path_driver_cb_func(void **dir_baton,
     {
       SVN_ERR(svn_path_check_valid(path, pool));
 
-      if (cb_baton->src_kind == svn_node_file)
+      if (path_info->src_kind == svn_node_file)
         {
           void *file_baton;
           SVN_ERR(cb_baton->editor->add_file(path, parent_baton, 
-                                             cb_baton->src_url, 
+                                             path_info->src_url, 
                                              cb_baton->src_revnum, 
                                              pool, &file_baton));
           SVN_ERR(cb_baton->editor->close_file(file_baton, NULL, pool));
@@ -274,7 +282,7 @@ path_driver_cb_func(void **dir_baton,
       else
         {
           SVN_ERR(cb_baton->editor->add_directory(path, parent_baton,
-                                                  cb_baton->src_url, 
+                                                  path_info->src_url, 
                                                   cb_baton->src_revnum, 
                                                   pool, dir_baton));
         }
@@ -285,40 +293,71 @@ path_driver_cb_func(void **dir_baton,
 
 static svn_error_t *
 repos_to_repos_copy(svn_commit_info_t **commit_info_p,
-                    const char *src_url, 
+                    const apr_array_header_t *copy_pairs, 
                     const svn_opt_revision_t *src_revision, 
-                    const char *dst_url, 
                     svn_client_ctx_t *ctx,
                     svn_boolean_t is_move,
                     apr_pool_t *pool)
 {
-  apr_array_header_t *paths = apr_array_make(pool, 2, sizeof(const char *));
-  const char *top_url, *src_rel, *dst_rel, *message, *repos_root;
+  apr_array_header_t *paths = apr_array_make(pool, 2 * copy_pairs->nelts,
+                                             sizeof(const char *));
+  apr_hash_t *action_hash = apr_hash_make(pool);
+  apr_array_header_t *path_infos;
+  const char *top_url, *message, *repos_root;
   svn_revnum_t youngest;
   svn_ra_session_t *ra_session;
-  svn_node_kind_t src_kind, dst_kind;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   void *commit_baton;
   svn_revnum_t src_revnum;
-  svn_boolean_t resurrection = FALSE;
   struct path_driver_cb_baton cb_baton;
+  int i;
   svn_error_t *err;
 
-  /* We have to open our session to the longest path common to both
-     SRC_URL and DST_URL in the repository so we can do existence
-     checks on both paths, and so we can operate on both paths in the
-     case of a move. */
-  top_url = svn_path_get_longest_ancestor(src_url, dst_url, pool);
-
-  /* Special edge-case!  (issue #683)  If you're resurrecting a
-     deleted item like this:  'svn cp -rN src_URL dst_URL', then it's
-     possible for src_URL == dst_URL == top_url.  In this situation,
-     we want to open an RA session to the *parent* of all three. */
-  if (strcmp(src_url, dst_url) == 0)
+  /* Create a path_info struct for each src/dst pair, and initialize it. */
+  path_infos = apr_array_make(pool, copy_pairs->nelts,
+                              sizeof(path_driver_info));
+  for (i = 0; i < copy_pairs->nelts; i++)
     {
-      resurrection = TRUE;
-      top_url = svn_path_dirname(top_url, pool);
+      const char *src_url = ((copy_pair **) (copy_pairs->elts))[i]->src;
+      path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
+
+      info->resurrection = FALSE;
+      info->src_url = src_url;
+    }
+
+  /* We have to open our session to the longest path common to all
+     SRC_URLS and DST_URLS in the repository so we can do existence
+     checks on all paths, and so we can operate on all paths in the
+     case of a move.  We only need to look at the dirname of the first
+     DST_URL because all the DST_URLs are in the same directory. */
+  top_url = apr_pstrdup(pool, ((copy_pair **) (copy_pairs->elts))[0]->dst);
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      const char *src_url = ((copy_pair **) (copy_pairs->elts))[i]->src;
+      top_url = svn_path_get_longest_ancestor(top_url, src_url, pool);
+    }
+
+  /* Check each src/dst pair for resurrection. */
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      copy_pair *pair = ((copy_pair **) (copy_pairs->elts))[i];
+      path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
+
+      if (strcmp(pair->src, pair->dst) == 0)
+        {
+          info->resurrection = TRUE;
+          
+          /* Special edge-case!  (issue #683)  If you're resurrecting a
+             deleted item like this:  'svn cp -rN src_URL dst_URL', then
+             it's possible for src_URL == dst_URL == top_url.  In this
+             situation, we want to open an RA session to be at least the
+             *parent* of all three. */
+          if (strcmp(pair->src, top_url) == 0)
+            {
+              top_url = svn_path_dirname(top_url, pool);
+            }
+        }
     }
 
   /* Open an RA session for the URL. Note that we don't have a local
@@ -348,11 +387,15 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       if ((err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
           && ((top_url == NULL) || (top_url[0] == '\0')))
         {
+          const char *first_src_url = 
+              ((copy_pair **) (copy_pairs->elts))[0]->src;
+          const char *first_dst_url = 
+              ((copy_pair **) (copy_pairs->elts))[0]->dst;
           return svn_error_createf
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              _("Source and dest appear not to be in the same repository "
                "(src: '%s'; dst: '%s')"),
-             src_url, dst_url);
+             first_src_url, first_dst_url);
         }
       else
         return err;
@@ -360,62 +403,86 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
 
-  if (strcmp(dst_url, repos_root) != 0
-      && svn_path_is_child(dst_url, src_url, pool) != NULL)
+  /* For each src/dst pair, check to see if that SRC_URL is a child of
+     the DST_URL (excepting the case where DST_URL is the repo root).
+     If it is, and the parent of DST_URL is the current TOP_URL, then we
+     need to reparent the session one directory higher, the parent of 
+     the DST_URL. */
+  for (i = 0; i < copy_pairs->nelts; i++ )
     {
-      resurrection = TRUE;
-      top_url = svn_path_dirname(top_url, pool);
+      copy_pair *pair = ((copy_pair **) (copy_pairs->elts))[i];
+      path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
 
-      SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
+      if (strcmp(pair->dst, repos_root) != 0
+          && svn_path_is_child(pair->dst, pair->src, pool) != NULL)
+        {
+          info->resurrection = TRUE;
+          top_url = svn_path_dirname(top_url, pool);
+
+          SVN_ERR(svn_ra_reparent(ra_session, top_url, pool));
+        }
     }
 
-  /* Get the portions of the SRC and DST URLs that are relative to
-     TOP_URL, and URI-decode those sections. */
-  src_rel = svn_path_is_child(top_url, src_url, pool);
-  if (src_rel)
-    src_rel = svn_path_uri_decode(src_rel, pool);
-  else
-    src_rel = "";
-
-  dst_rel = svn_path_is_child(top_url, dst_url, pool);
-  if (dst_rel)
-    dst_rel = svn_path_uri_decode(dst_rel, pool);
-  else
-    dst_rel = "";
-
-  /* We can't move something into itself, period. */
-  if (svn_path_is_empty(src_rel) && is_move)
-    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                             _("Cannot move URL '%s' into itself"), src_url);
+  /* Fetch the youngest revision. */
+  SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest, pool));
 
   /* Pass NULL for the path, to ensure error if trying to get a
      revision based on the working copy. */
   SVN_ERR(svn_client__get_revision_number
           (&src_revnum, ra_session, src_revision, NULL, pool));
-  
-  /* Fetch the youngest revision. */
-  SVN_ERR(svn_ra_get_latest_revnum(ra_session, &youngest, pool));
 
   /* Use YOUNGEST for copyfrom args if not provided. */
   if (! SVN_IS_VALID_REVNUM(src_revnum))
     src_revnum = youngest;
   
-  /* Verify that SRC_URL exists in the repository. */
-  SVN_ERR(svn_ra_check_path(ra_session, src_rel, src_revnum, &src_kind,
-                            pool));
-  if (src_kind == svn_node_none)
-    return svn_error_createf 
-      (SVN_ERR_FS_NOT_FOUND, NULL,
-       _("Path '%s' does not exist in revision %ld"),
-       src_url, src_revnum);
-
-  /* Figure out the basename that will result from this operation. */
-  SVN_ERR(svn_ra_check_path(ra_session, dst_rel, youngest, &dst_kind, pool));
-  if (dst_kind != svn_node_none)
+  /* Get the portions of the SRC and DST URLs that are relative to
+     TOP_URL, and URI-decode those sections. */
+  for (i = 0; i < copy_pairs->nelts; i++)
     {
-      /* We disallow the overwriting of existing paths. */
-      return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                               _("Path '%s' already exists"), dst_rel);
+      copy_pair *pair = ((copy_pair **) (copy_pairs->elts))[i];
+      svn_node_kind_t dst_kind;
+      const char *src_rel, *dst_rel;
+      path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
+
+      src_rel = svn_path_is_child(top_url, pair->src, pool);
+      if (src_rel)
+        src_rel = svn_path_uri_decode(src_rel, pool);
+      else
+        src_rel = "";
+
+      dst_rel = svn_path_is_child(top_url, pair->dst, pool);
+      if (dst_rel)
+        dst_rel = svn_path_uri_decode(dst_rel, pool);
+      else
+        dst_rel = "";
+
+      /* We can't move something into itself, period. */
+      if (svn_path_is_empty(src_rel) && is_move)
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("Cannot move URL '%s' into itself"),
+                                 pair->src);
+  
+      /* Verify that SRC_URL exists in the repository. */
+      SVN_ERR(svn_ra_check_path(ra_session, src_rel, src_revnum, 
+                                &info->src_kind, pool));
+      if (info->src_kind == svn_node_none)
+        return svn_error_createf 
+          (SVN_ERR_FS_NOT_FOUND, NULL,
+           _("Path '%s' does not exist in revision %ld"),
+           pair->src, src_revnum);
+
+      /* Figure out the basename that will result from this operation. */
+      SVN_ERR(svn_ra_check_path(ra_session, dst_rel, youngest, &dst_kind, 
+                                pool));
+      if (dst_kind != svn_node_none)
+        {
+          /* We disallow the overwriting of existing paths. */
+          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                   _("Path '%s' already exists"), dst_rel);
+        }
+
+      info->src_path = src_rel;
+      info->dst_path = dst_rel;
     }
 
   /* Create a new commit item and add it to the array. */
@@ -424,19 +491,31 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       svn_client_commit_item2_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
-        = apr_array_make(pool, 2, sizeof(item));
-      
-      item = apr_pcalloc(pool, sizeof(*item));
-      item->url = svn_path_join(top_url, dst_rel, pool);
-      item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
-      if (is_move && (! resurrection))
+        = apr_array_make(pool, 2 * copy_pairs->nelts, sizeof(item));
+
+      for (i = 0; i < copy_pairs->nelts; i++)
         {
+          path_driver_info *info = 
+            &(((path_driver_info *) (path_infos->elts))[i]);
+
           item = apr_pcalloc(pool, sizeof(*item));
-          item->url = svn_path_join(top_url, src_rel, pool);
-          item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
+          item->url = svn_path_join(top_url, info->dst_path, pool);
+          item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+          apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING,
+                       info);
+
+          if (is_move && (! info->resurrection))
+            {
+              item = apr_pcalloc(pool, sizeof(*item));
+              item->url = svn_path_join(top_url, info->src_path, pool);
+              item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
+              APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+              apr_hash_set(action_hash, info->src_path, APR_HASH_KEY_STRING,
+                           info);
+            }
         }
+
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
                                       ctx, pool));
       if (! message)
@@ -456,20 +535,21 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                     pool));
 
   /* Setup our PATHS for the path-based editor drive. */
-  APR_ARRAY_PUSH(paths, const char *) = dst_rel;
-  if (is_move && (! resurrection))
-    APR_ARRAY_PUSH(paths, const char *) = src_rel;
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
+
+      APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
+      if (is_move && (! info->resurrection))
+        APR_ARRAY_PUSH(paths, const char *) = info->src_path;
+    }
 
   /* Setup the callback baton. */
   cb_baton.editor = editor;
   cb_baton.edit_baton = edit_baton;
-  cb_baton.src_kind = src_kind;
-  cb_baton.src_url = src_url;
-  cb_baton.src_path = src_rel;
-  cb_baton.dst_path = dst_rel;
+  cb_baton.action_hash = action_hash;
   cb_baton.is_move = is_move;
   cb_baton.src_revnum = src_revnum;
-  cb_baton.resurrection = resurrection;
 
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver(editor, edit_baton, youngest, paths,
@@ -1128,7 +1208,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
     }
   else
     {
-      SVN_ERR(repos_to_repos_copy(commit_info_p, src, src_revision, dst,
+      SVN_ERR(repos_to_repos_copy(commit_info_p, copy_pairs, src_revision,
                                   ctx, is_move, pool));
     }
 
