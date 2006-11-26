@@ -899,9 +899,6 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
    resulting error (from neon, a <D:error> body response, or any
    non-2XX status code) as an svn_error_t, otherwise return NULL.
 
-   SESSION, METHOD, and URL are required as well, as they are used to
-   describe the possible error.  The error will be allocated in POOL.
-
    OKAY_1 and OKAY_2 are the "acceptable" result codes. Anything other
    than one of these will generate an error. OKAY_1 should always be
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
