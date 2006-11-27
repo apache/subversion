@@ -125,18 +125,18 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r22417
-    Fix a xlate handle caching bug.
-    Justification:
-      Simple fix to prevent crashes on Win32 at least.
-    Votes:
-      +1: djh, zhakov
-
   * r22440
     Fix a crash when using automatic authentication protocols.
     Justification:
       Simple crash fix.
     Votes:
-      +1: djh
+      +1: djh, dlr
 
 Approved changes:
+
+  * r22417
+    Fix a xlate handle caching bug.
+    Justification:
+      Simple fix to prevent crashes on Win32 at least.
+    Votes:
+      +1: djh, zhakov, dlr
