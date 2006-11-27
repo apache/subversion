@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import sys, re, os
 
 # Our testing module
 import svntest
@@ -40,7 +40,7 @@ def check_diff_output(diff_output, name, diff_type):
 
 # On Windows, diffs still display / rather than \ in paths
   if svntest.main.windows == 1:
-    name = string.replace(name, '\\', '/')
+    name = name.replace('\\', '/')
   i_re = re.compile('^Index:')
   d_re = re.compile('^Index: (\\./)?' + name)
   p_re = re.compile('^--- (\\./)?' + name)

@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os, os.path, shutil
+import os
 
 # Our testing module
 import svntest
