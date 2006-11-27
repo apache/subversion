@@ -204,7 +204,8 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
       match_or_fail(message, output_type.upper(), expected, actual)
     elif expected == SVNAnyOutput:
       if len(actual) == 0:
-        if message is not None: print message
+        if message is not None:
+          print message
         raise raisable
     elif expected is not None:
       raise SVNIncorrectDatatype("Unexpected type for %s data" % output_type)
