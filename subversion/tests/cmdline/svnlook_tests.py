@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import re, os
 
 # Our testing module
 import svntest
@@ -209,8 +209,8 @@ def delete_file_in_moved_dir(sbox):
   # Okay.  No failure, but did we get the right output?
   if len(output) != 2:
     raise svntest.Failure
-  if not ((string.strip(output[0]) == 'A/B/')
-          and (string.strip(output[1]) == 'A/B/E2/')):
+  if not ((output[0].strip() == 'A/B/')
+          and (output[1].strip() == 'A/B/E2/')):
     raise svntest.Failure
 
 
@@ -248,7 +248,7 @@ def test_print_property_diffs(sbox):
 
   # replace wcdir/iota with iota in expected_output
   for i in xrange(len(expected_output)):
-    expected_output[i] = string.replace(expected_output[i], iota_path, 'iota')
+    expected_output[i] = expected_output[i].replace(iota_path, 'iota')
 
   svntest.actions.compare_and_display_lines('', '', expected_output, output)
 

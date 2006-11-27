@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import os
 
 # Our testing module
 import svntest
@@ -68,7 +68,7 @@ def get_txns(repo_dir):
   "Get the txn names using 'svnadmin lstxns'."
 
   output_lines, error_lines = svntest.main.run_svnadmin('lstxns', repo_dir)
-  txns = map(string.strip, output_lines)
+  txns = map(output_lines.strip, output_lines)
 
   # sort, just in case
   txns.sort()
