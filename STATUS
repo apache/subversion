@@ -133,10 +133,3 @@ Candidate changes:
       +1: djh, dlr
 
 Approved changes:
-
-  * r22417
-    Fix a xlate handle caching bug.
-    Justification:
-      Simple fix to prevent crashes on Win32 at least.
-    Votes:
-      +1: djh, zhakov, dlr
