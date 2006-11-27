@@ -40,16 +40,17 @@
 /*** Code. ***/
 
 /*
- * if (not exist src_path)
- *   return ERR_BAD_SRC error
+ * for each source/destination pair
+ *   if (not exist src_path)
+ *     return ERR_BAD_SRC error
  *
- * if (exist dst_path)
- *   return ERR_OBSTRUCTION error
- * else
- *   copy src_path into parent_of_dst_path as basename (dst_path)
+ *   if (exist dst_path)
+ *     return ERR_OBSTRUCTION error
+ *   else
+ *     copy src_path into parent_of_dst_path as basename (dst_path)
  *
- * if (this is a move)
- *   delete src_path
+ *   if (this is a move)
+ *     delete src_path
  */
 
 
