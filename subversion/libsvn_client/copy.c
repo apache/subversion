@@ -182,7 +182,8 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
 
   for ( i = 0; i < copy_pairs->nelts; i++)
     {
-      copy_pair *pair = ((copy_pair **) (copy_pairs->elts))[i];
+      svn_client__copy_pair *pair = 
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
       svn_pool_clear(subpool);
       SVN_ERR(wc_to_wc_copy_single(pair->src, pair->dst, is_move, ctx,
                                    subpool));
@@ -319,7 +320,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                               sizeof(path_driver_info));
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      const char *src_url = ((copy_pair **) (copy_pairs->elts))[i]->src;
+      const char *src_url =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
       path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
 
       info->resurrection = FALSE;
@@ -331,17 +333,20 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
      checks on all paths, and so we can operate on all paths in the
      case of a move.  We only need to look at the dirname of the first
      DST_URL because all the DST_URLs are in the same directory. */
-  top_url = apr_pstrdup(pool, ((copy_pair **) (copy_pairs->elts))[0]->dst);
+  top_url = apr_pstrdup(pool, 
+    ((svn_client__copy_pair **) (copy_pairs->elts))[0]->dst);
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      const char *src_url = ((copy_pair **) (copy_pairs->elts))[i]->src;
+      const char *src_url =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
       top_url = svn_path_get_longest_ancestor(top_url, src_url, pool);
     }
 
   /* Check each src/dst pair for resurrection. */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      copy_pair *pair = ((copy_pair **) (copy_pairs->elts))[i];
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
       path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
 
       if (strcmp(pair->src, pair->dst) == 0)
@@ -388,9 +393,9 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
           && ((top_url == NULL) || (top_url[0] == '\0')))
         {
           const char *first_src_url = 
-              ((copy_pair **) (copy_pairs->elts))[0]->src;
+              ((svn_client__copy_pair **) (copy_pairs->elts))[0]->src;
           const char *first_dst_url = 
-              ((copy_pair **) (copy_pairs->elts))[0]->dst;
+              ((svn_client__copy_pair **) (copy_pairs->elts))[0]->dst;
           return svn_error_createf
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              _("Source and dest appear not to be in the same repository "
@@ -410,7 +415,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
      the DST_URL. */
   for (i = 0; i < copy_pairs->nelts; i++ )
     {
-      copy_pair *pair = ((copy_pair **) (copy_pairs->elts))[i];
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
       path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
 
       if (strcmp(pair->dst, repos_root) != 0
@@ -439,7 +445,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
      TOP_URL, and URI-decode those sections. */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      copy_pair *pair = ((copy_pair **) (copy_pairs->elts))[i];
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
       svn_node_kind_t dst_kind;
       const char *src_rel, *dst_rel;
       path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
@@ -1066,7 +1073,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
         {
           const char *src_path = ((const char **) (src_paths->elts))[i];
           const char *src_basename;
-          copy_pair *pair = apr_palloc(pool, sizeof(*pair));
+          svn_client__copy_pair *pair = apr_palloc(pool, sizeof(*pair));
 
           svn_pool_clear(subpool);
           src_basename = svn_path_basename(src_path, subpool);
@@ -1080,18 +1087,18 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
           pair->src = src_path;
           pair->dst = svn_path_join(dst_path_in, src_basename, pool);
-          APR_ARRAY_PUSH(copy_pairs, copy_pair *) = pair;
+          APR_ARRAY_PUSH(copy_pairs, svn_client__copy_pair *) = pair;
         }
 
       svn_pool_destroy(subpool);
     }
   else
     {
-      copy_pair *pair = apr_palloc(pool, sizeof(*pair));
+      svn_client__copy_pair *pair = apr_palloc(pool, sizeof(*pair));
 
       pair->src = ((const char **) (src_paths->elts))[0];
       pair->dst = dst_path_in;
-      APR_ARRAY_PUSH(copy_pairs, copy_pair *) = pair;
+      APR_ARRAY_PUSH(copy_pairs, svn_client__copy_pair *) = pair;
     }
 
   if (!srcs_are_urls && !dst_is_url)
@@ -1100,8 +1107,10 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
       for ( i = 0; i < copy_pairs->nelts; i++ )
         {
-          const char *src_path = ((copy_pair **) (copy_pairs->elts))[i]->src;
-          const char *dst_path = ((copy_pair **) (copy_pairs->elts))[i]->dst;
+          const char *src_path =
+            ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
+          const char *dst_path =
+            ((svn_client__copy_pair **) (copy_pairs->elts))[i]->dst;
 
           svn_pool_clear(subpool);
           
@@ -1123,9 +1132,9 @@ setup_copy(svn_commit_info_t **commit_info_p,
           for ( i = 0; i < copy_pairs->nelts; i++)
             {
               const char *src_path = 
-                  ((copy_pair **) (copy_pairs->elts))[i]->src;
+                ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
               const char *dst_path = 
-                  ((copy_pair **) (copy_pairs->elts))[i]->dst;
+                ((svn_client__copy_pair **) (copy_pairs->elts))[i]->dst;
 
               if (strcmp(src_path, dst_path) == 0)
                 return svn_error_createf
@@ -1153,7 +1162,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
               for ( i = 0; i < copy_pairs->nelts; i++)
                 {
                   const char *src_path = 
-                      ((copy_pair **) (copy_pairs->elts))[i]->src;
+                    ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
 
                   /* We can convert the working copy path to a URL based on the
                      entries file. */
@@ -1180,15 +1189,16 @@ setup_copy(svn_commit_info_t **commit_info_p,
                        _("'%s' does not seem to have a URL associated with it"),
                        svn_path_local_style(src_path, pool));
 
-                  ((copy_pair **) (copy_pairs->elts))[i]->src = entry->url;
+                  ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src =
+                    entry->url;
                   srcs_are_urls = TRUE;
                 }
             }
         }
     }
 
-  src = ((copy_pair **) (copy_pairs->elts))[0]->src;
-  dst = ((copy_pair **) (copy_pairs->elts))[0]->dst;
+  src = ((svn_client__copy_pair **) (copy_pairs->elts))[0]->src;
+  dst = ((svn_client__copy_pair **) (copy_pairs->elts))[0]->dst;
 
   /* Now, call the right handler for the operation. */
   if ((! srcs_are_urls) && (! dst_is_url))
