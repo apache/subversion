@@ -3107,7 +3107,7 @@ test_list = [ None,
               copy_multiple_wc,
               move_multiple_repo,
               copy_multiple_repo,
-              XFail(copy_multiple_repo_wc),
+              copy_multiple_repo_wc,
               XFail(copy_multiple_wc_repo),
              ]
 
