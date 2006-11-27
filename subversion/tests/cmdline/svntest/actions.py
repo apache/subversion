@@ -893,7 +893,8 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None):
     map(sys.stdout.write, actual)
 
 def compare_and_display_lines(message, label, expected, actual):
-  'Compare two sets of output lines, and print them if they differ.'
+  """Compare two sets of output lines, and print them if they differ.
+  MESSAGE is ignored if None."""
   # This catches the None vs. [] cases
   if expected is None: exp = []
   else: exp = expected
