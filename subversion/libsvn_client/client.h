@@ -615,20 +615,19 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_pool_t *pool);
 
 
-/* Recursively crawl the working copy path TARGET, harvesting
+/* Recursively crawl each working copy path SRC in COPY_PAIRS, harvesting
    commit_items into a COMMITABLES hash (see the docstring for
    svn_client__harvest_committables for what that really means, and
    for the relevance of LOCKED_DIRS) as if every entry at or below
-   TARGET was to be committed as a set of adds (mostly with history)
-   to a new repository URL (NEW_URL).
+   the SRC was to be committed as a set of adds (mostly with history)
+   to a new repository URL (DST in COPY_PAIRS).
 
    If CTX->CANCEL_FUNC is non-null, it will be called with 
    CTX->CANCEL_BATON while harvesting to determine if the client has 
    cancelled the operation.  */
 svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
-                                  const char *new_url,
-                                  const char *target,
+                                  const apr_array_header_t *copy_pairs,
                                   svn_wc_adm_access_t *adm_access,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);

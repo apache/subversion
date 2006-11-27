@@ -3108,7 +3108,7 @@ test_list = [ None,
               move_multiple_repo,
               copy_multiple_repo,
               copy_multiple_repo_wc,
-              XFail(copy_multiple_wc_repo),
+              copy_multiple_wc_repo,
              ]
 
 if __name__ == '__main__':

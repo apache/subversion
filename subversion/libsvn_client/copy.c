@@ -666,16 +666,16 @@ reconcile_errors(svn_error_t *commit_err,
 
 static svn_error_t *
 wc_to_repos_copy(svn_commit_info_t **commit_info_p,
-                 const char *src_path, 
-                 const char *dst_url, 
+                 const apr_array_header_t *copy_pairs, 
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  const char *anchor, *target, *message;
+  const char *message;
+  const char *top_src_path, *top_dst_url;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_node_kind_t src_kind, dst_kind;
+  svn_node_kind_t base_kind;
   void *commit_baton;
   apr_hash_t *committables, *tempfiles = NULL;
   svn_wc_adm_access_t *adm_access, *dir_access;
@@ -683,35 +683,68 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   svn_error_t *cmt_err = SVN_NO_ERROR;
   svn_error_t *unlock_err = SVN_NO_ERROR;
   svn_error_t *cleanup_err = SVN_NO_ERROR;
-  const char *base_path;
+  int i;
 
   /* The commit process uses absolute paths, so we need to open the access
      baton using absolute paths, and so we really need to use absolute
-     paths everywhere. */
-  SVN_ERR(svn_path_get_absolute(&base_path, src_path, pool));
+     paths everywhere. */  
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
+      SVN_ERR(svn_path_get_absolute(&pair->src_abs, pair->src, pool));
+    }
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, base_path,
+  /*Find the common root of all the source paths, and probe the wc. */
+  top_src_path = apr_pstrdup(pool,
+                       ((svn_client__copy_pair **) (copy_pairs->elts))[0]->src);
+  for (i = 1; i < copy_pairs->nelts; i++)
+    {
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
+      top_src_path = svn_path_get_longest_ancestor(top_src_path, pair->src,
+                                                   pool);
+    }
+  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, top_src_path,
                                  FALSE, -1, ctx->cancel_func,
                                  ctx->cancel_baton, pool));
 
-  /* Split the DST_URL into an anchor and target. */
-  svn_path_split(dst_url, &anchor, &target, pool);
-
-  /* Open an RA session for the anchor URL. */
-  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, anchor,
+  /* Determine the least common ancesor for the destinations, and open an RA
+     session to that location. */
+  svn_path_split(((svn_client__copy_pair **) (copy_pairs->elts))[0]->dst,
+                 &top_dst_url,
+                 NULL, pool);
+  for (i = 1; i < copy_pairs->nelts; i++)
+    {
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
+      top_dst_url = svn_path_get_longest_ancestor(top_dst_url, pair->dst, pool);
+    }
+                               
+  SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_dst_url,
                                                svn_wc_adm_access_path
                                                (adm_access),
                                                adm_access, NULL, TRUE, TRUE, 
                                                ctx, pool));
 
-  /* Figure out the basename that will result from this operation. */
-  SVN_ERR(svn_ra_check_path(ra_session, svn_path_uri_decode(target, pool),
-                            SVN_INVALID_REVNUM, &dst_kind, pool));
-  
-  if (dst_kind != svn_node_none)
+  /* Figure out the basename that will result from each copy and check to make
+     sure it doesn't exist already. */
+  for (i = 0; i < copy_pairs->nelts; i++)
     {
-      return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                               _("Path '%s' already exists"), dst_url);
+      svn_node_kind_t dst_kind;
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
+
+      pair->dst_rel = svn_path_is_child(top_dst_url, pair->dst, pool);
+      SVN_ERR(svn_ra_check_path(ra_session, 
+                                svn_path_uri_decode(pair->dst_rel, pool),
+                                SVN_INVALID_REVNUM, &dst_kind, pool));
+  
+      if (dst_kind != svn_node_none)
+        {
+          return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
+                                   _("Path '%s' already exists"), pair->dst);
+        }
     }
 
   /* Create a new commit item and add it to the array. */
@@ -719,12 +752,18 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       svn_client_commit_item2_t *item;
       const char *tmp_file;
+      commit_items = apr_array_make(pool, copy_pairs->nelts, sizeof(item));
 
-      commit_items = apr_array_make(pool, 1, sizeof(item));      
-      item = apr_pcalloc(pool, sizeof(*item));
-      item->url = dst_url;
-      item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+      for (i = 0; i < copy_pairs->nelts; i++ )
+        {
+          svn_client__copy_pair *pair =
+            ((svn_client__copy_pair **) (copy_pairs->elts))[i];
+
+          item = apr_pcalloc(pool, sizeof(*item));
+          item->url = pair->dst;
+          item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
+          APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+        }
 
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
                                       ctx, pool));
@@ -735,14 +774,14 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     message = "";
 
   /* Crawl the working copy for commit items. */
-  SVN_ERR(svn_io_check_path(base_path, &src_kind, pool));
-  if (src_kind == svn_node_dir)
-    SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, base_path, pool));
+  SVN_ERR(svn_io_check_path(top_src_path, &base_kind, pool));
+  if (base_kind == svn_node_dir)
+    SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, top_src_path, pool));
   else
     dir_access = adm_access;
-  if ((cmt_err = svn_client__get_copy_committables(&committables, 
-                                                   dst_url,
-                                                   base_path,
+
+  if ((cmt_err = svn_client__get_copy_committables(&committables,
+                                                   copy_pairs,
                                                    dir_access,
                                                    ctx,
                                                    pool)))
@@ -759,13 +798,13 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     goto cleanup;
 
   /* Sort and condense our COMMIT_ITEMS. */
-  if ((cmt_err = svn_client__condense_commit_items(&dst_url, 
+  if ((cmt_err = svn_client__condense_commit_items(&top_dst_url, 
                                                    commit_items, 
                                                    pool)))
     goto cleanup;
 
   /* Open an RA session to DST_URL. */
-  if ((cmt_err = svn_client__open_ra_session_internal(&ra_session, dst_url,
+  if ((cmt_err = svn_client__open_ra_session_internal(&ra_session, top_dst_url,
                                                       NULL, NULL,
                                                       commit_items,
                                                       FALSE, FALSE,
@@ -783,7 +822,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     goto cleanup;
 
   /* Perform the commit. */
-  cmt_err = svn_client__do_commit(dst_url, commit_items, adm_access,
+  cmt_err = svn_client__do_commit(top_dst_url, commit_items, adm_access,
                                   editor, edit_baton, 
                                   0, /* ### any notify_path_offset needed? */
                                   &tempfiles, NULL, ctx, pool);
@@ -1113,7 +1152,6 @@ setup_copy(svn_commit_info_t **commit_info_p,
   apr_array_header_t *copy_pairs = apr_array_make(pool, src_paths->nelts,
                                                   sizeof(struct copy_pair *));
   svn_boolean_t srcs_are_urls, dst_is_url;
-  const char *src, *dst;
   int i;
 
   /* Are either of our paths URLs?
@@ -1257,9 +1295,6 @@ setup_copy(svn_commit_info_t **commit_info_p,
         }
     }
 
-  src = ((svn_client__copy_pair **) (copy_pairs->elts))[0]->src;
-  dst = ((svn_client__copy_pair **) (copy_pairs->elts))[0]->dst;
-
   /* Now, call the right handler for the operation. */
   if ((! srcs_are_urls) && (! dst_is_url))
     {
@@ -1268,7 +1303,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
     }
   else if ((! srcs_are_urls) && (dst_is_url))
     {
-      SVN_ERR(wc_to_repos_copy(commit_info_p, src, dst,
+      SVN_ERR(wc_to_repos_copy(commit_info_p, copy_pairs,
                                ctx, pool));
     }
   else if ((srcs_are_urls) && (! dst_is_url))
