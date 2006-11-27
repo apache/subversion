@@ -994,7 +994,7 @@ test_is_root(const char **msg,
     {
       svn_boolean_t retval;
 
-      retval = svn_path_is_root(tests[i].path, strlen(tests[i].path), pool);
+      retval = svn_path_is_root(tests[i].path, strlen(tests[i].path));
       if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
