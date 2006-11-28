@@ -54,6 +54,60 @@
  */
 
 
+/* Find the longest common ancestor for all the SRCs and DSTs in COPY_PAIRS.
+   If SRC_ANCESTOR or DST_ANCESTOR is NULL, nothing will be returned in it.
+   COMMON_ANCESTOR will be the common ancestor of both the SRC_ANCESTOR and
+   DST_ANCESTOR, and will only be set if it is not NULL.
+ */
+static svn_error_t *
+get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
+                        const char **src_ancestor,
+                        const char **dst_ancestor,
+                        const char **common_ancestor,
+                        apr_pool_t *pool)
+{
+  apr_pool_t *subpool = svn_pool_create(pool);
+  char *top_src;
+  char *top_dst;
+  int i;
+
+  top_src = apr_pstrdup(subpool,
+              ((svn_client__copy_pair_t **) (copy_pairs->elts))[0]->src);
+  top_dst = apr_pstrdup(subpool,
+              ((svn_client__copy_pair_t **) (copy_pairs->elts))[0]->dst);
+
+  /* We don't need to clear the subpool here for several reasons:
+     1)  If we do, we can't use it to allocate the initial versions of 
+         top_src and top_dst (above).
+     2)  We don't return any errors in the following loop, so we are guanteed
+         to destory the subpool at the end of this function.
+     3)  The number of iterations is likely to be few, and the loop will be
+         through quickly, so memory leakage will not be significant, in time or
+         space.  */
+  for (i = 1; i < copy_pairs->nelts; i++)
+    {
+      const svn_client__copy_pair_t *pair =
+        ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
+
+      top_src = svn_path_get_longest_ancestor(top_src, pair->src, subpool);
+      top_dst = svn_path_get_longest_ancestor(top_dst, pair->dst, subpool);
+    }
+
+  if (src_ancestor)
+    *src_ancestor = apr_pstrdup(pool, top_src);
+
+  if (dst_ancestor)
+    *dst_ancestor = apr_pstrdup(pool, top_dst);
+
+  if (common_ancestor)
+    *common_ancestor = svn_path_get_longest_ancestor(top_src, top_dst, pool);
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Copy SRC_PATH into DST_PATH as DST_BASENAME, deleting SRC_PATH
    afterwards if IS_MOVE is TRUE.  Use POOL for all necessary
    allocations.
@@ -332,16 +386,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   /* We have to open our session to the longest path common to all
      SRC_URLS and DST_URLS in the repository so we can do existence
      checks on all paths, and so we can operate on all paths in the
-     case of a move.  We only need to look at the dirname of the first
-     DST_URL because all the DST_URLs are in the same directory. */
-  top_url = apr_pstrdup(pool, 
-    ((svn_client__copy_pair_t **) (copy_pairs->elts))[0]->dst);
-  for (i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair =
-        ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
-      top_url = svn_path_get_longest_ancestor(top_url, pair->src, pool);
-    }
+     case of a move. */
+  get_copy_pair_ancestors(copy_pairs, NULL, NULL, &top_url, pool);
 
   /* Check each src/dst pair for resurrection. */
   for (i = 0; i < copy_pairs->nelts; i++)
@@ -695,15 +741,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     }
 
   /*Find the common root of all the source paths, and probe the wc. */
-  top_src_path = apr_pstrdup(pool,
-                   ((svn_client__copy_pair_t **) (copy_pairs->elts))[0]->src);
-  for (i = 1; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair =
-        ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
-      top_src_path = svn_path_get_longest_ancestor(top_src_path, pair->src,
-                                                   pool);
-    }
+  get_copy_pair_ancestors(copy_pairs, &top_src_path, NULL, NULL, pool);
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, top_src_path,
                                  FALSE, -1, ctx->cancel_func,
                                  ctx->cancel_baton, pool));
@@ -982,17 +1020,11 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   svn_opt_revision_t revision;
   int i;
 
-  /* Find the common ancestor for all of the SRC_URLs, and open a repository
-     session to it.  We do not (yet) have a working copy, so we don't have a
-     corresponding path and tempfiles cannot go into the admin area. */
-  top_src_url = apr_pstrdup(pool,
-                  ((svn_client__copy_pair_t **) (copy_pairs->elts))[0]->src);
-  for (i = 1; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair =
-        ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
-      top_src_url = svn_path_get_longest_ancestor(top_src_url, pair->src, pool);
-    }
+  get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path, NULL, pool);
+
+  /* Open a repository session to the longest common src ancestor.  We do not
+     (yet) have a working copy, so we don't have a corresponding path and
+     tempfiles cannot go into the admin area. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_src_url, NULL,
                                                NULL, NULL, FALSE, TRUE, 
                                                ctx, pool));
@@ -1055,17 +1087,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                                  svn_path_local_style(dst_parent, pool));
     }
 
-  /* Find the longest common ancestor for the destination paths, and probe
-     the wc at that location. */
-  top_dst_path = apr_pstrdup(pool,
-                   ((svn_client__copy_pair_t **) (copy_pairs->elts))[0]->dst);
-  for (i = 1; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair =
-        ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
-      top_dst_path = svn_path_get_longest_ancestor(top_dst_path, pair->dst,
-                                                   pool);
-    }
+  /* Probe the wc at the longest common dst ancestor. */
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, top_dst_path, TRUE,
                                  0, ctx->cancel_func, ctx->cancel_baton,
                                  pool));
