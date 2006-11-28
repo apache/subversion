@@ -1585,7 +1585,3 @@ svn_wc__adm_missing(svn_wc_adm_access_t *adm_access,
 
   return FALSE;
 }
-
-
-
-
