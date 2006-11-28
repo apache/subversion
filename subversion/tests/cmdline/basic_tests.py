@@ -740,7 +740,7 @@ def basic_revert(sbox):
 
   ### Most of the rest of this test is ineffective, due to the
   ### problems described in issue #1611.
-  svntest.actions.run_and_verify_svn("", None, [], 'rm', E_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', E_path)
   svntest.main.safe_rmtree(E_path)
   expected_status.tweak('A/B/E', status='D ')
   expected_status.tweak('A/B/E', wc_rev='?')

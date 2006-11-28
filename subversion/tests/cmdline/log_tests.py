@@ -419,21 +419,21 @@ def versioned_log_message(sbox):
     svntest.main.file_append(iota_path, "2")
     
     # try to check in a change using a versioned file as your log entry.
-    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                        'ci', '-F', log_path)
 
     # force it.  should not produce any errors.
-    svntest.actions.run_and_verify_svn("", None, [],
+    svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-F', log_path, '--force-log')
 
     svntest.main.file_append(mu_path, "2")
 
     # try the same thing, but specifying the file to commit explicitly.
-    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                        'ci', '-F', log_path, mu_path)
 
     # force it...  should succeed.
-    svntest.actions.run_and_verify_svn("", None, [],
+    svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci',
                                        '-F', log_path,
                                        '--force-log', mu_path)
@@ -450,7 +450,7 @@ def log_with_empty_repos(sbox):
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'log',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -691,7 +691,8 @@ PROPS-END
     None, 1, dump_str)
 
   # run log
-  output, errput = svntest.actions.run_and_verify_svn("", None, [], 'log', URL)
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
+                                                      URL)
 
   # Verify the output contains either the expected fuzzy escape
   # sequence, or the literal control char.
@@ -720,7 +721,7 @@ def log_xml_empty_date(sbox):
   date_re = re.compile('<date');
 
   # Ensure that we get a date before we delete the property.
-  output, errput = svntest.actions.run_and_verify_svn("", None, [],
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
                                                       'log', '--xml', '-r1',
                                                       sbox.wc_dir)
   matched = 0
@@ -731,11 +732,11 @@ def log_xml_empty_date(sbox):
     raise svntest.Failure("log contains no date element")
 
   # Set the svn:date revprop to the empty string on revision 1.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'pdel', '--revprop', '-r1', 'svn:date',
                                      sbox.wc_dir)
 
-  output, errput = svntest.actions.run_and_verify_svn("", None, [],
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
                                                       'log', '--xml', '-r1',
                                                       sbox.wc_dir)
   for line in output:  

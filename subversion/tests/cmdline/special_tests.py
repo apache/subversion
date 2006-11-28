@@ -332,7 +332,7 @@ def remove_symlink(sbox):
                                         None, None, None, None, wc_dir)
   
   # Now remove it
-  svntest.actions.run_and_verify_svn("", None, [], 'rm', newfile_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', newfile_path)
 
   # Commit and verify that it worked
   expected_output = svntest.wc.State(wc_dir, {

@@ -72,7 +72,7 @@ or a url (when false) copy source is used."""
   else:
     pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', pi_src, rho_path)
 
   # Now commit
@@ -109,11 +109,11 @@ or a url (when false) copy source is used."""
   # Set props on file which is copy-source later on
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ps', 'phony-prop', '-F',
                                      prop_path, pi_path)
   os.remove(prop_path)
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ps', 'svn:eol-style', 'LF', rho_path)
 
   # Verify props having been set
@@ -141,7 +141,7 @@ or a url (when false) copy source is used."""
                                         wc_dir)
 
   # Bring wc into sync
-  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # File scheduled for deletion
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
@@ -157,7 +157,7 @@ or a url (when false) copy source is used."""
   else:
     pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
@@ -592,9 +592,9 @@ def no_wc_copy_overwrites(sbox):
   # These copies should fail
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                      'cp', pi_path, rho_path)
-  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                      'cp', pi_path, tau_path)
 
   # Status after failed copies should not have changed
@@ -983,7 +983,7 @@ def repos_to_wc(sbox):
   pi_url = other_repo_url + "/A/D/G/pi"
 
   # Expect an error in the directory case
-  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                      'copy', E_url, wc_dir)  
 
   # But file case should work fine.
@@ -1802,7 +1802,7 @@ def delete_replaced_file(sbox):
 
   # Copy 'pi' over 'rho' with history.
   pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  svntest.actions.run_and_verify_svn("", None, [], 'cp', pi_src, rho_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', pi_src, rho_path)
 
   # Check that file copied.
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
