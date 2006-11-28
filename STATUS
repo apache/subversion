@@ -23,15 +23,6 @@ Status of 1.4.3:
 
 Candidate changes:
 
-  * r19842
-    Synchronize (and improve readability of) the various instances of our 
-    license text + upgrade to 2006.
-    Justification:
-     Preparing to release 1.4.2 windows installer, license now on 1.4 branch
-     is now difficult to read. Actual license text isn't changed.
-    Votes:
-     +1: lgo, dlr
-
   * r21516, r22155, r22224
     Fixes for the Windows installer script: add license files of the
     libraries, typos and copyright year.
@@ -66,17 +57,6 @@ Candidate changes:
                 flavours. Its introduction therefore represents a regression
                 in the maintainability of the RPM packaging area as a whole.)
 
-  * r22205, r22207, r22214
-    subversion/tests/cmdline/davautocheck.sh improvements:
-      Fallback to curl if wget is not available.
-      Unset all proxy environmental variables for curl and wget.
-    Justification:
-      Nice for davautocheck.sh to work if:
-        People are behind a firewall with PROXY set, or
-        If they only have curl and not wget.
-    Votes:
-      +1: blair, dlr
-
   * r22253 through r22286
     svn-graph.pl: Update invocation of $ra->get_log() to account for
     the Perl API's $limit parameter.  Drastically improve UI and
@@ -87,16 +67,6 @@ Candidate changes:
     Notes: Copy r22286 from trunk to the 1.4.x branch.
     Votes:
       +1: dlr
-
-  * r22329
-    Report the first error found when parsing rule values from an
-    authz file, rather than the last.
-    Justification:
-      This both returns a more useful error, and doesn't leak a bunch
-      of errors in the middle.
-    Branch: 1.4.x-r22329
-    Votes:
-      +1: dlr, lundblad
 
   * r22332
     Fix leak of space on the Perl argument stack when calling methods
@@ -116,6 +86,8 @@ Candidate changes:
     Votes:
       +1: glasser
 
+Approved changes:
+
   * r22387
     JavaHL: Fix bogus argument parsing which keeps SVNAdmin.setLog()
     from working.
@@ -123,13 +95,42 @@ Candidate changes:
       Being able to change a log message directly on the repository
       through a Java API is useful.
     Votes:
-      +1: dlr
+      +1: dlr, jerenkrantz
 
   * r22440, r22461
     Fix a crash when using automatic authentication protocols.
     Justification:
       Simple crash fix.
     Votes:
-      +1: djh, dlr
+      +1: djh, dlr, jerenkrantz
 
-Approved changes:
+  * r22329
+    Report the first error found when parsing rule values from an
+    authz file, rather than the last.
+    Justification:
+      This both returns a more useful error, and doesn't leak a bunch
+      of errors in the middle.
+    Branch: 1.4.x-r22329
+    Votes:
+      +1: dlr, lundblad, jerenkrantz
+
+  * r22205, r22207, r22214
+    subversion/tests/cmdline/davautocheck.sh improvements:
+      Fallback to curl if wget is not available.
+      Unset all proxy environmental variables for curl and wget.
+    Justification:
+      Nice for davautocheck.sh to work if:
+        People are behind a firewall with PROXY set, or
+        If they only have curl and not wget.
+    Votes:
+      +1: blair, dlr, jerenkrantz
+
+  * r19842
+    Synchronize (and improve readability of) the various instances of our 
+    license text + upgrade to 2006.
+    Justification:
+     Preparing to release 1.4.2 windows installer, license now on 1.4 branch
+     is now difficult to read. Actual license text isn't changed.
+    Votes:
+     +1: lgo, dlr, jerenkrantz
+
