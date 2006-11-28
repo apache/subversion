@@ -1491,7 +1491,7 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
                                      'add', '-N',
                                      os.path.join(wc_dir, file1_path),
                                      os.path.join(wc_dir, dir1_path),
@@ -1592,7 +1592,7 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, nocommit_path), 'nocommit')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
                                      'add', '-N',
                                      os.path.join(wc_dir, dirA_path),
                                      os.path.join(wc_dir, fileA_path),

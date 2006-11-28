@@ -623,11 +623,11 @@ def cat_keyword_expansion(sbox):
   full_author = "x" * 400 
   key_author = "x" * 244
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--revprop', '-r2',
                                      'svn:author', full_author,
                                      sbox.wc_dir)
-  svntest.actions.run_and_verify_svn("", [ full_author ], [],
+  svntest.actions.run_and_verify_svn(None, [ full_author ], [],
                                      'propget', '--revprop', '-r2',
                                      'svn:author', '--strict',
                                      sbox.wc_dir)
