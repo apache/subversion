@@ -837,8 +837,8 @@ svn_client__get_copy_committables(apr_hash_t **committables,
      ### There's got to be a more efficient way to do this... */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      svn_client__copy_pair *pair = 
-        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
+      svn_client__copy_pair_t *pair = 
+        ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
       apr_array_header_t *list;
       svn_wc_adm_access_t *dir_access;
 

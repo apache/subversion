@@ -498,7 +498,7 @@ typedef struct
 
     /* The destination path relative to the repository root */
     const char *dst_rel;
-} svn_client__copy_pair;
+} svn_client__copy_pair_t;
 
 /* ---------------------------------------------------------------- */
 
