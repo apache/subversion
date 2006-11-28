@@ -321,12 +321,12 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                               sizeof(path_driver_info));
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      const char *src_url =
-        ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
       path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
 
       info->resurrection = FALSE;
-      info->src_url = src_url;
+      info->src_url = pair->src;
     }
 
   /* We have to open our session to the longest path common to all
@@ -338,9 +338,9 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     ((svn_client__copy_pair **) (copy_pairs->elts))[0]->dst);
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      const char *src_url =
-        ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
-      top_url = svn_path_get_longest_ancestor(top_url, src_url, pool);
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
+      top_url = svn_path_get_longest_ancestor(top_url, pair->src, pool);
     }
 
   /* Check each src/dst pair for resurrection. */
@@ -393,15 +393,13 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       if ((err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
           && ((top_url == NULL) || (top_url[0] == '\0')))
         {
-          const char *first_src_url = 
-              ((svn_client__copy_pair **) (copy_pairs->elts))[0]->src;
-          const char *first_dst_url = 
-              ((svn_client__copy_pair **) (copy_pairs->elts))[0]->dst;
+          svn_client__copy_pair *first_pair =
+            ((svn_client__copy_pair **) (copy_pairs->elts))[0];
           return svn_error_createf
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              _("Source and dest appear not to be in the same repository "
                "(src: '%s'; dst: '%s')"),
-             first_src_url, first_dst_url);
+             first_pair->src, first_pair->dst);
         }
       else
         return err;
@@ -991,9 +989,9 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                       ((svn_client__copy_pair **) (copy_pairs->elts))[0]->src);
   for (i = 1; i < copy_pairs->nelts; i++)
     {
-      const char *src_url =
-        ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
-      top_src_url = svn_path_get_longest_ancestor(top_src_url, src_url, pool);
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
+      top_src_url = svn_path_get_longest_ancestor(top_src_url, pair->src, pool);
     }
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, top_src_url, NULL,
                                                NULL, NULL, FALSE, TRUE, 
@@ -1063,9 +1061,9 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
                      ((svn_client__copy_pair **) (copy_pairs->elts))[0]->dst);
   for (i = 1; i < copy_pairs->nelts; i++)
     {
-      const char *dst_path =
-        ((svn_client__copy_pair **) (copy_pairs->elts))[i]->dst;
-      top_dst_path = svn_path_get_longest_ancestor(top_dst_path, dst_path,
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
+      top_dst_path = svn_path_get_longest_ancestor(top_dst_path, pair->dst,
                                                    pool);
     }
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, top_dst_path, TRUE,
@@ -1077,17 +1075,17 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
      working file happens to be missing.*/ 
   for (i = 0; i < copy_pairs->nelts; i++)
     {
-      const char *dst_path =
-        ((svn_client__copy_pair **) (copy_pairs->elts))[i]->dst;
+      svn_client__copy_pair *pair =
+        ((svn_client__copy_pair **) (copy_pairs->elts))[i];
       const svn_wc_entry_t *ent;
 
-      SVN_ERR(svn_wc_entry(&ent, dst_path, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc_entry(&ent, pair->dst, adm_access, FALSE, pool));
       if (ent && (ent->kind != svn_node_dir) && 
           (ent->schedule != svn_wc_schedule_delete))
         return svn_error_createf
           (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
            _("Entry for '%s' exists (though the working file is missing)"),
-           svn_path_local_style(dst_path, pool));
+           svn_path_local_style(pair->dst, pool));
     }
 
   /* Decide whether the two repositories are the same or not. */
@@ -1206,19 +1204,17 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
       for ( i = 0; i < copy_pairs->nelts; i++ )
         {
-          const char *src_path =
-            ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
-          const char *dst_path =
-            ((svn_client__copy_pair **) (copy_pairs->elts))[i]->dst;
+          svn_client__copy_pair *pair =
+            ((svn_client__copy_pair **) (copy_pairs->elts))[i];
 
           svn_pool_clear(subpool);
           
-          if (svn_path_is_child(src_path, dst_path, subpool))
+          if (svn_path_is_child(pair->src, pair->dst, subpool))
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot copy path '%s' into its own child '%s'"),
-               svn_path_local_style(src_path, pool),
-               svn_path_local_style(dst_path, pool));
+               svn_path_local_style(pair->src, pool),
+               svn_path_local_style(pair->dst, pool));
         }
 
       svn_pool_destroy(subpool);
@@ -1230,16 +1226,14 @@ setup_copy(svn_commit_info_t **commit_info_p,
         {
           for ( i = 0; i < copy_pairs->nelts; i++)
             {
-              const char *src_path = 
-                ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
-              const char *dst_path = 
-                ((svn_client__copy_pair **) (copy_pairs->elts))[i]->dst;
+              svn_client__copy_pair *pair =
+                ((svn_client__copy_pair **) (copy_pairs->elts))[i];
 
-              if (strcmp(src_path, dst_path) == 0)
+              if (strcmp(pair->src, pair->dst) == 0)
                 return svn_error_createf
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Cannot move path '%s' into itself"),
-                   svn_path_local_style(src_path, pool));
+                   svn_path_local_style(pair->src, pool));
             }
         }
       else
@@ -1260,19 +1254,19 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
               for ( i = 0; i < copy_pairs->nelts; i++)
                 {
-                  const char *src_path = 
-                    ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src;
+                  svn_client__copy_pair *pair =
+                    ((svn_client__copy_pair **) (copy_pairs->elts))[i];
 
                   /* We can convert the working copy path to a URL based on the
                      entries file. */
                   svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
                   const svn_wc_entry_t *entry;
                   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
-                                                 src_path, FALSE, 0,
+                                                 pair->src, FALSE, 0,
                                                  ctx->cancel_func,
                                                  ctx->cancel_baton, 
                                                  pool));
-                  SVN_ERR(svn_wc_entry(&entry, src_path, adm_access, FALSE,
+                  SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE,
                                        pool));
                   SVN_ERR(svn_wc_adm_close(adm_access));
 
@@ -1280,13 +1274,13 @@ setup_copy(svn_commit_info_t **commit_info_p,
                     return svn_error_createf
                       (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                        _("'%s' is not under version control"),
-                       svn_path_local_style(src_path, pool));
+                       svn_path_local_style(pair->src, pool));
 
                   if (! entry->url)
                     return svn_error_createf
                       (SVN_ERR_ENTRY_MISSING_URL, NULL,
                        _("'%s' does not seem to have a URL associated with it"),
-                       svn_path_local_style(src_path, pool));
+                       svn_path_local_style(pair->src, pool));
 
                   ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src =
                     entry->url;
