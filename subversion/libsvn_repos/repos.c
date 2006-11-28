@@ -1851,8 +1851,11 @@ svn_repos_find_root_path(const char *path,
       if (!err && check_repos_path(candidate, pool))
         break;
       svn_error_clear(err);
-      if (candidate[0] == '\0' || strcmp(candidate, "/") == 0)
+
+      if (candidate[0] == '\0' ||
+          svn_path_is_root(candidate, strlen(candidate)))
         return NULL;
+
       candidate = svn_path_dirname(candidate, pool);
     }
 
