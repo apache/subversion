@@ -486,13 +486,13 @@ svn_path_is_absolute(const char *path, apr_size_t len)
  
   /* On Windows, path is also absolute when it starts with 'H:' or 'H:/' 
      where 'H' is any letter. */
-#if defined (WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
   if (len >= 2 && 
       (path[1] == ':') &&
       ((path[0] >= 'A' && path[0] <= 'Z') || 
        (path[0] >= 'a' && path[0] <= 'z')))
      return TRUE;
-#endif /* WIN32 */
+#endif /* WIN32 or Cygwin */
  
   return FALSE;
 }
