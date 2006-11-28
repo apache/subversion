@@ -88,16 +88,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r22329
-    Report the first error found when parsing rule values from an
-    authz file, rather than the last.
-    Justification:
-      This both returns a more useful error, and doesn't leak a bunch
-      of errors in the middle.
-    Branch: 1.4.x-r22329
-    Votes:
-      +1: dlr, lundblad, jerenkrantz
-
   * r22205, r22207, r22214
     subversion/tests/cmdline/davautocheck.sh improvements:
       Fallback to curl if wget is not available.
