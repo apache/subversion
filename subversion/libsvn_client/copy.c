@@ -1251,7 +1251,6 @@ setup_copy(svn_commit_info_t **commit_info_p,
           if (src_revision->kind != svn_opt_revision_unspecified
               && src_revision->kind != svn_opt_revision_working)
             {
-
               for ( i = 0; i < copy_pairs->nelts; i++)
                 {
                   svn_client__copy_pair *pair =
@@ -1284,8 +1283,9 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
                   ((svn_client__copy_pair **) (copy_pairs->elts))[i]->src =
                     entry->url;
-                  srcs_are_urls = TRUE;
                 }
+
+              srcs_are_urls = TRUE;
             }
         }
     }
