@@ -125,11 +125,11 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r22440
+  * r22440, r22461
     Fix a crash when using automatic authentication protocols.
     Justification:
       Simple crash fix.
     Votes:
-      +1: djh, dlr
+      +1: djh, dlr (not r22461)
 
 Approved changes:
