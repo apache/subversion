@@ -99,6 +99,6 @@ Candidate changes:
       #! line claims Bourne shell.  Provides portability with other
       popular shells (zsh, ksh, etc.).
     Votes:
-      +1: dlr
+      +1: dlr, blair
 
 Approved changes:
