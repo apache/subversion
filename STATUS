@@ -88,17 +88,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r22205, r22207, r22214
-    subversion/tests/cmdline/davautocheck.sh improvements:
-      Fallback to curl if wget is not available.
-      Unset all proxy environmental variables for curl and wget.
-    Justification:
-      Nice for davautocheck.sh to work if:
-        People are behind a firewall with PROXY set, or
-        If they only have curl and not wget.
-    Votes:
-      +1: blair, dlr, jerenkrantz
-
   * r19842
     Synchronize (and improve readability of) the various instances of our 
     license text + upgrade to 2006.
