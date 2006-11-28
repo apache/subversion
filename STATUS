@@ -88,15 +88,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r22387
-    JavaHL: Fix bogus argument parsing which keeps SVNAdmin.setLog()
-    from working.
-    Justification:
-      Being able to change a log message directly on the repository
-      through a Java API is useful.
-    Votes:
-      +1: dlr, jerenkrantz
-
   * r22440, r22461
     Fix a crash when using automatic authentication protocols.
     Justification:

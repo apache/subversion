@@ -538,13 +538,6 @@ void SVNAdmin::setLog(const char *path, Revision &revision,
                               _("Missing revision")));
         return;
     }
-    else if (revision.revision()->kind != svn_opt_revision_unspecified)
-    { 
-        JNIUtil::handleSVNError(
-            svn_error_createf (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("Only one revision allowed")));
-      return;
-    }
     /* Open the filesystem  */
     svn_error_t *err = svn_repos_open (&repos, path, requestPool.pool());
     if(err != SVN_NO_ERROR)
