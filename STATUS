@@ -87,13 +87,3 @@ Candidate changes:
       +1: glasser
 
 Approved changes:
-
-  * r19842
-    Synchronize (and improve readability of) the various instances of our 
-    license text + upgrade to 2006.
-    Justification:
-     Preparing to release 1.4.2 windows installer, license now on 1.4 branch
-     is now difficult to read. Actual license text isn't changed.
-    Votes:
-     +1: lgo, dlr, jerenkrantz
-
