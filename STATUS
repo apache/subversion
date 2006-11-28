@@ -88,13 +88,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r22440, r22461
-    Fix a crash when using automatic authentication protocols.
-    Justification:
-      Simple crash fix.
-    Votes:
-      +1: djh, dlr, jerenkrantz
-
   * r22329
     Report the first error found when parsing rule values from an
     authz file, rather than the last.
