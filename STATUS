@@ -29,7 +29,7 @@ Candidate changes:
     Justification:
      Preparing to release 1.4.2 windows installer.
     Votes:
-     +1: lgo
+     +1: lgo, dlr
 
   * r21531, r21848, r21934
     Allow HTTP auth protocols to be configurable by way of a
