@@ -433,7 +433,8 @@ svn_path_is_empty(const char *path)
   return 0;
 }
 
-
+/* We decided against using apr_filepath_root here because of the negative 
+   performance impact (creating a pool and converting strings ). */
 svn_boolean_t
 svn_path_is_root(const char *path, apr_size_t len)
 {
@@ -448,16 +449,15 @@ svn_path_is_root(const char *path, apr_size_t len)
       (path[1] == ':') &&
       ((path[0] >= 'A' && path[0] <= 'Z') || 
        (path[0] >= 'a' && path[0] <= 'z')) &&
-      (len == 2 || (path[2] == '/' && len == 3))
-    )
+      (len == 2 || (path[2] == '/' && len == 3)))
     return TRUE;   
  
   /* On Windows and Cygwin, both //drive and //drive//share are root paths */
-  if (len >= 2 && path[0] == '/' && path[1] == '/' && path[len - 1]!='/')
+  if (len >= 2 && path[0] == '/' && path[1] == '/' && path[len - 1] != '/')
     {
       int segments = 0;
       int i;
-      for (i = len; i >=2; i--)
+      for (i = len; i >= 2; i--)
         {
           if (path[i] == '/')
             {
