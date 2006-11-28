@@ -1522,6 +1522,7 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
   svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
   apr_array_header_t *src_paths = apr_array_make(pool, 1, sizeof(const char *));
+
   /* It doesn't make sense to specify revisions in a move. */
 
   /* ### todo: this check could fail wrongly.  For example,
@@ -1536,7 +1537,6 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
         (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
- 
  
   APR_ARRAY_PUSH(src_paths, const char *) = src_path;
 
