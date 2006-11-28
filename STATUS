@@ -86,4 +86,11 @@ Candidate changes:
     Votes:
       +1: glasser
 
+  * r22466
+    Fix issue #2666, allowing Neon 0.26.2 without complaint.
+    Justification:
+       Otherwise, --disable-neon-version-check is required.
+    Votes:
+      +1: dlr
+
 Approved changes:
