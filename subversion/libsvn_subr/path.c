@@ -466,11 +466,8 @@ svn_path_is_root(const char *path, apr_size_t len)
                 return FALSE;
             }
         }
-      if (segments <= 1)
-        return TRUE;
-      else
-        return FALSE;
-     }
+      return (segments <= 1);
+    }
 #endif /* WIN32 or Cygwin */
  
   return FALSE;
