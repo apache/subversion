@@ -1991,6 +1991,8 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *
  * Other arguments are the same as svn_client_copy3().
  *
+ * This operation is atomic, either all paths will be copied, or none. 
+ *
  * @since New in 1.5.
  */
 svn_error_t *
@@ -2123,6 +2125,8 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * Each one of @a src_paths must be a file or directory under version
  * control, or the URL of a versioned item in the repository.  They
  * must also all be of the same type, e.g., all URLs or all WC paths.
+ *
+ * This operation is atomic, either all paths will be moved, or none.
  *
  * @a dst_dir must be a directory.
  *
