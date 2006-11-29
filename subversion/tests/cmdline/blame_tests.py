@@ -352,7 +352,7 @@ def blame_ignore_whitespace(sbox):
                                      'blame', '-x', '-w', file_path)
 
   # commit some changes
-  svntest.main.file_write(file_path
+  svntest.main.file_write(file_path,
                           " A  a   \n"
                           "Xxxx X\n"
                           "   Bb b  \n"
