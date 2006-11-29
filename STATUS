@@ -101,4 +101,11 @@ Candidate changes:
     Votes:
       +1: dlr, blair
 
+  * r22501
+    Fix script used to build our Solaris package.
+    Justification:
+      Simple fix, with the script completely broken as-is.
+    Votes:
+      +1: dlr
+
 Approved changes:
