@@ -3921,7 +3921,7 @@ def avoid_repeated_merge_using_inherited_merge_info(sbox):
   A_B_F_path = os.path.join(A_B_path, 'F')
   copy_of_B_path = os.path.join(A_path, 'copy-of-B')
 
-  # Create a deeper directory structure, bringing the WC to rev 3.
+  # Create a deeper directory structure.
   expected_status = create_deep_trees(wc_dir)
 
   # Edit alpha and commit it, creating revision 4.
@@ -4045,7 +4045,7 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
   A_B_F_E_path = os.path.join(A_B_F_path, 'E')
   copy_of_B_path = os.path.join(A_path, 'copy-of-B')
 
-  # Create a deeper directory structure, bringing the WC to rev 3.
+  # Create a deeper directory structure.
   expected_status = create_deep_trees(wc_dir)
 
   # Edit alpha and commit it, creating revision 4.
