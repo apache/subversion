@@ -379,9 +379,7 @@ def setrevprop(sbox):
 
   # Try an author property modification.
   foo_path = os.path.join(sbox.wc_dir, "foo")
-  fp = open(foo_path, "w")
-  fp.write("foo")
-  fp.close()
+  svntest.main.file_write(foo_path, "foo")
 
   output, errput = svntest.main.run_svnadmin("setrevprop", sbox.repo_dir,
                                              "-r0", "svn:author", foo_path)

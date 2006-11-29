@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -96,9 +96,7 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 2 
   but with multiple lines
   to test the code"""
-  log_file=open(msg_file, 'w')
-  log_file.write(msg)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg)
   svntest.main.file_append(iota_path, "2")
   svntest.main.run_svn(None, 'ci', '-F', msg_file)
   svntest.main.run_svn(None, 'up')
@@ -115,9 +113,7 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 4 
   but with multiple lines
   to test the code"""
-  log_file=open(msg_file, 'w')
-  log_file.write(msg)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg)
   svntest.main.file_append(iota_path, "4")
   svntest.main.file_append(epsilon_path, "4")
   svntest.main.run_svn(None, 'add', epsilon_path)
@@ -134,9 +130,7 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 6 
   but with multiple lines
   to test the code"""
-  log_file=open(msg_file, 'w')
-  log_file.write(msg)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg)
   svntest.main.run_svn(None, 'ps', 'blue', 'azul', B_path)  
   svntest.main.file_append(psi_path, "6")
   svntest.main.run_svn(None, 'ci', '-F', msg_file)
@@ -152,9 +146,7 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 8 
   but with multiple lines
   to test the code"""
-  log_file=open(msg_file, 'w')
-  log_file.write(msg)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg)
   svntest.main.file_append(iota_path, "8")
   svntest.main.file_append(rho_path, "8")
   svntest.main.run_svn(None, 'add', rho_path)
@@ -572,9 +564,7 @@ def log_through_copyfrom_history(sbox):
   but with multiple lines
   to test the code"""
 
-  log_file=open(msg_file, 'w')
-  log_file.write(msg2)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg2)
   svntest.main.file_append(mu_path, "2")
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
                                      '-F', msg_file)
@@ -583,18 +573,14 @@ def log_through_copyfrom_history(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
                                      '-m', "Log message for revision 3")
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu2_path)
-  log_file=open(msg_file, 'w')
-  log_file.write(msg4)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg4)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
                                      '-F', msg_file)
   svntest.main.file_append(mu_path, "5")
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
                                      '-m', "Log message for revision 5")
 
-  log_file=open(msg_file, 'w')
-  log_file.write(msg6)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg6)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', '-r', '5', mu_URL, mu2_URL,
                                      '-F', msg_file)

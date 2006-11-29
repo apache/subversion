@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -446,7 +446,7 @@ def merge_file_into_symlink(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
                                         None, None, None, None, wc_dir)
 
-  open(gamma_path, 'w+').write("changed file")
+  svntest.main.file_write(gamma_path, 'changed file', 'w+')
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Sending'),

@@ -85,10 +85,9 @@ def update_binary_file(sbox):
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
+  # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
-  fp.write(theta_contents)    # write png filedata into 'A/theta'
-  fp.close()
+  svntest.main.file_write(theta_path, theta_contents)
   
   svntest.main.run_svn(None, 'add', theta_path)  
 
@@ -209,13 +208,9 @@ def update_binary_file_2(sbox):
 
   # Write our two files' contents out to disk, in A/theta and A/zeta.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
-  fp.write(theta_contents)    
-  fp.close()
+  svntest.main.file_write(theta_path, theta_contents)
   zeta_path = os.path.join(wc_dir, 'A', 'zeta')
-  fp = open(zeta_path, 'w')
-  fp.write(zeta_contents)
-  fp.close()
+  svntest.main.file_write(zeta_path, zeta_contents)
 
   # Now, `svn add' those two files.
   svntest.main.run_svn(None, 'add', theta_path, zeta_path)  
@@ -1645,7 +1640,7 @@ def conflict_markers_matching_eol(sbox):
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
                           [crlf, '\015', '\n', '\012']):
     # rewrite file mu and set the eol-style property.
-    open(mu_path, 'wb').write("This is the file 'mu'."+ eolchar)
+    svntest.main.file_write(mu_path, "This is the file 'mu'."+ eolchar, 'wb')
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
 
     expected_disk.add({
