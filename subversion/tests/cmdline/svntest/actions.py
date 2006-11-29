@@ -204,7 +204,8 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
       match_or_fail(message, output_type.upper(), expected, actual)
     elif expected == SVNAnyOutput:
       if len(actual) == 0:
-        if message is not None: print message
+        if message is not None:
+          print message
         raise raisable
     elif expected is not None:
       raise SVNIncorrectDatatype("Unexpected type for %s data" % output_type)
@@ -892,7 +893,8 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None):
     map(sys.stdout.write, actual)
 
 def compare_and_display_lines(message, label, expected, actual):
-  'Compare two sets of output lines, and print them if they differ.'
+  """Compare two sets of output lines, and print them if they differ.
+  MESSAGE is ignored if None."""
   # This catches the None vs. [] cases
   if expected is None: exp = []
   else: exp = expected

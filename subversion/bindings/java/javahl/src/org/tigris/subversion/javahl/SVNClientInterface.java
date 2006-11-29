@@ -262,6 +262,14 @@ public interface SVNClientInterface
     void notification2(Notify2 notify);
 
     /**
+     * Set the progress callback.
+     *
+     * @param listener The progress callback.
+     * @since 1.5
+     */
+    void setProgressListener(ProgressListener listener);
+
+    /**
      * Sets the commit message handler. This allows more complex commit message
      * with the list of the elements to be commited as input.
      * @param messageHandler    callback for entering commit messages

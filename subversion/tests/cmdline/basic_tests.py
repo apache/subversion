@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, stat, sys, re, os.path
+import shutil, stat, re, os
 
 # Our testing module
 import svntest
@@ -442,21 +442,17 @@ def basic_merging_update(sbox):
   # Make local mods to wc_backup by recreating mu and rho
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
-  fp_mu = open(mu_path_backup, 'w+')
 
   # open in 'truncate to zero then write" mode
-  backup_mu_text='This is the new line 1 in the backup copy of mu'
+  backup_mu_text = 'This is the new line 1 in the backup copy of mu'
   for x in range(2,11):
     backup_mu_text = backup_mu_text + '\nThis is line ' + `x` + ' in mu'
-  fp_mu.write(backup_mu_text)
-  fp_mu.close()
+  svntest.main.file_write(mu_path_backup, backup_mu_text, 'w+')
   
-  fp_rho = open(rho_path_backup, 'w+') # now open rho in write mode
-  backup_rho_text='This is the new line 1 in the backup copy of rho'
+  backup_rho_text = 'This is the new line 1 in the backup copy of rho'
   for x in range(2,11):
     backup_rho_text = backup_rho_text + '\nThis is line ' + `x` + ' in rho'
-  fp_rho.write(backup_rho_text)
-  fp_rho.close()
+  svntest.main.file_write(rho_path_backup, backup_rho_text, 'w+')
   
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -740,7 +736,7 @@ def basic_revert(sbox):
 
   ### Most of the rest of this test is ineffective, due to the
   ### problems described in issue #1611.
-  svntest.actions.run_and_verify_svn("", None, [], 'rm', E_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', E_path)
   svntest.main.safe_rmtree(E_path)
   expected_status.tweak('A/B/E', status='D ')
   expected_status.tweak('A/B/E', wc_rev='?')

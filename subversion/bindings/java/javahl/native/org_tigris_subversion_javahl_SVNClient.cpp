@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -28,6 +28,7 @@
 #include "Revision.h"
 #include "Notify.h"
 #include "Notify2.h"
+#include "ProgressListener.h"
 #include "CommitMessage.h"
 #include "Prompter.h"
 #include "Targets.h"
@@ -410,6 +411,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_notification
     }
     cl->notification(notify);
 }
+
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    notification2
@@ -432,6 +434,31 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_notification2
     }
     cl->notification2(notify2);
 }
+
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    setProgressListener
+ * Signature: (Lorg/tigris/subversion/javahl/ProgressListener;)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_setProgressListener
+  (JNIEnv* env, jobject jthis, jobject jprogressListener)
+{
+    JNIEntry(SVNClient, setProgressListener);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return;
+    }
+    ProgressListener *listener =
+        ProgressListener::makeCProgressListener(jprogressListener);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    cl->setProgressListener(listener);
+}
+
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    commitMessageHandler

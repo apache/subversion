@@ -736,8 +736,12 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
   return svn_error_create(APR_EGENERAL, NULL, _("Unspecified error message"));
 }
 
+/* Implements the serf_response_handler_t interface.  Wait for HTTP
+   response status and headers, and invoke CTX->response_handler() to
+   carry out operation-specific processing.  Afterwards, check for
+   connection close. */
 static apr_status_t
-handler_default(serf_request_t *request,
+handle_response(serf_request_t *request,
                 serf_bucket_t *response,
                 void *baton,
                 apr_pool_t *pool)
@@ -746,9 +750,9 @@ handler_default(serf_request_t *request,
   serf_status_line sl;
   apr_status_t status;
 
-  /* Uh-oh.  Our connection died.  Requeue. */
   if (!response)
     {
+      /* Uh-oh.  Our connection died.  Requeue. */
       if (ctx->response_error)
         {
           status = ctx->response_error(request, response, 0,
@@ -817,16 +821,23 @@ handler_default(serf_request_t *request,
                                      pool);
     }
 
-  if (APR_STATUS_IS_EOF(status)) {
+  if (APR_STATUS_IS_EOF(status))
+    {
       status = svn_ra_serf__is_conn_closing(response);
-  }
+    }
 
   return status;
-
 }
 
+/* Implements the serf_request_setup_t interface (which sets up both a
+   request and its response handler callback).  If the CTX->delegate()
+   callback is non-NULL, invoke it to carry out the majority of the
+   serf_request_setup_t implementation.  Otherwise, perform default
+   setup, with special handling for HEAD requests, and finer-grained
+   callbacks invoked (if non-NULL) to produce the request headers and
+   body. */
 static apr_status_t
-setup_default(serf_request_t *request,
+setup_request(serf_request_t *request,
               void *setup_baton,
               serf_bucket_t **req_bkt,
               serf_response_acceptor_t *acceptor,
@@ -881,17 +892,17 @@ setup_default(serf_request_t *request,
         }
     }
 
-  *handler = handler_default;
+  *handler = handle_response;
   *handler_baton = ctx;
 
   return APR_SUCCESS;
 }
 
-serf_request_t*
+serf_request_t *
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
   return serf_connection_request_create(handler->conn->conn,
-                                        setup_default, handler);
+                                        setup_request, handler);
 }
 
 svn_error_t *

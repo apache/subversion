@@ -511,6 +511,13 @@ If t, their full path name will be displayed, else only the filename."
   :type 'string
   :group 'psvn)
 
+(defvar svn-status-custom-hide-function nil
+  "A function that receives a line-info and decides whether to hide that line.
+See psvn.el for an example function.")
+;; (put 'svn-status-custom-hide-function 'risky-local-variable t)
+;; already implied by "-function" suffix
+
+
 ;; Use the normally used mode for files ending in .~HEAD~, .~BASE~, ...
 (add-to-list 'auto-mode-alist '("\\.~?\\(HEAD\\|BASE\\|PREV\\)~?\\'" ignore t))
 
@@ -570,9 +577,6 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-commit-rev-number nil)
 (defvar svn-status-operated-on-dot nil)
 (defvar svn-status-elided-list nil)
-(defvar svn-status-custom-hide-function nil)
-;; (put 'svn-status-custom-hide-function 'risky-local-variable t)
-;; already implied by "-function" suffix
 (defvar svn-status-get-specific-revision-file-info)
 (defvar svn-status-last-output-buffer-name)
 (defvar svn-status-pre-run-svn-buffer nil)
@@ -605,6 +609,8 @@ This is nil if the log entry is for a new commit.")
 (defvar ediff-after-quit-destination-buffer)
 
 ;; That is an example for the svn-status-custom-hide-function:
+;; Note: For many cases it is a better solution to ignore files or
+;; file extensions via the svn-ignore properties (on P i, P I)
 ;; (setq svn-status-custom-hide-function 'svn-status-hide-pyc-files)
 ;; (defun svn-status-hide-pyc-files (info)
 ;;   "Hide all pyc files in the `svn-status-buffer-name' buffer."
@@ -1962,11 +1968,16 @@ The result will be \"K\", \"O\", \"T\", \"B\" or nil."
 (defun svn-status-line-info->is-visiblep (line-info)
   (not (or (svn-status-line-info->hide-because-unknown line-info)
            (svn-status-line-info->hide-because-unmodified line-info)
+           (svn-status-line-info->hide-because-custom-hide-function line-info)
            (svn-status-line-info->hide-because-user-elide line-info))))
 
 (defun svn-status-line-info->hide-because-unknown (line-info)
   (and svn-status-hide-unknown
        (eq (svn-status-line-info->filemark line-info) ??)))
+
+(defun svn-status-line-info->hide-because-custom-hide-function (line-info)
+  (and svn-status-custom-hide-function
+       (apply svn-status-custom-hide-function (list line-info))))
 
 (defun svn-status-line-info->hide-because-unmodified (line-info)
   ;;(message " %S %S %S %S - %s" svn-status-hide-unmodified (svn-status-line-info->propmark line-info) ?_

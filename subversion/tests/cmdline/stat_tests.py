@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import sys, os.path, re, time
+import os, re, time
 
 # Our testing module
 import svntest
@@ -940,19 +940,19 @@ def status_add_plus_conflict(sbox):
 
   branch_file = os.path.join(wc_dir, 'branch', 'file')
 
-  open(branch_file, 'wb+').write("line 1\nline2\nline3\n")
+  svntest.main.file_write(branch_file, "line 1\nline2\nline3\n", 'wb+')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'add', branch_file)
 
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      branch_file, '-m', 'rev 3')
 
-  open(branch_file, 'wb').write("line 1\nline3\n")
+  svntest.main.file_write(branch_file, "line 1\nline3\n", 'wb')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      branch_file, '-m', 'rev 4')
 
-  open(branch_file, 'wb').write("line 1\nline2\n")
+  svntest.main.file_write(branch_file, "line 1\nline2\n", 'wb')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'commit',
                                      branch_file, '-m', 'rev 5')
@@ -985,7 +985,7 @@ def inconsistent_eol(sbox):
   wc_dir = sbox.wc_dir
   iota_path = os.path.join(wc_dir, "iota")
 
-  open(iota_path, "wb").write("line 1\nline 2\n")
+  svntest.main.file_write(iota_path, "line 1\nline 2\n", "wb")
 
   svntest.actions.run_and_verify_svn(None,
                                      "property 'svn:eol-style' set on.*iota",
@@ -1005,7 +1005,7 @@ def inconsistent_eol(sbox):
                                         None, None, None, None, wc_dir)
 
   # Make the eol style inconsistent and verify that status says nothing.
-  open(iota_path, "wb").write("line 1\nline 2\r\n")
+  svntest.main.file_write(iota_path, "line 1\nline 2\r\n", "wb")
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 #----------------------------------------------------------------------

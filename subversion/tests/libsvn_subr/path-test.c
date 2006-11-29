@@ -40,12 +40,10 @@ test_path_is_child(const char **msg,
    */
 #define NUM_TEST_PATHS 24
 
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
 #define RUN_NUM_TEST_PATHS NUM_TEST_PATHS
-#elif defined(__CYGWIN__)
-#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS - 10
 #else
-#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS - 10 - 4
+#define RUN_NUM_TEST_PATHS NUM_TEST_PATHS - 14
 #endif
 
   static const char * const paths[NUM_TEST_PATHS] = { 
@@ -64,7 +62,6 @@ test_path_is_child(const char **msg,
     "//srv2",
     "//srv/shr",
     "//srv/shr/fld",
-    /* Win32 only */
     "H:/foo/bar",
     "H:/foo/baz",
     "H:/foo/bar/baz",
@@ -185,14 +182,12 @@ test_path_split(const char **msg,
     { SVN_EMPTY_PATH,   SVN_EMPTY_PATH,   SVN_EMPTY_PATH },
     { "/flu\\b/\\blarg", "/flu\\b",       "\\blarg" },
     { "/",               "/",             "/" },
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",             "X:/",           "X:/" },
     { "X:/foo",          "X:/",           "foo" },
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
     { "//srv/shr",       "//srv/shr",     "//srv/shr" },
     { "//srv",           "//srv",         "//srv" },
-    { "//srv/shr/fld",   "//srv/shr/",    "fld" },
+    { "//srv/shr/fld",   "//srv/shr",     "fld" },
 #endif /* WIN32 or Cygwin */
   };
   
@@ -529,7 +524,7 @@ test_join(const char **msg,
     { "abc", SVN_EMPTY_PATH, "abc" },
     { SVN_EMPTY_PATH, "/abc", "/abc" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH, SVN_EMPTY_PATH },
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",SVN_EMPTY_PATH, "X:/" },
     { "X:/","abc", "X:/abc" },
     { "X:/", "/def", "/def" },
@@ -544,8 +539,6 @@ test_join(const char **msg,
     { "X:abc", "/", "/" },
     { "X:abc", "X:/", "X:/" },
     { "X:abc", "X:/def", "X:/def" },
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
     { "//srv/shr",     "fld",     "//srv/shr/fld" },
     { "//srv",         "shr/fld", "//srv/shr/fld" },
     { "//srv/shr/fld", "subfld",  "//srv/shr/fld/subfld" },
@@ -620,7 +613,7 @@ test_join(const char **msg,
   TEST_MANY((pool, SVN_EMPTY_PATH, "/", SVN_EMPTY_PATH, NULL), "/");
   TEST_MANY((pool, SVN_EMPTY_PATH, SVN_EMPTY_PATH, "/", NULL), "/");
 
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
   TEST_MANY((pool, "X:/", "def", "ghi", NULL), "X:/def/ghi");
   TEST_MANY((pool, "abc", "X:/", "ghi", NULL), "X:/ghi");
   TEST_MANY((pool, "abc", "def", "X:/", NULL), "X:/");
@@ -639,8 +632,6 @@ test_join(const char **msg,
   TEST_MANY((pool, "X:", SVN_EMPTY_PATH, "ghi", NULL), "X:ghi");
   TEST_MANY((pool, "X:", "def", SVN_EMPTY_PATH, NULL), "X:def");
   TEST_MANY((pool, SVN_EMPTY_PATH, "X:", "ghi", NULL), "X:ghi");
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
   TEST_MANY((pool, "//srv/shr", "def", "ghi", NULL), "//srv/shr/def/ghi");
   TEST_MANY((pool, "//srv", "shr", "def", "ghi", NULL), "//srv/shr/def/ghi");
   TEST_MANY((pool, "//srv/shr/fld", "def", "ghi", NULL), "//srv/shr/fld/def/ghi");
@@ -682,13 +673,11 @@ test_basename(const char **msg,
     { "/b/a", "a" },
     { "/", "/" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
     { "X:/", "X:/" },
     { "X:/abc", "abc" },
     { "X:", "X:" },
     { "X:abc", "abc" },
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
     { "//srv/shr",      "//srv/shr" },
     { "//srv",          "//srv" },
     { "//srv/shr/fld",  "fld" },
@@ -739,21 +728,19 @@ test_dirname(const char **msg,
     { "/b/a", "/b" },
     { "/", "/" },
     { SVN_EMPTY_PATH, SVN_EMPTY_PATH },
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
     { "X:/", "X:/" },
     { "X:/abc", "X:/" },
     { "X:abc", "X:" },
     { "X:", "X:" },
+    { "//srv/shr",      "//srv/shr" },
+    { "//srv",          "//srv" },
+    { "//srv/shr/fld",  "//srv/shr" },
+    { "//srv/shr/fld/subfld", "//srv/shr/fld" },
 #else
     /* on non-Windows platforms, ':' is allowed in pathnames */
     { "X:", "" },
     { "X:abc", "" },
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
-    { "//srv/shr",      "//srv/shr" },
-    { "//srv",          "//srv" },
-    { "//srv/shr/fld",  "//srv/shr/" },
-    { "//srv/shr/fld/subfld", "//srv/shr/fld" },
 #endif /* WIN32 or Cygwin */
   };
 
@@ -885,13 +872,11 @@ test_canonicalize(const char **msg,
     { "//hst/foo",            "//hst/foo" },
     { "//hst",                "/hst" },
     { "//hst/./",             "/hst" },
-#endif /* WIN32 or Cygwin */
-#if defined(WIN32)
     { "X:/foo",               "X:/foo" },
     { "X:/",                  "X:/" },
     { "X:",                   "X:" },
     { "X:foo",                "X:foo" },
-#endif /* WIN32 */
+#endif /* WIN32 or Cygwin */
     { NULL, NULL }
   };
   int i;
@@ -932,17 +917,15 @@ test_remove_component(const char **msg,
     { "foo/bar",              "foo" },
     { "/foo/bar",             "/foo" },
     { "/foo",                 "/" },
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
     { "X:/foo/bar",           "X:/foo" },
     { "X:/foo",               "X:/" },
     { "X:/",                  "X:/" },
     { "X:foo",                "X:" },
     { "X:",                   "X:" },
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
     { "//srv/shr",            "//srv/shr" },
     { "//srv",                "//srv" },
-    { "//srv/shr/fld",        "//srv/shr/" },
+    { "//srv/shr/fld",        "//srv/shr" },
     { "//srv/shr/fld/subfld", "//srv/shr/fld" },
 #endif /* WIN32 or Cygwin */
     { NULL, NULL }
@@ -990,14 +973,11 @@ test_is_root(const char **msg,
     { "/foo/bar",      FALSE },
     { "/foo",          FALSE },
     { "/",             TRUE },
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
     { "X:/foo",        FALSE },
     { "X:/",           TRUE },
     { "X:foo",         FALSE },
     { "X:",            TRUE },
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
-    { "//srv/shr/",    TRUE },
     { "//srv/shr",     TRUE },
     { "//srv",         TRUE },
     { "//srv/shr/fld", FALSE },
@@ -1014,7 +994,7 @@ test_is_root(const char **msg,
     {
       svn_boolean_t retval;
 
-      retval = svn_path_is_root(tests[i].path, strlen(tests[i].path), pool);
+      retval = svn_path_is_root(tests[i].path, strlen(tests[i].path));
       if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -1044,15 +1024,12 @@ test_is_absolute(const char **msg,
     { "/",             TRUE },
     { "foo/bar",       FALSE },
     { "foo",           FALSE },
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
     { "X:/foo",        TRUE },
     { "X:/",           TRUE },
     { "X:foo",         TRUE },
     { "X:foo/bar",     TRUE },
     { "X:",            TRUE },
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
-    { "//srv/shr/",    TRUE },
     { "//srv/shr",     TRUE },
     { "//srv",         TRUE },
     { "//srv/shr/fld", TRUE },
@@ -1069,7 +1046,7 @@ test_is_absolute(const char **msg,
     {
       svn_boolean_t retval;
 
-      retval = svn_path_is_absolute(tests[i].path, strlen(tests[i].path), pool);
+      retval = svn_path_is_absolute(tests[i].path, strlen(tests[i].path));
       if (tests[i].result != retval)
         return svn_error_createf
           (SVN_ERR_TEST_FAILED, NULL,
@@ -1158,15 +1135,13 @@ test_path_is_ancestor(const char **msg,
     { SVN_EMPTY_PATH,    SVN_EMPTY_PATH,  TRUE},
     { "/",               "/",             TRUE},
                                          
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",             "X:/",           TRUE},
     { "X:/foo",          "X:/",           FALSE},
     { "X:/",             "X:/foo",        TRUE},
     { "X:",              "X:foo",         TRUE},
     { "X:foo",           "X:bar",         FALSE},
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
-    { "//srv/shr/",      "//srv",         FALSE},
+    { "//srv/shr",       "//srv",         FALSE},
     { "//srv/shr",       "//srv/shr/fld", TRUE },
     { "//srv",           "//srv/shr/fld", TRUE },
     { "//srv/shr/fld",   "//srv/shr",     FALSE },
@@ -1267,7 +1242,7 @@ test_compare_paths(const char **msg,
     { "/foo",         "/foo/bar/boo", -1},
     { "foo",          "/foo",         1},
 
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",          "X:/",           0},
     { "X:/foo",       "X:/foo",        0},
     { "X:foo",        "X:foo",         0},
@@ -1275,8 +1250,6 @@ test_compare_paths(const char **msg,
     { "X:",           "X:foo",         -1},
     { "X:foo",        "X:",            1},
     { "X:/foo",       "X:/",           1},
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
     { "//srv/shr",    "//srv",         1},
     { "//srv/shr",    "//srv/shr/fld", -1 },
     { "//srv/shr/fld", "//srv/shr",    1 },
@@ -1339,7 +1312,7 @@ test_get_longest_ancestor(const char **msg,
     { "file:///A/C",    "file:///B/D",     ""},
     { "file:///A/C",    "file:///A/D",     "file:///A"},
 
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
     { "X:/",            "X:/",             "X:/"},
     { "X:/foo",         "X:/",             "X:/"},
     { "X:/foo/bar/A/D/H/psi", "X:/foo/bar/A/B", "X:/foo/bar/A" },
@@ -1349,9 +1322,7 @@ test_get_longest_ancestor(const char **msg,
     { "X:",             "X:/",             ""},
     { "X:foo",          "X:bar",           "X:"},
     { "X:foo/bar",      "X:foo/bar/boo",   "X:foo/bar"},
-#endif /* WIN32 */
-#if defined(WIN32) || defined(__CYGWIN__)
-    { "//srv/shr/",      "//srv",          "//srv"},
+    { "//srv/shr",       "//srv",          "//srv"},
     { "//srv/shr",       "//srv/shr/fld",  "//srv/shr" },
     { "//srv",           "//srv/shr/fld",  "//srv" },
     { "//srv/shr/fld",   "//srv/shr",      "//srv/shr" },

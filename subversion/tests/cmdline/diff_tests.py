@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import sys, re, os
 
 # Our testing module
 import svntest
@@ -40,7 +40,7 @@ def check_diff_output(diff_output, name, diff_type):
 
 # On Windows, diffs still display / rather than \ in paths
   if svntest.main.windows == 1:
-    name = string.replace(name, '\\', '/')
+    name = name.replace('\\', '/')
   i_re = re.compile('^Index:')
   d_re = re.compile('^Index: (\\./)?' + name)
   p_re = re.compile('^--- (\\./)?' + name)
@@ -148,7 +148,7 @@ def diff_check_repo_subset(wc_dir, repo_subset, check_fn, do_diff_r):
 
 def update_a_file():
   "update a file"
-  open(os.path.join('A', 'B', 'E', 'alpha'), 'w').write("new atext")
+  svntest.main.file_write(os.path.join('A', 'B', 'E', 'alpha'), "new atext")
   # svntest.main.file_append(, "new atext")
   return 0
 
@@ -271,9 +271,9 @@ def check_replace_a_file(diff_output):
 
 def update_three_files():
   "update three files"
-  open(os.path.join('A', 'D', 'gamma'), 'w').write("new gamma")
-  open(os.path.join('A', 'D', 'G', 'tau'), 'w').write("new tau")
-  open(os.path.join('A', 'D', 'H', 'psi'), 'w').write("new psi")
+  svntest.main.file_write(os.path.join('A', 'D', 'gamma'), "new gamma")
+  svntest.main.file_write(os.path.join('A', 'D', 'G', 'tau'), "new tau")
+  svntest.main.file_write(os.path.join('A', 'D', 'H', 'psi'), "new psi")
   return 0
 
 def check_update_three_files(diff_output):
@@ -704,10 +704,9 @@ def dont_diff_binary_file(sbox):
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
+  # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
-  fp.write(theta_contents)    # write png filedata into 'A/theta'
-  fp.close()
+  svntest.main.file_write(theta_path, theta_contents)
   
   svntest.main.run_svn(None, 'add', theta_path)  
 
@@ -1434,9 +1433,7 @@ def check_for_omitted_prefix_in_path_component(sbox):
 
 
   file_path = os.path.join(prefix_path, "test.txt")
-  f = open(file_path, "w")
-  f.write("Hello\nThere\nIota\n")
-  f.close()
+  svntest.main.file_write(file_path, "Hello\nThere\nIota\n")
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'add', file_path)
@@ -1451,10 +1448,7 @@ def check_for_omitted_prefix_in_path_component(sbox):
                                      'cp', '-m', 'log msg', prefix_url,
                                      other_prefix_url)
 
-  f = open(file_path, "w")
-  f.write("Hello\nWorld\nIota\n")
-  f.close()
-
+  svntest.main.file_write(file_path, "Hello\nWorld\nIota\n")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg', prefix_path)
 
@@ -1485,7 +1479,7 @@ def diff_renamed_file(sbox):
   try:
     pi_path = os.path.join('A', 'D', 'G', 'pi')
     pi2_path = os.path.join('A', 'D', 'pi2')
-    open(pi_path, 'w').write("new pi")
+    svntest.main.file_write(pi_path, "new pi")
 
     svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-m', 'log msg')
@@ -1566,7 +1560,7 @@ def diff_within_renamed_dir(sbox):
     svntest.main.run_svn(None, 'mv', os.path.join('A', 'D', 'G'),
                                      os.path.join('A', 'D', 'I'))
     # svntest.main.run_svn(None, 'ci', '-m', 'log_msg')
-    open(os.path.join('A', 'D', 'I', 'pi'), 'w').write("new pi")
+    svntest.main.file_write(os.path.join('A', 'D', 'I', 'pi'), "new pi")
 
     # Check a repos->wc diff
     diff_output, err_output = svntest.main.run_svn(None, 'diff',
@@ -2381,7 +2375,7 @@ def diff_base_repos_moved(sbox):
 
     # Move, modify and commit a file
     svntest.main.run_svn(None, 'mv', oldfile, newfile)
-    open(newfile, 'w').write("new content\n")
+    svntest.main.file_write(newfile, "new content\n")
     svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m', '')
 
     # Check that a base->repos diff shows deleted and added lines.
@@ -2494,7 +2488,8 @@ def diff_weird_author(sbox):
 
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
-  open(os.path.join(sbox.wc_dir, 'A', 'mu'), 'w').write("new content\n")
+  svntest.main.file_write(os.path.join(sbox.wc_dir, 'A', 'mu'),
+                          "new content\n")
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
     'A/mu': Item(verb='Sending'),
@@ -2540,9 +2535,10 @@ def diff_ignore_whitespace(sbox):
   file_name = "iota"
   file_path = os.path.join(wc_dir, file_name)
 
-  open(file_path, 'w').write("Aa\n"
-                             "Bb\n"
-                             "Cc\n")
+  svntest.main.file_write(file_path,
+                          "Aa\n"
+                          "Bb\n"
+                          "Cc\n")
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
       })
@@ -2551,18 +2547,20 @@ def diff_ignore_whitespace(sbox):
                                         None, None, wc_dir)
 
   # only whitespace changes, should return no changes
-  open(file_path, 'w').write(" A  a   \n"
-                             "   B b  \n"
-                             "    C    c    \n")
+  svntest.main.file_write(file_path,
+                          " A  a   \n"
+                          "   B b  \n"
+                          "    C    c    \n")
 
   svntest.actions.run_and_verify_svn(None, [], [],
                                      'diff', '-x', '-w', file_path)
   
   # some changes + whitespace
-  open(file_path, 'w').write(" A  a   \n"
-                             "Xxxx X\n"
-                             "   Bb b  \n"
-                             "    C    c    \n")
+  svntest.main.file_write(file_path,
+                          " A  a   \n"
+                          "Xxxx X\n"
+                          "   Bb b  \n"
+                          "    C    c    \n")
   expected_output = [
     "Index: svn-test-work/working_copies/diff_tests-39/iota\n",
     "===================================================================\n",
@@ -2587,9 +2585,10 @@ def diff_ignore_eolstyle(sbox):
   file_name = "iota"
   file_path = os.path.join(wc_dir, file_name)
 
-  open(file_path, 'w').write("Aa\n"
-                             "Bb\n"
-                             "Cc\n")
+  svntest.main.file_write(file_path,
+                          "Aa\n"
+                          "Bb\n"
+                          "Cc\n")
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
       })
@@ -2598,9 +2597,10 @@ def diff_ignore_eolstyle(sbox):
                                         None, None, wc_dir)
 
   # commit only eol changes
-  open(file_path, 'w').write("Aa\r"
-                             "Bb\r"
-                             "Cc")
+  svntest.main.file_write(file_path,
+                          "Aa\r"
+                          "Bb\r"
+                          "Cc")
 
   expected_output = [
     "Index: svn-test-work/working_copies/diff_tests-40/iota\n",

@@ -2,7 +2,7 @@
  * ra_dav.h :  private declarations for the RA/DAV module
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -177,6 +177,72 @@ typedef struct {
 
 } svn_ra_dav__session_t;
 
+
+typedef struct {
+  ne_request *req;                      /* neon request structure */
+  ne_session *ne_sess;                  /* neon session structure */
+  svn_ra_dav__session_t *sess;          /* DAV session structure */
+  const char *method;
+  const char *url;
+  svn_error_t *err;                     /* error encountered while executing
+                                           the request */
+  svn_boolean_t marshalled_error;       /* TRUE if the error was server-side */
+  apr_pool_t *pool;                     /* where this struct is allocated */
+  apr_pool_t *iterpool;                 /* iteration pool
+                                           for use within callbacks */
+} svn_ra_dav__request_t;
+
+
+/* Statement macro to set the request error,
+ * making sure we don't leak any in case we encounter more than one error.
+ *
+ * Sets the 'err' field of REQ to the value obtained by evaluating NEW_ERR.
+ */
+#define SVN_RA_DAV__REQ_ERR(req, new_err)    \
+   do {                                      \
+     svn_error_t *svn_err__tmp = (new_err);  \
+     if ((req)->err)                         \
+       svn_error_clear(svn_err__tmp);        \
+     else                                    \
+       (req)->err = svn_err__tmp;            \
+   } while (0)
+
+
+/* Allocate an internal request structure allocated in a newly created
+ * subpool of POOL.  Create an associated neon request with the parameters
+ * given.
+ *
+ * Register a pool cleanup for any allocated Neon resources.
+ */
+svn_ra_dav__request_t *
+svn_ra_dav__request_create(ne_session *ne_sess, svn_ra_dav__session_t *sess,
+                           const char *method, const char *url,
+                           apr_pool_t *pool);
+
+/* Add a response body reader function to REQ.
+ *
+ * Use the associated session parameters to determine the use of
+ * compression.
+ *
+ * Register a pool cleanup on the pool of REQ to clean up any allocated
+ * Neon resources.
+ */
+void
+svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
+                                     ne_accept_response accpt,
+                                     ne_block_reader reader,
+                                     void *userdata);
+
+/* Create an xml parser for use with REQ.
+ *
+ * Register a pool cleanup on the pool of REQ to clean up any allocated
+ * Neon resources
+ */
+ne_xml_parser *
+svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req);
+
+/* Destroy request REQ and any associated resources */
+#define svn_ra_dav__request_destroy(req) svn_pool_destroy((req)->pool)
 
 /* Id used with ne_set_session_private() and ne_get_session_private()
    to retrieve the userdata (which is currently the RA session baton!) */
@@ -533,9 +599,15 @@ svn_error_t * svn_ra_dav__get_activity_collection
 /* Call ne_set_request_body_pdovider on REQ with a provider function
  * that pulls data from BODY_FILE.
  */
-svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
+svn_error_t *svn_ra_dav__set_neon_body_provider(svn_ra_dav__request_t *req,
                                                 apr_file_t *body_file);
 
+
+/* Allocate a Neon xml parser.
+ *
+ * Register a pool cleanup for any allocated Neon resources.
+ */
+ne_xml_parser *svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req);
 
 /** Find a given element in the table of elements.
  *
@@ -833,36 +905,15 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
                                attr, \
                                elem))
 
-/* Callback to get data from a Neon request after it has been sent.
-
-   REQUEST is the request, DISPATCH_RETURN_VAL is the value that
-   ne_request_dispatch(REQUEST) returned to the caller.
-
-   USERDATA is a closure baton. */
-typedef svn_error_t *
-svn_ra_dav__request_interrogator(ne_request *request,
-                                 int dispatch_return_val,
-                                 void *userdata);
-
 /* Given a neon REQUEST and SESSION, run the request; if CODE_P is
    non-null, return the http status code in *CODE_P.  Return any
    resulting error (from neon, a <D:error> body response, or any
-   non-2XX status code) as an svn_error_t, otherwise return NULL.  
-   The request will be freed either way.
-
-   SESSION, METHOD, and URL are required as well, as they are used to
-   describe the possible error.  The error will be allocated in POOL.
+   non-2XX status code) as an svn_error_t, otherwise return NULL.
 
    OKAY_1 and OKAY_2 are the "acceptable" result codes. Anything other
    than one of these will generate an error. OKAY_1 should always be
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
-
-   If INTERROGATOR is non-NULL, invoke it with the Neon request, the
-   dispatch result, and INTERROGATOR_BATON.  This is done regardless of
-   whether the request appears successful or not.  If the interrogator
-   has an error result, return that error immediately, after freeing the
-   request.
 
    ### not super sure on this "okay" stuff, but it means that the request
    ### dispatching code can generate much better errors than the callers
@@ -872,24 +923,19 @@ svn_ra_dav__request_interrogator(ne_request *request,
  */
 svn_error_t *
 svn_ra_dav__request_dispatch(int *code_p,
-                             ne_request *request,
-                             ne_session *session,
-                             const char *method,
-                             const char *url,
+                             svn_ra_dav__request_t *request,
                              int okay_1,
                              int okay_2,
-                             svn_ra_dav__request_interrogator interrogator,
-                             void *interrogator_baton,
                              apr_pool_t *pool);
 
-/* Grab the Location HTTP header from the Neon's REQUEST structure,
-   and return it in *LOCATION (expected to be passed in as type char **).
-   Implements the svn_ra_dav__request_interrogator interface (ignoring
-   the DISPATCH_RETURN_VAL parameter). */
-svn_error_t *
-svn_ra_dav__interrogate_for_location(ne_request *request,
-                                     int dispatch_return_val,
-                                     void *location);
+/* Return the Location HTTP header or NULL if none was sent.
+ *
+ * Do allocations in POOL.
+ */
+const char *
+svn_ra_dav__request_get_location(svn_ra_dav__request_t *request,
+                                 apr_pool_t *pool);
+
 
 /* Give PARSER the ability to parse a mod_dav_svn <D:error> response
    body in the case of a non-2XX response to REQUEST.  If a <D:error>

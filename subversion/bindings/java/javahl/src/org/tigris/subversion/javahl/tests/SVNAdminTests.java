@@ -17,9 +17,10 @@
  */
 package org.tigris.subversion.javahl.tests;
 
-import java.io.File;
+import java.io.IOException;
 import junit.framework.TestCase;
 
+import org.tigris.subversion.javahl.Revision;
 import org.tigris.subversion.javahl.SubversionException;
 import org.tigris.subversion.javahl.SVNAdmin;
 
@@ -28,67 +29,25 @@ import org.tigris.subversion.javahl.SVNAdmin;
  *
  * More methodes for testing are still needed
  */
-public class SVNAdminTests extends TestCase
+public class SVNAdminTests extends SVNTests
 {
-    private static final String REPOS_PATH = "testrep";
-
-    /**
-     * the objects, which is going to be tested
-     */
-    private SVNAdmin testee;
-
-    /**
-     * setup the test
-     * @throws Exception
-     */
-    protected void setUp() throws Exception
-    {
-        super.setUp();
-        testee = new SVNAdmin();
-    }
-
-    /**
-     * cleanp after the test
-     * @throws Exception
-     */
-    protected void tearDown() throws Exception
-    {
-        testee.dispose();
-        super.tearDown();
-    }
-
     /**
      * Test the basic SVNAdmin.create functionality
-     * @throws Throwable
+     * @exception SubversionException
      */
     public void testCreate()
-        throws SubversionException
+        throws SubversionException, IOException
     {
-        createRepository(REPOS_PATH);
-        File reposDir = new File(REPOS_PATH);
-        assertTrue("repository exists", reposDir.exists());
-        removeRepository(REPOS_PATH);
-        assertFalse("repository deleted", reposDir.exists());
+        OneTest thisTest = new OneTest(false);
+        assertTrue("repository exists", thisTest.getRepository().exists());
     }
 
-    /**
-     * Create a repository at <code>reposPath</code>.
-     *
-     * @param reposPath The path to the repository.
-     */
-    protected void createRepository(String reposPath)
-        throws SubversionException
+    public void testSetRevProp()
+        throws SubversionException, IOException
     {
-        testee.create(reposPath, false, false, null, SVNAdmin.BDB);
-    }
-
-    /**
-     * Delete the repository at <code>reposPath</code>.
-     *
-     * @param reposPath The path to the repository.
-     */
-    protected void removeRepository(String reposPath)
-    {
-        SVNTests.removeDirOrFile(new File(reposPath));
+        OneTest thisTest = new OneTest(false);
+        admin.setRevProp(thisTest.getRepositoryPath(), Revision.getInstance(0),
+                         "svn:log", "Initial repository creation", false,
+                         false);
     }
 }

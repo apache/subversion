@@ -469,13 +469,20 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   const char *to_url, *from_url;
   svn_ra_session_t *to_session;
   opt_baton_t *opt_baton = b;
-  apr_array_header_t *args;
+  apr_array_header_t *targets;
   init_baton_t baton;
 
-  SVN_ERR(svn_opt_parse_num_args(&args, os, 2, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        apr_array_make(pool, 0, 
+                                                       sizeof(const char *)), 
+                                        pool));
+  if (targets->nelts < 2)
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+  if (targets->nelts > 2)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
-  from_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 1, const char *), pool);
+  to_url = APR_ARRAY_IDX(targets, 0, const char *);
+  from_url = APR_ARRAY_IDX(targets, 1, const char *);
 
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
@@ -484,8 +491,8 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
                              _("Path '%s' is not a URL"), from_url);
 
-  baton.to_url = svn_path_canonicalize(to_url, pool);
-  baton.from_url = svn_path_canonicalize(from_url, pool);
+  baton.to_url = to_url;
+  baton.from_url = from_url;
   baton.config = opt_baton->config;
 
   callbacks.open_tmp_file = open_tmp_file;
@@ -1132,13 +1139,20 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   svn_ra_callbacks2_t callbacks = { 0 };
   svn_ra_session_t *to_session;
   opt_baton_t *opt_baton = b;
-  apr_array_header_t *args;
+  apr_array_header_t *targets;
   sync_baton_t baton;
   const char *to_url;
 
-  SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        apr_array_make(pool, 0, 
+                                                       sizeof(const char *)), 
+                                        pool));
+  if (targets->nelts < 1)
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+  if (targets->nelts > 1)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
+  to_url = APR_ARRAY_IDX(targets, 0, const char *);
 
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
@@ -1213,16 +1227,23 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   svn_ra_callbacks2_t callbacks = { 0 };
   svn_ra_session_t *to_session;
   opt_baton_t *opt_baton = b;
-  apr_array_header_t *args;
+  apr_array_header_t *targets;
   copy_revprops_baton_t baton;
   const char *to_url;
   svn_revnum_t revision = SVN_INVALID_REVNUM;
   char *digits_end = NULL;
 
-  SVN_ERR(svn_opt_parse_num_args(&args, os, 2, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        apr_array_make(pool, 0, 
+                                                       sizeof(const char *)), 
+                                        pool));
+  if (targets->nelts < 2)
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+  if (targets->nelts > 2)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
-  revision = strtol(APR_ARRAY_IDX(args, 1, const char *), &digits_end, 10);
+  to_url = APR_ARRAY_IDX(targets, 0, const char *);
+  revision = strtol(APR_ARRAY_IDX(targets, 1, const char *), &digits_end, 10);
   
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 

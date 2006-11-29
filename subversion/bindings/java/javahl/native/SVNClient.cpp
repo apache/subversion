@@ -23,6 +23,7 @@
 #include "JNIUtil.h"
 #include "Notify.h"
 #include "Notify2.h"
+#include "ProgressListener.h"
 #include "Prompter.h"
 #include "Pool.h"
 #include "Targets.h"
@@ -58,6 +59,7 @@ SVNClient::SVNClient()
 {
     m_notify = NULL;
     m_notify2 = NULL;
+    m_progressListener = NULL;
     m_prompter = NULL;
     m_commitMessage = NULL;
 }
@@ -66,6 +68,7 @@ SVNClient::~SVNClient()
 {
     delete m_notify;
     delete m_notify2;
+    delete m_progressListener;
     delete m_prompter;
 }
 
@@ -543,6 +546,12 @@ void SVNClient::notification2(Notify2 *notify2)
 {
     delete m_notify2;
     m_notify2 = notify2;
+}
+
+void SVNClient::setProgressListener(ProgressListener *listener)
+{
+    delete m_progressListener;
+    m_progressListener = listener;
 }
 
 void SVNClient::remove(Targets &targets, const char *message, bool force)
@@ -1713,6 +1722,9 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     }
     ctx->notify_func2= Notify2::notify;
     ctx->notify_baton2 = m_notify2;
+
+    ctx->progress_func = ProgressListener::progress;
+    ctx->progress_baton = m_progressListener;
 
     return ctx;
 }
