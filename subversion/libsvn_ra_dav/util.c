@@ -890,11 +890,9 @@ parsed_request(ne_session *sess,
   parser_wrapper_baton_t pwb;
   svn_ra_dav__request_t *req;
   ne_xml_parser *success_parser = NULL;
-  int code;
   const char *msg;
   spool_reader_baton_t spool_reader_baton;
   cancellation_baton_t *cancel_baton;
-  svn_error_t *err = SVN_NO_ERROR;
   svn_ra_dav__session_t *ras = ne_get_session_private(sess,
                                                       SVN_RA_NE_SESSION_ID);
 
@@ -983,17 +981,12 @@ parsed_request(ne_session *sess,
                                        cancel_baton);
 
   /* run the request and get the resulting status code. */
-  err = svn_ra_dav__request_dispatch(&code,
-                                     req,
-                                     (strcmp(method, "PROPFIND") == 0)
-                                     ? 207 : 200,
-                                     0, /* not used */
-                                     pool);
-  if (err)
-    return err;
-
-  if (status_code)
-    *status_code = code;
+  SVN_ERR(svn_ra_dav__request_dispatch(status_code,
+                                       req,
+                                       (strcmp(method, "PROPFIND") == 0)
+                                       ? 207 : 200,
+                                       0, /* not used */
+                                       pool));
 
   if (spool_response)
     {
@@ -1010,7 +1003,7 @@ parsed_request(ne_session *sess,
                             (SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                              _("Error reading spooled %s request response"),
                              method));
-          return err;
+          return req->err;
         }
     }
 
