@@ -490,6 +490,10 @@ typedef struct
     /* The absolute path of the source. */
     const char *src_abs;
 
+    /* The base name of the object.  It should be the same for both src
+       and dst. */
+    const char *base_name;
+
     /* The node kind of the source */
     svn_node_kind_t src_kind;
 
@@ -498,6 +502,9 @@ typedef struct
 
     /* The destination path relative to the repository root */
     const char *dst_rel;
+
+    /* The destination's parent path */
+    const char *dst_parent;
 } svn_client__copy_pair_t;
 
 /* ---------------------------------------------------------------- */

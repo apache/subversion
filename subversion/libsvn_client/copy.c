@@ -113,56 +113,27 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
    allocations.
 */
 static svn_error_t *
-wc_to_wc_copy_single(const char *src_path,
-                     const char *dst_path,
+wc_to_wc_copy_single(svn_client__copy_pair_t *pair,
                      svn_boolean_t is_move,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  svn_node_kind_t src_kind, dst_kind, dst_parent_kind;
-  const char *dst_parent, *base_name;
   svn_wc_adm_access_t *adm_access, *src_access;
   svn_error_t *err;
-
-  /* Verify that SRC_PATH exists. */
-  SVN_ERR(svn_io_check_path(src_path, &src_kind, pool));
-  if (src_kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                             _("Path '%s' does not exist"),
-                             svn_path_local_style(src_path, pool));
-
-  /* If DST_PATH does not exist, then its basename will become a new
-     file or dir added to its parent (possibly an implicit '.').
-     Else, just error out. */
-  SVN_ERR(svn_io_check_path(dst_path, &dst_kind, pool));
-  if (dst_kind != svn_node_none)
-    return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
-                             _("Path '%s' already exists"),
-                             svn_path_local_style(dst_path, pool));
-
-  svn_path_split(dst_path, &dst_parent, &base_name, pool);
-
-  /* Make sure the destination parent is a directory and produce a clear
-     error message if it is not. */
-  SVN_ERR(svn_io_check_path(dst_parent, &dst_parent_kind, pool));
-  if (dst_parent_kind != svn_node_dir)
-    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
-                             _("Path '%s' is not a directory"),
-                             svn_path_local_style(dst_parent, pool));
 
   if (is_move)
     {
       const char *src_parent;
 
-      svn_path_split(src_path, &src_parent, NULL, pool);
+      svn_path_split(pair->src, &src_parent, NULL, pool);
 
       SVN_ERR(svn_wc_adm_open3(&src_access, NULL, src_parent, TRUE,
-                               src_kind == svn_node_dir ? -1 : 0,
+                               pair->src_kind == svn_node_dir ? -1 : 0,
                                ctx->cancel_func, ctx->cancel_baton, pool));
 
       /* Need to avoid attempting to open the same dir twice when source
          and destination overlap. */
-      if (strcmp(src_parent, dst_parent) == 0)
+      if (strcmp(src_parent, pair->dst_parent) == 0)
         {
           adm_access = src_access;
         }
@@ -171,17 +142,18 @@ wc_to_wc_copy_single(const char *src_path,
           const char *src_parent_abs, *dst_parent_abs;
 
           SVN_ERR(svn_path_get_absolute(&src_parent_abs, src_parent, pool));
-          SVN_ERR(svn_path_get_absolute(&dst_parent_abs, dst_parent, pool));
+          SVN_ERR(svn_path_get_absolute(&dst_parent_abs, pair->dst_parent,
+                                        pool));
 
-          if ((src_kind == svn_node_dir)
+          if ((pair->src_kind == svn_node_dir)
               && (svn_path_is_child(src_parent_abs, dst_parent_abs, pool)))
             {
               SVN_ERR(svn_wc_adm_retrieve(&adm_access, src_access,
-                                          dst_parent, pool));
+                                          pair->dst_parent, pool));
             }
           else
             {
-              SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dst_parent,
+              SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, pair->dst_parent,
                                        TRUE, 0, ctx->cancel_func,
                                        ctx->cancel_baton,pool));
             }
@@ -190,7 +162,7 @@ wc_to_wc_copy_single(const char *src_path,
     }
   else 
     {
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dst_parent, TRUE, 0,
+      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, pair->dst_parent, TRUE, 0,
                                ctx->cancel_func, ctx->cancel_baton, pool));
     }
                               
@@ -200,7 +172,7 @@ wc_to_wc_copy_single(const char *src_path,
      ### won't detect any outstanding locks. If the source is locked and
      ### requires cleanup should we abort the copy? */
 
-  err = svn_wc_copy2(src_path, adm_access, base_name,
+  err = svn_wc_copy2(pair->src, adm_access, pair->base_name,
                      ctx->cancel_func, ctx->cancel_baton,
                      ctx->notify_func2, ctx->notify_baton2, pool);
   svn_sleep_for_timestamps();
@@ -209,7 +181,7 @@ wc_to_wc_copy_single(const char *src_path,
 
   if (is_move)
     {
-      SVN_ERR(svn_wc_delete2(src_path, src_access,
+      SVN_ERR(svn_wc_delete2(pair->src, src_access,
                              ctx->cancel_func, ctx->cancel_baton,
                              ctx->notify_func2, ctx->notify_baton2, pool));
 
@@ -235,13 +207,48 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
   int i;
   apr_pool_t *subpool = svn_pool_create(pool);
 
+  /* Check that all of our SRCs exist, and all the DSTs don't. */
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      svn_client__copy_pair_t *pair = 
+        ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
+      svn_node_kind_t dst_kind, dst_parent_kind;
+
+      svn_pool_clear(subpool);
+
+      /* Verify that SRC_PATH exists. */
+      SVN_ERR(svn_io_check_path(pair->src, &pair->src_kind, pool));
+      if (pair->src_kind == svn_node_none)
+        return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                                 _("Path '%s' does not exist"),
+                                 svn_path_local_style(pair->src, pool));
+
+      /* If DST_PATH does not exist, then its basename will become a new
+         file or dir added to its parent (possibly an implicit '.').
+         Else, just error out. */
+      SVN_ERR(svn_io_check_path(pair->dst, &dst_kind, pool));
+      if (dst_kind != svn_node_none)
+        return svn_error_createf(SVN_ERR_ENTRY_EXISTS, NULL,
+                                 _("Path '%s' already exists"),
+                                 svn_path_local_style(pair->dst, pool));
+
+      svn_path_split(pair->dst, &pair->dst_parent, &pair->base_name, pool);
+
+      /* Make sure the destination parent is a directory and produce a clear
+         error message if it is not. */
+      SVN_ERR(svn_io_check_path(pair->dst_parent, &dst_parent_kind, pool));
+      if (dst_parent_kind != svn_node_dir)
+        return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                                 _("Path '%s' is not a directory"),
+                                 svn_path_local_style(pair->dst_parent, pool));
+    }
+
   for ( i = 0; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = 
         ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
       svn_pool_clear(subpool);
-      SVN_ERR(wc_to_wc_copy_single(pair->src, pair->dst, is_move, ctx,
-                                   subpool));
+      SVN_ERR(wc_to_wc_copy_single(pair, is_move, ctx, subpool));
     }
 
   svn_pool_destroy(subpool);
