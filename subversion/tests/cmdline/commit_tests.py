@@ -1936,7 +1936,9 @@ def post_commit_hook_test(sbox):
                       "Transmitting file data .\n",
                       "Committed revision 2.\n",
                       "\n",
-                      "Warning: 'post-commit' hook failed with error output:\n",
+                      "Warning: 'post-commit' hook failed (exited with a "
+                      "non-zero exitcode of 1).  The following error output "
+                      "was produced by the hook:\n",
                       "Post-commit hook failed\n",
                     ]
 
