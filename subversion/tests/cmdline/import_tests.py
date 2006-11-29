@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -318,7 +318,7 @@ enable-auto-props = yes
   imp_file_path = os.path.join(imp_dir_path, file_name)
 
   os.mkdir(imp_dir_path, 0755)
-  open(imp_file_path, 'w').write("This is file test.dsp.\n")
+  svntest.main.file_write(imp_file_path, "This is file test.dsp.\n")
 
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
                                      '--username', svntest.main.wc_author,

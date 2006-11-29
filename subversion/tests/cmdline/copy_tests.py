@@ -1264,9 +1264,9 @@ def repos_to_wc_copy_eol_keywords(sbox):
   target_wc_path = os.path.join(wc_dir, 'new_file')
 
   # Modify iota to make it checkworthy.
-  f = open(iota_wc_path, "ab")
-  f.write("Hello\nSubversion\n$LastChangedRevision$\n")
-  f.close()
+  svntest.main.file_write(iota_wc_path,
+                          "Hello\nSubversion\n$LastChangedRevision$\n",
+                          "ab")
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:eol-style',

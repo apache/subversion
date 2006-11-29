@@ -393,25 +393,19 @@ def safe_rmtree(dirname, retry=0):
 # For making local mods to files
 def file_append(path, new_text):
   "Append NEW_TEXT to file at PATH"
-
-  fp = open(path, 'a')  # open in (a)ppend mode
-  fp.write(new_text)
-  fp.close()
+  file_write(path, new_text, 'a')  # open in (a)ppend mode
 
 # Append in binary mode
 def file_append_binary(path, new_text):
   "Append NEW_TEXT to file at PATH in binary mode"
-
-  fp = open(path, 'ab')  # open in (a)ppend mode
-  fp.write(new_text)
-  fp.close()
-
-# For making local mods to files
-def file_write(path, new_text):
-  "Replace contents of file at PATH with NEW_TEXT"
-
-  fp = open(path, 'w')  # open in (w)rite mode
-  fp.write(new_text)
+  file_write(path, new_text, 'ab')  # open in (a)ppend mode
+  
+# For creating new files, and making local mods to existing files.
+def file_write(path, contents, mode = 'w'):
+  """Write the CONTENTS to the file at PATH, opening file using MODE,
+  which is (w)rite by default."""
+  fp = open(path, mode)
+  fp.write(contents)
   fp.close()
 
 # For creating blank new repositories

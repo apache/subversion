@@ -241,9 +241,7 @@ def revert_reexpand_keyword(sbox):
   unexpanded_contents = "This is newfile: $Rev$.\n"
 
   # Put an unexpanded keyword into iota.
-  fp = open(newfile_path, 'w')
-  fp.write(unexpanded_contents)
-  fp.close()
+  svntest.main.file_write(newfile_path, unexpanded_contents)
 
   # Commit, without svn:keywords property set.
   svntest.main.run_svn(None, 'add', newfile_path)
@@ -264,9 +262,7 @@ def revert_reexpand_keyword(sbox):
   check_expanded(newfile_path)
 
   # Now un-expand the keyword again.
-  fp = open(newfile_path, 'w')
-  fp.write(unexpanded_contents)
-  fp.close()
+  svntest.main.file_write(newfile_path, unexpanded_contents)
 
   fp = open(newfile_path, 'r')
   lines = fp.readlines()
@@ -396,9 +392,7 @@ def revert_file_merge_replace_with_history(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
   # create new rho file
-  fp = open(rho_path, 'w')
-  fp.write("new rho\n")
-  fp.close()
+  svntest.main.file_write(rho_path, "new rho\n")
 
   # Add the new file
   svntest.actions.run_and_verify_svn(None, None, [], 'add', rho_path)
