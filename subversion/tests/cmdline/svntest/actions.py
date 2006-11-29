@@ -69,7 +69,7 @@ def setup_pristine_repository():
     # if this is dav, gives us access rights to import the greek tree.
     if main.is_ra_type_dav():
       authz_file = os.path.join(main.work_dir, "authz")
-      svntest.main.file_write(authz_file, "[/]\n* = rw\n")
+      main.file_write(authz_file, "[/]\n* = rw\n")
 
     # dump the greek tree to disk.
     main.greek_state.write_to_disk(main.greek_dump_dir)
