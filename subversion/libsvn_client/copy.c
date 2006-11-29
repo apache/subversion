@@ -524,6 +524,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   else
     message = "";
 
+  SVN_ERR(calculate_target_merge_info(ra_session, &(cb_baton.mergeinfo),
+                                      src_url, src_rel, src_revnum, pool));
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
@@ -549,8 +551,6 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   cb_baton.is_move = is_move;
   cb_baton.src_revnum = src_revnum;
   cb_baton.resurrection = resurrection;
-  SVN_ERR(calculate_target_merge_info(ra_session, &(cb_baton.mergeinfo),
-                                      src_url, src_rel, src_revnum, pool));
 
   /* Call the path-based editor driver. */
   err = svn_delta_path_driver(editor, edit_baton, youngest, paths,
