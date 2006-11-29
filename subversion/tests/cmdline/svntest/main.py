@@ -317,13 +317,8 @@ def create_config_dir(cfgdir,
   if not os.path.isdir(cfgdir):
     os.makedirs(cfgdir)
 
-  fd = open(cfgfile_cfg, 'w')
-  fd.write(config_contents)
-  fd.close()
-
-  fd = open(cfgfile_srv, 'w')
-  fd.write(server_contents)
-  fd.close()
+  file_write(cfgfile_cfg, config_contents)
+  file_write(cfgfile_srv, server_contents)
 
 
 # For running subversion and returning the output
@@ -593,9 +588,7 @@ class Sandbox:
       if not os.path.exists(work_dir):
         os.makedirs(work_dir)
       self.authz_file = os.path.join(work_dir, "authz")
-      fp = open(self.authz_file, "w")
-      fp.write("[/]\n* = rw\n")
-      fp.close()
+      file_write(self.authz_file, "[/]\n* = rw\n")
 
     # For svnserve tests we have a per-repository authz file, and it
     # doesn't need to be there in order for things to work, so we don't
