@@ -817,14 +817,12 @@ wrapper_startelm_cb(void *baton,
   int elem = 0;
 
   if (pwb->startelm_cb)
-    {
-      SVN_RA_DAV__REQ_ERR
-        (pwb->req,
-         pwb->startelm_cb(&elem, pwb->baton, parent, nspace, name, atts));
+    SVN_RA_DAV__REQ_ERR
+      (pwb->req,
+       pwb->startelm_cb(&elem, pwb->baton, parent, nspace, name, atts));
 
-      if (pwb->req->err)
-        return NE_XML_ABORT;
-    }
+  if (pwb->req->err)
+    return NE_XML_ABORT;
 
   return elem;
 }
@@ -835,14 +833,12 @@ wrapper_cdata_cb(void *baton, int state, const char *cdata, size_t len)
   parser_wrapper_baton_t *pwb = baton;
 
   if (pwb->cdata_cb)
-    {
-      SVN_RA_DAV__REQ_ERR
-        (pwb->req,
-         pwb->cdata_cb(pwb->baton, state, cdata, len));
+    SVN_RA_DAV__REQ_ERR
+      (pwb->req,
+       pwb->cdata_cb(pwb->baton, state, cdata, len));
 
-      if (pwb->req->err)
-        return NE_XML_ABORT;
-    }
+  if (pwb->req->err)
+    return NE_XML_ABORT;
 
   return 0;
 }
@@ -856,14 +852,12 @@ wrapper_endelm_cb(void *baton,
   parser_wrapper_baton_t *pwb = baton;
 
   if (pwb->endelm_cb)
-    {
-      SVN_RA_DAV__REQ_ERR
-        (pwb->req,
-         pwb->endelm_cb(pwb->baton, state, nspace, name));
+    SVN_RA_DAV__REQ_ERR
+      (pwb->req,
+       pwb->endelm_cb(pwb->baton, state, nspace, name));
 
-      if (pwb->req->err)
-        return NE_XML_ABORT;
-    }
+  if (pwb->req->err)
+    return NE_XML_ABORT;
 
   return 0;
 }
