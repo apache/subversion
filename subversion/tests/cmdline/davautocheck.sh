@@ -41,12 +41,11 @@
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
-trap trap_cleanup SIGHUP SIGTERM SIGINT
+trap stop_httpd_and_die SIGHUP SIGTERM SIGINT
 
-function trap_cleanup() {
-    [ -e  "$HTTPD_PID" ] \
-      && kill $(cat "$HTTPD_PID")
-    exit 1
+function stop_httpd_and_die() {
+  [ -e "$HTTPD_PID" ] && kill $(cat "$HTTPD_PID")
+  exit 1
 }
 
 function say() {
@@ -55,7 +54,7 @@ function say() {
 
 function fail() {
   say $*
-  exit 1
+  stop_httpd_and_die
 }
 
 function query() {
@@ -269,8 +268,8 @@ sleep 2
 
 say "HTTPD started and listening on '$BASE_URL'..."
 
-# use wget or curl to download configuration file through HTTPD and
-# compare it to the original
+# Perform a trivial validation of our httpd configuration by
+# downloading a file and comparing it to the original copy.
 HTTP_FETCH=wget
 HTTP_FETCH_OUTPUT="-q -O"
 type wget > /dev/null 2>&1
@@ -283,8 +282,8 @@ if [ $? -ne 0 ]; then
   HTTP_FETCH_OUTPUT="-s -o"
 fi
 $HTTP_FETCH $HTTP_FETCH_OUTPUT "$HTTPD_CFG-copy" "$BASE_URL/cfg"
-diff -q "$HTTPD_CFG" "$HTTPD_CFG-copy" \
-  || fail "HTTPD doesn't operate according to the configuration"
+diff -q "$HTTPD_CFG" "$HTTPD_CFG-copy" > /dev/null \
+  || fail "HTTPD doesn't operate according to the generated configuration"
 rm "$HTTPD_CFG-copy"
 
 say "HTTPD is good, starting the tests..."

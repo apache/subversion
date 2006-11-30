@@ -117,8 +117,6 @@ typedef int svn_ra_dav__xml_endelm_cb(void *userdata,
 
 
 
-
-
 /* Context for neon request hooks; shared by the neon callbacks in
    session.c.  */
 struct lock_request_baton
@@ -619,6 +617,17 @@ const svn_ra_dav__xml_elm_t *
 svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
                             const char *nspace,
                             const char *name);
+
+
+
+/* Collect CDATA into a stringbuf.
+ *
+ * BATON points to a struct of which the first element is
+ * assumed to be an svn_stringbuf_t *.
+ */
+svn_error_t *
+svn_ra_dav__xml_collect_cdata(void *baton, int state,
+                              const char *cdata, size_t len);
 
 
 /* Our equivalent of ne_xml_startelm_cb, the difference being that it

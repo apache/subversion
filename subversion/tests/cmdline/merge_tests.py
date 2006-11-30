@@ -790,14 +790,14 @@ def simple_property_merges(sbox):
     '' : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,4'}),
     'E/dir_conflicts.prej'
     : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
-           + "but the property does not exist."),    
+           + "but the property does not exist.\n"),
     'E/alpha.prej'
     : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
-           + "but the property does not exist."),
+           + "but the property does not exist.\n"),
     'E/beta.prej'
     : Item("Trying to change property 'foo' from 'foo?\\129val' to"
            + " 'mod?\\129foo',\n"
-           + "but the property does not exist."),
+           + "but the property does not exist.\n"),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
   expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})

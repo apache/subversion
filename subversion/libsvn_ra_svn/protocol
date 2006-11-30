@@ -25,7 +25,7 @@ is possible to parse an item without knowing its type in advance.
 Lists are not constrained to contain items of the same type.  Lists
 can be used for tuples, optional tuples, or arrays.  A tuple is a list
 expected to contain a fixed number of items, generally of differing
-types.  An optional value is a list containing either zero or a fixed
+types.  An optional tuple is a list containing either zero or a fixed
 number of items (thus "optional" here does not refer to the list's
 presence or absence, but to the presence or absence of its contents).
 An array is a list containing zero or more items of the same type.

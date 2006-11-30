@@ -20,7 +20,6 @@ import os      # for popen2()
 import shutil  # for rmtree()
 import re
 import stat    # for ST_MODE
-import string  # for atof()
 import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
@@ -137,7 +136,7 @@ enable_sasl = 0
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
 if windows == 1:
-  test_area_url = string.replace(test_area_url, '\\', '/')
+  test_area_url = test_area_url.replace('\\', '/')
 
 # Global variable indicating the FS type for repository creations.
 fs_type = None
@@ -317,13 +316,8 @@ def create_config_dir(cfgdir,
   if not os.path.isdir(cfgdir):
     os.makedirs(cfgdir)
 
-  fd = open(cfgfile_cfg, 'w')
-  fd.write(config_contents)
-  fd.close()
-
-  fd = open(cfgfile_srv, 'w')
-  fd.write(server_contents)
-  fd.close()
+  file_write(cfgfile_cfg, config_contents)
+  file_write(cfgfile_srv, server_contents)
 
 
 # For running subversion and returning the output
@@ -540,6 +534,8 @@ def compare_unordered_output(expected, actual):
      order of the lines"""
   if len(actual) != len(expected):
     raise Failure("Length of expected output not equal to actual length")
+
+  expected = list(expected)
   for aline in actual:
     try:
       i = expected.index(aline)
@@ -593,9 +589,7 @@ class Sandbox:
       if not os.path.exists(work_dir):
         os.makedirs(work_dir)
       self.authz_file = os.path.join(work_dir, "authz")
-      fp = open(self.authz_file, "w")
-      fp.write("[/]\n* = rw\n")
-      fp.close()
+      file_write(self.authz_file, "[/]\n* = rw\n")
 
     # For svnserve tests we have a per-repository authz file, and it
     # doesn't need to be there in order for things to work, so we don't
@@ -604,7 +598,7 @@ class Sandbox:
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
 
     if windows == 1:
-      self.repo_url = string.replace(self.repo_url, '\\', '/')
+      self.repo_url = self.repo_url.replace('\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
 
   def clone_dependent(self):
@@ -875,7 +869,7 @@ def run_tests(test_list):
   # Calculate pristine_url from test_area_url.
   pristine_url = test_area_url + '/' + pristine_dir
   if windows == 1:
-    pristine_url = string.replace(pristine_url, '\\', '/')  
+    pristine_url = pristine_url.replace('\\', '/')  
   
   # Setup the pristine repository (and working copy)
   actions.setup_pristine_repository()

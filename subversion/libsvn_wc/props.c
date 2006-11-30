@@ -177,7 +177,7 @@ open_reject_tmp_file(apr_file_t **fp, const char **reject_tmp_path,
 
 
 /* Assuming FP is a filehandle already open for appending, write
-   CONFLICT_DESCRIPTION to file. */
+   CONFLICT_DESCRIPTION to file, plus a trailing EOL sequence. */
 static svn_error_t *
 append_prop_conflict(apr_file_t *fp,
                      const svn_string_t *conflict_description,
@@ -186,11 +186,13 @@ append_prop_conflict(apr_file_t *fp,
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
   apr_size_t written;
-  const char *conflict_description_native =
+  const char *native_text =
     svn_utf_cstring_from_utf8_fuzzy(conflict_description->data, pool);
+  SVN_ERR(svn_io_file_write_full(fp, native_text, strlen(native_text),
+                                 &written, pool));
 
-  SVN_ERR(svn_io_file_write_full(fp, conflict_description_native,
-                                 strlen(conflict_description_native),
+  native_text = svn_utf_cstring_from_utf8_fuzzy(APR_EOL_STR, pool);
+  SVN_ERR(svn_io_file_write_full(fp, native_text, strlen(native_text),
                                  &written, pool));
 
   return SVN_NO_ERROR;

@@ -337,6 +337,17 @@ static void shim_xml_push_handler(ne_xml_parser *p,
 }
 
 
+svn_error_t *
+svn_ra_dav__xml_collect_cdata(void *baton, int state,
+                              const char *cdata, size_t len)
+{
+  svn_stringbuf_t **b = baton;
+
+  if (*b)
+    svn_stringbuf_appendbytes(*b, cdata, len);
+
+  return SVN_NO_ERROR;
+}
 
 
 void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
@@ -438,8 +449,7 @@ static const svn_ra_dav__xml_elm_t error_elements[] =
 };
 
 
-static int validate_error_elements(void *userdata,
-                                   svn_ra_dav__xml_elmid parent,
+static int validate_error_elements(svn_ra_dav__xml_elmid parent,
                                    svn_ra_dav__xml_elmid child)
 {
   switch (parent)
@@ -466,19 +476,42 @@ static int validate_error_elements(void *userdata,
 }
 
 
+static int
+collect_error_cdata(void *baton, int state,
+                    const char *cdata, size_t len)
+{
+  svn_stringbuf_t **b = baton;
+
+  if (*b)
+    svn_stringbuf_appendbytes(*b, cdata, len);
+
+  return SVN_RA_DAV__XML_VALID;
+}
+
 typedef struct error_parser_baton
 {
+  svn_stringbuf_t *want_cdata;
+  svn_stringbuf_t *cdata;
+
   svn_error_t **dst_err;
   svn_error_t *tmp_err;
   svn_boolean_t *marshalled_error;
 } error_parser_baton_t;
 
 
-static int start_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                             const char **atts)
+static int
+start_err_element(void *baton, int parent,
+                  const char *nspace, const char *name, const char **atts)
 {
-  error_parser_baton_t *b = userdata;
+  const svn_ra_dav__xml_elm_t *elm
+    = svn_ra_dav__lookup_xml_elem(error_elements, nspace, name);
+  int acc = elm
+    ? validate_error_elements(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  error_parser_baton_t *b = baton;
   svn_error_t **err = &(b->tmp_err);
+
+  if (acc != SVN_RA_DAV__XML_VALID)
+    return acc;
 
   switch (elm->id)
     {
@@ -509,32 +542,45 @@ static int start_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       break;
     }
 
-  return SVN_RA_DAV__XML_VALID;
-}
-
-static int end_err_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                           const char *cdata)
-{
-  error_parser_baton_t *b = userdata;
-  svn_error_t **err = &(b->tmp_err);
-
   switch (elm->id)
     {
     case ELEM_human_readable:
+      b->want_cdata = b->cdata;
+      svn_stringbuf_setempty(b->want_cdata);
+      break;
+
+    default:
+      b->want_cdata = NULL;
+      break;
+    }
+
+  return elm->id;
+}
+
+static int
+end_err_element(void *baton, int state, const char *nspace, const char *name)
+{
+  error_parser_baton_t *b = baton;
+  svn_error_t **err = &(b->tmp_err);
+
+  switch (state)
+    {
+    case ELEM_human_readable:
       {
-        if (cdata && *err)
+        if (b->cdata->data && *err)
           {
             /* On the server dav_error_response_tag() will add a leading
                and trailing newline if DEBUG_CR is defined in mod_dav.h,
                so remove any such characters here. */
             apr_size_t len;
-            if (*cdata == '\n')
-              ++cdata;
-            len = strlen(cdata);
-            if (len > 0 && cdata[len-1] == '\n')
+            const char *cd = b->cdata->data;
+            if (*cd == '\n')
+              ++cd;
+            len = strlen(cd);
+            if (len > 0 && cd[len-1] == '\n')
               --len;
 
-            (*err)->message = apr_pstrmemdup((*err)->pool, cdata, len);
+            (*err)->message = apr_pstrmemdup((*err)->pool, cd, len);
           }
         break;
       }
@@ -581,11 +627,15 @@ error_parser_create(svn_ra_dav__request_t *req)
   b->marshalled_error = &(req->marshalled_error);
   b->tmp_err = NULL;
 
+  b->want_cdata = NULL;
+  b->cdata = svn_stringbuf_create("", req->pool);
+
   /* attach a standard <D:error> body parser to the request */
   error_parser = svn_ra_dav__xml_parser_create(req);
-  shim_xml_push_handler(error_parser, error_elements,
-                        validate_error_elements, start_err_element,
-                        end_err_element, b, req->pool);
+  ne_xml_push_handler(error_parser,
+                      start_err_element,
+                      collect_error_cdata,
+                      end_err_element, b);
 
   apr_pool_cleanup_register(req->pool, b,
                             error_parser_baton_cleanup,
@@ -767,14 +817,12 @@ wrapper_startelm_cb(void *baton,
   int elem = 0;
 
   if (pwb->startelm_cb)
-    {
-      SVN_RA_DAV__REQ_ERR
-        (pwb->req,
-         pwb->startelm_cb(&elem, pwb->baton, parent, nspace, name, atts));
+    SVN_RA_DAV__REQ_ERR
+      (pwb->req,
+       pwb->startelm_cb(&elem, pwb->baton, parent, nspace, name, atts));
 
-      if (pwb->req->err)
-        return NE_XML_ABORT;
-    }
+  if (pwb->req->err)
+    return NE_XML_ABORT;
 
   return elem;
 }
@@ -785,14 +833,12 @@ wrapper_cdata_cb(void *baton, int state, const char *cdata, size_t len)
   parser_wrapper_baton_t *pwb = baton;
 
   if (pwb->cdata_cb)
-    {
-      SVN_RA_DAV__REQ_ERR
-        (pwb->req,
-         pwb->cdata_cb(pwb->baton, state, cdata, len));
+    SVN_RA_DAV__REQ_ERR
+      (pwb->req,
+       pwb->cdata_cb(pwb->baton, state, cdata, len));
 
-      if (pwb->req->err)
-        return NE_XML_ABORT;
-    }
+  if (pwb->req->err)
+    return NE_XML_ABORT;
 
   return 0;
 }
@@ -806,14 +852,12 @@ wrapper_endelm_cb(void *baton,
   parser_wrapper_baton_t *pwb = baton;
 
   if (pwb->endelm_cb)
-    {
-      SVN_RA_DAV__REQ_ERR
-        (pwb->req,
-         pwb->endelm_cb(pwb->baton, state, nspace, name));
+    SVN_RA_DAV__REQ_ERR
+      (pwb->req,
+       pwb->endelm_cb(pwb->baton, state, nspace, name));
 
-      if (pwb->req->err)
-        return NE_XML_ABORT;
-    }
+  if (pwb->req->err)
+    return NE_XML_ABORT;
 
   return 0;
 }
@@ -890,11 +934,9 @@ parsed_request(ne_session *sess,
   parser_wrapper_baton_t pwb;
   svn_ra_dav__request_t *req;
   ne_xml_parser *success_parser = NULL;
-  int code;
   const char *msg;
   spool_reader_baton_t spool_reader_baton;
   cancellation_baton_t *cancel_baton;
-  svn_error_t *err = SVN_NO_ERROR;
   svn_ra_dav__session_t *ras = ne_get_session_private(sess,
                                                       SVN_RA_NE_SESSION_ID);
 
@@ -983,17 +1025,12 @@ parsed_request(ne_session *sess,
                                        cancel_baton);
 
   /* run the request and get the resulting status code. */
-  err = svn_ra_dav__request_dispatch(&code,
-                                     req,
-                                     (strcmp(method, "PROPFIND") == 0)
-                                     ? 207 : 200,
-                                     0, /* not used */
-                                     pool);
-  if (err)
-    return err;
-
-  if (status_code)
-    *status_code = code;
+  SVN_ERR(svn_ra_dav__request_dispatch(status_code,
+                                       req,
+                                       (strcmp(method, "PROPFIND") == 0)
+                                       ? 207 : 200,
+                                       0, /* not used */
+                                       pool));
 
   if (spool_response)
     {
@@ -1010,7 +1047,7 @@ parsed_request(ne_session *sess,
                             (SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                              _("Error reading spooled %s request response"),
                              method));
-          return err;
+          return req->err;
         }
     }
 
@@ -1135,6 +1172,9 @@ svn_ra_dav__add_error_handler(ne_request *request,
   b->marshalled_error = NULL;
   b->tmp_err = NULL;
 
+  b->cdata = svn_stringbuf_create("", pool);
+  b->want_cdata = NULL;
+
   /* The error parser depends on the error being NULL to start with */
   *err = NULL;
 
@@ -1142,13 +1182,11 @@ svn_ra_dav__add_error_handler(ne_request *request,
                             error_parser_baton_cleanup,
                             apr_pool_cleanup_null);
 
-  shim_xml_push_handler(parser,
-                        error_elements,
-                        validate_error_elements,
-                        start_err_element,
-                        end_err_element,
-                        b,
-                        pool);
+  ne_xml_push_handler(parser,
+                      start_err_element,
+                      collect_error_cdata,
+                      end_err_element,
+                      b);
 
   ne_add_response_body_reader(request,
                               ra_dav_error_accepter,
