@@ -490,10 +490,10 @@ typedef struct error_parser_baton
 
 static int
 start_err_element(void *baton, int parent,
-                  const char *name, const char *nspace, const char **atts)
+                  const char *nspace, const char *name, const char **atts)
 {
   const svn_ra_dav__xml_elm_t *elm
-    = svn_ra_dav__lookup_xml_elem(error_elements, name, nspace);
+    = svn_ra_dav__lookup_xml_elem(error_elements, nspace, name);
   int acc = elm
     ? validate_error_elements(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
   error_parser_baton_t *b = baton;
@@ -547,7 +547,7 @@ start_err_element(void *baton, int parent,
 }
 
 static int
-end_err_element(void *baton, int state, const char *name, const char *nspace)
+end_err_element(void *baton, int state, const char *nspace, const char *name)
 {
   error_parser_baton_t *b = baton;
   svn_error_t **err = &(b->tmp_err);
