@@ -534,6 +534,8 @@ def compare_unordered_output(expected, actual):
      order of the lines"""
   if len(actual) != len(expected):
     raise Failure("Length of expected output not equal to actual length")
+
+  expected = list(expected)
   for aline in actual:
     try:
       i = expected.index(aline)
