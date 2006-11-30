@@ -15,7 +15,7 @@
 #
 ######################################################################
 
-import os, sys, string, types
+import os, types
 
 import svntest
 
@@ -40,7 +40,7 @@ class TestCase:
       print 'WARNING: Test doc string exceeds 50 characters'
     if description[-1] == '.':
       print 'WARNING: Test doc string ends in a period (.)'
-    if not string.lower(description[0]) == description[0]:
+    if not description[0].lower() == description[0]:
       print 'WARNING: Test doc string is capitalized'
 
   def need_sandbox(self):
