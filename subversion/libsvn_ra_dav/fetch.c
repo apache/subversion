@@ -1181,26 +1181,45 @@ svn_error_t *svn_ra_dav__get_latest_revnum(svn_ra_session_t *session,
 ** the end-element handler for DAV:version-name.
 */
 
-/* This implements the `svn_ra_dav__xml_validate_cb' prototype. */
-static int drev_validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
-                                 svn_ra_dav__xml_elmid child)
+typedef struct
 {
-  return SVN_RA_DAV__XML_VALID;
-}
+  svn_stringbuf_t *cdata;
+  apr_pool_t *pool;
+  svn_revnum_t revision;
+} drev_baton_t;
+
 
 /* This implements the `svn_ra_dav__xml_startelm_cb' prototype. */
-static int drev_start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                              const char **atts)
+static svn_error_t *
+drev_start_element(int *elem, void *baton, int parent,
+                   const char *nspace, const char *name, const char **atts)
 {
-  return SVN_RA_DAV__XML_VALID;
+  const svn_ra_dav__xml_elm_t *elm =
+    svn_ra_dav__lookup_xml_elem(drev_report_elements, nspace, name);
+  drev_baton_t *b = baton;
+
+  *elem = elm ? elm->id : SVN_RA_DAV__XML_DECLINE;
+  if (!elm)
+    return SVN_NO_ERROR;
+
+  if (elm->id == ELEM_version_name)
+    b->cdata = svn_stringbuf_create("", b->pool);
+
+  return SVN_NO_ERROR;
 }
 
 /* This implements the `svn_ra_dav__xml_endelm_cb' prototype. */
-static int drev_end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                            const char *cdata)
+static svn_error_t *
+drev_end_element(void *baton, int state,
+                 const char *nspace, const char *name)
 {
-  if (elm->id == ELEM_version_name)
-    *((svn_revnum_t *) userdata) = SVN_STR_TO_REV(cdata);
+  drev_baton_t *b = baton;
+
+  if (state == ELEM_version_name && b->cdata)
+    {
+      b->revision = SVN_STR_TO_REV(b->cdata->data);
+      b->cdata = NULL;
+    }
 
   return SVN_RA_DAV__XML_VALID;
 }
@@ -1214,11 +1233,15 @@ svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
   const char *body;
   const char *vcc_url;
   svn_error_t *err;
+  drev_baton_t *b = apr_palloc(pool, sizeof(*b));
+
+  b->pool = pool;
+  b->cdata = NULL;
+  b->revision = SVN_INVALID_REVNUM;
 
   /* Run the 'dated-rev-report' on the VCC url, which is always
      guaranteed to exist.   */
   SVN_ERR(svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->root.path, pool));
-  
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -1228,23 +1251,23 @@ svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
                       "</S:dated-rev-report>",
                       svn_time_to_cstring(timestamp, pool));
 
-  *revision = SVN_INVALID_REVNUM;
-  err = svn_ra_dav__parsed_request_compat(ras->sess, "REPORT",
-                                          vcc_url, body, NULL, NULL,
-                                          drev_report_elements,
-                                          drev_validate_element,
-                                          drev_start_element, drev_end_element,
-                                          revision, NULL, NULL, FALSE, pool);
+  err = svn_ra_dav__parsed_request(ras->sess, "REPORT",
+                                   vcc_url, body, NULL, NULL,
+                                   drev_start_element,
+                                   svn_ra_dav__xml_collect_cdata,
+                                   drev_end_element,
+                                   b, NULL, NULL, FALSE, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, _("Server does not support date-based "
                                        "operations"));
   else if (err)
     return err;
 
-  if (*revision == SVN_INVALID_REVNUM)
+  if (b->revision == SVN_INVALID_REVNUM)
     return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
                             _("Invalid server response to dated-rev request"));
 
+  *revision = b->revision;
   return SVN_NO_ERROR;
 }
 

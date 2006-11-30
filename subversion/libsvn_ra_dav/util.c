@@ -337,6 +337,17 @@ static void shim_xml_push_handler(ne_xml_parser *p,
 }
 
 
+svn_error_t *
+svn_ra_dav__xml_collect_cdata(void *baton, int state,
+                              const char *cdata, size_t len)
+{
+  svn_stringbuf_t **b = baton;
+
+  if (*b)
+    svn_stringbuf_appendbytes(*b, cdata, len);
+
+  return SVN_NO_ERROR;
+}
 
 
 void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
