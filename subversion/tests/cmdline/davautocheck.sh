@@ -54,7 +54,7 @@ function say() {
 
 function fail() {
   say $*
-  exit 1
+  stop_httpd_and_die
 }
 
 function query() {
