@@ -20,7 +20,6 @@ import os      # for popen2()
 import shutil  # for rmtree()
 import re
 import stat    # for ST_MODE
-import string  # for atof()
 import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
@@ -137,7 +136,7 @@ enable_sasl = 0
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
 if windows == 1:
-  test_area_url = string.replace(test_area_url, '\\', '/')
+  test_area_url = test_area_url.replace('\\', '/')
 
 # Global variable indicating the FS type for repository creations.
 fs_type = None
@@ -597,7 +596,7 @@ class Sandbox:
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
 
     if windows == 1:
-      self.repo_url = string.replace(self.repo_url, '\\', '/')
+      self.repo_url = self.repo_url.replace('\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
 
   def clone_dependent(self):
@@ -868,7 +867,7 @@ def run_tests(test_list):
   # Calculate pristine_url from test_area_url.
   pristine_url = test_area_url + '/' + pristine_dir
   if windows == 1:
-    pristine_url = string.replace(pristine_url, '\\', '/')  
+    pristine_url = pristine_url.replace('\\', '/')  
   
   # Setup the pristine repository (and working copy)
   actions.setup_pristine_repository()

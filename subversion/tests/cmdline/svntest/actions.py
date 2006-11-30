@@ -15,7 +15,7 @@
 #
 ######################################################################
 
-import os, shutil, string, re, sys, errno
+import os, shutil, re, sys, errno
 
 import main, tree, wc  # general svntest routines in this module.
 from svntest import Failure, SVNAnyOutput
@@ -90,7 +90,7 @@ def setup_pristine_repository():
       sys.exit(1)
 
     # verify the printed output of 'svn import'.
-    lastline = string.strip(output.pop())
+    lastline = output.pop().strip()
     cm = re.compile ("(Committed|Imported) revision [0-9]+.")
     match = cm.search (lastline)
     if not match:
@@ -680,7 +680,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   # Remove the final output line, and verify that the commit succeeded.
   lastline = ""
   if len(output):
-    lastline = string.strip(output.pop())
+    lastline = output.pop().strip()
 
     cm = re.compile("(Committed|Imported) revision [0-9]+.")
     match = cm.search(lastline)
