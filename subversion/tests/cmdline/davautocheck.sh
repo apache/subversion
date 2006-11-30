@@ -268,8 +268,8 @@ sleep 2
 
 say "HTTPD started and listening on '$BASE_URL'..."
 
-# use wget or curl to download configuration file through HTTPD and
-# compare it to the original
+# Perform a trivial validation of our httpd configuration by
+# downloading a file and comparing it to the original copy.
 HTTP_FETCH=wget
 HTTP_FETCH_OUTPUT="-q -O"
 type wget > /dev/null 2>&1
