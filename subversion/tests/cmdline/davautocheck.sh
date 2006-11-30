@@ -41,12 +41,11 @@
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
-trap trap_cleanup SIGHUP SIGTERM SIGINT
+trap stop_httpd_and_die SIGHUP SIGTERM SIGINT
 
-function trap_cleanup() {
-    [ -e  "$HTTPD_PID" ] \
-      && kill $(cat "$HTTPD_PID")
-    exit 1
+function stop_httpd_and_die() {
+  [ -e "$HTTPD_PID" ] && kill $(cat "$HTTPD_PID")
+  exit 1
 }
 
 function say() {
