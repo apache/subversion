@@ -439,10 +439,11 @@ def resurrect_deleted_dir(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
 
   # Delete directory A/D/G, commit that as r2.
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force',
-                                     wc_dir + '/A/D/G')
+                                     G_path)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G' : Item(verb='Deleting'),
@@ -495,10 +496,11 @@ def copy_deleted_dir_into_prefix(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  D_path = os.path.join(wc_dir, 'A', 'D')
 
   # Delete directory A/D, commit that as r2.
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force',
-                                     wc_dir + '/A/D')
+                                     D_path)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/D' : Item(verb='Deleting'),
@@ -609,9 +611,11 @@ def copy_modify_commit(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
   
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B2')
+                                     B_path, B2_path)
   
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
   svntest.main.file_append(alpha_path, "modified alpha")
@@ -712,10 +716,12 @@ def copy_delete_commit(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
 
   # copy a tree
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B2')
+                                     B_path, B2_path)
   
   # delete a file
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
@@ -762,11 +768,12 @@ def mv_and_revert_directory(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
 
   # Issue 931: move failed to lock the directory being deleted
   svntest.actions.run_and_verify_svn(None, None, [], 'move',
-                                     wc_dir + '/A/B/E',
-                                     wc_dir + '/A/B/F')
+                                     E_path, F_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
   expected_status.add({
