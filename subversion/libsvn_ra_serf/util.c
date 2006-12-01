@@ -768,6 +768,12 @@ handle_response(serf_request_t *request,
       return APR_SUCCESS;
     }
 
+  status = serf_bucket_response_status(response, &sl);
+  if (SERF_BUCKET_READ_ERROR(status))
+    {
+      return status;
+    }
+
   status = serf_bucket_response_wait_for_headers(response);
   if (status)
     {
@@ -775,23 +781,22 @@ handle_response(serf_request_t *request,
         {
           return status;
         }
-      /* If we got an EOF here when we're not a HEAD request,
-       * something went really wrong: either the server closed on us
-       * early or we're reading too much.  Either way, scream loudly.
+
+      /* Cases where a lack of a response body (via EOF) is okay:
+       *  - A HEAD request
+       *  - 204/304 response
+       *
+       * Otherwise, if we get an EOF here, something went really wrong: either
+       * the server closed on us early or we're reading too much.  Either way,
+       * scream loudly.
        */
-      if (strcmp(ctx->method, "HEAD") != 0)
+      if (strcmp(ctx->method, "HEAD") != 0 && sl.code != 204 && sl.code != 304)
         {
           ctx->session->pending_error =
               svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                _("Premature EOF seen from server"));
           return ctx->session->pending_error->apr_err;
         }
-    }
-
-  status = serf_bucket_response_status(response, &sl);
-  if (status)
-    {
-      return status;
     }
 
   if (ctx->conn->last_status_code == 401 && sl.code < 400)
