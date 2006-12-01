@@ -1337,7 +1337,11 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                        text_deltas, recurse, ignore_ancestry);
 }
 
-/* ASSUMPTION: When performing a 'merge' with two URLs at different
+/* Regardless of whether a client's capabilities indicate an
+   understanding of this command (by way of SVN_RA_SVN_CAP_MERGE_INFO),
+   we provide a response.
+
+   ASSUMPTION: When performing a 'merge' with two URLs at different
    revisions, the client will call this command more than once. */
 static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    apr_array_header_t *params, void *baton)
@@ -2290,10 +2294,11 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
                                  (apr_uint64_t) 1, (apr_uint64_t) 2));
   SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(www))",
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(wwww))",
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE, 
                                  SVN_RA_SVN_CAP_SVNDIFF1,
-                                 SVN_RA_SVN_CAP_ABSENT_ENTRIES));
+                                 SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                 SVN_RA_SVN_CAP_MERGE_INFO));
 
   /* Read client response.  Because the client response form changed
    * between version 1 and version 2, we have to do some of this by
