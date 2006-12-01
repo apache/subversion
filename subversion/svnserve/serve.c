@@ -1344,7 +1344,7 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  apr_array_header_t *paths;
+  apr_array_header_t *paths, *canonical_paths;
   apr_hash_t *mergeinfo;
   int i;
   apr_hash_index_t *hi;
@@ -1353,11 +1353,23 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "l(?r)b", &paths, &rev, 
                                  &include_parents));
+
+  /* Canonicalize the paths which merge info has been requested for. */
+  canonical_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
-    APR_ARRAY_IDX(paths, i, const char *) =
-      svn_path_canonicalize(APR_ARRAY_IDX(paths, i, const char *), pool);
+     {
+        svn_ra_svn_item_t *item = &APR_ARRAY_IDX(paths, i, svn_ra_svn_item_t);
+
+        if (item->kind != SVN_RA_SVN_STRING)
+          return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                  _("Path is not a string"));
+        APR_ARRAY_IDX(canonical_paths, i, const char *) =
+          svn_path_canonicalize(item->u.string->data, pool);
+     }
+
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_fs_get_merge_info(&mergeinfo, b->repos, paths, rev,
+  SVN_CMD_ERR(svn_repos_fs_get_merge_info(&mergeinfo, b->repos,
+                                          canonical_paths, rev,
                                           include_parents,
                                           authz_check_access_cb_func(b), b,
                                           pool));
@@ -1372,7 +1384,7 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
           apr_hash_this(hi, &key, NULL, &value);
           path = key;
           info = value;
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cc", path, info));
+          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "(cc)", path, info));
         }
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
     }
