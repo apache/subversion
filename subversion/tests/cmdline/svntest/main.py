@@ -785,8 +785,9 @@ def _internal_run_tests(test_list, testnums):
 
 def usage():
   prog_name = os.path.basename(sys.argv[0])
-  print "%s [--fs-type] [--verbose] [--enable-sasl] [--cleanup] " \
-        "[<test> ...]" % prog_name
+  print "%s [--url] [--fs-type] [--verbose] [--enable-sasl] [--cleanup] \\" \
+        % prog_name
+  print "%s [<test> ...]" % (" " * len(prog_name))
   print "%s [--list] [<test> ...]\n" % prog_name
   print "Arguments:"
   print " test          The number of the test to run (multiple okay), " \
