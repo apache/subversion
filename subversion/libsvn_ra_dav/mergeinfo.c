@@ -157,23 +157,11 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
                                          svn_boolean_t include_parents,
                                          apr_pool_t *pool)
 {
-  /* The Plan: Send a request to the server for a merge-info report.
-   */
-
-  int i;
+  svn_error_t *err;
+  int i, status_code;
   svn_ra_dav__session_t *ras = session->priv;
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct mergeinfo_baton mb;
-
-  /* ### FIXME: We need to know by this point whether the server even
-     ### supports the "get-merge-info" REPORT.  If it's unsupported,
-     ### we exit here.  Alternately, we could just try the REPORT, and
-     ### DTRT if greeted by a HTTP_NOT_IMPLEMENTED (501). */
-  if (FALSE /* server doesn't support get-merge-info */)
-    {
-      *mergeinfo = NULL;
-      return SVN_NO_ERROR;
-    }
 
   static const char minfo_report_head[]
     = "<S:merge-info-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
@@ -215,19 +203,32 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
   mb.result = apr_hash_make(pool);
   mb.err = SVN_NO_ERROR;
 
-  SVN_ERR (svn_ra_dav__parsed_request(ras->sess,
-                                      "REPORT",
-                                      ras->url->data,
-                                      request_body->data,
-                                      NULL, NULL,
-                                      start_element,
-                                      cdata_handler,
-                                      end_element,
-                                      &mb,
-                                      NULL,
-                                      NULL,
-                                      FALSE,
-                                      pool));
+  err = svn_ra_dav__parsed_request(ras->sess,
+                                   "REPORT",
+                                   ras->url->data,
+                                   request_body->data,
+                                   NULL, NULL,
+                                   start_element,
+                                   cdata_handler,
+                                   end_element,
+                                   &mb,
+                                   NULL,
+                                   &status_code,
+                                   FALSE,
+                                   pool);
+  /* If the server responds with HTTP_NOT_IMPLEMENTED, assume its
+     mod_dav_svn is too old to understand the get-merge-info REPORT.
+
+     ### It would be less expensive if knew the server's capabilities
+     ### *before* sending our REPORT. */
+  if (status_code == 501)
+    {
+      *mergeinfo = NULL;
+      svn_error_clear(err);
+    }
+  else if (err)
+    return err;
+
   if (mb.err == SVN_NO_ERROR)
     *mergeinfo = mb.result;
 
