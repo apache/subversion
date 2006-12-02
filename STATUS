@@ -93,14 +93,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r22486
-    davautocheck.sh: Remove bash-ism to fix Bourne shell portability.
-    Justification:
-      #! line claims Bourne shell.  Provides portability with other
-      popular shells (zsh, ksh, etc.).
-    Votes:
-      +1: dlr, blair
-
   * r22501
     Fix script used to build our Solaris package.
     Justification:
