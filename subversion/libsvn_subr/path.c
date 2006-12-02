@@ -314,9 +314,9 @@ previous_segment(const char *path,
 
   --len;
   while (len > 0 && path[len] != '/'
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
                  && path[len] != ':'
-#endif /* WIN32 */
+#endif /* WIN32 or Cygwin */
         )
     --len;
 
@@ -376,7 +376,10 @@ svn_path_dirname(const char *path, apr_pool_t *pool)
 
   assert(is_canonical(path, len));
 
-  return apr_pstrmemdup(pool, path, previous_segment(path, len));
+  if (svn_path_is_root(path, len))
+    return apr_pstrmemdup(pool, path, len);
+  else
+    return apr_pstrmemdup(pool, path, previous_segment(path, len));
 }
 
 
@@ -394,9 +397,9 @@ svn_path_basename(const char *path, apr_pool_t *pool)
     {
       start = len;
       while (start > 0 && path[start - 1] != '/'
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
              && path[start - 1] != ':'
-#endif /* WIN32 */
+#endif /* WIN32 or Cygwin */
             )
         --start;
     }
@@ -684,13 +687,22 @@ svn_path_is_child(const char *path1,
      Other root paths (like X:/) fall under the former case:
           X:/        path1[i] == '\0'
           X:/foo     path2[i] != '/'
+
+     Check for '//' to avoid matching '/' and '//srv'.
   */
   if (path1[i] == '\0' && path2[i])
     {
-      if (path2[i] == '/')
-        return apr_pstrdup(pool, path2 + i + 1);
-      else if (svn_path_is_root(path1, i))
-        return apr_pstrdup(pool, path2 + i);
+      if (path1[i - 1] == '/' || 
+#if defined(WIN32) || defined(__CYGWIN__)
+          path1[i - 1] == ':'
+#endif /* WIN32 or Cygwin */
+           )
+        if (path2[i] == '/')
+          return NULL;
+        else
+          return apr_pstrdup(pool, path2 + i);
+      else if (path2[i] == '/')
+        return apr_pstrdup(pool, path2 + i) + 1;
     }
 
   /* Otherwise, path2 isn't a child. */
@@ -714,9 +726,9 @@ svn_path_is_ancestor(const char *path1, const char *path2)
      then path1 is an ancestor. */
   if (strncmp(path1, path2, path1_len) == 0)
     return path1[path1_len - 1] == '/' ||
-#if defined (WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
            path1[path1_len - 1] == ':' ||
-#endif /* WIN32 */
+#endif /* WIN32 or Cygwin */
            (path2[path1_len] == '/' || path2[path1_len] == '\0');
 
   return FALSE;
@@ -1261,11 +1273,11 @@ svn_path_canonicalize(const char *path, apr_pool_t *pool)
     }
 
   strip_slash = TRUE;
-#if defined(WIN32)
+#if defined(WIN32) || defined(__CYGWIN__)
   /* Do not strip the trailing slash in a path like this: X:/ */
   if (canon_segments == 1 && canon[1] == ':' && canon[2] == '/')
     strip_slash = FALSE;
-#endif /* WIN32 */
+#endif /* WIN32 or Cygwin */
 
   /* Remove the trailing slash if needed. */
   if (strip_slash && 
