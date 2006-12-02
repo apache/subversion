@@ -1,0 +1,11 @@
+This branch exists with the purpose to refactor ra_dav
+in order to achieve several goals:
+
+ - Use more pool bound resources (ie fewer Neon ones) as
+   those don't need manual tracking.
+ - Move away from functions defined in ne_basic.h, because
+   they don't let us attach a 'custom error' reader to
+   requests without a lot of baton-juggling.
+ - Use as much as possible SVN_ERR macro invocations, to
+   line up with the rest of the code base.
+
