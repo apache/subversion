@@ -91,7 +91,7 @@ Candidate changes:
     Justification:
        Otherwise, --disable-neon-version-check is required.
     Votes:
-      +1: dlr
+      +1: dlr, maxb
 
   * r22501
     Fix script used to build our Solaris package.
