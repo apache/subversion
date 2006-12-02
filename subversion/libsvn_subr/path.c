@@ -692,9 +692,9 @@ svn_path_is_child(const char *path1,
   */
   if (path1[i] == '\0' && path2[i])
     {
-      if (path1[i - 1] == '/' || 
+      if (path1[i - 1] == '/'
 #if defined(WIN32) || defined(__CYGWIN__)
-          path1[i - 1] == ':'
+          || path1[i - 1] == ':'
 #endif /* WIN32 or Cygwin */
            )
         if (path2[i] == '/')
