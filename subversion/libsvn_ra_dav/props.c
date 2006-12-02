@@ -491,9 +491,8 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     const ne_propname *which_props,
                                     apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   propfind_ctx_t pc;
-  ne_buffer *body;
+  svn_stringbuf_t *body;
   apr_hash_t *extra_headers = apr_hash_make(pool);
 
   /* Add a Depth header. */
@@ -512,28 +511,31 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
 
   /* It's easier to roll our own PROPFIND here than use neon's current
      interfaces. */
-  body = ne_buffer_create();
-
   /* The start of the request body is fixed: */
-  ne_buffer_zappend(body, 
-                   "<?xml version=\"1.0\" encoding=\"utf-8\"?>" DEBUG_CR
-                   "<propfind xmlns=\"DAV:\">" DEBUG_CR);
+  body = svn_stringbuf_create
+    ("<?xml version=\"1.0\" encoding=\"utf-8\"?>" DEBUG_CR
+     "<propfind xmlns=\"DAV:\">" DEBUG_CR, pool);
 
   /* Are we asking for specific propert(y/ies), or just all of them? */
   if (which_props)
     {
       int n;
-      ne_buffer_zappend(body, "<prop>" DEBUG_CR);
+      apr_pool_t *iterpool = svn_pool_create(pool);
+
+      svn_stringbuf_appendcstr(body, "<prop>" DEBUG_CR);
       for (n = 0; which_props[n].name != NULL; n++) 
         {
-          ne_buffer_concat(body, "<", which_props[n].name, " xmlns=\"", 
-                           which_props[n].nspace, "\"/>" DEBUG_CR, NULL);
+          svn_pool_clear(iterpool);
+          svn_stringbuf_appendcstr
+            (body, apr_pstrcat(iterpool, "<", which_props[n].name, " xmlns=\"",
+                               which_props[n].nspace, "\"/>" DEBUG_CR, NULL));
         }
-      ne_buffer_zappend(body, "</prop></propfind>" DEBUG_CR);
+      svn_stringbuf_appendcstr(body, "</prop></propfind>" DEBUG_CR);
+      svn_pool_destroy(iterpool);
     }
   else
     {
-      ne_buffer_zappend(body, "<allprop/></propfind>" DEBUG_CR);
+      svn_stringbuf_appendcstr(body, "<allprop/></propfind>" DEBUG_CR);
     }
 
   /* Initialize our baton. */
@@ -544,17 +546,16 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   pc.cdata = svn_stringbuf_create("", pool);
 
   /* Create and dispatch the request! */
-  err = svn_ra_dav__parsed_request(sess, "PROPFIND", url,
-                                   body->data, 0,
-                                   set_parser,
-                                   start_element,
-                                   svn_ra_dav__xml_collect_cdata,
-                                   end_element,
-                                   &pc, extra_headers, NULL, FALSE, pool);
+  SVN_ERR(svn_ra_dav__parsed_request(sess, "PROPFIND", url,
+                                     body->data, 0,
+                                     set_parser,
+                                     start_element,
+                                     svn_ra_dav__xml_collect_cdata,
+                                     end_element,
+                                     &pc, extra_headers, NULL, FALSE, pool));
 
-  ne_buffer_destroy(body);
   *results = pc.props;
-  return err;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
@@ -977,10 +978,10 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 
 /* Helper function for svn_ra_dav__do_proppatch() below. */
 static void
-do_setprop(ne_buffer *body, 
-           const char *name, 
-           const svn_string_t *value,
-           apr_pool_t *pool)
+append_setprop(svn_stringbuf_t *body,
+               const char *name,
+               const svn_string_t *value,
+               apr_pool_t *pool)
 {
   const char *encoding = "";
   const char *xml_safe;
@@ -1002,7 +1003,8 @@ do_setprop(ne_buffer *body,
      here. */
   if (! value)
     {
-      ne_buffer_concat(body, "<", xml_tag_name, "/>", NULL);
+      svn_stringbuf_appendcstr(body,
+                               apr_psprintf(pool, "<%s />", xml_tag_name));
       return;
     }
 
@@ -1021,8 +1023,10 @@ do_setprop(ne_buffer *body,
       xml_safe = base64ed->data;
     }
 
-  ne_buffer_concat(body, "<", xml_tag_name, encoding, ">", 
-                   xml_safe, "</", xml_tag_name, ">", NULL);
+  svn_stringbuf_appendcstr(body,
+                           apr_psprintf(pool,"<%s %s>%s</%s>",
+                                        xml_tag_name, encoding,
+                                        xml_safe, xml_tag_name));
   return;
 }
 
@@ -1037,8 +1041,9 @@ svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
 {
   ne_request *req;
   int code;
-  ne_buffer *body; /* ### using an ne_buffer because it can realloc */
+  svn_stringbuf_t *body;
   svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* just punt if there are no changes to make. */
   if ((prop_changes == NULL || (! apr_hash_count(prop_changes)))
@@ -1047,50 +1052,48 @@ svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
 
   /* easier to roll our own PROPPATCH here than use ne_proppatch(), which 
    * doesn't really do anything clever. */
-  body = ne_buffer_create();
-
-  ne_buffer_zappend(body,
-                    "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
-                    "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:V=\""
-                    SVN_DAV_PROP_NS_DAV "\" xmlns:C=\""
-                    SVN_DAV_PROP_NS_CUSTOM "\" xmlns:S=\""
-                    SVN_DAV_PROP_NS_SVN "\">");
+  body = svn_stringbuf_create
+    ("<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
+     "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:V=\""
+     SVN_DAV_PROP_NS_DAV "\" xmlns:C=\""
+     SVN_DAV_PROP_NS_CUSTOM "\" xmlns:S=\""
+     SVN_DAV_PROP_NS_SVN "\">" DEBUG_CR, pool);
 
   /* Handle property changes. */
   if (prop_changes)
     {
       apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create(pool);
-      ne_buffer_zappend(body, "<D:set><D:prop>");
+      svn_stringbuf_appendcstr(body, "<D:set><D:prop>");
       for (hi = apr_hash_first(pool, prop_changes); hi; hi = apr_hash_next(hi))
         {
           const void *key;
           void *val;
           svn_pool_clear(subpool);
           apr_hash_this(hi, &key, NULL, &val);
-          do_setprop(body, key, val, subpool);
+          append_setprop(body, key, val, subpool);
         }
-      ne_buffer_zappend(body, "</D:prop></D:set>");
-      svn_pool_destroy(subpool);
+      svn_stringbuf_appendcstr(body, "</D:prop></D:set>");
     }
   
   /* Handle property deletions. */
   if (prop_deletes)
     {
       int n;
-      ne_buffer_zappend(body, "<D:remove><D:prop>");
-      for (n = 0; n < prop_deletes->nelts; n++) 
+      svn_stringbuf_appendcstr(body, "<D:remove><D:prop>");
+      for (n = 0; n < prop_deletes->nelts; n++)
         {
           const char *name = APR_ARRAY_IDX(prop_deletes, n, const char *);
-          do_setprop(body, name, NULL, pool);
+          svn_pool_clear(subpool);
+          append_setprop(body, name, NULL, subpool);
         }
-      ne_buffer_zappend(body, "</D:prop></D:remove>");
+      svn_stringbuf_appendcstr(body, "</D:prop></D:remove>");
     }
+  svn_pool_destroy(subpool);
 
   /* Finish up the body. */
-  ne_buffer_zappend(body, "</D:propertyupdate>");
+  svn_stringbuf_appendcstr(body, "</D:propertyupdate>");
   req = ne_request_create(ras->sess, "PROPPATCH", url);
-  ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
+  ne_set_request_body_buffer(req, body->data, body->len);
   ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
 
   /* add any extra headers passed in by caller. */
@@ -1122,7 +1125,6 @@ svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
          _("At least one property change failed; repository is unchanged"));
     }
 
-  ne_buffer_destroy(body);
   return err;
 }
 
