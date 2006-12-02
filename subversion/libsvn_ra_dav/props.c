@@ -2,7 +2,7 @@
  * props.c :  routines for fetching DAV properties
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -160,6 +160,10 @@ static const svn_ra_dav__xml_elm_t propfind_elements[] =
 
 typedef struct propfind_ctx_t
 {
+  /*WARNING: WANT_CDATA should stay the first element in the baton:
+    svn_ra_dav__xml_collect_cdata() assumes the baton starts with a stringbuf.
+  */
+  svn_stringbuf_t *cdata;
   apr_hash_t *props; /* const char *URL-PATH -> svn_ra_dav_resource_t */
 
   svn_ra_dav_resource_t *rsrc; /* the current resource. */
@@ -215,8 +219,7 @@ static void assign_rsrc_url(svn_ra_dav_resource_t *rsrc,
 }
 
 
-static int validate_element(void *userdata, 
-                            svn_ra_dav__xml_elmid parent, 
+static int validate_element(svn_ra_dav__xml_elmid parent,
                             svn_ra_dav__xml_elmid child)
 {
   switch (parent)
@@ -271,17 +274,30 @@ static int validate_element(void *userdata,
 }
 
 
-static int start_element(void *userdata, 
-                         const svn_ra_dav__xml_elm_t *elm, 
-                         const char **atts)
+static svn_error_t *
+start_element(int *elem, void *baton, int parent,
+              const char *nspace, const char *name, const char **atts)
 {
-  propfind_ctx_t *pc = userdata;
+  propfind_ctx_t *pc = baton;
+  const svn_ra_dav__xml_elm_t *elm
+    = svn_ra_dav__lookup_xml_elem(propfind_elements, nspace, name);
+  int acc = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  /* Accept unknown props */
 
-  switch (elm->id)
+  if (acc != SVN_RA_DAV__XML_VALID)
+    {
+      *elem = acc;
+      return (acc == SVN_RA_DAV__XML_DECLINE) ?
+        SVN_NO_ERROR : svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
+    }
+
+  svn_stringbuf_setempty(pc->cdata);
+  *elem = elm ? elm->id : ELEM_unknown;
+  switch (*elem)
     {
     case ELEM_response:
       if (pc->rsrc)
-        return SVN_RA_DAV__XML_INVALID;
+        return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
       /* Create a new resource. */
       pc->rsrc = apr_pcalloc(pc->pool, sizeof(*(pc->rsrc)));
       pc->rsrc->pool = pc->pool;
@@ -319,34 +335,33 @@ static int start_element(void *userdata,
     }
 
   /* Remember the last tag we opened. */
-  pc->last_open_id = elm->id;
-  return SVN_RA_DAV__XML_VALID;
+  pc->last_open_id = *elem;
+  return SVN_NO_ERROR;
 }
 
 
-static int end_element(void *userdata, 
-                       const svn_ra_dav__xml_elm_t *elm,
-                       const char *cdata)
+static svn_error_t * end_element(void *baton, int state,
+                                 const char *nspace, const char *name)
 {
-  propfind_ctx_t *pc = userdata;
+  propfind_ctx_t *pc = baton;
   svn_ra_dav_resource_t *rsrc = pc->rsrc;
-  const char *name;
   const svn_string_t *value = NULL;
   const elem_defn *parent_defn;
   const elem_defn *defn;
   ne_status status;
+  const char *cdata = pc->cdata->data;
 
-  switch (elm->id)
+  switch (state)
     {
     case ELEM_response:
       /* Verify that we've received a URL for this resource. */
       if (!pc->rsrc->url)
-        return SVN_RA_DAV__XML_INVALID;
+        return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
 
       /* Store the resource in the top-level hash table. */
       apr_hash_set(pc->props, pc->rsrc->url, APR_HASH_KEY_STRING, pc->rsrc);
       pc->rsrc = NULL;
-      return SVN_RA_DAV__XML_VALID;
+      return SVN_NO_ERROR;
 
     case ELEM_propstat:
       /* We're at the end of a set of properties.  Do the right thing
@@ -373,24 +388,24 @@ static int end_element(void *userdata,
       else if (! pc->status)
         {
           /* No status at all?  Bogosity. */
-          return SVN_RA_DAV__XML_INVALID;
+          return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
         }
-      return SVN_RA_DAV__XML_VALID;
+      return SVN_NO_ERROR;
 
     case ELEM_status:
       /* Parse the <status> tag's CDATA for a status code. */
       if (ne_parse_statusline(cdata, &status))
-        return SVN_RA_DAV__XML_INVALID;
+        return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
       free(status.reason_phrase);
       pc->status = status.code;
-      return SVN_RA_DAV__XML_VALID;
+      return SVN_NO_ERROR;
 
     case ELEM_href:
       /* Special handling for <href> that belongs to the <response> tag. */
       if (rsrc->href_parent == ELEM_response)
         {
           assign_rsrc_url(pc->rsrc, cdata, pc->pool);
-          return SVN_RA_DAV__XML_VALID;
+          return SVN_NO_ERROR;
         }
 
       /* Use the parent element's name, not the href. */
@@ -398,7 +413,7 @@ static int end_element(void *userdata,
 
       /* No known parent?  Get outta here. */
       if (!parent_defn)
-        return SVN_RA_DAV__XML_VALID;
+        return SVN_NO_ERROR;
 
       /* All other href's we'll treat as property values. */
       name = parent_defn->name;
@@ -415,16 +430,16 @@ static int end_element(void *userdata,
            structure to determine if they are properties.  Properties,
            we handle; all else hits the road.  ***/
 
-      if (elm->id == ELEM_unknown)
+      if (state == ELEM_unknown)
         {
-          name = apr_pstrcat(pc->pool, elm->nspace, elm->name, NULL);
+          name = apr_pstrcat(pc->pool, nspace, name, NULL);
         }
       else
         {
-          defn = defn_from_id(elm->id);
+          defn = defn_from_id(state);
           if (! (defn && defn->is_property))
-            return SVN_RA_DAV__XML_VALID;
-          name = defn->name;          
+            return SVN_NO_ERROR;
+          name = defn->name;
         }
 
       /* Check for encoding attribute. */
@@ -436,7 +451,7 @@ static int end_element(void *userdata,
 
       /* Check for known encoding type */
       if (strcmp(pc->encoding, "base64") != 0)
-        return SVN_RA_DAV__XML_INVALID;
+        return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
 
       /* There is an encoding on this property, handle it.
        * the braces are needed to allocate "in" on the stack. */
@@ -456,7 +471,7 @@ static int end_element(void *userdata,
      <propstat>, we'll either dump the props as invalid or move them
      into the resource's property hash. */
   apr_hash_set(pc->propbuffer, name, APR_HASH_KEY_STRING, value);
-  return SVN_RA_DAV__XML_VALID;
+  return SVN_NO_ERROR;
 }
 
 
@@ -526,15 +541,16 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   pc.pool = pool;
   pc.propbuffer = apr_hash_make(pool);
   pc.props = apr_hash_make(pool);
+  pc.cdata = svn_stringbuf_create("", pool);
 
   /* Create and dispatch the request! */
-  err = svn_ra_dav__parsed_request_compat(sess, "PROPFIND", url,
-                                          body->data, 0, 
-                                          set_parser, propfind_elements, 
-                                          validate_element, 
-                                          start_element, end_element, 
-                                          &pc, extra_headers, NULL, FALSE, 
-                                          pool);
+  err = svn_ra_dav__parsed_request(sess, "PROPFIND", url,
+                                   body->data, 0,
+                                   set_parser,
+                                   start_element,
+                                   svn_ra_dav__xml_collect_cdata,
+                                   end_element,
+                                   &pc, extra_headers, NULL, FALSE, pool);
 
   ne_buffer_destroy(body);
   *results = pc.props;
