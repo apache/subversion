@@ -165,19 +165,13 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct mergeinfo_baton mb;
 
-  /* ### todo: I don't understand why the static, file-global
-     variables shared by update and status are called `report_head'
-     and `report_tail', instead of `request_head' and `request_tail'.
-     Maybe Greg can explain?  Meanwhile, I'm tentatively using
-     "request_*" for my local vars below. */
-
-  static const char minfo_request_head[]
+  static const char minfo_report_head[]
     = "<S:merge-info-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
 
-  static const char minfo_request_tail[] = "</S:merge-info-report>" DEBUG_CR;
+  static const char minfo_report_tail[] = "</S:merge-info-report>" DEBUG_CR;
 
   /* Construct the request body. */
-  svn_stringbuf_appendcstr(request_body, minfo_request_head);
+  svn_stringbuf_appendcstr(request_body, minfo_report_head);
   svn_stringbuf_appendcstr(request_body,
                            apr_psprintf(pool,
                                         "<S:revision>%ld"
@@ -203,7 +197,7 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
         }
     }
 
-  svn_stringbuf_appendcstr(request_body, minfo_request_tail);
+  svn_stringbuf_appendcstr(request_body, minfo_report_tail);
 
   mb.pool = pool;
   mb.curr_path = NULL;
