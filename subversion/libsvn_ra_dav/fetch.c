@@ -1221,7 +1221,7 @@ drev_end_element(void *baton, int state,
       b->cdata = NULL;
     }
 
-  return SVN_RA_DAV__XML_VALID;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
