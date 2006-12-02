@@ -165,6 +165,16 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
   svn_stringbuf_t *request_body = svn_stringbuf_create("", pool);
   struct mergeinfo_baton mb;
 
+  /* ### FIXME: We need to know by this point whether the server even
+     ### supports the "get-merge-info" REPORT.  If it's unsupported,
+     ### we exit here.  Alternately, we could just try the REPORT, and
+     ### DTRT if greeted by a HTTP_NOT_IMPLEMENTED (501). */
+  if (FALSE /* server doesn't support get-merge-info */)
+    {
+      *mergeinfo = NULL;
+      return SVN_NO_ERROR;
+    }
+
   static const char minfo_report_head[]
     = "<S:merge-info-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
 
