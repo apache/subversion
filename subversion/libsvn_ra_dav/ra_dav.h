@@ -190,13 +190,6 @@ svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
                                      ne_block_reader reader,
                                      void *userdata);
 
-/* Create an xml parser for use with REQ.
- *
- * Register a pool cleanup on the pool of REQ to clean up any allocated
- * Neon resources
- */
-ne_xml_parser *
-svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req);
 
 /* Destroy request REQ and any associated resources */
 #define svn_ra_dav__request_destroy(req) svn_pool_destroy((req)->pool)
@@ -553,12 +546,6 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(svn_ra_dav__request_t *req,
                                                 apr_file_t *body_file);
 
 
-/* Allocate a Neon xml parser.
- *
- * Register a pool cleanup for any allocated Neon resources.
- */
-ne_xml_parser *svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req);
-
 /** Find a given element in the table of elements.
  *
  * The table of XML elements @a table is searched until element identified by
@@ -609,6 +596,19 @@ typedef svn_error_t * (*svn_ra_dav__endelm_cb_t)(void *baton,
                                                  int state,
                                                  const char *nspace,
                                                  const char *name);
+
+
+/* Create an xml parser for use with REQ.
+ *
+ * Register a pool cleanup on the pool of REQ to clean up any allocated
+ * Neon resources
+ */
+ne_xml_parser *
+svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req,
+                              svn_ra_dav__startelm_cb_t startelm_cb,
+                              svn_ra_dav__cdata_cb_t cdata_cb,
+                              svn_ra_dav__endelm_cb_t endelm_cb,
+                              void *baton);
 
 /* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
  * in session SESS, and parse the response.  If BODY is non-null, it is
