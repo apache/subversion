@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os
+import sys, re, os
 
 # Our testing module
 import svntest
@@ -2103,7 +2103,7 @@ def update_wc_on_windows_drive(sbox):
   		import win32api
 
   		drives=win32api.GetLogicalDriveStrings()
-  		drives=string.splitfields(drives, '\000')
+  		drives=drives.split('\000')
 
   		for d in range(ord('G'), ord('Z')+1):
   		  drive = chr(d)
