@@ -1692,30 +1692,6 @@ def cat_added_PREV(sbox):
                                      None, ".*has no committed revision.*",
                                      'cat', '-rPREV', f_path)
 
-# Isue #1869.
-def move_relative_paths(sbox):
-  "move file using relative path names"
-
-  sbox.build()
-  wc_dir = sbox.wc_dir
-  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
-  rel_path = os.path.join('..', '..', '..')
-
-  current_dir = os.getcwd()
-  os.chdir(E_path)
-  
-  try:
-    svntest.main.run_svn(None, 'mv', 'beta', rel_path)
-  finally:
-    os.chdir(current_dir)
-
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.add({
-    'beta'        : Item(status='A ', copied='+', wc_rev='-'),
-    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
-  })
-  svntest.actions.run_and_verify_status(wc_dir, expected_status)
-
 # Issue #2612.
 def ls_space_in_repo_name(sbox):
   'basic ls of repos with space in name'
@@ -1765,7 +1741,6 @@ test_list = [ None,
               info_nonhead,
               ls_nonhead,
               cat_added_PREV,
-              XFail(move_relative_paths, svntest.main.is_os_windows),
               ls_space_in_repo_name,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
