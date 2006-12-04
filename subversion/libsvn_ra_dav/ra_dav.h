@@ -859,6 +859,10 @@ svn_ra_dav__request_dispatch(int *code_p,
                              int okay_2,
                              apr_pool_t *pool);
 
+/* A layer over SVN_RA_DAV__REQUEST_DISPATCH() adding a
+   207 response parser to extract relevant (error) information.
+
+   Don't use this function if you're expecting 207 as a valid response. */
 svn_error_t *
 svn_ra_dav__simple_request(svn_ra_dav__request_t *req,
                            int okay_1, int okay_2, apr_pool_t *pool);
