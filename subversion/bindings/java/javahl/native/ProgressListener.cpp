@@ -77,7 +77,7 @@ ProgressListener::makeCProgressListener(jobject jprogressListener)
 
 void
 ProgressListener::progress(apr_off_t nbrBytes, apr_off_t total, void *baton,
-			   apr_pool_t *pool)
+                           apr_pool_t *pool)
 {
     if (baton)
     {
@@ -87,7 +87,7 @@ ProgressListener::progress(apr_off_t nbrBytes, apr_off_t total, void *baton,
 
 void
 ProgressListener::onProgress(apr_off_t progress, apr_off_t total,
-			     apr_pool_t *pool)
+                             apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
@@ -132,7 +132,7 @@ ProgressListener::onProgress(apr_off_t progress, apr_off_t total,
 
     // Call the Java method.
     jobject jevent = env->NewObject(clazz, midCT,
-				    (jlong) progress, (jlong) total);
+                                    (jlong) progress, (jlong) total);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return;

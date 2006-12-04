@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, sys, re, os
+import os
 import warnings
 
 # Our testing module
@@ -90,7 +90,7 @@ def externals_test_setup(sbox):
   D_path = os.path.join(wc_init_dir, "A/D")
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -100,27 +100,27 @@ def externals_test_setup(sbox):
   # post-commit status checks.
 
   svntest.main.file_append(mu_path, "Added to mu in revision 2.\n")
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   svntest.main.file_append(pi_path, "Added to pi in revision 3.\n")
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   svntest.main.file_append(lambda_path, "Added to lambda in revision 4.\n")
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   svntest.main.file_append(omega_path, "Added to omega in revision 5.\n")
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   # Get the whole working copy to revision 5.
-  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_init_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_init_dir)
 
   # Now copy the initial repository to create the "other" repository,
   # the one to which the first repository's `svn:externals' properties
@@ -135,7 +135,7 @@ def externals_test_setup(sbox):
 
   tmp_f = os.tempnam(wc_init_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
                                      '-F', tmp_f, 'svn:externals', C_path)
    
@@ -152,7 +152,7 @@ def externals_test_setup(sbox):
            "\n"
 
   svntest.main.file_append(tmp_f, externals_desc)
-  svntest.actions.run_and_verify_svn("", None, [], 'pset',
+  svntest.actions.run_and_verify_svn(None, None, [], 'pset',
                                      '-F', tmp_f, 'svn:externals', D_path)
 
   os.remove(tmp_f)
@@ -179,9 +179,9 @@ def change_external(path, new_val):
   and commit the change."""
   tmp_f = os.tempnam(svntest.main.temp_dir, 'tmp')
   svntest.main.file_append(tmp_f, new_val)
-  svntest.actions.run_and_verify_svn("", None, [], 'pset',
+  svntest.actions.run_and_verify_svn(None, None, [], 'pset',
                                      '-F', tmp_f, 'svn:externals', path)
-  svntest.actions.run_and_verify_svn("", None, [], 'ci',
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'log msg', '--quiet', path)
   os.remove(tmp_f)
 
@@ -210,7 +210,7 @@ def checkout_with_externals(sbox):
   repo_url       = sbox.repo_url
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -270,13 +270,13 @@ def update_receive_new_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -300,7 +300,7 @@ def update_receive_new_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update the other working copy, see if we get the new item.
-  svntest.actions.run_and_verify_svn("", None, [], 'up', other_wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
 
   exdir_E_path = os.path.join(other_wc_dir, "A", "D", "exdir_E")
   if (not os.path.exists(exdir_E_path)):
@@ -320,13 +320,13 @@ def update_lose_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -360,7 +360,7 @@ def update_lose_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update other working copy, see if lose & preserve things appropriately
-  svntest.actions.run_and_verify_svn("", None, [], 'up', other_wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
 
   exdir_A_path = os.path.join(other_wc_dir, "A", "D", "exdir_A")
   if (not os.path.exists(exdir_A_path)):
@@ -404,13 +404,13 @@ def update_change_pristine_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -433,7 +433,7 @@ def update_change_pristine_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update other working copy, see if get the right change.
-  svntest.actions.run_and_verify_svn("", None, [], 'up', other_wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
 
   xyzb_path = os.path.join(other_wc_dir, "x", "y", "z", "blah")
 
@@ -457,13 +457,13 @@ def update_change_modified_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -494,7 +494,7 @@ def update_change_modified_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update other working copy, see if get the right change.
-  svntest.actions.run_and_verify_svn("", None, [], 'up', other_wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
 
   xyzb_path = os.path.join(other_wc_dir, "x", "y", "z", "blah")
 
@@ -518,13 +518,13 @@ def update_receive_change_under_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -553,7 +553,7 @@ def update_receive_change_under_external(sbox):
   # The output's going to be all screwy because of the module
   # notifications, so don't bother parsing it, just run update
   # directly.
-  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   external_gamma_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'D', 'gamma')
   fp = open(external_gamma_path, 'r')
@@ -581,7 +581,7 @@ def update_receive_change_under_external(sbox):
                                         None, None, None, None, None,
                                         other_wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', os.path.join(wc_dir, "A", "C"))
 
   external_rho_path = os.path.join(wc_dir, 'A', 'C', 'exdir_G', 'rho')
@@ -607,7 +607,7 @@ def modify_and_update_receive_new_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout a working copy
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -622,7 +622,7 @@ def modify_and_update_receive_new_external(sbox):
 
   tmp_f = os.tempnam()
   svntest.main.file_append(tmp_f, externals_desc)
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset', '-F', tmp_f,
                                      'svn:externals', B_path)
   os.remove(tmp_f)
@@ -655,7 +655,7 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   def set_externals_for_path_expect_error(path, val, dir):
     tmp_f = os.tempnam(dir, 'tmp')
     svntest.main.file_append(tmp_f, val)
-    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                        'pset', '-F', tmp_f,
                                        'svn:externals', path)
     os.remove(tmp_f)
@@ -697,7 +697,7 @@ def export_with_externals(sbox):
   repo_url       = sbox.repo_url
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'export',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,

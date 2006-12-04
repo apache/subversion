@@ -17,12 +17,10 @@
  */
 package org.tigris.subversion.javahl;
 
-import java.util.EventObject;
-
 /**
  * The event passed to the {@link
  * ProgressListener.onProgress(ProgressEvent)} API to inform {@link
- * SVNClientInterfacce} of command progress (in terms of bytes).
+ * SVNClientInterface} of command progress (in terms of bytes).
  *
  * @since 1.5
  */

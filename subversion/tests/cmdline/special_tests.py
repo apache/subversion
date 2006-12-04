@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -332,7 +332,7 @@ def remove_symlink(sbox):
                                         None, None, None, None, wc_dir)
   
   # Now remove it
-  svntest.actions.run_and_verify_svn("", None, [], 'rm', newfile_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', newfile_path)
 
   # Commit and verify that it worked
   expected_output = svntest.wc.State(wc_dir, {
@@ -446,7 +446,7 @@ def merge_file_into_symlink(sbox):
   svntest.actions.run_and_verify_commit(wc_dir, expected_output, None, None,
                                         None, None, None, None, wc_dir)
 
-  open(gamma_path, 'w+').write("changed file")
+  svntest.main.file_write(gamma_path, 'changed file', 'w+')
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Sending'),

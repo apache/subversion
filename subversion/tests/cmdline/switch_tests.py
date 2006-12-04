@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, sys, re, os
+import shutil, re, os
 
 # Our testing module
 import svntest
@@ -1387,6 +1387,22 @@ This is the file 'pi'.
                                         svntest.tree.detect_conflict_files,
                                         extra_files, None, None, 0)
 
+#----------------------------------------------------------------------
+
+def switch_scheduled_add(sbox):
+  "switch a scheduled-add file"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  file_path = os.path.join(wc_dir, 'stub_file')
+  switch_url = sbox.repo_url + '/iota'
+
+  svntest.main.file_append(file_path, "")
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'add', file_path)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'switch', switch_url, file_path)
+
 ########################################################################
 # Run the tests
 
@@ -1413,6 +1429,7 @@ test_list = [ None,
               XFail(relocate_and_propset, svntest.main.is_ra_type_dav),
               forced_switch,
               forced_switch_failures,
+              switch_scheduled_add,
              ]
 
 if __name__ == '__main__':
