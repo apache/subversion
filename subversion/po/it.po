@@ -89,8 +89,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-11-22 05:00+0100\n"
-"PO-Revision-Date: 2006-11-22 08:41+0100\n"
+"POT-Creation-Date: 2006-12-04 05:00+0100\n"
+"PO-Revision-Date: 2006-12-04 08:30+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1084,8 +1084,8 @@ msgstr ""
 #: libsvn_client/diff.c:1460 libsvn_client/diff.c:2190
 #: libsvn_client/diff.c:2785 libsvn_client/diff.c:2913
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
-#: libsvn_client/prop_commands.c:352 libsvn_client/prop_commands.c:606
-#: libsvn_client/prop_commands.c:770 libsvn_client/prop_commands.c:1127
+#: libsvn_client/prop_commands.c:353 libsvn_client/prop_commands.c:607
+#: libsvn_client/prop_commands.c:771 libsvn_client/prop_commands.c:1128
 #: libsvn_client/ra.c:181 libsvn_client/revisions.c:89
 #: libsvn_client/status.c:256 libsvn_client/switch.c:107
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
@@ -1093,8 +1093,8 @@ msgstr ""
 #: libsvn_wc/adm_ops.c:2582 libsvn_wc/adm_ops.c:2608 libsvn_wc/adm_ops.c:2644
 #: libsvn_wc/adm_ops.c:2686 libsvn_wc/copy.c:307 libsvn_wc/copy.c:663
 #: libsvn_wc/copy.c:785 libsvn_wc/copy.c:792 libsvn_wc/diff.c:1793
-#: libsvn_wc/entries.c:2250 libsvn_wc/entries.c:2847 libsvn_wc/props.c:483
-#: libsvn_wc/props.c:1092 libsvn_wc/props.c:1543 libsvn_wc/questions.c:186
+#: libsvn_wc/entries.c:2250 libsvn_wc/entries.c:2847 libsvn_wc/props.c:485
+#: libsvn_wc/props.c:1094 libsvn_wc/props.c:1545 libsvn_wc/questions.c:186
 #: libsvn_wc/questions.c:300 libsvn_wc/status.c:729 libsvn_wc/translate.c:199
 #: libsvn_wc/update_editor.c:2299 libsvn_wc/update_editor.c:3150
 #, c-format
@@ -1427,40 +1427,40 @@ msgstr ""
 msgid "Property '%s' is not a regular property"
 msgstr "La proprietà '%s' non è regolare"
 
-#: libsvn_client/prop_commands.c:313
+#: libsvn_client/prop_commands.c:314
 #, c-format
 msgid "Revision property '%s' not allowed in this context"
 msgstr "Proprietà di revisione '%s' non permessa in questo contesto"
 
-#: libsvn_client/prop_commands.c:321 libsvn_client/prop_commands.c:440
+#: libsvn_client/prop_commands.c:322 libsvn_client/prop_commands.c:441
 #, c-format
 msgid "Bad property name: '%s'"
 msgstr "Nome di proprietà non valido: '%s'"
 
-#: libsvn_client/prop_commands.c:332
+#: libsvn_client/prop_commands.c:333
 #, c-format
 msgid "Setting property on non-local target '%s' needs a base revision"
 msgstr ""
 "L'impostazione di una proprietà su un target non locale '%s' necessita\n"
 "di una revisione di partenza"
 
-#: libsvn_client/prop_commands.c:338
+#: libsvn_client/prop_commands.c:339
 #, c-format
 msgid "Setting property recursively on non-local target '%s' is not supported"
 msgstr ""
 "L'impostazione ricorsiva di una proprietà su un target non locale '%s'\n"
 "non è supportata"
 
-#: libsvn_client/prop_commands.c:436
+#: libsvn_client/prop_commands.c:437
 msgid "Value will not be set unless forced"
 msgstr "Il valore non sarà impostato se non forzato"
 
-#: libsvn_client/prop_commands.c:659
+#: libsvn_client/prop_commands.c:660
 #, c-format
 msgid "'%s' does not exist in revision %ld"
 msgstr "'%s' non esiste nella revisione %ld"
 
-#: libsvn_client/prop_commands.c:666 libsvn_client/prop_commands.c:934
+#: libsvn_client/prop_commands.c:667 libsvn_client/prop_commands.c:935
 #, c-format
 msgid "Unknown node kind for '%s'"
 msgstr "Tipo di nodo sconosciuto per '%s'"
@@ -2666,7 +2666,7 @@ msgstr "Protocollo '%s' dell'URL non riconosciuto"
 msgid "Could not create a request (%s '%s')"
 msgstr "Non sono riuscito a creare una richiesta (%s '%s')"
 
-#: libsvn_ra_dav/commit.c:297
+#: libsvn_ra_dav/commit.c:298
 msgid ""
 "Could not fetch the Version Resource URL (needed during an import or when it "
 "is missing from the local, cached props)"
@@ -2679,59 +2679,59 @@ msgstr ""
 msgid "Could not create a CHECKOUT request (%s)"
 msgstr "Non sono riuscito a creare una richiesta CHECKOUT (%s)"
 
-#: libsvn_ra_dav/commit.c:546 libsvn_ra_serf/commit.c:376
+#: libsvn_ra_dav/commit.c:541 libsvn_ra_serf/commit.c:376
 #: libsvn_ra_serf/commit.c:437
 #, c-format
 msgid "Your file or directory '%s' is probably out-of-date"
 msgstr "Il tuo file o directory '%s' probabilmente non è aggiornato"
 
-#: libsvn_ra_dav/commit.c:554
+#: libsvn_ra_dav/commit.c:549
 msgid "The CHECKOUT response did not contain a 'Location:' header"
 msgstr "La risposta di CHECKOUT non conteneva un'intestazione 'Location:'"
 
-#: libsvn_ra_dav/commit.c:857
+#: libsvn_ra_dav/commit.c:851
 #, c-format
 msgid "Could not create a DELETE request (%s)"
 msgstr "Non sono riuscito a creare una richiesta DELETE (%s)"
 
-#: libsvn_ra_dav/commit.c:1142 libsvn_ra_serf/commit.c:1403
+#: libsvn_ra_dav/commit.c:1133 libsvn_ra_serf/commit.c:1403
 #, c-format
 msgid "File '%s' already exists"
 msgstr "Il file '%s' esiste già"
 
-#: libsvn_ra_dav/commit.c:1280
+#: libsvn_ra_dav/commit.c:1271
 msgid "Could not write svndiff to temp file"
 msgstr "Non sono riuscito a scrivere l'svndiff su un file temporaneo"
 
-#: libsvn_ra_dav/commit.c:1372
+#: libsvn_ra_dav/commit.c:1363
 #, c-format
 msgid "Could not create a PUT request (%s)"
 msgstr "Non sono riuscito a creare una richiesta PUT (%s)"
 
-#: libsvn_ra_dav/commit.c:1531
+#: libsvn_ra_dav/commit.c:1519
 #, c-format
 msgid "applying log message to %s"
 msgstr "applicazione del messaggio di log su %s"
 
-#: libsvn_ra_dav/fetch.c:277
+#: libsvn_ra_dav/fetch.c:276
 msgid "Could not save the URL of the version resource"
 msgstr "Non ho potuto salvare l'URL della risorsa di versione"
 
-#: libsvn_ra_dav/fetch.c:397
-msgid "Could not get content-type from response"
-msgstr ""
-"Non è stato possibile ottenere il valore di content-type dalla risposta"
-
-#: libsvn_ra_dav/fetch.c:439
+#: libsvn_ra_dav/fetch.c:421
 #, c-format
 msgid "Could not create a GET request for '%s'"
 msgstr "Non sono riuscito a creare una richiesta GET per '%s'"
 
-#: libsvn_ra_dav/fetch.c:595
+#: libsvn_ra_dav/fetch.c:489
+msgid "Could not get content-type from response"
+msgstr ""
+"Non è stato possibile ottenere il valore di content-type dalla risposta"
+
+#: libsvn_ra_dav/fetch.c:586
 msgid "Could not save file"
 msgstr "Non ho potuto salvare il file"
 
-#: libsvn_ra_dav/fetch.c:830 libsvn_ra_svn/client.c:909
+#: libsvn_ra_dav/fetch.c:821 libsvn_ra_svn/client.c:909
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -2742,43 +2742,43 @@ msgstr ""
 "   checksum atteso:   %s\n"
 "   checksum effettivo:  %s\n"
 
-#: libsvn_ra_dav/fetch.c:1075
+#: libsvn_ra_dav/fetch.c:1066
 msgid "Server response missing the expected deadprop-count property"
 msgstr ""
 "L'attesa proprietà deadprop-count non è presente nella risposta del server"
 
-#: libsvn_ra_dav/fetch.c:1248
+#: libsvn_ra_dav/fetch.c:1261
 msgid "Server does not support date-based operations"
 msgstr "Il server non supporta operazioni basate sulla data"
 
-#: libsvn_ra_dav/fetch.c:1255
+#: libsvn_ra_dav/fetch.c:1268
 msgid "Invalid server response to dated-rev request"
 msgstr "Risposta del server non valida ad una richiesta di revisione con data"
 
-#: libsvn_ra_dav/fetch.c:1319
+#: libsvn_ra_dav/fetch.c:1333
 msgid "Expected a valid revnum and path"
 msgstr "Atteso un numero di revisione valido e un percorso"
 
-#: libsvn_ra_dav/fetch.c:1401
+#: libsvn_ra_dav/fetch.c:1415
 msgid "'get-locations' REPORT not implemented"
 msgstr "REPORT di 'get-locations' non implementato"
 
-#: libsvn_ra_dav/fetch.c:1577 libsvn_ra_dav/session.c:1176
-#: libsvn_ra_dav/session.c:1464
+#: libsvn_ra_dav/fetch.c:1591 libsvn_ra_dav/session.c:1180
+#: libsvn_ra_dav/session.c:1468
 msgid "Incomplete lock data returned"
 msgstr "Restituiti dati di blocco incompleti"
 
-#: libsvn_ra_dav/fetch.c:1643
+#: libsvn_ra_dav/fetch.c:1657
 #, c-format
 msgid "Got unrecognized encoding '%s'"
 msgstr "Codifica non riconosciuta: '%s'"
 
-#: libsvn_ra_dav/fetch.c:1734 libsvn_ra_dav/fetch.c:1738
+#: libsvn_ra_dav/fetch.c:1748 libsvn_ra_dav/fetch.c:1752
 #: libsvn_ra_serf/locks.c:523
 msgid "Server does not support locking features"
 msgstr "Il server non supporta le funazionalità di blocco"
 
-#: libsvn_ra_dav/fetch.c:1813
+#: libsvn_ra_dav/fetch.c:1827
 msgid ""
 "DAV request failed; it's possible that the repository's pre-revprop-change "
 "hook either failed or is non-existent"
@@ -2786,17 +2786,17 @@ msgstr ""
 "Richiesta DAV fallita; è possibile che l'hook pre-revprop-change del "
 "repository abbia fallito o non esista"
 
-#: libsvn_ra_dav/fetch.c:2560
+#: libsvn_ra_dav/fetch.c:2574
 #, c-format
 msgid "Error writing to '%s': unexpected EOF"
 msgstr "Errore nella scrittura di '%s': EOF inatteso"
 
-#: libsvn_ra_dav/fetch.c:2707
+#: libsvn_ra_dav/fetch.c:2721
 #, c-format
 msgid "Unknown XML encoding: '%s'"
 msgstr "Codifica XML sconosciuta: '%s'"
 
-#: libsvn_ra_dav/fetch.c:2984
+#: libsvn_ra_dav/fetch.c:2998
 msgid "REPORT response handling failed to complete the editor drive"
 msgstr ""
 "Il gestore delle risposte di REPORT non è riuscito a completare la guida "
@@ -2814,7 +2814,7 @@ msgstr "REPORT di 'get-file-revs' non implementato"
 msgid "The file-revs report didn't contain any revisions"
 msgstr "Il report di file-revs non conteneva alcuna revisione"
 
-#: libsvn_ra_dav/merge.c:220
+#: libsvn_ra_dav/merge.c:222
 #, c-format
 msgid ""
 "Protocol error: we told the server not to auto-merge any resources, but it "
@@ -2824,7 +2824,7 @@ msgstr ""
 "automatico delle risorse ma lui ha risposto che '%s' è risultato di una "
 "fusione"
 
-#: libsvn_ra_dav/merge.c:229
+#: libsvn_ra_dav/merge.c:231
 #, c-format
 msgid ""
 "Internal error: there is an unknown parent (%d) for the 'DAV:response' "
@@ -2833,7 +2833,7 @@ msgstr ""
 "Errore interno: c'è un genitore (%d) sconosciuto all'elemento 'DAV:response' "
 "all'interno della risposta di MERGE"
 
-#: libsvn_ra_dav/merge.c:244
+#: libsvn_ra_dav/merge.c:246
 #, c-format
 msgid ""
 "Protocol error: the MERGE response for the '%s' resource did not return all "
@@ -2843,16 +2843,16 @@ msgstr ""
 "restituito tutte le proprietà che abbiamo chiesto (e di cui abbiamo bisogno "
 "per completare il commit)"
 
-#: libsvn_ra_dav/merge.c:263
+#: libsvn_ra_dav/merge.c:265
 #, c-format
 msgid "A MERGE response for '%s' is not a child of the destination ('%s')"
 msgstr "Una risposta di MERGE per '%s' non è figlia della destinazione ('%s')"
 
-#: libsvn_ra_dav/merge.c:485
+#: libsvn_ra_dav/merge.c:518
 msgid "The MERGE property response had an error status"
 msgstr "La risposta della proprietà di MERGE ha un errore nello status"
 
-#: libsvn_ra_dav/options.c:130
+#: libsvn_ra_dav/options.c:153
 msgid ""
 "The OPTIONS response did not include the requested activity-collection-set; "
 "this often means that the URL is not WebDAV-enabled"
@@ -2860,48 +2860,48 @@ msgstr ""
 "La risposta di OPTIONS non include l'activity-collection-set richiesto; "
 "questo spesso significa che l'URL non è WebDAV"
 
-#: libsvn_ra_dav/props.c:588
+#: libsvn_ra_dav/props.c:605
 #, c-format
 msgid "Failed to find label '%s' for URL '%s'"
 msgstr "Non ho trovato l'etichetta '%s' per l'URL '%s'"
 
-#: libsvn_ra_dav/props.c:617
+#: libsvn_ra_dav/props.c:634
 #, c-format
 msgid "'%s' was not present on the resource"
 msgstr "'%s' non era presente nella risorsa"
 
-#: libsvn_ra_dav/props.c:656
+#: libsvn_ra_dav/props.c:673
 #, c-format
 msgid "Neon was unable to parse URL '%s'"
 msgstr "Neon non è stato in grado di interpretare l'URL '%s'"
 
-#: libsvn_ra_dav/props.c:685
+#: libsvn_ra_dav/props.c:702
 msgid "The path was not part of a repository"
 msgstr "Il percorso non fa parte del repository"
 
-#: libsvn_ra_dav/props.c:696
+#: libsvn_ra_dav/props.c:713
 #, c-format
 msgid "No part of path '%s' was found in repository HEAD"
 msgstr ""
 "Nessuna parte del percorso '%s' è stata trovata nella HEAD del repository"
 
-#: libsvn_ra_dav/props.c:730 libsvn_ra_dav/props.c:785
+#: libsvn_ra_dav/props.c:747 libsvn_ra_dav/props.c:802
 msgid "The VCC property was not found on the resource"
 msgstr "La proprietà VCC non è stata trovata sulla risorsa"
 
-#: libsvn_ra_dav/props.c:798
+#: libsvn_ra_dav/props.c:815
 msgid "The relative-path property was not found on the resource"
 msgstr "La proprietà di percorso relativo non è stata trovata sulla risorsa"
 
-#: libsvn_ra_dav/props.c:919
+#: libsvn_ra_dav/props.c:936
 msgid "'DAV:baseline-collection' was not present on the baseline resource"
 msgstr "'DAV:baseline-collection' non era presente sulla risorsa di baseline"
 
-#: libsvn_ra_dav/props.c:938
+#: libsvn_ra_dav/props.c:955
 msgid "'DAV:version-name' was not present on the baseline resource"
 msgstr "'DAV:version-name' non era presente sulla risorsa di baseline"
 
-#: libsvn_ra_dav/props.c:1106 libsvn_ra_serf/commit.c:720
+#: libsvn_ra_dav/props.c:1125 libsvn_ra_serf/commit.c:720
 msgid "At least one property change failed; repository is unchanged"
 msgstr ""
 "Almeno una modifica di proprietà è fallita; il repository è rimaso immutato"
@@ -2922,7 +2922,7 @@ msgstr ""
 msgid "Got close-directory element without ever opening a directory"
 msgstr "Ricevuto elemento close-directory senza aver mai aperto una directory"
 
-#: libsvn_ra_dav/replay.c:431 libsvn_ra_serf/replay.c:495
+#: libsvn_ra_dav/replay.c:431 libsvn_ra_serf/replay.c:499
 msgid "Error writing stream: unexpected EOF"
 msgstr "Errore in scrittura: EOF inatteso"
 
@@ -2930,146 +2930,141 @@ msgstr "Errore in scrittura: EOF inatteso"
 msgid "Got cdata content for a prop delete"
 msgstr "Ricevuto un contenuto cdata per la cancellazione di una proprieta'"
 
-#: libsvn_ra_dav/session.c:456
+#: libsvn_ra_dav/session.c:460
 msgid "Invalid URL: illegal character in proxy port number"
 msgstr "URL non valida: carattere illegale nel numero di porta del proxy"
 
-#: libsvn_ra_dav/session.c:460
+#: libsvn_ra_dav/session.c:464
 msgid "Invalid URL: negative proxy port number"
 msgstr "URL non valida: numero di porta del proxy negativo"
 
-#: libsvn_ra_dav/session.c:463
+#: libsvn_ra_dav/session.c:467
 msgid ""
 "Invalid URL: proxy port number greater than maximum TCP port number 65535"
 msgstr ""
 "URL non valida: numero di porta del proxy più grande del numero di porta "
 "massimo del TCP 65535"
 
-#: libsvn_ra_dav/session.c:477
+#: libsvn_ra_dav/session.c:481
 msgid "Invalid config: illegal character in timeout value"
 msgstr "Configurazione non valida: carattere illegale nel valore di timeout"
 
-#: libsvn_ra_dav/session.c:481
+#: libsvn_ra_dav/session.c:485
 msgid "Invalid config: negative timeout value"
 msgstr "Configurazione non valida: valore di timeout negativo"
 
-#: libsvn_ra_dav/session.c:494
+#: libsvn_ra_dav/session.c:498
 msgid "Invalid config: illegal character in debug mask value"
 msgstr "Configurazione non valida: carattere illegale nella maschera di debug"
 
-#: libsvn_ra_dav/session.c:519
+#: libsvn_ra_dav/session.c:523
 #, c-format
 msgid "Invalid config: unknown http authtype '%s'"
 msgstr "Configurazione non valida: autenticazione http sconosciuta '%s'"
 
-#: libsvn_ra_dav/session.c:580
+#: libsvn_ra_dav/session.c:584
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
 msgstr ""
 "Modulo per accedere ad un repository tramite protocollo WebDAV (DeltaV)."
 
-#: libsvn_ra_dav/session.c:631
+#: libsvn_ra_dav/session.c:635
 msgid "Malformed URL for repository"
 msgstr "URL non conforme per il repository"
 
-#: libsvn_ra_dav/session.c:668
+#: libsvn_ra_dav/session.c:672
 msgid "Network socket initialization failed"
 msgstr "Inizializzazione del socket di rete fallita"
 
-#: libsvn_ra_dav/session.c:690
+#: libsvn_ra_dav/session.c:694
 msgid "SSL is not supported"
 msgstr "SSL non è supportato"
 
-#: libsvn_ra_dav/session.c:842
+#: libsvn_ra_dav/session.c:846
 #, c-format
 msgid "Invalid config: unable to load certificate file '%s'"
 msgstr ""
 "Configurazione non valida: non ho potuto caricare il file di certificato '%s'"
 
-#: libsvn_ra_dav/session.c:949
+#: libsvn_ra_dav/session.c:953
 msgid "The UUID property was not found on the resource or any of its parents"
 msgstr ""
 "La proprietà UUID non è stata trovata nella risorsa né in alcuno dei suoi "
 "genitori"
 
-#: libsvn_ra_dav/session.c:957
+#: libsvn_ra_dav/session.c:961
 msgid "Please upgrade the server to 0.19 or later"
 msgstr "Il server deve essere aggiornato alla versione 0.19 o successiva"
 
-#: libsvn_ra_dav/session.c:1148 libsvn_ra_dav/session.c:1285
+#: libsvn_ra_dav/session.c:1152 libsvn_ra_dav/session.c:1289
 msgid "Failed to parse URI"
 msgstr "Fallita l'interpretazione dell'URI"
 
-#: libsvn_ra_dav/session.c:1171 libsvn_ra_serf/locks.c:608
+#: libsvn_ra_dav/session.c:1175 libsvn_ra_serf/locks.c:608
 msgid "Lock request failed"
 msgstr "La richiesta di blocco è fallita"
 
-#: libsvn_ra_dav/session.c:1300 libsvn_ra_serf/locks.c:683
+#: libsvn_ra_dav/session.c:1304 libsvn_ra_serf/locks.c:683
 #, c-format
 msgid "'%s' is not locked in the repository"
 msgstr "'%s' non è bloccata nel repository"
 
-#: libsvn_ra_dav/session.c:1337
+#: libsvn_ra_dav/session.c:1341
 msgid "Unlock request failed"
 msgstr "La richiesta di sblocco è fallita"
 
-#: libsvn_ra_dav/session.c:1559
+#: libsvn_ra_dav/session.c:1563
 msgid "Failed to fetch lock information"
 msgstr "Non ho potuto ottenere le informazioni sul blocco"
 
-#: libsvn_ra_dav/session.c:1632
+#: libsvn_ra_dav/session.c:1636
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "Versione del lettore (%d) per ra_dav non supportata"
 
-#: libsvn_ra_dav/util.c:368
+#: libsvn_ra_dav/util.c:212
 msgid "authorization failed"
 msgstr "autorizzazione fallita"
 
-#: libsvn_ra_dav/util.c:372
+#: libsvn_ra_dav/util.c:216
 msgid "could not connect to server"
 msgstr "non ho potuto connettermi al server"
 
-#: libsvn_ra_dav/util.c:376
+#: libsvn_ra_dav/util.c:220
 msgid "timed out waiting for server"
 msgstr "timeout della connessione al server"
 
-#: libsvn_ra_dav/util.c:575
+#: libsvn_ra_dav/util.c:549
 msgid "Can't calculate the request body size"
 msgstr "Non posso calcolare la dimensione del corpo della richiesta"
 
-#: libsvn_ra_dav/util.c:918
-#, c-format
-msgid "Error spooling the %s request response to disk"
-msgstr "Errore nello spool della risposta alla richiesta %s su disco"
-
-#: libsvn_ra_dav/util.c:927
+#: libsvn_ra_dav/util.c:880
 #, c-format
 msgid "Error reading spooled %s request response"
 msgstr "Errore nella lettura dello spool di risposta alla richiesta %s"
 
-#: libsvn_ra_dav/util.c:937
+#: libsvn_ra_dav/util.c:890
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "La richiesta %s ha restituito XML non valido nella risposta: %s (%s)"
 
-#: libsvn_ra_dav/util.c:967 libsvn_ra_dav/util.c:996
+#: libsvn_ra_dav/util.c:922
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "richiesta %s fallita su '%s'"
 
-#: libsvn_ra_dav/util.c:1130
+#: libsvn_ra_dav/util.c:1051
 #, c-format
 msgid "'%s' path not found"
 msgstr "'%s' percorso non trovato"
 
-#: libsvn_ra_dav/util.c:1141
+#: libsvn_ra_dav/util.c:1060
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
 msgstr ""
 "Il repository è stato definitivamente spostato in '%s'; aggiorna\n"
 "i riferimenti"
 
-#: libsvn_ra_dav/util.c:1143
+#: libsvn_ra_dav/util.c:1062
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
 msgstr ""
@@ -3078,7 +3073,7 @@ msgstr ""
 
 #. We either have a neon error, or some other error
 #. that we didn't expect.
-#: libsvn_ra_dav/util.c:1154
+#: libsvn_ra_dav/util.c:1071
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s di '%s'"
@@ -3189,7 +3184,7 @@ msgstr "Attributo di revisione mancante per l'elemento open-file"
 msgid "Missing name attr in add-file element"
 msgstr "Attributo di nome mancante nell'elemento add-file"
 
-#: libsvn_ra_serf/replay.c:375
+#: libsvn_ra_serf/replay.c:379
 #, c-format
 msgid "Missing name attr in %s element"
 msgstr "Attributo 'name' mancante nell'elemento %s"
@@ -3217,7 +3212,7 @@ msgstr "Errore nel recupero di REPORT (%d)"
 msgid "Unspecified error message"
 msgstr "Messaggio d'errore non specificato"
 
-#: libsvn_ra_serf/util.c:786
+#: libsvn_ra_serf/util.c:797
 msgid "Premature EOF seen from server"
 msgstr "EOF prematuro visto dal server"
 
@@ -3603,65 +3598,85 @@ msgstr ""
 "Sblocco eseguito, ma gli agganci in post-unlock\n"
 "hanno fallito l'esecuzione"
 
-#: libsvn_repos/hooks.c:68
+#: libsvn_repos/hooks.c:87
+#, c-format
+msgid "'%s' hook succeeded, but error output could not be read"
+msgstr "L'aggancio '%s' è riuscito ma l'output dell'errore non può essere letto"
+
+#: libsvn_repos/hooks.c:102
+msgid "[Error output could not be translated from the native locale to UTF-8.]"
+msgstr "[L'output dell'errore non può essere tradotto dal locale nativo all'UTF-8.]"
+
+#: libsvn_repos/hooks.c:107
+msgid "[Error output could not be read.]"
+msgstr "[L'output dell'errore non può essere letto.]"
+
+#: libsvn_repos/hooks.c:116
+#, c-format
+msgid ""
+"'%s' hook failed (did not exit cleanly: exitwhy was %d, exitcode was %d).  "
+msgstr ""
+"L'aggancio '%s' è fallito (non è uscito in modo pulito: exitwhy è stato %d,\n"
+"exitcode è stato %d)."
+
+#: libsvn_repos/hooks.c:123
+#, c-format
+msgid "'%s' hook failed (exited with a non-zero exitcode of %d).  "
+msgstr "L'aggancio '%s' è fallito (exitcode diverso da zero pari a %d)."
+
+#: libsvn_repos/hooks.c:130
+msgid "The following error output was produced by the hook:\n"
+msgstr "Il seguente output di errore è stato prodotto dall'aggancio:\n"
+
+#: libsvn_repos/hooks.c:137
+msgid "No error output was produced by the hook."
+msgstr "Nessun output d'errore è stato prodotto dall'aggancio."
+
+#: libsvn_repos/hooks.c:170
 #, c-format
 msgid "Can't create pipe for hook '%s'"
 msgstr "Non riesco ad aprire una pipe per l'aggancio '%s'"
 
-#: libsvn_repos/hooks.c:80
+#: libsvn_repos/hooks.c:182
 #, c-format
 msgid "Can't make pipe read handle non-inherited for hook '%s'"
 msgstr ""
 "Non riesco a rendere la pipe in scrittura non-ereditata per l'aggancio '%s'"
 
-#: libsvn_repos/hooks.c:86
+#: libsvn_repos/hooks.c:188
 #, c-format
 msgid "Can't make pipe write handle non-inherited for hook '%s'"
 msgstr ""
 "Non riesco a rendere la pipe in scrittura non ereditata per l'aggancio '%s'"
 
-#: libsvn_repos/hooks.c:95
+#: libsvn_repos/hooks.c:197
 #, c-format
 msgid "Can't create null stdout for hook '%s'"
 msgstr "Non riesco a creare uno stdout nullo per l'aggancio '%s'"
 
-#: libsvn_repos/hooks.c:107
+#: libsvn_repos/hooks.c:209
 msgid "Error closing write end of stderr pipe"
 msgstr "Errore nella chiusura del lato in scrittura per la pipe di stderr"
 
-#: libsvn_repos/hooks.c:112
+#: libsvn_repos/hooks.c:214
 #, c-format
 msgid "Failed to start '%s' hook"
 msgstr "Fallita l'esecuzione dell'aggancio '%s'"
 
-#: libsvn_repos/hooks.c:134
-#, c-format
-msgid ""
-"'%s' hook failed with error output:\n"
-"%s"
-msgstr ""
-"L'aggancio '%s' ha fallito con questo errore:\n"
-"%s"
-
-#: libsvn_repos/hooks.c:141
-#, c-format
-msgid "'%s' hook failed; no error output available"
-msgstr "L'aggancio '%s' ha fallito; nessun errore disponibile"
-
-#: libsvn_repos/hooks.c:160
+#: libsvn_repos/hooks.c:227
 msgid "Error closing read end of stderr pipe"
 msgstr "Errore nella chiusura del lato di lettura della pipe stderr"
 
-#: libsvn_repos/hooks.c:164
+#: libsvn_repos/hooks.c:231
 msgid "Error closing null file"
 msgstr "Errore nella chiusura del file nullo"
 
-#: libsvn_repos/hooks.c:440
+#: libsvn_repos/hooks.c:507
 #, c-format
 msgid "Failed to run '%s' hook; broken symlink"
 msgstr "Esecuzione dell'aggancio '%s' fallita; il link simbolico è rotto"
 
-#: libsvn_repos/hooks.c:581
+#: libsvn_repos/hooks.c:648
 msgid ""
 "Repository has not been enabled to accept revision propchanges;\n"
 "ask the administrator to create a pre-revprop-change hook"
@@ -3978,11 +3993,11 @@ msgstr "Non riesco ad ottenere il mutex DSO"
 msgid "Can't ungrab DSO mutex"
 msgstr "Non riesco a rilasciare il mutex DSO"
 
-#: libsvn_subr/error.c:341
+#: libsvn_subr/error.c:347
 msgid "Can't recode error string from APR"
 msgstr "Non posso ricodificare la stringa di errore da APR"
 
-#: libsvn_subr/error.c:432
+#: libsvn_subr/error.c:438
 #, c-format
 msgid "%swarning: %s\n"
 msgstr "%sattenzione: %s\n"
@@ -4434,21 +4449,21 @@ msgstr ""
 msgid "Type '%s help' for usage.\n"
 msgstr "Digita '%s help' per informazioni.\n"
 
-#: libsvn_subr/path.c:1146
+#: libsvn_subr/path.c:1182
 #, c-format
 msgid "Couldn't determine absolute path of '%s'"
 msgstr "Non riesco a determinare il percorso assoluto di '%s'"
 
-#: libsvn_subr/path.c:1184
+#: libsvn_subr/path.c:1220
 #, c-format
 msgid "'%s' is neither a file nor a directory name"
 msgstr "'%s' non è un file ne' una directory"
 
-#: libsvn_subr/path.c:1299
+#: libsvn_subr/path.c:1335
 msgid "Can't determine the native path encoding"
 msgstr "Non riesco a determinare la codifuca nativa del percorso"
 
-#: libsvn_subr/path.c:1353
+#: libsvn_subr/path.c:1389
 #, c-format
 msgid "Invalid control character '0x%02x' in path '%s'"
 msgstr "Carattere di controllo non valido '0x%02x' nel percorso '%s'"
@@ -4541,7 +4556,7 @@ msgstr "Password per '%s': "
 msgid "'%s' has unsupported special file type '%s'"
 msgstr "'%s' è un tipo di file non supportato '%s'"
 
-#: libsvn_subr/subst.c:1660 libsvn_wc/props.c:1499
+#: libsvn_subr/subst.c:1660 libsvn_wc/props.c:1501
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "Il file '%s' ha terminatori di riga inconsistenti"
@@ -4578,27 +4593,27 @@ msgstr "Non riesco a creare il convertitore di caratteri, da '%s' a '%s'"
 msgid "Can't create a character converter from '%i' to '%i'"
 msgstr "Non riesco a creare il convertitore di caratteri, da '%i' a '%i'"
 
-#: libsvn_subr/utf.c:513
+#: libsvn_subr/utf.c:515
 #, c-format
 msgid "Can't convert string from native encoding to '%s':"
 msgstr "Non riesco a convertire la stringa dalla codifica nativa a '%s'"
 
-#: libsvn_subr/utf.c:517
+#: libsvn_subr/utf.c:519
 #, c-format
 msgid "Can't convert string from '%s' to native encoding:"
 msgstr "Non riesco a convertire la stringa da '%s' alla codifica nativa"
 
-#: libsvn_subr/utf.c:521
+#: libsvn_subr/utf.c:523
 #, c-format
 msgid "Can't convert string from '%s' to '%s':"
 msgstr "Non riesco a convertire la stringa da '%s' a '%s'"
 
-#: libsvn_subr/utf.c:527
+#: libsvn_subr/utf.c:529
 #, c-format
 msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
 msgstr "Non riesco a convertire la stringa dal CCSID '%i' al CCSID '%i'"
 
-#: libsvn_subr/utf.c:572
+#: libsvn_subr/utf.c:574
 #, c-format
 msgid ""
 "Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from "
@@ -4608,7 +4623,7 @@ msgstr ""
 "convertire\n"
 "da/in UTF-8"
 
-#: libsvn_subr/utf.c:580
+#: libsvn_subr/utf.c:582
 #, c-format
 msgid ""
 "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
@@ -4616,7 +4631,7 @@ msgstr ""
 "Rilevato il carattere non ASCII (code %d) e non riesco a convertirlo da/in "
 "UTF-8"
 
-#: libsvn_subr/utf.c:622
+#: libsvn_subr/utf.c:624
 #, c-format
 msgid ""
 "Valid UTF-8 data\n"
@@ -5248,12 +5263,12 @@ msgstr "Non posso leggere '%s'"
 msgid "Can't write property hash to '%s'"
 msgstr "Non posso scrivere l'hash della proprietà in '%s'"
 
-#: libsvn_wc/props.c:217
+#: libsvn_wc/props.c:219
 #, c-format
 msgid "Can't find entry '%s' in '%s'"
 msgstr "Non posso trovare la voce '%s' in '%s'"
 
-#: libsvn_wc/props.c:632
+#: libsvn_wc/props.c:634
 #, c-format
 msgid ""
 "Trying to add new property '%s' with value '%s',\n"
@@ -5262,7 +5277,7 @@ msgstr ""
 "Sto cercando di aggiungere la proprietà '%s', con valore '%s',\n"
 "ma ne esiste già una con valore '%s'."
 
-#: libsvn_wc/props.c:655
+#: libsvn_wc/props.c:657
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -5271,7 +5286,7 @@ msgstr ""
 "Sto cercando di modificare la proprietà '%s' da '%s' a '%s',\n"
 "ma non esiste."
 
-#: libsvn_wc/props.c:683
+#: libsvn_wc/props.c:685
 #, c-format
 msgid ""
 "Trying to delete property '%s' but value has been modified from '%s' to '%s'."
@@ -5279,7 +5294,7 @@ msgstr ""
 "Sto cercando di eliminare la proprietà '%s' ma il suo valore è stato "
 "modificato da '%s' a '%s'."
 
-#: libsvn_wc/props.c:701
+#: libsvn_wc/props.c:703
 #, c-format
 msgid ""
 "Trying to change property '%s' from '%s' to '%s',\n"
@@ -5288,52 +5303,52 @@ msgstr ""
 "Sto cercando di modificare la proprietà '%s', da '%s' a '%s',\n"
 "ma ne esiste già una con valore '%s'."
 
-#: libsvn_wc/props.c:884
+#: libsvn_wc/props.c:886
 #, c-format
 msgid "Missing end of line in wcprops file for '%s'"
 msgstr "Fine riga mancante nel file wcprops per '%s'"
 
-#: libsvn_wc/props.c:1068 libsvn_wc/props.c:1104 libsvn_wc/props.c:1374
-#: libsvn_wc/props.c:1626
+#: libsvn_wc/props.c:1070 libsvn_wc/props.c:1106 libsvn_wc/props.c:1376
+#: libsvn_wc/props.c:1628
 msgid "Failed to load properties from disk"
 msgstr "Caricamento delle proprietà dal disco fallito"
 
-#: libsvn_wc/props.c:1132
+#: libsvn_wc/props.c:1134
 #, c-format
 msgid "Cannot write property hash for '%s'"
 msgstr "Non riesco a scrivere l'hash della proprietà per '%s'"
 
-#: libsvn_wc/props.c:1366 libsvn_wc/props.c:1535
+#: libsvn_wc/props.c:1368 libsvn_wc/props.c:1537
 #, c-format
 msgid "Property '%s' is an entry property"
 msgstr "La proprietà '%s' è vuota"
 
-#: libsvn_wc/props.c:1413
+#: libsvn_wc/props.c:1415
 #, c-format
 msgid "Cannot set '%s' on a directory ('%s')"
 msgstr "Non posso impostare '%s' su una directory (%s)"
 
-#: libsvn_wc/props.c:1421
+#: libsvn_wc/props.c:1423
 #, c-format
 msgid "Cannot set '%s' on a file ('%s')"
 msgstr "Non posso impostare '%s' su un file (%s)"
 
-#: libsvn_wc/props.c:1427
+#: libsvn_wc/props.c:1429
 #, c-format
 msgid "'%s' is not a file or directory"
 msgstr "'%s' non è un file o una directory"
 
-#: libsvn_wc/props.c:1508
+#: libsvn_wc/props.c:1510
 #, c-format
 msgid "File '%s' has binary mime type property"
 msgstr "Il file '%s' ha la proprietà 'mime type' impostata a binario"
 
-#: libsvn_wc/props.c:2169
+#: libsvn_wc/props.c:2171
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "Errore nella lettura della proprietà %s su '%s': '%s'"
 
-#: libsvn_wc/props.c:2182
+#: libsvn_wc/props.c:2184
 #, c-format
 msgid ""
 "Invalid %s property on '%s': target involves '.' or '..' or is an absolute "
