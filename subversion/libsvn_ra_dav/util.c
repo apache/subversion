@@ -90,7 +90,7 @@ static const svn_ra_dav__xml_elm_t multistatus_elements[] =
   };
 
 
-static int multistatus_nesting_table[][4] =
+static const int multistatus_nesting_table[][4] =
   { { ELEM_root, ELEM_multistatus, SVN_RA_DAV__XML_INVALID },
     { ELEM_multistatus, ELEM_response, ELEM_responsedescription,
       SVN_RA_DAV__XML_DECLINE },
