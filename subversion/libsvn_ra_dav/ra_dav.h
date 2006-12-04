@@ -130,8 +130,6 @@ typedef struct {
   
   struct lock_request_baton *lrb;       /* used by lock/unlock */
 
-  struct copy_baton *cb;                /* used by COPY */
-
 } svn_ra_dav__session_t;
 
 
@@ -867,6 +865,19 @@ svn_error_t *
 svn_ra_dav__simple_request(svn_ra_dav__request_t *req,
                            int okay_1, int okay_2, apr_pool_t *pool);
 
+
+
+/* Helper function layered over SVN_RA_DAV__SIMPLE_REQUEST() to issue
+   a HTTP COPY request.
+
+   DEPTH is one of NE_DEPTH_INFINITE, NE_DEPTH_ZERO or NE_DEPTH_ONE. */
+svn_error_t *
+svn_ra_dav__copy(ne_session *sess,
+                 svn_boolean_t overwrite,
+                 int depth,
+                 const char *src,
+                 const char *dst,
+                 apr_pool_t *pool);
 
 /* Return the Location HTTP header or NULL if none was sent.
  *

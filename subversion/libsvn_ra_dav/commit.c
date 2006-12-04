@@ -78,28 +78,6 @@ typedef struct
 } version_rsrc_t;
 
 
-/* Context for parsing <D:error> bodies, used when we call ne_copy(). */
-struct copy_baton
-{
-  /* An indication of whether we're currently processing a COPY request
-   * or not.
-   */
-  svn_boolean_t making_a_copy;
-  
-  /* A parser for handling <D:error> responses from mod_dav_svn.  This
-   * will be NULL if we haven't processed a COPY request yet.
-   */
-  ne_xml_parser *error_parser;
-
-  /* If <D:error> is returned, here's where the parsed result goes, or
-   * NULL otherwise.
-   */
-  svn_error_t *err;
-
-  /* A place for allocating fields in this structure. */
-  apr_pool_t *pool;
-};
-
 typedef struct
 {
   svn_ra_dav__session_t *ras;
@@ -128,9 +106,6 @@ typedef struct
 
   /* Whether or not to keep the locks after commit is done. */
   svn_boolean_t keep_locks;
-
-  /* A context for neon COPY request callbacks. */
-  struct copy_baton *cb;
 
 } commit_ctx_t;
 
@@ -873,39 +848,6 @@ static svn_error_t * commit_delete_entry(const char *path,
 
 
 
-/* A callback of type ne_create_request_fn;  called whenever neon
-   creates a request. */
-static void 
-create_request_hook(ne_request *req,
-                    void *userdata,
-                    const char *method,
-                    const char *requri)
-{
-  struct copy_baton *cb = userdata;
-
-  if (strcmp(method, "COPY") == 0)
-    cb->making_a_copy = TRUE;
-}
-
-
-/* A callback of type ne_pre_send_fn;  called whenever neon is just
-   about to send a COPY request. */
-static void
-pre_send_hook(ne_request *req,
-              void *userdata,
-              ne_buffer *header)
-{
-  struct copy_baton *cb = userdata;
-
-  if (cb->making_a_copy)
-    {
-      cb->error_parser = ne_xml_create();
-      svn_ra_dav__add_error_handler(req, cb->error_parser,
-                                    &(cb->err), cb->pool);
-    }
-}
-
-
 static svn_error_t * commit_add_dir(const char *path,
                                     void *parent_baton,
                                     const char *copyfrom_path,
@@ -944,7 +886,6 @@ static svn_error_t * commit_add_dir(const char *path,
     {
       svn_string_t bc_url, bc_relative;
       const char *copy_src;
-      int status;
 
       /* This add has history, so we need to do a COPY. */
       
@@ -968,32 +909,12 @@ static svn_error_t * commit_add_dir(const char *path,
                                             workpool);
 
       /* Have neon do the COPY. */
-      status = ne_copy(parent->cc->ras->sess,
-                       1,                   /* overwrite */
-                       NE_DEPTH_INFINITE,   /* always copy dirs deeply */
-                       copy_src,            /* source URI */
-                       child->rsrc->wr_url); /* dest URI */
-
-      /* Did we get a <D:error> response? */
-      if (parent->cc->cb->err)
-        {
-          if (parent->cc->cb->error_parser)
-            ne_xml_destroy(parent->cc->cb->error_parser);
-          return parent->cc->cb->err;
-        }
-
-      /* Did we get some error from neon? */
-      if (status != NE_OK)
-        {
-          const char *msg = apr_psprintf(dir_pool, "COPY of %s", path);
-          if (parent->cc->cb->error_parser)
-            ne_xml_destroy(parent->cc->cb->error_parser);
-          return svn_ra_dav__convert_error(parent->cc->ras->sess,
-                                           msg, status, workpool);
-        }
-
-      if (parent->cc->cb->error_parser)
-        ne_xml_destroy(parent->cc->cb->error_parser);
+      SVN_ERR(svn_ra_dav__copy(parent->cc->ras->sess,
+                               1,                  /* overwrite */
+                               NE_DEPTH_INFINITE,  /* always copy dirs deeply */
+                               copy_src,           /* source URI */
+                               child->rsrc->wr_url,/* dest URI */
+                               workpool));
     }
 
   /* Add this path to the valid targets hash. */
@@ -1158,7 +1079,6 @@ static svn_error_t * commit_add_file(const char *path,
     {
       svn_string_t bc_url, bc_relative;
       const char *copy_src;
-      int status;
 
       /* This add has history, so we need to do a COPY. */
       
@@ -1182,32 +1102,12 @@ static svn_error_t * commit_add_file(const char *path,
                                             workpool);
 
       /* Have neon do the COPY. */
-      status = ne_copy(parent->cc->ras->sess,
-                       1,                   /* overwrite */
-                       NE_DEPTH_ZERO,       /* for a file, does it care? */
-                       copy_src,            /* source URI */
-                       file->rsrc->wr_url); /* dest URI */
-
-      /* Did we get a <D:error> response? */
-      if (parent->cc->cb->err)
-        {
-          if (parent->cc->cb->error_parser)
-            ne_xml_destroy(parent->cc->cb->error_parser);
-          return parent->cc->cb->err;
-        }
-
-      /* Did we get some error from neon? */
-      if (status != NE_OK)
-        {
-          const char *msg = apr_psprintf(file_pool, "COPY of %s", path);
-          if (parent->cc->cb->error_parser)
-            ne_xml_destroy(parent->cc->cb->error_parser);
-          return svn_ra_dav__convert_error(parent->cc->ras->sess,
-                                           msg, status, workpool);
-        }
-      
-      if (parent->cc->cb->error_parser)
-        ne_xml_destroy(parent->cc->cb->error_parser);
+      SVN_ERR(svn_ra_dav__copy(parent->cc->ras->sess,
+                               1,               /* overwrite */
+                               NE_DEPTH_ZERO,   /* file: this doesn't matter */
+                               copy_src,        /* source URI */
+                               file->rsrc->wr_url,/* dest URI */
+                               workpool));
     }
 
   /* Add this path to the valid targets hash. */
@@ -1538,22 +1438,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
 
-  /* Only initialize the baton the first time through. */
-  if (! ras->cb)
-    {
-      /* Build a copy_baton for COPY requests. */
-      ras->cb = apr_pcalloc(ras->pool, sizeof(*ras->cb));
-
-      /* Register request hooks in the neon session.  They specifically
-         allow any COPY requests (ne_copy()) to parse <D:error>
-         responses.  They're no-ops for other requests. */
-      ne_hook_create_request(ras->sess, create_request_hook, ras->cb);
-      ne_hook_pre_send(ras->sess, pre_send_hook, ras->cb);
-    }
-
-  /* Make sure the baton uses our current pool, so we don't leak. */
-  ras->cb->pool = pool;
-
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
   cc->ras = ras;
@@ -1566,7 +1450,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   cc->callback_baton = callback_baton;
   cc->tokens = lock_tokens;
   cc->keep_locks = keep_locks;
-  cc->cb = ras->cb;
 
   /* If the caller didn't give us any way of storing wcprops, then
      there's no point in getting back a MERGE response full of VR's. */

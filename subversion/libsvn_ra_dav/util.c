@@ -1083,6 +1083,32 @@ svn_ra_dav__simple_request(svn_ra_dav__request_t *req,
 }
 
 
+svn_error_t *
+svn_ra_dav__copy(ne_session *sess,
+                 svn_boolean_t overwrite,
+                 int depth,
+                 const char *src,
+                 const char *dst,
+                 apr_pool_t *pool)
+{
+  svn_ra_dav__session_t *ras =
+    ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
+  svn_ra_dav__request_t *req =
+    svn_ra_dav__request_create(sess, ras, "COPY", src, pool);
+  const char *abs_dst;
+
+  abs_dst = apr_psprintf(pool, "%s://%s%s", ne_get_scheme(sess),
+                         ne_get_server_hostport(sess), dst);
+  ne_add_request_header(req->req, "Depth",
+                        (depth == NE_DEPTH_INFINITE)
+                        ? "infinity" : (depth == NE_DEPTH_ZERO) ? "0" : "1");
+  ne_add_request_header(req->req, "Overwrite", overwrite ? "T" : "F");
+  ne_add_request_header(req->req, "Destination", abs_dst);
+
+  return svn_ra_dav__simple_request(req, 201, 204, pool);
+}
+
+
 
 svn_error_t *
 svn_ra_dav__maybe_store_auth_info(svn_ra_dav__session_t *ras,
