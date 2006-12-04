@@ -430,14 +430,14 @@ static int validate_error_elements(svn_ra_dav__xml_elmid parent,
     {
     case ELEM_root:
       if (child == ELEM_error)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_error:
       if (child == ELEM_svn_error
           || child == ELEM_human_readable)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE;  /* ignore if something else
                                             was in there */
