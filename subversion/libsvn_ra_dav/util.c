@@ -37,6 +37,38 @@
 
 #include "ra_dav.h"
 
+
+
+
+static apr_status_t
+xml_parser_cleanup(void *baton)
+{
+  ne_xml_destroy(baton);
+
+  return APR_SUCCESS;
+}
+
+static ne_xml_parser *
+xml_parser_create(svn_ra_dav__request_t *req)
+{
+  ne_xml_parser *p = ne_xml_create();
+
+  /* ### HACK: Set the parser's error to the empty string.  Someday we
+     hope neon will let us have an easy way to tell the difference
+     between XML parsing errors, and errors that occur while handling
+     the XML tags that we get.  Until then, trust that whenever neon
+     has an error somewhere below the API, it sets its own error to
+     something non-empty (the API promises non-NULL, at least). */
+  ne_xml_set_error(p, "");
+
+  apr_pool_cleanup_register(req->pool, p,
+                            xml_parser_cleanup,
+                            apr_pool_cleanup_null);
+
+  return p;
+}
+
+
 
 /* Neon request management */
 
@@ -103,35 +135,6 @@ svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
     }
   else
     ne_add_response_body_reader(req->req, accpt, reader, userdata);
-}
-
-
-static apr_status_t
-xml_parser_cleanup(void *baton)
-{
-  ne_xml_destroy(baton);
-
-  return APR_SUCCESS;
-}
-
-ne_xml_parser *
-svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req)
-{
-  ne_xml_parser *p = ne_xml_create();
-
-  /* ### HACK: Set the parser's error to the empty string.  Someday we
-     hope neon will let us have an easy way to tell the difference
-     between XML parsing errors, and errors that occur while handling
-     the XML tags that we get.  Until then, trust that whenever neon
-     has an error somewhere below the API, it sets its own error to
-     something non-empty (the API promises non-NULL, at least). */
-  ne_xml_set_error(p, "");
-
-  apr_pool_cleanup_register(req->pool, p,
-                            xml_parser_cleanup,
-                            apr_pool_cleanup_null);
-
-  return p;
 }
 
 
@@ -460,7 +463,7 @@ error_parser_create(svn_ra_dav__request_t *req)
   b->cdata = svn_stringbuf_create("", req->pool);
 
   /* attach a standard <D:error> body parser to the request */
-  error_parser = svn_ra_dav__xml_parser_create(req);
+  error_parser = xml_parser_create(req);
   ne_xml_push_handler(error_parser,
                       start_err_element,
                       collect_error_cdata,
@@ -696,6 +699,31 @@ wrapper_endelm_cb(void *baton,
   return 0;
 }
 
+
+ne_xml_parser *
+svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req,
+                              svn_ra_dav__startelm_cb_t startelm_cb,
+                              svn_ra_dav__cdata_cb_t cdata_cb,
+                              svn_ra_dav__endelm_cb_t endelm_cb,
+                              void *baton)
+{
+  ne_xml_parser *p = xml_parser_create(req);
+  parser_wrapper_baton_t *pwb = apr_palloc(req->pool, sizeof(*pwb));
+
+  pwb->req = req;
+  pwb->baton = baton;
+  pwb->startelm_cb = startelm_cb;
+  pwb->cdata_cb = cdata_cb;
+  pwb->endelm_cb = endelm_cb;
+
+  ne_xml_push_handler(p,
+                      wrapper_startelm_cb,
+                      wrapper_cdata_cb,
+                      wrapper_endelm_cb, pwb);
+
+  return p;
+}
+
 
 typedef struct cancellation_baton_t
 {
@@ -755,7 +783,6 @@ parsed_request(ne_session *sess,
                svn_boolean_t spool_response,
                apr_pool_t *pool)
 {
-  parser_wrapper_baton_t pwb;
   svn_ra_dav__request_t *req;
   ne_xml_parser *success_parser = NULL;
   const char *msg;
@@ -791,18 +818,9 @@ parsed_request(ne_session *sess,
     }
 
   /* create a parser to read the normal response body */
-  success_parser = svn_ra_dav__xml_parser_create(req);
-
-  pwb.req = req;
-  pwb.baton = baton;
-  pwb.startelm_cb = startelm_cb;
-  pwb.cdata_cb = cdata_cb;
-  pwb.endelm_cb = endelm_cb;
-
-  ne_xml_push_handler(success_parser,
-                      wrapper_startelm_cb,
-                      wrapper_cdata_cb,
-                      wrapper_endelm_cb, &pwb);
+  success_parser = svn_ra_dav__xml_parser_create(req,
+                                                 startelm_cb, cdata_cb,
+                                                 endelm_cb, baton);
 
   /* if our caller is interested in having access to this parser, call
      the SET_PARSER callback with BATON. */
