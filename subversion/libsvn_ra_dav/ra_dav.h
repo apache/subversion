@@ -117,6 +117,9 @@ typedef struct {
 
   ne_session *sess;                     /* HTTP session to server */
   ne_session *sess2;
+  svn_boolean_t main_session_busy;      /* TRUE when requests should be created
+                                           and issued on sess2; currently
+                                           only used by fetch.c */
 
   const svn_ra_callbacks2_t *callbacks; /* callbacks to get auth data */
   void *callback_baton;

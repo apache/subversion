@@ -1110,7 +1110,9 @@ svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
         }
     }
 
+  ras->main_session_busy = TRUE;
   code = ne_simple_request(ras->sess, req);
+  ras->main_session_busy = FALSE;
 
   if (code == NE_OK)
     {

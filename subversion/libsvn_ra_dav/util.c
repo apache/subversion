@@ -1205,8 +1205,12 @@ svn_ra_dav__request_dispatch(int *code_p,
   svn_ra_dav__add_response_body_reader(req, ra_dav_error_accepter,
                                        ne_xml_parse_v, error_parser);
 
+  if (req->ne_sess == req->sess->sess) /* We're consuming 'session 1' */
+    req->sess->main_session_busy = TRUE;
   /* run the request, see what comes back. */
   rv = ne_request_dispatch(req->req);
+  if (req->ne_sess == req->sess->sess) /* We're done consuming 'session 1' */
+    req->sess->main_session_busy = FALSE;
 
   /* Save values from the request */
   statstruct = ne_get_status(req->req);

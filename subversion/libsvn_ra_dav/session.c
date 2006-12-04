@@ -1154,7 +1154,9 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
     }
 
   /* Issue LOCK request. */
+  ras->main_session_busy = TRUE;
   rv = ne_lock(ras->sess, nlock);
+  ras->main_session_busy = FALSE;
 
   /* Did we get a <D:error> response? */
   if (ras->lrb->err)

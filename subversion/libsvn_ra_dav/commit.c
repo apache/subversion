@@ -1413,7 +1413,10 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   po[0].type = ne_propset;
   po[0].value = xml_data->data;
 
+  cc->ras->main_session_busy = TRUE;
   rv = ne_proppatch(cc->ras->sess, baseline_rsrc.wr_url, po);
+  cc->ras->main_session_busy = FALSE;
+
   if (rv != NE_OK)
     {
       const char *msg = apr_psprintf(pool, _("applying log message to %s"),
