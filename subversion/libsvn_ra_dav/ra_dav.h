@@ -859,6 +859,11 @@ svn_ra_dav__request_dispatch(int *code_p,
                              int okay_2,
                              apr_pool_t *pool);
 
+svn_error_t *
+svn_ra_dav__simple_request(svn_ra_dav__request_t *req,
+                           int okay_1, int okay_2, apr_pool_t *pool);
+
+
 /* Return the Location HTTP header or NULL if none was sent.
  *
  * Do allocations in POOL.

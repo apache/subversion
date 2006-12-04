@@ -70,6 +70,151 @@ xml_parser_create(svn_ra_dav__request_t *req)
 
 
 
+/* Simple multi-status parser
+ *
+ * For the purpose of 'simple' requests which - if it weren't
+ * for our custom error parser - could use the ne_basic.h interfaces.
+ */
+
+static const svn_ra_dav__xml_elm_t multistatus_elements[] =
+  { { "DAV:", "multistatus", ELEM_multistatus, 0 },
+    { "DAV:", "response", ELEM_response, 0 },
+    { "DAV:", "responsedescription", ELEM_responsedescription,
+      SVN_RA_DAV__XML_CDATA },
+    { "DAV:", "status", ELEM_status, SVN_RA_DAV__XML_CDATA },
+    { "DAV:", "href", ELEM_href, SVN_RA_DAV__XML_CDATA },
+
+    /* We start out basic and are not interested in propstat */
+    { "", "", ELEM_unknown, 0 },
+
+  };
+
+
+static int multistatus_nesting_table[][4] =
+  { { ELEM_root, ELEM_multistatus, SVN_RA_DAV__XML_INVALID },
+    { ELEM_multistatus, ELEM_response, ELEM_responsedescription,
+      SVN_RA_DAV__XML_DECLINE },
+    { ELEM_responsedescription, SVN_RA_DAV__XML_INVALID },
+    { ELEM_response, ELEM_href, ELEM_status, SVN_RA_DAV__XML_DECLINE },
+    { ELEM_status, SVN_RA_DAV__XML_INVALID },
+    { ELEM_href, SVN_RA_DAV__XML_INVALID },
+    { SVN_RA_DAV__XML_DECLINE },
+  };
+
+
+static int
+validate_element(int parent, int child)
+{
+  int i = 0;
+  int j = 0;
+
+  while (parent != multistatus_nesting_table[i][0]
+         && multistatus_nesting_table[i][0] > 0)
+    i++;
+
+  if (parent == multistatus_nesting_table[i][0])
+    while (multistatus_nesting_table[i][++j] != child
+           && multistatus_nesting_table[i][j] > 0)
+      ;
+
+  return multistatus_nesting_table[i][j];
+}
+
+typedef struct
+{
+  svn_stringbuf_t *want_cdata;
+  svn_stringbuf_t *cdata;
+
+  svn_ra_dav__request_t *req;
+  svn_stringbuf_t *description;
+  svn_boolean_t contains_error;
+} multistatus_baton_t;
+
+static svn_error_t *
+start_207_element(int *elem, void *baton, int parent,
+                  const char *nspace, const char *name, const char **atts)
+{
+  multistatus_baton_t *b = baton;
+  const svn_ra_dav__xml_elm_t *elm =
+    svn_ra_dav__lookup_xml_elem(multistatus_elements, nspace, name);
+  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+
+
+  if (*elem < 1) /* ! > 0 */
+    return SVN_NO_ERROR;
+
+  /* We're guaranteed to have ELM now: SVN_RA_DAV__XML_DECLINE < 1 */
+  if (elm->flags & SVN_RA_DAV__XML_CDATA)
+    {
+      svn_stringbuf_setempty(b->cdata);
+      b->want_cdata = b->cdata;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+end_207_element(void *baton, int state,
+                const char *nspace, const char *name)
+{
+  multistatus_baton_t *b = baton;
+
+  switch (state)
+    {
+    case ELEM_multistatus:
+      if (b->contains_error)
+        return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                _("The request response contained at least "
+                                  "one error."));
+      break;
+
+    case ELEM_responsedescription:
+      b->description = svn_stringbuf_dup(b->cdata, b->req->pool);
+      break;
+
+    case ELEM_status:
+      {
+        ne_status status;
+
+        if (ne_parse_statusline(b->cdata->data, &status) == 0)
+          {
+            /*### I wanted ||=, but I guess the end result is the same */
+            b->contains_error |= (status.klass != 2);
+            free(status.reason_phrase);
+          }
+        else
+          return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                  _("The response contains a non-conforming "
+                                    "HTTP status line."));
+      }
+
+    default:
+      /* do nothing */
+      break;
+    }
+
+  /* When we have an element which wants cdata,
+     we'll set it all up in start_207_element() again */
+  b->want_cdata = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+
+static ne_xml_parser *
+multistatus_parser_create(svn_ra_dav__request_t *req)
+{
+  multistatus_baton_t *b = apr_pcalloc(req->pool, sizeof(*b));
+  ne_xml_parser *multistatus_parser =
+    svn_ra_dav__xml_parser_create(req, start_207_element,
+                                  svn_ra_dav__xml_collect_cdata,
+                                  end_207_element, b);
+  return multistatus_parser;
+}
+
+
+
+
 /* Neon request management */
 
 static apr_status_t
@@ -922,6 +1067,22 @@ svn_ra_dav__parsed_request(ne_session *sess,
             apr_psprintf(pool,_("%s request failed on '%s'"), method, url));
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_ra_dav__simple_request(svn_ra_dav__request_t *req,
+                           int okay_1, int okay_2, apr_pool_t *pool)
+{
+  ne_xml_parser *multistatus =
+    multistatus_parser_create(req);
+
+  svn_ra_dav__add_response_body_reader(req, ne_accept_207,
+                                       ne_xml_parse_v, multistatus);
+
+
+  /* svn_ra_dav__request_dispatch() adds the custom error response reader */
+  return svn_ra_dav__request_dispatch(NULL, req, okay_1, okay_2, pool);
 }
 
 
