@@ -100,11 +100,11 @@ Candidate changes:
     Votes:
       +1: dlr
 
+Approved changes:
+
   * r22311
     Perl bindings: make svn_ra_do_{update,switch,status} work.
     Justification:
       Binding completeness.
     Votes:
-      +1: clkao
-
-Approved changes:
+      +1: clkao, dlr
