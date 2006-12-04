@@ -484,11 +484,8 @@ start_err_element(void *baton, int parent,
   error_parser_baton_t *b = baton;
   svn_error_t **err = &(b->tmp_err);
 
-  if (acc == SVN_RA_DAV__XML_INVALID)
-    return NE_XML_ABORT;
-
-  if (acc == SVN_RA_DAV__XML_DECLINE)
-    return NE_XML_DECLINE;
+  if (acc < 1) /* ! > 0 */
+    return acc;
 
   switch (elm->id)
     {
