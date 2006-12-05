@@ -1024,53 +1024,6 @@ D    test3"""
         self.svnmerge("rollback -vv -S ../trunk -r15-18",
                       nonmatch = r"D    anothernewfile")
 
-    def testMergeWithPotentialPropertyConflict(self):
-        """Init branch B, merge changes from branch A to branch B,
-        init branch C, and attempt a merge of changes from branch B to
-        branch C."""
-
-        # Initialize merge info for test-branch.
-        self.svnmerge2(["init", "-r 3-6", self.test_repo_url + "/trunk"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match = r"Committed revision 14")
-        os.remove("svnmerge-commit-message.txt")
-
-        # Make a change to trunk.
-        os.chdir("../trunk")
-        open("newfile", "w").close()
-        self.launch("svn add newfile")
-        self.launch("svn commit -m 'Adding newfile'",
-                    match=r"Committed revision 15")
-
-        # Merge a change from trunk to test-branch.
-        os.chdir("../test-branch")
-        self.svnmerge("merge -r 15 -S ../trunk")
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match=r"Committed revision 16")
-
-        # Get a WC for testYYY-branch.
-        os.chdir("..")
-        self.launch("svn co %s/branches/testYYY-branch" % self.test_repo_url)
-        os.chdir("testYYY-branch")
-
-        # Initialize merge info for testYYY-branch.
-        self.svnmerge2(["init", "-r 13",
-                        self.test_repo_url + "/branches/test-branch"])
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    nonmatch=r"Committed revision 17")
-        os.remove("svnmerge-commit-message.txt")
-
-        ### FIXME: Unfortunately, we're getting a conflict for the
-        ### merge info property here due to Subversion's lack of
-        ### merging of property values.
-        self.assertTrue(os.path.isfile("dir_conflicts.prej"))
-
-        # Attempt a merge of changes from test-branch to
-        # testYYY-branch.
-        self.svnmerge("merge -r 16 -S ../test-branch")
-        self.launch("svn commit -F svnmerge-commit-message.txt",
-                    match=r"Committed revision 18")
-
 if __name__ == "__main__":
     # If an existing template repository and working copy for testing
     # exists, then always remove it.  This prevents any problems if
