@@ -437,6 +437,10 @@ This can be set with \\[svn-status-set-trac-project-root].")
   "*A short name for the actual project.
 This can be set with \\[svn-status-set-module-name].")
 
+(defvar svn-status-branch-list nil
+  "*A list of known branches for the actual project
+This can be set with \\[svn-status-set-branch-list].")
+
 (defvar svn-status-load-state-before-svn-status t
   "*Whether to automatically restore state from ++psvn.state file before running svn-status.")
 
@@ -1662,6 +1666,7 @@ A and B must be line-info's."
   (define-key svn-status-mode-options-map (kbd "f") 'svn-status-toggle-display-full-path)
   (define-key svn-status-mode-options-map (kbd "t") 'svn-status-set-trac-project-root)
   (define-key svn-status-mode-options-map (kbd "n") 'svn-status-set-module-name)
+  (define-key svn-status-mode-options-map (kbd "b") 'svn-status-set-branch-list)
   (define-key svn-status-mode-map (kbd "O") svn-status-mode-options-map))
 (when (not svn-status-mode-trac-map)
   (setq svn-status-mode-trac-map (make-sparse-keymap))
@@ -1719,6 +1724,7 @@ A and B must be line-info's."
      ["Load Options" svn-status-load-state t]
      ["Set Trac project root" svn-status-set-trac-project-root t]
      ["Set Short module name" svn-status-set-module-name t]
+     ["Set Branch list" svn-status-set-branch-list t]
      ["Toggle sorting of *svn-status* buffer" svn-status-toggle-sort-status-buffer
       :style toggle :selected svn-status-sort-status-buffer]
      ["Toggle display of full path names" svn-status-toggle-display-full-path
@@ -2500,6 +2506,8 @@ Symbolic links to directories count as directories (see `file-directory-p')."
                       "")))
     (when svn-status-module-name
       (insert (format "Project name: %s\n" svn-status-module-name)))
+    (when svn-status-branch-list
+      (insert (format "Branches: %s\n" svn-status-branch-list)))
     (when svn-status-base-info
       (insert (concat "Repository: " (svn-status-base-info->url) "\n")))
     (when svn-status-hide-unknown
@@ -2589,6 +2597,13 @@ Note: this command assumes the proposed standard svn repository layout."
   (interactive)
   (svn-status-parse-info t)
   (svn-status-ls (concat (svn-status-base-info->repository-root) "/branches")))
+
+(defun svn-status-ls-tags ()
+  "Show, which tags exist for the actual working copy.
+Note: this command assumes the proposed standard svn repository layout."
+  (interactive)
+  (svn-status-parse-info t)
+  (svn-status-ls (concat (svn-status-base-info->repository-root) "/tags")))
 
 (defun svn-status-toggle-edit-cmd-flag (&optional reset)
   "Allow the user to edit the parameters for the next svn command.
@@ -4550,7 +4565,8 @@ Return nil, if not in a svn working copy."
            (list "svn-trac-project-root" svn-trac-project-root)
            (list "sort-status-buffer" svn-status-sort-status-buffer)
            (list "elide-list" svn-status-elided-list)
-           (list "module-name" svn-status-module-name)))
+           (list "module-name" svn-status-module-name)
+           (list "branch-list" svn-status-branch-list)))
     (insert (pp-to-string svn-status-options))
     (save-buffer)
     (kill-buffer buf)))
@@ -4571,12 +4587,15 @@ Return nil, if not in a svn working copy."
                 (nth 1 (assoc "elide-list" svn-status-options)))
           (setq svn-status-module-name
                 (nth 1 (assoc "module-name" svn-status-options)))
+          (setq svn-status-branch-list
+                (nth 1 (assoc "branch-list" svn-status-options)))
           (when (and (interactive-p) svn-status-elided-list (svn-status-apply-elide-list)))
           (message "psvn.el: loaded %s" file))
       (if no-error
           (setq svn-trac-project-root nil
                 svn-status-elided-list nil
-                svn-status-module-name nil)
+                svn-status-module-name nil
+                svn-status-branch-list nil)
         (error "psvn.el: %s is not readable." file)))))
 
 (defun svn-status-toggle-sort-status-buffer ()
@@ -4608,12 +4627,21 @@ removed again, when a faster parsing and display routine for
     (svn-status-save-state)))
 
 (defun svn-status-set-module-name ()
-  "Interactively set svn-status-module-name."
+  "Interactively set `svn-status-module-name'."
   (interactive)
   (setq svn-status-module-name
         (read-string "Short Unit Name (e.g.: MyProject): "
                      svn-status-module-name))
   (when (yes-or-no-p "Save the new setting for svn-status-module-name to disk? ")
+    (svn-status-save-state)))
+
+(defun svn-status-set-branch-list ()
+  "Interactively set `svn-status-branch-list'."
+  (interactive)
+  (setq svn-status-branch-list
+        (split-string (read-string "Branch list: "
+                                   (mapconcat 'identity svn-status-branch-list " "))))
+  (when (yes-or-no-p "Save the new setting for svn-status-branch-list to disk? ")
     (svn-status-save-state)))
 
 (defun svn-browse-url (url)
@@ -4744,6 +4772,23 @@ The conflicts must be marked with rcsmerge conflict markers."
              (svn-resolve-conflicts
               (svn-status-line-info->full-path file-info)))
         (error "can not resolve conflicts at this point"))))
+
+
+;; --------------------------------------------------------------------------------
+;; Working with branches
+;; --------------------------------------------------------------------------------
+
+(defun svn-select-branch ()
+  "Let the user select a branch from `svn-status-branch-list'"
+  (interactive)
+  (let* ((completion-function (if svn-status-use-ido-completion 'ido-completing-read 'completing-read))
+         (branch (funcall completion-function "Select branch: " svn-status-branch-list)))
+    (when (string-match "#\\(.+\\)" branch)
+      (save-match-data
+        (svn-status-parse-info t))
+      (setq branch (concat (svn-status-base-info->repository-root) "/" (match-string 1 branch))))
+    (message "svn-select-branch:: %s" branch)
+    branch))
 
 ;; --------------------------------------------------------------------------------
 ;; svnadmin interface
