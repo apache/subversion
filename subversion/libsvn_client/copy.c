@@ -67,14 +67,22 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
                         apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
+  const char *top_dst;
   char *top_src;
-  char *top_dst;
   int i;
 
   top_src = apr_pstrdup(subpool,
               ((svn_client__copy_pair_t **) (copy_pairs->elts))[0]->src);
-  top_dst = apr_pstrdup(subpool,
-              ((svn_client__copy_pair_t **) (copy_pairs->elts))[0]->dst);
+
+  /* Because all the destinations are in the same directory, we can easily
+     determine their common ancestor. */
+  if (copy_pairs->nelts == 1)
+    top_dst = apr_pstrdup(subpool,
+                ((svn_client__copy_pair_t **) (copy_pairs->elts))[0]->dst);
+  else
+    top_dst = svn_path_dirname(
+                ((svn_client__copy_pair_t **) (copy_pairs->elts))[0]->dst,
+                subpool);
 
   /* We don't need to clear the subpool here for several reasons:
      1)  If we do, we can't use it to allocate the initial versions of 
@@ -90,7 +98,6 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
         ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
 
       top_src = svn_path_get_longest_ancestor(top_src, pair->src, subpool);
-      top_dst = svn_path_get_longest_ancestor(top_dst, pair->dst, subpool);
     }
 
   if (src_ancestor)
