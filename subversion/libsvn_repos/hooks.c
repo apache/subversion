@@ -114,7 +114,7 @@ check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
     {
       failure_message = svn_stringbuf_createf(pool,
         _("'%s' hook failed (did not exit cleanly: "
-          "exitwhy was %d, exitcode was %d).  "),
+          "apr_exit_why_e was %d, exitcode was %d).  "),
         name, exitwhy, exitcode);
     }
   else
