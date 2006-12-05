@@ -833,13 +833,13 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         self.launch("svn update", match=r"At revision 19")
 
         # Merge into trunk
-        self.svnmerge("merge -vv --head branch2",
+        self.svnmerge("merge -vv -S branch2",
                       match=r"merge -r 18:19")
         p = self.getproperty()
         self.assertEqual("/branches/test-branch:1-16 /branches/test-branch2:1-19", p)
 
-        self.svnmerge("integrated --head branch2", match=r"^14-19$")
-        self.svnmerge("integrated --head ../test-branch", match=r"^13-16$")
+        self.svnmerge("integrated -S branch2", match=r"^14-19$")
+        self.svnmerge("integrated -S ../test-branch", match=r"^13-16$")
 
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match=r"Committed revision 20")
@@ -864,7 +864,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
     def testRollbackWithoutInit(self):
         """Rollback should error out if invoked prior to init"""
 
-        self.svnmerge("rollback -vv --head ../trunk",
+        self.svnmerge("rollback -vv -S ../trunk",
                       error = True,
                       match = r"no integration info available for repository path")
 
@@ -879,7 +879,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         os.remove("svnmerge-commit-message.txt")
 
         expected_error  = r"""Specified revision range falls out of the rollback range."""
-        self.svnmerge("rollback -vv --head ../trunk -r 2-14",
+        self.svnmerge("rollback -vv -S ../trunk -r 2-14",
                       error = True,
                       match = expected_error)
 
@@ -892,7 +892,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
                     match=r"Committed revision 14")
         os.remove("svnmerge-commit-message.txt")
 
-        self.svnmerge("rollback -vv --head ../trunk",
+        self.svnmerge("rollback -vv -S ../trunk",
                       error = True,
                       match = r"The '-r' option is mandatory for rollback")
 
@@ -910,7 +910,7 @@ class TestCase_TestRepo(TestCase_SvnMerge):
         detested_output = r"""
 D    test2
 D    test3"""
-        self.svnmerge("rollback -vv --record-only --head ../trunk -r5-7",
+        self.svnmerge("rollback -vv --record-only -S ../trunk -r5-7",
                       match = expected_output,
                       nonmatch = detested_output)
 
@@ -927,7 +927,7 @@ D    test3"""
         expected_output = r"""
 D    test2
 D    test3"""
-        self.svnmerge("rollback -vv --head ../trunk -r5-7",
+        self.svnmerge("rollback -vv -S ../trunk -r5-7",
                       match = expected_output)
 
     def testMergeAndRollbackEmptyRevisionRange(self):
@@ -953,14 +953,14 @@ D    test3"""
         os.chdir("../test-branch")
         self.launch("svn up ..",
                     error = False)
-        self.svnmerge("block -r 15,16 --head ../trunk")
+        self.svnmerge("block -r 15,16 -S ../trunk")
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match = r"Committed revision 17")
-        self.svnmerge("merge --head ../trunk")
+        self.svnmerge("merge -S ../trunk")
         self.launch("svn commit -F svnmerge-commit-message.txt")
 
         # Svnmerge rollback r15-16
-        self.svnmerge("rollback -vv --head ../trunk -r15-16",
+        self.svnmerge("rollback -vv -S ../trunk -r15-16",
                       error = False,
                       match = r"Nothing to rollback in revision range r15-16")
 
@@ -981,12 +981,12 @@ D    test3"""
 
         # Svnmerge merge r15
         os.chdir("../test-branch")
-        self.svnmerge("merge -r 15 --head ../trunk")
+        self.svnmerge("merge -r 15 -S ../trunk")
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match = r"Committed revision 16")
 
         # Svnmerge rollback r15
-        self.svnmerge("rollback -vv --head ../trunk -r15",
+        self.svnmerge("rollback -vv -S ../trunk -r15",
                       match = r"-r 15:14")
 
     def testBlockMergeAndRollback(self):
@@ -1011,17 +1011,17 @@ D    test3"""
         os.chdir("../test-branch")
         self.launch("svn up ..",
                     error = False)
-        self.svnmerge("block -r 16 --head ../trunk")
+        self.svnmerge("block -r 16 -S ../trunk")
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match = r"Committed revision 17")
-        self.svnmerge("merge --head ../trunk",
+        self.svnmerge("merge -S ../trunk",
                       nonmatch = r"A    anothernewfile",
                       match = r"A    newfile")
         self.launch("svn commit -F svnmerge-commit-message.txt",
                     match = r"Committed revision 18")
 
         # Svnmerge rollback revision range 15-18 (in effect only 15,17)
-        self.svnmerge("rollback -vv --head ../trunk -r15-18",
+        self.svnmerge("rollback -vv -S ../trunk -r15-18",
                       nonmatch = r"D    anothernewfile")
 
 if __name__ == "__main__":
