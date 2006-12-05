@@ -1069,7 +1069,6 @@ D    test3"""
         # Attempt a merge of changes from test-branch to
         # testYYY-branch.
         self.svnmerge("merge -r 16 -S ../test-branch")
-        self.assertTrue(os.path.isfile("dir_conflicts.prej"))
         try:
             self.launch("svn commit -F svnmerge-commit-message.txt",
                         match=r"Committed revision 18")
