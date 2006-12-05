@@ -168,7 +168,7 @@ static svn_error_t * simple_request(svn_ra_dav__session_t *ras,
   ne_request *req;
 
   /* create/prep the request */
-  request = svn_ra_dav__request_create(ras->sess, ras, method, url, pool);
+  request = svn_ra_dav__request_create(ras, method, url, pool);
   req = request->req;
   if (req == NULL)
     {
@@ -436,7 +436,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 
   /* create/prep the request */
   request =
-    svn_ra_dav__request_create(cc->ras->sess, cc->ras,
+    svn_ra_dav__request_create(cc->ras,
                                "CHECKOUT", vsn_url, pool);
   req = request->req;
   if (req == NULL)
@@ -818,8 +818,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                                                   child_tokens, pool));
       
       request =
-        svn_ra_dav__request_create(parent->cc->ras->sess,
-                                   parent->cc->ras, "DELETE", child, pool);
+        svn_ra_dav__request_create(parent->cc->ras, "DELETE", child, pool);
       req = request->req;
       if (req == NULL)
         return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
@@ -1246,7 +1245,6 @@ static svn_error_t * commit_close_file(void *file_baton,
 
   if (file->put_baton)
     {
-      ne_session *sess = cc->ras->sess;
       put_baton_t *pb = file->put_baton;
       const char *url = file->rsrc->wr_url;
       svn_ra_dav__request_t *request;
@@ -1255,7 +1253,7 @@ static svn_error_t * commit_close_file(void *file_baton,
       svn_error_t *err;
 
       /* create/prep the request */
-      request = svn_ra_dav__request_create(sess, cc->ras, "PUT", url, pool);
+      request = svn_ra_dav__request_create(cc->ras, "PUT", url, pool);
       req = request->req;
       if (req == NULL)
         {

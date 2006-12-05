@@ -173,7 +173,7 @@ typedef struct {
  * Register a pool cleanup for any allocated Neon resources.
  */
 svn_ra_dav__request_t *
-svn_ra_dav__request_create(ne_session *ne_sess, svn_ra_dav__session_t *sess,
+svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
                            const char *method, const char *url,
                            apr_pool_t *pool);
 

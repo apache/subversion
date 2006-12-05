@@ -230,15 +230,15 @@ dav_request_cleanup(void *baton)
 
 
 svn_ra_dav__request_t *
-svn_ra_dav__request_create(ne_session *ne_sess, svn_ra_dav__session_t *sess,
+svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
                            const char *method, const char *url,
                            apr_pool_t *pool)
 {
   apr_pool_t *reqpool = svn_pool_create(pool);
   svn_ra_dav__request_t *req = apr_pcalloc(reqpool, sizeof(*req));
 
-  req->ne_sess = ne_sess;
-  req->req = ne_request_create(ne_sess, method, url);
+  req->ne_sess = sess->main_session_busy ? sess->sess2 : sess->sess;
+  req->req = ne_request_create(req->ne_sess, method, url);
   req->sess = sess;
   req->pool = reqpool;
   req->iterpool = svn_pool_create(req->pool);
@@ -934,7 +934,7 @@ parsed_request(ne_session *sess,
                                                       SVN_RA_NE_SESSION_ID);
 
   /* create/prep the request */
-  req = svn_ra_dav__request_create(sess, ras, method, url, pool);
+  req = svn_ra_dav__request_create(ras, method, url, pool);
 
   if (body != NULL)
     ne_set_request_body_buffer(req->req, body, strlen(body));
@@ -1094,7 +1094,7 @@ svn_ra_dav__copy(ne_session *sess,
   svn_ra_dav__session_t *ras =
     ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
   svn_ra_dav__request_t *req =
-    svn_ra_dav__request_create(sess, ras, "COPY", src, pool);
+    svn_ra_dav__request_create(ras, "COPY", src, pool);
   const char *abs_dst;
 
   abs_dst = apr_psprintf(pool, "%s://%s%s", ne_get_scheme(sess),

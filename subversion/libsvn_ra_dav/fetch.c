@@ -413,7 +413,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
       delta_base = NULL;
     }
 
-  request = svn_ra_dav__request_create(sess, ras, "GET", url, pool);
+  request = svn_ra_dav__request_create(ras, "GET", url, pool);
   req = request->req;
   if (req == NULL)
     {
