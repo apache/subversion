@@ -135,7 +135,7 @@ svn_ra_dav__get_activity_collection(const svn_string_t **activity_coll,
   oc.pool = pool;
   oc.cdata = svn_stringbuf_create("", pool);
 
-  SVN_ERR(svn_ra_dav__parsed_request(ras->sess, "OPTIONS", url,
+  SVN_ERR(svn_ra_dav__parsed_request(ras, "OPTIONS", url,
                                      "<?xml version=\"1.0\" "
                                      "encoding=\"utf-8\"?>"
                                      "<D:options xmlns:D=\"DAV:\">"

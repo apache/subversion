@@ -428,13 +428,13 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
      START and END revisions. */
   use_rev = (start > end) ? start : end;
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                        ras->sess, ras->url->data, use_rev,
+                                        ras, ras->url->data, use_rev,
                                         pool));
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             pool);
 
 
-  err = svn_ra_dav__parsed_request(ras->sess,
+  err = svn_ra_dav__parsed_request(ras,
                                    "REPORT",
                                    final_bc_url,
                                    request_body->data,

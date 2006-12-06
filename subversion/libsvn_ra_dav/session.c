@@ -911,7 +911,7 @@ static svn_error_t *svn_ra_dav__get_repos_root(svn_ra_session_t *session,
       svn_stringbuf_t *url_buf;
 
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative,
-                                            NULL, ras->sess, ras->url->data,
+                                            NULL, ras, ras->url->data,
                                             SVN_INVALID_REVNUM, pool));
 
       /* Remove as many path components from the URL as there are components
@@ -940,7 +940,7 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
       const svn_string_t *uuid_propval;
 
       SVN_ERR(svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
-                                                    ras->sess, ras->url->data,
+                                                    ras, ras->url->data,
                                                     pool));
       SVN_ERR(svn_ra_dav__maybe_store_auth_info(ras, pool));
 
@@ -1130,7 +1130,7 @@ shim_svn_ra_dav__lock(svn_ra_session_t *session,
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component(ras->url->data, path, pool);  
-  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
+  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
                                         url, SVN_INVALID_REVNUM, pool));
 
   /* Clear out the lrb... */
@@ -1512,7 +1512,7 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component(ras->url->data, path, pool);  
 
-  err = svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
+  err = svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
                                       url, SVN_INVALID_REVNUM, pool);
   SVN_ERR(svn_ra_dav__maybe_store_auth_info_after_result(err, ras, pool));
 

@@ -754,7 +754,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL,
                                             &bc_url, &bc_relative,
                                             &got_rev,
-                                            ras->sess,
+                                            ras,
                                             url, revision,
                                             pool));
       final_url = svn_path_url_add_component(bc_url.data,
@@ -778,7 +778,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
          svn_ra_dav__get_baseline_info() call above; that will prevent
          the extra round trip, at least some of the time. */
       err = svn_ra_dav__get_one_prop(&expected_checksum,
-                                     ras->sess,
+                                     ras,
                                      final_url,
                                      NULL,
                                      &md5_propname,
@@ -827,7 +827,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
 
   if (props)
     {
-      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras->sess, final_url, 
+      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras, final_url, 
                                              NULL, NULL /* all props */, 
                                              pool)); 
       *props = apr_hash_make(pool);
@@ -877,7 +877,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL,
                                             &bc_url, &bc_relative,
                                             &got_rev,
-                                            ras->sess,
+                                            ras,
                                             url, revision,
                                             pool));
       final_url = svn_path_url_add_component(bc_url.data,
@@ -894,7 +894,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
   {
     const svn_string_t *deadprop_count;
   
-    SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras->sess,
+    SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras,
                                            final_url, NULL,
                                            deadprop_count_support_props,
                                            pool));
@@ -992,7 +992,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
 
       /* Just like Nautilus, Cadaver, or any other browser, we do a
          PROPFIND on the directory of depth 1. */
-      SVN_ERR(svn_ra_dav__get_props(&resources, ras->sess,
+      SVN_ERR(svn_ra_dav__get_props(&resources, ras,
                                     final_url, NE_DEPTH_ONE,
                                     NULL, which_props, pool));
       
@@ -1131,7 +1131,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
 
   if (props)                    
     {
-      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras->sess, final_url, 
+      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras, final_url, 
                                              NULL, NULL /* all props */, 
                                              pool)); 
 
@@ -1157,7 +1157,7 @@ svn_error_t *svn_ra_dav__get_latest_revnum(svn_ra_session_t *session,
   /* we don't need any of the baseline URLs and stuff, but this does
      give us the latest revision number */
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, NULL, latest_revnum,
-                                        ras->sess, ras->root.path,
+                                        ras, ras->root.path,
                                         SVN_INVALID_REVNUM, pool));
 
   SVN_ERR(svn_ra_dav__maybe_store_auth_info(ras, pool));
@@ -1241,7 +1241,7 @@ svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
 
   /* Run the 'dated-rev-report' on the VCC url, which is always
      guaranteed to exist.   */
-  SVN_ERR(svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->root.path, pool));
+  SVN_ERR(svn_ra_dav__get_vcc(&vcc_url, ras, ras->root.path, pool));
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -1251,7 +1251,7 @@ svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
                       "</S:dated-rev-report>",
                       svn_time_to_cstring(timestamp, pool));
 
-  err = svn_ra_dav__parsed_request(ras->sess, "REPORT",
+  err = svn_ra_dav__parsed_request(ras, "REPORT",
                                    vcc_url, body, NULL, NULL,
                                    drev_start_element,
                                    svn_ra_dav__xml_collect_cdata,
@@ -1396,13 +1396,13 @@ svn_ra_dav__get_locations(svn_ra_session_t *session,
      dav_get_resource() to choke on the server.  So instead, we pass a
      baseline-collection URL, which we get from the peg revision.  */
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                        ras->sess, ras->url->data,
+                                        ras, ras->url->data,
                                         peg_revision,
                                         pool));
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             pool);
 
-  err = svn_ra_dav__parsed_request(ras->sess, "REPORT", final_bc_url,
+  err = svn_ra_dav__parsed_request(ras, "REPORT", final_bc_url,
                                    request_body->data, NULL, NULL,
                                    gloc_start_element, NULL, NULL,
                                    &request_baton, NULL, &status_code,
@@ -1717,7 +1717,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
      possibly be a lock, so we just return no locks. */
   url = svn_path_url_add_component(ras->url->data, path, pool);
 
-  err = svn_ra_dav__parsed_request(ras->sess, "REPORT", url,
+  err = svn_ra_dav__parsed_request(ras, "REPORT", url,
                                    body, NULL, NULL,
                                    getlocks_start_element,
                                    getlocks_cdata_handler,
@@ -1796,7 +1796,7 @@ svn_error_t *svn_ra_dav__change_rev_prop(svn_ra_session_t *session,
 
   /* Get the baseline resource. */
   SVN_ERR(svn_ra_dav__get_baseline_props(NULL, &baseline,
-                                         ras->sess, 
+                                         ras,
                                          ras->url->data,
                                          rev,
                                          wanted_props, /* DAV:auto-version */
@@ -1843,7 +1843,7 @@ svn_error_t *svn_ra_dav__rev_proplist(svn_ra_session_t *session,
 
   /* Main objective: do a PROPFIND (allprops) on a baseline object */  
   SVN_ERR(svn_ra_dav__get_baseline_props(NULL, &baseline,
-                                         ras->sess, 
+                                         ras,
                                          ras->url->data,
                                          rev,
                                          NULL, /* get ALL properties */
@@ -2219,7 +2219,7 @@ start_element(int *elem, void *userdata, int parent_state, const char *nspace,
         {
           apr_hash_t *bc_children;
           SVN_ERR(svn_ra_dav__get_props(&bc_children,
-                                        rb->ras->sess2,
+                                        rb->ras,
                                         bc_url,
                                         NE_DEPTH_ONE,
                                         NULL, NULL /* allprops */,
@@ -2493,7 +2493,7 @@ add_node_props(report_baton_t *rb, apr_pool_t *pool)
                                        APR_HASH_KEY_STRING))) )
         {
           SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
-                                                 rb->ras->sess2,
+                                                 rb->ras,
                                                  rb->href->data,
                                                  NULL,
                                                  NULL,
@@ -2520,7 +2520,7 @@ add_node_props(report_baton_t *rb, apr_pool_t *pool)
                                        APR_HASH_KEY_STRING))) )
         {
           SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
-                                                 rb->ras->sess2,
+                                                 rb->ras,
                                                  TOP_DIR(rb).vsn_url,
                                                  NULL,
                                                  NULL,
@@ -2887,7 +2887,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
      Collection (BC) URL that represents the revision -- and a
      relative path under that BC.  */
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative, NULL,
-                                        rb->ras->sess,
+                                        rb->ras,
                                         url, revision,
                                         pool));
   
@@ -2966,7 +2966,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
 
   /* get the VCC.  if this doesn't work out for us, don't forget to
      remove the tmpfile before returning the error. */
-  if ((err = svn_ra_dav__get_vcc(&vcc, rb->ras->sess, 
+  if ((err = svn_ra_dav__get_vcc(&vcc, rb->ras,
                                  rb->ras->url->data, pool)))
     {
       (void) apr_file_close(rb->tmpfile);
@@ -2974,7 +2974,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
     }
 
   /* dispatch the REPORT. */
-  err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", vcc,
+  err = svn_ra_dav__parsed_request(rb->ras, "REPORT", vcc,
                                    NULL, rb->tmpfile, NULL,
                                    start_element,
                                    cdata_handler,

@@ -404,7 +404,7 @@ typedef struct {
 
 /* fetch a bunch of properties from the server. */
 svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
-                                    ne_session *sess,
+                                    svn_ra_dav__session_t *sess,
                                     const char *url,
                                     int depth,
                                     const char *label,
@@ -413,7 +413,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
 
 /* fetch a single resource's props from the server. */
 svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
-                                             ne_session *sess,
+                                             svn_ra_dav__session_t *sess,
                                              const char *url,
                                              const char *label,
                                              const ne_propname *which_props,
@@ -421,7 +421,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
 
 /* fetch a single resource's starting props from the server. */
 svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
-                                             ne_session *sess,
+                                             svn_ra_dav__session_t *sess,
                                              const char *url,
                                              const char *label,
                                              apr_pool_t *pool);
@@ -437,13 +437,13 @@ svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
 svn_error_t * 
 svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
                                       const char **missing_path,
-                                      ne_session *sess,
+                                      svn_ra_dav__session_t *sess,
                                       const char *url,
                                       apr_pool_t *pool);
 
 /* fetch a single property from a single resource */
 svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
-                                       ne_session *sess,
+                                       svn_ra_dav__session_t *sess,
                                        const char *url,
                                        const char *label,
                                        const ne_propname *propname,
@@ -481,7 +481,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
                                            svn_string_t *bc_url,
                                            svn_string_t *bc_relative,
                                            svn_revnum_t *latest_rev,
-                                           ne_session *sess,
+                                           svn_ra_dav__session_t *sess,
                                            const char *url,
                                            svn_revnum_t revision,
                                            apr_pool_t *pool);
@@ -498,7 +498,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 */
 svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
                                             svn_ra_dav_resource_t **bln_rsrc,
-                                            ne_session *sess,
+                                            svn_ra_dav__session_t *sess,
                                             const char *url,
                                             svn_revnum_t revision,
                                             const ne_propname *which_props,
@@ -510,7 +510,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
    repository's version-controlled-configuration resource.
  */
 svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
-                                 ne_session *sess,
+                                 svn_ra_dav__session_t *sess,
                                  const char *url,
                                  apr_pool_t *pool);
 
@@ -639,7 +639,7 @@ svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req,
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
-svn_ra_dav__parsed_request(ne_session *sess,
+svn_ra_dav__parsed_request(svn_ra_dav__session_t *sess,
                            const char *method,
                            const char *url,
                            const char *body,
@@ -875,7 +875,7 @@ svn_ra_dav__simple_request(svn_ra_dav__request_t *req,
 
    DEPTH is one of NE_DEPTH_INFINITE, NE_DEPTH_ZERO or NE_DEPTH_ONE. */
 svn_error_t *
-svn_ra_dav__copy(ne_session *sess,
+svn_ra_dav__copy(svn_ra_dav__session_t *ras,
                  svn_boolean_t overwrite,
                  int depth,
                  const char *src,

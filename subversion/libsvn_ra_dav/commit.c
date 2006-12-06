@@ -251,7 +251,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
       /* The version URL comes from a resource in the Baseline Collection. */
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL,
                                             &bc_url, &bc_relative, NULL,
-                                            cc->ras->sess,
+                                            cc->ras,
                                             rsrc->url,
                                             rsrc->revision,
                                             pool));
@@ -261,7 +261,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
 
   /* Get the DAV:checked-in property, which contains the URL of the
      Version Resource */
-  SVN_ERR(svn_ra_dav__get_props_resource(&propres, cc->ras->sess, url,
+  SVN_ERR(svn_ra_dav__get_props_resource(&propres, cc->ras, url,
                                          NULL, fetch_props, pool));
   url_str = apr_hash_get(propres->propset,
                          SVN_RA_DAV__PROP_CHECKED_IN,
@@ -893,7 +893,7 @@ static svn_error_t * commit_add_dir(const char *path,
          relative path under that BC.  */
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL,
                                             &bc_url, &bc_relative, NULL,
-                                            parent->cc->ras->sess,
+                                            parent->cc->ras,
                                             copyfrom_path,
                                             copyfrom_revision,
                                             workpool));
@@ -908,7 +908,7 @@ static svn_error_t * commit_add_dir(const char *path,
                                             workpool);
 
       /* Have neon do the COPY. */
-      SVN_ERR(svn_ra_dav__copy(parent->cc->ras->sess,
+      SVN_ERR(svn_ra_dav__copy(parent->cc->ras,
                                1,                  /* overwrite */
                                NE_DEPTH_INFINITE,  /* always copy dirs deeply */
                                copy_src,           /* source URI */
@@ -1043,7 +1043,7 @@ static svn_error_t * commit_add_file(const char *path,
     {
       svn_ra_dav_resource_t *res;
       svn_error_t *err = svn_ra_dav__get_starting_props(&res,
-                                                        file->cc->ras->sess,
+                                                        file->cc->ras,
                                                         file->rsrc->url, NULL,
                                                         workpool);
       if (!err)
@@ -1086,7 +1086,7 @@ static svn_error_t * commit_add_file(const char *path,
          relative path under that BC.  */
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL,
                                             &bc_url, &bc_relative, NULL,
-                                            parent->cc->ras->sess,
+                                            parent->cc->ras,
                                             copyfrom_path,
                                             copyfrom_revision,
                                             workpool));
@@ -1101,7 +1101,7 @@ static svn_error_t * commit_add_file(const char *path,
                                             workpool);
 
       /* Have neon do the COPY. */
-      SVN_ERR(svn_ra_dav__copy(parent->cc->ras->sess,
+      SVN_ERR(svn_ra_dav__copy(parent->cc->ras,
                                1,               /* overwrite */
                                NE_DEPTH_ZERO,   /* file: this doesn't matter */
                                copy_src,        /* source URI */
@@ -1363,7 +1363,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
      ### REPORT when that is available on the server. */
 
   /* fetch the DAV:version-controlled-configuration from the session's URL */
-  SVN_ERR(svn_ra_dav__get_one_prop(&vcc, cc->ras->sess, cc->ras->root.path, 
+  SVN_ERR(svn_ra_dav__get_one_prop(&vcc, cc->ras, cc->ras->root.path, 
                                    NULL, &svn_ra_dav__vcc_prop, pool));
 
   /* ### we should use DAV:apply-to-version on the CHECKOUT so we can skip
@@ -1375,7 +1375,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 
     /* Get the latest baseline from VCC's DAV:checked-in property.
        This should give us the HEAD revision of the moment. */
-    SVN_ERR(svn_ra_dav__get_one_prop(&baseline_url, cc->ras->sess,
+    SVN_ERR(svn_ra_dav__get_one_prop(&baseline_url, cc->ras,
                                      vcc->data, NULL,
                                      &svn_ra_dav__checked_in_prop, pool));
     baseline_rsrc.pool = pool;

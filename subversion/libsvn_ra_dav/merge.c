@@ -756,7 +756,7 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "</D:merge>",
                       activity_url, lockbuf->data);
 
-  SVN_ERR(svn_ra_dav__parsed_request(ras->sess, "MERGE", repos_url,
+  SVN_ERR(svn_ra_dav__parsed_request(ras, "MERGE", repos_url,
                                      body, 0, NULL,
                                      start_element,
                                      svn_ra_dav__xml_collect_cdata,

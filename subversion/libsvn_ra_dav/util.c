@@ -909,7 +909,7 @@ get_cancellation_baton(svn_ra_dav__request_t *req,
 
 /* See doc string for svn_ra_dav__parsed_request. */
 static svn_error_t *
-parsed_request(ne_session *sess,
+parsed_request(svn_ra_dav__session_t *ras,
                const char *method,
                const char *url,
                const char *body,
@@ -930,8 +930,6 @@ parsed_request(ne_session *sess,
   const char *msg;
   spool_reader_baton_t spool_reader_baton;
   cancellation_baton_t *cancel_baton;
-  svn_ra_dav__session_t *ras = ne_get_session_private(sess,
-                                                      SVN_RA_NE_SESSION_ID);
 
   /* create/prep the request */
   req = svn_ra_dav__request_create(ras, method, url, pool);
@@ -1040,7 +1038,7 @@ parsed_request(ne_session *sess,
 
 
 svn_error_t *
-svn_ra_dav__parsed_request(ne_session *sess,
+svn_ra_dav__parsed_request(svn_ra_dav__session_t *sess,
                            const char *method,
                            const char *url,
                            const char *body,
@@ -1084,21 +1082,19 @@ svn_ra_dav__simple_request(svn_ra_dav__request_t *req,
 
 
 svn_error_t *
-svn_ra_dav__copy(ne_session *sess,
+svn_ra_dav__copy(svn_ra_dav__session_t *ras,
                  svn_boolean_t overwrite,
                  int depth,
                  const char *src,
                  const char *dst,
                  apr_pool_t *pool)
 {
-  svn_ra_dav__session_t *ras =
-    ne_get_session_private(sess, SVN_RA_NE_SESSION_ID);
   svn_ra_dav__request_t *req =
     svn_ra_dav__request_create(ras, "COPY", src, pool);
   const char *abs_dst;
 
-  abs_dst = apr_psprintf(pool, "%s://%s%s", ne_get_scheme(sess),
-                         ne_get_server_hostport(sess), dst);
+  abs_dst = apr_psprintf(pool, "%s://%s%s", ne_get_scheme(ras->sess),
+                         ne_get_server_hostport(ras->sess), dst);
   ne_add_request_header(req->req, "Depth",
                         (depth == NE_DEPTH_INFINITE)
                         ? "infinity" : (depth == NE_DEPTH_ZERO) ? "0" : "1");
