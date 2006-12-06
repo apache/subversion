@@ -1117,6 +1117,10 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   /* Perform the move for each of the copy_pairs. */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
+      /* Check for cancellation */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
       SVN_ERR(repos_to_wc_copy_single(((svn_client__copy_pair_t **)
                                         (copy_pairs->elts))[i], 
                                       src_revnum, same_repositories, &revision, 
