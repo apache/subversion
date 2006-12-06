@@ -82,7 +82,12 @@ public:
      */
     static void putFinalizedClient(SVNBase *cl);
 
+    /**
+     * Throw a Java exception corresponding to err, and run
+     * svn_error_clear() on err.
+     */
     static void handleSVNError(svn_error_t *err);
+
     static jstring makeSVNErrorMessage(svn_error_t *err);
 
     /**
