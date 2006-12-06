@@ -865,7 +865,11 @@ svn_ra_dav__request_dispatch(int *code_p,
 
    Don't use this function if you're expecting 207 as a valid response. */
 svn_error_t *
-svn_ra_dav__simple_request(svn_ra_dav__request_t *req,
+svn_ra_dav__simple_request(int *code,
+                           svn_ra_dav__session_t *ras,
+                           const char *method,
+                           const char *url,
+                           apr_hash_t *extra_headers,
                            int okay_1, int okay_2, apr_pool_t *pool);
 
 

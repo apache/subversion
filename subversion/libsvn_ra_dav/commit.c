@@ -155,56 +155,14 @@ static version_rsrc_t * dup_resource(version_rsrc_t *base, apr_pool_t *pool)
   return rsrc;
 }
 
-static svn_error_t * simple_request(svn_ra_dav__session_t *ras, 
-                                    const char *method,
-                                    const char *url, 
-                                    int *code,
-                                    apr_hash_t *extra_headers,
-                                    int okay_1, 
-                                    int okay_2, 
-                                    apr_pool_t *pool)
-{
-  svn_ra_dav__request_t *request;
-  ne_request *req;
-
-  /* create/prep the request */
-  request = svn_ra_dav__request_create(ras, method, url, pool);
-  req = request->req;
-  if (req == NULL)
-    {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               _("Could not create a request (%s '%s')"),
-                               method, url);
-    }
-
-  /* add any extra headers passed in by caller. */
-  if (extra_headers != NULL)
-    {
-      apr_hash_index_t *hi;
-      for (hi = apr_hash_first(pool, extra_headers);
-           hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          apr_hash_this(hi, &key, NULL, &val);
-          ne_add_request_header(req, (const char *) key, (const char *) val); 
-        }
-    }
-
-  /* run the request and get the resulting status code (and svn_error_t) */
-  SVN_ERR(svn_ra_dav__request_dispatch(code, request, okay_1, okay_2, pool));
-  svn_ra_dav__request_destroy(request);
-
-  return SVN_NO_ERROR;
-}
-
-
 static svn_error_t * delete_activity(void *edit_baton,
                                      apr_pool_t *pool)
 {
   commit_ctx_t *cc = edit_baton;
-  return simple_request(cc->ras, "DELETE", cc->activity_url, NULL,
-                        NULL, 204 /* No Content */, 404 /* Not Found */, pool);
+  return svn_ra_dav__simple_request(NULL, cc->ras, "DELETE",
+                                    cc->activity_url, NULL,
+                                    204 /* No Content */,
+                                    404 /* Not Found */, pool);
 }
 
 
@@ -353,8 +311,10 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
   SVN_ERR(get_activity_collection(cc, &activity_collection, FALSE, pool));
   url = svn_path_url_add_component(activity_collection->data, 
                                    uuid_buf, pool);
-  SVN_ERR(simple_request(cc->ras, "MKACTIVITY", url, &code, NULL,
-                         201 /* Created */, 404 /* Not Found */, pool));
+  SVN_ERR(svn_ra_dav__simple_request(&code, cc->ras,
+                                     "MKACTIVITY", url, NULL,
+                                     201 /* Created */,
+                                     404 /* Not Found */, pool));
 
   /* if we get a 404, then it generally means that the cached activity
      collection no longer exists. Retry the sequence, but force a query
@@ -364,8 +324,9 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
       SVN_ERR(get_activity_collection(cc, &activity_collection, TRUE, pool));
       url = svn_path_url_add_component(activity_collection->data, 
                                        uuid_buf, pool);
-      SVN_ERR(simple_request(cc->ras, "MKACTIVITY", url, &code,
-                             NULL, 201, 0, pool));
+      SVN_ERR(svn_ra_dav__simple_request(&code, cc->ras,
+                                         "MKACTIVITY", url, NULL,
+                                         201, 0, pool));
     }
 
   cc->activity_url = url;
@@ -768,9 +729,11 @@ static svn_error_t * commit_delete_entry(const char *path,
      against the HEAD revision on-the-fly.  In such a universe, a
      failed deletion (because it's already missing) is OK;  deletion
      is an idempotent merge operation. */
-  serr =  simple_request(parent->cc->ras, "DELETE", child, &code,
-                         extra_headers,
-                         204 /* Created */, 404 /* Not Found */, pool);
+  serr =  svn_ra_dav__simple_request(&code, parent->cc->ras,
+                                     "DELETE", child,
+                                     extra_headers,
+                                     204 /* Created */,
+                                     404 /* Not Found */, pool);
 
   /* A locking-related error most likely means we were deleting a
      directory rather than a file, and didn't send all of the
@@ -878,8 +841,9 @@ static svn_error_t * commit_add_dir(const char *path,
     {
       /* This a new directory with no history, so just create a new,
          empty collection */
-      SVN_ERR(simple_request(parent->cc->ras, "MKCOL", child->rsrc->wr_url,
-                             &code, NULL, 201 /* Created */, 0, workpool));
+      SVN_ERR(svn_ra_dav__simple_request(&code, parent->cc->ras, "MKCOL",
+                                         child->rsrc->wr_url, NULL,
+                                         201 /* Created */, 0, workpool));
     }
   else
     {

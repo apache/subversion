@@ -1066,18 +1066,42 @@ svn_ra_dav__parsed_request(svn_ra_dav__session_t *sess,
 
 
 svn_error_t *
-svn_ra_dav__simple_request(svn_ra_dav__request_t *req,
+svn_ra_dav__simple_request(int *code,
+                           svn_ra_dav__session_t *ras,
+                           const char *method,
+                           const char *url,
+                           apr_hash_t *extra_headers,
                            int okay_1, int okay_2, apr_pool_t *pool)
 {
+  svn_ra_dav__request_t *req =
+    svn_ra_dav__request_create(ras, method, url, pool);
   ne_xml_parser *multistatus =
     multistatus_parser_create(req);
+
+  /* add any extra headers passed in by caller. */
+  if (extra_headers != NULL)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(pool, extra_headers);
+           hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this(hi, &key, NULL, &val);
+          ne_add_request_header(req->req,
+                                (const char *) key, (const char *) val);
+        }
+    }
 
   svn_ra_dav__add_response_body_reader(req, ne_accept_207,
                                        ne_xml_parse_v, multistatus);
 
 
   /* svn_ra_dav__request_dispatch() adds the custom error response reader */
-  return svn_ra_dav__request_dispatch(NULL, req, okay_1, okay_2, pool);
+  SVN_ERR(svn_ra_dav__request_dispatch(code, req, okay_1, okay_2, pool));
+  svn_ra_dav__request_destroy(req);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -1089,19 +1113,20 @@ svn_ra_dav__copy(svn_ra_dav__session_t *ras,
                  const char *dst,
                  apr_pool_t *pool)
 {
-  svn_ra_dav__request_t *req =
-    svn_ra_dav__request_create(ras, "COPY", src, pool);
   const char *abs_dst;
+  apr_hash_t *extra_headers = apr_hash_make(pool);
 
   abs_dst = apr_psprintf(pool, "%s://%s%s", ne_get_scheme(ras->sess),
                          ne_get_server_hostport(ras->sess), dst);
-  ne_add_request_header(req->req, "Depth",
-                        (depth == NE_DEPTH_INFINITE)
-                        ? "infinity" : (depth == NE_DEPTH_ZERO) ? "0" : "1");
-  ne_add_request_header(req->req, "Overwrite", overwrite ? "T" : "F");
-  ne_add_request_header(req->req, "Destination", abs_dst);
+  apr_hash_set(extra_headers, "Destination", APR_HASH_KEY_STRING, abs_dst);
+  apr_hash_set(extra_headers, "Depth", APR_HASH_KEY_STRING,
+               (depth == NE_DEPTH_INFINITE)
+               ? "infinity" : (depth == NE_DEPTH_ZERO) ? "0" : "1");
+  apr_hash_set(extra_headers, "Overwrite", APR_HASH_KEY_STRING,
+               overwrite ? "T" : "F");
 
-  return svn_ra_dav__simple_request(req, 201, 204, pool);
+  return svn_ra_dav__simple_request(NULL, ras, "COPY", src, extra_headers,
+                                    201, 204, pool);
 }
 
 
