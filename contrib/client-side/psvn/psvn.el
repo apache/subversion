@@ -439,7 +439,14 @@ This can be set with \\[svn-status-set-module-name].")
 
 (defvar svn-status-branch-list nil
   "*A list of known branches for the actual project
-This can be set with \\[svn-status-set-branch-list].")
+This can be set with \\[svn-status-set-branch-list].
+
+The list contains full repository paths or shortcuts starting with \#
+\# at the beginning is replaced by the repository url.
+\#1\# has the special meaning that all paths below the given directory
+will be considered for interactive selections.
+
+A useful setting might be: '\(\"\#trunk\" \"\#1\#tags\" \"\#1\#branches\")")
 
 (defvar svn-status-load-state-before-svn-status t
   "*Whether to automatically restore state from ++psvn.state file before running svn-status.")
@@ -1163,6 +1170,9 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                  ((eq svn-process-cmd 'ls)
                   (svn-status-show-process-output 'info t)
                   (message "svn ls finished"))
+                 ((eq svn-process-cmd 'diff)
+                  (svn-status-activate-diff-mode)
+                  (message "svn diff finished"))
                  ((eq svn-process-cmd 'parse-info)
                   (svn-status-parse-info-result))
                  ((eq svn-process-cmd 'blame)
@@ -1540,6 +1550,9 @@ A and B must be line-info's."
 (defvar svn-status-mode-extension-map ()
   "Subkeymap used in `svn-status-mode' for some seldom used commands.")
 (put 'svn-status-mode-extension-map 'risky-local-variable t) ;for Emacs 20.7
+(defvar svn-status-mode-branch-map ()
+  "Subkeymap used in `svn-status-mode' for branching commands.")
+(put 'svn-status-mode-extension-map 'risky-local-variable t) ;for Emacs 20.7
 
 (when (not svn-status-mode-map)
   (setq svn-status-mode-map (make-sparse-keymap))
@@ -1672,6 +1685,10 @@ A and B must be line-info's."
   (setq svn-status-mode-trac-map (make-sparse-keymap))
   (define-key svn-status-mode-trac-map (kbd "t") 'svn-trac-browse-timeline)
   (define-key svn-status-mode-map (kbd "T") svn-status-mode-trac-map))
+(when (not svn-status-mode-branch-map)
+  (setq svn-status-mode-branch-map (make-sparse-keymap))
+  (define-key svn-status-mode-branch-map (kbd "d") 'svn-branch-diff)
+  (define-key svn-status-mode-map (kbd "B") svn-status-mode-branch-map))
 
 (easy-menu-define svn-status-mode-menu svn-status-mode-map
   "'svn-status-mode' menu"
@@ -1704,6 +1721,10 @@ A and B must be line-info's."
     ["svn lock" svn-status-lock t]
     ["svn unlock" svn-status-unlock t]
     ["Show Process Buffer" svn-status-show-process-buffer t]
+    ("Branch"
+     ["diff" svn-branch-diff t]
+     ["Set Branch list" svn-status-set-branch-list t]
+     )
     ("Property"
      ["svn proplist" svn-status-property-list t]
      ["Set Multiple Properties..." svn-status-property-set t]
@@ -2586,10 +2607,13 @@ Put the found values in `svn-status-base-info'."
       (cadr (assoc 'repository-root svn-status-base-info))
     ""))
 
-(defun svn-status-ls (path)
+(defun svn-status-ls (path &optional synchron)
   "Run svn ls PATH."
   (interactive "sPath for svn ls: ")
-  (svn-run t t 'ls "ls" path))
+  (svn-run (not synchron) t 'ls "ls" path)
+  (when synchron
+    (split-string (with-current-buffer svn-process-buffer-name
+                    (buffer-substring-no-properties (point-min) (point-max))))))
 
 (defun svn-status-ls-branches ()
   "Show, which branches exist for the actual working copy.
@@ -4778,17 +4802,36 @@ The conflicts must be marked with rcsmerge conflict markers."
 ;; Working with branches
 ;; --------------------------------------------------------------------------------
 
-(defun svn-select-branch ()
-  "Let the user select a branch from `svn-status-branch-list'"
+(defun svn-branch-select (&optional prompt)
+  "Select a branch interactively from `svn-status-branch-list'"
   (interactive)
+  (unless prompt
+    (setq prompt "Select branch: "))
   (let* ((completion-function (if svn-status-use-ido-completion 'ido-completing-read 'completing-read))
-         (branch (funcall completion-function "Select branch: " svn-status-branch-list)))
-    (when (string-match "#\\(.+\\)" branch)
+         (branch (funcall completion-function prompt svn-status-branch-list))
+         (directory)
+         (base-url))
+    (when (string-match "#\\(1#\\)?\\(.+\\)" branch)
+      (setq directory (match-string 2 branch))
+      (setq base-url (concat (svn-status-base-info->repository-root) "/" directory))
       (save-match-data
         (svn-status-parse-info t))
-      (setq branch (concat (svn-status-base-info->repository-root) "/" (match-string 1 branch))))
-    (message "svn-select-branch:: %s" branch)
+      (if (eq (length (match-string 1 branch)) 0)
+          (setq branch base-url)
+        (let ((svn-status-branch-list (svn-status-ls base-url t)))
+          (setq branch (concat (svn-status-base-info->repository-root) "/"
+                               directory "/"
+                               (svn-select-branch (format "Select branch from '%s': " directory)))))))
     branch))
+
+(defun svn-branch-diff (branch1 branch2)
+  "Show the diff between two svn repository urls.
+When called interactively, use `svn-branch-select' to choose two branches from `svn-status-branch-list'."
+  (interactive
+   (let* ((branch1 (svn-branch-select "svn diff branch1: "))
+          (branch2 (svn-branch-select (format "svn diff %s against: " branch1))))
+     (list branch1 branch2)))
+  (svn-run t t 'diff "diff" svn-status-default-diff-arguments branch1 branch2))
 
 ;; --------------------------------------------------------------------------------
 ;; svnadmin interface
