@@ -23,6 +23,7 @@
 #include "JNIUtil.h"
 #include "Notify.h"
 #include "Notify2.h"
+#include "ProgressListener.h"
 #include "Prompter.h"
 #include "Pool.h"
 #include "Targets.h"
@@ -58,6 +59,7 @@ SVNClient::SVNClient()
 {
     m_notify = NULL;
     m_notify2 = NULL;
+    m_progressListener = NULL;
     m_prompter = NULL;
     m_commitMessage = NULL;
 }
@@ -66,6 +68,7 @@ SVNClient::~SVNClient()
 {
     delete m_notify;
     delete m_notify2;
+    delete m_progressListener;
     delete m_prompter;
 }
 
@@ -543,6 +546,12 @@ void SVNClient::notification2(Notify2 *notify2)
 {
     delete m_notify2;
     m_notify2 = notify2;
+}
+
+void SVNClient::setProgressListener(ProgressListener *listener)
+{
+    delete m_progressListener;
+    m_progressListener = listener;
 }
 
 void SVNClient::remove(Targets &targets, const char *message, bool force)
@@ -1459,9 +1468,9 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                     const char *outfileName,bool recurse, bool ignoreAncestry,
                     bool noDiffDelete, bool force)
 {
+    svn_error_t *err;
     Pool requestPool;
-    svn_error_t *err = NULL;
-    apr_array_header_t *options;
+
     if(target1 == NULL)
     {
         JNIUtil::throwNullPointerException("target1");
@@ -1482,17 +1491,17 @@ void SVNClient::diff(const char *target1, Revision &revision1,
         return;
 
     Path intTarget1(target1);
-    svn_error_t *Err = intTarget1.error_occured();
-    if(Err != NULL)
+    err = intTarget1.error_occured();
+    if (err != NULL)
     {
-        JNIUtil::handleSVNError(Err);
+        JNIUtil::handleSVNError(err);
         return;
     }
     Path intTarget2(target2);
-    Err = intTarget2.error_occured();
-    if(Err != NULL)
+    err = intTarget2.error_occured();
+    if (err != NULL)
     {
-        JNIUtil::handleSVNError(Err);
+        JNIUtil::handleSVNError(err);
         return;
     }
 
@@ -1511,10 +1520,10 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     }
 
     // we don't use any options
-    options = svn_cstring_split ("", " \t\n\r", TRUE, requestPool.pool());
+    apr_array_header_t *options = svn_cstring_split("", " \t\n\r", TRUE,
+						    requestPool.pool());
 
-    Err = svn_client_diff2 (
-                            options,    // options
+    err = svn_client_diff2 (options,
                             intTarget1.c_str(),
                             revision1.revision(),
                             intTarget2.c_str(),
@@ -1533,24 +1542,25 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     if (rv != APR_SUCCESS)
     {
         err = svn_error_create(rv, NULL,_("Cannot close file."));
-         JNIUtil::handleSVNError(err);
+	JNIUtil::handleSVNError(err);
         return;
     }
 
-    if(Err != NULL)
+    if (err != NULL)
     {
-         JNIUtil::handleSVNError(Err);
+        JNIUtil::handleSVNError(err);
         return;
     }
 }
+
 void SVNClient::diff(const char *target, Revision &pegRevision,
                     Revision &startRevision, Revision &endRevision,
                     const char *outfileName,bool recurse, bool ignoreAncestry,
                     bool noDiffDelete, bool force)
 {
+    svn_error_t *err;
     Pool requestPool;
-    svn_error_t *err = NULL;
-    apr_array_header_t *options;
+
     if(target == NULL)
     {
         JNIUtil::throwNullPointerException("target");
@@ -1566,10 +1576,10 @@ void SVNClient::diff(const char *target, Revision &pegRevision,
         return;
 
     Path intTarget(target);
-    svn_error_t *Err = intTarget.error_occured();
-    if(Err != NULL)
+    err = intTarget.error_occured();
+    if (err != NULL)
     {
-        JNIUtil::handleSVNError(Err);
+        JNIUtil::handleSVNError(err);
         return;
     }
 
@@ -1588,10 +1598,11 @@ void SVNClient::diff(const char *target, Revision &pegRevision,
     }
 
     // we don't use any options
-    options = svn_cstring_split ("", " \t\n\r", TRUE, requestPool.pool());
+    apr_array_header_t *options = svn_cstring_split("", " \t\n\r", TRUE,
+						    requestPool.pool());
 
-    Err = svn_client_diff_peg2 (
-                            options,    // options
+    err = svn_client_diff_peg2(
+                            options,
                             intTarget.c_str(),
                             pegRevision.revision(),
                             startRevision.revision(),
@@ -1610,13 +1621,13 @@ void SVNClient::diff(const char *target, Revision &pegRevision,
     if (rv != APR_SUCCESS)
     {
         err = svn_error_create(rv, NULL,_("Cannot close file."));
-         JNIUtil::handleSVNError(err);
+	JNIUtil::handleSVNError(err);
         return;
     }
 
-    if(Err != NULL)
+    if (err != NULL)
     {
-         JNIUtil::handleSVNError(Err);
+        JNIUtil::handleSVNError(err);
         return;
     }
 }
@@ -1713,6 +1724,9 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     }
     ctx->notify_func2= Notify2::notify;
     ctx->notify_baton2 = m_notify2;
+
+    ctx->progress_func = ProgressListener::progress;
+    ctx->progress_baton = m_progressListener;
 
     return ctx;
 }

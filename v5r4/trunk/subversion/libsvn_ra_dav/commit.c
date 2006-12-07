@@ -2,7 +2,7 @@
  * commit.c :  routines for committing changes to the server
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -189,10 +189,12 @@ static svn_error_t * simple_request(svn_ra_dav__session_t *ras,
                                     int okay_2, 
                                     apr_pool_t *pool)
 {
+  svn_ra_dav__request_t *request;
   ne_request *req;
 
   /* create/prep the request */
-  req = ne_request_create(ras->sess, method, url);
+  request = svn_ra_dav__request_create(ras->sess, ras, method, url, pool);
+  req = request->req;
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
@@ -215,10 +217,10 @@ static svn_error_t * simple_request(svn_ra_dav__session_t *ras,
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  return svn_ra_dav__request_dispatch(code, req, ras->sess,
-                                      method, url, okay_1, okay_2,
-                                      NULL, NULL,
-                                      pool);
+  SVN_ERR(svn_ra_dav__request_dispatch(code, request, okay_1, okay_2, pool));
+  svn_ra_dav__request_destroy(request);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -445,12 +447,12 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                                  svn_boolean_t allow_404,
                                  const char *token,
                                  int *code,
-                                 char **locn,
+                                 const char **locn,
                                  apr_pool_t *pool)
 {
+  svn_ra_dav__request_t *request;
   ne_request *req;
   const char *body;
-  svn_error_t *err;
 
   /* assert: vsn_url != NULL */
 
@@ -458,7 +460,10 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
      ### place result into res->wr_url and return it */
 
   /* create/prep the request */
-  req = ne_request_create(cc->ras->sess, "CHECKOUT", vsn_url);
+  request =
+    svn_ra_dav__request_create(cc->ras->sess, cc->ras,
+                               "CHECKOUT", vsn_url, pool);
+  req = request->req;
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
@@ -483,14 +488,15 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(code, req, cc->ras->sess,
-                                     "CHECKOUT", vsn_url,
-                                     201 /* Created */,
-                                     allow_404 ? 404 /* Not Found */ : 0,
-                                     svn_ra_dav__interrogate_for_location,
-                                     locn, pool);
+  SVN_ERR(svn_ra_dav__request_dispatch(code, request,
+                                       201 /* Created */,
+                                       allow_404 ? 404 /* Not Found */ : 0,
+                                       pool));
 
-  return err;
+  *locn = svn_ra_dav__request_get_location(request, pool);
+  svn_ra_dav__request_destroy(request);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -501,7 +507,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
                                        apr_pool_t *pool)
 {
   int code;
-  char *locn = NULL;
+  const char *locn = NULL;
   ne_uri parse;
   svn_error_t *err;
 
@@ -517,9 +523,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* possibly run the request again, with a re-fetched Version Resource */
   if (err == NULL && allow_404 && code == 404)
     {
-      /* free the LOCN if it got assigned. */
-      if (locn)
-        free(locn);
       locn = NULL;
 
       /* re-fetch, forcing a query to the server */
@@ -532,10 +535,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* special-case when conflicts occur */
   if (err)
     {
-      /* free the LOCN if it got assigned. */
-      if (locn)
-        free(locn);
-      
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
           (err->apr_err, err,
@@ -556,7 +555,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   ne_uri_parse(locn, &parse);
   rsrc->wr_url = apr_pstrdup(rsrc->pool, parse.path);
   ne_uri_free(&parse);
-  free(locn);
 
   return SVN_NO_ERROR;
 }
@@ -818,6 +816,7 @@ static svn_error_t * commit_delete_entry(const char *path,
        limits on the amount of data it's willing to receive in headers. */
       
       apr_hash_t *child_tokens = NULL;
+      svn_ra_dav__request_t *request;
       ne_request *req;
       const char *body;
       const char *token;
@@ -843,7 +842,10 @@ static svn_error_t * commit_delete_entry(const char *path,
       SVN_ERR(svn_ra_dav__assemble_locktoken_body(&locks_list,
                                                   child_tokens, pool));
       
-      req = ne_request_create(parent->cc->ras->sess, "DELETE", child);
+      request =
+        svn_ra_dav__request_create(parent->cc->ras->sess,
+                                   parent->cc->ras, "DELETE", child, pool);
+      req = request->req;
       if (req == NULL)
         return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
                                  _("Could not create a DELETE request (%s)"),
@@ -853,16 +855,12 @@ static svn_error_t * commit_delete_entry(const char *path,
                           "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
                           locks_list->data);
       ne_set_request_body_buffer(req, body, strlen(body));
-      
-      /* Don't use SVN_ERR() here because some preprocessors can't
-         handle a compile-time conditional inside a macro call. */
-      serr = svn_ra_dav__request_dispatch(&code, req, parent->cc->ras->sess,
-                                          "DELETE", child,
-                                          204 /* Created */,
-                                          404 /* Not Found */,
-                                          NULL, NULL,
-                                          pool);
-      SVN_ERR(serr);
+
+      SVN_ERR(svn_ra_dav__request_dispatch(&code, request,
+                                           204 /* Created */,
+                                           404 /* Not Found */,
+                                           pool));
+      svn_ra_dav__request_destroy(request);
     }
   else if (serr)
     return serr;
@@ -1351,12 +1349,14 @@ static svn_error_t * commit_close_file(void *file_baton,
       ne_session *sess = cc->ras->sess;
       put_baton_t *pb = file->put_baton;
       const char *url = file->rsrc->wr_url;
+      svn_ra_dav__request_t *request;
       ne_request *req;
       int code;
       svn_error_t *err;
 
       /* create/prep the request */
-      req = ne_request_create(sess, "PUT", url);
+      request = svn_ra_dav__request_create(sess, cc->ras, "PUT", url, pool);
+      req = request->req;
       if (req == NULL)
         {
           return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
@@ -1387,26 +1387,22 @@ static svn_error_t * commit_close_file(void *file_baton,
           (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
       
       /* Give the file to neon. The provider will rewind the file. */
-      err = svn_ra_dav__set_neon_body_provider(req, pb->tmpfile);
+      err = svn_ra_dav__set_neon_body_provider(request, pb->tmpfile);
       if (err)
         {
           apr_file_close(pb->tmpfile);
-          ne_request_destroy(req);
           return err;
         }
       
       /* run the request and get the resulting status code (and svn_error_t) */
-      err = svn_ra_dav__request_dispatch(&code, req, sess, "PUT", url,
-                                         201 /* Created */,
-                                         204 /* No Content */,
-                                         NULL, NULL,
-                                         pool);
+      SVN_ERR(svn_ra_dav__request_dispatch(&code, request,
+                                           201 /* Created */,
+                                           204 /* No Content */,
+                                           pool));
+      svn_ra_dav__request_destroy(request);
       
       /* we're done with the file.  this should delete it. */
       (void) apr_file_close(pb->tmpfile);
-      
-      if (err)
-        return err;
     }
 
   /* Perform all of the property changes on the file. Note that we

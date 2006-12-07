@@ -1903,6 +1903,7 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision number from update",
                 client.update(thisTest.getWCPath(), null, true), 1);
     }
+
     public void testBasicCancelOperation() throws Throwable
     {
         // build the test setup
@@ -1930,6 +1931,36 @@ public class BasicTests extends SVNTests
         catch (ClientException e)
         {
             // this is expected
+        }
+    }
+
+    public void testDataTransferProgressReport() throws Throwable
+    {
+        // ### FIXME: This isn't working over ra_local, because
+        // ### ra_local is not invoking the progress callback.
+        if (SVNTests.rootUrl.startsWith("file://"))
+            return;
+
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        ProgressListener listener = new ProgressListener()
+        {
+            public void onProgress(ProgressEvent event)
+            {
+                // TODO: Examine the byte counts from "event".
+                throw new RuntimeException("Progress reported as expected");
+            }
+        };
+        client.setProgressListener(listener);
+
+        // Perform an update to exercise the progress notification.
+        try
+        {
+            client.update(thisTest.getWCPath(), null, true);
+            fail("No progress reported");
+        }
+        catch (RuntimeException progressReported)
+        {
         }
     }
 }

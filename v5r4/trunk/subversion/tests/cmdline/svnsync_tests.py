@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import sys, os
 
 # Our testing module
 import svntest
@@ -270,16 +270,15 @@ def basic_authz(sbox):
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
-  fp = open(sbox.authz_file, 'w')
-  fp.write("[svnsync-basic-authz:/]\n" +
-           "* = r\n" +
-           "\n" +
-           "[svnsync-basic-authz:/A/B]\n" +
-           "* = \n" +
-           "\n" +
-           "[svnsync-basic-authz-1:/]\n" +
-           "* = rw\n")
-  fp.close()
+  svntest.main.file_write(sbox.authz_file,
+                          "[svnsync-basic-authz:/]\n"
+                          "* = r\n"
+                          "\n"
+                          "[svnsync-basic-authz:/A/B]\n"
+                          "* = \n"
+                          "\n"
+                          "[svnsync-basic-authz-1:/]\n"
+                          "* = rw\n")
 
   run_sync(dest_sbox.repo_url)
 

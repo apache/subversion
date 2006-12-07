@@ -247,14 +247,15 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   /* Create a new commit item and add it to the array. */
   if (ctx->log_msg_func || ctx->log_msg_func2)
     {
-      svn_client_commit_item2_t item;
+      svn_client_commit_item2_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
-        = apr_array_make(pool, 1, sizeof(&item));
-      
-      item.url = target;
-      item.state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
-      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = &item;
+        = apr_array_make(pool, 1, sizeof(item));
+     
+      item = apr_pcalloc(pool, sizeof(*item));
+      item->url = target;
+      item->state_flags = SVN_CLIENT_COMMIT_ITEM_PROP_MODS;
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
                                       ctx, pool));
       if (! message)
@@ -323,7 +324,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
   if (svn_path_is_url(target))
     {
         /* The rationale for requiring the base_revision_for_url
-           argument is that without it, it' too easy to possibly
+           argument is that without it, it's too easy to possibly
            overwrite someone else's change without noticing.  (See
            also tools/examples/svnput.c). */
       if (! SVN_IS_VALID_REVNUM(base_revision_for_url))

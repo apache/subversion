@@ -79,9 +79,10 @@ def skip_test_when_no_authz_available():
 
 def authz_open_root(sbox):
   "authz issue #2486 - open root"
-  sbox.build()
   
   skip_test_when_no_authz_available()
+  
+  sbox.build()
   
   write_authz_file(sbox, {"/": "", "/A": "jrandom = rw"})
 
@@ -114,9 +115,10 @@ def authz_open_root(sbox):
 
 def authz_open_directory(sbox):
   "authz issue #2486 - open directory"
-  sbox.build()
   
   skip_test_when_no_authz_available()
+  
+  sbox.build()
   
   write_authz_file(sbox, {"/": "*=rw", "/A/B": "*=", "/A/B/E": "jrandom = rw"})
   
@@ -149,9 +151,10 @@ def authz_open_directory(sbox):
 
 def broken_authz_file(sbox):
   "broken authz files cause errors"
-  sbox.build(create_wc = False)
-  
+
   skip_test_when_no_authz_available()
+
+  sbox.build(create_wc = False)
   
   # No characters but 'r', 'w', and whitespace are allowed as a value
   # in an authz rule.
@@ -178,21 +181,6 @@ def authz_read_access(sbox):
 
   sbox.build(create_wc = False)
 
-  write_restrictive_svnserve_conf(sbox.repo_dir)
-
-  if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
-  else:
-    expected_err = ".*svn: Authorization failed.*"
-
-  write_authz_file(sbox, { "/": "* = r",
-                           "/A/B": "* =",
-                           "/A/D": "* = rw",
-                           "/A/D/G": ("* = rw\n" +
-                                      svntest.main.wc_author + " ="),
-                           "/A/D/H": ("* = \n" +
-                                      svntest.main.wc_author + " = rw")})
-         
   root_url = sbox.repo_url
   A_url = root_url + '/A'
   B_url = A_url + '/B'
@@ -207,6 +195,32 @@ def authz_read_access(sbox):
   pi_url = G_url + '/pi'
   H_url = D_url + '/H'
   chi_url = H_url + '/chi'
+
+  if sbox.repo_url.startswith("http"):
+    expected_err = ".*403 Forbidden.*"
+  else:
+    expected_err = ".*svn: Authorization failed.*"
+
+  # create some folders with spaces in their names
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'mkdir',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'logmsg',
+                                     B_url+'/folder with spaces',
+                                     B_url+'/folder with spaces/empty folder')
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  write_authz_file(sbox, { "/": "* = r",
+                           "/A/B": "* =",
+                           "/A/D": "* = rw",
+                           "/A/D/G": ("* = rw\n" +
+                                      svntest.main.wc_author + " ="),
+                           "/A/D/H": ("* = \n" +
+                                      svntest.main.wc_author + " = rw"),
+                           "/A/B/folder with spaces":
+                                     (svntest.main.wc_author + " = r")})
 
   # read a remote file
   svntest.actions.run_and_verify_svn(None, ["This is the file 'iota'.\n"],
@@ -223,7 +237,7 @@ def authz_read_access(sbox):
                                      chi_url)
                                      
   # read a remote file, unreadable: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'cat',
                                      '--username', svntest.main.wc_author,
@@ -231,7 +245,7 @@ def authz_read_access(sbox):
                                      lambda_url)
 
   # read a remote file, unreadable through recursion: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'cat',
                                      '--username', svntest.main.wc_author,
@@ -253,14 +267,21 @@ def authz_read_access(sbox):
                                      root_url)
 
   # open a remote folder(ls), unreadable: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, svntest.SVNAnyOutput, 'ls',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      B_url)
 
+  # open a remote folder(ls) with spaces, should succeed
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [], 'ls',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     B_url+'/folder with spaces/empty folder')
+
   # open a remote folder(ls), unreadable through recursion: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'ls',
                                      '--username', svntest.main.wc_author,
@@ -268,14 +289,14 @@ def authz_read_access(sbox):
                                      E_url)
 
   # copy a remote file
-  svntest.actions.run_and_verify_svn("", None, [], 'cp',
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      iota_url, D_url,
                                      '-m', 'logmsg')
 
   # copy a remote file, source is unreadable: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'cp',
                                      '--username', svntest.main.wc_author,
@@ -284,14 +305,14 @@ def authz_read_access(sbox):
                                      lambda_url, D_url)
 
   # copy a remote folder
-  svntest.actions.run_and_verify_svn("", None, [], 'cp',
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      C_url, D_url,
                                      '-m', 'logmsg')
 
   # copy a remote folder, source is unreadable: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'cp',
                                      '--username', svntest.main.wc_author,
@@ -329,7 +350,7 @@ def authz_write_access(sbox):
   D_url = A_url + '/D'
   
   # copy a remote file, target is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'cp',
                                      '--username', svntest.main.wc_author,
@@ -338,7 +359,7 @@ def authz_write_access(sbox):
                                      lambda_url, D_url)
 
   # copy a remote folder, target is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'cp',
                                      '--username', svntest.main.wc_author,
@@ -347,7 +368,7 @@ def authz_write_access(sbox):
                                      E_url, D_url)
 
   # delete a file, target is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'rm',
                                      '--username', svntest.main.wc_author,
@@ -356,7 +377,7 @@ def authz_write_access(sbox):
                                      iota_url)
 
   # delete a folder, target is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'rm',
                                      '--username', svntest.main.wc_author,
@@ -365,7 +386,7 @@ def authz_write_access(sbox):
                                      D_url)
 
   # create a folder, target is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'mkdir',
                                      '--username', svntest.main.wc_author,
@@ -374,7 +395,7 @@ def authz_write_access(sbox):
                                      A_url+'/newfolder')
 
   # move a remote file, source is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'mv',
                                      '--username', svntest.main.wc_author,
@@ -383,7 +404,7 @@ def authz_write_access(sbox):
                                      mu_url, C_url)
 
   # move a remote folder, source is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'mv',
                                      '--username', svntest.main.wc_author,
@@ -392,7 +413,7 @@ def authz_write_access(sbox):
                                      D_url, C_url)
 
   # move a remote file, target is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'mv',
                                      '--username', svntest.main.wc_author,
@@ -401,7 +422,7 @@ def authz_write_access(sbox):
                                      lambda_url, D_url)
 
   # move a remote folder, target is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'mv',
                                      '--username', svntest.main.wc_author,
@@ -413,7 +434,7 @@ def authz_write_access(sbox):
     expected_err = ".*svn: Authorization failed.*"
     
   # lock a file, target is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'lock',
                                      '--username', svntest.main.wc_author,
@@ -594,7 +615,7 @@ def authz_log_and_tracing_test(sbox):
                                  'ci', '-m', 'changed file rho', sbox.wc_dir)
   
   # copy a remote file
-  svntest.actions.run_and_verify_svn("", None, [], 'cp',
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      rho_path, D_url,
@@ -615,7 +636,7 @@ def authz_log_and_tracing_test(sbox):
   # changed file in this rev. is not readable anymore, so author and date
   # should be hidden, like this:
   # r2 | (no author) | (no date) | 1 line 
-  svntest.actions.run_and_verify_svn("", ".*(no author).*(no date).*", [],
+  svntest.actions.run_and_verify_svn(None, ".*(no author).*(no date).*", [],
                                      'log', '-r', '2', '--limit', '1',
                                      wc_dir)
 
@@ -626,18 +647,18 @@ def authz_log_and_tracing_test(sbox):
 
   # if we do the same thing directly on the unreadable file, we get:
   # svn: Item is not readable
-  svntest.actions.run_and_verify_svn("", None, expected_err2,
+  svntest.actions.run_and_verify_svn(None, None, expected_err2,
                                      'log', rho_path)
                                      
   # while the HEAD rev of the copy is readable in /A/D, its parent in 
   # /A/D/G is not, so don't spill any info there either.
-  svntest.actions.run_and_verify_svn("", ".*(no author).*(no date).*", [],
+  svntest.actions.run_and_verify_svn(None, ".*(no author).*(no date).*", [],
                                     'log', '-r', '2', '--limit', '1', D_url)
 
   ## cat
   
   # now see if we can look at the older version of rho
-  svntest.actions.run_and_verify_svn("", None, expected_err,
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
                                     'cat', '-r', '2', D_url+'/rho')
 
   if sbox.repo_url.startswith('http'):
@@ -645,19 +666,19 @@ def authz_log_and_tracing_test(sbox):
   else:
     expected_err2 = ".*svn: Unreadable path encountered; access denied.*"
 
-  svntest.actions.run_and_verify_svn("", None, expected_err2,
+  svntest.actions.run_and_verify_svn(None, None, expected_err2,
                                     'cat', '-r', '2', G_url+'/rho')  
   
   ## diff
   
   # we shouldn't see the diff of a file in an unreadable path
-  svntest.actions.run_and_verify_svn("", None, expected_err,
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
                                     'diff', '-r', 'HEAD', G_url+'/rho')
 
-  svntest.actions.run_and_verify_svn("", None, expected_err,
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
                                     'diff', '-r', '2', D_url+'/rho')  
 
-  svntest.actions.run_and_verify_svn("", None, expected_err,
+  svntest.actions.run_and_verify_svn(None, None, expected_err,
                                     'diff', '-r', '2:4', D_url+'/rho')  
 
 # test whether read access is correctly granted and denied
@@ -685,7 +706,7 @@ def authz_aliases(sbox):
   iota_url = root_url + '/iota'
 
   # copy a remote file, target is readonly for jconstant: should fail
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, expected_err,
                                      'cp',
                                      '--username', svntest.main.wc_author2,
@@ -694,7 +715,7 @@ def authz_aliases(sbox):
                                      iota_url, B_url)
 
   # try the same action, but as user jray (alias of jrandom), should work.
-  svntest.actions.run_and_verify_svn("",
+  svntest.actions.run_and_verify_svn(None,
                                      None, [],
                                      'cp',
                                      '--username', svntest.main.wc_author,

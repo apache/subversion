@@ -1491,7 +1491,7 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
                                      'add', '-N',
                                      os.path.join(wc_dir, file1_path),
                                      os.path.join(wc_dir, dir1_path),
@@ -1592,7 +1592,7 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, nocommit_path), 'nocommit')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
                                      'add', '-N',
                                      os.path.join(wc_dir, dirA_path),
                                      os.path.join(wc_dir, fileA_path),
@@ -1936,7 +1936,9 @@ def post_commit_hook_test(sbox):
                       "Transmitting file data .\n",
                       "Committed revision 2.\n",
                       "\n",
-                      "Warning: 'post-commit' hook failed with error output:\n",
+                      "Warning: 'post-commit' hook failed (exited with a "
+                      "non-zero exitcode of 1).  The following error output "
+                      "was produced by the hook:\n",
                       "Post-commit hook failed\n",
                     ]
 
@@ -2019,8 +2021,7 @@ test_list = [ None,
               hudson_part_1,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
-              # issue #2578 causes the hudson_part_2 test to fail.
-              XFail(hudson_part_2, svntest.main.is_ra_type_dav),
+              hudson_part_2,
               hudson_part_2_1,
               XFail(hook_test),
               merge_mixed_revisions,

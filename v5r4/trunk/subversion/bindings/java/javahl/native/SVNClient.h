@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -31,6 +31,7 @@
 class Revision;
 class Notify;
 class Notify2;
+class ProgressListener;
 class Targets;
 class JNIByteArray;
 class Prompter;
@@ -112,6 +113,7 @@ public:
     void remove(Targets &targets, const char *message,bool force);
     void notification(Notify *notify);
     void notification2(Notify2 *notify2);
+    void setProgressListener(ProgressListener *progressListener);
     jlong checkout(const char *moduleName, const char *destPath,
                        Revision &revision, Revision &pegRevsion, bool recurse,
                        bool ignoreExternals);
@@ -166,6 +168,7 @@ private:
                                     size_t& size);
     Notify *m_notify;
     Notify2 *m_notify2;
+    ProgressListener *m_progressListener;
     Prompter *m_prompter;
     Path m_lastPath;
     bool m_cancelOperation;

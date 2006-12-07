@@ -135,9 +135,9 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 start_replay(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
-          svn_ra_serf__dav_props_t name,
-          const char **attrs)
+             void *userData,
+             svn_ra_serf__dav_props_t name,
+             const char **attrs)
 {
   replay_context_t *ctx = userData;
   replay_state_e state;
@@ -336,6 +336,10 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, APPLY_TEXTDELTA);
 
       checksum = svn_ra_serf__find_attr(attrs, "checksum");
+      if (checksum)
+        {
+          checksum = apr_pstrdup(info->pool, checksum);
+        }
 
       SVN_ERR(ctx->editor->apply_textdelta(info->baton, checksum,
                                            info->pool,
@@ -397,8 +401,8 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_replay(svn_ra_serf__xml_parser_t *parser,
-        void *userData,
-        svn_ra_serf__dav_props_t name)
+           void *userData,
+           svn_ra_serf__dav_props_t name)
 {
   replay_context_t *ctx = userData;
   replay_state_e state;
@@ -472,9 +476,9 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_replay(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
-          const char *data,
-          apr_size_t len)
+             void *userData,
+             const char *data,
+             apr_size_t len)
 {
   replay_context_t *replay_ctx = userData;
   replay_state_e state;

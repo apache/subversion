@@ -2963,7 +2963,7 @@ check_wc_root(svn_boolean_t *wc_root,
 
   /* If this is the root folder (of a drive), it should be the WC 
      root too. */
-  if (svn_path_is_root(path, strlen(path), pool))
+  if (svn_path_is_root(path, strlen(path)))
     return SVN_NO_ERROR;
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */

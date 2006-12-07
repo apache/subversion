@@ -295,9 +295,8 @@ def textual_merges_galore(sbox):
   fp = open(other_rho_path, "r")
   current_other_rho_text = fp.read()
   fp.close()
-  fp = open(other_rho_path, 'w')
-  fp.write(other_rho_text + current_other_rho_text)
-  fp.close()
+  svntest.main.file_write(other_rho_path,
+                          other_rho_text + current_other_rho_text)
 
   # We expect pi and tau to merge and conflict respectively, but
   # those are just side effects of the method we're using to test the
@@ -779,14 +778,14 @@ def simple_property_merges(sbox):
   expected_disk.add({
     'E/dir_conflicts.prej'
     : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
-           + "but the property does not exist."),    
+           + "but the property does not exist.\n"),
     'E/alpha.prej'
     : Item("Trying to change property 'foo' from 'foo_val' to 'mod_foo',\n"
-           + "but the property does not exist."),
+           + "but the property does not exist.\n"),
     'E/beta.prej'
     : Item("Trying to change property 'foo' from 'foo?\\129val' to"
            + " 'mod?\\129foo',\n"
-           + "but the property does not exist."),
+           + "but the property does not exist.\n"),
     })
   expected_disk.tweak('E', 'E/alpha', props={'bar' : 'bar_val'})
   expected_disk.tweak('E/beta', props={'bar' : 'bar\201val'})
@@ -1408,10 +1407,9 @@ def merge_binary_file (sbox):
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
+  # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
-  fp.write(theta_contents)    # write png filedata into 'A/theta'
-  fp.close()
+  svntest.main.file_write(theta_path, theta_contents)
   
   svntest.main.run_svn(None, 'add', theta_path)  
 
@@ -1501,10 +1499,9 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
+  # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, "A", "theta")
-  fp = open(theta_path, "w")
-  fp.write(theta_contents)    # write png filedata into 'A/theta'
-  fp.close()
+  svntest.main.file_write(theta_path, theta_contents)
   
   svntest.main.run_svn(None, "add", theta_path)
 
@@ -1585,9 +1582,7 @@ def merge_in_new_file_and_diff(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
   
   new_file_path = os.path.join(wc_dir, 'A', 'B', 'E', 'newfile')
-  fp = open(new_file_path, 'w')
-  fp.write("newfile\n")
-  fp.close()
+  svntest.main.file_write(new_file_path, "newfile\n")
 
   # Add the new file, and commit revision 3.
   svntest.actions.run_and_verify_svn(None, None, [], "add", new_file_path)
@@ -2110,9 +2105,7 @@ def merge_binary_with_common_ancestry(sbox):
   theta_contents = fp.read()
   fp.close()
   theta_I_path = os.path.join(I_path, 'theta')
-  fp = open(theta_I_path, 'w')
-  fp.write(theta_contents)
-  fp.close()
+  svntest.main.file_write(theta_I_path, theta_contents)
   svntest.main.run_svn(None, 'add', theta_I_path)
   svntest.main.run_svn(None, 'propset', 'svn:mime-type',
                        'application/octet-stream', theta_I_path)
@@ -3202,12 +3195,8 @@ def merge_file_replace(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         wc_dir)
-  # create new rho file
-  fp = open(rho_path, 'w')
-  fp.write("new rho\n")
-  fp.close()
-
-  # Add the new file
+  # Create and add a new file.
+  svntest.main.file_write(rho_path, "new rho\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'add', rho_path)
  
   # Commit revsion 3 
@@ -3302,12 +3291,8 @@ def merge_file_replace_to_mixed_rev_wc(sbox):
                                         expected_disk, 
                                         expected_status)
 
-  # create new rho file
-  fp = open(rho_path, 'w')
-  fp.write("new rho\n")
-  fp.close()
-
-  # Add the new file
+  # Create and add a new file.
+  svntest.main.file_write(rho_path, "new rho\n")
   svntest.actions.run_and_verify_svn(None, None, [], 'add', rho_path)
  
   # Commit revsion 3 
@@ -3378,9 +3363,10 @@ def merge_ignore_whitespace(sbox):
   file_path = os.path.join(wc_dir, file_name)
   file_url = sbox.repo_url + '/iota'
 
-  open(file_path, 'w').write("Aa\n"
-                             "Bb\n"
-                             "Cc\n")
+  svntest.main.file_write(file_path,
+                          "Aa\n"
+                          "Bb\n"
+                          "Cc\n")
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
       })
@@ -3389,10 +3375,7 @@ def merge_ignore_whitespace(sbox):
                                         None, None, wc_dir)
 
   # change the file, mostly whitespace changes + an extra line
-  open(file_path, 'w').write("A  a\n"
-                             "Bb \n"
-                             " Cc\n"
-                             "New line in iota\n")
+  svntest.main.file_write(file_path, "A  a\nBb \n Cc\nNew line in iota\n")
   expected_output = wc.State(wc_dir, { file_name : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(file_name, wc_rev=3)
@@ -3408,9 +3391,7 @@ def merge_ignore_whitespace(sbox):
                                      'up', '-r', '2', file_path)
   # Make some local whitespace changes, these should not conflict
   # with the remote whitespace changes as both will be ignored.
-  open(file_path, 'w').write("    Aa\n"
-                             "B b\n"
-                             "C c\n")
+  svntest.main.file_write(file_path, "    Aa\nB b\nC c\n")
 
   # Lines changed only by whitespaces - both in local or remote - 
   # should be ignored
@@ -3447,9 +3428,11 @@ def merge_ignore_eolstyle(sbox):
   file_path = os.path.join(wc_dir, file_name)
   file_url = sbox.repo_url + '/iota'
 
-  open(file_path, 'wb').write("Aa\r\n"
-                              "Bb\r\n"
-                              "Cc\r\n")
+  svntest.main.file_write(file_path,
+                          "Aa\r\n"
+                          "Bb\r\n"
+                          "Cc\r\n",
+                          "wb")
   expected_output = svntest.wc.State(wc_dir, {
       'iota' : Item(verb='Sending'),
       })
@@ -3458,10 +3441,12 @@ def merge_ignore_eolstyle(sbox):
                                         None, None, wc_dir)
 
   # change the file, mostly eol changes + an extra line
-  open(file_path, 'wb').write("Aa\r"
-                              "Bb\n"
-                              "Cc\r"
-                              "New line in iota\n")
+  svntest.main.file_write(file_path,
+                          "Aa\r"
+                          "Bb\n"
+                          "Cc\r"
+                          "New line in iota\n",
+                          "wb")
   expected_output = wc.State(wc_dir, { file_name : Item(verb='Sending'), })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak(file_name, wc_rev=3)
@@ -3477,9 +3462,11 @@ def merge_ignore_eolstyle(sbox):
                                      'up', '-r', '2', file_path)
   # Make some local eol changes, these should not conflict
   # with the remote eol changes as both will be ignored.
-  open(file_path, 'wb').write("Aa\n"
-                              "Bb\r"
-                              "Cc\n")
+  svntest.main.file_write(file_path,
+                          "Aa\n"
+                          "Bb\r"
+                          "Cc\n",
+                          "wb")
 
   # Lines changed only by eolstyle - both in local or remote - 
   # should be ignored
@@ -3517,9 +3504,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
   new_alpha_path = os.path.join(wc_dir, 'A', 'C', 'alpha')
   
   # Create a new "alpha" file, with enough differences to cause a conflict.
-  fp = open(new_alpha_path, 'w')
-  fp.write('new alpha content\n')
-  fp.close()
+  svntest.main.file_write(new_alpha_path, 'new alpha content\n')
 
   # Add and commit the new "alpha" file, creating revision 2.
   svntest.main.run_svn(None, "add", new_alpha_path)
@@ -3617,7 +3602,7 @@ def merge_conflict_markers_matching_eol(sbox):
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
                           [crlf, '\015', '\n', '\012']):
     # rewrite file mu and set the eol-style property.
-    open(mu_path, 'wb').write("This is the file 'mu'."+ eolchar)
+    svntest.main.file_write(mu_path, "This is the file 'mu'."+ eolchar, 'wb')
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
 
     expected_disk.add({

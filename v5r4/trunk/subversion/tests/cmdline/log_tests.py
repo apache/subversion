@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os, shutil
+import string, re, os
 
 # Our testing module
 import svntest
@@ -96,9 +96,7 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 2 
   but with multiple lines
   to test the code"""
-  log_file=open(msg_file, 'w')
-  log_file.write(msg)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg)
   svntest.main.file_append(iota_path, "2")
   svntest.main.run_svn(None, 'ci', '-F', msg_file)
   svntest.main.run_svn(None, 'up')
@@ -115,9 +113,7 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 4 
   but with multiple lines
   to test the code"""
-  log_file=open(msg_file, 'w')
-  log_file.write(msg)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg)
   svntest.main.file_append(iota_path, "4")
   svntest.main.file_append(epsilon_path, "4")
   svntest.main.run_svn(None, 'add', epsilon_path)
@@ -134,9 +130,7 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 6 
   but with multiple lines
   to test the code"""
-  log_file=open(msg_file, 'w')
-  log_file.write(msg)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg)
   svntest.main.run_svn(None, 'ps', 'blue', 'azul', B_path)  
   svntest.main.file_append(psi_path, "6")
   svntest.main.run_svn(None, 'ci', '-F', msg_file)
@@ -152,9 +146,7 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 8 
   but with multiple lines
   to test the code"""
-  log_file=open(msg_file, 'w')
-  log_file.write(msg)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg)
   svntest.main.file_append(iota_path, "8")
   svntest.main.file_append(rho_path, "8")
   svntest.main.run_svn(None, 'add', rho_path)
@@ -419,21 +411,21 @@ def versioned_log_message(sbox):
     svntest.main.file_append(iota_path, "2")
     
     # try to check in a change using a versioned file as your log entry.
-    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                        'ci', '-F', log_path)
 
     # force it.  should not produce any errors.
-    svntest.actions.run_and_verify_svn("", None, [],
+    svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci', '-F', log_path, '--force-log')
 
     svntest.main.file_append(mu_path, "2")
 
     # try the same thing, but specifying the file to commit explicitly.
-    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                        'ci', '-F', log_path, mu_path)
 
     # force it...  should succeed.
-    svntest.actions.run_and_verify_svn("", None, [],
+    svntest.actions.run_and_verify_svn(None, None, [],
                                        'ci',
                                        '-F', log_path,
                                        '--force-log', mu_path)
@@ -450,7 +442,7 @@ def log_with_empty_repos(sbox):
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'log',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -572,9 +564,7 @@ def log_through_copyfrom_history(sbox):
   but with multiple lines
   to test the code"""
 
-  log_file=open(msg_file, 'w')
-  log_file.write(msg2)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg2)
   svntest.main.file_append(mu_path, "2")
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
                                      '-F', msg_file)
@@ -583,18 +573,14 @@ def log_through_copyfrom_history(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
                                      '-m', "Log message for revision 3")
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu2_path)
-  log_file=open(msg_file, 'w')
-  log_file.write(msg4)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg4)
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
                                      '-F', msg_file)
   svntest.main.file_append(mu_path, "5")
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
                                      '-m', "Log message for revision 5")
 
-  log_file=open(msg_file, 'w')
-  log_file.write(msg6)
-  log_file.close()
+  svntest.main.file_write(msg_file, msg6)
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', '-r', '5', mu_URL, mu2_URL,
                                      '-F', msg_file)
@@ -691,7 +677,8 @@ PROPS-END
     None, 1, dump_str)
 
   # run log
-  output, errput = svntest.actions.run_and_verify_svn("", None, [], 'log', URL)
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
+                                                      URL)
 
   # Verify the output contains either the expected fuzzy escape
   # sequence, or the literal control char.
@@ -720,7 +707,7 @@ def log_xml_empty_date(sbox):
   date_re = re.compile('<date');
 
   # Ensure that we get a date before we delete the property.
-  output, errput = svntest.actions.run_and_verify_svn("", None, [],
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
                                                       'log', '--xml', '-r1',
                                                       sbox.wc_dir)
   matched = 0
@@ -731,11 +718,11 @@ def log_xml_empty_date(sbox):
     raise svntest.Failure("log contains no date element")
 
   # Set the svn:date revprop to the empty string on revision 1.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'pdel', '--revprop', '-r1', 'svn:date',
                                      sbox.wc_dir)
 
-  output, errput = svntest.actions.run_and_verify_svn("", None, [],
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
                                                       'log', '--xml', '-r1',
                                                       sbox.wc_dir)
   for line in output:  
