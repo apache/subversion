@@ -111,33 +111,8 @@ svn_cl__copy(apr_getopt_t *os,
     SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2), opt_state,
                                        NULL, ctx->config, pool));
 
-  if (targets->nelts == 1)
-    {
-      /* Standard copy, try to copy the source onto the destination. */
-      src_path = ((const char **) (targets->elts))[0];
-
-      err = svn_client_copy3(&commit_info, src_path,
-                             &(opt_state->start_revision),
-                             dst_path, ctx, pool);
-
-      /* If dst_path already exists, try to copy src_path as a child of it,
-       * by using copy_into. */
-      if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
-                  || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
-        {
-          svn_error_clear(err);
-      
-          err = svn_client_copy_into(&commit_info, targets,
-                                     &(opt_state->start_revision),
-                                     dst_path, ctx, pool);
-        }
-    }
-  else
-    {
-      err = svn_client_copy_into(&commit_info, targets,
-                                 &(opt_state->start_revision),
-                                 dst_path, ctx, pool);
-    }
+  err = svn_client_copy4(&commit_info, targets, &(opt_state->start_revision),
+                         dst_path, TRUE, ctx, pool);
 
   if (ctx->log_msg_func2)
     SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));

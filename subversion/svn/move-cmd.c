@@ -70,31 +70,8 @@ svn_cl__move(apr_getopt_t *os,
   dst_path = ((const char **) (targets->elts))[targets->nelts - 1];
   apr_array_pop(targets);
 
-  if (targets->nelts == 1)
-    {
-      /* A simple move, move the source to the destination. */
-      src_path = ((const char **) (targets->elts))[0];
-  
-      err = svn_client_move4(&commit_info, src_path, dst_path,
-                             opt_state->force, ctx, pool);
-
-      /* If dst_path already exists, try to move src_path as a child of it, by
-       * using move_into. */
-      if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
-                  || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
-        {
-          svn_error_clear(err);
-
-          err = svn_client_move_into(&commit_info, targets, dst_path,
-                                     opt_state->force, ctx, pool);
-        }
-    }
-  else
-    {
-      /* If there are multiple sources, move the targets into dst_path. */
-      err = svn_client_move_into(&commit_info, targets, dst_path,
-                                 opt_state->force, ctx, pool);
-    }
+  err = svn_client_move5(&commit_info, targets, dst_path, opt_state->force,
+                         TRUE, ctx, pool);
 
   if (err)
     err = svn_cl__may_need_force(err);

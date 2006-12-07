@@ -1363,6 +1363,45 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
 
 /* Public Interfaces */
+svn_error_t *
+svn_client_copy4(svn_commit_info_t **commit_info_p,
+                 apr_array_header_t *src_paths,
+                 const svn_opt_revision_t *src_revision,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  svn_error_t *err;
+
+  err = setup_copy(commit_info_p,
+                   src_paths, src_revision, dst_path,
+                   FALSE /* is_move */,
+                   TRUE /* force, set to avoid deletion check */,
+                   ctx,
+                   pool);
+
+  /* If the destination exists, try to copy the sources as children of the
+     destination. */
+  if (copy_as_child && err && (src_paths->nelts == 1)
+        && (err->apr_err == SVN_ERR_ENTRY_EXISTS
+            || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
+    {
+      const char *src_path = ((const char **) (src_paths->elts))[0];
+      const char *src_basename = svn_path_basename(src_path, pool);
+    
+      return setup_copy(commit_info_p,
+                        src_paths, src_revision,
+                        svn_path_join(dst_path, src_basename, pool),
+                        FALSE /* is_move */,
+                        TRUE /* force, set to avoid deletion check */,
+                        ctx,
+                        pool);
+    }
+
+  return err;
+}
+
 
 svn_error_t *
 svn_client_copy3(svn_commit_info_t **commit_info_p,
@@ -1375,12 +1414,13 @@ svn_client_copy3(svn_commit_info_t **commit_info_p,
   apr_array_header_t *src_paths = apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(src_paths, const char *) = src_path;
 
-  return setup_copy(commit_info_p,
-                    src_paths, src_revision, dst_path,
-                    FALSE /* is_move */,
-                    TRUE /* force, set to avoid deletion check */,
-                    ctx,
-                    pool);
+  return svn_client_copy4(commit_info_p,
+                          src_paths,
+                          src_revision,
+                          dst_path,
+                          FALSE,
+                          ctx,
+                          pool);
 }
 
 
@@ -1433,35 +1473,44 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
   return err;
 }
 
-svn_error_t *
-svn_client_copy_into(svn_commit_info_t **commit_info_p,
-                     const apr_array_header_t *src_paths,
-                     const svn_opt_revision_t *src_revision,
-                     const char *dst_dir,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
-{
-  const char *dst_path;
 
-  /* If we have only one source, then setup_copy is going to think the
-   * destination is explicit, so we had better make sure that it is. */
-  if (src_paths->nelts == 1)
+svn_error_t *
+svn_client_move5(svn_commit_info_t **commit_info_p,
+                 apr_array_header_t *src_paths,
+                 const char *dst_path,
+                 svn_boolean_t force,
+                 svn_boolean_t move_as_child,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool)
+{
+  const svn_opt_revision_t src_revision
+    = { svn_opt_revision_unspecified, { 0 } };
+  svn_error_t *err;
+  
+  err = setup_copy(commit_info_p, src_paths, &src_revision, dst_path,
+                   TRUE /* is_move */,
+                   force,
+                   ctx,
+                   pool);
+
+  /* If the destination exists, try to copy the sources as children of the
+     destination. */
+  if (move_as_child && err && (src_paths->nelts == 1)
+        && (err->apr_err == SVN_ERR_ENTRY_EXISTS
+            || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
     {
       const char *src_path = ((const char **) (src_paths->elts))[0];
       const char *src_basename = svn_path_basename(src_path, pool);
-      dst_path = svn_path_join(dst_dir, src_basename, pool);
+    
+      return setup_copy(commit_info_p, src_paths, &src_revision,
+                        svn_path_join(dst_path, src_basename, pool),
+                        TRUE /* is_move */,
+                        force,
+                        ctx,
+                        pool);
     }
-  else
-    {
-      dst_path = dst_dir;
-    }
-
-  return setup_copy(commit_info_p,
-                    src_paths, src_revision, dst_path,
-                    FALSE /* is_move */,
-                    TRUE /* force, set to avoid deletion check */,
-                    ctx,
-                    pool);
+  
+  return err;
 }
 
 svn_error_t *
@@ -1472,17 +1521,12 @@ svn_client_move4(svn_commit_info_t **commit_info_p,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  const svn_opt_revision_t src_revision
-    = { svn_opt_revision_unspecified, { 0 } };
   apr_array_header_t *src_paths = apr_array_make(pool, 1, sizeof(const char *));
   APR_ARRAY_PUSH(src_paths, const char *) = src_path;
 
-  return setup_copy(commit_info_p,
-                    src_paths, &src_revision, dst_path,
-                    TRUE /* is_move */,
-                    force,
-                    ctx,
-                    pool);
+  return svn_client_move5(commit_info_p,
+                          src_paths, dst_path, force, FALSE,
+                          ctx, pool);
 }
 
 svn_error_t *
@@ -1572,36 +1616,4 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
   /* These structs have the same layout for the common fields. */
   *commit_info_p = (svn_client_commit_info_t *) commit_info;
   return err;
-}
-
-svn_error_t *
-svn_client_move_into(svn_commit_info_t **commit_info_p,
-                     apr_array_header_t *src_paths,
-                     const char *dst_dir,
-                     svn_boolean_t force,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
-{
-  const svn_opt_revision_t src_revision
-    = { svn_opt_revision_unspecified, { 0 } };
-  const char *dst_path;
-
-  /* If we have only one source, then setup_copy is going to think the
-   * destination is explicit, so we had better make sure that it is. */
-  if (src_paths->nelts == 1)
-    {
-      const char *src_path = ((const char **) (src_paths->elts))[0];
-      const char *src_basename = svn_path_basename(src_path, pool);
-      dst_path = svn_path_join(dst_dir, src_basename, pool);
-    }
-  else
-    {
-      dst_path = dst_dir;
-    }
-
-  return setup_copy(commit_info_p, src_paths, &src_revision, dst_path,
-                    TRUE /* is_move */,
-                    force,
-                    ctx,
-                    pool);
 }
