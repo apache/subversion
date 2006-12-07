@@ -255,6 +255,11 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = 
         ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
       svn_pool_clear(subpool);
+
+      /* Check for cancellation */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
       SVN_ERR(wc_to_wc_copy_single(pair, is_move, ctx, subpool));
     }
 
