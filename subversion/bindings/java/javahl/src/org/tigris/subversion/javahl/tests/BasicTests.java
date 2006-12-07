@@ -24,6 +24,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 /**
@@ -1883,6 +1884,23 @@ public class BasicTests extends SVNTests
                       true), 5);
  
     }
+
+    /**
+     * Test the {@link SVNClientInterface.diffSummarize()} API.
+     * @since 1.5
+     */
+    public void testDiffSummarize() throws Throwable
+    {
+        OneTest thisTest = new OneTest(false);
+        DiffSummaries summary = new DiffSummaries();
+        // Perform a recursive diff summary, ignoring ancestry.
+        client.diffSummarize(thisTest.getUrl(), new Revision.Number(0),
+                             thisTest.getUrl(), Revision.HEAD, true, false,
+                             summary);
+        assertEquals("Wrong number of diff summary descriptors", 1,
+                     summary.size());
+    }
+
     /**
      * test the basic SVNClient.isAdminDirectory functionality
      * @throws Throwable
@@ -1961,6 +1979,19 @@ public class BasicTests extends SVNTests
         }
         catch (RuntimeException progressReported)
         {
+        }
+    }
+
+    /**
+     * A DiffSummaryReceiver implementation which collects all
+     * DiffSummary notifications.
+     */
+    private static class DiffSummaries extends ArrayList
+        implements DiffSummaryReceiver
+    {
+        public void onSummary(DiffSummary descriptor)
+        {
+            super.add(descriptor);
         }
     }
 }

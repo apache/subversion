@@ -670,6 +670,32 @@ public class SVNClient implements SVNClientInterface
                             boolean force) throws ClientException;
 
     /**
+     * Produce a diff summary which lists the items changed between
+     * path and revision pairs.
+     *
+     * @param target1 Path or URL.
+     * @param revision1 Revision of <code>target1</code>.
+     * @param target2 Path or URL.
+     * @param revision2 Revision of <code>target2</code>.
+     * @param recurse Whether to recurse.
+     * @param ignoreAncestry Whether to ignore unrelated files during
+     * comparison.  False positives may potentially be reported if
+     * this parameter <code>false</code>, since a file might have been
+     * modified between two revisions, but still have the same
+     * contents.
+     * @param receiver As each is difference found, this callback is
+     * invoked with a description of the difference.
+     *
+     * @exception ClientException
+     * @since 1.5
+     */
+    public native void diffSummarize(String target1, Revision revision1,
+                                     String target2, Revision revision2,
+                                     boolean recurse, boolean ignoreAncestry,
+                                     DiffSummaryReceiver receiver)
+        throws ClientException;
+
+    /**
      * Retrieves the properties of an item
      * @param path  the path of the item
      * @return array of property objects

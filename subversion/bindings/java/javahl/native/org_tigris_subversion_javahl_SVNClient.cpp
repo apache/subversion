@@ -32,6 +32,7 @@
 #include "CommitMessage.h"
 #include "Prompter.h"
 #include "Targets.h"
+#include "DiffSummaryReceiver.h"
 #include "BlameCallback.h"
 #include "svn_version.h"
 #include "svn_private_config.h"
@@ -1418,6 +1419,53 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_l
         jnoDiffDeleted ? true:false, jforce ? true:false);
 }
 
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    diffSummarize
+ * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;ZZLorg/tigris/subversion/javahl/DiffSummaryReceiver;)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diffSummarize
+  (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1, 
+   jstring jtarget2, jobject jrevision2, jboolean jrecurse,
+   jboolean jignoreAncestry, jobject jdiffSummaryReceiver)
+{
+    JNIEntry(SVNClient, diffSummarize);
+
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return;
+    }
+    JNIStringHolder target1(jtarget1);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    Revision revision1(jrevision1);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    JNIStringHolder target2(jtarget2);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    Revision revision2(jrevision2);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    DiffSummaryReceiver receiver(jthis);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+
+    cl->diffSummarize(target1, revision1, target2, revision2, (bool) jrecurse,
+		      (bool) jignoreAncestry, receiver);
+}
 
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
