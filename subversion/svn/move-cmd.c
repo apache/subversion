@@ -42,7 +42,7 @@ svn_cl__move(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  const char *src_path, *dst_path;
+  const char *dst_path;
   svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
