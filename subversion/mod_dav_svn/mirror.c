@@ -89,15 +89,14 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
     }
 
     if (!f->ctx) {
-        const char *full_path;
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
 
         apr_uri_parse(r->pool, master_uri, &ctx->uri);
         ctx->remotepath = apr_pstrcat(r->pool, ctx->uri.path, "/",
-                                      dav_svn_get_special_uri(r), NULL);
+                                      dav_svn__get_special_uri(r), NULL);
         ctx->remotepath_len = strlen(ctx->remotepath);
         ctx->localpath = apr_pstrcat(r->pool, dav_svn__get_root_dir(r), "/",
-                                     dav_svn_get_special_uri(r), NULL);
+                                     dav_svn__get_special_uri(r), NULL);
         ctx->localpath_len = strlen(ctx->localpath);
         ctx->pattern = apr_strmatch_precompile(r->pool, ctx->localpath, 0);
         ctx->pattern_len = ctx->localpath_len;
@@ -124,7 +123,6 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
         match = apr_strmatch(ctx->pattern, data, len);
         if (match) {
             apr_bucket *next_bucket;
-            char *foo;
             apr_bucket_split(bkt, match - data);
             next_bucket = APR_BUCKET_NEXT(bkt); 
             apr_bucket_split(next_bucket, ctx->pattern_len);
@@ -152,7 +150,6 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
 
     if (!r->main && master_uri) {
         const char *location, *start_foo = NULL;
-        apr_size_t master_len;
 
         location = apr_table_get(r->headers_out, "Location");
         if (location) {
@@ -189,15 +186,14 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
     }
 
     if (!f->ctx) {
-        const char *full_path;
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
 
         apr_uri_parse(r->pool, master_uri, &ctx->uri);
         ctx->remotepath = apr_pstrcat(r->pool, ctx->uri.path, "/",
-                                      dav_svn_get_special_uri(r), NULL);
+                                      dav_svn__get_special_uri(r), NULL);
         ctx->remotepath_len = strlen(ctx->remotepath);
         ctx->localpath = apr_pstrcat(r->pool, dav_svn__get_root_dir(r), "/",
-                                     dav_svn_get_special_uri(r), NULL);
+                                     dav_svn__get_special_uri(r), NULL);
         ctx->localpath_len = strlen(ctx->localpath);
         ctx->pattern = apr_strmatch_precompile(r->pool, ctx->remotepath, 0);
         ctx->pattern_len = ctx->remotepath_len;
@@ -214,7 +210,6 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
         match = apr_strmatch(ctx->pattern, data, len);
         if (match) {
             apr_bucket *next_bucket;
-            char *foo;
             apr_bucket_split(bkt, match - data);
             next_bucket = APR_BUCKET_NEXT(bkt); 
             apr_bucket_split(next_bucket, ctx->pattern_len);
