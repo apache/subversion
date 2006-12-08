@@ -143,12 +143,7 @@ authz_read(svn_boolean_t *allowed,
          revision is the same as its path in this txn. */
       if ((rev == SVN_INVALID_REVNUM) && (revpath == NULL))
         {
-          const char *txn_name;
-          svn_fs_txn_t *txn;
-
-          txn_name = svn_fs_txn_root_name(root, pool);
-          SVN_ERR(svn_fs_open_txn(&txn, svn_fs_root_fs(root), txn_name, pool));
-          rev = svn_fs_txn_base_revision(txn);
+          rev = svn_fs_txn_root_base_revision(root);
           revpath = path;
         }
     }
