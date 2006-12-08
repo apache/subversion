@@ -160,7 +160,7 @@ static svn_error_t * delete_activity(void *edit_baton,
 {
   commit_ctx_t *cc = edit_baton;
   return svn_ra_dav__simple_request(NULL, cc->ras, "DELETE",
-                                    cc->activity_url, NULL,
+                                    cc->activity_url, NULL, NULL,
                                     204 /* No Content */,
                                     404 /* Not Found */, pool);
 }
@@ -312,7 +312,7 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
   url = svn_path_url_add_component(activity_collection->data, 
                                    uuid_buf, pool);
   SVN_ERR(svn_ra_dav__simple_request(&code, cc->ras,
-                                     "MKACTIVITY", url, NULL,
+                                     "MKACTIVITY", url, NULL, NULL,
                                      201 /* Created */,
                                      404 /* Not Found */, pool));
 
@@ -325,7 +325,7 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
       url = svn_path_url_add_component(activity_collection->data, 
                                        uuid_buf, pool);
       SVN_ERR(svn_ra_dav__simple_request(&code, cc->ras,
-                                         "MKACTIVITY", url, NULL,
+                                         "MKACTIVITY", url, NULL, NULL,
                                          201, 0, pool));
     }
 
@@ -730,7 +730,7 @@ static svn_error_t * commit_delete_entry(const char *path,
      failed deletion (because it's already missing) is OK;  deletion
      is an idempotent merge operation. */
   serr =  svn_ra_dav__simple_request(&code, parent->cc->ras,
-                                     "DELETE", child,
+                                     "DELETE", child, NULL,
                                      extra_headers,
                                      204 /* Created */,
                                      404 /* Not Found */, pool);
@@ -842,7 +842,7 @@ static svn_error_t * commit_add_dir(const char *path,
       /* This a new directory with no history, so just create a new,
          empty collection */
       SVN_ERR(svn_ra_dav__simple_request(&code, parent->cc->ras, "MKCOL",
-                                         child->rsrc->wr_url, NULL,
+                                         child->rsrc->wr_url, NULL, NULL,
                                          201 /* Created */, 0, workpool));
     }
   else

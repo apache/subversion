@@ -1071,6 +1071,7 @@ svn_ra_dav__simple_request(int *code,
                            const char *method,
                            const char *url,
                            apr_hash_t *extra_headers,
+                           const char *body,
                            int okay_1, int okay_2, apr_pool_t *pool)
 {
   svn_ra_dav__request_t *req =
@@ -1093,9 +1094,11 @@ svn_ra_dav__simple_request(int *code,
         }
     }
 
+  if (body)
+    ne_set_request_body_buffer(req->req, body, strlen(body));
+
   svn_ra_dav__add_response_body_reader(req, ne_accept_207,
                                        ne_xml_parse_v, multistatus);
-
 
   /* svn_ra_dav__request_dispatch() adds the custom error response reader */
   SVN_ERR(svn_ra_dav__request_dispatch(code, req, okay_1, okay_2, pool));
@@ -1126,7 +1129,7 @@ svn_ra_dav__copy(svn_ra_dav__session_t *ras,
                overwrite ? "T" : "F");
 
   return svn_ra_dav__simple_request(NULL, ras, "COPY", src, extra_headers,
-                                    201, 204, pool);
+                                    NULL, 201, 204, pool);
 }
 
 

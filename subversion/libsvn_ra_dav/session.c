@@ -1436,7 +1436,7 @@ do_unlock(svn_ra_session_t *session,
                  SVN_DAV_OPTION_LOCK_BREAK);
 
   return svn_ra_dav__simple_request(NULL, ras, "UNLOCK", url_path,
-                                    extra_headers, 204, 0, pool);
+                                    extra_headers, NULL, 204, 0, pool);
 }
 
 

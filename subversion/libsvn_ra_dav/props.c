@@ -1039,10 +1039,8 @@ svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
                          apr_hash_t *extra_headers,
                          apr_pool_t *pool)
 {
-  ne_request *req;
-  int code;
-  svn_stringbuf_t *body;
   svn_error_t *err;
+  svn_stringbuf_t *body;
   apr_pool_t *subpool = svn_pool_create(pool);
 
   /* just punt if there are no changes to make. */
@@ -1092,40 +1090,22 @@ svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
 
   /* Finish up the body. */
   svn_stringbuf_appendcstr(body, "</D:propertyupdate>");
-  req = ne_request_create(ras->sess, "PROPPATCH", url);
-  ne_set_request_body_buffer(req, body->data, body->len);
-  ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
 
-  /* add any extra headers passed in by caller. */
-  if (extra_headers != NULL)
-    {
-      apr_hash_index_t *hi;
-      for (hi = apr_hash_first(pool, extra_headers);
-           hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          apr_hash_this(hi, &key, NULL, &val);
-          ne_add_request_header(req, (const char *) key, (const char *) val); 
-        }
-    }
+  /* Finish up the headers. */
+  if (! extra_headers)
+    extra_headers = apr_hash_make(pool);
+  apr_hash_set(extra_headers, "Content-Type", APR_HASH_KEY_STRING,
+               "text/xml; charset=UTF-8");
 
-  ras->main_session_busy = TRUE;
-  code = ne_simple_request(ras->sess, req);
-  ras->main_session_busy = FALSE;
-
-  if (code == NE_OK)
-    {
-      err = SVN_NO_ERROR;
-    }
-  else
-    {
-      /* WebDAV spec says that if any part of a PROPPATCH fails, the
-         entire 'commit' is rejected.  */
-      err = svn_error_create
-        (SVN_ERR_RA_DAV_PROPPATCH_FAILED, NULL,
-         _("At least one property change failed; repository is unchanged"));
-    }
+  err = svn_ra_dav__simple_request(NULL, ras, "PROPPATCH", url,
+                                   extra_headers, body->data,
+                                   200, 207, pool);
+  if (err)
+    svn_error_compose
+      (err,
+       svn_error_create
+       (SVN_ERR_RA_DAV_PROPPATCH_FAILED, NULL,
+        _("At least one property change failed; repository is unchanged")));
 
   return err;
 }
