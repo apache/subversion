@@ -11,7 +11,7 @@ in order to achieve several goals:
 
 As well as this list of specific tasks:
 
- - Integrate commit.c:simple_request with
-   svn_ra_dav__simple_request().
+ - Implement our own PROPFIND request generating function
+   to replace ne_lock_discover() in svn_ra_dav__get_lock().
  - Clean up the use of Neon requests as much as possible
    (without duplicating all of Neon's interfaces).
