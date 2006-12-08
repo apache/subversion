@@ -708,22 +708,16 @@ svn_repos_replay2(svn_fs_root_t *root,
   cb_baton.base_path = base_path;
   cb_baton.base_path_len = base_path_len;
   cb_baton.low_water_mark = low_water_mark;
+  cb_baton.compare_root = NULL;
 
   if (send_deltas)
     {
-      svn_revnum_t compare_root_revision = SVN_INVALID_REVNUM;
-      if (svn_fs_is_revision_root(root))
-        compare_root_revision = svn_fs_revision_root_revision(root) - 1;
-      else if (svn_fs_is_txn_root(root))
-        compare_root_revision = svn_fs_txn_root_base_revision(root);
       SVN_ERR(svn_fs_revision_root(&cb_baton.compare_root, 
                                    svn_fs_root_fs(root), 
-                                   compare_root_revision, 
+                                   svn_fs_is_revision_root(root) 
+                                     ? svn_fs_revision_root_revision(root)
+                                     : svn_fs_txn_root_base_revision(root),
                                    pool));
-    }
-  else
-    {
-      cb_baton.compare_root = NULL;
     }
 
   cb_baton.copies = apr_array_make(pool, 4, sizeof(struct copy_info));
