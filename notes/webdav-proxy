@@ -10,7 +10,7 @@ in certain circumstances.
 
 This model has several advantages to using a straight HTTP DAV-aware
 caching proxy, in that each slave can respond to all read-only requests
-without ever having to go the master backend.
+without ever having to relay them to the master backend.
 
 Requirements: Subversion 1.5 or newer (merged to trunk as of r22606)
               Apache HTTP Server 2.2.0 or higher with mod_proxy enabled
