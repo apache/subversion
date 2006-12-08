@@ -711,26 +711,20 @@ svn_repos_replay2(svn_fs_root_t *root,
 
   if (send_deltas)
     {
-      svn_revnum_t revision = svn_fs_revision_root_revision(root);
-      svn_revnum_t compare_root_revision;
-      if (! SVN_IS_VALID_REVNUM(revision))
-        {
-          svn_fs_txn_t *txn;
-          const char *txn_name = svn_fs_txn_root_name(root, pool);
-          SVN_ERR(svn_fs_open_txn(&txn, svn_fs_root_fs(root),
-                                  txn_name, pool));
-          compare_root_revision = svn_fs_txn_base_revision(txn);
-        }
-      else
-        compare_root_revision = revision - 1;
-
-      SVN_ERR(svn_fs_revision_root(&cb_baton.compare_root,
-                                   svn_fs_root_fs(root),
-                                   compare_root_revision,
+      svn_revnum_t compare_root_revision = SVN_INVALID_REVNUM;
+      if (svn_fs_is_revision_root(root))
+        compare_root_revision = svn_fs_revision_root_revision(root) - 1;
+      else if (svn_fs_is_txn_root(root))
+        compare_root_revision = svn_fs_txn_root_base_revision(root);
+      SVN_ERR(svn_fs_revision_root(&cb_baton.compare_root, 
+                                   svn_fs_root_fs(root), 
+                                   compare_root_revision, 
                                    pool));
     }
   else
-    cb_baton.compare_root = NULL;
+    {
+      cb_baton.compare_root = NULL;
+    }
 
   cb_baton.copies = apr_array_make(pool, 4, sizeof(struct copy_info));
   cb_baton.pool = pool;

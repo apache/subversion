@@ -265,13 +265,8 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
     }
   else if (svn_fs_is_txn_root(tgt_root))
     {
-      svn_fs_t *fs = svn_fs_root_fs(tgt_root);
-      const char *txn_name = svn_fs_txn_root_name(tgt_root, pool);
-      svn_fs_txn_t *txn;
-
-      SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
       SVN_ERR(editor->set_target_revision 
-              (edit_baton, svn_fs_txn_base_revision(txn), pool));
+              (edit_baton, svn_fs_txn_root_base_revision(tgt_root), pool));
     }
 
   /* Setup our pseudo-global structure here.  We need these variables
