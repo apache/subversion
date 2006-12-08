@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
@@ -1883,6 +1884,36 @@ public class BasicTests extends SVNTests
                       true), 5);
  
     }
+
+    /**
+     * Test the {@link SVNClientInterface.diffSummarize()} API.
+     * @since 1.5
+     */
+    public void testDiffSummarize() throws Throwable
+    {
+        OneTest thisTest = new OneTest(false);
+        DiffSummaries summary = new DiffSummaries();
+        // Perform a recursive diff summary, ignoring ancestry.
+        client.diffSummarize(thisTest.getUrl(), new Revision.Number(0),
+                             thisTest.getUrl(), Revision.HEAD, true, false,
+                             summary);
+        assertEquals("Wrong number of diff summary descriptors", 20,
+                     summary.size());
+
+        // Rigorously inspect one of our DiffSummary notifications.
+        final String BETA_PATH = "A/B/E/beta";
+        DiffSummary betaDiff = (DiffSummary) summary.get(BETA_PATH);
+        assertNotNull("No diff summary for " + BETA_PATH, betaDiff);
+        assertEquals("Incorrect path for " + BETA_PATH, BETA_PATH,
+                     betaDiff.getPath());
+        assertTrue("Incorrect diff kind for " + BETA_PATH,
+                   DiffSummary.DiffKind.ADDED.equals(betaDiff.getDiffKind()));
+        assertEquals("Incorrect props changed notice for " + BETA_PATH,
+                     false, betaDiff.propsChanged());
+        assertEquals("Incorrect node kind for " + BETA_PATH, 1,
+                     betaDiff.getNodeKind());
+    }
+
     /**
      * test the basic SVNClient.isAdminDirectory functionality
      * @throws Throwable
@@ -1961,6 +1992,19 @@ public class BasicTests extends SVNTests
         }
         catch (RuntimeException progressReported)
         {
+        }
+    }
+
+    /**
+     * A DiffSummaryReceiver implementation which collects all
+     * DiffSummary notifications.
+     */
+    private static class DiffSummaries extends HashMap
+        implements DiffSummaryReceiver
+    {
+        public void onSummary(DiffSummary descriptor)
+        {
+            super.put(descriptor.getPath(), descriptor);
         }
     }
 }

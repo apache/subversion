@@ -35,6 +35,7 @@ class ProgressListener;
 class Targets;
 class JNIByteArray;
 class Prompter;
+class DiffSummaryReceiver;
 class BlameCallback;
 class CommitMessage;
 #include "svn_client.h"
@@ -147,6 +148,10 @@ public:
                   Revision &startRevision, Revision &endRevision,
                   const char *outfileName,bool recurse, bool ignoreAncestry,
                   bool noDiffDelete, bool force);
+    void diffSummarize(const char *target1, Revision &revision1,
+                       const char *target2, Revision &revision2,
+                       bool recurse, bool ignoreAncestry,
+                       DiffSummaryReceiver &receiver);
 
     const char * getLastPath();
     void dispose(jobject jthis);
