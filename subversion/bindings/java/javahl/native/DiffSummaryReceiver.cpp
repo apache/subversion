@@ -128,9 +128,6 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
 
     // Invoke the Java DiffSummaryReceiver callback.
     env->CallVoidMethod(m_receiver, callback, jDiffSummary);
-    // ### FIXME: Our callback triggers an exception.  We die inside
-    // ### isJavaExceptionThrown(), when JNI's
-    // ### env->ExceptionDescribe() method segfaults internally.  :-{
     if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;

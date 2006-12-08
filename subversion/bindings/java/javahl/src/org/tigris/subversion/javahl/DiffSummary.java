@@ -69,7 +69,7 @@ public class DiffSummary extends EventObject
     /**
      * @return Whether any properties have changed.
      */
-    public boolean isPropsChanged()
+    public boolean propsChanged()
     {
         return this.propsChanged;
     }
@@ -81,6 +81,14 @@ public class DiffSummary extends EventObject
     public int getNodeKind()
     {
         return this.nodeKind;
+    }
+
+    /**
+     * @return The path.
+     */
+    public String toString()
+    {
+        return getPath();
     }
 
     /**
@@ -122,6 +130,40 @@ public class DiffSummary extends EventObject
             default:
                 throw new IllegalArgumentException("Diff kind " + diffKind +
                                                    " not recognized");
+            }
+        }
+
+        /**
+         * @param diffKind A DiffKind for comparison.
+         * @return Whether both DiffKinds are of the same type.
+         */
+        public boolean equals(Object diffKind)
+        {
+            return (((DiffKind) diffKind).kind == this.kind);
+        }
+
+        public int hashCode()
+        {
+            return Integer.valueOf(this.kind).hashCode();
+        }
+
+        /**
+         * @return A textual representation of the type of diff.
+         */
+        public String toString()
+        {
+            switch (this.kind)
+            {
+            case 0:
+                return "normal";
+            case 1:
+                return "added";
+            case 2:
+                return "modified";
+            case 3:
+                return "deleted";
+            default:
+                return "unknown";
             }
         }
     }

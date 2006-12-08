@@ -24,8 +24,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
@@ -1897,8 +1897,21 @@ public class BasicTests extends SVNTests
         client.diffSummarize(thisTest.getUrl(), new Revision.Number(0),
                              thisTest.getUrl(), Revision.HEAD, true, false,
                              summary);
-        assertEquals("Wrong number of diff summary descriptors", 1,
+        assertEquals("Wrong number of diff summary descriptors", 20,
                      summary.size());
+
+        // Rigorously inspect one of our DiffSummary notifications.
+        final String BETA_PATH = "A/B/E/beta";
+        DiffSummary betaDiff = (DiffSummary) summary.get(BETA_PATH);
+        assertNotNull("No diff summary for " + BETA_PATH, betaDiff);
+        assertEquals("Incorrect path for " + BETA_PATH, BETA_PATH,
+                     betaDiff.getPath());
+        assertTrue("Incorrect diff kind for " + BETA_PATH,
+                   DiffSummary.DiffKind.ADDED.equals(betaDiff.getDiffKind()));
+        assertEquals("Incorrect props changed notice for " + BETA_PATH,
+                     false, betaDiff.propsChanged());
+        assertEquals("Incorrect node kind for " + BETA_PATH, 1,
+                     betaDiff.getNodeKind());
     }
 
     /**
@@ -1986,12 +1999,12 @@ public class BasicTests extends SVNTests
      * A DiffSummaryReceiver implementation which collects all
      * DiffSummary notifications.
      */
-    private static class DiffSummaries extends ArrayList
+    private static class DiffSummaries extends HashMap
         implements DiffSummaryReceiver
     {
         public void onSummary(DiffSummary descriptor)
         {
-            super.add(descriptor);
+            super.put(descriptor.getPath(), descriptor);
         }
     }
 }

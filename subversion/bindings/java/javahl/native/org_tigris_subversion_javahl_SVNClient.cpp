@@ -1457,7 +1457,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diffSummarize
     {
         return;
     }
-    DiffSummaryReceiver receiver(jthis);
+    DiffSummaryReceiver receiver(jdiffSummaryReceiver);
     if (JNIUtil::isExceptionThrown())
     {
         return;
