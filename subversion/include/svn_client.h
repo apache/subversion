@@ -1905,15 +1905,24 @@ svn_client_resolved(const char *path,
  *
  * @a src_paths must be files or directories under version control, or
  * URLs of a versioned item in the repository.  If @a src_paths has multiple
- * items, they must @a src_revision is used to choose the revision from which
- * to copy the @a src_path.
+ * items, they must be all repository URLs or all working copy paths.
+ * @a src_revision is used to choose the revision from which to copy the
+ * @a src_paths.
  *
- * The parent of @a dst_path must already exist.  If @a src_paths has only
- * one item, and @a copy_as_child is TRUE, @a dst_path must be a non-existent
- * WC path or URL.  If @a src_paths has only one item, @a copy_as_child is
- * FALSE, and @a dst_path already exists, fail with @c SVN_ERR_ENTRY_EXISTS
- * if @a dst_path is a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if
- * @a dst_path is an URL.
+ * The parent of @a dst_path must already exist.
+ *
+ * If @a src_paths has only one item, attempt to move it to @a dst_path.  If
+ * @a copy_as_child is TRUE and @a dst_path already exists, attempt to copy the
+ * item as a child of @a dst_path.  If a child of @a dst_path already exists
+ * with the same name as the item in @a src_paths, fail with
+ * @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
+ * @c SVN_ERR_FS_ALREADY_EXSISTS if @a dst_path is a URL.
+ *
+ * If @a src_paths has multiple items, @a copy_as_child is ignored, and all
+ * @a src_paths are copied as children of @a dst_path.  If any child of
+ * @a dst_path already exists with the same name any item in @a src_paths,
+ * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
+ * @c SVN_ERR_FS_ALREADY_EXSISTS if @a dst_path is a URL.
  *
  * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
@@ -1945,10 +1954,10 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_copy4(), with the difference that if @dst_path exists,
- * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
- * @c SVN_ERR_FS_ALREADY_EXISTS.  Also, only take a single @a src_path and
- * @a dst_path.
+ * Similar to svn_client_copy4(), with the difference that if
+ * @a dst_path exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a
+ * working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
+ * repository URL.  Also, only take a single @a src_path and @a dst_path.
  *
  * @since New in 1.4.
  *
@@ -2005,7 +2014,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * @a src_paths must be files or directories under version control, or
  * URLs of versioned items in the repository.  All @a src_paths must be of
  * the same type.  If multiple @a src_paths are given, @a dst_path must be
- * a directory and @src_paths will be moved as children of @a dst_path.
+ * a directory and @a src_paths will be moved as children of @a dst_path.
  *
  * If @a src_paths are repository URLs:
  *
@@ -2034,12 +2043,20 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *     items and @a force is not set, the move will fail. If @a force is set
  *     such items will be removed.
  *
- * The parent of @a dst_path must already exist.  If @a src_paths has only
- * one item, and @a move_as_child is TRUE, @a dst_path must be a non-existent
- * WC path or URL.  If @a src_paths has only one item, @a copy_as_child is
- * FALSE, and @a dst_path already exists, fail with @c SVN_ERR_ENTRY_EXISTS
- * if @a dst_path is a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if
- * @a dst_path is an URL.
+ * The parent of @a dst_path must already exist.
+ *
+ * If @a src_paths has only one item, attempt to move it to @a dst_path.  If
+ * @a move_as_child is TRUE and @a dst_path already exists, attempt to move the
+ * item as a child of @a dst_path.  If a child of @a dst_path already exists
+ * with the same name as the item in @a src_paths, fail with
+ * @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
+ * @c SVN_ERR_FS_ALREADY_EXSISTS if @a dst_path is a URL.
+ *
+ * If @a src_paths has multiple items, @a copy_as_child is ignored, and all
+ * @a src_paths are moved as children of @a dst_path.  If any child of
+ * @a dst_path already exists with the same name any item in @a src_paths,
+ * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
+ * @c SVN_ERR_FS_ALREADY_EXSISTS if @a dst_path is a URL.
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
@@ -2063,10 +2080,10 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_move5(), with the difference that if @dst_path exists,
- * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
- * @c SVN_ERR_FS_ALREADY_EXISTS.  Also, only take a single @a src_path and
- * @a dst_path.
+ * Similar to svn_client_move5(), with the difference that if
+ * @a dst_path exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a
+ * working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
+ * repository URL.  Also, only take a single @a src_path and @a dst_path.
  *
  * @since New in 1.4.
  *
