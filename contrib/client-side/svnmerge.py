@@ -1156,10 +1156,10 @@ def action_merge(branch_dir, branch_props):
 
         # Set merge props appropriately if bidirectional support is enabled
         if opts["bidirectional"]:
-          new_merge_props = merge_metadata.get(start-1)
-          if new_merge_props != old_merge_props:
-              set_merge_props(branch_dir, new_merge_props)
-              old_merge_props = new_merge_props
+            new_merge_props = merge_metadata.get(start-1)
+            if new_merge_props != old_merge_props:
+                set_merge_props(branch_dir, new_merge_props)
+                old_merge_props = new_merge_props
 
         if not record_only:
             # Do the merge
