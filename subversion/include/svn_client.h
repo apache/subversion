@@ -1911,18 +1911,18 @@ svn_client_resolved(const char *path,
  *
  * The parent of @a dst_path must already exist.
  *
- * If @a src_paths has only one item, attempt to move it to @a dst_path.  If
+ * If @a src_paths has only one item, attempt to copy it to @a dst_path.  If
  * @a copy_as_child is TRUE and @a dst_path already exists, attempt to copy the
- * item as a child of @a dst_path.  If a child of @a dst_path already exists
- * with the same name as the item in @a src_paths, fail with
- * @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
- * @c SVN_ERR_FS_ALREADY_EXSISTS if @a dst_path is a URL.
+ * item as a child of @a dst_path.  If @a copy_as_child is FALSE and
+ * @a dst_path already exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path
+ * is a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
+ * URL.
  *
  * If @a src_paths has multiple items, @a copy_as_child is ignored, and all
  * @a src_paths are copied as children of @a dst_path.  If any child of
  * @a dst_path already exists with the same name any item in @a src_paths,
  * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
- * @c SVN_ERR_FS_ALREADY_EXSISTS if @a dst_path is a URL.
+ * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
  *
  * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
@@ -1954,10 +1954,8 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_copy4(), with the difference that if
- * @a dst_path exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a
- * working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
- * repository URL.  Also, only take a single @a src_path and @a dst_path.
+ * Similar to svn_client_copy4(), with only one @a src_path and
+ * @a copy_as_child set to FALSE.
  *
  * @since New in 1.4.
  *
@@ -2047,16 +2045,16 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *
  * If @a src_paths has only one item, attempt to move it to @a dst_path.  If
  * @a move_as_child is TRUE and @a dst_path already exists, attempt to move the
- * item as a child of @a dst_path.  If a child of @a dst_path already exists
- * with the same name as the item in @a src_paths, fail with
- * @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
- * @c SVN_ERR_FS_ALREADY_EXSISTS if @a dst_path is a URL.
+ * item as a child of @a dst_path.  If @a move_as_child is FALSE and
+ * @a dst_path already exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path
+ * is a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
+ * URL.
  *
  * If @a src_paths has multiple items, @a copy_as_child is ignored, and all
  * @a src_paths are moved as children of @a dst_path.  If any child of
  * @a dst_path already exists with the same name any item in @a src_paths,
  * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
- * @c SVN_ERR_FS_ALREADY_EXSISTS if @a dst_path is a URL.
+ * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
@@ -2080,10 +2078,8 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  apr_pool_t *pool);
 
 /**
- * Similar to svn_client_move5(), with the difference that if
- * @a dst_path exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a
- * working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
- * repository URL.  Also, only take a single @a src_path and @a dst_path.
+ * Similar to svn_client_move5(), with only one @a src_path and
+ * @a move_as_child set to FALSE.
  *
  * @since New in 1.4.
  *
