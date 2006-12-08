@@ -710,10 +710,25 @@ svn_repos_replay2(svn_fs_root_t *root,
   cb_baton.low_water_mark = low_water_mark;
 
   if (send_deltas)
-    SVN_ERR(svn_fs_revision_root(&cb_baton.compare_root,
-                                 svn_fs_root_fs(root),
-                                 svn_fs_revision_root_revision(root) - 1,
-                                 pool));
+    {
+      svn_revnum_t revision = svn_fs_revision_root_revision(root);
+      svn_revnum_t compare_root_revision;
+      if (! SVN_IS_VALID_REVNUM(revision))
+        {
+          svn_fs_txn_t *txn;
+          const char *txn_name = svn_fs_txn_root_name(root, pool);
+          SVN_ERR(svn_fs_open_txn(&txn, svn_fs_root_fs(root),
+                                  txn_name, pool));
+          compare_root_revision = svn_fs_txn_base_revision(txn);
+        }
+      else
+        compare_root_revision = revision - 1;
+
+      SVN_ERR(svn_fs_revision_root(&cb_baton.compare_root,
+                                   svn_fs_root_fs(root),
+                                   compare_root_revision,
+                                   pool));
+    }
   else
     cb_baton.compare_root = NULL;
 
