@@ -2,7 +2,7 @@
  * session.c :  routines for maintaining sessions state (to the DAV server)
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -976,11 +976,9 @@ create_request_hook(ne_request *req,
 {
   struct lock_request_baton *lrb = userdata;
 
-  /* If a LOCK, UNLOCK, or PROPFIND is happening, then remember the
+  /* If a PROPFIND is happening, then remember the
      http method. */
-  if ((strcmp(method, "LOCK") == 0)
-      || (strcmp(method, "UNLOCK") == 0)
-      || (strcmp(method, "PROPFIND") == 0))  
+  if ((strcmp(method, "PROPFIND") == 0))
     {
       lrb->method = apr_pstrdup(lrb->pool, method);
       lrb->request = req;
@@ -1003,8 +1001,7 @@ pre_send_hook(ne_request *req,
 
   /* Possibly attach some custom headers to the request. */
 
-  if ((strcmp(lrb->method, "LOCK") == 0)
-      || (strcmp(lrb->method, "PROPFIND") == 0))
+  if ((strcmp(lrb->method, "PROPFIND") == 0))
     {
       /* Possibly add an X-SVN-Option: header indicating that the lock
          is being stolen.  */
@@ -1027,17 +1024,6 @@ pre_send_hook(ne_request *req,
         }
     }
 
-  if (strcmp(lrb->method, "UNLOCK") == 0)
-    {
-      if (lrb->force)
-        {
-          char *buf = apr_psprintf(lrb->pool, "%s: %s\r\n",
-                                   SVN_DAV_OPTIONS_HEADER,
-                                   SVN_DAV_OPTION_LOCK_BREAK);
-          ne_buffer_zappend(header, buf);
-        }
-    }
-
   /* Register a response handler capable of parsing <D:error> */
   lrb->error_parser = ne_xml_create();
   svn_ra_dav__add_error_handler(req, lrb->error_parser,
@@ -1056,8 +1042,7 @@ post_send_hook(ne_request *req,
   if (! lrb->method)
     return NE_OK;
 
-  if ((strcmp(lrb->method, "LOCK") == 0)
-      || (strcmp(lrb->method, "PROPFIND") == 0))
+  if ((strcmp(lrb->method, "PROPFIND") == 0))
     {
       const char *val;
 
@@ -1110,101 +1095,233 @@ setup_neon_request_hook(svn_ra_dav__session_t *ras)
     }
 }
 
-/* (Note: *LOCK is an output parameter.) */
-/* ### TODO for 1.3: Send all locks to the server at once. */
-static svn_error_t *
-shim_svn_ra_dav__lock(svn_ra_session_t *session,
-                      svn_lock_t **lock,
-                      const char *path,
-                      const char *comment,
-                      svn_boolean_t force,
-                      svn_revnum_t current_rev,
-                      apr_pool_t *pool)
+static const svn_ra_dav__xml_elm_t lock_elements[] =
 {
-  svn_ra_dav__session_t *ras = session->priv;
-  int rv;
-  const char *url;
-  svn_string_t fs_path;
-  struct ne_lock *nlock;
-  svn_lock_t *slock;
+  { "DAV:", "prop", ELEM_prop, 0 },
+  { "DAV:", "lockdiscovery", ELEM_lock_discovery, 0 },
+  { "DAV:", "activelock", ELEM_lock_activelock, 0 },
+  { "DAV:", "locktype", ELEM_lock_type, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "lockscope", ELEM_lock_scope, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "depth", ELEM_lock_depth, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "owner", ELEM_lock_owner, SVN_RA_DAV__XML_COLLECT },
+  { "DAV:", "timeout", ELEM_lock_timeout, SVN_RA_DAV__XML_CDATA },
+  { "DAV:", "locktoken", ELEM_lock_token, 0 },
+  { "DAV:", "href", ELEM_lock_href, SVN_RA_DAV__XML_CDATA },
+  { "", "", ELEM_unknown, SVN_RA_DAV__XML_COLLECT },
+  { NULL }
+};
 
-  /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component(ras->url->data, path, pool);  
-  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
-                                        url, SVN_INVALID_REVNUM, pool));
+typedef struct
+{
+  svn_stringbuf_t *cdata;
+  apr_pool_t *pool;
 
-  /* Clear out the lrb... */
-  memset((ras->lrb), 0, sizeof(*ras->lrb));
+  svn_stringbuf_t *owner;
+  svn_stringbuf_t *timeout;
+  svn_stringbuf_t *depth;
+  svn_stringbuf_t *token;
+} lock_baton_t;
 
-  /* ...and load it up again. */
-  ras->lrb->pool = pool;
-  ras->lrb->current_rev = current_rev;
-  ras->lrb->force = force;
+static svn_error_t *
+lock_start_element(int *elem, void *baton, int parent,
+                   const char *nspace, const char *name, const char **atts)
+{
+  lock_baton_t *b = baton;
+  const svn_ra_dav__xml_elm_t *elm =
+    svn_ra_dav__lookup_xml_elem(lock_elements, nspace, name);
 
-  /* Make a neon lock structure. */
-  nlock = ne_lock_create();
-  nlock->owner = comment ? ne_strdup(apr_xml_quote_string(pool, comment, 1))
-                         : NULL;
-
-  if ((rv = ne_uri_parse(url, &(nlock->uri))))
+  if (! elm)
     {
-      ne_lock_destroy(nlock);
-      return svn_ra_dav__convert_error(ras->sess, _("Failed to parse URI"),
-                                       rv, pool);
+      *elem = NE_XML_DECLINE;
+      return SVN_NO_ERROR;
     }
 
-  /* Issue LOCK request. */
-  ras->main_session_busy = TRUE;
-  rv = ne_lock(ras->sess, nlock);
-  ras->main_session_busy = FALSE;
-
-  /* Did we get a <D:error> response? */
-  if (ras->lrb->err)
+  /* collect interesting element contents */
+  /* owner, href inside locktoken, depth, timeout */
+  switch (elm->id)
     {
-      ne_lock_destroy(nlock);
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-      return ras->lrb->err;
+    case ELEM_lock_owner:
+    case ELEM_lock_timeout:
+    case ELEM_lock_depth:
+      b->cdata = svn_stringbuf_create("", b->pool);
+      break;
+
+    case ELEM_lock_href:
+      if (parent == ELEM_lock_token)
+        b->cdata = svn_stringbuf_create("", b->pool);
+      break;
+
+    default:
+      b->cdata = NULL;
     }
 
-  /* Did we get some other sort of neon error? */
-  if (rv)
-    {
-      ne_lock_destroy(nlock);
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-      return svn_ra_dav__convert_error(ras->sess,
-                                       _("Lock request failed"), rv, pool);
-    }
-
-  if (!ras->lrb->lock_owner || !ras->lrb->creation_date)
-    return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                            _("Incomplete lock data returned"));
-
-  /* Build an svn_lock_t based on the returned ne_lock. */
-  slock = svn_lock_create(pool);
-  slock->path = fs_path.data;
-  slock->token = apr_pstrdup(pool, nlock->token);
-  if (nlock->owner)
-    slock->comment = apr_pstrdup(pool, nlock->owner);
-  slock->owner = apr_pstrdup(pool, ras->lrb->lock_owner);
-  slock->creation_date = ras->lrb->creation_date;
-
-  if (nlock->timeout == NE_TIMEOUT_INFINITE)
-    slock->expiration_date = 0;
-  else if (nlock->timeout > 0)
-    slock->expiration_date = slock->creation_date + 
-                             apr_time_from_sec(nlock->timeout);
-  
-  /* Free neon things. */
-  ne_lock_destroy(nlock);
-  if (ras->lrb->error_parser)
-    ne_xml_destroy(ras->lrb->error_parser);
-
-  *lock = slock;
+  *elem = elm->id;
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+lock_end_element(void *baton, int state, const char *nspace, const char *name)
+{
+  lock_baton_t *b = baton;
+
+  if (b->cdata)
+    switch (state)
+      {
+      case ELEM_lock_owner:
+        b->owner = b->cdata;
+        break;
+
+      case ELEM_lock_timeout:
+        b->timeout = b->cdata;
+        break;
+
+      case ELEM_lock_depth:
+        b->depth = b->cdata;
+        break;
+
+      case ELEM_lock_href:
+        b->token = b->cdata;
+        break;
+      }
+
+  b->cdata = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+lock_cdata(void *baton, int state, const char *cdata, size_t len)
+{
+  lock_baton_t *b = baton;
+
+  if (b->cdata)
+    svn_stringbuf_appendbytes(b->cdata, cdata, len);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+lock_from_baton(svn_lock_t **lock,
+                svn_ra_dav__request_t *req,
+                const char *path,
+                lock_baton_t *lrb, apr_pool_t *pool)
+{
+  const char *val;
+  svn_lock_t *lck = svn_lock_create(pool);
+
+  val = ne_get_response_header(req->req, SVN_DAV_CREATIONDATE_HEADER);
+  if (val)
+    SVN_ERR_W(svn_time_from_cstring(&(lck->creation_date), val, pool),
+              "...");
+
+  val = ne_get_response_header(req->req, SVN_DAV_LOCK_OWNER_HEADER);
+  if (val)
+    lck->owner = apr_pstrdup(pool, val);
+  if (lrb->owner)
+    lck->comment = lrb->owner->data;
+  if (lrb->token)
+    lck->token = lrb->token->data;
+  if (path)
+    lck->path = path;
+  if (lrb->timeout)
+    {
+      const char *timeout_str = lrb->timeout->data;
+
+      if (strcmp(timeout_str, "Infinite") != 0)
+        {
+          if (strncmp("Second-", timeout_str, strlen("Second-")) == 0)
+            {
+              int time_offset = atoi(&(timeout_str[7]));
+
+              lck->expiration_date = lck->creation_date
+                + apr_time_from_sec(time_offset);
+            }
+          else
+            return svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS,
+                                    NULL, _("Invalid timeout value."));
+        }
+      else
+        lck->expiration_date = 0;
+    }
+  *lock = lck;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+do_lock(svn_lock_t **lock,
+        svn_ra_session_t *session,
+        const char *path,
+        const char *comment,
+        svn_boolean_t force,
+        svn_revnum_t current_rev,
+        apr_pool_t *pool)
+{
+  svn_ra_dav__request_t *req;
+  svn_stringbuf_t *body;
+  ne_uri uri;
+  int code;
+  const char *url;
+  svn_string_t fs_path;
+  ne_xml_parser *lck_parser;
+  svn_ra_dav__session_t *ras = session->priv;
+  lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
+
+  /* To begin, we convert the incoming path into an absolute fs-path. */
+  url = svn_path_url_add_component(ras->url->data, path, pool);
+  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras,
+                                        url, SVN_INVALID_REVNUM, pool));
+
+
+  ne_uri_parse(url, &uri);
+  req = svn_ra_dav__request_create(ras, "LOCK", uri.path, pool);
+  ne_uri_free(&uri);
+
+  lrb->pool = pool;
+  lck_parser = svn_ra_dav__xml_parser_create
+    (req, lock_start_element, lock_cdata, lock_end_element, lrb);
+
+  svn_ra_dav__add_response_body_reader(req, ne_accept_2xx,
+                                       ne_xml_parse_v, lck_parser);
+
+  body = svn_stringbuf_createf
+    (req->pool,
+     "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
+     "<D:lockinfo xmlns:D=\"DAV:\">" DEBUG_CR
+     " <D:lockscope><D:exclusive /></D:lockscope>" DEBUG_CR
+     " <D:locktype><D:write /></D:locktype>" DEBUG_CR
+     "%s" /* maybe owner */
+     "</D:lockinfo>",
+     comment ? apr_psprintf(req->pool,
+                            " <D:owner>%s</D:owner>" DEBUG_CR, comment)
+     : "");
+
+  /*### Attach a lock response reader to the request */
+
+  ne_add_request_header(req->req, "Depth", "0");
+  ne_add_request_header(req->req, "Timeout", "Infinite");
+  ne_add_request_header(req->req, "Content-Type", "text/xml");
+  ne_set_request_body_buffer(req->req, body->data, body->len);
+  if (force)
+    ne_add_request_header(req->req,
+                          SVN_DAV_OPTIONS_HEADER, SVN_DAV_OPTION_LOCK_STEAL);
+  if (SVN_IS_VALID_REVNUM(current_rev))
+    ne_add_request_header(req->req,
+                          SVN_DAV_VERSION_NAME_HEADER,
+                          apr_psprintf(pool, "%ld", current_rev));
+
+  SVN_ERR(svn_ra_dav__request_dispatch(&code, req, 200, 0, pool));
+
+  /*###FIXME: we never verified whether we have received back the type
+    of lock we requested: was it shared/exclusive? was it write/otherwise?
+    How many did we get back? Only one? */
+  SVN_ERR(lock_from_baton(lock, req, fs_path.data, lrb, pool));
+
+  svn_ra_dav__request_destroy(req);
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 svn_ra_dav__lock(svn_ra_session_t *session,
@@ -1219,8 +1336,6 @@ svn_ra_dav__lock(svn_ra_session_t *session,
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_ra_dav__session_t *ras = session->priv;
   svn_error_t *ret_err = NULL;
-
-  setup_neon_request_hook(ras);
 
   /* ### TODO for 1.3: Send all the locks over the wire at once.  This
      loop is just a temporary shim. */
@@ -1239,8 +1354,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
       path = key;
       revnum = val;
 
-      err = shim_svn_ra_dav__lock(session, &lock, path, comment, 
-                                  force, *revnum, iterpool);
+      err = do_lock(&lock, session, path, comment, force, *revnum, iterpool);
 
       if (err && !SVN_ERR_IS_LOCK_ERROR(err))
         {
@@ -1271,16 +1385,19 @@ svn_ra_dav__lock(svn_ra_session_t *session,
 
 /* ###TODO for 1.3: Send all lock tokens to the server at once. */
 static svn_error_t *
-shim_svn_ra_dav__unlock(svn_ra_session_t *session,
-                        const char *path,
-                        const char *token,
-                        svn_boolean_t force,
-                        apr_pool_t *pool)
+do_unlock(svn_ra_session_t *session,
+          const char *path,
+          const char *token,
+          svn_boolean_t force,
+          apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
   int rv;
   const char *url;
+  const char *url_path;
   struct ne_lock *nlock;
+
+  apr_hash_t *extra_headers = apr_hash_make(pool);
 
   /* Make a neon lock structure containing token and full URL to unlock. */
   nlock = ne_lock_create();
@@ -1292,6 +1409,8 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
                                        rv, pool);
     }
 
+  url_path = apr_pstrdup(pool, nlock->uri.path);
+  ne_lock_destroy(nlock);
   /* In the case of 'force', we might not have a token at all.
      Unfortunately, ne_unlock() insists on sending one, and mod_dav
      insists on having a valid token for UNLOCK requests.  That means
@@ -1305,50 +1424,19 @@ shim_svn_ra_dav__unlock(svn_ra_session_t *session,
         return svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
                                  _("'%s' is not locked in the repository"),
                                  path);
-      
-      nlock->token = ne_strdup(lock->token);
-    }
-  else
-    {
-      nlock->token = ne_strdup(token);
+      token = lock->token;
     }
 
-  /* Clear out the lrb... */
-  memset((ras->lrb), 0, sizeof(*ras->lrb));
 
-  /* ...and load it up again. */
-  ras->lrb->pool = pool;
-  ras->lrb->force = force;
 
-  /* Issue UNLOCK request. */
-  rv = ne_unlock(ras->sess, nlock);
+  apr_hash_set(extra_headers, "Lock-Token", APR_HASH_KEY_STRING,
+               apr_psprintf(pool, "<%s>", token));
+  if (force)
+    apr_hash_set(extra_headers, SVN_DAV_OPTIONS_HEADER, APR_HASH_KEY_STRING,
+                 SVN_DAV_OPTION_LOCK_BREAK);
 
-  /* Did we get a <D:error> response? */
-  if (ras->lrb->err)
-    {
-      ne_lock_destroy(nlock);
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-
-      return ras->lrb->err;
-    }
-
-  /* Did we get some other sort of neon error? */
-  if (rv)
-    {
-      ne_lock_destroy(nlock);
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-      return svn_ra_dav__convert_error(ras->sess,
-                                       _("Unlock request failed"), rv, pool);
-    }  
-
-  /* Free neon things. */
-  ne_lock_destroy(nlock);
-  if (ras->lrb->error_parser)
-    ne_xml_destroy(ras->lrb->error_parser);
-
-  return SVN_NO_ERROR;
+  return svn_ra_dav__simple_request(NULL, ras, "UNLOCK", url_path,
+                                    extra_headers, 204, 0, pool);
 }
 
 
@@ -1364,8 +1452,6 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_ra_dav__session_t *ras = session->priv;
   svn_error_t *ret_err = NULL;
-
-  setup_neon_request_hook(ras);
 
   /* ### TODO for 1.3: Send all the lock tokens over the wire at once.
         This loop is just a temporary shim. */
@@ -1388,7 +1474,7 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
       else
         token = NULL;
 
-      err = shim_svn_ra_dav__unlock(session, path, token, force, iterpool);
+      err = do_unlock(session, path, token, force, iterpool);
 
       if (err && !SVN_ERR_IS_UNLOCK_ERROR(err))
         {
