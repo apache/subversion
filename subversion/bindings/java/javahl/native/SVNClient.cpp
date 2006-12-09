@@ -1634,9 +1634,9 @@ void SVNClient::diff(const char *target, Revision &pegRevision,
 
 void
 SVNClient::diffSummarize(const char *target1, Revision &revision1,
-			 const char *target2, Revision &revision2,
-			 bool recurse, bool ignoreAncestry,
-			 DiffSummaryReceiver &receiver)
+                         const char *target2, Revision &revision2,
+                         bool recurse, bool ignoreAncestry,
+                         DiffSummaryReceiver &receiver)
 {
     svn_error_t *err;
     Pool requestPool;
@@ -1672,11 +1672,11 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
     }
 
     err = svn_client_diff_summarize(path1.c_str(), revision1.revision(),
-				    path2.c_str(), revision2.revision(),
-				    recurse ? TRUE : FALSE,
-				    ignoreAncestry ? TRUE : FALSE,
-				    DiffSummaryReceiver::summarize, &receiver,
-				    ctx, requestPool.pool());
+                                    path2.c_str(), revision2.revision(),
+                                    recurse ? TRUE : FALSE,
+                                    ignoreAncestry ? TRUE : FALSE,
+                                    DiffSummaryReceiver::summarize, &receiver,
+                                    ctx, requestPool.pool());
     if (err != NULL)
     {
         JNIUtil::handleSVNError(err);

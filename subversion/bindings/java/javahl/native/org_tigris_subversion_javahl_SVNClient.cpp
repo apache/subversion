@@ -1464,7 +1464,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diffSummarize
     }
 
     cl->diffSummarize(target1, revision1, target2, revision2, (bool) jrecurse,
-		      (bool) jignoreAncestry, receiver);
+                      (bool) jignoreAncestry, receiver);
 }
 
 /*
