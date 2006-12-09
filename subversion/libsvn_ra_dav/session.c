@@ -1213,7 +1213,7 @@ lock_from_baton(svn_lock_t **lock,
   val = ne_get_response_header(req->req, SVN_DAV_CREATIONDATE_HEADER);
   if (val)
     SVN_ERR_W(svn_time_from_cstring(&(lck->creation_date), val, pool),
-              "...");
+              _("Invalid creation date header value in response."));
 
   val = ne_get_response_header(req->req, SVN_DAV_LOCK_OWNER_HEADER);
   if (val)
