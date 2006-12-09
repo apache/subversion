@@ -481,14 +481,12 @@ remove_tmpfiles(apr_hash_t *tempfiles,
   for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
     {
       const void *key;
-      apr_ssize_t keylen;
-      void *val;
       svn_node_kind_t kind;
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      apr_hash_this(hi, &key, &keylen, &val);
+      apr_hash_this(hi, &key, NULL, NULL);
       SVN_ERR(svn_io_check_path((const char *)key, &kind, pool));
       if (kind == svn_node_file)
         SVN_ERR(svn_io_remove_file((const char *)key, pool));

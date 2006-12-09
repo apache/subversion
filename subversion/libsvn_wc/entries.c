@@ -2743,7 +2743,6 @@ walker_helper(const char *dirpath,
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
       const void *key;
-      apr_ssize_t klen;
       void *val;
       const svn_wc_entry_t *current_entry; 
       const char *entrypath;
@@ -2752,7 +2751,7 @@ walker_helper(const char *dirpath,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      apr_hash_this(hi, &key, &klen, &val);
+      apr_hash_this(hi, &key, NULL, &val);
       current_entry = val;
 
       if (strcmp(current_entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)

@@ -1028,9 +1028,7 @@ delta_dirs(struct context *c,
       for (hi = apr_hash_first(pool, s_entries); hi; hi = apr_hash_next(hi))
         {
           const svn_fs_dirent_t *s_entry;
-          const void *key;
           void *val;
-          apr_ssize_t klen;
           const char *e_fullpath;
           svn_node_kind_t src_kind;
           
@@ -1038,7 +1036,7 @@ delta_dirs(struct context *c,
           svn_pool_clear(subpool);
 
           /* KEY is the entry name in source, VAL the dirent */
-          apr_hash_this(hi, &key, &klen, &val);
+          apr_hash_this(hi, NULL, NULL, &val);
           s_entry = val;
           src_kind = s_entry->kind;
           e_fullpath = svn_path_join(edit_path, s_entry->name, subpool);

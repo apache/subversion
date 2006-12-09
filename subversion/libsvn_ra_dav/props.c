@@ -1265,16 +1265,13 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
      get the item. */
   for (hi = apr_hash_first(pool, resources); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
       void *val;
-      const char *childname;
       svn_ra_dav_resource_t *resource;
       const svn_string_t *propval;
       apr_hash_index_t *h;
       svn_dirent_t *entry;
 
-      apr_hash_this(hi, &key, NULL, &val);
-      childname =  key;
+      apr_hash_this(hi, NULL, NULL, &val);
       resource = val;
           
       entry = apr_pcalloc(pool, sizeof(*entry));
@@ -1296,8 +1293,7 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
            h; h = apr_hash_next(h))
         {
           const void *kkey;
-          void *vval;
-          apr_hash_this(h, &kkey, NULL, &vval);
+          apr_hash_this(h, &kkey, NULL, NULL);
           
           if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
                       sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -667,9 +667,8 @@ jobjectArray SVNAdmin::lslocks(const char *path)
     for (hi = apr_hash_first (requestPool.pool(), locks); hi; 
             hi = apr_hash_next (hi),i++)
     {
-        const void *key;
         void *val;
-        apr_hash_this (hi, &key, NULL, &val);
+        apr_hash_this (hi, NULL, NULL, &val);
         svn_lock_t *lock = (svn_lock_t *)val;
         jobject jLock = SVNClient::createJavaLock(lock);
         env->SetObjectArrayElement(ret, i, jLock);

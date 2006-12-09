@@ -920,10 +920,9 @@ svn_wc__wcprops_write(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   for (hi = apr_hash_first(pool, wcprops); hi && ! any_props;
        hi = apr_hash_next(hi))
     {
-      const void *key;
       void *val;
 
-      apr_hash_this(hi, &key, NULL, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
       proplist = val;
       if (apr_hash_count(proplist) > 0)
         any_props = TRUE;
