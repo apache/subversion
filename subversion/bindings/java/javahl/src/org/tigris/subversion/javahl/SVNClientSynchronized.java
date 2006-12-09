@@ -886,8 +886,8 @@ public class SVNClientSynchronized implements SVNClientInterface
      * this parameter <code>false</code>, since a file might have been
      * modified between two revisions, but still have the same
      * contents.
-     * @param receiver As each is difference found, this callback is
-     * invoked with a description of the difference.
+     * @param receiver As each is difference is found, this callback
+     * is invoked with a description of the difference.
      *
      * @exception ClientException
      * @since 1.5
