@@ -695,7 +695,10 @@ class WinGeneratorBase(GeneratorBase):
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
             or isinstance(target, gen_base.TargetSWIGLib)):
-      fakeincludes.append(self.swig_libdir)
+      if self.swig_vernum >= 103028:
+        fakeincludes.append(self.apath(self.swig_libdir, target.lang))
+      else:
+        fakeincludes.append(self.swig_libdir)
 
     fakeincludes.append(self.apath(self.zlib_path))
 
