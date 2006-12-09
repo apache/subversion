@@ -1038,13 +1038,11 @@ print_tree(svn_fs_root_t *root,
   subpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_ssize_t keylen;
       void *val;
       svn_fs_dirent_t *entry;
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, &keylen, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
       entry = val;
       SVN_ERR(print_tree(root, svn_path_join(path, entry->name, pool),
                          entry->id, (entry->kind == svn_node_dir),

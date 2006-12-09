@@ -134,12 +134,11 @@ look_up_committable(apr_hash_t *committables,
 
   for (hi = apr_hash_first(pool, committables); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
       void *val;
       apr_array_header_t *these_committables;
       int i;
       
-      apr_hash_this(hi, &key, NULL, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
       these_committables = val;
       
       for (i = 0; i < these_committables->nelts; i++)
@@ -1291,8 +1290,6 @@ svn_client__do_commit(const char *base_url,
   /* Transmit outstanding text deltas. */
   for (hi = apr_hash_first(pool, file_mods); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_ssize_t klen;
       struct file_mod_t *mod;
       svn_client_commit_item2_t *item;
       void *val;
@@ -1304,7 +1301,7 @@ svn_client__do_commit(const char *base_url,
       
       svn_pool_clear(subpool);
       /* Get the next entry. */
-      apr_hash_this(hi, &key, &klen, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
       mod = val;
 
       /* Transmit the entry. */

@@ -1,7 +1,7 @@
 /* fs-helpers.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -234,13 +234,11 @@ get_dir_entries(apr_hash_t *tree_entries,
      names */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_ssize_t keylen;
       void *val;
       svn_fs_dirent_t *dirent;
       const char *full_path;
  
-      apr_hash_this(hi, &key, &keylen, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
       dirent = val;
 
       /* Calculate the full path of this entry (by appending the name
@@ -386,9 +384,8 @@ svn_test__validate_tree(svn_fs_root_t *root,
     {
       const void *key;
       apr_ssize_t keylen;
-      void *val;
 
-      apr_hash_this(hi, &key, &keylen, &val);
+      apr_hash_this(hi, &key, &keylen, NULL);
 
       /* If we don't have an extra entries string, make one. */
       if (! extra_entries)

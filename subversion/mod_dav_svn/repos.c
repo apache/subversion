@@ -2616,12 +2616,11 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                hi; hi = apr_hash_next(hi))
             {
               const void *key;
-              apr_ssize_t klen;
               void *val;
               svn_io_dirent_t *dirent;
               svn_fs_dirent_t *ent = apr_pcalloc(resource->pool, sizeof(*ent));
 
-              apr_hash_this(hi, &key, &klen, &val);
+              apr_hash_this(hi, &key, NULL, &val);
               dirent = val;
 
               if (dirent->kind != svn_node_dir)

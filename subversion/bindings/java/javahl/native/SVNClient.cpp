@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1246,9 +1246,8 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     if (hi == NULL)
         return NULL; // no property with this name
 
-    const char *filename;
     svn_string_t *propval;
-    apr_hash_this (hi, (const void **)&filename, NULL, (void**)&propval);
+    apr_hash_this (hi, NULL, NULL, (void**)&propval);
 
     if(propval == NULL)
         return NULL;
