@@ -1293,9 +1293,9 @@ do_lock(svn_lock_t **lock,
      " <D:locktype><D:write /></D:locktype>" DEBUG_CR
      "%s" /* maybe owner */
      "</D:lockinfo>",
-     comment ? apr_psprintf(req->pool,
-                            " <D:owner>%s</D:owner>" DEBUG_CR, comment)
-     : "");
+     (comment
+      ? apr_psprintf(req->pool, " <D:owner>%s</D:owner>" DEBUG_CR, comment)
+      : ""));
 
   /*### Attach a lock response reader to the request */
 
