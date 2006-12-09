@@ -1301,7 +1301,8 @@ do_lock(svn_lock_t **lock,
 
   ne_add_request_header(req->req, "Depth", "0");
   ne_add_request_header(req->req, "Timeout", "Infinite");
-  ne_add_request_header(req->req, "Content-Type", "text/xml");
+  ne_add_request_header(req->req, "Content-Type",
+                        "text/xml; charset=\"utf-8\"");
   ne_set_request_body_buffer(req->req, body->data, body->len);
   if (force)
     ne_add_request_header(req->req,
