@@ -534,8 +534,10 @@ svn_ra_dav__xml_collect_cdata(void *baton, int state,
 
 /* Our equivalent of ne_xml_startelm_cb, the difference being that it
  * returns errors in a svn_error_t, and returns the element type via
- * ELEM.  To ignore the element *ELEM should be set to NE_XML_DECLINE
- * and SVN_NO_ERROR should be returned.
+ * ELEM.  To ignore the element *ELEM should be set to
+ * SVN_RA_DAV__XML_DECLINE and SVN_NO_ERROR should be returned.
+ * *ELEM can be set to SVN_RA_DAV__XML_INVALID to indicate invalid XML
+ * (and abort the parse).
  */
 typedef svn_error_t * (*svn_ra_dav__startelm_cb_t)(int *elem,
                                                    void *baton,
