@@ -794,12 +794,6 @@ svn_ra_dav__open(svn_ra_session_t *session,
   ne_set_server_auth(sess2, request_auth, ras);
 #endif
 
-  /* Store our RA session baton in Neon's private data slot so we can
-     get at it in functions that take only ne_session_t *sess
-     (instead of the full svn_ra_dav__session_t *ras). */
-  ne_set_session_private(sess, SVN_RA_NE_SESSION_ID, ras);
-  ne_set_session_private(sess2, SVN_RA_NE_SESSION_ID, ras);
-
   if (is_ssl_session)
     {
       const char *authorities, *trust_default_ca;
@@ -807,7 +801,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
             cfg, server_group,
             SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES,
             NULL);
-      
+
       if (authorities != NULL)
         {
           char *files, *file, *last;

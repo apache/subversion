@@ -157,11 +157,6 @@ svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
 /* Destroy request REQ and any associated resources */
 #define svn_ra_dav__request_destroy(req) svn_pool_destroy((req)->pool)
 
-/* Id used with ne_set_session_private() and ne_get_session_private()
-   to retrieve the userdata (which is currently the RA session baton!) */
-#define SVN_RA_NE_SESSION_ID   "SVN"
-
-
 #ifdef SVN_DEBUG
 #define DEBUG_CR "\n"
 #else

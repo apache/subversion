@@ -376,7 +376,7 @@ static svn_error_t *add_props(apr_hash_t *props,
 }
 
 
-static svn_error_t *custom_get_request(ne_session *sess,
+static svn_error_t *custom_get_request(svn_ra_dav__session_t *ras,
                                        const char *url,
                                        const char *relpath,
                                        ne_block_reader reader,
@@ -391,8 +391,6 @@ static svn_error_t *custom_get_request(ne_session *sess,
   svn_ra_dav__request_t *request;
   ne_request *req;
   svn_error_t *err;
-  svn_ra_dav__session_t *ras = ne_get_session_private(sess,
-                                                      SVN_RA_NE_SESSION_ID);
 
   if (use_base)
     {
@@ -559,7 +557,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   return 0;
 }
 
-static svn_error_t *simple_fetch_file(ne_session *sess,
+static svn_error_t *simple_fetch_file(svn_ra_dav__session_t *ras,
                                       const char *url,
                                       const char *relpath,
                                       svn_boolean_t text_deltas,
@@ -588,7 +586,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
   frc.pool = pool;
 
-  SVN_ERR(custom_get_request(sess, url, relpath,
+  SVN_ERR(custom_get_request(ras, url, relpath,
                              fetch_file_reader, &frc,
                              get_wc_prop, cb_baton,
                              TRUE, pool));
@@ -798,7 +796,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
         apr_md5_init(&(fwc.md5_context));
 
       /* Fetch the file, shoving it at the provided stream. */
-      SVN_ERR(custom_get_request(ras->sess, final_url, path,
+      SVN_ERR(custom_get_request(ras, final_url, path,
                                  get_file_reader, &fwc,
                                  ras->callbacks->get_wc_prop,
                                  ras->callback_baton,
@@ -2394,7 +2392,7 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
       if (! rb->receiving_all)
         {
           /* assert: rb->href->len > 0 */
-          SVN_ERR(simple_fetch_file(rb->ras->sess2, 
+          SVN_ERR(simple_fetch_file(rb->ras,
                                     rb->href->data,
                                     TOP_DIR(rb).pathbuf->data,
                                     rb->fetch_content,
@@ -2609,7 +2607,7 @@ end_element(void *userdata, int state,
       /* fetch file */
       if (! rb->receiving_all)
         {
-          SVN_ERR(simple_fetch_file(rb->ras->sess2,
+          SVN_ERR(simple_fetch_file(rb->ras,
                                     rb->href->data,
                                     TOP_DIR(rb).pathbuf->data,
                                     rb->fetch_content,
