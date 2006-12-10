@@ -715,7 +715,7 @@ svn_repos_replay2(svn_fs_root_t *root,
       SVN_ERR(svn_fs_revision_root(&cb_baton.compare_root, 
                                    svn_fs_root_fs(root), 
                                    svn_fs_is_revision_root(root) 
-                                     ? svn_fs_revision_root_revision(root)
+                                     ? svn_fs_revision_root_revision(root) - 1
                                      : svn_fs_txn_root_base_revision(root),
                                    pool));
     }
