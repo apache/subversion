@@ -18,26 +18,15 @@
 
 
 
-#include <assert.h>
-#include <ctype.h>
-
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
-#include <apr_general.h>
-#include <apr_xml.h>
-
-#include <ne_auth.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
 #include "../libsvn_ra/ra_loader.h"
-#include "svn_config.h"
-#include "svn_delta.h"
-#include "svn_version.h"
 #include "svn_path.h"
 #include "svn_time.h"
-#include "svn_xml.h"
 #include "svn_private_config.h"
 
 #include "ra_dav.h"
