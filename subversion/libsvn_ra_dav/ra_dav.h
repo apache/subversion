@@ -76,39 +76,6 @@ typedef struct {
 
 
 
-/* Context for neon request hooks; shared by the neon callbacks in
-   session.c.  */
-struct lock_request_baton
-{
-  /* The method neon is about to execute. */
-  const char *method;
-
-  /* The current working revision of item being locked. */
-  svn_revnum_t current_rev;
-
-  /* Whether client is "forcing" a lock or unlock. */
-  svn_boolean_t force;
-
-  /* The creation-date returned for newly created lock. */
-  apr_time_t creation_date;
-
-  /* The person who created the lock. */
-  const char *lock_owner;
-
-  /* A parser for handling <D:error> responses from mod_dav_svn. */
-  ne_xml_parser *error_parser;
-
-  /* If <D:error> is returned, here's where the parsed result goes. */
-  svn_error_t *err;
-
-  /* The neon request being executed */
-  ne_request *request;
-
-  /* A place for allocating fields in this structure. */
-  apr_pool_t *pool;
-};
-
-
 typedef struct {
   apr_pool_t *pool;
   svn_stringbuf_t *url;                 /* original, unparsed session url */
@@ -129,10 +96,6 @@ typedef struct {
 
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
-
-  
-  struct lock_request_baton *lrb;       /* used by lock/unlock */
-
 } svn_ra_dav__session_t;
 
 
@@ -752,7 +715,6 @@ enum {
   ELEM_lock_scope,
   ELEM_lock_depth,
   ELEM_lock_timeout,
-  ELEM_lock_href,
   ELEM_editor_report,
   ELEM_open_root,
   ELEM_apply_textdelta,
