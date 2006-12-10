@@ -26,8 +26,6 @@
 #include <apr_strings.h>
 #include <apr_xml.h>
 
-#include <ne_socket.h>
-
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_path.h"

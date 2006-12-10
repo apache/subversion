@@ -24,10 +24,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#include <ne_socket.h>
 #include <ne_basic.h>
-#include <ne_props.h>
-#include <ne_xml.h>
 
 #include "svn_error.h"
 #include "svn_path.h"

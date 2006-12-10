@@ -26,13 +26,8 @@
 #include <apr_general.h>
 #include <apr_xml.h>
 
-#include <ne_socket.h>
-#include <ne_request.h>
 #include <ne_uri.h>
 #include <ne_auth.h>
-#include <ne_locks.h>
-#include <ne_alloc.h>
-#include <ne_utils.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -1304,22 +1299,18 @@ do_unlock(svn_ra_session_t *session,
   int rv;
   const char *url;
   const char *url_path;
-  struct ne_lock *nlock;
+  ne_uri uri;
 
   apr_hash_t *extra_headers = apr_hash_make(pool);
 
   /* Make a neon lock structure containing token and full URL to unlock. */
-  nlock = ne_lock_create();
-  url = svn_path_url_add_component(ras->url->data, path, pool);  
-  if ((rv = ne_uri_parse(url, &(nlock->uri))))
-    {
-      ne_lock_destroy(nlock);
-      return svn_ra_dav__convert_error(ras->sess, _("Failed to parse URI"),
-                                       rv, pool);
-    }
+  url = svn_path_url_add_component(ras->url->data, path, pool);
+  if ((rv = ne_uri_parse(url, &uri)))
+    return svn_ra_dav__convert_error(ras->sess, _("Failed to parse URI"),
+                                     rv, pool);
 
-  url_path = apr_pstrdup(pool, nlock->uri.path);
-  ne_lock_destroy(nlock);
+  url_path = apr_pstrdup(pool, uri.path);
+  ne_uri_free(&uri);
   /* In the case of 'force', we might not have a token at all.
      Unfortunately, ne_unlock() insists on sending one, and mod_dav
      insists on having a valid token for UNLOCK requests.  That means

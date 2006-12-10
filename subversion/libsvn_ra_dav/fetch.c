@@ -30,13 +30,7 @@
 #include <apr_md5.h>
 #include <apr_xml.h>
 
-#include <ne_socket.h>
 #include <ne_basic.h>
-#include <ne_utils.h>
-#include <ne_props.h>
-#include <ne_xml.h>
-#include <ne_request.h>
-#include <ne_compress.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"

@@ -22,7 +22,6 @@
 #include <apr_want.h>
 
 #include <ne_alloc.h>
-#include <ne_socket.h>
 #include <ne_uri.h>
 #include <ne_compress.h>
 #include <ne_basic.h>

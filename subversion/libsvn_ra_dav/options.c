@@ -20,9 +20,6 @@
 
 #include <apr_pools.h>
 
-#include <ne_socket.h>
-#include <ne_request.h>
-
 #include "svn_error.h"
 
 #include "svn_private_config.h"

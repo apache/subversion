@@ -23,10 +23,6 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#include <ne_socket.h>
-#include <ne_request.h>
-
-
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
