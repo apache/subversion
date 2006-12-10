@@ -730,8 +730,8 @@ static svn_error_t * commit_delete_entry(const char *path,
      failed deletion (because it's already missing) is OK;  deletion
      is an idempotent merge operation. */
   serr =  svn_ra_dav__simple_request(&code, parent->cc->ras,
-                                     "DELETE", child, NULL,
-                                     extra_headers,
+                                     "DELETE", child,
+                                     extra_headers, NULL,
                                      204 /* Created */,
                                      404 /* Not Found */, pool);
 
