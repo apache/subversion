@@ -509,6 +509,16 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(svn_ra_dav__request_t *req,
                                                 apr_file_t *body_file);
 
 
+#define SVN_RA_DAV__DEPTH_ZERO      0
+#define SVN_RA_DAV__DEPTH_ONE       1
+#define SVN_RA_DAV__DEPTH_INFINITE -1
+/* Add a 'Depth' header to a hash of headers.
+ *
+ * DEPTH is one of the above defined SVN_RA_DAV__DEPTH_* values.
+ */
+void
+svn_ra_dav__add_depth_header(apr_hash_t *extra_headers, int depth);
+
 /** Find a given element in the table of elements.
  *
  * The table of XML elements @a table is searched until element identified by
@@ -850,7 +860,7 @@ svn_ra_dav__simple_request(int *code,
 /* Helper function layered over SVN_RA_DAV__SIMPLE_REQUEST() to issue
    a HTTP COPY request.
 
-   DEPTH is one of NE_DEPTH_INFINITE, NE_DEPTH_ZERO or NE_DEPTH_ONE. */
+   DEPTH is one of the SVN_RA_DAV__DEPTH_* constants. */
 svn_error_t *
 svn_ra_dav__copy(svn_ra_dav__session_t *ras,
                  svn_boolean_t overwrite,

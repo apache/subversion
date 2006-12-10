@@ -987,7 +987,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
       /* Just like Nautilus, Cadaver, or any other browser, we do a
          PROPFIND on the directory of depth 1. */
       SVN_ERR(svn_ra_dav__get_props(&resources, ras,
-                                    final_url, NE_DEPTH_ONE,
+                                    final_url, SVN_RA_DAV__DEPTH_ONE,
                                     NULL, which_props, pool));
       
       /* Count the number of path components in final_url. */
@@ -1013,8 +1013,9 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
           childname =  key;
           resource = val;
           
-          /* Skip the effective '.' entry that comes back from NE_DEPTH_ONE.
-             The children must have one more component then final_url.
+          /* Skip the effective '.' entry that comes back from
+             SVN_RA_DAV__DEPTH_ONE. The children must have one more
+             component then final_url.
              Note that we can't just strcmp the URLs because of URL encoding
              differences (i.e. %3c vs. %3C etc.) */
           if (svn_path_component_count(childname) == final_url_n_components)
@@ -2197,7 +2198,7 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
           SVN_ERR(svn_ra_dav__get_props(&bc_children,
                                         rb->ras,
                                         bc_url,
-                                        NE_DEPTH_ONE,
+                                        SVN_RA_DAV__DEPTH_ONE,
                                         NULL, NULL /* allprops */,
                                         TOP_DIR(rb).pool));
           

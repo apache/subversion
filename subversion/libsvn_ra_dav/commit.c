@@ -871,7 +871,8 @@ static svn_error_t * commit_add_dir(const char *path,
       /* Have neon do the COPY. */
       SVN_ERR(svn_ra_dav__copy(parent->cc->ras,
                                1,                  /* overwrite */
-                               NE_DEPTH_INFINITE,  /* always copy dirs deeply */
+                               SVN_RA_DAV__DEPTH_INFINITE,
+                                                   /* always copy dirs deeply */
                                copy_src,           /* source URI */
                                child->rsrc->wr_url,/* dest URI */
                                workpool));
@@ -1064,7 +1065,8 @@ static svn_error_t * commit_add_file(const char *path,
       /* Have neon do the COPY. */
       SVN_ERR(svn_ra_dav__copy(parent->cc->ras,
                                1,               /* overwrite */
-                               NE_DEPTH_ZERO,   /* file: this doesn't matter */
+                               SVN_RA_DAV__DEPTH_ZERO,
+                                                /* file: this doesn't matter */
                                copy_src,        /* source URI */
                                file->rsrc->wr_url,/* dest URI */
                                workpool));

@@ -1106,6 +1106,20 @@ svn_ra_dav__simple_request(int *code,
   return SVN_NO_ERROR;
 }
 
+void
+svn_ra_dav__add_depth_header(apr_hash_t *extra_headers, int depth)
+{
+  /*  assert(extra_headers != NULL);
+  assert(depth == SVN_RA_DAV__DEPTH_ZERO
+         || depth == SVN_RA_DAV__DEPTH_ONE
+         || depth == SVN_RA_DAV__DEPTH_INFINITE); */
+  apr_hash_set(extra_headers, "Depth", APR_HASH_KEY_STRING,
+               (depth == SVN_RA_DAV__DEPTH_INFINITE)
+               ? "infinity" : (depth == SVN_RA_DAV__DEPTH_ZERO) ? "0" : "1");
+
+  return;
+}
+
 
 svn_error_t *
 svn_ra_dav__copy(svn_ra_dav__session_t *ras,
@@ -1121,11 +1135,9 @@ svn_ra_dav__copy(svn_ra_dav__session_t *ras,
   abs_dst = apr_psprintf(pool, "%s://%s%s", ne_get_scheme(ras->sess),
                          ne_get_server_hostport(ras->sess), dst);
   apr_hash_set(extra_headers, "Destination", APR_HASH_KEY_STRING, abs_dst);
-  apr_hash_set(extra_headers, "Depth", APR_HASH_KEY_STRING,
-               (depth == NE_DEPTH_INFINITE)
-               ? "infinity" : (depth == NE_DEPTH_ZERO) ? "0" : "1");
   apr_hash_set(extra_headers, "Overwrite", APR_HASH_KEY_STRING,
                overwrite ? "T" : "F");
+  svn_ra_dav__add_depth_header(extra_headers, depth);
 
   return svn_ra_dav__simple_request(NULL, ras, "COPY", src, extra_headers,
                                     NULL, 201, 204, pool);

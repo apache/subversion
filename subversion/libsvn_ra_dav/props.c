@@ -488,15 +488,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   svn_stringbuf_t *body;
   apr_hash_t *extra_headers = apr_hash_make(pool);
 
-  /* Add a Depth header. */
-  if (depth == NE_DEPTH_ZERO)
-    apr_hash_set(extra_headers, "Depth", 5, "0");
-  else if (depth == NE_DEPTH_ONE)
-    apr_hash_set(extra_headers, "Depth", 5, "1");
-  else if (depth == NE_DEPTH_INFINITE)
-    apr_hash_set(extra_headers, "Depth", 5, "infinite");
-  else
-    abort(); /* somebody passed some poo to our function. */
+  svn_ra_dav__add_depth_header(extra_headers, depth);
 
   /* If we have a label, use it. */
   if (label != NULL)
@@ -565,7 +557,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
   if (len > 1 && url[len - 1] == '/')
       url_path[len - 1] = '\0';
 
-  SVN_ERR(svn_ra_dav__get_props(&props, sess, url_path, NE_DEPTH_ZERO,
+  SVN_ERR(svn_ra_dav__get_props(&props, sess, url_path, SVN_RA_DAV__DEPTH_ZERO,
                                 label, which_props, pool));
 
   /* ### HACK.  We need to have the client canonicalize paths, get rid
@@ -1220,7 +1212,8 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
     }
 
   /* Depth-zero PROPFIND is the One True DAV Way. */
-  err = svn_ra_dav__get_props(&resources, ras, final_url, NE_DEPTH_ZERO,
+  err = svn_ra_dav__get_props(&resources, ras, final_url,
+                              SVN_RA_DAV__DEPTH_ZERO,
                               NULL, NULL /* all props */, pool);
   if (err) 
     {
