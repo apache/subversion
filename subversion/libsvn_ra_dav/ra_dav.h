@@ -904,6 +904,27 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                       apr_pool_t *pool);
 
 /*
+ * Implements the lock RA layer function. */
+svn_error_t *
+svn_ra_dav__lock(svn_ra_session_t *session,
+                 apr_hash_t *path_revs,
+                 const char *comment,
+                 svn_boolean_t force,
+                 svn_ra_lock_callback_t lock_func,
+                 void *lock_baton,
+                 apr_pool_t *pool);
+
+/*
+ * Implements the unlock RA layer function. */
+svn_error_t *
+svn_ra_dav__unlock(svn_ra_session_t *session,
+                   apr_hash_t *path_tokens,
+                   svn_boolean_t force,
+                   svn_ra_lock_callback_t lock_func,
+                   void *lock_baton,
+                   apr_pool_t *pool);
+
+/*
  * Implements the get_lock RA layer function. */
 svn_error_t *
 svn_ra_dav__get_lock(svn_ra_session_t *session,
