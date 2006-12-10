@@ -26,10 +26,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#include <stdlib.h>     /* for free() */
 #include <assert.h>
-
-#include <ne_basic.h>
 
 #include "svn_pools.h"
 #include "svn_error.h"

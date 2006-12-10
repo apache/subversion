@@ -26,7 +26,6 @@
 #include <apr_general.h>
 #include <apr_xml.h>
 
-#include <ne_uri.h>
 #include <ne_auth.h>
 
 #include "svn_error.h"
