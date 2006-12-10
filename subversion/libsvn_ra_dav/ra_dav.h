@@ -44,7 +44,6 @@ extern "C" {
 
 /* Rename these types and constants to abstract from Neon */
 
-#define SVN_RA_DAV__XML_VALID   -2
 #define SVN_RA_DAV__XML_DECLINE NE_XML_DECLINE
 #define SVN_RA_DAV__XML_INVALID NE_XML_ABORT
 

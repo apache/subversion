@@ -223,42 +223,42 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
     {
     case ELEM_root:
       if (child == ELEM_multistatus)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_multistatus:
       if (child == ELEM_response)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE;
 
     case ELEM_response:
       if ((child == ELEM_href) || (child == ELEM_propstat))
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE;
 
     case ELEM_propstat:
       if ((child == ELEM_prop) || (child == ELEM_status))
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE;
 
     case ELEM_prop:
-      return SVN_RA_DAV__XML_VALID; /* handle all children of <prop> */
+      return child; /* handle all children of <prop> */
         
     case ELEM_baseline_coll:
     case ELEM_checked_in:
     case ELEM_vcc:
       if (child == ELEM_href)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* not concerned with other types */
       
     case ELEM_resourcetype:
       if ((child == ELEM_collection) || (child == ELEM_baseline))
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* not concerned with other types
                                            (### now) */
@@ -278,15 +278,11 @@ start_element(int *elem, void *baton, int parent,
   propfind_ctx_t *pc = baton;
   const svn_ra_dav__xml_elm_t *elm
     = svn_ra_dav__lookup_xml_elem(propfind_elements, nspace, name);
-  int acc = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
-  /* Accept unknown props */
 
-  if (acc != SVN_RA_DAV__XML_VALID)
-    {
-      *elem = acc;
-      return (acc == SVN_RA_DAV__XML_DECLINE) ?
-        SVN_NO_ERROR : svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
-    }
+
+  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  if (*elem < 1) /* not a valid element */
+    return SVN_NO_ERROR;
 
   svn_stringbuf_setempty(pc->cdata);
   *elem = elm ? elm->id : ELEM_unknown;

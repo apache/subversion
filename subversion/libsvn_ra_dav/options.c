@@ -55,19 +55,19 @@ validate_element(svn_ra_dav__xml_elmid parent, svn_ra_dav__xml_elmid child)
     {
     case ELEM_root:
       if (child == ELEM_options_response)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_options_response:
       if (child == ELEM_activity_coll_set)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* not concerned with other response */
 
     case ELEM_activity_coll_set:
       if (child == ELEM_href)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* not concerned with unknown crud */
 
@@ -85,16 +85,10 @@ start_element(int *elem, void *baton, int parent,
   options_ctx_t *oc = baton;
   const svn_ra_dav__xml_elm_t *elm
     = svn_ra_dav__lookup_xml_elem(options_elements, nspace, name);
-  int acc = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
 
-  if (acc != SVN_RA_DAV__XML_VALID)
-    {
-      *elem = acc;
-      return (acc == SVN_RA_DAV__XML_DECLINE) ?
-        SVN_NO_ERROR : svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
-    }
-  else
-    *elem = elm->id;
+  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  if (*elem < 1) /* Not a valid element */
+    return SVN_NO_ERROR;
 
   if (elm->id == ELEM_href)
     oc->want_cdata = oc->cdata;

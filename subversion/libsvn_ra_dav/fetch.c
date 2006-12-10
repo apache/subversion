@@ -1888,8 +1888,7 @@ svn_error_t *svn_ra_dav__rev_prop(svn_ra_session_t *session,
 */
 
 /* This implements the `svn_ra_dav__xml_validate_cb' prototype. */
-static int validate_element(void *userdata,
-                            svn_ra_dav__xml_elmid parent,
+static int validate_element(svn_ra_dav__xml_elmid parent,
                             svn_ra_dav__xml_elmid child)
 {
   /* We're being very strict with the validity of XML elements here. If
@@ -1902,7 +1901,7 @@ static int validate_element(void *userdata,
     {
     case ELEM_root:
       if (child == ELEM_update_report)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -1910,19 +1909,19 @@ static int validate_element(void *userdata,
       if (child == ELEM_target_revision
           || child == ELEM_open_directory
           || child == ELEM_resource_walk)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_resource_walk:
       if (child == ELEM_resource)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_resource:
       if (child == ELEM_checked_in)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -1939,7 +1938,7 @@ static int validate_element(void *userdata,
           || child == ELEM_delete_entry
           || child == ELEM_SVN_prop
           || child == ELEM_checked_in)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -1951,7 +1950,7 @@ static int validate_element(void *userdata,
           || child == ELEM_set_prop
           || child == ELEM_SVN_prop
           || child == ELEM_checked_in)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -1963,7 +1962,7 @@ static int validate_element(void *userdata,
           || child == ELEM_fetch_props
           || child == ELEM_set_prop
           || child == ELEM_remove_prop)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -1972,19 +1971,19 @@ static int validate_element(void *userdata,
           || child == ELEM_txdelta
           || child == ELEM_set_prop
           || child == ELEM_SVN_prop)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_checked_in:
       if (child == ELEM_href)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_set_prop:
       /* Prop name is an attribute, prop value is CDATA, so no child elts. */
-      return SVN_RA_DAV__XML_VALID;
+      return child;
 
     case ELEM_SVN_prop:
       /*      if (child == ELEM_version_name
@@ -1993,14 +1992,14 @@ static int validate_element(void *userdata,
               || child == ELEM_md5_checksum
               || child == ELEM_repository_uuid
               || child == ELEM_remove_prop)
-              return SVN_RA_DAV__XML_VALID;
+              return child;
               else
               return SVN_RA_DAV__XML_DECLINE;
       */
       /* ### TODO:  someday uncomment the block above, and make the
          else clause return NE_XML_IGNORE.  But first, neon needs to
          define that value.  :-) */
-      return SVN_RA_DAV__XML_VALID;
+      return child;
 
     default:
       return SVN_RA_DAV__XML_DECLINE;
@@ -2023,8 +2022,8 @@ static void push_dir(report_baton_t *rb,
 }
 
 /* This implements the `ne_xml_startelm_cb' prototype. */
-static svn_error_t * 
-start_element(int *elem, void *userdata, int parent_state, const char *nspace,
+static svn_error_t *
+start_element(int *elem, void *userdata, int parent, const char *nspace,
               const char *elt_name, const char **atts)
 {
   report_baton_t *rb = userdata;
@@ -2040,28 +2039,11 @@ start_element(int *elem, void *userdata, int parent_state, const char *nspace,
   apr_pool_t *subpool;
   const char *base_checksum = NULL;
   const svn_ra_dav__xml_elm_t *elm;
-  int rc;
 
   elm = svn_ra_dav__lookup_xml_elem(report_elements, nspace, elt_name);
-
-  if (elm == NULL)
-    {
-      *elem = NE_XML_DECLINE;
-      return SVN_NO_ERROR;
-    }
-
-  rc = validate_element(NULL, parent_state, elm->id);
-
-  if (rc != SVN_RA_DAV__XML_VALID)
-    {
-      if (rc == SVN_RA_DAV__XML_DECLINE)
-        {
-          *elem = NE_XML_DECLINE;
-          return SVN_NO_ERROR;
-        }
-      else
-        return UNEXPECTED_ELEMENT(nspace, elt_name);
-    }
+  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  if (*elem < 1) /* not a valid element */
+    return SVN_NO_ERROR;
 
   switch (elm->id)
     {
