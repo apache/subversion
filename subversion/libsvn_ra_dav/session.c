@@ -644,7 +644,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
 {
   apr_size_t len;
   ne_session *sess, *sess2;
-  ne_uri uri = { 0 };
+  ne_uri *uri = apr_pcalloc(pool, sizeof(*uri));
   svn_ra_dav__session_t *ras;
   int is_ssl_session;
   svn_boolean_t compression;
@@ -656,15 +656,16 @@ svn_ra_dav__open(svn_ra_session_t *session,
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
   /* Sanity check the URI */
-  SVN_ERR(parse_url(&uri, repos_URL));
+  SVN_ERR(parse_url(uri, repos_URL));
+
+  /* make sure we eventually destroy the uri */
+  apr_pool_cleanup_register(pool, uri, cleanup_uri, apr_pool_cleanup_null);
+
 
   /* Can we initialize network? */
   if (ne_sock_init() != 0)
-    {
-      ne_uri_free(&uri);
-      return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                              _("Network socket initialization failed"));
-    }
+    return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
+                            _("Network socket initialization failed"));
 
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
@@ -675,28 +676,29 @@ svn_ra_dav__open(svn_ra_session_t *session,
    * the scheme to lower case before we pass it on to Neon, otherwise we
    * would crash later on when we assume Neon has set up its https stuff
    * but it really didn't. */
-  for (itr = uri.scheme; *itr; ++itr)
+  for (itr = uri->scheme; *itr; ++itr)
     *itr = tolower(*itr);
 
-  is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
+  is_ssl_session = (strcasecmp(uri->scheme, "https") == 0);
   if (is_ssl_session)
     {
       if (ne_has_support(NE_FEATURE_SSL) == 0)
-        {
-          ne_uri_free(&uri);
-          return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                                  _("SSL is not supported"));
-        }
+        return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
+                                _("SSL is not supported"));
     }
   /* Create two neon session objects, and set their properties... */
-  sess = ne_session_create(uri.scheme, uri.host, uri.port);
-  sess2 = ne_session_create(uri.scheme, uri.host, uri.port);
+  sess = ne_session_create(uri->scheme, uri->host, uri->port);
+  sess2 = ne_session_create(uri->scheme, uri->host, uri->port);
+  /* make sure we will eventually destroy the session */
+  apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
+  apr_pool_cleanup_register(pool, sess2, cleanup_session,
+                            apr_pool_cleanup_null);
 
-  cfg = config ? apr_hash_get(config, 
+  cfg = config ? apr_hash_get(config,
                               SVN_CONFIG_CATEGORY_SERVERS,
                               APR_HASH_KEY_STRING) : NULL;
   if (cfg)
-    server_group = svn_config_find_group(cfg, uri.host,
+    server_group = svn_config_find_group(cfg, uri->host,
                                          SVN_CONFIG_SECTION_GROUPS, pool);
   else
     server_group = NULL;
@@ -709,29 +711,23 @@ svn_ra_dav__open(svn_ra_session_t *session,
     const char *proxy_password;
     int timeout;
     int debug;
-    svn_error_t *err;
-    
+
 #ifdef SVN_NEON_0_26
     neon_auth_types = NE_AUTH_BASIC | NE_AUTH_DIGEST;
     if (is_ssl_session)
       neon_auth_types |= NE_AUTH_NEGOTIATE;
 #endif
-    err = get_server_settings(&proxy_host,
-                              &proxy_port,
-                              &proxy_username,
-                              &proxy_password,
-                              &timeout,
-                              &debug,
-                              &compression,
-                              &neon_auth_types,
-                              cfg,
-                              uri.host,
-                              pool);
-    if (err)
-      {
-        ne_uri_free(&uri);
-        return err;
-      }
+    SVN_ERR(get_server_settings(&proxy_host,
+                                &proxy_port,
+                                &proxy_username,
+                                &proxy_password,
+                                &timeout,
+                                &debug,
+                                &compression,
+                                &neon_auth_types,
+                                cfg,
+                                uri->host,
+                                pool));
 
     if (debug)
       ne_debug_init(stderr, debug);
@@ -749,7 +745,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
 
             pab->username = proxy_username;
             pab->password = proxy_password ? proxy_password : "";
-        
+
             ne_set_proxy_auth(sess, proxy_auth, pab);
             ne_set_proxy_auth(sess2, proxy_auth, pab);
           }
@@ -761,28 +757,22 @@ svn_ra_dav__open(svn_ra_session_t *session,
     ne_set_read_timeout(sess2, timeout);
   }
 
-  /* make sure we will eventually destroy the session */
-  apr_pool_cleanup_register(pool, sess, cleanup_session,
-                            apr_pool_cleanup_null);
-  apr_pool_cleanup_register(pool, sess2, cleanup_session,
-                            apr_pool_cleanup_null);
-
   ne_set_useragent(sess, "SVN/" SVN_VERSION);
   ne_set_useragent(sess2, "SVN/" SVN_VERSION);
 
   /* clean up trailing slashes from the URL */
-  len = strlen(uri.path);
-  if (len > 1 && uri.path[len - 1] == '/')
-    uri.path[len - 1] = '\0';
+  len = strlen(uri->path);
+  if (len > 1 && (uri->path)[len - 1] == '/')
+    (uri->path)[len - 1] = '\0';
 
   /* Create and fill a session_baton. */
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
   ras->url = svn_stringbuf_create(repos_URL, pool);
   /* copies uri pointer members, they get free'd in __close. */
-  ras->root = uri; 
+  ras->root = *uri;
   ras->sess = sess;
-  ras->sess2 = sess2;  
+  ras->sess2 = sess2;
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
   ras->compression = compression;
@@ -792,13 +782,8 @@ svn_ra_dav__open(svn_ra_session_t *session,
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 
-  /* make sure we eventually destroy the uri */
-  apr_pool_cleanup_register(pool, &ras->root, cleanup_uri,
-                            apr_pool_cleanup_null);
-
   /* note that ras->username and ras->password are still NULL at this
      point. */
-
 
   /* Register an authentication 'pull' callback with the neon sessions */
 #ifdef SVN_NEON_0_26
@@ -884,11 +869,13 @@ static svn_error_t *svn_ra_dav__reparent(svn_ra_session_t *session,
                                          apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  ne_uri uri = { 0 };
+  ne_uri *uri = apr_pcalloc(session->pool, sizeof(*uri));
 
-  SVN_ERR(parse_url(&uri, url));
-  ne_uri_free(&ras->root);
-  ras->root = uri;
+  SVN_ERR(parse_url(uri, url));
+  apr_pool_cleanup_register(session->pool, uri, cleanup_uri,
+                            apr_pool_cleanup_null);
+
+  ras->root = *uri;
   svn_stringbuf_set(ras->url, url);
   return SVN_NO_ERROR;
 }
