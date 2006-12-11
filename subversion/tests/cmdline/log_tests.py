@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, re, os
+import re, os
 
 # Our testing module
 import svntest
@@ -258,7 +258,7 @@ def parse_log_output(log_lines):
       this_item['revision'] = match.group(1)
       this_item['author']   = match.group(2)
       this_item['date']     = match.group(3)
-      lines = string.atoi((match.group(4)))
+      lines = int((match.group(4)))
       this_item['lines']    = lines
 
       # Eat the expected blank line.
@@ -331,7 +331,7 @@ def check_log_chain(chain, revlist):
   for i in range(0, nbr_expected):
     expect_rev = revlist[i]
     log_item = chain[i]
-    saw_rev = string.atoi(log_item['revision'])
+    saw_rev = int(log_item['revision'])
     date = log_item['date']
     author = log_item['author']
     msg = log_item['msg']
