@@ -244,7 +244,8 @@ svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
   req->method = apr_pstrdup(req->pool, method);
   req->url = apr_pstrdup(req->pool, url);
 
-  assert(req != NULL);
+  /* Neon resources may be NULL on out-of-memory */
+  assert(req->req != NULL);
   apr_pool_cleanup_register(reqpool, req,
                             dav_request_cleanup,
                             apr_pool_cleanup_null);
