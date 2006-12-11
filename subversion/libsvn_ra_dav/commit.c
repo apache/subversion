@@ -1199,7 +1199,6 @@ static svn_error_t * commit_close_file(void *file_baton,
       const char *url = file->rsrc->wr_url;
       svn_ra_dav__request_t *request;
       ne_request *req;
-      int code;
       svn_error_t *err;
 
       /* create/prep the request */
@@ -1238,7 +1237,7 @@ static svn_error_t * commit_close_file(void *file_baton,
         }
 
       /* run the request and get the resulting status code (and svn_error_t) */
-      SVN_ERR(svn_ra_dav__request_dispatch(&code, request,
+      SVN_ERR(svn_ra_dav__request_dispatch(NULL, request,
                                            201 /* Created */,
                                            204 /* No Content */,
                                            pool));
