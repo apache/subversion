@@ -407,12 +407,6 @@ static svn_error_t *custom_get_request(svn_ra_dav__session_t *ras,
 
   request = svn_ra_dav__request_create(ras, "GET", url, pool);
   req = request->req;
-  if (req == NULL)
-    {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               _("Could not create a GET request for '%s'"),
-                               url);
-    }
 
   if (delta_base)
     {

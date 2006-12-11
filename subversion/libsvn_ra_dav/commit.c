@@ -391,15 +391,8 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 
   /* create/prep the request */
   request =
-    svn_ra_dav__request_create(cc->ras,
-                               "CHECKOUT", vsn_url, pool);
+    svn_ra_dav__request_create(cc->ras, "CHECKOUT", vsn_url, pool);
   req = request->req;
-  if (req == NULL)
-    {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               _("Could not create a CHECKOUT request (%s)"),
-                               vsn_url);
-    }
 
   /* ### store this into cc to avoid pool growth */
   body = apr_psprintf(pool,
@@ -777,11 +770,7 @@ static svn_error_t * commit_delete_entry(const char *path,
       request =
         svn_ra_dav__request_create(parent->cc->ras, "DELETE", child, pool);
       req = request->req;
-      if (req == NULL)
-        return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                                 _("Could not create a DELETE request (%s)"),
-                                 child);
-      
+
       body = apr_psprintf(pool, 
                           "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
                           locks_list->data);
@@ -1215,13 +1204,7 @@ static svn_error_t * commit_close_file(void *file_baton,
       /* create/prep the request */
       request = svn_ra_dav__request_create(cc->ras, "PUT", url, pool);
       req = request->req;
-      if (req == NULL)
-        {
-          return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                                   _("Could not create a PUT request (%s)"),
-                                   url);
-        }
-      
+
       ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
       
       if (file->token)
