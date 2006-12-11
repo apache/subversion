@@ -205,7 +205,8 @@ multistatus_parser_create(svn_ra_dav__request_t *req)
 {
   multistatus_baton_t *b = apr_pcalloc(req->pool, sizeof(*b));
   ne_xml_parser *multistatus_parser =
-    svn_ra_dav__xml_parser_create(req, start_207_element,
+    svn_ra_dav__xml_parser_create(req, ne_accept_207,
+                                  start_207_element,
                                   svn_ra_dav__xml_collect_cdata,
                                   end_207_element, b);
   return multistatus_parser;
@@ -263,11 +264,11 @@ compressed_body_reader_cleanup(void *baton)
   return APR_SUCCESS;
 }
 
-void
-svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
-                                     ne_accept_response accpt,
-                                     ne_block_reader reader,
-                                     void *userdata)
+static void
+attach_ne_body_reader(svn_ra_dav__request_t *req,
+                      ne_accept_response accpt,
+                      ne_block_reader reader,
+                      void *userdata)
 {
   if (req->sess->compression)
     {
@@ -281,6 +282,48 @@ svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
     }
   else
     ne_add_response_body_reader(req->req, accpt, reader, userdata);
+}
+
+
+typedef struct
+{
+  svn_ra_dav__request_t *req;
+  svn_ra_dav__block_reader real_reader;
+  void *real_baton;
+} body_reader_wrapper_baton_t;
+
+static int
+body_reader_wrapper(void *userdata, const char *data, size_t len)
+{
+  body_reader_wrapper_baton_t *b = userdata;
+
+  if (b->req->err)
+    /* We already had an error? Bail out. */
+    return 1;
+
+  SVN_RA_DAV__REQ_ERR
+    (b->req,
+     b->real_reader(b->real_baton, data, len));
+
+  if (b->req->err)
+    return 1;
+
+  return 0;
+}
+
+void
+svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
+                                     ne_accept_response accpt,
+                                     svn_ra_dav__block_reader reader,
+                                     void *userdata)
+{
+  body_reader_wrapper_baton_t *b = apr_palloc(req->pool, sizeof(*b));
+
+  b->req = req;
+  b->real_baton = userdata;
+  b->real_reader = reader;
+
+  attach_ne_body_reader(req, accpt, body_reader_wrapper, b);
 }
 
 
@@ -616,6 +659,11 @@ error_parser_create(svn_ra_dav__request_t *req)
                             error_parser_baton_cleanup,
                             apr_pool_cleanup_null);
 
+  /* Register the "error" accepter and body-reader with the request --
+     the one to use when HTTP status is *not* 2XX */
+  attach_ne_body_reader(req, ra_dav_error_accepter,
+                        ne_xml_parse_v, error_parser);
+
   return error_parser;
 }
 
@@ -709,23 +757,18 @@ typedef struct spool_reader_baton_t
 
 
 /* This implements the ne_block_reader() callback interface. */
-static int
-spool_reader(void *userdata, 
-             const char *buf, 
+static svn_error_t *
+spool_reader(void *userdata,
+             const char *buf,
              size_t len)
 {
   spool_reader_baton_t *baton = userdata;
 
-  if (! baton->req->err)
-    baton->req->err = svn_io_file_write_full(baton->spool_file, buf,
-                                             len, NULL, baton->req->iterpool);
+  SVN_ERR(svn_io_file_write_full(baton->spool_file, buf,
+                                 len, NULL, baton->req->iterpool));
   svn_pool_clear(baton->req->iterpool);
 
-  if (baton->req->err)
-    /* ### Call ne_set_error(), as ne_block_reader doc implies? */
-    return 1;
-  else
-    return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -774,6 +817,7 @@ parse_spool_file(svn_ra_dav__session_t *ras,
  */
 typedef struct {
   svn_ra_dav__request_t *req;
+  ne_xml_parser *parser;
 
   void *baton;
   svn_ra_dav__startelm_cb_t startelm_cb;
@@ -842,9 +886,29 @@ wrapper_endelm_cb(void *baton,
   return 0;
 }
 
+static int
+wrapper_reader_cb(void *baton, const char *data, size_t len)
+{
+  parser_wrapper_baton_t *pwb = baton;
+  svn_ra_dav__session_t *sess = pwb->req->sess;
+
+  if (pwb->req->err)
+    return 1;
+
+  if (sess->callbacks->cancel_func)
+    SVN_RA_DAV__REQ_ERR
+      (pwb->req,
+       (sess->callbacks->cancel_func)(sess->callback_baton));
+
+  if (pwb->req->err)
+    return 1;
+
+  return ne_xml_parse(pwb->parser, data, len);
+}
 
 ne_xml_parser *
 svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req,
+                              ne_accept_response accpt,
                               svn_ra_dav__startelm_cb_t startelm_cb,
                               svn_ra_dav__cdata_cb_t cdata_cb,
                               svn_ra_dav__endelm_cb_t endelm_cb,
@@ -854,6 +918,7 @@ svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req,
   parser_wrapper_baton_t *pwb = apr_palloc(req->pool, sizeof(*pwb));
 
   pwb->req = req;
+  pwb->parser = p;
   pwb->baton = baton;
   pwb->startelm_cb = startelm_cb;
   pwb->cdata_cb = cdata_cb;
@@ -863,6 +928,9 @@ svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req,
                       wrapper_startelm_cb,
                       wrapper_cdata_cb,
                       wrapper_endelm_cb, pwb);
+
+  if (accpt)
+    attach_ne_body_reader(req, accpt, wrapper_reader_cb, pwb);
 
   return p;
 }
@@ -930,7 +998,6 @@ parsed_request(svn_ra_dav__session_t *ras,
   ne_xml_parser *success_parser = NULL;
   const char *msg;
   spool_reader_baton_t spool_reader_baton;
-  cancellation_baton_t *cancel_baton;
 
   /* create/prep the request */
   req = svn_ra_dav__request_create(ras, method, url, pool);
@@ -959,7 +1026,7 @@ parsed_request(svn_ra_dav__session_t *ras,
     }
 
   /* create a parser to read the normal response body */
-  success_parser = svn_ra_dav__xml_parser_create(req,
+  success_parser = svn_ra_dav__xml_parser_create(req, NULL,
                                                  startelm_cb, cdata_cb,
                                                  endelm_cb, baton);
 
@@ -985,17 +1052,13 @@ parsed_request(svn_ra_dav__session_t *ras,
                                        req->pool));
       spool_reader_baton.req = req;
 
-      cancel_baton = get_cancellation_baton(req, spool_reader,
-                                            &spool_reader_baton, pool);
-
+      svn_ra_dav__add_response_body_reader(req, ne_accept_2xx, spool_reader,
+                                           &spool_reader_baton);
     }
   else
-    cancel_baton = get_cancellation_baton(req, ne_xml_parse_v,
-                                          success_parser, pool);
-
-  svn_ra_dav__add_response_body_reader(req, ne_accept_2xx,
-                                       cancellation_callback,
-                                       cancel_baton);
+    attach_ne_body_reader(req, ne_accept_2xx, cancellation_callback,
+                          get_cancellation_baton(req, ne_xml_parse_v,
+                                                 success_parser, pool));
 
   /* run the request and get the resulting status code. */
   SVN_ERR(svn_ra_dav__request_dispatch(status_code,
@@ -1077,8 +1140,10 @@ svn_ra_dav__simple_request(int *code,
 {
   svn_ra_dav__request_t *req =
     svn_ra_dav__request_create(ras, method, url, pool);
-  ne_xml_parser *multistatus =
-    multistatus_parser_create(req);
+
+  /* we don't need the status parser: it's attached to the request
+     and detected errors will be returned there... */
+  (void)multistatus_parser_create(req);
 
   /* add any extra headers passed in by caller. */
   if (extra_headers != NULL)
@@ -1097,9 +1162,6 @@ svn_ra_dav__simple_request(int *code,
 
   if (body)
     ne_set_request_body_buffer(req->req, body, strlen(body));
-
-  svn_ra_dav__add_response_body_reader(req, ne_accept_207,
-                                       ne_xml_parse_v, multistatus);
 
   /* svn_ra_dav__request_dispatch() adds the custom error response reader */
   SVN_ERR(svn_ra_dav__request_dispatch(code, req, okay_1, okay_2, pool));
@@ -1236,11 +1298,6 @@ svn_ra_dav__request_dispatch(int *code_p,
 
   /* attach a standard <D:error> body parser to the request */
   error_parser = error_parser_create(req);
-
-  /* Register the "error" accepter and body-reader with the request --
-     the one to use when HTTP status is *not* 2XX */
-  svn_ra_dav__add_response_body_reader(req, ra_dav_error_accepter,
-                                       ne_xml_parse_v, error_parser);
 
   if (req->ne_sess == req->sess->sess) /* We're consuming 'session 1' */
     req->sess->main_session_busy = TRUE;

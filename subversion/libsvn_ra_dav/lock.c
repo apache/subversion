@@ -253,10 +253,8 @@ do_lock(svn_lock_t **lock,
   lrb->pool = pool;
   lrb->xml_table = &(lock_elements[3]);
   lck_parser = svn_ra_dav__xml_parser_create
-    (req, lock_start_element, lock_cdata, lock_end_element, lrb);
-
-  svn_ra_dav__add_response_body_reader(req, ne_accept_2xx,
-                                       ne_xml_parse_v, lck_parser);
+    (req, ne_accept_207,
+     lock_start_element, lock_cdata, lock_end_element, lrb);
 
   body = svn_stringbuf_createf
     (req->pool,
@@ -509,16 +507,12 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   lrb->pool = pool;
   lrb->xml_table = lock_elements;
   lck_parser = svn_ra_dav__xml_parser_create
-    (req, lock_start_element, lock_cdata, lock_end_element, lrb);
+    (req, ne_accept_207, lock_start_element, lock_cdata, lock_end_element, lrb);
 
   ne_add_request_header(req->req, "Depth", "0");
   ne_add_request_header(req->req, "Content-Type",
                         "text/xml; charset=\"utf-8\"");
   ne_set_request_body_buffer(req->req, body, strlen(body));
-
-  /* Attach a lock response reader to the request */
-  svn_ra_dav__add_response_body_reader(req, ne_accept_2xx,
-                                       ne_xml_parse_v, lck_parser);
 
   SVN_ERR_W(svn_ra_dav__request_dispatch(NULL, req, 200, 207, pool),
             _("Failed to fetch lock information"));

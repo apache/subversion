@@ -379,7 +379,7 @@ static svn_error_t *add_props(apr_hash_t *props,
 static svn_error_t *custom_get_request(svn_ra_dav__session_t *ras,
                                        const char *url,
                                        const char *relpath,
-                                       ne_block_reader reader,
+                                       svn_ra_dav__block_reader reader,
                                        void *subctx,
                                        svn_ra_get_wc_prop_func_t get_wc_prop,
                                        void *cb_baton,
@@ -441,20 +441,11 @@ static svn_error_t *custom_get_request(svn_ra_dav__session_t *ras,
 }
 
 /* This implements the ne_block_reader() callback interface. */
-static int
+static svn_error_t *
 fetch_file_reader(void *userdata, const char *buf, size_t len)
 {
   custom_get_ctx_t *cgc = userdata;
   file_read_ctx_t *frc = cgc->subctx;
-
-  if (cgc->req->err)
-    {
-      /* We must have gotten an error during the last read. */
-      /* Abort the rest of the read. */
-      /* ### Call ne_set_error(), as ne_block_reader doc implies? */
-      return 1;
-
-    }
 
   if (len == 0)
     {
@@ -468,13 +459,9 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
       int rv = ne_get_content_type(cgc->req->req, &ctype);
 
       if (rv != 0)
-        {
-          SVN_RA_DAV__REQ_ERR
-            (cgc->req,
-             svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
-                              _("Could not get content-type from response")));
-          return 1;
-        }
+        return
+          svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
+                           _("Could not get content-type from response"));
 
       /* Neon guarantees non-NULL values when rv==0 */
       if (!strcmp(ctype.type, "application")
@@ -525,9 +512,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
       apr_size_t written = len;
 
-      SVN_RA_DAV__REQ_ERR
-        (cgc->req,
-         svn_stream_write(frc->stream, buf, &written));
+      SVN_ERR(svn_stream_write(frc->stream, buf, &written));
 
       /* ### the svndiff stream parser does not obey svn_stream semantics
          ### in its write handler. it does not output the number of bytes
@@ -593,12 +578,10 @@ static svn_error_t *simple_fetch_file(svn_ra_dav__session_t *ras,
 
 /* Helper (neon callback) for svn_ra_dav__get_file.  This implements
    the ne_block_reader() callback interface. */
-static int
+static svn_error_t *
 get_file_reader(void *userdata, const char *buf, size_t len)
 {
   custom_get_ctx_t *cgc = userdata;
-  apr_size_t wlen;
-  svn_error_t *err;
 
   /* The stream we want to push data at. */
   file_write_ctx_t *fwc = cgc->subctx; 
@@ -608,21 +591,9 @@ get_file_reader(void *userdata, const char *buf, size_t len)
     apr_md5_update(&(fwc->md5_context), buf, len);
 
   /* Write however many bytes were passed in by neon. */
-  wlen = len;
-  err = svn_stream_write(stream, buf, &wlen);
+  SVN_ERR(svn_stream_write(stream, buf, &len));
 
-  /* Technically, if the write came up short then there's guaranteed
-     to be an error anyway, so we only really need to check for error.
-     But heck, why not gather as much information as possible about
-     what happened before tossing it all and just returning non-zero? */
-  if (err || (wlen != len))
-    {
-      /* ### Call ne_set_error(), as ne_block_reader doc implies? */
-      svn_error_clear(err);
-      return 1;
-    }
-
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 

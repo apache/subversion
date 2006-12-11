@@ -139,6 +139,13 @@ svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
                            const char *method, const char *url,
                            apr_pool_t *pool);
 
+
+/* Our version of ne_block_reader, which returns an
+ * svn_error_t * instead of an int. */
+typedef svn_error_t *(*svn_ra_dav__block_reader)(void *baton,
+                                                 const char *data,
+                                                 size_t len);
+
 /* Add a response body reader function to REQ.
  *
  * Use the associated session parameters to determine the use of
@@ -150,7 +157,7 @@ svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
 void
 svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
                                      ne_accept_response accpt,
-                                     ne_block_reader reader,
+                                     svn_ra_dav__block_reader reader,
                                      void *userdata);
 
 
@@ -568,13 +575,17 @@ typedef svn_error_t * (*svn_ra_dav__endelm_cb_t)(void *baton,
                                                  const char *name);
 
 
-/* Create an xml parser for use with REQ.
+/* Create an xml parser and registers a response body reader with REQ.
  *
  * Register a pool cleanup on the pool of REQ to clean up any allocated
  * Neon resources
+ *
+ * Pass NULL for ACCPT when you don't want the returned parser
+ * to be attached to REQ.
  */
 ne_xml_parser *
 svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req,
+                              ne_accept_response accpt,
                               svn_ra_dav__startelm_cb_t startelm_cb,
                               svn_ra_dav__cdata_cb_t cdata_cb,
                               svn_ra_dav__endelm_cb_t endelm_cb,
