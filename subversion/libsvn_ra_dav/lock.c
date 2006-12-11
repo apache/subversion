@@ -283,7 +283,7 @@ do_lock(svn_lock_t **lock,
   if (SVN_IS_VALID_REVNUM(current_rev))
     ne_add_request_header(req->req,
                           SVN_DAV_VERSION_NAME_HEADER,
-                          apr_psprintf(pool, "%ld", current_rev));
+                          apr_psprintf(req->pool, "%ld", current_rev));
 
   SVN_ERR(svn_ra_dav__request_dispatch(&code, req, 200, 0, pool));
 

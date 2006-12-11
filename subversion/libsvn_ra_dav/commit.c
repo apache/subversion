@@ -395,7 +395,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   req = request->req;
 
   /* ### store this into cc to avoid pool growth */
-  body = apr_psprintf(pool,
+  body = apr_psprintf(request->pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
                       "<D:checkout xmlns:D=\"DAV:\">"
                       "<D:activity-set>"
@@ -406,7 +406,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   if (token)
     {
       const char *token_header_val;
-      token_header_val = apr_psprintf(pool, "(<%s>)", token);
+      token_header_val = apr_psprintf(request->pool, "(<%s>)", token);
       ne_add_request_header(req, "If", token_header_val);
     }
 
@@ -763,15 +763,16 @@ static svn_error_t * commit_delete_entry(const char *path,
       if ((token = apr_hash_get(parent->cc->tokens, path, 
                                 APR_HASH_KEY_STRING)))
         apr_hash_set(child_tokens, path, APR_HASH_KEY_STRING, token);
-      
-      SVN_ERR(svn_ra_dav__assemble_locktoken_body(&locks_list,
-                                                  child_tokens, pool));
-      
+
+
       request =
         svn_ra_dav__request_create(parent->cc->ras, "DELETE", child, pool);
       req = request->req;
 
-      body = apr_psprintf(pool, 
+      SVN_ERR(svn_ra_dav__assemble_locktoken_body(&locks_list,
+                                                  child_tokens, request->pool));
+
+      body = apr_psprintf(request->pool,
                           "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
                           locks_list->data);
       ne_set_request_body_buffer(req, body, strlen(body));
@@ -1206,14 +1207,15 @@ static svn_error_t * commit_close_file(void *file_baton,
       req = request->req;
 
       ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
-      
+
       if (file->token)
         {
           const char *token_header_val;
           const char *token_uri;
 
           token_uri = svn_path_url_add_component(cc->ras->url->data,
-                                                 file->rsrc->url, pool);
+                                                 file->rsrc->url,
+                                                 request->pool);
           token_header_val = apr_psprintf(pool, "<%s> (<%s>)",
                                           token_uri, file->token);
           ne_add_request_header(req, "If", token_header_val);
@@ -1222,11 +1224,11 @@ static svn_error_t * commit_close_file(void *file_baton,
       if (pb->base_checksum)
         ne_add_request_header
           (req, SVN_DAV_BASE_FULLTEXT_MD5_HEADER, pb->base_checksum);
-      
+
       if (text_checksum)
         ne_add_request_header
           (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
-      
+
       /* Give the file to neon. The provider will rewind the file. */
       err = svn_ra_dav__set_neon_body_provider(request, pb->tmpfile);
       if (err)
@@ -1234,7 +1236,7 @@ static svn_error_t * commit_close_file(void *file_baton,
           apr_file_close(pb->tmpfile);
           return err;
         }
-      
+
       /* run the request and get the resulting status code (and svn_error_t) */
       SVN_ERR(svn_ra_dav__request_dispatch(&code, request,
                                            201 /* Created */,
