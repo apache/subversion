@@ -351,8 +351,8 @@ def check_log_chain(chain, revlist):
              or author == '(no author)')):
       raise SVNUnexpectedLogs('Malformed author', chain, 'author')
 
-    # Verify the expectation even-numbered revisions in the Greek tree
-    # have 3-line log messages.
+    # Verify the expectation that even-numbered revisions in the Greek
+    # tree tweaked by the log tests have 3-line log messages.
     if (saw_rev % 2 == 0 and log_item['lines'] != 3):
       raise SVNUnexpectedLogs('Malformed log line counts', chain, 'lines')
        
