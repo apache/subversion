@@ -253,7 +253,7 @@ do_lock(svn_lock_t **lock,
   lrb->pool = pool;
   lrb->xml_table = &(lock_elements[3]);
   lck_parser = svn_ra_dav__xml_parser_create
-    (req, ne_accept_207,
+    (req, ne_accept_2xx,
      lock_start_element, lock_cdata, lock_end_element, lrb);
 
   body = svn_stringbuf_createf
