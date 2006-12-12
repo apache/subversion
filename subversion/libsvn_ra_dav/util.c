@@ -1143,7 +1143,7 @@ svn_ra_dav__simple_request(int *code,
 
   /* we don't need the status parser: it's attached to the request
      and detected errors will be returned there... */
-  (void)multistatus_parser_create(req);
+  (void) multistatus_parser_create(req);
 
   /* add any extra headers passed in by caller. */
   if (extra_headers != NULL)
