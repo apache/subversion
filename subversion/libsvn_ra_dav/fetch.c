@@ -439,7 +439,7 @@ static svn_error_t *custom_get_request(svn_ra_dav__session_t *ras,
   return err;
 }
 
-/* This implements the ne_block_reader() callback interface. */
+/* This implements the svn_ra_dav__block_reader() callback interface. */
 static svn_error_t *
 fetch_file_reader(void *userdata, const char *buf, size_t len)
 {
@@ -575,8 +575,8 @@ static svn_error_t *simple_fetch_file(svn_ra_dav__session_t *ras,
   return SVN_NO_ERROR;
 }
 
-/* Helper (neon callback) for svn_ra_dav__get_file.  This implements
-   the ne_block_reader() callback interface. */
+/* Helper for svn_ra_dav__get_file.  This implements
+   the svn_ra_dav__block_reader() callback interface. */
 static svn_error_t *
 get_file_reader(void *userdata, const char *buf, size_t len)
 {

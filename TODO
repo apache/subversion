@@ -3,15 +3,10 @@ in order to achieve several goals:
 
  - Use more pool bound resources (ie fewer Neon ones) as
    those don't need manual tracking.
- - Move away from functions defined in ne_basic.h, because
-   they don't let us attach a 'custom error' reader to
-   requests without a lot of baton-juggling.
  - Use as much as possible SVN_ERR macro invocations, to
    line up with the rest of the code base.
 
 As well as this list of specific tasks:
 
- - Implement our own PROPFIND request generating function
-   to replace ne_lock_discover() in svn_ra_dav__get_lock().
  - Clean up the use of Neon requests as much as possible
    (without duplicating all of Neon's interfaces).

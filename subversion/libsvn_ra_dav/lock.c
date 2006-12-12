@@ -378,9 +378,8 @@ do_unlock(svn_ra_session_t *session,
   url_path = apr_pstrdup(pool, uri.path);
   ne_uri_free(&uri);
   /* In the case of 'force', we might not have a token at all.
-     Unfortunately, ne_unlock() insists on sending one, and mod_dav
-     insists on having a valid token for UNLOCK requests.  That means
-     we need to fetch the token. */
+     Unfortunately, mod_dav insists on having a valid token for
+     UNLOCK requests.  That means we need to fetch the token. */
   if (! token)
     {
       svn_lock_t *lock;

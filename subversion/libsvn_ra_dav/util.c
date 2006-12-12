@@ -756,7 +756,7 @@ typedef struct spool_reader_baton_t
 } spool_reader_baton_t;
 
 
-/* This implements the ne_block_reader() callback interface. */
+/* This implements the svn_ra_dav__block_reader() callback interface. */
 static svn_error_t *
 spool_reader(void *userdata,
              const char *buf,
