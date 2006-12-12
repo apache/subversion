@@ -1194,7 +1194,6 @@ static svn_error_t * commit_close_file(void *file_baton,
       const char *url = file->rsrc->wr_url;
       apr_hash_t *extra_headers;
       svn_ra_dav__request_t *request;
-      svn_error_t *err;
 
       /* create/prep the request */
       request = svn_ra_dav__request_create(cc->ras, "PUT", url, pool);
@@ -1221,12 +1220,7 @@ static svn_error_t * commit_close_file(void *file_baton,
           (extra_headers, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
 
       /* Give the file to neon. The provider will rewind the file. */
-      err = svn_ra_dav__set_neon_body_provider(request, pb->tmpfile);
-      if (err)
-        {
-          apr_file_close(pb->tmpfile);
-          return err;
-        }
+      SVN_ERR(svn_ra_dav__set_neon_body_provider(request, pb->tmpfile));
 
       /* run the request and get the resulting status code (and svn_error_t) */
       SVN_ERR(svn_ra_dav__request_dispatch(NULL, request, extra_headers, NULL,
