@@ -652,11 +652,13 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
   ne_uri_parse(url, &parsed_url);
   if (parsed_url.path == NULL)
     {
+      ne_uri_free(&parsed_url);
       return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
                                _("Neon was unable to parse URL '%s'"), url);
     }
 
   path_s = svn_stringbuf_create(parsed_url.path, pool);
+  ne_uri_free(&parsed_url);
 
   /* Try to get the starting_props from the public url.  If the
      resource no longer exists in HEAD, we'll get a failure.  That's
@@ -668,9 +670,11 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
                                            NULL, pool);
       if (! err)
         break;   /* found an existing parent! */
-      
+
       if (err->apr_err != SVN_ERR_RA_DAV_PATH_NOT_FOUND)
-        goto error;  /* found a _real_ error */
+        return err;  /* found a _real_ error */
+      else
+        svn_error_clear(err);
 
       /* else... lop off the basename and try again. */
       lopped_path = svn_path_join(svn_path_basename(path_s->data, pool),
@@ -679,30 +683,20 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
       svn_path_remove_component(path_s);
 
       /* if we detect an infinite loop, get out. */
-      if (path_s->len == len)          
-        {
-          err = svn_error_quick_wrap
-            (err, _("The path was not part of a repository"));
-          goto error;
-        }
-      svn_error_clear(err);
+      if (path_s->len == len)
+        return svn_error_quick_wrap
+          (err, _("The path was not part of a repository"));
     }
 
   /* error out if entire URL was bogus (not a single part of it exists
      in the repository!)  */
   if (svn_path_is_empty(path_s->data))
-    {
-      err = svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
-                              _("No part of path '%s' was found in "
-                                "repository HEAD"), parsed_url.path);
-      goto error;
-    }
+    return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                             _("No part of path '%s' was found in "
+                               "repository HEAD"), parsed_url.path);
 
   *missing_path = lopped_path;
-
- error:
-  ne_uri_free(&parsed_url);
-  return err;
+  return SVN_NO_ERROR;
 }
 
 
