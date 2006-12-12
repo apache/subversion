@@ -362,7 +362,6 @@ do_unlock(svn_ra_session_t *session,
           apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  int rv;
   const char *url;
   const char *url_path;
   ne_uri uri;
@@ -371,9 +370,12 @@ do_unlock(svn_ra_session_t *session,
 
   /* Make a neon lock structure containing token and full URL to unlock. */
   url = svn_path_url_add_component(ras->url->data, path, pool);
-  if ((rv = ne_uri_parse(url, &uri)))
-    return svn_ra_dav__convert_error(ras->sess, _("Failed to parse URI"),
-                                     rv, pool);
+  if (ne_uri_parse(url, &uri))
+    {
+      ne_uri_free(&uri);
+      return svn_error_create(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
+                              _("Failed to parse URI"));
+    }
 
   url_path = apr_pstrdup(pool, uri.path);
   ne_uri_free(&uri);
