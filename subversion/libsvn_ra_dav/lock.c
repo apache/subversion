@@ -308,7 +308,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   svn_error_t *ret_err = NULL;
 
-  /* ### TODO for 1.3: Send all the locks over the wire at once.  This
+  /* ### TODO for issue 2263: Send all the locks over the wire at once.  This
      loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
     {
@@ -354,7 +354,7 @@ svn_ra_dav__lock(svn_ra_session_t *session,
 }
 
 
-/* ###TODO for 1.3: Send all lock tokens to the server at once. */
+/* ###TODO for issue 2263: Send all lock tokens to the server at once. */
 static svn_error_t *
 do_unlock(svn_ra_session_t *session,
           const char *path,
@@ -420,7 +420,7 @@ svn_ra_dav__unlock(svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   svn_error_t *ret_err = NULL;
 
-  /* ### TODO for 1.3: Send all the lock tokens over the wire at once.
+  /* ### TODO for issue 2263: Send all the lock tokens over the wire at once.
         This loop is just a temporary shim. */
   for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
     {
