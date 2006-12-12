@@ -281,9 +281,7 @@ do_lock(svn_lock_t **lock,
     svn_ra_dav__set_header(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
                            apr_psprintf(req->pool, "%ld", current_rev));
 
-  ne_set_request_body_buffer(req->ne_req, body->data, body->len);
-
-  SVN_ERR(svn_ra_dav__request_dispatch(&code, req, extra_headers,
+  SVN_ERR(svn_ra_dav__request_dispatch(&code, req, extra_headers, body->data,
                                        200, 0, pool));
 
   /*###FIXME: we never verified whether we have received back the type
@@ -515,9 +513,8 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   svn_ra_dav__set_header(extra_headers, "Depth", "0");
   svn_ra_dav__set_header(extra_headers, "Content-Type",
                          "text/xml; charset=\"utf-8\"");
-  ne_set_request_body_buffer(req->ne_req, body, strlen(body));
 
-  SVN_ERR_W(svn_ra_dav__request_dispatch(NULL, req, extra_headers,
+  SVN_ERR_W(svn_ra_dav__request_dispatch(NULL, req, extra_headers, body,
                                          200, 207, pool),
             _("Failed to fetch lock information"));
   /*###FIXME We assume here we only got one lock response. The WebDAV

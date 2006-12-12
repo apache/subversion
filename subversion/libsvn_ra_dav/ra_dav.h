@@ -843,6 +843,7 @@ svn_error_t *
 svn_ra_dav__request_dispatch(int *code_p,
                              svn_ra_dav__request_t *request,
                              apr_hash_t *extra_headers,
+                             const char *body,
                              int okay_1,
                              int okay_2,
                              apr_pool_t *pool);

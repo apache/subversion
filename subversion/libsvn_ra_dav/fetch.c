@@ -427,7 +427,7 @@ static svn_error_t *custom_get_request(svn_ra_dav__session_t *ras,
   cgc.subctx = subctx;
 
   /* run the request */
-  err = svn_ra_dav__request_dispatch(NULL, request, NULL,
+  err = svn_ra_dav__request_dispatch(NULL, request, NULL, NULL,
                                      200 /* OK */,
                                      226 /* IM Used */,
                                      pool);

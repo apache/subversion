@@ -400,7 +400,6 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                       "<D:activity-set>"
                       "<D:href>%s</D:href>"
                       "</D:activity-set></D:checkout>", cc->activity_url);
-  ne_set_request_body_buffer(request->ne_req, body, strlen(body));
 
   if (token)
     {
@@ -410,7 +409,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  SVN_ERR(svn_ra_dav__request_dispatch(code, request, extra_headers,
+  SVN_ERR(svn_ra_dav__request_dispatch(code, request, extra_headers, body,
                                        201 /* Created */,
                                        allow_404 ? 404 /* Not Found */ : 0,
                                        pool));
@@ -772,9 +771,8 @@ static svn_error_t * commit_delete_entry(const char *path,
       body = apr_psprintf(request->pool,
                           "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
                           locks_list->data);
-      ne_set_request_body_buffer(request->ne_req, body, strlen(body));
 
-      SVN_ERR(svn_ra_dav__request_dispatch(&code, request, NULL,
+      SVN_ERR(svn_ra_dav__request_dispatch(&code, request, NULL, body,
                                            204 /* Created */,
                                            404 /* Not Found */,
                                            pool));
@@ -1231,7 +1229,7 @@ static svn_error_t * commit_close_file(void *file_baton,
         }
 
       /* run the request and get the resulting status code (and svn_error_t) */
-      SVN_ERR(svn_ra_dav__request_dispatch(NULL, request, extra_headers,
+      SVN_ERR(svn_ra_dav__request_dispatch(NULL, request, extra_headers, NULL,
                                            201 /* Created */,
                                            204 /* No Content */,
                                            pool));
