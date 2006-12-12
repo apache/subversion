@@ -354,7 +354,7 @@ def check_log_chain(chain, revlist):
     # Verify the expectation even-numbered revisions in the Greek tree
     # have 3-line log messages.
     if (saw_rev % 2 == 0 and log_item['lines'] != 3):
-      raise SVNUnexpectedLogs('Malformed lines', chain, 'lines')
+      raise SVNUnexpectedLogs('Malformed log line counts', chain, 'lines')
        
     # Check that the log message looks right:
     pattern = 'Log message for revision ' + `saw_rev`
