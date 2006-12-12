@@ -1374,6 +1374,10 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
 {
   svn_error_t *err;
 
+  if ( (src_paths->nelts > 1) && ! (copy_as_child) )
+    return svn_error_create(SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED,
+                            NULL, NULL);
+  
   err = setup_copy(commit_info_p,
                    src_paths, src_revision, dst_path,
                    FALSE /* is_move */,
@@ -1486,6 +1490,10 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
   const svn_opt_revision_t src_revision
     = { svn_opt_revision_unspecified, { 0 } };
   svn_error_t *err;
+
+  if ( (src_paths->nelts > 1) && ! (move_as_child) )
+    return svn_error_create(SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED,
+                            NULL, NULL);
   
   err = setup_copy(commit_info_p, src_paths, &src_revision, dst_path,
                    TRUE /* is_move */,

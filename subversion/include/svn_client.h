@@ -1918,11 +1918,14 @@ svn_client_resolved(const char *path,
  * is a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
  * URL.
  *
- * If @a src_paths has multiple items, @a copy_as_child is ignored, and all
+ * If @a src_paths has multiple items, and @a copy_as_child is TRUE, all
  * @a src_paths are copied as children of @a dst_path.  If any child of
  * @a dst_path already exists with the same name any item in @a src_paths,
  * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
  * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
+ *
+ * If @a src_paths has multiple items, and @a copy_as_child is FALSE, fail
+ * with @c SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED.
  *
  * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
@@ -2050,11 +2053,14 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * is a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
  * URL.
  *
- * If @a src_paths has multiple items, @a copy_as_child is ignored, and all
+ * If @a src_paths has multiple items, and @a move_as_child is TRUE, all
  * @a src_paths are moved as children of @a dst_path.  If any child of
  * @a dst_path already exists with the same name any item in @a src_paths,
  * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
  * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
+ *
+ * If @a src_paths has multiple items, and @a move_as_child is FALSE, fail
+ * with @c SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED.
  *
  * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
