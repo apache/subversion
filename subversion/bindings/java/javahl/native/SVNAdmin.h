@@ -37,7 +37,7 @@ class SVNAdmin : public SVNBase
 {
 public:
     void rmlocks(const char *path, Targets &locks);
-	jobjectArray lslocks(const char *path);
+    jobjectArray lslocks(const char *path);
     void verify(const char *path, Outputer &messageOut,
                     Revision &revisionStart, Revision &revisionEnd);
     void setRevProp(const char *path, Revision &revision,

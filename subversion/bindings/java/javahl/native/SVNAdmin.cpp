@@ -47,7 +47,7 @@ SVNAdmin * SVNAdmin::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
     jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-						   JAVA_PACKAGE"/SVNAdmin");
+                                                   JAVA_PACKAGE"/SVNAdmin");
     return (cppAddr == 0 ? NULL : reinterpret_cast<SVNAdmin *>(cppAddr));
 }
 
@@ -513,9 +513,9 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
 }
 
 void SVNAdmin::setRevProp(const char *path, Revision &revision,
-			  const char *propName, const char *propValue,
-			  bool usePreRevPropChangeHook,
-			  bool usePostRevPropChangeHook)
+                          const char *propName, const char *propValue,
+                          bool usePreRevPropChangeHook,
+                          bool usePostRevPropChangeHook)
 {
     Pool requestPool;
     if (path == NULL)
@@ -553,14 +553,13 @@ void SVNAdmin::setRevProp(const char *path, Revision &revision,
 
     /* If we are bypassing the hooks system, we just hit the filesystem
        directly. */
-    svn_string_t *propValStr = svn_string_create(propValue,
-						 requestPool.pool());
+    svn_string_t *propValStr = svn_string_create(propValue, requestPool.pool());
     if (usePreRevPropChangeHook || usePostRevPropChangeHook)
     {
         err = svn_repos_fs_change_rev_prop3
             (repos, revision.revision()->value.number, NULL,
              propName, propValStr, usePreRevPropChangeHook,
-	     usePostRevPropChangeHook, NULL, NULL, requestPool.pool());
+             usePostRevPropChangeHook, NULL, NULL, requestPool.pool());
     }
     else
     {

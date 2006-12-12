@@ -275,7 +275,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_password
     if (jpassword == NULL)
     {
         JNIUtil::raiseThrowable("java/lang/IllegalArgumentException",
-		       _("Provide a password (null is not supported)"));
+                                _("Provide a password (null is not supported)"));
         return;
     }
     JNIStringHolder password(jpassword);
@@ -1922,6 +1922,6 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_info2
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_initNative
   (JNIEnv *env, jclass jclazz)
 {
-	// No standard JNIEntry here, because this call initializes everthing
-	JNIUtil::JNIGlobalInit(env);
+    // No standard JNIEntry here, because this call initializes everthing
+    JNIUtil::JNIGlobalInit(env);
 }
