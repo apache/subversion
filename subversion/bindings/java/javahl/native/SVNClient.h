@@ -45,10 +45,10 @@ class SVNClient :public SVNBase
 {
 public:
     jobjectArray info2(const char *path, Revision &revision, 
-        Revision &pegRevision, bool recurse);
-	void unlock(Targets &targets, bool force);
-	void lock(Targets &targets, const char *comment, bool force);
-	jobjectArray revProperties(jobject jthis, const char *path, 
+                       Revision &pegRevision, bool recurse);
+    void unlock(Targets &targets, bool force);
+    void lock(Targets &targets, const char *comment, bool force);
+    jobjectArray revProperties(jobject jthis, const char *path, 
                                 Revision &revision);
     void cancelOperation();
     void commitMessageHandler(CommitMessage *commitMessage);
