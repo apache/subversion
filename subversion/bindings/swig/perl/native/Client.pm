@@ -158,7 +158,7 @@ methods described below:
                            the subversion config only.
 
     cancel                 undef
-                           
+
     config                 Hash containing the config from the 
                            default subversion config file location.
 
