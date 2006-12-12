@@ -383,6 +383,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   svn_ra_dav__request_t *request;
   ne_request *req;
   const char *body;
+  apr_hash_t *extra_headers = NULL;
 
   /* assert: vsn_url != NULL */
 
@@ -405,13 +406,13 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
 
   if (token)
     {
-      const char *token_header_val;
-      token_header_val = apr_psprintf(request->pool, "(<%s>)", token);
-      ne_add_request_header(req, "If", token_header_val);
+      extra_headers = apr_hash_make(request->pool);
+      svn_ra_dav__set_header(extra_headers, "If",
+                             apr_psprintf(request->pool, "(<%s>)", token));
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  SVN_ERR(svn_ra_dav__request_dispatch(code, request,
+  SVN_ERR(svn_ra_dav__request_dispatch(code, request, extra_headers,
                                        201 /* Created */,
                                        allow_404 ? 404 /* Not Found */ : 0,
                                        pool));
@@ -777,7 +778,7 @@ static svn_error_t * commit_delete_entry(const char *path,
                           locks_list->data);
       ne_set_request_body_buffer(req, body, strlen(body));
 
-      SVN_ERR(svn_ra_dav__request_dispatch(&code, request,
+      SVN_ERR(svn_ra_dav__request_dispatch(&code, request, NULL,
                                            204 /* Created */,
                                            404 /* Not Found */,
                                            pool));
@@ -1197,6 +1198,7 @@ static svn_error_t * commit_close_file(void *file_baton,
     {
       put_baton_t *pb = file->put_baton;
       const char *url = file->rsrc->wr_url;
+      apr_hash_t *extra_headers;
       svn_ra_dav__request_t *request;
       ne_request *req;
       svn_error_t *err;
@@ -1205,28 +1207,26 @@ static svn_error_t * commit_close_file(void *file_baton,
       request = svn_ra_dav__request_create(cc->ras, "PUT", url, pool);
       req = request->req;
 
-      ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
+      extra_headers = apr_hash_make(request->pool);
+      svn_ra_dav__set_header(extra_headers, "Content-Type",
+                             SVN_SVNDIFF_MIME_TYPE);
 
       if (file->token)
-        {
-          const char *token_header_val;
-          const char *token_uri;
-
-          token_uri = svn_path_url_add_component(cc->ras->url->data,
-                                                 file->rsrc->url,
-                                                 request->pool);
-          token_header_val = apr_psprintf(pool, "<%s> (<%s>)",
-                                          token_uri, file->token);
-          ne_add_request_header(req, "If", token_header_val);
-        }
+        svn_ra_dav__set_header
+          (extra_headers, "If",
+           apr_psprintf(pool, "<%s> (<%s>)",
+                        svn_path_url_add_component(cc->ras->url->data,
+                                                   file->rsrc->url,
+                                                   request->pool),
+                        file->token));
 
       if (pb->base_checksum)
-        ne_add_request_header
-          (req, SVN_DAV_BASE_FULLTEXT_MD5_HEADER, pb->base_checksum);
+        svn_ra_dav__set_header(extra_headers, SVN_DAV_BASE_FULLTEXT_MD5_HEADER,
+                               pb->base_checksum);
 
       if (text_checksum)
-        ne_add_request_header
-          (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
+        svn_ra_dav__set_header
+          (extra_headers, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
 
       /* Give the file to neon. The provider will rewind the file. */
       err = svn_ra_dav__set_neon_body_provider(request, pb->tmpfile);
@@ -1237,7 +1237,7 @@ static svn_error_t * commit_close_file(void *file_baton,
         }
 
       /* run the request and get the resulting status code (and svn_error_t) */
-      SVN_ERR(svn_ra_dav__request_dispatch(NULL, request,
+      SVN_ERR(svn_ra_dav__request_dispatch(NULL, request, extra_headers,
                                            201 /* Created */,
                                            204 /* No Content */,
                                            pool));

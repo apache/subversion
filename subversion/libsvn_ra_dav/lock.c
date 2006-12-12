@@ -239,6 +239,7 @@ do_lock(svn_lock_t **lock,
   ne_xml_parser *lck_parser;
   svn_ra_dav__session_t *ras = session->priv;
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
+  apr_hash_t *extra_headers;
 
   /* To begin, we convert the incoming path into an absolute fs-path. */
   url = svn_path_url_add_component(ras->url->data, path, pool);
@@ -268,22 +269,22 @@ do_lock(svn_lock_t **lock,
       ? apr_psprintf(req->pool, " <D:owner>%s</D:owner>" DEBUG_CR, comment)
       : ""));
 
-  /*### Attach a lock response reader to the request */
-
-  ne_add_request_header(req->req, "Depth", "0");
-  ne_add_request_header(req->req, "Timeout", "Infinite");
-  ne_add_request_header(req->req, "Content-Type",
-                        "text/xml; charset=\"utf-8\"");
-  ne_set_request_body_buffer(req->req, body->data, body->len);
+  extra_headers = apr_hash_make(req->pool);
+  svn_ra_dav__set_header(extra_headers, "Depth", "0");
+  svn_ra_dav__set_header(extra_headers, "Timeout", "Infinite");
+  svn_ra_dav__set_header(extra_headers, "Content-Type",
+                         "text/xml; charset=\"utf-8\"");
   if (force)
-    ne_add_request_header(req->req,
-                          SVN_DAV_OPTIONS_HEADER, SVN_DAV_OPTION_LOCK_STEAL);
+    svn_ra_dav__set_header(extra_headers, SVN_DAV_OPTIONS_HEADER,
+                           SVN_DAV_OPTION_LOCK_STEAL);
   if (SVN_IS_VALID_REVNUM(current_rev))
-    ne_add_request_header(req->req,
-                          SVN_DAV_VERSION_NAME_HEADER,
-                          apr_psprintf(req->pool, "%ld", current_rev));
+    svn_ra_dav__set_header(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
+                           apr_psprintf(req->pool, "%ld", current_rev));
 
-  SVN_ERR(svn_ra_dav__request_dispatch(&code, req, 200, 0, pool));
+  ne_set_request_body_buffer(req->req, body->data, body->len);
+
+  SVN_ERR(svn_ra_dav__request_dispatch(&code, req, extra_headers,
+                                       200, 0, pool));
 
   /*###FIXME: we never verified whether we have received back the type
     of lock we requested: was it shared/exclusive? was it write/otherwise?
@@ -483,6 +484,7 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   lock_baton_t *lrb = apr_pcalloc(pool, sizeof(*lrb));
   svn_ra_dav__request_t *req;
   ne_xml_parser *lck_parser;
+  apr_hash_t *extra_headers;
   static const char *body =
     "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
     "<D:propfind xmlns:D=\"DAV:\">" DEBUG_CR
@@ -509,12 +511,14 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   lck_parser = svn_ra_dav__xml_parser_create
     (req, ne_accept_207, lock_start_element, lock_cdata, lock_end_element, lrb);
 
-  ne_add_request_header(req->req, "Depth", "0");
-  ne_add_request_header(req->req, "Content-Type",
-                        "text/xml; charset=\"utf-8\"");
+  extra_headers = apr_hash_make(req->pool);
+  svn_ra_dav__set_header(extra_headers, "Depth", "0");
+  svn_ra_dav__set_header(extra_headers, "Content-Type",
+                         "text/xml; charset=\"utf-8\"");
   ne_set_request_body_buffer(req->req, body, strlen(body));
 
-  SVN_ERR_W(svn_ra_dav__request_dispatch(NULL, req, 200, 207, pool),
+  SVN_ERR_W(svn_ra_dav__request_dispatch(NULL, req, extra_headers,
+                                         200, 207, pool),
             _("Failed to fetch lock information"));
   /*###FIXME We assume here we only got one lock response. The WebDAV
     spec makes no such guarantees. How to make sure we grab the one we need? */

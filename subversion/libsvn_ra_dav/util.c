@@ -1010,21 +1010,6 @@ parsed_request(svn_ra_dav__session_t *ras,
   /* ### use a symbolic name somewhere for this MIME type? */
   ne_add_request_header(req->req, "Content-Type", "text/xml");
 
-  /* add any extra headers passed in by caller. */
-  if (extra_headers != NULL)
-    {
-      apr_hash_index_t *hi;
-      for (hi = apr_hash_first(pool, extra_headers);
-           hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          apr_hash_this(hi, &key, NULL, &val);
-          ne_add_request_header(req->req,
-                                (const char *) key, (const char *) val);
-        }
-    }
-
   /* create a parser to read the normal response body */
   success_parser = svn_ra_dav__xml_parser_create(req, NULL,
                                                  startelm_cb, cdata_cb,
@@ -1062,7 +1047,7 @@ parsed_request(svn_ra_dav__session_t *ras,
 
   /* run the request and get the resulting status code. */
   SVN_ERR(svn_ra_dav__request_dispatch(status_code,
-                                       req,
+                                       req, extra_headers,
                                        (strcmp(method, "PROPFIND") == 0)
                                        ? 207 : 200,
                                        0, /* not used */
@@ -1145,26 +1130,12 @@ svn_ra_dav__simple_request(int *code,
      and detected errors will be returned there... */
   (void) multistatus_parser_create(req);
 
-  /* add any extra headers passed in by caller. */
-  if (extra_headers != NULL)
-    {
-      apr_hash_index_t *hi;
-      for (hi = apr_hash_first(pool, extra_headers);
-           hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          apr_hash_this(hi, &key, NULL, &val);
-          ne_add_request_header(req->req,
-                                (const char *) key, (const char *) val);
-        }
-    }
-
   if (body)
     ne_set_request_body_buffer(req->req, body, strlen(body));
 
   /* svn_ra_dav__request_dispatch() adds the custom error response reader */
-  SVN_ERR(svn_ra_dav__request_dispatch(code, req, okay_1, okay_2, pool));
+  SVN_ERR(svn_ra_dav__request_dispatch(code, req, extra_headers,
+                                       okay_1, okay_2, pool));
   svn_ra_dav__request_destroy(req);
 
   return SVN_NO_ERROR;
@@ -1285,6 +1256,7 @@ svn_ra_dav__add_error_handler(ne_request *request,
 svn_error_t *
 svn_ra_dav__request_dispatch(int *code_p,
                              svn_ra_dav__request_t *req,
+                             apr_hash_t *extra_headers,
                              int okay_1,
                              int okay_2,
                              apr_pool_t *pool)
@@ -1295,6 +1267,23 @@ svn_ra_dav__request_dispatch(int *code_p,
   const char *code_desc;
   int code;
   const char *msg;
+
+
+  /* add any extra headers passed in by caller. */
+  if (extra_headers != NULL)
+    {
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(pool, extra_headers);
+           hi; hi = apr_hash_next(hi))
+        {
+          const void *key;
+          void *val;
+          apr_hash_this(hi, &key, NULL, &val);
+          ne_add_request_header(req->req,
+                                (const char *) key, (const char *) val);
+        }
+    }
+
 
   /* attach a standard <D:error> body parser to the request */
   error_parser = error_parser_create(req);

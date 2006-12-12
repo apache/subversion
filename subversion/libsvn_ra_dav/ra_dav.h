@@ -842,6 +842,7 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
 svn_error_t *
 svn_ra_dav__request_dispatch(int *code_p,
                              svn_ra_dav__request_t *request,
+                             apr_hash_t *extra_headers,
                              int okay_1,
                              int okay_2,
                              apr_pool_t *pool);
@@ -861,6 +862,10 @@ svn_ra_dav__simple_request(int *code,
                            const char *body,
                            int okay_1, int okay_2, apr_pool_t *pool);
 
+
+/* Convenience statement macro for setting headers in a hash */
+#define svn_ra_dav__set_header(hash, hdr, val) \
+  apr_hash_set((hash), (hdr), APR_HASH_KEY_STRING, (val))
 
 
 /* Helper function layered over SVN_RA_DAV__SIMPLE_REQUEST() to issue
