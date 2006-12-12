@@ -184,12 +184,12 @@ lock_from_baton(svn_lock_t **lock,
       return SVN_NO_ERROR;
     }
 
-  val = ne_get_response_header(req->req, SVN_DAV_CREATIONDATE_HEADER);
+  val = ne_get_response_header(req->ne_req, SVN_DAV_CREATIONDATE_HEADER);
   if (val)
     SVN_ERR_W(svn_time_from_cstring(&(lck->creation_date), val, pool),
               _("Invalid creation date header value in response."));
 
-  val = ne_get_response_header(req->req, SVN_DAV_LOCK_OWNER_HEADER);
+  val = ne_get_response_header(req->ne_req, SVN_DAV_LOCK_OWNER_HEADER);
   if (val)
     lck->owner = apr_pstrdup(pool, val);
   if (lrb->owner)
@@ -281,7 +281,7 @@ do_lock(svn_lock_t **lock,
     svn_ra_dav__set_header(extra_headers, SVN_DAV_VERSION_NAME_HEADER,
                            apr_psprintf(req->pool, "%ld", current_rev));
 
-  ne_set_request_body_buffer(req->req, body->data, body->len);
+  ne_set_request_body_buffer(req->ne_req, body->data, body->len);
 
   SVN_ERR(svn_ra_dav__request_dispatch(&code, req, extra_headers,
                                        200, 0, pool));
@@ -515,7 +515,7 @@ svn_ra_dav__get_lock(svn_ra_session_t *session,
   svn_ra_dav__set_header(extra_headers, "Depth", "0");
   svn_ra_dav__set_header(extra_headers, "Content-Type",
                          "text/xml; charset=\"utf-8\"");
-  ne_set_request_body_buffer(req->req, body, strlen(body));
+  ne_set_request_body_buffer(req->ne_req, body, strlen(body));
 
   SVN_ERR_W(svn_ra_dav__request_dispatch(NULL, req, extra_headers,
                                          200, 207, pool),

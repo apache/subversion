@@ -381,7 +381,6 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                                  apr_pool_t *pool)
 {
   svn_ra_dav__request_t *request;
-  ne_request *req;
   const char *body;
   apr_hash_t *extra_headers = NULL;
 
@@ -393,7 +392,6 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
   /* create/prep the request */
   request =
     svn_ra_dav__request_create(cc->ras, "CHECKOUT", vsn_url, pool);
-  req = request->req;
 
   /* ### store this into cc to avoid pool growth */
   body = apr_psprintf(request->pool,
@@ -402,7 +400,7 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
                       "<D:activity-set>"
                       "<D:href>%s</D:href>"
                       "</D:activity-set></D:checkout>", cc->activity_url);
-  ne_set_request_body_buffer(req, body, strlen(body));
+  ne_set_request_body_buffer(request->ne_req, body, strlen(body));
 
   if (token)
     {
@@ -743,7 +741,6 @@ static svn_error_t * commit_delete_entry(const char *path,
       
       apr_hash_t *child_tokens = NULL;
       svn_ra_dav__request_t *request;
-      ne_request *req;
       const char *body;
       const char *token;
       svn_stringbuf_t *locks_list;
@@ -768,7 +765,6 @@ static svn_error_t * commit_delete_entry(const char *path,
 
       request =
         svn_ra_dav__request_create(parent->cc->ras, "DELETE", child, pool);
-      req = request->req;
 
       SVN_ERR(svn_ra_dav__assemble_locktoken_body(&locks_list,
                                                   child_tokens, request->pool));
@@ -776,7 +772,7 @@ static svn_error_t * commit_delete_entry(const char *path,
       body = apr_psprintf(request->pool,
                           "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
                           locks_list->data);
-      ne_set_request_body_buffer(req, body, strlen(body));
+      ne_set_request_body_buffer(request->ne_req, body, strlen(body));
 
       SVN_ERR(svn_ra_dav__request_dispatch(&code, request, NULL,
                                            204 /* Created */,
@@ -1200,12 +1196,10 @@ static svn_error_t * commit_close_file(void *file_baton,
       const char *url = file->rsrc->wr_url;
       apr_hash_t *extra_headers;
       svn_ra_dav__request_t *request;
-      ne_request *req;
       svn_error_t *err;
 
       /* create/prep the request */
       request = svn_ra_dav__request_create(cc->ras, "PUT", url, pool);
-      req = request->req;
 
       extra_headers = apr_hash_make(request->pool);
       svn_ra_dav__set_header(extra_headers, "Content-Type",

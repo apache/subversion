@@ -99,7 +99,7 @@ typedef struct {
 
 
 typedef struct {
-  ne_request *req;                      /* neon request structure */
+  ne_request *ne_req;                   /* neon request structure */
   ne_session *ne_sess;                  /* neon session structure */
   svn_ra_dav__session_t *sess;          /* DAV session structure */
   const char *method;

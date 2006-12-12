@@ -389,7 +389,6 @@ static svn_error_t *custom_get_request(svn_ra_dav__session_t *ras,
   custom_get_ctx_t cgc = { 0 };
   const char *delta_base;
   svn_ra_dav__request_t *request;
-  ne_request *req;
   svn_error_t *err;
 
   if (use_base)
@@ -406,7 +405,6 @@ static svn_error_t *custom_get_request(svn_ra_dav__session_t *ras,
     }
 
   request = svn_ra_dav__request_create(ras, "GET", url, pool);
-  req = request->req;
 
   if (delta_base)
     {
@@ -418,7 +416,8 @@ static svn_error_t *custom_get_request(svn_ra_dav__session_t *ras,
          get mod_dav updated and the backend APIs expanded, then we
          can switch to using the If: header. For now, use a custom
          header to specify the version resource to use as the base. */
-      ne_add_request_header(req, SVN_DAV_DELTA_BASE_HEADER, delta_base);
+      ne_add_request_header(request->ne_req,
+                            SVN_DAV_DELTA_BASE_HEADER, delta_base);
     }
 
   svn_ra_dav__add_response_body_reader(request, ne_accept_2xx, reader, &cgc);
@@ -456,7 +455,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   if (!cgc->checked_type)
     {
       ne_content_type ctype = { 0 };
-      int rv = ne_get_content_type(cgc->req->req, &ctype);
+      int rv = ne_get_content_type(cgc->req->ne_req, &ctype);
 
       if (rv != 0)
         return

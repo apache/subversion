@@ -222,8 +222,8 @@ dav_request_cleanup(void *baton)
 {
   svn_ra_dav__request_t *req = baton;
 
-  if (req->req)
-    ne_request_destroy(req->req);
+  if (req->ne_req)
+    ne_request_destroy(req->ne_req);
 
   return APR_SUCCESS;
 }
@@ -238,7 +238,7 @@ svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
   svn_ra_dav__request_t *req = apr_pcalloc(reqpool, sizeof(*req));
 
   req->ne_sess = sess->main_session_busy ? sess->sess2 : sess->sess;
-  req->req = ne_request_create(req->ne_sess, method, url);
+  req->ne_req = ne_request_create(req->ne_sess, method, url);
   req->sess = sess;
   req->pool = reqpool;
   req->iterpool = svn_pool_create(req->pool);
@@ -246,7 +246,7 @@ svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
   req->url = apr_pstrdup(req->pool, url);
 
   /* Neon resources may be NULL on out-of-memory */
-  assert(req->req != NULL);
+  assert(req->ne_req != NULL);
   apr_pool_cleanup_register(reqpool, req,
                             dav_request_cleanup,
                             apr_pool_cleanup_null);
@@ -273,7 +273,7 @@ attach_ne_body_reader(svn_ra_dav__request_t *req,
   if (req->sess->compression)
     {
       ne_decompress *decompress =
-        ne_decompress_reader(req->req, accpt, reader, userdata);
+        ne_decompress_reader(req->ne_req, accpt, reader, userdata);
 
       apr_pool_cleanup_register(req->pool,
                                 decompress,
@@ -281,7 +281,7 @@ attach_ne_body_reader(svn_ra_dav__request_t *req,
                                 apr_pool_cleanup_null);
     }
   else
-    ne_add_response_body_reader(req->req, accpt, reader, userdata);
+    ne_add_response_body_reader(req->ne_req, accpt, reader, userdata);
 }
 
 
@@ -742,7 +742,7 @@ svn_error_t *svn_ra_dav__set_neon_body_provider(svn_ra_dav__request_t *req,
   b->body_file = body_file;
   b->req = req;
 
-  ne_set_request_body_provider(req->req, (size_t) finfo.size,
+  ne_set_request_body_provider(req->ne_req, (size_t) finfo.size,
                                ra_dav_body_provider, b);
   return SVN_NO_ERROR;
 }
@@ -1003,12 +1003,12 @@ parsed_request(svn_ra_dav__session_t *ras,
   req = svn_ra_dav__request_create(ras, method, url, pool);
 
   if (body != NULL)
-    ne_set_request_body_buffer(req->req, body, strlen(body));
+    ne_set_request_body_buffer(req->ne_req, body, strlen(body));
   else
     SVN_ERR(svn_ra_dav__set_neon_body_provider(req, body_file));
 
   /* ### use a symbolic name somewhere for this MIME type? */
-  ne_add_request_header(req->req, "Content-Type", "text/xml");
+  ne_add_request_header(req->ne_req, "Content-Type", "text/xml");
 
   /* create a parser to read the normal response body */
   success_parser = svn_ra_dav__xml_parser_create(req, NULL,
@@ -1131,7 +1131,7 @@ svn_ra_dav__simple_request(int *code,
   (void) multistatus_parser_create(req);
 
   if (body)
-    ne_set_request_body_buffer(req->req, body, strlen(body));
+    ne_set_request_body_buffer(req->ne_req, body, strlen(body));
 
   /* svn_ra_dav__request_dispatch() adds the custom error response reader */
   SVN_ERR(svn_ra_dav__request_dispatch(code, req, extra_headers,
@@ -1279,7 +1279,7 @@ svn_ra_dav__request_dispatch(int *code_p,
           const void *key;
           void *val;
           apr_hash_this(hi, &key, NULL, &val);
-          ne_add_request_header(req->req,
+          ne_add_request_header(req->ne_req,
                                 (const char *) key, (const char *) val);
         }
     }
@@ -1291,12 +1291,12 @@ svn_ra_dav__request_dispatch(int *code_p,
   if (req->ne_sess == req->sess->sess) /* We're consuming 'session 1' */
     req->sess->main_session_busy = TRUE;
   /* run the request, see what comes back. */
-  rv = ne_request_dispatch(req->req);
+  rv = ne_request_dispatch(req->ne_req);
   if (req->ne_sess == req->sess->sess) /* We're done consuming 'session 1' */
     req->sess->main_session_busy = FALSE;
 
   /* Save values from the request */
-  statstruct = ne_get_status(req->req);
+  statstruct = ne_get_status(req->ne_req);
   code_desc = apr_pstrdup(pool, statstruct->reason_phrase);
   code = statstruct->code;
 
@@ -1348,6 +1348,6 @@ const char *
 svn_ra_dav__request_get_location(svn_ra_dav__request_t *request,
                                  apr_pool_t *pool)
 {
-  const char *val = ne_get_response_header(request->req, "Location");
+  const char *val = ne_get_response_header(request->ne_req, "Location");
   return val ? apr_pstrdup(pool, val) : NULL;
 }
