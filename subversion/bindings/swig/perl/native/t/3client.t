@@ -124,8 +124,8 @@ $ctx->log_msg(
         isa_ok($pool,'_p_apr_pool_t',
                'pool param to callback is a _p_apr_pool_t');
         my $commit_item = shift @$commit_items;
-        isa_ok($commit_item,'_p_svn_client_commit_item_t',
-               'commit_item element is a _p_svn_client_commit_item_t');
+        isa_ok($commit_item,'_p_svn_client_commit_item2_t',
+               'commit_item element is a _p_svn_client_commit_item2_t');
         is($commit_item->path(),"$wcpath/dir1/new",
            "commit_item has proper path for committed file");
         is($commit_item->kind(),$SVN::Node::file,

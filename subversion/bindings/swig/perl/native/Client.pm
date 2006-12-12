@@ -991,7 +991,7 @@ the commit you can set this scalar to undef.  The 2nd value is a path to a
 temporary file which might be holding that log message, or undef if no such
 field exists (though, if log_msg is undef, this value is undefined).  The 
 log message B<MUST> be a UTF8 string with LF line separators.  The 3rd parameter
-is a reference to an array of svn_client_commit_item_t objects, which may
+is a reference to an array of svn_client_commit_item2_t objects, which may
 be fully or only partially filled-in, depending on the type of commit
 operation.  The 4th and last parameter will be a pool.
 
@@ -1005,7 +1005,7 @@ sub log_msg {
     my $self = shift;
 
     if (scalar(@_) == 1) {
-        $self->{'log_msg_callback'} = $self->{'ctx'}->log_msg_baton(shift);
+        $self->{'log_msg_callback'} = $self->{'ctx'}->log_msg_baton2(shift);
     }
     return ${$self->{'log_msg_callback'}};
 }
@@ -1306,7 +1306,7 @@ also only useful when working with a WC.
 package _p_svn_client_commit_info_t;
 use SVN::Base qw(Client svn_client_commit_info_t_);
 
-=head2 svn_client_commit_item_t
+=head2 svn_client_commit_item2_t
 
 =over 8
 
@@ -1353,8 +1353,8 @@ to wc properties.
 
 =cut
 
-package _p_svn_client_commit_item_t;
-use SVN::Base qw(Client svn_client_commit_item_t_);
+package _p_svn_client_commit_item2_t;
+use SVN::Base qw(Client svn_client_commit_item2_t_);
 
 =head2 svn_client_commit_info_t
 

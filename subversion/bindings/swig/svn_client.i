@@ -186,7 +186,7 @@
 #ifdef SWIGPERL
 %apply void *CALLBACK_BATON {
   void *notify_baton,
-  void *log_msg_baton,
+  void *log_msg_baton2,
   void *cancel_baton
 }
 #endif
@@ -259,8 +259,8 @@
 %typemap(argout) svn_client_ctx_t ** {
   (*$1)->notify_func = svn_swig_pl_notify_func;
   (*$1)->notify_baton = (void *) &PL_sv_undef;
-  (*$1)->log_msg_func = svn_swig_pl_get_commit_log_func;
-  (*$1)->log_msg_baton = (void *) &PL_sv_undef;
+  (*$1)->log_msg_func2 = svn_swig_pl_get_commit_log_func;
+  (*$1)->log_msg_baton2 = (void *) &PL_sv_undef;
   (*$1)->cancel_func = svn_swig_pl_cancel_func;
   (*$1)->cancel_baton = (void *) &PL_sv_undef;
   %append_output(SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
