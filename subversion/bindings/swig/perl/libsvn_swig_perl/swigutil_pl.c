@@ -1072,7 +1072,8 @@ void svn_swig_pl_notify_func(void * baton,
 /* Thunked version of svn_client_get_commit_log_t callback type. */
 svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
-                                             apr_array_header_t *commit_items,
+                                             const apr_array_header_t *
+                                             commit_items,
                                              void *baton,
                                              apr_pool_t *pool)
 {
@@ -1091,7 +1092,7 @@ svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
     log_msg_sv = newRV_noinc(sv_newmortal());
     tmp_file_sv = newRV_noinc(sv_newmortal());
     commit_items_sv = svn_swig_pl_convert_array
-      (commit_items, _SWIG_TYPE("svn_client_commit_item_t *"));
+      (commit_items, _SWIG_TYPE("svn_client_commit_item2_t *"));
 
     svn_swig_pl_callback_thunk(CALL_SV,
                                baton, &result,

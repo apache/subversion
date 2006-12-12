@@ -187,10 +187,11 @@ void svn_swig_pl_notify_func(void * baton,
 			     svn_revnum_t revision);
 
 
-/* Thunked version of svn_client_get_commit_log_t callback type. */
+/* Thunked version of svn_client_get_commit_log2_t callback type. */
 svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
-                                             apr_array_header_t *commit_items,
+                                             const apr_array_header_t *
+                                             commit_items,
                                              void *baton,
                                              apr_pool_t *pool);
 
