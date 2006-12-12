@@ -1283,12 +1283,9 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   const svn_string_t *vcc;
   const svn_string_t *baseline_url;
   version_rsrc_t baseline_rsrc = { SVN_INVALID_REVNUM };
-  ne_proppatch_operation po[2] = { { 0 } };
-  int rv;
-  svn_stringbuf_t *xml_data;
   svn_error_t *err = NULL;
   int retry_count = 5;
-  
+
   /* ### this whole sequence can/should be replaced with an expand-property
      ### REPORT when that is available on the server. */
 
@@ -1333,24 +1330,15 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   if (err)
     return err;
 
-  /* XML-Escape the log message. */
-  xml_data = NULL;           /* Required by svn_xml_escape_*. */
-  svn_xml_escape_cdata_cstring(&xml_data, log_msg, pool);
+  {
+    apr_hash_t *prop_changes = apr_hash_make(pool);
+    svn_string_t *log_str = svn_string_create(log_msg, pool);
 
-  po[0].name = &log_message_prop;
-  po[0].type = ne_propset;
-  po[0].value = xml_data->data;
-
-  cc->ras->main_session_busy = TRUE;
-  rv = ne_proppatch(cc->ras->sess, baseline_rsrc.wr_url, po);
-  cc->ras->main_session_busy = FALSE;
-
-  if (rv != NE_OK)
-    {
-      const char *msg = apr_psprintf(pool, _("applying log message to %s"),
-                                     baseline_rsrc.wr_url);
-      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv, pool);
-    }
+    apr_hash_set(prop_changes, SVN_PROP_PREFIX "log",
+                 APR_HASH_KEY_STRING, log_str);
+    SVN_ERR(svn_ra_dav__do_proppatch(cc->ras, baseline_rsrc.wr_url,
+                                     prop_changes, NULL, NULL, pool));
+  }
 
   return SVN_NO_ERROR;
 }
