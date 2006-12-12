@@ -38,9 +38,8 @@ static const svn_ra_dav__xml_elm_t lock_elements[] =
   { "DAV:", "propstat", ELEM_propstat, 0 },
   { "DAV:", "status", ELEM_status, SVN_RA_DAV__XML_CDATA },
   /* extend lockdiscovery elements here;
-     ### Remember to update lock_start_element when you change
-     the number of elements here: it contains a hard reference
-     to the next element. */
+     ### Remember to update do_lock() when you change the number of
+     elements here: it contains a hard reference to the next element. */
 
   /* lock and lockdiscovery elements */
   { "DAV:", "prop", ELEM_prop, 0 },
