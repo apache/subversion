@@ -103,9 +103,9 @@ Candidate changes:
   * r22689
     Fix off-by-1 stringbuf corruption bug.
     Justification:
-      Corruption.
+      Data corruption.
     Votes:
-      +1: dionisos
+      +1: dionisos, dlr
 
 
 Approved changes:
