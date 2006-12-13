@@ -240,8 +240,8 @@ svn_cl__propedit(apr_getopt_t *os,
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Bad encoding option: prop value not stored as UTF8"));
 
-              if (ctx->log_msg_func2)
-                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2),
+              if (ctx->log_msg_func3)
+                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
 
@@ -250,7 +250,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                         FALSE, opt_state->force,
                                         base_rev,
                                         ctx, subpool);
-              if (ctx->log_msg_func2)
+              if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
               else if (err)
                 return err;
