@@ -227,6 +227,10 @@ svn_client__get_merge_info_for_path(svn_ra_session_t *ra_session,
 /*** RA callbacks ***/
 
 
+/* CTX is of type "svn_client_ctx_t *". */
+#define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
+        ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
+
 /* This is the baton that we pass to RA->open(), and is associated with
    the callback table we provide to RA. */
 typedef struct
