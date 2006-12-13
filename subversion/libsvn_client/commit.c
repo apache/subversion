@@ -646,7 +646,7 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
   apr_pool_t *subpool;
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func3 || ctx->log_msg_func2 || ctx->log_msg_func)
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
       /* If there's a log message gatherer, create a temporary commit
          item array solely to help generate the log message.  The
@@ -1453,7 +1453,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
-  if (ctx->log_msg_func3 || ctx->log_msg_func2 || ctx->log_msg_func)
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
       const char *tmp_file;
       cmt_err = svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
