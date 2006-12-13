@@ -110,10 +110,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r22332
-    Fix leak of space on the Perl argument stack when calling methods
-    in a Perl class acting as a commit editor.
-    Justification:
-      Memory leaks are bad.
-    Votes:
-      +1: dlr, clkao
