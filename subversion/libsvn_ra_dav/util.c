@@ -1212,42 +1212,6 @@ svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
 }
 
 
-void
-svn_ra_dav__add_error_handler(ne_request *request,
-                              ne_xml_parser *parser,
-                              svn_error_t **err,
-                              apr_pool_t *pool)
-{
-  error_parser_baton_t *b = apr_palloc(pool, sizeof(*b));
-
-  b->dst_err = err;
-  b->marshalled_error = NULL;
-  b->tmp_err = NULL;
-
-  b->cdata = svn_stringbuf_create("", pool);
-  b->want_cdata = NULL;
-
-  /* The error parser depends on the error being NULL to start with */
-  *err = NULL;
-
-  apr_pool_cleanup_register(pool, b,
-                            error_parser_baton_cleanup,
-                            apr_pool_cleanup_null);
-
-  ne_xml_push_handler(parser,
-                      start_err_element,
-                      collect_error_cdata,
-                      end_err_element,
-                      b);
-
-  ne_add_response_body_reader(request,
-                              ra_dav_error_accepter,
-                              ne_xml_parse_v,
-                              parser);
-}
-
-
-
 svn_error_t *
 svn_ra_dav__request_dispatch(int *code_p,
                              svn_ra_dav__request_t *req,

@@ -890,17 +890,6 @@ svn_ra_dav__request_get_location(svn_ra_dav__request_t *request,
                                  apr_pool_t *pool);
 
 
-/* Give PARSER the ability to parse a mod_dav_svn <D:error> response
-   body in the case of a non-2XX response to REQUEST.  If a <D:error>
-   response is detected, then set *ERR to the parsed error.
-*/
-void
-svn_ra_dav__add_error_handler(ne_request *request,
-                              ne_xml_parser *parser,
-                              svn_error_t **err,
-                              apr_pool_t *pool);
-
-
 /*
  * Implements the get_locations RA layer function. */
 svn_error_t *
