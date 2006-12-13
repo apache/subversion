@@ -646,6 +646,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
   svn_stringbuf_t *path_s;
   ne_uri parsed_url;
   const char *lopped_path = "";
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Split the url into its component pieces (scheme, host, path,
      etc).  We want the path part. */
@@ -666,8 +667,9 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
      starting_props from parent directories. */
   while (! svn_path_is_empty(path_s->data))
     {
+      svn_pool_clear(iterpool);
       err = svn_ra_dav__get_starting_props(rsrc, sess, path_s->data,
-                                           NULL, pool);
+                                           NULL, iterpool);
       if (! err)
         break;   /* found an existing parent! */
 
@@ -687,6 +689,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
         return svn_error_quick_wrap
           (err, _("The path was not part of a repository"));
     }
+  svn_pool_destroy(iterpool);
 
   /* error out if entire URL was bogus (not a single part of it exists
      in the repository!)  */
