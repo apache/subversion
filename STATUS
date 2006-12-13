@@ -76,6 +76,15 @@ Candidate changes:
     Votes:
       +1: kou
 
+  * r22689
+    Fix off-by-1 stringbuf corruption bug.
+    Justification:
+      Data corruption.
+    Note:
+      Trivial merge conflict.
+    Votes:
+      +1: dionisos, dlr
+
 Approved changes:
 
   * r18254
