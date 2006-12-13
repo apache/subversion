@@ -395,7 +395,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     }
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func3 || ctx->log_msg_func2 || ctx->log_msg_func)
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
       svn_client_commit_item3_t *item;
       const char *tmp_file;
@@ -604,7 +604,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     }
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func3 || ctx->log_msg_func2 || ctx->log_msg_func)
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
       svn_client_commit_item3_t *item;
       const char *tmp_file;
