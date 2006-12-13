@@ -188,6 +188,10 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 /*** RA callbacks ***/
 
 
+/* CTX is of type "svn_client_ctx_t *". */
+#define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
+        ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
+
 /* This is the baton that we pass to RA->open(), and is associated with
    the callback table we provide to RA. */
 typedef struct
@@ -202,7 +206,7 @@ typedef struct
      outside the working copy. */
   svn_boolean_t read_only_wc;
 
-  /* An array of svn_client_commit_item2_t * structures, present only
+  /* An array of svn_client_commit_item3_t * structures, present only
      during working copy commits. */
   apr_array_header_t *commit_items;
 
@@ -757,14 +761,16 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
 
 
 
-/* Retrieves log message using *CTX->log_msg_func or
- * *CTX->log_msg_func2 callbacks.
- * Other arguments same as svn_client_get_commit_log2_t. */
-svn_error_t * svn_client__get_log_msg(const char **log_msg,
-                                      const char **tmp_file,
-                                      const apr_array_header_t *commit_items,
-                                      svn_client_ctx_t *ctx,
-                                      apr_pool_t *pool);
+/* Retrieve log messages using the first provided (non-NULL) callback
+   in the set of *CTX->log_msg_func3, CTX->log_msg_func2, or
+   CTX->log_msg_func.  Other arguments same as
+   svn_client_get_commit_log3_t. */
+svn_error_t *
+svn_client__get_log_msg(const char **log_msg,
+                        const char **tmp_file,
+                        const apr_array_header_t *commit_items,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

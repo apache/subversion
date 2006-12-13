@@ -557,9 +557,9 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     }
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func || ctx->log_msg_func2)
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
-      svn_client_commit_item2_t *item;
+      svn_client_commit_item3_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make(pool, 2 * copy_pairs->nelts, sizeof(item));
@@ -569,10 +569,12 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
           path_driver_info *info = 
             &(((path_driver_info *) (path_infos->elts))[i]);
 
-          item = apr_pcalloc(pool, sizeof(*item));
+          SVN_ERR(svn_client_commit_item_create
+                  ((const svn_client_commit_item3_t **) &item, pool));
+
           item->url = svn_path_join(top_url, info->dst_path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-          APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+          APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
           apr_hash_set(action_hash, info->dst_path, APR_HASH_KEY_STRING,
                        info);
 
@@ -656,14 +658,12 @@ remove_tmpfiles(apr_hash_t *tempfiles,
   for (hi = apr_hash_first(pool, tempfiles); hi; hi = apr_hash_next(hi))
     {
       const void *key;
-      apr_ssize_t keylen;
-      void *val;
       svn_node_kind_t kind;
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      apr_hash_this(hi, &key, &keylen, &val);
+      apr_hash_this(hi, &key, NULL, NULL);
       SVN_ERR(svn_io_check_path((const char *)key, &kind, pool));
       if (kind == svn_node_file)
         SVN_ERR(svn_io_remove_file((const char *)key, pool));
@@ -804,9 +804,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     }
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func || ctx->log_msg_func2)
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
-      svn_client_commit_item2_t *item;
+      svn_client_commit_item3_t *item;
       const char *tmp_file;
       commit_items = apr_array_make(pool, copy_pairs->nelts, sizeof(item));
 
@@ -815,7 +815,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
           svn_client__copy_pair_t *pair =
             ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
 
-          item = apr_pcalloc(pool, sizeof(*item));
+          SVN_ERR(svn_client_commit_item_create
+                  ((const svn_client_commit_item3_t **) &item, pool));
+
           item->url = pair->dst;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
           APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;

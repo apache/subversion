@@ -56,7 +56,7 @@ svn_cl__move(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
 
-  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2), opt_state,
+  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                      NULL, ctx->config, pool));
 
   if (opt_state->start_revision.kind != svn_opt_revision_unspecified
@@ -75,7 +75,7 @@ svn_cl__move(apr_getopt_t *os,
 
   if (err)
     err = svn_cl__may_need_force(err);
-  SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
+  SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));
 
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));

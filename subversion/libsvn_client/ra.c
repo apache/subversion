@@ -92,9 +92,9 @@ get_wc_prop(void *baton,
       int i;
       for (i = 0; i < cb->commit_items->nelts; i++)
         {
-          svn_client_commit_item2_t *item
+          svn_client_commit_item3_t *item
             = APR_ARRAY_IDX(cb->commit_items, i,
-                            svn_client_commit_item2_t *);
+                            svn_client_commit_item3_t *);
           if (! strcmp(relpath, 
                        svn_path_uri_decode(item->url, pool)))
             return svn_wc_prop_get(value, name, item->path, cb->base_access,
@@ -134,8 +134,8 @@ push_wc_prop(void *baton,
 
   for (i = 0; i < cb->commit_items->nelts; i++)
     {
-      svn_client_commit_item2_t *item
-        = APR_ARRAY_IDX(cb->commit_items, i, svn_client_commit_item2_t *);
+      svn_client_commit_item3_t *item
+        = APR_ARRAY_IDX(cb->commit_items, i, svn_client_commit_item3_t *);
       
       if (strcmp(relpath, svn_path_uri_decode(item->url, pool)) == 0)
         {

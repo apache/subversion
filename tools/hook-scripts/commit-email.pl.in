@@ -38,17 +38,19 @@ BEGIN {
 
 use strict;
 use Carp;
-my ($sendmail, $smtp_server);
+my ($sendmail, $smtp_server, $stdout);
 
 ######################################################################
 # Configuration section.
 
-# Sendmail path, or SMTP server address.
-# You should define exactly one of these two configuration variables,
-# leaving the other commented out, to select which method of sending
+# Sendmail path, SMTP server address, or stdout.
+# You should define exactly one of these three configuration variables,
+# leaving the other commented out, to select which method of creating
 # email should be used.
 #$sendmail = "/usr/sbin/sendmail";
 $smtp_server = "127.0.0.1";
+# Use stdout if you like to get the message in mbox format to stdout.
+#$stdout = 1;
 
 # Svnlook path.
 my $svnlook = "@SVN_BINDIR@/svnlook";
@@ -90,10 +92,10 @@ my $no_diff_added = 0;
           $ok = 0;
         }
     }
-  if (not (defined $sendmail xor defined $smtp_server))
+  if (not (defined $sendmail xor defined $smtp_server xor defined $stdout))
     {
-      warn "$0: exactly one of \$sendmail or \$smtp_server must be ",
-           "set, edit $0.\n";
+      warn "$0: exactly one of \$sendmail, \$smtp_server, or \$stdout ",
+           "must be set, edit $0.\n";
       $ok = 0;
     }
   exit 1 unless $ok;
@@ -123,6 +125,7 @@ my $author;
 my $propname;
 
 my $mode = 'commit';
+my $date;
 my $diff_file;
 
 # Use the reference to the first project to populate.
@@ -355,7 +358,7 @@ if ($mode eq 'commit')
     # Get the author, date, and log from svnlook.
     my @infolines = &read_from_process($svnlook, 'info', $repos, '-r', $rev);
     $author = shift @infolines;
-    my $date = shift @infolines;
+    $date = shift @infolines;
     shift @infolines;
     my @log = map { "$_\n" } @infolines;
 
@@ -537,6 +540,18 @@ foreach my $project (@project_settings_list)
       }
 
     my @head;
+    if (defined $stdout)
+      {
+        my ( $h_date, $h_year, $h_time, $h_day, $h_offset, $h_week_day, $h_short_date, $h_month_day, $h_month_name );
+
+        $h_date = $date;
+		  $h_date =~ s/[(),]//g;
+
+		  ( $h_short_date, $h_time, $h_offset, $h_week_day, $h_month_day, $h_month_name, $h_year ) = split(/ /, $h_date);
+
+		  push(@head, "From $mail_from $h_week_day $h_month_name $h_month_day $h_time $h_year\n");
+		  push(@head, "Date: $h_week_day, $h_month_name $h_month_day $h_year $h_time $h_offset\n");
+      }
     push(@head, "To: $to\n");
     push(@head, "From: $mail_from\n");
     push(@head, "Subject: $subject\n");
@@ -612,6 +627,11 @@ foreach my $project (@project_settings_list)
           }
         handle_smtp_error($smtp, $smtp->dataend());
         handle_smtp_error($smtp, $smtp->quit());
+      }
+    elsif (defined $stdout)
+      {
+        print @head, @body;
+        print @difflines if $diff_wanted;
       }
 
     # Dump the output to logfile (if its name is not empty).

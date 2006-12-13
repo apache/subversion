@@ -145,6 +145,9 @@ class WinGeneratorBase(GeneratorBase):
     # Find the right Perl library name to link SWIG bindings with
     self._find_perl()
 
+    # Find the right Python include and libraries dirs for SWIG bindings
+    self._find_python()
+
     # Find the installed SWIG version to adjust swig options
     self._find_swig()
 
@@ -695,7 +698,12 @@ class WinGeneratorBase(GeneratorBase):
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
             or isinstance(target, gen_base.TargetSWIGLib)):
-      fakeincludes.append(self.swig_libdir)
+      if self.swig_vernum >= 103028:
+        fakeincludes.append(self.apath(self.swig_libdir, target.lang))
+      else:
+        fakeincludes.append(self.swig_libdir)
+      if target.lang == "python":
+        fakeincludes.extend(self.python_includes)
 
     fakeincludes.append(self.apath(self.zlib_path))
 
@@ -722,6 +730,11 @@ class WinGeneratorBase(GeneratorBase):
       if target.name == 'mod_dav_svn':
         fakelibdirs.append(self.apath(self.httpd_path, "modules/dav/main", 
                                       cfg))
+    if self.swig_libdir \
+       and (isinstance(target, gen_base.TargetSWIG)
+            or isinstance(target, gen_base.TargetSWIGLib)):
+      if target.lang == "python" and self.python_libdir:
+        fakelibdirs.append(self.python_libdir)
 
     return fakelibdirs
 
@@ -936,6 +949,21 @@ class WinGeneratorBase(GeneratorBase):
                        % (msg, self.perl_lib))
     finally:
       fp.close()
+
+  def _find_python(self):
+    "Find the appropriate options for creating SWIG-based Python modules"
+    self.python_includes = []
+    self.python_libdir = ""
+    try:
+      from distutils import sysconfig
+      inc = sysconfig.get_python_inc()
+      plat = sysconfig.get_python_inc(plat_specific=1)
+      self.python_includes.append(inc)
+      if inc != plat:
+        self.python_includes.append(plat)
+      self.python_libdir = self.apath(sysconfig.PREFIX, "libs")
+    except ImportError:
+      pass
 
   def _find_swig(self):
     # Require 1.3.24. If not found, assume 1.3.25.
