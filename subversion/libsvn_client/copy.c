@@ -395,23 +395,25 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     }
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func || ctx->log_msg_func2)
+  if (ctx->log_msg_func3 || ctx->log_msg_func2 || ctx->log_msg_func)
     {
-      svn_client_commit_item2_t *item;
+      svn_client_commit_item3_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make(pool, 2, sizeof(item));
       
-      item = apr_pcalloc(pool, sizeof(*item));
+      SVN_ERR(svn_client_commit_item_create
+              ((const svn_client_commit_item3_t **) &item, pool));
       item->url = svn_path_join(top_url, dst_rel, pool);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
       if (is_move && (! resurrection))
         {
-          item = apr_pcalloc(pool, sizeof(*item));
+          SVN_ERR(svn_client_commit_item_create
+                  ((const svn_client_commit_item3_t **) &item, pool));
           item->url = svn_path_join(top_url, src_rel, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
-          APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+          APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
                                       ctx, pool));
@@ -602,16 +604,17 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
     }
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func || ctx->log_msg_func2)
+  if (ctx->log_msg_func3 || ctx->log_msg_func2 || ctx->log_msg_func)
     {
-      svn_client_commit_item2_t *item;
+      svn_client_commit_item3_t *item;
       const char *tmp_file;
 
-      commit_items = apr_array_make(pool, 1, sizeof(item));      
-      item = apr_pcalloc(pool, sizeof(*item));
+      commit_items = apr_array_make(pool, 1, sizeof(item));
+      SVN_ERR(svn_client_commit_item_create
+              ((const svn_client_commit_item3_t **) &item, pool));
       item->url = dst_url;
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
 
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
                                       ctx, pool));
