@@ -1758,8 +1758,8 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     ctx->auth_baton = ab;
     ctx->notify_func = Notify::notify;
     ctx->notify_baton = m_notify;
-    ctx->log_msg_func = getCommitMessage;
-    ctx->log_msg_baton = getCommitMessageBaton(message);
+    ctx->log_msg_func3 = getCommitMessage;
+    ctx->log_msg_baton3 = getCommitMessageBaton(message);
     ctx->cancel_func = checkCancel;
     m_cancelOperation = false;
     ctx->cancel_baton = this;
@@ -1781,11 +1781,12 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     return ctx;
 }
 
-svn_error_t *SVNClient::getCommitMessage(const char **log_msg, 
-                                         const char **tmp_file,
-                                         apr_array_header_t *commit_items, 
-                                         void *baton,
-                                         apr_pool_t *pool)
+svn_error_t *
+SVNClient::getCommitMessage(const char **log_msg, 
+                            const char **tmp_file,
+                            const apr_array_header_t *commit_items, 
+                            void *baton,
+                            apr_pool_t *pool)
 {
     *log_msg = NULL;
     *tmp_file = NULL;
@@ -1814,7 +1815,7 @@ void *SVNClient::getCommitMessageBaton(const char *message)
     if(message != NULL || m_commitMessage)
     {
         log_msg_baton *baton = (log_msg_baton *)
-            apr_palloc (JNIUtil::getRequestPool()->pool(), sizeof (*baton));
+            apr_palloc(JNIUtil::getRequestPool()->pool(), sizeof(*baton));
 
         baton->message = message;
         baton->messageHandler = m_commitMessage;
