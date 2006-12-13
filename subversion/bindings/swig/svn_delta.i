@@ -91,7 +91,10 @@ void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
 
 %apply (const svn_delta_editor_t *EDITOR, void *BATON)
 {
-  (const svn_delta_editor_t *editor, void *edit_baton)
+  (const svn_delta_editor_t *editor, void *edit_baton),
+  (const svn_delta_editor_t *update_editor, void *update_baton),
+  (const svn_delta_editor_t *switch_editor, void *switch_baton),
+  (const svn_delta_editor_t *status_editor, void *status_baton)
 }
 
 /* -----------------------------------------------------------------------

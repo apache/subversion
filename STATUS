@@ -110,13 +110,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r22311
-    Perl bindings: make svn_ra_do_{update,switch,status} work.
-    Justification:
-      Binding completeness.
-    Votes:
-      +1: clkao, dlr
-
   * r22332
     Fix leak of space on the Perl argument stack when calling methods
     in a Perl class acting as a commit editor.
