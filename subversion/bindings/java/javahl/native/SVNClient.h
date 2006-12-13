@@ -178,12 +178,21 @@ private:
     Path m_lastPath;
     bool m_cancelOperation;
     CommitMessage *m_commitMessage;
-    void *getCommitMessageBaton(const char *message);
+
+    /**
+     * Implements the svn_client_get_commit_log3_t API.
+     */
     static svn_error_t *getCommitMessage(const char **log_msg,
-                                             const char **tmp_file,
-                                             apr_array_header_t *commit_items,
-                                             void *baton,
-                                             apr_pool_t *pool);
+                                         const char **tmp_file,
+                                         const apr_array_header_t *
+                                         commit_items,
+                                         void *baton,
+                                         apr_pool_t *pool);
+    /**
+     * Produce a baton for the getCommitMessage() callback.
+     */
+    void *getCommitMessageBaton(const char *message);
+
     std::string m_userName;
     std::string m_passWord;
     std::string m_configDir;
