@@ -68,6 +68,14 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r22332
+    Fix leak of space on the Perl argument stack when calling methods
+    in a Perl class acting as a commit editor.
+    Justification:
+      Memory leaks are bad.
+    Votes:
+      +1: dlr
+
   * r22346, r22351, r22352
     Calculate checksums in ra_replay and repos_replay.
     Justification:
@@ -100,11 +108,3 @@ Approved changes:
       Binding completeness.
     Votes:
       +1: clkao, dlr
-
-  * r22332
-    Fix leak of space on the Perl argument stack when calling methods
-    in a Perl class acting as a commit editor.
-    Justification:
-      Memory leaks are bad.
-    Votes:
-      +1: dlr, clkao
