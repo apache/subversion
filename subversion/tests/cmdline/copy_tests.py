@@ -439,10 +439,11 @@ def resurrect_deleted_dir(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
 
   # Delete directory A/D/G, commit that as r2.
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force',
-                                     wc_dir + '/A/D/G')
+                                     G_path)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G' : Item(verb='Deleting'),
@@ -495,10 +496,11 @@ def copy_deleted_dir_into_prefix(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  D_path = os.path.join(wc_dir, 'A', 'D')
 
   # Delete directory A/D, commit that as r2.
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force',
-                                     wc_dir + '/A/D')
+                                     D_path)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/D' : Item(verb='Deleting'),
@@ -609,9 +611,11 @@ def copy_modify_commit(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
   
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B2')
+                                     B_path, B2_path)
   
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
   svntest.main.file_append(alpha_path, "modified alpha")
@@ -712,10 +716,12 @@ def copy_delete_commit(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
 
   # copy a tree
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B2')
+                                     B_path, B2_path)
   
   # delete a file
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
@@ -762,11 +768,12 @@ def mv_and_revert_directory(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
 
   # Issue 931: move failed to lock the directory being deleted
   svntest.actions.run_and_verify_svn(None, None, [], 'move',
-                                     wc_dir + '/A/B/E',
-                                     wc_dir + '/A/B/F')
+                                     E_path, F_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
   expected_status.add({
@@ -2707,6 +2714,105 @@ def copy_added_paths_to_URL(sbox):
                                         expected_disk,
                                         expected_status)
 
+
+# Issue #1869.
+def move_to_relative_paths(sbox):
+  "move file using relative dst path names"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  rel_path = os.path.join('..', '..', '..')
+
+  current_dir = os.getcwd()
+  os.chdir(E_path)
+  
+  try:
+    svntest.main.run_svn(None, 'mv', 'beta', rel_path)
+  finally:
+    os.chdir(current_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'beta'        : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+#----------------------------------------------------------------------
+def move_from_relative_paths(sbox):
+  "move file using relative src path names"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  beta_rel_path = os.path.join('..', 'E', 'beta')
+
+  current_dir = os.getcwd()
+  os.chdir(F_path)
+  
+  try:
+    svntest.main.run_svn(None, 'mv', beta_rel_path, '.')
+  finally:
+    os.chdir(current_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/F/beta'  : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+#----------------------------------------------------------------------
+def copy_to_relative_paths(sbox):
+  "copy file using relative dst path names"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  rel_path = os.path.join('..', '..', '..')
+
+  current_dir = os.getcwd()
+  os.chdir(E_path)
+  
+  try:
+    svntest.main.run_svn(None, 'cp', 'beta', rel_path)
+  finally:
+    os.chdir(current_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'beta'        : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+#----------------------------------------------------------------------
+def copy_from_relative_paths(sbox):
+  "copy file using relative src path names"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  beta_rel_path = os.path.join('..', 'E', 'beta')
+
+  current_dir = os.getcwd()
+  os.chdir(F_path)
+  
+  try:
+    svntest.main.run_svn(None, 'cp', beta_rel_path, '.')
+  finally:
+    os.chdir(current_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/F/beta'  : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -2761,6 +2867,10 @@ test_list = [ None,
               move_dir_back_and_forth,
               copy_move_added_paths,
               copy_added_paths_to_URL,
+              XFail(move_to_relative_paths, svntest.main.is_os_windows),
+              move_from_relative_paths,
+              XFail(copy_to_relative_paths, svntest.main.is_os_windows),
+              copy_from_relative_paths,
              ]
 
 if __name__ == '__main__':

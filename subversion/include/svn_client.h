@@ -316,7 +316,7 @@ typedef struct svn_client_commit_info_t
 
 /**
  * @name Commit state flags
- * @brief State flags for use with the @c svn_client_commit_item2_t structure
+ * @brief State flags for use with the @c svn_client_commit_item3_t structure
  * (see the note about the namespace for that structure, which also
  * applies to these flags).
  * @{
@@ -330,9 +330,51 @@ typedef struct svn_client_commit_info_t
 #define SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN  0x20
 /** @} */
 
+/** The commit candidate structure.  In order to avoid backwards
+ * compatibility problems clients should use
+ * svn_client_commit_item_create() to allocate and intialize this
+ * structure instead of doing so themselves.
+ *
+ * @since New in 1.5.
+ */
+typedef struct svn_client_commit_item3_t
+{
+  /** absolute working-copy path of item */
+  const char *path;
+
+  /** node kind (dir, file) */
+  svn_node_kind_t kind;
+
+  /** commit URL for this item */
+  const char *url;
+
+  /** revision of textbase */
+  svn_revnum_t revision;
+
+  /** copyfrom-url or NULL if not a copied item */
+  const char *copyfrom_url;
+  
+  /** copyfrom-rev, valid when copyfrom_url != NULL */
+  svn_revnum_t copyfrom_rev;
+  
+  /** state flags */
+  apr_byte_t state_flags;
+
+  /** An array of `svn_prop_t *' changes to wc properties.  If adding
+   * to this array, allocate the svn_prop_t and its contents in @c
+   * wcprop_changes->pool, so that it has the same lifetime as this
+   * svn_client_commit_item2_t.
+   *
+   * See http://subversion.tigris.org/issues/show_bug.cgi?id=806 for
+   * what would happen if the post-commit process didn't group these
+   * changes together with all other changes to the item :-).
+   */
+  apr_array_header_t *wcprop_changes;
+} svn_client_commit_item3_t;
+
 /** The commit candidate structure.
  *
- * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 typedef struct svn_client_commit_item2_t
 {
@@ -358,9 +400,9 @@ typedef struct svn_client_commit_item2_t
   apr_byte_t state_flags;
 
   /** An array of `svn_prop_t *' changes to wc properties.  If adding
-   * to this array, allocate the svn_prop_t and its contents in
+   * to this array, allocate the svn_prop_t and its contents in @c
    * wcprop_changes->pool, so that it has the same lifetime as this
-   * svn_client_commit_item_t.
+   * svn_client_commit_item2_t.
    *
    * See http://subversion.tigris.org/issues/show_bug.cgi?id=806 for
    * what would happen if the post-commit process didn't group these
@@ -368,16 +410,6 @@ typedef struct svn_client_commit_item2_t
    */
   apr_array_header_t *wcprop_changes;
 } svn_client_commit_item2_t;
-
-/** 
- * Return a duplicate of @a item, allocated in @a pool. No part of the new
- * structure will be shared with @a item.
- *
- * @since New in 1.3.
- */
-svn_client_commit_item2_t *
-svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
-                            apr_pool_t *pool);
 
 /** The commit candidate structure.
  *
@@ -416,6 +448,69 @@ typedef struct svn_client_commit_item_t
 
 } svn_client_commit_item_t;
 
+/** Initialize a commit item.
+ * Set @a *item to a commit item object, allocated in @a pool.
+ *
+ * In order to avoid backwards compatibility problems, this function
+ * is used to intialize and allocate the @c svn_client_commit_item3_t
+ * structure rather than doing so explicitly, as the size of this
+ * structure may change in the future.
+ * 
+ * The current implementation never returns error, but callers should
+ * still check for error, for compatibility with future versions.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_commit_item_create(const svn_client_commit_item3_t **item,
+                              apr_pool_t *pool);
+
+/** 
+ * Return a duplicate of @a item, allocated in @a pool. No part of the new
+ * structure will be shared with @a item.
+ *
+ * @since New in 1.5.
+ */
+svn_client_commit_item3_t *
+svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
+                            apr_pool_t *pool);
+
+/** 
+ * Return a duplicate of @a item, allocated in @a pool. No part of the new
+ * structure will be shared with @a item.
+ *
+ * @deprecated Provided for backward compatibility with the 1.3 API.
+ */
+svn_client_commit_item2_t *
+svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
+                            apr_pool_t *pool);
+
+/** Callback type used by commit-y operations to get a commit log message
+ * from the caller.
+ *  
+ * Set @a *log_msg to the log message for the commit, allocated in @a 
+ * pool, or @c NULL if wish to abort the commit process.  Set @a *tmp_file 
+ * to the path of any temporary file which might be holding that log 
+ * message, or @c NULL if no such file exists (though, if @a *log_msg is 
+ * @c NULL, this value is undefined).  The log message MUST be a UTF8 
+ * string with LF line separators.
+ *
+ * @a commit_items is a read-only array of @c svn_client_commit_item3_t
+ * structures, which may be fully or only partially filled-in,
+ * depending on the type of commit operation.
+ *
+ * @a baton is provided along with the callback for use by the handler.
+ *
+ * All allocations should be performed in @a pool.
+ *
+ * @since New in 1.5.
+ */
+typedef svn_error_t *(*svn_client_get_commit_log3_t)
+  (const char **log_msg,
+   const char **tmp_file,
+   const apr_array_header_t *commit_items,
+   void *baton,
+   apr_pool_t *pool);
 
 /** Callback type used by commit-y operations to get a commit log message
  * from the caller.
@@ -435,7 +530,7 @@ typedef struct svn_client_commit_item_t
  *
  * All allocations should be performed in @a pool.
  *
- * @since New in 1.3.
+ * @deprecated Provided for backward compatibility with the 1.3 API.
  */
 typedef svn_error_t *(*svn_client_get_commit_log2_t)
   (const char **log_msg,
@@ -644,6 +739,15 @@ typedef struct svn_client_ctx_t
   /** callback baton for log_msg_func2
    * @since New in 1.3. */
   void *log_msg_baton2;
+
+  /** Log message callback function. NULL means that Subversion
+   *   should try @c log_msg_func2, then @c log_msg_func.
+   * @since New in 1.5. */
+  svn_client_get_commit_log3_t log_msg_func3;
+
+  /** The callback baton for @c log_msg_func3.
+   * @since New in 1.5. */
+  void *log_msg_baton3;
 
   /** Notification callback for network progress information.
    * May be NULL if not used.
@@ -1003,9 +1107,9 @@ svn_client_add(const char *path,
  * for addition (using svn_client_add(), whose docstring you should
  * read).
  *
- * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
- * this function can use to query for a commit log message when one is
- * needed.
+ * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
+ * combo that this function can use to query for a commit log message
+ * when one is needed.
  *
  * If @a ctx->notify_func2 is non-null, when the directory has been created
  * (successfully) in the working copy, call @a ctx->notify_func2 with
@@ -1037,7 +1141,7 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
 /** Delete items from a repository or working copy.
  *
  * If the paths in @a paths are URLs, use the authentication baton in
- * @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to
+ * @a ctx and @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to
  * immediately attempt to commit a deletion of the URLs from the
  * repository.  If the commit succeeds, allocate (in @a pool) and
  * populate @a *commit_info_p.  Every path must belong to the same
@@ -1055,9 +1159,9 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * modified and/or unversioned items. If @a force is set such items
  * will be deleted.
  *
- * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
- * this function can use to query for a commit log message when one is
- * needed.
+ * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
+ * combo that this function can use to query for a commit log message
+ * when one is needed.
  *
  * If @a ctx->notify_func2 is non-null, then for each item deleted, call
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the deleted
@@ -1090,7 +1194,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
 
 /** Import file or directory @a path into repository directory @a url at
  * head, authenticating with the authentication baton cached in @a ctx, 
- * and using @a ctx->log_msg_func/@a ctx->log_msg_baton to get a log message 
+ * and using @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to get a log message 
  * for the (implied) commit.  Set @a *commit_info_p to the results of the 
  * commit, allocated in @a pool.  If some components of @a url do not exist
  * then create parent directories as necessary.
@@ -1111,8 +1215,9 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  *
  * Use @a pool for any temporary allocation.  
  * 
- * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that 
- * this function can use to query for a commit log message when one is needed.
+ * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
+ * combo that this function can use to query for a commit log message
+ * when one is needed.
  *
  * Use @a nonrecursive to indicate that imported directories should not
  * recurse into any subdirectories they may have.
@@ -1155,7 +1260,7 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
 /**
  * Commit files or directories into repository, authenticating with
  * the authentication baton cached in @a ctx, and using 
- * @a ctx->log_msg_func/@a ctx->log_msg_baton to obtain the log message. 
+ * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to obtain the log message. 
  * Set @a *commit_info_p to the results of the commit, allocated in @a pool.
  *
  * @a targets is an array of <tt>const char *</tt> paths to commit.  They 
@@ -1969,7 +2074,7 @@ svn_client_resolved(const char *path,
  * dst_path must be a non-existent WC path or URL.
  *
  * If @a dst_path is a URL, use the authentication baton 
- * in @a ctx and @a ctx->log_msg_func/@a ctx->log_msg_baton to immediately 
+ * in @a ctx and @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to immediately 
  * attempt to commit the copy action in the repository.  If the commit 
  * succeeds, allocate (in @a pool) and populate @a *commit_info_p.
  *
@@ -1984,8 +2089,8 @@ svn_client_resolved(const char *path,
  * a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path
  * is an URL.
  *
- * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
- * this function can use to query for a commit log message when one is
+ * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo
+ * that this function can use to query for a commit log message when one is
  * needed.
  *
  * If @a ctx->notify_func2 is non-null, invoke it with @a ctx->notify_baton2
@@ -2058,7 +2163,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *
  *   - @a dst_path must also be a working copy path.
  *
- *   - @a ctx->log_msg_func and @a ctx->log_msg_baton are ignored.
+ *   - @a ctx->log_msg_func3 and @a ctx->log_msg_baton3 are ignored.
  *
  *   - This is a scheduling operation.  No changes will happen to the
  *     repository until a commit occurs.  This scheduling can be removed
@@ -2076,7 +2181,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  * a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path
  * is an URL.
  *
- * @a ctx->log_msg_func/@a ctx->log_msg_baton are a callback/baton combo that
+ * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
  *
  * If @a ctx->notify_func2 is non-null, then for each item moved, call
@@ -2182,8 +2287,8 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * if it has not changed since revision @a base_revision_for_url.  @a
  * base_revision_for_url must be @c SVN_INVALID_REVNUM if @a target is
  * not an URL.  @a recurse is not supported on URLs.  The
- * authentication baton in @a ctx and @a ctx->log_msg_func/@a
- * ctx->log_msg_baton will be used to immediately attempt to commit
+ * authentication baton in @a ctx and @a ctx->log_msg_func3/@a
+ * ctx->log_msg_baton3 will be used to immediately attempt to commit
  * the property change in the repository.  If the commit succeeds,
  * allocate (in @a pool) and populate @a *commit_info_p.
  *

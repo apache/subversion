@@ -2,7 +2,7 @@
  * props.c :  routines for fetching DAV properties
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -160,6 +160,10 @@ static const svn_ra_dav__xml_elm_t propfind_elements[] =
 
 typedef struct propfind_ctx_t
 {
+  /*WARNING: WANT_CDATA should stay the first element in the baton:
+    svn_ra_dav__xml_collect_cdata() assumes the baton starts with a stringbuf.
+  */
+  svn_stringbuf_t *cdata;
   apr_hash_t *props; /* const char *URL-PATH -> svn_ra_dav_resource_t */
 
   svn_ra_dav_resource_t *rsrc; /* the current resource. */
@@ -215,8 +219,7 @@ static void assign_rsrc_url(svn_ra_dav_resource_t *rsrc,
 }
 
 
-static int validate_element(void *userdata, 
-                            svn_ra_dav__xml_elmid parent, 
+static int validate_element(svn_ra_dav__xml_elmid parent,
                             svn_ra_dav__xml_elmid child)
 {
   switch (parent)
@@ -271,17 +274,30 @@ static int validate_element(void *userdata,
 }
 
 
-static int start_element(void *userdata, 
-                         const svn_ra_dav__xml_elm_t *elm, 
-                         const char **atts)
+static svn_error_t *
+start_element(int *elem, void *baton, int parent,
+              const char *nspace, const char *name, const char **atts)
 {
-  propfind_ctx_t *pc = userdata;
+  propfind_ctx_t *pc = baton;
+  const svn_ra_dav__xml_elm_t *elm
+    = svn_ra_dav__lookup_xml_elem(propfind_elements, nspace, name);
+  int acc = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  /* Accept unknown props */
 
-  switch (elm->id)
+  if (acc != SVN_RA_DAV__XML_VALID)
+    {
+      *elem = acc;
+      return (acc == SVN_RA_DAV__XML_DECLINE) ?
+        SVN_NO_ERROR : svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
+    }
+
+  svn_stringbuf_setempty(pc->cdata);
+  *elem = elm ? elm->id : ELEM_unknown;
+  switch (*elem)
     {
     case ELEM_response:
       if (pc->rsrc)
-        return SVN_RA_DAV__XML_INVALID;
+        return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
       /* Create a new resource. */
       pc->rsrc = apr_pcalloc(pc->pool, sizeof(*(pc->rsrc)));
       pc->rsrc->pool = pc->pool;
@@ -319,34 +335,33 @@ static int start_element(void *userdata,
     }
 
   /* Remember the last tag we opened. */
-  pc->last_open_id = elm->id;
-  return SVN_RA_DAV__XML_VALID;
+  pc->last_open_id = *elem;
+  return SVN_NO_ERROR;
 }
 
 
-static int end_element(void *userdata, 
-                       const svn_ra_dav__xml_elm_t *elm,
-                       const char *cdata)
+static svn_error_t * end_element(void *baton, int state,
+                                 const char *nspace, const char *name)
 {
-  propfind_ctx_t *pc = userdata;
+  propfind_ctx_t *pc = baton;
   svn_ra_dav_resource_t *rsrc = pc->rsrc;
-  const char *name;
   const svn_string_t *value = NULL;
   const elem_defn *parent_defn;
   const elem_defn *defn;
   ne_status status;
+  const char *cdata = pc->cdata->data;
 
-  switch (elm->id)
+  switch (state)
     {
     case ELEM_response:
       /* Verify that we've received a URL for this resource. */
       if (!pc->rsrc->url)
-        return SVN_RA_DAV__XML_INVALID;
+        return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
 
       /* Store the resource in the top-level hash table. */
       apr_hash_set(pc->props, pc->rsrc->url, APR_HASH_KEY_STRING, pc->rsrc);
       pc->rsrc = NULL;
-      return SVN_RA_DAV__XML_VALID;
+      return SVN_NO_ERROR;
 
     case ELEM_propstat:
       /* We're at the end of a set of properties.  Do the right thing
@@ -373,24 +388,24 @@ static int end_element(void *userdata,
       else if (! pc->status)
         {
           /* No status at all?  Bogosity. */
-          return SVN_RA_DAV__XML_INVALID;
+          return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
         }
-      return SVN_RA_DAV__XML_VALID;
+      return SVN_NO_ERROR;
 
     case ELEM_status:
       /* Parse the <status> tag's CDATA for a status code. */
       if (ne_parse_statusline(cdata, &status))
-        return SVN_RA_DAV__XML_INVALID;
+        return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
       free(status.reason_phrase);
       pc->status = status.code;
-      return SVN_RA_DAV__XML_VALID;
+      return SVN_NO_ERROR;
 
     case ELEM_href:
       /* Special handling for <href> that belongs to the <response> tag. */
       if (rsrc->href_parent == ELEM_response)
         {
           assign_rsrc_url(pc->rsrc, cdata, pc->pool);
-          return SVN_RA_DAV__XML_VALID;
+          return SVN_NO_ERROR;
         }
 
       /* Use the parent element's name, not the href. */
@@ -398,7 +413,7 @@ static int end_element(void *userdata,
 
       /* No known parent?  Get outta here. */
       if (!parent_defn)
-        return SVN_RA_DAV__XML_VALID;
+        return SVN_NO_ERROR;
 
       /* All other href's we'll treat as property values. */
       name = parent_defn->name;
@@ -415,16 +430,16 @@ static int end_element(void *userdata,
            structure to determine if they are properties.  Properties,
            we handle; all else hits the road.  ***/
 
-      if (elm->id == ELEM_unknown)
+      if (state == ELEM_unknown)
         {
-          name = apr_pstrcat(pc->pool, elm->nspace, elm->name, NULL);
+          name = apr_pstrcat(pc->pool, nspace, name, NULL);
         }
       else
         {
-          defn = defn_from_id(elm->id);
+          defn = defn_from_id(state);
           if (! (defn && defn->is_property))
-            return SVN_RA_DAV__XML_VALID;
-          name = defn->name;          
+            return SVN_NO_ERROR;
+          name = defn->name;
         }
 
       /* Check for encoding attribute. */
@@ -436,7 +451,7 @@ static int end_element(void *userdata,
 
       /* Check for known encoding type */
       if (strcmp(pc->encoding, "base64") != 0)
-        return SVN_RA_DAV__XML_INVALID;
+        return svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
 
       /* There is an encoding on this property, handle it.
        * the braces are needed to allocate "in" on the stack. */
@@ -456,7 +471,7 @@ static int end_element(void *userdata,
      <propstat>, we'll either dump the props as invalid or move them
      into the resource's property hash. */
   apr_hash_set(pc->propbuffer, name, APR_HASH_KEY_STRING, value);
-  return SVN_RA_DAV__XML_VALID;
+  return SVN_NO_ERROR;
 }
 
 
@@ -476,9 +491,8 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     const ne_propname *which_props,
                                     apr_pool_t *pool)
 {
-  svn_error_t *err = SVN_NO_ERROR;
   propfind_ctx_t pc;
-  ne_buffer *body;
+  svn_stringbuf_t *body;
   apr_hash_t *extra_headers = apr_hash_make(pool);
 
   /* Add a Depth header. */
@@ -497,28 +511,31 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
 
   /* It's easier to roll our own PROPFIND here than use neon's current
      interfaces. */
-  body = ne_buffer_create();
-
   /* The start of the request body is fixed: */
-  ne_buffer_zappend(body, 
-                   "<?xml version=\"1.0\" encoding=\"utf-8\"?>" DEBUG_CR
-                   "<propfind xmlns=\"DAV:\">" DEBUG_CR);
+  body = svn_stringbuf_create
+    ("<?xml version=\"1.0\" encoding=\"utf-8\"?>" DEBUG_CR
+     "<propfind xmlns=\"DAV:\">" DEBUG_CR, pool);
 
   /* Are we asking for specific propert(y/ies), or just all of them? */
   if (which_props)
     {
       int n;
-      ne_buffer_zappend(body, "<prop>" DEBUG_CR);
+      apr_pool_t *iterpool = svn_pool_create(pool);
+
+      svn_stringbuf_appendcstr(body, "<prop>" DEBUG_CR);
       for (n = 0; which_props[n].name != NULL; n++) 
         {
-          ne_buffer_concat(body, "<", which_props[n].name, " xmlns=\"", 
-                           which_props[n].nspace, "\"/>" DEBUG_CR, NULL);
+          svn_pool_clear(iterpool);
+          svn_stringbuf_appendcstr
+            (body, apr_pstrcat(iterpool, "<", which_props[n].name, " xmlns=\"",
+                               which_props[n].nspace, "\"/>" DEBUG_CR, NULL));
         }
-      ne_buffer_zappend(body, "</prop></propfind>" DEBUG_CR);
+      svn_stringbuf_appendcstr(body, "</prop></propfind>" DEBUG_CR);
+      svn_pool_destroy(iterpool);
     }
   else
     {
-      ne_buffer_zappend(body, "<allprop/></propfind>" DEBUG_CR);
+      svn_stringbuf_appendcstr(body, "<allprop/></propfind>" DEBUG_CR);
     }
 
   /* Initialize our baton. */
@@ -526,19 +543,19 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   pc.pool = pool;
   pc.propbuffer = apr_hash_make(pool);
   pc.props = apr_hash_make(pool);
+  pc.cdata = svn_stringbuf_create("", pool);
 
   /* Create and dispatch the request! */
-  err = svn_ra_dav__parsed_request_compat(sess, "PROPFIND", url,
-                                          body->data, 0, 
-                                          set_parser, propfind_elements, 
-                                          validate_element, 
-                                          start_element, end_element, 
-                                          &pc, extra_headers, NULL, FALSE, 
-                                          pool);
+  SVN_ERR(svn_ra_dav__parsed_request(sess, "PROPFIND", url,
+                                     body->data, 0,
+                                     set_parser,
+                                     start_element,
+                                     svn_ra_dav__xml_collect_cdata,
+                                     end_element,
+                                     &pc, extra_headers, NULL, FALSE, pool));
 
-  ne_buffer_destroy(body);
   *results = pc.props;
-  return err;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
@@ -961,10 +978,10 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
 
 /* Helper function for svn_ra_dav__do_proppatch() below. */
 static void
-do_setprop(ne_buffer *body, 
-           const char *name, 
-           const svn_string_t *value,
-           apr_pool_t *pool)
+append_setprop(svn_stringbuf_t *body,
+               const char *name,
+               const svn_string_t *value,
+               apr_pool_t *pool)
 {
   const char *encoding = "";
   const char *xml_safe;
@@ -986,7 +1003,8 @@ do_setprop(ne_buffer *body,
      here. */
   if (! value)
     {
-      ne_buffer_concat(body, "<", xml_tag_name, "/>", NULL);
+      svn_stringbuf_appendcstr(body,
+                               apr_psprintf(pool, "<%s />", xml_tag_name));
       return;
     }
 
@@ -1005,8 +1023,10 @@ do_setprop(ne_buffer *body,
       xml_safe = base64ed->data;
     }
 
-  ne_buffer_concat(body, "<", xml_tag_name, encoding, ">", 
-                   xml_safe, "</", xml_tag_name, ">", NULL);
+  svn_stringbuf_appendcstr(body,
+                           apr_psprintf(pool,"<%s %s>%s</%s>",
+                                        xml_tag_name, encoding,
+                                        xml_safe, xml_tag_name));
   return;
 }
 
@@ -1021,8 +1041,9 @@ svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
 {
   ne_request *req;
   int code;
-  ne_buffer *body; /* ### using an ne_buffer because it can realloc */
+  svn_stringbuf_t *body;
   svn_error_t *err;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   /* just punt if there are no changes to make. */
   if ((prop_changes == NULL || (! apr_hash_count(prop_changes)))
@@ -1031,50 +1052,48 @@ svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
 
   /* easier to roll our own PROPPATCH here than use ne_proppatch(), which 
    * doesn't really do anything clever. */
-  body = ne_buffer_create();
-
-  ne_buffer_zappend(body,
-                    "<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
-                    "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:V=\""
-                    SVN_DAV_PROP_NS_DAV "\" xmlns:C=\""
-                    SVN_DAV_PROP_NS_CUSTOM "\" xmlns:S=\""
-                    SVN_DAV_PROP_NS_SVN "\">");
+  body = svn_stringbuf_create
+    ("<?xml version=\"1.0\" encoding=\"utf-8\" ?>" DEBUG_CR
+     "<D:propertyupdate xmlns:D=\"DAV:\" xmlns:V=\""
+     SVN_DAV_PROP_NS_DAV "\" xmlns:C=\""
+     SVN_DAV_PROP_NS_CUSTOM "\" xmlns:S=\""
+     SVN_DAV_PROP_NS_SVN "\">" DEBUG_CR, pool);
 
   /* Handle property changes. */
   if (prop_changes)
     {
       apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create(pool);
-      ne_buffer_zappend(body, "<D:set><D:prop>");
+      svn_stringbuf_appendcstr(body, "<D:set><D:prop>");
       for (hi = apr_hash_first(pool, prop_changes); hi; hi = apr_hash_next(hi))
         {
           const void *key;
           void *val;
           svn_pool_clear(subpool);
           apr_hash_this(hi, &key, NULL, &val);
-          do_setprop(body, key, val, subpool);
+          append_setprop(body, key, val, subpool);
         }
-      ne_buffer_zappend(body, "</D:prop></D:set>");
-      svn_pool_destroy(subpool);
+      svn_stringbuf_appendcstr(body, "</D:prop></D:set>");
     }
   
   /* Handle property deletions. */
   if (prop_deletes)
     {
       int n;
-      ne_buffer_zappend(body, "<D:remove><D:prop>");
-      for (n = 0; n < prop_deletes->nelts; n++) 
+      svn_stringbuf_appendcstr(body, "<D:remove><D:prop>");
+      for (n = 0; n < prop_deletes->nelts; n++)
         {
           const char *name = APR_ARRAY_IDX(prop_deletes, n, const char *);
-          do_setprop(body, name, NULL, pool);
+          svn_pool_clear(subpool);
+          append_setprop(body, name, NULL, subpool);
         }
-      ne_buffer_zappend(body, "</D:prop></D:remove>");
+      svn_stringbuf_appendcstr(body, "</D:prop></D:remove>");
     }
+  svn_pool_destroy(subpool);
 
   /* Finish up the body. */
-  ne_buffer_zappend(body, "</D:propertyupdate>");
+  svn_stringbuf_appendcstr(body, "</D:propertyupdate>");
   req = ne_request_create(ras->sess, "PROPPATCH", url);
-  ne_set_request_body_buffer(req, body->data, ne_buffer_size(body));
+  ne_set_request_body_buffer(req, body->data, body->len);
   ne_add_request_header(req, "Content-Type", "text/xml; charset=UTF-8");
 
   /* add any extra headers passed in by caller. */
@@ -1106,7 +1125,6 @@ svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
          _("At least one property change failed; repository is unchanged"));
     }
 
-  ne_buffer_destroy(body);
   return err;
 }
 
@@ -1247,16 +1265,13 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
      get the item. */
   for (hi = apr_hash_first(pool, resources); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
       void *val;
-      const char *childname;
       svn_ra_dav_resource_t *resource;
       const svn_string_t *propval;
       apr_hash_index_t *h;
       svn_dirent_t *entry;
 
-      apr_hash_this(hi, &key, NULL, &val);
-      childname =  key;
+      apr_hash_this(hi, NULL, NULL, &val);
       resource = val;
           
       entry = apr_pcalloc(pool, sizeof(*entry));
@@ -1278,8 +1293,7 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
            h; h = apr_hash_next(h))
         {
           const void *kkey;
-          void *vval;
-          apr_hash_this(h, &kkey, NULL, &vval);
+          apr_hash_this(h, &kkey, NULL, NULL);
           
           if (strncmp((const char *)kkey, SVN_DAV_PROP_NS_CUSTOM,
                       sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0)

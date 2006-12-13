@@ -1081,8 +1081,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                        h; h = apr_hash_next(h))
                     {
                       const void *kkey;
-                      void *vval;
-                      apr_hash_this(h, &kkey, NULL, &vval);
+                      apr_hash_this(h, &kkey, NULL, NULL);
                   
                       if (strncmp((const char *) kkey, SVN_DAV_PROP_NS_CUSTOM,
                                   sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0
@@ -1221,7 +1220,7 @@ drev_end_element(void *baton, int state,
       b->cdata = NULL;
     }
 
-  return SVN_RA_DAV__XML_VALID;
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
@@ -2236,12 +2235,11 @@ start_element(int *elem, void *userdata, int parent_state, const char *nspace,
               for (hi = apr_hash_first(TOP_DIR(rb).pool, bc_children);
                    hi; hi = apr_hash_next(hi))
                 {
-                  const void *key;
                   void *val;
                   svn_ra_dav_resource_t *rsrc;
                   const svn_string_t *vc_url;
 
-                  apr_hash_this(hi, &key, NULL, &val);
+                  apr_hash_this(hi, NULL, NULL, &val);
                   rsrc = val;
 
                   vc_url = apr_hash_get(rsrc->propset,

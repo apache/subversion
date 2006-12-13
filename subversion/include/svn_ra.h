@@ -1137,7 +1137,7 @@ svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
 
 /**
  * Lock each path in @a path_revs, which is a hash whose keys are the
- * paths to be locked, and whose values are the corresponding bas
+ * paths to be locked, and whose values are the corresponding base
  * revisions for each path.
  *
  * Note that locking is never anonymous, so any server implementing

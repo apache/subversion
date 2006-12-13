@@ -340,6 +340,8 @@ install-static: @INSTALL_STATIC_RULES@
 javahl: javahl-java javahl-javah javahl-lib @JAVAHL_TESTS_TARGET@
 install-javahl: install-javahl-java install-javahl-javah install-javahl-lib
 
+### FIXME: We need to delete {*.lo,*.la,*.o} from the javahl/native/
+### dir, or we get complaints from g++.
 clean-javahl:
 	rm -rf $(javahl_java_PATH) $(javahl_javah_PATH) @JAVAHL_OBJDIR@
 

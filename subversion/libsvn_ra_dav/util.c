@@ -37,6 +37,38 @@
 
 #include "ra_dav.h"
 
+
+
+
+static apr_status_t
+xml_parser_cleanup(void *baton)
+{
+  ne_xml_destroy(baton);
+
+  return APR_SUCCESS;
+}
+
+static ne_xml_parser *
+xml_parser_create(svn_ra_dav__request_t *req)
+{
+  ne_xml_parser *p = ne_xml_create();
+
+  /* ### HACK: Set the parser's error to the empty string.  Someday we
+     hope neon will let us have an easy way to tell the difference
+     between XML parsing errors, and errors that occur while handling
+     the XML tags that we get.  Until then, trust that whenever neon
+     has an error somewhere below the API, it sets its own error to
+     something non-empty (the API promises non-NULL, at least). */
+  ne_xml_set_error(p, "");
+
+  apr_pool_cleanup_register(req->pool, p,
+                            xml_parser_cleanup,
+                            apr_pool_cleanup_null);
+
+  return p;
+}
+
+
 
 /* Neon request management */
 
@@ -106,48 +138,7 @@ svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
 }
 
 
-static apr_status_t
-xml_parser_cleanup(void *baton)
-{
-  ne_xml_destroy(baton);
-
-  return APR_SUCCESS;
-}
-
-ne_xml_parser *
-svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req)
-{
-  ne_xml_parser *p = ne_xml_create();
-
-  /* ### HACK: Set the parser's error to the empty string.  Someday we
-     hope neon will let us have an easy way to tell the difference
-     between XML parsing errors, and errors that occur while handling
-     the XML tags that we get.  Until then, trust that whenever neon
-     has an error somewhere below the API, it sets its own error to
-     something non-empty (the API promises non-NULL, at least). */
-  ne_xml_set_error(p, "");
-
-  apr_pool_cleanup_register(req->pool, p,
-                            xml_parser_cleanup,
-                            apr_pool_cleanup_null);
-
-  return p;
-}
-
-
 
-
-typedef struct {
-  apr_pool_t *pool;                          /* pool on which this is alloc-d */
-  void *original_userdata;                   /* userdata for callbacks */
-  const svn_ra_dav__xml_elm_t *elements;     /* old-style elements table */
-  svn_ra_dav__xml_validate_cb *validate_cb;  /* old-style validate callback */
-  svn_ra_dav__xml_startelm_cb *startelm_cb;  /* old-style startelm callback */
-  svn_ra_dav__xml_endelm_cb *endelm_cb;      /* old-style endelm callback */
-  svn_stringbuf_t *cdata_accum;              /* stringbuffer for CDATA */
-} neon_shim_baton_t;
-
-
 const svn_ra_dav__xml_elm_t *
 svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
                             const char *nspace,
@@ -174,169 +165,6 @@ svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
   return elem_unknown;
 }
 
-/** Fill in temporary structure for ELEM_unknown element.
- *
- * Call only for element ELEM_unknown!  For Neon 0.23 API
- * compatibility, we need to fill the XML element structure with real
- * namespace and element name, as "old-style" handler used to get that
- * from Neon parser. This is a hack, so don't expect it to be elegant.
- * The @a elem_pointer is a reference to element pointer which is
- * returned by svn_ra_dav__lookup_xml_elem, and supposedly points at
- * en entry in the XML elements table supplied by an "old-style"
- * handler. @a elem_unknown_temporary is a reference to XML element
- * structure allocated on the stack. There's no reason to allocate it
- * anywhere else because it's going to use @a nspace and @a name which
- * are passed into the "new-style" handler by the Neon parser, so the
- * structure pointed at by @a elem_unknown_temporary must die when the
- * calling function completes. This function is designed to be called
- * from "new-style" startelm and endelm callbacks. */
-static void
-handle_unknown(const svn_ra_dav__xml_elm_t **elem_pointer,
-               svn_ra_dav__xml_elm_t *elem_unknown_temporary,
-               const char *nspace, const char *name)
-{
-  elem_unknown_temporary->nspace = nspace;
-  elem_unknown_temporary->name = name;
-  elem_unknown_temporary->id = (*elem_pointer)->id;
-  elem_unknown_temporary->flags = (*elem_pointer)->flags;
-
-  /* The pointer will use temporary record instead of a table record */
-  *elem_pointer = elem_unknown_temporary;
-}
-
-/** (Neon 0.24) Start element parsing.
- *
- * Calls "old-style" API callbacks validate_cb and startelm_cb to emulate
- * Neon 0.23 parser. @a userdata is a @c neon_shim_baton_t instance.
- * ---- ne_xml.h ----
- * The startelm callback may return:
- *   <0 =>  abort the parse (NE_XML_ABORT)
- *    0 =>  decline this element  (NE_XML_DECLINE)
- *   >0 =>  accept this element; value is state for this element.
- * The 'parent' integer is the state returned by the handler of the
- * parent element. */
-static int
-shim_startelm(void *userdata, int parent_state, const char *nspace,
-              const char *name, const char **attrs)
-{
-  neon_shim_baton_t *baton = userdata;
-  svn_ra_dav__xml_elm_t elem_unknown_temporary;
-  const svn_ra_dav__xml_elm_t *elem =
-    svn_ra_dav__lookup_xml_elem(baton->elements, nspace, name);
-  int rc;
-
-  if (!elem)
-    return NE_XML_DECLINE; /* Let Neon handle this */
-
-  /* TODO: explore an option of keeping element pointer in the baton
-   * to cut one loop in endelm */
-
-  /* 'parent' here actually means a parent element's id as opposed
-   * to 'parent' parameter passed to the startelm() function */
-  rc = baton->validate_cb(baton->original_userdata, parent_state, elem->id);
-  if (rc != SVN_RA_DAV__XML_VALID) {
-    return (rc == SVN_RA_DAV__XML_DECLINE) ? NE_XML_DECLINE : NE_XML_ABORT;
-  }
-
-  if (elem->id == ELEM_unknown)
-    handle_unknown(&elem, &elem_unknown_temporary, nspace, name);
-
-  rc = baton->startelm_cb(baton->original_userdata, elem, attrs);
-  if (rc != SVN_RA_DAV__XML_VALID) {
-    return (rc == SVN_RA_DAV__XML_DECLINE) ? NE_XML_DECLINE : NE_XML_ABORT;
-  }
-
-  if (baton->cdata_accum != NULL)
-    svn_stringbuf_setempty(baton->cdata_accum);
-  else
-    baton->cdata_accum = svn_stringbuf_create("", baton->pool);
-
-  /* @a parent in the pre-Neon 0.24 interface was a parent's element
-   * id but now it's the status returned by parent's startelm(), so we need to
-   * bridge this by returning this element's id as a status.
-   * We also need to ensure that element ids start with 1, because
-   * zero is `decline'. See ra_dav.h definition of ELEM_* values.
-   */
-  return elem->id;
-}
-
-/** (Neon 0.24) Collect element's contents.
- *
- * Collects element's contents into @a userdata string buffer. @a userdata is a
- * @c neon_shim_baton_t instance.
- * May return non-zero to abort the parse. */
-static int shim_cdata(void *userdata, int state, const char *cdata, size_t len)
-{
-  const neon_shim_baton_t *baton = userdata;
-
-  svn_stringbuf_appendbytes(baton->cdata_accum, cdata, len);
-  return 0; /* no error */
-}
-
-/** (Neon 0.24) Finish parsing element.
- *
- * Calls "old-style" endelm_cb callback. @a userdata is a @c neon_shim_baton_t
- * instance.
- * May return non-zero to abort the parse. */
-static int shim_endelm(void *userdata, int state, const char *nspace,
-                       const char *name)
-{
-  const neon_shim_baton_t *baton = userdata;
-  svn_ra_dav__xml_elm_t elem_unknown_temporary;
-  const svn_ra_dav__xml_elm_t *elem =
-    svn_ra_dav__lookup_xml_elem(baton->elements, nspace, name);
-  int rc;
-
-  if (!elem)
-    return -1; /* shouldn't be here if startelm didn't abort the parse */
-
-  if (elem->id == ELEM_unknown)
-    handle_unknown(&elem, &elem_unknown_temporary, nspace, name);
-
-  rc = baton->endelm_cb(baton->original_userdata,
-                        elem,
-                        baton->cdata_accum->data);
-  if (rc != SVN_RA_DAV__XML_VALID)
-    return -1; /* abort the parse */
-
-  return 0; /* no error */
-}
-
-/** Push an XML handler onto Neon's handler stack.
- *
- * Parser @a p uses a stack of handlers to process XML. The handler is
- * composed of validation callback @a validate_cb, start-element
- * callback @a startelm_cb, and end-element callback @a endelm_cb, which
- * collectively handle elements supplied in an array @a elements. Parser
- * passes given user baton @a userdata to all callbacks.
- * This is a new function on top of ne_xml_push_handler, adds memory pool
- * @a pool as the last parameter. This parameter is not used with Neon
- * 0.23.9, but will be with Neon 0.24. When Neon 0.24 is used, ra_dav
- * receives calls from the new interface and performs functions described
- * above by itself, using @a elements and calling callbacks according to
- * 0.23 interface.
- */
-static void shim_xml_push_handler(ne_xml_parser *p,
-                                  const svn_ra_dav__xml_elm_t *elements,
-                                  svn_ra_dav__xml_validate_cb validate_cb,
-                                  svn_ra_dav__xml_startelm_cb startelm_cb,
-                                  svn_ra_dav__xml_endelm_cb endelm_cb, 
-                                  void *userdata,
-                                  apr_pool_t *pool)
-{
-  neon_shim_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
-  baton->pool = pool;
-  baton->original_userdata = userdata;
-  baton->elements = elements;
-  baton->validate_cb = validate_cb;
-  baton->startelm_cb = startelm_cb;
-  baton->endelm_cb = endelm_cb;
-  baton->cdata_accum = NULL; /* don't create until startelm is called */
-
-  ne_xml_push_handler(p, shim_startelm, shim_cdata, shim_endelm, baton);
-}
-
-
 svn_error_t *
 svn_ra_dav__xml_collect_cdata(void *baton, int state,
                               const char *cdata, size_t len)
@@ -348,8 +176,9 @@ svn_ra_dav__xml_collect_cdata(void *baton, int state,
 
   return SVN_NO_ERROR;
 }
-
 
+
+
 void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
 {
   ne_uri parsed_url;
@@ -485,7 +314,7 @@ collect_error_cdata(void *baton, int state,
   if (*b)
     svn_stringbuf_appendbytes(*b, cdata, len);
 
-  return SVN_RA_DAV__XML_VALID;
+  return 0;
 }
 
 typedef struct error_parser_baton
@@ -510,8 +339,11 @@ start_err_element(void *baton, int parent,
   error_parser_baton_t *b = baton;
   svn_error_t **err = &(b->tmp_err);
 
-  if (acc != SVN_RA_DAV__XML_VALID)
-    return acc;
+  if (acc == SVN_RA_DAV__XML_INVALID)
+    return NE_XML_ABORT;
+
+  if (acc == SVN_RA_DAV__XML_DECLINE)
+    return NE_XML_DECLINE;
 
   switch (elm->id)
     {
@@ -603,7 +435,7 @@ end_err_element(void *baton, int state, const char *nspace, const char *name)
       break;
     }
 
-  return SVN_RA_DAV__XML_VALID;
+  return 0;
 }
 
 static apr_status_t
@@ -631,7 +463,7 @@ error_parser_create(svn_ra_dav__request_t *req)
   b->cdata = svn_stringbuf_create("", req->pool);
 
   /* attach a standard <D:error> body parser to the request */
-  error_parser = svn_ra_dav__xml_parser_create(req);
+  error_parser = xml_parser_create(req);
   ne_xml_push_handler(error_parser,
                       start_err_element,
                       collect_error_cdata,
@@ -814,12 +646,17 @@ wrapper_startelm_cb(void *baton,
                     const char **atts)
 {
   parser_wrapper_baton_t *pwb = baton;
-  int elem = 0;
+  int elem = SVN_RA_DAV__XML_DECLINE;
 
   if (pwb->startelm_cb)
     SVN_RA_DAV__REQ_ERR
       (pwb->req,
        pwb->startelm_cb(&elem, pwb->baton, parent, nspace, name, atts));
+
+  if (elem == SVN_RA_DAV__XML_INVALID)
+    SVN_RA_DAV__REQ_ERR
+      (pwb->req,
+       svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL));
 
   if (pwb->req->err)
     return NE_XML_ABORT;
@@ -860,6 +697,31 @@ wrapper_endelm_cb(void *baton,
     return NE_XML_ABORT;
 
   return 0;
+}
+
+
+ne_xml_parser *
+svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req,
+                              svn_ra_dav__startelm_cb_t startelm_cb,
+                              svn_ra_dav__cdata_cb_t cdata_cb,
+                              svn_ra_dav__endelm_cb_t endelm_cb,
+                              void *baton)
+{
+  ne_xml_parser *p = xml_parser_create(req);
+  parser_wrapper_baton_t *pwb = apr_palloc(req->pool, sizeof(*pwb));
+
+  pwb->req = req;
+  pwb->baton = baton;
+  pwb->startelm_cb = startelm_cb;
+  pwb->cdata_cb = cdata_cb;
+  pwb->endelm_cb = endelm_cb;
+
+  ne_xml_push_handler(p,
+                      wrapper_startelm_cb,
+                      wrapper_cdata_cb,
+                      wrapper_endelm_cb, pwb);
+
+  return p;
 }
 
 
@@ -903,10 +765,7 @@ get_cancellation_baton(svn_ra_dav__request_t *req,
   return b;
 }
 
-/* See doc string for svn_ra_dav__parsed_request.  The only new
-   parameter here is use_neon_shim, which if true, means that
-   VALIDATE_CB, STARTELM_CB, and ENDELM_CB are expecting the old,
-   pre-0.24 Neon api, so use a shim layer to translate for them. */
+/* See doc string for svn_ra_dav__parsed_request. */
 static svn_error_t *
 parsed_request(ne_session *sess,
                const char *method,
@@ -915,13 +774,6 @@ parsed_request(ne_session *sess,
                apr_file_t *body_file,
                void set_parser(ne_xml_parser *parser,
                                void *baton),
-               const svn_ra_dav__xml_elm_t *elements,
-               svn_boolean_t use_neon_shim,
-               /* These three are defined iff use_neon_shim is defined. */
-               svn_ra_dav__xml_validate_cb validate_compat_cb,
-               svn_ra_dav__xml_startelm_cb startelm_compat_cb, 
-               svn_ra_dav__xml_endelm_cb endelm_compat_cb,
-               /* These three are defined iff use_neon_shim is NOT defined. */
                svn_ra_dav__startelm_cb_t startelm_cb,
                svn_ra_dav__cdata_cb_t cdata_cb,
                svn_ra_dav__endelm_cb_t endelm_cb,
@@ -931,7 +783,6 @@ parsed_request(ne_session *sess,
                svn_boolean_t spool_response,
                apr_pool_t *pool)
 {
-  parser_wrapper_baton_t pwb;
   svn_ra_dav__request_t *req;
   ne_xml_parser *success_parser = NULL;
   const char *msg;
@@ -967,28 +818,9 @@ parsed_request(ne_session *sess,
     }
 
   /* create a parser to read the normal response body */
-  success_parser = svn_ra_dav__xml_parser_create(req);
-
-  pwb.req = req;
-
-  if (use_neon_shim)
-    {
-      shim_xml_push_handler(success_parser, elements,
-                            validate_compat_cb, startelm_compat_cb,
-                            endelm_compat_cb, baton, pool);
-    }
-  else
-    {
-      pwb.baton = baton;
-      pwb.startelm_cb = startelm_cb;
-      pwb.cdata_cb = cdata_cb;
-      pwb.endelm_cb = endelm_cb;
-
-      ne_xml_push_handler(success_parser,
-                          wrapper_startelm_cb,
-                          wrapper_cdata_cb,
-                          wrapper_endelm_cb, &pwb);
-    }
+  success_parser = svn_ra_dav__xml_parser_create(req,
+                                                 startelm_cb, cdata_cb,
+                                                 endelm_cb, baton);
 
   /* if our caller is interested in having access to this parser, call
      the SET_PARSER callback with BATON. */
@@ -1083,39 +915,10 @@ svn_ra_dav__parsed_request(ne_session *sess,
                            apr_pool_t *pool)
 {
   SVN_ERR_W(parsed_request(sess, method, url, body, body_file,
-                           set_parser, NULL, FALSE, NULL, NULL, NULL,
+                           set_parser,
                            startelm_cb, cdata_cb, endelm_cb,
                            baton, extra_headers, status_code,
                            spool_response, pool),
-            apr_psprintf(pool,_("%s request failed on '%s'"), method, url));
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_ra_dav__parsed_request_compat(ne_session *sess,
-                                  const char *method,
-                                  const char *url,
-                                  const char *body,
-                                  apr_file_t *body_file,
-                                  void set_parser(ne_xml_parser *parser,
-                                                  void *baton),
-                                  const svn_ra_dav__xml_elm_t *elements, 
-                                  svn_ra_dav__xml_validate_cb validate_cb,
-                                  svn_ra_dav__xml_startelm_cb startelm_cb, 
-                                  svn_ra_dav__xml_endelm_cb endelm_cb,
-                                  void *baton,
-                                  apr_hash_t *extra_headers,
-                                  int *status_code,
-                                  svn_boolean_t spool_response,
-                                  apr_pool_t *pool)
-{
-  SVN_ERR_W(parsed_request(sess, method, url, body, body_file,
-                           set_parser, elements, TRUE,
-                           validate_cb, startelm_cb, endelm_cb,
-                           NULL, NULL, NULL, baton, extra_headers,
-                           status_code, spool_response, pool),
             apr_psprintf(pool,_("%s request failed on '%s'"), method, url));
 
   return SVN_NO_ERROR;

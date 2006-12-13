@@ -1502,8 +1502,8 @@ main(int argc, const char *argv[])
                         SVN_CONFIG_OPTION_NO_UNLOCK, TRUE);
 
   /* Set the log message callback function.  Note that individual
-     subcommands will populate the ctx->log_msg_baton2 */
-  ctx->log_msg_func2 = svn_cl__get_log_message;
+     subcommands will populate the ctx->log_msg_baton3. */
+  ctx->log_msg_func3 = svn_cl__get_log_message;
 
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;

@@ -4496,6 +4496,81 @@ get_merge_info(const char **msg,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+root_revisions(const char **msg,
+               svn_boolean_t msg_only,
+               svn_test_opts_t *opts,
+               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t after_rev, fetched_rev;
+  apr_pool_t *spool = svn_pool_create(pool);
+
+  *msg = "svn_fs_root_t (base) revisions";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-root-revisions",
+                              opts->fs_type, pool));
+
+  /* In first txn, create and commit the greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+
+  /* First, verify that a revision root based on our new revision
+     reports the correct associated revision. */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool)); 
+  fetched_rev = svn_fs_revision_root_revision(rev_root);
+  if (after_rev != fetched_rev)
+    return svn_error_createf
+      (SVN_ERR_TEST_FAILED, NULL,
+       "expected revision '%d'; "
+       "got '%d' from svn_fs_revision_root_revision(rev_root)",
+       (int)after_rev, (int)fetched_rev);
+
+  /* Then verify that we can't ask about the txn-base-rev from a
+     revision root. */
+  fetched_rev = svn_fs_txn_root_base_revision(rev_root);
+  if (fetched_rev != SVN_INVALID_REVNUM)
+    return svn_error_createf
+      (SVN_ERR_TEST_FAILED, NULL,
+       "expected SVN_INVALID_REVNUM; "
+       "got '%d' from svn_fs_txn_root_base_revision(rev_root)",
+       (int)fetched_rev);
+
+  /* Now, create a second txn based on AFTER_REV. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+
+  /* Verify that it reports the right base revision. */
+  fetched_rev = svn_fs_txn_root_base_revision(txn_root);
+  if (after_rev != fetched_rev)
+    return svn_error_createf
+      (SVN_ERR_TEST_FAILED, NULL,
+       "expected '%d'; "
+       "got '%d' from svn_fs_txn_root_base_revision(txn_root)",
+       (int)after_rev, (int)fetched_rev);
+
+  /* Then verify that we can't ask about the rev-root-rev from a
+     txn root. */
+  fetched_rev = svn_fs_revision_root_revision(txn_root);
+  if (fetched_rev != SVN_INVALID_REVNUM)
+    return svn_error_createf
+      (SVN_ERR_TEST_FAILED, NULL,
+       "expected SVN_INVALID_REVNUM; "
+       "got '%d' from svn_fs_revision_root_revision(txn_root)",
+       (int)fetched_rev);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -4534,5 +4609,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(branch_test),
     SVN_TEST_PASS(verify_checksum),
     SVN_TEST_PASS(closest_copy_test),
+    SVN_TEST_PASS(root_revisions),
     SVN_TEST_NULL
   };

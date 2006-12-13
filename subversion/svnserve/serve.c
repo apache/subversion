@@ -1993,7 +1993,6 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *full_path;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
-  const void *key;
   void *val;
   svn_lock_t *l;
 
@@ -2011,7 +2010,7 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_this(hi, &key, NULL, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
       l = val;
       SVN_ERR(write_lock(conn, pool, l));
     }
