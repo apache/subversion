@@ -646,20 +646,21 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
   apr_pool_t *subpool;
 
   /* Create a new commit item and add it to the array. */
-  if (ctx->log_msg_func || ctx->log_msg_func2)
+  if (ctx->log_msg_func3 || ctx->log_msg_func2 || ctx->log_msg_func)
     {
       /* If there's a log message gatherer, create a temporary commit
          item array solely to help generate the log message.  The
          array is not used for the import itself. */
-      svn_client_commit_item2_t *item;
+      svn_client_commit_item3_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make(pool, 1, sizeof(item));
       
-      item = apr_pcalloc(pool, sizeof(*item));
+      SVN_ERR(svn_client_commit_item_create
+              ((const svn_client_commit_item3_t **) &item, pool));
       item->path = apr_pstrdup(pool, path);
       item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-      APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+      APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
       
       SVN_ERR(svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
                                       ctx, pool));
@@ -1436,8 +1437,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
     for (i = 0; i < commit_items->nelts; ++i)
       {
-        svn_client_commit_item2_t *item;
-        item = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
+        svn_client_commit_item3_t *item =
+          APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
         
         if (item->state_flags != SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN) 
           {
@@ -1452,7 +1453,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
   /* Go get a log message.  If an error occurs, or no log message is
      specified, abort the operation. */
-  if (ctx->log_msg_func ||  ctx->log_msg_func2)
+  if (ctx->log_msg_func3 || ctx->log_msg_func2 || ctx->log_msg_func)
     {
       const char *tmp_file;
       cmt_err = svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
@@ -1509,8 +1510,8 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
 
       for (i = 0; i < commit_items->nelts; i++)
         {
-          svn_client_commit_item2_t *item
-            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
+          svn_client_commit_item3_t *item
+            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
           svn_boolean_t loop_recurse = FALSE;
           const char *adm_access_path;
           svn_wc_adm_access_t *adm_access;

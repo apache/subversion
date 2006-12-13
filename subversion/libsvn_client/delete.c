@@ -136,9 +136,9 @@ delete_urls(svn_commit_info_t **commit_info_p,
     }
 
   /* Create new commit items and add them to the array. */
-  if (ctx->log_msg_func || ctx->log_msg_func2)
+  if (ctx->log_msg_func3 || ctx->log_msg_func2 || ctx->log_msg_func)
     {
-      svn_client_commit_item2_t *item;
+      svn_client_commit_item3_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make(pool, targets->nelts, sizeof(item));
@@ -146,10 +146,11 @@ delete_urls(svn_commit_info_t **commit_info_p,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
-          item = apr_pcalloc(pool, sizeof(*item));
+          SVN_ERR(svn_client_commit_item_create
+                  ((const svn_client_commit_item3_t **) &item, pool));
           item->url = svn_path_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
-          APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+          APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
       SVN_ERR(svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
                                       ctx, pool));
