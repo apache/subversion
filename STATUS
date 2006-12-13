@@ -92,6 +92,14 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r22609
+    Make svn_repos_replay2 able to send deltas when used with txn roots.
+    Justification:
+      Make the api do what's promised.
+    Votes:
+      +1: glasser
+      +1: clkao (tested but vote not counted)
+
 Approved changes:
 
   * r22311
