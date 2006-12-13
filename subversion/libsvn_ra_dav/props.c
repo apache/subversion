@@ -645,7 +645,9 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
   apr_size_t len;
   svn_stringbuf_t *path_s;
   ne_uri parsed_url;
-  const char *lopped_path = "";
+  svn_stringbuf_t *lopped_path =
+    svn_stringbuf_create(url, pool); /* initialize to make sure it'll fit
+                                        without reallocating */
   apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* Split the url into its component pieces (scheme, host, path,
@@ -658,6 +660,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
                                _("Neon was unable to parse URL '%s'"), url);
     }
 
+  svn_stringbuf_setempty(lopped_path);
   path_s = svn_stringbuf_create(parsed_url.path, pool);
   ne_uri_free(&parsed_url);
 
@@ -679,8 +682,10 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
         svn_error_clear(err);
 
       /* else... lop off the basename and try again. */
-      lopped_path = svn_path_join(svn_path_basename(path_s->data, pool),
-                                  lopped_path, pool);
+      svn_stringbuf_set(lopped_path,
+                        svn_path_join(svn_path_basename(path_s->data, iterpool),
+                                      lopped_path->data, iterpool));
+
       len = path_s->len;
       svn_path_remove_component(path_s);
 
@@ -719,7 +724,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
 
     *rsrc = tmp;
   }
-  *missing_path = lopped_path;
+  *missing_path = lopped_path->data;
   svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
