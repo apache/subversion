@@ -104,6 +104,11 @@ typedef struct {
   svn_ra_dav__session_t *sess;          /* DAV session structure */
   const char *method;
   const char *url;
+  int rv;                               /* Return value from
+                                           ne_request_dispatch() or -1 if
+                                           not dispatched yet. */
+  int code;                             /* HTTP return code, or 0 if none */
+
   svn_error_t *err;                     /* error encountered while executing
                                            the request */
   svn_boolean_t marshalled_error;       /* TRUE if the error was server-side */
@@ -784,15 +789,6 @@ svn_error_t *
 svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
                                                svn_ra_dav__session_t *ras,
                                                apr_pool_t *pool);
-
-
-/* Create an error object for an error from neon in the given session,
-   where the return code from neon was RETCODE, and CONTEXT describes
-   what was being attempted.  Do temporary allocations in POOL. */
-svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
-                                       const char *context,
-                                       int retcode,
-                                       apr_pool_t *pool);
 
 
 /* Create an error of type SVN_ERR_RA_DAV_MALFORMED_DATA for cases where

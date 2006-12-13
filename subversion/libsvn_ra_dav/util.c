@@ -244,6 +244,7 @@ svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
   req->iterpool = svn_pool_create(req->pool);
   req->method = apr_pstrdup(req->pool, method);
   req->url = apr_pstrdup(req->pool, url);
+  req->rv = -1;
 
   /* Neon resources may be NULL on out-of-memory */
   assert(req->ne_req != NULL);
@@ -384,18 +385,46 @@ void svn_ra_dav__copy_href(svn_stringbuf_t *dst, const char *src)
   ne_uri_free(&parsed_url);
 }
 
-svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
-                                       const char *context,
-                                       int retcode,
-                                       apr_pool_t *pool)
+static svn_error_t *
+generate_error(svn_ra_dav__request_t *req, apr_pool_t *pool)
 {
   int errcode = SVN_ERR_RA_DAV_REQUEST_FAILED;
+  const char *context =
+    apr_psprintf(req->pool, _("%s of '%s'"), req->method, req->url);;
   const char *msg;
   const char *hostport;
 
   /* Convert the return codes. */
-  switch (retcode) 
+  switch (req->rv)
     {
+    case NE_OK:
+      switch (req->code)
+        {
+        case 404:
+          return svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
+                                  apr_psprintf(pool, _("'%s' path not found"),
+                                               req->url));
+
+        case 301:
+        case 302:
+          return svn_error_create
+            (SVN_ERR_RA_DAV_RELOCATED, NULL,
+             apr_psprintf(pool,
+                          (req->code == 301)
+                          ? _("Repository moved permanently to '%s';"
+                              " please relocate")
+                          : _("Repository moved temporarily to '%s';"
+                              " please relocate"),
+                          svn_ra_dav__request_get_location(req, pool)));
+
+        default:
+          return svn_error_create
+            (errcode, NULL,
+             apr_psprintf(pool,
+                          _("Server sent unexpected return value (%d) "
+                            "in response to %s request for '%s'"), req->code,
+                          req->method, req->url));
+        }
     case NE_AUTH:
       errcode = SVN_ERR_RA_NOT_AUTHORIZED;
       msg = _("authorization failed");
@@ -411,16 +440,18 @@ svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
 
     default:
       /* Get the error string from neon and convert to UTF-8. */
-      SVN_ERR(svn_utf_cstring_to_utf8(&msg, ne_get_error(sess), pool));
+      SVN_ERR(svn_utf_cstring_to_utf8(&msg, ne_get_error(req->ne_sess), pool));
       break;
     }
 
   /* The hostname may contain non-ASCII characters, so convert it to UTF-8. */
-  SVN_ERR(svn_utf_cstring_to_utf8(&hostport, ne_get_server_hostport(sess),
-                                  pool));
+  SVN_ERR(svn_utf_cstring_to_utf8(&hostport,
+                                  ne_get_server_hostport(req->ne_sess), pool));
 
-  return svn_error_createf(errcode, NULL, "%s: %s (%s://%s)", 
-                           context, msg, ne_get_scheme(sess), 
+  /*### This is a translation nightmare. Make sure to compose full strings
+    and mark those for translation. */
+  return svn_error_createf(errcode, NULL, "%s: %s (%s://%s)",
+                           context, msg, ne_get_scheme(req->ne_sess),
                            hostport);
 }
 
@@ -1204,7 +1235,7 @@ svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
       else if (err)
         {
           svn_error_clear(err2);
-          return err;          
+          return err;
         }
     }
 
@@ -1222,12 +1253,8 @@ svn_ra_dav__request_dispatch(int *code_p,
                              apr_pool_t *pool)
 {
   ne_xml_parser *error_parser;
-  int rv;
   const ne_status *statstruct;
   const char *code_desc;
-  int code;
-  const char *msg;
-
 
   /* add any extra headers passed in by caller. */
   if (extra_headers != NULL)
@@ -1253,56 +1280,32 @@ svn_ra_dav__request_dispatch(int *code_p,
   if (req->ne_sess == req->sess->ne_sess) /* We're consuming 'session 1' */
     req->sess->main_session_busy = TRUE;
   /* run the request, see what comes back. */
-  rv = ne_request_dispatch(req->ne_req);
+  req->rv = ne_request_dispatch(req->ne_req);
   if (req->ne_sess == req->sess->ne_sess) /* We're done consuming 'session 1' */
     req->sess->main_session_busy = FALSE;
 
   /* Save values from the request */
   statstruct = ne_get_status(req->ne_req);
   code_desc = apr_pstrdup(pool, statstruct->reason_phrase);
-  code = statstruct->code;
+  req->code = statstruct->code;
 
   if (code_p)
-     *code_p = code;
+     *code_p = req->code;
 
   if (!req->marshalled_error)
     SVN_ERR(req->err);
 
   /* If the status code was one of the two that we expected, then go
      ahead and return now. IGNORE any marshalled error. */
-  if (rv == NE_OK && (code == okay_1 || code == okay_2))
+  if (req->rv == NE_OK && (req->code == okay_1 || req->code == okay_2))
     return SVN_NO_ERROR;
 
   /* Any other errors? Report them */
   SVN_ERR(req->err);
 
-  /* We either have a neon error or an unexpected HTTP response code */
-  if (rv == NE_OK)
-    {
-      if (code == 404)
-        {
-          msg = apr_psprintf(pool, _("'%s' path not found"), req->url);
-          return svn_error_create(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL, msg);
-        }
-      else if (code == 301 || code == 302)
-        {
-          const char *location = svn_ra_dav__request_get_location(req, pool);
-
-          msg = apr_psprintf(pool,
-                             (code == 301)
-                              ? _("Repository moved permanently to '%s';"
-                                  " please relocate")
-                              : _("Repository moved temporarily to '%s';"
-                                  " please relocate"),
-                             location);
-
-          return svn_error_create(SVN_ERR_RA_DAV_RELOCATED, NULL, msg);
-        }
-    }
   /* We either have a neon error, or some other error
      that we didn't expect. */
-  msg = apr_psprintf(pool, _("%s of '%s'"), req->method, req->url);
-  return svn_ra_dav__convert_error(req->ne_sess, msg, rv, pool);
+  return generate_error(req, pool);
 }
 
 
