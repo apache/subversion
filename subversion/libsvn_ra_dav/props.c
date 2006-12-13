@@ -689,7 +689,6 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
         return svn_error_quick_wrap
           (err, _("The path was not part of a repository"));
     }
-  svn_pool_destroy(iterpool);
 
   /* error out if entire URL was bogus (not a single part of it exists
      in the repository!)  */
@@ -698,7 +697,30 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
                              _("No part of path '%s' was found in "
                                "repository HEAD"), parsed_url.path);
 
+  /* Duplicate rsrc out of iterpool into pool */
+  {
+    apr_hash_index_t *hi;
+    svn_ra_dav_resource_t *tmp = apr_pcalloc(pool, sizeof(*tmp));
+    tmp->url = apr_pstrdup(pool, (*rsrc)->url);
+    tmp->is_collection = (*rsrc)->is_collection;
+    tmp->pool = pool;
+    tmp->propset = apr_hash_make(pool);
+
+    for (hi = apr_hash_first(iterpool, (*rsrc)->propset);
+         hi; hi = apr_hash_next(hi))
+      {
+        const void *key;
+        void *val;
+
+        apr_hash_this(hi, &key, NULL, &val);
+        apr_hash_set(tmp->propset, apr_pstrdup(pool, key), APR_HASH_KEY_STRING,
+                     svn_string_dup(val, pool));
+      }
+
+    *rsrc = tmp;
+  }
   *missing_path = lopped_path;
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
