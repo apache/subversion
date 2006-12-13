@@ -771,8 +771,8 @@ svn_ra_dav__open(svn_ra_session_t *session,
   ras->url = svn_stringbuf_create(repos_URL, pool);
   /* copies uri pointer members, they get free'd in __close. */
   ras->root = *uri;
-  ras->sess = sess;
-  ras->sess2 = sess2;
+  ras->ne_sess = sess;
+  ras->ne_sess2 = sess2;
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
   ras->compression = compression;

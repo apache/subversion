@@ -81,8 +81,8 @@ typedef struct {
   ne_uri root;                          /* parsed version of above */
   const char *repos_root;               /* URL for repository root */
 
-  ne_session *sess;                     /* HTTP session to server */
-  ne_session *sess2;
+  ne_session *ne_sess;                  /* HTTP session to server */
+  ne_session *ne_sess2;
   svn_boolean_t main_session_busy;      /* TRUE when requests should be created
                                            and issued on sess2; currently
                                            only used by fetch.c */

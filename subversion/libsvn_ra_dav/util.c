@@ -237,7 +237,7 @@ svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
   apr_pool_t *reqpool = svn_pool_create(pool);
   svn_ra_dav__request_t *req = apr_pcalloc(reqpool, sizeof(*req));
 
-  req->ne_sess = sess->main_session_busy ? sess->sess2 : sess->sess;
+  req->ne_sess = sess->main_session_busy ? sess->ne_sess2 : sess->ne_sess;
   req->ne_req = ne_request_create(req->ne_sess, method, url);
   req->sess = sess;
   req->pool = reqpool;
@@ -1162,8 +1162,8 @@ svn_ra_dav__copy(svn_ra_dav__session_t *ras,
   const char *abs_dst;
   apr_hash_t *extra_headers = apr_hash_make(pool);
 
-  abs_dst = apr_psprintf(pool, "%s://%s%s", ne_get_scheme(ras->sess),
-                         ne_get_server_hostport(ras->sess), dst);
+  abs_dst = apr_psprintf(pool, "%s://%s%s", ne_get_scheme(ras->ne_sess),
+                         ne_get_server_hostport(ras->ne_sess), dst);
   apr_hash_set(extra_headers, "Destination", APR_HASH_KEY_STRING, abs_dst);
   apr_hash_set(extra_headers, "Overwrite", APR_HASH_KEY_STRING,
                overwrite ? "T" : "F");
@@ -1286,11 +1286,11 @@ svn_ra_dav__request_dispatch(int *code_p,
   /* attach a standard <D:error> body parser to the request */
   error_parser = error_parser_create(req);
 
-  if (req->ne_sess == req->sess->sess) /* We're consuming 'session 1' */
+  if (req->ne_sess == req->sess->ne_sess) /* We're consuming 'session 1' */
     req->sess->main_session_busy = TRUE;
   /* run the request, see what comes back. */
   rv = ne_request_dispatch(req->ne_req);
-  if (req->ne_sess == req->sess->sess) /* We're done consuming 'session 1' */
+  if (req->ne_sess == req->sess->ne_sess) /* We're done consuming 'session 1' */
     req->sess->main_session_busy = FALSE;
 
   /* Save values from the request */
