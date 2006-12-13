@@ -910,7 +910,7 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
 
   if (! ras->uuid)
     {
-      svn_ra_dav_resource_t *rsrc;
+      svn_ra_dav__resource_t *rsrc;
       const char *lopped_path;
       const svn_string_t *uuid_propval;
 

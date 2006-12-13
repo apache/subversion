@@ -167,7 +167,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
                                      svn_boolean_t force,
                                      apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *propres;
+  svn_ra_dav__resource_t *propres;
   const char *url;
   const svn_string_t *url_str;
 
@@ -985,7 +985,7 @@ static svn_error_t * commit_add_file(const char *path,
   if ((! parent->created) 
       && (! apr_hash_get(file->cc->valid_targets, path, APR_HASH_KEY_STRING)))
     {
-      svn_ra_dav_resource_t *res;
+      svn_ra_dav__resource_t *res;
       svn_error_t *err = svn_ra_dav__get_starting_props(&res,
                                                         file->cc->ras,
                                                         file->rsrc->url, NULL,

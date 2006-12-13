@@ -361,7 +361,7 @@ typedef struct {
 
   apr_pool_t *pool;
 
-} svn_ra_dav_resource_t;
+} svn_ra_dav__resource_t;
 
 /* ### WARNING: which_props can only identify properties which props.c
    ### knows about. see the elem_definitions[] array. */
@@ -376,7 +376,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     apr_pool_t *pool);
 
 /* fetch a single resource's props from the server. */
-svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
+svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav__resource_t **rsrc,
                                              svn_ra_dav__session_t *sess,
                                              const char *url,
                                              const char *label,
@@ -384,7 +384,7 @@ svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
                                              apr_pool_t *pool);
 
 /* fetch a single resource's starting props from the server. */
-svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
+svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav__resource_t **rsrc,
                                              svn_ra_dav__session_t *sess,
                                              const char *url,
                                              const char *label,
@@ -399,7 +399,7 @@ svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
    trailing portion of the URL that did not exist.  If an error
    occurs, *MISSING_PATH isn't changed. */
 svn_error_t * 
-svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
+svn_ra_dav__search_for_starting_props(svn_ra_dav__resource_t **rsrc,
                                       const char **missing_path,
                                       svn_ra_dav__session_t *sess,
                                       const char *url,
@@ -461,7 +461,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
    revision of the resource specified by URL.
 */
 svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
-                                            svn_ra_dav_resource_t **bln_rsrc,
+                                            svn_ra_dav__resource_t **bln_rsrc,
                                             svn_ra_dav__session_t *sess,
                                             const char *url,
                                             svn_revnum_t revision,

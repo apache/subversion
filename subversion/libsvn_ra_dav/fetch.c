@@ -55,7 +55,7 @@ typedef struct {
   /* the information for this subdir. if rsrc==NULL, then this is a sentinel
      record in fetch_ctx_t.subdirs to close the directory implied by the
      parent_baton member. */
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav__resource_t *rsrc;
 
   /* the directory containing this subdirectory. */
   void *parent_baton;
@@ -622,7 +622,7 @@ add_prop_to_hash(void *baton,
 */
 static svn_error_t *
 filter_props(apr_hash_t *props,
-             svn_ra_dav_resource_t *rsrc,
+             svn_ra_dav__resource_t *rsrc,
              svn_boolean_t add_entry_props,
              apr_pool_t *pool)
 {
@@ -691,7 +691,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
                                   apr_hash_t **props,
                                   apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav__resource_t *rsrc;
   const char *final_url;
   svn_ra_dav__session_t *ras = session->priv;
   const char *url = svn_path_url_add_component(ras->url->data, path, pool);
@@ -810,7 +810,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                                  apr_uint32_t dirent_fields,
                                  apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav__resource_t *rsrc;
   apr_hash_index_t *hi;
   apr_hash_t *resources;
   const char *final_url;
@@ -966,7 +966,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
           const void *key;
           void *val;
           const char *childname;
-          svn_ra_dav_resource_t *resource;
+          svn_ra_dav__resource_t *resource;
           const svn_string_t *propval;
           apr_hash_index_t *h;
           svn_dirent_t *entry;
@@ -1725,7 +1725,7 @@ svn_error_t *svn_ra_dav__change_rev_prop(svn_ra_session_t *session,
                                          apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  svn_ra_dav_resource_t *baseline;
+  svn_ra_dav__resource_t *baseline;
   svn_error_t *err;
   apr_hash_t *prop_changes = NULL;
   apr_array_header_t *prop_deletes = NULL;
@@ -1794,7 +1794,7 @@ svn_error_t *svn_ra_dav__rev_proplist(svn_ra_session_t *session,
                                       apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  svn_ra_dav_resource_t *baseline;
+  svn_ra_dav__resource_t *baseline;
 
   *props = apr_hash_make(pool);
 
@@ -2177,7 +2177,7 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
                 {
                   const void *key;
                   void *val;
-                  svn_ra_dav_resource_t *rsrc;
+                  svn_ra_dav__resource_t *rsrc;
                   const svn_string_t *vc_url;
 
                   apr_hash_this(hi, &key, NULL, &val);
@@ -2407,7 +2407,7 @@ start_element(int *elem, void *userdata, int parent, const char *nspace,
 static svn_error_t *
 add_node_props(report_baton_t *rb, apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc = NULL;
+  svn_ra_dav__resource_t *rsrc = NULL;
   apr_hash_t *props = NULL;
 
   /* Do nothing if parsing a modern report, because the properties

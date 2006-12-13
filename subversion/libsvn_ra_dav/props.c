@@ -159,9 +159,9 @@ typedef struct propfind_ctx_t
     svn_ra_dav__xml_collect_cdata() assumes the baton starts with a stringbuf.
   */
   svn_stringbuf_t *cdata;
-  apr_hash_t *props; /* const char *URL-PATH -> svn_ra_dav_resource_t */
+  apr_hash_t *props; /* const char *URL-PATH -> svn_ra_dav__resource_t */
 
-  svn_ra_dav_resource_t *rsrc; /* the current resource. */
+  svn_ra_dav__resource_t *rsrc; /* the current resource. */
   const char *encoding; /* property encoding (or NULL) */
   int status; /* status for the current <propstat> (or 0 if unknown). */
   apr_hash_t *propbuffer; /* holds properties until their status is known. */
@@ -190,7 +190,7 @@ static const elem_defn *defn_from_id(svn_ra_dav__xml_elmid id)
 
 
 /* Assign URL to RSRC.  Use POOL for any allocations. */
-static void assign_rsrc_url(svn_ra_dav_resource_t *rsrc, 
+static void assign_rsrc_url(svn_ra_dav__resource_t *rsrc, 
                             const char *url,
                             apr_pool_t *pool)
 {
@@ -335,7 +335,7 @@ static svn_error_t * end_element(void *baton, int state,
                                  const char *nspace, const char *name)
 {
   propfind_ctx_t *pc = baton;
-  svn_ra_dav_resource_t *rsrc = pc->rsrc;
+  svn_ra_dav__resource_t *rsrc = pc->rsrc;
   const svn_string_t *value = NULL;
   const elem_defn *parent_defn;
   const elem_defn *defn;
@@ -541,7 +541,7 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
   return SVN_NO_ERROR;
 }
 
-svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
+svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav__resource_t **rsrc,
                                              svn_ra_dav__session_t *sess,
                                              const char *url,
                                              const char *label,
@@ -599,7 +599,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
                                        const ne_propname *propname,
                                        apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav__resource_t *rsrc;
   ne_propname props[2] = { { 0 } };
   const char *name;
   const svn_string_t *value;
@@ -622,7 +622,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
   return SVN_NO_ERROR;
 }
 
-svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
+svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav__resource_t **rsrc,
                                              svn_ra_dav__session_t *sess,
                                              const char *url,
                                              const char *label,
@@ -635,7 +635,7 @@ svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
 
 
 svn_error_t * 
-svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
+svn_ra_dav__search_for_starting_props(svn_ra_dav__resource_t **rsrc,
                                       const char **missing_path,
                                       svn_ra_dav__session_t *sess,
                                       const char *url,
@@ -705,7 +705,7 @@ svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
   /* Duplicate rsrc out of iterpool into pool */
   {
     apr_hash_index_t *hi;
-    svn_ra_dav_resource_t *tmp = apr_pcalloc(pool, sizeof(*tmp));
+    svn_ra_dav__resource_t *tmp = apr_pcalloc(pool, sizeof(*tmp));
     tmp->url = apr_pstrdup(pool, (*rsrc)->url);
     tmp->is_collection = (*rsrc)->is_collection;
     tmp->pool = pool;
@@ -735,7 +735,7 @@ svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
                                  const char *url,
                                  apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav__resource_t *rsrc;
   const char *lopped_path;
   const svn_string_t *vcc_s;
   
@@ -760,14 +760,14 @@ svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
 
 
 svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
-                                            svn_ra_dav_resource_t **bln_rsrc,
+                                            svn_ra_dav__resource_t **bln_rsrc,
                                             svn_ra_dav__session_t *sess,
                                             const char *url,
                                             svn_revnum_t revision,
                                             const ne_propname *which_props,
                                             apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav__resource_t *rsrc;
   const svn_string_t *vcc;
   const svn_string_t *relative_path;
   const char *my_bc_relative;
@@ -912,7 +912,7 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
                                            svn_revnum_t revision,
                                            apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *baseline_rsrc, *rsrc;
+  svn_ra_dav__resource_t *baseline_rsrc, *rsrc;
   const svn_string_t *my_bc_url;
   svn_string_t my_bc_rel;
 
@@ -1258,7 +1258,7 @@ svn_ra_dav__do_stat(svn_ra_session_t *session,
       const void *key;
       void *val;
       const char *childname;
-      svn_ra_dav_resource_t *resource;
+      svn_ra_dav__resource_t *resource;
       const svn_string_t *propval;
       apr_hash_index_t *h;
       svn_dirent_t *entry;
