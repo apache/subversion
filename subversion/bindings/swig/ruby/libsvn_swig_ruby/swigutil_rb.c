@@ -696,7 +696,7 @@ DEFINE_DUP2(wc_entry)
 DEFINE_DUP2(client_diff_summarize)
 DEFINE_DUP2(dirent)
 DEFINE_DUP_NO_CONVENIENCE2(prop)
-DEFINE_DUP_NO_CONVENIENCE2(client_commit_item2)
+DEFINE_DUP_NO_CONVENIENCE2(client_commit_item3)
 DEFINE_DUP_NO_CONVENIENCE2(client_proplist_item)
 DEFINE_DUP_NO_CONVENIENCE2(wc_external_item)
 DEFINE_DUP_NO_CONVENIENCE2(log_changed_path)
@@ -782,9 +782,9 @@ DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_string,
                           c2r_string, , const char *, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_string,
                           c2r_svn_string, &, svn_string_t, NULL)
-DEFINE_APR_ARRAY_TO_ARRAY(static VALUE, c2r_commit_item2_array,
-                          c2r_client_commit_item2_dup, ,
-                          svn_client_commit_item2_t *, NULL)
+DEFINE_APR_ARRAY_TO_ARRAY(static VALUE, c2r_commit_item3_array,
+                          c2r_client_commit_item3_dup, ,
+                          svn_client_commit_item3_t *, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_prop,
                           c2r_prop_dup, &, svn_prop_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_rev,
@@ -1618,11 +1618,11 @@ svn_swig_rb_repos_authz_callback(svn_repos_authz_access_t required,
 }
 
 svn_error_t *
-svn_swig_rb_get_commit_log_func2(const char **log_msg,
-                                 const char **tmp_file,
-                                 const apr_array_header_t *commit_items,
-                                 void *baton,
-                                 apr_pool_t *pool)
+svn_swig_rb_get_commit_log_func(const char **log_msg,
+                                const char **tmp_file,
+                                const apr_array_header_t *commit_items,
+                                void *baton,
+                                apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
   VALUE proc, rb_pool;
@@ -1641,7 +1641,7 @@ svn_swig_rb_get_commit_log_func2(const char **log_msg,
 
     cbb.receiver = proc;
     cbb.message = rb_id_call();
-    cbb.args = rb_ary_new3(1, c2r_commit_item2_array(commit_items));
+    cbb.args = rb_ary_new3(1, c2r_commit_item3_array(commit_items));
     result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
 
     if (!err) {
