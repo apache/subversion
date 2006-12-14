@@ -53,7 +53,14 @@ int main(int argc, char **argv)
   for (i = 1; i < argc; i++)
     {
       const char *path_utf8;
+#ifndef AS400_UTF8
       err = svn_utf_cstring_to_utf8(&path_utf8, argv[i], pool);
+#else
+      /* Even when compiled with UTF support in V5R4, argv is still
+       * encoded in ebcdic. */
+      err = svn_utf_cstring_to_utf8_ex2(&path_utf8, argv[i],
+                                        (const char *)0, pool);
+#endif
       if (err != SVN_NO_ERROR)
         svn_handle_error2(err, stderr, TRUE, "target-test: ");
       *((const char **)apr_array_push(targets)) = 

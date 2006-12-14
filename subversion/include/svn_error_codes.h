@@ -1018,11 +1018,11 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
              SVN_ERR_CL_CATEGORY_START + 0,
-             "Client error in parsing arguments")
+             "Error parsing arguments")
 
   SVN_ERRDEF(SVN_ERR_CL_INSUFFICIENT_ARGS,
              SVN_ERR_CL_CATEGORY_START + 1,
-             "Not enough arguments provided; try 'svn help' for more info")
+             "Not enough arguments provided")
 
   SVN_ERRDEF(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS,
              SVN_ERR_CL_CATEGORY_START + 2,

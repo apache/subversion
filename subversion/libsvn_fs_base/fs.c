@@ -335,7 +335,7 @@ bdb_write_config  (svn_fs_t *fs)
     "#\n"
     "# Make sure you read the documentation at:\n"
     "#\n"
-    "#   http://www.sleepycat.com/docs/ref/lock/max.html\n"
+    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/lock/max.html\n"
     "#\n"
     "# before tweaking these values.\n"
     "set_lk_max_locks   2000\n"
@@ -346,9 +346,9 @@ bdb_write_config  (svn_fs_t *fs)
     "#\n"
     "# Make sure you read the documentation at:\n"
     "#\n"
-    "#   http://www.sleepycat.com/docs/api_c/env_set_lg_bsize.html\n"
-    "#   http://www.sleepycat.com/docs/api_c/env_set_lg_max.html\n"
-    "#   http://www.sleepycat.com/docs/ref/log/limits.html\n"
+    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/api_c/env_set_lg_bsize.html\n"
+    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/api_c/env_set_lg_max.html\n"
+    "#   http://www.oracle.com/technology/documentation/berkeley-db/db/ref/log/limits.html\n"
     "#\n"
     "# Increase the size of the in-memory log buffer from the default\n"
     "# of 32 Kbytes to 256 Kbytes.  Decrease the log file size from\n"
@@ -365,8 +365,8 @@ bdb_write_config  (svn_fs_t *fs)
     "set_lg_max      1048576\n"
     "#\n"
     "# If you see \"log region out of memory\" errors, bump lg_regionmax.\n"
-    "# See http://www.sleepycat.com/docs/ref/log/config.html and\n"
-    "# http://svn.haxx.se/users/archive-2004-10/1001.shtml for more.\n"
+    "# See http://www.oracle.com/technology/documentation/berkeley-db/ref/log/config.html\n"
+    "# and http://svn.haxx.se/users/archive-2004-10/1001.shtml for more.\n"
     "set_lg_regionmax 131072\n"
     "#\n"
     /* ### Configure this with "svnadmin create --bdb-cache-size" */
@@ -399,7 +399,7 @@ bdb_write_config  (svn_fs_t *fs)
       "# Disable fsync of log files on transaction commit. Read the\n"
       "# documentation about DB_TXN_NOSYNC at:\n"
       "#\n"
-      "#   http://www.sleepycat.com/docs/api_c/env_set_flags.html\n"
+      "#   http://www.oracle.com/technology/documentation/berkeley-db/ref/log/config.html\n"
       "#\n"
       "# [requires Berkeley DB 4.0]\n",
       /* inactive */
@@ -413,7 +413,7 @@ bdb_write_config  (svn_fs_t *fs)
       "# Enable automatic removal of unused transaction log files.\n"
       "# Read the documentation about DB_LOG_AUTOREMOVE at:\n"
       "#\n"
-      "#   http://www.sleepycat.com/docs/api_c/env_set_flags.html\n"
+      "#   http://www.oracle.com/technology/documentation/berkeley-db/ref/log/config.html\n"
       "#\n"
       "# [requires Berkeley DB 4.2]\n",
       /* inactive */

@@ -307,17 +307,24 @@ check_if_session_is_at_repos_root(svn_ra_session_t *sess,
  * "svn:sync-" prefix, from revision REV of the repository associated
  * with RA session FROM_SESSION, to the repository associated with RA
  * session TO_SESSION.
+ *
+ * If SYNC is TRUE, then properties on the destination revision that
+ * do not exist on the source revision will be removed.
  */
 static svn_error_t *
 copy_revprops(svn_ra_session_t *from_session,
               svn_ra_session_t *to_session,
               svn_revnum_t rev,
+              svn_boolean_t sync,
               apr_pool_t *pool)
 {
   apr_pool_t *subpool = svn_pool_create(pool);
-  apr_hash_t *revprops;
+  apr_hash_t *revprops, *existing_props;
   svn_boolean_t saw_sync_props = FALSE;
   apr_hash_index_t *hi;
+
+  if (sync)
+    SVN_ERR(svn_ra_rev_proplist(to_session, rev, &existing_props, pool));
 
   SVN_ERR(svn_ra_rev_proplist(from_session, rev, &revprops, pool));
 
@@ -334,6 +341,26 @@ copy_revprops(svn_ra_session_t *from_session,
         saw_sync_props = TRUE;
       else
         SVN_ERR(svn_ra_change_rev_prop(to_session, rev, key, val, subpool));
+
+      if (sync)
+        apr_hash_set(existing_props, key, APR_HASH_KEY_STRING, NULL);
+    }
+
+  if (sync)
+    {
+      for (hi = apr_hash_first(pool, existing_props);
+           hi;
+           hi = apr_hash_next(hi))
+        {
+          const void *name;
+
+          svn_pool_clear(subpool);
+
+          apr_hash_this(hi, &name, NULL, NULL);
+
+          SVN_ERR(svn_ra_change_rev_prop(to_session, rev, name, NULL,
+                                         subpool));
+        }
     }
 
   if (saw_sync_props)
@@ -421,7 +448,7 @@ do_initialize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   /* Finally, copy all non-svnsync revprops from rev 0 of the source
      repos into the dest repos. */
 
-  SVN_ERR(copy_revprops(from_session, to_session, 0, pool));
+  SVN_ERR(copy_revprops(from_session, to_session, 0, FALSE, pool));
 
   /* TODO: It would be nice if we could set the dest repos UUID to be
      equal to the UUID of the source repos, at least optionally.  That
@@ -442,13 +469,20 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   const char *to_url, *from_url;
   svn_ra_session_t *to_session;
   opt_baton_t *opt_baton = b;
-  apr_array_header_t *args;
+  apr_array_header_t *targets;
   init_baton_t baton;
 
-  SVN_ERR(svn_opt_parse_num_args(&args, os, 2, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        apr_array_make(pool, 0, 
+                                                       sizeof(const char *)), 
+                                        pool));
+  if (targets->nelts < 2)
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+  if (targets->nelts > 2)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
-  from_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 1, const char *), pool);
+  to_url = APR_ARRAY_IDX(targets, 0, const char *);
+  from_url = APR_ARRAY_IDX(targets, 1, const char *);
 
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
@@ -457,8 +491,8 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
                              _("Path '%s' is not a URL"), from_url);
 
-  baton.to_url = svn_path_canonicalize(to_url, pool);
-  baton.from_url = svn_path_canonicalize(from_url, pool);
+  baton.to_url = to_url;
+  baton.from_url = from_url;
   baton.config = opt_baton->config;
 
   callbacks.open_tmp_file = open_tmp_file;
@@ -963,7 +997,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
           if (copying > last_merged)
             {
               SVN_ERR(copy_revprops(from_session, to_session, 
-                                    to_latest, pool));
+                                    to_latest, TRUE, pool));
               last_merged = copying;
               last_merged_rev = svn_string_create
                 (apr_psprintf(pool, "%ld", last_merged), pool);
@@ -1074,7 +1108,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       /* Ok, we're done with the data, now we just need to do the
          revprops and we're all set. */
 
-      SVN_ERR(copy_revprops(from_session, to_session, current, subpool));
+      SVN_ERR(copy_revprops(from_session, to_session, current, TRUE, subpool));
 
       /* Ok, we're done, bring the last-merged-rev property up to date. */
 
@@ -1105,13 +1139,20 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   svn_ra_callbacks2_t callbacks = { 0 };
   svn_ra_session_t *to_session;
   opt_baton_t *opt_baton = b;
-  apr_array_header_t *args;
+  apr_array_header_t *targets;
   sync_baton_t baton;
   const char *to_url;
 
-  SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        apr_array_make(pool, 0, 
+                                                       sizeof(const char *)), 
+                                        pool));
+  if (targets->nelts < 1)
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+  if (targets->nelts > 1)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
+  to_url = APR_ARRAY_IDX(targets, 0, const char *);
 
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
@@ -1173,7 +1214,7 @@ do_copy_revprops(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       (APR_EINVAL, NULL, _("Cannot copy revprops for a revision that has not "
                            "been synchronized yet"));
 
-  SVN_ERR(copy_revprops(from_session, to_session, baton->rev, pool));
+  SVN_ERR(copy_revprops(from_session, to_session, baton->rev, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1186,16 +1227,23 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   svn_ra_callbacks2_t callbacks = { 0 };
   svn_ra_session_t *to_session;
   opt_baton_t *opt_baton = b;
-  apr_array_header_t *args;
+  apr_array_header_t *targets;
   copy_revprops_baton_t baton;
   const char *to_url;
   svn_revnum_t revision = SVN_INVALID_REVNUM;
   char *digits_end = NULL;
 
-  SVN_ERR(svn_opt_parse_num_args(&args, os, 2, pool));
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
+                                        apr_array_make(pool, 0, 
+                                                       sizeof(const char *)), 
+                                        pool));
+  if (targets->nelts < 2)
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+  if (targets->nelts > 2)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  to_url = svn_path_canonicalize(APR_ARRAY_IDX(args, 0, const char *), pool);
-  revision = strtol(APR_ARRAY_IDX(args, 1, const char *), &digits_end, 10);
+  to_url = APR_ARRAY_IDX(targets, 0, const char *);
+  revision = strtol(APR_ARRAY_IDX(targets, 1, const char *), &digits_end, 10);
   
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
@@ -1484,13 +1532,13 @@ main(int argc, const char *argv[])
   err = (*subcommand->cmd_func)(os, &opt_baton, pool);
   if (err)
     {
-      /* Fix up stupid default error strings. */
-      if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS)
+      /* For argument-related problems, suggest using the 'help'
+         subcommand. */
+      if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
+          || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
         {
-          svn_error_clear(err);
-          err = svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                                 _("Not enough arguments provided; "
-                                   "try 'svnsync help' for more info"));
+          err = svn_error_quick_wrap(err, 
+                                     _("Try 'svnsync help' for more info"));
         }
       svn_handle_error2(err, stderr, FALSE, "svnsync: ");
       svn_error_clear(err);

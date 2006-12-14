@@ -262,6 +262,14 @@ public interface SVNClientInterface
     void notification2(Notify2 notify);
 
     /**
+     * Set the progress callback.
+     *
+     * @param listener The progress callback.
+     * @since 1.5
+     */
+    void setProgressListener(ProgressListener listener);
+
+    /**
      * Sets the commit message handler. This allows more complex commit message
      * with the list of the elements to be commited as input.
      * @param messageHandler    callback for entering commit messages
@@ -576,6 +584,32 @@ public interface SVNClientInterface
     void diff(String target, Revision pegRevision, Revision startRevision,
               Revision endRevision, String outFileName, boolean recurse,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force)
+            throws ClientException;
+
+    /**
+     * Produce a diff summary which lists the items changed between
+     * path and revision pairs.
+     *
+     * @param target1 Path or URL.
+     * @param revision1 Revision of <code>target1</code>.
+     * @param target2 Path or URL.
+     * @param revision2 Revision of <code>target2</code>.
+     * @param recurse Whether to recurse.
+     * @param ignoreAncestry Whether to ignore unrelated files during
+     * comparison.  False positives may potentially be reported if
+     * this parameter <code>false</code>, since a file might have been
+     * modified between two revisions, but still have the same
+     * contents.
+     * @param receiver As each is difference is found, this callback
+     * is invoked with a description of the difference.
+     *
+     * @exception ClientException
+     * @since 1.5
+     */
+    void diffSummarize(String target1, Revision revision1,
+                       String target2, Revision revision2,
+                       boolean recurse, boolean ignoreAncestry,
+                       DiffSummaryReceiver receiver)
             throws ClientException;
 
     /**

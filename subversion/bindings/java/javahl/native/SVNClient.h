@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -31,9 +31,11 @@
 class Revision;
 class Notify;
 class Notify2;
+class ProgressListener;
 class Targets;
 class JNIByteArray;
 class Prompter;
+class DiffSummaryReceiver;
 class BlameCallback;
 class CommitMessage;
 #include "svn_client.h"
@@ -43,10 +45,10 @@ class SVNClient :public SVNBase
 {
 public:
     jobjectArray info2(const char *path, Revision &revision, 
-        Revision &pegRevision, bool recurse);
-	void unlock(Targets &targets, bool force);
-	void lock(Targets &targets, const char *comment, bool force);
-	jobjectArray revProperties(jobject jthis, const char *path, 
+                       Revision &pegRevision, bool recurse);
+    void unlock(Targets &targets, bool force);
+    void lock(Targets &targets, const char *comment, bool force);
+    jobjectArray revProperties(jobject jthis, const char *path, 
                                 Revision &revision);
     void cancelOperation();
     void commitMessageHandler(CommitMessage *commitMessage);
@@ -112,6 +114,7 @@ public:
     void remove(Targets &targets, const char *message,bool force);
     void notification(Notify *notify);
     void notification2(Notify2 *notify2);
+    void setProgressListener(ProgressListener *progressListener);
     jlong checkout(const char *moduleName, const char *destPath,
                        Revision &revision, Revision &pegRevsion, bool recurse,
                        bool ignoreExternals);
@@ -145,6 +148,10 @@ public:
                   Revision &startRevision, Revision &endRevision,
                   const char *outfileName,bool recurse, bool ignoreAncestry,
                   bool noDiffDelete, bool force);
+    void diffSummarize(const char *target1, Revision &revision1,
+                       const char *target2, Revision &revision2,
+                       bool recurse, bool ignoreAncestry,
+                       DiffSummaryReceiver &receiver);
 
     const char * getLastPath();
     void dispose(jobject jthis);
@@ -166,16 +173,26 @@ private:
                                     size_t& size);
     Notify *m_notify;
     Notify2 *m_notify2;
+    ProgressListener *m_progressListener;
     Prompter *m_prompter;
     Path m_lastPath;
     bool m_cancelOperation;
     CommitMessage *m_commitMessage;
-    void *getCommitMessageBaton(const char *message);
+
+    /**
+     * Implements the svn_client_get_commit_log3_t API.
+     */
     static svn_error_t *getCommitMessage(const char **log_msg,
-                                             const char **tmp_file,
-                                             apr_array_header_t *commit_items,
-                                             void *baton,
-                                             apr_pool_t *pool);
+                                         const char **tmp_file,
+                                         const apr_array_header_t *
+                                         commit_items,
+                                         void *baton,
+                                         apr_pool_t *pool);
+    /**
+     * Produce a baton for the getCommitMessage() callback.
+     */
+    void *getCommitMessageBaton(const char *message);
+
     std::string m_userName;
     std::string m_passWord;
     std::string m_configDir;

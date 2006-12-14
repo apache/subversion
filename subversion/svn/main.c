@@ -1496,8 +1496,8 @@ main(int argc, const char *argv[])
                         SVN_CONFIG_OPTION_NO_UNLOCK, TRUE);
 
   /* Set the log message callback function.  Note that individual
-     subcommands will populate the ctx->log_msg_baton2 */
-  ctx->log_msg_func2 = svn_cl__get_log_message;
+     subcommands will populate the ctx->log_msg_baton3. */
+  ctx->log_msg_func3 = svn_cl__get_log_message;
 
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;
@@ -1546,6 +1546,14 @@ main(int argc, const char *argv[])
     {
       svn_error_t *tmp_err;
 
+      /* For argument-related problems, suggest using the 'help'
+         subcommand. */
+      if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
+          || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
+        {
+          err = svn_error_quick_wrap(err, 
+                                     _("Try 'svn help' for more info"));
+        }
       svn_handle_error2(err, stderr, FALSE, "svn: ");
 
       /* Tell the user about 'svn cleanup' if any error on the stack

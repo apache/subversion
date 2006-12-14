@@ -45,5 +45,8 @@ def main():
 def foo_to_bar(m):
     return m.replace('foo', 'bar')
 
+def identity(m):
+    return m
+
 main()
 sys.exit(0)

@@ -2,7 +2,7 @@
  * fetch.c :  routines for fetching updates and checkouts
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,6 +19,7 @@
 
 
 #include <assert.h>
+#include <stdlib.h> /* for free() */
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
@@ -87,10 +88,8 @@ typedef struct {
 } file_write_ctx_t;
 
 typedef struct {
-  svn_error_t *err;             /* propagate an error out of the reader */
-
+  svn_ra_dav__request_t *req;   /* Used to propagate errors out of the reader */
   int checked_type;             /* have we processed ctype yet? */
-  ne_content_type ctype;        /* the Content-Type header */
 
   void *subctx;
 } custom_get_ctx_t;
@@ -381,23 +380,6 @@ static svn_error_t *add_props(apr_hash_t *props,
     }
   return SVN_NO_ERROR;
 }
-                      
-
-/* This implements the svn_ra_dav__request_interrogator() interface.
-   USERDATA is 'ne_content_type *'. */
-static svn_error_t *interrogate_for_content_type(ne_request *req,
-                                                 int dispatch_return_val,
-                                                 void *userdata)
-{
-  ne_content_type *ctype = userdata;
-
-  if (ne_get_content_type(req, ctype) != 0)
-    return svn_error_createf
-      (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
-       _("Could not get content-type from response"));
-
-  return SVN_NO_ERROR;
-}
 
 
 static svn_error_t *custom_get_request(ne_session *sess,
@@ -412,11 +394,11 @@ static svn_error_t *custom_get_request(ne_session *sess,
 {
   custom_get_ctx_t cgc = { 0 };
   const char *delta_base;
+  svn_ra_dav__request_t *request;
   ne_request *req;
-  ne_decompress *decompress;
   svn_error_t *err;
   svn_ra_dav__session_t *ras = ne_get_session_private(sess,
-                                                     SVN_RA_NE_SESSION_ID);
+                                                      SVN_RA_NE_SESSION_ID);
 
   if (use_base)
     {
@@ -431,7 +413,8 @@ static svn_error_t *custom_get_request(ne_session *sess,
       delta_base = NULL;
     }
 
-  req = ne_request_create(sess, "GET", url);
+  request = svn_ra_dav__request_create(sess, ras, "GET", url, pool);
+  req = request->req;
   if (req == NULL)
     {
       return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
@@ -452,41 +435,21 @@ static svn_error_t *custom_get_request(ne_session *sess,
       ne_add_request_header(req, SVN_DAV_DELTA_BASE_HEADER, delta_base);
     }
 
-  /* add in a reader to capture the body of the response. */
-  if (ras->compression) 
-    {
-      decompress = ne_decompress_reader(req, ne_accept_2xx, reader, &cgc);
-    }
-  else 
-    {
-      decompress = NULL;
-      ne_add_response_body_reader(req, ne_accept_2xx, reader, &cgc);
-    }
+  svn_ra_dav__add_response_body_reader(request, ne_accept_2xx, reader, &cgc);
 
   /* complete initialization of the body reading context */
+  cgc.req = request;
   cgc.subctx = subctx;
 
   /* run the request */
-  err = svn_ra_dav__request_dispatch(NULL, req, sess, "GET", url,
+  err = svn_ra_dav__request_dispatch(NULL, request,
                                      200 /* OK */,
                                      226 /* IM Used */,
-                                     interrogate_for_content_type, &cgc.ctype,
                                      pool);
+  svn_ra_dav__request_destroy(request);
 
-  if (decompress)
-    ne_decompress_destroy(decompress);
-
-  /* we no longer need this */
-  if (cgc.ctype.value != NULL)
-    free(cgc.ctype.value);
-
-  /* if there was an error writing the contents, then return it rather
-     than Neon-related errors */
-  if (cgc.err)
-    {
-      svn_error_clear(err);
-      return cgc.err;
-    }
+  /* The request runner raises internal errors before Neon errors,
+     pass a returned error to our callers */
 
   return err;
 }
@@ -498,7 +461,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   custom_get_ctx_t *cgc = userdata;
   file_read_ctx_t *frc = cgc->subctx;
 
-  if (cgc->err)
+  if (cgc->req->err)
     {
       /* We must have gotten an error during the last read. */
       /* Abort the rest of the read. */
@@ -515,11 +478,21 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
   if (!cgc->checked_type)
     {
+      ne_content_type ctype = { 0 };
+      int rv = ne_get_content_type(cgc->req->req, &ctype);
 
-      if (cgc->ctype.type
-          && cgc->ctype.subtype
-          && !strcmp(cgc->ctype.type, "application") 
-          && !strcmp(cgc->ctype.subtype, "vnd.svn-svndiff"))
+      if (rv != 0)
+        {
+          SVN_RA_DAV__REQ_ERR
+            (cgc->req,
+             svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
+                              _("Could not get content-type from response")));
+          return 1;
+        }
+
+      /* Neon guarantees non-NULL values when rv==0 */
+      if (!strcmp(ctype.type, "application")
+          && !strcmp(ctype.subtype, "vnd.svn-svndiff"))
         {
           /* we are receiving an svndiff. set things up. */
           frc->stream = svn_txdelta_parse_svndiff(frc->handler,
@@ -527,6 +500,9 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
                                                   TRUE,
                                                   frc->pool);
         }
+
+      if (ctype.value)
+        free(ctype.value);
 
       cgc->checked_type = 1;
     }
@@ -553,7 +529,9 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
       /* We can't really do anything useful if we get an error here.  Pass
          it off to someone who can. */
-      cgc->err = (*frc->handler)(&window, frc->handler_baton);
+      SVN_RA_DAV__REQ_ERR
+        (cgc->req,
+         (*frc->handler)(&window, frc->handler_baton));
     }
   else
     {
@@ -561,7 +539,9 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
       apr_size_t written = len;
 
-      cgc->err = svn_stream_write(frc->stream, buf, &written);
+      SVN_RA_DAV__REQ_ERR
+        (cgc->req,
+         svn_stream_write(frc->stream, buf, &written));
 
       /* ### the svndiff stream parser does not obey svn_stream semantics
          ### in its write handler. it does not output the number of bytes
@@ -1101,8 +1081,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                        h; h = apr_hash_next(h))
                     {
                       const void *kkey;
-                      void *vval;
-                      apr_hash_this(h, &kkey, NULL, &vval);
+                      apr_hash_this(h, &kkey, NULL, NULL);
                   
                       if (strncmp((const char *) kkey, SVN_DAV_PROP_NS_CUSTOM,
                                   sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0
@@ -1201,28 +1180,47 @@ svn_error_t *svn_ra_dav__get_latest_revnum(svn_ra_session_t *session,
 ** the end-element handler for DAV:version-name.
 */
 
-/* This implements the `svn_ra_dav__xml_validate_cb' prototype. */
-static int drev_validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
-                                 svn_ra_dav__xml_elmid child)
+typedef struct
 {
-  return SVN_RA_DAV__XML_VALID;
-}
+  svn_stringbuf_t *cdata;
+  apr_pool_t *pool;
+  svn_revnum_t revision;
+} drev_baton_t;
+
 
 /* This implements the `svn_ra_dav__xml_startelm_cb' prototype. */
-static int drev_start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                              const char **atts)
+static svn_error_t *
+drev_start_element(int *elem, void *baton, int parent,
+                   const char *nspace, const char *name, const char **atts)
 {
-  return SVN_RA_DAV__XML_VALID;
+  const svn_ra_dav__xml_elm_t *elm =
+    svn_ra_dav__lookup_xml_elem(drev_report_elements, nspace, name);
+  drev_baton_t *b = baton;
+
+  *elem = elm ? elm->id : SVN_RA_DAV__XML_DECLINE;
+  if (!elm)
+    return SVN_NO_ERROR;
+
+  if (elm->id == ELEM_version_name)
+    b->cdata = svn_stringbuf_create("", b->pool);
+
+  return SVN_NO_ERROR;
 }
 
 /* This implements the `svn_ra_dav__xml_endelm_cb' prototype. */
-static int drev_end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                            const char *cdata)
+static svn_error_t *
+drev_end_element(void *baton, int state,
+                 const char *nspace, const char *name)
 {
-  if (elm->id == ELEM_version_name)
-    *((svn_revnum_t *) userdata) = SVN_STR_TO_REV(cdata);
+  drev_baton_t *b = baton;
 
-  return SVN_RA_DAV__XML_VALID;
+  if (state == ELEM_version_name && b->cdata)
+    {
+      b->revision = SVN_STR_TO_REV(b->cdata->data);
+      b->cdata = NULL;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
@@ -1234,11 +1232,15 @@ svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
   const char *body;
   const char *vcc_url;
   svn_error_t *err;
+  drev_baton_t *b = apr_palloc(pool, sizeof(*b));
+
+  b->pool = pool;
+  b->cdata = NULL;
+  b->revision = SVN_INVALID_REVNUM;
 
   /* Run the 'dated-rev-report' on the VCC url, which is always
      guaranteed to exist.   */
   SVN_ERR(svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->root.path, pool));
-  
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -1248,23 +1250,23 @@ svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
                       "</S:dated-rev-report>",
                       svn_time_to_cstring(timestamp, pool));
 
-  *revision = SVN_INVALID_REVNUM;
-  err = svn_ra_dav__parsed_request_compat(ras->sess, "REPORT",
-                                          vcc_url, body, NULL, NULL,
-                                          drev_report_elements,
-                                          drev_validate_element,
-                                          drev_start_element, drev_end_element,
-                                          revision, NULL, NULL, FALSE, pool);
+  err = svn_ra_dav__parsed_request(ras->sess, "REPORT",
+                                   vcc_url, body, NULL, NULL,
+                                   drev_start_element,
+                                   svn_ra_dav__xml_collect_cdata,
+                                   drev_end_element,
+                                   b, NULL, NULL, FALSE, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, _("Server does not support date-based "
                                        "operations"));
   else if (err)
     return err;
 
-  if (*revision == SVN_INVALID_REVNUM)
+  if (b->revision == SVN_INVALID_REVNUM)
     return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
                             _("Invalid server response to dated-rev request"));
 
+  *revision = b->revision;
   return SVN_NO_ERROR;
 }
 
@@ -2233,12 +2235,11 @@ start_element(int *elem, void *userdata, int parent_state, const char *nspace,
               for (hi = apr_hash_first(TOP_DIR(rb).pool, bc_children);
                    hi; hi = apr_hash_next(hi))
                 {
-                  const void *key;
                   void *val;
                   svn_ra_dav_resource_t *rsrc;
                   const svn_string_t *vc_url;
 
-                  apr_hash_this(hi, &key, NULL, &val);
+                  apr_hash_this(hi, NULL, NULL, &val);
                   rsrc = val;
 
                   vc_url = apr_hash_get(rsrc->propset,

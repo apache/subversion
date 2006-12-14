@@ -347,6 +347,8 @@ put_xlate_handle_node(xlate_handle_node_t *node,
                             APR_HASH_KEY_STRING);
       if (node_p == NULL)
         {
+          userdata_key = apr_pstrdup(apr_hash_pool_get(xlate_handle_hash),
+                                     userdata_key);
           node_p = apr_palloc(apr_hash_pool_get(xlate_handle_hash),
                               sizeof(*node_p));
           *node_p = NULL;

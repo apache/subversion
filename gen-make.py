@@ -159,6 +159,9 @@ def _usage_exit():
   print "  --enable-bdb-in-apr-util"
   print "           configure APR-Util to use Berkeley DB"
   print
+  print "  --enable-ml"
+  print "           enable use of ML assembler with zlib"
+  print
   print "  --vsnet-version=VER"
   print "           generate for VS.NET version VER (2002, 2003, or 2005)"
   print "           [only valid in combination with '-t vcproj']"
@@ -202,6 +205,7 @@ if __name__ == '__main__':
                             'enable-quantify',
                             'enable-nls',
                             'enable-bdb-in-apr-util',
+                            'enable-ml',
                             'vsnet-version=',
                             ])
     if len(args) > 1:

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -400,6 +400,20 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             worker.notification2(notify);
+        }
+    }
+
+    /**
+     * Set the progress callback.
+     *
+     * @param listener The progress callback.
+     * @since 1.5
+     */
+    public void setProgressListener(ProgressListener listener)
+    {
+        synchronized (clazz)
+        {
+            worker.setProgressListener(listener);
         }
     }
 
@@ -855,6 +869,39 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             worker.diff(target, pegRevision, startRevision, endRevision,
                     outFileName, recurse, ignoreAncestry, noDiffDeleted, force);
+        }
+    }
+
+    /**
+     * Produce a diff summary which lists the items changed between
+     * path and revision pairs.
+     *
+     * @param target1 Path or URL.
+     * @param revision1 Revision of <code>target1</code>.
+     * @param target2 Path or URL.
+     * @param revision2 Revision of <code>target2</code>.
+     * @param recurse Whether to recurse.
+     * @param ignoreAncestry Whether to ignore unrelated files during
+     * comparison.  False positives may potentially be reported if
+     * this parameter <code>false</code>, since a file might have been
+     * modified between two revisions, but still have the same
+     * contents.
+     * @param receiver As each is difference is found, this callback
+     * is invoked with a description of the difference.
+     *
+     * @exception ClientException
+     * @since 1.5
+     */
+    public void diffSummarize(String target1, Revision revision1,
+                              String target2, Revision revision2,
+                              boolean recurse, boolean ignoreAncestry,
+                              DiffSummaryReceiver receiver)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.diffSummarize(target1, revision1, target2, revision2,
+                                 recurse, ignoreAncestry, receiver);
         }
     }
 

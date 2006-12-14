@@ -82,7 +82,12 @@ public:
      */
     static void putFinalizedClient(SVNBase *cl);
 
+    /**
+     * Throw a Java exception corresponding to err, and run
+     * svn_error_clear() on err.
+     */
     static void handleSVNError(svn_error_t *err);
+
     static jstring makeSVNErrorMessage(svn_error_t *err);
 
     /**
@@ -103,7 +108,7 @@ public:
     { raiseThrowable(JAVA_PACKAGE"/JNIError", message); }
 
     static apr_pool_t * getPool();
-	static bool JNIGlobalInit(JNIEnv *env);
+    static bool JNIGlobalInit(JNIEnv *env);
     static bool JNIInit(JNIEnv *env);
     static JNIMutex *getGlobalPoolMutex();
     enum { formatBufferSize = 2048 };

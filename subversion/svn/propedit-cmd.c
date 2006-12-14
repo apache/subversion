@@ -159,7 +159,7 @@ svn_cl__propedit(apr_getopt_t *os,
         {
           apr_hash_t *props;
           const char *target = ((const char **) (targets->elts))[i];
-          svn_string_t *propval;
+          svn_string_t *propval, *edited_propval;
           const char *base_dir = target;
           const char *target_local;
           svn_wc_adm_access_t *adm_access;
@@ -215,7 +215,7 @@ svn_cl__propedit(apr_getopt_t *os,
           
           /* Run the editor on a temporary file which contains the
              original property value... */
-          SVN_ERR(svn_cl__edit_externally(&propval, NULL,
+          SVN_ERR(svn_cl__edit_externally(&edited_propval, NULL,
                                           opt_state->editor_cmd,
                                           base_dir,
                                           propval,
@@ -229,7 +229,7 @@ svn_cl__propedit(apr_getopt_t *os,
             : svn_path_local_style(target, subpool);
 
           /* ...and re-set the property's value accordingly. */
-          if (propval)
+          if (edited_propval && !svn_string_compare(propval, edited_propval))
             {
               svn_commit_info_t *commit_info = NULL;
               svn_error_t *err = SVN_NO_ERROR;
@@ -240,17 +240,17 @@ svn_cl__propedit(apr_getopt_t *os,
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Bad encoding option: prop value not stored as UTF8"));
 
-              if (ctx->log_msg_func2)
-                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2),
+              if (ctx->log_msg_func3)
+                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
 
               err = svn_client_propset3(&commit_info,
-                                        pname_utf8, propval, target, 
+                                        pname_utf8, edited_propval, target, 
                                         FALSE, opt_state->force,
                                         base_rev,
                                         ctx, subpool);
-              if (ctx->log_msg_func2)
+              if (ctx->log_msg_func3)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
               else if (err)
                 return err;

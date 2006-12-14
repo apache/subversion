@@ -16,18 +16,19 @@
  * @endcopyright
  */
 package org.tigris.subversion.javahl;
+
+import java.util.EventListener;
+
 /**
  * Subversion notification interface.
  *
- * Implement this interface and implement the onNotify method
- * to provide a custom notification handler to the SVNClient
- * class.
- * If you need to pass extra information to the notification
- * handler then just add these to you implementing class
+ * Implement this interface to provide a custom notification handler
+ * to the SVNClient class.  If you need to pass extra information to
+ * the notification handler add it to your implementing class.
  *
  * @since 1.2
  */
-public interface Notify2
+public interface Notify2 extends EventListener
 {
     /**
      * Handler for Subversion notifications.

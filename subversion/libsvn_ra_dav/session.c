@@ -85,7 +85,11 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   if (! ras->callbacks->auth_baton)
     return -1;
 
-  if (attempt == 0)
+  /* Neon automatically tries some auth protocols and bumps the attempt
+     count without using Subversion's callbacks, so we can't depend
+     on attempt == 0 the first time we are called -- we need to check
+     if the auth state has been initted as well.  */
+  if (attempt == 0 || ras->auth_iterstate == NULL)
     {
       const char *realmstring;
 

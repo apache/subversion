@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os, shutil
+import re, os
 
 # Our testing module
 import svntest
@@ -69,25 +69,25 @@ def guarantee_repos_and_wc(sbox):
 
   sbox.build()
   wc_path = sbox.wc_dir
-  msg_file=os.path.join (sbox.repo_dir, 'log-msg')
-  msg_file=os.path.abspath (msg_file)
+  msg_file=os.path.join(sbox.repo_dir, 'log-msg')
+  msg_file=os.path.abspath(msg_file)
 
   # Now we have a repos and wc at revision 1.
 
-  was_cwd = os.getcwd ()
-  os.chdir (wc_path)
+  was_cwd = os.getcwd()
+  os.chdir(wc_path)
 
   # Set up the paths we'll be using most often.
-  iota_path = os.path.join ('iota')
-  mu_path = os.path.join ('A', 'mu')
-  B_path = os.path.join ('A', 'B')
-  omega_path = os.path.join ('A', 'D', 'H', 'omega')
-  pi_path = os.path.join ('A', 'D', 'G', 'pi')
-  rho_path = os.path.join ('A', 'D', 'G', 'rho')
-  alpha_path = os.path.join ('A', 'B', 'E', 'alpha')
-  beta_path = os.path.join ('A', 'B', 'E', 'beta')
-  psi_path = os.path.join ('A', 'D', 'H', 'psi')
-  epsilon_path = os.path.join ('A', 'C', 'epsilon')
+  iota_path = os.path.join('iota')
+  mu_path = os.path.join('A', 'mu')
+  B_path = os.path.join('A', 'B')
+  omega_path = os.path.join('A', 'D', 'H', 'omega')
+  pi_path = os.path.join('A', 'D', 'G', 'pi')
+  rho_path = os.path.join('A', 'D', 'G', 'rho')
+  alpha_path = os.path.join('A', 'B', 'E', 'alpha')
+  beta_path = os.path.join('A', 'B', 'E', 'beta')
+  psi_path = os.path.join('A', 'D', 'H', 'psi')
+  epsilon_path = os.path.join('A', 'C', 'epsilon')
 
   # Do a varied bunch of commits.  No copies yet, we'll wait till Ben
   # is done for that.
@@ -96,81 +96,73 @@ def guarantee_repos_and_wc(sbox):
   msg=""" Log message for revision 2 
   but with multiple lines
   to test the code"""
-  log_file=open (msg_file, 'w')
-  log_file.write (msg)
-  log_file.close ()
-  svntest.main.file_append (iota_path, "2")
-  svntest.main.run_svn (None, 'ci', '-F', msg_file)
-  svntest.main.run_svn (None, 'up')
+  svntest.main.file_write(msg_file, msg)
+  svntest.main.file_append(iota_path, "2")
+  svntest.main.run_svn(None, 'ci', '-F', msg_file)
+  svntest.main.run_svn(None, 'up')
 
   # Revision 3: edit A/D/H/omega, A/D/G/pi, A/D/G/rho, and A/B/E/alpha
-  svntest.main.file_append (omega_path, "3")
-  svntest.main.file_append (pi_path, "3")
-  svntest.main.file_append (rho_path, "3")
-  svntest.main.file_append (alpha_path, "3")
-  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 3")
-  svntest.main.run_svn (None, 'up')
+  svntest.main.file_append(omega_path, "3")
+  svntest.main.file_append(pi_path, "3")
+  svntest.main.file_append(rho_path, "3")
+  svntest.main.file_append(alpha_path, "3")
+  svntest.main.run_svn(None, 'ci', '-m', "Log message for revision 3")
+  svntest.main.run_svn(None, 'up')
 
   # Revision 4: edit iota again, add A/C/epsilon
   msg=""" Log message for revision 4 
   but with multiple lines
   to test the code"""
-  log_file=open (msg_file, 'w')
-  log_file.write (msg)
-  log_file.close ()
-  svntest.main.file_append (iota_path, "4")
-  svntest.main.file_append (epsilon_path, "4")
-  svntest.main.run_svn (None, 'add', epsilon_path)
-  svntest.main.run_svn (None, 'ci', '-F', msg_file)
-  svntest.main.run_svn (None, 'up')
+  svntest.main.file_write(msg_file, msg)
+  svntest.main.file_append(iota_path, "4")
+  svntest.main.file_append(epsilon_path, "4")
+  svntest.main.run_svn(None, 'add', epsilon_path)
+  svntest.main.run_svn(None, 'ci', '-F', msg_file)
+  svntest.main.run_svn(None, 'up')
 
   # Revision 5: edit A/C/epsilon, delete A/D/G/rho
-  svntest.main.file_append (epsilon_path, "5")
-  svntest.main.run_svn (None, 'rm', rho_path)
-  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 5")
-  svntest.main.run_svn (None, 'up')
+  svntest.main.file_append(epsilon_path, "5")
+  svntest.main.run_svn(None, 'rm', rho_path)
+  svntest.main.run_svn(None, 'ci', '-m', "Log message for revision 5")
+  svntest.main.run_svn(None, 'up')
 
   # Revision 6: prop change on A/B, edit A/D/H/psi
   msg=""" Log message for revision 6 
   but with multiple lines
   to test the code"""
-  log_file=open (msg_file, 'w')
-  log_file.write (msg)
-  log_file.close ()
-  svntest.main.run_svn (None, 'ps', 'blue', 'azul', B_path)  
-  svntest.main.file_append (psi_path, "6")
-  svntest.main.run_svn (None, 'ci', '-F', msg_file)
-  svntest.main.run_svn (None, 'up')
+  svntest.main.file_write(msg_file, msg)
+  svntest.main.run_svn(None, 'ps', 'blue', 'azul', B_path)  
+  svntest.main.file_append(psi_path, "6")
+  svntest.main.run_svn(None, 'ci', '-F', msg_file)
+  svntest.main.run_svn(None, 'up')
 
   # Revision 7: edit A/mu, prop change on A/mu
-  svntest.main.file_append (mu_path, "7")
-  svntest.main.run_svn (None, 'ps', 'red', 'burgundy', mu_path)
-  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 7")
-  svntest.main.run_svn (None, 'up')
+  svntest.main.file_append(mu_path, "7")
+  svntest.main.run_svn(None, 'ps', 'red', 'burgundy', mu_path)
+  svntest.main.run_svn(None, 'ci', '-m', "Log message for revision 7")
+  svntest.main.run_svn(None, 'up')
 
   # Revision 8: edit iota yet again, re-add A/D/G/rho
   msg=""" Log message for revision 8 
   but with multiple lines
   to test the code"""
-  log_file=open (msg_file, 'w')
-  log_file.write (msg)
-  log_file.close ()
-  svntest.main.file_append (iota_path, "8")
-  svntest.main.file_append (rho_path, "8")
-  svntest.main.run_svn (None, 'add', rho_path)
-  svntest.main.run_svn (None, 'ci', '-F', msg_file)
-  svntest.main.run_svn (None, 'up')
+  svntest.main.file_write(msg_file, msg)
+  svntest.main.file_append(iota_path, "8")
+  svntest.main.file_append(rho_path, "8")
+  svntest.main.run_svn(None, 'add', rho_path)
+  svntest.main.run_svn(None, 'ci', '-F', msg_file)
+  svntest.main.run_svn(None, 'up')
 
   # Revision 9: edit A/B/E/beta, delete A/B/E/alpha
-  svntest.main.file_append (beta_path, "9")
-  svntest.main.run_svn (None, 'rm', alpha_path)
-  svntest.main.run_svn (None, 'ci', '-m', "Log message for revision 9")
-  svntest.main.run_svn (None, 'up')
+  svntest.main.file_append(beta_path, "9")
+  svntest.main.run_svn(None, 'rm', alpha_path)
+  svntest.main.run_svn(None, 'ci', '-m', "Log message for revision 9")
+  svntest.main.run_svn(None, 'up')
 
   max_revision = 9
 
   # Restore.
-  os.chdir (was_cwd)
+  os.chdir(was_cwd)
 
   # Let's run 'svn status' and make sure the working copy looks
   # exactly the way we think it should.  Start with a generic
@@ -192,7 +184,7 @@ def guarantee_repos_and_wc(sbox):
 
 # For errors seen while parsing log data.
 class SVNLogParseError(Exception):
-  def __init__ (self, args=None):
+  def __init__(self, args=None):
     self.args = args
 
 
@@ -247,8 +239,8 @@ def parse_log_output(log_lines):
 
   # Regular expression to match the header line of a log message, with
   # these groups: (revision number), (author), (date), (num lines).
-  header_re = re.compile ('^r([0-9]+) \| ' \
-                          + '([^|]*) \| ([^|]*) \| ([0-9]+) lines?')
+  header_re = re.compile('^r([0-9]+) \| ' \
+                         + '([^|]*) \| ([^|]*) \| ([0-9]+) lines?')
 
   # The log chain to return.
   chain = []
@@ -256,26 +248,26 @@ def parse_log_output(log_lines):
   this_item = None
   while 1:
     try:
-      this_line = log_lines.pop (0)
+      this_line = log_lines.pop(0)
     except IndexError:
       return chain
 
-    match = header_re.search (this_line)
-    if match and match.groups ():
+    match = header_re.search(this_line)
+    if match and match.groups():
       this_item = {}
-      this_item['revision'] = match.group(1)
+      this_item['revision'] = int(match.group(1))
       this_item['author']   = match.group(2)
       this_item['date']     = match.group(3)
-      lines = string.atoi ((match.group (4)))
+      lines = int(match.group(4))
       this_item['lines']    = lines
 
       # Eat the expected blank line.
-      log_lines.pop (0)
+      log_lines.pop(0)
 
-      ### todo: we don't parse changed-paths yet, since Subversion
-      ### doesn't output them.  When it does, they'll appear here,
-      ### right after the header line, and then there'll be a blank
-      ### line between them and the msg.
+      ### TODO: Parse "Changed paths" (available from 'log -v') into
+      ### the 'paths' element.  They'd appear here, right after the
+      ### header line, and with be a blank line between them and the
+      ### msg.
 
       # Accumulate the log message
       msg = ''
@@ -285,7 +277,7 @@ def parse_log_output(log_lines):
     elif this_line == msg_separator:
       if this_item:
         this_item['msg'] = msg
-        chain.append (this_item)
+        chain.append(this_item)
     else:  # if didn't see separator now, then something's wrong
       raise SVNLogParseError, "trailing garbage after log message"
 
@@ -313,7 +305,7 @@ class SVNUnexpectedLogs(svntest.Failure):
     return msg
 
 
-def check_log_chain (chain, revlist):
+def check_log_chain(chain, revlist):
   """Verify that log chain CHAIN contains the right log messages for
   revisions START to END (see documentation for parse_log_output() for
   more about log chains).
@@ -339,7 +331,7 @@ def check_log_chain (chain, revlist):
   for i in range(0, nbr_expected):
     expect_rev = revlist[i]
     log_item = chain[i]
-    saw_rev = string.atoi (log_item['revision'])
+    saw_rev = log_item['revision']
     date = log_item['date']
     author = log_item['author']
     msg = log_item['msg']
@@ -348,22 +340,21 @@ def check_log_chain (chain, revlist):
       missing_revs.append(expect_rev)
       continue
     # Check that date looks at least vaguely right:
-    date_re = re.compile ('[0-9]+')
+    date_re = re.compile('[0-9]+')
     if not date_re.search(date):
       raise SVNUnexpectedLogs('Malformed date', chain, 'date')
     # Authors are a little harder, since they might not exist over ra-dav.
     # Well, it's not much of a check, but we'll do what we can.
-    author_re = re.compile ('[a-zA-Z]+')
-    if (not (author_re.search (author)
+    author_re = re.compile('[a-zA-Z]+')
+    if (not (author_re.search(author)
              or author == ''
              or author == '(no author)')):
       raise SVNUnexpectedLogs('Malformed author', chain, 'author')
 
-    # Check for multiline log messages.
-    # If revision is an even number then it should have 
-    # a three line log message.
+    # Verify the expectation that even-numbered revisions in the Greek
+    # tree tweaked by the log tests have 3-line log messages.
     if (saw_rev % 2 == 0 and log_item['lines'] != 3):
-      raise SVNUnexpectedLogs('Malformed lines', chain, 'lines')
+      raise SVNUnexpectedLogs('Malformed log line counts', chain, 'lines')
        
     # Check that the log message looks right:
     pattern = 'Log message for revision ' + `saw_rev`
@@ -395,11 +386,11 @@ def plain_log(sbox):
   try:
     output, err = svntest.actions.run_and_verify_svn(None, None, [], 'log')
 
-    log_chain = parse_log_output (output)
+    log_chain = parse_log_output(output)
     check_log_chain(log_chain, range(max_revision, 1 - 1, -1))
     
   finally:
-    os.chdir (was_cwd)
+    os.chdir(was_cwd)
 
 
 #----------------------------------------------------------------------
@@ -408,38 +399,38 @@ def versioned_log_message(sbox):
 
   sbox.build()
 
-  was_cwd = os.getcwd ()
-  os.chdir (sbox.wc_dir)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
 
   try:
-    iota_path = os.path.join ('iota')
-    mu_path = os.path.join ('A', 'mu')
-    log_path = os.path.join ('A', 'D', 'H', 'omega')
+    iota_path = os.path.join('iota')
+    mu_path = os.path.join('A', 'mu')
+    log_path = os.path.join('A', 'D', 'H', 'omega')
     
-    svntest.main.file_append (iota_path, "2")
+    svntest.main.file_append(iota_path, "2")
     
     # try to check in a change using a versioned file as your log entry.
-    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                        'ci', '-F', log_path)
 
     # force it.  should not produce any errors.
-    svntest.actions.run_and_verify_svn ("", None, [],
-                                        'ci', '-F', log_path, '--force-log')
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci', '-F', log_path, '--force-log')
 
-    svntest.main.file_append (mu_path, "2")
+    svntest.main.file_append(mu_path, "2")
 
     # try the same thing, but specifying the file to commit explicitly.
-    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                        'ci', '-F', log_path, mu_path)
 
     # force it...  should succeed.
-    svntest.actions.run_and_verify_svn ("", None, [],
-                                        'ci',
-                                        '-F', log_path,
-                                        '--force-log', mu_path)
+    svntest.actions.run_and_verify_svn(None, None, [],
+                                       'ci',
+                                       '-F', log_path,
+                                       '--force-log', mu_path)
 
   finally:
-    os.chdir (was_cwd)
+    os.chdir(was_cwd)
 
 
 #----------------------------------------------------------------------
@@ -449,13 +440,12 @@ def log_with_empty_repos(sbox):
   # Create virgin repos
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
 
-  svntest.actions.run_and_verify_svn ("", None, [],
-                                      'log',
-                                      '--username', svntest.main.wc_author,
-                                      '--password', svntest.main.wc_passwd,
-                                      svntest.main.current_repo_url)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'log',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     sbox.repo_url)
 
 #----------------------------------------------------------------------
 def log_where_nothing_changed(sbox):
@@ -471,13 +461,13 @@ def log_where_nothing_changed(sbox):
   # without error to the end of dav_svn__log_report(), which would
   # send a closing tag even though no opening tag had ever been sent.
 
-  rho_path = os.path.join (sbox.wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.main.file_append (rho_path, "some new material in rho")
+  rho_path = os.path.join(sbox.wc_dir, 'A', 'D', 'G', 'rho')
+  svntest.main.file_append(rho_path, "some new material in rho")
   svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
                                      'log msg', rho_path)
 
   # Now run 'svn log -r2' on a directory unaffected by revision 2.
-  H_path = os.path.join (sbox.wc_dir, 'A', 'D', 'H')
+  H_path = os.path.join(sbox.wc_dir, 'A', 'D', 'H')
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'log', '-r', '2', H_path)
 
@@ -505,13 +495,13 @@ def log_with_path_args(sbox):
   try:
     output, err = svntest.actions.run_and_verify_svn(
       None, None, [],
-      'log', svntest.main.current_repo_url, 'A/D/G', 'A/D/H')
+      'log', sbox.repo_url, 'A/D/G', 'A/D/H')
 
-    log_chain = parse_log_output (output)
+    log_chain = parse_log_output(output)
     check_log_chain(log_chain, [8, 6, 5, 3, 1])
 
   finally:
-    os.chdir (was_cwd)
+    os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
 def dynamic_revision(sbox):
@@ -542,7 +532,7 @@ def url_missing_in_head(sbox):
 
   guarantee_repos_and_wc(sbox)
 
-  my_url = svntest.main.current_repo_url + "/A/B/E/alpha" + "@8"
+  my_url = sbox.repo_url + "/A/B/E/alpha" + "@8"
   
   output, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                    'log', my_url)
@@ -553,13 +543,13 @@ def log_through_copyfrom_history(sbox):
   "'svn log TGT' with copyfrom history"
   sbox.build()
   wc_dir = sbox.wc_dir
-  msg_file=os.path.join (sbox.repo_dir, 'log-msg')
-  msg_file=os.path.abspath (msg_file)
+  msg_file=os.path.join(sbox.repo_dir, 'log-msg')
+  msg_file=os.path.abspath(msg_file)
 
-  mu_path = os.path.join (wc_dir, 'A', 'mu')
-  mu2_path = os.path.join (wc_dir, 'A', 'mu2')
-  mu_URL = svntest.main.current_repo_url + '/A/mu'
-  mu2_URL = svntest.main.current_repo_url + '/A/mu2'
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  mu2_path = os.path.join(wc_dir, 'A', 'mu2')
+  mu_URL = sbox.repo_url + '/A/mu'
+  mu2_URL = sbox.repo_url + '/A/mu2'
    
   msg2=""" Log message for revision 2 
   but with multiple lines
@@ -573,70 +563,64 @@ def log_through_copyfrom_history(sbox):
   but with multiple lines
   to test the code"""
 
-  log_file=open (msg_file, 'w')
-  log_file.write (msg2)
-  log_file.close ()
-  svntest.main.file_append (mu_path, "2")
-  svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
-                                      '-F', msg_file)
-  svntest.main.file_append (mu2_path, "this is mu2")
-  svntest.actions.run_and_verify_svn (None, None, [], 'add', mu2_path)
-  svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
-                                      '-m', "Log message for revision 3")
-  svntest.actions.run_and_verify_svn (None, None, [], 'rm', mu2_path)
-  log_file=open (msg_file, 'w')
-  log_file.write (msg4)
-  log_file.close ()
-  svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
-                                      '-F', msg_file)
-  svntest.main.file_append (mu_path, "5")
-  svntest.actions.run_and_verify_svn (None, None, [], 'ci', wc_dir,
-                                      '-m', "Log message for revision 5")
+  svntest.main.file_write(msg_file, msg2)
+  svntest.main.file_append(mu_path, "2")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-F', msg_file)
+  svntest.main.file_append(mu2_path, "this is mu2")
+  svntest.actions.run_and_verify_svn(None, None, [], 'add', mu2_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', "Log message for revision 3")
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu2_path)
+  svntest.main.file_write(msg_file, msg4)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-F', msg_file)
+  svntest.main.file_append(mu_path, "5")
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+                                     '-m', "Log message for revision 5")
 
-  log_file=open (msg_file, 'w')
-  log_file.write (msg6)
-  log_file.close ()
-  svntest.actions.run_and_verify_svn (None, None, [],
-                                      'cp', '-r', '5', mu_URL, mu2_URL,
-                                      '-F', msg_file)
-  svntest.actions.run_and_verify_svn (None, None, [], 'up', wc_dir)
+  svntest.main.file_write(msg_file, msg6)
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'cp', '-r', '5', mu_URL, mu2_URL,
+                                     '-F', msg_file)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # The full log for mu2 is relatively unsurprising
-  output, err = svntest.actions.run_and_verify_svn (None, None, [],
-                                                    'log', mu2_path)
-  log_chain = parse_log_output (output)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', mu2_path)
+  log_chain = parse_log_output(output)
   check_log_chain(log_chain, [6, 5, 2, 1])
 
-  output, err = svntest.actions.run_and_verify_svn (None, None, [],
-                                                    'log', mu2_URL)
-  log_chain = parse_log_output (output)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', mu2_URL)
+  log_chain = parse_log_output(output)
   check_log_chain(log_chain, [6, 5, 2, 1])
 
   # First "oddity", the full log for mu2 doesn't include r3, but the -r3
   # log works!
   peg_mu2_path = mu2_path + "@3"
-  output, err = svntest.actions.run_and_verify_svn (None, None, [],
-                                                    'log', '-r', '3', 
-                                                    peg_mu2_path)
-  log_chain = parse_log_output (output)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', '-r', '3', 
+                                                   peg_mu2_path)
+  log_chain = parse_log_output(output)
   check_log_chain(log_chain, [3])
 
   peg_mu2_URL = mu2_URL + "@3"
-  output, err = svntest.actions.run_and_verify_svn (None, None, [],
-                                                    'log', '-r', '3', 
-                                                    peg_mu2_URL)
-  log_chain = parse_log_output (output)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', '-r', '3', 
+                                                   peg_mu2_URL)
+  log_chain = parse_log_output(output)
   check_log_chain(log_chain, [3])
-  output, err = svntest.actions.run_and_verify_svn (None, None, [],
-                                                    'log', '-r', '2', 
-                                                    mu2_path)
-  log_chain = parse_log_output (output)
-  check_log_chain (log_chain, [2])
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', '-r', '2', 
+                                                   mu2_path)
+  log_chain = parse_log_output(output)
+  check_log_chain(log_chain, [2])
 
-  output, err = svntest.actions.run_and_verify_svn (None, None, [],
-                                                    'log', '-r', '2', 
-                                                    mu2_URL)
-  log_chain = parse_log_output (output)
+  output, err = svntest.actions.run_and_verify_svn(None, None, [],
+                                                   'log', '-r', '2', 
+                                                   mu2_URL)
+  log_chain = parse_log_output(output)
   check_log_chain(log_chain, [2])
 
 #----------------------------------------------------------------------
@@ -681,9 +665,8 @@ PROPS-END
   # Create virgin repos and working copy
   svntest.main.safe_rmtree(sbox.repo_dir, 1)
   svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
 
-  URL = svntest.main.current_repo_url
+  URL = sbox.repo_url
 
   # load dumpfile with control character into repos to get
   # a log with control char content
@@ -693,7 +676,8 @@ PROPS-END
     None, 1, dump_str)
 
   # run log
-  output, errput = svntest.actions.run_and_verify_svn ("", None, [], 'log', URL)
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'log', 
+                                                      URL)
 
   # Verify the output contains either the expected fuzzy escape
   # sequence, or the literal control char.
@@ -703,13 +687,13 @@ PROPS-END
                           "and a Ctrl-I \(\t\)\."
   matched = None
   for line in output:
-    if re.match (match_unescaped_ctrl_re, line) \
-       or re.match (match_escaped_ctrl_re, line):
+    if re.match(match_unescaped_ctrl_re, line) \
+       or re.match(match_escaped_ctrl_re, line):
       matched = 1
 
   if not matched:
-    raise svntest.Failure ("log message not transmitted properly:" +
-                           str(output) + "\n" + "error: " + str(errput))
+    raise svntest.Failure("log message not transmitted properly:" +
+                          str(output) + "\n" + "error: " + str(errput))
 
 #----------------------------------------------------------------------
 def log_xml_empty_date(sbox):
@@ -717,12 +701,12 @@ def log_xml_empty_date(sbox):
   sbox.build()
 
   # Create the revprop-change hook for this test
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
   date_re = re.compile('<date');
 
   # Ensure that we get a date before we delete the property.
-  output, errput = svntest.actions.run_and_verify_svn("", None, [],
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
                                                       'log', '--xml', '-r1',
                                                       sbox.wc_dir)
   matched = 0
@@ -730,19 +714,19 @@ def log_xml_empty_date(sbox):
     if date_re.search(line):
       matched = 1
   if not matched:
-    raise svntest.Failure ("log contains no date element")
+    raise svntest.Failure("log contains no date element")
 
   # Set the svn:date revprop to the empty string on revision 1.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'pdel', '--revprop', '-r1', 'svn:date',
                                      sbox.wc_dir)
 
-  output, errput = svntest.actions.run_and_verify_svn("", None, [],
+  output, errput = svntest.actions.run_and_verify_svn(None, None, [],
                                                       'log', '--xml', '-r1',
                                                       sbox.wc_dir)
   for line in output:  
     if date_re.search(line):
-      raise svntest.Failure ("log contains date element when svn:date is empty")
+      raise svntest.Failure("log contains date element when svn:date is empty")
 
 #----------------------------------------------------------------------
 def log_limit(sbox):
@@ -751,31 +735,31 @@ def log_limit(sbox):
 
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
-                                                svntest.main.current_repo_url)
-  log_chain = parse_log_output (out)
+                                                sbox.repo_url)
+  log_chain = parse_log_output(out)
   check_log_chain(log_chain, [9, 8])
 
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
-                                                svntest.main.current_repo_url,
+                                                sbox.repo_url,
                                                 'A/B')
-  log_chain = parse_log_output (out)
+  log_chain = parse_log_output(out)
   check_log_chain(log_chain, [9, 6])
 
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
                                                 '--revision', '2:HEAD',
-                                                svntest.main.current_repo_url,
+                                                sbox.repo_url,
                                                 'A/B')
-  log_chain = parse_log_output (out)
+  log_chain = parse_log_output(out)
   check_log_chain(log_chain, [3, 6])
 
   out, err = svntest.actions.run_and_verify_svn(None, None, [],
                                                 'log', '--limit', '2',
                                                 '--revision', '1',
-                                                svntest.main.current_repo_url,
+                                                sbox.repo_url,
                                                 'A/B')
-  log_chain = parse_log_output (out)
+  log_chain = parse_log_output(out)
   check_log_chain(log_chain, [1])
 
   must_be_positive = ".*Argument to --limit must be positive.*"
@@ -783,11 +767,11 @@ def log_limit(sbox):
   # error expected when limit <= 0
   svntest.actions.run_and_verify_svn(None, None, must_be_positive,
                                      'log', '--limit', '0', '--revision', '1',
-                                     svntest.main.current_repo_url, 'A/B')
+                                     sbox.repo_url, 'A/B')
                                                 
   svntest.actions.run_and_verify_svn(None, None, must_be_positive,
                                      'log', '--limit', '-1', '--revision', '1',
-                                     svntest.main.current_repo_url, 'A/B')
+                                     sbox.repo_url, 'A/B')
                                                                                                 
 def log_base_peg(sbox):
   "run log on an @BASE target"

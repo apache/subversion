@@ -528,7 +528,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * At the start of traversal, the consumer provides @a edit_baton, a
  * baton global to the entire delta edit.  If there is a target
  * revision that needs to be set for this operation, the producer
- * should called the @c set_target_revision function at this point.
+ * should call the @c set_target_revision function at this point.
  *
  * Next, if there are any tree deltas to express, the producer should
  * pass the @a edit_baton to the @c open_root function, to get a baton
@@ -940,14 +940,15 @@ svn_delta_editor_t *svn_delta_default_editor(apr_pool_t *pool);
 svn_error_t *svn_delta_noop_window_handler(svn_txdelta_window_t *window,
                                            void *baton);
 
-/** Return a cancellation editor that wraps @a wrapped_editor.
+/** Set @a *editor and @a *edit_baton to a cancellation editor that
+ * wraps @a wrapped_editor and @a wrapped_baton.
  *
  * The @a editor will call @a cancel_func with @a cancel_baton when each of 
  * its functions is called, continuing on to call the corresponding wrapped 
- * function if it returns @c SVN_NO_ERROR.
+ * function if @a cancel_func returns @c SVN_NO_ERROR.
  *
- * If @a cancel_func is @c NULL, @a *editor is set to @a wrapped_editor and 
- * @a *edit_baton is set to @a wrapped_baton.
+ * If @a cancel_func is @c NULL, set @a *editor to @a wrapped_editor and 
+ * @a *edit_baton to @a wrapped_baton.
  */
 svn_error_t *
 svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,

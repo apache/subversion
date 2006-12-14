@@ -16,7 +16,6 @@
 ######################################################################
 
 import re
-import string
 import os
 import sys
 
@@ -278,7 +277,7 @@ def create_from_path(path, contents=None, props={}, atts={}):
   # get a list of all the names in the path
   # each of these will be a child of the former
   if os.sep != "/":
-    path = string.replace(path, os.sep, "/")
+    path = path.replace(os.sep, "/")
   elements = path.split("/")
   if len(elements) == 0:
     ### we should raise a less generic error here. which?
@@ -331,8 +330,8 @@ def get_props(path):
     # Not a misprint; "> 0" really is preferable to ">= 0" in this case.
     if line.find(' : ') > 0:
       name, value = line.split(' : ')
-      name = string.strip(name)
-      value = string.strip(value)
+      name = name.strip()
+      value = value.strip()
       props[name] = value
       first_value = 1
     else:    # Multi-line property, so re-use the current name.
@@ -550,8 +549,8 @@ def dump_tree(n,indent=""):
   else:
     print "%s%s" % (indent, n.name)
 
-  indent = string.replace(indent, "-", " ")
-  indent = string.replace(indent, "+", " ")
+  indent = indent.replace("-", " ")
+  indent = indent.replace("+", " ")
   for i in range(len(tmp_children)):
     c = tmp_children[i]
     if i == len(tmp_children

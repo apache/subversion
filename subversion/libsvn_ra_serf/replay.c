@@ -135,9 +135,9 @@ push_state(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 start_replay(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
-          svn_ra_serf__dav_props_t name,
-          const char **attrs)
+             void *userData,
+             svn_ra_serf__dav_props_t name,
+             const char **attrs)
 {
   replay_context_t *ctx = userData;
   replay_state_e state;
@@ -336,6 +336,10 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, APPLY_TEXTDELTA);
 
       checksum = svn_ra_serf__find_attr(attrs, "checksum");
+      if (checksum)
+        {
+          checksum = apr_pstrdup(info->pool, checksum);
+        }
 
       SVN_ERR(ctx->editor->apply_textdelta(info->baton, checksum,
                                            info->pool,
@@ -350,8 +354,12 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
            strcmp(name.name, "close-file") == 0)
     {
       replay_info_t *info = parser->state->private;
+      const char *checksum;
 
-      SVN_ERR(ctx->editor->close_file(info->baton, NULL, parser->state->pool));
+      checksum = svn_ra_serf__find_attr(attrs, "checksum");
+
+      SVN_ERR(ctx->editor->close_file(info->baton, checksum, 
+                                      parser->state->pool));
 
       svn_ra_serf__xml_pop_state(parser);
     }
@@ -393,8 +401,8 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 end_replay(svn_ra_serf__xml_parser_t *parser,
-        void *userData,
-        svn_ra_serf__dav_props_t name)
+           void *userData,
+           svn_ra_serf__dav_props_t name)
 {
   replay_context_t *ctx = userData;
   replay_state_e state;
@@ -468,9 +476,9 @@ end_replay(svn_ra_serf__xml_parser_t *parser,
 
 static svn_error_t *
 cdata_replay(svn_ra_serf__xml_parser_t *parser,
-          void *userData,
-          const char *data,
-          apr_size_t len)
+             void *userData,
+             const char *data,
+             apr_size_t len)
 {
   replay_context_t *replay_ctx = userData;
   replay_state_e state;
@@ -515,8 +523,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
   serf_bucket_t *buckets, *tmp;
-  apr_hash_t *props;
-  svn_revnum_t peg_rev;
 
   replay_ctx = apr_pcalloc(pool, sizeof(*replay_ctx));
   replay_ctx->pool = pool;
@@ -558,8 +564,6 @@ svn_ra_serf__replay(svn_ra_session_t *ra_session,
                                       sizeof("</S:replay-report>")-1,
                                       session->bkt_alloc);
   serf_bucket_aggregate_append(buckets, tmp);
-
-  props = apr_hash_make(pool);
 
   handler = apr_pcalloc(pool, sizeof(*handler));
 

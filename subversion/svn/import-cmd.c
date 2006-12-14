@@ -104,10 +104,10 @@ svn_cl__import(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
                          FALSE, FALSE, FALSE, pool);
 
-  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2), opt_state,
+  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                      NULL, ctx->config, pool));
   SVN_ERR(svn_cl__cleanup_log_msg 
-          (ctx->log_msg_baton2, svn_client_import2(&commit_info,
+          (ctx->log_msg_baton3, svn_client_import2(&commit_info,
                                                    path,
                                                    url,
                                                    opt_state->nonrecursive,

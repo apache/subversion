@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -373,6 +373,15 @@ typedef struct svn_ra_callbacks2_t
 
   /** Notification callback baton, used with progress_func. */
   void *progress_baton;
+
+  /** Cancelation function
+   *
+   * As its baton, the general callback baton is used
+   *
+   * @since New in 1.5
+   */
+  svn_cancel_func_t cancel_func;
+
 } svn_ra_callbacks2_t;
 
 /** Similar to svn_ra_callbacks2_t, except that the progress
@@ -1106,7 +1115,7 @@ svn_error_t *svn_ra_get_file_revs(svn_ra_session_t *session,
 
 /**
  * Lock each path in @a path_revs, which is a hash whose keys are the
- * paths to be locked, and whose values are the corresponding bas
+ * paths to be locked, and whose values are the corresponding base
  * revisions for each path.
  *
  * Note that locking is never anonymous, so any server implementing

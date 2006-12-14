@@ -1509,21 +1509,32 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### single user, to a group of users defined in a special [groups]"
       APR_EOL_STR
-      "### section, or to anyone using the '*' wildcard.  Each definition can"
+      "### section, to an alias defined in a special [aliases] section or"
+      APR_EOL_STR
+      "### to anyone using the '*' wildcard.  Each definition can"
       APR_EOL_STR
       "### grant read ('r') access, read-write ('rw') access, or no access"
       APR_EOL_STR
       "### ('')."
       APR_EOL_STR
       APR_EOL_STR
+      "[aliases]"
+      APR_EOL_STR
+      "# joe = /C=XZ/ST=Dessert/L=Snake City/O=Snake Oil, Ltd./OU=Research Institute/CN=Joe Average"
+      APR_EOL_STR
+      APR_EOL_STR
       "[groups]"
       APR_EOL_STR
       "# harry_and_sally = harry,sally"
+      APR_EOL_STR
+      "# harry_sally_and_joe = harry,sally,&joe"
       APR_EOL_STR
       APR_EOL_STR
       "# [/foo/bar]"
       APR_EOL_STR
       "# harry = rw"
+      APR_EOL_STR
+      "# &joe = r"
       APR_EOL_STR
       "# * ="
       APR_EOL_STR
@@ -1840,8 +1851,11 @@ svn_repos_find_root_path(const char *path,
       if (!err && check_repos_path(candidate, pool))
         break;
       svn_error_clear(err);
-      if (candidate[0] == '\0' || strcmp(candidate, "/") == 0)
+
+      if (candidate[0] == '\0' ||
+          svn_path_is_root(candidate, strlen(candidate)))
         return NULL;
+
       candidate = svn_path_dirname(candidate, pool);
     }
 

@@ -251,15 +251,6 @@ svn_ra_serf__get_latest_revnum(svn_ra_session_t *ra_session,
 }
 
 static svn_error_t *
-svn_ra_serf__get_dated_revision(svn_ra_session_t *session,
-                                svn_revnum_t *revision,
-                                apr_time_t tm,
-                                apr_pool_t *pool)
-{
-  abort();
-}
-
-static svn_error_t *
 svn_ra_serf__rev_proplist(svn_ra_session_t *ra_session,
                           svn_revnum_t rev,
                           apr_hash_t **ret_props,

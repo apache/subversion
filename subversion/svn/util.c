@@ -343,6 +343,8 @@ svn_cl__edit_externally(svn_string_t **edited_contents /* UTF-8! */,
 }
 
 
+/* A svn_client_ctx_t's log_msg_baton3, for use with
+   svn_cl__make_log_msg_baton(). */
 struct log_msg_baton
 {
   const char *editor_cmd;  /* editor specified via --editor-cmd, else NULL */
@@ -489,7 +491,6 @@ truncate_buffer_at_prefix(apr_size_t *new_len,
 
 #define EDITOR_EOF_PREFIX  _("--This line, and those below, will be ignored--")
 
-/* This function is of type svn_client_get_commit_log2_t. */
 svn_error_t *
 svn_cl__get_log_message(const char **log_msg,
                         const char **tmp_file,
@@ -551,8 +552,8 @@ svn_cl__get_log_message(const char **log_msg,
 
       for (i = 0; i < commit_items->nelts; i++)
         {
-          svn_client_commit_item2_t *item
-            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item2_t *);
+          svn_client_commit_item3_t *item
+            = APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
           const char *path = item->path;
           char text_mod = '_', prop_mod = ' ', unlock = ' ';
 

@@ -22,7 +22,7 @@ Blanket commit access:
          kevin   Kevin Pilch-Bisson <kevin@pilch-bisson.net>
         philip   Philip Martin <philip@codematters.co.uk>
    jerenkrantz   Justin Erenkrantz <justin@erenkrantz.com>
-        rooneg   Garrett Rooney <grooney@collab.net>
+        rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
       bcollins   Ben Collins <bcollins@debian.org>
          blair   Blair Zajac <blair@orcaware.com>
        striker   Sander Striker <striker@apache.org>
@@ -45,10 +45,11 @@ Blanket commit access:
        dberlin   Daniel Berlin <dberlin@dberlin.org>
      danderson   David Anderson <david.anderson@natulte.net>
         zhakov   Ivan Zhakov <chemodax@gmail.com>
-        djames   David James <djames@collab.net>
+        djames   David James <james@cs.toronto.edu>
        malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
-        pburba   Paul Burba <PaulB@softlanding.com>
+        pburba   Paul Burba <ptbsvn@adelphia.net>
        glasser   David Glasser <glasser@mit.edu>
+           lgo   Lieven Govaerts <lgo@mobsol.be>
 
 Commit access for specific areas:
 
@@ -96,10 +97,10 @@ Commit access for specific areas:
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
        mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
-           lgo   Lieven Govaerts <lgo@mobsol.be>             (tests)
        madanus   Madan U S <madan@collab.net>                (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
+       kameshj   Kamesh Jayachandran <kamesh@collab.net>     (svntest)
 
   Translation of message files:
 
@@ -111,7 +112,7 @@ Commit access for specific areas:
       karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
         plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
        jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW)
-       marcosc   Marcos Chaves <mchvs@hotmail.com>           (po: pt_BR)
+       marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
         pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
@@ -127,6 +128,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
       markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
+       hwright   Hyrum Wright <hyrum_wright@mail.utexas.edu> (multi-moves br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

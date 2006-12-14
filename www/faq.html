@@ -231,6 +231,8 @@ a <tt>file:</tt> URL?</a></li>
   svnserve, but it doesn't seem to be listening on port 3690.</a></li>
 <li><a href="#already-under-version-control">I can't add a directory
     because Subversion says it's "already under version control".</a></li>
+<li><a href="#slow-private-svnserve">Accessing non-public repositories
+    via svnserve is really slow sometimes.</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -2012,9 +2014,13 @@ changes made to the volume cause automatic commits on the server.</p>
 <h3>How do I run svnserve as a service
 on Windows?</h3>
 
-<p>The <tt>svnserve</tt> binary itself cannot be installed as a
-Windows service, but there are a number of &ldquo;service
-wrappers&rdquo; that can do the job; for example:</p>
+<p>For versions 1.4.0 and later, you can find
+instructions <a
+href="http://svn.collab.net/repos/svn/trunk/notes/windows-service.txt">here</a>.</p>
+
+<p>In versions before 1.4.0, the <tt>svnserve</tt> binary itself could
+not be installed as a Windows service, but there are a number of
+&ldquo;service wrappers&rdquo; that can do the job; for example:</p>
 
 <ul>
 <li><a href="http://www.clanlib.org/~mbn/svnservice/">SVNService</a>
@@ -3363,6 +3369,23 @@ solution described here was not mentioned in that thread.</p>
   making an unwanted copy of it in your repository.
 </p>
 <![CDATA[=========================================================]]>
+
+</div>
+
+<div class="h3" id="slow-private-svnserve" title="slow-private-svnserve">
+<h3>Accessing non-public repositories
+    via svnserve is really slow sometimes.</h3>
+
+<p>This often happens when APR is compiled to use <tt>/dev/random</tt>
+and the server is unable to gather enough entropy.  If Subversion is the
+only application using APR on the server, you can safely recompile APR
+with the <tt>--with-devrandom=/dev/urandom</tt> option passed to
+<tt>configure</tt>.  This should <b>not</b> be done on systems that use
+APR for other processes, however, as it could make other services
+insecure.</p>
+<![CDATA[=========================================================]]>
+
+</div>
 
 </div>
 

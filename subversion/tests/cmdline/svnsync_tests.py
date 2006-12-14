@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import sys, os
 
 # Our testing module
 import svntest
@@ -43,7 +43,6 @@ def build_repos(sbox):
 
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
 
 
 def run_sync(url, expected_error=None):
@@ -101,7 +100,7 @@ def run_test(sbox, dump_file_name):
   svntest.actions.run_and_verify_load(dest_sbox.repo_dir, mirror_cfg)
 
   # Create the revprop-change hook for this test
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -221,7 +220,7 @@ def detect_meddling(sbox):
                                      dest_sbox.repo_url,
                                      dest_sbox.wc_dir)
 
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
   run_sync(dest_sbox.repo_url)
@@ -262,25 +261,24 @@ def basic_authz(sbox):
 
   sbox.build("svnsync-basic-authz")
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
   build_repos(dest_sbox)
 
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
-  fp = open(sbox.authz_file, 'w')
-  fp.write("[svnsync-basic-authz:/]\n" +
-           "* = r\n" +
-           "\n" +
-           "[svnsync-basic-authz:/A/B]\n" +
-           "* = \n" +
-           "\n" +
-           "[svnsync-basic-authz-1:/]\n" +
-           "* = rw\n")
-  fp.close()
+  svntest.main.file_write(sbox.authz_file,
+                          "[svnsync-basic-authz:/]\n"
+                          "* = r\n"
+                          "\n"
+                          "[svnsync-basic-authz:/A/B]\n"
+                          "* = \n"
+                          "\n"
+                          "[svnsync-basic-authz-1:/]\n"
+                          "* = rw\n")
 
   run_sync(dest_sbox.repo_url)
 
@@ -343,12 +341,12 @@ def copy_from_unreadable_dir(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'Copy B to P')
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
   build_repos(dest_sbox)
 
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   fp = open(sbox.authz_file, 'w')
 
@@ -427,6 +425,14 @@ def url_encoding(sbox):
   run_test(sbox, "url-encoding-bug.dump")
 
 
+# A test for copying revisions that lack a property that already exists
+# on the destination rev as part of the commit (i.e. svn:author in this
+# case, but svn:date would also work).
+def no_author(sbox):
+  "test copying revs with no svn:author revprops"
+  run_test(sbox, "no-author.dump")
+
+
 ########################################################################
 # Run the tests
 
@@ -449,6 +455,7 @@ test_list = [ None,
               basic_authz,
               copy_from_unreadable_dir,
               url_encoding,
+              no_author,
              ]
 
 if __name__ == '__main__':

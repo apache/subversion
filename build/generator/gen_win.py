@@ -65,6 +65,8 @@ class WinGeneratorBase(GeneratorBase):
     # NLS options
     self.enable_nls = None
 
+    # ML (assembler) is disabled by default; use --enable-ml to detect
+    self.enable_ml = None
 
     for opt, val in options:
       if opt == '--with-berkeley-db':
@@ -107,6 +109,8 @@ class WinGeneratorBase(GeneratorBase):
         self.enable_nls = 1
       elif opt == '--enable-bdb-in-apr-util':
         self.configure_apr_util = 1
+      elif opt == '--enable-ml':
+        self.enable_ml = 1
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?', val):
           self.vsnet_version = '7.00'
@@ -140,6 +144,9 @@ class WinGeneratorBase(GeneratorBase):
 
     # Find the right Perl library name to link SWIG bindings with
     self._find_perl()
+
+    # Find the right Python include and libraries dirs for SWIG bindings
+    self._find_python()
 
     # Find the installed SWIG version to adjust swig options
     self._find_swig()
@@ -506,9 +513,21 @@ class WinGeneratorBase(GeneratorBase):
     if self.enable_nls and name == '__ALL__':
       depends.extend(self.sections['locale'].get_targets())
 
-    # Build ZLib as a dependency of Neon if we have it
-    if  self.zlib_path and name == 'neon':
+    # Build ZLib as a dependency of Neon or Serf if we have it
+    if self.zlib_path and (name == 'neon' or name == 'serf'):
       depends.extend(self.sections['zlib'].get_targets())
+
+    # To set the correct build order of the JavaHL targets, the javahl-javah 
+    # and libsvnjavahl targets are defined with extra dependencies in build.conf
+    # like this:
+    # add-deps = $(javahl_javah_DEPS) $(javahl_java_DEPS)
+    #
+    # This section parses those dependencies and adds them to the dependency list
+    # for this target.
+    if name == 'javahl-javah' or name == 'libsvnjavahl':
+      for dep in re.findall('\$\(([^\)]*)_DEPS\)', target.add_deps):
+        dep = string.replace(dep, '_', '-')
+        depends.extend(self.sections[dep].get_targets())
 
     return depends
 
@@ -674,12 +693,17 @@ class WinGeneratorBase(GeneratorBase):
       fakeincludes.append(self.apath(self.libintl_path, 'inc'))
     
     if self.serf_lib:
-      fakeincludes.append(self.apath(self.serf_path, ""))
+      fakeincludes.append(self.apath(self.serf_path))
 
     if self.swig_libdir \
        and (isinstance(target, gen_base.TargetSWIG)
             or isinstance(target, gen_base.TargetSWIGLib)):
-      fakeincludes.append(self.swig_libdir)
+      if self.swig_vernum >= 103028:
+        fakeincludes.append(self.apath(self.swig_libdir, target.lang))
+      else:
+        fakeincludes.append(self.swig_libdir)
+      if target.lang == "python":
+        fakeincludes.extend(self.python_includes)
 
     fakeincludes.append(self.apath(self.zlib_path))
 
@@ -706,6 +730,11 @@ class WinGeneratorBase(GeneratorBase):
       if target.name == 'mod_dav_svn':
         fakelibdirs.append(self.apath(self.httpd_path, "modules/dav/main", 
                                       cfg))
+    if self.swig_libdir \
+       and (isinstance(target, gen_base.TargetSWIG)
+            or isinstance(target, gen_base.TargetSWIGLib)):
+      if target.lang == "python" and self.python_libdir:
+        fakelibdirs.append(self.python_libdir)
 
     return fakelibdirs
 
@@ -921,6 +950,21 @@ class WinGeneratorBase(GeneratorBase):
     finally:
       fp.close()
 
+  def _find_python(self):
+    "Find the appropriate options for creating SWIG-based Python modules"
+    self.python_includes = []
+    self.python_libdir = ""
+    try:
+      from distutils import sysconfig
+      inc = sysconfig.get_python_inc()
+      plat = sysconfig.get_python_inc(plat_specific=1)
+      self.python_includes.append(inc)
+      if inc != plat:
+        self.python_includes.append(plat)
+      self.python_libdir = self.apath(sysconfig.PREFIX, "libs")
+    except ImportError:
+      pass
+
   def _find_swig(self):
     # Require 1.3.24. If not found, assume 1.3.25.
     default_version = '1.3.25'
@@ -981,6 +1025,9 @@ class WinGeneratorBase(GeneratorBase):
 
   def _find_ml(self):
     "Check if the ML assembler is in the path"
+    if not self.enable_ml:
+      self.have_ml = 0
+      return
     fp = os.popen('ml /help', 'r')
     try:
       line = fp.readline()
