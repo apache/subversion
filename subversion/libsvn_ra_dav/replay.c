@@ -474,7 +474,7 @@ svn_ra_dav__replay(svn_ra_session_t *session,
   rb.prop_pool = svn_pool_create(pool);
   rb.prop_accum = svn_stringbuf_create("", rb.prop_pool);
 
-  return svn_ra_dav__parsed_request(ras->sess, "REPORT", ras->url->data, body,
+  return svn_ra_dav__parsed_request(ras, "REPORT", ras->url->data, body,
                                     NULL, NULL,
                                     start_element,
                                     cdata_handler,
