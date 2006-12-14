@@ -144,7 +144,8 @@ public class DiffSummary extends EventObject
 
         public int hashCode()
         {
-            return Integer.valueOf(this.kind).hashCode();
+            // Equivalent to new Integer(this.kind).hashCode().
+            return this.kind;
         }
 
         /**
