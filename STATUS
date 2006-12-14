@@ -76,15 +76,6 @@ Candidate changes:
     Votes:
       +1: kou
 
-  * r22689
-    Fix off-by-1 stringbuf corruption bug.
-    Justification:
-      Data corruption.
-    Note:
-      Trivial merge conflict.
-    Votes:
-      +1: dionisos, dlr
-
 Approved changes:
 
   * r18254
@@ -95,3 +86,12 @@ Approved changes:
       Depends on r18144 et al. - unmergeable until those revs are merged.
     Votes:
       +1: brane, lundblad, malcolm, dlr
+
+  * r22689
+    Fix off-by-1 stringbuf corruption bug.
+    Justification:
+      Data corruption.
+    Note:
+      Trivial merge conflict.
+    Votes:
+      +1: dionisos, dlr, malcolm
