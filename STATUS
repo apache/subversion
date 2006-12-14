@@ -100,13 +100,13 @@ Candidate changes:
       +1: glasser
       +1: clkao (tested but vote not counted)
 
+
+Approved changes:
+
   * r22689
     Fix off-by-1 stringbuf corruption bug.
     Justification:
       Data corruption.
     Votes:
-      +1: dionisos, dlr
-
-
-Approved changes:
+      +1: dionisos, dlr, malcolm
 
