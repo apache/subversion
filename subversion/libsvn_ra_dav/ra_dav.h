@@ -108,7 +108,7 @@ typedef struct {
                                            ne_request_dispatch() or -1 if
                                            not dispatched yet. */
   int code;                             /* HTTP return code, or 0 if none */
-
+  const char *code_desc;                /* Textual description of CODE */
   svn_error_t *err;                     /* error encountered while executing
                                            the request */
   svn_boolean_t marshalled_error;       /* TRUE if the error was server-side */

@@ -393,7 +393,6 @@ generate_error(svn_ra_dav__request_t *req, apr_pool_t *pool)
     apr_psprintf(req->pool, _("%s of '%s'"), req->method, req->url);;
   const char *msg;
   const char *hostport;
-  const ne_status *statstruct;
 
   /* Convert the return codes. */
   switch (req->rv)
@@ -419,15 +418,12 @@ generate_error(svn_ra_dav__request_t *req, apr_pool_t *pool)
                           svn_ra_dav__request_get_location(req, pool)));
 
         default:
-          statstruct = ne_get_status(req->ne_req);
-          msg = apr_pstrdup(pool, statstruct->reason_phrase);
-
           return svn_error_create
             (errcode, NULL,
              apr_psprintf(pool,
                           _("Server sent unexpected return value (%d %s) "
                             "in response to %s request for '%s'"), req->code,
-                          msg, req->method, req->url));
+                          req->code_desc, req->method, req->url));
         }
     case NE_AUTH:
       errcode = SVN_ERR_RA_NOT_AUTHORIZED;
@@ -1258,7 +1254,6 @@ svn_ra_dav__request_dispatch(int *code_p,
 {
   ne_xml_parser *error_parser;
   const ne_status *statstruct;
-  const char *code_desc;
 
   /* add any extra headers passed in by caller. */
   if (extra_headers != NULL)
@@ -1290,7 +1285,7 @@ svn_ra_dav__request_dispatch(int *code_p,
 
   /* Save values from the request */
   statstruct = ne_get_status(req->ne_req);
-  code_desc = apr_pstrdup(pool, statstruct->reason_phrase);
+  req->code_desc = apr_pstrdup(pool, statstruct->reason_phrase);
   req->code = statstruct->code;
 
   if (code_p)
