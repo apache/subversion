@@ -139,7 +139,7 @@ push_wc_prop(void *baton,
       
       if (strcmp(relpath, svn_path_uri_decode(item->url, pool)) == 0)
         {
-          apr_pool_t *cpool = item->wcprop_changes->pool;
+          apr_pool_t *cpool = item->incoming_prop_changes->pool;
           svn_prop_t *prop = apr_palloc(cpool, sizeof(*prop));
           
           prop->name = apr_pstrdup(cpool, name);
@@ -153,7 +153,7 @@ push_wc_prop(void *baton,
           
           /* Buffer the propchange to take effect during the
              post-commit process. */
-          *((svn_prop_t **) apr_array_push(item->wcprop_changes)) = prop;
+          APR_ARRAY_PUSH(item->incoming_prop_changes, svn_prop_t **)= prop;
           return SVN_NO_ERROR;
         }
     }
