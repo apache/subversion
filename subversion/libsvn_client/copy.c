@@ -583,7 +583,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
               item = apr_pcalloc(pool, sizeof(*item));
               item->url = svn_path_join(top_url, info->src_path, pool);
               item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
-              APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+              APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
               apr_hash_set(action_hash, info->src_path, APR_HASH_KEY_STRING,
                            info);
             }
@@ -820,7 +820,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
           item->url = pair->dst;
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-          APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+          APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
 
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
