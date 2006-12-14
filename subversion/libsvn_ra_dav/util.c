@@ -390,7 +390,7 @@ generate_error(svn_ra_dav__request_t *req, apr_pool_t *pool)
 {
   int errcode = SVN_ERR_RA_DAV_REQUEST_FAILED;
   const char *context =
-    apr_psprintf(req->pool, _("%s of '%s'"), req->method, req->url);;
+    apr_psprintf(req->pool, _("%s of '%s'"), req->method, req->url);
   const char *msg;
   const char *hostport;
 
