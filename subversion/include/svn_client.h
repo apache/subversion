@@ -360,16 +360,31 @@ typedef struct svn_client_commit_item3_t
   /** state flags */
   apr_byte_t state_flags;
 
-  /** An array of `svn_prop_t *' changes to wc properties.  If adding
-   * to this array, allocate the svn_prop_t and its contents in @c
-   * wcprop_changes->pool, so that it has the same lifetime as this
-   * svn_client_commit_item2_t.
+  /** An array of @c svn_prop_t *'s, which are incoming changes from
+   * the repository to WC properties.  These changes are applied
+   * post-commit.
    *
-   * See http://subversion.tigris.org/issues/show_bug.cgi?id=806 for
-   * what would happen if the post-commit process didn't group these
-   * changes together with all other changes to the item :-).
+   * When adding to this array, allocate the @c svn_prop_t and its
+   * contents in @c incoming_prop_changes->pool, so that it has the
+   * same lifetime as this data structure.
+   *
+   * See http://subversion.tigris.org/issues/show_bug.cgi?id=806 for a
+   * description of what would happen if the post-commit process
+   * didn't group these changes together with all other changes to the
+   * item.
    */
-  apr_array_header_t *wcprop_changes;
+  apr_array_header_t *incoming_prop_changes;
+
+  /** An array of @c svn_prop_t *'s, which are outgoing changes to
+   * make to properties in the repository.  These extra property
+   * changes are declared pre-commit, and applied to the repository as
+   * part of a commit.
+   *
+   * When adding to this array, allocate the @c svn_prop_t and its
+   * contents in @c incoming_prop_changes->pool, so that it has the
+   * same lifetime as this data structure.
+   */
+  apr_array_header_t *outgoing_prop_changes;
 } svn_client_commit_item3_t;
 
 /** The commit candidate structure.
@@ -399,14 +414,8 @@ typedef struct svn_client_commit_item2_t
   /** state flags */
   apr_byte_t state_flags;
 
-  /** An array of `svn_prop_t *' changes to wc properties.  If adding
-   * to this array, allocate the svn_prop_t and its contents in @c
-   * wcprop_changes->pool, so that it has the same lifetime as this
-   * svn_client_commit_item2_t.
-   *
-   * See http://subversion.tigris.org/issues/show_bug.cgi?id=806 for
-   * what would happen if the post-commit process didn't group these
-   * changes together with all other changes to the item :-).
+  /** Analogous to the @c svn_client_commit_item3_t.incoming_prop_changes
+   * field.
    */
   apr_array_header_t *wcprop_changes;
 } svn_client_commit_item2_t;
@@ -435,14 +444,8 @@ typedef struct svn_client_commit_item_t
   /** state flags */
   apr_byte_t state_flags;
 
-  /** An array of `svn_prop_t *' changes to wc properties.  If adding
-   * to this array, allocate the svn_prop_t and its contents in
-   * wcprop_changes->pool, so that it has the same lifetime as this
-   * svn_client_commit_item_t.
-   *
-   * See http://subversion.tigris.org/issues/show_bug.cgi?id=806 for 
-   * what would happen if the post-commit process didn't group these
-   * changes together with all other changes to the item :-).
+  /** Analogous to the @c svn_client_commit_item3_t.incoming_prop_changes
+   * field.
    */
   apr_array_header_t *wcprop_changes;
 

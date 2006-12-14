@@ -362,11 +362,7 @@ int main(int argc, const char *argv[])
   if (err)
     return svn_cmdline_handle_exit_error(err, pool, "svnserve: ");
 
-#ifdef WIN32
-  params.root = NULL;
-#else
   params.root = "/";
-#endif /* WIN32 */
   params.tunnel = FALSE;
   params.tunnel_user = NULL;
   params.read_only = FALSE;
@@ -487,18 +483,6 @@ int main(int argc, const char *argv[])
 
         }
     }
-
-#ifdef WIN32
-  if (! params.root)
-    {
-      svn_error_clear
-        (svn_cmdline_fputs
-          (_("You must specify a root path with the --root option.\n"),
-           stderr, pool));
-      return EXIT_FAILURE;
-    }
-#endif /* WIN32 */
-
   if (os->ind != argc)
     usage(argv[0], pool);
 

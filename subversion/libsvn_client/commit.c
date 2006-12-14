@@ -1563,7 +1563,7 @@ svn_client_commit4(svn_commit_info_t **commit_info_p,
           if ((bump_err = svn_wc_queue_committed
                (&queue,
                 item->path, adm_access, loop_recurse,
-                item->wcprop_changes,
+                item->incoming_prop_changes,
                 remove_lock, (! keep_changelist),
                 apr_hash_get(digests, item->path, APR_HASH_KEY_STRING),
                 pool)))
