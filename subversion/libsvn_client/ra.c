@@ -153,7 +153,7 @@ push_wc_prop(void *baton,
           
           /* Buffer the propchange to take effect during the
              post-commit process. */
-          APR_ARRAY_PUSH(item->incoming_prop_changes, svn_prop_t **)= prop;
+          APR_ARRAY_PUSH(item->incoming_prop_changes, svn_prop_t *) = prop;
           return SVN_NO_ERROR;
         }
     }
