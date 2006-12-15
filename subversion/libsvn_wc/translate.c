@@ -112,12 +112,12 @@ svn_wc_translated_stream(svn_stream_t **stream,
 
 
 svn_error_t *
-svn_wc_translated_file2 (const char **xlated_path,
-                         const char *src,
-                         const char *versioned_file,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_uint32_t flags,
-                         apr_pool_t *pool)
+svn_wc_translated_file2(const char **xlated_path,
+                        const char *src,
+                        const char *versioned_file,
+                        svn_wc_adm_access_t *adm_access,
+                        apr_uint32_t flags,
+                        apr_pool_t *pool)
 {
   svn_subst_eol_style_t style;
   const char *eol;
