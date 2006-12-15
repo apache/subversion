@@ -241,14 +241,21 @@
 #endif
 
 /* -----------------------------------------------------------------------
- * wcprop_changes member of svn_client_commit_info needs to be
- * converted back and forth from an array */
+ * Prop change fields of svn_client_commit_item3_t need to be
+ * converted between array data types. */
 
 #ifdef SWIGPERL
-%typemap(out) apr_array_header_t *wcprop_changes {
-    $result = svn_swig_pl_convert_array($1,
-      $descriptor(svn_prop_t *));
-    argvi++;
+%typemap(out) apr_array_header_t *incoming_prop_changes {
+    if ($1) {
+        $result = svn_swig_pl_convert_array($1, $descriptor(svn_prop_t *));
+        argvi++;
+    }
+}
+%typemap(out) apr_array_header_t *outgoing_prop_changes {
+    if ($1) {
+        $result = svn_swig_pl_convert_array($1, $descriptor(svn_prop_t *));
+        argvi++;
+    }
 }
 #endif
 

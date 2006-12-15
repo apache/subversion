@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 117;
+use Test::More tests => 118;
 use strict;
 
 # shut up about variables that are only used once.
@@ -141,11 +141,15 @@ $ctx->log_msg(
         is($commit_item->state_flags(),$SVN::Client::COMMIT_ITEM_ADD |
                                        $SVN::Client::COMMIT_ITEM_TEXT_MODS,
            'state_flags are ADD and TEXT_MODS');
-        my $wcprop_changes = $commit_item->wcprop_changes();
-        isa_ok($wcprop_changes,'ARRAY','wcprop_changes returns an ARRAY');
-        is(scalar(@$wcprop_changes),0,
-           'No elements in the wcprop_changes array because '. 
+        my $prop_changes = $commit_item->incoming_prop_changes();
+        isa_ok($prop_changes, 'ARRAY',
+               'incoming_prop_changes returns an ARRAY');
+        is(scalar(@$prop_changes), 0,
+           'No elements in the incoming_prop_changes array because ' .
            ' we did not make any');
+        $prop_changes = $commit_item->outgoing_prop_changes();
+        is($prop_changes, undef,
+           'No outgoing_prop_changes array because we did not add any');
         $$log_msg = 'Add new';
         return 0;
     } );
