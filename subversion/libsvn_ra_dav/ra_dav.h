@@ -137,6 +137,9 @@ typedef struct {
  * subpool of POOL.  Create an associated neon request with the parameters
  * given.
  *
+ * When a request is being dispatched on the primary Neon session,
+ * the request is allocated to the secondary neon session of SESS.
+ *
  * Register a pool cleanup for any allocated Neon resources.
  */
 svn_ra_dav__request_t *
@@ -420,7 +423,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
 
 /* Get various Baseline-related information for a given "public" URL.
 
-   Given a Neon session SESS and a URL, return whether the URL is a
+   Given a session SESS and a URL, return whether the URL is a
    directory in *IS_DIR.  IS_DIR may be NULL if this flag is unneeded.
 
    REVISION may be SVN_INVALID_REVNUM to indicate that the operation
@@ -456,8 +459,8 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
                                            apr_pool_t *pool);
 
 /* Fetch a baseline resource populated with specific properties.
-   
-   Given a Neon session SESS and a URL, set *BLN_RSRC to a baseline of
+
+   Given a session SESS and a URL, set *BLN_RSRC to a baseline of
    REVISION, populated with whatever properties are specified by
    WHICH_PROPS.  To fetch all properties, pass NULL for WHICH_PROPS.
 
@@ -475,7 +478,7 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
 
 /* Fetch the repository's unique Version-Controlled-Configuration url.
    
-   Given a Neon session SESS and a URL, set *VCC to the url of the
+   Given a session SESS and a URL, set *VCC to the url of the
    repository's version-controlled-configuration resource.
  */
 svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
@@ -580,12 +583,17 @@ typedef svn_error_t * (*svn_ra_dav__endelm_cb_t)(void *baton,
                                                  const char *name);
 
 
-/* Create an xml parser and registers a response body reader with REQ.
+/* Create a Neon xml parser with callbacks STARTELM_CB, ENDELM_CB and
+ * CDATA_CB.  The created parser wraps the Neon callbacks and marshals any
+ * errors returned by the callbacks through the Neon layer.  Any errors
+ * raised will be returned by svn_ra_dav__request_dispatch() unless
+ * an earlier error occurred.
  *
  * Register a pool cleanup on the pool of REQ to clean up any allocated
- * Neon resources
+ * Neon resources.
  *
- * Pass NULL for ACCPT when you don't want the returned parser
+ * ACCPT indicates whether the parser wants read the response body
+ * or not.  Pass NULL for ACCPT when you don't want the returned parser
  * to be attached to REQ.
  */
 ne_xml_parser *
@@ -819,21 +827,23 @@ svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
                                attr, \
                                elem))
 
-/* Given a neon REQUEST and SESSION, run the request; if CODE_P is
+/* Given a REQUEST, run it; if CODE_P is
    non-null, return the http status code in *CODE_P.  Return any
-   resulting error (from neon, a <D:error> body response, or any
-   non-2XX status code) as an svn_error_t, otherwise return NULL.
+   resulting error (from Neon, a <D:error> body response, or any
+   non-2XX status code) as an svn_error_t, otherwise return SVN_NO_ERROR.
+
+   EXTRA_HEADERS is a hash with (key -> value) of
+   (const char * -> const char *) where the key is the HTTP header name.
+
+   BODY is a null terminated string containing an in-memory request
+   body.  Use svn_ra_dav__set_neon_body_provider() if you want the
+   request body to be read from a file.
 
    OKAY_1 and OKAY_2 are the "acceptable" result codes. Anything other
    than one of these will generate an error. OKAY_1 should always be
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
 
-   ### not super sure on this "okay" stuff, but it means that the request
-   ### dispatching code can generate much better errors than the callers
-   ### when something goes wrong. if we need more than two, then we could
-   ### add another param, switch to an array, or do something entirely
-   ### different...
  */
 svn_error_t *
 svn_ra_dav__request_dispatch(int *code_p,
