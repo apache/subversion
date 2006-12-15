@@ -149,7 +149,7 @@ $ctx->log_msg(
            ' we did not make any');
         $prop_changes = $commit_item->outgoing_prop_changes();
         is($prop_changes, undef,
-           'No outgoing_prop_changes array because we did not add any');
+           'No outgoing_prop_changes array because we did not create one');
         $$log_msg = 'Add new';
         return 0;
     } );
