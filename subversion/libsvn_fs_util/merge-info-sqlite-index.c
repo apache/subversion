@@ -237,7 +237,7 @@ svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
 #endif
   SVN_ERR(util_sqlite_exec(db, "begin transaction;", NULL, NULL));
 
-  /* Cleanup the leftovers of any previous, failed FSFS transactions
+  /* Cleanup the leftovers of any previous, failed transactions
    * involving NEW_REV. */
   deletestring = apr_psprintf(pool,
                               "delete from mergeinfo_changed where revision = %ld;",
