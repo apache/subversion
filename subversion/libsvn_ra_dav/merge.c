@@ -274,6 +274,11 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
   return bump_resource(mc, relative, mc->vsn_url->data, pool);
 }
 
+/* Determine whether we're receiving the expected XML response.
+   Return CHILD when interested in receiving the child's contents
+   or one of SVN_RA_DAV__XML_INVALID and SVN_RA_DAV__XML_DECLINE
+   when respectively this is the incorrect response or
+   the element (and its children) are uninteresting */
 static int validate_element(svn_ra_dav__xml_elmid parent,
                             svn_ra_dav__xml_elmid child)
 {
