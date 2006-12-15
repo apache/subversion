@@ -1424,7 +1424,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diff__Ljava_l
  * Method:    diffSummarize
  * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;ZZLorg/tigris/subversion/javahl/DiffSummaryReceiver;)V
  */
-JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diffSummarize
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2ZZLorg_tigris_subversion_javahl_DiffSummaryReceiver_2
   (JNIEnv *env, jobject jthis, jstring jtarget1, jobject jrevision1, 
    jstring jtarget2, jobject jrevision2, jboolean jrecurse,
    jboolean jignoreAncestry, jobject jdiffSummaryReceiver)
@@ -1465,6 +1465,39 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diffSummarize
 
     cl->diffSummarize(target1, revision1, target2, revision2, (bool) jrecurse,
                       (bool) jignoreAncestry, receiver);
+}
+
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_diffSummarize__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2ZZLorg_tigris_subversion_javahl_DiffSummaryReceiver_2
+  (JNIEnv *env, jobject jthis, jstring jtarget, jobject jPegRevision,
+   jobject jStartRevision, jobject jEndRevision, jboolean jrecurse,
+   jboolean jignoreAncestry, jobject jdiffSummaryReceiver)
+{
+    JNIEntry(SVNClient, diffSummarize);
+
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError(_("bad c++ this"));
+        return;
+    }
+    JNIStringHolder target(jtarget);
+    if (JNIUtil::isExceptionThrown())
+        return;
+    Revision pegRevision(jPegRevision);
+    if (JNIUtil::isExceptionThrown())
+        return;
+    Revision startRevision(jStartRevision);
+    if (JNIUtil::isExceptionThrown())
+        return;
+    Revision endRevision(jEndRevision);
+    if (JNIUtil::isExceptionThrown())
+        return;
+    DiffSummaryReceiver receiver(jdiffSummaryReceiver);
+    if (JNIUtil::isExceptionThrown())
+        return;
+
+    cl->diffSummarize(target, pegRevision, startRevision, endRevision,
+                      (bool) jrecurse, (bool) jignoreAncestry, receiver);
 }
 
 /*

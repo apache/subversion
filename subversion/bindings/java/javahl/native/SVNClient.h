@@ -152,6 +152,10 @@ public:
                        const char *target2, Revision &revision2,
                        bool recurse, bool ignoreAncestry,
                        DiffSummaryReceiver &receiver);
+    void diffSummarize(const char *target, Revision &pegRevision,
+                       Revision &startRevision, Revision &endRevision,
+                       bool recurse, bool ignoreAncestry,
+                       DiffSummaryReceiver &receiver);
 
     const char * getLastPath();
     void dispose(jobject jthis);
