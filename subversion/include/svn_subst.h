@@ -250,6 +250,42 @@ svn_subst_stream_translated(svn_stream_t *stream,
                             svn_boolean_t expand,
                             apr_pool_t *pool);
 
+/** Return a stream which performs eol translation and keyword
+ * expansion when read from or written to.  The stream @a stream
+ * is used to read and write all data.  Make sure you call
+ * svn_stream_close() on @a stream to make sure all data are flushed
+ * and cleaned up.
+ *
+ * Read and write operations perform the same transformation:
+ * all data is translated to normal form.
+ *
+ * @see svn_subst_translate_to_normal_form()
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
+                                           svn_stream_t *source,
+                                           svn_subst_eol_style_t eol_style,
+                                           const char *eol_str,
+                                           svn_boolean_t always_repair_eols,
+                                           apr_hash_t *keywords,
+                                           apr_pool_t *pool);
+
+
+/** Returns a stream which translates the special file at @a path to
+ * the internal representation for special files when read from.  When
+ * written to, it does the reverse: creating a special file when the
+ * stream is closed.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_subst_stream_from_specialfile(svn_stream_t **stream,
+                                  const char *path,
+                                  apr_pool_t *pool);
+
+
 /** Similar to svn_subst_translate_stream3() except relies upon a
  * @c svn_subst_keywords_t struct instead of a hash for the keywords.
  *
