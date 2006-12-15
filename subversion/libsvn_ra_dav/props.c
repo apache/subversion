@@ -213,7 +213,11 @@ static void assign_rsrc_url(svn_ra_dav__resource_t *rsrc,
   rsrc->url = url_path;
 }
 
-
+/* Determine whether we're receiving the expected XML response.
+   Return CHILD when interested in receiving the child's contents
+   or one of SVN_RA_DAV__XML_INVALID and SVN_RA_DAV__XML_DECLINE
+   when respectively this is the incorrect response or
+   the element (and its children) are uninteresting */
 static int validate_element(svn_ra_dav__xml_elmid parent,
                             svn_ra_dav__xml_elmid child)
 {
@@ -1108,13 +1112,11 @@ svn_ra_dav__do_proppatch(svn_ra_dav__session_t *ras,
                                    extra_headers, body->data,
                                    200, 207, pool);
   if (err)
-    svn_error_compose
-      (err,
-       svn_error_create
-       (SVN_ERR_RA_DAV_PROPPATCH_FAILED, NULL,
-        _("At least one property change failed; repository is unchanged")));
+    return svn_error_create
+      (SVN_ERR_RA_DAV_PROPPATCH_FAILED, err,
+       _("At least one property change failed; repository is unchanged"));
 
-  return err;
+  return SVN_NO_ERROR;
 }
 
 

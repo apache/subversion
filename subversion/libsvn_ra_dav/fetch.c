@@ -1849,7 +1849,11 @@ svn_error_t *svn_ra_dav__rev_prop(svn_ra_session_t *session,
 ** ### next are subdir elems, possibly fetch-file, then fetch-prop.
 */
 
-/* This implements the `svn_ra_dav__xml_validate_cb' prototype. */
+/* Determine whether we're receiving the expected XML response.
+   Return CHILD when interested in receiving the child's contents
+   or one of SVN_RA_DAV__XML_INVALID and SVN_RA_DAV__XML_DECLINE
+   when respectively this is the incorrect response or
+   the element (and its children) are uninteresting */
 static int validate_element(svn_ra_dav__xml_elmid parent,
                             svn_ra_dav__xml_elmid child)
 {
