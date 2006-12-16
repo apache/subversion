@@ -68,9 +68,13 @@ svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
   if (new_item->copyfrom_url)
     new_item->copyfrom_url = apr_pstrdup(pool, new_item->copyfrom_url);
 
-  if (new_item->wcprop_changes)
-    new_item->wcprop_changes = svn_prop_array_dup(new_item->wcprop_changes,
-                                                  pool);
+  if (new_item->incoming_prop_changes)
+    new_item->incoming_prop_changes =
+      svn_prop_array_dup(new_item->incoming_prop_changes, pool);
+
+  if (new_item->outgoing_prop_changes)
+    new_item->outgoing_prop_changes =
+      svn_prop_array_dup(new_item->outgoing_prop_changes, pool);
 
   return new_item;
 }

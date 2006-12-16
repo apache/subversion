@@ -492,12 +492,13 @@ static PyObject *convert_svn_string_t(void *value, void *ctx,
 static PyObject *convert_svn_client_commit_item3_t(void *value, void *ctx)
 {
   PyObject *list;
-  PyObject *path, *kind, *url, *rev, *cf_url, *cf_rev, *state, *wcprop_changes;
+  PyObject *path, *kind, *url, *rev, *cf_url, *cf_rev, *state,
+      *incoming_prop_changes, *outgoing_prop_changes;
   svn_client_commit_item3_t *item = value;
 
   /* ctx is unused */
 
-  list = PyList_New(8);
+  list = PyList_New(9);
 
   if (item->path)
     path = PyString_FromString(item->path);
@@ -528,16 +529,26 @@ static PyObject *convert_svn_client_commit_item3_t(void *value, void *ctx)
   cf_rev = PyInt_FromLong(item->copyfrom_rev);
   state = PyInt_FromLong(item->state_flags);
 
-  if (item->wcprop_changes)
-    wcprop_changes = svn_swig_py_array_to_list(item->wcprop_changes);
+  if (item->incoming_prop_changes)
+    incoming_prop_changes =
+      svn_swig_py_array_to_list(item->incoming_prop_changes);
   else
     {
-      wcprop_changes = Py_None;
+      incoming_prop_changes = Py_None;
+      Py_INCREF(Py_None);
+    }
+
+  if (item->outgoing_prop_changes)
+    outgoing_prop_changes =
+      svn_swig_py_array_to_list(item->outgoing_prop_changes);
+  else
+    {
+      outgoing_prop_changes = Py_None;
       Py_INCREF(Py_None);
     }
 
   if (! (list && path && kind && url && rev && cf_url && cf_rev && state &&
-         wcprop_changes))
+         incoming_prop_changes && outgoing_prop_changes))
     {
       Py_XDECREF(list);
       Py_XDECREF(path);
@@ -547,7 +558,8 @@ static PyObject *convert_svn_client_commit_item3_t(void *value, void *ctx)
       Py_XDECREF(cf_url);
       Py_XDECREF(cf_rev);
       Py_XDECREF(state);
-      Py_XDECREF(wcprop_changes);
+      Py_XDECREF(incoming_prop_changes);
+      Py_XDECREF(outgoing_prop_changes);
       return NULL;
     }
 
@@ -558,7 +570,8 @@ static PyObject *convert_svn_client_commit_item3_t(void *value, void *ctx)
   PyList_SET_ITEM(list, 4, cf_url);
   PyList_SET_ITEM(list, 5, cf_rev);
   PyList_SET_ITEM(list, 6, state);
-  PyList_SET_ITEM(list, 7, wcprop_changes);
+  PyList_SET_ITEM(list, 7, incoming_prop_changes);
+  PyList_SET_ITEM(list, 8, outgoing_prop_changes);
   return list;
 }
 

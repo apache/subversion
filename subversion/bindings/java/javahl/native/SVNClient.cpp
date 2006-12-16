@@ -1683,6 +1683,47 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
     }
 }
 
+void
+SVNClient::diffSummarize(const char *target, Revision &pegRevision,
+                         Revision &startRevision, Revision &endRevision,
+                         bool recurse, bool ignoreAncestry,
+                         DiffSummaryReceiver &receiver)
+{
+    svn_error_t *err;
+    Pool requestPool;
+
+    if (target == NULL)
+    {
+        JNIUtil::throwNullPointerException("target");
+        return;
+    }
+
+    svn_client_ctx_t *ctx = getContext(NULL);
+    if (ctx == NULL)
+        return;
+
+    Path path(target);
+    err = path.error_occured();
+    if (err != NULL)
+    {
+        JNIUtil::handleSVNError(err);
+        return;
+    }
+
+    err = svn_client_diff_summarize_peg(path.c_str(), pegRevision.revision(),
+					startRevision.revision(),
+					endRevision.revision(),
+					recurse ? TRUE : FALSE,
+					ignoreAncestry ? TRUE : FALSE,
+					DiffSummaryReceiver::summarize,
+					&receiver, ctx, requestPool.pool());
+    if (err != NULL)
+    {
+        JNIUtil::handleSVNError(err);
+        return;
+    }
+}
+
 svn_client_ctx_t * SVNClient::getContext(const char *message)
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();

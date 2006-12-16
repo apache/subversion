@@ -587,6 +587,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-remote)
 (defvar svn-status-commit-rev-number nil)
 (defvar svn-status-operated-on-dot nil)
+(defvar svn-status-last-commit-author nil)
 (defvar svn-status-elided-list nil)
 (defvar svn-status-get-specific-revision-file-info)
 (defvar svn-status-last-output-buffer-name)
@@ -1075,6 +1076,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                 (delete-region (point-min) (point-max))
               (goto-char (point-max)))
             (setq svn-process-cmd cmdtype)
+            (setq svn-status-last-commit-author nil)
             (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
             (svn-status-update-mode-line)
             (sit-for 0.1)
@@ -1963,7 +1965,9 @@ See `svn-status-make-ui-status' for information about the ui-status."
     (if (and l (>= l 0))
         l
       nil)))
-(defun svn-status-line-info->author (line-info) (nth 6 line-info))
+(defun svn-status-line-info->author (line-info)
+  "Return the last author that changed the item that is represented in LINE-INFO."
+  (nth 6 line-info))
 (defun svn-status-line-info->update-available (line-info)
   "Return whether LINE-INFO is out of date.
 In other words, whether there is a newer version available in the
@@ -2031,6 +2035,9 @@ The result will be \"K\", \"O\", \"T\", \"B\" or nil."
 
 (defun svn-status-line-info->set-localrev (line-info value)
   (setcar (nthcdr 4 line-info) value))
+
+(defun svn-status-line-info->set-author (line-info value)
+  (setcar (nthcdr 6 line-info) value))
 
 (defun svn-status-line-info->set-lastchangerev (line-info value)
   (setcar (nthcdr 5 line-info) value))
@@ -2172,6 +2179,8 @@ When called with the prefix argument 0, use the full path name."
                svn-status-commit-rev-number)
       (svn-status-line-info->set-localrev line-info svn-status-commit-rev-number)
       (svn-status-line-info->set-lastchangerev line-info svn-status-commit-rev-number))
+    (when svn-status-last-commit-author
+      (svn-status-line-info->set-author line-info svn-status-last-commit-author))
     (cond ((equal action 'committed)
            (setq tag-string " <committed>")
            (when (member (svn-status-line-info->repo-locked line-info) '(?K))
@@ -2223,7 +2232,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
   (save-excursion
     (set-buffer svn-process-buffer-name)
     (let ((action)
-          (name)
+          (file-name)
           (skip)
           (result))
       (goto-char (point-min))
@@ -2254,8 +2263,10 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
             ;; when the commit used . as argument, delete the trailing directory
             ;; from the svn output
             (search-forward "/" nil t))
-          (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
-          (setq result (cons (list name action)
+          (setq file-name (buffer-substring-no-properties (point) (svn-point-at-eol)))
+          (unless svn-status-last-commit-author
+            (setq svn-status-last-commit-author (car (svn-status-info-for-path (expand-file-name (concat default-directory file-name))))))
+          (setq result (cons (list file-name action)
                              result))
           (setq skip nil))
         (forward-line 1))
@@ -2575,8 +2586,9 @@ non-interactive use."
   (interactive "P")
   (if (eq arg 0)
       (setq svn-status-base-info nil)
-    (svn-run nil t 'parse-info "info" ".")
-    (svn-status-parse-info-result))
+    (let ((svn-process-buffer-name "*svn-info-output*"))
+      (svn-run nil t 'parse-info "info" ".")
+      (svn-status-parse-info-result)))
   (unless (eq arg t)
     (svn-status-update-buffer)))
 
@@ -2584,7 +2596,8 @@ non-interactive use."
   "Parse the result from the svn info command.
 Put the found values in `svn-status-base-info'."
   (let ((url)
-        (repository-root))
+        (repository-root)
+        (last-changed-author))
     (save-excursion
       (set-buffer svn-process-buffer-name)
       (goto-char (point-min))
@@ -2592,8 +2605,10 @@ Put the found values in `svn-status-base-info'."
         (search-forward "url: ")
         (setq url (buffer-substring-no-properties (point) (svn-point-at-eol)))
         (when (search-forward "repository root: " nil t)
-          (setq repository-root (buffer-substring-no-properties (point) (svn-point-at-eol))))))
-    (setq svn-status-base-info `((url ,url) (repository-root ,repository-root)))))
+          (setq repository-root (buffer-substring-no-properties (point) (svn-point-at-eol))))
+        (when (search-forward "last changed author: " nil t)
+          (setq last-changed-author (buffer-substring-no-properties (point) (svn-point-at-eol))))))
+    (setq svn-status-base-info `((url ,url) (repository-root ,repository-root) (last-changed-author ,last-changed-author)))))
 
 (defun svn-status-base-info->url ()
   "Extract the url part from `svn-status-base-info'."
@@ -3157,6 +3172,20 @@ See `svn-status-marked-files' for what counts as selected."
   (interactive)
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
   (svn-run t t 'info "info" "--targets" svn-status-temp-arg-file))
+
+(defun svn-status-info-for-path (path)
+  "Run svn info on the given PATH.
+Return some interesting parts of the resulting output.
+At the moment a list containing the last changed author is returned."
+  (let ((svn-process-buffer-name "*svn-info-output*")
+        (last-changed-author))
+    (svn-run nil t 'info "info" path)
+    (with-current-buffer svn-process-buffer-name
+      (goto-char (point-min))
+      (when (search-forward "last changed author: " nil t)
+        (setq last-changed-author (buffer-substring-no-properties (point) (svn-point-at-eol)))))
+    (svn-status-message 7 "last-changed-author for '%s': %s" path last-changed-author)
+    (list last-changed-author)))
 
 (defun svn-status-blame (revision)
   "Run `svn blame' on the current file.

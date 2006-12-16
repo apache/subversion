@@ -1889,20 +1889,34 @@ public class BasicTests extends SVNTests
      * Test the {@link SVNClientInterface.diffSummarize()} API.
      * @since 1.5
      */
-    public void testDiffSummarize() throws Throwable
+    public void testDiffSummarize()
+        throws SubversionException, IOException
     {
         OneTest thisTest = new OneTest(false);
-        DiffSummaries summary = new DiffSummaries();
+        DiffSummaries summaries = new DiffSummaries();
         // Perform a recursive diff summary, ignoring ancestry.
         client.diffSummarize(thisTest.getUrl(), new Revision.Number(0),
                              thisTest.getUrl(), Revision.HEAD, true, false,
-                             summary);
+                             summaries);
+        assertExpectedDiffSummaries(summaries);
+
+        summaries.clear();
+        // Perform a recursive diff summary with a peg revision,
+        // ignoring ancestry.
+        client.diffSummarize(thisTest.getUrl(), Revision.HEAD,
+                             new Revision.Number(0), Revision.HEAD,
+                             true, false, summaries);
+        assertExpectedDiffSummaries(summaries);
+    }
+
+    private void assertExpectedDiffSummaries(DiffSummaries summaries)
+    {
         assertEquals("Wrong number of diff summary descriptors", 20,
-                     summary.size());
+                     summaries.size());
 
         // Rigorously inspect one of our DiffSummary notifications.
         final String BETA_PATH = "A/B/E/beta";
-        DiffSummary betaDiff = (DiffSummary) summary.get(BETA_PATH);
+        DiffSummary betaDiff = (DiffSummary) summaries.get(BETA_PATH);
         assertNotNull("No diff summary for " + BETA_PATH, betaDiff);
         assertEquals("Incorrect path for " + BETA_PATH, BETA_PATH,
                      betaDiff.getPath());

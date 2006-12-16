@@ -3543,6 +3543,31 @@ svn_error_t *svn_wc_translated_file(const char **xlated_p,
                                     svn_boolean_t force_repair,
                                     apr_pool_t *pool);
 
+
+/** Returns a @a stream allocated in @a pool with access to the given
+ * @a path taking the file properties from @a versioned_file using
+ * @a adm_access.
+ *
+ * When translation from normal form is requested
+ * (@c SVN_WC_TRANSLATE_FROM_NF is specified in @a flags), @a path
+ * is used as target path and stream read operations are not supported.
+ * Conversely, if translation to normal form is requested
+ * (@c SVN_WC_TRANSLATE_TO_NF is specified in @a flags), @a path is
+ * used as source path and stream write operations are not supported.
+ *
+ * The @a flags are the same constants as those used for
+ * svn_wc_translated_file().
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_translated_stream(svn_stream_t **stream,
+                         const char *path,
+                         const char *versioned_file,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_uint32_t flags,
+                         apr_pool_t *pool);
+
 
 /* Text/Prop Deltas Using an Editor */
 

@@ -1344,10 +1344,16 @@ $SVN::Client::COMMIT_ITEM_TEXT_MODS
 $SVN::Client::COMMIT_ITEM_PROP_MODS
 $SVN::Client::COMMIT_ITEM_IS_COPY
 
-=item $citem>wcprop_changes()
+=item $citem>incoming_prop_changes()
 
-A reference to an array of svn_prop_t objects represent changes
-to wc properties.
+A reference to an array of svn_prop_t objects representing changes to
+WC properties.
+
+=item $citem>outgoing_prop_changes()
+
+A reference to an array of svn_prop_t objects representing extra
+changes to properties in the repository (which are not necessarily
+reflected by the WC).
 
 =back
 

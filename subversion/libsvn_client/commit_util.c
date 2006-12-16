@@ -92,8 +92,9 @@ add_committable(apr_hash_t *committables,
     ? apr_pstrdup(pool, copyfrom_url) : NULL;
   new_item->copyfrom_rev   = copyfrom_rev;
   new_item->state_flags    = state_flags;
-  new_item->wcprop_changes = apr_array_make(pool, 1, sizeof(svn_prop_t *));
-   
+  new_item->incoming_prop_changes = apr_array_make(pool, 1,
+                                                   sizeof(svn_prop_t *));
+
   /* Now, add the commit item to the array. */
   APR_ARRAY_PUSH(array, svn_client_commit_item3_t *) = new_item;
 }
@@ -1735,7 +1736,7 @@ svn_client__get_log_msg(const char **log_msg,
               old_item->copyfrom_url = item->copyfrom_url;
               old_item->copyfrom_rev = item->copyfrom_rev;
               old_item->state_flags = item->state_flags;
-              old_item->wcprop_changes = item->wcprop_changes;
+              old_item->wcprop_changes = item->incoming_prop_changes;
 
               APR_ARRAY_PUSH(old_commit_items, svn_client_commit_item2_t *) =
                 old_item;
@@ -1754,7 +1755,7 @@ svn_client__get_log_msg(const char **log_msg,
                 item->copyfrom_rev : item->revision;
               old_item->copyfrom_url = item->copyfrom_url;
               old_item->state_flags = item->state_flags;
-              old_item->wcprop_changes = item->wcprop_changes;
+              old_item->wcprop_changes = item->incoming_prop_changes;
 
               APR_ARRAY_PUSH(old_commit_items, svn_client_commit_item_t *) =
                 old_item;
