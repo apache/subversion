@@ -66,6 +66,8 @@
 #define path_svnpath           "tools\svnpath"
 #define path_iconv             (path_svn + "iconv")
 #define path_ssl               (path_svn + "bin")
+; Licenses
+#define path_licenses          (path_svn + "licenses")
 
 ;Debug symbols ----------------------------------------------------------------
 ; Basic files
