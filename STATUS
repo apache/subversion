@@ -23,14 +23,6 @@ Status of 1.4.3:
 
 Candidate changes:
 
-  * r21516, r22155, r22224
-    Fixes for the Windows installer script: add license files of the
-    libraries, typos and copyright year.
-    Justification:
-     Preparing to release 1.4.2 windows installer.
-    Votes:
-     +1: lgo, dlr
-
   * r21531, r21848, r21934
     Allow HTTP auth protocols to be configurable by way of a
     "http-auth-types" parameter.
@@ -102,6 +94,14 @@ Candidate changes:
 
 
 Approved changes:
+
+  * r21516, r22155, r22224
+    Fixes for the Windows installer script: add license files of the
+    libraries, typos and copyright year.
+    Justification:
+     Preparing to release 1.4.2 windows installer.
+    Votes:
+     +1: lgo, dlr
 
   * r22689
     Fix off-by-1 stringbuf corruption bug.
