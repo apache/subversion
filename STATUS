@@ -87,11 +87,3 @@ Approved changes:
     Votes:
       +1: brane, lundblad, malcolm, dlr
 
-  * r22689
-    Fix off-by-1 stringbuf corruption bug.
-    Justification:
-      Data corruption.
-    Note:
-      Trivial merge conflict.
-    Votes:
-      +1: dionisos, dlr, malcolm
