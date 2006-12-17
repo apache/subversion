@@ -972,6 +972,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   if (basefile)
     SVN_ERR(svn_wc__close_text_base(basefile, path, 0, pool));
 
+  local_digest = svn_txdelta_md5_digest(txdelta_stream);
+
   if (digest)
     memcpy(digest, local_digest, APR_MD5_DIGESTSIZE);
 
