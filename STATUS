@@ -103,10 +103,3 @@ Approved changes:
     Votes:
      +1: lgo, dlr
 
-  * r22689
-    Fix off-by-1 stringbuf corruption bug.
-    Justification:
-      Data corruption.
-    Votes:
-      +1: dionisos, dlr, malcolm
-
