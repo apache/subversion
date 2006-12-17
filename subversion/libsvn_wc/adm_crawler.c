@@ -850,8 +850,6 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   if (! fulltext)
     base_stream
       = svn_stream_checksummed(base_stream, &base_digest, NULL, TRUE, pool);
-  local_stream
-    = svn_stream_checksummed(local_stream, &local_digest, NULL, TRUE, pool);
 
   svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
 
