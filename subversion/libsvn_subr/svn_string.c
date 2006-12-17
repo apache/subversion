@@ -356,10 +356,12 @@ svn_stringbuf_ensure (svn_stringbuf_t *str, apr_size_t minimum_size)
               }
           }
 
-      str->data = (char *) my__realloc (str->data, 
-                                        str->len,
+      str->data = (char *) my__realloc (str->data,
+                                        str->len + 1,
+                                        /* We need to maintain (and thus copy)
+                                           the trailing nul */
                                         str->blocksize,
-                                        str->pool); 
+                                        str->pool);
     }
 }
 
