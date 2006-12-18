@@ -89,7 +89,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
 
       *stream = svn_stream_from_aprfile2(file, FALSE, pool);
 
-      if (! svn_subst_translation_required(style, eol, keywords, special, TRUE))
+      if (svn_subst_translation_required(style, eol, keywords, special, TRUE))
         {
           if (to_nf)
             SVN_ERR(svn_subst_stream_translated_to_normal_form
@@ -97,7 +97,7 @@ svn_wc_translated_stream(svn_stream_t **stream,
                      keywords, pool));
           else
             *stream = svn_subst_stream_translated
-              (*stream, eol, repair_forced, keywords, TRUE, pool);
+              (*stream, eol, TRUE, keywords, TRUE, pool);
         }
     }
 

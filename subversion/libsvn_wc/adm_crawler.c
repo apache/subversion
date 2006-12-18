@@ -850,8 +850,6 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   if (! fulltext)
     base_stream
       = svn_stream_checksummed(base_stream, &base_digest, NULL, TRUE, pool);
-  local_stream
-    = svn_stream_checksummed(local_stream, &local_digest, NULL, TRUE, pool);
 
   svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
 
@@ -971,6 +969,8 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   /* Close base file, if it was opened. */
   if (basefile)
     SVN_ERR(svn_wc__close_text_base(basefile, path, 0, pool));
+
+  local_digest = svn_txdelta_md5_digest(txdelta_stream);
 
   if (digest)
     memcpy(digest, local_digest, APR_MD5_DIGESTSIZE);

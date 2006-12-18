@@ -157,7 +157,8 @@ svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
     return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
  *stream = svn_subst_stream_translated(source, eol_str,
-                                       always_repair_eols,
+                                       eol_style == svn_subst_eol_style_fixed
+                                       || always_repair_eols,
                                        keywords, FALSE, pool);
 
  return SVN_NO_ERROR;
