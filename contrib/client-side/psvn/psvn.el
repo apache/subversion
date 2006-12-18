@@ -203,6 +203,7 @@
 (eval-when-compile (require 'dired))
 (eval-when-compile (require 'ediff-util))
 (eval-when-compile (require 'elp))
+(eval-when-compile (require 'pp))
 
 (condition-case nil
     (progn
@@ -478,6 +479,8 @@ svn-status-coding-system is used in svn-run, if it is not nil.")
 (defvar svn-status-track-user-input nil "Track user/password queries.
 This feature is implemented via a process filter.
 It is an experimental feature.")
+
+(defvar svn-status-refresh-info nil "Whether `svn-status-update-buffer' should call `svn-status-parse-info'.")
 
 ;;; Customize group
 (defgroup psvn nil
@@ -896,6 +899,9 @@ inside loops."
         if (listp item) nconc (svn-status-flatten-list item)
         else collect item))
 
+(defun svn-status-completion-function ()
+  (if svn-status-use-ido-completion 'ido-completing-read 'completing-read))
+
 (defun svn-status-window-line-position (w)
   "Return the window line at point for window W, or nil if W is nil."
   (svn-status-message 3 "About to count lines; selected window is %s" (selected-window))
@@ -992,13 +998,15 @@ If there is no .svn directory, examine if there is CVS and run
   (svn-status default-directory arg))
 
 (defun svn-status-use-history ()
+  "Interactively select a different directory from `svn-status-directory-history'."
   (interactive)
-  (let* ((hist svn-status-directory-history)
-         (dir (read-from-minibuffer "svn-status on directory: "
-                              (cadr svn-status-directory-history)
-                              nil nil 'hist)))
+  (let* ((hist (cdr svn-status-directory-history))
+         (dir (funcall (svn-status-completion-function) "svn-status on directory: " hist)))
     (if (file-directory-p dir)
-        (svn-status dir)
+        (progn
+          (unless svn-status-refresh-info
+            (setq svn-status-refresh-info 'once))
+          (svn-status dir))
       (error "%s is not a directory" dir))))
 
 (defun svn-had-user-input-since-asynch-run ()
@@ -2487,6 +2495,10 @@ Symbolic links to directories count as directories (see `file-directory-p')."
   (unless (string= (buffer-name) svn-status-buffer-name)
     (set-buffer svn-status-buffer-name))
   (svn-status-mode)
+  (when svn-status-refresh-info
+    (when (eq svn-status-refresh-info 'once)
+      (setq svn-status-refresh-info nil))
+    (svn-status-parse-info t))
   (let ((st-info svn-status-info)
         (buffer-read-only nil)
         (start-pos)
@@ -2587,6 +2599,8 @@ non-interactive use."
   (if (eq arg 0)
       (setq svn-status-base-info nil)
     (let ((svn-process-buffer-name "*svn-info-output*"))
+      (when (get-buffer svn-process-buffer-name)
+        (kill-buffer svn-process-buffer-name))
       (svn-run nil t 'parse-info "info" ".")
       (svn-status-parse-info-result)))
   (unless (eq arg t)
@@ -3613,9 +3627,8 @@ If no files have been marked, commit recursively the file at point."
 Run `svn-status' on the selected bookmark."
   (interactive
    (list
-    (let ((completion-ignore-case t)
-          (completion-function (if svn-status-use-ido-completion 'ido-completing-read 'completing-read)))
-      (funcall completion-function "SVN status bookmark: " svn-bookmark-list))))
+    (let ((completion-ignore-case t))
+      (funcall (svn-status-completion-function) "SVN status bookmark: " svn-bookmark-list))))
   (unless bookmark
     (error "No bookmark specified"))
   (let ((directory (cdr (assoc bookmark svn-bookmark-list))))
@@ -4141,14 +4154,11 @@ When called with a prefix argument, it is possible to enter a new property."
   (interactive)
   (require 'mailcap nil t)
   (let ((completion-ignore-case t)
-        (completion-function (if svn-status-use-ido-completion
-                                 'ido-completing-read
-                               'completing-read))
         (mime-types (when (fboundp 'mailcap-mime-types)
                       (mailcap-mime-types))))
     (svn-status-property-set-property
      (svn-status-marked-files) "svn:mime-type"
-     (funcall completion-function "Set svn:mime-type for the marked files: "
+     (funcall (svn-status-completion-function) "Set svn:mime-type for the marked files: "
               (mapcar (lambda (x) (cons x x)) ; for Emacs 21
                       (sort mime-types 'string<))))))
 
@@ -4836,8 +4846,7 @@ The conflicts must be marked with rcsmerge conflict markers."
   (interactive)
   (unless prompt
     (setq prompt "Select branch: "))
-  (let* ((completion-function (if svn-status-use-ido-completion 'ido-completing-read 'completing-read))
-         (branch (funcall completion-function prompt svn-status-branch-list))
+  (let* ((branch (funcall (svn-status-completion-function) prompt svn-status-branch-list))
          (directory)
          (base-url))
     (when (string-match "#\\(1#\\)?\\(.+\\)" branch)
@@ -4850,7 +4859,7 @@ The conflicts must be marked with rcsmerge conflict markers."
         (let ((svn-status-branch-list (svn-status-ls base-url t)))
           (setq branch (concat (svn-status-base-info->repository-root) "/"
                                directory "/"
-                               (svn-select-branch (format "Select branch from '%s': " directory)))))))
+                               (svn-branch-select (format "Select branch from '%s': " directory)))))))
     branch))
 
 (defun svn-branch-diff (branch1 branch2)
