@@ -93,5 +93,11 @@ Candidate changes:
       +1: clkao (tested but vote not counted)
       -0: dlr (how does r22614 figure into this?)
 
+  * r22729
+    Fix potential filesystem memory leak in commit-finalization loop.
+    Justification:
+      Memory leaks are bad.  New implementation is more scalable.
+    Votes:
+      +1: dlr
 
 Approved changes:
