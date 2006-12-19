@@ -283,13 +283,35 @@ public class SVNClient implements SVNClientInterface
      * @param pegRevision the peg revision to interpret the path
      * @param recurse whether you want it to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @exception ClientException
-     * @since 1.2
+     * @since 1.5
      */
     public native long checkout(String moduleName, String destPath,
                                 Revision revision, Revision pegRevision,
-                                boolean recurse, boolean ignoreExternals)
+                                boolean recurse, boolean ignoreExternals,
+                                boolean allowUnverObstructions)
             throws ClientException;
+    
+    /**
+     * Executes a revision checkout.
+     * @param moduleName name of the module to checkout.
+     * @param destPath destination directory for checkout.
+     * @param revision the revision to checkout.
+     * @param pegRevision the peg revision to interpret the path
+     * @param recurse whether you want it to checkout files recursively.
+     * @param ignoreExternals if externals are ignored during checkout
+     * @exception ClientException
+     * @since 1.2
+     */
+    public long checkout(String moduleName, String destPath,
+                                Revision revision, Revision pegRevision,
+                                boolean recurse, boolean ignoreExternals)
+            throws ClientException
+    {
+        return checkout(moduleName, destPath, revision, revision, recurse,
+                        ignoreExternals, false);
+    }
 
     /**
      * Executes a revision checkout.
@@ -304,7 +326,7 @@ public class SVNClient implements SVNClientInterface
             throws ClientException
     {
         return checkout(moduleName, destPath, revision, revision, recurse,
-                false);
+                        false, false);
     }
     /**
      * Sets the notification callback used to send processing information back
@@ -392,7 +414,7 @@ public class SVNClient implements SVNClientInterface
     public long update(String path, Revision revision, boolean recurse)
             throws ClientException
     {
-        return update(new String[]{path}, revision, recurse, false)[0];
+        return update(new String[]{path}, revision, recurse, false, false)[0];
     }
 
     /**
@@ -406,8 +428,49 @@ public class SVNClient implements SVNClientInterface
      * @exception ClientException
      * @since 1.2
      */
+    public long[] update(String[] path, Revision revision,
+                         boolean recurse, boolean ignoreExternals)
+            throws ClientException
+    {
+        return update(path, revision, recurse, false, false);
+    }
+
+    /**
+     * Updates the directory or file from repository
+     * @param path target file.
+     * @param revision the revision number to update.
+     *                 Revision.HEAD will update to the
+     *                 latest revision.
+     * @param recurse recursively update.
+     * @param ignoreExternals externals will be ignore during update
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long update(String path, Revision revision, boolean recurse,
+                       boolean ignoreExternals,
+                       boolean allowUnverObstructions)
+            throws ClientException
+    {
+        return update(new String[]{path}, revision, recurse,
+                      ignoreExternals, allowUnverObstructions)[0];
+    }
+
+    /**
+     * Updates the directories or files from repository
+     * @param path array of target files.
+     * @param revision the revision number to update.
+     *                 Revision.HEAD will update to the
+     *                 latest revision.
+     * @param recurse recursively update.
+     * @param ignoreExternals externals will be ignore during update
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
     public native long[] update(String[] path, Revision revision,
-                                boolean recurse, boolean ignoreExternals)
+                                boolean recurse, boolean ignoreExternals,
+                                boolean allowUnverObstructions)
             throws ClientException;
 
     /**
@@ -533,10 +596,28 @@ public class SVNClient implements SVNClientInterface
      * @param url       the new url for the working copy
      * @param revision  the new base revision of working copy
      * @param recurse   traverse into subdirectories
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
      * @exception ClientException
+     * @since 1.5 
      */
     public native long doSwitch(String path, String url, Revision revision,
-                                boolean recurse) throws ClientException;
+                                boolean recurse,
+                                boolean allowUnverObstructions)
+            throws ClientException;
+    /**
+     * Update local copy to mirror a new url.
+     * @param path      the working copy path
+     * @param url       the new url for the working copy
+     * @param revision  the new base revision of working copy
+     * @param recurse   traverse into subdirectories
+     * @exception ClientException
+     */
+    public long doSwitch(String path, String url, Revision revision,
+                         boolean recurse) throws ClientException
+    {
+        return doSwitch(path, url, revision, recurse, false);
+    }
+
     /**
      * Import a file or directory into a repository directory  at
      * head.

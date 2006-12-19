@@ -480,8 +480,9 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart,
 }
 
 jlong SVNClient::checkout(const char *moduleName, const char *destPath, 
-                          Revision &revision, Revision &pegRevision, 
-                          bool recurse, bool ignoreExternals)
+                          Revision &revision, Revision &pegRevision,
+                          bool recurse, bool ignoreExternals,
+                          bool allowUnverObstructions)
 {
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool ();
@@ -519,14 +520,15 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
         return -1;
     }
 
-    Err = svn_client_checkout2 (&retval, url.c_str(),
-                                 path.c_str (),
-                                 pegRevision.revision (),
-                                 revision.revision (),
-                                 recurse, 
-                                 ignoreExternals,
-                                 ctx,
-                                 apr_pool);
+    Err = svn_client_checkout3(&retval, url.c_str(),
+                               path.c_str (),
+                               pegRevision.revision (),
+                               revision.revision (),
+                               recurse, 
+                               ignoreExternals,
+                               allowUnverObstructions,
+                               ctx,
+                               apr_pool);
 
     if(Err != NULL)
     {
@@ -644,7 +646,7 @@ void SVNClient::add(const char *path, bool recurse, bool force)
 }
 
 jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
-                             bool ignoreExternals)
+                             bool ignoreExternals, bool allowUnverObstructions)
 {
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool ();
@@ -662,12 +664,13 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
-    Err = svn_client_update2 (&retval, array,
-                                          revision.revision (),
-                                          recurse,
-                                          ignoreExternals,
-                                          ctx,
-                                          apr_pool);
+    Err = svn_client_update3(&retval, array,
+                             revision.revision (),
+                             recurse,
+                             ignoreExternals,
+                             allowUnverObstructions,
+                             ctx,
+                             apr_pool);
     if(Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
@@ -967,7 +970,8 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
 }
 
 jlong SVNClient::doSwitch(const char *path, const char *url, 
-                          Revision &revision, bool recurse)
+                          Revision &revision, bool recurse,
+                          bool allowUnverObstructions)
 {
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool ();
@@ -1002,12 +1006,12 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
     {
         return -1;
     }
-    Err = svn_client_switch (&retval, intPath.c_str (),
-                                          intUrl.c_str(),
-                                          revision.revision (),
-                                          recurse,
-                                          ctx,
-                                          apr_pool);
+    Err = svn_client_switch2(&retval, intPath.c_str (),
+                             intUrl.c_str(),
+                             revision.revision (),
+                             recurse, allowUnverObstructions,
+                             ctx,
+                             apr_pool);
 
     if(Err != NULL)
     {
