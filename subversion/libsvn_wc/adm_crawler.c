@@ -977,7 +977,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   /* Close the file baton, and get outta here. */
   return editor->close_file
-    (file_baton, svn_md5_digest_to_cstring (local_digest, pool), pool);
+    (file_baton, svn_md5_digest_to_cstring(local_digest, pool), pool);
 }
 
 svn_error_t *
