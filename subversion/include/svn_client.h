@@ -1413,8 +1413,8 @@ svn_client_status(svn_revnum_t *result_rev,
  * change to some path in @a targets.  @a peg_revision indicates in
  * which revision @a targets are valid.  If @a peg_revision is @c
  * svn_opt_revision_unspecified, it defaults to @c
- * svn_opt_revision_head for URIs or @c svn_opt_revision_working for
- * WC targets.
+ * svn_opt_revision_head for URLs or @c svn_opt_revision_working for
+ * WC paths.
  *
  * If @a limit is non-zero only invoke @a receiver on the first @a limit
  * logs.
