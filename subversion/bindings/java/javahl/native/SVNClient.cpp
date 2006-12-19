@@ -1711,12 +1711,12 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
     }
 
     err = svn_client_diff_summarize_peg(path.c_str(), pegRevision.revision(),
-					startRevision.revision(),
-					endRevision.revision(),
-					recurse ? TRUE : FALSE,
-					ignoreAncestry ? TRUE : FALSE,
-					DiffSummaryReceiver::summarize,
-					&receiver, ctx, requestPool.pool());
+                                        startRevision.revision(),
+                                        endRevision.revision(),
+                                        recurse ? TRUE : FALSE,
+                                        ignoreAncestry ? TRUE : FALSE,
+                                        DiffSummaryReceiver::summarize,
+                                        &receiver, ctx, requestPool.pool());
     if (err != NULL)
     {
         JNIUtil::handleSVNError(err);
