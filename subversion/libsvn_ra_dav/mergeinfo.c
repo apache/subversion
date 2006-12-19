@@ -203,7 +203,7 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
   mb.result = apr_hash_make(pool);
   mb.err = SVN_NO_ERROR;
 
-  err = svn_ra_dav__parsed_request(ras->ne_sess,
+  err = svn_ra_dav__parsed_request(ras,
                                    "REPORT",
                                    ras->url->data,
                                    request_body->data,
