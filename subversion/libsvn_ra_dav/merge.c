@@ -23,10 +23,6 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#include <ne_socket.h>
-#include <ne_request.h>
-
-
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_path.h"
@@ -278,6 +274,11 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
   return bump_resource(mc, relative, mc->vsn_url->data, pool);
 }
 
+/* Determine whether we're receiving the expected XML response.
+   Return CHILD when interested in receiving the child's contents
+   or one of SVN_RA_DAV__XML_INVALID and SVN_RA_DAV__XML_DECLINE
+   when respectively this is the incorrect response or
+   the element (and its children) are uninteresting */
 static int validate_element(svn_ra_dav__xml_elmid parent,
                             svn_ra_dav__xml_elmid child)
 {
@@ -291,7 +292,7 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
     {
     case ELEM_root:
       if (child == ELEM_merge_response)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -299,21 +300,21 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
       if (child == ELEM_updated_set
           || child == ELEM_merged_set
           || child == ELEM_ignored_set)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* any child is allowed */
 
     case ELEM_updated_set:
     case ELEM_merged_set:
       if (child == ELEM_response)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
                                            was in there */
 
     case ELEM_ignored_set:
       if (child == ELEM_href)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
                                            was in there */
@@ -322,7 +323,7 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
       if (child == ELEM_href
           || child == ELEM_status
           || child == ELEM_propstat)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else if (child == ELEM_responsedescription)
         /* ### I think we want this... to save a message for the user */
         return SVN_RA_DAV__XML_DECLINE; /* valid, but we don't need to see it */
@@ -332,7 +333,7 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
 
     case ELEM_propstat:
       if (child == ELEM_prop || child == ELEM_status)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else if (child == ELEM_responsedescription)
         /* ### I think we want this... to save a message for the user */
         return SVN_RA_DAV__XML_DECLINE; /* valid, but we don't need to see it */
@@ -348,20 +349,20 @@ static int validate_element(svn_ra_dav__xml_elmid parent,
           || child == ELEM_creator_displayname
           || child == ELEM_post_commit_err
           /* other props */)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* ignore other props */
 
     case ELEM_checked_in:
       if (child == ELEM_href)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
                                            was in there */
 
     case ELEM_resourcetype:
       if (child == ELEM_collection || child == ELEM_baseline)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
                                            was in there */
@@ -379,17 +380,12 @@ start_element(int *elem, void *baton, int parent,
 {
   const svn_ra_dav__xml_elm_t *elm
     = svn_ra_dav__lookup_xml_elem(merge_elements, nspace, name);
-  int acc = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
   merge_ctx_t *mc = baton;
 
-  if (acc != SVN_RA_DAV__XML_VALID)
-    {
-      *elem = acc;
-      return (acc == SVN_RA_DAV__XML_DECLINE) ?
-        SVN_NO_ERROR : svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
-    }
+  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  if (*elem < 1) /* not a valid element */
+    return SVN_NO_ERROR;
 
-  *elem = elm->id;
   switch (elm->id)
     {
     case ELEM_response:
@@ -756,7 +752,7 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "</D:merge>",
                       activity_url, lockbuf->data);
 
-  SVN_ERR(svn_ra_dav__parsed_request(ras->sess, "MERGE", repos_url,
+  SVN_ERR(svn_ra_dav__parsed_request(ras, "MERGE", repos_url,
                                      body, 0, NULL,
                                      start_element,
                                      svn_ra_dav__xml_collect_cdata,

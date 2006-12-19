@@ -1431,11 +1431,11 @@ merge(svn_stringbuf_t *conflict_p,
                                                s_entry->id,
                                                s_entry->kind,
                                                txn_id,
-                                               pool));
+                                               iterpool));
             }
           else
             {
-              SVN_ERR(svn_fs_fs__dag_delete(target, key, txn_id, pool));
+              SVN_ERR(svn_fs_fs__dag_delete(target, key, txn_id, iterpool));
             }
         }
 
