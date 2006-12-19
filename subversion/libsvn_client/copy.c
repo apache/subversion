@@ -1042,6 +1042,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   int i;
 
   get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path, NULL, pool);
+  if (copy_pairs->nelts == 1)
+    top_src_url = svn_path_dirname(top_src_url, pool);
 
   /* Open a repository session to the longest common src ancestor.  We do not
      (yet) have a working copy, so we don't have a corresponding path and
