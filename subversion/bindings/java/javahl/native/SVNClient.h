@@ -93,7 +93,7 @@ public:
     void doImport(const char *path, const char *url, const char *message,
                       bool recurse);
     jlong doSwitch(const char *path, const char *url, Revision &revision,
-                       bool recurse);
+                   bool recurse, bool allowUnverObstructions);
     jlong doExport(const char *srcPath, const char *destPath, 
                        Revision &revision, Revision &pegRevision, bool force,
                        bool ignoreExternals, bool recurse, 
@@ -108,7 +108,7 @@ public:
     jlong commit(Targets &targets, const char *message, bool recurse, 
                   bool noUnlock);
     jlongArray update(Targets &targets, Revision &revision, bool recurse,
-        bool ignoreExternals);
+                      bool ignoreExternals, bool allowUnverObstructions);
     void add(const char *path, bool recurse, bool force);
     void revert(const char *path, bool recurse);
     void remove(Targets &targets, const char *message,bool force);
@@ -116,8 +116,8 @@ public:
     void notification2(Notify2 *notify2);
     void setProgressListener(ProgressListener *progressListener);
     jlong checkout(const char *moduleName, const char *destPath,
-                       Revision &revision, Revision &pegRevsion, bool recurse,
-                       bool ignoreExternals);
+                   Revision &revision, Revision &pegRevsion, bool recurse,
+                   bool ignoreExternals, bool allowUnverObstructions);
     jobjectArray logMessages(const char *path, Revision &revisionStart,
                                  Revision &revisionEnd, bool stopOnCopy,
                                  bool discoverPaths, long limit);

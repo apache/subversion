@@ -340,6 +340,30 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param pegRevision the peg revision to interpret the path
      * @param recurse whether you want it to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long checkout(String moduleName, String destPath, Revision revision,
+                         Revision pegRevision, boolean recurse,
+                         boolean ignoreExternals, boolean allowUnverObstructions)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.checkout(moduleName, destPath, revision, pegRevision,
+                    recurse, ignoreExternals, allowUnverObstructions);
+        }
+    }
+
+    /**
+     * Executes a revision checkout.
+     * @param moduleName name of the module to checkout.
+     * @param destPath destination directory for checkout.
+     * @param revision the revision to checkout.
+     * @param pegRevision the peg revision to interpret the path
+     * @param recurse whether you want it to checkout files recursively.
+     * @param ignoreExternals if externals are ignored during checkout
      * @exception ClientException
      * @since 1.2
      */
@@ -529,6 +553,52 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Updates the directory or file from repository
+     * @param path target file.
+     * @param revision the revision number to update.
+     *                 Revision.HEAD will update to the
+     *                 latest revision.
+     * @param recurse recursively update.
+     * @param ignoreExternals if externals are ignored during update
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long update(String path, Revision revision, boolean recurse,
+                       boolean ignoreExternals, boolean allowUnverObstructions)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.update(path, revision, recurse, ignoreExternals,
+                                 allowUnverObstructions);
+        }
+    }
+
+    /**
+     * Updates the directories or files from repository
+     * @param path array of target files.
+     * @param revision the revision number to update.
+     *                 Revision.HEAD will update to the
+     *                 latest revision.
+     * @param recurse recursively update.
+     * @param ignoreExternals if externals are ignored during update
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long[] update(String[] path, Revision revision, boolean recurse,
+                         boolean ignoreExternals,
+                         boolean allowUnverObstructions) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.update(path, revision, recurse, ignoreExternals,
+                                 allowUnverObstructions);
+        }
+    }
+
+    /**
      * Commits changes to the repository.
      * @param path      files to commit.
      * @param message   log message.
@@ -684,6 +754,27 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             return worker.doExport(srcPath, destPath, revision, pegRevision,
                     force, ignoreExternals, recurse, nativeEOL);
+        }
+    }
+
+    /**
+     * Update local copy to mirror a new url.
+     * @param path      the working copy path
+     * @param url       the new url for the working copy
+     * @param revision  the new base revision of working copy
+     * @param recurse   traverse into subdirectories
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long doSwitch(String path, String url, Revision revision,
+                         boolean recurse, boolean allowUnverObstructions)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.doSwitch(path, url, revision, recurse,
+                                   allowUnverObstructions);
         }
     }
 
