@@ -16,7 +16,7 @@ Sessions and requests
 
 Both Neon and ra_dav have concepts known as 'session' and 'request'.
 The request concept in ra_dav parallels the one in Neon, except that
-it stores request related information for ra_dav.  The session
+ra_dav's stores request-related info for the RA layer.  The session
 concept in ra_dav differs from the one in Neon: while the one in Neon
 is mainly meant to track / maintain a socket connection, the ra_dav
 session is the RA session opened by an RA consumer.  An ra_dav session
@@ -70,8 +70,7 @@ Library specific conventions
 
  * Make Neon resources which need explicit destruction live as short
    as possible, or register a pool cleanup to ensure destruction.
-   Preferrably copy the results into a pool with the required life time
-   though.
+   Preferrably, copy the results into a pool with the necessary lifetime
 
 
 
