@@ -2006,28 +2006,44 @@ svn_client_resolved(const char *path,
                     apr_pool_t *pool);
 
 
-/** Copy @a src_path to @a dst_path.
+/** Copy @a src_paths to @a dst_path.
  *
- * @a src_path must be a file or directory under version control, or
- * the URL of a versioned item in the repository.  @a src_revision is
- * used to choose the revision from which to copy the @a src_path.  @a
- * dst_path must be a non-existent WC path or URL.
+ * If multiple @a src_paths are given, @a dst_path must be a directory,
+ * and @a src_paths will be copied as children of @a dst_path.
+ *
+ * @a src_paths must be files or directories under version control, or
+ * URLs of a versioned item in the repository.  If @a src_paths has multiple
+ * items, they must be all repository URLs or all working copy paths.
+ * @a src_revision is used to choose the revision from which to copy the
+ * @a src_paths.
+ *
+ * The parent of @a dst_path must already exist.
+ *
+ * If @a src_paths has only one item, attempt to copy it to @a dst_path.  If
+ * @a copy_as_child is TRUE and @a dst_path already exists, attempt to copy the
+ * item as a child of @a dst_path.  If @a copy_as_child is FALSE and
+ * @a dst_path already exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path
+ * is a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
+ * URL.
+ *
+ * If @a src_paths has multiple items, and @a copy_as_child is TRUE, all
+ * @a src_paths are copied as children of @a dst_path.  If any child of
+ * @a dst_path already exists with the same name any item in @a src_paths,
+ * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
+ * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
+ *
+ * If @a src_paths has multiple items, and @a copy_as_child is FALSE, fail
+ * with @c SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED.
  *
  * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to immediately 
  * attempt to commit the copy action in the repository.  If the commit 
  * succeeds, allocate (in @a pool) and populate @a *commit_info_p.
  *
- * If @a dst_path is not a URL, then this is just a
- * variant of svn_client_add(), where the @a dst_path items are scheduled
- * for addition as copies.  No changes will happen to the repository
- * until a commit occurs.  This scheduling can be removed with
- * svn_client_revert().
- *
- * The parent of @a dst_path must already exist, but if @a dst_path
- * already exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is
- * a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path
- * is an URL.
+ * If @a dst_path is not a URL, then this is just a variant of 
+ * svn_client_add(), where the @a src_path items are scheduled for addition
+ * as copies.  No changes will happen to the repository until a commit occurs.
+ * This scheduling can be removed with svn_client_revert().
  *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo
  * that this function can use to query for a commit log message when one is
@@ -2037,7 +2053,24 @@ svn_client_resolved(const char *path,
  * for each item added at the new location, passing the new, relative path of
  * the added item.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_copy4(svn_commit_info_t **commit_info_p,
+                 apr_array_header_t *src_paths,
+                 const svn_opt_revision_t *src_revision,
+                 const char *dst_path,
+                 svn_boolean_t copy_as_child,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_copy4(), with only one @a src_path and
+ * @a copy_as_child set to FALSE.
+ *
  * @since New in 1.4.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_copy3(svn_commit_info_t **commit_info_p,
@@ -2083,13 +2116,16 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
                 apr_pool_t *pool);
 
 
+
 /**
- * Move @a src_path to @a dst_path.
+ * Move @a src_paths to @a dst_path.
  *
- * @a src_path must be a file or directory under version control, or the
- * URL of a versioned item in the repository.  
+ * @a src_paths must be files or directories under version control, or
+ * URLs of versioned items in the repository.  All @a src_paths must be of
+ * the same type.  If multiple @a src_paths are given, @a dst_path must be
+ * a directory and @a src_paths will be moved as children of @a dst_path.
  *
- * If @a src_path is a repository URL:
+ * If @a src_paths are repository URLs:
  *
  *   - @a dst_path must also be a repository URL.
  *
@@ -2099,7 +2135,7 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *   - The move operation will be immediately committed.  If the
  *     commit succeeds, allocate (in @a pool) and populate @a *commit_info_p.
  *
- * If @a src_path is a working copy path:
+ * If @a src_paths are working copy paths:
  *
  *   - @a dst_path must also be a working copy path.
  *
@@ -2107,19 +2143,32 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *
  *   - This is a scheduling operation.  No changes will happen to the
  *     repository until a commit occurs.  This scheduling can be removed
- *     with svn_client_revert().  If @a src_path is a file it is removed
- *     from the working copy immediately.  If @a src_path is a directory it 
- *     will remain in the working copy but all the files, and unversioned
- *     items, it contains will be removed.
+ *     with svn_client_revert().  If one of @a src_paths is a file it is
+ *     removed from the working copy immediately.  If one of @a src_path
+ *     is a directory it will remain in the working copy but all the files,
+ *     and unversioned items, it contains will be removed.
  *
- *   - If @a src_path contains locally modified and/or unversioned items 
- *     and @a force is not set, the move will fail. If @a force is set such
- *     items will be removed.
+ *   - If one of @a src_paths contains locally modified and/or unversioned
+ *     items and @a force is not set, the move will fail. If @a force is set
+ *     such items will be removed.
  *
- * The parent of @a dst_path must already exist, but if @a dst_path
- * already exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is
- * a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path
- * is an URL.
+ * The parent of @a dst_path must already exist.
+ *
+ * If @a src_paths has only one item, attempt to move it to @a dst_path.  If
+ * @a move_as_child is TRUE and @a dst_path already exists, attempt to move the
+ * item as a child of @a dst_path.  If @a move_as_child is FALSE and
+ * @a dst_path already exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path
+ * is a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
+ * URL.
+ *
+ * If @a src_paths has multiple items, and @a move_as_child is TRUE, all
+ * @a src_paths are moved as children of @a dst_path.  If any child of
+ * @a dst_path already exists with the same name any item in @a src_paths,
+ * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
+ * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
+ *
+ * If @a src_paths has multiple items, and @a move_as_child is FALSE, fail
+ * with @c SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED.
  *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton combo that
  * this function can use to query for a commit log message when one is needed.
@@ -2131,7 +2180,24 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *
  * ### Is this really true?  What about svn_wc_notify_commit_replaced()? ###
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_move5(svn_commit_info_t **commit_info_p,
+                 apr_array_header_t *src_paths,
+                 const char *dst_path,
+                 svn_boolean_t force,
+                 svn_boolean_t move_as_child,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_move5(), with only one @a src_path and
+ * @a move_as_child set to FALSE.
+ *
  * @since New in 1.4.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */ 
 svn_error_t *
 svn_client_move4(svn_commit_info_t **commit_info_p,
@@ -2197,6 +2263,7 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
                 svn_boolean_t force,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
+
 
 
 /** Properties
