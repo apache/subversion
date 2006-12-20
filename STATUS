@@ -89,9 +89,8 @@ Candidate changes:
     Justification:
       Make the api do what's promised.
     Votes:
-      +1: glasser
+      +1: glasser, dlr
       +1: clkao (tested but vote not counted)
-      -0: dlr (how does r22614 figure into this?)
 
   * r22729
     Fix potential filesystem memory leak in commit-finalization loop.
