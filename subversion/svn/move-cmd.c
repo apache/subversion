@@ -67,7 +67,7 @@ svn_cl__move(apr_getopt_t *os,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
 
-  dst_path = ((const char **) (targets->elts))[targets->nelts - 1];
+  dst_path = APR_ARRAY_IDX(targets, targets->nelts - 1, const char *);
   apr_array_pop(targets);
 
   err = svn_client_move5(&commit_info, targets, dst_path, opt_state->force,
