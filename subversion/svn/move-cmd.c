@@ -42,7 +42,7 @@ svn_cl__move(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  const char *src_path, *dst_path;
+  const char *dst_path;
   svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
 
@@ -51,12 +51,7 @@ svn_cl__move(apr_getopt_t *os,
 
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-  if (targets->nelts > 2)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
-  src_path = ((const char **) (targets->elts))[0];
-  dst_path = ((const char **) (targets->elts))[1];
-  
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
@@ -72,22 +67,11 @@ svn_cl__move(apr_getopt_t *os,
          _("Cannot specify revisions (except HEAD) with move operations"));
     }
 
-  err = svn_client_move4(&commit_info, src_path, dst_path,
-                         opt_state->force, ctx, pool);
+  dst_path = ((const char **) (targets->elts))[targets->nelts - 1];
+  apr_array_pop(targets);
 
-  /* If dst_path already exists, try to move src_path as a child of it. */
-  if (err && (err->apr_err == SVN_ERR_ENTRY_EXISTS
-              || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
-    {
-      const char *src_basename = svn_path_basename(src_path, pool);
-
-      svn_error_clear(err);
-      
-      err = svn_client_move4(&commit_info, src_path,
-                             svn_path_join(dst_path, src_basename, pool),
-                             opt_state->force, ctx, pool);
-
-    }
+  err = svn_client_move5(&commit_info, targets, dst_path, opt_state->force,
+                         TRUE, ctx, pool);
 
   if (err)
     err = svn_cl__may_need_force(err);
