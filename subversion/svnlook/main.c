@@ -1411,15 +1411,28 @@ do_pget(svnlook_ctxt_t *c,
 
   if (prop == NULL)
     {
+       const char *err_msg;
        if (path == NULL)
-         return svn_error_createf
-           (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-            _("Property '%s' not found on revision %ld"), propname, c->rev_id);
+         {
+           /* We're operating on a revprop (e.g. c->is_revision). */
+           err_msg = apr_psprintf(pool,
+                                  _("Property '%s' not found on revision %ld"),
+                                  propname, c->rev_id);
+         }
        else
-         return svn_error_createf
-           (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-            _("Property '%s' not found on path '%s' in revision %ld"),
-            propname, path, c->rev_id);
+         {
+           if (SVN_IS_VALID_REVNUM(c->rev_id))
+             err_msg = apr_psprintf(pool,
+                                    _("Property '%s' not found on path '%s' "
+                                      "in revision %ld"),
+                                    propname, path, c->rev_id);
+           else
+             err_msg = apr_psprintf(pool,
+                                    _("Property '%s' not found on path '%s' "
+                                      "in transaction %s"),
+                                    propname, path, c->txn_name);
+         }
+       return svn_error_create(SVN_ERR_PROPERTY_NOT_FOUND, NULL, err_msg);
     }
 
   /* Else. */
