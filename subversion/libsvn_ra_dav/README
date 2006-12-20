@@ -22,10 +22,11 @@ is mainly meant to track / maintain a socket connection, the ra_dav
 session is the RA session opened by an RA consumer.  An ra_dav session
 (currently) contains 2 Neon sessions.
 
-Only one request can be dispatched on a Neon session at a time, this
-is why there is a second Neon session, which is used by Neon session
-callbacks which want to retrieve information from the server
-synchronously.  Allocation to either Neon session happens automatically.
+Only one request can be dispatched on a Neon session at a time; this
+is why there is a second Neon session, which is used by ra_dav
+implementations of Neon callbacks which want to retrieve information
+from the server concurrently with an active Neon session.  Allocation
+to either Neon session happens automatically.
 
 
 
@@ -105,7 +106,7 @@ When condensing errors, these rules are used:
    errors are transformed into a generic error code + message
  - Locally generated errors in the callbacks are returned as is
  - Subversion server errors are returned when available
- - Protocol statusses unexpectedly returned (including 2xx codes!)
+ - Protocol statuses unexpectedly returned (including 2xx codes!)
    result in a general error message including the status number
    and description
 
