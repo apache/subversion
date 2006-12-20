@@ -53,9 +53,9 @@ svn_cl__copy(apr_getopt_t *os,
 
   /* Figure out which type of trace editor to use.
      If the src_paths are not homogeneous, setup_copy will return an error. */
-  src_path = ((const char **) (targets->elts))[0];
+  src_path = APR_ARRAY_IDX(targets, 0, const char *);
   srcs_are_urls = svn_path_is_url(src_path);
-  dst_path = ((const char **) (targets->elts))[targets->nelts - 1];
+  dst_path = APR_ARRAY_IDX(targets, targets->nelts - 1, const char *);
   apr_array_pop(targets);
   dst_is_url = svn_path_is_url(dst_path);
 
