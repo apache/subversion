@@ -223,7 +223,7 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_pool_clear(iterpool);
 
       /* Verify that SRC_PATH exists. */
-      SVN_ERR(svn_io_check_path(pair->src, &pair->src_kind, pool));
+      SVN_ERR(svn_io_check_path(pair->src, &pair->src_kind, iterpool));
       if (pair->src_kind == svn_node_none)
         return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
                                  _("Path '%s' does not exist"),
