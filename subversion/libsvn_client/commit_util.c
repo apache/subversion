@@ -1215,6 +1215,29 @@ do_item_commit(void **dir_baton,
           tempfile = apr_pstrdup(apr_hash_pool_get(tempfiles), tempfile);
           apr_hash_set(tempfiles, tempfile, APR_HASH_KEY_STRING, (void *)1);
         }
+
+      /* Make any additional client -> repository prop changes. */
+      if (item->outgoing_prop_changes)
+        {
+          svn_prop_t *prop;
+          int i;
+
+          for (i = 0; i < item->outgoing_prop_changes->nelts; i++)
+            {
+              prop = APR_ARRAY_IDX(item->outgoing_prop_changes, i,
+                                   svn_prop_t *);
+              if (kind == svn_node_file)
+                {
+                  editor->change_file_prop(file_baton, prop->name,
+                                           prop->value, pool);
+                }
+              else
+                {
+                  editor->change_dir_prop(*dir_baton, prop->name,
+                                          prop->value, pool);
+                }
+            }
+        }
     }
 
   /* Finally, handle text mods (in that we need to open a file if it
