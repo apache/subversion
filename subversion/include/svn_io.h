@@ -87,6 +87,8 @@ typedef struct svn_io_dirent_t {
  *
  * If intermediate directories on the way to @a path don't exist, an
  * error is returned, and @a *kind's value is undefined.
+ *
+ * Use @a pool for temporary allocations.
  */
 svn_error_t *svn_io_check_path(const char *path,
                                svn_node_kind_t *kind,
