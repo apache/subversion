@@ -2862,13 +2862,13 @@ def move_multiple_wc(sbox):
   expected_status.remove('A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega', 'A/B/E/alpha',
                          'A/B/E/beta', 'A/B/E')
 
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 
@@ -2911,13 +2911,13 @@ def copy_multiple_wc(sbox):
     'A/C/E/beta'  : Item(status='  ', wc_rev=2),
     })
 
-  svntest.actions.run_and_verify_commit (wc_dir,
-                                         expected_output,
-                                         expected_status,
-                                         None,
-                                         None, None,
-                                         None, None,
-                                         wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
 
 #----------------------------------------------------------------------
 
