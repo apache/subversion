@@ -53,7 +53,7 @@ svn_cl__propedit(apr_getopt_t *os,
   /* Validate the input and get the property's name (and a UTF-8
      version of that name). */
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
-  pname = ((const char **) (args->elts))[0];
+  pname = APR_ARRAY_IDX(args, 0, const char *);
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
   if (! svn_prop_name_is_valid(pname_utf8))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
@@ -158,7 +158,7 @@ svn_cl__propedit(apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           apr_hash_t *props;
-          const char *target = ((const char **) (targets->elts))[i];
+          const char *target = APR_ARRAY_IDX(targets, i, const char *);
           svn_string_t *propval, *edited_propval;
           const char *base_dir = target;
           const char *target_local;
