@@ -271,7 +271,7 @@ svn_cl__status(apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      const char *target = ((const char **) (targets->elts))[i];
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       svn_pool_clear(subpool);
 
@@ -320,7 +320,7 @@ svn_cl__status(apr_getopt_t *os,
               for (j = 0; j < path_array->nelts; j++)
                 {
                   struct status_cache *scache =
-                    ((struct status_cache **) (path_array->elts))[j];
+                    APR_ARRAY_IDX(path_array, j, struct status_cache *);
                   print_status_normal_or_xml(&sb, scache->path, scache->status);
                 }
             }
