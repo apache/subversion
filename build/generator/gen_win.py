@@ -130,6 +130,11 @@ class WinGeneratorBase(GeneratorBase):
         else:
           sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
                            ' assumimg "%s"\n' % (val, self.vsnet_version))
+    if self.sqlite_path == None:
+      sys.stderr.write('ERROR: Sqlite path not specifed. ' + \
+                       'Use --with-sqlite option.')
+      sys.exit(1)
+	
 
   def __init__(self, fname, verfname, options, subdir):
     """
