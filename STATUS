@@ -99,4 +99,11 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r22780
+    Provide an appropriate initial config directory for JavaHL.
+    Justification:
+      The auth cache directory tree is otherwise created in the cwd.
+    Votes:
+      +1: dlr
+
 Approved changes:
