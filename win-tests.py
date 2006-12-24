@@ -285,8 +285,15 @@ class Httpd:
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir 
     self.path = os.path.join(self.httpd_dir, 'bin', self.name)
-    self.root = os.path.join(abs_builddir, CMDLINE_TEST_SCRIPT_NATIVE_PATH,
-                             'httpd')
+
+    if not os.path.exists(self.path):
+      self.name = 'httpd.exe'
+      self.path = os.path.join(self.httpd_dir, 'bin', self.name)
+      if not os.path.exists(self.path):
+        raise RuntimeError, "Could not find a valid httpd binary!"
+
+    self.root_dir = os.path.join(CMDLINE_TEST_SCRIPT_NATIVE_PATH, 'httpd')
+    self.root = os.path.join(abs_builddir, self.root_dir)
     self.authz_file = os.path.join(abs_builddir,
                                    CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                                    'svn-test-work', 'authz')
@@ -297,12 +304,22 @@ class Httpd:
     self.service_name = 'svn-test-httpd-' + str(httpd_port)
     self.httpd_args = [self.name, '-n', self._quote(self.service_name),
                        '-f', self._quote(self.httpd_config)]
-    
-    create_target_dir(self.root)
+   
+    create_target_dir(self.root_dir)
     
     self._create_users_file()
     self._create_mime_types_file()
-        
+       
+    # Determine version.
+    if os.path.exists(os.path.join(self.httpd_dir,
+                                   'modules', 'mod_access_compat.so')):
+      self.httpd_ver = 2.3
+    elif os.path.exists(os.path.join(self.httpd_dir,
+                                     'modules', 'mod_auth_basic.so')):
+      self.httpd_ver = 2.2
+    else:
+      self.httpd_ver = 2.0
+
     # Create httpd config file    
     fp = open(self.httpd_config, 'w')
 
@@ -316,7 +333,16 @@ class Httpd:
 
     # Write LoadModule for minimal system module
     fp.write(self._sys_module('dav_module', 'mod_dav.so'))
-    fp.write(self._sys_module('auth_module', 'mod_auth.so'))
+    if self.httpd_ver >= 2.3:
+      fp.write(self._sys_module('access_compat_module', 'mod_access_compat.so'))
+      fp.write(self._sys_module('authz_core_module', 'mod_authz_core.so'))
+      fp.write(self._sys_module('authz_user_module', 'mod_authz_user.so'))
+    if self.httpd_ver >= 2.2:
+      fp.write(self._sys_module('auth_basic_module', 'mod_auth_basic.so'))
+      fp.write(self._sys_module('authn_core_module', 'mod_authn_core.so'))
+      fp.write(self._sys_module('authn_file_module', 'mod_authn_file.so'))
+    else:
+      fp.write(self._sys_module('auth_module', 'mod_auth.so'))
     fp.write(self._sys_module('mime_module', 'mod_mime.so'))
     fp.write(self._sys_module('log_config_module', 'mod_log_config.so'))
     
