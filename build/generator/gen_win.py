@@ -671,6 +671,9 @@ class WinGeneratorBase(GeneratorBase):
                      self.apath(self.apr_path, "include"),
                      self.apath(self.apr_util_path, "include") ]
 
+    if target.name == 'mod_authz_svn':
+      fakeincludes.extend([ self.apath(self.httpd_path, "modules/aaa") ])
+
     if isinstance(target, gen_base.TargetApacheMod):
       fakeincludes.extend([ self.apath(self.apr_util_path, "xml/expat/lib"),
                             self.apath(self.httpd_path, "include"),
