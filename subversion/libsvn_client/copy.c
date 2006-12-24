@@ -308,21 +308,32 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
 }
 
 
-typedef struct {
+/* Path-specific state used as part of path_driver_cb_baton. */
+typedef struct
+{
   const char *src_url;
   const char *src_path;
   const char *dst_path;
   svn_node_kind_t src_kind;
   svn_boolean_t resurrection;
-} path_driver_info;
+} path_driver_info_t;
 
 
+/* The baton used with the path_driver_cb_func() callback for a copy
+   or move operation. */
 struct path_driver_cb_baton
 {
+  /* The editor (and its state) used to perform the operation. */
   const svn_delta_editor_t *editor;
   void *edit_baton;
+
+  /* A hash of path -> path_driver_info_t *'s. */
   apr_hash_t *action_hash;
+
+  /* The revision number of the copy or move's source. */
   svn_revnum_t src_revnum;
+
+  /* Whether the operation is a move or copy. */
   svn_boolean_t is_move;
 };
 
@@ -336,9 +347,9 @@ path_driver_cb_func(void **dir_baton,
 {
   struct path_driver_cb_baton *cb_baton = callback_baton;
   svn_boolean_t do_delete = FALSE, do_add = FALSE;
-  path_driver_info *path_info = apr_hash_get(cb_baton->action_hash,
-                                             path,
-                                             APR_HASH_KEY_STRING);
+  path_driver_info_t *path_info = apr_hash_get(cb_baton->action_hash,
+                                               path,
+                                               APR_HASH_KEY_STRING);
 
   /* Initialize return value. */
   *dir_baton = NULL;
@@ -430,15 +441,15 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   /* Create a path_info struct for each src/dst pair, and initialize it. */
   path_infos = apr_array_make(pool, copy_pairs->nelts,
-                              sizeof(path_driver_info));
+                              sizeof(path_driver_info_t *));
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      path_driver_info *info = &APR_ARRAY_IDX(path_infos, i, path_driver_info);
-
+      path_driver_info_t *info = apr_pcalloc(pool, sizeof(*info));
       info->resurrection = FALSE;
       info->src_url = pair->src;
+      APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
     }
 
   /* We have to open our session to the longest path common to all
@@ -452,7 +463,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      path_driver_info *info = &APR_ARRAY_IDX(path_infos, i, path_driver_info);
+      path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
+                                               path_driver_info_t *);
 
       if (strcmp(pair->src, pair->dst) == 0)
         {
@@ -498,7 +510,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
           && ((top_url == NULL) || (top_url[0] == '\0')))
         {
           svn_client__copy_pair_t *first_pair =
-            ((svn_client__copy_pair_t **) (copy_pairs->elts))[0];
+            APR_ARRAY_IDX(copy_pairs, 0, svn_client__copy_pair_t *);
           return svn_error_createf
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
              _("Source and dest appear not to be in the same repository "
@@ -520,7 +532,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      path_driver_info *info = &APR_ARRAY_IDX(path_infos, i, path_driver_info);
+      path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
+                                               path_driver_info_t *);
 
       if (strcmp(pair->dst, repos_root) != 0
           && svn_path_is_child(pair->dst, pair->src, pool) != NULL)
@@ -550,7 +563,8 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      path_driver_info *info = &APR_ARRAY_IDX(path_infos, i, path_driver_info);
+      path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
+                                               path_driver_info_t *);
       svn_node_kind_t dst_kind;
       const char *src_rel, *dst_rel;
 
@@ -603,10 +617,10 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       apr_array_header_t *commit_items 
         = apr_array_make(pool, 2 * copy_pairs->nelts, sizeof(item));
 
-      for (i = 0; i < copy_pairs->nelts; i++)
+      for (i = 0; i < path_infos->nelts; i++)
         {
-          path_driver_info *info = 
-            &(((path_driver_info *) (path_infos->elts))[i]);
+          path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
+                                                   path_driver_info_t *);
 
           SVN_ERR(svn_client_commit_item_create
                   ((const svn_client_commit_item3_t **) &item, pool));
@@ -647,9 +661,10 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                     pool));
 
   /* Setup our PATHS for the path-based editor drive. */
-  for (i = 0; i < copy_pairs->nelts; i++)
+  for (i = 0; i < path_infos->nelts; i++)
     {
-      path_driver_info *info = &(((path_driver_info *) (path_infos->elts))[i]);
+      path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
+                                               path_driver_info_t *);
 
       APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
       if (is_move && (! info->resurrection))
