@@ -1290,7 +1290,7 @@ def action_rollback(branch_dir, branch_props):
     # Limit to revisions specified by -r (if any)
     revs = merged_revs & RevisionSet(opts["revision"])
 
-    # make sure theres some revision to rollback
+    # make sure there's some revision to rollback
     if not revs:
         report("Nothing to rollback in revision range r%s" % opts["revision"])
         return
@@ -1700,10 +1700,10 @@ common_opts = [
     OptionArg("-S", "--source", "--head",
               default=None,
               help="specify a merge source for this branch. It can be either "
-                   "a path, a full URL, or an unambigous substring of one the "
-                   "paths for which merge tracking was already initialized. "
-                   "Needed only to disambiguate in case of multiple merge "
-                   "sources"),
+                   "a path, a full URL, or an unambiguous substring of one "
+                   "the paths for which merge tracking was already "
+                   "initialized.  Needed only to disambiguate in case of "
+                   "multiple merge sources"),
 ]
 
 command_table = {
