@@ -1018,6 +1018,21 @@ def action_init(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
+    # If the user hasn't specified the revisions to use, see if the
+    # "source" is a branch from the current tree and if so, we can use
+    # the version data obtained from it.
+    if not opts["revision"]:
+        cf_source, cf_rev = get_copyfrom(opts["source-url"])
+        branch_path = target_to_repos_relative_path(branch_dir)
+
+        # If the branch_path is the source path of "source",
+        # then "source" was branched from the current working tree
+        # and we can use the revisions determined by get_copyfrom
+        if branch_path == cf_source:
+            report('the source "%s" is a branch of "%s"' %
+                   (opts["source-url"], branch_dir))
+            opts["revision"] = "1-" + cf_rev
+
     # Get the initial revision set if not explicitly specified.
     revs = opts["revision"] or "1-" + get_latest_rev(opts["source-url"])
     revs = RevisionSet(revs)
