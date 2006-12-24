@@ -181,6 +181,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
     {
       svn_wc_adm_access_t *adm_access, *src_access;
       svn_error_t *err;
+      const char *src_parent;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
@@ -188,8 +189,6 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       /* Check for cancellation */
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
-      const char *src_parent;
 
       svn_path_split(pair->src, &src_parent, NULL, iterpool);
 
