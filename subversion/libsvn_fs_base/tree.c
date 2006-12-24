@@ -2096,12 +2096,12 @@ merge(svn_stringbuf_t *conflict_p,
           if (s_entry)
             {
               SVN_ERR(svn_fs_base__dag_set_entry(target, key, s_entry->id,
-                                                 txn_id, trail, pool));
+                                                 txn_id, trail, iterpool));
             }
           else
             {
               SVN_ERR(svn_fs_base__dag_delete(target, key, txn_id, 
-                                              trail, pool));
+                                              trail, iterpool));
             }
         }
 

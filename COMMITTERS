@@ -50,6 +50,7 @@ Blanket commit access:
         pburba   Paul Burba <ptbsvn@adelphia.net>
        glasser   David Glasser <glasser@mit.edu>
            lgo   Lieven Govaerts <lgo@mobsol.be>
+       hwright   Hyrum Wright <hyrum_wright@mail.utexas.edu>
 
 Commit access for specific areas:
 
@@ -128,7 +129,6 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
       markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
-       hwright   Hyrum Wright <hyrum_wright@mail.utexas.edu> (multi-moves br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

@@ -515,6 +515,43 @@ svn_client__get_diff_summarize_editor(const char *target,
 
 /* ---------------------------------------------------------------- */
 
+/*** Copy Stuff ***/
+
+/* This structure is used to associate a specific copy or move SRC with a
+   specific copy or move destination.  It also contains information which
+   various helper functions may need.  Not every copy function uses every
+   field.
+*/
+typedef struct
+{
+    /* The source path or url */
+    const char *src;
+
+    /* The source path relative to the wc root */
+    const char *src_rel;
+
+    /* The absolute path of the source. */
+    const char *src_abs;
+
+    /* The base name of the object.  It should be the same for both src
+       and dst. */
+    const char *base_name;
+
+    /* The node kind of the source */
+    svn_node_kind_t src_kind;
+
+    /* The destination path or url */
+    const char *dst;
+
+    /* The destination path relative to the repository root */
+    const char *dst_rel;
+
+    /* The destination's parent path */
+    const char *dst_parent;
+} svn_client__copy_pair_t;
+
+/* ---------------------------------------------------------------- */
+
 /*** Commit Stuff ***/
 
 /* WARNING: This is all new, untested, un-peer-reviewed conceptual
@@ -628,20 +665,19 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_pool_t *pool);
 
 
-/* Recursively crawl the working copy path TARGET, harvesting
+/* Recursively crawl each working copy path SRC in COPY_PAIRS, harvesting
    commit_items into a COMMITABLES hash (see the docstring for
    svn_client__harvest_committables for what that really means, and
    for the relevance of LOCKED_DIRS) as if every entry at or below
-   TARGET was to be committed as a set of adds (mostly with history)
-   to a new repository URL (NEW_URL).
+   the SRC was to be committed as a set of adds (mostly with history)
+   to a new repository URL (DST in COPY_PAIRS).
 
    If CTX->CANCEL_FUNC is non-null, it will be called with 
    CTX->CANCEL_BATON while harvesting to determine if the client has 
    cancelled the operation.  */
 svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
-                                  const char *new_url,
-                                  const char *target,
+                                  const apr_array_header_t *copy_pairs,
                                   svn_wc_adm_access_t *adm_access,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);

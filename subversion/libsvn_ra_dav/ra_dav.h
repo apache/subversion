@@ -123,13 +123,17 @@ typedef struct {
  *
  * Sets the 'err' field of REQ to the value obtained by evaluating NEW_ERR.
  */
-#define SVN_RA_DAV__REQ_ERR(req, new_err)    \
-   do {                                      \
-     svn_error_t *svn_err__tmp = (new_err);  \
-     if ((req)->err)                         \
-       svn_error_clear(svn_err__tmp);        \
-     else                                    \
-       (req)->err = svn_err__tmp;            \
+#define SVN_RA_DAV__REQ_ERR(req, new_err)        \
+   do {                                          \
+     svn_error_t *svn_err__tmp = (new_err);      \
+     if ((req)->err && !(req)->marshalled_error) \
+       svn_error_clear(svn_err__tmp);            \
+     else if (svn_err__tmp)                      \
+       {                                         \
+         svn_error_clear((req)->err);            \
+         (req)->err = svn_err__tmp;              \
+         (req)->marshalled_error = FALSE;        \
+       }                                         \
    } while (0)
 
 

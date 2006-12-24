@@ -936,6 +936,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 13,
              "Path has no lock token")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED,
+             SVN_ERR_CLIENT_CATEGORY_START + 14,
+             "Operation does not support multiple sources")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,
