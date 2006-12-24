@@ -1699,9 +1699,9 @@ common_opts = [
                    'and ranges separated by commas, e.g., "534,537-539,540"'),
     OptionArg("-S", "--source", "--head",
               default=None,
-              help="specify a merge source for this branch. It can be either "
+              help="specify a merge source for this branch.  It can be either "
                    "a path, a full URL, or an unambiguous substring of one "
-                   "the paths for which merge tracking was already "
+                   "of the paths for which merge tracking was already "
                    "initialized.  Needed only to disambiguate in case of "
                    "multiple merge sources"),
 ]
