@@ -124,10 +124,20 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  const char *dst_parent;
+  svn_wc_adm_access_t *adm_access;
 
+  get_copy_pair_ancestors(copy_pairs, NULL, &dst_parent, NULL, pool);
+  if (copy_pairs->nelts == 1)
+    dst_parent = svn_path_dirname(dst_parent, pool);
+
+  /* Because all copies are to the same destination directory, we can open
+     the directory once, and use it for each copy. */
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dst_parent, TRUE, 0,
+                           ctx->cancel_func, ctx->cancel_baton, pool));
+                              
   for ( i = 0; i < copy_pairs->nelts; i++)
     {
-      svn_wc_adm_access_t *adm_access;
       svn_error_t *err;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
@@ -137,10 +147,6 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, pair->dst_parent, TRUE, 0,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               iterpool));
-                              
       /* Perform the copy */
 
       /* ### This is not a move, so we won't have locked the source, so we
@@ -152,10 +158,9 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
                          ctx->notify_func2, ctx->notify_baton2, iterpool);
       svn_sleep_for_timestamps();
       SVN_ERR(err);
-
-      SVN_ERR(svn_wc_adm_close(adm_access));
     }
 
+  SVN_ERR(svn_wc_adm_close(adm_access));
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
