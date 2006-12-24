@@ -96,6 +96,9 @@ struct svn_ra_serf__propfind_context_t {
   /* Are we done issuing the PROPFIND? */
   svn_boolean_t done;
 
+  /* Context from XML stream */
+  svn_ra_serf__xml_parser_t *parser_ctx;
+
   /* If not-NULL, add us to this list when we're done. */
   svn_ra_serf__list_t **done_list;
 
@@ -434,6 +437,7 @@ setup_propfind(serf_request_t *request,
     }
 
   parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
+  ctx->parser_ctx = parser_ctx;
 
   parser_ctx->pool = pool;
   parser_ctx->user_data = ctx;
@@ -590,7 +594,11 @@ svn_ra_serf__wait_for_props(svn_ra_serf__propfind_context_t *prop_ctx,
                             svn_ra_serf__session_t *sess,
                             apr_pool_t *pool)
 {
-  return svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
+  svn_error_t *err;
+
+  err = svn_ra_serf__context_run_wait(&prop_ctx->done, sess, pool);
+  SVN_ERR(prop_ctx->parser_ctx->error);
+  return err;
 }
 
 /*
