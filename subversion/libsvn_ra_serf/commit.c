@@ -294,8 +294,6 @@ checkout_dir(dir_context_t *dir)
 
   if (dir->parent_dir)
     {
-      SVN_ERR(checkout_dir(dir->parent_dir));
-      
       /* Is our parent a copy?  If so, we're already implicitly checked out. */
       if (apr_hash_get(dir->commit->copied_entries,
                        dir->parent_dir->name, APR_HASH_KEY_STRING))
