@@ -365,7 +365,7 @@ checkout_dir(dir_context_t *dir)
                                   return_response_err(handler,
                                                       &checkout_ctx->progress),
                                   _("Path '%s' not present"),
-                                  svn_path_local_style(dir->name, dir->pool));
+                                  dir->name);
         }
 
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
@@ -426,7 +426,7 @@ checkout_file(file_context_t *file)
                               return_response_err(handler,
                                                   &file->checkout->progress),
                               _("Path '%s' not present"),
-                              svn_path_local_style(file->name, file->pool));
+                              file->name);
         }
 
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
