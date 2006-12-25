@@ -72,8 +72,9 @@ typedef struct {
 
   svn_boolean_t read_headers;
 
-  /* Our HTTP status code. */
+  /* Our HTTP status code and reason. */
   int status_code;
+  const char *reason;
 
   /* The currently collected value as we build it up */
   const char *tmp;
@@ -359,6 +360,7 @@ handle_lock(serf_request_t *request,
       rv = serf_bucket_response_status(response, &sl);
 
       ctx->status_code = sl.code;
+      ctx->reason = sl.reason;
 
       /* 423 == Locked */
       if (sl.code == 423)
@@ -400,6 +402,9 @@ handle_lock(serf_request_t *request,
       if (APR_STATUS_IS_EOF(status))
         {
           ctx->done = TRUE;
+          ctx->error = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                         _("Lock request failed: %d %s"),
+                                         ctx->status_code, ctx->reason);
         }
     }
   else
@@ -597,13 +602,10 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       
       svn_ra_serf__request_create(handler);
       error = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
+      SVN_ERR(lock_ctx->error);
+      SVN_ERR(parser_ctx->error);
       if (error)
         {
-          if (parser_ctx->error != SVN_NO_ERROR)
-            error = parser_ctx->error;
-          if (lock_ctx->error != SVN_NO_ERROR)
-            error = lock_ctx->error;
-
           return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, error,
                                   _("Lock request failed"));
         }

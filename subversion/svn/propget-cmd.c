@@ -70,7 +70,7 @@ svn_cl__propget(apr_getopt_t *os,
   /* PNAME is first argument (and PNAME_UTF8 will be a UTF-8 version
      thereof) */
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
-  pname = ((const char **) (args->elts))[0];
+  pname = APR_ARRAY_IDX(args, 0, const char *);
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
   
   /* suck up all the remaining arguments into a targets array */
@@ -120,7 +120,7 @@ svn_cl__propget(apr_getopt_t *os,
 
       for (i = 0; i < targets->nelts; i++)
         {
-          const char *target = ((const char **) (targets->elts))[i];
+          const char *target = APR_ARRAY_IDX(targets, i, const char *);
           apr_hash_t *props;
           apr_hash_index_t *hi;
           svn_boolean_t print_filenames = FALSE;

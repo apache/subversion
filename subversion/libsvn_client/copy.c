@@ -117,27 +117,87 @@ get_copy_pair_ancestors(const apr_array_header_t *copy_pairs,
 }
 
 
-/* Copy SRC_PATH into DST_PATH as DST_BASENAME, deleting SRC_PATH
-   afterwards if IS_MOVE is TRUE.  Use POOL for temporary
+/* Copy each COPY_PAIR->SRC into COPY_PAIR->DST.  Use POOL for temporary
    allocations. */
 static svn_error_t *
-wc_to_wc_copy_single(svn_client__copy_pair_t *pair,
-                     svn_boolean_t is_move,
-                     svn_client_ctx_t *ctx,
-                     apr_pool_t *pool)
+do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access, *src_access;
-  svn_error_t *err;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  const char *dst_parent;
+  svn_wc_adm_access_t *adm_access;
 
-  if (is_move)
+  get_copy_pair_ancestors(copy_pairs, NULL, &dst_parent, NULL, pool);
+  if (copy_pairs->nelts == 1)
+    dst_parent = svn_path_dirname(dst_parent, pool);
+
+  /* Because all copies are to the same destination directory, we can open
+     the directory once, and use it for each copy. */
+  SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, dst_parent, TRUE, 0,
+                           ctx->cancel_func, ctx->cancel_baton, pool));
+                              
+  for ( i = 0; i < copy_pairs->nelts; i++)
     {
-      const char *src_parent;
+      svn_error_t *err;
+      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
+                                                    svn_client__copy_pair_t *);
+      svn_pool_clear(iterpool);
 
-      svn_path_split(pair->src, &src_parent, NULL, pool);
+      /* Check for cancellation */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+      /* Perform the copy */
+
+      /* ### This is not a move, so we won't have locked the source, so we
+         ### won't detect any outstanding locks. If the source is locked and
+         ### requires cleanup should we abort the copy? */
+
+      err = svn_wc_copy2(pair->src, adm_access, pair->base_name,
+                         ctx->cancel_func, ctx->cancel_baton,
+                         ctx->notify_func2, ctx->notify_baton2, iterpool);
+      svn_sleep_for_timestamps();
+      SVN_ERR(err);
+    }
+
+  SVN_ERR(svn_wc_adm_close(adm_access));
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Move each COPY_PAIR->SRC into COPY_PAIR->DST, deleting COPY_PAIR->SRC
+   afterwards.  Use POOL for temporary allocations. */
+static svn_error_t *
+do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  for ( i = 0; i < copy_pairs->nelts; i++)
+    {
+      svn_wc_adm_access_t *adm_access, *src_access;
+      svn_error_t *err;
+      const char *src_parent;
+      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
+                                                    svn_client__copy_pair_t *);
+      svn_pool_clear(iterpool);
+
+      /* Check for cancellation */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+      svn_path_split(pair->src, &src_parent, NULL, iterpool);
 
       SVN_ERR(svn_wc_adm_open3(&src_access, NULL, src_parent, TRUE,
                                pair->src_kind == svn_node_dir ? -1 : 0,
-                               ctx->cancel_func, ctx->cancel_baton, pool));
+                               ctx->cancel_func, ctx->cancel_baton,
+                               iterpool));
 
       /* Need to avoid attempting to open the same dir twice when source
          and destination overlap. */
@@ -149,58 +209,45 @@ wc_to_wc_copy_single(svn_client__copy_pair_t *pair,
         {
           const char *src_parent_abs, *dst_parent_abs;
 
-          SVN_ERR(svn_path_get_absolute(&src_parent_abs, src_parent, pool));
+          SVN_ERR(svn_path_get_absolute(&src_parent_abs, src_parent,
+                                        iterpool));
           SVN_ERR(svn_path_get_absolute(&dst_parent_abs, pair->dst_parent,
-                                        pool));
+                                        iterpool));
 
           if ((pair->src_kind == svn_node_dir)
-              && (svn_path_is_child(src_parent_abs, dst_parent_abs, pool)))
+              && (svn_path_is_child(src_parent_abs, dst_parent_abs,
+                                    iterpool)))
             {
               SVN_ERR(svn_wc_adm_retrieve(&adm_access, src_access,
-                                          pair->dst_parent, pool));
+                                              pair->dst_parent, iterpool));
             }
           else
             {
               SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, pair->dst_parent,
                                        TRUE, 0, ctx->cancel_func,
-                                       ctx->cancel_baton, pool));
+                                       ctx->cancel_baton, 
+                                       iterpool));
             }
         }
-
-    }
-  else 
-    {
-      SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, pair->dst_parent, TRUE, 0,
-                               ctx->cancel_func, ctx->cancel_baton, pool));
-    }
                               
-  /* Perform the copy and (optionally) delete. */
+      /* Perform the copy and delete. */
+      err = svn_wc_copy2(pair->src, adm_access, pair->base_name,
+                         ctx->cancel_func, ctx->cancel_baton,
+                         ctx->notify_func2, ctx->notify_baton2, iterpool);
+      svn_sleep_for_timestamps();
+      SVN_ERR(err);
 
-  /* ### If this is not a move, we won't have locked the source, so we
-     ### won't detect any outstanding locks. If the source is locked and
-     ### requires cleanup should we abort the copy? */
-
-  err = svn_wc_copy2(pair->src, adm_access, pair->base_name,
-                     ctx->cancel_func, ctx->cancel_baton,
-                     ctx->notify_func2, ctx->notify_baton2, pool);
-  svn_sleep_for_timestamps();
-  SVN_ERR(err);
-
-
-  if (is_move)
-    {
       SVN_ERR(svn_wc_delete2(pair->src, src_access,
                              ctx->cancel_func, ctx->cancel_baton,
-                             ctx->notify_func2, ctx->notify_baton2, pool));
+                             ctx->notify_func2, ctx->notify_baton2,
+                             iterpool));
 
       if (adm_access != src_access)
         SVN_ERR(svn_wc_adm_close(adm_access));
       SVN_ERR(svn_wc_adm_close(src_access));
     }
-  else
-    {
-      SVN_ERR(svn_wc_adm_close(adm_access));
-    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -251,21 +298,13 @@ wc_to_wc_copy(const apr_array_header_t *copy_pairs,
                                  svn_path_local_style(pair->dst_parent, pool));
     }
 
-  /* Copy each target. */
-  for ( i = 0; i < copy_pairs->nelts; i++)
-    {
-      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
-                                                    svn_client__copy_pair_t *);
-      svn_pool_clear(iterpool);
-
-      /* Check for cancellation */
-      if (ctx->cancel_func)
-        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
-      SVN_ERR(wc_to_wc_copy_single(pair, is_move, ctx, iterpool));
-    }
-
   svn_pool_destroy(iterpool);
+
+  /* Copy or move all targets. */
+  if (is_move)
+    SVN_ERR(do_wc_to_wc_moves(copy_pairs, ctx, pool));
+  else
+    SVN_ERR(do_wc_to_wc_copies(copy_pairs, ctx, pool));
 
   return SVN_NO_ERROR;
 }

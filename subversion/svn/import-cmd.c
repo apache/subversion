@@ -86,13 +86,13 @@ svn_cl__import(apr_getopt_t *os,
        _("Too many arguments to import command"));
   else if (targets->nelts == 1)
     {
-      url = ((const char **) (targets->elts))[0];
+      url = APR_ARRAY_IDX(targets, 0, const char *); 
       path = "";
     }
   else
     {
-      path = ((const char **) (targets->elts))[0];
-      url = ((const char **) (targets->elts))[1];
+      path = APR_ARRAY_IDX(targets, 0, const char *);
+      url = APR_ARRAY_IDX(targets, 1, const char *);
     }
 
   if (! svn_path_is_url(url))
