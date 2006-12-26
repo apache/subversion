@@ -1227,8 +1227,8 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
-      SVN_ERR(repos_to_wc_copy_single(((svn_client__copy_pair_t **)
-                                        (copy_pairs->elts))[i], 
+      SVN_ERR(repos_to_wc_copy_single(APR_ARRAY_IDX(copy_pairs, i,
+                                                    svn_client__copy_pair_t *),
                                       src_revnum, same_repositories, &revision, 
                                       ra_session, adm_access,
                                       ctx, pool));
