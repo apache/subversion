@@ -416,7 +416,26 @@ public interface SVNClientInterface
                 boolean noUnlock) throws ClientException;
 
     /**
-     * Copies a versioned file with the history preserved.
+     * Copy versioned paths with the history preserved.
+     *
+     * @param srcPaths Source paths or URLs.
+     * @param destPath Destination path or URL.
+     * @param message Commit message.  May be <code>null</code> if
+     * <code>destPath</code> is not a URL.
+     * @param revision Source revision.
+     * @param copyAsChild Whether to copy <code>srcPaths</code> as
+     * children of <code>destPath</code>.
+     * @exception ClientException If the copy operation fails.
+     * @since 1.5
+     */
+    void copy(String[] srcPaths, String destPath, String message,
+              Revision revision, boolean copyAsChild)
+        throws ClientException;
+
+    /**
+     * Copy versioned paths with the history preserved (with
+     * <code>copyAsChild</code> behavior).
+     *
      * @param srcPath   source path or url
      * @param destPath  destination path or url
      * @param message   commit message if destPath is an url
@@ -427,19 +446,36 @@ public interface SVNClientInterface
               Revision revision) throws ClientException;
 
     /**
-     * Moves or renames a file.
-     * @param srcPath   source path or url
-     * @param destPath  destination path or url
-     * @param message   commit message if destPath is an url
-     * @param revision  source revision (unused)
-     * @param force     even with local modifications.
-     * @exception ClientException
+     * Move or rename versioned paths.
+     *
+     * @param srcPaths Source paths or URLs.
+     * @param destPath Destination path or URL.
+     * @param message Commit message.  May be <code>null</code> if
+     * <code>destPath</code> is not a URL.
+     * @param force Whether to perform the move even if local
+     * modifications exist.
+     * @param moveAsChild Whether to move <code>srcPaths</code> as
+     * children of <code>destPath</code>.
+     * @exception ClientException If the move operation fails.
+     * @since 1.5
      */
-    void move(String srcPath, String destPath, String message,
-              Revision revision, boolean force) throws ClientException;
+    void move(String[] srcPaths, String destPath, String message,
+              boolean force, boolean moveAsChild)
+        throws ClientException;
 
     /**
-     * Moves or renames a file.
+     * @deprecated Use move() without a Revision parameter.
+     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
+     * @since 1.2
+     */
+    void move(String srcPath, String destPath, String message,
+              Revision ignored, boolean force)
+        throws ClientException;
+
+    /**
+     * Move or rename versioned paths (with <code>moveAsChild</code>
+     * behavior).
+     *
      * @param srcPath   source path or url
      * @param destPath  destination path or url
      * @param message   commit message if destPath is an url
