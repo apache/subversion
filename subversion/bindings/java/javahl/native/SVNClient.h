@@ -101,10 +101,10 @@ public:
     void resolved(const char *path, bool recurse);
     void cleanup(const char *path);
     void mkdir(Targets &targets, const char *message);
-    void move(const char *srcPath, const char *destPath,
-                  const char *message, bool force);
-    void copy(const char *srcPath, const char *destPath,
-                  const char *message, Revision &revision);
+    void move(Targets &srcPaths, const char *destPath,
+              const char *message, bool force, bool moveAsChild);
+    void copy(Targets &srcPaths, const char *destPath,
+              const char *message, Revision &revision, bool copyAsChild);
     jlong commit(Targets &targets, const char *message, bool recurse, 
                   bool noUnlock);
     jlongArray update(Targets &targets, Revision &revision, bool recurse,
