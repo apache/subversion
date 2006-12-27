@@ -126,7 +126,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *dst_parent;
   svn_wc_adm_access_t *adm_access;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
 
   get_copy_pair_ancestors(copy_pairs, NULL, &dst_parent, NULL, pool);
   if (copy_pairs->nelts == 1)
@@ -179,7 +179,7 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
 
   for ( i = 0; i < copy_pairs->nelts; i++)
     {
