@@ -126,6 +126,7 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   const char *dst_parent;
   svn_wc_adm_access_t *adm_access;
+  svn_error_t *err;
 
   get_copy_pair_ancestors(copy_pairs, NULL, &dst_parent, NULL, pool);
   if (copy_pairs->nelts == 1)
@@ -138,7 +139,6 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
                               
   for ( i = 0; i < copy_pairs->nelts; i++)
     {
-      svn_error_t *err;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_pool_clear(iterpool);
@@ -156,9 +156,12 @@ do_wc_to_wc_copies(const apr_array_header_t *copy_pairs,
       err = svn_wc_copy2(pair->src, adm_access, pair->base_name,
                          ctx->cancel_func, ctx->cancel_baton,
                          ctx->notify_func2, ctx->notify_baton2, iterpool);
-      svn_sleep_for_timestamps();
-      SVN_ERR(err);
+      if (err)
+        break;
     }
+
+  svn_sleep_for_timestamps();
+  SVN_ERR(err);
 
   SVN_ERR(svn_wc_adm_close(adm_access));
   svn_pool_destroy(iterpool);
@@ -176,11 +179,11 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_error_t *err;
 
   for ( i = 0; i < copy_pairs->nelts; i++)
     {
       svn_wc_adm_access_t *adm_access, *src_access;
-      svn_error_t *err;
       const char *src_parent;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
@@ -232,8 +235,9 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
       err = svn_wc_copy2(pair->src, adm_access, pair->base_name,
                          ctx->cancel_func, ctx->cancel_baton,
                          ctx->notify_func2, ctx->notify_baton2, iterpool);
-      svn_sleep_for_timestamps();
-      SVN_ERR(err);
+
+      if (err)
+        break;
 
       SVN_ERR(svn_wc_delete2(pair->src, src_access,
                              ctx->cancel_func, ctx->cancel_baton,
@@ -244,6 +248,9 @@ do_wc_to_wc_moves(const apr_array_header_t *copy_pairs,
         SVN_ERR(svn_wc_adm_close(adm_access));
       SVN_ERR(svn_wc_adm_close(src_access));
     }
+
+  svn_sleep_for_timestamps();
+  SVN_ERR(err);
 
   svn_pool_destroy(iterpool);
 
