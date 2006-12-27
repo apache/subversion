@@ -416,7 +416,7 @@ setup_propfind(serf_request_t *request,
                apr_pool_t *pool)
 {
   svn_ra_serf__propfind_context_t *ctx = setup_baton;
-  svn_ra_serf__xml_parser_t *parser_ctx;
+  svn_ra_serf__xml_parser_t *parser_ctx = ctx->parser_ctx;
 
   *req_bkt =
       svn_ra_serf__bucket_propfind_create(ctx->conn, ctx->path, ctx->label,
@@ -435,9 +435,6 @@ setup_propfind(serf_request_t *request,
               serf_bucket_ssl_encrypt_context_get(*req_bkt);
         }
     }
-
-  parser_ctx = apr_pcalloc(pool, sizeof(*parser_ctx));
-  ctx->parser_ctx = parser_ctx;
 
   parser_ctx->pool = pool;
   parser_ctx->user_data = ctx;
@@ -563,6 +560,9 @@ svn_ra_serf__deliver_props(svn_ra_serf__propfind_context_t **prop_ctx,
       handler->conn = new_prop_ctx->conn;
 
       new_prop_ctx->handler = handler;
+
+      new_prop_ctx->parser_ctx = apr_pcalloc(pool,
+                                             sizeof(*new_prop_ctx->parser_ctx));
 
       *prop_ctx = new_prop_ctx;
     }

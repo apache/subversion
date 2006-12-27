@@ -724,104 +724,76 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     return -1;
 }
 
-void SVNClient::copy(const char *srcPath, const char *destPath, 
-                     const char *message, Revision &revision)
+void SVNClient::copy(Targets &srcPaths, const char *destPath, 
+                     const char *message, Revision &revision, bool copyAsChild)
 {
     Pool requestPool;
-    apr_pool_t * apr_pool = requestPool.pool ();
 
-    if(srcPath == NULL)
+    const apr_array_header_t *srcs = srcPaths.array(requestPool);
+    svn_error_t *err = srcPaths.error_occured();
+    if (err)
     {
-        JNIUtil::throwNullPointerException("srcPath");
+        JNIUtil::handleSVNError(err);
         return;
     }
-    if(destPath == NULL)
+    if (destPath == NULL)
     {
         JNIUtil::throwNullPointerException("destPath");
         return;
     }
-
-    Path sourcePath(srcPath);
-    svn_error_t *Err = sourcePath.error_occured();
-    if(Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
     Path destinationPath(destPath);
-    Err = destinationPath.error_occured();
-    if(Err != NULL)
+    err = destinationPath.error_occured();
+    if (err)
     {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
-
-    svn_client_commit_info_t *commit_info = NULL;
-       svn_client_ctx_t *ctx = getContext(message);
-    if(ctx == NULL)
-    {
-        return;
-    }
-
-    Err = svn_client_copy (&commit_info,
-                             sourcePath.c_str (),
-                             revision.revision(),
-                             destinationPath.c_str (),
-                             ctx,
-                             apr_pool);
-    if(Err != NULL)
-         JNIUtil::handleSVNError(Err);
-
-}
-
-void SVNClient::move(const char *srcPath, const char *destPath, 
-                     const char *message, bool force)
-{
-    Pool requestPool;
-    apr_pool_t * apr_pool = requestPool.pool ();
-
-    if(srcPath == NULL)
-    {
-        JNIUtil::throwNullPointerException("srcPath");
-        return;
-    }
-    if(destPath == NULL)
-    {
-        JNIUtil::throwNullPointerException("destPath");
-        return;
-    }
-    svn_client_commit_info_t *commit_info = NULL;
-    Path sourcePath(srcPath);
-    svn_error_t *Err = sourcePath.error_occured();
-    if(Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
-
-    Path destinationPath(destPath);
-    Err = destinationPath.error_occured();
-    if(Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
+        JNIUtil::handleSVNError(err);
         return;
     }
 
     svn_client_ctx_t *ctx = getContext(message);
-    if(ctx == NULL)
+    if (ctx == NULL)
+        return;
+    svn_commit_info_t *commit_info;
+    err = svn_client_copy4(&commit_info, (apr_array_header_t *) srcs,
+                           revision.revision(), destinationPath.c_str(),
+                           copyAsChild, ctx, requestPool.pool());
+    if (err)
+        JNIUtil::handleSVNError(err);
+}
+
+void SVNClient::move(Targets &srcPaths, const char *destPath, 
+                     const char *message, bool force, bool moveAsChild)
+{
+    Pool requestPool;
+
+    const apr_array_header_t *srcs = srcPaths.array(requestPool);
+    svn_error_t *err = srcPaths.error_occured();
+    if (err)
     {
+        JNIUtil::handleSVNError(err);
+        return;
+    }
+    if (destPath == NULL)
+    {
+        JNIUtil::throwNullPointerException("destPath");
+        return;
+    }
+    Path destinationPath(destPath);
+    err = destinationPath.error_occured();
+    if (err)
+    {
+        JNIUtil::handleSVNError(err);
         return;
     }
 
-
-    Err = svn_client_move2 (&commit_info,
-                                        sourcePath.c_str (),
-                                        destinationPath.c_str (),
-                                        force,
-                                        ctx,
-                                        apr_pool);
-    if(Err != NULL)
-         JNIUtil::handleSVNError(Err);
+    svn_client_ctx_t *ctx = getContext(message);
+    if (ctx == NULL)
+        return;
+    svn_commit_info_t *commit_info;
+    err = svn_client_move5(&commit_info, (apr_array_header_t *) srcs, 
+                           destinationPath.c_str(), force, moveAsChild,
+                           ctx, requestPool.pool());
+    if (err)
+        JNIUtil::handleSVNError(err);
 }
 
 void SVNClient::mkdir(Targets &targets, const char *message)

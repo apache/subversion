@@ -141,12 +141,11 @@ if base_url:
 copied_execs = []   # Store copied exec files to avoid the final dir scan
 
 def create_target_dir(dirname):
-  if create_dirs:
-    tgt_dir = os.path.join(abs_builddir, dirname)
-    if not os.path.exists(tgt_dir):
-      if verbose:
-        print "mkdir:", tgt_dir
-      os.makedirs(tgt_dir)
+  tgt_dir = os.path.join(abs_builddir, dirname)
+  if not os.path.exists(tgt_dir):
+    if verbose:
+      print "mkdir:", tgt_dir
+    os.makedirs(tgt_dir)
 
 def copy_changed_file(src, tgt):
   assert os.path.isfile(src)

@@ -114,7 +114,7 @@ class SVNTests extends TestCase
     protected static String rootUrl;
 
     /**
-     * Initialize one test object
+     * Create a JUnit <code>TestCase</code> instance.
      */
     protected SVNTests()
     {
@@ -132,8 +132,9 @@ class SVNTests extends TestCase
         {
             // if no root url, set build a file url
             rootUrl = rootDir.toURI().toString();
-            // java may have a different view about the number of '/' to follow
-            // "file:" than subversion. We convert to the subversion view.
+            // The JRE may have a different view about the number of
+            // '/' characters to follow "file:" in a URL than
+            // Subversion.  We convert to the Subversion view.
             if(rootUrl.startsWith("file:///"))
                 ; // this is the form subversion needs
             else if(rootUrl.startsWith("file://"))
@@ -142,10 +143,6 @@ class SVNTests extends TestCase
                 rootUrl = rootUrl.replaceFirst("file:/", "file:///");
         }
 
-        // ### The paths for the command-line tests are now
-        // ### "svn-test-work/local_tmp", "svn-test-work/repositories"
-        // ### and "svn-test-work/repositories".  The JavaHL tests
-        // ### have not been updated to match.
         this.localTmp = new File(this.rootDir, "local_tmp");
         this.conf = new File(this.localTmp, "config");
         this.repositories = new File(this.rootDir, "repositories");
@@ -299,8 +296,8 @@ class SVNTests extends TestCase
     protected String makeReposUrl(File file)
     {
         // split the common part of the root directory
-        String path = file.getAbsolutePath().
-                substring(rootDirectoryName.length()+1);
+        String path = file.getAbsolutePath()
+            .substring(this.rootDir.getAbsolutePath().length() + 1);
         // append to the root url
         return rootUrl + path.replace(File.separatorChar, '/');
     }

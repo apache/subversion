@@ -663,6 +663,84 @@ public class BasicTests extends SVNTests
     }
 
     /**
+     * Test the {@link SVNClientInterface.copy()} API.
+     * @since 1.5
+     */
+    public void testCopy()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        // Copy files from A/B/E to A/B/F.
+        String[] srcPaths = { "alpha", "beta" };
+        for (int i = 0; i < srcPaths.length; i++)
+        {
+            String fileName = srcPaths[i];
+            srcPaths[i] = new File(thisTest.getWorkingCopy(),
+                                   "A/B/E/" + fileName).getPath();
+            wc.addItem("A/B/F/" + fileName,
+                       wc.getItemContent("A/B/E/" + fileName));
+            wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/F/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Add |
+                                  CommitItemStateFlags.IsCopy);
+        }
+        client.copy(srcPaths,
+                    new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
+                    null, Revision.getInstance(1), true);
+
+        // Commit the changes, and check the state of the WC.
+        assertEquals("Wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "Copy files", true), 2);
+        thisTest.checkStatus();
+    }
+
+    /**
+     * Test the {@link SVNClientInterface.move()} API.
+     * @since 1.5
+     */
+    public void testMove()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        // Move files from A/B/E to A/B/F.
+        String[] srcPaths = { "alpha", "beta" };
+        for (int i = 0; i < srcPaths.length; i++)
+        {
+            String fileName = srcPaths[i];
+            srcPaths[i] = new File(thisTest.getWorkingCopy(),
+                                   "A/B/E/" + fileName).getPath();
+
+            wc.addItem("A/B/F/" + fileName,
+                       wc.getItemContent("A/B/E/" + fileName));
+            wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/F/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Add |
+                                  CommitItemStateFlags.IsCopy);
+
+            wc.removeItem("A/B/E/" + fileName);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/E/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Delete);
+        }
+        client.move(srcPaths,
+                    new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
+                    null, false, true);
+
+        // Commit the changes, and check the state of the WC.
+        assertEquals("Wrong revision number from commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "Move files", true), 2);
+        thisTest.checkStatus();
+    }
+
+    /**
      * test the basic SVNClient.update functionality with concurrent changes
      * in the repository and the working copy
      * @throws Throwable

@@ -615,78 +615,58 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_commit
         jnoUnlock ? true : false);
 }
 
-/*
- * Class:     org_tigris_subversion_javahl_SVNClient
- * Method:    copy
- * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;
- *             Lorg/tigris/subversion/javahl/Revision;)V
- */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_copy
-  (JNIEnv* env, jobject jthis, jstring jsrcPath, jstring jdestPath, 
-   jstring jmessage, jobject jrevision)
+  (JNIEnv* env, jobject jthis, jobjectArray jsrcPaths, jstring jdestPath, 
+   jstring jmessage, jobject jrevision, jboolean jcopyAsChild)
 {
     JNIEntry(SVNClient, copy);
+
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if(cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
-    JNIStringHolder srcPath(jsrcPath);
-    if(JNIUtil::isExceptionThrown())
-    {
+    Targets srcPaths(jsrcPaths);
+    if (JNIUtil::isExceptionThrown())
         return;
-    }
     JNIStringHolder destPath(jdestPath);
-    if(JNIUtil::isExceptionThrown())
-    {
+    if (JNIUtil::isExceptionThrown())
         return;
-    }
     JNIStringHolder message(jmessage);
-    if(JNIUtil::isExceptionThrown())
-    {
+    if (JNIUtil::isExceptionThrown())
         return;
-    }
     Revision revision(jrevision);
-    if(JNIUtil::isExceptionThrown())
-    {
+    if (JNIUtil::isExceptionThrown())
         return;
-    }
-    cl->copy(srcPath, destPath, message, revision);
+
+    cl->copy(srcPaths, destPath, message, revision,
+             jcopyAsChild ? true : false);
 }
 
-/*
- * Class:     org_tigris_subversion_javahl_SVNClient
- * Method:    move
- * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Z)V
- */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_move
-  (JNIEnv *env, jobject jthis, jstring jsrcPath, jstring jdestPath, 
-   jstring jmessage, jboolean jforce)
+  (JNIEnv *env, jobject jthis, jobjectArray jsrcPaths, jstring jdestPath, 
+   jstring jmessage, jboolean jforce, jboolean jmoveAsChild)
 {
     JNIEntry(SVNClient, move);
+
     SVNClient *cl = SVNClient::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
-    JNIStringHolder srcPath(jsrcPath);
-    if(JNIUtil::isExceptionThrown())
-    {
+    Targets srcPaths(jsrcPaths);
+    if (JNIUtil::isExceptionThrown())
         return;
-    }
     JNIStringHolder destPath(jdestPath);
-    if(JNIUtil::isExceptionThrown())
-    {
+    if (JNIUtil::isExceptionThrown())
         return;
-    }
     JNIStringHolder message(jmessage);
-    if(JNIUtil::isExceptionThrown())
-    {
+    if (JNIUtil::isExceptionThrown())
         return;
-    }
-    cl->move(srcPath, destPath, message, jforce ? true:false);
+    cl->move(srcPaths, destPath, message, jforce ? true : false,
+	     jmoveAsChild ? true : false);
 }
 
 /*
