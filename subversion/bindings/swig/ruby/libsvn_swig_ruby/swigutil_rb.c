@@ -17,6 +17,15 @@
 #include "svn_utf.h"
 
 
+#define AOFF2NUM(num) \
+  (sizeof(apr_off_t) == SIZEOF_LONG_LONG ? LL2NUM(num) : LONG2NUM(num))
+
+#if SIZEOF_LONG_LONG == 8
+#  define AI642NUM(num) LL2NUM(num)
+#else
+#  define AI642NUM(num) LONG2NUM(num)
+#endif
+
 #define POOL_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_core_pool())))
 #define CONTEXT_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_client_context())))
 #define SVN_ERR_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_error())))
@@ -2055,13 +2064,7 @@ ra_callbacks_progress_func(apr_off_t progress,
 
     cbb.receiver = callbacks;
     cbb.message = rb_id_progress_func();
-    cbb.args = rb_ary_new3(2,
-                           sizeof(apr_off_t) == sizeof(long long) ?
-                             LL2NUM(progress):
-                             LONG2NUM(progress),
-                           sizeof(apr_off_t) == sizeof(long long) ?
-                             LL2NUM(total):
-                             LONG2NUM(total));
+    cbb.args = rb_ary_new3(2, AOFF2NUM(progress), AOFF2NUM(total));
     invoke_callback((VALUE)(&cbb), Qnil);
   }
 }
@@ -2665,9 +2668,7 @@ svn_swig_rb_client_blame_receiver_func(void *baton,
     cbb.receiver = proc;
     cbb.message = rb_id_call();
     cbb.args = rb_ary_new3(5,
-                           sizeof(apr_int64_t) == sizeof(long long) ?
-                             LL2NUM(line_no):
-                             LONG2NUM(line_no),
+                           AI642NUM(line_no),
                            INT2NUM(revision),
                            c2r_string2(author),
                            c2r_svn_date_string2(date),
