@@ -306,7 +306,9 @@ svn_swig_rb_initialize(void)
   rb_define_const(mSvnLocale, "ALL", INT2NUM(LC_ALL));
   rb_define_const(mSvnLocale, "COLLATE", INT2NUM(LC_COLLATE));
   rb_define_const(mSvnLocale, "CTYPE", INT2NUM(LC_CTYPE));
+#ifdef LC_MESSAGES
   rb_define_const(mSvnLocale, "MESSAGES", INT2NUM(LC_MESSAGES));
+#endif
   rb_define_const(mSvnLocale, "MONETARY", INT2NUM(LC_MONETARY));
   rb_define_const(mSvnLocale, "NUMERIC", INT2NUM(LC_NUMERIC));
   rb_define_const(mSvnLocale, "TIME", INT2NUM(LC_TIME));
