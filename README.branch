@@ -149,7 +149,7 @@ Contents
        Creates wc Awc1 with all files (i.e., Awc1/mu) but no
        subdirectories.
    
-       Awc1/.svn/entries               this_dir    depth-immediates
+       Awc1/.svn/entries               this_dir    depth-files
        ...
    
    svn co --depth=immediates http://.../A Awc2
