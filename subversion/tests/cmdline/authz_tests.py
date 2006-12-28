@@ -805,7 +805,7 @@ test_list = [ None,
               authz_checkout_and_update_test,
               authz_partial_export_test,
               authz_aliases,
-              XFail(authz_validate)
+              authz_validate,
              ]
 
 if __name__ == '__main__':
