@@ -79,7 +79,8 @@ Valid options:
                                 'BASE'       base rev of item's working copy
                                 'COMMITTED'  last commit at or before BASE
                                 'PREV'       revision just before COMMITTED
-  -N [--non-recursive]     : operate on single directory only
+  -N [--non-recursive]     : obsolete; use --depth=1 or --depth=0 instead
+  --depth arg              : pass desired depth (0, 1, or 2) as additional arg
   -q [--quiet]             : print as little as possible
   --diff3-cmd arg          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
