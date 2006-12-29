@@ -692,7 +692,7 @@ public class BasicTests extends SVNTests
                     null, Revision.getInstance(1), true);
 
         // Commit the changes, and check the state of the WC.
-        assertEquals("Wrong revision number from commit",
+        assertEquals("Unexpected WC revision number after commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "Copy files", true), 2);
         thisTest.checkStatus();
@@ -734,7 +734,7 @@ public class BasicTests extends SVNTests
                     null, false, true);
 
         // Commit the changes, and check the state of the WC.
-        assertEquals("Wrong revision number from commit",
+        assertEquals("Unexpected WC revision number after commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "Move files", true), 2);
         thisTest.checkStatus();
