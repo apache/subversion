@@ -725,7 +725,8 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
 }
 
 void SVNClient::copy(Targets &srcPaths, const char *destPath, 
-                     const char *message, Revision &revision, bool copyAsChild)
+                     const char *message, Revision &revision,
+                     Revision &pegRevision, bool copyAsChild)
 {
     Pool requestPool;
 
@@ -753,6 +754,8 @@ void SVNClient::copy(Targets &srcPaths, const char *destPath,
     if (ctx == NULL)
         return;
     svn_commit_info_t *commit_info;
+    // ### TODO: Use pegRevision once there is a Subversion API which
+    // ### supports it.
     err = svn_client_copy4(&commit_info, (apr_array_header_t *) srcs,
                            revision.revision(), destinationPath.c_str(),
                            copyAsChild, ctx, requestPool.pool());
