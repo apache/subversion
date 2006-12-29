@@ -423,13 +423,17 @@ public interface SVNClientInterface
      * @param message Commit message.  May be <code>null</code> if
      * <code>destPath</code> is not a URL.
      * @param revision Source revision.
+     * @param pegRevision Ignored until supported by the underlying
+     * Subversion APIs.  Defaults to {@link
+     * org.tigris.subversion.javahl.Revision#HEAD} (if
+     * <code>null</code>).
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @exception ClientException If the copy operation fails.
      * @since 1.5
      */
     void copy(String[] srcPaths, String destPath, String message,
-              Revision revision, boolean copyAsChild)
+              Revision revision, Revision pegRevision, boolean copyAsChild)
         throws ClientException;
 
     /**

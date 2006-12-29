@@ -687,12 +687,13 @@ public class BasicTests extends SVNTests
                                   CommitItemStateFlags.Add |
                                   CommitItemStateFlags.IsCopy);
         }
+        Revision pegRevision = null;
         client.copy(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, Revision.getInstance(1), true);
+                    null, Revision.getInstance(1), pegRevision, true);
 
         // Commit the changes, and check the state of the WC.
-        assertEquals("Wrong revision number from commit",
+        assertEquals("Unexpected WC revision number after commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "Copy files", true), 2);
         thisTest.checkStatus();
@@ -734,7 +735,7 @@ public class BasicTests extends SVNTests
                     null, false, true);
 
         // Commit the changes, and check the state of the WC.
-        assertEquals("Wrong revision number from commit",
+        assertEquals("Unexpected WC revision number after commit",
                      client.commit(new String[] { thisTest.getWCPath() },
                                    "Move files", true), 2);
         thisTest.checkStatus();

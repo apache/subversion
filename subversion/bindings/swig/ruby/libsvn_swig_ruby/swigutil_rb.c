@@ -17,6 +17,17 @@
 #include "svn_utf.h"
 
 
+#define AOFF2NUM(num) \
+  (sizeof(apr_off_t) == SIZEOF_LONG_LONG ? LL2NUM(num) : LONG2NUM(num))
+
+#if SIZEOF_LONG_LONG == 8
+#  define AI642NUM(num) LL2NUM(num)
+#else
+#  define AI642NUM(num) LONG2NUM(num)
+#endif
+
+#define EMPTY_CPP_ARGUMENT
+
 #define POOL_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_core_pool())))
 #define CONTEXT_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_client_context())))
 #define SVN_ERR_P(obj) (RTEST(rb_obj_is_kind_of(obj, rb_svn_error())))
@@ -295,7 +306,9 @@ svn_swig_rb_initialize(void)
   rb_define_const(mSvnLocale, "ALL", INT2NUM(LC_ALL));
   rb_define_const(mSvnLocale, "COLLATE", INT2NUM(LC_COLLATE));
   rb_define_const(mSvnLocale, "CTYPE", INT2NUM(LC_CTYPE));
+#ifdef LC_MESSAGES
   rb_define_const(mSvnLocale, "MESSAGES", INT2NUM(LC_MESSAGES));
+#endif
   rb_define_const(mSvnLocale, "MONETARY", INT2NUM(LC_MONETARY));
   rb_define_const(mSvnLocale, "NUMERIC", INT2NUM(LC_NUMERIC));
   rb_define_const(mSvnLocale, "TIME", INT2NUM(LC_TIME));
@@ -779,21 +792,21 @@ name(const apr_array_header_t *apr_ary)                                     \
 }
 
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_string,
-                          c2r_string, , const char *, NULL)
+                          c2r_string, EMPTY_CPP_ARGUMENT, const char *, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_string,
                           c2r_svn_string, &, svn_string_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(static VALUE, c2r_commit_item3_array,
-                          c2r_client_commit_item3_dup, ,
+                          c2r_client_commit_item3_dup, EMPTY_CPP_ARGUMENT,
                           svn_client_commit_item3_t *, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_prop,
                           c2r_prop_dup, &, svn_prop_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_svn_rev,
                           c2r_long, &, svn_revnum_t, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_proplist_item,
-                          c2r_client_proplist_item_dup, ,
+                          c2r_client_proplist_item_dup, EMPTY_CPP_ARGUMENT,
                           svn_client_proplist_item_t *, NULL)
 DEFINE_APR_ARRAY_TO_ARRAY(VALUE, svn_swig_rb_apr_array_to_array_external_item,
-                          c2r_wc_external_item_dup, ,
+                          c2r_wc_external_item_dup, EMPTY_CPP_ARGUMENT,
                           svn_wc_external_item_t *, NULL)
 
 
@@ -2055,13 +2068,7 @@ ra_callbacks_progress_func(apr_off_t progress,
 
     cbb.receiver = callbacks;
     cbb.message = rb_id_progress_func();
-    cbb.args = rb_ary_new3(2,
-                           sizeof(apr_off_t) == sizeof(long long) ?
-                             LL2NUM(progress):
-                             LONG2NUM(progress),
-                           sizeof(apr_off_t) == sizeof(long long) ?
-                             LL2NUM(total):
-                             LONG2NUM(total));
+    cbb.args = rb_ary_new3(2, AOFF2NUM(progress), AOFF2NUM(total));
     invoke_callback((VALUE)(&cbb), Qnil);
   }
 }
@@ -2665,9 +2672,7 @@ svn_swig_rb_client_blame_receiver_func(void *baton,
     cbb.receiver = proc;
     cbb.message = rb_id_call();
     cbb.args = rb_ary_new3(5,
-                           sizeof(apr_int64_t) == sizeof(long long) ?
-                             LL2NUM(line_no):
-                             LONG2NUM(line_no),
+                           AI642NUM(line_no),
                            INT2NUM(revision),
                            c2r_string2(author),
                            c2r_svn_date_string2(date),

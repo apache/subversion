@@ -1075,7 +1075,6 @@ handle_propchange_only(report_info_t *info)
 
 static void fetch_file(report_context_t *ctx, report_info_t *info)
 {
-  const char *checked_in_url;
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__handler_t *handler;
 

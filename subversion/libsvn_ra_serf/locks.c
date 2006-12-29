@@ -481,7 +481,6 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets, *tmp;
   lock_info_t *lock_ctx;
   const char *req_url;
   svn_error_t *err;
@@ -658,7 +657,6 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       svn_ra_serf__handler_t *handler;
       svn_ra_serf__simple_request_context_t *ctx;
       const char *req_url, *path, *token;
-      lock_info_t *lock_ctx;
       const void *key;
       void *val;
       struct unlock_context_t unlock_ctx;

@@ -852,7 +852,6 @@ setup_delete_headers(serf_bucket_t *headers,
                      apr_pool_t *pool)
 {
   delete_context_t *ctx = baton;
-  const char *lock_tokens;
 
   serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
                           apr_ltoa(pool, ctx->revision));
@@ -1049,7 +1048,6 @@ delete_entry(const char *path,
   dir_context_t *dir = parent_baton;
   delete_context_t *delete_ctx;
   svn_ra_serf__handler_t *handler;
-  const char *lock_token;
   svn_error_t *err;
 
   /* Ensure our directory has been checked out */

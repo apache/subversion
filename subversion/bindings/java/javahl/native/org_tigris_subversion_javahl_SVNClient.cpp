@@ -617,12 +617,13 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_commit
 
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_copy
   (JNIEnv* env, jobject jthis, jobjectArray jsrcPaths, jstring jdestPath, 
-   jstring jmessage, jobject jrevision, jboolean jcopyAsChild)
+   jstring jmessage, jobject jrevision, jobject jPegRevision,
+   jboolean jcopyAsChild)
 {
     JNIEntry(SVNClient, copy);
 
     SVNClient *cl = SVNClient::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
@@ -639,8 +640,11 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_copy
     Revision revision(jrevision);
     if (JNIUtil::isExceptionThrown())
         return;
+    Revision pegRevision(jPegRevision, true);
+    if (JNIUtil::isExceptionThrown())
+        return;
 
-    cl->copy(srcPaths, destPath, message, revision,
+    cl->copy(srcPaths, destPath, message, revision, pegRevision,
              jcopyAsChild ? true : false);
 }
 

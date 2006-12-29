@@ -667,8 +667,6 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       xml_status = XML_Parse(ctx->xmlp, data, len, 0);
       if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
         {
-          svn_error_t *err;
-
           XML_ParserFree(ctx->xmlp);
 
           if (!ctx->status_code)
