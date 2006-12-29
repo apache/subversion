@@ -687,9 +687,10 @@ public class BasicTests extends SVNTests
                                   CommitItemStateFlags.Add |
                                   CommitItemStateFlags.IsCopy);
         }
+        Revision pegRevision = null;
         client.copy(srcPaths,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, Revision.getInstance(1), true);
+                    null, Revision.getInstance(1), pegRevision, true);
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",

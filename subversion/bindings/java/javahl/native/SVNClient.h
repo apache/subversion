@@ -104,7 +104,8 @@ public:
     void move(Targets &srcPaths, const char *destPath,
               const char *message, bool force, bool moveAsChild);
     void copy(Targets &srcPaths, const char *destPath,
-              const char *message, Revision &revision, bool copyAsChild);
+              const char *message, Revision &revision, Revision &pegRevision,
+              bool copyAsChild);
     jlong commit(Targets &targets, const char *message, bool recurse, 
                   bool noUnlock);
     jlongArray update(Targets &targets, Revision &revision, bool recurse,

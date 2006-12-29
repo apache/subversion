@@ -577,6 +577,10 @@ public class SVNClient implements SVNClientInterface
      * @param destPath Destination path or URL.
      * @param message Commit message if <code>destPath</code> is a URL.
      * @param revision Source revision.
+     * @param pegRevision Ignored until supported by the underlying
+     * Subversion APIs.  Defaults to {@link
+     * org.tigris.subversion.javahl.Revision#HEAD} (if
+     * <code>null</code>).
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @exception ClientException If the copy operation fails.
@@ -584,7 +588,8 @@ public class SVNClient implements SVNClientInterface
      * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
      */
     public native void copy(String[] srcPaths, String destPath, String message,
-                            Revision revision, boolean copyAsChild)
+                            Revision revision, Revision pegRevision,
+                            boolean copyAsChild)
         throws ClientException;
 
     /**
@@ -601,7 +606,8 @@ public class SVNClient implements SVNClientInterface
                      Revision revision)
         throws ClientException
     {
-        copy(new String[] { srcPath }, destPath, message, revision, true);
+        copy(new String[] { srcPath }, destPath, message, revision,
+             Revision.HEAD, true);
     }
 
     /**
