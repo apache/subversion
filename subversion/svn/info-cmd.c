@@ -561,7 +561,7 @@ svn_cl__info(apr_getopt_t *os,
     }
   
   if (opt_state->depth == svn_depth_unknown)
-    opt_state->depth = svn_depth_infinity;
+    opt_state->depth = svn_depth_one;
 
   for (i = 0; i < targets->nelts; i++)
     {
