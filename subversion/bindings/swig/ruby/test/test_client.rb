@@ -8,7 +8,7 @@ class SvnClientTest < Test::Unit::TestCase
   include SvnTestUtil
 
   def setup
-    setup_basic
+    setup_basic(true)
   end
 
   def teardown
