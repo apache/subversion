@@ -11,7 +11,8 @@ end
 
 module SvnTestUtil
 
-  def setup_basic
+  def setup_basic(need_svnserve=false)
+    @need_svnserve = need_svnserve
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
@@ -28,7 +29,7 @@ module SvnTestUtil
     setup_tmp
     setup_repository
     add_hooks
-    setup_svnserve
+    setup_svnserve if @need_svnserve
     setup_config
     setup_wc
     add_authentication
@@ -37,7 +38,7 @@ module SvnTestUtil
 
   def teardown_basic
     GC.stress = false if GC.respond_to?(:stress=)
-    teardown_svnserve
+    teardown_svnserve if @need_svnserve
     teardown_repository
     teardown_wc
     teardown_config
