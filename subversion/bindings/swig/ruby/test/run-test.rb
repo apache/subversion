@@ -12,7 +12,10 @@ ext_svn_dir = File.join(ext_dir, "svn")
 FileUtils.mkdir_p(ext_svn_dir)
 at_exit {FileUtils.rm_rf(ext_dir)}
 
-if /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
+$LOAD_PATH.unshift(test_dir)
+require 'util'
+
+if SvnTestUtil.windows?
   ext_svn_ext_dir = File.join(ext_svn_dir, "ext")
   FileUtils.mkdir_p(ext_svn_ext_dir)
   FileUtils.cp(Dir.glob(File.join(base_dir, "*.dll"), ext_svn_ext_dir))
