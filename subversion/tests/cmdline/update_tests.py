@@ -2114,10 +2114,6 @@ def update_wc_on_windows_drive(sbox):
 
     return None
 
-  # skip this test on non-Windows platforms.
-  if not os.name == 'nt':
-    raise svntest.Skip
-
   # just create an empty folder, we'll checkout later.
   sbox.build(create_wc = False)
   svntest.main.safe_rmtree(sbox.wc_dir)
@@ -2633,7 +2629,7 @@ test_list = [ None,
               XFail(update_copy_of_old_rev),
               forced_update,
               forced_update_failures,
-              update_wc_on_windows_drive,
+              Skip(update_wc_on_windows_drive, os.name != 'nt'),
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
              ]
