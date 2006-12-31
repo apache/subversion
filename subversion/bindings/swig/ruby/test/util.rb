@@ -2,9 +2,6 @@ require "fileutils"
 
 require "my-assertions"
 
-require "svn/client"
-require "svn/repos"
-
 class Time
   unless instance_methods.include?("to_int")
     alias to_int to_i
@@ -234,5 +231,10 @@ exit 1
   def setup_auth_baton(auth_baton)
     auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
     auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
+  end
+
+  module_function
+  def windows?
+    /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
   end
 end
