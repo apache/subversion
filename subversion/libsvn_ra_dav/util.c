@@ -217,15 +217,31 @@ multistatus_parser_create(svn_ra_dav__request_t *req)
 
 /* Neon request management */
 
+/* Forward declare */
 static apr_status_t
-dav_request_cleanup(void *baton)
+dav_request_cleanup (void *baton);
+
+static apr_status_t
+dav_request_sess_cleanup(void *baton)
 {
   svn_ra_dav__request_t *req = baton;
+
+  /* Make sure we don't run the 'child' cleanup anymore:
+     the pool it refers to probably doesn't exist anymore when it
+     finally does get run if it hasn't by now. */
+  apr_pool_cleanup_kill(req->pool, req, dav_request_cleanup);
 
   if (req->ne_req)
     ne_request_destroy(req->ne_req);
 
   return APR_SUCCESS;
+}
+
+static apr_status_t
+dav_request_cleanup (void *baton)
+{
+  svn_ra_dav__request_t *req = baton;
+  apr_pool_cleanup_run(req->sess->pool, req, dav_request_sess_cleanup);
 }
 
 
@@ -248,13 +264,15 @@ svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
 
   /* Neon resources may be NULL on out-of-memory */
   assert(req->ne_req != NULL);
+  apr_pool_cleanup_register(sess->pool, req,
+                            dav_request_sess_cleanup,
+                            apr_pool_cleanup_null);
   apr_pool_cleanup_register(reqpool, req,
                             dav_request_cleanup,
                             apr_pool_cleanup_null);
 
   return req;
 }
-
 
 static apr_status_t
 compressed_body_reader_cleanup(void *baton)
