@@ -1,5 +1,7 @@
 require "fileutils"
 
+require "my-assertions"
+
 require "svn/client"
 require "svn/repos"
 
