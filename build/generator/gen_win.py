@@ -56,6 +56,7 @@ class WinGeneratorBase(GeneratorBase):
                            'mod_authz_svn': None }
 
     # Instrumentation options
+    self.disable_shared = None
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.configure_apr_util = None
@@ -111,6 +112,8 @@ class WinGeneratorBase(GeneratorBase):
         self.configure_apr_util = 1
       elif opt == '--enable-ml':
         self.enable_ml = 1
+      elif opt == '--disable-shared':
+        self.disable_shared = 1
       elif opt == '--vsnet-version':
         if val == '2002' or re.match('7(\.\d+)?', val):
           self.vsnet_version = '7.00'
@@ -277,10 +280,15 @@ class WinGeneratorBase(GeneratorBase):
       install_targets = filter(lambda x: x.name != 'libsvn_ra_dav',
                                install_targets)
 
+    dll_targets = []
     for target in install_targets:
-      if isinstance(target, gen_base.TargetLib) and target.msvc_fake:
-        install_targets.append(self.create_fake_target(target))
-
+      if isinstance(target, gen_base.TargetLib):
+        if target.msvc_fake:
+          install_targets.append(self.create_fake_target(target))
+        if target.msvc_export and not self.disable_shared:
+          dll_targets.append(self.create_dll_target(target))
+    install_targets.extend(dll_targets)
+    
     # sort these for output stability, to watch out for regressions.
     install_targets.sort(lambda t1, t2: cmp(t1.name, t2.name))
     return install_targets
@@ -295,6 +303,42 @@ class WinGeneratorBase(GeneratorBase):
     self.graph.add(gen_base.DT_LINK, section.target.name, dep)
     dep.msvc_fake = section.target
     return section.target
+    
+  def create_dll_target(self, dep):
+    "Return a dynamic library that depends on a static library"
+    target = gen_base.TargetLib(dep.name, 
+                                { 'path'      : dep.path,
+                                  'msvc-name' : dep.name + "_dll" }, 
+                                self)
+    target.msvc_export = dep.msvc_export
+
+    # The dependency should now be static.
+    dep.msvc_export = None
+    dep.msvc_static = True
+    
+    # Remove the 'lib' prefix, so that the static library will be called
+    # svn_foo.lib
+    dep.name = dep.name[3:]
+    # However, its name should still be 'libsvn_foo' in Visual Studio
+    dep.msvc_name = target.name
+
+    # We renamed dep, so right now it has no dependencies. Because target has
+    # dep's old dependencies, transfer them over to dep.
+    deps = self.graph.deps[gen_base.DT_LINK]
+    deps[dep.name] = deps[target.name]
+
+    for key in deps.iterkeys():
+      # Link everything except tests against the dll. Tests need to be linked
+      # against the static libraries because they sometimes access internal
+      # library functions.
+      if dep in deps[key] and key.find("test") == -1:
+        deps[key].remove(dep)
+        deps[key].append(target)
+
+    # The dll has exactly one dependency, the static library.
+    deps[target.name] = [ dep ]
+
+    return target
 
   def get_configs(self, target):
     "Get the list of configurations for the project"
@@ -398,7 +442,7 @@ class WinGeneratorBase(GeneratorBase):
 
       deps = []
       for header in target.msvc_export:
-        deps.append(self.path(target.path, header))
+        deps.append(self.path('subversion/include', header))
 
       cbuild = "python $(InputPath) %s > %s" \
                % (string.join(deps), def_file)
@@ -455,7 +499,7 @@ class WinGeneratorBase(GeneratorBase):
 
   def get_def_file(self, target):
     if isinstance(target, gen_base.TargetLib) and target.msvc_export:
-      return self.path(target.path, target.name + ".def")
+      return target.name + ".def"
     return None
 
   def gen_proj_names(self, install_targets):
@@ -605,9 +649,27 @@ class WinGeneratorBase(GeneratorBase):
   def get_linked_win_depends(self, target, deps, static_recurse=0):
     """Find project dependencies for a DLL or EXE project"""
 
-    for dep, dep_kind in self.get_direct_depends(target):
+    direct_deps = self.get_direct_depends(target)
+    for dep, dep_kind in direct_deps:
       is_proj, is_lib, is_static = dep_kind
 
+      # add all top level dependencies
+      if not static_recurse or is_lib:
+        # We need to guard against linking both a static and a dynamic library
+        # into a project (this is mainly a concern for tests). To do this, for
+        # every dll dependency we first check to see if its corresponding
+        # static library is already in the list of dependencies. If it is,
+        # we don't add the dll to the list.
+        if is_lib and dep.msvc_export and not self.disable_shared:
+          static_dep = self.graph.get_sources(gen_base.DT_LINK, dep.name)[0]
+          if deps.has_key(static_dep):
+            continue
+        deps[dep] = dep_kind
+
+    # add any libraries that static library dependencies depend on
+    for dep, dep_kind in direct_deps:
+      is_proj, is_lib, is_static = dep_kind
+      
       # recurse for projectless dependencies
       if not is_proj:
         self.get_linked_win_depends(dep, deps, 0)
@@ -615,11 +677,6 @@ class WinGeneratorBase(GeneratorBase):
       # also recurse into static library dependencies
       elif is_static:
         self.get_linked_win_depends(dep, deps, 1)
-
-      # add all top level dependencies and any libraries that
-      # static library dependencies depend on.
-      if not static_recurse or is_lib:
-        deps[dep] = dep_kind
 
   def get_win_defines(self, target, cfg):
     "Return the list of defines for target"
