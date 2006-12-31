@@ -57,6 +57,11 @@ all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
 client_tests = filter(lambda x: x.startswith(CMDLINE_TEST_SCRIPT_PATH),
                       all_tests)
 
+dll_paths = []
+for section in gen_obj.sections.values():
+  if section.options.get("msvc-export"):
+    dll_paths.append(os.path.join("subversion", section.name))
+
 opts, args = my_getopt(sys.argv[1:], 'hrdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
@@ -210,8 +215,10 @@ def locate_libs():
     libintl_dll_path = os.path.join(libintl_path, 'bin', 'intl3_svn.dll')
     copy_changed_file(libintl_dll_path, abs_objdir)
 
+  dll_path = reduce(lambda x, y: x + os.path.join(abs_objdir, y) + os.pathsep,
+                    dll_paths, "")
   os.environ['APR_ICONV_PATH'] = os.path.abspath(apriconv_so_path)
-  os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
+  os.environ['PATH'] = abs_objdir + os.pathsep + dll_path + os.environ['PATH']
   
 def fix_case(path):
     path = os.path.normpath(path)
