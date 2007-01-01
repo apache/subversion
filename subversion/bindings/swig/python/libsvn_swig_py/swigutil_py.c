@@ -1549,6 +1549,14 @@ read_handler_pyio(void *baton, char *buffer, apr_size_t *len)
   apr_size_t bytes;
   svn_error_t *err = SVN_NO_ERROR;
 
+  if (py_io == Py_None)
+    {
+      /* Return the empty string to indicate a short read */
+      *buffer = '\0';
+      *len = 0;
+      return SVN_NO_ERROR;
+    }
+
   svn_swig_py_acquire_py_lock();
   if ((result = PyObject_CallMethod(py_io, (char *)"read",
                                     (char *)"i", *len)) == NULL)
@@ -1586,7 +1594,7 @@ write_handler_pyio(void *baton, const char *data, apr_size_t *len)
   PyObject *py_io = baton;
   svn_error_t *err = SVN_NO_ERROR;
 
-  if (data != NULL)
+  if (data != NULL && py_io != Py_None)
     {
       svn_swig_py_acquire_py_lock();
       if ((result = PyObject_CallMethod(py_io, (char *)"write",

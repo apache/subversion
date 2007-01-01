@@ -58,8 +58,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     dump = dumpstream.getvalue()
     feedback = feedbackstream.getvalue()
     expected_feedback = "* Dumped revision " + str(self.rev)
-    self.assert_("Node-path: trunk/README.txt" in dump)
-    self.assert_(expected_feedback in feedback)
+    self.assertEquals(dump.count("Node-path: trunk/README.txt"), 2)
+    self.assertEquals(feedback.count(expected_feedback), 1)
     self.assertEquals(self.callback_calls, 13)
 
     # Check that the dump can be cancelled
@@ -73,12 +73,22 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertRaises(ValueError, repos.dump_fs2,
       self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0, None)
 
-    # Check that the dump fails when we pass in None as the dumpstream or
-    # feedbackstream
-    # FIXME: We should probably return a ValueError instead, and say that
-    # the function does not accept NULL streams
-    self.assertRaises(AttributeError, repos.dump_fs2,
-      self.repos, None, None, 0, self.rev, 0, 0, None)
+    dumpstream = StringIO.StringIO()
+    feedbackstream = StringIO.StringIO()
+
+    # Check that we can grab the feedback stream, but not the dumpstream
+    repos.dump_fs2(self.repos, None, feedbackstream, 0, self.rev, 0, 0, None)
+    feedback = feedbackstream.getvalue()
+    self.assertEquals(feedback.count(expected_feedback), 1)
+
+    # Check that we can grab the dumpstream, but not the feedbackstream
+    repos.dump_fs2(self.repos, dumpstream, None, 0, self.rev, 0, 0, None)
+    dump = dumpstream.getvalue()
+    self.assertEquals(dump.count("Node-path: trunk/README.txt"), 2)
+
+    # Check that we can ignore both the dumpstream and the feedbackstream
+    repos.dump_fs2(self.repos, dumpstream, None, 0, self.rev, 0, 0, None)
+    self.assertEquals(feedback.count(expected_feedback), 1)
 
     # FIXME: The Python bindings don't check for 'NULL' values for
     #        svn_repos_t objects, so the following call segfaults
