@@ -73,6 +73,7 @@ public:
                          void *baton,
                          apr_pool_t *pool);
 
+protected:
     /**
      * Handler for Subversion progress events.
      *

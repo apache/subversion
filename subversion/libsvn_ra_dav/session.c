@@ -2,7 +2,7 @@
  * session.c :  routines for maintaining sessions state (to the DAV server)
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,13 +26,7 @@
 #include <apr_general.h>
 #include <apr_xml.h>
 
-#include <ne_socket.h>
-#include <ne_request.h>
-#include <ne_uri.h>
 #include <ne_auth.h>
-#include <ne_locks.h>
-#include <ne_alloc.h>
-#include <ne_utils.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -85,7 +79,11 @@ static int request_auth(void *userdata, const char *realm, int attempt,
   if (! ras->callbacks->auth_baton)
     return -1;
 
-  if (attempt == 0)
+  /* Neon automatically tries some auth protocols and bumps the attempt
+     count without using Subversion's callbacks, so we can't depend
+     on attempt == 0 the first time we are called -- we need to check
+     if the auth state has been initted as well.  */
+  if (attempt == 0 || ras->auth_iterstate == NULL)
     {
       const char *realmstring;
 
@@ -646,7 +644,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
 {
   apr_size_t len;
   ne_session *sess, *sess2;
-  ne_uri uri = { 0 };
+  ne_uri *uri = apr_pcalloc(pool, sizeof(*uri));
   svn_ra_dav__session_t *ras;
   int is_ssl_session;
   svn_boolean_t compression;
@@ -658,15 +656,16 @@ svn_ra_dav__open(svn_ra_session_t *session,
     apr_pcalloc(pool, sizeof(*neonprogress_baton));
 
   /* Sanity check the URI */
-  SVN_ERR(parse_url(&uri, repos_URL));
+  SVN_ERR(parse_url(uri, repos_URL));
+
+  /* make sure we eventually destroy the uri */
+  apr_pool_cleanup_register(pool, uri, cleanup_uri, apr_pool_cleanup_null);
+
 
   /* Can we initialize network? */
   if (ne_sock_init() != 0)
-    {
-      ne_uri_free(&uri);
-      return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                              _("Network socket initialization failed"));
-    }
+    return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
+                            _("Network socket initialization failed"));
 
   /* we want to know if the repository is actually somewhere else */
   /* ### not yet: http_redirect_register(sess, ... ); */
@@ -677,28 +676,29 @@ svn_ra_dav__open(svn_ra_session_t *session,
    * the scheme to lower case before we pass it on to Neon, otherwise we
    * would crash later on when we assume Neon has set up its https stuff
    * but it really didn't. */
-  for (itr = uri.scheme; *itr; ++itr)
+  for (itr = uri->scheme; *itr; ++itr)
     *itr = tolower(*itr);
 
-  is_ssl_session = (strcasecmp(uri.scheme, "https") == 0);
+  is_ssl_session = (strcasecmp(uri->scheme, "https") == 0);
   if (is_ssl_session)
     {
       if (ne_has_support(NE_FEATURE_SSL) == 0)
-        {
-          ne_uri_free(&uri);
-          return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
-                                  _("SSL is not supported"));
-        }
+        return svn_error_create(SVN_ERR_RA_DAV_SOCK_INIT, NULL,
+                                _("SSL is not supported"));
     }
   /* Create two neon session objects, and set their properties... */
-  sess = ne_session_create(uri.scheme, uri.host, uri.port);
-  sess2 = ne_session_create(uri.scheme, uri.host, uri.port);
+  sess = ne_session_create(uri->scheme, uri->host, uri->port);
+  sess2 = ne_session_create(uri->scheme, uri->host, uri->port);
+  /* make sure we will eventually destroy the session */
+  apr_pool_cleanup_register(pool, sess, cleanup_session, apr_pool_cleanup_null);
+  apr_pool_cleanup_register(pool, sess2, cleanup_session,
+                            apr_pool_cleanup_null);
 
-  cfg = config ? apr_hash_get(config, 
+  cfg = config ? apr_hash_get(config,
                               SVN_CONFIG_CATEGORY_SERVERS,
                               APR_HASH_KEY_STRING) : NULL;
   if (cfg)
-    server_group = svn_config_find_group(cfg, uri.host,
+    server_group = svn_config_find_group(cfg, uri->host,
                                          SVN_CONFIG_SECTION_GROUPS, pool);
   else
     server_group = NULL;
@@ -711,29 +711,23 @@ svn_ra_dav__open(svn_ra_session_t *session,
     const char *proxy_password;
     int timeout;
     int debug;
-    svn_error_t *err;
-    
+
 #ifdef SVN_NEON_0_26
     neon_auth_types = NE_AUTH_BASIC | NE_AUTH_DIGEST;
     if (is_ssl_session)
       neon_auth_types |= NE_AUTH_NEGOTIATE;
 #endif
-    err = get_server_settings(&proxy_host,
-                              &proxy_port,
-                              &proxy_username,
-                              &proxy_password,
-                              &timeout,
-                              &debug,
-                              &compression,
-                              &neon_auth_types,
-                              cfg,
-                              uri.host,
-                              pool);
-    if (err)
-      {
-        ne_uri_free(&uri);
-        return err;
-      }
+    SVN_ERR(get_server_settings(&proxy_host,
+                                &proxy_port,
+                                &proxy_username,
+                                &proxy_password,
+                                &timeout,
+                                &debug,
+                                &compression,
+                                &neon_auth_types,
+                                cfg,
+                                uri->host,
+                                pool));
 
     if (debug)
       ne_debug_init(stderr, debug);
@@ -751,7 +745,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
 
             pab->username = proxy_username;
             pab->password = proxy_password ? proxy_password : "";
-        
+
             ne_set_proxy_auth(sess, proxy_auth, pab);
             ne_set_proxy_auth(sess2, proxy_auth, pab);
           }
@@ -763,28 +757,22 @@ svn_ra_dav__open(svn_ra_session_t *session,
     ne_set_read_timeout(sess2, timeout);
   }
 
-  /* make sure we will eventually destroy the session */
-  apr_pool_cleanup_register(pool, sess, cleanup_session,
-                            apr_pool_cleanup_null);
-  apr_pool_cleanup_register(pool, sess2, cleanup_session,
-                            apr_pool_cleanup_null);
-
   ne_set_useragent(sess, "SVN/" SVN_VERSION);
   ne_set_useragent(sess2, "SVN/" SVN_VERSION);
 
   /* clean up trailing slashes from the URL */
-  len = strlen(uri.path);
-  if (len > 1 && uri.path[len - 1] == '/')
-    uri.path[len - 1] = '\0';
+  len = strlen(uri->path);
+  if (len > 1 && (uri->path)[len - 1] == '/')
+    (uri->path)[len - 1] = '\0';
 
   /* Create and fill a session_baton. */
   ras = apr_pcalloc(pool, sizeof(*ras));
   ras->pool = pool;
   ras->url = svn_stringbuf_create(repos_URL, pool);
   /* copies uri pointer members, they get free'd in __close. */
-  ras->root = uri; 
-  ras->sess = sess;
-  ras->sess2 = sess2;  
+  ras->root = *uri;
+  ras->ne_sess = sess;
+  ras->ne_sess2 = sess2;
   ras->callbacks = callbacks;
   ras->callback_baton = callback_baton;
   ras->compression = compression;
@@ -794,13 +782,8 @@ svn_ra_dav__open(svn_ra_session_t *session,
   svn_auth_set_parameter(ras->callbacks->auth_baton,
                          SVN_AUTH_PARAM_SERVER_GROUP, server_group);
 
-  /* make sure we eventually destroy the uri */
-  apr_pool_cleanup_register(pool, &ras->root, cleanup_uri,
-                            apr_pool_cleanup_null);
-
   /* note that ras->username and ras->password are still NULL at this
      point. */
-
 
   /* Register an authentication 'pull' callback with the neon sessions */
 #ifdef SVN_NEON_0_26
@@ -811,12 +794,6 @@ svn_ra_dav__open(svn_ra_session_t *session,
   ne_set_server_auth(sess2, request_auth, ras);
 #endif
 
-  /* Store our RA session baton in Neon's private data slot so we can
-     get at it in functions that take only ne_session_t *sess
-     (instead of the full svn_ra_dav__session_t *ras). */
-  ne_set_session_private(sess, SVN_RA_NE_SESSION_ID, ras);
-  ne_set_session_private(sess2, SVN_RA_NE_SESSION_ID, ras);
-
   if (is_ssl_session)
     {
       const char *authorities, *trust_default_ca;
@@ -824,7 +801,7 @@ svn_ra_dav__open(svn_ra_session_t *session,
             cfg, server_group,
             SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES,
             NULL);
-      
+
       if (authorities != NULL)
         {
           char *files, *file, *last;
@@ -886,11 +863,13 @@ static svn_error_t *svn_ra_dav__reparent(svn_ra_session_t *session,
                                          apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  ne_uri uri = { 0 };
+  ne_uri *uri = apr_pcalloc(session->pool, sizeof(*uri));
 
-  SVN_ERR(parse_url(&uri, url));
-  ne_uri_free(&ras->root);
-  ras->root = uri;
+  SVN_ERR(parse_url(uri, url));
+  apr_pool_cleanup_register(session->pool, uri, cleanup_uri,
+                            apr_pool_cleanup_null);
+
+  ras->root = *uri;
   svn_stringbuf_set(ras->url, url);
   return SVN_NO_ERROR;
 }
@@ -907,7 +886,7 @@ static svn_error_t *svn_ra_dav__get_repos_root(svn_ra_session_t *session,
       svn_stringbuf_t *url_buf;
 
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative,
-                                            NULL, ras->sess, ras->url->data,
+                                            NULL, ras, ras->url->data,
                                             SVN_INVALID_REVNUM, pool));
 
       /* Remove as many path components from the URL as there are components
@@ -931,12 +910,12 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
 
   if (! ras->uuid)
     {
-      svn_ra_dav_resource_t *rsrc;
+      svn_ra_dav__resource_t *rsrc;
       const char *lopped_path;
       const svn_string_t *uuid_propval;
 
       SVN_ERR(svn_ra_dav__search_for_starting_props(&rsrc, &lopped_path,
-                                                    ras->sess, ras->url->data,
+                                                    ras, ras->url->data,
                                                     pool));
       SVN_ERR(svn_ra_dav__maybe_store_auth_info(ras, pool));
 
@@ -958,617 +937,8 @@ static svn_error_t *svn_ra_dav__do_get_uuid(svn_ra_session_t *session,
     }
 
   *uuid = ras->uuid;
-  return SVN_NO_ERROR; 
-}
-
-
-/* A callback of type ne_create_request_fn;  called whenever neon
-   creates a request. */
-static void 
-create_request_hook(ne_request *req,
-                    void *userdata,
-                    const char *method,
-                    const char *requri)
-{
-  struct lock_request_baton *lrb = userdata;
-
-  /* If a LOCK, UNLOCK, or PROPFIND is happening, then remember the
-     http method. */
-  if ((strcmp(method, "LOCK") == 0)
-      || (strcmp(method, "UNLOCK") == 0)
-      || (strcmp(method, "PROPFIND") == 0))  
-    {
-      lrb->method = apr_pstrdup(lrb->pool, method);
-      lrb->request = req;
-    }
-}
-
-
-
-/* A callback of type ne_pre_send_fn;  called whenever neon is just
-   about to send a request. */
-static void
-pre_send_hook(ne_request *req,
-              void *userdata,
-              ne_buffer *header)
-{
-  struct lock_request_baton *lrb = userdata;
-
-  if (! lrb->method)
-    return;
-
-  /* Possibly attach some custom headers to the request. */
-
-  if ((strcmp(lrb->method, "LOCK") == 0)
-      || (strcmp(lrb->method, "PROPFIND") == 0))
-    {
-      /* Possibly add an X-SVN-Option: header indicating that the lock
-         is being stolen.  */
-      if (lrb->force)
-        {
-          char *hdr = apr_psprintf(lrb->pool, "%s: %s\r\n",
-                                   SVN_DAV_OPTIONS_HEADER,
-                                   SVN_DAV_OPTION_LOCK_STEAL);
-          ne_buffer_zappend(header, hdr);
-        }
-
-      /* If we have a working-revision of the file, send it so that
-         svn_fs_lock() can do an out-of-dateness check. */
-      if (SVN_IS_VALID_REVNUM(lrb->current_rev))
-        {
-          char *buf = apr_psprintf(lrb->pool, "%s: %ld\r\n",
-                                   SVN_DAV_VERSION_NAME_HEADER,
-                                   lrb->current_rev);
-          ne_buffer_zappend(header, buf);
-        }
-    }
-
-  if (strcmp(lrb->method, "UNLOCK") == 0)
-    {
-      if (lrb->force)
-        {
-          char *buf = apr_psprintf(lrb->pool, "%s: %s\r\n",
-                                   SVN_DAV_OPTIONS_HEADER,
-                                   SVN_DAV_OPTION_LOCK_BREAK);
-          ne_buffer_zappend(header, buf);
-        }
-    }
-
-  /* Register a response handler capable of parsing <D:error> */
-  lrb->error_parser = ne_xml_create();
-  svn_ra_dav__add_error_handler(req, lrb->error_parser,
-                                &(lrb->err), lrb->pool);
-}
-
-/* A callback of type ne_post_send_fn;  called after neon has sent a
-   request and received a response header back. */
-static int
-post_send_hook(ne_request *req,
-               void *userdata,
-               const ne_status *status)
-{
-  struct lock_request_baton *lrb = userdata;
-
-  if (! lrb->method)
-    return NE_OK;
-
-  if ((strcmp(lrb->method, "LOCK") == 0)
-      || (strcmp(lrb->method, "PROPFIND") == 0))
-    {
-      const char *val;
-
-      val = ne_get_response_header(req, SVN_DAV_CREATIONDATE_HEADER);
-      if (val)
-        {
-          svn_error_t *err = svn_time_from_cstring(&(lrb->creation_date),
-                                                   val, lrb->pool);
-
-          NE_DEBUG(NE_DBG_HTTP, "got cdate %s for %s request...\n",
-                   val, lrb->method);
-
-          if (err)
-            {
-              svn_error_clear(err);
-              lrb->creation_date = 0;
-              /* ### Should we return NE_RETRY in this case?  And if
-                 ### we were to do that, would we also set *status
-                 ### and call ne_set_error? */
-            }
-        }
-
-      val = ne_get_response_header(req, SVN_DAV_LOCK_OWNER_HEADER);
-      if (val)
-        lrb->lock_owner = apr_pstrdup(lrb->pool, val);
-    }
-
-  return NE_OK;
-}
-
-
-static void
-setup_neon_request_hook(svn_ra_dav__session_t *ras)
-{
-  /* We need to set up the lock callback once and only once per neon
-     session creation. */
-
-  if (! ras->lrb)
-    {
-      struct lock_request_baton *lrb;
-      /* Build context for neon callbacks and then register them. */
-      lrb = apr_pcalloc(ras->pool, sizeof(*lrb));
-
-      ne_hook_create_request(ras->sess, create_request_hook, lrb);
-      ne_hook_pre_send(ras->sess, pre_send_hook, lrb);
-      ne_hook_post_send(ras->sess, post_send_hook, lrb);
-
-      lrb->pool = ras->pool;
-      ras->lrb = lrb;
-    }
-}
-
-/* (Note: *LOCK is an output parameter.) */
-/* ### TODO for 1.3: Send all locks to the server at once. */
-static svn_error_t *
-shim_svn_ra_dav__lock(svn_ra_session_t *session,
-                      svn_lock_t **lock,
-                      const char *path,
-                      const char *comment,
-                      svn_boolean_t force,
-                      svn_revnum_t current_rev,
-                      apr_pool_t *pool)
-{
-  svn_ra_dav__session_t *ras = session->priv;
-  int rv;
-  const char *url;
-  svn_string_t fs_path;
-  struct ne_lock *nlock;
-  svn_lock_t *slock;
-
-  /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component(ras->url->data, path, pool);  
-  SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
-                                        url, SVN_INVALID_REVNUM, pool));
-
-  /* Clear out the lrb... */
-  memset((ras->lrb), 0, sizeof(*ras->lrb));
-
-  /* ...and load it up again. */
-  ras->lrb->pool = pool;
-  ras->lrb->current_rev = current_rev;
-  ras->lrb->force = force;
-
-  /* Make a neon lock structure. */
-  nlock = ne_lock_create();
-  nlock->owner = comment ? ne_strdup(apr_xml_quote_string(pool, comment, 1))
-                         : NULL;
-
-  if ((rv = ne_uri_parse(url, &(nlock->uri))))
-    {
-      ne_lock_destroy(nlock);
-      return svn_ra_dav__convert_error(ras->sess, _("Failed to parse URI"),
-                                       rv, pool);
-    }
-
-  /* Issue LOCK request. */
-  rv = ne_lock(ras->sess, nlock);
-
-  /* Did we get a <D:error> response? */
-  if (ras->lrb->err)
-    {
-      ne_lock_destroy(nlock);
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-      return ras->lrb->err;
-    }
-
-  /* Did we get some other sort of neon error? */
-  if (rv)
-    {
-      ne_lock_destroy(nlock);
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-      return svn_ra_dav__convert_error(ras->sess,
-                                       _("Lock request failed"), rv, pool);
-    }
-
-  if (!ras->lrb->lock_owner || !ras->lrb->creation_date)
-    return svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                            _("Incomplete lock data returned"));
-
-  /* Build an svn_lock_t based on the returned ne_lock. */
-  slock = svn_lock_create(pool);
-  slock->path = fs_path.data;
-  slock->token = apr_pstrdup(pool, nlock->token);
-  if (nlock->owner)
-    slock->comment = apr_pstrdup(pool, nlock->owner);
-  slock->owner = apr_pstrdup(pool, ras->lrb->lock_owner);
-  slock->creation_date = ras->lrb->creation_date;
-
-  if (nlock->timeout == NE_TIMEOUT_INFINITE)
-    slock->expiration_date = 0;
-  else if (nlock->timeout > 0)
-    slock->expiration_date = slock->creation_date + 
-                             apr_time_from_sec(nlock->timeout);
-  
-  /* Free neon things. */
-  ne_lock_destroy(nlock);
-  if (ras->lrb->error_parser)
-    ne_xml_destroy(ras->lrb->error_parser);
-
-  *lock = slock;
   return SVN_NO_ERROR;
 }
-
-
-static svn_error_t *
-svn_ra_dav__lock(svn_ra_session_t *session,
-                 apr_hash_t *path_revs,
-                 const char *comment,
-                 svn_boolean_t force,
-                 svn_ra_lock_callback_t lock_func, 
-                 void *lock_baton,
-                 apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_ra_dav__session_t *ras = session->priv;
-  svn_error_t *ret_err = NULL;
-
-  setup_neon_request_hook(ras);
-
-  /* ### TODO for 1.3: Send all the locks over the wire at once.  This
-     loop is just a temporary shim. */
-  for (hi = apr_hash_first(pool, path_revs); hi; hi = apr_hash_next(hi))
-    {
-      svn_lock_t *lock;
-      const void *key;
-      const char *path;
-      void *val;
-      svn_revnum_t *revnum;
-      svn_error_t *err, *callback_err = NULL;
-
-      svn_pool_clear(iterpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      revnum = val;
-
-      err = shim_svn_ra_dav__lock(session, &lock, path, comment, 
-                                  force, *revnum, iterpool);
-
-      if (err && !SVN_ERR_IS_LOCK_ERROR(err))
-        {
-          ret_err = err;
-          goto departure;
-        }
-
-      if (lock_func)
-        callback_err = lock_func(lock_baton, path, TRUE, err ? NULL : lock,
-                                 err, iterpool);
-
-      svn_error_clear(err);
-
-      if (callback_err)
-        {
-          ret_err = callback_err;
-          goto departure;
-        }
-
-    }
-
-  svn_pool_destroy(iterpool);
-
- departure:
-  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras, pool);
-}
-
-
-/* ###TODO for 1.3: Send all lock tokens to the server at once. */
-static svn_error_t *
-shim_svn_ra_dav__unlock(svn_ra_session_t *session,
-                        const char *path,
-                        const char *token,
-                        svn_boolean_t force,
-                        apr_pool_t *pool)
-{
-  svn_ra_dav__session_t *ras = session->priv;
-  int rv;
-  const char *url;
-  struct ne_lock *nlock;
-
-  /* Make a neon lock structure containing token and full URL to unlock. */
-  nlock = ne_lock_create();
-  url = svn_path_url_add_component(ras->url->data, path, pool);  
-  if ((rv = ne_uri_parse(url, &(nlock->uri))))
-    {
-      ne_lock_destroy(nlock);
-      return svn_ra_dav__convert_error(ras->sess, _("Failed to parse URI"),
-                                       rv, pool);
-    }
-
-  /* In the case of 'force', we might not have a token at all.
-     Unfortunately, ne_unlock() insists on sending one, and mod_dav
-     insists on having a valid token for UNLOCK requests.  That means
-     we need to fetch the token. */
-  if (! token)
-    {
-      svn_lock_t *lock;
-
-      SVN_ERR(svn_ra_dav__get_lock(session, &lock, path, pool));
-      if (! lock)
-        return svn_error_createf(SVN_ERR_RA_NOT_LOCKED, NULL,
-                                 _("'%s' is not locked in the repository"),
-                                 path);
-      
-      nlock->token = ne_strdup(lock->token);
-    }
-  else
-    {
-      nlock->token = ne_strdup(token);
-    }
-
-  /* Clear out the lrb... */
-  memset((ras->lrb), 0, sizeof(*ras->lrb));
-
-  /* ...and load it up again. */
-  ras->lrb->pool = pool;
-  ras->lrb->force = force;
-
-  /* Issue UNLOCK request. */
-  rv = ne_unlock(ras->sess, nlock);
-
-  /* Did we get a <D:error> response? */
-  if (ras->lrb->err)
-    {
-      ne_lock_destroy(nlock);
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-
-      return ras->lrb->err;
-    }
-
-  /* Did we get some other sort of neon error? */
-  if (rv)
-    {
-      ne_lock_destroy(nlock);
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-      return svn_ra_dav__convert_error(ras->sess,
-                                       _("Unlock request failed"), rv, pool);
-    }  
-
-  /* Free neon things. */
-  ne_lock_destroy(nlock);
-  if (ras->lrb->error_parser)
-    ne_xml_destroy(ras->lrb->error_parser);
-
-  return SVN_NO_ERROR;
-}
-
-
-static svn_error_t *
-svn_ra_dav__unlock(svn_ra_session_t *session,
-                   apr_hash_t *path_tokens,
-                   svn_boolean_t force,
-                   svn_ra_lock_callback_t lock_func, 
-                   void *lock_baton,
-                   apr_pool_t *pool)
-{
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_ra_dav__session_t *ras = session->priv;
-  svn_error_t *ret_err = NULL;
-
-  setup_neon_request_hook(ras);
-
-  /* ### TODO for 1.3: Send all the lock tokens over the wire at once.
-        This loop is just a temporary shim. */
-  for (hi = apr_hash_first(pool, path_tokens); hi; hi = apr_hash_next(hi))
-    {
-      const void *key;
-      const char *path;
-      void *val;
-      const char *token;
-      svn_error_t *err, *callback_err = NULL; 
-
-      svn_pool_clear(iterpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      /* Since we can't store NULL values in a hash, we turn "" to
-         NULL here. */
-      if (strcmp(val, "") != 0)
-        token = val;
-      else
-        token = NULL;
-
-      err = shim_svn_ra_dav__unlock(session, path, token, force, iterpool);
-
-      if (err && !SVN_ERR_IS_UNLOCK_ERROR(err))
-        {
-          ret_err = err;
-          goto departure;
-        }
-
-      if (lock_func)
-        callback_err = lock_func(lock_baton, path, FALSE, NULL, err, iterpool);
-
-      svn_error_clear(err);
-
-      if (callback_err)
-        {
-          ret_err = callback_err;
-          goto departure;
-        }
-    }
-
-  svn_pool_destroy(iterpool);
-
- departure:
-  return svn_ra_dav__maybe_store_auth_info_after_result(ret_err, ras, pool);
-}
-
-
-/* A context for lock_receiver(). */
-struct receiver_baton
-{
-  /* Set this if something goes wrong. */
-  svn_error_t *err;
-  
-  /* The thing being retrieved and assembled. */
-  svn_lock_t *lock;
-
-  /* Our RA session. */
-  svn_ra_dav__session_t *ras;
-
-  /* The baton used by the handle_creation_date() callback */
-  struct lock_request_baton *lrb;
-  
-  /* The absolute FS path that we're querying. */
-  const char *fs_path;
-
-  /* A place to allocate the lock. */
-  apr_pool_t *pool;
-};
-
-
-/* A callback of type ne_lock_result;  called by ne_lock_discover(). */
-static void
-lock_receiver(void *userdata,
-              const struct ne_lock *lock,
-#ifdef SVN_NEON_0_26
-              const ne_uri *uri,
-#else
-              const char *uri,
-#endif
-              const ne_status *status)
-{
-  struct receiver_baton *rb = userdata;
-
-  if (lock)
-    {
-      /* The post_send hook has not run at this stage; so grab the 
-         response headers early.  As Joe Orton explains in Issue
-         #2297: "post_send hooks run much later than the name might
-         suggest.  I've noted another API change for a future neon
-         release to make that easier." */
-      if (post_send_hook(rb->lrb->request, rb->lrb, 
-                         ne_get_status(rb->lrb->request)))
-        {
-          return;
-        }
-
-      if (!rb->lrb->lock_owner || !rb->lrb->creation_date)
-        {
-          rb->err = svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                     _("Incomplete lock data returned"));
-          return;
-        }
-      /* Convert the ne_lock into an svn_lock_t. */
-      rb->lock = svn_lock_create(rb->pool);
-      rb->lock->token = apr_pstrdup(rb->pool, lock->token);
-      rb->lock->path = rb->fs_path;
-      if (lock->owner)
-        rb->lock->comment = apr_pstrdup(rb->pool, lock->owner);
-      rb->lock->owner = apr_pstrdup(rb->pool, rb->lrb->lock_owner);
-      rb->lock->creation_date = rb->lrb->creation_date;
-      if (lock->timeout == NE_TIMEOUT_INFINITE)
-        rb->lock->expiration_date = 0;
-      else if (lock->timeout > 0)
-        rb->lock->expiration_date = rb->lock->creation_date + 
-                                    apr_time_from_sec(lock->timeout);      
-    }
-  else
-    {
-      /* There's no lock... is that because the path isn't locked?  Or
-         because of a real error?  */
-      if (status->code != 404)
-        rb->err = svn_error_create(SVN_ERR_RA_DAV_PROPS_NOT_FOUND, NULL,
-                                   status->reason_phrase);
-    }
-}
-
-
-svn_error_t *
-svn_ra_dav__get_lock(svn_ra_session_t *session,
-                     svn_lock_t **lock,
-                     const char *path,
-                     apr_pool_t *pool)
-{
-  svn_ra_dav__session_t *ras = session->priv;
-  int rv;
-  const char *url;
-  struct receiver_baton *rb;
-  svn_string_t fs_path;
-  svn_error_t *err;
-  ne_uri uri;
-
-  /* To begin, we convert the incoming path into an absolute fs-path. */
-  url = svn_path_url_add_component(ras->url->data, path, pool);  
-
-  err = svn_ra_dav__get_baseline_info(NULL, NULL, &fs_path, NULL, ras->sess,
-                                      url, SVN_INVALID_REVNUM, pool);
-  SVN_ERR(svn_ra_dav__maybe_store_auth_info_after_result(err, ras, pool));
-
-  /* Build context for neon callbacks and then register them. */
-  setup_neon_request_hook(ras);
-  memset((ras->lrb), 0, sizeof(*ras->lrb));
-  ras->lrb->pool = pool;
-
-  /* Build context for the lock_receiver() callback. */
-  rb = apr_pcalloc(pool, sizeof(*rb));
-  rb->pool = pool;
-  rb->ras = ras;
-  rb->lrb = ras->lrb;
-  rb->fs_path = fs_path.data;
-
-  /* Ask neon to "discover" the lock (presumably by doing a PROPFIND
-     for the DAV:supportedlock property). */
-  
-  /* ne_lock_discover wants just the path, so parse it out of the url. */
-  if (ne_uri_parse(url, &uri) == 0)
-    {
-      url = apr_pstrdup(pool, uri.path);
-      ne_uri_free(&uri);
-    }
-
-  rv = ne_lock_discover(ras->sess, url, lock_receiver, rb);
-
-  /* Did we get a <D:error> response? */
-  if (ras->lrb->err)
-    {
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-      return ras->lrb->err;
-    }
-
-  /* Did lock_receiver() generate an error? */
-  if (rb->err)
-    {
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-      return rb->err;
-    }
-
-  /* Did we get some other sort of neon error? */
-  if (rv)
-    {
-      if (ras->lrb->error_parser)
-        ne_xml_destroy(ras->lrb->error_parser);
-      return svn_ra_dav__convert_error(ras->sess,
-                                       _("Failed to fetch lock information"),
-                                       rv, pool);
-    }  
-
-  /* Free neon things. */
-  if (ras->lrb->error_parser)
-    ne_xml_destroy(ras->lrb->error_parser);
-  
-  *lock = rb->lock;
-  return SVN_NO_ERROR;
-}
-
-
 
 
 static const svn_version_t *

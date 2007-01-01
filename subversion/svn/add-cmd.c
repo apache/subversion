@@ -58,7 +58,7 @@ svn_cl__add(apr_getopt_t *os,
   subpool = svn_pool_create(pool);
   for (i = 0; i < targets->nelts; i++)
     {
-      const char *target = ((const char **) (targets->elts))[i];
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));

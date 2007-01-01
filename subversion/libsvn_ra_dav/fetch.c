@@ -19,6 +19,7 @@
 
 
 #include <assert.h>
+#include <stdlib.h> /* for free() */
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h> /* for strcmp() */
@@ -29,13 +30,7 @@
 #include <apr_md5.h>
 #include <apr_xml.h>
 
-#include <ne_socket.h>
 #include <ne_basic.h>
-#include <ne_utils.h>
-#include <ne_props.h>
-#include <ne_xml.h>
-#include <ne_request.h>
-#include <ne_compress.h>
 
 #include "svn_error.h"
 #include "svn_pools.h"
@@ -60,7 +55,7 @@ typedef struct {
   /* the information for this subdir. if rsrc==NULL, then this is a sentinel
      record in fetch_ctx_t.subdirs to close the directory implied by the
      parent_baton member. */
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav__resource_t *rsrc;
 
   /* the directory containing this subdirectory. */
   void *parent_baton;
@@ -87,10 +82,8 @@ typedef struct {
 } file_write_ctx_t;
 
 typedef struct {
-  svn_error_t *err;             /* propagate an error out of the reader */
-
+  svn_ra_dav__request_t *req;   /* Used to propagate errors out of the reader */
   int checked_type;             /* have we processed ctype yet? */
-  ne_content_type ctype;        /* the Content-Type header */
 
   void *subctx;
 } custom_get_ctx_t;
@@ -381,29 +374,12 @@ static svn_error_t *add_props(apr_hash_t *props,
     }
   return SVN_NO_ERROR;
 }
-                      
-
-/* This implements the svn_ra_dav__request_interrogator() interface.
-   USERDATA is 'ne_content_type *'. */
-static svn_error_t *interrogate_for_content_type(ne_request *req,
-                                                 int dispatch_return_val,
-                                                 void *userdata)
-{
-  ne_content_type *ctype = userdata;
-
-  if (ne_get_content_type(req, ctype) != 0)
-    return svn_error_createf
-      (SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
-       _("Could not get content-type from response"));
-
-  return SVN_NO_ERROR;
-}
 
 
-static svn_error_t *custom_get_request(ne_session *sess,
+static svn_error_t *custom_get_request(svn_ra_dav__session_t *ras,
                                        const char *url,
                                        const char *relpath,
-                                       ne_block_reader reader,
+                                       svn_ra_dav__block_reader reader,
                                        void *subctx,
                                        svn_ra_get_wc_prop_func_t get_wc_prop,
                                        void *cb_baton,
@@ -413,10 +389,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
   custom_get_ctx_t cgc = { 0 };
   const char *delta_base;
   svn_ra_dav__request_t *request;
-  ne_request *req;
   svn_error_t *err;
-  svn_ra_dav__session_t *ras = ne_get_session_private(sess,
-                                                      SVN_RA_NE_SESSION_ID);
 
   if (use_base)
     {
@@ -431,14 +404,7 @@ static svn_error_t *custom_get_request(ne_session *sess,
       delta_base = NULL;
     }
 
-  request = svn_ra_dav__request_create(sess, ras, "GET", url, pool);
-  req = request->req;
-  if (req == NULL)
-    {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               _("Could not create a GET request for '%s'"),
-                               url);
-    }
+  request = svn_ra_dav__request_create(ras, "GET", url, pool);
 
   if (delta_base)
     {
@@ -450,52 +416,35 @@ static svn_error_t *custom_get_request(ne_session *sess,
          get mod_dav updated and the backend APIs expanded, then we
          can switch to using the If: header. For now, use a custom
          header to specify the version resource to use as the base. */
-      ne_add_request_header(req, SVN_DAV_DELTA_BASE_HEADER, delta_base);
+      ne_add_request_header(request->ne_req,
+                            SVN_DAV_DELTA_BASE_HEADER, delta_base);
     }
 
   svn_ra_dav__add_response_body_reader(request, ne_accept_2xx, reader, &cgc);
 
   /* complete initialization of the body reading context */
+  cgc.req = request;
   cgc.subctx = subctx;
 
   /* run the request */
-  err = svn_ra_dav__request_dispatch(NULL, request,
+  err = svn_ra_dav__request_dispatch(NULL, request, NULL, NULL,
                                      200 /* OK */,
                                      226 /* IM Used */,
-                                     interrogate_for_content_type, &cgc.ctype,
                                      pool);
   svn_ra_dav__request_destroy(request);
 
-  /* we no longer need this */
-  if (cgc.ctype.value != NULL)
-    free(cgc.ctype.value);
-
-  /* if there was an error writing the contents, then return it rather
-     than Neon-related errors */
-  if (cgc.err)
-    {
-      svn_error_clear(err);
-      return cgc.err;
-    }
+  /* The request runner raises internal errors before Neon errors,
+     pass a returned error to our callers */
 
   return err;
 }
 
-/* This implements the ne_block_reader() callback interface. */
-static int
+/* This implements the svn_ra_dav__block_reader() callback interface. */
+static svn_error_t *
 fetch_file_reader(void *userdata, const char *buf, size_t len)
 {
   custom_get_ctx_t *cgc = userdata;
   file_read_ctx_t *frc = cgc->subctx;
-
-  if (cgc->err)
-    {
-      /* We must have gotten an error during the last read. */
-      /* Abort the rest of the read. */
-      /* ### Call ne_set_error(), as ne_block_reader doc implies? */
-      return 1;
-
-    }
 
   if (len == 0)
     {
@@ -505,11 +454,17 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
   if (!cgc->checked_type)
     {
+      ne_content_type ctype = { 0 };
+      int rv = ne_get_content_type(cgc->req->ne_req, &ctype);
 
-      if (cgc->ctype.type
-          && cgc->ctype.subtype
-          && !strcmp(cgc->ctype.type, "application") 
-          && !strcmp(cgc->ctype.subtype, "vnd.svn-svndiff"))
+      if (rv != 0)
+        return
+          svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS, NULL,
+                           _("Could not get content-type from response"));
+
+      /* Neon guarantees non-NULL values when rv==0 */
+      if (!strcmp(ctype.type, "application")
+          && !strcmp(ctype.subtype, "vnd.svn-svndiff"))
         {
           /* we are receiving an svndiff. set things up. */
           frc->stream = svn_txdelta_parse_svndiff(frc->handler,
@@ -517,6 +472,9 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
                                                   TRUE,
                                                   frc->pool);
         }
+
+      if (ctype.value)
+        free(ctype.value);
 
       cgc->checked_type = 1;
     }
@@ -543,7 +501,9 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
       /* We can't really do anything useful if we get an error here.  Pass
          it off to someone who can. */
-      cgc->err = (*frc->handler)(&window, frc->handler_baton);
+      SVN_RA_DAV__REQ_ERR
+        (cgc->req,
+         (*frc->handler)(&window, frc->handler_baton));
     }
   else
     {
@@ -551,7 +511,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
 
       apr_size_t written = len;
 
-      cgc->err = svn_stream_write(frc->stream, buf, &written);
+      SVN_ERR(svn_stream_write(frc->stream, buf, &written));
 
       /* ### the svndiff stream parser does not obey svn_stream semantics
          ### in its write handler. it does not output the number of bytes
@@ -575,7 +535,7 @@ fetch_file_reader(void *userdata, const char *buf, size_t len)
   return 0;
 }
 
-static svn_error_t *simple_fetch_file(ne_session *sess,
+static svn_error_t *simple_fetch_file(svn_ra_dav__session_t *ras,
                                       const char *url,
                                       const char *relpath,
                                       svn_boolean_t text_deltas,
@@ -604,7 +564,7 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
 
   frc.pool = pool;
 
-  SVN_ERR(custom_get_request(sess, url, relpath,
+  SVN_ERR(custom_get_request(ras, url, relpath,
                              fetch_file_reader, &frc,
                              get_wc_prop, cb_baton,
                              TRUE, pool));
@@ -615,14 +575,12 @@ static svn_error_t *simple_fetch_file(ne_session *sess,
   return SVN_NO_ERROR;
 }
 
-/* Helper (neon callback) for svn_ra_dav__get_file.  This implements
-   the ne_block_reader() callback interface. */
-static int
+/* Helper for svn_ra_dav__get_file.  This implements
+   the svn_ra_dav__block_reader() callback interface. */
+static svn_error_t *
 get_file_reader(void *userdata, const char *buf, size_t len)
 {
   custom_get_ctx_t *cgc = userdata;
-  apr_size_t wlen;
-  svn_error_t *err;
 
   /* The stream we want to push data at. */
   file_write_ctx_t *fwc = cgc->subctx; 
@@ -632,21 +590,9 @@ get_file_reader(void *userdata, const char *buf, size_t len)
     apr_md5_update(&(fwc->md5_context), buf, len);
 
   /* Write however many bytes were passed in by neon. */
-  wlen = len;
-  err = svn_stream_write(stream, buf, &wlen);
+  SVN_ERR(svn_stream_write(stream, buf, &len));
 
-  /* Technically, if the write came up short then there's guaranteed
-     to be an error anyway, so we only really need to check for error.
-     But heck, why not gather as much information as possible about
-     what happened before tossing it all and just returning non-zero? */
-  if (err || (wlen != len))
-    {
-      /* ### Call ne_set_error(), as ne_block_reader doc implies? */
-      svn_error_clear(err);
-      return 1;
-    }
-
-  return 0;
+  return SVN_NO_ERROR;
 }
 
 
@@ -676,7 +622,7 @@ add_prop_to_hash(void *baton,
 */
 static svn_error_t *
 filter_props(apr_hash_t *props,
-             svn_ra_dav_resource_t *rsrc,
+             svn_ra_dav__resource_t *rsrc,
              svn_boolean_t add_entry_props,
              apr_pool_t *pool)
 {
@@ -745,7 +691,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
                                   apr_hash_t **props,
                                   apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav__resource_t *rsrc;
   const char *final_url;
   svn_ra_dav__session_t *ras = session->priv;
   const char *url = svn_path_url_add_component(ras->url->data, path, pool);
@@ -764,7 +710,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL,
                                             &bc_url, &bc_relative,
                                             &got_rev,
-                                            ras->sess,
+                                            ras,
                                             url, revision,
                                             pool));
       final_url = svn_path_url_add_component(bc_url.data,
@@ -788,7 +734,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
          svn_ra_dav__get_baseline_info() call above; that will prevent
          the extra round trip, at least some of the time. */
       err = svn_ra_dav__get_one_prop(&expected_checksum,
-                                     ras->sess,
+                                     ras,
                                      final_url,
                                      NULL,
                                      &md5_propname,
@@ -814,7 +760,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
         apr_md5_init(&(fwc.md5_context));
 
       /* Fetch the file, shoving it at the provided stream. */
-      SVN_ERR(custom_get_request(ras->sess, final_url, path,
+      SVN_ERR(custom_get_request(ras, final_url, path,
                                  get_file_reader, &fwc,
                                  ras->callbacks->get_wc_prop,
                                  ras->callback_baton,
@@ -837,7 +783,7 @@ svn_error_t *svn_ra_dav__get_file(svn_ra_session_t *session,
 
   if (props)
     {
-      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras->sess, final_url, 
+      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras, final_url, 
                                              NULL, NULL /* all props */, 
                                              pool)); 
       *props = apr_hash_make(pool);
@@ -864,7 +810,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                                  apr_uint32_t dirent_fields,
                                  apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc;
+  svn_ra_dav__resource_t *rsrc;
   apr_hash_index_t *hi;
   apr_hash_t *resources;
   const char *final_url;
@@ -887,7 +833,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL,
                                             &bc_url, &bc_relative,
                                             &got_rev,
-                                            ras->sess,
+                                            ras,
                                             url, revision,
                                             pool));
       final_url = svn_path_url_add_component(bc_url.data,
@@ -904,7 +850,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
   {
     const svn_string_t *deadprop_count;
   
-    SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras->sess,
+    SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras,
                                            final_url, NULL,
                                            deadprop_count_support_props,
                                            pool));
@@ -1002,8 +948,8 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
 
       /* Just like Nautilus, Cadaver, or any other browser, we do a
          PROPFIND on the directory of depth 1. */
-      SVN_ERR(svn_ra_dav__get_props(&resources, ras->sess,
-                                    final_url, NE_DEPTH_ONE,
+      SVN_ERR(svn_ra_dav__get_props(&resources, ras,
+                                    final_url, SVN_RA_DAV__DEPTH_ONE,
                                     NULL, which_props, pool));
       
       /* Count the number of path components in final_url. */
@@ -1020,7 +966,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
           const void *key;
           void *val;
           const char *childname;
-          svn_ra_dav_resource_t *resource;
+          svn_ra_dav__resource_t *resource;
           const svn_string_t *propval;
           apr_hash_index_t *h;
           svn_dirent_t *entry;
@@ -1029,8 +975,9 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
           childname =  key;
           resource = val;
           
-          /* Skip the effective '.' entry that comes back from NE_DEPTH_ONE.
-             The children must have one more component then final_url.
+          /* Skip the effective '.' entry that comes back from
+             SVN_RA_DAV__DEPTH_ONE. The children must have one more
+             component then final_url.
              Note that we can't just strcmp the URLs because of URL encoding
              differences (i.e. %3c vs. %3C etc.) */
           if (svn_path_component_count(childname) == final_url_n_components)
@@ -1091,8 +1038,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
                        h; h = apr_hash_next(h))
                     {
                       const void *kkey;
-                      void *vval;
-                      apr_hash_this(h, &kkey, NULL, &vval);
+                      apr_hash_this(h, &kkey, NULL, NULL);
                   
                       if (strncmp((const char *) kkey, SVN_DAV_PROP_NS_CUSTOM,
                                   sizeof(SVN_DAV_PROP_NS_CUSTOM) - 1) == 0
@@ -1141,7 +1087,7 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
 
   if (props)                    
     {
-      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras->sess, final_url, 
+      SVN_ERR(svn_ra_dav__get_props_resource(&rsrc, ras, final_url, 
                                              NULL, NULL /* all props */, 
                                              pool)); 
 
@@ -1167,7 +1113,7 @@ svn_error_t *svn_ra_dav__get_latest_revnum(svn_ra_session_t *session,
   /* we don't need any of the baseline URLs and stuff, but this does
      give us the latest revision number */
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, NULL, latest_revnum,
-                                        ras->sess, ras->root.path,
+                                        ras, ras->root.path,
                                         SVN_INVALID_REVNUM, pool));
 
   SVN_ERR(svn_ra_dav__maybe_store_auth_info(ras, pool));
@@ -1191,28 +1137,47 @@ svn_error_t *svn_ra_dav__get_latest_revnum(svn_ra_session_t *session,
 ** the end-element handler for DAV:version-name.
 */
 
-/* This implements the `svn_ra_dav__xml_validate_cb' prototype. */
-static int drev_validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
-                                 svn_ra_dav__xml_elmid child)
+typedef struct
 {
-  return SVN_RA_DAV__XML_VALID;
-}
+  svn_stringbuf_t *cdata;
+  apr_pool_t *pool;
+  svn_revnum_t revision;
+} drev_baton_t;
+
 
 /* This implements the `svn_ra_dav__xml_startelm_cb' prototype. */
-static int drev_start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                              const char **atts)
+static svn_error_t *
+drev_start_element(int *elem, void *baton, int parent,
+                   const char *nspace, const char *name, const char **atts)
 {
-  return SVN_RA_DAV__XML_VALID;
+  const svn_ra_dav__xml_elm_t *elm =
+    svn_ra_dav__lookup_xml_elem(drev_report_elements, nspace, name);
+  drev_baton_t *b = baton;
+
+  *elem = elm ? elm->id : SVN_RA_DAV__XML_DECLINE;
+  if (!elm)
+    return SVN_NO_ERROR;
+
+  if (elm->id == ELEM_version_name)
+    b->cdata = svn_stringbuf_create("", b->pool);
+
+  return SVN_NO_ERROR;
 }
 
 /* This implements the `svn_ra_dav__xml_endelm_cb' prototype. */
-static int drev_end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                            const char *cdata)
+static svn_error_t *
+drev_end_element(void *baton, int state,
+                 const char *nspace, const char *name)
 {
-  if (elm->id == ELEM_version_name)
-    *((svn_revnum_t *) userdata) = SVN_STR_TO_REV(cdata);
+  drev_baton_t *b = baton;
 
-  return SVN_RA_DAV__XML_VALID;
+  if (state == ELEM_version_name && b->cdata)
+    {
+      b->revision = SVN_STR_TO_REV(b->cdata->data);
+      b->cdata = NULL;
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
@@ -1224,11 +1189,15 @@ svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
   const char *body;
   const char *vcc_url;
   svn_error_t *err;
+  drev_baton_t *b = apr_palloc(pool, sizeof(*b));
+
+  b->pool = pool;
+  b->cdata = NULL;
+  b->revision = SVN_INVALID_REVNUM;
 
   /* Run the 'dated-rev-report' on the VCC url, which is always
      guaranteed to exist.   */
-  SVN_ERR(svn_ra_dav__get_vcc(&vcc_url, ras->sess, ras->root.path, pool));
-  
+  SVN_ERR(svn_ra_dav__get_vcc(&vcc_url, ras, ras->root.path, pool));
 
   body = apr_psprintf(pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
@@ -1238,23 +1207,23 @@ svn_error_t *svn_ra_dav__get_dated_revision(svn_ra_session_t *session,
                       "</S:dated-rev-report>",
                       svn_time_to_cstring(timestamp, pool));
 
-  *revision = SVN_INVALID_REVNUM;
-  err = svn_ra_dav__parsed_request_compat(ras->sess, "REPORT",
-                                          vcc_url, body, NULL, NULL,
-                                          drev_report_elements,
-                                          drev_validate_element,
-                                          drev_start_element, drev_end_element,
-                                          revision, NULL, NULL, FALSE, pool);
+  err = svn_ra_dav__parsed_request(ras, "REPORT",
+                                   vcc_url, body, NULL, NULL,
+                                   drev_start_element,
+                                   svn_ra_dav__xml_collect_cdata,
+                                   drev_end_element,
+                                   b, NULL, NULL, FALSE, pool);
   if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
     return svn_error_quick_wrap(err, _("Server does not support date-based "
                                        "operations"));
   else if (err)
     return err;
 
-  if (*revision == SVN_INVALID_REVNUM)
+  if (b->revision == SVN_INVALID_REVNUM)
     return svn_error_create(SVN_ERR_INCOMPLETE_DATA, NULL,
                             _("Invalid server response to dated-rev request"));
 
+  *revision = b->revision;
   return SVN_NO_ERROR;
 }
 
@@ -1383,13 +1352,13 @@ svn_ra_dav__get_locations(svn_ra_session_t *session,
      dav_get_resource() to choke on the server.  So instead, we pass a
      baseline-collection URL, which we get from the peg revision.  */
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                        ras->sess, ras->url->data,
+                                        ras, ras->url->data,
                                         peg_revision,
                                         pool));
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             pool);
 
-  err = svn_ra_dav__parsed_request(ras->sess, "REPORT", final_bc_url,
+  err = svn_ra_dav__parsed_request(ras, "REPORT", final_bc_url,
                                    request_body->data, NULL, NULL,
                                    gloc_start_element, NULL, NULL,
                                    &request_baton, NULL, &status_code,
@@ -1704,7 +1673,7 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
      possibly be a lock, so we just return no locks. */
   url = svn_path_url_add_component(ras->url->data, path, pool);
 
-  err = svn_ra_dav__parsed_request(ras->sess, "REPORT", url,
+  err = svn_ra_dav__parsed_request(ras, "REPORT", url,
                                    body, NULL, NULL,
                                    getlocks_start_element,
                                    getlocks_cdata_handler,
@@ -1755,7 +1724,7 @@ svn_error_t *svn_ra_dav__change_rev_prop(svn_ra_session_t *session,
                                          apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  svn_ra_dav_resource_t *baseline;
+  svn_ra_dav__resource_t *baseline;
   svn_error_t *err;
   apr_hash_t *prop_changes = NULL;
   apr_array_header_t *prop_deletes = NULL;
@@ -1783,7 +1752,7 @@ svn_error_t *svn_ra_dav__change_rev_prop(svn_ra_session_t *session,
 
   /* Get the baseline resource. */
   SVN_ERR(svn_ra_dav__get_baseline_props(NULL, &baseline,
-                                         ras->sess, 
+                                         ras,
                                          ras->url->data,
                                          rev,
                                          wanted_props, /* DAV:auto-version */
@@ -1824,13 +1793,13 @@ svn_error_t *svn_ra_dav__rev_proplist(svn_ra_session_t *session,
                                       apr_pool_t *pool)
 {
   svn_ra_dav__session_t *ras = session->priv;
-  svn_ra_dav_resource_t *baseline;
+  svn_ra_dav__resource_t *baseline;
 
   *props = apr_hash_make(pool);
 
   /* Main objective: do a PROPFIND (allprops) on a baseline object */  
   SVN_ERR(svn_ra_dav__get_baseline_props(NULL, &baseline,
-                                         ras->sess, 
+                                         ras,
                                          ras->url->data,
                                          rev,
                                          NULL, /* get ALL properties */
@@ -1880,9 +1849,12 @@ svn_error_t *svn_ra_dav__rev_prop(svn_ra_session_t *session,
 ** ### next are subdir elems, possibly fetch-file, then fetch-prop.
 */
 
-/* This implements the `svn_ra_dav__xml_validate_cb' prototype. */
-static int validate_element(void *userdata,
-                            svn_ra_dav__xml_elmid parent,
+/* Determine whether we're receiving the expected XML response.
+   Return CHILD when interested in receiving the child's contents
+   or one of SVN_RA_DAV__XML_INVALID and SVN_RA_DAV__XML_DECLINE
+   when respectively this is the incorrect response or
+   the element (and its children) are uninteresting */
+static int validate_element(svn_ra_dav__xml_elmid parent,
                             svn_ra_dav__xml_elmid child)
 {
   /* We're being very strict with the validity of XML elements here. If
@@ -1895,7 +1867,7 @@ static int validate_element(void *userdata,
     {
     case ELEM_root:
       if (child == ELEM_update_report)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -1903,19 +1875,19 @@ static int validate_element(void *userdata,
       if (child == ELEM_target_revision
           || child == ELEM_open_directory
           || child == ELEM_resource_walk)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_resource_walk:
       if (child == ELEM_resource)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_resource:
       if (child == ELEM_checked_in)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -1932,7 +1904,7 @@ static int validate_element(void *userdata,
           || child == ELEM_delete_entry
           || child == ELEM_SVN_prop
           || child == ELEM_checked_in)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -1944,7 +1916,7 @@ static int validate_element(void *userdata,
           || child == ELEM_set_prop
           || child == ELEM_SVN_prop
           || child == ELEM_checked_in)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -1956,7 +1928,7 @@ static int validate_element(void *userdata,
           || child == ELEM_fetch_props
           || child == ELEM_set_prop
           || child == ELEM_remove_prop)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -1965,19 +1937,19 @@ static int validate_element(void *userdata,
           || child == ELEM_txdelta
           || child == ELEM_set_prop
           || child == ELEM_SVN_prop)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_checked_in:
       if (child == ELEM_href)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_set_prop:
       /* Prop name is an attribute, prop value is CDATA, so no child elts. */
-      return SVN_RA_DAV__XML_VALID;
+      return child;
 
     case ELEM_SVN_prop:
       /*      if (child == ELEM_version_name
@@ -1986,14 +1958,14 @@ static int validate_element(void *userdata,
               || child == ELEM_md5_checksum
               || child == ELEM_repository_uuid
               || child == ELEM_remove_prop)
-              return SVN_RA_DAV__XML_VALID;
+              return child;
               else
               return SVN_RA_DAV__XML_DECLINE;
       */
       /* ### TODO:  someday uncomment the block above, and make the
          else clause return NE_XML_IGNORE.  But first, neon needs to
          define that value.  :-) */
-      return SVN_RA_DAV__XML_VALID;
+      return child;
 
     default:
       return SVN_RA_DAV__XML_DECLINE;
@@ -2016,8 +1988,8 @@ static void push_dir(report_baton_t *rb,
 }
 
 /* This implements the `ne_xml_startelm_cb' prototype. */
-static svn_error_t * 
-start_element(int *elem, void *userdata, int parent_state, const char *nspace,
+static svn_error_t *
+start_element(int *elem, void *userdata, int parent, const char *nspace,
               const char *elt_name, const char **atts)
 {
   report_baton_t *rb = userdata;
@@ -2033,28 +2005,11 @@ start_element(int *elem, void *userdata, int parent_state, const char *nspace,
   apr_pool_t *subpool;
   const char *base_checksum = NULL;
   const svn_ra_dav__xml_elm_t *elm;
-  int rc;
 
   elm = svn_ra_dav__lookup_xml_elem(report_elements, nspace, elt_name);
-
-  if (elm == NULL)
-    {
-      *elem = NE_XML_DECLINE;
-      return SVN_NO_ERROR;
-    }
-
-  rc = validate_element(NULL, parent_state, elm->id);
-
-  if (rc != SVN_RA_DAV__XML_VALID)
-    {
-      if (rc == SVN_RA_DAV__XML_DECLINE)
-        {
-          *elem = NE_XML_DECLINE;
-          return SVN_NO_ERROR;
-        }
-      else
-        return UNEXPECTED_ELEMENT(nspace, elt_name);
-    }
+  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  if (*elem < 1) /* not a valid element */
+    return SVN_NO_ERROR;
 
   switch (elm->id)
     {
@@ -2206,9 +2161,9 @@ start_element(int *elem, void *userdata, int parent_state, const char *nspace,
         {
           apr_hash_t *bc_children;
           SVN_ERR(svn_ra_dav__get_props(&bc_children,
-                                        rb->ras->sess2,
+                                        rb->ras,
                                         bc_url,
-                                        NE_DEPTH_ONE,
+                                        SVN_RA_DAV__DEPTH_ONE,
                                         NULL, NULL /* allprops */,
                                         TOP_DIR(rb).pool));
           
@@ -2223,12 +2178,11 @@ start_element(int *elem, void *userdata, int parent_state, const char *nspace,
               for (hi = apr_hash_first(TOP_DIR(rb).pool, bc_children);
                    hi; hi = apr_hash_next(hi))
                 {
-                  const void *key;
                   void *val;
-                  svn_ra_dav_resource_t *rsrc;
+                  svn_ra_dav__resource_t *rsrc;
                   const svn_string_t *vc_url;
 
-                  apr_hash_this(hi, &key, NULL, &val);
+                  apr_hash_this(hi, NULL, NULL, &val);
                   rsrc = val;
 
                   vc_url = apr_hash_get(rsrc->propset,
@@ -2404,7 +2358,7 @@ start_element(int *elem, void *userdata, int parent_state, const char *nspace,
       if (! rb->receiving_all)
         {
           /* assert: rb->href->len > 0 */
-          SVN_ERR(simple_fetch_file(rb->ras->sess2, 
+          SVN_ERR(simple_fetch_file(rb->ras,
                                     rb->href->data,
                                     TOP_DIR(rb).pathbuf->data,
                                     rb->fetch_content,
@@ -2455,7 +2409,7 @@ start_element(int *elem, void *userdata, int parent_state, const char *nspace,
 static svn_error_t *
 add_node_props(report_baton_t *rb, apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *rsrc = NULL;
+  svn_ra_dav__resource_t *rsrc = NULL;
   apr_hash_t *props = NULL;
 
   /* Do nothing if parsing a modern report, because the properties
@@ -2480,7 +2434,7 @@ add_node_props(report_baton_t *rb, apr_pool_t *pool)
                                        APR_HASH_KEY_STRING))) )
         {
           SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
-                                                 rb->ras->sess2,
+                                                 rb->ras,
                                                  rb->href->data,
                                                  NULL,
                                                  NULL,
@@ -2507,7 +2461,7 @@ add_node_props(report_baton_t *rb, apr_pool_t *pool)
                                        APR_HASH_KEY_STRING))) )
         {
           SVN_ERR(svn_ra_dav__get_props_resource(&rsrc,
-                                                 rb->ras->sess2,
+                                                 rb->ras,
                                                  TOP_DIR(rb).vsn_url,
                                                  NULL,
                                                  NULL,
@@ -2619,7 +2573,7 @@ end_element(void *userdata, int state,
       /* fetch file */
       if (! rb->receiving_all)
         {
-          SVN_ERR(simple_fetch_file(rb->ras->sess2,
+          SVN_ERR(simple_fetch_file(rb->ras,
                                     rb->href->data,
                                     TOP_DIR(rb).pathbuf->data,
                                     rb->fetch_content,
@@ -2874,7 +2828,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
      Collection (BC) URL that represents the revision -- and a
      relative path under that BC.  */
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, NULL, &bc_relative, NULL,
-                                        rb->ras->sess,
+                                        rb->ras,
                                         url, revision,
                                         pool));
   
@@ -2953,7 +2907,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
 
   /* get the VCC.  if this doesn't work out for us, don't forget to
      remove the tmpfile before returning the error. */
-  if ((err = svn_ra_dav__get_vcc(&vcc, rb->ras->sess, 
+  if ((err = svn_ra_dav__get_vcc(&vcc, rb->ras,
                                  rb->ras->url->data, pool)))
     {
       (void) apr_file_close(rb->tmpfile);
@@ -2961,7 +2915,7 @@ static svn_error_t * reporter_finish_report(void *report_baton,
     }
 
   /* dispatch the REPORT. */
-  err = svn_ra_dav__parsed_request(rb->ras->sess, "REPORT", vcc,
+  err = svn_ra_dav__parsed_request(rb->ras, "REPORT", vcc,
                                    NULL, rb->tmpfile, NULL,
                                    start_element,
                                    cdata_handler,

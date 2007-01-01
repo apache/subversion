@@ -336,6 +336,10 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
       info = push_state(parser, ctx, APPLY_TEXTDELTA);
 
       checksum = svn_ra_serf__find_attr(attrs, "checksum");
+      if (checksum)
+        {
+          checksum = apr_pstrdup(info->pool, checksum);
+        }
 
       SVN_ERR(ctx->editor->apply_textdelta(info->baton, checksum,
                                            info->pool,
@@ -366,7 +370,6 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
     {
       const char *prop_name;
       prop_info_t *info;
-      svn_boolean_t del_prop;
 
       prop_name = svn_ra_serf__find_attr(attrs, "name");
       if (!prop_name)

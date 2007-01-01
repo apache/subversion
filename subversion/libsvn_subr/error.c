@@ -1,7 +1,7 @@
 /* error.c:  common exception handling for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -100,7 +100,9 @@ make_error_internal(apr_status_t apr_err,
 
 #if defined(SVN_DEBUG_ERROR)
   if (! child)
-      apr_pool_cleanup_register(pool, new_error, err_abort, NULL);
+      apr_pool_cleanup_register(pool, new_error,
+                                err_abort,
+                                apr_pool_cleanup_null);
 #endif
 
   return new_error;
@@ -219,7 +221,9 @@ svn_error_compose(svn_error_t *chain, svn_error_t *new_err)
     }
 
 #if defined(SVN_DEBUG_ERROR)
-  apr_pool_cleanup_register(pool, chain, err_abort, NULL);
+  apr_pool_cleanup_register(pool, chain,
+                            err_abort,
+                            apr_pool_cleanup_null);
 #endif
 
   /* Destroy the new error chain. */
@@ -269,7 +273,9 @@ svn_error_dup(svn_error_t *err)
     }
 
 #if defined(SVN_DEBUG_ERROR)
-  apr_pool_cleanup_register(pool, tmp_err, err_abort, NULL);
+  apr_pool_cleanup_register(pool, tmp_err,
+                            err_abort,
+                            apr_pool_cleanup_null);
 #endif
 
   return new_err;

@@ -2,7 +2,7 @@
  * merge.c :  routines for performing a MERGE server requests
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,10 +22,6 @@
 #include <apr_hash.h>
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
-
-#include <ne_socket.h>
-#include <ne_request.h>
-
 
 #include "svn_string.h"
 #include "svn_error.h"
@@ -75,14 +71,16 @@ enum merge_rtype {
 };
 
 typedef struct {
+  /*WARNING: WANT_CDATA should stay the first element in the baton:
+    svn_ra_dav__xml_collect_cdata() assumes the baton starts with a stringbuf.
+  */
+  svn_stringbuf_t *want_cdata;
+  svn_stringbuf_t *cdata;
   apr_pool_t *pool;
 
   /* a clearable subpool of pool, for loops.  Do not use for anything
      that must persist beyond the scope of your function! */
   apr_pool_t *scratchpool;
-
-  /* any error that may have occurred during the MERGE response handling */
-  svn_error_t *err;
 
   /* the BASE_HREF contains the merge target. as resources are specified in
      the merge response, we make their URLs relative to this URL, thus giving
@@ -276,7 +274,12 @@ static svn_error_t * handle_resource(merge_ctx_t *mc,
   return bump_resource(mc, relative, mc->vsn_url->data, pool);
 }
 
-static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
+/* Determine whether we're receiving the expected XML response.
+   Return CHILD when interested in receiving the child's contents
+   or one of SVN_RA_DAV__XML_INVALID and SVN_RA_DAV__XML_DECLINE
+   when respectively this is the incorrect response or
+   the element (and its children) are uninteresting */
+static int validate_element(svn_ra_dav__xml_elmid parent,
                             svn_ra_dav__xml_elmid child)
 {
   if ((child == ELEM_collection || child == ELEM_baseline)
@@ -289,7 +292,7 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
     {
     case ELEM_root:
       if (child == ELEM_merge_response)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
@@ -297,21 +300,21 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
       if (child == ELEM_updated_set
           || child == ELEM_merged_set
           || child == ELEM_ignored_set)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* any child is allowed */
 
     case ELEM_updated_set:
     case ELEM_merged_set:
       if (child == ELEM_response)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
                                            was in there */
 
     case ELEM_ignored_set:
       if (child == ELEM_href)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
                                            was in there */
@@ -320,7 +323,7 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
       if (child == ELEM_href
           || child == ELEM_status
           || child == ELEM_propstat)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else if (child == ELEM_responsedescription)
         /* ### I think we want this... to save a message for the user */
         return SVN_RA_DAV__XML_DECLINE; /* valid, but we don't need to see it */
@@ -330,7 +333,7 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
 
     case ELEM_propstat:
       if (child == ELEM_prop || child == ELEM_status)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else if (child == ELEM_responsedescription)
         /* ### I think we want this... to save a message for the user */
         return SVN_RA_DAV__XML_DECLINE; /* valid, but we don't need to see it */
@@ -346,20 +349,20 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
           || child == ELEM_creator_displayname
           || child == ELEM_post_commit_err
           /* other props */)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* ignore other props */
 
     case ELEM_checked_in:
       if (child == ELEM_href)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
                                            was in there */
 
     case ELEM_resourcetype:
       if (child == ELEM_collection || child == ELEM_baseline)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* ignore if something else
                                            was in there */
@@ -371,10 +374,17 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
   /* NOTREACHED */
 }
 
-static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                         const char **atts)
+static svn_error_t *
+start_element(int *elem, void *baton, int parent,
+              const char *nspace, const char *name, const char **atts)
 {
-  merge_ctx_t *mc = userdata;
+  const svn_ra_dav__xml_elm_t *elm
+    = svn_ra_dav__lookup_xml_elem(merge_elements, nspace, name);
+  merge_ctx_t *mc = baton;
+
+  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  if (*elem < 1) /* not a valid element */
+    return SVN_NO_ERROR;
 
   switch (elm->id)
     {
@@ -429,30 +439,49 @@ static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       break;
     }
 
-  return SVN_RA_DAV__XML_VALID;
+  switch (elm->id)
+    {
+    case ELEM_href:
+    case ELEM_status:
+    case ELEM_version_name:
+    case ELEM_post_commit_err:
+    case ELEM_creationdate:
+    case ELEM_creator_displayname:
+      mc->want_cdata = mc->cdata;
+      svn_stringbuf_setempty(mc->cdata);
+      break;
+
+    default:
+      mc->want_cdata = NULL;
+      break;
+    }
+
+
+  return SVN_NO_ERROR;
 }
 
-static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                       const char *cdata)
+static svn_error_t *
+end_element(void *baton, int state,
+            const char *nspace, const char *name)
 {
-  merge_ctx_t *mc = userdata;
+  merge_ctx_t *mc = baton;
 
-  switch (elm->id)
+  switch (state)
     {
     case ELEM_href:
       switch (mc->href_parent)
         {
         case ELEM_ignored_set:
-          add_ignored(mc, cdata);
+          add_ignored(mc, mc->cdata->data);
           break;
 
         case ELEM_response:
           /* we're now working on this href... */
-          svn_ra_dav__copy_href(mc->href, cdata);
+          svn_ra_dav__copy_href(mc->href, mc->cdata->data);
           break;
 
         case ELEM_checked_in:
-          svn_ra_dav__copy_href(mc->vsn_url, cdata);
+          svn_ra_dav__copy_href(mc->vsn_url, mc->cdata->data);
           break;
         }
       break;
@@ -466,7 +495,7 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       {
         ne_status hs;
 
-        if (ne_parse_statusline(cdata, &hs) != 0)
+        if (ne_parse_statusline(mc->cdata->data, &hs) != 0)
           mc->response_has_error = TRUE;
         else
           {
@@ -478,12 +507,12 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
               }
             free(hs.reason_phrase);
           }
-        if (mc->response_has_error && mc->err == NULL)
+        if (mc->response_has_error)
           {
             /* ### fix this error value */
-            mc->err = svn_error_create(APR_EGENERAL, NULL,
-                                       _("The MERGE property response had an "
-                                         "error status"));
+            return svn_error_create(APR_EGENERAL, NULL,
+                                    _("The MERGE property response had an "
+                                      "error status"));
           }
       }
       break;
@@ -499,20 +528,9 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
 
     case ELEM_response:
       {
-        svn_error_t *err;
-
         /* the end of a DAV:response means that we've seen all the information
            related to this resource. process it. */
-        err = handle_resource(mc, mc->scratchpool);
-        if (err != NULL)
-          {
-            /* ### how best to handle this error? for now, just remember the
-               ### first one found */
-            if (mc->err == NULL)
-              mc->err = err;
-            else
-              svn_error_clear(err);
-          }
+        SVN_ERR(handle_resource(mc, mc->scratchpool));
         svn_pool_clear(mc->scratchpool);
       }
       break;
@@ -525,19 +543,19 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       break;
 
     case ELEM_version_name:
-      svn_stringbuf_set(mc->vsn_name, cdata);
+      svn_stringbuf_set(mc->vsn_name, mc->cdata->data);
       break;
 
     case ELEM_post_commit_err:
-      svn_stringbuf_set(mc->post_commit_err, cdata);
+      svn_stringbuf_set(mc->post_commit_err, mc->cdata->data);
       break;
 
     case ELEM_creationdate:
-      svn_stringbuf_set(mc->committed_date, cdata);
+      svn_stringbuf_set(mc->committed_date, mc->cdata->data);
       break;
 
     case ELEM_creator_displayname:
-      svn_stringbuf_set(mc->last_author, cdata);
+      svn_stringbuf_set(mc->last_author, mc->cdata->data);
       break;
 
     default:
@@ -546,7 +564,7 @@ static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
       break;
     }
 
-  return SVN_RA_DAV__XML_VALID;
+  return SVN_NO_ERROR;
 }
 
 
@@ -678,8 +696,8 @@ svn_error_t * svn_ra_dav__merge_activity(
   const char *body;
   apr_hash_t *extra_headers = NULL;
   svn_stringbuf_t *lockbuf = svn_stringbuf_create("", pool);
-  svn_error_t *err;
 
+  mc.cdata = svn_stringbuf_create("", pool);
   mc.pool = pool;
   mc.scratchpool = svn_pool_create(pool);
   mc.base_href = repos_url;
@@ -734,20 +752,12 @@ svn_error_t * svn_ra_dav__merge_activity(
                       "</D:merge>",
                       activity_url, lockbuf->data);
 
-  err = svn_ra_dav__parsed_request_compat(ras->sess, "MERGE", repos_url,
-                                          body, 0, NULL, merge_elements,
-                                          validate_element, start_element,
-                                          end_element, &mc, extra_headers,
-                                          NULL, FALSE, pool);
-  
-  /* is there an error stashed away in our context? */
-  if (mc.err)
-    {
-      svn_error_clear(err);
-      return mc.err;
-    }
-  else if (err)
-    return err;
+  SVN_ERR(svn_ra_dav__parsed_request(ras, "MERGE", repos_url,
+                                     body, 0, NULL,
+                                     start_element,
+                                     svn_ra_dav__xml_collect_cdata,
+                                     end_element, &mc, extra_headers,
+                                     NULL, FALSE, pool));
 
   /* return some commit properties to the caller. */
   if (new_rev)

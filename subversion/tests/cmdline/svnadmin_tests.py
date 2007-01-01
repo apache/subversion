@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import os
 
 # Our testing module
 import svntest
@@ -68,7 +68,7 @@ def get_txns(repo_dir):
   "Get the txn names using 'svnadmin lstxns'."
 
   output_lines, error_lines = svntest.main.run_svnadmin('lstxns', repo_dir)
-  txns = map(string.strip, output_lines)
+  txns = map(output_lines.strip, output_lines)
 
   # sort, just in case
   txns.sort()
@@ -379,9 +379,7 @@ def setrevprop(sbox):
 
   # Try an author property modification.
   foo_path = os.path.join(sbox.wc_dir, "foo")
-  fp = open(foo_path, "w")
-  fp.write("foo")
-  fp.close()
+  svntest.main.file_write(foo_path, "foo")
 
   output, errput = svntest.main.run_svnadmin("setrevprop", sbox.repo_dir,
                                              "-r0", "svn:author", foo_path)

@@ -40,6 +40,7 @@
 #include "svn_repos.h"
 #include "svn_fs.h"
 #include "svn_version.h"
+#include "svn_io.h"
 
 #include "svn_private_config.h"
 #include "winservice.h"
@@ -324,6 +325,7 @@ int main(int argc, const char *argv[])
   int family = APR_INET;
   int mode_opt_count = 0;
   const char *pid_filename = NULL;
+  svn_node_kind_t kind;
 
   /* Initialize the app. */
   if (svn_cmdline_init("svnserve", stderr) != EXIT_SUCCESS)
@@ -432,6 +434,24 @@ int main(int argc, const char *argv[])
 
         case 'r':
           SVN_INT_ERR(svn_utf_cstring_to_utf8(&params.root, arg, pool));
+
+          err = svn_io_check_resolved_path(params.root, &kind, pool);
+          if (err)
+            {
+              svn_handle_error2(err, stderr, FALSE, "svnserve: ");
+              svn_error_clear(err);
+              return EXIT_FAILURE;
+            }
+          if (kind != svn_node_dir)
+            {
+              svn_error_clear
+                (svn_cmdline_fprintf
+                   (stderr, pool,
+                    _("svnserve: Root path '%s' does not exist "
+                      "or is not a directory.\n"), params.root));
+              return EXIT_FAILURE;
+            }
+
           params.root = svn_path_internal_style(params.root, pool);
           SVN_INT_ERR(svn_path_get_absolute(&params.root, params.root, pool));
           break;

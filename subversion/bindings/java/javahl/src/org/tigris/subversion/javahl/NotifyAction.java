@@ -114,6 +114,12 @@ public interface NotifyAction
     public static final int failed_unlock = 24;
 
     /**
+     * @since 1.5
+     * Tried adding a path that already exists.
+     */
+    public static final int exists = 25;
+
+    /**
      * textual representation of the action types
      */
     public static final String[] actionNames =

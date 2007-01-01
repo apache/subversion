@@ -1,7 +1,7 @@
 /* hooks.c : running repository hooks
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -39,6 +39,110 @@
 
 /*** Hook drivers. ***/
 
+#ifndef AS400
+/* Helper function for run_hook_cmd().  Wait for a hook to finish
+   executing and return either SVN_NO_ERROR if the hook script completed
+   without error, or an error describing the reason for failure.
+
+   NAME and CMD are the name and path of the hook program, CMD_PROC
+   is a pointer to the structure representing the running process,
+   and READ_ERRHANDLE is an open handle to the hook's stderr.
+
+   Hooks are considered to have failed if we are unable to wait for the
+   process, if we are unable to read from the hook's stderr, if the
+   process has failed to exit cleanly (due to a coredump, for example),
+   or if the process returned a non-zero return code.
+
+   Any error output returned by the hook's stderr will be included in an
+   error message, though the presence of output on stderr is not itself
+   a reason to fail a hook. */
+static svn_error_t *
+check_hook_result(const char *name, const char *cmd, apr_proc_t *cmd_proc,
+                  apr_file_t *read_errhandle, apr_pool_t *pool)
+{
+  svn_error_t *err, *err2;
+  svn_stringbuf_t *native_stderr, *failure_message;
+  const char *utf8_stderr;
+  int exitcode;
+  apr_exit_why_e exitwhy;
+
+  err2 = svn_stringbuf_from_aprfile(&native_stderr, read_errhandle, pool);
+
+  err = svn_io_wait_for_cmd(cmd_proc, cmd, &exitcode, &exitwhy, pool);
+  if (err)
+    {
+      svn_error_clear(err2);
+      return err;
+    }
+
+  if (APR_PROC_CHECK_EXIT(exitwhy) && exitcode == 0)
+    {
+      /* The hook exited cleanly.  However, if we got an error reading
+         the hook's stderr, fail the hook anyway, because this might be
+         symptomatic of a more important problem. */
+      if (err2)
+        {
+          return svn_error_createf
+            (SVN_ERR_REPOS_HOOK_FAILURE, err2,
+             _("'%s' hook succeeded, but error output could not be read"),
+             name);
+        }
+
+      return SVN_NO_ERROR;
+    }
+
+  /* The hook script failed. */
+
+  /* If we got the stderr output okay, try to translate it into UTF-8.
+     Ensure there is something sensible in the UTF-8 string regardless. */
+  if (!err2)
+    {
+      err2 = svn_utf_cstring_to_utf8(&utf8_stderr, native_stderr->data, pool);
+      if (err2)
+        utf8_stderr = _("[Error output could not be translated from the "
+                        "native locale to UTF-8.]");
+    }
+  else
+    {
+      utf8_stderr = _("[Error output could not be read.]");
+    }
+  /*### It would be nice to include the text of any translation or read
+        error in the messages above before we clear it here. */
+  svn_error_clear(err2);
+
+  if (!APR_PROC_CHECK_EXIT(exitwhy))
+    {
+      failure_message = svn_stringbuf_createf(pool,
+        _("'%s' hook failed (did not exit cleanly: "
+          "apr_exit_why_e was %d, exitcode was %d).  "),
+        name, exitwhy, exitcode);
+    }
+  else
+    {
+      failure_message = svn_stringbuf_createf(pool,
+        _("'%s' hook failed (exited with a non-zero exitcode of %d).  "),
+        name, exitcode);
+    }
+
+  if (utf8_stderr[0])
+    {
+      svn_stringbuf_appendcstr(failure_message,
+                               _("The following error output was produced "
+                                 "by the hook:\n"));
+      svn_stringbuf_appendcstr(failure_message, utf8_stderr);
+    }
+  else
+    {
+      svn_stringbuf_appendcstr(failure_message,
+                               _("No error output was produced by the "
+                                 "hook."));
+    }
+
+  return svn_error_create(SVN_ERR_REPOS_HOOK_FAILURE, err,
+                          failure_message->data);
+}
+#endif /* AS400 */
+
 /* NAME, CMD and ARGS are the name, path to and arguments for the hook
    program that is to be run.  The hook's exit status will be checked,
    and if an error occurred the hook's stderr output will be added to
@@ -57,8 +161,6 @@ run_hook_cmd(const char *name,
   apr_file_t *read_errhandle, *write_errhandle, *null_handle;
   apr_status_t apr_err;
   svn_error_t *err;
-  int exitcode;
-  apr_exit_why_e exitwhy;
   apr_proc_t cmd_proc;
 
   /* Create a pipe to access stderr of the child. */
@@ -113,42 +215,7 @@ run_hook_cmd(const char *name,
     }
   else
     {
-      svn_stringbuf_t *native_error;
-      const char *error;
-      svn_error_t *err2;
-
-      err2 = svn_stringbuf_from_aprfile(&native_error, read_errhandle, pool);
-
-      err = svn_io_wait_for_cmd(&cmd_proc, cmd, &exitcode, &exitwhy, pool);
-      if (! err)
-        {
-          if (! APR_PROC_CHECK_EXIT(exitwhy) || exitcode != 0)
-            {
-              if (! err2)
-                {
-                  err2 = svn_utf_cstring_to_utf8(&error, native_error->data,
-                                                 pool);
-                  if (! err2)
-                    err = svn_error_createf
-                      (SVN_ERR_REPOS_HOOK_FAILURE, err,
-                       _("'%s' hook failed with error output:\n%s"),
-                       name, error);
-                }
-              else
-                {
-                  err = svn_error_createf
-                    (SVN_ERR_REPOS_HOOK_FAILURE, err,
-                     _("'%s' hook failed; no error output available"), name);
-                }
-            }
-        }
-      if (err2)
-        {
-          if (err)
-            svn_error_clear(err2);
-          else
-            err = err2;
-        }
+      err = check_hook_result(name, cmd, &cmd_proc, read_errhandle, pool);
     }
 
   /* Hooks are fallible, and so hook failure is "expected" to occur at
@@ -461,7 +528,8 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
       args[2] = user ? user : "";
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd("start-commit", hook, args, NULL, pool));
+      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_START_COMMIT, hook, args, NULL,
+                           pool));
     }
 
   return SVN_NO_ERROR;
@@ -489,7 +557,8 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
       args[2] = txn_name;
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd("pre-commit", hook, args, NULL, pool));
+      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_COMMIT, hook, args, NULL,
+                           pool));
     }
 
   return SVN_NO_ERROR;
@@ -517,7 +586,8 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
       args[2] = apr_psprintf(pool, "%ld", rev);
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd("post-commit", hook, args, NULL, pool));
+      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_COMMIT, hook, args, NULL,
+                           pool));
     }
 
   return SVN_NO_ERROR;
@@ -564,8 +634,8 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd("pre-revprop-change", hook, args, stdin_handle,
-                           pool));
+      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_REVPROP_CHANGE, hook, args,
+                           stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -626,8 +696,8 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd("post-revprop-change", hook, args, stdin_handle,
-                           pool));
+      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_REVPROP_CHANGE, hook, args,
+                           stdin_handle, pool));
       
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -660,7 +730,7 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
       args[3] = username;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd("pre-lock", hook, args, NULL, pool));
+      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -696,7 +766,8 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
       args[3] = NULL;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd("post-lock", hook, args, stdin_handle, pool));
+      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_LOCK, hook, args, stdin_handle,
+                           pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -728,7 +799,8 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
       args[3] = username ? username : "";
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd("pre-unlock", hook, args, NULL, pool));
+      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_UNLOCK, hook, args, NULL,
+                           pool));
     }
 
   return SVN_NO_ERROR;
@@ -764,7 +836,8 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
       args[3] = NULL;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd("post-unlock", hook, args, stdin_handle, pool));
+      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_UNLOCK, hook, args,
+                           stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }

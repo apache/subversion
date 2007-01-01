@@ -340,6 +340,30 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @param pegRevision the peg revision to interpret the path
      * @param recurse whether you want it to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long checkout(String moduleName, String destPath, Revision revision,
+                         Revision pegRevision, boolean recurse,
+                         boolean ignoreExternals, boolean allowUnverObstructions)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.checkout(moduleName, destPath, revision, pegRevision,
+                    recurse, ignoreExternals, allowUnverObstructions);
+        }
+    }
+
+    /**
+     * Executes a revision checkout.
+     * @param moduleName name of the module to checkout.
+     * @param destPath destination directory for checkout.
+     * @param revision the revision to checkout.
+     * @param pegRevision the peg revision to interpret the path
+     * @param recurse whether you want it to checkout files recursively.
+     * @param ignoreExternals if externals are ignored during checkout
      * @exception ClientException
      * @since 1.2
      */
@@ -529,6 +553,52 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Updates the directory or file from repository
+     * @param path target file.
+     * @param revision the revision number to update.
+     *                 Revision.HEAD will update to the
+     *                 latest revision.
+     * @param recurse recursively update.
+     * @param ignoreExternals if externals are ignored during update
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long update(String path, Revision revision, boolean recurse,
+                       boolean ignoreExternals, boolean allowUnverObstructions)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.update(path, revision, recurse, ignoreExternals,
+                                 allowUnverObstructions);
+        }
+    }
+
+    /**
+     * Updates the directories or files from repository
+     * @param path array of target files.
+     * @param revision the revision number to update.
+     *                 Revision.HEAD will update to the
+     *                 latest revision.
+     * @param recurse recursively update.
+     * @param ignoreExternals if externals are ignored during update
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long[] update(String[] path, Revision revision, boolean recurse,
+                         boolean ignoreExternals,
+                         boolean allowUnverObstructions) throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.update(path, revision, recurse, ignoreExternals,
+                                 allowUnverObstructions);
+        }
+    }
+
+    /**
      * Commits changes to the repository.
      * @param path      files to commit.
      * @param message   log message.
@@ -545,8 +615,40 @@ public class SVNClientSynchronized implements SVNClientInterface
             return worker.commit(path, message, recurse, false);
         }
     }
+
     /**
-     * Copies a versioned file with the history preserved.
+     * Copy versioned paths with the history preserved.
+     *
+     * @param srcPaths Source paths or URLs.
+     * @param destPath Destination path or URL.
+     * @param message Commit message if <code>destPath</code> is a URL.
+     * @param revision Source revision.
+     * @param pegRevision Ignored until supported by the underlying
+     * Subversion APIs.  Defaults to {@link
+     * org.tigris.subversion.javahl.Revision#HEAD} (if
+     * <code>null</code>).
+     * @param copyAsChild Whether to copy <code>srcPaths</code> as
+     * children of <code>destPath</code>.
+     * @exception ClientException If the copy operation fails.
+     * @since 1.5
+     * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
+     */
+    public void copy(String[] srcPaths, String destPath, String message,
+                     Revision revision, Revision pegRevision,
+                     boolean copyAsChild)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.copy(srcPaths, destPath, message, revision, pegRevision,
+                        copyAsChild);
+        }
+    }
+
+    /**
+     * Copy versioned paths with the history preserved (with
+     * <code>copyAsChild</code> behavior).
+     *
      * @param srcPath   source path or url
      * @param destPath  destination path or url
      * @param message   commit message if destPath is an url
@@ -561,14 +663,35 @@ public class SVNClientSynchronized implements SVNClientInterface
             worker.copy(srcPath, destPath, message, revision);
         }
     }
+
     /**
-     * Moves or renames a file.
-     * @param srcPath   source path or url
-     * @param destPath  destination path or url
-     * @param message   commit message if destPath is an url
-     * @param revision  source revision
-     * @param force     even with local modifications.
-     * @exception ClientException
+     * Move or rename versioned paths.
+     *
+     * @param srcPaths Source paths or URLs.
+     * @param destPath Destination path or URL.
+     * @param message Commit message.  May be <code>null</code> if
+     * <code>destPath</code> is not a URL.
+     * @param force Whether to perform the move even if local
+     * modifications exist.
+     * @param moveAsChild Whether to move <code>srcPaths</code> as
+     * children of <code>destPath</code>.
+     * @exception ClientException If the move operation fails.
+     * @since 1.5
+     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
+     */
+    public void move(String[] srcPaths, String destPath, String message,
+                     boolean force, boolean moveAsChild)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.move(srcPaths, destPath, message, force, moveAsChild);
+        }
+    }
+
+    /**
+     * @deprecated Use move() without a Revision parameter.
+     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
      * @since 1.2
      */
     public void move(String srcPath, String destPath, String message,
@@ -581,7 +704,8 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
-     * Moves or renames a file.
+     * Move or rename versioned paths (with <code>moveAsChild</code>
+     * behavior).
      *
      * @param srcPath  source path or url
      * @param destPath destination path or url
@@ -684,6 +808,27 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             return worker.doExport(srcPath, destPath, revision, pegRevision,
                     force, ignoreExternals, recurse, nativeEOL);
+        }
+    }
+
+    /**
+     * Update local copy to mirror a new url.
+     * @param path      the working copy path
+     * @param url       the new url for the working copy
+     * @param revision  the new base revision of working copy
+     * @param recurse   traverse into subdirectories
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long doSwitch(String path, String url, Revision revision,
+                         boolean recurse, boolean allowUnverObstructions)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            return worker.doSwitch(path, url, revision, recurse,
+                                   allowUnverObstructions);
         }
     }
 
@@ -869,6 +1014,80 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             worker.diff(target, pegRevision, startRevision, endRevision,
                     outFileName, recurse, ignoreAncestry, noDiffDeleted, force);
+        }
+    }
+
+    /**
+     * Produce a diff summary which lists the items changed between
+     * path and revision pairs.
+     *
+     * @param target1 Path or URL.
+     * @param revision1 Revision of <code>target1</code>.
+     * @param target2 Path or URL.
+     * @param revision2 Revision of <code>target2</code>.
+     * @param recurse Whether to recurse.
+     * @param ignoreAncestry Whether to ignore unrelated files during
+     * comparison.  False positives may potentially be reported if
+     * this parameter <code>false</code>, since a file might have been
+     * modified between two revisions, but still have the same
+     * contents.
+     * @param receiver As each is difference is found, this callback
+     * is invoked with a description of the difference.
+     *
+     * @exception ClientException
+     * @since 1.5
+     */
+    public void diffSummarize(String target1, Revision revision1,
+                              String target2, Revision revision2,
+                              boolean recurse, boolean ignoreAncestry,
+                              DiffSummaryReceiver receiver)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.diffSummarize(target1, revision1, target2, revision2,
+                                 recurse, ignoreAncestry, receiver);
+        }
+    }
+
+    /**
+     * Produce a diff summary which lists the items changed between
+     * path and revision pairs.
+     *
+     * @param target Path or URL.
+     * @param pegRevision Revision at which to interpret
+     * <code>target</code>.  If {@link RevisionKind#unspecified} or
+     * <code>null</code>, behave identically to {@link
+     * diffSummarize(String, Revision, String, Revision, boolean,
+     * boolean, DiffSummaryReceiver)}, using <code>path</code> for
+     * both of that method's targets.
+     * @param startRevision Beginning of range for comparsion of
+     * <code>target</code>.
+     * @param endRevision End of range for comparsion of
+     * <code>target</code>.
+     * @param recurse Whether to recurse.
+     * @param ignoreAncestry Whether to ignore unrelated files during
+     * comparison.  False positives may potentially be reported if
+     * this parameter <code>false</code>, since a file might have been
+     * modified between two revisions, but still have the same
+     * contents.
+     * @param receiver As each is difference is found, this callback
+     * is invoked with a description of the difference.
+     *
+     * @exception ClientException
+     * @since 1.5
+     */
+    public void diffSummarize(String target, Revision pegRevision,
+                              Revision startRevision, Revision endRevision,
+                              boolean recurse, boolean ignoreAncestry,
+                              DiffSummaryReceiver receiver)
+        throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.diffSummarize(target, pegRevision, startRevision,
+                                 endRevision, recurse, ignoreAncestry,
+                                 receiver);
         }
     }
 

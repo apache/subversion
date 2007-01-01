@@ -835,6 +835,25 @@ svn_repos_stat(svn_dirent_t **dirent,
                apr_pool_t *pool);
 
 
+/**
+ * Given @a path which exists at revision @a start in @a fs, set
+ * @a *deleted to the revision @a path was first deleted, within the
+ * inclusive revision range set by @a start and @a end.  If @a path
+ * does not exist at revision @a start or was not deleted within the
+ * specified range, then set @a *deleted to SVN_INVALID_REVNUM.
+ * Use @a pool for memory allocation.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_deleted_rev(svn_fs_t *fs,
+                      const char *path,
+                      svn_revnum_t start,
+                      svn_revnum_t end,
+                      svn_revnum_t *deleted,
+                      apr_pool_t *pool);
+
+
 /** Callback type for use with svn_repos_history().  @a path and @a
  * revision represent interesting history locations in the lifetime
  * of the path passed to svn_repos_history().  @a baton is the same

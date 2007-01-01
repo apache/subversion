@@ -1186,7 +1186,7 @@ add_directory(const char *path,
     {
       svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t tmp_entry;
-      apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND |
+      apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND |
         SVN_WC__ENTRY_MODIFY_DELETED | SVN_WC__ENTRY_MODIFY_ABSENT;
 
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
@@ -2963,7 +2963,7 @@ check_wc_root(svn_boolean_t *wc_root,
 
   /* If this is the root folder (of a drive), it should be the WC 
      root too. */
-  if (svn_path_is_root(path, strlen(path), pool))
+  if (svn_path_is_root(path, strlen(path)))
     return SVN_NO_ERROR;
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */

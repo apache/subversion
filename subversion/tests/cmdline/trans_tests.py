@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import sys, os.path, re
+import os, re
 
 # Our testing module
 import svntest
@@ -411,9 +411,7 @@ def update_modified_with_translation(sbox):
 
   # Replace contents of rho and set eol translation to 'native'
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  f = open(rho_path, "w")
-  f.write("1\n2\n3\n4\n5\n6\n7\n8\n9\n")
-  f.close()
+  svntest.main.file_write(rho_path, "1\n2\n3\n4\n5\n6\n7\n8\n9\n")
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:eol-style', 'native',
                                      rho_path)
@@ -435,9 +433,7 @@ def update_modified_with_translation(sbox):
                                         rho_path)
 
   # Change rho again
-  f = open(rho_path, "w")
-  f.write("1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n")
-  f.close()
+  svntest.main.file_write(rho_path, "1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n")
 
   # Commit revision 3 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -450,9 +446,7 @@ def update_modified_with_translation(sbox):
                                         rho_path)
 
   # Locally modify rho again.
-  f = open(rho_path, "w")
-  f.write("1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n10\n")
-  f.close()
+  svntest.main.file_write(rho_path, "1\n2\n3\n4\n4.5\n5\n6\n7\n8\n9\n10\n")
 
   # Prepare trees for an update to rev 1.
   expected_output = svntest.wc.State(wc_dir, {
@@ -623,11 +617,11 @@ def cat_keyword_expansion(sbox):
   full_author = "x" * 400 
   key_author = "x" * 244
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', '--revprop', '-r2',
                                      'svn:author', full_author,
                                      sbox.wc_dir)
-  svntest.actions.run_and_verify_svn("", [ full_author ], [],
+  svntest.actions.run_and_verify_svn(None, [ full_author ], [],
                                      'propget', '--revprop', '-r2',
                                      'svn:author', '--strict',
                                      sbox.wc_dir)

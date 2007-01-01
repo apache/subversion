@@ -92,9 +92,9 @@ get_wc_prop(void *baton,
       int i;
       for (i = 0; i < cb->commit_items->nelts; i++)
         {
-          svn_client_commit_item2_t *item
+          svn_client_commit_item3_t *item
             = APR_ARRAY_IDX(cb->commit_items, i,
-                            svn_client_commit_item2_t *);
+                            svn_client_commit_item3_t *);
           if (! strcmp(relpath, 
                        svn_path_uri_decode(item->url, pool)))
             return svn_wc_prop_get(value, name, item->path, cb->base_access,
@@ -134,12 +134,12 @@ push_wc_prop(void *baton,
 
   for (i = 0; i < cb->commit_items->nelts; i++)
     {
-      svn_client_commit_item2_t *item
-        = APR_ARRAY_IDX(cb->commit_items, i, svn_client_commit_item2_t *);
+      svn_client_commit_item3_t *item
+        = APR_ARRAY_IDX(cb->commit_items, i, svn_client_commit_item3_t *);
       
       if (strcmp(relpath, svn_path_uri_decode(item->url, pool)) == 0)
         {
-          apr_pool_t *cpool = item->wcprop_changes->pool;
+          apr_pool_t *cpool = item->incoming_prop_changes->pool;
           svn_prop_t *prop = apr_palloc(cpool, sizeof(*prop));
           
           prop->name = apr_pstrdup(cpool, name);
@@ -153,7 +153,7 @@ push_wc_prop(void *baton,
           
           /* Buffer the propchange to take effect during the
              post-commit process. */
-          *((svn_prop_t **) apr_array_push(item->wcprop_changes)) = prop;
+          APR_ARRAY_PUSH(item->incoming_prop_changes, svn_prop_t *) = prop;
           return SVN_NO_ERROR;
         }
     }

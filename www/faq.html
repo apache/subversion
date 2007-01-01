@@ -231,6 +231,8 @@ a <tt>file:</tt> URL?</a></li>
   svnserve, but it doesn't seem to be listening on port 3690.</a></li>
 <li><a href="#already-under-version-control">I can't add a directory
     because Subversion says it's "already under version control".</a></li>
+<li><a href="#slow-private-svnserve">Accessing non-public repositories
+    via svnserve is really slow sometimes.</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -3079,7 +3081,7 @@ encrypted, but in fact they're only lightly scrambled with an
 algorithm that's the moral equivalent to rot13.  They can be cracked
 instantly.  The only utility of the the scrambling is to prevent users
 (like root) from accidentally seeing the password.  Nobody's cared
-enough to to do this for Subversion yet; if you're interested, send
+enough to do this for Subversion yet; if you're interested, send
 patches to the dev@ list.</p>
 
 </div>
@@ -3367,6 +3369,23 @@ solution described here was not mentioned in that thread.</p>
   making an unwanted copy of it in your repository.
 </p>
 <![CDATA[=========================================================]]>
+
+</div>
+
+<div class="h3" id="slow-private-svnserve" title="slow-private-svnserve">
+<h3>Accessing non-public repositories
+    via svnserve is really slow sometimes.</h3>
+
+<p>This often happens when APR is compiled to use <tt>/dev/random</tt>
+and the server is unable to gather enough entropy.  If Subversion is the
+only application using APR on the server, you can safely recompile APR
+with the <tt>--with-devrandom=/dev/urandom</tt> option passed to
+<tt>configure</tt>.  This should <b>not</b> be done on systems that use
+APR for other processes, however, as it could make other services
+insecure.</p>
+<![CDATA[=========================================================]]>
+
+</div>
 
 </div>
 

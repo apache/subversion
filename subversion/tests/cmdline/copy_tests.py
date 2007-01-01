@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import stat, sys, os, shutil, re
+import stat, os, re
 
 # Our testing module
 import svntest
@@ -72,7 +72,7 @@ or a url (when false) copy source is used."""
   else:
     pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', pi_src, rho_path)
 
   # Now commit
@@ -109,11 +109,11 @@ or a url (when false) copy source is used."""
   # Set props on file which is copy-source later on
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ps', 'phony-prop', '-F',
                                      prop_path, pi_path)
   os.remove(prop_path)
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ps', 'svn:eol-style', 'LF', rho_path)
 
   # Verify props having been set
@@ -141,7 +141,7 @@ or a url (when false) copy source is used."""
                                         wc_dir)
 
   # Bring wc into sync
-  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # File scheduled for deletion
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
@@ -157,7 +157,7 @@ or a url (when false) copy source is used."""
   else:
     pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
@@ -439,10 +439,11 @@ def resurrect_deleted_dir(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
 
   # Delete directory A/D/G, commit that as r2.
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force',
-                                     wc_dir + '/A/D/G')
+                                     G_path)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/G' : Item(verb='Deleting'),
@@ -495,10 +496,11 @@ def copy_deleted_dir_into_prefix(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  D_path = os.path.join(wc_dir, 'A', 'D')
 
   # Delete directory A/D, commit that as r2.
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force',
-                                     wc_dir + '/A/D')
+                                     D_path)
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/D' : Item(verb='Deleting'),
@@ -592,9 +594,9 @@ def no_wc_copy_overwrites(sbox):
   # These copies should fail
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                      'cp', pi_path, rho_path)
-  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                      'cp', pi_path, tau_path)
 
   # Status after failed copies should not have changed
@@ -609,9 +611,11 @@ def copy_modify_commit(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
   
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B2')
+                                     B_path, B2_path)
   
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
   svntest.main.file_append(alpha_path, "modified alpha")
@@ -712,10 +716,12 @@ def copy_delete_commit(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  B2_path = os.path.join(wc_dir, 'A', 'B2')
 
   # copy a tree
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B2')
+                                     B_path, B2_path)
   
   # delete a file
   alpha_path = os.path.join(wc_dir, 'A', 'B2', 'E', 'alpha')
@@ -762,11 +768,12 @@ def mv_and_revert_directory(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
 
   # Issue 931: move failed to lock the directory being deleted
   svntest.actions.run_and_verify_svn(None, None, [], 'move',
-                                     wc_dir + '/A/B/E',
-                                     wc_dir + '/A/B/F')
+                                     E_path, F_path)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/B/E', 'A/B/E/alpha', 'A/B/E/beta', status='D ')
   expected_status.add({
@@ -983,7 +990,7 @@ def repos_to_wc(sbox):
   pi_url = other_repo_url + "/A/D/G/pi"
 
   # Expect an error in the directory case
-  svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+  svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                      'copy', E_url, wc_dir)  
 
   # But file case should work fine.
@@ -1264,9 +1271,9 @@ def repos_to_wc_copy_eol_keywords(sbox):
   target_wc_path = os.path.join(wc_dir, 'new_file')
 
   # Modify iota to make it checkworthy.
-  f = open(iota_wc_path, "ab")
-  f.write("Hello\nSubversion\n$LastChangedRevision$\n")
-  f.close()
+  svntest.main.file_write(iota_wc_path,
+                          "Hello\nSubversion\n$LastChangedRevision$\n",
+                          "ab")
 
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'propset', 'svn:eol-style',
@@ -1621,7 +1628,7 @@ def url_to_non_existent_url_path(sbox):
 
   # Look for both possible versions of the error message, as the DAV
   # error is worded differently from that of other RA layers.
-  msg = ".*: (Path 'G' not present|.*G' path not found)"
+  msg = ".*: (Path 'G(/C/E)?' not present|.*G' path not found)"
 
   # Expect failure on 'svn cp SRC DST' where one or more ancestor
   # directories of DST do not exist
@@ -1802,7 +1809,7 @@ def delete_replaced_file(sbox):
 
   # Copy 'pi' over 'rho' with history.
   pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  svntest.actions.run_and_verify_svn("", None, [], 'cp', pi_src, rho_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', pi_src, rho_path)
 
   # Check that file copied.
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
@@ -2707,6 +2714,446 @@ def copy_added_paths_to_URL(sbox):
                                         expected_disk,
                                         expected_status)
 
+
+# Issue #1869.
+def move_to_relative_paths(sbox):
+  "move file using relative dst path names"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  rel_path = os.path.join('..', '..', '..')
+
+  current_dir = os.getcwd()
+  os.chdir(E_path)
+  
+  try:
+    svntest.main.run_svn(None, 'mv', 'beta', rel_path)
+  finally:
+    os.chdir(current_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'beta'        : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+#----------------------------------------------------------------------
+def move_from_relative_paths(sbox):
+  "move file using relative src path names"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  beta_rel_path = os.path.join('..', 'E', 'beta')
+
+  current_dir = os.getcwd()
+  os.chdir(F_path)
+  
+  try:
+    svntest.main.run_svn(None, 'mv', beta_rel_path, '.')
+  finally:
+    os.chdir(current_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/F/beta'  : Item(status='A ', copied='+', wc_rev='-'),
+    'A/B/E/beta'  : Item(status='D ', wc_rev='1')
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+#----------------------------------------------------------------------
+def copy_to_relative_paths(sbox):
+  "copy file using relative dst path names"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  rel_path = os.path.join('..', '..', '..')
+
+  current_dir = os.getcwd()
+  os.chdir(E_path)
+  
+  try:
+    svntest.main.run_svn(None, 'cp', 'beta', rel_path)
+  finally:
+    os.chdir(current_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'beta'        : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+#----------------------------------------------------------------------
+def copy_from_relative_paths(sbox):
+  "copy file using relative src path names"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  beta_rel_path = os.path.join('..', 'E', 'beta')
+
+  current_dir = os.getcwd()
+  os.chdir(F_path)
+  
+  try:
+    svntest.main.run_svn(None, 'cp', beta_rel_path, '.')
+  finally:
+    os.chdir(current_dir)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/F/beta'  : Item(status='A ', copied='+', wc_rev='-'),
+  })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+#----------------------------------------------------------------------
+
+# Test moving multiple files within a wc.
+
+def move_multiple_wc(sbox):
+  "svn mv multiple files to a common directory"
+   
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi') 
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi') 
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  C_path = os.path.join(wc_dir, 'A', 'C')
+
+  # Move chi, psi, omega and E to A/C
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv', chi_path, psi_path,
+                                     omega_path, E_path, C_path)
+
+  # Create expected output
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/chi'     : Item(verb='Adding'),
+    'A/C/psi'     : Item(verb='Adding'),
+    'A/C/omega'   : Item(verb='Adding'),
+    'A/C/E'       : Item(verb='Adding'),
+    'A/D/H/chi'   : Item(verb='Deleting'),
+    'A/D/H/psi'   : Item(verb='Deleting'),
+    'A/D/H/omega' : Item(verb='Deleting'),
+    'A/B/E'       : Item(verb='Deleting'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  
+  # Add the moved files
+  expected_status.add({
+    'A/C/chi'     : Item(status='  ', wc_rev=2),
+    'A/C/psi'     : Item(status='  ', wc_rev=2),
+    'A/C/omega'   : Item(status='  ', wc_rev=2),
+    'A/C/E'       : Item(status='  ', wc_rev=2),
+    'A/C/E/alpha' : Item(status='  ', wc_rev=2),
+    'A/C/E/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  # Removed the moved files
+  expected_status.remove('A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega', 'A/B/E/alpha',
+                         'A/B/E/beta', 'A/B/E')
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+#----------------------------------------------------------------------
+
+# Test copying multiple files within a wc.
+
+def copy_multiple_wc(sbox):
+  "svn cp multiple files to a common directory"
+   
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi') 
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi') 
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  C_path = os.path.join(wc_dir, 'A', 'C')
+
+  # Copy chi, psi, omega and E to A/C
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', chi_path, psi_path,
+                                     omega_path, E_path, C_path)
+
+  # Create expected output
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/chi'     : Item(verb='Adding'),
+    'A/C/psi'     : Item(verb='Adding'),
+    'A/C/omega'   : Item(verb='Adding'),
+    'A/C/E'       : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  
+  # Add the moved files
+  expected_status.add({
+    'A/C/chi'     : Item(status='  ', wc_rev=2),
+    'A/C/psi'     : Item(status='  ', wc_rev=2),
+    'A/C/omega'   : Item(status='  ', wc_rev=2),
+    'A/C/E'       : Item(status='  ', wc_rev=2),
+    'A/C/E/alpha' : Item(status='  ', wc_rev=2),
+    'A/C/E/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+#----------------------------------------------------------------------
+
+# Test moving multiple files within a repo.
+
+def move_multiple_repo(sbox):
+  "move multiple files within a repo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  chi_url = sbox.repo_url + '/A/D/H/chi'
+  psi_url = sbox.repo_url + '/A/D/H/psi'
+  omega_url = sbox.repo_url + '/A/D/H/omega'
+  E_url = sbox.repo_url + '/A/B/E'
+  C_url = sbox.repo_url + '/A/C'
+
+  # Move three files and a directory in the repo to a different location 
+  # in the repo
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     chi_url, psi_url, omega_url, E_url, C_url,
+                                     '-m', 'logmsg')
+
+  # Update to HEAD, and check to see if the files really moved in the repo
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/chi'     : Item(status='A '),
+    'A/C/psi'     : Item(status='A '),
+    'A/C/omega'   : Item(status='A '),
+    'A/C/E'       : Item(status='A '),
+    'A/C/E/alpha' : Item(status='A '),
+    'A/C/E/beta'  : Item(status='A '),
+    'A/D/H/chi'   : Item(status='D '),
+    'A/D/H/psi'   : Item(status='D '),
+    'A/D/H/omega' : Item(status='D '),
+    'A/B/E'       : Item(status='D '),
+    })
+  
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega', 'A/B/E/alpha',
+                       'A/B/E/beta', 'A/B/E')
+  expected_disk.add({
+    'A/C/chi'     : Item(contents="This is the file 'chi'.\n"),
+    'A/C/psi'     : Item(contents="This is the file 'psi'.\n"),
+    'A/C/omega'   : Item(contents="This is the file 'omega'.\n"),
+    'A/C/E'       : Item(),
+    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/D/H/chi', 'A/D/H/psi', 'A/D/H/omega', 'A/B/E/alpha',
+                         'A/B/E/beta', 'A/B/E')
+  expected_status.add({
+    'A/C/chi'     : Item(status='  ', wc_rev=2),
+    'A/C/psi'     : Item(status='  ', wc_rev=2),
+    'A/C/omega'   : Item(status='  ', wc_rev=2),
+    'A/C/E'       : Item(status='  ', wc_rev=2),
+    'A/C/E/alpha' : Item(status='  ', wc_rev=2),
+    'A/C/E/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+#----------------------------------------------------------------------
+
+# Test copying multiple files within a repo.
+
+def copy_multiple_repo(sbox):
+  "copy multiple files within a repo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  chi_url = sbox.repo_url + '/A/D/H/chi'
+  psi_url = sbox.repo_url + '/A/D/H/psi'
+  omega_url = sbox.repo_url + '/A/D/H/omega'
+  E_url = sbox.repo_url + '/A/B/E'
+  C_url = sbox.repo_url + '/A/C'
+
+  # Copy three files and a directory in the repo to a different location 
+  # in the repo
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     chi_url, psi_url, omega_url, E_url, C_url,
+                                     '-m', 'logmsg')
+
+  # Update to HEAD, and check to see if the files really moved in the repo
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/chi'     : Item(status='A '),
+    'A/C/psi'     : Item(status='A '),
+    'A/C/omega'   : Item(status='A '),
+    'A/C/E'       : Item(status='A '),
+    'A/C/E/alpha' : Item(status='A '),
+    'A/C/E/beta'  : Item(status='A '),
+    })
+  
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/C/chi'     : Item(contents="This is the file 'chi'.\n"),
+    'A/C/psi'     : Item(contents="This is the file 'psi'.\n"),
+    'A/C/omega'   : Item(contents="This is the file 'omega'.\n"),
+    'A/C/E'       : Item(),
+    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/C/chi'     : Item(status='  ', wc_rev=2),
+    'A/C/psi'     : Item(status='  ', wc_rev=2),
+    'A/C/omega'   : Item(status='  ', wc_rev=2),
+    'A/C/E'       : Item(status='  ', wc_rev=2),
+    'A/C/E/alpha' : Item(status='  ', wc_rev=2),
+    'A/C/E/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+#----------------------------------------------------------------------
+
+# Test moving copying multiple files from a repo to a wc
+
+def copy_multiple_repo_wc(sbox):
+  "copy multiple files from a repo to a wc"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  chi_url = sbox.repo_url + '/A/D/H/chi'
+  psi_url = sbox.repo_url + '/A/D/H/psi'
+  omega_url = sbox.repo_url + '/A/D/H/omega'
+  E_url = sbox.repo_url + '/A/B/E'
+  C_path = os.path.join(wc_dir, 'A', 'C')
+
+  # Perform the copy and check the output
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     chi_url, psi_url, omega_url, E_url,
+                                     C_path)
+ 
+  # Commit the changes, and verify the content actually got copied
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/chi'     : Item(verb='Adding'),
+    'A/C/psi'     : Item(verb='Adding'),
+    'A/C/omega'   : Item(verb='Adding'),
+    'A/C/E'       : Item(verb='Adding'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/C/chi'     : Item(status='  ', wc_rev=2),
+    'A/C/psi'     : Item(status='  ', wc_rev=2),
+    'A/C/omega'   : Item(status='  ', wc_rev=2),
+    'A/C/E'       : Item(status='  ', wc_rev=2),
+    'A/C/E/alpha' : Item(status='  ', wc_rev=2),
+    'A/C/E/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir, 
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
+#----------------------------------------------------------------------
+
+# Test moving copying multiple files from a wc to a repo
+
+def copy_multiple_wc_repo(sbox):
+  "copy multiple files from a wc to a repo"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  C_url = sbox.repo_url + '/A/C'
+
+  # Perform the copy and check the output
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     chi_path, psi_path, omega_path, E_path,
+                                     C_url, '-m', 'logmsg')
+
+  # Update to HEAD, and check to see if the files really got copied in the repo
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/chi'     : Item(status='A '),
+    'A/C/psi'     : Item(status='A '),
+    'A/C/omega'   : Item(status='A '),
+    'A/C/E'       : Item(status='A '),
+    'A/C/E/alpha' : Item(status='A '),
+    'A/C/E/beta'  : Item(status='A '),
+    })
+  
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.add({
+    'A/C/chi': Item(contents="This is the file 'chi'.\n"),
+    'A/C/psi': Item(contents="This is the file 'psi'.\n"),
+    'A/C/omega': Item(contents="This is the file 'omega'.\n"),
+    'A/C/E'       : Item(),
+    'A/C/E/alpha' : Item(contents="This is the file 'alpha'.\n"),
+    'A/C/E/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'A/C/chi'     : Item(status='  ', wc_rev=2),
+    'A/C/psi'     : Item(status='  ', wc_rev=2),
+    'A/C/omega'   : Item(status='  ', wc_rev=2),
+    'A/C/E'       : Item(status='  ', wc_rev=2),
+    'A/C/E/alpha' : Item(status='  ', wc_rev=2),
+    'A/C/E/beta'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -2761,6 +3208,16 @@ test_list = [ None,
               move_dir_back_and_forth,
               copy_move_added_paths,
               copy_added_paths_to_URL,
+              XFail(move_to_relative_paths, svntest.main.is_os_windows),
+              move_from_relative_paths,
+              XFail(copy_to_relative_paths, svntest.main.is_os_windows),
+              copy_from_relative_paths,
+              move_multiple_wc,
+              copy_multiple_wc,
+              move_multiple_repo,
+              copy_multiple_repo,
+              copy_multiple_repo_wc,
+              copy_multiple_wc_repo,
              ]
 
 if __name__ == '__main__':
