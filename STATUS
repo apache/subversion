@@ -70,13 +70,6 @@ Candidate changes:
     Votes:
       +1: glasser
 
-  * r22466
-    Fix issue #2666, allowing Neon 0.26.2 without complaint.
-    Justification:
-       Otherwise, --disable-neon-version-check is required.
-    Votes:
-      +1: dlr, maxb
-
   * r22501
     Fix script used to build our Solaris package.
     Justification:
@@ -100,3 +93,10 @@ Candidate changes:
       +1: dlr
 
 Approved changes:
+
+  * r22466
+    Fix issue #2666, allowing Neon 0.26.2 without complaint.
+    Justification:
+       Otherwise, --disable-neon-version-check is required.
+    Votes:
+      +1: dlr, maxb, malcolm (assuming the obvious conflict resolution chosen)
