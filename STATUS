@@ -114,11 +114,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r22870
-    Backport ra_serf changes from trunk into 1.4.x.
-    Justification:
-      The current 1.4.x version has known bugs; including fixes are good.
-    Branch:
-      1.4.x-serf
-    Votes:
-      +1: jerenkrantz, dlr, malcolm

@@ -52,6 +52,7 @@ typedef enum {
   DEPTH,
   TIMEOUT,
   LOCK_TOKEN,
+  COMMENT,
 } lock_state_e;
 
 typedef struct {
@@ -66,18 +67,14 @@ typedef struct {
 
   svn_lock_t *lock;
 
-  const char *owner;
-  const char *creation_date;
-  const char *lock_token;
-  const char *comment;
-
   svn_boolean_t force;
   svn_revnum_t revision;
 
   svn_boolean_t read_headers;
 
-  /* Our HTTP status code. */
+  /* Our HTTP status code and reason. */
   int status_code;
+  const char *reason;
 
   /* The currently collected value as we build it up */
   const char *tmp;
@@ -86,6 +83,8 @@ typedef struct {
   /* are we done? */
   svn_boolean_t done;
 
+  /* Any errors. */
+  svn_error_t *error;
 } lock_info_t;
 
 
@@ -102,6 +101,7 @@ push_state(svn_ra_serf__xml_parser_t *parser,
     case DEPTH:
     case TIMEOUT:
     case LOCK_TOKEN:
+    case COMMENT:
         parser->state->private = apr_pcalloc(parser->state->pool,
                                              sizeof(lock_prop_info_t));
         break;
@@ -161,6 +161,10 @@ start_lock(svn_ra_serf__xml_parser_t *parser,
       else if (strcmp(name.name, "locktoken") == 0)
         {
           push_state(parser, ctx, LOCK_TOKEN);
+        }
+      else if (strcmp(name.name, "owner") == 0)
+        {
+          push_state(parser, ctx, COMMENT);
         }
     }
   else if (state == LOCK_TYPE)
@@ -261,6 +265,17 @@ end_lock(svn_ra_serf__xml_parser_t *parser,
       /* We don't actually need the lock token. */
       svn_ra_serf__xml_pop_state(parser);
     }
+  else if (state == COMMENT &&
+           strcmp(name.name, "owner") == 0)
+    {
+      lock_prop_info_t *info = parser->state->private;
+
+      if (info->len)
+        {
+          ctx->lock->comment = apr_pstrndup(ctx->pool, info->data, info->len);
+        }
+      svn_ra_serf__xml_pop_state(parser);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -285,6 +300,7 @@ cdata_lock(svn_ra_serf__xml_parser_t *parser,
     case DEPTH:
     case TIMEOUT:
     case LOCK_TOKEN:
+    case COMMENT:
         svn_ra_serf__expand_string(&info->data, &info->len,
                                    data, len, parser->state->pool);
         break;
@@ -344,17 +360,14 @@ handle_lock(serf_request_t *request,
       rv = serf_bucket_response_status(response, &sl);
 
       ctx->status_code = sl.code;
+      ctx->reason = sl.reason;
 
       /* 423 == Locked */
       if (sl.code == 423)
         {
-          svn_error_t *err;
-
-          err = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                                 _("Lock request failed: %d %s"),
-                                 sl.code, sl.reason);
-          xml_ctx->error = err;
-          return err->apr_err;
+          ctx->error = svn_ra_serf__handle_server_error(request, response,
+                                                        pool);
+          return ctx->error->apr_err;
         }
 
       headers = serf_bucket_response_get_headers(response);
@@ -389,6 +402,9 @@ handle_lock(serf_request_t *request,
       if (APR_STATUS_IS_EOF(status))
         {
           ctx->done = TRUE;
+          ctx->error = svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                                         _("Lock request failed: %d %s"),
+                                         ctx->status_code, ctx->reason);
         }
     }
   else
@@ -437,13 +453,13 @@ create_lock_body(void *baton,
 
   svn_ra_serf__add_tag_buckets(buckets, "locktype", "<write/>", alloc);
 
-  if (ctx->comment)
+  if (ctx->lock->comment)
     {
       svn_stringbuf_t *xml_esc = NULL;
       svn_string_t val;
 
-      val.data = ctx->comment;
-      val.len = strlen(ctx->comment);
+      val.data = ctx->lock->comment;
+      val.len = strlen(ctx->lock->comment);
 
       svn_xml_escape_cdata_string(&xml_esc, &val, pool);
       svn_ra_serf__add_tag_buckets(buckets, "owner", xml_esc->data, alloc);
@@ -465,7 +481,6 @@ svn_ra_serf__get_lock(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_parser_t *parser_ctx;
-  serf_bucket_t *buckets, *tmp;
   lock_info_t *lock_ctx;
   const char *req_url;
   svn_error_t *err;
@@ -551,7 +566,6 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       lock_ctx->path = key;
       lock_ctx->revision = *((svn_revnum_t*)val);
       lock_ctx->lock = svn_lock_create(subpool);
-      lock_ctx->comment = comment;
       lock_ctx->lock->path = key;
       lock_ctx->lock->comment = comment;
 
@@ -587,10 +601,12 @@ svn_ra_serf__lock(svn_ra_session_t *ra_session,
       
       svn_ra_serf__request_create(handler);
       error = svn_ra_serf__context_run_wait(&lock_ctx->done, session, subpool);
+      SVN_ERR(lock_ctx->error);
+      SVN_ERR(parser_ctx->error);
       if (error)
         {
-          SVN_ERR(parser_ctx->error);
-          return error;
+          return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, error,
+                                  _("Lock request failed"));
         }
 
       SVN_ERR(lock_func(lock_baton, lock_ctx->path, TRUE, lock_ctx->lock, NULL,
@@ -641,7 +657,6 @@ svn_ra_serf__unlock(svn_ra_session_t *ra_session,
       svn_ra_serf__handler_t *handler;
       svn_ra_serf__simple_request_context_t *ctx;
       const char *req_url, *path, *token;
-      lock_info_t *lock_ctx;
       const void *key;
       void *val;
       struct unlock_context_t unlock_ctx;
