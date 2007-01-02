@@ -46,13 +46,6 @@
                             sqlite3_errmsg((db)));              \
 } while (0)
 
-/* Helper function to construct the mergeinfo db */
-static const char *
-path_mergeinfo_db(const char *path, apr_pool_t *pool)
-{
-  return svn_path_join(path, SVN_FS_MERGE_INFO__DB_NAME, pool);
-}
-
 #ifdef SQLITE3_DEBUG
 static void
 sqlite_tracer (void *data, const char *sql)
@@ -74,6 +67,17 @@ util_sqlite_exec (sqlite3 *db, const char *sql,
   if (sqlite3_exec(db, sql, NULL, NULL, &err_msg) != SQLITE_OK)
     return svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
                             err_msg);
+  return SVN_NO_ERROR;
+}
+
+/* Open a connection in *DB to the merge info database under
+   REPOS_PATH. */
+static svn_error_t *
+open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
+{
+  const char *db_path = svn_path_join(repos_path, SVN_FS_MERGE_INFO__DB_NAME,
+                                      pool);
+  SQLITE_ERR(sqlite3_open(db_path, db), *db);
   return SVN_NO_ERROR;
 }
 
@@ -103,7 +107,7 @@ svn_fs_merge_info__create_index(const char *path, apr_pool_t *pool)
 {
   sqlite3 *db;
 
-  SQLITE_ERR(sqlite3_open(path_mergeinfo_db(path, pool), &db), db);
+  SVN_ERR(open_db(&db, path, pool));
 #ifdef SQLITE3_DEBUG
   sqlite3_trace (db, sqlite_tracer, db);
 #endif
@@ -231,7 +235,7 @@ svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
 
   sqlite3 *db;
 
-  SQLITE_ERR(sqlite3_open(path_mergeinfo_db(txn->fs->path, pool), &db), db);
+  SVN_ERR(open_db(&db, txn->fs->path, pool));
 #ifdef SQLITE3_DEBUG
   sqlite3_trace (db, sqlite_tracer, db);
 #endif
@@ -496,7 +500,7 @@ svn_fs_merge_info__get_merge_info(apr_hash_t **mergeinfo,
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
   rev = svn_fs_revision_root_revision(root);
 
-  SQLITE_ERR(sqlite3_open(path_mergeinfo_db(root->fs->path, pool), &db), db);
+  SVN_ERR(open_db(&db, root->fs->path, pool));
 
 #ifdef SQLITE3_DEBUG
   sqlite3_trace (db, sqlite_tracer, db);
