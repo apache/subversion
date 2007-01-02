@@ -451,7 +451,7 @@ get_merge_info_for_path(sqlite3 *db,
       /* The repository and the merge info index internally refer to
          the root path as "" rather than "/". */
       if (strcmp(parentpath->data, "/") == 0)
-        parentpath->data = "";
+        parentpath->data = (char *) "";
 
       SVN_ERR(get_merge_info_for_path(db, parentpath->data, rev,
                                       NULL, cache, include_parents,
