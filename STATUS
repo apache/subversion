@@ -102,6 +102,15 @@ Candidate changes:
       +1: malcolm, dlr
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
+  * r22825/r22824
+    Fix issue #2684, reporting of a circular dependency if an authz
+    group is used by more than one other group.
+    Justification:
+      Fixes overzealous validation which blocks actual functionality.
+    Branch: 1.4.x-issue-2684
+    Votes:
+      +1: dlr
+
   * rXXXXX
     Backport ra_serf changes from trunk into 1.4.x.
     See:
