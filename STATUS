@@ -99,7 +99,7 @@ Candidate changes:
     Notes: We might want to wait until we actually merge something we
       originally committed in 2007, possibly hold until 1.4.4?
     Votes:
-      +1: malcolm
+      +1: malcolm, dlr
 
   * rXXXXX
     Backport ra_serf changes from trunk into 1.4.x.
@@ -109,7 +109,7 @@ Candidate changes:
     Justification:
       The current 1.4.x version has known bugs; including fixes are good.
     Votes:
-      +1: jerenkrantz
+      +1: jerenkrantz, dlr
 
 Approved changes:
 
