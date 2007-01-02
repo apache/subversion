@@ -101,5 +101,15 @@ Candidate changes:
     Votes:
       +1: malcolm
 
+  * rXXXXX
+    Backport ra_serf changes from trunk into 1.4.x.
+    See:
+      http://people.apache.org/~jerenkrantz/serf-1.4.x.patch
+      (Will commit to a branch first if doesn't get any vetoes.)
+    Justification:
+      The current 1.4.x version has known bugs; including fixes are good.
+    Votes:
+      +1: jerenkrantz
+
 Approved changes:
 
