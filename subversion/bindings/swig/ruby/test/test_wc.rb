@@ -3,6 +3,7 @@ require "util"
 
 require "svn/core"
 require "svn/wc"
+require "svn/repos"
 
 class SvnWcTest < Test::Unit::TestCase
   include SvnTestUtil
