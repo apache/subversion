@@ -99,7 +99,7 @@ Candidate changes:
     Notes: We might want to wait until we actually merge something we
       originally committed in 2007, possibly hold until 1.4.4?
     Votes:
-      +1: malcolm, dlr
+      +1: malcolm, dlr, hwright
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
   * r22825/r22824
