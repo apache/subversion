@@ -75,7 +75,7 @@ Candidate changes:
     Justification:
       Simple fix, with the script completely broken as-is.
     Votes:
-      +1: dlr
+      +1: dlr, jerenkrantz
 
   * r22609
     Make svn_repos_replay2 able to send deltas when used with txn roots.
@@ -90,7 +90,7 @@ Candidate changes:
     Justification:
       Memory leaks are bad.  New implementation is more scalable.
     Votes:
-      +1: dlr
+      +1: dlr, jerenkrantz
 
   * r19808-19810, r22853
     Synchronise license text and then bump copyright dates to 2007.
@@ -100,6 +100,7 @@ Candidate changes:
       originally committed in 2007, possibly hold until 1.4.4?
     Votes:
       +1: malcolm, dlr
+      -1: jerenkrantz (This is an unnecessary change to backport.)
 
   * rXXXXX
     Backport ra_serf changes from trunk into 1.4.x.
