@@ -68,7 +68,7 @@ Candidate changes:
       a feature, is fully compatible and is more a matter of
       filling in unfinished work.
     Votes:
-      +1: glasser
+      +1: glasser, jerenkrantz
 
   * r22501
     Fix script used to build our Solaris package.
@@ -76,14 +76,6 @@ Candidate changes:
       Simple fix, with the script completely broken as-is.
     Votes:
       +1: dlr, jerenkrantz
-
-  * r22609
-    Make svn_repos_replay2 able to send deltas when used with txn roots.
-    Justification:
-      Make the api do what's promised.
-    Votes:
-      +1: glasser, dlr
-      +1: clkao (tested but vote not counted)
 
   * r22729
     Fix potential filesystem memory leak in commit-finalization loop.
@@ -102,6 +94,16 @@ Candidate changes:
       +1: malcolm, dlr, hwright
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
+Approved changes:
+
+  * r22609
+    Make svn_repos_replay2 able to send deltas when used with txn roots.
+    Justification:
+      Make the api do what's promised.
+    Votes:
+      +1: glasser, dlr, jerenkrantz
+      +1: clkao (tested but vote not counted)
+
   * r22825/r22824
     Fix issue #2684, reporting of a circular dependency if an authz
     group is used by more than one other group.
@@ -110,7 +112,4 @@ Candidate changes:
       Regression against 1.3.x.
     Branch: 1.4.x-issue-2684
     Votes:
-      +1: dlr, maloclm
-
-Approved changes:
-
+      +1: dlr, maloclm, jerenkrantz
