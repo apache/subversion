@@ -71,18 +71,53 @@ util_sqlite_exec(sqlite3 *db, const char *sql,
   return SVN_NO_ERROR;
 }
 
-/* Open a connection in *DB to the merge info database under
-   REPOS_PATH. */
+/* The version number of the schema used to store the merge info index. */
+#define MERGE_INFO_INDEX_SCHEMA_FORMAT      1
+#define MERGE_INFO_INDEX_SCHEMA_FORMAT_STR "1"
+
+/* Return SVN_ERR_FS_GENERAL if the schema doesn't exist,
+   SVN_ERR_FS_UNSUPPORTED_FORMAT if the schema format is invalid, or
+   SVN_ERR_FS_SQLITE_ERROR if an sqlite error occurs during
+   validation.  Return SVN_NO_ERROR is everything is okay. */
 static svn_error_t *
-open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
+check_format(sqlite3 *db)
 {
-  const char *db_path = svn_path_join(repos_path, SVN_FS_MERGE_INFO__DB_NAME,
-                                      pool);
-  SQLITE_ERR(sqlite3_open(db_path, db), *db);
-#ifdef SQLITE3_DEBUG
-  sqlite3_trace(*db, sqlite_tracer, *db);
-#endif
-  return SVN_NO_ERROR;
+  svn_error_t *err;
+  sqlite3_stmt *stmt;
+
+  SQLITE_ERR(sqlite3_prepare(db, "pragma user_version;", -1, &stmt, NULL), db);
+  if (sqlite3_step(stmt) == SQLITE_ROW)
+    {
+      /* Validate that the schema exists as expected and that the
+         schema and repository versions match. */
+      int schema_format = sqlite3_column_int(stmt, 0);
+      if (schema_format == MERGE_INFO_INDEX_SCHEMA_FORMAT)
+        {
+          err = SVN_NO_ERROR;
+        }
+      else if (schema_format == 0)
+        {
+          /* This is likely a freshly-created database in which the
+             merge tracking schema doesn't yet exist. */
+          err = svn_error_create(SVN_ERR_FS_GENERAL, NULL,
+                                 _("Merge Tracking schema format not set"));
+        }
+      else if (schema_format > MERGE_INFO_INDEX_SCHEMA_FORMAT)
+        {
+          err = svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
+                                 _("Merge Tracking schema format %d "
+                                   "not recognized"), schema_format);
+        }
+      /* else, we may one day want to perform a schema migration. */
+
+      SQLITE_ERR(sqlite3_finalize(stmt), db);
+    }
+  else
+    {
+      err = svn_error_create(SVN_ERR_FS_SQLITE_ERROR, NULL,
+                             sqlite3_errmsg(db));
+    }
+  return err;
 }
 
 const char SVN_MTD_CREATE_SQL[] = "pragma auto_vacuum = 1;"
@@ -102,7 +137,37 @@ const char SVN_MTD_CREATE_SQL[] = "pragma auto_vacuum = 1;"
   "create index mi_c_path_idx on mergeinfo_changed (path);"
   APR_EOL_STR
   "create index mi_c_revision_idx on mergeinfo_changed (revision);"
+  APR_EOL_STR
+  "pragma user_version = " MERGE_INFO_INDEX_SCHEMA_FORMAT_STR ";"
   APR_EOL_STR;
+
+/* Open a connection in *DB to the merge info database under
+   REPOS_PATH.  Validate the merge tracking schema, creating it if it
+   doesn't yet exist.  This provides both a migration path for pre-1.5
+   repositories, and handles merge info index initialization for 1.5+
+   repositories. */
+static svn_error_t *
+open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const char *db_path = svn_path_join(repos_path, SVN_FS_MERGE_INFO__DB_NAME,
+                                      pool);
+  SQLITE_ERR(sqlite3_open(db_path, db), *db);
+#ifdef SQLITE3_DEBUG
+  sqlite3_trace(*db, sqlite_tracer, *db);
+#endif
+
+  /* Validate the schema. */
+  err = check_format(*db);
+  if (err && err->apr_err == SVN_ERR_FS_GENERAL)
+    {
+      /* Assume that we've just created an empty merge info index by
+         way of sqlite3_open() (likely from accessing a pre-1.5
+         repository), and need to create the merge tracking schema. */
+      err = util_sqlite_exec(*db, SVN_MTD_CREATE_SQL, NULL, NULL);
+    }
+  return err;
+}
 
 /* Create an sqlite DB for our merge info index under PATH.  Use POOL
    for temporary allocations. */
@@ -111,7 +176,6 @@ svn_fs_merge_info__create_index(const char *path, apr_pool_t *pool)
 {
   sqlite3 *db;
   SVN_ERR(open_db(&db, path, pool));
-  SVN_ERR(util_sqlite_exec(db, SVN_MTD_CREATE_SQL, NULL, NULL));
   SQLITE_ERR(sqlite3_close(db), db);
   return SVN_NO_ERROR;
 }
