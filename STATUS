@@ -96,12 +96,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r22825/r22824
-    Fix issue #2684, reporting of a circular dependency if an authz
-    group is used by more than one other group.
-    Justification:
-      Fixes overzealous validation which blocks actual functionality.
-      Regression against 1.3.x.
-    Branch: 1.4.x-issue-2684
-    Votes:
-      +1: dlr, maloclm, jerenkrantz
