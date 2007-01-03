@@ -285,8 +285,11 @@ class WinGeneratorBase(GeneratorBase):
       if isinstance(target, gen_base.TargetLib):
         if target.msvc_fake:
           install_targets.append(self.create_fake_target(target))
-        if target.msvc_export and not self.disable_shared:
-          dll_targets.append(self.create_dll_target(target))
+        if target.msvc_export:
+          if self.disable_shared:
+            target.msvc_static = True
+          else:
+            dll_targets.append(self.create_dll_target(target))
     install_targets.extend(dll_targets)
     
     # sort these for output stability, to watch out for regressions.
@@ -498,7 +501,8 @@ class WinGeneratorBase(GeneratorBase):
       return self.get_output_dir(target)
 
   def get_def_file(self, target):
-    if isinstance(target, gen_base.TargetLib) and target.msvc_export:
+    if isinstance(target, gen_base.TargetLib) and target.msvc_export \
+       and not self.disable_shared:
       return target.name + ".def"
     return None
 
