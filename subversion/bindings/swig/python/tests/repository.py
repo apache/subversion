@@ -39,6 +39,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     for i in range(5):
       path = os.path.join(REPOS_PATH, "test" + str(i))
       repos.create(path, "", "", None, fs_config)
+      repos.delete(path)
 
   def test_dump_fs2(self):
     """Test the dump_fs2 function"""
