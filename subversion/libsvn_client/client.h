@@ -95,11 +95,14 @@ svn_client__revision_is_local(const svn_opt_revision_t *revision);
     Both PEG_REV and OP_REV may be modified as a result of this function.
     IS_URL should be TRUE if the path the revisions refer to is a url,
     FALSE otherwise.
+    
+    If NOTICE_LOCAL_MODS is set, the WORKING is used, instead of BASE.
   */
 svn_error_t *
 svn_client__resolve_revisions(svn_opt_revision_t *peg_rev,
                               svn_opt_revision_t *op_rev,
-                              svn_boolean_t is_url);
+                              svn_boolean_t is_url,
+                              svn_boolean_t notice_local_mods);
 
 
 /* Given the CHANGED_PATHS and REVISION from an instance of a
