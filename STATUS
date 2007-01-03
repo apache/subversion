@@ -96,14 +96,6 @@ Candidate changes:
 
 Approved changes:
 
-  * r22609
-    Make svn_repos_replay2 able to send deltas when used with txn roots.
-    Justification:
-      Make the api do what's promised.
-    Votes:
-      +1: glasser, dlr, jerenkrantz
-      +1: clkao (tested but vote not counted)
-
   * r22825/r22824
     Fix issue #2684, reporting of a circular dependency if an authz
     group is used by more than one other group.
