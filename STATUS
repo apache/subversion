@@ -77,13 +77,6 @@ Candidate changes:
     Votes:
       +1: dlr, jerenkrantz
 
-  * r22729
-    Fix potential filesystem memory leak in commit-finalization loop.
-    Justification:
-      Memory leaks are bad.  New implementation is more scalable.
-    Votes:
-      +1: dlr, jerenkrantz
-
   * r19808-19810, r22853
     Synchronise license text and then bump copyright dates to 2007.
     Justification:
@@ -96,3 +89,9 @@ Candidate changes:
 
 Approved changes:
 
+  * r22729
+    Fix potential filesystem memory leak in commit-finalization loop.
+    Justification:
+      Memory leaks are bad.  New implementation is more scalable.
+    Votes:
+      +1: dlr, jerenkrantz, malcolm
