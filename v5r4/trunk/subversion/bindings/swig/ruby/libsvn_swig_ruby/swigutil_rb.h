@@ -113,13 +113,11 @@ svn_error_t *svn_swig_rb_repos_authz_callback(svn_repos_authz_access_t required,
                                               void *baton,
                                               apr_pool_t *pool);
   
-/* Implements the svn_client_get_commit_log3_t API. */
-svn_error_t *svn_swig_rb_get_commit_log_func(const char **log_msg,
-                                             const char **tmp_file,
-                                             const apr_array_header_t *
-                                             commit_items,
-                                             void *baton,
-                                             apr_pool_t *pool);
+svn_error_t *svn_swig_rb_get_commit_log_func2(const char **log_msg,
+                                              const char **tmp_file,
+                                              const apr_array_header_t *commit_items,
+                                              void *baton,
+                                              apr_pool_t *pool);
 
 void svn_swig_rb_notify_func2(void *baton,
                               const svn_wc_notify_t *notify,

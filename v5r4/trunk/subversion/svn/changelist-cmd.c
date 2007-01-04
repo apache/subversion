@@ -57,13 +57,13 @@ svn_cl__changelist(apr_getopt_t *os,
     {
       if (targets->nelts < 2)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-      changelist_name = APR_ARRAY_IDX(targets, 0, const char *);
+      changelist_name = ((const char **) (targets->elts))[0];
     }
 
 
   for (i = opt_state->clear ? 0 : 1; i < targets->nelts; i++)
     {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      const char *target = ((const char **) (targets->elts))[i];
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));

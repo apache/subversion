@@ -162,9 +162,6 @@ def _usage_exit():
   print "  --enable-ml"
   print "           enable use of ML assembler with zlib"
   print
-  print "  --disable-shared"
-  print "           only build static libraries"
-  print
   print "  --vsnet-version=VER"
   print "           generate for VS.NET version VER (2002, 2003, or 2005)"
   print "           [only valid in combination with '-t vcproj']"
@@ -209,7 +206,6 @@ if __name__ == '__main__':
                             'enable-nls',
                             'enable-bdb-in-apr-util',
                             'enable-ml',
-                            'disable-shared',
                             'vsnet-version=',
                             ])
     if len(args) > 1:

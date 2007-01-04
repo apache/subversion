@@ -117,7 +117,6 @@ SWIG_PL_INCLUDES = @SWIG_PL_INCLUDES@
 SWIG_RB_INCLUDES = @SWIG_RB_INCLUDES@ -I$(SWIG_SRC_DIR)/ruby/libsvn_swig_ruby
 SWIG_RB_COMPILE = @SWIG_RB_COMPILE@
 SWIG_RB_LINK = @SWIG_RB_LINK@
-SWIG_RB_LIBS = @SWIG_RB_LIBS@
 SWIG_RB_SITE_LIB_DIR = @SWIG_RB_SITE_LIB_DIR@
 SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
 SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
@@ -351,7 +350,7 @@ check-javahl: javahl
         exit 1; \
     fi
 	@FIX_JAVAHL_LIB@
-	$(JAVA) -Dtest.rootdir=$(abs_builddir)/subversion/bindings/java/javahl/test-work -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) org.tigris.subversion.javahl.tests.RunTests
+	$(JAVA) -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) org.tigris.subversion.javahl.tests.RunTests
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"

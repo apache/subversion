@@ -2110,9 +2110,13 @@ def update_wc_on_windows_drive(sbox):
   		  if not drive + ':\\' in drives:
   			return drive
     except ImportError:
-      return None
+      return ''
 
-    return None
+    return ''
+
+  # skip this test on non-Windows platforms.
+  if not os.name == 'nt':
+    raise svntest.Skip
 
   # just create an empty folder, we'll checkout later.
   sbox.build(create_wc = False)
@@ -2121,11 +2125,11 @@ def update_wc_on_windows_drive(sbox):
   
   # create a virtual drive to the working copy folder
   drive = find_the_next_available_drive_letter()
-  if drive is None:
+  if drive == '':
     raise svntest.Skip
 
   os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
-  wc_dir = drive + ':/'
+  wc_dir = drive + ':\\\\'
   was_cwd = os.getcwd()
 
   try:
@@ -2629,7 +2633,7 @@ test_list = [ None,
               XFail(update_copy_of_old_rev),
               forced_update,
               forced_update_failures,
-              Skip(update_wc_on_windows_drive, os.name != 'nt'),
+              update_wc_on_windows_drive,
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
              ]

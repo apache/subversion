@@ -250,7 +250,7 @@ svn_cl__blame(apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       svn_error_t *err;
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      const char *target = ((const char **) (targets->elts))[i];
       const char *truepath;
       svn_opt_revision_t peg_revision;
 

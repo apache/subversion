@@ -141,29 +141,6 @@ svn_subst_translate_to_normal_form(const char *src,
                                        pool);
 }
 
-svn_error_t *
-svn_subst_stream_translated_to_normal_form(svn_stream_t **stream,
-                                           svn_stream_t *source,
-                                           svn_subst_eol_style_t eol_style,
-                                           const char *eol_str,
-                                           svn_boolean_t always_repair_eols,
-                                           apr_hash_t *keywords,
-                                           apr_pool_t *pool)
-{
- if (eol_style == svn_subst_eol_style_native)
-    eol_str = SVN_SUBST__DEFAULT_EOL_STR;
-  else if (! (eol_style == svn_subst_eol_style_fixed
-              || eol_style == svn_subst_eol_style_none))
-    return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
-
- *stream = svn_subst_stream_translated(source, eol_str,
-                                       eol_style == svn_subst_eol_style_fixed
-                                       || always_repair_eols,
-                                       keywords, FALSE, pool);
-
- return SVN_NO_ERROR;
-}
-
 
 /* Helper function for svn_subst_build_keywords */
 
@@ -1486,95 +1463,78 @@ svn_subst_copy_and_translate(const char *src,
 }
 
 
-/* Set SRC_STREAM to a stream from which the internal representation
- * for the special file at SRC can be read.
- *
- * The stream returned will be allocated in POOL.
- */
-static svn_error_t *
-detranslate_special_file_to_stream(svn_stream_t **src_stream,
-                                   const char *src,
-                                   apr_pool_t *pool)
-{
-  apr_finfo_t finfo;
-  apr_file_t *s;
-  svn_string_t *buf;
-
-  /* First determine what type of special file we are
-     detranslating. */
-  SVN_ERR(svn_io_stat(&finfo, src, APR_FINFO_MIN | APR_FINFO_LINK, pool));
-
- switch (finfo.filetype) {
-  case APR_REG:
-    /* Nothing special to do here, just copy the original file's
-       contents. */
-    SVN_ERR(svn_io_file_open(&s, src, APR_READ | APR_BUFFERED,
-                              APR_OS_DEFAULT, pool));
-    *src_stream = svn_stream_from_aprfile(s, pool);
-
-    break;
-  case APR_LNK:
-    /* Determine the destination of the link. */
-
-    *src_stream = svn_stream_from_stringbuf(svn_stringbuf_create ("", pool),
-                                            pool);
-    SVN_ERR(svn_io_read_link(&buf, src, pool));
-
-    SVN_ERR(svn_stream_printf(*src_stream, pool, "link %s",
-                              buf->data));
-    break;
-  default:
-    abort ();
-  }
-
-  return SVN_NO_ERROR;
-}
-
 /* Given a special file at SRC, generate a textual representation of
    it in a normal file at DST.  Perform all allocations in POOL. */
 static svn_error_t *
-detranslate_special_file(const char *src, const char *dst, apr_pool_t *pool)
+detranslate_special_file(const char *src,
+                         const char *dst,
+                         apr_pool_t *pool)
 {
+  svn_stream_t *translated_stream, *dst_stream;
   const char *dst_tmp;
   apr_file_t *d;
-  svn_stream_t *src_stream, *dst_stream;
 
-
+  SVN_ERR(detranslated_stream_special(&translated_stream, src, pool));
+  
   /* Open a temporary destination that we will eventually atomically
      rename into place. */
   SVN_ERR(svn_io_open_unique_file2(&d, &dst_tmp, dst,
                                    ".tmp", svn_io_file_del_none, pool));
 
-  dst_stream = svn_stream_from_aprfile2(d, FALSE, pool);
+  dst_stream = svn_stream_from_aprfile(d, pool);
 
-  SVN_ERR(detranslate_special_file_to_stream(&src_stream, src, pool));
-  SVN_ERR(svn_stream_copy(src_stream, dst_stream, pool));
+  SVN_ERR(svn_stream_copy(translated_stream, dst_stream, pool));
 
   SVN_ERR(svn_stream_close(dst_stream));
+  SVN_ERR(svn_stream_close(translated_stream));
+  SVN_ERR(svn_io_file_close(d, pool));
 
   /* Do the atomic rename from our temporary location. */
   SVN_ERR(svn_io_file_rename(dst_tmp, dst, pool));
-
+  
   return SVN_NO_ERROR;
 }
 
-/* Creates a special file DST from the internal representation given
- * in SRC.
- *
- * All temporary allocations will be done in POOL.
- */
-static svn_error_t *
-create_special_file_from_stringbuf(svn_stringbuf_t *src, const char *dst,
-                                   apr_pool_t *pool)
-{
-  svn_error_t *err;
-  char *identifier, *remainder;
-  const char *dst_tmp;
 
+/* Given a file containing a repository representation of a special
+   file in SRC, create the appropriate special file at location DST.
+   Perform all allocations in POOL. */
+static svn_error_t *
+create_special_file(const char *src,
+                    const char *dst,
+                    apr_pool_t *pool)
+{
+  svn_stringbuf_t *contents;
+  char *identifier, *remainder;
+  const char *dst_tmp, *src_tmp = NULL;
+  svn_error_t *err;
+  svn_node_kind_t kind;
+  svn_boolean_t is_special;
+
+  /* Check to see if we are being asked to create a special file from
+     a special file.  If so, do a temporary detranslation and work
+     from there. */
+  SVN_ERR(svn_io_check_special_path(src, &kind, &is_special, pool));
+
+  if (is_special)
+    {
+      SVN_ERR(svn_io_open_unique_file2(NULL, &src_tmp, dst, ".tmp",
+                                       svn_io_file_del_none, pool));
+      SVN_ERR(detranslate_special_file(src, src_tmp, pool));
+      src = src_tmp;
+    }
+  
+  /* Read in the detranslated file. */
+  SVN_ERR(svn_stringbuf_from_file(&contents, src, pool));
+
+  /* If there was just a temporary detranslation, remove it now. */
+  if (src_tmp)
+    SVN_ERR(svn_io_remove_file(src_tmp, pool));
+      
   /* Separate off the identifier.  The first space character delimits
      the identifier, after which any remaining characters are specific
      to the actual special device being created. */
-  identifier = src->data;
+  identifier = contents->data;
   for (remainder = identifier; *remainder; remainder++)
     {
       if (*remainder == ' ')
@@ -1584,7 +1544,7 @@ create_special_file_from_stringbuf(svn_stringbuf_t *src, const char *dst,
           break;
         }
     }
-
+           
   if (! strcmp(identifier, SVN_SUBST__SPECIAL_LINK_STR))
     {
       /* For symlinks, the type specific data is just a filesystem
@@ -1597,7 +1557,7 @@ create_special_file_from_stringbuf(svn_stringbuf_t *src, const char *dst,
       /* We should return a valid error here. */
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                _("'%s' has unsupported special file type "
-                                 "'%s'"), src->data, identifier);
+                                 "'%s'"), src, identifier);
     }
 
   /* If we had an error, check to see if it was because this type of
@@ -1610,46 +1570,16 @@ create_special_file_from_stringbuf(svn_stringbuf_t *src, const char *dst,
           /* Fall back to just copying the text-base. */
           SVN_ERR(svn_io_open_unique_file2(NULL, &dst_tmp, dst, ".tmp",
                                            svn_io_file_del_none, pool));
-          SVN_ERR(svn_io_file_create(dst_tmp, src->data, pool));
+          SVN_ERR(svn_io_copy_file(src, dst_tmp, TRUE, pool));
         }
       else
         return err;
     }
 
   /* Do the atomic rename from our temporary location. */
-  return svn_io_file_rename(dst_tmp, dst, pool);
-}
+  SVN_ERR(svn_io_file_rename(dst_tmp, dst, pool));
 
-/* Given a file containing a repository representation of a special
-   file in SRC, create the appropriate special file at location DST.
-   Perform all allocations in POOL. */
-static svn_error_t *
-create_special_file(const char *src, const char *dst, apr_pool_t *pool)
-{
-  svn_stringbuf_t *contents;
-  svn_node_kind_t kind;
-  svn_boolean_t is_special;
-  svn_stream_t *source;
-
-  /* Check to see if we are being asked to create a special file from
-     a special file.  If so, do a temporary detranslation and work
-     from there. */
-  SVN_ERR(svn_io_check_special_path(src, &kind, &is_special, pool));
-
-  if (is_special)
-    {
-      svn_boolean_t eof;
-
-      SVN_ERR(detranslate_special_file_to_stream(&source, src, pool));
-      /* The special file normal form doesn't have line endings,
-       * so, read all of the file into the stringbuf */
-      SVN_ERR(svn_stream_readline(source, &contents, "\n", &eof, pool));
-    }
-  else
-    /* Read in the detranslated file. */
-    SVN_ERR(svn_stringbuf_from_file(&contents, src, pool));
-
-  return create_special_file_from_stringbuf(contents, dst, pool);
+  return SVN_NO_ERROR;
 }
 
 
@@ -1745,93 +1675,8 @@ svn_subst_copy_and_translate3(const char *src,
   return SVN_NO_ERROR;
 }
 
-
-/*** 'Special file' stream support */
-
-struct special_stream_baton
-{
-  svn_stream_t *read_stream;
-  svn_stringbuf_t *write_content;
-  svn_stream_t *write_stream;
-  const char *path;
-  apr_pool_t *pool;
-};
 
 
-static svn_error_t *
-read_handler_special(void *baton, char *buffer, apr_size_t *len)
-{
-  struct special_stream_baton *btn = baton;
-
-  if (btn->read_stream)
-    /* We actually found a file to read from */
-    return svn_stream_read(btn->read_stream, buffer, len);
-  else
-    return svn_error_createf(APR_ENOENT, NULL,
-                             "Can't read special file: File '%s' not found",
-                             svn_path_local_style (btn->path, btn->pool));
-}
-
-static svn_error_t *
-write_handler_special(void *baton, const char *buffer, apr_size_t *len)
-{
-  struct special_stream_baton *btn = baton;
-
-  return svn_stream_write(btn->write_stream, buffer, len);
-}
-
-
-static svn_error_t *
-close_handler_special (void *baton)
-{
-  struct special_stream_baton *btn = baton;
-
-  if (btn->write_content->len)
-    {
-      /* yeay! we received data and need to create a special file! */
-
-      SVN_ERR(create_special_file_from_stringbuf(btn->write_content,
-                                                 btn->path,
-                                                 btn->pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_subst_stream_from_specialfile(svn_stream_t **stream,
-                                   const char *path,
-                                   apr_pool_t *pool)
-{
-  struct special_stream_baton *baton = apr_palloc(pool, sizeof(*baton));
-  svn_error_t *err;
-
-  baton->pool = pool;
-  baton->path = apr_pstrdup(pool, path);
-
-  err = detranslate_special_file_to_stream(&baton->read_stream, path, pool);
-
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      svn_error_clear(err);
-      baton->read_stream = NULL;
-    }
-
-  baton->write_content = svn_stringbuf_create("", pool);
-  baton->write_stream = svn_stream_from_stringbuf(baton->write_content, pool);
-
-  *stream = svn_stream_create(baton, pool);
-  svn_stream_set_read(*stream, read_handler_special);
-  svn_stream_set_write(*stream, write_handler_special);
-  svn_stream_set_close(*stream, close_handler_special);
-
-  return SVN_NO_ERROR;
-}
-
-
-
-/*** String translation */
 svn_error_t *
 svn_subst_translate_string(svn_string_t **new_value,
                            const svn_string_t *value,
@@ -1864,7 +1709,7 @@ svn_subst_translate_string(svn_string_t **new_value,
                                        NULL,  /* no keywords */
                                        FALSE, /* no expansion */
                                        pool));
-
+  
   *new_value = svn_string_create(val_utf8_lf, pool);
 
   return SVN_NO_ERROR;

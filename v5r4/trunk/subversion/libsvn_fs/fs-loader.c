@@ -605,12 +605,6 @@ svn_fs_txn_root_name(svn_fs_root_t *root, apr_pool_t *pool)
 }
 
 svn_revnum_t
-svn_fs_txn_root_base_revision(svn_fs_root_t *root)
-{
-  return root->is_txn_root ? root->rev : SVN_INVALID_REVNUM;
-}
-
-svn_revnum_t
 svn_fs_revision_root_revision(svn_fs_root_t *root)
 {
   return root->is_txn_root ? SVN_INVALID_REVNUM : root->rev;

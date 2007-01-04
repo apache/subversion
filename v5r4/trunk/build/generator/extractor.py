@@ -3,7 +3,7 @@
 # extractor.py: extract function names from declarations in header files
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -20,6 +20,7 @@
 import os
 import re
 import string
+
 
 #
 # This parses the following two types of declarations:
@@ -41,7 +42,6 @@ def extract_funcs(fname):
 _filter_names = [
   'svn_boolean_t',  # svn_config_enumerator_t looks like (to our regex) a
                     # function declaration for svn_boolean_t
-  'svn_auth_get_keychain_simple_provider', # Not available on Windows
   ]
 
 if __name__ == '__main__':
@@ -51,5 +51,3 @@ if __name__ == '__main__':
   for fname in sys.argv[1:]:
     for func in extract_funcs(fname):
       print func
-    if os.path.basename(fname) == 'svn_ctype.h':
-      print 'svn_ctype_table = svn_ctype_table_internal CONSTANT'

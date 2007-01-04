@@ -154,26 +154,17 @@ def test_misc(sbox):
     print "Unexpected result from proplist: %s" % proplist
     raise svntest.Failure
 
-  prop_name = 'foo:bar-baz-quux'
   output, errput = svntest.main.run_svnlook('propget', '--revprop', repo_dir,
-                                            prop_name)
+      'foo:bar-baz-quux')
 
-  expected_err = "Property '%s' not found on revision " % prop_name
+  rm = re.compile("Property.*not found")
   for line in errput:
-    if line.find(expected_err) != -1:
+    match = rm.search(line)
+    if match:
       break
   else:
     raise svntest.main.SVNUnmatchedError
 
-  output, errput = svntest.main.run_svnlook('propget', '-r1', repo_dir,
-                                            prop_name, '/')
-
-  expected_err = "Property '%s' not found on path '/' in revision " % prop_name
-  for line in errput:
-    if line.find(expected_err) != -1:
-      break
-  else:
-    raise svntest.main.SVNUnmatchedError
 
 #----------------------------------------------------------------------
 # Issue 1089

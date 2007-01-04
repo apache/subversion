@@ -2,7 +2,7 @@
  * repos.c: mod_dav_svn repository provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2454,7 +2454,7 @@ set_headers(request_rec *r, const dav_resource *resource)
                && r->content_type)
         mimetype = r->content_type;
       else
-        mimetype = ap_default_type(r);
+        mimetype = "text/plain";
 
       serr = svn_mime_type_validate(mimetype, resource->pool);
       if (serr)
@@ -2616,11 +2616,12 @@ deliver(const dav_resource *resource, ap_filter_t *output)
                hi; hi = apr_hash_next(hi))
             {
               const void *key;
+              apr_ssize_t klen;
               void *val;
               svn_io_dirent_t *dirent;
               svn_fs_dirent_t *ent = apr_pcalloc(resource->pool, sizeof(*ent));
 
-              apr_hash_this(hi, &key, NULL, &val);
+              apr_hash_this(hi, &key, &klen, &val);
               dirent = val;
 
               if (dirent->kind != svn_node_dir)

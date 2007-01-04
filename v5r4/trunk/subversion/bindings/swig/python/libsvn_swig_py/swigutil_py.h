@@ -237,8 +237,7 @@ svn_error_t *svn_swig_py_fs_get_locks_func(void *baton,
 SVN_SWIG_SWIGUTIL_EXPORT
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
-                                             const apr_array_header_t *
-                                             commit_items,
+                                             apr_array_header_t *commit_items,
                                              void *baton,
                                              apr_pool_t *pool);
 

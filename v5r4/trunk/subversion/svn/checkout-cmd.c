@@ -77,7 +77,7 @@ svn_cl__checkout(apr_getopt_t *os,
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
   /* Add a path if the user only specified URLs */
-  local_dir = APR_ARRAY_IDX(targets, targets->nelts - 1, const char *);
+  local_dir = ((const char **) (targets->elts))[targets->nelts - 1];
   if (svn_path_is_url(local_dir))
     {
       if (targets->nelts == 1)
@@ -122,7 +122,7 @@ svn_cl__checkout(apr_getopt_t *os,
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
 
       /* Validate the REPOS_URL */
-      repos_url = APR_ARRAY_IDX(targets, i, const char *);
+      repos_url = ((const char **) (targets->elts))[i];
       if (! svn_path_is_url(repos_url))
         return svn_error_createf 
           (SVN_ERR_BAD_URL, NULL, 

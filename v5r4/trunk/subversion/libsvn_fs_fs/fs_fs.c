@@ -3968,10 +3968,11 @@ write_final_changed_path_info(apr_off_t *offset_p,
       svn_fs_path_change_t *change;
       const void *key;
       void *val;
+      apr_ssize_t keylen;
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, NULL, &val);
+      apr_hash_this(hi, &key, &keylen, &val);
       change = val;
       
       id = change->node_rev_id;

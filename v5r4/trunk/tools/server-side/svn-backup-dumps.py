@@ -16,10 +16,8 @@
 # history and logs, available at http://subversion.tigris.org/.
 # ====================================================================
 #
-# This script creates dump files from a subversion repository.
+# This script creates dump files from a subversion repository on *IX.
 # It is intended for use in cron jobs and post-commit hooks.
-#
-# Tested on UNIX with python 2.3 and 2.4, on Windows with python 2.4.
 #
 # The basic operation modes are:
 #    1. Create a full dump (revisions 0 to HEAD).
@@ -130,13 +128,12 @@
 #  - improve documentation
 #
 
-__version = "0.5"
+__version = "0.4"
 
 import sys
 import os
-if os.name != "nt":
-    import fcntl
-    import select
+import fcntl
+import select
 import gzip
 import os.path
 from optparse import OptionParser
@@ -424,12 +421,6 @@ class SvnBackup:
         fcntl.fcntl( fd, fcntl.F_SETFL, n|os.O_NONBLOCK )
 
     def exec_cmd( self, cmd, output=None, printerr=False ):
-        if os.name == "nt":
-            return self.exec_cmd_nt( cmd, output, printerr )
-        else:
-            return self.exec_cmd_unix( cmd, output, printerr )
-
-    def exec_cmd_unix( self, cmd, output=None, printerr=False ):
         try:
             proc = Popen( cmd, stdout=PIPE, stderr=PIPE, shell=False )
         except:
@@ -464,25 +455,6 @@ class SvnBackup:
         rc = proc.wait()
         if printerr:
             print ""
-        return ( rc, bufout, buferr )
-
-    def exec_cmd_nt( self, cmd, output=None, printerr=False ):
-        try:
-            proc = Popen( cmd, stdout=PIPE, stderr=None, shell=False )
-        except:
-            return ( 256, "", "Popen failed (%s ...):\n  %s" % ( cmd[0],
-                    str(sys.exc_info()[1]) ) )
-        stdout = proc.stdout
-        bufout = ""
-        buferr = ""
-        buf = stdout.read( 16384 )
-        while len( buf ) > 0:
-            if output:
-                output.write( buf )
-            else:
-                bufout += buf
-            buf = stdout.read( 16384 )
-        rc = proc.wait()
         return ( rc, bufout, buferr )
 
     def get_head_rev( self ):

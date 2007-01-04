@@ -56,7 +56,7 @@ svn_cl__delete(apr_getopt_t *os,
 
   if (! svn_path_is_url(APR_ARRAY_IDX(targets, 0, const char *)))
     {
-      ctx->log_msg_func3 = NULL;
+      ctx->log_msg_func2 = NULL;
       if (opt_state->message || opt_state->filedata)
         {
           return svn_error_create
@@ -66,7 +66,7 @@ svn_cl__delete(apr_getopt_t *os,
     }
   else
     {
-      SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
+      SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2), opt_state,
                                          NULL, ctx->config, pool));
     }
 
@@ -74,8 +74,8 @@ svn_cl__delete(apr_getopt_t *os,
   if (err)
     err = svn_cl__may_need_force(err);
 
-  if (ctx->log_msg_func3)
-    SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3, err));
+  if (ctx->log_msg_func2)
+    SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
   else if (err)
     return err;
 

@@ -14,9 +14,9 @@ Build system
 JavaHL should compile and run under Linux, Win32, and Mac OS X with a
 JDK 1.3+.
 
-Its build will produce both a native library (libsvnjavahl-1.so on Unix
-or libsvnjavahl-1.dll on Win32) and a platform independent archive of
-Java bytecode (svn-javahl.jar).
+Its build will produce both a native library (libsvnjavahl.so on Unix
+or libsvnjavahl.dll on Win32) and a platform independent archive of
+Java bytecode (svnjavahl.jar).
 
 To build JavaHL on non-Win32 platforms, just add "--enable-javahl" to
 the configure script's parameters.  "--with-jdk" can be provided to

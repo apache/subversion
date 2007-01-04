@@ -114,8 +114,6 @@
 [end][end]
 		</File>
 [end]
-[is target_type "2"]		<File RelativePath="..\empty.c"/>[end]
-
 	</Files>
 	<Globals>
 	</Globals>

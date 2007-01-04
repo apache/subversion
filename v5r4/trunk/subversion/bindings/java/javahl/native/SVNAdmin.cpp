@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -47,7 +47,7 @@ SVNAdmin * SVNAdmin::getCppObject(jobject jthis)
 {
     static jfieldID fid = 0;
     jlong cppAddr = SVNBase::findCppAddrForJObject(jthis, &fid,
-                                                   JAVA_PACKAGE"/SVNAdmin");
+						   JAVA_PACKAGE"/SVNAdmin");
     return (cppAddr == 0 ? NULL : reinterpret_cast<SVNAdmin *>(cppAddr));
 }
 
@@ -513,9 +513,9 @@ void SVNAdmin::rmtxns(const char *path, Targets &transactions)
 }
 
 void SVNAdmin::setRevProp(const char *path, Revision &revision,
-                          const char *propName, const char *propValue,
-                          bool usePreRevPropChangeHook,
-                          bool usePostRevPropChangeHook)
+			  const char *propName, const char *propValue,
+			  bool usePreRevPropChangeHook,
+			  bool usePostRevPropChangeHook)
 {
     Pool requestPool;
     if (path == NULL)
@@ -553,13 +553,14 @@ void SVNAdmin::setRevProp(const char *path, Revision &revision,
 
     /* If we are bypassing the hooks system, we just hit the filesystem
        directly. */
-    svn_string_t *propValStr = svn_string_create(propValue, requestPool.pool());
+    svn_string_t *propValStr = svn_string_create(propValue,
+						 requestPool.pool());
     if (usePreRevPropChangeHook || usePostRevPropChangeHook)
     {
         err = svn_repos_fs_change_rev_prop3
             (repos, revision.revision()->value.number, NULL,
              propName, propValStr, usePreRevPropChangeHook,
-             usePostRevPropChangeHook, NULL, NULL, requestPool.pool());
+	     usePostRevPropChangeHook, NULL, NULL, requestPool.pool());
     }
     else
     {
@@ -666,8 +667,9 @@ jobjectArray SVNAdmin::lslocks(const char *path)
     for (hi = apr_hash_first (requestPool.pool(), locks); hi; 
             hi = apr_hash_next (hi),i++)
     {
+        const void *key;
         void *val;
-        apr_hash_this (hi, NULL, NULL, &val);
+        apr_hash_this (hi, &key, NULL, &val);
         svn_lock_t *lock = (svn_lock_t *)val;
         jobject jLock = SVNClient::createJavaLock(lock);
         env->SetObjectArrayElement(ret, i, jLock);

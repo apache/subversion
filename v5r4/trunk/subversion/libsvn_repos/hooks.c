@@ -528,8 +528,7 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
       args[2] = user ? user : "";
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_START_COMMIT, hook, args, NULL,
-                           pool));
+      SVN_ERR(run_hook_cmd("start-commit", hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -557,8 +556,7 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
       args[2] = txn_name;
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_COMMIT, hook, args, NULL,
-                           pool));
+      SVN_ERR(run_hook_cmd("pre-commit", hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -586,8 +584,7 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
       args[2] = apr_psprintf(pool, "%ld", rev);
       args[3] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_COMMIT, hook, args, NULL,
-                           pool));
+      SVN_ERR(run_hook_cmd("post-commit", hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -634,8 +631,8 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_REVPROP_CHANGE, hook, args,
-                           stdin_handle, pool));
+      SVN_ERR(run_hook_cmd("pre-revprop-change", hook, args, stdin_handle,
+                           pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -696,8 +693,8 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
       args[5] = action_string;
       args[6] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_REVPROP_CHANGE, hook, args,
-                           stdin_handle, pool));
+      SVN_ERR(run_hook_cmd("post-revprop-change", hook, args, stdin_handle,
+                           pool));
       
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -730,7 +727,7 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
       args[3] = username;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_LOCK, hook, args, NULL, pool));
+      SVN_ERR(run_hook_cmd("pre-lock", hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -766,8 +763,7 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
       args[3] = NULL;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_LOCK, hook, args, stdin_handle,
-                           pool));
+      SVN_ERR(run_hook_cmd("post-lock", hook, args, stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }
@@ -799,8 +795,7 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
       args[3] = username ? username : "";
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_PRE_UNLOCK, hook, args, NULL,
-                           pool));
+      SVN_ERR(run_hook_cmd("pre-unlock", hook, args, NULL, pool));
     }
 
   return SVN_NO_ERROR;
@@ -836,8 +831,7 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
       args[3] = NULL;
       args[4] = NULL;
 
-      SVN_ERR(run_hook_cmd(SVN_REPOS__HOOK_POST_UNLOCK, hook, args,
-                           stdin_handle, pool));
+      SVN_ERR(run_hook_cmd("post-unlock", hook, args, stdin_handle, pool));
 
       SVN_ERR(svn_io_file_close(stdin_handle, pool));
     }

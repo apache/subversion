@@ -20,6 +20,9 @@
 
 #include <apr_pools.h>
 
+#include <ne_socket.h>
+#include <ne_request.h>
+
 #include "svn_error.h"
 
 #include "svn_private_config.h"
@@ -55,19 +58,19 @@ validate_element(svn_ra_dav__xml_elmid parent, svn_ra_dav__xml_elmid child)
     {
     case ELEM_root:
       if (child == ELEM_options_response)
-        return child;
+        return SVN_RA_DAV__XML_VALID;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_options_response:
       if (child == ELEM_activity_coll_set)
-        return child;
+        return SVN_RA_DAV__XML_VALID;
       else
         return SVN_RA_DAV__XML_DECLINE; /* not concerned with other response */
 
     case ELEM_activity_coll_set:
       if (child == ELEM_href)
-        return child;
+        return SVN_RA_DAV__XML_VALID;
       else
         return SVN_RA_DAV__XML_DECLINE; /* not concerned with unknown crud */
 
@@ -85,10 +88,16 @@ start_element(int *elem, void *baton, int parent,
   options_ctx_t *oc = baton;
   const svn_ra_dav__xml_elm_t *elm
     = svn_ra_dav__lookup_xml_elem(options_elements, nspace, name);
+  int acc = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
 
-  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
-  if (*elem < 1) /* Not a valid element */
-    return SVN_NO_ERROR;
+  if (acc != SVN_RA_DAV__XML_VALID)
+    {
+      *elem = acc;
+      return (acc == SVN_RA_DAV__XML_DECLINE) ?
+        SVN_NO_ERROR : svn_error_create(SVN_ERR_XML_MALFORMED, NULL, NULL);
+    }
+  else
+    *elem = elm->id;
 
   if (elm->id == ELEM_href)
     oc->want_cdata = oc->cdata;
@@ -126,7 +135,7 @@ svn_ra_dav__get_activity_collection(const svn_string_t **activity_coll,
   oc.pool = pool;
   oc.cdata = svn_stringbuf_create("", pool);
 
-  SVN_ERR(svn_ra_dav__parsed_request(ras, "OPTIONS", url,
+  SVN_ERR(svn_ra_dav__parsed_request(ras->sess, "OPTIONS", url,
                                      "<?xml version=\"1.0\" "
                                      "encoding=\"utf-8\"?>"
                                      "<D:options xmlns:D=\"DAV:\">"

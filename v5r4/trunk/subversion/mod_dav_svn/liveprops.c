@@ -2,7 +2,7 @@
  * liveprops.c: mod_dav_svn live property provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -20,7 +20,6 @@
 #include <apr_md5.h>
 
 #include <httpd.h>
-#include <http_core.h>
 #include <util_xml.h>
 #include <mod_dav.h>
 
@@ -465,7 +464,7 @@ insert_prop(const dav_resource *resource,
                      && resource->info->r->content_type)
               mime_type = resource->info->r->content_type;
             else
-              mime_type = ap_default_type(resource->info->r);
+              mime_type = "text/plain"; /* default for file */
 
             if ((serr = svn_mime_type_validate(mime_type, p)))
               {

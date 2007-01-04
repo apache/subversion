@@ -2,7 +2,7 @@
  * swigutil_pl.h :  utility functions and stuff for the SWIG Perl bindings
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -187,11 +187,10 @@ void svn_swig_pl_notify_func(void * baton,
 			     svn_revnum_t revision);
 
 
-/* Thunked version of svn_client_get_commit_log3_t callback type. */
+/* Thunked version of svn_client_get_commit_log_t callback type. */
 svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
-                                             const apr_array_header_t *
-                                             commit_items,
+                                             apr_array_header_t *commit_items,
                                              void *baton,
                                              apr_pool_t *pool);
 

@@ -806,13 +806,6 @@ svn_boolean_t svn_fs_is_revision_root(svn_fs_root_t *root);
 const char *svn_fs_txn_root_name(svn_fs_root_t *root,
                                  apr_pool_t *pool);
 
-/** If @a root is the root of a transaction, return the number of the
- * revision on which is was based when created.  Otherwise, return @c
- * SVN_INVALID_REVNUM.
- *
- * @since New in 1.5.
- */
-svn_revnum_t svn_fs_txn_root_base_revision(svn_fs_root_t *root);
 
 /** If @a root is the root of a revision, return the revision number.
  * Otherwise, return @c SVN_INVALID_REVNUM.

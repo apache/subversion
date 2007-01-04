@@ -55,10 +55,10 @@ public interface Notify
          * @param action kind of action
          * @return english text
          */
-        public static final String getActionName(int action)
-        {
-            return NotifyAction.actionNames[action];
-        }
+		public static final String getActionName(int action)
+		{
+			return NotifyAction.actionNames[action];
+		}
 
     }
     /**
@@ -72,9 +72,9 @@ public interface Notify
          * @param status    type of the notification
          * @return  english text
          */
-        public static final String getStatusName(int status)
-        {
-            return NotifyStatus.statusNames[status];
-        }
+		public static final String getStatusName(int status)
+		{
+			return NotifyStatus.statusNames[status];
+		}
     }
 }

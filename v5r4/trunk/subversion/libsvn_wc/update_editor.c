@@ -1186,7 +1186,7 @@ add_directory(const char *path,
     {
       svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t tmp_entry;
-      apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND |
+      apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND |
         SVN_WC__ENTRY_MODIFY_DELETED | SVN_WC__ENTRY_MODIFY_ABSENT;
 
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,

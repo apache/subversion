@@ -932,9 +932,6 @@ handle_stream(serf_request_t *request,
   if (sl.code == 404)
     {
       fetch_ctx->done = TRUE;
-      fetch_ctx->err = svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND, NULL,
-                                         "'%s' path not found",
-                                         fetch_ctx->info->name);
       return svn_ra_serf__handle_discard_body(request, response, NULL, pool);
     }
 
@@ -1075,6 +1072,7 @@ handle_propchange_only(report_info_t *info)
 
 static void fetch_file(report_context_t *ctx, report_info_t *info)
 {
+  const char *checked_in_url;
   svn_ra_serf__connection_t *conn;
   svn_ra_serf__handler_t *handler;
 
@@ -2535,8 +2533,6 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       stream_ctx->target_stream = stream;
       stream_ctx->sess = session;
       stream_ctx->conn = conn;
-      stream_ctx->info = apr_pcalloc(pool, sizeof(*stream_ctx->info));
-      stream_ctx->info->name = fetch_url;
       
       handler = apr_pcalloc(pool, sizeof(*handler));
       handler->method = "GET";
@@ -2553,7 +2549,6 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
       svn_ra_serf__request_create(handler);
       
       SVN_ERR(svn_ra_serf__context_run_wait(&stream_ctx->done, session, pool));
-      SVN_ERR(stream_ctx->err);
     }
 
   return SVN_NO_ERROR;

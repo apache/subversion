@@ -65,8 +65,6 @@ typedef struct {
   enum conf_flag autoversioning;  /* whether autoversioning is active */
   enum conf_flag do_path_authz;   /* whether GET subrequests are active */
   enum conf_flag list_parentpath; /* whether to allow GET of parentpath */
-  const char *root_dir;              /* our top-level directory */
-  const char *master_uri;            /* URI to the master SVN repos */
 } dir_conf_t;
 
 
@@ -139,8 +137,6 @@ create_dir_config(apr_pool_t *p, char *dir)
   /* NOTE: dir==NULL creates the default per-dir config */
   dir_conf_t *conf = apr_pcalloc(p, sizeof(*conf));
 
-  conf->root_dir = dir;
-
   return conf;
 }
 
@@ -155,15 +151,12 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf = apr_pcalloc(p, sizeof(*newconf));
 
   newconf->fs_path = INHERIT_VALUE(parent, child, fs_path);
-  newconf->master_uri = INHERIT_VALUE(parent, child, master_uri);
   newconf->repo_name = INHERIT_VALUE(parent, child, repo_name);
   newconf->xslt_uri = INHERIT_VALUE(parent, child, xslt_uri);
   newconf->fs_parent_path = INHERIT_VALUE(parent, child, fs_parent_path);
   newconf->autoversioning = INHERIT_VALUE(parent, child, autoversioning);
   newconf->do_path_authz = INHERIT_VALUE(parent, child, do_path_authz);
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
-  /* Prefer our parent's value over our new one - hence the swap. */
-  newconf->root_dir = INHERIT_VALUE(child, parent, root_dir);
 
   return newconf;
 }
@@ -175,17 +168,6 @@ SVNReposName_cmd(cmd_parms *cmd, void *config, const char *arg1)
   dir_conf_t *conf = config;
 
   conf->repo_name = apr_pstrdup(cmd->pool, arg1);
-
-  return NULL;
-}
-
-
-static const char *
-SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
-{
-  dir_conf_t *conf = config;
-
-  conf->master_uri = apr_pstrdup(cmd->pool, arg1);
 
   return NULL;
 }
@@ -380,26 +362,6 @@ dav_svn__get_repo_name(request_rec *r)
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
   return conf->repo_name;
-}
-
-
-const char *
-dav_svn__get_root_dir(request_rec *r)
-{
-  dir_conf_t *conf;
-
-  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->root_dir;
-}
-
-
-const char *
-dav_svn__get_master_uri(request_rec *r)
-{
-  dir_conf_t *conf;
-
-  conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-  return conf->master_uri;
 }
 
 
@@ -615,10 +577,6 @@ static const command_rec cmds[] =
   AP_INIT_FLAG("SVNListParentPath", SVNListParentPath_cmd, NULL,
                ACCESS_CONF|RSRC_CONF, "allow GET of SVNParentPath."),
 
-  /* per directory/location */
-  AP_INIT_TAKE1("SVNMasterURI", SVNMasterURI_cmd, NULL, ACCESS_CONF,
-                "specifies a URI to access a master Subversion repository"),
-
   { NULL }
 };
 
@@ -656,15 +614,6 @@ register_hooks(apr_pool_t *pconf)
   dav_hook_insert_all_liveprops(dav_svn__insert_all_liveprops, NULL, NULL,
                                 APR_HOOK_MIDDLE);
   dav_register_liveprop_group(pconf, &dav_svn__liveprop_group);
-
-  /* Proxy / mirroring filters and fixups */
-  ap_register_output_filter("LocationRewrite", dav_svn__location_header_filter,
-                            NULL, AP_FTYPE_CONTENT_SET);
-  ap_register_output_filter("ReposRewrite", dav_svn__location_body_filter,
-                            NULL, AP_FTYPE_CONTENT_SET);
-  ap_register_input_filter("IncomingRewrite", dav_svn__location_in_filter,
-                           NULL, AP_FTYPE_CONTENT_SET);
-  ap_hook_fixups(dav_svn__proxy_merge_fixup, NULL, NULL, APR_HOOK_MIDDLE);
 }
 
 

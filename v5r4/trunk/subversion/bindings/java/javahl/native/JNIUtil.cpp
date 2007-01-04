@@ -95,12 +95,12 @@ bool JNIUtil::JNIInit(JNIEnv *env)
  */
 bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 {
-    // this method has to be run only once during the run a 
+	// this method has to be run only once during the run a 
     // programm
     static bool run = false;
     if(run) // already run
     {
-        return true;
+		return true;
     }
     run = true;
     // do not run this part more than one time. 
@@ -439,7 +439,7 @@ bool JNIUtil::isExceptionThrown()
  */
 void JNIUtil::setEnv(JNIEnv *env)
 {
-    JNIThreadData::pushNewThreadData();
+	JNIThreadData::pushNewThreadData();
     JNIThreadData *data = JNIThreadData::getThreadData();
     data->m_env = env;
     data->m_exceptionThrown = false;

@@ -50,8 +50,6 @@ Blanket commit access:
         pburba   Paul Burba <ptbsvn@adelphia.net>
        glasser   David Glasser <glasser@mit.edu>
            lgo   Lieven Govaerts <lgo@mobsol.be>
-       hwright   Hyrum Wright <hyrum_wright@mail.utexas.edu>
-    vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
 
 Commit access for specific areas:
 
@@ -102,7 +100,6 @@ Commit access for specific areas:
        madanus   Madan U S <madan@collab.net>                (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
-       kameshj   Kamesh Jayachandran <kamesh@collab.net>     (svntest)
 
   Translation of message files:
 
@@ -117,7 +114,6 @@ Commit access for specific areas:
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
         pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
-        cauchy   Dongsheng Song <dongsheng.song@gmail.com>   (po: zh_CN)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
@@ -131,6 +127,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
       markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
+       hwright   Hyrum Wright <hyrum_wright@mail.utexas.edu> (multi-moves br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

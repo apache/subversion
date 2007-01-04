@@ -56,7 +56,7 @@ svn_cl__export(apr_getopt_t *os,
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
   
   /* The first target is the `from' path. */
-  from = APR_ARRAY_IDX(targets, 0, const char *);
+  from = ((const char **) (targets->elts))[0];
 
   /* Get the peg revision if present. */
   SVN_ERR(svn_opt_parse_path(&peg_revision, &truefrom, from, pool));
@@ -66,7 +66,7 @@ svn_cl__export(apr_getopt_t *os,
   if (targets->nelts == 1) 
     to = svn_path_uri_decode(svn_path_basename(truefrom, pool), pool);
   else
-    to = APR_ARRAY_IDX(targets, 1, const char *);
+    to = ((const char **) (targets->elts))[1];
 
   if (! opt_state->quiet)
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE, TRUE,

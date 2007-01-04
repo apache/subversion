@@ -112,7 +112,7 @@
 #endif
 
 #ifdef SWIGPYTHON
-%callback_typemap(svn_client_get_commit_log3_t log_msg_func,
+%callback_typemap(svn_client_get_commit_log_t log_msg_func,
                   void *log_msg_baton,
                   svn_swig_py_get_commit_log_func,
                   ,
@@ -120,11 +120,11 @@
 #endif
 
 #ifdef SWIGRUBY
-%callback_typemap(svn_client_get_commit_log3_t log_msg_func,
-                  void *log_msg_baton,
+%callback_typemap(svn_client_get_commit_log2_t log_msg_func2,
+                  void *log_msg_baton2,
                   ,
                   ,
-                  svn_swig_rb_get_commit_log_func)
+                  svn_swig_rb_get_commit_log_func2)
 
 %callback_typemap(svn_cancel_func_t cancel_func, void *cancel_baton,
                   ,
@@ -186,7 +186,7 @@
 #ifdef SWIGPERL
 %apply void *CALLBACK_BATON {
   void *notify_baton,
-  void *log_msg_baton3,
+  void *log_msg_baton,
   void *cancel_baton
 }
 #endif
@@ -203,7 +203,7 @@
 %apply void *CALLBACK_BATON
 {
   void *notify_baton2,
-  void *log_msg_baton3,
+  void *log_msg_baton2,
   void *cancel_baton
 }
 #endif
@@ -241,21 +241,14 @@
 #endif
 
 /* -----------------------------------------------------------------------
- * Prop change fields of svn_client_commit_item3_t need to be
- * converted between array data types. */
+ * wcprop_changes member of svn_client_commit_info needs to be
+ * converted back and forth from an array */
 
 #ifdef SWIGPERL
-%typemap(out) apr_array_header_t *incoming_prop_changes {
-    if ($1) {
-        $result = svn_swig_pl_convert_array($1, $descriptor(svn_prop_t *));
-        argvi++;
-    }
-}
-%typemap(out) apr_array_header_t *outgoing_prop_changes {
-    if ($1) {
-        $result = svn_swig_pl_convert_array($1, $descriptor(svn_prop_t *));
-        argvi++;
-    }
+%typemap(out) apr_array_header_t *wcprop_changes {
+    $result = svn_swig_pl_convert_array($1,
+      $descriptor(svn_prop_t *));
+    argvi++;
 }
 #endif
 
@@ -266,8 +259,8 @@
 %typemap(argout) svn_client_ctx_t ** {
   (*$1)->notify_func = svn_swig_pl_notify_func;
   (*$1)->notify_baton = (void *) &PL_sv_undef;
-  (*$1)->log_msg_func3 = svn_swig_pl_get_commit_log_func;
-  (*$1)->log_msg_baton3 = (void *) &PL_sv_undef;
+  (*$1)->log_msg_func = svn_swig_pl_get_commit_log_func;
+  (*$1)->log_msg_baton = (void *) &PL_sv_undef;
   (*$1)->cancel_func = svn_swig_pl_cancel_func;
   (*$1)->cancel_baton = (void *) &PL_sv_undef;
   %append_output(SWIG_NewPointerObj(*$1, $*1_descriptor, 0));
@@ -290,7 +283,7 @@
 
 /* provide Python with access to some thunks. */
 %constant svn_cancel_func_t svn_swig_py_cancel_func;
-%constant svn_client_get_commit_log3_t svn_swig_py_get_commit_log_func;
+%constant svn_client_get_commit_log2_t svn_swig_py_get_commit_log_func;
 %constant svn_wc_notify_func2_t svn_swig_py_notify_func;
 
 #endif
@@ -298,14 +291,14 @@
 #ifdef SWIGRUBY
 %inline %{
 static VALUE
-svn_client_set_log_msg_func3(svn_client_ctx_t *ctx,
-                             svn_client_get_commit_log3_t log_msg_func,
-                             void *log_msg_baton,
+svn_client_set_log_msg_func2(svn_client_ctx_t *ctx,
+                             svn_client_get_commit_log2_t log_msg_func2,
+                             void *log_msg_baton2,
                              apr_pool_t *pool)
 {
-  ctx->log_msg_func3 = log_msg_func;
-  ctx->log_msg_baton3 = log_msg_baton;
-  return (VALUE) log_msg_baton;
+  ctx->log_msg_func2 = log_msg_func2;
+  ctx->log_msg_baton2 = log_msg_baton2;
+  return (VALUE)log_msg_baton2;
 }
 
 static VALUE

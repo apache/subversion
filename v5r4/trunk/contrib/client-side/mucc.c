@@ -50,8 +50,7 @@ init(const char *application)
 
   SVN_VERSION_DEFINE(my_version);
 
-  if (svn_cmdline_init(application, stderr) 
-      || apr_allocator_create(&allocator))
+  if (svn_cmdline_init(application, stderr) || apr_allocator_create(&allocator))
     exit(EXIT_FAILURE);
 
   err = svn_ver_check_list(&my_version, checklist);
@@ -65,15 +64,93 @@ init(const char *application)
   return pool;
 }
 
-static svn_ra_callbacks_t *
-ra_callbacks(const char *username,
-             const char *password, 
-             apr_pool_t *pool)
+static svn_error_t *
+prompt_for_creds(const char **username,
+                 const char **password,
+                 const char *realm,
+                 apr_pool_t *pool)
 {
-  svn_ra_callbacks_t *callbacks = apr_palloc(pool, sizeof(*callbacks));
-  svn_cmdline_setup_auth_baton(&callbacks->auth_baton, FALSE,
-                               username, password,
-                               NULL, FALSE, NULL, NULL, NULL, pool);
+  char buffer[100];
+  svn_boolean_t prompt_with_username;
+
+  if (realm)
+    SVN_ERR(svn_cmdline_printf(pool, "Authentication realm: %s\n", realm));
+
+  if (! *username)
+    {
+      SVN_ERR(svn_cmdline_printf(pool, "Username: "));
+      if (! fgets(buffer, sizeof(buffer), stdin))
+        return svn_error_createf(0, NULL, "failed to get username");
+      if (strlen(buffer) > 0 && buffer[strlen(buffer)-1] == '\n')
+        buffer[strlen(buffer)-1] = '\0';
+      *username = buffer;
+      prompt_with_username = FALSE;
+    }
+  else
+    prompt_with_username = TRUE;
+  *username = apr_pstrdup(pool, *username);
+
+  if (password)
+    {
+      apr_size_t sz = sizeof(buffer);
+      const char *prompt = (prompt_with_username
+                            ? apr_psprintf(pool, "Password for %s: ", *username)
+                            : "Password: ");
+      apr_status_t status = apr_password_get(prompt, buffer, &sz);
+      if (status)
+        return svn_error_wrap_apr(status, "failed to get password");
+      *password = apr_pstrdup(pool, buffer);
+    }
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+simple_prompt(svn_auth_cred_simple_t **cred,
+              void *baton,
+              const char *realm,
+              const char *username,
+              svn_boolean_t may_save,
+              apr_pool_t *pool)
+{
+  const char *password;
+  SVN_ERR(prompt_for_creds(&username, &password, realm, pool));
+  *cred = apr_palloc(pool, sizeof(**cred));
+  (*cred)->username = username;
+  (*cred)->password = password;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+username_prompt(svn_auth_cred_username_t **cred,
+                void *baton,
+                const char *realm,
+                svn_boolean_t may_save,
+                apr_pool_t *pool)
+{
+  const char *username = NULL;
+  SVN_ERR(prompt_for_creds(&username, NULL, realm, pool));
+  *cred = apr_palloc(pool, sizeof(**cred));
+  (*cred)->username = username;
+  return SVN_NO_ERROR;
+}
+
+static svn_ra_callbacks_t *
+ra_callbacks(apr_pool_t *pool)
+{
+  apr_array_header_t *providers;
+  svn_ra_callbacks_t *callbacks;
+  svn_auth_provider_object_t *provider;
+
+  providers = apr_array_make(pool, 2, sizeof(svn_auth_provider_object_t *));
+  svn_client_get_simple_prompt_provider(&provider, simple_prompt, NULL, 2,
+                                        pool);
+  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+  svn_client_get_username_prompt_provider(&provider, username_prompt, NULL, 2,
+                                          pool);
+  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+  callbacks = apr_palloc(pool, sizeof(*callbacks));
+  svn_auth_open(&callbacks->auth_baton, providers, pool);
   callbacks->open_tmp_file = NULL;
   callbacks->get_wc_prop = NULL;
   callbacks->set_wc_prop = NULL;
@@ -286,8 +363,6 @@ static svn_error_t *
 execute(const apr_array_header_t *actions,
         const char *anchor,
         const char *message,
-        const char *username,
-        const char *password,
         apr_pool_t *pool)
 {
   svn_ra_session_t *session;
@@ -298,9 +373,7 @@ execute(const apr_array_header_t *actions,
   svn_error_t *err;
   int i;
 
-  SVN_ERR(svn_ra_open(&session, anchor, 
-                      ra_callbacks(username, password, pool), 
-                      NULL, NULL, pool));
+  SVN_ERR(svn_ra_open(&session, anchor, ra_callbacks(pool), NULL, NULL, pool));
 
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
 
@@ -359,8 +432,6 @@ usage(apr_pool_t *pool, int exit_val)
     "options:\n"
     "  -m, --message ARG   use ARG as a log message\n"
     "  -F, --file ARG      read log message from file ARG\n"
-    "  -u, --username ARG  commit the changes as username ARG\n"
-    "  -p, --password ARG  use ARG as the password\n"
     "  -h, --help          display this text\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
@@ -386,13 +457,10 @@ main(int argc, const char **argv)
   const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
     {"file", 'F', 1, ""},
-    {"username", 'u', 1, ""},
-    {"password", 'p', 1, ""},
     {"help", 'h', 0, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = "committed using mucc";
-  const char *username = NULL, *password = NULL;
 
   apr_getopt_init(&getopt, pool, argc, argv);
   getopt->interleave = 1;
@@ -424,12 +492,6 @@ main(int argc, const char **argv)
             if (err)
               handle_error(err, pool);
           }
-          break;
-        case 'u':
-          username = apr_pstrdup(pool, arg);
-          break;
-        case 'p':
-          password = apr_pstrdup(pool, arg);
           break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
@@ -509,7 +571,7 @@ main(int argc, const char **argv)
   if (! actions->nelts)
     usage(pool, EXIT_FAILURE);
 
-  err = execute(actions, anchor, message, username, password, pool);
+  err = execute(actions, anchor, message, pool);
   if (err)
     handle_error(err, pool);
 

@@ -25,6 +25,10 @@
 #include <apr_strings.h>
 #include <apr_xml.h>
 
+#include <ne_socket.h>
+#include <ne_utils.h>
+#include <ne_xml.h>
+
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_delta.h"
@@ -334,13 +338,13 @@ svn_ra_dav__get_file_revs(svn_ra_session_t *session,
      dav_get_resource() to choke on the server.  So instead, we pass a
      baseline-collection URL, which we get from END. */
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                        ras, ras->url->data, end,
+                                        ras->sess, ras->url->data, end,
                                         pool));
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             pool);
 
   /* Dispatch the request. */
-  err = svn_ra_dav__parsed_request(ras, "REPORT", final_bc_url,
+  err = svn_ra_dav__parsed_request(ras->sess, "REPORT", final_bc_url,
                                    request_body->data, NULL, NULL,
                                    start_element, cdata_handler, end_element,
                                    &rb, request_headers, &http_status, FALSE,

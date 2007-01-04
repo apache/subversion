@@ -53,7 +53,7 @@ svn_cl__propedit(apr_getopt_t *os,
   /* Validate the input and get the property's name (and a UTF-8
      version of that name). */
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
-  pname = APR_ARRAY_IDX(args, 0, const char *);
+  pname = ((const char **) (args->elts))[0];
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
   if (! svn_prop_name_is_valid(pname_utf8))
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
@@ -158,7 +158,7 @@ svn_cl__propedit(apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           apr_hash_t *props;
-          const char *target = APR_ARRAY_IDX(targets, i, const char *);
+          const char *target = ((const char **) (targets->elts))[i];
           svn_string_t *propval, *edited_propval;
           const char *base_dir = target;
           const char *target_local;
@@ -240,8 +240,8 @@ svn_cl__propedit(apr_getopt_t *os,
                   (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                    _("Bad encoding option: prop value not stored as UTF8"));
 
-              if (ctx->log_msg_func3)
-                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
+              if (ctx->log_msg_func2)
+                SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2),
                                                    opt_state, NULL, ctx->config,
                                                    subpool));
 
@@ -250,7 +250,7 @@ svn_cl__propedit(apr_getopt_t *os,
                                         FALSE, opt_state->force,
                                         base_rev,
                                         ctx, subpool);
-              if (ctx->log_msg_func3)
+              if (ctx->log_msg_func2)
                 SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton2, err));
               else if (err)
                 return err;

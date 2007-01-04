@@ -294,6 +294,8 @@ checkout_dir(dir_context_t *dir)
 
   if (dir->parent_dir)
     {
+      SVN_ERR(checkout_dir(dir->parent_dir));
+      
       /* Is our parent a copy?  If so, we're already implicitly checked out. */
       if (apr_hash_get(dir->commit->copied_entries,
                        dir->parent_dir->name, APR_HASH_KEY_STRING))
@@ -365,7 +367,7 @@ checkout_dir(dir_context_t *dir)
                                   return_response_err(handler,
                                                       &checkout_ctx->progress),
                                   _("Path '%s' not present"),
-                                  dir->name);
+                                  svn_path_local_style(dir->name, dir->pool));
         }
 
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
@@ -426,7 +428,7 @@ checkout_file(file_context_t *file)
                               return_response_err(handler,
                                                   &file->checkout->progress),
                               _("Path '%s' not present"),
-                              file->name);
+                              svn_path_local_style(file->name, file->pool));
         }
 
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
@@ -852,6 +854,7 @@ setup_delete_headers(serf_bucket_t *headers,
                      apr_pool_t *pool)
 {
   delete_context_t *ctx = baton;
+  const char *lock_tokens;
 
   serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
                           apr_ltoa(pool, ctx->revision));
@@ -1048,6 +1051,7 @@ delete_entry(const char *path,
   dir_context_t *dir = parent_baton;
   delete_context_t *delete_ctx;
   svn_ra_serf__handler_t *handler;
+  const char *lock_token;
   svn_error_t *err;
 
   /* Ensure our directory has been checked out */
@@ -1211,11 +1215,7 @@ add_directory(const char *path,
       
   if (add_dir_ctx->status != 201)
     {
-      SVN_ERR(add_dir_ctx->server_error.error);
-      return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                               _("Add directory failed: %s on %s (%d)"),
-                               handler->method, handler->path,
-                               add_dir_ctx->status);
+      abort();
     }
 
   *child_baton = dir;

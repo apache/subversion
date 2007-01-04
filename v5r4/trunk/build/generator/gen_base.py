@@ -268,6 +268,7 @@ class SWIGObject(ObjectFile):
     self.lang_abbrev = lang_abbrev[lang]
     ### hmm. this is Makefile-specific
     self.compile_cmd = '$(COMPILE_%s_WRAPPER)' % string.upper(self.lang_abbrev)
+    self.source_generated = 1
 
 class HeaderFile(DependencyNode):
   def __init__(self, filename, classname = None, compile_cmd = None):
@@ -552,7 +553,8 @@ class TargetSWIG(TargetLib):
     self.filename = build_path_join(self.path, lib_filename)
 
     ifile = SWIGSource(ipath)
-    cfile = SWIGObject(build_path_join(self.path, cname), self.lang)
+    cfile = SWIGObject(build_path_join('$(top_srcdir)', self.path, cname),
+                       self.lang)
     ofile = SWIGObject(build_path_join(self.path, oname), self.lang)
 
     # the .c file depends upon the .i file

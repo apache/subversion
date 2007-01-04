@@ -378,9 +378,7 @@ struct svn_fs_root_t
   /* For transaction roots, flags describing the txn's behavior. */
   apr_uint32_t txn_flags;
 
-  /* For revision roots, the number of the revision; for transaction
-     roots, the number of the revision on which the transaction is
-     based. */
+  /* For revision roots, the number of the revision.  */
   svn_revnum_t rev;
 
   /* FSAP-specific vtable and private data */

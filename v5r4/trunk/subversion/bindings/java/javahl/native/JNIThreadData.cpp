@@ -37,7 +37,7 @@ JNIThreadData::JNIThreadData()
     m_env = NULL;
     m_exceptionThrown = false;
     m_requestPool = NULL;
-    m_previous = NULL;
+	m_previous = NULL;
 }
 /**
  * destroy an object
@@ -120,8 +120,8 @@ void JNIThreadData::pushNewThreadData()
         JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_get");
         return;
     }
-    JNIThreadData *newData = new JNIThreadData();
-    newData->m_previous =data;
+	JNIThreadData *newData = new JNIThreadData();
+	newData->m_previous =data;
     apr_err = apr_threadkey_private_set (newData, g_key);
     if(apr_err)
     {
@@ -142,12 +142,12 @@ void JNIThreadData::popThreadData()
         JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_get");
         return;
     }
-    if(data == NULL)
-    {
-        return;
-    }
-    JNIThreadData *oldData = data->m_previous;
-    delete data;
+	if(data == NULL)
+	{
+		return;
+	}
+	JNIThreadData *oldData = data->m_previous;
+	delete data;
     apr_err = apr_threadkey_private_set (oldData, g_key);
     if(apr_err)
     {

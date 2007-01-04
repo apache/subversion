@@ -158,7 +158,7 @@ methods described below:
                            the subversion config only.
 
     cancel                 undef
-
+                           
     config                 Hash containing the config from the 
                            default subversion config file location.
 
@@ -991,7 +991,7 @@ the commit you can set this scalar to undef.  The 2nd value is a path to a
 temporary file which might be holding that log message, or undef if no such
 field exists (though, if log_msg is undef, this value is undefined).  The 
 log message B<MUST> be a UTF8 string with LF line separators.  The 3rd parameter
-is a reference to an array of svn_client_commit_item3_t objects, which may
+is a reference to an array of svn_client_commit_item_t objects, which may
 be fully or only partially filled-in, depending on the type of commit
 operation.  The 4th and last parameter will be a pool.
 
@@ -1005,7 +1005,7 @@ sub log_msg {
     my $self = shift;
 
     if (scalar(@_) == 1) {
-        $self->{'log_msg_callback'} = $self->{'ctx'}->log_msg_baton3(shift);
+        $self->{'log_msg_callback'} = $self->{'ctx'}->log_msg_baton(shift);
     }
     return ${$self->{'log_msg_callback'}};
 }
@@ -1306,7 +1306,7 @@ also only useful when working with a WC.
 package _p_svn_client_commit_info_t;
 use SVN::Base qw(Client svn_client_commit_info_t_);
 
-=head2 svn_client_commit_item3_t
+=head2 svn_client_commit_item_t
 
 =over 8
 
@@ -1344,23 +1344,17 @@ $SVN::Client::COMMIT_ITEM_TEXT_MODS
 $SVN::Client::COMMIT_ITEM_PROP_MODS
 $SVN::Client::COMMIT_ITEM_IS_COPY
 
-=item $citem>incoming_prop_changes()
+=item $citem>wcprop_changes()
 
-A reference to an array of svn_prop_t objects representing changes to
-WC properties.
-
-=item $citem>outgoing_prop_changes()
-
-A reference to an array of svn_prop_t objects representing extra
-changes to properties in the repository (which are not necessarily
-reflected by the WC).
+A reference to an array of svn_prop_t objects represent changes
+to wc properties.
 
 =back
 
 =cut
 
-package _p_svn_client_commit_item3_t;
-use SVN::Base qw(Client svn_client_commit_item3_t_);
+package _p_svn_client_commit_item_t;
+use SVN::Base qw(Client svn_client_commit_item_t_);
 
 =head2 svn_client_commit_info_t
 

@@ -1149,12 +1149,13 @@ log_do_committed(struct log_runner *loggy,
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
           const void *key;
+          apr_ssize_t klen;
           void *val;
           const svn_wc_entry_t *cur_entry; 
           svn_wc_adm_access_t *entry_access;
                   
           /* Get the next entry */
-          apr_hash_this(hi, &key, NULL, &val);
+          apr_hash_this(hi, &key, &klen, &val);
           cur_entry = (svn_wc_entry_t *) val;
                   
           /* Skip each entry that isn't scheduled for deletion. */

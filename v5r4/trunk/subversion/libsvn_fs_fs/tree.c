@@ -128,8 +128,7 @@ static svn_fs_root_t *make_revision_root(svn_fs_t *fs, svn_revnum_t rev,
                                          apr_pool_t *pool);
 
 static svn_fs_root_t *make_txn_root(svn_fs_t *fs, const char *txn,
-                                    svn_revnum_t base_rev, apr_uint32_t flags,
-                                    apr_pool_t *pool);
+                                    apr_uint32_t flags, apr_pool_t *pool);
 
 
 /*** Node Caching in the Roots. ***/
@@ -271,7 +270,7 @@ svn_fs_fs__txn_root(svn_fs_root_t **root_p,
         flags |= SVN_FS_TXN_CHECK_LOCKS;
     }
   
-  root = make_txn_root(txn->fs, txn->id, txn->base_rev, flags, pool);
+  root = make_txn_root(txn->fs, txn->id, flags, pool);
 
   *root_p = root;
   
@@ -1431,11 +1430,11 @@ merge(svn_stringbuf_t *conflict_p,
                                                s_entry->id,
                                                s_entry->kind,
                                                txn_id,
-                                               iterpool));
+                                               pool));
             }
           else
             {
-              SVN_ERR(svn_fs_fs__dag_delete(target, key, txn_id, iterpool));
+              SVN_ERR(svn_fs_fs__dag_delete(target, key, txn_id, pool));
             }
         }
 
@@ -3212,12 +3211,11 @@ make_revision_root(svn_fs_t *fs,
 
 
 /* Construct a root object referring to the root of the transaction
-   named TXN and based on revision BASE_REV in FS, with FLAGS to
-   describe transaction's behavior.  Create the new root in POOL.  */
+   named TXN in FS, with FLAGS to describe transaction's behavior.
+   Create the new root in POOL.  */
 static svn_fs_root_t *
 make_txn_root(svn_fs_t *fs,
               const char *txn,
-              svn_revnum_t base_rev,
               apr_uint32_t flags,
               apr_pool_t *pool)
 {
@@ -3225,7 +3223,6 @@ make_txn_root(svn_fs_t *fs,
   root->is_txn_root = TRUE;
   root->txn = apr_pstrdup(root->pool, txn);
   root->txn_flags = flags;
-  root->rev = base_rev;
 
   return root;
 }

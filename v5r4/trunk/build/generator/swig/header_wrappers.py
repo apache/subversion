@@ -84,15 +84,11 @@ class Generator(generator.swig.Generator):
       param_names = string.join(self._re_param_names.findall(params), ", ")
       params = "%s _obj, %s" % (type, params)
 
-    invoke_callback = "%s(%s)" % (callee, param_names)
-    if return_type != "void":
-      invoke_callback = "return %s" % (invoke_callback)
-
     # Write out the declaration
     self.ofile.write(
       "static %s %s_invoke_%s(\n" % (return_type, module, function) +
       "  %s) {\n" % params +
-      "  %s;\n" % invoke_callback +
+      "  return %s(%s);\n" % (callee, param_names) +
       "}\n\n")
 
 

@@ -47,8 +47,8 @@ rewrite_urls(apr_array_header_t *targets,
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
 
-  from = APR_ARRAY_IDX(targets, 0, const char *);
-  to = APR_ARRAY_IDX(targets, 1, const char *);
+  from = ((const char **) (targets->elts))[0];
+  to = ((const char **) (targets->elts))[1];
 
   /* "--relocate http https" and "--relocate http://foo svn://bar" are OK,
      but things like "--relocate http://foo svn" are not */
@@ -67,7 +67,7 @@ rewrite_urls(apr_array_header_t *targets,
     {
       for (i = 2; i < targets->nelts; i++)
         {
-          const char *target = APR_ARRAY_IDX(targets, i, const char *);
+          const char *target = ((const char **) (targets->elts))[i];
           svn_pool_clear(subpool);
           SVN_ERR(svn_client_relocate(target, from, to, recurse, 
                                       ctx, subpool));
@@ -111,13 +111,13 @@ svn_cl__switch(apr_getopt_t *os,
   /* Get the required SWITCH_URL and the optional TARGET arguments. */
   if (targets->nelts == 1)
     {
-      switch_url = APR_ARRAY_IDX(targets, 0, const char *);
+      switch_url = ((const char **) (targets->elts))[0];
       target = "";
     }
   else
     {
-      switch_url = APR_ARRAY_IDX(targets, 0, const char *);
-      target = APR_ARRAY_IDX(targets, 1, const char *);
+      switch_url = ((const char **) (targets->elts))[0];
+      target = ((const char **) (targets->elts))[1];
     }
 
   /* Validate the switch_url */

@@ -464,12 +464,6 @@ authz_group_walk(svn_config_t *cfg,
           /* Recurse on that group. */
           SVN_ERR(authz_group_walk(cfg, &group_user[1],
                                    checked_groups, pool));
-
-          /* Remove group from hash of checked groups, so that we don't
-             incorrectly report an error if we see it again as part of
-             another group. */
-          apr_hash_set(checked_groups, &group_user[1],
-                       APR_HASH_KEY_STRING, NULL);
         }
       else if (*group_user == '&')
         {

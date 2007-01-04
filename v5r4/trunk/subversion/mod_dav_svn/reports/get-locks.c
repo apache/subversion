@@ -87,6 +87,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
   subpool = svn_pool_create(resource->pool);
   for (hi = apr_hash_first(resource->pool, locks); hi; hi = apr_hash_next(hi))
     {
+      const void *key;
       void *val;
       const svn_lock_t *lock;
       const char *path_quoted, *token_quoted;
@@ -95,7 +96,7 @@ dav_svn__get_locks_report(const dav_resource *resource,
       svn_boolean_t owner_base64 = FALSE, comment_base64 = FALSE;
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, NULL, NULL, &val);
+      apr_hash_this(hi, &key, NULL, &val);
       lock = val;
       
       path_quoted = apr_xml_quote_string(subpool, lock->path, 1);

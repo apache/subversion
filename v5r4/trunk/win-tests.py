@@ -57,11 +57,6 @@ all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
 client_tests = filter(lambda x: x.startswith(CMDLINE_TEST_SCRIPT_PATH),
                       all_tests)
 
-dll_paths = []
-for section in gen_obj.sections.values():
-  if section.options.get("msvc-export"):
-    dll_paths.append(os.path.join("subversion", section.name))
-
 opts, args = my_getopt(sys.argv[1:], 'hrdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
@@ -146,11 +141,12 @@ if base_url:
 copied_execs = []   # Store copied exec files to avoid the final dir scan
 
 def create_target_dir(dirname):
-  tgt_dir = os.path.join(abs_builddir, dirname)
-  if not os.path.exists(tgt_dir):
-    if verbose:
-      print "mkdir:", tgt_dir
-    os.makedirs(tgt_dir)
+  if create_dirs:
+    tgt_dir = os.path.join(abs_builddir, dirname)
+    if not os.path.exists(tgt_dir):
+      if verbose:
+        print "mkdir:", tgt_dir
+      os.makedirs(tgt_dir)
 
 def copy_changed_file(src, tgt):
   assert os.path.isfile(src)
@@ -215,10 +211,8 @@ def locate_libs():
     libintl_dll_path = os.path.join(libintl_path, 'bin', 'intl3_svn.dll')
     copy_changed_file(libintl_dll_path, abs_objdir)
 
-  dll_path = reduce(lambda x, y: x + os.path.join(abs_objdir, y) + os.pathsep,
-                    dll_paths, "")
   os.environ['APR_ICONV_PATH'] = os.path.abspath(apriconv_so_path)
-  os.environ['PATH'] = abs_objdir + os.pathsep + dll_path + os.environ['PATH']
+  os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
   
 def fix_case(path):
     path = os.path.normpath(path)
@@ -291,15 +285,8 @@ class Httpd:
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir 
     self.path = os.path.join(self.httpd_dir, 'bin', self.name)
-
-    if not os.path.exists(self.path):
-      self.name = 'httpd.exe'
-      self.path = os.path.join(self.httpd_dir, 'bin', self.name)
-      if not os.path.exists(self.path):
-        raise RuntimeError, "Could not find a valid httpd binary!"
-
-    self.root_dir = os.path.join(CMDLINE_TEST_SCRIPT_NATIVE_PATH, 'httpd')
-    self.root = os.path.join(abs_builddir, self.root_dir)
+    self.root = os.path.join(abs_builddir, CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                             'httpd')
     self.authz_file = os.path.join(abs_builddir,
                                    CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                                    'svn-test-work', 'authz')
@@ -310,22 +297,12 @@ class Httpd:
     self.service_name = 'svn-test-httpd-' + str(httpd_port)
     self.httpd_args = [self.name, '-n', self._quote(self.service_name),
                        '-f', self._quote(self.httpd_config)]
-   
-    create_target_dir(self.root_dir)
+    
+    create_target_dir(self.root)
     
     self._create_users_file()
     self._create_mime_types_file()
-       
-    # Determine version.
-    if os.path.exists(os.path.join(self.httpd_dir,
-                                   'modules', 'mod_access_compat.so')):
-      self.httpd_ver = 2.3
-    elif os.path.exists(os.path.join(self.httpd_dir,
-                                     'modules', 'mod_auth_basic.so')):
-      self.httpd_ver = 2.2
-    else:
-      self.httpd_ver = 2.0
-
+        
     # Create httpd config file    
     fp = open(self.httpd_config, 'w')
 
@@ -339,16 +316,7 @@ class Httpd:
 
     # Write LoadModule for minimal system module
     fp.write(self._sys_module('dav_module', 'mod_dav.so'))
-    if self.httpd_ver >= 2.3:
-      fp.write(self._sys_module('access_compat_module', 'mod_access_compat.so'))
-      fp.write(self._sys_module('authz_core_module', 'mod_authz_core.so'))
-      fp.write(self._sys_module('authz_user_module', 'mod_authz_user.so'))
-    if self.httpd_ver >= 2.2:
-      fp.write(self._sys_module('auth_basic_module', 'mod_auth_basic.so'))
-      fp.write(self._sys_module('authn_core_module', 'mod_authn_core.so'))
-      fp.write(self._sys_module('authn_file_module', 'mod_authn_file.so'))
-    else:
-      fp.write(self._sys_module('auth_module', 'mod_auth.so'))
+    fp.write(self._sys_module('auth_module', 'mod_auth.so'))
     fp.write(self._sys_module('mime_module', 'mod_mime.so'))
     fp.write(self._sys_module('log_config_module', 'mod_log_config.so'))
     

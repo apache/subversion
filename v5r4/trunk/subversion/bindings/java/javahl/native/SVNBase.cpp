@@ -74,7 +74,7 @@ void SVNBase::dispose(jobject jthis, jfieldID *fid, const char *className)
     SVNBase::findCppAddrFieldID(fid, className, env);
     if (*fid == 0)
     {
-        return;
+	return;
     }
     env->SetLongField(jthis, *fid, 0);
     if (JNIUtil::isJavaExceptionThrown())

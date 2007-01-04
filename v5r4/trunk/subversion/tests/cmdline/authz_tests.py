@@ -723,73 +723,6 @@ def authz_aliases(sbox):
                                      '-m', 'logmsg',
                                      iota_url, B_url)
 
-def authz_validate(sbox):
-  "test the authz validation rules"
-
-  skip_test_when_no_authz_available()
-
-  sbox.build(create_wc = False)
-
-  write_restrictive_svnserve_conf(sbox.repo_dir)
-
-  A_url = sbox.repo_url + '/A'
-
-  # If any of the validate rules fail, the authz isn't loaded so there's no 
-  # access at all to the repository.
-
-  # Test 1: Undefined group
-  write_authz_file(sbox, { "/"  : "* = r",
-                           "/A/B" : "@undefined_group = rw" })
-
-  if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
-  else:
-    expected_err = ".*@undefined_group.*"
-
-  # validation of this authz file should fail, so no repo access
-  svntest.actions.run_and_verify_svn("ls remote folder",
-                                     None, expected_err,
-                                     'ls',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     A_url)
-
-  # Test 2: Circular dependency
-  write_authz_file(sbox, { "/"  : "* = r" },
-                         { "groups" : """admins = admin1, admin2, @devs
-devs1 = @admins, dev1
-devs2 = @admins, dev2
-devs = @devs1, dev3, dev4""" })
-
-  if sbox.repo_url.startswith("http"):
-    expected_err = ".*403 Forbidden.*"
-  else:
-    expected_err = ".*Circular dependency.*"
-
-  # validation of this authz file should fail, so no repo access
-  svntest.actions.run_and_verify_svn("ls remote folder",
-                                     None, expected_err,
-                                     'ls',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     A_url)
-
-  # Test 3: Group including other group 2 times (issue 2684)
-  write_authz_file(sbox, { "/"  : "* = r" },
-                         { "groups" : """admins = admin1, admin2
-devs1 = @admins, dev1
-devs2 = @admins, dev2
-users = @devs1, @devs2, user1, user2""" })
-
-  # validation of this authz file should fail, so no repo access
-  svntest.actions.run_and_verify_svn("ls remote folder",
-                                      ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
-                                      [],
-                                     'ls',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     A_url)
-
 ########################################################################
 # Run the tests
 
@@ -805,7 +738,6 @@ test_list = [ None,
               authz_checkout_and_update_test,
               authz_partial_export_test,
               authz_aliases,
-              authz_validate,
              ]
 
 if __name__ == '__main__':

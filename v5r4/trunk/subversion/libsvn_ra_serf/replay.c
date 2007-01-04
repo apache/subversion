@@ -370,6 +370,7 @@ start_replay(svn_ra_serf__xml_parser_t *parser,
     {
       const char *prop_name;
       prop_info_t *info;
+      svn_boolean_t del_prop;
 
       prop_name = svn_ra_serf__find_attr(attrs, "name");
       if (!prop_name)
