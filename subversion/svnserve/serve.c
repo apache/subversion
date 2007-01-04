@@ -1367,7 +1367,7 @@ static svn_error_t *get_merge_info(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         if (item->kind != SVN_RA_SVN_STRING)
           return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                   _("Path is not a string"));
-        APR_ARRAY_IDX(canonical_paths, i, const char *) =
+        APR_ARRAY_PUSH(canonical_paths, const char *) =
           svn_path_canonicalize(item->u.string->data, pool);
      }
 
