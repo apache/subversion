@@ -836,6 +836,9 @@ def simple_property_merges(sbox):
   alpha_path = os.path.join(wc_dir, 'B', 'E', 'alpha')
 
   # Cannot use run_and_verify_merge with a file target
+  ### FIXME: This is failing over ra_svn.  Merge info inherited from
+  ### A2_url for /A:1-4 is being ignored, such that the merge is still
+  ### occurring.
   svntest.actions.run_and_verify_svn(None, [], [], 'merge', '-r', '3:4',
                                      alpha_url, alpha_path)
   
@@ -3954,6 +3957,7 @@ def create_deep_trees(wc_dir):
 
   return expected_status
 
+### FIXME: This test is failing over ra_svn.
 def avoid_repeated_merge_using_inherited_merge_info(sbox):
   "use inherited merge info to avoid repeated merge"
 
