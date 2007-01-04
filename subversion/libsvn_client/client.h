@@ -2,7 +2,7 @@
  * client.h :  shared stuff internal to the client library.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -85,6 +85,24 @@ svn_client__compare_revisions(svn_opt_revision_t *revision1,
  */ 
 svn_boolean_t 
 svn_client__revision_is_local(const svn_opt_revision_t *revision);
+
+
+/* Resolve peg revisions and operational revisions in the following way:
+    * A URL pegrev defaults to HEAD, unless specified.
+    * A wc-path pegrev defaults to BASE, unless specified.
+    * Operational revs default to pegrev, unless specified.
+    
+    Both PEG_REV and OP_REV may be modified as a result of this function.
+    IS_URL should be TRUE if the path the revisions refer to is a url,
+    FALSE otherwise.
+    
+    If NOTICE_LOCAL_MODS is set, the WORKING is used, instead of BASE.
+  */
+svn_error_t *
+svn_client__resolve_revisions(svn_opt_revision_t *peg_rev,
+                              svn_opt_revision_t *op_rev,
+                              svn_boolean_t is_url,
+                              svn_boolean_t notice_local_mods);
 
 
 /* Given the CHANGED_PATHS and REVISION from an instance of a

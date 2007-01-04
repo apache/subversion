@@ -1,7 +1,6 @@
 require "fileutils"
 
-require "svn/client"
-require "svn/repos"
+require "my-assertions"
 
 class Time
   unless instance_methods.include?("to_int")
@@ -11,13 +10,14 @@ end
 
 module SvnTestUtil
 
-  def setup_basic
+  def setup_basic(need_svnserve=false)
+    @need_svnserve = need_svnserve
     @author = ENV["USER"] || "sample-user"
     @password = "sample-password"
     @realm = "sample realm"
     @repos_path = File.join("test", "repos")
     @full_repos_path = File.expand_path(@repos_path)
-    @repos_uri = "file://#{@full_repos_path}"
+    @repos_uri = "file://#{@full_repos_path.sub(/^\/?/, '/')}"
     @svnserve_host = "127.0.0.1"
     @svnserve_ports = (64152..64282).collect{|x| x.to_s}
     @wc_base_dir = File.join("test", "wc-tmp")
@@ -28,7 +28,7 @@ module SvnTestUtil
     setup_tmp
     setup_repository
     add_hooks
-    setup_svnserve
+    setup_svnserve if @need_svnserve
     setup_config
     setup_wc
     add_authentication
@@ -37,7 +37,7 @@ module SvnTestUtil
 
   def teardown_basic
     GC.stress = false if GC.respond_to?(:stress=)
-    teardown_svnserve
+    teardown_svnserve if @need_svnserve
     teardown_repository
     teardown_wc
     teardown_config
@@ -231,5 +231,18 @@ exit 1
   def setup_auth_baton(auth_baton)
     auth_baton[Svn::Core::AUTH_PARAM_CONFIG_DIR] = @config_path
     auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
+  end
+
+  def normalize_line_break(str)
+    if windows?
+      str.gsub(/\n/, "\r\n")
+    else
+      str
+    end
+  end
+
+  module_function
+  def windows?
+    /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
   end
 end

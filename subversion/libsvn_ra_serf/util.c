@@ -41,8 +41,8 @@
 
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
-           void *baton,
-           apr_pool_t *pool)
+                        void *baton,
+                        apr_pool_t *pool)
 {
   serf_bucket_t *bucket;
   svn_ra_serf__connection_t *conn = baton;
@@ -63,9 +63,9 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
 
 serf_bucket_t*
 svn_ra_serf__accept_response(serf_request_t *request,
-                serf_bucket_t *stream,
-                void *acceptor_baton,
-                apr_pool_t *pool)
+                             serf_bucket_t *stream,
+                             void *acceptor_baton,
+                             apr_pool_t *pool)
 {
   serf_bucket_t *c;
   serf_bucket_alloc_t *bkt_alloc;
@@ -95,9 +95,9 @@ accept_head(serf_request_t *request,
 
 void
 svn_ra_serf__conn_closed(serf_connection_t *conn,
-            void *closed_baton,
-            apr_status_t why,
-            apr_pool_t *pool)
+                         void *closed_baton,
+                         apr_status_t why,
+                         apr_pool_t *pool)
 {
   svn_ra_serf__connection_t *our_conn = closed_baton;
 
@@ -322,9 +322,9 @@ cdata_error(svn_ra_serf__xml_parser_t *parser,
 
 apr_status_t
 svn_ra_serf__handle_discard_body(serf_request_t *request,
-                                  serf_bucket_t *response,
-                                  void *baton,
-                                  apr_pool_t *pool)
+                                 serf_bucket_t *response,
+                                 void *baton,
+                                 apr_pool_t *pool)
 {
   apr_status_t status;
   svn_ra_serf__server_error_t *server_err = baton;

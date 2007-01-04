@@ -145,8 +145,12 @@
 // svn_stringbuf_from_file
 // svn_stringbuf_from_aprfile
 
+#ifndef SWIGPYTHON
+/* These functions are useful in Python, because they allow you to
+ * easily delete files which are marked as read-only on Windows. */
 %ignore svn_io_remove_file;
 %ignore svn_io_remove_dir;
+#endif
 %ignore svn_io_get_dir_filenames;
 %ignore svn_io_get_dirents2;
 %ignore svn_io_get_dirents;
