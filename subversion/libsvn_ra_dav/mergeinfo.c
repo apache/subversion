@@ -150,12 +150,13 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
 
 /* Request a merge-info-report from the URL attached to SESSION,
    and fill in the MERGEINFO hash with the results.  */
-svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
-                                         apr_hash_t **mergeinfo,
-                                         const apr_array_header_t *paths,
-                                         svn_revnum_t revision,
-                                         svn_boolean_t include_parents,
-                                         apr_pool_t *pool)
+svn_error_t *
+svn_ra_dav__get_merge_info(svn_ra_session_t *session,
+                           apr_hash_t **mergeinfo,
+                           const apr_array_header_t *paths,
+                           svn_revnum_t revision,
+                           svn_boolean_t include_parents,
+                           apr_pool_t *pool)
 {
   svn_error_t *err;
   int i, status_code;
@@ -219,8 +220,8 @@ svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
   /* If the server responds with HTTP_NOT_IMPLEMENTED, assume its
      mod_dav_svn is too old to understand the get-merge-info REPORT.
 
-     ### It would be less expensive if knew the server's capabilities
-     ### *before* sending our REPORT. */
+     ### It would be less expensive if we knew the server's
+     ### capabilities *before* sending our REPORT. */
   if (status_code == 501)
     {
       *mergeinfo = NULL;
