@@ -157,13 +157,15 @@ cdata_handler(svn_ra_serf__xml_parser_t *parser, void *userData,
 
 /* Request a merge-info-report from the URL attached to SESSION,
    and fill in the MERGEINFO hash with the results.  */
-svn_error_t * svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
-                                          apr_hash_t **mergeinfo,
-                                          const apr_array_header_t *paths,
-                                          svn_revnum_t revision,
-                                          svn_boolean_t include_parents,
-                                          apr_pool_t *pool)
+svn_error_t *
+svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
+                            apr_hash_t **mergeinfo,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t revision,
+                            svn_boolean_t include_parents,
+                            apr_pool_t *pool)
 {
+  svn_error_t *err;
   static const char minfo_request_head[]
     = "<S:merge-info-report xmlns:S=\"" SVN_XML_NAMESPACE "\">";
 
@@ -204,7 +206,8 @@ svn_error_t * svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *this_path =
-            apr_xml_quote_string(pool, ((const char **) paths->elts)[i], 0);
+            apr_xml_quote_string(pool, APR_ARRAY_IDX(paths, i, const char *),
+                                 0);
           svn_ra_serf__add_tag_buckets(buckets, "S:path", 
                                        this_path, session->bkt_alloc);
         }
@@ -239,7 +242,23 @@ svn_error_t * svn_ra_serf__get_merge_info(svn_ra_session_t *ra_session,
 
   svn_ra_serf__request_create(handler);
 
-  SVN_ERR(svn_ra_serf__context_run_wait(&mergeinfo_ctx->done, session, pool));
+  err = svn_ra_serf__context_run_wait(&mergeinfo_ctx->done, session, pool);
+  /* If the server responds with HTTP_NOT_IMPLEMENTED (which ra_serf
+     translates into a Subversion error), assume its mod_dav_svn is
+     too old to understand the get-merge-info REPORT.
+
+     ### It would be less expensive if we knew the server's
+     ### capabilities *before* sending our REPORT. */
+  if (err)
+    {
+      if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+        {
+          *mergeinfo = NULL;
+          svn_error_clear(err);
+        }
+      else
+        return err;
+    }
 
   if (mergeinfo_ctx->done)
     *mergeinfo = mergeinfo_ctx->result;
