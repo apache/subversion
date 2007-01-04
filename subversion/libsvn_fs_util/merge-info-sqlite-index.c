@@ -78,7 +78,7 @@ util_sqlite_exec(sqlite3 *db, const char *sql,
 /* Return SVN_ERR_FS_GENERAL if the schema doesn't exist,
    SVN_ERR_FS_UNSUPPORTED_FORMAT if the schema format is invalid, or
    SVN_ERR_FS_SQLITE_ERROR if an sqlite error occurs during
-   validation.  Return SVN_NO_ERROR is everything is okay. */
+   validation.  Return SVN_NO_ERROR if everything is okay. */
 static svn_error_t *
 check_format(sqlite3 *db)
 {
@@ -105,8 +105,8 @@ check_format(sqlite3 *db)
       else if (schema_format > MERGE_INFO_INDEX_SCHEMA_FORMAT)
         {
           err = svn_error_createf(SVN_ERR_FS_UNSUPPORTED_FORMAT, NULL,
-                                 _("Merge Tracking schema format %d "
-                                   "not recognized"), schema_format);
+                                  _("Merge Tracking schema format %d "
+                                    "not recognized"), schema_format);
         }
       /* else, we may one day want to perform a schema migration. */
 
