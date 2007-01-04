@@ -49,7 +49,7 @@ svn_cl__propdel(apr_getopt_t *os,
 
   /* Get the property's name (and a UTF-8 version of that name). */
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
-  pname = ((const char **) (args->elts))[0];
+  pname = APR_ARRAY_IDX(args, 0, const char *);
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
 
   /* Suck up all the remaining arguments into a targets array */
@@ -93,7 +93,7 @@ svn_cl__propdel(apr_getopt_t *os,
       /* For each target, remove the property PNAME. */
       for (i = 0; i < targets->nelts; i++)
         {
-          const char *target = ((const char **) (targets->elts))[i];
+          const char *target = APR_ARRAY_IDX(targets, i, const char *);
           svn_boolean_t success;
 
           svn_pool_clear(subpool);

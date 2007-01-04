@@ -73,7 +73,8 @@ svn_cl__merge(apr_getopt_t *os,
                                 _("Too many arguments given"));
 
       SVN_ERR(svn_opt_parse_path(&peg_revision, &sourcepath1,
-                                 ((const char **)(targets->elts))[0], pool));
+                                 APR_ARRAY_IDX(targets, 0, const char *),
+                                 pool));
       sourcepath2 = sourcepath1;
 
       /* Set the default peg revision if one was not specified. */
@@ -83,7 +84,7 @@ svn_cl__merge(apr_getopt_t *os,
 
       /* decide where to apply the diffs, defaulting to '.' */
       if (targets->nelts == 2)
-        targetpath = ((const char **) (targets->elts))[1];
+        targetpath = APR_ARRAY_IDX(targets, 1, const char *);
       else
         targetpath = "";
     }
@@ -97,10 +98,10 @@ svn_cl__merge(apr_getopt_t *os,
 
       /* the first two paths become the 'sources' */
       SVN_ERR(svn_opt_parse_path(&opt_state->start_revision, &sourcepath1,
-                                 ((const char **) (targets->elts))[0],
+                                 APR_ARRAY_IDX(targets, 0, const char *),
                                  pool));
       SVN_ERR(svn_opt_parse_path(&opt_state->end_revision, &sourcepath2,
-                                 ((const char **) (targets->elts))[1],
+                                 APR_ARRAY_IDX(targets, 1, const char *),
                                  pool));
       
       /* Catch 'svn merge wc_path1 wc_path2 [target]' without explicit
@@ -118,7 +119,7 @@ svn_cl__merge(apr_getopt_t *os,
 
       /* decide where to apply the diffs, defaulting to '.' */
       if (targets->nelts == 3)
-        targetpath = ((const char **) (targets->elts))[2];
+        targetpath = APR_ARRAY_IDX(targets, 2, const char *);
       else
         targetpath = "";
     }

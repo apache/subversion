@@ -203,6 +203,7 @@
 (eval-when-compile (require 'dired))
 (eval-when-compile (require 'ediff-util))
 (eval-when-compile (require 'elp))
+(eval-when-compile (require 'pp))
 
 (condition-case nil
     (progn
@@ -479,6 +480,8 @@ svn-status-coding-system is used in svn-run, if it is not nil.")
 This feature is implemented via a process filter.
 It is an experimental feature.")
 
+(defvar svn-status-refresh-info nil "Whether `svn-status-update-buffer' should call `svn-status-parse-info'.")
+
 ;;; Customize group
 (defgroup psvn nil
   "Subversion interface for Emacs."
@@ -587,6 +590,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-remote)
 (defvar svn-status-commit-rev-number nil)
 (defvar svn-status-operated-on-dot nil)
+(defvar svn-status-last-commit-author nil)
 (defvar svn-status-elided-list nil)
 (defvar svn-status-get-specific-revision-file-info)
 (defvar svn-status-last-output-buffer-name)
@@ -895,6 +899,9 @@ inside loops."
         if (listp item) nconc (svn-status-flatten-list item)
         else collect item))
 
+(defun svn-status-completion-function ()
+  (if svn-status-use-ido-completion 'ido-completing-read 'completing-read))
+
 (defun svn-status-window-line-position (w)
   "Return the window line at point for window W, or nil if W is nil."
   (svn-status-message 3 "About to count lines; selected window is %s" (selected-window))
@@ -991,13 +998,15 @@ If there is no .svn directory, examine if there is CVS and run
   (svn-status default-directory arg))
 
 (defun svn-status-use-history ()
+  "Interactively select a different directory from `svn-status-directory-history'."
   (interactive)
-  (let* ((hist svn-status-directory-history)
-         (dir (read-from-minibuffer "svn-status on directory: "
-                              (cadr svn-status-directory-history)
-                              nil nil 'hist)))
+  (let* ((hist (cdr svn-status-directory-history))
+         (dir (funcall (svn-status-completion-function) "svn-status on directory: " hist)))
     (if (file-directory-p dir)
-        (svn-status dir)
+        (progn
+          (unless svn-status-refresh-info
+            (setq svn-status-refresh-info 'once))
+          (svn-status dir))
       (error "%s is not a directory" dir))))
 
 (defun svn-had-user-input-since-asynch-run ()
@@ -1075,6 +1084,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                 (delete-region (point-min) (point-max))
               (goto-char (point-max)))
             (setq svn-process-cmd cmdtype)
+            (setq svn-status-last-commit-author nil)
             (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
             (svn-status-update-mode-line)
             (sit-for 0.1)
@@ -1963,7 +1973,9 @@ See `svn-status-make-ui-status' for information about the ui-status."
     (if (and l (>= l 0))
         l
       nil)))
-(defun svn-status-line-info->author (line-info) (nth 6 line-info))
+(defun svn-status-line-info->author (line-info)
+  "Return the last author that changed the item that is represented in LINE-INFO."
+  (nth 6 line-info))
 (defun svn-status-line-info->update-available (line-info)
   "Return whether LINE-INFO is out of date.
 In other words, whether there is a newer version available in the
@@ -2031,6 +2043,9 @@ The result will be \"K\", \"O\", \"T\", \"B\" or nil."
 
 (defun svn-status-line-info->set-localrev (line-info value)
   (setcar (nthcdr 4 line-info) value))
+
+(defun svn-status-line-info->set-author (line-info value)
+  (setcar (nthcdr 6 line-info) value))
 
 (defun svn-status-line-info->set-lastchangerev (line-info value)
   (setcar (nthcdr 5 line-info) value))
@@ -2172,6 +2187,8 @@ When called with the prefix argument 0, use the full path name."
                svn-status-commit-rev-number)
       (svn-status-line-info->set-localrev line-info svn-status-commit-rev-number)
       (svn-status-line-info->set-lastchangerev line-info svn-status-commit-rev-number))
+    (when svn-status-last-commit-author
+      (svn-status-line-info->set-author line-info svn-status-last-commit-author))
     (cond ((equal action 'committed)
            (setq tag-string " <committed>")
            (when (member (svn-status-line-info->repo-locked line-info) '(?K))
@@ -2223,7 +2240,7 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
   (save-excursion
     (set-buffer svn-process-buffer-name)
     (let ((action)
-          (name)
+          (file-name)
           (skip)
           (result))
       (goto-char (point-min))
@@ -2254,8 +2271,10 @@ Return a list that is suitable for `svn-status-update-with-command-list'"
             ;; when the commit used . as argument, delete the trailing directory
             ;; from the svn output
             (search-forward "/" nil t))
-          (setq name (buffer-substring-no-properties (point) (svn-point-at-eol)))
-          (setq result (cons (list name action)
+          (setq file-name (buffer-substring-no-properties (point) (svn-point-at-eol)))
+          (unless svn-status-last-commit-author
+            (setq svn-status-last-commit-author (car (svn-status-info-for-path (expand-file-name (concat default-directory file-name))))))
+          (setq result (cons (list file-name action)
                              result))
           (setq skip nil))
         (forward-line 1))
@@ -2476,6 +2495,10 @@ Symbolic links to directories count as directories (see `file-directory-p')."
   (unless (string= (buffer-name) svn-status-buffer-name)
     (set-buffer svn-status-buffer-name))
   (svn-status-mode)
+  (when svn-status-refresh-info
+    (when (eq svn-status-refresh-info 'once)
+      (setq svn-status-refresh-info nil))
+    (svn-status-parse-info t))
   (let ((st-info svn-status-info)
         (buffer-read-only nil)
         (start-pos)
@@ -2575,8 +2598,11 @@ non-interactive use."
   (interactive "P")
   (if (eq arg 0)
       (setq svn-status-base-info nil)
-    (svn-run nil t 'parse-info "info" ".")
-    (svn-status-parse-info-result))
+    (let ((svn-process-buffer-name "*svn-info-output*"))
+      (when (get-buffer svn-process-buffer-name)
+        (kill-buffer svn-process-buffer-name))
+      (svn-run nil t 'parse-info "info" ".")
+      (svn-status-parse-info-result)))
   (unless (eq arg t)
     (svn-status-update-buffer)))
 
@@ -2584,7 +2610,8 @@ non-interactive use."
   "Parse the result from the svn info command.
 Put the found values in `svn-status-base-info'."
   (let ((url)
-        (repository-root))
+        (repository-root)
+        (last-changed-author))
     (save-excursion
       (set-buffer svn-process-buffer-name)
       (goto-char (point-min))
@@ -2592,8 +2619,10 @@ Put the found values in `svn-status-base-info'."
         (search-forward "url: ")
         (setq url (buffer-substring-no-properties (point) (svn-point-at-eol)))
         (when (search-forward "repository root: " nil t)
-          (setq repository-root (buffer-substring-no-properties (point) (svn-point-at-eol))))))
-    (setq svn-status-base-info `((url ,url) (repository-root ,repository-root)))))
+          (setq repository-root (buffer-substring-no-properties (point) (svn-point-at-eol))))
+        (when (search-forward "last changed author: " nil t)
+          (setq last-changed-author (buffer-substring-no-properties (point) (svn-point-at-eol))))))
+    (setq svn-status-base-info `((url ,url) (repository-root ,repository-root) (last-changed-author ,last-changed-author)))))
 
 (defun svn-status-base-info->url ()
   "Extract the url part from `svn-status-base-info'."
@@ -3158,6 +3187,20 @@ See `svn-status-marked-files' for what counts as selected."
   (svn-status-create-arg-file svn-status-temp-arg-file "" (svn-status-marked-files) "")
   (svn-run t t 'info "info" "--targets" svn-status-temp-arg-file))
 
+(defun svn-status-info-for-path (path)
+  "Run svn info on the given PATH.
+Return some interesting parts of the resulting output.
+At the moment a list containing the last changed author is returned."
+  (let ((svn-process-buffer-name "*svn-info-output*")
+        (last-changed-author))
+    (svn-run nil t 'info "info" path)
+    (with-current-buffer svn-process-buffer-name
+      (goto-char (point-min))
+      (when (search-forward "last changed author: " nil t)
+        (setq last-changed-author (buffer-substring-no-properties (point) (svn-point-at-eol)))))
+    (svn-status-message 7 "last-changed-author for '%s': %s" path last-changed-author)
+    (list last-changed-author)))
+
 (defun svn-status-blame (revision)
   "Run `svn blame' on the current file.
 When called with a prefix argument, ask the user for the REVISION to use.
@@ -3584,9 +3627,8 @@ If no files have been marked, commit recursively the file at point."
 Run `svn-status' on the selected bookmark."
   (interactive
    (list
-    (let ((completion-ignore-case t)
-          (completion-function (if svn-status-use-ido-completion 'ido-completing-read 'completing-read)))
-      (funcall completion-function "SVN status bookmark: " svn-bookmark-list))))
+    (let ((completion-ignore-case t))
+      (funcall (svn-status-completion-function) "SVN status bookmark: " svn-bookmark-list))))
   (unless bookmark
     (error "No bookmark specified"))
   (let ((directory (cdr (assoc bookmark svn-bookmark-list))))
@@ -4112,14 +4154,11 @@ When called with a prefix argument, it is possible to enter a new property."
   (interactive)
   (require 'mailcap nil t)
   (let ((completion-ignore-case t)
-        (completion-function (if svn-status-use-ido-completion
-                                 'ido-completing-read
-                               'completing-read))
         (mime-types (when (fboundp 'mailcap-mime-types)
                       (mailcap-mime-types))))
     (svn-status-property-set-property
      (svn-status-marked-files) "svn:mime-type"
-     (funcall completion-function "Set svn:mime-type for the marked files: "
+     (funcall (svn-status-completion-function) "Set svn:mime-type for the marked files: "
               (mapcar (lambda (x) (cons x x)) ; for Emacs 21
                       (sort mime-types 'string<))))))
 
@@ -4807,8 +4846,7 @@ The conflicts must be marked with rcsmerge conflict markers."
   (interactive)
   (unless prompt
     (setq prompt "Select branch: "))
-  (let* ((completion-function (if svn-status-use-ido-completion 'ido-completing-read 'completing-read))
-         (branch (funcall completion-function prompt svn-status-branch-list))
+  (let* ((branch (funcall (svn-status-completion-function) prompt svn-status-branch-list))
          (directory)
          (base-url))
     (when (string-match "#\\(1#\\)?\\(.+\\)" branch)
@@ -4821,7 +4859,7 @@ The conflicts must be marked with rcsmerge conflict markers."
         (let ((svn-status-branch-list (svn-status-ls base-url t)))
           (setq branch (concat (svn-status-base-info->repository-root) "/"
                                directory "/"
-                               (svn-select-branch (format "Select branch from '%s': " directory)))))))
+                               (svn-branch-select (format "Select branch from '%s': " directory)))))))
     branch))
 
 (defun svn-branch-diff (branch1 branch2)

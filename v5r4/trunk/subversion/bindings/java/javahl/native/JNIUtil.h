@@ -108,7 +108,7 @@ public:
     { raiseThrowable(JAVA_PACKAGE"/JNIError", message); }
 
     static apr_pool_t * getPool();
-	static bool JNIGlobalInit(JNIEnv *env);
+    static bool JNIGlobalInit(JNIEnv *env);
     static bool JNIInit(JNIEnv *env);
     static JNIMutex *getGlobalPoolMutex();
     enum { formatBufferSize = 2048 };

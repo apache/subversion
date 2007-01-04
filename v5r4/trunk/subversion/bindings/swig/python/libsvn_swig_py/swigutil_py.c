@@ -489,15 +489,16 @@ static PyObject *convert_svn_string_t(void *value, void *ctx,
   return PyString_FromStringAndSize((void *)s->data, s->len);
 }
 
-static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
+static PyObject *convert_svn_client_commit_item3_t(void *value, void *ctx)
 {
   PyObject *list;
-  PyObject *path, *kind, *url, *rev, *cf_url, *state;
-  svn_client_commit_item_t *item = value;
+  PyObject *path, *kind, *url, *rev, *cf_url, *cf_rev, *state,
+      *incoming_prop_changes, *outgoing_prop_changes;
+  svn_client_commit_item3_t *item = value;
 
   /* ctx is unused */
 
-  list = PyList_New(6);
+  list = PyList_New(9);
 
   if (item->path)
     path = PyString_FromString(item->path);
@@ -525,9 +526,29 @@ static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
 
   kind = PyInt_FromLong(item->kind);
   rev = PyInt_FromLong(item->revision);
+  cf_rev = PyInt_FromLong(item->copyfrom_rev);
   state = PyInt_FromLong(item->state_flags);
 
-  if (! (list && path && kind && url && rev && cf_url && state))
+  if (item->incoming_prop_changes)
+    incoming_prop_changes =
+      svn_swig_py_array_to_list(item->incoming_prop_changes);
+  else
+    {
+      incoming_prop_changes = Py_None;
+      Py_INCREF(Py_None);
+    }
+
+  if (item->outgoing_prop_changes)
+    outgoing_prop_changes =
+      svn_swig_py_array_to_list(item->outgoing_prop_changes);
+  else
+    {
+      outgoing_prop_changes = Py_None;
+      Py_INCREF(Py_None);
+    }
+
+  if (! (list && path && kind && url && rev && cf_url && cf_rev && state &&
+         incoming_prop_changes && outgoing_prop_changes))
     {
       Py_XDECREF(list);
       Py_XDECREF(path);
@@ -535,7 +556,10 @@ static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
       Py_XDECREF(url);
       Py_XDECREF(rev);
       Py_XDECREF(cf_url);
+      Py_XDECREF(cf_rev);
       Py_XDECREF(state);
+      Py_XDECREF(incoming_prop_changes);
+      Py_XDECREF(outgoing_prop_changes);
       return NULL;
     }
 
@@ -544,7 +568,10 @@ static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
   PyList_SET_ITEM(list, 2, url);
   PyList_SET_ITEM(list, 3, rev);
   PyList_SET_ITEM(list, 4, cf_url);
-  PyList_SET_ITEM(list, 5, state);
+  PyList_SET_ITEM(list, 5, cf_rev);
+  PyList_SET_ITEM(list, 6, state);
+  PyList_SET_ITEM(list, 7, incoming_prop_changes);
+  PyList_SET_ITEM(list, 8, outgoing_prop_changes);
   return list;
 }
 
@@ -907,8 +934,8 @@ commit_item_array_to_list(const apr_array_header_t *array)
 
     for (i = 0; i < array->nelts; ++i)
       {
-        PyObject *ob = convert_svn_client_commit_item_t
-          (APR_ARRAY_IDX(array, i, svn_client_commit_item_t *), NULL);
+        PyObject *ob = convert_svn_client_commit_item3_t
+          (APR_ARRAY_IDX(array, i, svn_client_commit_item3_t *), NULL);
         if (ob == NULL)
           goto error;
         PyList_SET_ITEM(list, i, ob);
@@ -1522,6 +1549,14 @@ read_handler_pyio(void *baton, char *buffer, apr_size_t *len)
   apr_size_t bytes;
   svn_error_t *err = SVN_NO_ERROR;
 
+  if (py_io == Py_None)
+    {
+      /* Return the empty string to indicate a short read */
+      *buffer = '\0';
+      *len = 0;
+      return SVN_NO_ERROR;
+    }
+
   svn_swig_py_acquire_py_lock();
   if ((result = PyObject_CallMethod(py_io, (char *)"read",
                                     (char *)"i", *len)) == NULL)
@@ -1559,7 +1594,7 @@ write_handler_pyio(void *baton, const char *data, apr_size_t *len)
   PyObject *py_io = baton;
   svn_error_t *err = SVN_NO_ERROR;
 
-  if (data != NULL)
+  if (data != NULL && py_io != Py_None)
     {
       svn_swig_py_acquire_py_lock();
       if ((result = PyObject_CallMethod(py_io, (char *)"write",
@@ -1775,7 +1810,8 @@ svn_error_t *svn_swig_py_fs_get_locks_func(void *baton,
 
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
-                                             apr_array_header_t *commit_items,
+                                             const apr_array_header_t *
+                                             commit_items,
                                              void *baton,
                                              apr_pool_t *pool)
 {

@@ -4596,7 +4596,7 @@ msgstr ""
 
 #: libsvn_subr/prompt.c:300
 msgid "(R)eject, accept (t)emporarily or accept (p)ermanently? "
-msgstr "(R)ejet, acception (t)emporairement ou (p)ermanente ? "
+msgstr "(R)ejet, acceptation (t)emporaire ou (p)ermanente ? "
 
 #: libsvn_subr/prompt.c:304
 msgid "(R)eject or accept (t)emporarily? "

@@ -1018,6 +1018,21 @@ def action_init(branch_dir, branch_props):
     # Check branch directory is ready for being modified
     check_dir_clean(branch_dir)
 
+    # If the user hasn't specified the revisions to use, see if the
+    # "source" is a branch from the current tree and if so, we can use
+    # the version data obtained from it.
+    if not opts["revision"]:
+        cf_source, cf_rev = get_copyfrom(opts["source-url"])
+        branch_path = target_to_repos_relative_path(branch_dir)
+
+        # If the branch_path is the source path of "source",
+        # then "source" was branched from the current working tree
+        # and we can use the revisions determined by get_copyfrom
+        if branch_path == cf_source:
+            report('the source "%s" is a branch of "%s"' %
+                   (opts["source-url"], branch_dir))
+            opts["revision"] = "1-" + cf_rev
+
     # Get the initial revision set if not explicitly specified.
     revs = opts["revision"] or "1-" + get_latest_rev(opts["source-url"])
     revs = RevisionSet(revs)
@@ -1156,10 +1171,10 @@ def action_merge(branch_dir, branch_props):
 
         # Set merge props appropriately if bidirectional support is enabled
         if opts["bidirectional"]:
-          new_merge_props = merge_metadata.get(start-1)
-          if new_merge_props != old_merge_props:
-              set_merge_props(branch_dir, new_merge_props)
-              old_merge_props = new_merge_props
+            new_merge_props = merge_metadata.get(start-1)
+            if new_merge_props != old_merge_props:
+                set_merge_props(branch_dir, new_merge_props)
+                old_merge_props = new_merge_props
 
         if not record_only:
             # Do the merge
@@ -1275,7 +1290,7 @@ def action_rollback(branch_dir, branch_props):
     # Limit to revisions specified by -r (if any)
     revs = merged_revs & RevisionSet(opts["revision"])
 
-    # make sure theres some revision to rollback
+    # make sure there's some revision to rollback
     if not revs:
         report("Nothing to rollback in revision range r%s" % opts["revision"])
         return
@@ -1684,11 +1699,11 @@ common_opts = [
                    'and ranges separated by commas, e.g., "534,537-539,540"'),
     OptionArg("-S", "--source", "--head",
               default=None,
-              help="specify a merge source for this branch. It can be either "
-                   "a path, a full URL, or an unambigous substring of one the "
-                   "paths for which merge tracking was already initialized. "
-                   "Needed only to disambiguate in case of multiple merge "
-                   "sources"),
+              help="specify a merge source for this branch.  It can be either "
+                   "a path, a full URL, or an unambiguous substring of one "
+                   "of the paths for which merge tracking was already "
+                   "initialized.  Needed only to disambiguate in case of "
+                   "multiple merge sources"),
 ]
 
 command_table = {

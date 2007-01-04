@@ -53,7 +53,11 @@ LINK32=link.exe
 # Begin Target
 
 [for platforms][for configs]# Name "[target.proj_name] - [platforms] [configs.name]"
-[end][end][for sources]# Begin Source File
+[end][end][is target_number "0x0102"]# Begin Source File
+
+SOURCE="..\empty.c"
+# End Source File
+[end][for sources]# Begin Source File
 
 SOURCE=[sources.path][if-any sources.reldir]
 [for platforms][for configs]

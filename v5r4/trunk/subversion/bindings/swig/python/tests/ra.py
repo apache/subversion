@@ -1,6 +1,7 @@
 import unittest, os, setup_path
 
 from svn import core, repos, fs, delta, client, ra
+from StringIO import StringIO
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH, REPOS_URL
@@ -20,6 +21,20 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     callbacks = ra.callbacks2_t()
 
     self.ra_ctx = ra.open2(REPOS_URL, callbacks, None, None)
+
+  def test_get_file(self):
+    # Test getting the properties of a file
+    fs_revnum = fs.youngest_rev(self.fs)
+    rev, properties = ra.get_file(self.ra_ctx, "trunk/README2.txt",
+                                  core.svn_invalid_revnum, None)
+    self.assertEqual(rev, fs_revnum)
+    self.assertEqual(properties["svn:mime-type"], "text/plain")
+
+    # Test getting the contents of a file
+    filestream = StringIO()
+    rev, properties = ra.get_file(self.ra_ctx, "trunk/README2.txt",
+                                  fs_revnum, filestream)
+    self.assertEqual("A test.\n", filestream.getvalue())
 
   def test_get_repos_root(self):
     root = ra.get_repos_root(self.ra_ctx)

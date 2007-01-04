@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, re, os
+import re, os
 
 # Our testing module
 import svntest
@@ -255,19 +255,19 @@ def parse_log_output(log_lines):
     match = header_re.search(this_line)
     if match and match.groups():
       this_item = {}
-      this_item['revision'] = match.group(1)
+      this_item['revision'] = int(match.group(1))
       this_item['author']   = match.group(2)
       this_item['date']     = match.group(3)
-      lines = string.atoi((match.group(4)))
+      lines = int(match.group(4))
       this_item['lines']    = lines
 
       # Eat the expected blank line.
       log_lines.pop(0)
 
-      ### todo: we don't parse changed-paths yet, since Subversion
-      ### doesn't output them.  When it does, they'll appear here,
-      ### right after the header line, and then there'll be a blank
-      ### line between them and the msg.
+      ### TODO: Parse "Changed paths" (available from 'log -v') into
+      ### the 'paths' element.  They'd appear here, right after the
+      ### header line, and with be a blank line between them and the
+      ### msg.
 
       # Accumulate the log message
       msg = ''
@@ -331,7 +331,7 @@ def check_log_chain(chain, revlist):
   for i in range(0, nbr_expected):
     expect_rev = revlist[i]
     log_item = chain[i]
-    saw_rev = string.atoi(log_item['revision'])
+    saw_rev = log_item['revision']
     date = log_item['date']
     author = log_item['author']
     msg = log_item['msg']
@@ -351,11 +351,10 @@ def check_log_chain(chain, revlist):
              or author == '(no author)')):
       raise SVNUnexpectedLogs('Malformed author', chain, 'author')
 
-    # Check for multiline log messages.
-    # If revision is an even number then it should have 
-    # a three line log message.
+    # Verify the expectation that even-numbered revisions in the Greek
+    # tree tweaked by the log tests have 3-line log messages.
     if (saw_rev % 2 == 0 and log_item['lines'] != 3):
-      raise SVNUnexpectedLogs('Malformed lines', chain, 'lines')
+      raise SVNUnexpectedLogs('Malformed log line counts', chain, 'lines')
        
     # Check that the log message looks right:
     pattern = 'Log message for revision ' + `saw_rev`

@@ -29,12 +29,20 @@ AC_DEFUN(SVN_LIB_SERF,
         LDFLAGS="$save_ldflags"])
       CPPFLAGS="$save_cppflags"
     fi
-  ])
+  ], [
+       if test -d "$srcdir/serf" -a "$svn_lib_neon" = "no"; then
+         serf_found=reconfig
+       fi
+     ])
 
-  svn_lib_serf=$serf_found
 
   if test $serf_found = "reconfig"; then
-    SVN_EXTERNAL_PROJECT([serf], [--with-apr=../apr --with-apr-util=../apr-util])
+    SVN_EXTERNAL_PROJECT([serf], [--with-apr=$apr_config --with-apr-util=$apu_config])
+    serf_prefix=$prefix
+    SVN_SERF_PREFIX="$serf_prefix"
+    SVN_SERF_INCLUDES="-I$srcdir/serf"
+    SVN_SERF_LIBS="$abs_builddir/serf/libserf-0.la"
+    SVN_SERF_EXPORT_LIBS="-L$serf_prefix/lib -lserf-0"
   fi
 
   if test $serf_found = "yes"; then
@@ -42,7 +50,11 @@ AC_DEFUN(SVN_LIB_SERF,
     SVN_SERF_INCLUDES="-I$serf_prefix/include/serf-0"
     SVN_SERF_LIBS="$serf_prefix/lib/libserf-0.la"
     SVN_SERF_EXPORT_LIBS="-L$serf_prefix/lib -lserf-0"
+  elif test $serf_found = "reconfig"; then
+    serf_found=yes
   fi
+
+  svn_lib_serf=$serf_found
 
   AC_SUBST(SVN_SERF_PREFIX)
   AC_SUBST(SVN_SERF_INCLUDES)
