@@ -2515,13 +2515,9 @@ def merge_prop_change_to_deleted_target(sbox):
   finally:
     os.chdir(saved_cwd)
 
-
-#----------------------------------------------------------------------
-# A merge that replaces a directory
-# Tests for Issue #2144 and Issue #2607
-  
-def merge_dir_replace(sbox):
-  "merge a replacement of a directory"
+ 
+def setup_dir_replace(sbox):
+  "setup the working copy for directory replace tests"
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -2621,16 +2617,41 @@ def merge_dir_replace(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
-  # Recreate foo in F
+#----------------------------------------------------------------------
+# A merge that replaces a directory
+# Tests for Issue #2144 and Issue #2607
+
+def merge_dir_replace(sbox):
+  "merge a replacement of a directory"
+
+  setup_dir_replace(sbox)
+  wc_dir = sbox.wc_dir
+
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  F_url = sbox.repo_url + '/A/B/F'
+  foo_path = os.path.join(F_path, 'foo')
+  new_file2 = os.path.join(foo_path, "new file 2")
+
+  # Recreate foo in F and add a new folder with a file
+  bar_path = os.path.join(foo_path, 'bar')
+  new_file3 = os.path.join(bar_path, "new file 3")
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', bar_path)
+  svntest.main.file_append(new_file3, "Initial text in new file 3.\n")
+  svntest.main.run_svn(None, "add", new_file3)
 
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo' : Item(verb='Adding'),
+    'A/B/F/foo/bar'            : Item(verb='Adding'),
+    'A/B/F/foo/bar/new file 3' : Item(verb='Adding'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/B/F/foo'    : Item(status='  ', wc_rev=5),
-    'A/C/foo'     : Item(status='  ', wc_rev=3),
+    'A/B/F/foo'             : Item(status='  ', wc_rev=5),
+    'A/B/F/foo/bar'         : Item(status='  ', wc_rev=5),
+    'A/B/F/foo/bar/new file 3'  : Item(status='  ', wc_rev=5),
+    'A/C/foo'               : Item(status='  ', wc_rev=3),
     'A/C/foo/new file'      : Item(status='  ', wc_rev=3),
     'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),    
     })
@@ -2643,17 +2664,23 @@ def merge_dir_replace(sbox):
   expected_output = wc.State(C_path, {
     'foo' : Item(status='D '),
     'foo' : Item(status='A '),
-    'foo/new file'   : Item(status='D '),
     'foo/new file 2' : Item(status='D '),
+    'foo/bar'        : Item(status='A '),
+    'foo/bar/new file 3' : Item(status='A '),
+    'foo/new file'   : Item(status='D '),
     })
   expected_disk = wc.State('', {
     'foo' : Item(),
+    'foo/bar' : Item(),
+    'foo/bar/new file 3' : Item("Initial text in new file 3.\n"),
     })
   expected_status = wc.State(C_path, {
     ''    : Item(status='  ', wc_rev=1),
     'foo' : Item(status='R ', wc_rev='-', copied='+'),
-    'foo/new file'   : Item(status='D ', wc_rev='-', copied='+'),
     'foo/new file 2' : Item(status='D ', wc_rev='-', copied='+'),
+    'foo/bar'            : Item(status='A ', wc_rev='-', copied='+'),
+    'foo/bar/new file 3' : Item(status='A ', wc_rev='-', copied='+'),
+    'foo/new file'   : Item(status='D ', wc_rev='-', copied='+'),
     })
   expected_skip = wc.State(C_path, { })
   svntest.actions.run_and_verify_merge(C_path, '2', '5', F_url,
@@ -2679,7 +2706,103 @@ def merge_dir_replace(sbox):
                                         expected_status,
                                         None, None, None, None, None,
                                         wc_dir)
-  
+
+#----------------------------------------------------------------------
+# A merge that replaces a directory and one of its children
+# Tests for Issue #2690
+
+def merge_dir_and_file_replace(sbox):
+  "replace both dir and one of its children"
+
+  setup_dir_replace(sbox)
+  wc_dir = sbox.wc_dir
+
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  F_url = sbox.repo_url + '/A/B/F'
+  foo_path = os.path.join(F_path, 'foo')
+  new_file2 = os.path.join(foo_path, "new file 2")
+
+  # Recreate foo and 'new file 2' in F and add a new folder with a file
+  bar_path = os.path.join(foo_path, 'bar')
+  new_file3 = os.path.join(bar_path, "new file 3")
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', bar_path)
+  svntest.main.file_append(new_file3, "Initial text in new file 3.\n")
+  svntest.main.run_svn(None, "add", new_file3)
+  svntest.main.file_append(new_file2, "New text in new file 2.\n")
+  svntest.main.run_svn(None, "add", new_file2)
+
+  expected_output = wc.State(wc_dir, {
+    'A/B/F/foo' : Item(verb='Adding'),
+    'A/B/F/foo/new file 2'     : Item(verb='Adding'),
+    'A/B/F/foo/bar'            : Item(verb='Adding'),
+    'A/B/F/foo/bar/new file 3' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/F/foo'             : Item(status='  ', wc_rev=5),
+    'A/B/F/foo/new file 2'  : Item(status='  ', wc_rev=5),
+    'A/B/F/foo/bar'         : Item(status='  ', wc_rev=5),
+    'A/B/F/foo/bar/new file 3'  : Item(status='  ', wc_rev=5),
+    'A/C/foo'               : Item(status='  ', wc_rev=3),
+    'A/C/foo/new file'      : Item(status='  ', wc_rev=3),
+    'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),    
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+  # Merge replacement of foo onto C
+  expected_output = wc.State(C_path, {
+    'foo' : Item(status='D '),
+    'foo' : Item(status='A '),
+    'foo/new file 2' : Item(status='D '),
+    'foo/new file 2' : Item(status='A '),
+    'foo/bar'        : Item(status='A '),
+    'foo/bar/new file 3' : Item(status='A '),
+    'foo/new file'   : Item(status='D '),
+    })
+  expected_disk = wc.State('', {
+    'foo' : Item(),
+    'foo/new file 2' : Item("New text in new file 2.\n"),
+    'foo/bar' : Item(),
+    'foo/bar/new file 3' : Item("Initial text in new file 3.\n"),
+    })
+  expected_status = wc.State(C_path, {
+    ''    : Item(status='  ', wc_rev=1),
+    'foo' : Item(status='R ', wc_rev='-', copied='+'),
+    'foo/new file 2' : Item(status='R ', wc_rev='-', copied='+'),
+    'foo/bar'            : Item(status='A ', wc_rev='-', copied='+'),
+    'foo/bar/new file 3' : Item(status='A ', wc_rev='-', copied='+'),
+    'foo/new file'   : Item(status='D ', wc_rev='-', copied='+'),
+    })
+  expected_skip = wc.State(C_path, { })
+  svntest.actions.run_and_verify_merge(C_path, '2', '5', F_url,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, None, None, None, None,
+                                       0, # skip props
+                                       0) # don't do a dry-run the output differs
+
+  # Commit merge of foo onto C
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/C/foo'    : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/B/F/foo'  : Item(status='  ', wc_rev=5),
+    'A/C/foo'    : Item(status='  ', wc_rev=6),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None, None, None, None, None,
+                                        wc_dir)
+
 #----------------------------------------------------------------------
 def merge_file_with_space_in_its_name(sbox):
   "merge a file whose name contains a space"
@@ -3870,6 +3993,7 @@ test_list = [ None,
               cherry_pick_text_conflict,
               merge_file_replace,
               XFail(merge_dir_replace),
+              XFail(merge_dir_and_file_replace),
               merge_file_replace_to_mixed_rev_wc,
               merge_added_dir_to_deleted_in_target,
               merge_ignore_whitespace,
