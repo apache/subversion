@@ -233,6 +233,10 @@ a <tt>file:</tt> URL?</a></li>
     because Subversion says it's "already under version control".</a></li>
 <li><a href="#slow-private-svnserve">Accessing non-public repositories
     via svnserve is really slow sometimes.</a></li>
+<li><a href="#ssl-negotiation-error">When performing Subversion
+    operations involving a lot of data over SSL, I get the error
+    <tt>SSL negotiation failed: SSL error: decryption failed or bad
+    record mac</tt>.</li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -3383,6 +3387,17 @@ with the <tt>--with-devrandom=/dev/urandom</tt> option passed to
 <tt>configure</tt>.  This should <b>not</b> be done on systems that use
 APR for other processes, however, as it could make other services
 insecure.</p>
+<![CDATA[=========================================================]]>
+
+<div class="h3" id="ssl-negotiation-error" title="ssl-negotiation-error">
+<h3>When performing Subversion operations involving a lot of data over
+    SSL, I get the error <tt>SSL negotiation failed: SSL error:
+    decryption failed or bad record mac</tt>.</h3>
+
+<p>This can occur due to a problem with OpenSSL 0.9.8.  Downgrading to
+an older version (or possibly upgrading to a newer version) is known
+to fix this issue.</p>
+
 <![CDATA[=========================================================]]>
 
 </div>
