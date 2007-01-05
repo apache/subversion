@@ -143,8 +143,7 @@ const char SVN_MTD_CREATE_SQL[] = "pragma auto_vacuum = 1;"
 
 /* Open a connection in *DB to the merge info database under
    REPOS_PATH.  Validate the merge tracking schema, creating it if it
-   doesn't yet exist.  This provides both a migration path for pre-1.5
-   repositories, and handles merge info index initialization for 1.5+
+   doesn't yet exist.  This provides a migration path for pre-1.5
    repositories. */
 static svn_error_t *
 open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
@@ -164,6 +163,7 @@ open_db(sqlite3 **db, const char *repos_path, apr_pool_t *pool)
       /* Assume that we've just created an empty merge info index by
          way of sqlite3_open() (likely from accessing a pre-1.5
          repository), and need to create the merge tracking schema. */
+      svn_error_clear(err);
       err = util_sqlite_exec(*db, SVN_MTD_CREATE_SQL, NULL, NULL);
     }
   return err;
