@@ -89,9 +89,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r22729
-    Fix potential filesystem memory leak in commit-finalization loop.
-    Justification:
-      Memory leaks are bad.  New implementation is more scalable.
-    Votes:
-      +1: dlr, jerenkrantz, malcolm
