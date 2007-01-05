@@ -1266,7 +1266,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
   /* Are either of our paths URLs?
    * Just check the first src_path.  If there are more than one, we'll check
    * for homogeneity amoung them down below. */
-  srcs_are_urls = svn_path_is_url(((const char **) (src_paths->elts))[0]);
+  srcs_are_urls = svn_path_is_url(APR_ARRAY_IDX(src_paths, 0, const char *));
   dst_is_url = svn_path_is_url(dst_path_in);
 
   /* If we have multiple source paths, it implies the dst_path is a directory
@@ -1278,7 +1278,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
       for ( i = 0; i < src_paths->nelts; i++)
         {
-          const char *src_path = ((const char **) (src_paths->elts))[i];
+          const char *src_path = APR_ARRAY_IDX(src_paths, i, const char *);
           const char *src_basename;
           svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
 
@@ -1303,7 +1303,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
     {
       svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
 
-      pair->src = ((const char **) (src_paths->elts))[0];
+      pair->src = APR_ARRAY_IDX(src_paths, 0, const char *);
       pair->dst = dst_path_in;
       APR_ARRAY_PUSH(copy_pairs, svn_client__copy_pair_t *) = pair;
     }
@@ -1391,8 +1391,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                        _("'%s' does not seem to have a URL associated with it"),
                        svn_path_local_style(pair->src, pool));
 
-                  ((svn_client__copy_pair_t **) (copy_pairs->elts))[i]->src =
-                    entry->url;
+                  pair->src = entry->url;
                 }
 
               srcs_are_urls = TRUE;
@@ -1456,7 +1455,7 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
         && (err->apr_err == SVN_ERR_ENTRY_EXISTS
             || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
     {
-      const char *src_path = ((const char **) (src_paths->elts))[0];
+      const char *src_path = APR_ARRAY_IDX(src_paths, 0, const char *);
       const char *src_basename = svn_path_basename(src_path, pool);
 
       svn_error_clear(err);
@@ -1574,7 +1573,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
         && (err->apr_err == SVN_ERR_ENTRY_EXISTS
             || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
     {
-      const char *src_path = ((const char **) (src_paths->elts))[0];
+      const char *src_path = APR_ARRAY_IDX(src_paths, 0, const char *);
       const char *src_basename = svn_path_basename(src_path, pool);
 
       svn_error_clear(err);
