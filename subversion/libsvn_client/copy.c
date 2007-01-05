@@ -2,7 +2,7 @@
  * copy.c:  copy/move wrappers around wc 'copy' functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1458,7 +1458,9 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
     {
       const char *src_path = ((const char **) (src_paths->elts))[0];
       const char *src_basename = svn_path_basename(src_path, pool);
-    
+
+      svn_error_clear(err);
+
       return setup_copy(commit_info_p,
                         src_paths, src_revision,
                         svn_path_join(dst_path, src_basename, pool),
@@ -1566,7 +1568,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                    ctx,
                    pool);
 
-  /* If the destination exists, try to copy the sources as children of the
+  /* If the destination exists, try to move the sources as children of the
      destination. */
   if (move_as_child && err && (src_paths->nelts == 1)
         && (err->apr_err == SVN_ERR_ENTRY_EXISTS
@@ -1574,7 +1576,9 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
     {
       const char *src_path = ((const char **) (src_paths->elts))[0];
       const char *src_basename = svn_path_basename(src_path, pool);
-    
+
+      svn_error_clear(err);
+
       return setup_copy(commit_info_p, src_paths, &src_revision,
                         svn_path_join(dst_path, src_basename, pool),
                         TRUE /* is_move */,
