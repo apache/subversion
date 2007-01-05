@@ -43,6 +43,42 @@ string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
   return new_hash;
 }
 
+svn_error_t *
+svn_client_commit_item_create(const svn_client_commit_item3_t **item,
+                              apr_pool_t *pool)
+{
+  *item = apr_pcalloc(pool, sizeof(svn_client_commit_item3_t));
+  return SVN_NO_ERROR;
+}
+
+svn_client_commit_item3_t *
+svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
+                            apr_pool_t *pool)
+{
+  svn_client_commit_item3_t *new_item = apr_palloc(pool, sizeof(*new_item));
+
+  *new_item = *item;
+
+  if (new_item->path)
+    new_item->path = apr_pstrdup(pool, new_item->path);
+
+  if (new_item->url)
+    new_item->url = apr_pstrdup(pool, new_item->url);
+
+  if (new_item->copyfrom_url)
+    new_item->copyfrom_url = apr_pstrdup(pool, new_item->copyfrom_url);
+
+  if (new_item->incoming_prop_changes)
+    new_item->incoming_prop_changes =
+      svn_prop_array_dup(new_item->incoming_prop_changes, pool);
+
+  if (new_item->outgoing_prop_changes)
+    new_item->outgoing_prop_changes =
+      svn_prop_array_dup(new_item->outgoing_prop_changes, pool);
+
+  return new_item;
+}
+
 svn_client_commit_item2_t *
 svn_client_commit_item2_dup(const svn_client_commit_item2_t *item,
                             apr_pool_t *pool)

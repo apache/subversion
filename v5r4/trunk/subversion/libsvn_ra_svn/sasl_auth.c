@@ -2,7 +2,7 @@
  * sasl_auth.c :  functions for SASL-based authentication
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -274,10 +274,16 @@ static svn_error_t *handle_interact(svn_auth_cred_simple_t *creds,
       switch (prompt->id)
         {
         case SASL_CB_AUTHNAME:
+          if (!creds)
+            return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                    _("Can't get user name"));
           prompt->result = creds->username;
           prompt->len = strlen(creds->username);
           break;
         case SASL_CB_PASS:
+          if (!creds)
+            return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                    _("Can't get password"));
           prompt->result = creds->password;
           prompt->len = strlen(creds->password);
           break;
