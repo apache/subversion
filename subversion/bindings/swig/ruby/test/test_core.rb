@@ -361,8 +361,7 @@ EOS
 + c
 EOD
     diff = Svn::Core::Diff.file_diff(original.path, modified.path)
-    assert_equal(normalize_line_break(expected),
-                 diff.unified(original_header, modified_header))
+    assert_equal(expected, diff.unified(original_header, modified_header))
 
     options = Svn::Core::DiffFileOptions.parse("--ignore-space-change")
     expected = <<-EOD
@@ -376,8 +375,7 @@ EOD
    c
 EOD
     diff = Svn::Core::Diff.file_diff(original.path, modified.path, options)
-    assert_equal(normalize_line_break(expected),
-                 diff.unified(original_header, modified_header))
+    assert_equal(expected, diff.unified(original_header, modified_header))
 
     options = Svn::Core::DiffFileOptions.parse("--ignore-all-space")
     expected = <<-EOD
@@ -390,8 +388,7 @@ EOD
    c
 EOD
     diff = Svn::Core::Diff.file_diff(original.path, modified.path, options)
-    assert_equal(normalize_line_break(expected),
-                 diff.unified(original_header, modified_header))
+    assert_equal(expected, diff.unified(original_header, modified_header))
   end
 
   def test_diff_merge
@@ -440,7 +437,7 @@ EOD
     diff = Svn::Core::Diff.file_diff3(original.path,
                                       modified.path,
                                       latest.path)
-    assert_equal(normalize_line_break(expected), diff.merge)
+    assert_equal(expected, diff.merge)
 
     options = Svn::Core::DiffFileOptions.parse("--ignore-space-change")
     expected = <<-EOD
@@ -454,7 +451,7 @@ EOD
                                       modified.path,
                                       latest.path,
                                       options)
-    assert_equal(normalize_line_break(expected), diff.merge)
+    assert_equal(expected, diff.merge)
 
     options = Svn::Core::DiffFileOptions.parse("--ignore-all-space")
     expected = <<-EOD
@@ -468,7 +465,7 @@ EOD
                                       modified.path,
                                       latest.path,
                                       options)
-    assert_equal(normalize_line_break(expected), diff.merge)
+    assert_equal(expected, diff.merge)
   end
 
   def test_diff_file_options
