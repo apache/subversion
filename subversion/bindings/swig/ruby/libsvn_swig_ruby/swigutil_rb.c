@@ -1,3 +1,7 @@
+
+/* Tell swigutil_rb.h that we're inside the implementation */
+#define SVN_SWIG_SWIGUTIL_RB_C
+
 #include "rubyhead.swg"
 #include "swig_ruby_external_runtime.swg"
 #include "swigutil_rb.h"
