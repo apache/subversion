@@ -233,14 +233,6 @@ exit 1
     auth_baton[Svn::Core::AUTH_PARAM_DEFAULT_USERNAME] = @author
   end
 
-  def normalize_line_break(str)
-    if windows?
-      str.gsub(/\n/, "\r\n")
-    else
-      str
-    end
-  end
-
   module_function
   def windows?
     /cygwin|mingw|mswin32|bccwin32/.match(RUBY_PLATFORM)
