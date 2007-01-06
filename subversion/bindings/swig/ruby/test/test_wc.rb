@@ -429,13 +429,13 @@ EOE
 
       translated_file = access.translated_file(src_path, crlf_path,
                                                Svn::Wc::TRANSLATE_FROM_NF)
-      assert_equal(crlf_source, File.read(translated_file))
+      assert_equal(crlf_source, File.open(translated_file, "rb") {|f| f.read})
       translated_file = access.translated_file(src_path, cr_path,
                                                Svn::Wc::TRANSLATE_FROM_NF)
-      assert_equal(cr_source, File.read(translated_file))
+      assert_equal(cr_source, File.open(translated_file, "rb") {|f| f.read})
       translated_file = access.translated_file(src_path, lf_path,
                                                Svn::Wc::TRANSLATE_FROM_NF)
-      assert_equal(lf_source, File.read(translated_file))
+      assert_equal(lf_source, File.open(translated_file, "rb") {|f| f.read})
     end
   end
 
