@@ -174,7 +174,7 @@ def copy_execs(baton, dirname, names):
   copied_execs = baton
   for name in names:
     ext = os.path.splitext(name)[1]
-    if ext != ".exe" and ext != ".so":
+    if ext != ".exe":
       continue
     src = os.path.join(dirname, name)
     tgt = os.path.join(abs_builddir, dirname, name)
@@ -299,7 +299,7 @@ class Svnserve:
 
 class Httpd:
   "Run httpd for ra_dav tests"
-  def __init__(self, abs_httpd_dir, abs_builddir, httpd_port):
+  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir 
@@ -320,6 +320,7 @@ class Httpd:
     self.httpd_users = os.path.join(self.root, 'users')
     self.httpd_mime_types = os.path.join(self.root, 'mime.types')
     self.abs_builddir = abs_builddir
+    self.abs_objdir = abs_objdir
     self.service_name = 'svn-test-httpd-' + str(httpd_port)
     self.httpd_args = [self.name, '-n', self._quote(self.service_name),
                        '-f', self._quote(self.httpd_config)]
@@ -407,7 +408,7 @@ class Httpd:
     return 'LoadModule ' + name + " " + self._quote(full_path) + '\n'
 
   def _svn_module(self, name, path):
-    full_path = os.path.join(self.abs_builddir, path)
+    full_path = os.path.join(self.abs_objdir, path)
     return 'LoadModule ' + name + ' ' + self._quote(full_path) + '\n' 
 
   def _svn_repo(self, name):
@@ -462,7 +463,7 @@ if run_svnserve:
   daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
 if run_httpd:
-  daemon = Httpd(abs_httpd_dir, abs_builddir, httpd_port)
+  daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port)
 
 # Start service daemon, if any
 if daemon:
