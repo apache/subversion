@@ -168,14 +168,12 @@ AC_DEFUN(SVN_FIND_SWIG,
   if test "$RUBY" != "none"; then
     rbconfig="$RUBY -rrbconfig -e "
 
-    changequote(<<, >>)
     for var_name in archdir CC CFLAGS LDSHARED DLEXT LIBRUBYARG \
                     sitedir sitelibdir sitearchdir libdir
     do
-      rbconfig_tmp=`$rbconfig "print Config::CONFIG['$var_name']"`
+      rbconfig_tmp=`$rbconfig "print Config::CONFIG@<:@'$var_name'@:>@"`
       eval "rbconfig_$var_name=\"$rbconfig_tmp\""
     done
-    changequote([, ])
 
     AC_MSG_NOTICE([Configuring Ruby SWIG binding])
 
