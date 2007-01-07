@@ -319,6 +319,10 @@ class WinGeneratorBase(GeneratorBase):
                                 self)
     target.msvc_export = dep.msvc_export
 
+    # move the description from the static library target to the dll.
+    target.desc = dep.desc
+    dep.desc = None
+
     # The dependency should now be static.
     dep.msvc_export = None
     dep.msvc_static = True
