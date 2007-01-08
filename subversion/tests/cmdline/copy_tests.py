@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -742,7 +742,8 @@ def copy_delete_commit(sbox):
 
   # copy a tree
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
-                                     wc_dir + '/A/B', wc_dir + '/A/B3')
+                                     os.path.join(wc_dir, 'A', 'B'),
+                                     os.path.join(wc_dir, 'A', 'B3'))
   
   # delete a directory
   E_path = os.path.join(wc_dir, 'A', 'B3', 'E')
@@ -770,6 +771,7 @@ def mv_and_revert_directory(sbox):
   wc_dir = sbox.wc_dir
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   F_path = os.path.join(wc_dir, 'A', 'B', 'F')
+  new_E_path = os.path.join(F_path, 'E')
 
   # Issue 931: move failed to lock the directory being deleted
   svntest.actions.run_and_verify_svn(None, None, [], 'move',
@@ -785,7 +787,7 @@ def mv_and_revert_directory(sbox):
 
   # Issue 932: revert failed to lock the parent directory
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
-                                     wc_dir + '/A/B/F/E')
+                                     new_E_path)
   expected_status.remove('A/B/F/E', 'A/B/F/E/alpha', 'A/B/F/E/beta')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
@@ -1421,7 +1423,7 @@ def repos_to_wc_1634(sbox):
   wc_dir = sbox.wc_dir
 
   # First delete a subdirectory and commit.
-  E_path = wc_dir + "/A/B/E"
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   svntest.actions.run_and_verify_svn(None, None, [], 'delete', E_path)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/E' : Item(verb='Deleting'),
