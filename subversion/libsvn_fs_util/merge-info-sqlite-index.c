@@ -72,8 +72,7 @@ util_sqlite_exec(sqlite3 *db, const char *sql,
 }
 
 /* The version number of the schema used to store the merge info index. */
-#define MERGE_INFO_INDEX_SCHEMA_FORMAT      1
-#define MERGE_INFO_INDEX_SCHEMA_FORMAT_STR "1"
+#define MERGE_INFO_INDEX_SCHEMA_FORMAT 1
 
 /* Return SVN_ERR_FS_GENERAL if the schema doesn't exist,
    SVN_ERR_FS_UNSUPPORTED_FORMAT if the schema format is invalid, or
@@ -138,7 +137,7 @@ const char SVN_MTD_CREATE_SQL[] = "pragma auto_vacuum = 1;"
   APR_EOL_STR
   "create index mi_c_revision_idx on mergeinfo_changed (revision);"
   APR_EOL_STR
-  "pragma user_version = " MERGE_INFO_INDEX_SCHEMA_FORMAT_STR ";"
+  "pragma user_version = " APR_STRINGIFY(MERGE_INFO_INDEX_SCHEMA_FORMAT) ";"
   APR_EOL_STR;
 
 /* Open a connection in *DB to the merge info database under
