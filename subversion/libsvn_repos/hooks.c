@@ -524,7 +524,7 @@ svn_repos__hooks_start_commit(svn_repos_t *repos,
       const char *args[4];
 
       args[0] = hook;
-      args[1] = svn_repos_path(repos, pool);
+      args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = user ? user : "";
       args[3] = NULL;
 
@@ -553,7 +553,7 @@ svn_repos__hooks_pre_commit(svn_repos_t *repos,
       const char *args[4];
 
       args[0] = hook;
-      args[1] = svn_repos_path(repos, pool);
+      args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = txn_name;
       args[3] = NULL;
 
@@ -582,7 +582,7 @@ svn_repos__hooks_post_commit(svn_repos_t *repos,
       const char *args[4];
 
       args[0] = hook;
-      args[1] = svn_repos_path(repos, pool);
+      args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = apr_psprintf(pool, "%ld", rev);
       args[3] = NULL;
 
@@ -627,7 +627,7 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
       action_string[1] = '\0';
 
       args[0] = hook;
-      args[1] = svn_repos_path(repos, pool);
+      args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = apr_psprintf(pool, "%ld", rev);
       args[3] = author ? author : "";
       args[4] = name;
@@ -689,7 +689,7 @@ svn_repos__hooks_post_revprop_change(svn_repos_t *repos,
       action_string[1] = '\0';
 
       args[0] = hook;
-      args[1] = svn_repos_path(repos, pool);
+      args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = apr_psprintf(pool, "%ld", rev);
       args[3] = author ? author : "";
       args[4] = name;
@@ -725,7 +725,7 @@ svn_repos__hooks_pre_lock(svn_repos_t *repos,
       const char *args[5];
 
       args[0] = hook;
-      args[1] = svn_repos_path(repos, pool);
+      args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = path;
       args[3] = username;
       args[4] = NULL;
@@ -761,7 +761,7 @@ svn_repos__hooks_post_lock(svn_repos_t *repos,
       SVN_ERR(create_temp_file(&stdin_handle, paths_str, pool));
 
       args[0] = hook;
-      args[1] = svn_repos_path(repos, pool);
+      args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = username;
       args[3] = NULL;
       args[4] = NULL;
@@ -794,7 +794,7 @@ svn_repos__hooks_pre_unlock(svn_repos_t *repos,
       const char *args[5];
 
       args[0] = hook;
-      args[1] = svn_repos_path(repos, pool);
+      args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = path;
       args[3] = username ? username : "";
       args[4] = NULL;
@@ -831,7 +831,7 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
       SVN_ERR(create_temp_file(&stdin_handle, paths_str, pool));
 
       args[0] = hook;
-      args[1] = svn_repos_path(repos, pool);
+      args[1] = svn_path_local_style(svn_repos_path(repos, pool), pool);
       args[2] = username ? username : "";
       args[3] = NULL;
       args[4] = NULL;
