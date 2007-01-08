@@ -2,7 +2,7 @@
  * adm_crawler.c:  report local WC mods to an Editor.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -781,7 +781,6 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   svn_txdelta_stream_t *txdelta_stream;
   apr_file_t *basefile = NULL;
   apr_file_t *tempbasefile;
-  const char *entry_digest_hex = NULL;
   const char *base_digest_hex = NULL;
   const unsigned char *base_digest = NULL;
   const unsigned char *local_digest = NULL;
@@ -919,52 +918,13 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                 _("While preparing '%s' for commit"),
                                 svn_path_local_style(path, pool)));
 
-  /* Close the two files */
-  /*  SVN_ERR (svn_io_file_close (localfile, pool)); */
-  SVN_ERR(svn_io_file_close(tempbasefile, pool));
-  /* Make sure the old text base still matches its checksum.
-     Otherwise we could have sent corrupt data and never know it.
-     For backwards compatibility, no checksum means assume a match. */
-  if (entry_digest_hex)
-    {
-      base_digest_hex = svn_md5_digest_to_cstring_display(base_digest, pool);
-      if (strcmp(entry_digest_hex, base_digest_hex) != 0)
-        {
-          /* There is an entry checksum, but it does not match
-             the actual text base checksum.  Extreme badness. */
-
-          /* Deliberately ignore error; the error about the
-             checksum mismatch is more important to return.
-             And wrapping the above error into the checksum
-             error would be weird, as they're unrelated.
-             The function is documented to remove the temporary file
-             for *this* particular error. Well... */
-          svn_error_clear(svn_io_remove_file(tmp_base, pool));
-
-          /* Also, ignore a possible error from the delta transmission
-             above, because it *might* be caused by the corrupt
-             textbase, and if it isn't, the user needs to rerun this
-             operation after repairing the textbase anyway. */
-          svn_error_clear(err);
-
-          if (tempfile)
-            *tempfile = NULL;
-
-          return svn_error_createf
-            (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-             _("Checksum mismatch for '%s'; "
-               "expected '%s', actual: '%s'"),
-             svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
-                                  pool),
-             entry_digest_hex, base_digest_hex);
-        }
-    }
-
   /* Now, handle that delta transmission error if any, so we can stop
      thinking about it after this point. */
   SVN_ERR_W(err, apr_psprintf(pool,
                               _("While preparing '%s' for commit"),
                               svn_path_local_style(path, pool)));
+
+  SVN_ERR(svn_io_file_close(tempbasefile, pool));
 
   /* Close base file, if it was opened. */
   if (basefile)
