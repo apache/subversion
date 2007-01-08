@@ -1036,9 +1036,9 @@ class WinGeneratorBase(GeneratorBase):
     self.ruby_includes = []
     self.ruby_libdir = None
     proc = os.popen('ruby -rrbconfig -e ' + escape_shell_arg(
-                   "puts Config::CONFIG['LIBRUBY']\n"
-                   "puts Config::CONFIG['archdir']\n"
-                   "puts Config::CONFIG['libdir']\n"), 'r')
+                    "puts Config::CONFIG['LIBRUBY'];"
+                    "puts Config::CONFIG['archdir'];"
+                    "puts Config::CONFIG['libdir'];"), 'r')
     try:
       libruby = proc.readline()[:-1]
       if libruby:
