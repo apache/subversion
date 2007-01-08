@@ -763,6 +763,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
           if (state)
             *state = svn_wc_notify_state_missing;
           svn_error_clear(err);
+          svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
         }
       else if (err)
@@ -802,6 +803,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
         *content_state = svn_wc_notify_state_missing;
       if (prop_state)
         *prop_state = svn_wc_notify_state_missing;
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
   
@@ -825,6 +827,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
           *content_state = svn_wc_notify_state_missing;
         if (prop_state)
           *prop_state = svn_wc_notify_state_missing;
+        svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
   }
@@ -976,6 +979,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
         }
       else
         *content_state = svn_wc_notify_state_missing;
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
@@ -991,6 +995,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
             /* It's versioned but missing. */
             if (content_state)
               *content_state = svn_wc_notify_state_obstructed;
+            svn_pool_destroy(subpool);
             return SVN_NO_ERROR;
           }
         if (! merge_b->dry_run)
@@ -1114,6 +1119,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
     {
       if (state)
         *state = svn_wc_notify_state_missing;
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
@@ -1186,6 +1192,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           else
             *state = svn_wc_notify_state_missing;
         }
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
@@ -1204,6 +1211,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           /* Versioned but missing */
           if (state)
             *state = svn_wc_notify_state_obstructed;
+          svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
         }
       if (! merge_b->dry_run)
@@ -1339,6 +1347,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
     {
       if (state)
         *state = svn_wc_notify_state_missing;
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
   
