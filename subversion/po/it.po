@@ -89,8 +89,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.2.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-12-21 05:00+0100\n"
-"PO-Revision-Date: 2006-12-22 09:16+0100\n"
+"POT-Creation-Date: 2007-01-06 10:34+0100\n"
+"PO-Revision-Date: 2007-01-08 08:49+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Italian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1005,13 +1005,13 @@ msgstr "È richiesto il nome di un nuovo elemento quando si importa un file"
 msgid "'%s' does not exist"
 msgstr "'%s' non esiste"
 
-#: libsvn_client/commit.c:606 libsvn_client/copy.c:229 svnlook/main.c:1204
+#: libsvn_client/commit.c:606 libsvn_client/copy.c:283 svnlook/main.c:1204
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "Il percorso '%s' non esiste"
 
-#: libsvn_client/commit.c:737 libsvn_client/copy.c:238
-#: libsvn_client/copy.c:552 libsvn_client/copy.c:802 libsvn_client/copy.c:1099
+#: libsvn_client/commit.c:737 libsvn_client/copy.c:292
+#: libsvn_client/copy.c:612 libsvn_client/copy.c:863 libsvn_client/copy.c:1160
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "Il percorso '%s' esiste già"
@@ -1021,15 +1021,15 @@ msgstr "Il percorso '%s' esiste già"
 msgid "'%s' is a reserved name and cannot be imported"
 msgstr "'%s' è un nome riservato e non può essere importato"
 
-#: libsvn_client/commit.c:868 libsvn_client/copy.c:694
+#: libsvn_client/commit.c:868 libsvn_client/copy.c:755
 msgid "Commit failed (details follow):"
 msgstr "Commit fallito (seguono dettagli):"
 
-#: libsvn_client/commit.c:876 libsvn_client/copy.c:702
+#: libsvn_client/commit.c:876 libsvn_client/copy.c:763
 msgid "Commit succeeded, but other errors follow:"
 msgstr "Commit eseguito, ma seguono altri errori:"
 
-#: libsvn_client/commit.c:883 libsvn_client/copy.c:709
+#: libsvn_client/commit.c:883 libsvn_client/copy.c:770
 msgid "Error unlocking locked dirs (details follow):"
 msgstr "Errore nello sbloccare le directory bloccate (seguono dettagli):"
 
@@ -1038,7 +1038,7 @@ msgid "Error bumping revisions post-commit (details follow):"
 msgstr ""
 "Errore nell'incrementare di 1 le revisioni dopo il commit (seguono dettagli):"
 
-#: libsvn_client/commit.c:905 libsvn_client/copy.c:720
+#: libsvn_client/commit.c:905 libsvn_client/copy.c:781
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "Errore nella pulizia dopo il commit (seguono dettagli):"
 
@@ -1084,7 +1084,7 @@ msgstr ""
 "L'elemento in trasmissione '%s' ha un flag copy ma non una URL copyfrom"
 
 #: libsvn_client/commit_util.c:705 libsvn_client/commit_util.c:853
-#: libsvn_client/copy.c:1324 libsvn_client/delete.c:67
+#: libsvn_client/copy.c:1385 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1460 libsvn_client/diff.c:2190
 #: libsvn_client/diff.c:2785 libsvn_client/diff.c:2913
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
@@ -1151,13 +1151,13 @@ msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr ""
 "L'elemento in trasmissione '%s' ha un flag copy ma una revisione non valida"
 
-#: libsvn_client/copy.c:248 libsvn_client/copy.c:1109
+#: libsvn_client/copy.c:302 libsvn_client/copy.c:1170
 #: libsvn_client/update.c:78
 #, c-format
 msgid "Path '%s' is not a directory"
 msgstr "Il percorso '%s' non è una directory"
 
-#: libsvn_client/copy.c:465
+#: libsvn_client/copy.c:523
 #, c-format
 msgid ""
 "Source and dest appear not to be in the same repository (src: '%s'; dst: '%"
@@ -1166,64 +1166,64 @@ msgstr ""
 "Sorgente e destinazione sembrano non essere nello stesso repository "
 "(sorgente: '%s'; destinazione: '%s')"
 
-#: libsvn_client/copy.c:533
+#: libsvn_client/copy.c:593
 #, c-format
 msgid "Cannot move URL '%s' into itself"
 msgstr "Non posso spostare l'URL '%s' su se stessa"
 
-#: libsvn_client/copy.c:542 libsvn_client/prop_commands.c:226
+#: libsvn_client/copy.c:602 libsvn_client/prop_commands.c:226
 #, c-format
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "Il percorso '%s' non esiste nella revisione %ld"
 
-#: libsvn_client/copy.c:973
+#: libsvn_client/copy.c:1034
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr ""
 "L'URL sorgente '%s' è di un altro repository; la lascio come copia locale "
 "disgiunta"
 
-#: libsvn_client/copy.c:1086
+#: libsvn_client/copy.c:1147
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "Percorso '%s' non trovato nella revisione %ld"
 
-#: libsvn_client/copy.c:1091
+#: libsvn_client/copy.c:1152
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "Percorso '%s' non trovato nella revisione head"
 
-#: libsvn_client/copy.c:1132
+#: libsvn_client/copy.c:1193
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "L'elemento per '%s' esiste già (anche se manca il file locale)"
 
-#: libsvn_client/copy.c:1232
+#: libsvn_client/copy.c:1293
 msgid "Cannot mix repository and working copy paths in source list"
 msgstr ""
 "Non posso mischiare i percorsi del repository e della copia di \n"
 "lavoro nella lista delle sorgenti."
 
-#: libsvn_client/copy.c:1264
+#: libsvn_client/copy.c:1325
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "Non posso copiare il percorso '%s' in un suo elemento '%s'"
 
-#: libsvn_client/copy.c:1284
+#: libsvn_client/copy.c:1345
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "Non posso spostare il percorso '%s' in se stesso"
 
-#: libsvn_client/copy.c:1293
+#: libsvn_client/copy.c:1354
 msgid "No support for repos <--> working copy moves"
 msgstr "Spostamenti fra repository e copia locale non sono supportati"
 
-#: libsvn_client/copy.c:1330
+#: libsvn_client/copy.c:1391
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' non sembra avere una URL associata"
 
-#: libsvn_client/copy.c:1617 svn/move-cmd.c:67
+#: libsvn_client/copy.c:1681 svn/move-cmd.c:67
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr ""
 "Non si possono specificare revisioni (eccetto HEAD) con il comando move"
@@ -2680,8 +2680,8 @@ msgstr ""
 "Non posso prendere l'URL della versione della risorse (necessaria\n"
 "durante un importazione o quando assente dalle proprietà della copia locale)"
 
-#: libsvn_ra_dav/commit.c:462 libsvn_ra_serf/commit.c:376
-#: libsvn_ra_serf/commit.c:437
+#: libsvn_ra_dav/commit.c:462 libsvn_ra_serf/commit.c:374
+#: libsvn_ra_serf/commit.c:435
 #, c-format
 msgid "Your file or directory '%s' is probably out-of-date"
 msgstr "Il tuo file o directory '%s' probabilmente non è aggiornato"
@@ -2754,7 +2754,7 @@ msgid "Got unrecognized encoding '%s'"
 msgstr "Codifica non riconosciuta: '%s'"
 
 #: libsvn_ra_dav/fetch.c:1704 libsvn_ra_dav/fetch.c:1708
-#: libsvn_ra_serf/locks.c:523
+#: libsvn_ra_serf/locks.c:527
 msgid "Server does not support locking features"
 msgstr "Il server non supporta le funazionalità di blocco"
 
@@ -2902,7 +2902,7 @@ msgstr "'DAV:baseline-collection' non era presente sulla risorsa di baseline"
 msgid "'DAV:version-name' was not present on the baseline resource"
 msgstr "'DAV:version-name' non era presente sulla risorsa di baseline"
 
-#: libsvn_ra_dav/props.c:1117 libsvn_ra_serf/commit.c:720
+#: libsvn_ra_dav/props.c:1117 libsvn_ra_serf/commit.c:718
 msgid "At least one property change failed; repository is unchanged"
 msgstr ""
 "Almeno una modifica di proprietà è fallita; il repository è rimaso immutato"
@@ -2923,7 +2923,7 @@ msgstr ""
 msgid "Got close-directory element without ever opening a directory"
 msgstr "Ricevuto elemento close-directory senza aver mai aperto una directory"
 
-#: libsvn_ra_dav/replay.c:431 libsvn_ra_serf/replay.c:499
+#: libsvn_ra_dav/replay.c:431 libsvn_ra_serf/replay.c:498
 msgid "Error writing stream: unexpected EOF"
 msgstr "Errore in scrittura: EOF inatteso"
 
@@ -3009,31 +3009,31 @@ msgstr "La risposta contiene almeno un errore"
 msgid "The response contains a non-conforming HTTP status line."
 msgstr "La risposta contiene una linea di stato HTTP non conforme."
 
-#: libsvn_ra_dav/util.c:393
+#: libsvn_ra_dav/util.c:413
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s di '%s'"
 
-#: libsvn_ra_dav/util.c:405
+#: libsvn_ra_dav/util.c:425
 #, c-format
 msgid "'%s' path not found"
 msgstr "'%s' percorso non trovato"
 
-#: libsvn_ra_dav/util.c:414
+#: libsvn_ra_dav/util.c:434
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
 msgstr ""
 "Il repository è stato definitivamente spostato in '%s'; aggiorna\n"
 "i riferimenti"
 
-#: libsvn_ra_dav/util.c:416
+#: libsvn_ra_dav/util.c:436
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
 msgstr ""
 "Il repository è stato temporaneamente spostato in '%s'; aggiorna\n"
 "i riferimenti"
 
-#: libsvn_ra_dav/util.c:424
+#: libsvn_ra_dav/util.c:444
 #, c-format
 msgid ""
 "Server sent unexpected return value (%d %s) in response to %s request for '%"
@@ -3043,33 +3043,33 @@ msgstr ""
 "risposta\n"
 "%s alla richiesta di '%s'"
 
-#: libsvn_ra_dav/util.c:430
+#: libsvn_ra_dav/util.c:450
 msgid "authorization failed"
 msgstr "autorizzazione fallita"
 
-#: libsvn_ra_dav/util.c:434
+#: libsvn_ra_dav/util.c:454
 msgid "could not connect to server"
 msgstr "non ho potuto connettermi al server"
 
-#: libsvn_ra_dav/util.c:438
+#: libsvn_ra_dav/util.c:458
 msgid "timed out waiting for server"
 msgstr "timeout della connessione al server"
 
-#: libsvn_ra_dav/util.c:771
+#: libsvn_ra_dav/util.c:791
 msgid "Can't calculate the request body size"
 msgstr "Non posso calcolare la dimensione del corpo della richiesta"
 
-#: libsvn_ra_dav/util.c:1098
+#: libsvn_ra_dav/util.c:1118
 #, c-format
 msgid "Error reading spooled %s request response"
 msgstr "Errore nella lettura dello spool di risposta alla richiesta %s"
 
-#: libsvn_ra_dav/util.c:1108
+#: libsvn_ra_dav/util.c:1128
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "La richiesta %s ha restituito XML non valido nella risposta: %s (%s)"
 
-#: libsvn_ra_dav/util.c:1140
+#: libsvn_ra_dav/util.c:1160
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "richiesta %s fallita su '%s'"
@@ -3121,21 +3121,31 @@ msgstr "L'URL locale '%s' contiene un nome host non supportato"
 msgid "Unable to open repository '%s'"
 msgstr "Non riesco ad aprire il repository '%s'"
 
-#: libsvn_ra_serf/commit.c:369 libsvn_ra_serf/commit.c:430
+#: libsvn_ra_serf/commit.c:367 libsvn_ra_serf/commit.c:428
 #: libsvn_repos/commit.c:393
 #, c-format
 msgid "Path '%s' not present"
 msgstr "Il percorso '%s' non è presente"
 
-#: libsvn_ra_serf/commit.c:918
+#: libsvn_ra_serf/commit.c:915
 msgid "Failed writing updated file"
 msgstr "Scrittura del file aggiornato fallita"
+
+#: libsvn_ra_serf/commit.c:1216
+#, c-format
+msgid "Add directory failed: %s on %s (%d)"
+msgstr "Aggiunta della directory fallita: %s in %s (%d)"
 
 #: libsvn_ra_serf/getlocations.c:289
 msgid "File doesn't exist on HEAD"
 msgstr "Il percorso '%s' non esiste alla revisione HEAD"
 
-#: libsvn_ra_serf/locks.c:608
+#: libsvn_ra_serf/locks.c:406
+#, c-format
+msgid "Lock request failed: %d %s"
+msgstr "La richiesta di blocco è fallita: %d %s"
+
+#: libsvn_ra_serf/locks.c:609
 msgid "Lock request failed"
 msgstr "La richiesta di blocco è fallita"
 
@@ -3184,7 +3194,7 @@ msgstr "Attributo di revisione mancante per l'elemento open-file"
 msgid "Missing name attr in add-file element"
 msgstr "Attributo di nome mancante nell'elemento add-file"
 
-#: libsvn_ra_serf/replay.c:379
+#: libsvn_ra_serf/replay.c:378
 #, c-format
 msgid "Missing name attr in %s element"
 msgstr "Attributo 'name' mancante nell'elemento %s"
@@ -3203,16 +3213,16 @@ msgstr "Non trovo il nome dell'host: %s://%s"
 msgid "Unsupported RA loader version (%d) for ra_serf"
 msgstr "Versione (%d) del lettore per ra_serf non supportata"
 
-#: libsvn_ra_serf/update.c:2114
+#: libsvn_ra_serf/update.c:2116
 #, c-format
 msgid "Error retrieving REPORT (%d)"
 msgstr "Errore nel recupero di REPORT (%d)"
 
-#: libsvn_ra_serf/util.c:736
+#: libsvn_ra_serf/util.c:755
 msgid "Unspecified error message"
 msgstr "Messaggio d'errore non specificato"
 
-#: libsvn_ra_serf/util.c:797
+#: libsvn_ra_serf/util.c:816
 msgid "Premature EOF seen from server"
 msgstr "EOF prematuro visto dal server"
 
@@ -3386,7 +3396,7 @@ msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "Versione %d del lettore per ra_svn non supportata"
 
 #: libsvn_ra_svn/cram.c:194 libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/sasl_auth.c:383 libsvn_ra_svn/sasl_auth.c:438
+#: libsvn_ra_svn/sasl_auth.c:389 libsvn_ra_svn/sasl_auth.c:444
 #: libsvn_ra_svn/simple_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "Risposta del server inattesa all'autenticazione"
@@ -3459,19 +3469,24 @@ msgstr "Status sconosciuto '%s' nella risposta del comando"
 msgid "Could not initialize the SASL library"
 msgstr "Non riesco ad inizializzare la libreria SASL"
 
-#: libsvn_ra_svn/sasl_auth.c:287
+#: libsvn_ra_svn/sasl_auth.c:279
+msgid "Can't get user name"
+msgstr "Non riesco ad ottenere il nome utente"
+
+#: libsvn_ra_svn/sasl_auth.c:286 libsvn_ra_svn/simple_auth.c:97
+#: libsvn_subr/prompt.c:156
+msgid "Can't get password"
+msgstr "Non riesco a leggere la password"
+
+#: libsvn_ra_svn/sasl_auth.c:293
 msgid "Unhandled SASL interaction"
 msgstr "Interazione con SASL non gestita"
 
-#: libsvn_ra_svn/sasl_auth.c:575 libsvn_ra_svn/simple_auth.c:58
+#: libsvn_ra_svn/sasl_auth.c:581 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "Errore di autenticazione dal server: %s"
-
-#: libsvn_ra_svn/simple_auth.c:97 libsvn_subr/prompt.c:156
-msgid "Can't get password"
-msgstr "Non riesco a leggere la password"
 
 #: libsvn_ra_svn/simple_auth.c:117
 msgid "Cannot negotiate authentication mechanism"
@@ -4435,16 +4450,15 @@ msgstr ""
 
 #: libsvn_subr/opt.c:977
 msgid ""
-"Copyright (C) 2000-2006 CollabNet.\n"
+"Copyright (C) 2000-2007 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
 "This product includes software developed by CollabNet (http://www.Collab."
 "Net/).\n"
 "\n"
 msgstr ""
-"Copyright (C) 2000-2006 CollabNet.\n"
+"Copyright (C) 2000-2007 CollabNet.\n"
 "Subversion è un software open source, vedi http://subversion.tigris.org/\n"
-"Questo prodotto include software sviluppato da CollabNet (http://www.Collab."
-"Net/).\n"
+"Questo prodotto include software sviluppato da CollabNet (http://www.Collab.Net/).\n"
 "\n"
 
 #: libsvn_subr/opt.c:1028 libsvn_subr/opt.c:1069
@@ -6258,13 +6272,16 @@ msgid ""
 "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
 "  All the SRCs must be of the same type.\n"
 msgstr ""
-"Duplica un oggetto nella copia locale (CL) o nel repository, preservando lo storico.\n"
+"Duplica un oggetto nella copia locale (CL) o nel repository, preservando lo "
+"storico.\n"
 "uso: copy SORGENTE... DESTINAZIONE\n"
 "\n"
-"Le copie di sorgenti multiple verranno aggiunte come figlie di DESTINAZIONE, che\n"
+"Le copie di sorgenti multiple verranno aggiunte come figlie di DESTINAZIONE, "
+"che\n"
 "dev'essere una directory.\n"
 "\n"
-"  SRG e DST possono essere entrambi un percorso nella copia locale o una URL:\n"
+"  SRG e DST possono essere entrambi un percorso nella copia locale o una "
+"URL:\n"
 "    CL  -> CL:   copia e prepara per l'aggiunta (con storico)\n"
 "    CL  -> URL:  esegui immediatamente il commit di una copia di CL in URL\n"
 "    URL -> CL:   effettua il checkout di URL in CL, prepara per l'aggiunta\n"
