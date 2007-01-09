@@ -1,5 +1,5 @@
 ;;; psvn.el --- Subversion interface for emacs
-;; Copyright (C) 2002-2006 by Stefan Reichoer
+;; Copyright (C) 2002-2007 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer, <stefan@xsteve.at>
 ;; $Id$
@@ -22,7 +22,7 @@
 ;;; Commentary
 
 ;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux,
-;; freebsd5, red hat el3 with svn 1.3.1
+;; freebsd5, red hat el4, ubuntu edgy with svn 1.4.0
 
 ;; psvn.el is an interface for the revision control tool subversion
 ;; (see http://subversion.tigris.org)
@@ -839,6 +839,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
   (define-key svn-global-keymap (kbd "f =") 'svn-file-show-svn-diff)
   (define-key svn-global-keymap (kbd "f b") 'svn-status-blame)
+  (define-key svn-global-keymap (kbd "f a") 'svn-file-add-to-changelog)
   (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
   (define-key svn-global-keymap (kbd "S") 'svn-status-switch-to-status-buffer)
   (define-key svn-global-keymap (kbd "o") 'svn-status-pop-to-status-buffer))
@@ -882,6 +883,14 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
            (getenv "SVN_ASP_DOT_NET_HACK"))
       "_svn"
     ".svn"))
+
+(defun svn-log-edit-file-name (&optional curdir)
+  "Get the name of the saved log edit file
+If curdir, return `svn-log-edit-file-name'
+Otherwise position svn-log-edit-file-name in the root directory of this working copy"
+  (if curdir
+      svn-log-edit-file-name
+    (concat (svn-status-base-dir) svn-log-edit-file-name)))
 
 (defun svn-status-message (level &rest args)
   "If LEVEL is lower than `svn-status-debug-level' print ARGS using `message'.
@@ -3600,16 +3609,20 @@ If no files have been marked, commit recursively the file at point."
       (svn-log-edit-insert-files-to-commit))))
 
 (defun svn-status-pop-to-commit-buffer ()
+  "Pop to the svn commit buffer.
+If a saved log message exists in `svn-log-edit-file-name' insert it in the buffer."
   (interactive)
   (setq svn-status-pre-commit-window-configuration (current-window-configuration))
   (let* ((use-existing-buffer (get-buffer svn-log-edit-buffer-name))
          (commit-buffer (get-buffer-create svn-log-edit-buffer-name))
-         (dir default-directory))
+         (dir default-directory)
+         (log-edit-file-name))
     (pop-to-buffer commit-buffer)
     (setq default-directory dir)
+    (setq log-edit-file-name (svn-log-edit-file-name))
     (unless use-existing-buffer
-      (when (and svn-log-edit-file-name (file-readable-p svn-log-edit-file-name))
-        (insert-file-contents svn-log-edit-file-name)))
+      (when (and log-edit-file-name (file-readable-p log-edit-file-name))
+        (insert-file-contents log-edit-file-name)))
     (svn-log-edit-mode)))
 
 (defun svn-status-switch-to-status-buffer ()
@@ -4385,7 +4398,10 @@ If ARG then show diff between some other version of the selected files."
 (defun svn-log-edit-save-message ()
   "Save the current log message to the file `svn-log-edit-file-name'."
   (interactive)
-  (write-region (point-min) (point-max) svn-log-edit-file-name))
+  (let ((log-edit-file-name (svn-log-edit-file-name)))
+    (if (string= buffer-file-name log-edit-file-name)
+        (save-buffer)
+      (write-region (point-min) (point-max) log-edit-file-name))))
 
 (defun svn-log-edit-erase-edit-buffer ()
   "Delete everything in the `svn-log-edit-buffer-name' buffer."
@@ -4415,6 +4431,13 @@ If ARG then show diff between some other version of the selected files."
     (goto-char (point-min))
     (flush-lines "^## .*")))
 
+(defun svn-file-add-to-changelog (curdir)
+  "Create a changelog entry for the function at point.
+`add-change-log-entry-other-window' creates the header information.
+If CURDIR, save the log file in the current directory, otherwise in the base directory of this working copy."
+  (interactive "P")
+  (add-change-log-entry-other-window nil (svn-log-edit-file-name curdir))
+  (svn-log-edit-mode))
 
 ;; --------------------------------------------------------------------------------
 ;; svn-log-view-mode:
