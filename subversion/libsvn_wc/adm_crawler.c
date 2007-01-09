@@ -815,9 +815,13 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
   SVN_ERR(svn_io_file_open(&tempbasefile, tmp_base,
                            APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
 
+  /* Wrap the translated stream with a new stream that writes the
+     translated contents into the new text base file as we read from it.
+     Note that the new text base file will be closed when the new stream
+     is closed. */
   local_stream
     = copying_stream(local_stream,
-                     svn_stream_from_aprfile(tempbasefile, pool), pool);
+                     svn_stream_from_aprfile2(tempbasefile, FALSE, pool), pool);
 
   if (! fulltext)
     {
@@ -845,7 +849,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
 
   /* Create a text-delta stream object that pulls
      data out of the two files. */
-  base_stream = svn_stream_from_aprfile(basefile, pool);
+  base_stream = svn_stream_from_aprfile2(basefile, TRUE, pool);
   if (! fulltext)
     base_stream
       = svn_stream_checksummed(base_stream, &base_digest, NULL, TRUE, pool);
@@ -907,24 +911,13 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                                    pool),
              ent->checksum, base_digest_hex);
         }
-      else
-        SVN_ERR_W(err,
-                  apr_psprintf(pool,
-                               _("While preparing '%s' for commit"),
-                               svn_path_local_style(path, pool)));
    }
-  else
-    SVN_ERR_W(err, apr_psprintf(pool,
-                                _("While preparing '%s' for commit"),
-                                svn_path_local_style(path, pool)));
 
   /* Now, handle that delta transmission error if any, so we can stop
      thinking about it after this point. */
   SVN_ERR_W(err, apr_psprintf(pool,
                               _("While preparing '%s' for commit"),
                               svn_path_local_style(path, pool)));
-
-  SVN_ERR(svn_io_file_close(tempbasefile, pool));
 
   /* Close base file, if it was opened. */
   if (basefile)
