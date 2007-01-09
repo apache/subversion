@@ -25,6 +25,7 @@
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
+#include "svn_md5.h"
 #include "svn_repos.h"
 #include "svn_props.h"
 #include "svn_pools.h"
@@ -227,6 +228,7 @@ add_subdir(svn_fs_root_t *source_root,
           void *delta_handler_baton, *file_baton;
           svn_txdelta_stream_t *delta_stream;
           const char *new_src_path;
+          unsigned char digest[APR_MD5_DIGESTSIZE];
 
           SVN_ERR(editor->add_file(svn_path_join(path, dent->name, subpool),
                                    *dir_baton, NULL, SVN_INVALID_REVNUM,
@@ -264,7 +266,13 @@ add_subdir(svn_fs_root_t *source_root,
                                             delta_handler_baton,
                                             pool));
 
-          SVN_ERR(editor->close_file(file_baton, NULL, pool));
+          SVN_ERR(svn_fs_file_md5_checksum(digest, 
+                                           source_root, 
+                                           new_src_path, 
+                                           pool));
+          SVN_ERR(editor->close_file(file_baton,
+                                     svn_md5_digest_to_cstring(digest, pool),
+                                     pool));
         }
       else
         abort();
@@ -568,8 +576,19 @@ path_driver_cb_func(void **dir_baton,
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;
-          /* ### Provide checksum if sending deltas. */
-          SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool, 
+          const char *checksum = NULL;
+
+          if (cb->compare_root && source_root && source_path)
+            {
+              unsigned char digest[APR_MD5_DIGESTSIZE];
+              SVN_ERR(svn_fs_file_md5_checksum(digest,
+                                               source_root,
+                                               source_path,
+                                               pool));
+              checksum = svn_md5_digest_to_cstring(digest, pool);
+            }
+
+          SVN_ERR(editor->apply_textdelta(file_baton, checksum, pool, 
                                           &delta_handler, 
                                           &delta_handler_baton));
           if (cb->compare_root)
@@ -592,8 +611,13 @@ path_driver_cb_func(void **dir_baton,
 
   /* Close the file baton if we opened it. */
   if (file_baton)
-    /* ### Provide checksum if we sent a text delta. */
-    SVN_ERR(editor->close_file(file_baton, NULL, pool));
+    {
+      unsigned char digest[APR_MD5_DIGESTSIZE];
+      SVN_ERR(svn_fs_file_md5_checksum(digest, root, path, pool));
+      SVN_ERR(editor->close_file(file_baton, 
+                                 svn_md5_digest_to_cstring(digest, pool),
+                                 pool));
+    }
 
   return SVN_NO_ERROR;
 }
