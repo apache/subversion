@@ -56,9 +56,9 @@ verify_mergeinfo_parse(const char *input,
   /* Test valid input. */
   err = svn_mergeinfo_parse(input, &path_to_merge_ranges, pool);
   if (err || apr_hash_count(path_to_merge_ranges) != 1)
-      return svn_error_createf(SVN_ERR_TEST_FAILED, err,
-                               "svn_mergeinfo_parse (%s) failed "
-                               "unexpectedly", input);
+    return svn_error_createf(SVN_ERR_TEST_FAILED, err,
+                             "svn_mergeinfo_parse (%s) failed unexpectedly",
+                             input);
   for (hi = apr_hash_first(pool, path_to_merge_ranges); hi;
        hi = apr_hash_next(hi))
     {
@@ -89,21 +89,19 @@ verify_mergeinfo_parse(const char *input,
    -> merge ranges. */
 static apr_hash_t *info1, *info2, *info3;
 
-#define NBR_MERGEINFO_VALS 4
+#define NBR_MERGEINFO_VALS 3
 /* Valid merge info values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
   {
     "/trunk:1",
     "/trunk/foo:1-6",
-    "/trunk: 5,7-9,10,11,13,14",
-    "/trunk: "
+    "/trunk: 5,7-9,10,11,13,14"
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
   {
     "/trunk",
     "/trunk/foo",
-    "/trunk",
     "/trunk"
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
@@ -111,8 +109,7 @@ static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS] =
   {
     { 1, 1 },
     { 1, 6 },
-    { 5, 5 },
-    { SVN_INVALID_REVNUM, SVN_INVALID_REVNUM }
+    { 5, 5 }
   };
 
 static svn_error_t *
@@ -129,8 +126,8 @@ test_parse_single_line_mergeinfo(const char **msg,
     return SVN_NO_ERROR;
 
   for (i = 0; i < NBR_MERGEINFO_VALS; i++)
-    verify_mergeinfo_parse(mergeinfo_vals[i], mergeinfo_paths[i],
-                           &mergeinfo_ranges[i], pool);
+    SVN_ERR(verify_mergeinfo_parse(mergeinfo_vals[i], mergeinfo_paths[i],
+                                   &mergeinfo_ranges[i], pool));
 
   return SVN_NO_ERROR;
 }
@@ -183,11 +180,12 @@ test_parse_combine_rangeinfo(const char **msg,
 }
 
 
-#define NBR_BROKEN_MERGEINFO_VALS 4
+#define NBR_BROKEN_MERGEINFO_VALS 5
 /* Invalid merge info values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
     "/missing-revs",
+    "/missing-revs-with-colon: ",
     "/trunk: 5,7-9,10,11,13,14,",
     "/trunk 5,7-9,10,11,13,14",
     "/trunk:5 7--9 10 11 13 14"
@@ -200,6 +198,7 @@ test_parse_broken_mergeinfo(const char **msg,
                             apr_pool_t *pool)
 {
   int i;
+  svn_error_t *err;
   *msg = "parse broken single line mergeinfo";
 
   if (msg_only)
@@ -207,10 +206,14 @@ test_parse_broken_mergeinfo(const char **msg,
 
   /* Trigger some error(s) with mal-formed input. */
   for (i = 0; i < NBR_BROKEN_MERGEINFO_VALS; i++)
-    if (svn_mergeinfo_parse(broken_mergeinfo_vals[i], &info1, pool) ==
-        SVN_NO_ERROR)
+    {
+      err = svn_mergeinfo_parse(broken_mergeinfo_vals[i], &info1, pool);
+      if (err == SVN_NO_ERROR)
         return fail(pool, "svn_mergeinfo_parse (%s) failed to detect an error",
                     broken_mergeinfo_vals[i]);
+      else
+        svn_error_clear(err);
+    }
 
   return SVN_NO_ERROR;
 }
