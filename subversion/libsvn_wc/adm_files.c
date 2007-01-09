@@ -264,6 +264,62 @@ svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
 }
 
 
+/* Create an killme file in the adm area.
+ *
+ * If ADM_ONLY is non-zero then only administrative area will be removed,
+ * otherwise all directory.
+ */
+svn_error_t *
+svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
+                    svn_boolean_t adm_only,
+                    apr_pool_t *pool)
+{
+  const char *path;
+
+  SVN_ERR(svn_wc__adm_write_check(adm_access));
+
+  path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
+                              NULL, FALSE, pool, SVN_WC__ADM_KILLME, NULL);
+
+  return svn_io_file_create(path, adm_only ? SVN_WC__KILL_ADM_ONLY : "", pool);
+}
+
+svn_error_t *
+svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
+                     svn_boolean_t *exists,
+                     svn_boolean_t *kill_adm_only,
+                     apr_pool_t *pool)
+{
+  const char *path;
+  svn_error_t *err;
+  svn_stringbuf_t *contents;
+
+  path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
+                              NULL, FALSE, pool, SVN_WC__ADM_KILLME, NULL);
+  
+  /* By default think that killme file exists. */
+  *exists = TRUE;
+  err = svn_stringbuf_from_file(&contents, path, pool);
+
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      /* Killme file doesn't exist. */
+      *exists = FALSE;
+      svn_error_clear(err);
+    }
+  else if (err)
+    {
+      return err;
+    }
+
+  /* If killme file contains string 'adm-only' then remove only administrative
+     area. */
+  *kill_adm_only = svn_string_compare_stringbuf
+    (svn_string_create(SVN_WC__KILL_ADM_ONLY, pool), contents);
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Syncing files in the adm area. ***/
 

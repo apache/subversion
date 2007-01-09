@@ -1142,6 +1142,9 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * modified and/or unversioned items. If @a force is set such items
  * will be deleted.
  *
+ * If @keep_local is TRUE then local copy of path will be kept in 
+ * working copy.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1150,7 +1153,21 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the deleted
  * item.
  *
- * @since New in 1.3.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_delete3(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *paths,
+                   svn_boolean_t force,
+                   svn_boolean_t keep_local,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_delete3(), but with @a keep_local always set
+ * to false
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_delete2(svn_commit_info_t **commit_info_p,
@@ -1158,7 +1175,6 @@ svn_client_delete2(svn_commit_info_t **commit_info_p,
                    svn_boolean_t force,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
-
 
 /**
  * Similar to svn_client_delete2(), but takes the @c svn_client_commit_info_t

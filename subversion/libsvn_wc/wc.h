@@ -138,6 +138,9 @@ struct svn_wc_traversal_info_t
    directory.  */
 #define SVN_WC__THIS_DIR_PREJ           "dir_conflicts"
 
+/* The contents of killme file, which signals to delete administrative
+   area only. */
+#define SVN_WC__KILL_ADM_ONLY           "adm-only"
 
 
 /* A space separated list of properties that we cache presence/absence of.

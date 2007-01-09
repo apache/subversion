@@ -326,7 +326,10 @@ svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
 
 /* The main logic for client deletion from a working copy. Deletes PATH
    from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
-   modified the delete will fail and return an error unless FORCE is TRUE.
+   modified the delete will fail and return an error unless FORCE or KEEP_LOCAL
+   is TRUE.
+   If KEEP_LOCAL is TRUE then path scheduled to delete from repository only
+   and local copy of path will be kept in working copy.
    If DRY_RUN is TRUE all the checks are made to ensure that the delete can
    occur, but the working copy is not modified.  If NOTIFY_FUNC is not
    null, it is called with NOTIFY_BATON for each file or directory deleted. */
@@ -334,6 +337,7 @@ svn_error_t * svn_client__wc_delete(const char *path,
                                     svn_wc_adm_access_t *adm_access,
                                     svn_boolean_t force,
                                     svn_boolean_t dry_run,
+                                    svn_boolean_t keep_local,
                                     svn_wc_notify_func2_t notify_func,
                                     void *notify_baton,
                                     svn_client_ctx_t *ctx,

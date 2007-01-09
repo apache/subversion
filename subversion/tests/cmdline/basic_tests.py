@@ -1706,6 +1706,52 @@ def ls_space_in_repo_name(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      sbox.repo_url)
 
+
+def delete_keep_local(sbox):
+  'delete file and directory with --keep-local'
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  C_path = os.path.join(wc_dir, 'A', 'C')
+  
+  # Remove file iota
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local',
+                                     iota_path)
+
+  # Remove directory 'A/C'
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local',
+                                     C_path)
+
+  # Commit changes
+  expected_output = wc.State(wc_dir, {
+    'iota' : Item(verb='Deleting'),
+    'A/C' : Item(verb='Deleting'),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('iota')
+  expected_status.remove('A/C')
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        wc_dir)
+
+  # Update working copy to check disk state still greek tree
+  expected_disk = svntest.main.greek_state.copy()
+  expected_output = svntest.wc.State(wc_dir, {})
+  expected_status.tweak(wc_rev = 2);
+  
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
+
 ########################################################################
 # Run the tests
 
@@ -1742,6 +1788,7 @@ test_list = [ None,
               ls_nonhead,
               cat_added_PREV,
               ls_space_in_repo_name,
+              delete_keep_local,
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.

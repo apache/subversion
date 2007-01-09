@@ -449,6 +449,11 @@ read_entry(svn_wc_entry_t **new_entry,
 
   /* Changelist. */
   SVN_ERR(read_str(&entry->changelist, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Keep entry in working copy after deletion? */
+  SVN_ERR(read_bool(&entry->keep_local, SVN_WC__ENTRY_ATTR_KEEP_LOCAL,
+                    buf, end));
 
  done:
   *new_entry = entry;
@@ -646,6 +651,10 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                        modify_flags, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                        atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, name));
 
+  /* Is this item should be kept in working copy after deletion? */
+  SVN_ERR(do_bool_attr(&entry->keep_local,
+                       modify_flags, SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
+                       atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, name));
 
   /* Attempt to set up timestamps. */
   {
@@ -1542,6 +1551,9 @@ write_entry(svn_stringbuf_t *buf,
   /* Changelist. */
   write_str(buf, entry->changelist, pool);
 
+  /* Keep in working copy flag. */
+  write_bool(buf, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, entry->keep_local);
+
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -1668,6 +1680,10 @@ write_entry_xml(svn_stringbuf_t **output,
   /* Incomplete state */
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
                (entry->incomplete ? "true" : NULL));
+
+  /* Keep in wc flag  */
+  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, APR_HASH_KEY_STRING,
+               (entry->keep_local ? "true" : NULL));
 
   /* Timestamps */
   if (entry->text_time)
@@ -2147,6 +2163,9 @@ fold_entry(apr_hash_t *entries,
                                 ? apr_pstrdup(pool, entry->present_props)
                                 : NULL);
 
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
+    cur_entry->keep_local = entry->keep_local;
+
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
   if (cur_entry->kind != svn_node_dir)
@@ -2176,6 +2195,13 @@ fold_entry(apr_hash_t *entries,
       cur_entry->copied = FALSE;
       cur_entry->copyfrom_rev = SVN_INVALID_REVNUM;
       cur_entry->copyfrom_url = NULL;
+    }
+
+  /* keep_local makes sense only when we are going to delete directory. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE
+      && entry->schedule != svn_wc_schedule_delete)
+    {
+      cur_entry->keep_local = FALSE;
     }
 
   /* Make sure the entry exists in the entries hash.  Possibly it
