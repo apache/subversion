@@ -1133,7 +1133,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       /* Passing NULL for the notify_func and notify_baton because
          repos_diff.c:delete_entry() will do it for us. */
       err = svn_client__wc_delete(mine, parent_access, merge_b->force,
-                                  merge_b->dry_run, NULL, NULL,
+                                  merge_b->dry_run, FALSE, NULL, NULL,
                                   merge_b->ctx, subpool);
       if (err && state)
         {
@@ -1365,7 +1365,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
         SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                     subpool));
         err = svn_client__wc_delete(path, parent_access, merge_b->force,
-                                    merge_b->dry_run,
+                                    merge_b->dry_run, FALSE,
                                     merge_delete_notify_func, &mdb,
                                     merge_b->ctx, subpool);
         if (err && state)

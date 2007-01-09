@@ -1320,6 +1320,12 @@ typedef struct svn_wc_entry_t
    */
   const char *changelist;
 
+  /** Local copy should be kept in working copy after deletion from repository.
+   * Currently used only for "this dir" when it is scheduled for deletion.
+   *
+   * @since New in 1.5. */
+  svn_boolean_t keep_local;
+
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
 } svn_wc_entry_t;
@@ -2060,11 +2066,14 @@ svn_error_t *svn_wc_copy(const char *src,
  * deletion will occur.  @a adm_access must hold a write lock for the parent 
  * of @a path.
  *
- * This function immediately deletes all files, modified and unmodified,
- * versioned and unversioned from the working copy. It also immediately
- * deletes unversioned directories and directories that are scheduled to be
- * added.  Only versioned directories will remain in the working copy,
- * these get deleted by the update following the commit.
+ * If @a keep_local is FALSE, this function immediately deletes all files,
+ * modified and unmodified, versioned and unversioned from the working copy.
+ * It also immediately deletes unversioned directories and directories that
+ * are scheduled to be added.  Only versioned directories will remain in the
+ * working copy, these get deleted by the update following the commit.
+ *
+ * If @a keep_local is TRUE, then all files and directories will be kept
+ * in working copy.
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -2074,7 +2083,21 @@ svn_error_t *svn_wc_copy(const char *src,
  * the @a notify_baton and that path. The @a notify_func callback may be
  * @c NULL if notification is not needed.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_delete3(const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            svn_boolean_t keep_local,
+                            apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_delete3(), but with @a keep_local always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_delete2(const char *path,
                             svn_wc_adm_access_t *adm_access,

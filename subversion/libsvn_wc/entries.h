@@ -72,6 +72,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS     "cachable-props"
 #define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
 #define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
+#define SVN_WC__ENTRY_ATTR_KEEP_LOCAL         "keep-local"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -149,14 +150,15 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS     APR_INT64_C(0x10000000)
 #define SVN_WC__ENTRY_MODIFY_PRESENT_PROPS      APR_INT64_C(0x20000000)
 #define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x40000000)
+#define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x80000000)
 
 
 /* ...or perhaps this to mean all of those above... */
-#define SVN_WC__ENTRY_MODIFY_ALL           APR_INT64_C(0x7FFFFFFF)
+#define SVN_WC__ENTRY_MODIFY_ALL           APR_INT64_C(0xFFFFFFFF)
 
 /* ...ORed together with this to mean "I really mean this, don't be
    trying to protect me from myself on this one." */
-#define SVN_WC__ENTRY_MODIFY_FORCE         APR_INT64_C(0x80000000)
+#define SVN_WC__ENTRY_MODIFY_FORCE         APR_INT64_C(0x100000000)
 
 
 /* Modify an entry for NAME in access baton ADM_ACCESS by folding in

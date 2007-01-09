@@ -58,6 +58,21 @@ svn_error_t *svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
                                     svn_boolean_t tmp,
                                     apr_pool_t *pool);
 
+/* Make 'PATH/<administrative_subdir>/killme' file.
+   If adm_only is non-zero then file will contain text 'adm-only',
+   otherwise file will be empty. */
+svn_error_t *svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
+                                 svn_boolean_t adm_only,
+                                 apr_pool_t *pool);
+
+/* Sets EXISTS to TRUE if killme file exists in the administrative area, FALSE
+   otherwise.
+   Also sets KILL_ADM_ONLY to value passed to svn_wc__make_killme() */
+svn_error_t *svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
+                                  svn_boolean_t *exists,
+                                  svn_boolean_t *kill_adm_only,
+                                  apr_pool_t *pool);
+
 /* Atomically rename a temporary text-base file to its canonical
    location.  The tmp file should be closed already. */
 svn_error_t *

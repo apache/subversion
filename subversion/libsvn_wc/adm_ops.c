@@ -841,13 +841,14 @@ remove_file_if_present(const char *file, apr_pool_t *pool)
 }
 
 
-/* Recursively mark a tree ADM_ACCESS with a SCHEDULE and/or COPIED
+/* Recursively mark a tree ADM_ACCESS with a SCHEDULE, COPIED and/or KEEP_LOCAL
    flag, depending on the state of MODIFY_FLAGS. */
 static svn_error_t *
 mark_tree(svn_wc_adm_access_t *adm_access, 
           apr_uint64_t modify_flags,
           svn_wc_schedule_t schedule,
           svn_boolean_t copied,
+          svn_boolean_t keep_local,
           svn_cancel_func_t cancel_func,
           void *cancel_baton,
           svn_wc_notify_func2_t notify_func,
@@ -858,6 +859,8 @@ mark_tree(svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   const svn_wc_entry_t *entry; 
+  svn_wc_entry_t tmp_entry;
+  apr_uint64_t this_dir_flags;
 
   /* Read the entries file for this directory. */
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
@@ -869,7 +872,6 @@ mark_tree(svn_wc_adm_access_t *adm_access,
       const void *key;
       void *val;
       const char *base_name;
-      svn_wc_entry_t *dup_entry;
 
       /* Clear our per-iteration pool. */
       svn_pool_clear(subpool);
@@ -893,18 +895,19 @@ mark_tree(svn_wc_adm_access_t *adm_access,
           SVN_ERR(svn_wc_adm_retrieve(&child_access, adm_access, fullpath,
                                       subpool));
           SVN_ERR(mark_tree(child_access, modify_flags,
-                            schedule, copied,
+                            schedule, copied, keep_local,
                             cancel_func, cancel_baton,
                             notify_func, notify_baton,
                             subpool));
         }
 
-      /* Need to duplicate the entry because we are changing the scheduling */
-      dup_entry = svn_wc_entry_dup(entry, subpool);
-      dup_entry->schedule = schedule;
-      dup_entry->copied = copied; 
-      SVN_ERR(svn_wc__entry_modify(adm_access, base_name, dup_entry, 
-                                   modify_flags, TRUE, subpool));
+      tmp_entry.schedule = schedule;
+      tmp_entry.copied = copied;
+      SVN_ERR(svn_wc__entry_modify
+              (adm_access, base_name, &tmp_entry, 
+               modify_flags & (SVN_WC__ENTRY_MODIFY_SCHEDULE
+                               | SVN_WC__ENTRY_MODIFY_COPIED),
+               TRUE, subpool));
 
       /* Tell someone what we've done. */
       if (schedule == svn_wc_schedule_delete && notify_func != NULL)
@@ -915,23 +918,39 @@ mark_tree(svn_wc_adm_access_t *adm_access,
   
   /* Handle "this dir" for states that need it done post-recursion. */
   entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, APR_HASH_KEY_STRING);
-
+  this_dir_flags = 0;
+  
   /* Uncommitted directories (schedule add) that are to be scheduled for
      deletion are a special case, they don't need to be changed as they
      will be removed from their parent's entry list. */
   if (! (entry->schedule == svn_wc_schedule_add
          && schedule == svn_wc_schedule_delete))
   {
-    /* Need to duplicate the entry because we are changing the scheduling */
-    svn_wc_entry_t *dup_entry = svn_wc_entry_dup(entry, subpool);
     if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
-      dup_entry->schedule = schedule;
+      {
+        tmp_entry.schedule = schedule;
+        this_dir_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE;
+      }
+
     if (modify_flags & SVN_WC__ENTRY_MODIFY_COPIED)
-      dup_entry->copied = copied;
-    SVN_ERR(svn_wc__entry_modify(adm_access, NULL, dup_entry, modify_flags,
-                                 TRUE, subpool));
+      {
+        tmp_entry.copied = copied;
+        this_dir_flags |= SVN_WC__ENTRY_MODIFY_COPIED;
+      }
   }
-  
+
+  /* Set keep_local on the "this dir", if requested. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
+    {
+      tmp_entry.keep_local = keep_local;
+      this_dir_flags |= SVN_WC__ENTRY_MODIFY_KEEP_LOCAL;
+    }
+
+  /* Modify this_dir entry if requested. */
+  if (this_dir_flags)
+    SVN_ERR(svn_wc__entry_modify(adm_access, NULL, &tmp_entry, this_dir_flags,
+                                 TRUE, subpool));
+ 
   /* Destroy our per-iteration pool. */
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
@@ -1095,12 +1114,13 @@ erase_from_wc(const char *path,
 
 
 svn_error_t *
-svn_wc_delete2(const char *path,
+svn_wc_delete3(const char *path,
                svn_wc_adm_access_t *adm_access,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
                void *notify_baton,
+               svn_boolean_t keep_local, 
                apr_pool_t *pool)
 {
   svn_wc_adm_access_t *dir_access;
@@ -1175,8 +1195,10 @@ svn_wc_delete2(const char *path,
           if (dir_access != adm_access)
             {
               /* Recursively mark a whole tree for deletion. */
-              SVN_ERR(mark_tree(dir_access, SVN_WC__ENTRY_MODIFY_SCHEDULE,
-                                svn_wc_schedule_delete, FALSE,
+              SVN_ERR(mark_tree(dir_access,
+                                SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                | SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
+                                svn_wc_schedule_delete, FALSE, keep_local,
                                 cancel_func, cancel_baton,
                                 notify_func, notify_baton,
                                 pool));
@@ -1251,14 +1273,30 @@ svn_wc_delete2(const char *path,
 
   /* By the time we get here, anything that was scheduled to be added has
      become unversioned */
-  if (was_schedule == svn_wc_schedule_add)
-    SVN_ERR(erase_unversioned_from_wc
-            (path, cancel_func, cancel_baton, pool));
-  else
-    SVN_ERR(erase_from_wc(path, adm_access, was_kind,
-                          cancel_func, cancel_baton, pool));
+  if (!keep_local)
+    {
+      if (was_schedule == svn_wc_schedule_add)
+        SVN_ERR(erase_unversioned_from_wc
+                (path, cancel_func, cancel_baton, pool));
+      else
+        SVN_ERR(erase_from_wc(path, adm_access, was_kind,
+                              cancel_func, cancel_baton, pool));
+    }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_delete2(const char *path,
+               svn_wc_adm_access_t *adm_access,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *pool)
+{
+  return svn_wc_delete3(path, adm_access, cancel_func, cancel_baton,
+                        notify_func, notify_baton, FALSE, pool);
 }
 
 svn_error_t *
@@ -1529,7 +1567,7 @@ svn_wc_add2(const char *path,
 
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR(mark_tree(adm_access, SVN_WC__ENTRY_MODIFY_COPIED,
-                            svn_wc_schedule_normal, TRUE,
+                            svn_wc_schedule_normal, TRUE, FALSE,
                             cancel_func,
                             cancel_baton,
                             NULL, NULL, /* N/A cuz we aren't deleting */
