@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-11-13 08:53+0100\n"
-"PO-Revision-Date: 2007-01-06 15:56+0800\n"
+"PO-Revision-Date: 2007-01-09 09:13+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1006,10 +1006,10 @@ msgstr "提交项目“%s”有复制标记，但是没有源地址(copyfrom URL
 #: libsvn_client/commit_util.c:853
 #: libsvn_client/copy.c:1385
 #: libsvn_client/delete.c:67
-#: libsvn_client/diff.c:1460
-#: libsvn_client/diff.c:2190
-#: libsvn_client/diff.c:2785
-#: libsvn_client/diff.c:2913
+#: libsvn_client/diff.c:1469
+#: libsvn_client/diff.c:2199
+#: libsvn_client/diff.c:2794
+#: libsvn_client/diff.c:2922
 #: libsvn_client/locking_commands.c:259
 #: libsvn_client/log.c:133
 #: libsvn_client/prop_commands.c:354
@@ -1207,56 +1207,56 @@ msgstr "无法显示：文件标记为二进制类型。%s"
 #. xgettext: the '.working', '.merge-left.r%ld' and
 #. '.merge-right.r%ld' strings are used to tag onto a file
 #. name in case of a merge conflict
-#: libsvn_client/diff.c:885
+#: libsvn_client/diff.c:888
 msgid ".working"
 msgstr ".working"
 
-#: libsvn_client/diff.c:887
+#: libsvn_client/diff.c:890
 #, c-format
 msgid ".merge-left.r%ld"
 msgstr ".merge-left.r%ld"
 
-#: libsvn_client/diff.c:890
+#: libsvn_client/diff.c:893
 #, c-format
 msgid ".merge-right.r%ld"
 msgstr ".merge-right.r%ld"
 
-#: libsvn_client/diff.c:1525
-#: libsvn_client/diff.c:1729
+#: libsvn_client/diff.c:1534
+#: libsvn_client/diff.c:1738
 msgid "Not all required revisions are specified"
 msgstr "没有全部提供需要的版本"
 
-#: libsvn_client/diff.c:1540
+#: libsvn_client/diff.c:1549
 msgid "At least one revision must be non-local for a pegged diff"
 msgstr "对于peg差异，必须至少有一个非本地版本"
 
-#: libsvn_client/diff.c:1652
-#: libsvn_client/diff.c:1664
+#: libsvn_client/diff.c:1661
+#: libsvn_client/diff.c:1673
 #, c-format
 msgid "'%s' was not found in the repository at revision %ld"
 msgstr "在仓库的版本 %2$ld 中找不到“%1$s”"
 
-#: libsvn_client/diff.c:2010
+#: libsvn_client/diff.c:2019
 msgid "Sorry, svn_client_diff3 was called in a way that is not yet supported"
 msgstr "抱歉，svn_client_diff3不支持这种调用方式"
 
-#: libsvn_client/diff.c:2049
+#: libsvn_client/diff.c:2058
 msgid "Only diffs between a path's text-base and its working files are supported at this time"
 msgstr "当前diff只支持参考文件与其工作文件比较"
 
-#: libsvn_client/diff.c:2194
+#: libsvn_client/diff.c:2203
 #: libsvn_client/switch.c:111
 #, c-format
 msgid "Directory '%s' has no URL"
 msgstr "目录“%s”没有URL"
 
-#: libsvn_client/diff.c:2401
+#: libsvn_client/diff.c:2410
 msgid "Summarizing diff can only compare repository to repository"
 msgstr "只有仓库和仓库才能比较差异概要"
 
-#: libsvn_client/diff.c:2758
-#: libsvn_client/diff.c:2764
-#: libsvn_client/diff.c:2898
+#: libsvn_client/diff.c:2767
+#: libsvn_client/diff.c:2773
+#: libsvn_client/diff.c:2907
 #: libsvn_client/locking_commands.c:263
 #: libsvn_client/ra.c:382
 #: libsvn_client/ra.c:748
@@ -3384,9 +3384,8 @@ msgid "Could not initialize the SASL library"
 msgstr "不能初始化 SASL 库"
 
 #: libsvn_ra_svn/sasl_auth.c:279
-#, fuzzy
 msgid "Can't get user name"
-msgstr "无法获取文件名"
+msgstr "无法获取用户名"
 
 #: libsvn_ra_svn/sasl_auth.c:286
 #: libsvn_ra_svn/simple_auth.c:97
@@ -3408,7 +3407,7 @@ msgstr "来自服务器的认证错误：%s"
 
 #: libsvn_ra_svn/simple_auth.c:117
 msgid "Cannot negotiate authentication mechanism"
-msgstr "无法协商出认识机制"
+msgstr "协商认证机制失败"
 
 #: libsvn_ra_svn/streams.c:77
 #: libsvn_ra_svn/streams.c:152
@@ -4618,15 +4617,14 @@ msgstr "非法的XML：%s 在第 %d 行"
 msgid "Error aborting report"
 msgstr "取消报告时发生错误"
 
-#: libsvn_wc/adm_crawler.c:905
-#: libsvn_wc/adm_crawler.c:955
+#: libsvn_wc/adm_crawler.c:904
 #, c-format
 msgid "Checksum mismatch for '%s'; expected '%s', actual: '%s'"
 msgstr "“%s”的校验和不一致：预期“%s”，实际：“%s”"
 
-#: libsvn_wc/adm_crawler.c:914
-#: libsvn_wc/adm_crawler.c:919
-#: libsvn_wc/adm_crawler.c:966
+#: libsvn_wc/adm_crawler.c:913
+#: libsvn_wc/adm_crawler.c:918
+#: libsvn_wc/adm_crawler.c:924
 #, c-format
 msgid "While preparing '%s' for commit"
 msgstr "当为提交操作准备“%s”时"
