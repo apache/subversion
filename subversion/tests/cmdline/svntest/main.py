@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -291,6 +291,8 @@ def run_command_stdin(command, error_expected, binary_mode=0,
     exit_signal = wait_code % 256
 
     if exit_signal != 0:
+      sys.stdout.write("".join(stdout_lines))
+      sys.stderr.write("".join(stderr_lines))
       raise SVNProcessTerminatedBySignal
 
   if verbose_mode:
