@@ -297,20 +297,22 @@ svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                               NULL, FALSE, pool, SVN_WC__ADM_KILLME, NULL);
   
-  /* By default think that killme file exists. */
-  *exists = TRUE;
   err = svn_stringbuf_from_file(&contents, path, pool);
 
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+  if (err)
     {
-      /* Killme file doesn't exist. */
-      *exists = FALSE;
-      svn_error_clear(err);
-    }
-  else if (err)
-    {
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* Killme file doesn't exist. */
+          *exists = FALSE;
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+
       return err;
     }
+
+  *exists = TRUE;
 
   /* If killme file contains string 'adm-only' then remove only administrative
      area. */
