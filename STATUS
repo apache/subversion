@@ -70,13 +70,6 @@ Candidate changes:
     Votes:
       +1: glasser, jerenkrantz
 
-  * r22501
-    Fix script used to build our Solaris package.
-    Justification:
-      Simple fix, with the script completely broken as-is.
-    Votes:
-      +1: dlr, jerenkrantz
-
   * r19808-19810, r22853
     Synchronise license text and then bump copyright dates to 2007.
     Justification:
@@ -88,4 +81,11 @@ Candidate changes:
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
 Approved changes:
+
+  * r22501
+    Fix script used to build our Solaris package.
+    Justification:
+      Simple fix, with the script completely broken as-is.
+    Votes:
+      +1: dlr, jerenkrantz, cmpilato
 
