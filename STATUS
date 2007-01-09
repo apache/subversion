@@ -60,16 +60,6 @@ Candidate changes:
     Votes:
       +1: dlr
 
-  * r22346, r22351, r22352
-    Calculate checksums in ra_replay and repos_replay.
-    Justification:
-      Integrity checks for svnsync and SVK are good, and this
-      is fixing things marked as "###".  While it's arguably
-      a feature, is fully compatible and is more a matter of
-      filling in unfinished work.
-    Votes:
-      +1: glasser, jerenkrantz
-
   * r19808-19810, r22853
     Synchronise license text and then bump copyright dates to 2007.
     Justification:
@@ -81,4 +71,14 @@ Candidate changes:
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
 Approved changes:
+
+  * r22346, r22351, r22352
+    Calculate checksums in ra_replay and repos_replay.
+    Justification:
+      Integrity checks for svnsync and SVK are good, and this
+      is fixing things marked as "###".  While it's arguably
+      a feature, is fully compatible and is more a matter of
+      filling in unfinished work.
+    Votes:
+      +1: glasser, jerenkrantz, cmpilato
 
