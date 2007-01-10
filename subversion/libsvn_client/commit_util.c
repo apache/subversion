@@ -2,7 +2,7 @@
  * commit_util.c:  Driver for the WC commit process.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -691,7 +691,7 @@ svn_client__harvest_committables(apr_hash_t **committables,
       target = svn_path_join_many(subpool, 
                                   svn_wc_adm_access_path(parent_dir),  
                                   targets->nelts 
-                                  ? (((const char **) targets->elts)[i]) 
+                                  ? APR_ARRAY_IDX(targets, i, const char *) 
                                   : NULL,
                                   NULL);
 
@@ -839,7 +839,7 @@ svn_client__get_copy_committables(apr_hash_t **committables,
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = 
-        ((svn_client__copy_pair_t **) (copy_pairs->elts))[i];
+        APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
       apr_array_header_t *list;
       svn_wc_adm_access_t *dir_access;
 

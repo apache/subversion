@@ -1,7 +1,7 @@
 /* reps-strings.c : intepreting representations with respect to strings
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -118,8 +118,7 @@ delta_string_keys(apr_array_header_t **keys,
   /* Now, push the string keys for each window into *KEYS */
   for (i = 0; i < chunks->nelts; i++)
     {
-      rep_delta_chunk_t *chunk =
-        (((rep_delta_chunk_t **) chunks->elts)[i]);
+      rep_delta_chunk_t *chunk = APR_ARRAY_IDX(chunks, i, rep_delta_chunk_t *);
 
       key = apr_pstrdup(pool, chunk->string_key);
       (*((const char **)(apr_array_push(*keys)))) = key;
@@ -143,7 +142,7 @@ delete_strings(apr_array_header_t *keys,
   for (i = 0; i < keys->nelts; i++)
     {
       svn_pool_clear(subpool);
-      str_key = ((const char **) keys->elts)[i];
+      str_key = APR_ARRAY_IDX(keys, i, const char *);
       SVN_ERR(svn_fs_bdb__string_delete(fs, str_key, trail, subpool));
     }
   svn_pool_destroy(subpool);
@@ -1515,7 +1514,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
             int i;
             for (i = 0; i < windows->nelts; i++)
               {
-                ww = ((window_write_t **) windows->elts)[i];
+                ww = APR_ARRAY_IDX(windows, i, window_write_t *);
                 SVN_ERR(svn_fs_bdb__string_delete(fs, ww->key, trail, pool));
               }
             return SVN_NO_ERROR;
@@ -1550,7 +1549,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
        chunks to the representation. */
     for (i = 0; i < windows->nelts; i++)
       {
-        ww = ((window_write_t **) windows->elts)[i];
+        ww = APR_ARRAY_IDX(windows, i, window_write_t *);
 
         /* Allocate a chunk and its window */
         chunk = apr_palloc(pool, sizeof(*chunk));

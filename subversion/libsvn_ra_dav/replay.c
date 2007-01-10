@@ -2,7 +2,7 @@
  * replay.c :  routines for replaying revisions
  *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -56,7 +56,8 @@ typedef struct {
   svn_stringbuf_t *prop_accum;
 } replay_baton_t;
 
-#define TOP_DIR(rb) (((dir_item_t *)(rb)->dirs->elts)[(rb)->dirs->nelts - 1])
+#define TOP_DIR(rb) (APR_ARRAY_IDX((rb)->dirs, (rb)->dirs->nelts - 1, \
+                                   dir_item_t))
 
 /* Info about a given directory we've seen. */
 typedef struct {

@@ -2,7 +2,7 @@
  * serve.c :  Functions for serving the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1402,7 +1402,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   full_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
     {
-      elt = &((svn_ra_svn_item_t *) paths->elts)[i];
+      elt = &APR_ARRAY_IDX(paths, i, svn_ra_svn_item_t);
       if (elt->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Log path entry not a string");

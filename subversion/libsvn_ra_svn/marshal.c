@@ -2,7 +2,7 @@
  * marshal.c :  Marshalling routines for Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -645,7 +645,7 @@ static svn_error_t *vparse_tuple(apr_array_header_t *items, apr_pool_t *pool,
       /* '?' just means the tuple may stop; skip past it. */
       if (**fmt == '?')
         (*fmt)++;
-      elt = &((svn_ra_svn_item_t *) items->elts)[count];
+      elt = &APR_ARRAY_IDX(items, count, svn_ra_svn_item_t);
       if (**fmt == 'n' && elt->kind == SVN_RA_SVN_NUMBER)
         *va_arg(*ap, apr_uint64_t *) = elt->u.number;
       else if (**fmt == 'r' && elt->kind == SVN_RA_SVN_NUMBER)
@@ -770,7 +770,7 @@ svn_error_t *svn_ra_svn__handle_failure_status(apr_array_header_t *params,
   for (i = params->nelts - 1; i >= 0; i--)
     {
       svn_pool_clear(subpool);
-      elt = &((svn_ra_svn_item_t *) params->elts)[i];
+      elt = &APR_ARRAY_IDX(params, i, svn_ra_svn_item_t);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Malformed error list"));

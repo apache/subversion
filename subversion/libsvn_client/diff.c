@@ -2,7 +2,7 @@
  * diff.c: comparing and merging
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -355,8 +355,7 @@ diff_content_changed(const char *path,
       args = apr_palloc(subpool, nargs * sizeof(char *));
       for (i = 0; i < diff_cmd_baton->options->nelts; i++)
         {
-          args[i] = 
-            ((const char **)(diff_cmd_baton->options->elts))[i];
+          args[i] = APR_ARRAY_IDX(diff_cmd_baton->options, i, const char *);
         }
       assert(i == nargs);
     }
