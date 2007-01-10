@@ -488,7 +488,7 @@ check_cache(apr_hash_t *ret_props,
 
 /*
  * This function will deliver a PROP_CTX PROPFIND request in the SESS
- * serf context for the properties listed in LOOKUP_PROPS at URL for
+ * serf context for the properties listed in FIND_PROPS at URL for
  * DEPTH ("0","1","infinity").
  *
  * This function will not block waiting for the response.  Instead, the
