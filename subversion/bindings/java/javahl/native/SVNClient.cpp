@@ -750,14 +750,23 @@ void SVNClient::copy(Targets &srcPaths, const char *destPath,
         return;
     }
 
+    apr_array_header_t *copy_items =
+        apr_array_make(requestPool.pool(), srcs->nelts,
+                       sizeof(svn_client_copy_item_t *));
+    for (int i = 0; i < srcs->nelts; i++)
+    {
+        svn_client_copy_item_t *copy_item = (svn_client_copy_item_t *)
+            apr_palloc(requestPool.pool(), sizeof(*copy_item));
+        copy_item->src = APR_ARRAY_IDX(srcs, i, const char *);
+        copy_item->src_revision = revision.revision();
+        copy_item->peg_revision = pegRevision.revision();
+        APR_ARRAY_PUSH(copy_items, svn_client_copy_item_t *) = copy_item;
+    }
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
     svn_commit_info_t *commit_info;
-    // ### TODO: Use pegRevision once there is a Subversion API which
-    // ### supports it.
-    err = svn_client_copy4(&commit_info, (apr_array_header_t *) srcs,
-                           revision.revision(), destinationPath.c_str(),
+    err = svn_client_copy4(&commit_info, copy_items, destinationPath.c_str(),
                            copyAsChild, ctx, requestPool.pool());
     if (err)
         JNIUtil::handleSVNError(err);
