@@ -627,7 +627,7 @@ array_push_str(apr_array_header_t *array,
      transfer str's lifetime to pool.  Is that something callers are
      depending on? */
 
-  (*((const char **) apr_array_push(array))) = apr_pstrdup(pool, str);
+  APR_ARRAY_PUSH(array, const char *) = apr_pstrdup(pool, str);
 }
 
 
@@ -810,7 +810,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
              because we needed to split up the list with svn_cstring_split. */
           const char *utf8_target = APR_ARRAY_IDX(known_targets,
                                                   i, const char *);
-          (*((const char **) apr_array_push(input_targets))) = utf8_target;
+          APR_ARRAY_PUSH(input_targets, const char *) = utf8_target;
         }
     }
 
@@ -892,7 +892,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
             continue;
         }
 
-      (*((const char **) apr_array_push(output_targets))) = target;
+      APR_ARRAY_PUSH(output_targets, const char *) = target;
     }
 
 

@@ -749,7 +749,7 @@ check_locations(svn_fs_t *fs, struct locations_info *info,
   struct locations_info *iter;
 
   for (iter = info; iter->rev != 0; ++iter)
-    *(svn_revnum_t *) apr_array_push(a) = iter->rev;
+    APR_ARRAY_PUSH(a, svn_revnum_t) = iter->rev;
 
   SVN_ERR(svn_repos_trace_node_locations(fs, &h, path, peg_revision, a,
                                          NULL, NULL, pool));

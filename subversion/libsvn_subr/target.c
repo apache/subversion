@@ -76,14 +76,14 @@ svn_path_condense_targets(const char **pcommon,
   removed = apr_pcalloc(pool, (targets->nelts * sizeof(svn_boolean_t)));
   abs_targets = apr_array_make(pool, targets->nelts, sizeof(const char *));
   
-  (*((const char **)apr_array_push(abs_targets))) = *pcommon;
+  APR_ARRAY_PUSH(abs_targets, const char *) = *pcommon;
   
   for (i = 1; i < targets->nelts; ++i)
     {
       const char *rel = APR_ARRAY_IDX(targets, i, const char *);
       const char *absolute;
       SVN_ERR(svn_path_get_absolute(&absolute, rel, pool));
-      (*((const char **)apr_array_push(abs_targets))) = absolute;
+      APR_ARRAY_PUSH(abs_targets, const char *) = absolute;
       *pcommon = svn_path_get_longest_ancestor(*pcommon, absolute, pool);
     }
   
@@ -179,7 +179,7 @@ svn_path_condense_targets(const char **pcommon,
                 rel_item++;
             }
           
-          (*((const char **)apr_array_push(*pcondensed_targets)))
+          APR_ARRAY_PUSH(*pcondensed_targets, const char *)
             = apr_pstrdup(pool, rel_item);
         }
     }
@@ -262,8 +262,8 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
          and its original path to REL_TARGETS. */
       if (keep_me)
         {
-          (* ((const char **) apr_array_push(abs_targets))) = abs_path;
-          (* ((const char **) apr_array_push(rel_targets))) = rel_path;
+          APR_ARRAY_PUSH(abs_targets, const char *) = abs_path;
+          APR_ARRAY_PUSH(rel_targets, const char *) = rel_path;
         }
     }
   

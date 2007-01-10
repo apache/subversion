@@ -477,7 +477,7 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
       while (cpy)
         {
           copy_id = apr_pstrmemdup(pool, cpy->data, cpy->len);
-          (*((const char **)(apr_array_push(txncopies)))) = copy_id;
+          APR_ARRAY_PUSH(txncopies, const char *) = copy_id;
           cpy = cpy->next;
         }
       transaction->copies = txncopies;
@@ -581,7 +581,7 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
                                         chunk_skel->children->len));
 
           /* Add this chunk to the array. */
-          (*((rep_delta_chunk_t **)(apr_array_push(chunks)))) = chunk;
+          APR_ARRAY_PUSH(chunks, rep_delta_chunk_t *) = chunk;
 
           /* Next... */
           chunk_skel = chunk_skel->next;

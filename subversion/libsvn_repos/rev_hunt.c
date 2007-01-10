@@ -2,7 +2,7 @@
  *                their properties.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -832,8 +832,8 @@ svn_repos_get_file_revs(svn_repos_t *repos,
               break;
             }
         }
-      *(svn_revnum_t*) apr_array_push(revnums) = rev;
-      *(char **) apr_array_push(paths) = apr_pstrdup(pool, rev_path);
+      APR_ARRAY_PUSH(revnums, svn_revnum_t) = rev;
+      APR_ARRAY_PUSH(paths, char *) = apr_pstrdup(pool, rev_path);
       if (rev <= start)
         break;
 

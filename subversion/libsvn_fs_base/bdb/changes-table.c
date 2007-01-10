@@ -1,7 +1,7 @@
 /* changes-table.c : operations on the `changes' table
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -407,7 +407,7 @@ svn_fs_bdb__changes_fetch_raw(apr_array_header_t **changes_p,
         goto cleanup;
 
       /* ... and add it to our return array.  */
-      (*((change_t **) apr_array_push(changes))) = change;
+      APR_ARRAY_PUSH(changes, change_t *) = change;
 
       /* Advance the cursor to the next record with this same KEY, and
          fetch that record. */

@@ -263,8 +263,8 @@ organize_lock_targets(const char **common_parent,
                                      _("'%s' has no URL"),
                                      svn_path_local_style(target, pool));
 
-          (*((const char **)(apr_array_push(urls)))) = apr_pstrdup 
-            (pool, entry->url);
+          APR_ARRAY_PUSH(urls, const char *) = apr_pstrdup(pool,
+                                                           entry->url);
         }
 
       /* Condense our absolute urls and get the relative urls. */

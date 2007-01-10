@@ -2,7 +2,7 @@
  * auth.c: authentication support functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -127,7 +127,7 @@ svn_auth_open(svn_auth_baton_t **auth_baton,
                        provider->vtable->cred_kind, APR_HASH_KEY_STRING,
                        table);
         }  
-      *(svn_auth_provider_object_t **)apr_array_push(table->providers) 
+      APR_ARRAY_PUSH(table->providers, svn_auth_provider_object_t *)
         = provider;
     }
 
