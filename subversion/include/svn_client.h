@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2024,29 +2024,48 @@ svn_client_resolved(const char *path,
                     apr_pool_t *pool);
 
 
-/** Copy @a src_paths to @a dst_path.
+/**
+ * A structure which describes a copy operation--it's source, source revision,
+ * and peg revision.
  *
- * If multiple @a src_paths are given, @a dst_path must be a directory,
- * and @a src_paths will be copied as children of @a dst_path.
+ * @since New in 1.5.
+ */
+typedef struct svn_client_copy_item_t
+{
+    /** The source path or URL. */
+    const char *src;
+
+    /** The source operational revision. */
+    const svn_opt_revision_t *src_revision;
+
+    /** The source peg revision. */
+    const svn_opt_revision_t *peg_revision;
+} svn_client_copy_item_t;
+
+/** Copy each @a src in @a src_items to @a dst_path.
  *
- * @a src_paths must be files or directories under version control, or
- * URLs of a versioned item in the repository.  If @a src_paths has multiple
- * items, they must be all repository URLs or all working copy paths.
- * @a src_revision is used to choose the revision from which to copy the
- * @a src_paths.
+ * If multiple @a src_items are given, @a dst_path must be a directory,
+ * and @a src_items will be copied as children of @a dst_path.
+ *
+ * @a src_items must be an array of <tt>svn_client_copy_item_t</tt> structures.
+ *
+ * Each @src in @a src_items must be files or directories under version control,
+ * or URLs of a versioned item in the repository.  If @a src_items has multiple
+ * items, the @src members must be all repository URLs or all working copy
+ * paths.
  *
  * The parent of @a dst_path must already exist.
  *
- * If @a src_paths has only one item, attempt to copy it to @a dst_path.  If
+ * If @a src_items has only one item, attempt to copy it to @a dst_path.  If
  * @a copy_as_child is TRUE and @a dst_path already exists, attempt to copy the
  * item as a child of @a dst_path.  If @a copy_as_child is FALSE and
  * @a dst_path already exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path
  * is a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
  * URL.
  *
- * If @a src_paths has multiple items, and @a copy_as_child is TRUE, all
- * @a src_paths are copied as children of @a dst_path.  If any child of
- * @a dst_path already exists with the same name any item in @a src_paths,
+ * If @a src_items has multiple items, and @a copy_as_child is TRUE, all
+ * @a src_items are copied as children of @a dst_path.  If any child of
+ * @a dst_path already exists with the same name any item in @a src_items,
  * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
  * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
  *
@@ -2059,7 +2078,7 @@ svn_client_resolved(const char *path,
  * succeeds, allocate (in @a pool) and populate @a *commit_info_p.
  *
  * If @a dst_path is not a URL, then this is just a variant of 
- * svn_client_add(), where the @a src_path items are scheduled for addition
+ * svn_client_add(), where the @a src_items are scheduled for addition
  * as copies.  No changes will happen to the repository until a commit occurs.
  * This scheduling can be removed with svn_client_revert().
  *
@@ -2075,8 +2094,7 @@ svn_client_resolved(const char *path,
  */
 svn_error_t *
 svn_client_copy4(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *src_paths,
-                 const svn_opt_revision_t *src_revision,
+                 apr_array_header_t *src_items,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_client_ctx_t *ctx,

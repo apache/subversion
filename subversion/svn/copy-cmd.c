@@ -2,7 +2,7 @@
  * copy-cmd.c -- Subversion copy command
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -40,16 +40,35 @@ svn_cl__copy(apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
-  apr_array_header_t *targets;
+  apr_array_header_t *targets, *src_items;
   const char *src_path, *dst_path;
   svn_boolean_t srcs_are_urls, dst_is_url;
   svn_commit_info_t *commit_info = NULL;
   svn_error_t *err;
+  int i;
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
                                         opt_state->targets, pool));
   if (targets->nelts < 2)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+
+  /* Get the src list and associated peg revs */
+  src_items = apr_array_make(pool, targets->nelts - 1,
+                             sizeof(svn_client_copy_item_t *));
+  for (i = 0; i < (targets->nelts - 1); i++)
+    {
+      const char *target = ((const char **) (targets->elts))[i];
+      svn_client_copy_item_t *item = apr_palloc(pool, sizeof(*item));
+      const char *src;
+      svn_opt_revision_t peg_revision;
+
+      SVN_ERR(svn_opt_parse_path(&peg_revision, &src, target, pool));
+      item->src = src;
+      item->src_revision = &(opt_state->start_revision);
+      item->peg_revision = &peg_revision;
+
+      APR_ARRAY_PUSH(src_items, svn_client_copy_item_t *) = item;
+    }
 
   /* Figure out which type of trace editor to use.
      If the src_paths are not homogeneous, setup_copy will return an error. */
@@ -111,7 +130,7 @@ svn_cl__copy(apr_getopt_t *os,
     SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                        NULL, ctx->config, pool));
 
-  err = svn_client_copy4(&commit_info, targets, &(opt_state->start_revision),
+  err = svn_client_copy4(&commit_info, src_items,
                          dst_path, TRUE, ctx, pool);
 
   if (ctx->log_msg_func3)

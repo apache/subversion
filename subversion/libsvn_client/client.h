@@ -509,7 +509,7 @@ svn_client__get_diff_summarize_editor(const char *target,
 */
 typedef struct
 {
-    /* The source path or url */
+    /* The source path or url. */
     const char *src;
 
     /* The source path relative to the wc root */
@@ -524,6 +524,18 @@ typedef struct
 
     /* The node kind of the source */
     svn_node_kind_t src_kind;
+
+    /* The source operational name. */
+    const char *src_op_name;
+
+    /* The source operational revision. */
+    svn_opt_revision_t src_op_revision;
+
+    /* The source peg revision. */
+    svn_opt_revision_t src_peg_revision;
+
+    /* The source revision number. */
+    svn_revnum_t src_revnum;
 
     /* The destination path or url */
     const char *dst;
