@@ -1257,7 +1257,6 @@ setup_copy(svn_commit_info_t **commit_info_p,
            svn_client_ctx_t *ctx,
            apr_pool_t *pool)
 {
-  apr_pool_t *subpool;
   apr_array_header_t *copy_pairs = apr_array_make(pool, src_paths->nelts,
                                                   sizeof(struct copy_pair *));
   svn_boolean_t srcs_are_urls, dst_is_url;
@@ -1274,7 +1273,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
    * a destination path for each of the source paths. */
   if (src_paths->nelts > 1)
     {
-      subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       for ( i = 0; i < src_paths->nelts; i++)
         {
@@ -1282,8 +1281,8 @@ setup_copy(svn_commit_info_t **commit_info_p,
           const char *src_basename;
           svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
 
-          svn_pool_clear(subpool);
-          src_basename = svn_path_basename(src_path, subpool);
+          svn_pool_clear(iterpool);
+          src_basename = svn_path_basename(src_path, iterpool);
 
           /* Check to see if all the sources are urls or all working copy 
            * paths. */
@@ -1297,7 +1296,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
           APR_ARRAY_PUSH(copy_pairs, svn_client__copy_pair_t *) = pair;
         }
 
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
   else
     {
@@ -1310,16 +1309,16 @@ setup_copy(svn_commit_info_t **commit_info_p,
 
   if (!srcs_are_urls && !dst_is_url)
     {
-      subpool = svn_pool_create(pool);
+      apr_pool_t *iterpool = svn_pool_create(pool);
 
       for ( i = 0; i < copy_pairs->nelts; i++ )
         {
           svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                             svn_client__copy_pair_t *);
 
-          svn_pool_clear(subpool);
+          svn_pool_clear(iterpool);
           
-          if (svn_path_is_child(pair->src, pair->dst, subpool))
+          if (svn_path_is_child(pair->src, pair->dst, iterpool))
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                _("Cannot copy path '%s' into its own child '%s'"),
@@ -1327,7 +1326,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
                svn_path_local_style(pair->dst, pool));
         }
 
-      svn_pool_destroy(subpool);
+      svn_pool_destroy(iterpool);
     }
 
   if (is_move)
@@ -1361,10 +1360,14 @@ setup_copy(svn_commit_info_t **commit_info_p,
           if (src_revision->kind != svn_opt_revision_unspecified
               && src_revision->kind != svn_opt_revision_working)
             {
+              apr_pool_t *iterpool = svn_pool_create(pool);
+
               for ( i = 0; i < copy_pairs->nelts; i++)
                 {
                   svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
+
+                  svn_pool_clear(iterpool);
 
                   /* We can convert the working copy path to a URL based on the
                      entries file. */
@@ -1374,9 +1377,9 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                                  pair->src, FALSE, 0,
                                                  ctx->cancel_func,
                                                  ctx->cancel_baton, 
-                                                 pool));
+                                                 iterpool));
                   SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE,
-                                       pool));
+                                       iterpool));
                   SVN_ERR(svn_wc_adm_close(adm_access));
 
                   if (! entry)
@@ -1391,9 +1394,10 @@ setup_copy(svn_commit_info_t **commit_info_p,
                        _("'%s' does not seem to have a URL associated with it"),
                        svn_path_local_style(pair->src, pool));
 
-                  pair->src = entry->url;
+                  pair->src = apr_pstrdup(pool, entry->url);
                 }
 
+              svn_pool_destroy(iterpool);
               srcs_are_urls = TRUE;
             }
         }
