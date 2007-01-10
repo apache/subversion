@@ -2,7 +2,7 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -318,7 +318,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "copy", svn_cl__copy, {"cp"}, N_
     ("Duplicate something in working copy or repository, remembering history.\n"
-     "usage: copy SRC... DST\n"
+     "usage: copy SRC[@REV]... DST\n"
      "\n"
      "When copying multiple sources, they will be added as children of DST, \n"
      "which must be a directory.\n"

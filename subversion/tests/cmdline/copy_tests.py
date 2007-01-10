@@ -469,7 +469,7 @@ def resurrect_deleted_dir(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
-                                     '-r', '1', url, url,
+                                     url + '@1', url,
                                      '-m', 'logmsg')
 
   # For completeness' sake, update to HEAD, and verify we have a full
@@ -521,7 +521,7 @@ def copy_deleted_dir_into_prefix(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'cp',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
-                                     '-r', '1', url1, url2,
+                                     url1 + '@1', url2,
                                      '-m', 'logmsg')
 
 #----------------------------------------------------------------------
@@ -1225,7 +1225,7 @@ def resurrect_deleted_file(sbox):
 
   # repos->wc copy, to resurrect deleted file.
   svntest.actions.run_and_verify_svn("Copy error:", None, [],
-                                     'cp', '-r', '1', rho_url, wc_dir)
+                                     'cp', rho_url + '@1', wc_dir)
 
   # status should now show the file scheduled for addition-with-history
   expected_status.add({
@@ -1350,20 +1350,20 @@ def revision_kinds_local_source(sbox):
 
   # Test the various revision-kind keywords, and none.
   sub_tests = [ ('file0', 2, rWC, None),
-                ('file1', 3, r3, '-rHEAD'),
-                # ('file2', 2, r2, '-rBASE'),
-                # ('file3', 2, r2, '-rCOMMITTED'),
-                # ('file4', 1, r1, '-rPREV'),
+                ('file1', 3, r3, 'HEAD'),
+                # ('file2', 2, r2, 'BASE'),
+                # ('file3', 2, r2, 'COMMITTED'),
+                # ('file4', 1, r1, 'PREV'),
               ]
 
-  for dst, from_rev, text, rev_arg in sub_tests:
+  for dst, from_rev, text, peg_rev in sub_tests:
     dst_path = os.path.join(wc_dir, dst) 
-    if rev_arg is None:
+    if peg_rev is None:
       svntest.actions.run_and_verify_svn(None, None, [], "copy",
                                          mu_path, dst_path)
     else:
-      svntest.actions.run_and_verify_svn(None, None, [], "copy", rev_arg,
-                                         mu_path, dst_path)
+      svntest.actions.run_and_verify_svn(None, None, [], "copy",
+                                         mu_path + "@" + peg_rev, dst_path)
     expected_disk.add({ dst: Item(contents=text) })
 
     # Check that the copied-from revision == from_rev.
@@ -1437,9 +1437,9 @@ def repos_to_wc_1634(sbox):
                                         wc_dir)
 
   # Now copy the directory back.
-  E_url = sbox.repo_url + "/A/B/E"
+  E_url = sbox.repo_url + "/A/B/E@1"
   svntest.actions.run_and_verify_svn(None, None, [],
-                                     'copy', '-r1', E_url, E_path)
+                                     'copy', E_url, E_path)
   expected_status.add({
     'A/B/E'       :  Item(status='A ', copied='+', wc_rev='-'),
     'A/B/E/alpha' :  Item(status='  ', copied='+', wc_rev='-'),
@@ -1663,7 +1663,7 @@ def non_existent_url_to_url(sbox):
                                      adg_url, '-m', '')
 
   svntest.actions.run_and_verify_svn(None, None, [], 'copy',
-                                     '-r', '1', pi_url, new_url,
+                                     pi_url + '@1', new_url,
                                      '-m', '')
 
 #----------------------------------------------------------------------
@@ -1689,7 +1689,7 @@ def old_dir_url_to_url(sbox):
   # Try copying a file that was in the deleted directory that is now a
   # file
   svntest.actions.run_and_verify_svn(None, None, [], 'copy',
-                                     '-r', '1', pi_url, new_url,
+                                     pi_url + '@1', new_url,
                                      '-m', '')
 
 
@@ -3155,6 +3155,184 @@ def copy_multiple_wc_repo(sbox):
                                         expected_disk,
                                         expected_status)
 
+#----------------------------------------------------------------------
+
+# Test copying local files using peg revision syntax
+# (Issue 2546) 
+def copy_peg_rev_local_files(sbox):
+  "copy local files using peg rev syntax"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  new_iota_path = os.path.join(wc_dir, 'new_iota')
+  iota_path = os.path.join(wc_dir, 'iota')
+  sigma_path = os.path.join(wc_dir, 'sigma')
+
+  psi_text = "This is the file 'psi'.\n"
+  iota_text = "This is the file 'iota'.\n"
+
+  # Make some changes to the repository
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     psi_path, new_iota_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     iota_path, psi_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     new_iota_path, iota_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'rev 2',
+                                     wc_dir)
+
+  # Copy using a peg rev
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     iota_path + '@HEAD', '-r', '1',
+                                     sigma_path)
+
+  # Commit and verify disk contents
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir, 
+                                     '-m', 'rev 3')
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=psi_text)
+  expected_disk.tweak('A/D/H/psi', contents=iota_text)
+  expected_disk.add({
+    'sigma' : Item(contents=psi_text),
+    })
+
+  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
+  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+
+
+#----------------------------------------------------------------------
+
+# Test copying local directories using peg revision syntax
+# (Issue 2546) 
+def copy_peg_rev_local_dirs(sbox):
+  "copy local dirs using peg rev syntax"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
+  G_path = os.path.join(wc_dir, 'A', 'D', 'G')
+  I_path = os.path.join(wc_dir, 'A', 'D', 'I')
+  J_path = os.path.join(wc_dir, 'A', 'J')
+  alpha_path = os.path.join(E_path, 'alpha')
+
+  # Make some changes to the repository
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+                                     alpha_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'rev 2',
+                                     wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     E_path, I_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'rev 3',
+                                     wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     G_path, E_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'rev 4',
+                                     wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     I_path, G_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'rev 5',
+                                     wc_dir)
+
+  # Copy using a peg rev
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     G_path + '@HEAD', '-r', '1',
+                                     J_path)
+
+  # Commit and verify disk contents
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir, 
+                                     '-m', 'rev 6')
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/beta')
+  expected_disk.remove('A/B/E/alpha')
+  expected_disk.remove('A/D/G/pi')
+  expected_disk.remove('A/D/G/rho')
+  expected_disk.remove('A/D/G/tau')
+  expected_disk.add({
+    'A/B/E/pi'    : Item(contents="This is the file 'pi'.\n"),
+    'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
+    'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
+    'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
+    'A/J/beta'  : Item(contents="This is the file 'beta'.\n"),
+    })
+
+  actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 5)
+  svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
+
+
+#----------------------------------------------------------------------
+
+# Test copying urls using peg revision syntax
+# (Issue 2546) 
+def copy_peg_rev_url(sbox):
+  "copy urls using peg rev syntax"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
+  new_iota_path = os.path.join(wc_dir, 'new_iota')
+  iota_path = os.path.join(wc_dir, 'iota')
+  iota_url = sbox.repo_url + '/iota'
+  sigma_url = sbox.repo_url + '/sigma'
+
+  psi_text = "This is the file 'psi'.\n"
+  iota_text = "This is the file 'iota'.\n"
+
+  # Make some changes to the repository
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     psi_path, new_iota_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     iota_path, psi_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'mv',
+                                     new_iota_path, iota_path)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
+                                     '-m', 'rev 2',
+                                     wc_dir)
+
+  # Copy using a peg rev
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp',
+                                     iota_url + '@HEAD', '-r', '1',
+                                     sigma_url, '-m', 'rev 3')
+
+  # Update to HEAD and verify disk contents
+  expected_output = svntest.wc.State(wc_dir, {
+    'sigma' : Item(status='A '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('iota', contents=psi_text)
+  expected_disk.tweak('A/D/H/psi', contents=iota_text)
+  expected_disk.add({
+    'sigma' : Item(contents=psi_text),
+    })
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 3)
+  expected_status.add({
+    'sigma' : Item(status='  ', wc_rev=3)
+    })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
 
 ########################################################################
 # Run the tests
@@ -3220,6 +3398,9 @@ test_list = [ None,
               copy_multiple_repo,
               copy_multiple_repo_wc,
               copy_multiple_wc_repo,
+              copy_peg_rev_local_files,
+              copy_peg_rev_local_dirs,
+              copy_peg_rev_url,
              ]
 
 if __name__ == '__main__':
