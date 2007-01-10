@@ -842,7 +842,9 @@ remove_file_if_present(const char *file, apr_pool_t *pool)
 
 
 /* Recursively mark a tree ADM_ACCESS with a SCHEDULE, COPIED and/or KEEP_LOCAL
-   flag, depending on the state of MODIFY_FLAGS. */
+   flag, depending on the state of MODIFY_FLAGS (which may contain only a
+   subset of the possible modification flags, namely, those indicating a change
+   to one of the three flags mentioned above). */
 static svn_error_t *
 mark_tree(svn_wc_adm_access_t *adm_access, 
           apr_uint64_t modify_flags,

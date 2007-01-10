@@ -1142,8 +1142,10 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * modified and/or unversioned items. If @a force is set such items
  * will be deleted.
  *
- * If @keep_local is TRUE then local copy of path will be kept in 
- * working copy.
+ * If the paths are working copy paths and @a keep_local is true then
+ * the paths will not be removed from the working copy, only scheduled
+ * for removal from the repository.  Once the scheduled deletion is
+ * committed, they will appear as unversioned paths in the working copy.
  *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
@@ -1165,7 +1167,7 @@ svn_client_delete3(svn_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_delete3(), but with @a keep_local always set
- * to false
+ * to false.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */

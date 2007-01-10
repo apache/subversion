@@ -328,8 +328,10 @@ svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
    from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
    modified the delete will fail and return an error unless FORCE or KEEP_LOCAL
    is TRUE.
-   If KEEP_LOCAL is TRUE then path scheduled to delete from repository only
-   and local copy of path will be kept in working copy.
+
+   If KEEP_LOCAL is TRUE then PATH is only scheduled from deletion from the
+   repository and a local copy of PATH will be kept in the working copy.
+
    If DRY_RUN is TRUE all the checks are made to ensure that the delete can
    occur, but the working copy is not modified.  If NOTIFY_FUNC is not
    null, it is called with NOTIFY_BATON for each file or directory deleted. */

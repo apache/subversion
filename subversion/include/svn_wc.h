@@ -1320,8 +1320,9 @@ typedef struct svn_wc_entry_t
    */
   const char *changelist;
 
-  /** Local copy should be kept in working copy after deletion from repository.
-   * Currently used only for "this dir" when it is scheduled for deletion.
+  /** Whether a local copy of this entry should be kept in the working copy
+   * after a deletion has been committed,  Only valid for the this-dir entry
+   * when it is scheduled for deletion.
    *
    * @since New in 1.5. */
   svn_boolean_t keep_local;
@@ -2072,8 +2073,8 @@ svn_error_t *svn_wc_copy(const char *src,
  * are scheduled to be added.  Only versioned directories will remain in the
  * working copy, these get deleted by the update following the commit.
  *
- * If @a keep_local is TRUE, then all files and directories will be kept
- * in working copy.
+ * If @a keep_local is TRUE, all files and directories will be kept in the
+ * working copy (and will become unversioned on the next commit).
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error

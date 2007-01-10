@@ -1638,8 +1638,9 @@ start_handler(void *userData, const char *eltname, const char **atts)
   return;
 }
 
-/* Process the "KILLME" file in ADM_ACCESS
- */
+/* Process the "KILLME" file in ADM_ACCESS: remove the administrative area
+   for ADM_ACCESS and its children, and, if ADM_ONLY is false, also remove
+   the contents of the working copy (leaving only locally-modified files). */
 static svn_error_t *
 handle_killme(svn_wc_adm_access_t *adm_access,
               svn_boolean_t adm_only,
@@ -1654,7 +1655,8 @@ handle_killme(svn_wc_adm_access_t *adm_access,
                        svn_wc_adm_access_path(adm_access), adm_access,
                        FALSE, pool));
 
-  /* Blow away the entire directory, and all those below it too. */
+  /* Blow away the administrative directories, and possibly the working
+     copy tree too. */
   err = svn_wc_remove_from_revision_control(adm_access,
                                             SVN_WC_ENTRY_THIS_DIR,
                                             !adm_only, /* destroy */
