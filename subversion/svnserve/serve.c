@@ -1410,7 +1410,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 svn_path_canonicalize(elt->u.string->data,
                                                       pool),
                                 pool);
-      *((const char **) apr_array_push(full_paths)) = full_path;
+      APR_ARRAY_PUSH(full_paths, const char *) = full_path;
     }
   SVN_ERR(trivial_auth_request(conn, pool, b));
 

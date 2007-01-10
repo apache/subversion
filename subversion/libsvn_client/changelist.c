@@ -2,7 +2,7 @@
  * changelist.c:  implementation of the 'changelist' command
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -76,8 +76,8 @@ found_an_entry(const char *path,
           || ((entry->kind == svn_node_dir)
               && (strcmp(entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)))
         {
-          (*((const char **) apr_array_push(b->path_list))) =
-            apr_pstrdup(b->pool, path);
+          APR_ARRAY_PUSH(b->path_list, const char *) = apr_pstrdup(b->pool,
+                                                                   path);
         }
     }
 

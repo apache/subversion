@@ -2,7 +2,7 @@
  * paths.c:   a path manipulation library using svn_stringbuf_t
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -777,7 +777,7 @@ svn_path_decompose(const char *path,
     {
       char dirsep = '/';
 
-      *((const char **) apr_array_push(components))
+      APR_ARRAY_PUSH(components, const char *)
         = apr_pstrmemdup(pool, &dirsep, sizeof(dirsep));
 
       i++;
@@ -791,9 +791,9 @@ svn_path_decompose(const char *path,
       if ((path[i] == '/') || (path[i] == '\0'))
         {
           if (SVN_PATH_IS_PLATFORM_EMPTY(path + oldi, i - oldi))
-            *((const char **) apr_array_push(components)) = SVN_EMPTY_PATH;
+            APR_ARRAY_PUSH(components, const char *) = SVN_EMPTY_PATH;
           else
-            *((const char **) apr_array_push(components))
+            APR_ARRAY_PUSH(components, const char *)
               = apr_pstrmemdup(pool, path + oldi, i - oldi);
 
           i++;

@@ -2,7 +2,7 @@
  * prop_commands.c:  Implementation of propset, propget, and proplist.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -882,7 +882,7 @@ push_props_on_list(apr_array_header_t *list,
       item->node_name = svn_stringbuf_create(path, pool);
       item->prop_hash = prop_hash;
       
-      *((svn_client_proplist_item_t **) apr_array_push(list)) = item;
+      APR_ARRAY_PUSH(list, svn_client_proplist_item_t *) = item;
     }
 }
 

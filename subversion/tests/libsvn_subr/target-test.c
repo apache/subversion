@@ -63,7 +63,7 @@ int main(int argc, char **argv)
 #endif
       if (err != SVN_NO_ERROR)
         svn_handle_error2(err, stderr, TRUE, "target-test: ");
-      *((const char **)apr_array_push(targets)) = 
+      APR_ARRAY_PUSH(targets, const char *) = 
         svn_path_internal_style(path_utf8, pool);
     }
 

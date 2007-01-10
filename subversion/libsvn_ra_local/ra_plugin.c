@@ -794,7 +794,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
              absolute repository path. */
           abs_path = svn_path_join(sbaton->fs_path->data, relative_path,
                                    pool);
-          (*((const char **)(apr_array_push(abs_paths)))) = abs_path;
+          APR_ARRAY_PUSH(abs_paths, const char *) = abs_path;
         }
     }
 

@@ -498,7 +498,7 @@ svn_cstring_split_append(apr_array_header_t *array,
         }
 
       if (p[0] != '\0')
-        (*((const char **) apr_array_push(array))) = p;
+        APR_ARRAY_PUSH(array, const char *) = p;
 
       p = apr_strtok(NULL, sep_chars, &last);
     }

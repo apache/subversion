@@ -89,7 +89,7 @@ typedef struct {
 } custom_get_ctx_t;
 
 #define POP_SUBDIR(sds) (APR_ARRAY_IDX((sds), --(sds)->nelts, subdir_t *))
-#define PUSH_SUBDIR(sds,s) (*(subdir_t **)apr_array_push(sds) = (s))
+#define PUSH_SUBDIR(sds,s) (APR_ARRAY_PUSH((sds), subdir_t *) = (s))
 
 typedef svn_error_t * (*prop_setter_t)(void *baton,
                                        const char *name,
@@ -144,7 +144,7 @@ typedef struct {
   apr_array_header_t *dirs;  /* stack of directory batons/vsn_urls */
 #define TOP_DIR(rb) (APR_ARRAY_IDX((rb)->dirs, (rb)->dirs->nelts - 1, \
                                    dir_item_t))
-#define PUSH_BATON(rb,b) (*(void **)apr_array_push((rb)->dirs) = (b))
+#define PUSH_BATON(rb,b) (APR_ARRAY_PUSH((rb)->dirs, void *) = (b))
 
   /* These items are only valid inside add- and open-file tags! */
   void *file_baton;
@@ -1772,7 +1772,7 @@ svn_error_t *svn_ra_dav__change_rev_prop(svn_ra_session_t *session,
   else
     {
       prop_deletes = apr_array_make(pool, 1, sizeof(const char *));
-      (*((const char **) apr_array_push(prop_deletes))) = name;
+      APR_ARRAY_PUSH(prop_deletes, const char *) = name;
     }
 
   err = svn_ra_dav__do_proppatch(ras, baseline->url, prop_changes,

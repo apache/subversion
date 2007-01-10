@@ -706,14 +706,14 @@ upd_change_xxx_prop(void *baton,
           if (! b->changed_props)
             b->changed_props = apr_array_make(b->pool, 1, sizeof(name));
           
-          (*((const char **)(apr_array_push(b->changed_props)))) = qname;
+          APR_ARRAY_PUSH(b->changed_props, const char *) = qname;
         }
       else
         {
           if (! b->removed_props)
             b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
           
-          (*((const char **)(apr_array_push(b->removed_props)))) = qname;
+          APR_ARRAY_PUSH(b->removed_props, const char *) = qname;
         }
     }
 

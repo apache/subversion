@@ -2,7 +2,7 @@
  * log.c: handle the log-report request and response
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -257,7 +257,7 @@ dav_svn__log_report(const dav_resource *resource,
             return derr;
           target = svn_path_join(resource->info->repos_path, rel_path, 
                                  resource->pool);
-          (*((const char **)(apr_array_push(paths)))) = target;
+          APR_ARRAY_PUSH(paths, const char *) = target;
         }
       /* else unknown element; skip it */
     }
