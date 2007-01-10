@@ -2,7 +2,7 @@
  * log.c:  return log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -257,7 +257,7 @@ svn_client_log3(const apr_array_header_t *targets,
 
         for (i = 0; i < targets->nelts; i++)
           {
-            const char *target = ((const char **)targets->elts)[i];
+            const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
             if (start_is_local)
               SVN_ERR(svn_client__get_revision_number

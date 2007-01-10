@@ -1,7 +1,7 @@
 /* error.c:  common exception handling for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -392,7 +392,7 @@ svn_handle_error2(svn_error_t *err,
         {
           for (i = 0; i < empties->nelts; i++)
             {
-              if (err->apr_err == ((apr_status_t *)empties->elts)[i])
+              if (err->apr_err == APR_ARRAY_IDX(empties, i, apr_status_t) )
                 {
                   printed_already = TRUE;
                   break;

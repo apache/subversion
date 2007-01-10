@@ -1,7 +1,7 @@
 /* fs_skels.c --- conversion between fs native types and skeletons
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1082,8 +1082,8 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
           skel_t *chunk_skel = svn_fs_base__make_empty_list(pool);
           skel_t *diff_skel = svn_fs_base__make_empty_list(pool);
           const char *size_str, *offset_str, *version_str;
-          rep_delta_chunk_t *chunk =
-            (((rep_delta_chunk_t **) chunks->elts)[i - 1]);
+          rep_delta_chunk_t *chunk = APR_ARRAY_IDX(chunks, i - 1,
+                                                   rep_delta_chunk_t *);
 
           /* OFFSET */
           offset_str = apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT,

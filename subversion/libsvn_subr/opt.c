@@ -925,22 +925,22 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
 
       if (output_targets->nelts > 0)
         {
-          path = ((const char **) (output_targets->elts))[0];
+          path = APR_ARRAY_IDX(output_targets, 0, const char *);
           SVN_ERR(svn_opt_parse_path(&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[0] = path;
+              APR_ARRAY_IDX(output_targets, 0, const char *) = path;
               start_revision->kind = temprev.kind;
               start_revision->value = temprev.value;
             }
         }
       if (output_targets->nelts > 1)
         {
-          path = ((const char **) (output_targets->elts))[1];
+          path = APR_ARRAY_IDX(output_targets, 1, const char *);
           SVN_ERR(svn_opt_parse_path(&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[1] = path;
+              APR_ARRAY_IDX(output_targets, 1, const char *) = path;
               end_revision->kind = temprev.kind;
               end_revision->value = temprev.value;
             }
@@ -1011,7 +1011,7 @@ svn_opt_print_help2(apr_getopt_t *os,
   if (os && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_opt_subcommand_help2(((const char **) (targets->elts))[i],
+        svn_opt_subcommand_help2(APR_ARRAY_IDX(targets, i, const char *),
                                  cmd_table, option_table, pool);
       }
   else if (print_version)   /* just --version */
@@ -1052,7 +1052,7 @@ svn_opt_print_help(apr_getopt_t *os,
   if (os && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_opt_subcommand_help(((const char **) (targets->elts))[i],
+        svn_opt_subcommand_help(APR_ARRAY_IDX(targets, i, const char *),
                                 cmd_table, option_table, pool);
       }
   else if (print_version)   /* just --version */

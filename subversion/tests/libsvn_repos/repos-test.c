@@ -1,7 +1,7 @@
 /* repos-test.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -457,7 +457,7 @@ print_chrevs(const apr_array_header_t *revs_got,
     {
       for (i = 0; i < revs_got->nelts; i++)
         {
-          rev = ((svn_revnum_t *)revs_got->elts)[i];
+          rev = APR_ARRAY_IDX(revs_got, i, svn_revnum_t);
           outstr = apr_pstrcat(pool, 
                                outstr,
                                apr_psprintf(pool, "%ld ", rev),
@@ -686,7 +686,7 @@ revisions_changed(const char **msg,
         /* Do the revisions lists match up exactly? */
         for (i = 0; i < num_revs; i++)
           {
-            svn_revnum_t rev = ((svn_revnum_t *)revs->elts)[i];
+            svn_revnum_t rev = APR_ARRAY_IDX(revs, i, svn_revnum_t);
             if (rev != revs_changed[i])
               return svn_error_createf
                 (SVN_ERR_FS_GENERAL, NULL,

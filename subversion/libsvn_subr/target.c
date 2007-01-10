@@ -3,7 +3,7 @@
  *              a subversion subcommand.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -80,7 +80,7 @@ svn_path_condense_targets(const char **pcommon,
   
   for (i = 1; i < targets->nelts; ++i)
     {
-      const char *rel = ((const char **)targets->elts)[i];
+      const char *rel = APR_ARRAY_IDX(targets, i, const char *);
       const char *absolute;
       SVN_ERR(svn_path_get_absolute(&absolute, rel, pool));
       (*((const char **)apr_array_push(abs_targets))) = absolute;
@@ -112,8 +112,8 @@ svn_path_condense_targets(const char **pcommon,
                   if (removed[j])
                     continue;
                   
-                  abs_targets_i = ((const char **)abs_targets->elts)[i];
-                  abs_targets_j = ((const char **)abs_targets->elts)[j];
+                  abs_targets_i = APR_ARRAY_IDX(abs_targets, i, const char *);
+                  abs_targets_j = APR_ARRAY_IDX(abs_targets, j, const char *);
                   
                   ancestor = svn_path_get_longest_ancestor 
                     (abs_targets_i, abs_targets_j, pool);
@@ -138,8 +138,8 @@ svn_path_condense_targets(const char **pcommon,
              remove the target. */
           for (i = 0; i < abs_targets->nelts; ++i)
             {
-              const char *abs_targets_i 
-                = ((const char **) abs_targets->elts)[i];
+              const char *abs_targets_i = APR_ARRAY_IDX(abs_targets, i,
+                                                        const char *);
 
               if ((strcmp(abs_targets_i, *pcommon) == 0) && (! removed[i]))
                 {
@@ -156,7 +156,7 @@ svn_path_condense_targets(const char **pcommon,
       
       for (i = 0; i < abs_targets->nelts; ++i)
         {
-          const char *rel_item = ((const char **)abs_targets->elts)[i];
+          const char *rel_item = APR_ARRAY_IDX(abs_targets, i, const char *);
 
           /* Skip this if it's been removed. */
           if (removed[i])
@@ -228,7 +228,7 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
   */
   for (i = 0; i < targets->nelts; i++)
     {
-      const char *rel_path = ((const char **)targets->elts)[i];
+      const char *rel_path = APR_ARRAY_IDX(targets, i, const char *);
       const char *abs_path;
       int j;
       svn_boolean_t keep_me;
@@ -241,7 +241,7 @@ svn_path_remove_redundancies(apr_array_header_t **pcondensed_targets,
       keep_me = TRUE;
       for (j = 0; j < abs_targets->nelts; j++)
         {
-          const char *keeper = ((const char **)abs_targets->elts)[j];
+          const char *keeper = APR_ARRAY_IDX(abs_targets, j, const char *);
           
           /* Quit here if we find this path already in the keepers. */
           if (strcmp(keeper, abs_path) == 0)
