@@ -1,13 +1,13 @@
+#
 # Simplified Chinese translation for subversion package
-# Copyright (C) 2006 CollabNet.
 # This file is distributed under the same license as the subversion package.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.4.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2006-11-13 08:53+0100\n"
-"PO-Revision-Date: 2007-01-09 09:16+0800\n"
+"POT-Creation-Date: 2007-01-10 17:44+0800\n"
+"PO-Revision-Date: 2007-01-10 17:50+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1917,7 +1917,7 @@ msgstr "文件系统“%2$s”中的路径“%1$s”没有令牌"
 #: libsvn_fs_base/err.c:190
 #, c-format
 msgid "Corrupt lock in 'locks' table for '%s' in filesystem '%s'"
-msgstr "文件系统‘%2$s’中‘%1$s’的‘locks’表锁损坏"
+msgstr "文件系统“%2$s”中“%1$s”的“locks”表锁损坏"
 
 #: libsvn_fs_base/err.c:200
 #: libsvn_fs_fs/err.c:117
@@ -2820,7 +2820,7 @@ msgid "Missing name attr in open-directory element"
 msgstr "元素open-directory没有name属性"
 
 #: libsvn_ra_dav/replay.c:248
-#: libsvn_ra_dav/replay.c:351
+#: libsvn_ra_dav/replay.c:353
 #: libsvn_ra_serf/replay.c:378
 #, c-format
 msgid "Missing name attr in %s element"
@@ -2834,17 +2834,17 @@ msgstr "元素apply-textdelta之前没有add-file或者open-file元素"
 msgid "Got close-file element without preceding add-file or open-file"
 msgstr "元素close-file之前没有add-file或者open-file元素"
 
-#: libsvn_ra_dav/replay.c:329
+#: libsvn_ra_dav/replay.c:331
 msgid "Got close-directory element without ever opening a directory"
 msgstr "在没有打开目录的情况下发现了close-directory元素"
 
-#: libsvn_ra_dav/replay.c:456
+#: libsvn_ra_dav/replay.c:458
 #: libsvn_ra_serf/replay.c:498
 #, c-format
 msgid "Error writing stream: unexpected EOF"
 msgstr "写入流出错：意外的 EOF"
 
-#: libsvn_ra_dav/replay.c:463
+#: libsvn_ra_dav/replay.c:465
 #, c-format
 msgid "Got cdata content for a prop delete"
 msgstr "删除属性时遇到cdata内容"
@@ -3003,27 +3003,27 @@ msgstr "访问本地磁盘的仓库模块。"
 
 #: libsvn_ra_local/ra_plugin.c:285
 msgid "Unable to open an ra_local session to URL"
-msgstr "无法打开URL的ra_local会话"
+msgstr "无法为URL打开ra_local会话"
 
 #: libsvn_ra_local/ra_plugin.c:1340
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_local"
-msgstr "不支持%d版本的ra_local RA加载器"
+msgstr "不支持ra_local RA加载器版本 %d"
 
 #: libsvn_ra_local/split_url.c:44
 #, c-format
 msgid "Local URL '%s' does not contain 'file://' prefix"
-msgstr "本地URL“%s”并未包含 'file://' 开头"
+msgstr "本地URL“%s”没有“file://”前缀"
 
 #: libsvn_ra_local/split_url.c:55
 #, c-format
 msgid "Local URL '%s' contains only a hostname, no path"
-msgstr "本地URL“%s”仅含主机名称，没有路径"
+msgstr "本地URL“%s”只有主机名称，没有路径"
 
 #: libsvn_ra_local/split_url.c:117
 #, c-format
 msgid "Local URL '%s' contains unsupported hostname"
-msgstr "本地URL“%s”包含未支持的主机名称"
+msgstr "本地URL“%s”包含不支持的主机名称"
 
 #: libsvn_ra_local/split_url.c:127
 #: libsvn_ra_local/split_url.c:134
@@ -3046,16 +3046,16 @@ msgstr "更新文件失败"
 #: libsvn_ra_serf/commit.c:1211
 #, c-format
 msgid "Add directory failed: %s on %s (%d)"
-msgstr "msgstr \"增加目录失败: 在路径 ‘%2$s’执行方法 ‘%1$s’(%3$d)\""
+msgstr "增加目录失败: 在路径 “%2$s”执行方法 “%1$s”(%3$d)"
 
 #: libsvn_ra_serf/getlocations.c:289
 msgid "File doesn't exist on HEAD"
-msgstr "路径“%s”不存在于HEAD"
+msgstr "HEAD中没有路径“%s”"
 
 #: libsvn_ra_serf/locks.c:406
 #, c-format
 msgid "Lock request failed: %d %s"
-msgstr "锁请求失败: %d %s"
+msgstr "加锁请求失败: %d %s"
 
 #: libsvn_ra_serf/locks.c:718
 #, c-format
@@ -3064,27 +3064,27 @@ msgstr "解锁请求失败: %d %s"
 
 #: libsvn_ra_serf/replay.c:204
 msgid "Missing revision attr in delete-entry element"
-msgstr "delete-entry元素丢失了revision属性"
+msgstr "delete-entry元素没有revision属性"
 
 #: libsvn_ra_serf/replay.c:230
 msgid "Missing revision attr in open-directory element"
-msgstr "open-directory元素丢失了revision属性"
+msgstr "open-directory元素没有revision属性"
 
 #: libsvn_ra_serf/replay.c:250
 msgid "Missing name attr in add-directory element"
-msgstr "add-directory元素丢失了name属性"
+msgstr "add-directory元素没有name属性"
 
 #: libsvn_ra_serf/replay.c:285
 msgid "Missing name attr in open-file element"
-msgstr "open-file元素丢失了name属性"
+msgstr "open-file元素没有name属性"
 
 #: libsvn_ra_serf/replay.c:291
 msgid "Missing revision attr in open-file element"
-msgstr "open-file元素丢失了revision属性"
+msgstr "open-file元素没有revision属性"
 
 #: libsvn_ra_serf/replay.c:311
 msgid "Missing name attr in add-file element"
-msgstr "add-file元素丢失了name属性"
+msgstr "add-file元素没有name属性"
 
 #: libsvn_ra_serf/serf.c:52
 msgid "Access repository via WebDAV protocol through serf."
@@ -3098,12 +3098,12 @@ msgstr "找不到主机：%s://%s"
 #: libsvn_ra_serf/serf.c:732
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_serf"
-msgstr "不支持%d版本的ra_serf RA加载器"
+msgstr "不支持ra_serf RA加载器版本 %d"
 
 #: libsvn_ra_serf/update.c:2116
 #, c-format
 msgid "Error retrieving REPORT (%d)"
-msgstr "获取报告时出错(%d)"
+msgstr "获取报告出错(%d)"
 
 #: libsvn_ra_serf/util.c:751
 msgid "Unspecified error message"
@@ -3111,12 +3111,12 @@ msgstr "未指明的错误信息"
 
 #: libsvn_ra_serf/util.c:812
 msgid "Premature EOF seen from server"
-msgstr "太早从服务器发现EOF"
+msgstr "从服务器发现EOF太早"
 
 #: libsvn_ra_svn/client.c:127
 #, c-format
 msgid "Unknown hostname '%s'"
-msgstr "未知的主机名称“%s”"
+msgstr "未知的主机“%s”"
 
 #: libsvn_ra_svn/client.c:139
 #, c-format
@@ -3126,11 +3126,11 @@ msgstr "无法创建 socket"
 #: libsvn_ra_svn/client.c:143
 #, c-format
 msgid "Can't connect to host '%s'"
-msgstr "无法连接至主机“%s”"
+msgstr "无法连接主机“%s”"
 
 #: libsvn_ra_svn/client.c:164
 msgid "Proplist element not a list"
-msgstr "属性列表元素不是一个列表"
+msgstr "Proplist 元素不是列表"
 
 #: libsvn_ra_svn/client.c:188
 msgid "Prop diffs element not a list"
@@ -3139,19 +3139,19 @@ msgstr "Prop diffs 元素不是一个列表"
 #: libsvn_ra_svn/client.c:226
 #, c-format
 msgid "Unrecognized node kind '%s' from server"
-msgstr "无法识别来自服务器的节点种类“%s”"
+msgstr "服务器返回无法识别的节点类型 “%s”"
 
 #: libsvn_ra_svn/client.c:273
 #: libsvn_ra_svn/client.c:327
 #, c-format
 msgid "Authentication error from server: %s"
-msgstr "来自服务器的认证错误：%s"
+msgstr "服务器报告认证错误：%s"
 
 #: libsvn_ra_svn/client.c:276
 #: libsvn_ra_svn/cram.c:194
 #: libsvn_ra_svn/cram.c:212
 msgid "Unexpected server response to authentication"
-msgstr "意外的认证时服务器响应"
+msgstr "服务器意外响应认证请求"
 
 #: libsvn_ra_svn/client.c:314
 #: libsvn_subr/prompt.c:156
@@ -3161,32 +3161,32 @@ msgstr "无法取得密码"
 
 #: libsvn_ra_svn/client.c:334
 msgid "Cannot negotiate authentication mechanism"
-msgstr "无法协商出认识机制"
+msgstr "无法协商认证机制"
 
 #: libsvn_ra_svn/client.c:466
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
-msgstr "无法识别的隧道规则“%s”"
+msgstr "无法识别的隧道方案 “%s”"
 
 #: libsvn_ra_svn/client.c:483
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
-msgstr "隧道规则 %s 需要设定环境变数 %s"
+msgstr "隧道方案 %s 需要设定环境变量 %s"
 
 #: libsvn_ra_svn/client.c:494
 #, c-format
 msgid "Can't tokenize command '%s'"
-msgstr "不能 tokenize 命令“%s”"
+msgstr "不能解析命令“%s”"
 
 #: libsvn_ra_svn/client.c:525
 #, c-format
 msgid "Error in child process: %s"
-msgstr "子程序错误：%s"
+msgstr "子进程错误：%s"
 
 #: libsvn_ra_svn/client.c:549
 #, c-format
 msgid "Can't create tunnel"
-msgstr "无法创建 tunnel"
+msgstr "无法创建隧道"
 
 #: libsvn_ra_svn/client.c:588
 #, c-format
@@ -3196,11 +3196,11 @@ msgstr "非法的svn仓库URL“%s”"
 #: libsvn_ra_svn/client.c:627
 #, c-format
 msgid "Server requires minimum version %d"
-msgstr "服务器最低要求的版号为 %d"
+msgstr "服务器要求的最低版本是 %d"
 
 #: libsvn_ra_svn/client.c:682
 msgid "Impossibly long repository root from server"
-msgstr "服务器回传的仓库根路径长得太夸张"
+msgstr "服务器返回的仓库根路径太长"
 
 #: libsvn_ra_svn/client.c:693
 msgid "Module for accessing a repository using the svn network protocol."
@@ -3212,44 +3212,44 @@ msgstr "服务器没有返回仓库根路径"
 
 #: libsvn_ra_svn/client.c:982
 msgid "Non-string as part of file contents"
-msgstr "文件内容的一部份不是字串"
+msgstr "部份文件内容不是字符串"
 
 #: libsvn_ra_svn/client.c:1081
 msgid "Dirlist element not a list"
-msgstr "目录列表元素不是一个列表"
+msgstr "目录列表元素不是列表"
 
 #: libsvn_ra_svn/client.c:1238
 msgid "Log entry not a list"
-msgstr "日志条目不是一个列表"
+msgstr "日志条目不是列表"
 
 #: libsvn_ra_svn/client.c:1251
 msgid "Changed-path entry not a list"
-msgstr "已修改路径条目不是一个列表"
+msgstr "已修改路径条目不是列表"
 
 #: libsvn_ra_svn/client.c:1327
 msgid "'stat' not implemented"
-msgstr "stat未实现"
+msgstr "未实现“stat”"
 
 #: libsvn_ra_svn/client.c:1384
 msgid "'get-locations' not implemented"
-msgstr "get-locations 未实现"
+msgstr "未实现“get-locations”"
 
 #: libsvn_ra_svn/client.c:1396
 msgid "Location entry not a list"
-msgstr "区域条目不是一个列表"
+msgstr "区域条目不是列表"
 
 #: libsvn_ra_svn/client.c:1446
 msgid "'get-file-revs' not implemented"
-msgstr "get-file-revs 未实现"
+msgstr "未实现“get-file-revs”"
 
 #: libsvn_ra_svn/client.c:1459
 msgid "Revision entry not a list"
-msgstr "版本条目不是一个列表"
+msgstr "版本条目不是列表"
 
 #: libsvn_ra_svn/client.c:1472
 #: libsvn_ra_svn/client.c:1497
 msgid "Text delta chunk not a string"
-msgstr "文字差异区段并非字串"
+msgstr "文本差异块不是字符串"
 
 #: libsvn_ra_svn/client.c:1509
 msgid "The get-file-revs command didn't return any revisions"
@@ -3265,7 +3265,7 @@ msgstr "服务器不支持解锁"
 
 #: libsvn_ra_svn/client.c:1718
 msgid "Lock response not a list"
-msgstr "加锁响应不是一个列表"
+msgstr "加锁响应不是列表"
 
 #: libsvn_ra_svn/client.c:1732
 msgid "Unknown status for lock command"
@@ -3273,28 +3273,28 @@ msgstr "加锁命令的状态未知"
 
 #: libsvn_ra_svn/client.c:1754
 msgid "Didn't receive end marker for lock responses"
-msgstr "加锁响应丢失了结尾标记"
+msgstr "加锁响应没有结束标记"
 
 #: libsvn_ra_svn/client.c:1841
 msgid "Unlock response not a list"
-msgstr "解锁响应不是一个列表"
+msgstr "解锁响应不是列表"
 
 #: libsvn_ra_svn/client.c:1855
 msgid "Unknown status for unlock command"
-msgstr "解锁命令的状态未知"
+msgstr "未知的解锁命令状态"
 
 #: libsvn_ra_svn/client.c:1876
 msgid "Didn't receive end marker for unlock responses"
-msgstr "解锁响应丢失了结束标记"
+msgstr "解锁响应没有结束标记"
 
 #: libsvn_ra_svn/client.c:1900
 #: libsvn_ra_svn/client.c:1928
 msgid "Server doesn't support the get-lock command"
-msgstr "服务器不支持命令get-lock"
+msgstr "服务器不支持命令 get-lock"
 
 #: libsvn_ra_svn/client.c:1941
 msgid "Lock element not a list"
-msgstr "Lock元素不是一个列表"
+msgstr "Lock元素不是列表"
 
 #: libsvn_ra_svn/client.c:1964
 msgid "Server doesn't support the replay command"
@@ -3657,7 +3657,7 @@ msgstr ""
 msgid "'%s' not found in filesystem"
 msgstr "在文件系统中找不到“%s”"
 
-#: libsvn_repos/replay.c:359
+#: libsvn_repos/replay.c:367
 #, c-format
 msgid "Filesystem path '%s' is neither a file nor a directory"
 msgstr "文件系统中路径“%s”既不是文件也不是目录"
@@ -4323,7 +4323,7 @@ msgid ""
 "This product includes software developed by CollabNet (http://www.Collab.Net/).\n"
 "\n"
 msgstr ""
-"版权所有 (C) 2000-2006 CollabNet.\n"
+"版权所有 (C) 2000-2007 CollabNet.\n"
 "Subversion 是开放源代码软件，请参阅 http://subversion.tigris.org/\n"
 "此产品包含的软件由 CollabNet (http://www.Collab.Net/)开发。\n"
 "\n"
@@ -4485,7 +4485,7 @@ msgstr "不能创建从“%i”到“%i”的字符转换器"
 #: libsvn_subr/utf.c:515
 #, c-format
 msgid "Can't convert string from native encoding to '%s':"
-msgstr "不能把字符串从本地编码转换为‘%s’编码："
+msgstr "不能把字符串从本地编码转换为“%s”编码："
 
 #: libsvn_subr/utf.c:519
 #, c-format
@@ -4495,12 +4495,12 @@ msgstr "不能把字符串从”%s“编码转换为本地编码。"
 #: libsvn_subr/utf.c:523
 #, c-format
 msgid "Can't convert string from '%s' to '%s':"
-msgstr "不能把字符串从‘%s’编码转换为‘%s’编码。"
+msgstr "不能把字符串从“%s”编码转换为“%s”编码。"
 
 #: libsvn_subr/utf.c:529
 #, c-format
 msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
-msgstr "不能把字符串从 CCSID‘%i’编码转换为 CCSID‘%i’编码。"
+msgstr "不能把字符串从 CCSID“%i”编码转换为 CCSID“%i”编码。"
 
 #: libsvn_subr/utf.c:574
 #, c-format
@@ -6162,7 +6162,7 @@ msgstr ""
 "\n"
 "    最后一次提交的版本号码\n"
 "    最后一次提交的作者\n"
-"    如果被锁定，显示字母“O”。（使用‘svn info URL’来查看详细信息）\n"
+"    如果被锁定，显示字母“O”。（使用“svn info URL”来查看详细信息）\n"
 "    大小 (以字节为单位)\n"
 "    最后一次提交的日期与时间\n"
 
@@ -7145,7 +7145,7 @@ msgstr "试图“svn revert --recursive”？"
 #: svn/status.c:263
 #, c-format
 msgid "'%s' has lock token, but no lock owner"
-msgstr "‘%s’锁被盗取，但没有锁的所有者"
+msgstr "“%s”锁被盗取，但没有锁的所有者"
 
 #: svn/switch-cmd.c:58
 #, c-format
