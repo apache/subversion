@@ -66,14 +66,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r22253 through r22286
-    svn-graph.pl: Update invocation of $ra->get_log() to account for
-    the Perl API's $limit parameter.  Drastically improve UI and
-    implementation.
-    Justification:
-      Incorrect API usage results in a completely broken script.  Old
-      algorithm wasn't quite right, either.
-    Notes: Copy r22286 from trunk to the 1.4.x branch.
-    Votes:
-      +1: dlr
-      +0: danderson
