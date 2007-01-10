@@ -651,7 +651,7 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                        modify_flags, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                        atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, name));
 
-  /* Is this item should be kept in working copy after deletion? */
+  /* Should this item be kept in the working copy after deletion? */
   SVN_ERR(do_bool_attr(&entry->keep_local,
                        modify_flags, SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
                        atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, name));

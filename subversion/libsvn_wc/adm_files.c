@@ -264,11 +264,6 @@ svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
 }
 
 
-/* Create an killme file in the adm area.
- *
- * If ADM_ONLY is non-zero then only administrative area will be removed,
- * otherwise all directory.
- */
 svn_error_t *
 svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
                     svn_boolean_t adm_only,
@@ -314,8 +309,8 @@ svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
 
   *exists = TRUE;
 
-  /* If killme file contains string 'adm-only' then remove only administrative
-     area. */
+  /* If the killme file contains the string 'adm-only' then only the
+     administrative area should be removed. */
   *kill_adm_only = svn_string_compare_stringbuf
     (svn_string_create(SVN_WC__KILL_ADM_ONLY, pool), contents);
 

@@ -58,16 +58,20 @@ svn_error_t *svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
                                     svn_boolean_t tmp,
                                     apr_pool_t *pool);
 
-/* Make 'PATH/<administrative_subdir>/killme' file.
-   If adm_only is non-zero then file will contain text 'adm-only',
-   otherwise file will be empty. */
+/* Create a killme file in the administrative area, indicating that the
+   directory containing the administrative area should be removed.
+
+   If ADM_ONLY is true then remove only the administrative areas for the
+   directory and subdirectories. */
 svn_error_t *svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t adm_only,
                                  apr_pool_t *pool);
 
-/* Sets EXISTS to TRUE if killme file exists in the administrative area, FALSE
-   otherwise.
-   Also sets KILL_ADM_ONLY to value passed to svn_wc__make_killme() */
+/* Set EXISTS to TRUE if a killme file exists in the administrative area,
+   FALSE otherwise.
+
+   If EXISTS is true, set KILL_ADM_ONLY to the value passed to
+   svn_wc__make_killme() above. */
 svn_error_t *svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
                                   svn_boolean_t *exists,
                                   svn_boolean_t *kill_adm_only,
