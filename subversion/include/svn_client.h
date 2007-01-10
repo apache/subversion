@@ -2047,7 +2047,8 @@ typedef struct svn_client_copy_item_t
  * If multiple @a src_items are given, @a dst_path must be a directory,
  * and @a src_items will be copied as children of @a dst_path.
  *
- * @a src_items must be an array of <tt>svn_client_copy_item_t</tt> structures.
+ * @a src_items must be an array of elements of type
+ * <tt>svn_client_copy_item_t *</tt>.
  *
  * Each @src in @a src_items must be files or directories under version control,
  * or URLs of a versioned item in the repository.  If @a src_items has multiple
