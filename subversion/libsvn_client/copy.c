@@ -1462,14 +1462,16 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
             || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
     {
       const char *src_path = APR_ARRAY_IDX(src_paths, 0, const char *);
-      const char *src_basename = svn_path_basename(src_path, pool);
+      const char *src_basename;
 
       svn_error_clear(err);
       svn_pool_clear(subpool);
 
+      src_basename = svn_path_basename(src_path, subpool);
+
       err = setup_copy(commit_info_p,
                        src_paths, src_revision,
-                       svn_path_join(dst_path, src_basename, pool),
+                       svn_path_join(dst_path, src_basename, subpool),
                        FALSE /* is_move */,
                        TRUE /* force, set to avoid deletion check */,
                        ctx,
@@ -1584,13 +1586,15 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
             || err->apr_err == SVN_ERR_FS_ALREADY_EXISTS))
     {
       const char *src_path = APR_ARRAY_IDX(src_paths, 0, const char *);
-      const char *src_basename = svn_path_basename(src_path, pool);
+      const char *src_basename;
 
       svn_error_clear(err);
       svn_pool_clear(subpool);
 
+      src_basename = svn_path_basename(src_path, subpool);
+
       err = setup_copy(commit_info_p, src_paths, &src_revision,
-                       svn_path_join(dst_path, src_basename, pool),
+                       svn_path_join(dst_path, src_basename, subpool),
                        TRUE /* is_move */,
                        force,
                        ctx,
