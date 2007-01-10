@@ -459,15 +459,15 @@ A useful setting might be: '\(\"\#trunk\" \"\#1\#tags\" \"\#1\#branches\")")
 ;; (put 'svn-log-edit-done-hook 'risky-local-variable t)
 ;; already implied by "-hook" suffix
 
+(defvar svn-post-process-svn-output-hook nil "Hook that can be used to preprocess the output from svn.
+The function `svn-status-remove-control-M' can be useful for that hook")
+
+(when (eq system-type 'windows-nt)
+  (add-hook 'svn-post-process-svn-output-hook 'svn-status-remove-control-M))
+
 (defvar svn-status-coding-system nil
   "A special coding system is needed for the output of svn.
 svn-status-coding-system is used in svn-run, if it is not nil.")
-
-(defcustom svn-status-wash-control-M-in-process-buffers
-  (eq system-type 'windows-nt)
-  "*Remove any trailing ^M from the `svn-process-buffer-name' buffer."
-  :type 'boolean
-  :group 'psvn)
 
 (defcustom svn-status-use-ido-completion
   (fboundp 'ido-completing-read)
@@ -1121,8 +1121,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                 ;; `call-process' ignores `process-connection-type' and
                 ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
-                (when svn-status-wash-control-M-in-process-buffers
-                  (svn-status-remove-control-M))
+              (run-hooks 'svn-post-process-svn-output-hook)
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)
               (when svn-pre-run-mode-line-process
@@ -1151,8 +1150,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
     (setq svn-status-mode-line-process-status "")
     (svn-status-update-mode-line)
     (cond ((string= event "finished\n")
-           (when svn-status-wash-control-M-in-process-buffers
-             (svn-status-remove-control-M))
+           (run-hooks 'svn-post-process-svn-output-hook)
            (cond ((eq svn-process-cmd 'status)
                   ;;(message "svn status finished")
                   (svn-process-sentinel-fixup-path-seperators)
