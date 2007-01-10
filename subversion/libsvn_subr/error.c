@@ -405,7 +405,7 @@ svn_handle_error2(svn_error_t *err,
           print_error(err, stream, prefix);
           if (! err->message)
             {
-              APR_ARRAY_PUSH(empties, apr_status_t *) = err->apr_err;
+              APR_ARRAY_PUSH(empties, apr_status_t) = err->apr_err;
             }
         }
 
