@@ -49,17 +49,6 @@ Candidate changes:
                 flavours. Its introduction therefore represents a regression
                 in the maintainability of the RPM packaging area as a whole.)
 
-  * r22253 through r22286
-    svn-graph.pl: Update invocation of $ra->get_log() to account for
-    the Perl API's $limit parameter.  Drastically improve UI and
-    implementation.
-    Justification:
-      Incorrect API usage results in a completely broken script.  Old
-      algorithm wasn't quite right, either.
-    Notes: Copy r22286 from trunk to the 1.4.x branch.
-    Votes:
-      +1: dlr
-
   * r19808-19810, r22853
     Synchronise license text and then bump copyright dates to 2007.
     Justification:
@@ -70,5 +59,21 @@ Candidate changes:
       +1: malcolm, dlr, hwright
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
+  * rTBD
+    Fix merge test 30.
+    Justification:
+      Fixes a regression.
+
 Approved changes:
 
+  * r22253 through r22286
+    svn-graph.pl: Update invocation of $ra->get_log() to account for
+    the Perl API's $limit parameter.  Drastically improve UI and
+    implementation.
+    Justification:
+      Incorrect API usage results in a completely broken script.  Old
+      algorithm wasn't quite right, either.
+    Notes: Copy r22286 from trunk to the 1.4.x branch.
+    Votes:
+      +1: dlr
+      +0: danderson
