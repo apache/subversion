@@ -1367,12 +1367,13 @@ setup_copy(svn_commit_info_t **commit_info_p,
                   svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
 
-                  svn_pool_clear(iterpool);
-
                   /* We can convert the working copy path to a URL based on the
                      entries file. */
                   svn_wc_adm_access_t *adm_access;  /* ### FIXME local */
                   const svn_wc_entry_t *entry;
+
+                  svn_pool_clear(iterpool);
+
                   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL,
                                                  pair->src, FALSE, 0,
                                                  ctx->cancel_func,
