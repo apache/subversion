@@ -43,7 +43,7 @@
 # close-directory element     close-directory 要素
 # close-file element      close-file 要素
 # commit                  コミット
-# conflict                衝突
+# conflict                競合
 # contents                内容
 # copyfrom                コピー元
 # creating ...            〜を作成しています
@@ -91,7 +91,7 @@
 # merge                   マージ
 # MIME type               MIME タイプ
 # modified                修正された
-# mutex                   相互排除ロック
+# mutex                   相互排他ロック
 # name attr               name 属性
 # native encoding         ネイティブのエンコーディング
 # no ... available        利用できる〜がありません
@@ -149,6 +149,7 @@
 # text base               テキストベース
 # text-base               テキストベース
 # textual contents        テキスト
+# type (of node)          種別
 # token                   トークン
 # transaction             トランザクション
 # transaction root        トランザクションルート
@@ -169,8 +170,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-12 02:52+0900\n"
-"PO-Revision-Date: 2007-01-12 02:52+0900\n"
+"POT-Creation-Date: 2007-01-12 03:21+0900\n"
+"PO-Revision-Date: 2007-01-12 03:21+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -355,7 +356,7 @@ msgstr "作業コピーのパスが見つかりました"
 
 #: include/svn_error_codes.h:349
 msgid "A conflict in the working copy obstructs the current operation"
-msgstr "作業ディレクトリ内に衝突があり、実行中の操作が妨害されました"
+msgstr "作業ディレクトリ内に競合があり、実行中の操作が妨害されました"
 
 #: include/svn_error_codes.h:353
 msgid "Working copy is corrupt"
@@ -498,7 +499,7 @@ msgstr "オブジェクトがリビジョンルートではありません"
 
 #: include/svn_error_codes.h:494
 msgid "Merge conflict during commit"
-msgstr "コミット中にマージの衝突がありました"
+msgstr "コミット中にマージの競合がありました"
 
 #: include/svn_error_codes.h:498
 msgid "A representation vanished or changed between reads"
@@ -1066,7 +1067,7 @@ msgstr "'%s' は既に存在します。そしてディレクトリではあり�
 #: libsvn_client/commit.c:198
 #, c-format
 msgid "Unknown or unversionable type for '%s'"
-msgstr "'%s' は未知またはバージョン管理できない形式です"
+msgstr "'%s' は未知またはバージョン管理できない種別です"
 
 #: libsvn_client/commit.c:512
 msgid "New entry name required when importing a file"
@@ -1143,7 +1144,7 @@ msgstr "エントリ '%s' が特殊なステータスを突然変更しました
 #: libsvn_client/commit_util.c:331
 #, c-format
 msgid "Aborting commit: '%s' remains in conflict"
-msgstr "コミットを中断しています: '%s' がまだ衝突しています"
+msgstr "コミットを中断しています: '%s' がまだ競合しています"
 
 #: libsvn_client/commit_util.c:397
 #, c-format
@@ -1738,17 +1739,17 @@ msgstr "未知のファイルシステム形式 '%s' です"
 #: libsvn_fs/fs-loader.c:253
 #, c-format
 msgid "Can't allocate FS mutex"
-msgstr "ファイルシステムの相互排除ロックを割り当てられません"
+msgstr "ファイルシステムの相互排他ロックを割り当てられません"
 
 #: libsvn_fs/fs-loader.c:289
 #, c-format
 msgid "Can't grab FS mutex"
-msgstr "ファイルシステムの相互排除ロックを奪えません"
+msgstr "ファイルシステムの相互排他ロックを奪えません"
 
 #: libsvn_fs/fs-loader.c:295
 #, c-format
 msgid "Can't ungrab FS mutex"
-msgstr "ファイルシステムの相互排除ロックを手放せません"
+msgstr "ファイルシステムの相互排他ロックを手放せません"
 
 #: libsvn_fs/fs-loader.c:907
 msgid "Negative expiration date passed to svn_fs_lock"
@@ -2383,7 +2384,7 @@ msgstr "'%s' に予想外の変更できないノードがあります"
 #: libsvn_fs_base/tree.c:1811 libsvn_fs_fs/tree.c:1212
 #, c-format
 msgid "Conflict at '%s'"
-msgstr "'%s' で衝突が生じています"
+msgstr "'%s' で競合が生じています"
 
 #: libsvn_fs_base/tree.c:1861 libsvn_fs_base/tree.c:2566
 #: libsvn_fs_fs/tree.c:1261 libsvn_fs_fs/tree.c:1748
@@ -2465,12 +2466,12 @@ msgstr "FSFS 共有データを取得できません"
 #: libsvn_fs_fs/fs.c:105
 #, c-format
 msgid "Can't create FSFS write-lock mutex"
-msgstr "FSFS 書き込みロックの相互排除ロックを作成できません"
+msgstr "FSFS 書き込みロックの相互排他ロックを作成できません"
 
 #: libsvn_fs_fs/fs.c:113
 #, c-format
 msgid "Can't create FSFS txn list mutex"
-msgstr "FSFS トランザクションリストの相互排除ロックを作成できません"
+msgstr "FSFS トランザクションリストの相互排他ロックを作成できません"
 
 #: libsvn_fs_fs/fs.c:119
 #, c-format
@@ -2490,12 +2491,12 @@ msgstr ""
 #: libsvn_fs_fs/fs_fs.c:340
 #, c-format
 msgid "Can't grab FSFS txn list mutex"
-msgstr "FSFS トランザクションリストの相互排除ロックを奪えません"
+msgstr "FSFS トランザクションリストの相互排他ロックを奪えません"
 
 #: libsvn_fs_fs/fs_fs.c:348
 #, c-format
 msgid "Can't ungrab FSFS txn list mutex"
-msgstr "FSFS トランザクションリストの相互排除ロックを手放せません"
+msgstr "FSFS トランザクションリストの相互排他ロックを手放せません"
 
 #: libsvn_fs_fs/fs_fs.c:374
 #, c-format
@@ -2706,12 +2707,12 @@ msgstr "chmod '%s' はできません"
 #: libsvn_fs_fs/fs_fs.c:4167
 #, c-format
 msgid "Can't grab FSFS repository mutex"
-msgstr "FSFS リポジトリの相互排除ロックを奪えません"
+msgstr "FSFS リポジトリの相互排他ロックを奪えません"
 
 #: libsvn_fs_fs/fs_fs.c:4181
 #, c-format
 msgid "Can't ungrab FSFS repository mutex"
-msgstr "FSFS リポジトリの相互排除ロックを手放せません"
+msgstr "FSFS リポジトリの相互排他ロックを手放せません"
 
 #: libsvn_fs_fs/fs_fs.c:4299
 msgid "Transaction out of date"
@@ -4116,12 +4117,12 @@ msgstr "時刻を人間の読める形に変換できません"
 #: libsvn_subr/dso.c:71
 #, c-format
 msgid "Can't grab DSO mutex"
-msgstr "動的共有オブジェクト (DSO) の相互排除ロックを奪えません"
+msgstr "動的共有オブジェクト (DSO) の相互排他ロックを奪えません"
 
 #: libsvn_subr/dso.c:85 libsvn_subr/dso.c:107 libsvn_subr/dso.c:122
 #, c-format
 msgid "Can't ungrab DSO mutex"
-msgstr "動的共有オブジェクト (DSO) の相互排除ロックを手放せません"
+msgstr "動的共有オブジェクト (DSO) の相互排他ロックを手放せません"
 
 #: libsvn_subr/error.c:347
 msgid "Can't recode error string from APR"
@@ -4561,7 +4562,7 @@ msgstr "URL '%s' に要素 '..' が含まれています"
 #: libsvn_subr/opt.c:872
 #, c-format
 msgid "Error resolving case of '%s'"
-msgstr "'%s' の衝突を解消する際にエラーが発生しました"
+msgstr "'%s' の競合を解消する際にエラーが発生しました"
 
 # c-format arguments: pgm_name, SVN_VERSION, __DATE__, __TIME__
 #: libsvn_subr/opt.c:974
@@ -4704,7 +4705,7 @@ msgstr "'%s' のパスフレーズ: "
 #: libsvn_subr/subst.c:1599
 #, c-format
 msgid "'%s' has unsupported special file type '%s'"
-msgstr "'%s' に、サポートされていない特別なファイル形式 '%s' があります"
+msgstr "'%s' に、サポートされていない特別なファイル種別 '%s' があります"
 
 #: libsvn_subr/subst.c:1730 libsvn_wc/props.c:1500
 #, c-format
@@ -4713,11 +4714,11 @@ msgstr "ファイル '%s' は改行文字が一貫していません"
 
 #: libsvn_subr/utf.c:194
 msgid "Can't lock charset translation mutex"
-msgstr "文字コード変換の相互排除ロックをかけられません"
+msgstr "文字コード変換の相互排他ロックをかけられません"
 
 #: libsvn_subr/utf.c:212 libsvn_subr/utf.c:319
 msgid "Can't unlock charset translation mutex"
-msgstr "文字コード変換の相互排除ロックを解除できません"
+msgstr "文字コード変換の相互排他ロックを解除できません"
 
 #: libsvn_subr/utf.c:271
 #, c-format
@@ -4910,7 +4911,7 @@ msgid ""
 "Can't replace '%s' with a node of a differing type; the deletion must be "
 "committed and the parent updated before adding '%s'"
 msgstr ""
-"'%s' は、異なる形式のノードに置換できません。'%s' を追加する前に、削除をコ"
+"'%s' は、異なる種別のノードに置換できません。'%s' を追加する前に、削除をコ"
 "ミットして親ディレクトリを更新しなければいけません"
 
 #: libsvn_wc/adm_ops.c:1435
@@ -5880,22 +5881,22 @@ msgstr "チェックサム: %s\n"
 #: svn/info-cmd.c:371
 #, c-format
 msgid "Conflict Previous Base File: %s\n"
-msgstr "衝突状態にある、以前 BASE だったファイル: %s\n"
+msgstr "競合状態にある、以前 BASE だったファイル: %s\n"
 
 #: svn/info-cmd.c:377
 #, c-format
 msgid "Conflict Previous Working File: %s\n"
-msgstr "衝突状態にある、以前作業中だったファイル: %s\n"
+msgstr "競合状態にある、以前作業中だったファイル: %s\n"
 
 #: svn/info-cmd.c:382
 #, c-format
 msgid "Conflict Current Base File: %s\n"
-msgstr "衝突状態にある、現在 BASE であるファイル: %s\n"
+msgstr "競合状態にある、現在 BASE であるファイル: %s\n"
 
 #: svn/info-cmd.c:387
 #, c-format
 msgid "Conflict Properties File: %s\n"
-msgstr "衝突に関する属性ファイル: %s\n"
+msgstr "競合に関する属性ファイル: %s\n"
 
 #: svn/info-cmd.c:395
 #, c-format
@@ -6472,15 +6473,15 @@ msgstr ""
 "が\n"
 "  障害となっても、それだけでチェックアウトが自動的に失敗することはありませ"
 "ん。\n"
-"  障害となっているパスがリポジトリ内の対応するパスと同じ形式 (ファイルまた"
-"は\n"
-"  ディレクトリ) である場合、そのパスはバージョン管理下に置かれますが、その"
-"内\n"
-"  容は作業コピー内に「そのまま」残されます。つまり、障害となっているディレ"
-"ク\n"
-"  トリの中で、バージョン管理下にない子ノードがまた障害となっていると、それ"
-"も\n"
-"  またバージョン管理下に置かれるかもしれません。ファイルに関しては、障害と"
+"  障害となっているパスがリポジトリ内の対応するパスと同じ種別 (ファイルか"
+"ディ\n"
+"  レクトリか) である場合、そのパスはバージョン管理下に置かれますが、その内"
+"容\n"
+"  は作業コピー内に「そのまま」残されます。つまり、障害となっているディレク"
+"ト\n"
+"  リの中で、バージョン管理下にない子ノードがまた障害となっていると、それも"
+"ま\n"
+"  たバージョン管理下に置かれるかもしれません。ファイルに関しては、障害と"
 "なっ\n"
 "  ているものとリポジトリ内のものの内容の違いはすべて、作業コピーへのローカ"
 "ル\n"
@@ -6577,7 +6578,7 @@ msgstr ""
 "    URL -> WC:   URL をチェックアウトして WC に入れ、追加準備状態にします\n"
 "    URL -> URL:  完全なサーバサイドのコピーです。ブランチとタグに用いられま"
 "す\n"
-"  <コピー元> はすべて同じ種類でなければなりません。\n"
+"  <コピー元> はすべて同じ種別でなければなりません。\n"
 
 # * Description for 'svn delete'.
 # * "delete (del, remove, rm): " is displayed at the head of the first line.
@@ -7072,7 +7073,7 @@ msgstr ""
 "  す:\n"
 "    WC  -> WC:   (履歴をもたせたまま) 移動して追加準備状態にします\n"
 "    URL -> URL:  完全なサーバサイドの名前変更です\n"
-"  <移動元> はすべて同じ種類でなければなりません。\n"
+"  <移動元> はすべて同じ種別でなければなりません。\n"
 
 # * Description for 'svn propdel'.
 # * "propdel (pdel, pd): " is displayed at the head of the first line.
@@ -7304,12 +7305,12 @@ msgid ""
 "  remove conflict markers; it merely removes the conflict-related\n"
 "  artifact files and allows PATH to be committed again.\n"
 msgstr ""
-"作業コピー内やディレクトリ内の「衝突」状態を取り除きます。\n"
+"作業コピー内やディレクトリ内の「競合」状態を取り除きます。\n"
 "使用方法: resolved <パス>...\n"
 "\n"
-"  注意:  このサブコマンドは、意味的に衝突を解消したり衝突の標識を取り除いた"
+"  注意:  このサブコマンドは、意味的に競合を解消したり衝突の標識を取り除いた"
 "り\n"
-"  するわけではありません。単に、衝突に際して機械的に作り出されたファイルを"
+"  するわけではありません。単に、競合に際して機械的に作り出されたファイルを"
 "削\n"
 "  除し、<パス> を再びコミットできるようにするだけです。\n"
 
@@ -7329,7 +7330,7 @@ msgstr ""
 "\n"
 "  注意:  このサブコマンドは、ネットワークへのアクセスを必要とすることなくあ"
 "ら\n"
-"  ゆる衝突状態を解消します。しかし削除されたディレクトリの復旧はしません。\n"
+"  ゆる競合状態を解消します。しかし削除されたディレクトリの復旧はしません。\n"
 
 # * Description for 'svn status'.
 # * "status (stat, st): " is displayed at the head of the first line.
@@ -7423,7 +7424,7 @@ msgstr ""
 "    1 列目: 項目が追加や変更あるいはその他の変更を受けたかを示します\n"
 "      ' ' 修正はありません\n"
 "      'A' 追加されました\n"
-"      'C' 衝突しています\n"
+"      'C' 競合しています\n"
 "      'D' 削除されました\n"
 "      'I' 無視されています\n"
 "      'M' 修正されました\n"
@@ -7439,7 +7440,7 @@ msgstr ""
 "          て妨害されています\n"
 "    2 列目: ファイルまたはディレクトリの属性の修正を示します\n"
 "      ' ' 修正はありません\n"
-"      'C' 衝突しています\n"
+"      'C' 競合しています\n"
 "      'M' 修正されました\n"
 "    3 列目: 作業コピーのディレクトリがロックされているかいないかを示します\n"
 "      ' ' ロックされていません\n"
@@ -7552,19 +7553,19 @@ msgstr ""
 "で\n"
 "  switch が自動的に失敗することはありません。障害となっているパスがリポジト"
 "リ\n"
-"  内の対応するパスと同じ形式 (ファイルまたはディレクトリ) である場合、その"
-"パ\n"
-"  スはバージョン管理下に置かれますが、その内容は作業コピー内に「そのまま」"
-"残\n"
-"  されます。つまり、障害となっているディレクトリの中で、バージョン管理下に"
-"な\n"
-"  い子ノードがまた障害となっていると、それもまたバージョン管理下に置かれる"
-"か\n"
-"  もしれません。ファイルに関しては、障害となっているものとリポジトリ内のも"
+"  内の対応するパスと同じ種別 (ファイルかディレクトリか) である場合、そのパ"
+"ス\n"
+"  はバージョン管理下に置かれますが、その内容は作業コピー内に「そのまま」残"
+"さ\n"
+"  れます。つまり、障害となっているディレクトリの中で、バージョン管理下にな"
+"い\n"
+"  子ノードがまた障害となっていると、それもまたバージョン管理下に置かれるか"
+"も\n"
+"  しれません。ファイルに関しては、障害となっているものとリポジトリ内のもの"
 "の\n"
-"  の内容の違いはすべて、作業コピーへのローカルの修正のように扱われます。リ"
-"ポ\n"
-"  ジトリで与えられている属性はすべて、障害となっているパスに適用されます。\n"
+"  内容の違いはすべて、作業コピーへのローカルの修正のように扱われます。リポ"
+"ジ\n"
+"  トリで与えられている属性はすべて、障害となっているパスに適用されます。\n"
 
 # * Description for 'svn unlock'.
 # * "unlock: " is displayed at the head of the first line.
@@ -7633,7 +7634,7 @@ msgstr ""
 "    A  追加されました\n"
 "    D  削除されました\n"
 "    U  更新されました\n"
-"    C  衝突しています\n"
+"    C  競合しています\n"
 "    G  マージされました\n"
 "    E  存在していました\n"
 "\n"
@@ -7649,21 +7650,21 @@ msgstr ""
 "更\n"
 "  新が自動的に失敗することはありません。障害となっているパスがリポジトリ内"
 "の\n"
-"  対応するパスと同じ形式 (ファイルまたはディレクトリ) である場合、そのパス"
-"は\n"
-"  バージョン管理下に置かれますが、その内容は作業コピー内に「そのまま」残さ"
-"れ\n"
-"  ます。つまり、障害となっているディレクトリの中で、バージョン管理下にない"
-"子\n"
-"  ノードがまた障害となっていると、それもまたバージョン管理下に置かれるかも"
-"し\n"
-"  れません。ファイルに関しては、障害となっているものとリポジトリ内のものの"
-"内\n"
-"  容の違いはすべて、作業コピーへのローカルの修正のように扱われます。リポジ"
-"ト\n"
-"  リで与えられている属性はすべて、障害となっているパスに適用されます。障害"
-"と\n"
-"  なったパスは 1 列目でコード 'E' を用いて報告されます。\n"
+"  対応するパスと同じ種別 (ファイルかディレクトリか) である場合、そのパスは"
+"バ\n"
+"  ージョン管理下に置かれますが、その内容は作業コピー内に「そのまま」残され"
+"ま\n"
+"  す。つまり、障害となっているディレクトリの中で、バージョン管理下にない子"
+"ノー\n"
+"  ドがまた障害となっていると、それもまたバージョン管理下に置かれるかもしれ"
+"ま\n"
+"  せん。ファイルに関しては、障害となっているものとリポジトリ内のものの内容"
+"の\n"
+"  違いはすべて、作業コピーへのローカルの修正のように扱われます。リポジトリ"
+"で\n"
+"  与えられている属性はすべて、障害となっているパスに適用されます。障害と"
+"なっ\n"
+"  たパスは 1 列目でコード 'E' を用いて報告されます。\n"
 
 #: svn/main.c:869 svnadmin/main.c:78 svnlook/main.c:285 svnsync/main.c:146
 msgid "Caught signal"
@@ -7824,7 +7825,7 @@ msgstr "'%s' を元に戻せませんでした -- 復元でなく更新をして
 #: svn/notify.c:141
 #, c-format
 msgid "Resolved conflicted state of '%s'\n"
-msgstr "'%s' の衝突状態を解消しました\n"
+msgstr "'%s' の競合状態を解消しました\n"
 
 #: svn/notify.c:222
 #, c-format
@@ -11420,7 +11421,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "    1 列目: 項目が追加や変更あるいはその他の変更を受けたかを示します\n"
 #~ "      ' ' 修正はありません\n"
 #~ "      'A' 追加されました\n"
-#~ "      'C' 衝突しています\n"
+#~ "      'C' 競合しています\n"
 #~ "      'D' 削除されました\n"
 #~ "      'G' マージされました\n"
 #~ "      'I' 無視されています\n"
@@ -11437,7 +11438,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "          て妨害されています\n"
 #~ "    2 列目: ファイルまたはディレクトリの属性の修正を示します\n"
 #~ "      ' ' 修正はありません\n"
-#~ "      'C' 衝突しています\n"
+#~ "      'C' 競合しています\n"
 #~ "      'M' 修正されました\n"
 #~ "    3 列目: 作業コピーのディレクトリがロックされているかいないかを示しま"
 #~ "す\n"
@@ -11582,7 +11583,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "    A  追加されました\n"
 #~ "    D  削除されました\n"
 #~ "    U  更新されました\n"
-#~ "    C  衝突しています\n"
+#~ "    C  競合しています\n"
 #~ "    G  マージされました\n"
 #~ "\n"
 #~ "  1 列目の文字は、実際のファイルに対する更新を意味します。\n"
@@ -11679,7 +11680,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "    1 列目: 項目が追加や変更あるいはその他の変更を受けたかを示します\n"
 #~ "      ' ' 修正はありません\n"
 #~ "      'A' 追加されました\n"
-#~ "      'C' 衝突しています\n"
+#~ "      'C' 競合しています\n"
 #~ "      'D' 削除されました\n"
 #~ "      'G' マージされました\n"
 #~ "      'I' 無視されています\n"
@@ -11695,7 +11696,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "          妨害されています\n"
 #~ "    2 列目: ファイルまたはディレクトリの属性の修正を示します\n"
 #~ "      ' ' 修正はありません\n"
-#~ "      'C' 衝突しています\n"
+#~ "      'C' 競合しています\n"
 #~ "      'M' 修正されました\n"
 #~ "    3 列目: 作業コピーのディレクトリがロックされているかいないかを示しま"
 #~ "す\n"
@@ -11958,7 +11959,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "    1 列目: 項目が追加や変更あるいはその他の変更を受けたかを示します\n"
 #~ "      ' ' 修正はありません\n"
 #~ "      'A' 追加されました\n"
-#~ "      'C' 衝突しています\n"
+#~ "      'C' 競合しています\n"
 #~ "      'D' 削除されました\n"
 #~ "      'G' マージされました\n"
 #~ "      'I' 無視されています\n"
@@ -11974,7 +11975,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "          妨害されています\n"
 #~ "    2 列目: ファイルまたはディレクトリの属性の修正を示します\n"
 #~ "      ' ' 修正はありません\n"
-#~ "      'C' 衝突しています\n"
+#~ "      'C' 競合しています\n"
 #~ "    3 列目: 作業コピーのディレクトリがロックされているかいないかを示しま"
 #~ "す\n"
 #~ "      ' ' ロックされていません\n"
@@ -12232,7 +12233,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "    1 列目: 項目が追加や変更あるいはその他の変更を受けたかを示します\n"
 #~ "      ' ' 修正はありません\n"
 #~ "      'A' 追加されました\n"
-#~ "      'C' 衝突しています\n"
+#~ "      'C' 競合しています\n"
 #~ "      'D' 削除されました\n"
 #~ "      'G' マージされました\n"
 #~ "      'I' 無視されています\n"
@@ -12248,7 +12249,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "          妨害されています\n"
 #~ "    2 列目: ファイルまたはディレクトリの属性の修正を示します\n"
 #~ "      ' ' 修正はありません\n"
-#~ "      'C' 衝突しています\n"
+#~ "      'C' 競合しています\n"
 #~ "      'M' 修正されました\n"
 #~ "    3 列目: 作業コピーのディレクトリがロックされているかいないかを示しま"
 #~ "す\n"
@@ -12377,7 +12378,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "    1 列目: 項目が追加や変更あるいはその他の変更を受けたかを示します\n"
 #~ "      ' ' 修正はありません\n"
 #~ "      'A' 追加されました\n"
-#~ "      'C' 衝突しています\n"
+#~ "      'C' 競合しています\n"
 #~ "      'D' 削除されました\n"
 #~ "      'G' マージされました\n"
 #~ "      'I' 無視されています\n"
@@ -12393,7 +12394,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "          妨害されています\n"
 #~ "    2 列目: ファイルまたはディレクトリの属性の修正を示します\n"
 #~ "      ' ' 修正はありません\n"
-#~ "      'C' 衝突しています\n"
+#~ "      'C' 競合しています\n"
 #~ "      'M' 修正されました\n"
 #~ "    3 列目: 作業コピーのディレクトリがロックされているかいないかを示しま"
 #~ "す\n"
@@ -13534,7 +13535,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "Can't replace '%s' with a node of a differing type; commit the deletion, "
 #~ "update the parent, and then add '%s'"
 #~ msgstr ""
-#~ "'%s' は、異なる形式のノードに置換できません。削除をコミットし親ディレクト"
+#~ "'%s' は、異なる種別のノードに置換できません。削除をコミットし親ディレクト"
 #~ "リで update を実行してから、'%s' を追加してください"
 
 # * Description for 'svn --extensions'.
@@ -13597,7 +13598,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "    A  追加されました\n"
 #~ "    D  削除されました\n"
 #~ "    U  更新されました\n"
-#~ "    C  衝突しています\n"
+#~ "    C  競合しています\n"
 #~ "    G  マージされました\n"
 #~ "\n"
 #~ "  1 列目の文字は、実際のファイルに対する更新を意味します。これに対し、ファ"
@@ -13765,13 +13766,13 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr "クライアントが引数をパースしているときにエラーが生じました"
 
 #~ msgid "Can't fetch FSFS mutex"
-#~ msgstr "FSFS の相互排除ロックを取得できません"
+#~ msgstr "FSFS の相互排他ロックを取得できません"
 
 #~ msgid "Can't create FSFS mutex"
-#~ msgstr "FSFS の相互排除ロックを作成できません"
+#~ msgstr "FSFS の相互排他ロックを作成できません"
 
 #~ msgid "Can't store FSFS mutex"
-#~ msgstr "FSFS の相互排除ロックを保存できません"
+#~ msgstr "FSFS の相互排他ロックを保存できません"
 
 #~ msgid "'%s' hook failed; no error output available"
 #~ msgstr "'%s' フックが失敗しました。利用できるエラー出力はありません"
