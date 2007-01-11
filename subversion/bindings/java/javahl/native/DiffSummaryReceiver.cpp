@@ -139,4 +139,4 @@ DiffSummaryReceiver::onSummary(const svn_client_diff_summarize_t *diff,
     }
 
     return SVN_NO_ERROR;
-};
+}
