@@ -47,7 +47,7 @@ my ($sendmail, $smtp_server);
 # You should define exactly one of these two configuration variables,
 # leaving the other commented out, to select which method of sending
 # email should be used.
-# Using --stdout on the command line overwrites both.
+# Using --stdout on the command line overrides both.
 #$sendmail = "/usr/sbin/sendmail";
 $smtp_server = "127.0.0.1";
 
