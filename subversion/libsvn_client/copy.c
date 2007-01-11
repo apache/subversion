@@ -571,7 +571,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   
       /* Run the history function to get the object's url in the operational
          revision. */
-      SVN_ERR(svn_client__repos_locations(&pair->src_op_name, &new_rev,
+      SVN_ERR(svn_client__repos_locations(&pair->src, &new_rev,
                                           &ignored_url, &ignored_rev,
                                           NULL,
                                           pair->src, &pair->src_peg_revision,
@@ -580,7 +580,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
 
       /* Get the portions of the SRC and DST URLs that are relative to
          TOP_URL, and URI-decode those sections. */
-      src_rel = svn_path_is_child(top_url, pair->src_op_name, pool);
+      src_rel = svn_path_is_child(top_url, pair->src, pool);
       if (src_rel)
         src_rel = svn_path_uri_decode(src_rel, pool);
       else
@@ -617,7 +617,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
                                    _("Path '%s' already exists"), dst_rel);
         }
 
-      info->src_url = pair->src_op_name;
+      info->src_url = pair->src;
       info->src_path = src_rel;
       info->dst_path = dst_rel;
     }
@@ -982,7 +982,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
   if (pair->src_kind == svn_node_dir)
     {
       SVN_ERR(svn_client__checkout_internal
-              (NULL, pair->src, pair->dst, &pair->src_peg_revision,
+              (NULL, pair->src_original, pair->dst, &pair->src_peg_revision,
                &pair->src_op_revision,
                TRUE, FALSE, FALSE, NULL, ctx, pool));
 
@@ -1022,7 +1022,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
           /* Schedule dst_path for addition in parent, with copy history.
              (This function also recursively puts a 'copied' flag on every
              entry). */
-          SVN_ERR(svn_wc_add2(pair->dst, adm_access, pair->src_op_name,
+          SVN_ERR(svn_wc_add2(pair->dst, adm_access, pair->src,
                               src_revnum,
                               ctx->cancel_func, ctx->cancel_baton, 
                               ctx->notify_func2, ctx->notify_baton2, pool));
@@ -1108,6 +1108,30 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
+  /* Get the real path for the source, based upon it's peg revision. */
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
+                                                    svn_client__copy_pair_t *);
+      const char *src, *ignored_url;
+      svn_opt_revision_t *new_rev, *ignored_rev, dead_end_rev;
+
+      svn_pool_clear(iterpool);
+      dead_end_rev.kind = svn_opt_revision_unspecified;
+
+      SVN_ERR(svn_client__repos_locations(&src, &new_rev,
+                                          &ignored_url, &ignored_rev,
+                                          NULL,
+                                          pair->src,
+                                          &pair->src_peg_revision,
+                                          &pair->src_op_revision,
+                                          &dead_end_rev,
+                                          ctx, iterpool));
+
+      pair->src_original = pair->src;
+      pair->src = apr_pstrdup(pool, src);
+    }
+
   get_copy_pair_ancestors(copy_pairs, &top_src_url, &top_dst_path, NULL, pool);
   if (copy_pairs->nelts == 1)
     top_src_url = svn_path_dirname(top_src_url, pool);
@@ -1138,26 +1162,11 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_node_kind_t dst_parent_kind, dst_kind;
-      const char *dst_parent, *ignored_url, *op_name;
-      svn_opt_revision_t *new_rev, *ignored_rev, dead_end_rev;
+      const char *dst_parent;
 
       svn_pool_clear(iterpool);
 
-      /* First, determine the real source, using the peg revision.  */
-      dead_end_rev.kind = svn_opt_revision_unspecified;
-
-      SVN_ERR(svn_client__repos_locations(&op_name, &new_rev,
-                                          &ignored_url, &ignored_rev,
-                                          NULL,
-                                          pair->src,
-                                          &pair->src_peg_revision,
-                                          &pair->src_op_revision,
-                                          &dead_end_rev,
-                                          ctx, iterpool));
-
-      pair->src_op_name = apr_pstrdup(pool, op_name);
-      pair->src_rel = svn_path_is_child(top_src_url, pair->src_op_name,
-                                        pool);
+      pair->src_rel = svn_path_is_child(top_src_url, pair->src, pool);
 
       /* Next, make sure that the path exists in the repository. */
       SVN_ERR(svn_ra_check_path(ra_session, pair->src_rel, pair->src_revnum, 
