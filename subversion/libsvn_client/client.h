@@ -525,8 +525,9 @@ typedef struct
     /* The node kind of the source */
     svn_node_kind_t src_kind;
 
-    /* The source operational name. */
-    const char *src_op_name;
+    /* The original source name.  (Used when the source gets overwritten by a
+       peg revision lookup.) */
+    const char *src_original;
 
     /* The source operational revision. */
     svn_opt_revision_t src_op_revision;
