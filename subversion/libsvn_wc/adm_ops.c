@@ -538,10 +538,28 @@ process_committed_internal(int *log_number,
                      new_revnum, rev_date, rev_author, NULL, FALSE,
                      remove_changelist, NULL, subpool));
           else
-            SVN_ERR(process_committed_leaf
-                    ((*log_number)++, this_path, adm_access, NULL,
-                     new_revnum, rev_date, rev_author, NULL, FALSE,
-                     remove_changelist, NULL, subpool));
+            {
+              /* No log file is executed at this time. In case this folder
+                 gets replaced, the entries file might still contain files 
+                 scheduled for deletion. No need to process those here, they
+                 will be when the parent is processed. */
+              if (current_entry->schedule == svn_wc_schedule_delete)
+                {
+                  svn_wc_entry_t *parent_entry;
+                  apr_hash_t *entries;
+                  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, 
+                                              subpool));
+
+                  parent_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, 
+                                              APR_HASH_KEY_STRING);
+                  if (parent_entry->schedule == svn_wc_schedule_replace)
+                    continue;
+                }
+              SVN_ERR(process_committed_leaf
+                      ((*log_number)++, this_path, adm_access, NULL,
+                       new_revnum, rev_date, rev_author, NULL, FALSE,
+                       remove_changelist, NULL, subpool));
+            }
         }
 
       svn_pool_destroy(subpool); 
