@@ -58,7 +58,7 @@ Commit access for specific areas:
   Bindings:
 
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
-      markphip   Mark Phippard <MarkP@softlanding.com>       (JavaHL bindings)
+      markphip   Mark Phippard <markphip@gmail.com>          (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
@@ -130,7 +130,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
-      markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
+      markphip   Mark Phippard <markphip@gmail.com>          (ebcdic)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
