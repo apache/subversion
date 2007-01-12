@@ -17,10 +17,10 @@ for repos dump/load, including the merge history index.
     index in a meaningful fashion yet.
 
 * Assure that 'propdel' sets empty range lists for any inherited merge
-  info.
+  info. (?)
 
 * Make 'propedit' pull down merge info from the repository and combine
-  it with any WC-local merge info.
+  it with any WC-local merge info. (?)
 
   * Alter code as low-level as svn_fs_node_proplist(), or stay
     higher-level, near svn_client_propget2()?
