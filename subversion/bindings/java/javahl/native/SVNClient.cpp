@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,7 @@
 #include "JNIUtil.h"
 #include "Notify.h"
 #include "Notify2.h"
+#include "CopySources.h"
 #include "DiffSummaryReceiver.h"
 #include "ProgressListener.h"
 #include "Prompter.h"
@@ -724,17 +725,16 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     return -1;
 }
 
-void SVNClient::copy(Targets &srcPaths, const char *destPath, 
-                     const char *message, Revision &revision,
-                     Revision &pegRevision, bool copyAsChild)
+void SVNClient::copy(CopySources &copySources, const char *destPath, 
+                     const char *message, bool copyAsChild)
 {
     Pool requestPool;
 
-    const apr_array_header_t *srcs = srcPaths.array(requestPool);
-    svn_error_t *err = srcPaths.error_occured();
-    if (err)
+    apr_array_header_t *srcs = copySources.array(requestPool);
+    if (srcs == NULL)
     {
-        JNIUtil::handleSVNError(err);
+        JNIUtil::throwNativeException(JAVA_PACKAGE "ClientException",
+                                      "Invalid copy sources");
         return;
     }
     if (destPath == NULL)
@@ -743,31 +743,19 @@ void SVNClient::copy(Targets &srcPaths, const char *destPath,
         return;
     }
     Path destinationPath(destPath);
-    err = destinationPath.error_occured();
+    svn_error_t *err = destinationPath.error_occured();
     if (err)
     {
         JNIUtil::handleSVNError(err);
         return;
     }
 
-    apr_array_header_t *sources =
-        apr_array_make(requestPool.pool(), srcs->nelts,
-                       sizeof(svn_client_copy_source_t *));
-    for (int i = 0; i < srcs->nelts; i++)
-    {
-        svn_client_copy_source_t *source = (svn_client_copy_source_t *)
-            apr_palloc(requestPool.pool(), sizeof(*source));
-        source->path = APR_ARRAY_IDX(srcs, i, const char *);
-        source->revision = revision.revision();
-        source->peg_revision = pegRevision.revision();
-        APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = source;
-    }
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
     svn_commit_info_t *commit_info;
-    err = svn_client_copy4(&commit_info, sources, destinationPath.c_str(),
-                           copyAsChild, ctx, requestPool.pool());
+    err = svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
+			   copyAsChild, ctx, requestPool.pool());
     if (err)
         JNIUtil::handleSVNError(err);
 }

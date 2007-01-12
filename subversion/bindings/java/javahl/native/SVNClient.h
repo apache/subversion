@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -35,6 +35,7 @@ class ProgressListener;
 class Targets;
 class JNIByteArray;
 class Prompter;
+class CopySources;
 class DiffSummaryReceiver;
 class BlameCallback;
 class CommitMessage;
@@ -103,9 +104,8 @@ public:
     void mkdir(Targets &targets, const char *message);
     void move(Targets &srcPaths, const char *destPath,
               const char *message, bool force, bool moveAsChild);
-    void copy(Targets &srcPaths, const char *destPath,
-              const char *message, Revision &revision, Revision &pegRevision,
-              bool copyAsChild);
+    void copy(CopySources &copySources, const char *destPath,
+              const char *message, bool copyAsChild);
     jlong commit(Targets &targets, const char *message, bool recurse, 
                   bool noUnlock);
     jlongArray update(Targets &targets, Revision &revision, bool recurse,
