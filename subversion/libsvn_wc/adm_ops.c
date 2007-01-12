@@ -546,9 +546,6 @@ process_committed_internal(int *log_number,
               if (current_entry->schedule == svn_wc_schedule_delete)
                 {
                   svn_wc_entry_t *parent_entry;
-                  apr_hash_t *entries;
-                  SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, 
-                                              subpool));
 
                   parent_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, 
                                               APR_HASH_KEY_STRING);
