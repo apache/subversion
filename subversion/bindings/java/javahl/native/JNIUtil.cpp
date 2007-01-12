@@ -318,72 +318,64 @@ jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
     jstring jmessage = makeJString(buffer.c_str());
     return jmessage;
 }
-/**
- * process a svn error by wraping in into a ClientExpection
- * and throwing that
- * @param err   the error to by handled
- */
-void JNIUtil::handleSVNError(svn_error_t *err)
+
+void
+JNIUtil::throwNativeException(const char *className, const char *msg,
+			      const char *fileName, int aprErr)
 {
     JNIEnv *env = getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientException");
-    if(getLogLevel() >= exceptionLog)
+    jclass clazz = env->FindClass(className);
+
+    if (getLogLevel() >= exceptionLog)
     {
         JNICriticalSection cs(*g_logMutex);
-        g_logStream << "Error SVN exception thrown message:<";
-        g_logStream << err->message << "> file:<" << err->file <<"> apr-err:<";
-        g_logStream << err->apr_err << ">" << std::endl;
+        g_logStream << "Subversion JavaHL exception thrown, message:<";
+        g_logStream << msg << ">";
+	if (fileName)
+	    g_logStream << " file:<" << fileName << ">";
+	if (aprErr != -1)
+	    g_logStream << " apr-err:<" << aprErr << ">";
+	g_logStream << std::endl;
     }
-    if(isJavaExceptionThrown())
-    {
-        svn_error_clear(err);
+    if (isJavaExceptionThrown())
         return;
-    }
 
-    std::string buffer;
-    assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
-    jstring jmessage = makeJString(buffer.c_str());
-    if(isJavaExceptionThrown())
-    {
-        svn_error_clear(err);
+    jstring jmessage = makeJString(msg);
+    if (isJavaExceptionThrown())
         return;
-    }
-    jstring jfile = makeJString(err->file);
-    if(isJavaExceptionThrown())
-    {
-        svn_error_clear(err);
+    jstring jfile = makeJString(fileName);
+    if (isJavaExceptionThrown())
         return;
-    }
+
     jmethodID mid = env->GetMethodID(clazz, "<init>", 
         "(Ljava/lang/String;Ljava/lang/String;I)V");
-    if(isJavaExceptionThrown())
-    {
-        svn_error_clear(err);
+    if (isJavaExceptionThrown())
         return;
-    }
-    jobject error = env->NewObject(clazz, mid, jmessage, jfile, 
-        static_cast<jint>(err->apr_err));
-    svn_error_clear(err);
-    if(isJavaExceptionThrown())
-    {
+    jobject nativeException = env->NewObject(clazz, mid, jmessage, jfile,
+					     static_cast<jint>(aprErr));
+    if (isJavaExceptionThrown())
         return;
-    }
+
     env->DeleteLocalRef(clazz);
-    if(isJavaExceptionThrown())
-    {
+    if (isJavaExceptionThrown())
         return;
-    }
     env->DeleteLocalRef(jmessage);
-    if(isJavaExceptionThrown())
-    {
+    if (isJavaExceptionThrown())
         return;
-    }
     env->DeleteLocalRef(jfile);
-    if(isJavaExceptionThrown())
-    {
+    if (isJavaExceptionThrown())
         return;
-    }
-    env->Throw(static_cast<jthrowable>(error));
+
+    env->Throw(static_cast<jthrowable>(nativeException));
+}
+
+void JNIUtil::handleSVNError(svn_error_t *err)
+{
+    std::string msg;
+    assembleErrorMessage(err, 0, APR_SUCCESS, msg);
+    throwNativeException(JAVA_PACKAGE "/ClientException", msg.c_str(),
+			 err->file, err->apr_err);
+    svn_error_clear(err);
 }
 
 void JNIUtil::putFinalizedClient(SVNBase *object)
