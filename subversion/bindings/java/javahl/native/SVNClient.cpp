@@ -733,7 +733,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
     apr_array_header_t *srcs = copySources.array(requestPool);
     if (srcs == NULL)
     {
-        JNIUtil::throwNativeException(JAVA_PACKAGE "ClientException",
+        JNIUtil::throwNativeException(JAVA_PACKAGE "/ClientException",
                                       "Invalid copy sources");
         return;
     }
