@@ -1365,7 +1365,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
     {
       svn_client__copy_pair_t *pair = apr_palloc(pool, sizeof(*pair));
       svn_client_copy_source_t *source =
-        ((svn_client_copy_source_t **) (sources->elts))[0];
+        APR_ARRAY_IDX(sources, 0, svn_client_copy_source_t *);
 
       pair->src = apr_pstrdup(pool, source->path);
       pair->src_op_revision = *source->revision;
@@ -1678,7 +1678,7 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
  
   for (i = 0; i < src_paths->nelts; i++)
     {
-      const char *src_path = ((const char **) (src_paths->elts))[i];
+      const char *src_path = APR_ARRAY_IDX(src_paths, i, const char *);
       svn_client_copy_source_t *copy_source = apr_palloc(pool, 
                                                          sizeof(*copy_source));
       
