@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -32,6 +32,7 @@
 #include "CommitMessage.h"
 #include "Prompter.h"
 #include "Targets.h"
+#include "CopySources.h"
 #include "DiffSummaryReceiver.h"
 #include "BlameCallback.h"
 #include "svn_version.h"
@@ -616,9 +617,8 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_commit
 }
 
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_copy
-  (JNIEnv* env, jobject jthis, jobjectArray jsrcPaths, jstring jdestPath, 
-   jstring jmessage, jobject jrevision, jobject jPegRevision,
-   jboolean jcopyAsChild)
+  (JNIEnv* env, jobject jthis, jobjectArray jcopySources, jstring jdestPath, 
+   jstring jmessage, jboolean jcopyAsChild)
 {
     JNIEntry(SVNClient, copy);
 
@@ -628,7 +628,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_copy
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
-    Targets srcPaths(jsrcPaths);
+    CopySources copySources(jcopySources);
     if (JNIUtil::isExceptionThrown())
         return;
     JNIStringHolder destPath(jdestPath);
@@ -637,15 +637,8 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_copy
     JNIStringHolder message(jmessage);
     if (JNIUtil::isExceptionThrown())
         return;
-    Revision revision(jrevision);
-    if (JNIUtil::isExceptionThrown())
-        return;
-    Revision pegRevision(jPegRevision, true);
-    if (JNIUtil::isExceptionThrown())
-        return;
 
-    cl->copy(srcPaths, destPath, message, revision, pegRevision,
-             jcopyAsChild ? true : false);
+    cl->copy(copySources, destPath, message, jcopyAsChild ? true : false);
 }
 
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_move

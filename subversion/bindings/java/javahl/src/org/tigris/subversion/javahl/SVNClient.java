@@ -3,7 +3,7 @@ package org.tigris.subversion.javahl;
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -573,23 +573,18 @@ public class SVNClient implements SVNClientInterface
     /**
      * Copy versioned paths with the history preserved.
      *
-     * @param srcPaths Source paths or URLs.
+     * @param sources A list of <code>CopySource</code> objects.
      * @param destPath Destination path or URL.
-     * @param message Commit message if <code>destPath</code> is a URL.
-     * @param revision Source revision.
-     * @param pegRevision Ignored until supported by the underlying
-     * Subversion APIs.  Defaults to {@link
-     * org.tigris.subversion.javahl.Revision#HEAD} (if
-     * <code>null</code>).
+     * @param message Commit message.  May be <code>null</code> if
+     * <code>destPath</code> is not a URL.
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @exception ClientException If the copy operation fails.
      * @since 1.5
      * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
      */
-    public native void copy(String[] srcPaths, String destPath, String message,
-                            Revision revision, Revision pegRevision,
-                            boolean copyAsChild)
+    public native void copy(CopySource[] sources, String destPath,
+                            String message, boolean copyAsChild)
         throws ClientException;
 
     /**
@@ -606,8 +601,9 @@ public class SVNClient implements SVNClientInterface
                      Revision revision)
         throws ClientException
     {
-        copy(new String[] { srcPath }, destPath, message, revision,
-             Revision.HEAD, true);
+        copy(new CopySource[] { new CopySource(srcPath, revision,
+                                               Revision.HEAD) },
+             destPath, message, true);
     }
 
     /**
