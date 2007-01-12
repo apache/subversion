@@ -59,10 +59,13 @@ Candidate changes:
       +1: malcolm, dlr, hwright
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
-  * rTBD
-    Fix merge test 30.
+  * r22991
+    Fix error in post-commit phase of commit with replaced folder 
+    (merge test 30).
     Justification:
-      Fixes a regression.
+      Fixes a regression introduced in 1.4.2.
+    Votes:
+      +1: lgo
 
 Approved changes:
 
