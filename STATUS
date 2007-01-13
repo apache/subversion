@@ -59,13 +59,14 @@ Candidate changes:
       +1: malcolm, dlr, hwright
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
-  * r22991
+  * r22991, -8
     Fix error in post-commit phase of commit with replaced folder 
     (merge test 30).
     Justification:
       Fixes a regression introduced in 1.4.2.
     Votes:
-      +1: lgo, dlr
+      +1: lgo
+      +1: dlr (only for r22991)
 
 Approved changes:
 
