@@ -71,5 +71,13 @@ Candidate changes:
       -1: malcolm (to apply as is: needs a backport branch - the code has
         changed between trunk and branch).
 
+  * r23004
+    Fix generation of VS200x solutions.
+    Justification:
+      Very painful to build on VS200x without this fix.
+    Votes:
+      +1: djh
+  
+
 Approved changes:
 
