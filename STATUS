@@ -67,6 +67,8 @@ Candidate changes:
     Votes:
       +1: lgo
       +1: dlr (only for r22991)
+      -1: malcolm (to apply as is: needs a backport branch - the code has
+        changed between trunk and branch).
 
 Approved changes:
 
