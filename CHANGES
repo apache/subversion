@@ -8,11 +8,13 @@ http://svn.collab.net/repos/svn/tags/1.4.3
     * fixed: svn_load_dirs.pl cannot import file names containing '@' (r22203)
     * include newest version of svn-graph.pl (r22969)
 
-  - Both:
+  - Server:
     * fixed: incorrectly reporting authz circular dependencies (issue #2684)
+    * fixed: potential filesystem memory leak in commit finalisation (r22729)
+
+  - Client and Server:
     * fixed: crash in character translation, particularly on Windows (r22417)
     * fixed: potential string corruption when resizing string buffers (r22689)
-    * fixed: potential filesystem memory leak in commit finalisation (r22729)
     * translation updates for Korean, Spanish, Italian, Simplified Chinese,
           and Japanese (fixing issues #2649 and #2681)
 
