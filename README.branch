@@ -1,13 +1,10 @@
-          Implementing Incomplete Directory Support in SVN
+                Implementing Sparse Directory Support in SVN
 
    #########################################################################
    ###                                                                   ###
-   ###  Note: Although this feature was called "incomplete directories"  ###
-   ###  while under development, we might want to call it something      ###
-   ###  else when it goes live.  "Incomplete" makes it sound like        ###
-   ###  there's something wrong with the directory, something missing.   ###
-   ###  Perhaps "sparse directories" or "partial directories" would be   ###
-   ###  less user-frightening.                                           ###
+   ###  Note: This feature uset to be called "incomplete directories";   ###
+   ###  It is now called "sparse directories", because "incomplete"      ###
+   ###  made it sound like something was wrong with your directories.    ###
    ###                                                                   ###
    #########################################################################
 
