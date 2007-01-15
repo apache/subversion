@@ -66,8 +66,7 @@ Candidate changes:
       Fixes a regression introduced in 1.4.2, includes test.
     Branch: 1.4.x-r22991
     Votes:
-      +1: lgo
-      +1: dlr (only for r22991)
+      +1: lgo, dlr
       -1: malcolm (to apply as is: needs a backport branch - the code has
         changed between trunk and branch).
 
