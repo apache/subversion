@@ -839,17 +839,13 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
               /* There is no corresponding target entry, so delete. */
               e_fullpath = svn_path_join(e_path, s_entry->name, subpool);
-<<<<<<< .working
-              if (s_entry->kind != svn_node_dir)
-=======
               SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root),
                                            svn_path_join(t_path,
                                                           s_entry->name,
                                                           subpool),
                                             s_rev, b->t_rev,
                                             &deleted_rev, subpool));
-              if (b->recurse || s_entry->kind != svn_node_dir)
->>>>>>> .merge-right.r23006
+              if (s_entry->kind != svn_node_dir)
                 SVN_ERR(b->editor->delete_entry(e_fullpath,
                                                 deleted_rev,
                                                 dir_baton, subpool));

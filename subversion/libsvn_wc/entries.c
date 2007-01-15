@@ -452,7 +452,10 @@ read_entry(svn_wc_entry_t **new_entry,
   SVN_ERR(read_str(&entry->changelist, buf, end, pool));
   MAYBE_DONE;
 
-<<<<<<< .working
+  /* Keep entry in working copy after deletion? */
+  SVN_ERR(read_bool(&entry->keep_local, SVN_WC__ENTRY_ATTR_KEEP_LOCAL,
+                    buf, end));
+
   /* Depth. */
   {
     const char *result;
@@ -466,12 +469,6 @@ read_entry(svn_wc_entry_t **new_entry,
       entry->depth = svn_depth_infinity;
   }
 
-=======
-  /* Keep entry in working copy after deletion? */
-  SVN_ERR(read_bool(&entry->keep_local, SVN_WC__ENTRY_ATTR_KEEP_LOCAL,
-                    buf, end));
-
->>>>>>> .merge-right.r23006
  done:
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -1568,7 +1565,9 @@ write_entry(svn_stringbuf_t *buf,
   /* Changelist. */
   write_str(buf, entry->changelist, pool);
 
-<<<<<<< .working
+  /* Keep in working copy flag. */
+  write_bool(buf, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, entry->keep_local);
+
   /* Depth. */
   {
     const char *val;
@@ -1590,11 +1589,6 @@ write_entry(svn_stringbuf_t *buf,
     write_val(buf, val, strlen(val));
   }
 
-=======
-  /* Keep in working copy flag. */
-  write_bool(buf, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, entry->keep_local);
-
->>>>>>> .merge-right.r23006
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;

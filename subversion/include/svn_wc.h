@@ -1325,22 +1325,6 @@ typedef struct svn_wc_entry_t
    */
   const char *changelist;
 
-<<<<<<< .working
-  /** The depth of this entry.
-   *
-   * ### It's a bit annoying that we only use this on this_dir
-   * ### entries, yet it will exist (with value svn_depth_infinity) on
-   * ### all entries.  Maybe some future extensibility would make this
-   * ### field meaningful on entries besides this_dir.
-   *
-   * @since New in 1.5.
-   */
-  svn_depth_t depth;
-
-  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup()
-     and alloc_entry() in libsvn_wc/entries.c, to see if you need to
-     extend one or both of them as well. */
-=======
   /** Whether a local copy of this entry should be kept in the working copy
    * after a deletion has been committed,  Only valid for the this-dir entry
    * when it is scheduled for deletion.
@@ -1348,9 +1332,19 @@ typedef struct svn_wc_entry_t
    * @since New in 1.5. */
   svn_boolean_t keep_local;
 
-  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
-     if you need to extend that as well. */
->>>>>>> .merge-right.r23006
+  /** The depth of this entry.
+   *
+   * ### It's a bit annoying that we only use this on this_dir
+   * ### entries, yet it will exist (with value svn_depth_infinity) on
+   * ### all entries.  Maybe some future extensibility would make this
+   * ### field meaningful on entries besides this_dir.
+   *
+   * @since New in 1.5. */
+  svn_depth_t depth;
+
+  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup()
+     and alloc_entry() in libsvn_wc/entries.c, to see if you need to
+     extend one or both of them as well. */
 } svn_wc_entry_t;
 
 

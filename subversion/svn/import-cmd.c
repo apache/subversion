@@ -104,18 +104,13 @@ svn_cl__import(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
                          FALSE, FALSE, FALSE, pool);
 
-<<<<<<< .working
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_infinity;
 
-  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2), opt_state,
-=======
   SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
->>>>>>> .merge-right.r23006
                                      NULL, ctx->config, pool));
   SVN_ERR(svn_cl__cleanup_log_msg 
-<<<<<<< .working
-          (ctx->log_msg_baton2,
+          (ctx->log_msg_baton3,
            /* ### TODO: take a real depth?  But I'm not sure how
               ### useful that would be for an import.  I could see
               ### svn_depth_files being useful for import, but we
@@ -127,15 +122,6 @@ svn_cl__import(apr_getopt_t *os,
                               opt_state->no_ignore,
                               ctx,
                               pool)));
-=======
-          (ctx->log_msg_baton3, svn_client_import2(&commit_info,
-                                                   path,
-                                                   url,
-                                                   opt_state->nonrecursive,
-                                                   opt_state->no_ignore,
-                                                   ctx,
-                                                   pool)));
->>>>>>> .merge-right.r23006
 
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));

@@ -609,39 +609,21 @@ make_reporter(svn_ra_session_t *session,
                                               pool));
 
   /* Build a reporter baton. */
-<<<<<<< .working
   SVN_ERR(svn_repos_begin_report2(&rbaton,
                                   revision,
                                   sbaton->username,
-                                  sbaton->repos, 
+                                  sbaton->repos,
                                   sbaton->fs_path->data,
-                                  target, 
+                                  target,
                                   other_fs_path,
                                   text_deltas,
                                   depth,
                                   ignore_ancestry,
-                                  editor, 
+                                  editor,
                                   edit_baton,
                                   NULL,
                                   NULL,
                                   pool));
-=======
-  SVN_ERR(svn_repos_begin_report(&rbaton,
-                                 revision,
-                                 sbaton->username,
-                                 sbaton->repos,
-                                 sbaton->fs_path->data,
-                                 target,
-                                 other_fs_path,
-                                 text_deltas,
-                                 recurse,
-                                 ignore_ancestry,
-                                 editor,
-                                 edit_baton,
-                                 NULL,
-                                 NULL,
-                                 pool));
->>>>>>> .merge-right.r23006
 
   /* Wrap the report baton given us by the repos layer with our own
      reporter baton. */
