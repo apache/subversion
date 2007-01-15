@@ -76,6 +76,14 @@ Candidate changes:
       Very painful to build on VS200x without this fix.
     Votes:
       +1: djh, dlr
+
+  * r23018
+    Fix the ability to change file permissions (via a work-around)
+    when we don't actually have permissions to change permissions.
+    Justification:
+      Fixes a regression from 1.3.2.
+    Votes:
+      +1: dlr
   
 
 Approved changes:
