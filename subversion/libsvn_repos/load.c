@@ -1,7 +1,7 @@
 /* load.c --- parsing a 'dumpfile'-formatted stream.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1104,10 +1104,8 @@ remove_node_props(void *baton)
   for (hi = apr_hash_first(nb->pool, proplist); hi; hi = apr_hash_next(hi))
     {
       const void *key;
-      apr_ssize_t keylen;
-      void *val;
 
-      apr_hash_this(hi, &key, &keylen, &val);
+      apr_hash_this(hi, &key, NULL, NULL);
 
       SVN_ERR(svn_fs_change_node_prop(rb->txn_root, nb->path,
                                       (const char *) key, NULL,

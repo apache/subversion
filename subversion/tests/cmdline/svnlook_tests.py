@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import re, os
 
 # Our testing module
 import svntest
@@ -154,17 +154,26 @@ def test_misc(sbox):
     print "Unexpected result from proplist: %s" % proplist
     raise svntest.Failure
 
+  prop_name = 'foo:bar-baz-quux'
   output, errput = svntest.main.run_svnlook('propget', '--revprop', repo_dir,
-      'foo:bar-baz-quux')
+                                            prop_name)
 
-  rm = re.compile("Property.*not found")
+  expected_err = "Property '%s' not found on revision " % prop_name
   for line in errput:
-    match = rm.search(line)
-    if match:
+    if line.find(expected_err) != -1:
       break
   else:
     raise svntest.main.SVNUnmatchedError
 
+  output, errput = svntest.main.run_svnlook('propget', '-r1', repo_dir,
+                                            prop_name, '/')
+
+  expected_err = "Property '%s' not found on path '/' in revision " % prop_name
+  for line in errput:
+    if line.find(expected_err) != -1:
+      break
+  else:
+    raise svntest.main.SVNUnmatchedError
 
 #----------------------------------------------------------------------
 # Issue 1089
@@ -209,8 +218,8 @@ def delete_file_in_moved_dir(sbox):
   # Okay.  No failure, but did we get the right output?
   if len(output) != 2:
     raise svntest.Failure
-  if not ((string.strip(output[0]) == 'A/B/')
-          and (string.strip(output[1]) == 'A/B/E2/')):
+  if not ((output[0].strip() == 'A/B/')
+          and (output[1].strip() == 'A/B/E2/')):
     raise svntest.Failure
 
 
@@ -248,7 +257,7 @@ def test_print_property_diffs(sbox):
 
   # replace wcdir/iota with iota in expected_output
   for i in xrange(len(expected_output)):
-    expected_output[i] = string.replace(expected_output[i], iota_path, 'iota')
+    expected_output[i] = expected_output[i].replace(iota_path, 'iota')
 
   svntest.actions.compare_and_display_lines('', '', expected_output, output)
 

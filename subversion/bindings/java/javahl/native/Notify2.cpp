@@ -152,7 +152,7 @@ Notify2::onNotify (
         midCT = env->GetMethodID(clazz, "<init>", 
             "(Ljava/lang/String;IILjava/lang/String;"
             "Lorg/tigris/subversion/javahl/Lock;Ljava/lang/String;IIIJ)V");
-        if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+        if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         {
             return;
         }

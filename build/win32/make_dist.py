@@ -226,6 +226,17 @@ _disttree = {'': OptFile('%(readme)s', 'README.txt'),
                           OptFile('%(@zlib)s/zlibstat.lib'),
                           ),
 
+             'licenses': None,
+             'licenses/bdb': File('%(@berkeley-db)s/LICENSE'),
+             'licenses/neon': File('%(@neon)s/src/COPYING.LIB'),
+             'licenses/zlib': File('%(@zlib)s/README'),
+             'licenses/apr-util': File('%(@apr-util)s/LICENSE'),
+             'licenses/apr-iconv': File('%(@apr-iconv)s/LICENSE'),
+             'licenses/apr': File('%(@apr)s/LICENSE'),
+             'licenses/httpd': File('%(@httpd)s/LICENSE'),
+             'licenses/openssl': File('%(@openssl)s/LICENSE'),
+             'licenses/svn' : File('%(srcdir)s/COPYING'),
+
              'perl': None,
              'perl/site': None,
              'perl/site/lib': None,
@@ -382,7 +393,7 @@ def _make_dist(cfg):
 
     xpdb = '-x "*.pdb"'
     _make_zip('',        ('/README.txt', '/bin', '/httpd',
-                          '/iconv', '/share/locale'), xpdb)
+                          '/iconv', '/licenses', '/share/locale'), xpdb)
     _make_zip('_dev',    ('/README.txt', '/doc', '/include', '/lib'), xpdb)
     _make_zip('_javahl', ('/README.txt', '/javahl'), xpdb)
     _make_zip('_pdb',    ('',), '-i "*.pdb"')

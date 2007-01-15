@@ -29,20 +29,24 @@
 #include "JNIUtil.h"
 
 /**
- * JNIEntry create a stack element on the stack, which will be used to track
- * the entry and exit of methods
+ * Create a stack element on the stack, which will be used to track
+ * the entry and exit of a method.  Assumes that there are a local
+ * variables named "env" and "jthis" available.
  */ 
 #define JNIEntry(c,m) JNIStackElement se(env, #c, #m, jthis);
+
 /**
- * JNIEntry create a stack element on the stack, which will be used to track
- * the entry and exit of static methods
+ * Create a stack element on the stack, which will be used to track
+ * the entry and exit of a static method.  Assumes that there are a
+ * local variables named "env" and "jthis" available.
  */ 
 #define JNIEntryStatic(c,m) JNIStackElement se(env, #c, #m, jclazz);
 
+
 /**
- * This class is used to mark the entry and exists of methods. It can generate
- * a log message on entry and exits. The members are used to generate the exit
- * message
+ * This class is used to mark the entry and exit of a method, and can
+ * generate a log messages at those points.  The members are used to
+ * generate the exit message
  */
 class JNIStackElement
 {

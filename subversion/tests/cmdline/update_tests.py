@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, string, sys, re, os
+import sys, re, os
 
 # Our testing module
 import svntest
@@ -85,10 +85,9 @@ def update_binary_file(sbox):
   theta_contents = fp.read()  # suck up contents of a test .png file
   fp.close()
 
+  # Write PNG file data into 'A/theta'.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
-  fp.write(theta_contents)    # write png filedata into 'A/theta'
-  fp.close()
+  svntest.main.file_write(theta_path, theta_contents)
   
   svntest.main.run_svn(None, 'add', theta_path)  
 
@@ -209,13 +208,9 @@ def update_binary_file_2(sbox):
 
   # Write our two files' contents out to disk, in A/theta and A/zeta.
   theta_path = os.path.join(wc_dir, 'A', 'theta')
-  fp = open(theta_path, 'w')
-  fp.write(theta_contents)    
-  fp.close()
+  svntest.main.file_write(theta_path, theta_contents)
   zeta_path = os.path.join(wc_dir, 'A', 'zeta')
-  fp = open(zeta_path, 'w')
-  fp.write(zeta_contents)
-  fp.close()
+  svntest.main.file_write(zeta_path, zeta_contents)
 
   # Now, `svn add' those two files.
   svntest.main.run_svn(None, 'add', theta_path, zeta_path)  
@@ -1378,7 +1373,7 @@ def update_schedule_add_dir(sbox):
   # (Standard procedure when trying to resurrect the directory.)
   D_path = os.path.join(wc_dir, 'A', 'D')
   svntest.actions.run_and_verify_svn("Copy error:", None, [],
-                                     'cp', '-r', '1', G_url, D_path)
+                                     'cp', G_url + '@1', D_path)
 
   # status should now show the dir scheduled for addition-with-history
   expected_status.add({
@@ -1645,7 +1640,7 @@ def conflict_markers_matching_eol(sbox):
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
                           [crlf, '\015', '\n', '\012']):
     # rewrite file mu and set the eol-style property.
-    open(mu_path, 'wb').write("This is the file 'mu'."+ eolchar)
+    svntest.main.file_write(mu_path, "This is the file 'mu'."+ eolchar, 'wb')
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
 
     expected_disk.add({
@@ -2108,20 +2103,16 @@ def update_wc_on_windows_drive(sbox):
   		import win32api
 
   		drives=win32api.GetLogicalDriveStrings()
-  		drives=string.splitfields(drives,'\000')
+  		drives=drives.split('\000')
 
   		for d in range(ord('G'), ord('Z')+1):
   		  drive = chr(d)
   		  if not drive + ':\\' in drives:
   			return drive
     except ImportError:
-      return ''
+      return None
 
-    return ''
-
-  # skip this test on non-Windows platforms.
-  if not os.name == 'nt':
-    raise svntest.Skip
+    return None
 
   # just create an empty folder, we'll checkout later.
   sbox.build(create_wc = False)
@@ -2130,11 +2121,11 @@ def update_wc_on_windows_drive(sbox):
   
   # create a virtual drive to the working copy folder
   drive = find_the_next_available_drive_letter()
-  if drive == '':
+  if drive is None:
     raise svntest.Skip
 
   os.popen3('subst ' + drive +': ' + sbox.wc_dir, 't')
-  wc_dir = drive + ':\\\\'
+  wc_dir = drive + ':/'
   was_cwd = os.getcwd()
 
   try:
@@ -2638,7 +2629,7 @@ test_list = [ None,
               XFail(update_copy_of_old_rev),
               forced_update,
               forced_update_failures,
-              update_wc_on_windows_drive,
+              Skip(update_wc_on_windows_drive, os.name != 'nt'),
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
              ]

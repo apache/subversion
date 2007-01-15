@@ -1,7 +1,7 @@
 /* txn-table.c : operations on the `transactions' table
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -301,8 +301,8 @@ svn_fs_bdb__get_txn_list(apr_array_header_t **names_p,
         continue;
 
       /* Add the transaction name to the NAMES array, duping it into POOL. */
-      (*((const char **) apr_array_push(names))) 
-        = apr_pstrmemdup(pool, key.data, key.size);
+      APR_ARRAY_PUSH(names, const char *) = apr_pstrmemdup(pool, key.data,
+                                                           key.size);
     }
 
   /* Check for errors, but close the cursor first. */

@@ -185,20 +185,24 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
         jAction = org_tigris_subversion_javahl_NotifyAction_blame_revision;
         break;
     case svn_wc_notify_locked:
-        /* Lock a file */
+        /* Lock a path */
         jAction = org_tigris_subversion_javahl_NotifyAction_locked;
         break;
     case svn_wc_notify_unlocked:
-        /* Lock a file */
+        /* Unlock a path */
         jAction = org_tigris_subversion_javahl_NotifyAction_unlocked;
         break;
     case svn_wc_notify_failed_lock:
-        /* Lock a file */
+        /* Lock failed */
         jAction = org_tigris_subversion_javahl_NotifyAction_failed_lock;
         break;
     case svn_wc_notify_failed_unlock:
-        /* Lock a file */
+        /* Unlock failed */
         jAction = org_tigris_subversion_javahl_NotifyAction_failed_unlock;
+        break;
+    case svn_wc_notify_exists:
+        /* Tried adding a path that already exists. */
+        jAction = org_tigris_subversion_javahl_NotifyAction_exists;
         break;
     }
     return jAction;

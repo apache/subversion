@@ -1,7 +1,7 @@
 /* reps-strings.c : intepreting representations with respect to strings
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -118,11 +118,10 @@ delta_string_keys(apr_array_header_t **keys,
   /* Now, push the string keys for each window into *KEYS */
   for (i = 0; i < chunks->nelts; i++)
     {
-      rep_delta_chunk_t *chunk =
-        (((rep_delta_chunk_t **) chunks->elts)[i]);
+      rep_delta_chunk_t *chunk = APR_ARRAY_IDX(chunks, i, rep_delta_chunk_t *);
 
       key = apr_pstrdup(pool, chunk->string_key);
-      (*((const char **)(apr_array_push(*keys)))) = key;
+      APR_ARRAY_PUSH(*keys, const char *) = key;
     }
 
   return SVN_NO_ERROR;
@@ -143,7 +142,7 @@ delete_strings(apr_array_header_t *keys,
   for (i = 0; i < keys->nelts; i++)
     {
       svn_pool_clear(subpool);
-      str_key = ((const char **) keys->elts)[i];
+      str_key = APR_ARRAY_IDX(keys, i, const char *);
       SVN_ERR(svn_fs_bdb__string_delete(fs, str_key, trail, subpool));
     }
   svn_pool_destroy(subpool);
@@ -507,7 +506,7 @@ rep_read_range(svn_fs_t *fs,
                    rep_key);
 
               rep_key = chunk->rep_key;
-              *(representation_t**) apr_array_push(reps) = rep;
+              APR_ARRAY_PUSH(reps, representation_t *) = rep;
               SVN_ERR(svn_fs_bdb__read_rep(&rep, fs, rep_key, 
                                            trail, pool));
             }
@@ -1467,7 +1466,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
           ww->svndiff_len = new_target_baton.size;
           ww->text_off = tview_off;
           ww->text_len = window->tview_len;
-          (*((window_write_t **)(apr_array_push(windows)))) = ww;
+          APR_ARRAY_PUSH(windows, window_write_t *) = ww;
 
           /* Update our recordkeeping variables. */
           tview_off += window->tview_len;
@@ -1506,7 +1505,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
         SVN_ERR(svn_fs_bdb__string_size(&old_size, fs, str_key, 
                                         trail, pool));
         orig_str_keys = apr_array_make(pool, 1, sizeof(str_key));
-        (*((const char **)(apr_array_push(orig_str_keys)))) = str_key;
+        APR_ARRAY_PUSH(orig_str_keys, const char *) = str_key;
 
         /* If the new data is NOT an space optimization, destroy the
            string(s) we created, and get outta here. */
@@ -1515,7 +1514,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
             int i;
             for (i = 0; i < windows->nelts; i++)
               {
-                ww = ((window_write_t **) windows->elts)[i];
+                ww = APR_ARRAY_IDX(windows, i, window_write_t *);
                 SVN_ERR(svn_fs_bdb__string_delete(fs, ww->key, trail, pool));
               }
             return SVN_NO_ERROR;
@@ -1550,7 +1549,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
        chunks to the representation. */
     for (i = 0; i < windows->nelts; i++)
       {
-        ww = ((window_write_t **) windows->elts)[i];
+        ww = APR_ARRAY_IDX(windows, i, window_write_t *);
 
         /* Allocate a chunk and its window */
         chunk = apr_palloc(pool, sizeof(*chunk));
@@ -1563,7 +1562,7 @@ svn_fs_base__rep_deltify(svn_fs_t *fs,
         chunk->rep_key = source;
 
         /* Add this chunk to the array. */
-        (*((rep_delta_chunk_t **)(apr_array_push(chunks)))) = chunk;
+        APR_ARRAY_PUSH(chunks, rep_delta_chunk_t *) = chunk;
       }
 
     /* Put the chunks array into the representation. */

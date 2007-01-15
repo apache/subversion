@@ -1657,7 +1657,7 @@ dir_props_changed(svn_wc_adm_access_t *adm_access,
                                      originalprops, b->baton);
 }
 
-/* Used to wrap svn_diff_callbacks_t as an svn_wc_diff_callbacks_2t. */
+/* Used to wrap svn_diff_callbacks_t as an svn_wc_diff_callbacks2_t. */
 static struct svn_wc_diff_callbacks2_t callbacks_wrapper = {
   file_changed,
   file_added,

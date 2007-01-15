@@ -265,13 +265,8 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
     }
   else if (svn_fs_is_txn_root(tgt_root))
     {
-      svn_fs_t *fs = svn_fs_root_fs(tgt_root);
-      const char *txn_name = svn_fs_txn_root_name(tgt_root, pool);
-      svn_fs_txn_t *txn;
-
-      SVN_ERR(svn_fs_open_txn(&txn, fs, txn_name, pool));
       SVN_ERR(editor->set_target_revision 
-              (edit_baton, svn_fs_txn_base_revision(txn), pool));
+              (edit_baton, svn_fs_txn_root_base_revision(tgt_root), pool));
     }
 
   /* Setup our pseudo-global structure here.  We need these variables
@@ -1070,9 +1065,7 @@ delta_dirs(struct context *c,
       for (hi = apr_hash_first(pool, s_entries); hi; hi = apr_hash_next(hi))
         {
           const svn_fs_dirent_t *s_entry;
-          const void *key;
           void *val;
-          apr_ssize_t klen;
           const char *e_fullpath;
           svn_node_kind_t src_kind;
           
@@ -1080,7 +1073,7 @@ delta_dirs(struct context *c,
           svn_pool_clear(subpool);
 
           /* KEY is the entry name in source, VAL the dirent */
-          apr_hash_this(hi, &key, &klen, &val);
+          apr_hash_this(hi, NULL, NULL, &val);
           s_entry = val;
           src_kind = s_entry->kind;
           e_fullpath = svn_path_join(edit_path, s_entry->name, subpool);

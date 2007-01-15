@@ -39,7 +39,7 @@ public:
      */
     ~CommitMessage();
 
-    jstring getCommitMessage(apr_array_header_t *commit_items);
+    jstring getCommitMessage(const apr_array_header_t *commit_items);
 
     /**
      * Create a C++ holding object for the Java object passed into the

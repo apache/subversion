@@ -57,7 +57,7 @@ do
 
   case "$1" in
   --with-apxs=*)
-  apxs="--with-apxs $optarg"
+  apxs="--with-apxs=$optarg"
   ;;
   esac
 
@@ -89,8 +89,8 @@ fi
 
 make
 make install DESTDIR=$TEMPDIR
-. build/pkg/pkginfo
-cp build/pkg/pkginfo $TEMPDIR$PREFIX
+. packages/solaris/pkginfo
+cp packages/solaris/pkginfo $TEMPDIR$PREFIX
 
 current=`pwd`
 cd $TEMPDIR$PREFIX

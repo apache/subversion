@@ -672,13 +672,12 @@ II.   INSTALLATION
 
       * [Optional] Apache 2 source, downloaded from
         http://httpd.apache.org/download.cgi, these instructions assume
-        version 2.0.58.  Only needed for building the server dso modules.
-        Note that although Subversion will compile against Apache 2.2.2
-        and APR 1.2.7, there is a bug that causes runtime failures with
-        Subversion on Windows.  It will hopefully be fixed in the
-        Apache 2.2.3 and APR 1.2.8 release.  The patch is available at:
-        http://www.mail-archive.com/dev@apr.apache.org/msg15242.html if
-        you want to patch and build APR yourself.
+        version 2.0.58.  This is only needed for building the Subversion
+        server Apache modules.  Note that although Subversion will compile
+        against Apache 2.2.3 and APR 1.2.7, there is a bug that causes
+        runtime failures with Subversion on Windows.  The fix is included in
+        APR 1.2.8 and will be bundled in the next HTTP Server release
+        (likely to be 2.2.4).
       * [Optional] Apache 2 msi install file, also from
         http://httpd.apache.org/download.cgi (required for running the
         tests).  Only needed for testing the server dso modules and if

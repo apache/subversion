@@ -600,7 +600,9 @@ dontdothat_insert_filters(request_rec *r)
 
       ctx->xmlp = XML_ParserCreate(NULL);
 
-      apr_pool_cleanup_register(r->pool, ctx->xmlp, clean_up_parser, NULL);
+      apr_pool_cleanup_register(r->pool, ctx->xmlp,
+                                clean_up_parser,
+                                apr_pool_cleanup_null);
 
       XML_SetUserData(ctx->xmlp, ctx);
       XML_SetElementHandler(ctx->xmlp, start_element, end_element);

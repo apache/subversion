@@ -95,11 +95,10 @@ write_hash_to_stringbuf(apr_hash_t *hash,
            this = apr_hash_next(this))
         {
           const void *key;
-          void *val;
           apr_ssize_t keylen;
 
-          /* Get this key and val. */
-          apr_hash_this(this, &key, &keylen, &val);
+          /* Get this key. */
+          apr_hash_this(this, &key, &keylen, NULL);
 
           /* Only output values deleted in hash. */
           if (apr_hash_get(hash, key, keylen))

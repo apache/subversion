@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -39,12 +39,11 @@ def get_standard_state(wc_dir):
 
   state = svntest.actions.get_virginal_state(wc_dir, 1)
 
-  state.tweak('', status=' M')
+  state.tweak('', 'A/D', 'A/D/G/pi', status=' M')
   state.tweak('A/B/lambda', status='M ')
   state.tweak('A/B/E', 'A/D/H/chi', status='R ')
   state.tweak('A/B/E/alpha', 'A/B/E/beta', 'A/C', 'A/D/gamma',
               'A/D/G/rho', status='D ')
-  state.tweak('A/D', 'A/D/G/pi', status=' M')
   state.tweak('A/D/H/omega', status='MM')
 
   # New things
@@ -253,7 +252,7 @@ def commit_multiple_targets(sbox):
   ADG_path = os.path.join(wc_dir, 'A', 'D', 'G')
   svntest.main.run_svn(None, 'propset', 'foo', 'bar', ADG_path)
 
-  # Created expected output tree for 'svn ci'.  We should see changes
+  # Create expected output tree for 'svn ci'.  We should see changes
   # only on these three targets, no others.  
   expected_output = svntest.wc.State(wc_dir, {
     'A/D/H/psi' : Item(verb='Sending'),
@@ -289,7 +288,7 @@ def commit_multiple_targets_2(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # This test will commit three targets:  psi, B, omega and pi.  In that order.
+  # This test will commit four targets:  psi, B, omega and pi.  In that order.
 
   # Make local mods to many files.
   AB_path = os.path.join(wc_dir, 'A', 'B')
@@ -352,12 +351,6 @@ def commit_inclusive_dir(sbox):
 
   # Create expected output tree.
   D_path = os.path.join(wc_dir, 'A', 'D')
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
-  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
   
   expected_output = svntest.wc.State(wc_dir, {
     'A/D' : Item(verb='Sending'),
@@ -398,21 +391,6 @@ def commit_top_dir(sbox):
   make_standard_slew_of_changes(wc_dir)
 
   # Create expected output tree.
-  top_path = wc_dir
-  Q_path = os.path.join(wc_dir, 'Q')
-  floo_path = os.path.join(wc_dir, 'Q', 'floo')
-  E_path = os.path.join(wc_dir, 'A', 'B', 'E')
-  bloo_path = os.path.join(wc_dir, 'A', 'B', 'E', 'bloo')
-  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
-  C_path = os.path.join(wc_dir, 'A', 'C')
-  D_path = os.path.join(wc_dir, 'A', 'D')
-  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
-  rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo')
-  chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
-  omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  
   expected_output = svntest.wc.State(wc_dir, {
     '' : Item(verb='Sending'),
     'Q' : Item(verb='Adding'),
@@ -903,7 +881,6 @@ def merge_mixed_revisions(sbox):
   H_path = os.path.join(wc_dir, 'A', 'D', 'H')
   chi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'chi')
   omega_path = os.path.join(wc_dir, 'A', 'D', 'H', 'omega')
-  psi_path = os.path.join(wc_dir, 'A', 'D', 'H', 'psi')
 
   # Here's the reproduction formula, in 5 parts.
   # Hoo, what a buildup of state!
@@ -1234,9 +1211,8 @@ def commit_add_file_twice(sbox):
   # Created expected status tree.
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
-    'A/D/H/gloo' : Item(status='A ', wc_rev=0),
+    'A/D/H/gloo' : Item(status='  ', wc_rev=2),
     })
-  expected_status.tweak('A/D/H/gloo', wc_rev=2, status='  ')
 
   # Commit should succeed
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -1251,7 +1227,6 @@ def commit_add_file_twice(sbox):
   svntest.main.run_svn(None, 'up', '-r', '1', wc_dir)
 
   # Create the file again
-  gloo_path = os.path.join(wc_dir, 'A', 'D', 'H', 'gloo') 
   svntest.main.file_append(gloo_path, "hello")
   svntest.main.run_svn(None, 'add', gloo_path)
 
@@ -1516,7 +1491,7 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, file4_path), 'this is file4')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
                                      'add', '-N',
                                      os.path.join(wc_dir, file1_path),
                                      os.path.join(wc_dir, dir1_path),
@@ -1617,7 +1592,7 @@ def commit_nonrecursive(sbox):
   svntest.main.file_append(os.path.join(wc_dir, nocommit_path), 'nocommit')
 
   # Add them to version control.
-  svntest.actions.run_and_verify_svn("", SVNAnyOutput, [],
+  svntest.actions.run_and_verify_svn(None, SVNAnyOutput, [],
                                      'add', '-N',
                                      os.path.join(wc_dir, dirA_path),
                                      os.path.join(wc_dir, fileA_path),
@@ -1961,7 +1936,9 @@ def post_commit_hook_test(sbox):
                       "Transmitting file data .\n",
                       "Committed revision 2.\n",
                       "\n",
-                      "Warning: 'post-commit' hook failed with error output:\n",
+                      "Warning: 'post-commit' hook failed (exited with a "
+                      "non-zero exitcode of 1).  The following error output "
+                      "was produced by the hook:\n",
                       "Post-commit hook failed\n",
                     ]
 
@@ -2044,8 +2021,7 @@ test_list = [ None,
               hudson_part_1,
               hudson_part_1_variation_1,
               hudson_part_1_variation_2,
-              # issue #2578 causes the hudson_part_2 test to fail.
-              XFail(hudson_part_2, svntest.main.is_ra_type_dav),
+              hudson_part_2,
               hudson_part_2_1,
               XFail(hook_test),
               merge_mixed_revisions,

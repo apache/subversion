@@ -41,8 +41,8 @@
 
 serf_bucket_t *
 svn_ra_serf__conn_setup(apr_socket_t *sock,
-           void *baton,
-           apr_pool_t *pool)
+                        void *baton,
+                        apr_pool_t *pool)
 {
   serf_bucket_t *bucket;
   svn_ra_serf__connection_t *conn = baton;
@@ -63,9 +63,9 @@ svn_ra_serf__conn_setup(apr_socket_t *sock,
 
 serf_bucket_t*
 svn_ra_serf__accept_response(serf_request_t *request,
-                serf_bucket_t *stream,
-                void *acceptor_baton,
-                apr_pool_t *pool)
+                             serf_bucket_t *stream,
+                             void *acceptor_baton,
+                             apr_pool_t *pool)
 {
   serf_bucket_t *c;
   serf_bucket_alloc_t *bkt_alloc;
@@ -95,9 +95,9 @@ accept_head(serf_request_t *request,
 
 void
 svn_ra_serf__conn_closed(serf_connection_t *conn,
-            void *closed_baton,
-            apr_status_t why,
-            apr_pool_t *pool)
+                         void *closed_baton,
+                         apr_status_t why,
+                         apr_pool_t *pool)
 {
   svn_ra_serf__connection_t *our_conn = closed_baton;
 
@@ -192,6 +192,10 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
   while (!*done)
     {
       int i;
+
+      if (sess->wc_callbacks &&
+          sess->wc_callbacks->cancel_func)
+        SVN_ERR((sess->wc_callbacks->cancel_func)(sess->wc_callback_baton));
 
       status = serf_context_run(sess->context, SERF_DURATION_FOREVER, pool);
       if (APR_STATUS_IS_TIMEUP(status))
@@ -318,9 +322,9 @@ cdata_error(svn_ra_serf__xml_parser_t *parser,
 
 apr_status_t
 svn_ra_serf__handle_discard_body(serf_request_t *request,
-                                  serf_bucket_t *response,
-                                  void *baton,
-                                  apr_pool_t *pool)
+                                 serf_bucket_t *response,
+                                 void *baton,
+                                 apr_pool_t *pool)
 {
   apr_status_t status;
   svn_ra_serf__server_error_t *server_err = baton;
@@ -663,7 +667,26 @@ svn_ra_serf__handle_xml_parser(serf_request_t *request,
       xml_status = XML_Parse(ctx->xmlp, data, len, 0);
       if (xml_status == XML_STATUS_ERROR && ctx->ignore_errors == FALSE)
         {
-          abort();
+          XML_ParserFree(ctx->xmlp);
+
+          if (!ctx->status_code)
+            {
+              abort();
+            }
+          if (*ctx->done == FALSE)
+            {
+              *ctx->done = TRUE;
+              if (ctx->done_list)
+                {
+                  ctx->done_item->data = ctx->user_data;
+                  ctx->done_item->next = *ctx->done_list;
+                  *ctx->done_list = ctx->done_item;
+                }
+            }
+          ctx->error = svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                         "XML parsing failed: (%d %s)",
+                                         sl.code, sl.reason);
+          return ctx->error->apr_err;
         }
 
       if (ctx->error && ctx->ignore_errors == FALSE)
@@ -732,8 +755,12 @@ svn_ra_serf__handle_server_error(serf_request_t *request,
   return svn_error_create(APR_EGENERAL, NULL, _("Unspecified error message"));
 }
 
+/* Implements the serf_response_handler_t interface.  Wait for HTTP
+   response status and headers, and invoke CTX->response_handler() to
+   carry out operation-specific processing.  Afterwards, check for
+   connection close. */
 static apr_status_t
-handler_default(serf_request_t *request,
+handle_response(serf_request_t *request,
                 serf_bucket_t *response,
                 void *baton,
                 apr_pool_t *pool)
@@ -742,9 +769,9 @@ handler_default(serf_request_t *request,
   serf_status_line sl;
   apr_status_t status;
 
-  /* Uh-oh.  Our connection died.  Requeue. */
   if (!response)
     {
+      /* Uh-oh.  Our connection died.  Requeue. */
       if (ctx->response_error)
         {
           status = ctx->response_error(request, response, 0,
@@ -760,6 +787,12 @@ handler_default(serf_request_t *request,
       return APR_SUCCESS;
     }
 
+  status = serf_bucket_response_status(response, &sl);
+  if (SERF_BUCKET_READ_ERROR(status))
+    {
+      return status;
+    }
+
   status = serf_bucket_response_wait_for_headers(response);
   if (status)
     {
@@ -767,23 +800,22 @@ handler_default(serf_request_t *request,
         {
           return status;
         }
-      /* If we got an EOF here when we're not a HEAD request,
-       * something went really wrong: either the server closed on us
-       * early or we're reading too much.  Either way, scream loudly.
+
+      /* Cases where a lack of a response body (via EOF) is okay:
+       *  - A HEAD request
+       *  - 204/304 response
+       *
+       * Otherwise, if we get an EOF here, something went really wrong: either
+       * the server closed on us early or we're reading too much.  Either way,
+       * scream loudly.
        */
-      if (strcmp(ctx->method, "HEAD") != 0)
+      if (strcmp(ctx->method, "HEAD") != 0 && sl.code != 204 && sl.code != 304)
         {
           ctx->session->pending_error =
               svn_error_create(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
                                _("Premature EOF seen from server"));
           return ctx->session->pending_error->apr_err;
         }
-    }
-
-  status = serf_bucket_response_status(response, &sl);
-  if (status)
-    {
-      return status;
     }
 
   if (ctx->conn->last_status_code == 401 && sl.code < 400)
@@ -813,16 +845,23 @@ handler_default(serf_request_t *request,
                                      pool);
     }
 
-  if (APR_STATUS_IS_EOF(status)) {
+  if (APR_STATUS_IS_EOF(status))
+    {
       status = svn_ra_serf__is_conn_closing(response);
-  }
+    }
 
   return status;
-
 }
 
+/* Implements the serf_request_setup_t interface (which sets up both a
+   request and its response handler callback).  If the CTX->delegate()
+   callback is non-NULL, invoke it to carry out the majority of the
+   serf_request_setup_t implementation.  Otherwise, perform default
+   setup, with special handling for HEAD requests, and finer-grained
+   callbacks invoked (if non-NULL) to produce the request headers and
+   body. */
 static apr_status_t
-setup_default(serf_request_t *request,
+setup_request(serf_request_t *request,
               void *setup_baton,
               serf_bucket_t **req_bkt,
               serf_response_acceptor_t *acceptor,
@@ -877,17 +916,17 @@ setup_default(serf_request_t *request,
         }
     }
 
-  *handler = handler_default;
+  *handler = handle_response;
   *handler_baton = ctx;
 
   return APR_SUCCESS;
 }
 
-serf_request_t*
+serf_request_t *
 svn_ra_serf__request_create(svn_ra_serf__handler_t *handler)
 {
   return serf_connection_request_create(handler->conn->conn,
-                                        setup_default, handler);
+                                        setup_request, handler);
 }
 
 svn_error_t *

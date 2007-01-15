@@ -2,7 +2,7 @@
  * replay.c :  routines for replaying revisions
  *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -56,7 +56,8 @@ typedef struct {
   svn_stringbuf_t *prop_accum;
 } replay_baton_t;
 
-#define TOP_DIR(rb) (((dir_item_t *)(rb)->dirs->elts)[(rb)->dirs->nelts - 1])
+#define TOP_DIR(rb) (APR_ARRAY_IDX((rb)->dirs, (rb)->dirs->nelts - 1, \
+                                   dir_item_t))
 
 /* Info about a given directory we've seen. */
 typedef struct {
@@ -296,8 +297,10 @@ start_element(int *elem, void *baton, int parent_state, const char *nspace,
                      "add-file or open-file"));
       else
         {
+          const char *checksum = svn_xml_get_attr_value("checksum", atts);
+
           SVN_ERR(rb->editor->close_file(rb->file_baton,
-                                         NULL, /* XXX text checksum */
+                                         checksum,
                                          TOP_DIR(rb).file_pool));
           rb->file_baton = NULL;
         }
@@ -472,7 +475,7 @@ svn_ra_dav__replay(svn_ra_session_t *session,
   rb.prop_pool = svn_pool_create(pool);
   rb.prop_accum = svn_stringbuf_create("", rb.prop_pool);
 
-  return svn_ra_dav__parsed_request(ras->sess, "REPORT", ras->url->data, body,
+  return svn_ra_dav__parsed_request(ras, "REPORT", ras->url->data, body,
                                     NULL, NULL,
                                     start_element,
                                     cdata_handler,

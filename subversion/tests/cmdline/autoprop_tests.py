@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import sys, re, os, os.path, shutil
+import os
 
 # Our testing module
 import svntest
@@ -71,15 +71,6 @@ spacetest = abc = def ; ghi = ; = j
 ''' % (enable_flag and 'yes' or 'no')
 
   svntest.main.create_config_dir(config_dir, config_contents)
-
-#----------------------------------------------------------------------
-
-def create_test_file(dir, name):
-  "create a test file"
-
-  fd = open(os.path.join(dir, name), 'w')
-  fd.write('foo\nbar\nbaz\n')
-  fd.close()
 
 #----------------------------------------------------------------------
 
@@ -142,7 +133,8 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
                'foobar.lha',
                'spacetest']
   for filename in filenames:
-    create_test_file(files_dir, filename)
+    svntest.main.file_write(os.path.join(files_dir, filename),
+                            'foo\nbar\nbaz\n')
 
   if len(subdir) == 0:
     # add/import the files

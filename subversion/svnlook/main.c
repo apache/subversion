@@ -1038,13 +1038,11 @@ print_tree(svn_fs_root_t *root,
   subpool = svn_pool_create(pool);
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      apr_ssize_t keylen;
       void *val;
       svn_fs_dirent_t *entry;
 
       svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, &keylen, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
       entry = val;
       SVN_ERR(print_tree(root, svn_path_join(path, entry->name, pool),
                          entry->id, (entry->kind == svn_node_dir),
@@ -1413,15 +1411,28 @@ do_pget(svnlook_ctxt_t *c,
 
   if (prop == NULL)
     {
+       const char *err_msg;
        if (path == NULL)
-         return svn_error_createf
-           (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-            _("Property '%s' not found on revision %ld"), propname, c->rev_id);
+         {
+           /* We're operating on a revprop (e.g. c->is_revision). */
+           err_msg = apr_psprintf(pool,
+                                  _("Property '%s' not found on revision %ld"),
+                                  propname, c->rev_id);
+         }
        else
-         return svn_error_createf
-           (SVN_ERR_PROPERTY_NOT_FOUND, NULL,
-            _("Property '%s' not found on path '%s' in revision %ld"),
-            propname, path, c->rev_id);
+         {
+           if (SVN_IS_VALID_REVNUM(c->rev_id))
+             err_msg = apr_psprintf(pool,
+                                    _("Property '%s' not found on path '%s' "
+                                      "in revision %ld"),
+                                    propname, path, c->rev_id);
+           else
+             err_msg = apr_psprintf(pool,
+                                    _("Property '%s' not found on path '%s' "
+                                      "in transaction %s"),
+                                    propname, path, c->txn_name);
+         }
+       return svn_error_create(SVN_ERR_PROPERTY_NOT_FOUND, NULL, err_msg);
     }
 
   /* Else. */
@@ -2183,6 +2194,14 @@ main(int argc, const char *argv[])
   err = (*subcommand->cmd_func)(os, &opt_state, pool);
   if (err)
     {
+      /* For argument-related problems, suggest using the 'help'
+         subcommand. */
+      if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
+          || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
+        {
+          err = svn_error_quick_wrap(err, 
+                                     _("Try 'svnlook help' for more info"));
+        }
       svn_handle_error2(err, stderr, FALSE, "svnlook: ");
       svn_error_clear(err);
       svn_pool_destroy(pool);

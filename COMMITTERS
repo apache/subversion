@@ -39,7 +39,7 @@ Blanket commit access:
   jszakmeister   John Szakmeister <john@szakmeister.net>
       dionisos   Erik Hülsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
-           djh   D.J. Heap <dj@shadyvale.net>
+           djh   D.J. Heap <djheap@gmail.com>
           maxb   Max Bowsher <maxb1@ukf.net>
       lundblad   Peter N. Lundblad <peter@famlundblad.se>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
@@ -50,13 +50,15 @@ Blanket commit access:
         pburba   Paul Burba <ptbsvn@adelphia.net>
        glasser   David Glasser <glasser@mit.edu>
            lgo   Lieven Govaerts <lgo@mobsol.be>
+       hwright   Hyrum Wright <hyrum_wright@mail.utexas.edu>
+    vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
 
 Commit access for specific areas:
 
   Bindings:
 
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
-      markphip   Mark Phippard <MarkP@softlanding.com>       (JavaHL bindings)
+      markphip   Mark Phippard <markphip@gmail.com>          (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
@@ -100,6 +102,7 @@ Commit access for specific areas:
        madanus   Madan U S <madan@collab.net>                (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
+       kameshj   Kamesh Jayachandran <kamesh@collab.net>     (svntest)
 
   Translation of message files:
 
@@ -114,6 +117,7 @@ Commit access for specific areas:
        marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
         pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
+        cauchy   Dongsheng Song <dongsheng.song@gmail.com>   (po: zh_CN)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
@@ -126,7 +130,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
-      markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
+      markphip   Mark Phippard <markphip@gmail.com>          (ebcdic)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

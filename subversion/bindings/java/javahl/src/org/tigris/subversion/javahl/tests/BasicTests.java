@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
@@ -471,18 +472,7 @@ public class BasicTests extends SVNTests
         thisTest.getWc().setItemOODInfo("", psiCommitRev, psiAuthor,
                                         psiCommitDate, NodeKind.dir);
 
-        try
-        {
-            thisTest.checkStatus(true);
-        }
-        catch (junit.framework.AssertionFailedError xfail)
-        {
-            // FIXME: This test is currently expected to fail.
-            return;
-        }
-        fail("XPASS: Expected AssertionFailedError due to a bug in " +
-             "libsvn_client regarding retrieval of 'out of date' info " +
-             "from the repos");
+        thisTest.checkStatus(true);
     }
 
     /**
@@ -669,6 +659,89 @@ public class BasicTests extends SVNTests
                 client.update(thisTest.getWCPath(), null, true), 2);
 
         // check the status of the working copy
+        thisTest.checkStatus();
+    }
+
+    /**
+     * Test the {@link SVNClientInterface.copy()} API.
+     * @since 1.5
+     */
+    public void testCopy()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+        final Revision firstRevision = Revision.getInstance(1);
+        final Revision pegRevision = null;  // Defaults to Revision.HEAD.
+
+        // Copy files from A/B/E to A/B/F.
+        String[] srcPaths = { "alpha", "beta" };
+        CopySource[] sources = new CopySource[srcPaths.length];
+        for (int i = 0; i < srcPaths.length; i++)
+        {
+            String fileName = srcPaths[i];
+            sources[i] =
+                new CopySource(new File(thisTest.getWorkingCopy(),
+                                        "A/B/E/" + fileName).getPath(),
+                               firstRevision, pegRevision);
+            wc.addItem("A/B/F/" + fileName,
+                       wc.getItemContent("A/B/E/" + fileName));
+            wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/F/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Add |
+                                  CommitItemStateFlags.IsCopy);
+        }
+        client.copy(sources,
+                    new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
+                    null, true);
+
+        // Commit the changes, and check the state of the WC.
+        assertEquals("Unexpected WC revision number after commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "Copy files", true), 2);
+        thisTest.checkStatus();
+    }
+
+    /**
+     * Test the {@link SVNClientInterface.move()} API.
+     * @since 1.5
+     */
+    public void testMove()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        // Move files from A/B/E to A/B/F.
+        String[] srcPaths = { "alpha", "beta" };
+        for (int i = 0; i < srcPaths.length; i++)
+        {
+            String fileName = srcPaths[i];
+            srcPaths[i] = new File(thisTest.getWorkingCopy(),
+                                   "A/B/E/" + fileName).getPath();
+
+            wc.addItem("A/B/F/" + fileName,
+                       wc.getItemContent("A/B/E/" + fileName));
+            wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/F/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Add |
+                                  CommitItemStateFlags.IsCopy);
+
+            wc.removeItem("A/B/E/" + fileName);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/E/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Delete);
+        }
+        client.move(srcPaths,
+                    new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
+                    null, false, true);
+
+        // Commit the changes, and check the state of the WC.
+        assertEquals("Unexpected WC revision number after commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "Move files", true), 2);
         thisTest.checkStatus();
     }
 
@@ -1883,6 +1956,50 @@ public class BasicTests extends SVNTests
                       true), 5);
  
     }
+
+    /**
+     * Test the {@link SVNClientInterface.diffSummarize()} API.
+     * @since 1.5
+     */
+    public void testDiffSummarize()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(false);
+        DiffSummaries summaries = new DiffSummaries();
+        // Perform a recursive diff summary, ignoring ancestry.
+        client.diffSummarize(thisTest.getUrl(), new Revision.Number(0),
+                             thisTest.getUrl(), Revision.HEAD, true, false,
+                             summaries);
+        assertExpectedDiffSummaries(summaries);
+
+        summaries.clear();
+        // Perform a recursive diff summary with a peg revision,
+        // ignoring ancestry.
+        client.diffSummarize(thisTest.getUrl(), Revision.HEAD,
+                             new Revision.Number(0), Revision.HEAD,
+                             true, false, summaries);
+        assertExpectedDiffSummaries(summaries);
+    }
+
+    private void assertExpectedDiffSummaries(DiffSummaries summaries)
+    {
+        assertEquals("Wrong number of diff summary descriptors", 20,
+                     summaries.size());
+
+        // Rigorously inspect one of our DiffSummary notifications.
+        final String BETA_PATH = "A/B/E/beta";
+        DiffSummary betaDiff = (DiffSummary) summaries.get(BETA_PATH);
+        assertNotNull("No diff summary for " + BETA_PATH, betaDiff);
+        assertEquals("Incorrect path for " + BETA_PATH, BETA_PATH,
+                     betaDiff.getPath());
+        assertTrue("Incorrect diff kind for " + BETA_PATH,
+                   DiffSummary.DiffKind.ADDED.equals(betaDiff.getDiffKind()));
+        assertEquals("Incorrect props changed notice for " + BETA_PATH,
+                     false, betaDiff.propsChanged());
+        assertEquals("Incorrect node kind for " + BETA_PATH, 1,
+                     betaDiff.getNodeKind());
+    }
+
     /**
      * test the basic SVNClient.isAdminDirectory functionality
      * @throws Throwable
@@ -1903,6 +2020,7 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision number from update",
                 client.update(thisTest.getWCPath(), null, true), 1);
     }
+
     public void testBasicCancelOperation() throws Throwable
     {
         // build the test setup
@@ -1930,6 +2048,204 @@ public class BasicTests extends SVNTests
         catch (ClientException e)
         {
             // this is expected
+        }
+    }
+
+    public void testDataTransferProgressReport() throws Throwable
+    {
+        // ### FIXME: This isn't working over ra_local, because
+        // ### ra_local is not invoking the progress callback.
+        if (SVNTests.rootUrl.startsWith("file://"))
+            return;
+
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        ProgressListener listener = new ProgressListener()
+        {
+            public void onProgress(ProgressEvent event)
+            {
+                // TODO: Examine the byte counts from "event".
+                throw new RuntimeException("Progress reported as expected");
+            }
+        };
+        client.setProgressListener(listener);
+
+        // Perform an update to exercise the progress notification.
+        try
+        {
+            client.update(thisTest.getWCPath(), null, true);
+            fail("No progress reported");
+        }
+        catch (RuntimeException progressReported)
+        {
+        }
+    }
+
+    /**
+     * Test tolerance of unversioned obstructions when adding paths with
+     * {@link org.tigris.subversion.javahl.SVNClient#checkout()},
+     * {@link org.tigris.subversion.javahl.SVNClient#update()}, and
+     * {@link org.tigris.subversion.javahl.SVNClient#doSwitch()}
+     * @throws IOException
+     * @throws SubversionException
+     */
+    public void testObstructionTolerance()
+            throws SubversionException, IOException
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+
+        File file;
+        PrintWriter pw;
+
+        // ----- TEST CHECKOUT -----
+        // Use export to make unversioned obstructions for a second
+        // WC checkout (deleting export target from previous tests
+        // first if it exists).
+        String secondWC = thisTest.getWCPath() + ".backup1";
+        removeDirOrFile(new File(secondWC));
+        client.doExport(thisTest.getUrl(), secondWC, null, false);
+
+        // Make an obstructing file that conflicts with add coming from repos
+        file = new File(secondWC, "A/B/lambda");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is the conflicting obstructiong file 'lambda'.");
+        pw.close();
+
+        // Attempt to checkout backup WC without "--force"...
+        try
+        {
+            // ...should fail
+            client.checkout(thisTest.getUrl(), secondWC, null, null, true,
+                            false, false);
+            fail("obstructed checkout should fail by default");
+        }
+        catch (ClientException expected)
+        {
+        }
+
+        // Attempt to checkout backup WC with "--force"
+        // so obstructions are tolerated
+        client.checkout(thisTest.getUrl(), secondWC, null, null, true,
+                        false, true);
+
+        // Check the WC status, the only status should be a text
+        // mod to lambda.  All the other obstructing files were identical
+        Status[] secondWCStatus = client.status(secondWC, true, false,
+                                                false, false, false);
+        if (!(secondWCStatus.length == 1 &&
+            secondWCStatus[0].getPath().endsWith("A/B/lambda") &&
+            secondWCStatus[0].getTextStatus() == StatusKind.modified &&
+            secondWCStatus[0].getPropStatus() == StatusKind.none))
+        {
+            fail("Unexpected WC status after co with unversioned obstructions");
+        }
+
+        // Make a third WC to test obstruction tolerance of sw and up.
+        OneTest backupTest = thisTest.copy(".backup2");
+
+        // ----- TEST UPDATE -----
+        // r2: Add a file A/D/H/nu
+        file = new File(thisTest.getWorkingCopy(), "A/D/H/nu");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is the file 'nu'.");
+        pw.close();
+        client.add(file.getAbsolutePath(), false);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/H/nu", NodeKind.file,
+                              CommitItemStateFlags.TextMods +
+                              CommitItemStateFlags.Add);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] {thisTest.getWCPath()},
+                     "log msg", true), 2);
+        thisTest.getWc().addItem("A/D/H/nu", "This is the file 'nu'.");
+        Status status = client.singleStatus(thisTest.getWCPath() +
+                                            "/A/D/H/nu",
+                                            false);
+
+        // Add an unversioned file A/D/H/nu to the backup WC
+        file = new File(backupTest.getWorkingCopy(), "A/D/H/nu");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is the file 'nu'.");
+        pw.close();
+
+        // Attempt to update backup WC without "--force"
+        try
+        {
+            // obstructed update should fail
+            client.update(backupTest.getWCPath(), null, true);
+            fail("obstructed update should fail by default");
+        }
+        catch (ClientException expected)
+        {
+        }
+
+        // Attempt to update backup WC with "--force"
+        assertEquals("wrong revision from update", 
+                     client.update(backupTest.getWCPath(),
+                                   null, true, false, true), 2);
+
+        // ----- TEST SWITCH -----
+        // Add an unversioned file A/B/E/nu to the backup WC
+        // The file differs from A/D/H/nu
+        file = new File(backupTest.getWorkingCopy(), "A/B/E/nu");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is yet another file 'nu'.");
+        pw.close();
+
+        // Add an unversioned file A/B/E/chi to the backup WC
+        // The file is identical to A/D/H/chi.
+        file = new File(backupTest.getWorkingCopy(), "A/B/E/chi");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is the file 'chi'.");
+        pw.close();
+
+        // Attempt to switch A/B/E to A/D/H without "--force"
+        try
+        {
+            // obstructed switch should fail
+            client.doSwitch(backupTest.getWCPath() + "/A/B/E",
+                                backupTest.getUrl() + "/A/D/H",
+                            null, true);
+            fail("obstructed switch should fail by default");
+        }
+        catch (ClientException expected)
+        {
+        }
+
+        // Complete the switch using "--force" and check the status
+        client.doSwitch(backupTest.getWCPath() + "/A/B/E",
+                backupTest.getUrl() + "/A/D/H",
+                null, true, true);
+
+        backupTest.getWc().setItemIsSwitched("A/B/E",true);
+        backupTest.getWc().removeItem("A/B/E/alpha");
+        backupTest.getWc().removeItem("A/B/E/beta");
+        backupTest.getWc().addItem("A/B/E/nu",
+                                   "This is yet another file 'nu'.");
+        backupTest.getWc().setItemTextStatus("A/B/E/nu", Status.Kind.modified);
+        backupTest.getWc().addItem("A/D/H/nu",
+                                   "This is the file 'nu'.");
+        backupTest.getWc().addItem("A/B/E/chi",
+                                   backupTest.getWc().getItemContent("A/D/H/chi"));
+        backupTest.getWc().addItem("A/B/E/psi",
+                                   backupTest.getWc().getItemContent("A/D/H/psi"));
+        backupTest.getWc().addItem("A/B/E/omega",
+                                   backupTest.getWc().getItemContent("A/D/H/omega"));
+
+        backupTest.checkStatus();
+    }
+
+    /**
+     * A DiffSummaryReceiver implementation which collects all
+     * DiffSummary notifications.
+     */
+    private static class DiffSummaries extends HashMap
+        implements DiffSummaryReceiver
+    {
+        public void onSummary(DiffSummary descriptor)
+        {
+            super.put(descriptor.getPath(), descriptor);
         }
     }
 }

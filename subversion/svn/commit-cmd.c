@@ -89,12 +89,13 @@ svn_cl__commit(apr_getopt_t *os,
      to store the temp file, instead of the current working directory.  The 
      client might not have write access to their working directory, but they 
      better have write access to the directory they're committing.  */
-  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton2),
+  SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3),
                                      opt_state, base_dir, 
                                      ctx->config, pool));
 
   /* Commit. */
   SVN_ERR(svn_cl__cleanup_log_msg
+<<<<<<< .working
           (ctx->log_msg_baton2,
            svn_client_commit4(&commit_info,
                               targets,
@@ -104,6 +105,17 @@ svn_cl__commit(apr_getopt_t *os,
                               opt_state->changelist,
                               ctx,
                               pool)));
+=======
+          (ctx->log_msg_baton3, svn_client_commit4(&commit_info,
+                                                   targets,
+                                                   opt_state->nonrecursive
+                                                   ? FALSE : TRUE,
+                                                   no_unlock,
+                                                   opt_state->keep_changelist,
+                                                   opt_state->changelist,
+                                                   ctx,
+                                                   pool)));
+>>>>>>> .merge-right.r23006
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 

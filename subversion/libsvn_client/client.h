@@ -2,7 +2,7 @@
  * client.h :  shared stuff internal to the client library.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -85,6 +85,24 @@ svn_client__compare_revisions(svn_opt_revision_t *revision1,
  */ 
 svn_boolean_t 
 svn_client__revision_is_local(const svn_opt_revision_t *revision);
+
+
+/* Resolve peg revisions and operational revisions in the following way:
+    * A URL pegrev defaults to HEAD, unless specified.
+    * A wc-path pegrev defaults to BASE, unless specified.
+    * Operational revs default to pegrev, unless specified.
+    
+    Both PEG_REV and OP_REV may be modified as a result of this function.
+    IS_URL should be TRUE if the path the revisions refer to is a url,
+    FALSE otherwise.
+    
+    If NOTICE_LOCAL_MODS is set, the WORKING is used, instead of BASE.
+  */
+svn_error_t *
+svn_client__resolve_revisions(svn_opt_revision_t *peg_rev,
+                              svn_opt_revision_t *op_rev,
+                              svn_boolean_t is_url,
+                              svn_boolean_t notice_local_mods);
 
 
 /* Given the CHANGED_PATHS and REVISION from an instance of a
@@ -188,6 +206,10 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 /*** RA callbacks ***/
 
 
+/* CTX is of type "svn_client_ctx_t *". */
+#define SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx) \
+        ((ctx)->log_msg_func3 || (ctx)->log_msg_func2 || (ctx)->log_msg_func)
+
 /* This is the baton that we pass to RA->open(), and is associated with
    the callback table we provide to RA. */
 typedef struct
@@ -202,7 +224,7 @@ typedef struct
      outside the working copy. */
   svn_boolean_t read_only_wc;
 
-  /* An array of svn_client_commit_item2_t * structures, present only
+  /* An array of svn_client_commit_item3_t * structures, present only
      during working copy commits. */
   apr_array_header_t *commit_items;
 
@@ -304,7 +326,12 @@ svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
 
 /* The main logic for client deletion from a working copy. Deletes PATH
    from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
-   modified the delete will fail and return an error unless FORCE is TRUE.
+   modified the delete will fail and return an error unless FORCE or KEEP_LOCAL
+   is TRUE.
+
+   If KEEP_LOCAL is TRUE then PATH is only scheduled from deletion from the
+   repository and a local copy of PATH will be kept in the working copy.
+
    If DRY_RUN is TRUE all the checks are made to ensure that the delete can
    occur, but the working copy is not modified.  If NOTIFY_FUNC is not
    null, it is called with NOTIFY_BATON for each file or directory deleted. */
@@ -312,6 +339,7 @@ svn_error_t * svn_client__wc_delete(const char *path,
                                     svn_wc_adm_access_t *adm_access,
                                     svn_boolean_t force,
                                     svn_boolean_t dry_run,
+                                    svn_boolean_t keep_local,
                                     svn_wc_notify_func2_t notify_func,
                                     void *notify_baton,
                                     svn_client_ctx_t *ctx,
@@ -487,6 +515,56 @@ svn_client__get_diff_summarize_editor(const char *target,
 
 /* ---------------------------------------------------------------- */
 
+/*** Copy Stuff ***/
+
+/* This structure is used to associate a specific copy or move SRC with a
+   specific copy or move destination.  It also contains information which
+   various helper functions may need.  Not every copy function uses every
+   field.
+*/
+typedef struct
+{
+    /* The source path or url. */
+    const char *src;
+
+    /* The source path relative to the wc root */
+    const char *src_rel;
+
+    /* The absolute path of the source. */
+    const char *src_abs;
+
+    /* The base name of the object.  It should be the same for both src
+       and dst. */
+    const char *base_name;
+
+    /* The node kind of the source */
+    svn_node_kind_t src_kind;
+
+    /* The original source name.  (Used when the source gets overwritten by a
+       peg revision lookup.) */
+    const char *src_original;
+
+    /* The source operational revision. */
+    svn_opt_revision_t src_op_revision;
+
+    /* The source peg revision. */
+    svn_opt_revision_t src_peg_revision;
+
+    /* The source revision number. */
+    svn_revnum_t src_revnum;
+
+    /* The destination path or url */
+    const char *dst;
+
+    /* The destination path relative to the repository root */
+    const char *dst_rel;
+
+    /* The destination's parent path */
+    const char *dst_parent;
+} svn_client__copy_pair_t;
+
+/* ---------------------------------------------------------------- */
+
 /*** Commit Stuff ***/
 
 /* WARNING: This is all new, untested, un-peer-reviewed conceptual
@@ -600,20 +678,19 @@ svn_client__harvest_committables(apr_hash_t **committables,
                                  apr_pool_t *pool);
 
 
-/* Recursively crawl the working copy path TARGET, harvesting
+/* Recursively crawl each working copy path SRC in COPY_PAIRS, harvesting
    commit_items into a COMMITABLES hash (see the docstring for
    svn_client__harvest_committables for what that really means, and
    for the relevance of LOCKED_DIRS) as if every entry at or below
-   TARGET was to be committed as a set of adds (mostly with history)
-   to a new repository URL (NEW_URL).
+   the SRC was to be committed as a set of adds (mostly with history)
+   to a new repository URL (DST in COPY_PAIRS).
 
    If CTX->CANCEL_FUNC is non-null, it will be called with 
    CTX->CANCEL_BATON while harvesting to determine if the client has 
    cancelled the operation.  */
 svn_error_t *
 svn_client__get_copy_committables(apr_hash_t **committables,
-                                  const char *new_url,
-                                  const char *target,
+                                  const apr_array_header_t *copy_pairs,
                                   svn_wc_adm_access_t *adm_access,
                                   svn_client_ctx_t *ctx,
                                   apr_pool_t *pool);
@@ -736,14 +813,16 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
 
 
 
-/* Retrieves log message using *CTX->log_msg_func or
- * *CTX->log_msg_func2 callbacks.
- * Other arguments same as svn_client_get_commit_log2_t. */
-svn_error_t * svn_client__get_log_msg(const char **log_msg,
-                                      const char **tmp_file,
-                                      const apr_array_header_t *commit_items,
-                                      svn_client_ctx_t *ctx,
-                                      apr_pool_t *pool);
+/* Retrieve log messages using the first provided (non-NULL) callback
+   in the set of *CTX->log_msg_func3, CTX->log_msg_func2, or
+   CTX->log_msg_func.  Other arguments same as
+   svn_client_get_commit_log3_t. */
+svn_error_t *
+svn_client__get_log_msg(const char **log_msg,
+                        const char **tmp_file,
+                        const apr_array_header_t *commit_items,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

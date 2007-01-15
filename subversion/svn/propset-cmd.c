@@ -57,7 +57,7 @@ svn_cl__propset(apr_getopt_t *os,
      version of the name, too. */
   SVN_ERR(svn_opt_parse_num_args(&args, os,
                                  opt_state->filedata ? 1 : 2, pool));
-  pname = ((const char **) (args->elts))[0];
+  pname = APR_ARRAY_IDX(args, 0, const char *);
   SVN_ERR(svn_utf_cstring_to_utf8(&pname_utf8, pname, pool));
 
   /* Get the PROPVAL from either an external file, or from the command
@@ -69,7 +69,7 @@ svn_cl__propset(apr_getopt_t *os,
     }
   else
     {
-      propval = svn_string_create(((const char **) (args->elts))[1], pool);
+      propval = svn_string_create(APR_ARRAY_IDX(args, 1, const char *), pool);
       propval_came_from_cmdline = TRUE;
     }
   
@@ -164,7 +164,7 @@ svn_cl__propset(apr_getopt_t *os,
 
       for (i = 0; i < targets->nelts; i++)
         {
-          const char *target = ((const char **) (targets->elts))[i];
+          const char *target = APR_ARRAY_IDX(targets, i, const char *);
           svn_boolean_t success;
 
           svn_pool_clear(subpool);

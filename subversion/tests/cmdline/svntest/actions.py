@@ -15,7 +15,7 @@
 #
 ######################################################################
 
-import os, shutil, string, re, sys, errno
+import os, shutil, re, sys, errno
 
 import main, tree, wc  # general svntest routines in this module.
 from svntest import Failure, SVNAnyOutput
@@ -69,9 +69,7 @@ def setup_pristine_repository():
     # if this is dav, gives us access rights to import the greek tree.
     if main.is_ra_type_dav():
       authz_file = os.path.join(main.work_dir, "authz")
-      fp = open(authz_file, "w")
-      fp.write("[/]\n* = rw\n")
-      fp.close()
+      main.file_write(authz_file, "[/]\n* = rw\n")
 
     # dump the greek tree to disk.
     main.greek_state.write_to_disk(main.greek_dump_dir)
@@ -92,7 +90,7 @@ def setup_pristine_repository():
       sys.exit(1)
 
     # verify the printed output of 'svn import'.
-    lastline = string.strip(output.pop())
+    lastline = output.pop().strip()
     cm = re.compile ("(Committed|Imported) revision [0-9]+.")
     match = cm.search (lastline)
     if not match:
@@ -204,7 +202,8 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
       match_or_fail(message, output_type.upper(), expected, actual)
     elif expected == SVNAnyOutput:
       if len(actual) == 0:
-        if message is not None: print message
+        if message is not None:
+          print message
         raise raisable
     elif expected is not None:
       raise SVNIncorrectDatatype("Unexpected type for %s data" % output_type)
@@ -681,7 +680,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   # Remove the final output line, and verify that the commit succeeded.
   lastline = ""
   if len(output):
-    lastline = string.strip(output.pop())
+    lastline = output.pop().strip()
 
     cm = re.compile("(Committed|Imported) revision [0-9]+.")
     match = cm.search(lastline)
@@ -892,7 +891,8 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None):
     map(sys.stdout.write, actual)
 
 def compare_and_display_lines(message, label, expected, actual):
-  'Compare two sets of output lines, and print them if they differ.'
+  """Compare two sets of output lines, and print them if they differ.
+  MESSAGE is ignored if None."""
   # This catches the None vs. [] cases
   if expected is None: exp = []
   else: exp = expected

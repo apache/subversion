@@ -59,7 +59,7 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
 
   /* (The docs say the target must be either a URL or implicit '.', but
      explicit WC targets are also accepted.) */
-  target = ((const char **) (targets->elts))[0];
+  target = APR_ARRAY_IDX(targets, 0, const char *);
   SVN_ERR(svn_client_url_from_path(URL, target, pool));  
   if (*URL == NULL)
     return svn_error_create

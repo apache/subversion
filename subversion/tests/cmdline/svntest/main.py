@@ -5,7 +5,7 @@
 #  See http://subversion.tigris.org for more information.
 #
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -20,7 +20,6 @@ import os      # for popen2()
 import shutil  # for rmtree()
 import re
 import stat    # for ST_MODE
-import string  # for atof()
 import copy    # for deepcopy()
 import time    # for time()
 import traceback # for print_exc()
@@ -137,7 +136,7 @@ enable_sasl = 0
 # Global URL to testing area.  Default to ra_local, current working dir.
 test_area_url = file_scheme_prefix + os.path.abspath(os.getcwd())
 if windows == 1:
-  test_area_url = string.replace(test_area_url, '\\', '/')
+  test_area_url = test_area_url.replace('\\', '/')
 
 # Global variable indicating the FS type for repository creations.
 fs_type = None
@@ -292,6 +291,8 @@ def run_command_stdin(command, error_expected, binary_mode=0,
     exit_signal = wait_code % 256
 
     if exit_signal != 0:
+      sys.stdout.write("".join(stdout_lines))
+      sys.stderr.write("".join(stderr_lines))
       raise SVNProcessTerminatedBySignal
 
   if verbose_mode:
@@ -317,13 +318,8 @@ def create_config_dir(cfgdir,
   if not os.path.isdir(cfgdir):
     os.makedirs(cfgdir)
 
-  fd = open(cfgfile_cfg, 'w')
-  fd.write(config_contents)
-  fd.close()
-
-  fd = open(cfgfile_srv, 'w')
-  fd.write(server_contents)
-  fd.close()
+  file_write(cfgfile_cfg, config_contents)
+  file_write(cfgfile_srv, server_contents)
 
 
 # For running subversion and returning the output
@@ -393,25 +389,19 @@ def safe_rmtree(dirname, retry=0):
 # For making local mods to files
 def file_append(path, new_text):
   "Append NEW_TEXT to file at PATH"
-
-  fp = open(path, 'a')  # open in (a)ppend mode
-  fp.write(new_text)
-  fp.close()
+  file_write(path, new_text, 'a')  # open in (a)ppend mode
 
 # Append in binary mode
 def file_append_binary(path, new_text):
   "Append NEW_TEXT to file at PATH in binary mode"
-
-  fp = open(path, 'ab')  # open in (a)ppend mode
-  fp.write(new_text)
-  fp.close()
-
-# For making local mods to files
-def file_write(path, new_text):
-  "Replace contents of file at PATH with NEW_TEXT"
-
-  fp = open(path, 'w')  # open in (w)rite mode
-  fp.write(new_text)
+  file_write(path, new_text, 'ab')  # open in (a)ppend mode
+  
+# For creating new files, and making local mods to existing files.
+def file_write(path, contents, mode = 'w'):
+  """Write the CONTENTS to the file at PATH, opening file using MODE,
+  which is (w)rite by default."""
+  fp = open(path, mode)
+  fp.write(contents)
   fp.close()
 
 # For creating blank new repositories
@@ -546,6 +536,8 @@ def compare_unordered_output(expected, actual):
      order of the lines"""
   if len(actual) != len(expected):
     raise Failure("Length of expected output not equal to actual length")
+
+  expected = list(expected)
   for aline in actual:
     try:
       i = expected.index(aline)
@@ -599,9 +591,7 @@ class Sandbox:
       if not os.path.exists(work_dir):
         os.makedirs(work_dir)
       self.authz_file = os.path.join(work_dir, "authz")
-      fp = open(self.authz_file, "w")
-      fp.write("[/]\n* = rw\n")
-      fp.close()
+      file_write(self.authz_file, "[/]\n* = rw\n")
 
     # For svnserve tests we have a per-repository authz file, and it
     # doesn't need to be there in order for things to work, so we don't
@@ -610,7 +600,7 @@ class Sandbox:
       self.authz_file = os.path.join(self.repo_dir, "conf", "authz")
 
     if windows == 1:
-      self.repo_url = string.replace(self.repo_url, '\\', '/')
+      self.repo_url = self.repo_url.replace('\\', '/')
     self.test_paths = [self.wc_dir, self.repo_dir]
 
   def clone_dependent(self):
@@ -706,10 +696,10 @@ class TestRunner:
     if self.pred.need_sandbox():
       # ooh! this function takes a sandbox argument
       sandbox = Sandbox(self.pred.get_sandbox_name(), self.index)
-      args = (sandbox,)
+      kw = { 'sandbox' : sandbox }
     else:
       sandbox = None
-      args = ()
+      kw = {}
 
     # Explicitly set this so that commands that commit but don't supply a
     # log message will fail rather than invoke an editor.
@@ -718,7 +708,7 @@ class TestRunner:
     os.environ['SVNTEST_EDITOR_FUNC'] = ''
 
     try:
-      rc = self.pred.run(args)
+      rc = apply(self.pred.run, (), kw)
       if rc is not None:
         print 'STYLE ERROR in',
         self._print_name()
@@ -795,18 +785,29 @@ def _internal_run_tests(test_list, testnums):
   return exit_code
 
 
+def usage():
+  prog_name = os.path.basename(sys.argv[0])
+  print "%s [--url] [--fs-type] [--verbose] [--enable-sasl] [--cleanup] \\" \
+        % prog_name
+  print "%s [<test> ...]" % (" " * len(prog_name))
+  print "%s [--list] [<test> ...]\n" % prog_name
+  print "Arguments:"
+  print " test          The number of the test to run (multiple okay), " \
+        "or all tests\n"
+  print "Options:"
+  print " --list        Print test doc strings instead of running them"
+  print " --fs-type     Subversion file system type (fsfs or bdb)"
+  print " --url         Base url to the repos (e.g. svn://localhost)"
+  print " --verbose     Print binary command-lines"
+  print " --cleanup     Whether to clean up"
+  print " --enable-sasl Whether to enable SASL authentication"
+  print " --help        This information"
+
+
 # Main func.  This is the "entry point" that all the test scripts call
 # to run their list of tests.
 #
-# This routine parses sys.argv to decide what to do.  Basic usage:
-#
-# test-script.py [--list] [<testnum>]...
-#
-# --list : Option to print the docstrings for the chosen tests
-# instead of running them.
-#
-# [<testnum>]... : the numbers of the tests that should be run.  If no
-# testnums are specified, then all tests in TEST_LIST are run.
+# This routine parses sys.argv to decide what to do.
 def run_tests(test_list):
   """Main routine to run all tests in TEST_LIST.
 
@@ -824,9 +825,9 @@ def run_tests(test_list):
   # Should the tests be listed (as opposed to executed)?
   list_tests = 0
 
-  opts, args = my_getopt(sys.argv[1:], 'v',
+  opts, args = my_getopt(sys.argv[1:], 'vh',
                          ['url=', 'fs-type=', 'verbose', 'cleanup', 'list',
-                          'enable-sasl'])
+                          'enable-sasl', 'help'])
 
   for arg in args:
     if arg == "list":
@@ -835,7 +836,12 @@ def run_tests(test_list):
     elif arg.startswith('BASE_URL='):
       test_area_url = arg[9:]
     else:
-      testnums.append(int(arg))
+      try:
+        testnums.append(int(arg))
+      except ValueError:
+        print "ERROR:  invalid test number '%s'\n" % arg
+        usage()
+        sys.exit(1)
 
   for opt, val in opts:
     if opt == "--url":
@@ -856,13 +862,17 @@ def run_tests(test_list):
     elif opt == "--enable-sasl":
       enable_sasl = 1
 
+    elif opt == "-h" or opt == "--help":
+      usage()
+      sys.exit(0)
+
   if test_area_url[-1:] == '/': # Normalize url to have no trailing slash
     test_area_url = test_area_url[:-1]
 
   # Calculate pristine_url from test_area_url.
   pristine_url = test_area_url + '/' + pristine_dir
   if windows == 1:
-    pristine_url = string.replace(pristine_url, '\\', '/')  
+    pristine_url = pristine_url.replace('\\', '/')  
   
   # Setup the pristine repository (and working copy)
   actions.setup_pristine_repository()

@@ -706,32 +706,10 @@ typedef enum svn_wc_notify_lock_state_t {
 /**
  * Structure used in the @c svn_wc_notify_func2_t function.
  *
- * @c path is either absolute or relative to the current working directory
- * (i.e., not relative to an anchor).  @c action describes what happened
- * to @c path.
- *
  * @c kind, @c content_state, @c prop_state and @c lock_state are from
- * after @c action, not before.  @c lock_state reflects the addition
- * or removal of a lock token in the working copy.
+ * after @c action, not before.
  *
- * If @c mime_type is non-null, it indicates the mime-type of @c path.
- * It is always @c NULL for directories.
- *
- * If @c action is @c svn_wc_notify_update_completed, @c revision is the
- * target revision of the update, or @c SVN_INVALID_REVNUM if not
- * available.  If @c action is @c svn_wc_notify_blame_revision, @c
- * revision is the processed revision.  In all other cases, @c
- * revision is @c SVN_INVALID_REVNUM.
- *
- * For an @c action of svn_wc_notify_locked, @c lock is the lock
- * structure received from the repository.  For other actions, it is
- * @c NULL.
- *
- * @c err is @c NULL, except when @c action is @c
- * svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock, in
- * which case it points to an error describing the reason for the failure.
- *
- * Note that if @c action is @c svn_wc_notify_update, then @c path has 
+ * @note If @c action is @c svn_wc_notify_update, then @c path has 
  * already been installed, so it is legitimate for an implementation of
  * @c svn_wc_notify_func2_t to examine @c path in the working copy.
  *
@@ -751,15 +729,34 @@ typedef enum svn_wc_notify_lock_state_t {
  * @since New in 1.2.
  */
 typedef struct svn_wc_notify_t {
+  /** Path, either absolute or relative to the current working directory
+   * (i.e., not relative to an anchor). */
   const char *path;
+  /** Action that describes what happened to @c path. */
   svn_wc_notify_action_t action;
+  /** Node kind of @c path. */
   svn_node_kind_t kind;
+  /** If non-null, indicates the mime-type of @c path.
+   * It is always @c NULL for directories. */
   const char *mime_type;
+  /** Points to the lock structure received from the repository when
+   * @c action is @c svn_wc_notify_locked.  For other actions, it is
+   * @c NULL. */
   const svn_lock_t *lock;
+  /** Points to an error describing the reason for the failure when @c
+   * action is @c svn_wc_notify_failed_lock or @c svn_wc_notify_failed_unlock.
+   * Is @c NULL otherwise. */
   svn_error_t *err;
+  /** The type of notification that is occurring about node content. */
   svn_wc_notify_state_t content_state;
+  /** The type of notification that is occurring about node properties. */
   svn_wc_notify_state_t prop_state;
+  /** Reflects the addition or removal of a lock token in the working copy. */
   svn_wc_notify_lock_state_t lock_state;
+  /** When @c action is @c svn_wc_notify_update_completed, target revision
+   * of the update, or @c SVN_INVALID_REVNUM if not available; when @c
+   * action is @c svn_wc_notify_blame_revision, processed revision.
+   * In all other cases, it is @c SVN_INVALID_REVNUM. */
   svn_revnum_t revision;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
@@ -1328,6 +1325,7 @@ typedef struct svn_wc_entry_t
    */
   const char *changelist;
 
+<<<<<<< .working
   /** The depth of this entry.
    *
    * ### It's a bit annoying that we only use this on this_dir
@@ -1342,6 +1340,17 @@ typedef struct svn_wc_entry_t
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup()
      and alloc_entry() in libsvn_wc/entries.c, to see if you need to
      extend one or both of them as well. */
+=======
+  /** Whether a local copy of this entry should be kept in the working copy
+   * after a deletion has been committed,  Only valid for the this-dir entry
+   * when it is scheduled for deletion.
+   *
+   * @since New in 1.5. */
+  svn_boolean_t keep_local;
+
+  /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
+     if you need to extend that as well. */
+>>>>>>> .merge-right.r23006
 } svn_wc_entry_t;
 
 
@@ -1665,6 +1674,7 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
  * This indicates an item that is not versioned in the working copy.
  */
 
+/** The type of status for the working copy. */
 enum svn_wc_status_kind
 {
     /** does not exist */
@@ -2096,11 +2106,14 @@ svn_error_t *svn_wc_copy(const char *src,
  * deletion will occur.  @a adm_access must hold a write lock for the parent 
  * of @a path.
  *
- * This function immediately deletes all files, modified and unmodified,
- * versioned and unversioned from the working copy. It also immediately
- * deletes unversioned directories and directories that are scheduled to be
- * added.  Only versioned directories will remain in the working copy,
- * these get deleted by the update following the commit.
+ * If @a keep_local is FALSE, this function immediately deletes all files,
+ * modified and unmodified, versioned and unversioned from the working copy.
+ * It also immediately deletes unversioned directories and directories that
+ * are scheduled to be added.  Only versioned directories will remain in the
+ * working copy, these get deleted by the update following the commit.
+ *
+ * If @a keep_local is TRUE, all files and directories will be kept in the
+ * working copy (and will become unversioned on the next commit).
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -2110,7 +2123,21 @@ svn_error_t *svn_wc_copy(const char *src,
  * the @a notify_baton and that path. The @a notify_func callback may be
  * @c NULL if notification is not needed.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_delete3(const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            svn_boolean_t keep_local,
+                            apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_delete3(), but with @a keep_local always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_delete2(const char *path,
                             svn_wc_adm_access_t *adm_access,
@@ -2407,7 +2434,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * be @c NULL to signal that initialization is required.
  *
  * All pointer data passed to this function
- * (@a path, @adm_access, @a wcprop_changes
+ * (@a path, @a adm_access, @a wcprop_changes
  * and @a digest) should remain valid until the queue has been
  * processed by svn_wc_process_committed_queue().
  *
@@ -2991,7 +3018,7 @@ typedef svn_error_t *(*svn_wc_canonicalize_svn_prop_get_file_t)
 
 
 /** Canonicalize the value of an svn:* property @a propname with
- * value @propval.
+ * value @a propval.
  *
  * If the property is not appropriate for a node of kind @a kind, or
  * is otherwise invalid, throw an error.  Otherwise, set @a *propval_p
@@ -3633,6 +3660,31 @@ svn_error_t *svn_wc_translated_file(const char **xlated_p,
                                     svn_wc_adm_access_t *adm_access,
                                     svn_boolean_t force_repair,
                                     apr_pool_t *pool);
+
+
+/** Returns a @a stream allocated in @a pool with access to the given
+ * @a path taking the file properties from @a versioned_file using
+ * @a adm_access.
+ *
+ * When translation from normal form is requested
+ * (@c SVN_WC_TRANSLATE_FROM_NF is specified in @a flags), @a path
+ * is used as target path and stream read operations are not supported.
+ * Conversely, if translation to normal form is requested
+ * (@c SVN_WC_TRANSLATE_TO_NF is specified in @a flags), @a path is
+ * used as source path and stream write operations are not supported.
+ *
+ * The @a flags are the same constants as those used for
+ * svn_wc_translated_file().
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_translated_stream(svn_stream_t **stream,
+                         const char *path,
+                         const char *versioned_file,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_uint32_t flags,
+                         apr_pool_t *pool);
 
 
 /* Text/Prop Deltas Using an Editor */

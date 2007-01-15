@@ -3,7 +3,7 @@ package org.tigris.subversion.javahl;
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -224,6 +224,23 @@ public interface SVNClientInterface
      * @param pegRevision the peg revision to interpret the path
      * @param recurse whether you want it to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    long checkout(String moduleName, String destPath, Revision revision,
+                  Revision pegRevision, boolean recurse,
+                  boolean ignoreExternals,
+                  boolean allowUnverObstructions) throws ClientException;
+
+    /**
+     * Executes a revision checkout.
+     * @param moduleName name of the module to checkout.
+     * @param destPath destination directory for checkout.
+     * @param revision the revision to checkout.
+     * @param pegRevision the peg revision to interpret the path
+     * @param recurse whether you want it to checkout files recursively.
+     * @param ignoreExternals if externals are ignored during checkout
      * @exception ClientException
      * @since 1.2
      */
@@ -260,6 +277,14 @@ public interface SVNClientInterface
      * @since 1.2
      */
     void notification2(Notify2 notify);
+
+    /**
+     * Set the progress callback.
+     *
+     * @param listener The progress callback.
+     * @since 1.5
+     */
+    void setProgressListener(ProgressListener listener);
 
     /**
      * Sets the commit message handler. This allows more complex commit message
@@ -334,6 +359,38 @@ public interface SVNClientInterface
                   boolean ignoreExternals) throws ClientException;
 
     /**
+     * Updates the directory or file from repository
+     * @param path target file.
+     * @param revision the revision number to update.
+     *                 Revision.HEAD will update to the
+     *                 latest revision.
+     * @param recurse recursively update.
+     * @param ignoreExternals if externals are ignored during update
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    long update(String path, Revision revision, boolean recurse,
+                boolean ignoreExternals, boolean allowUnverObstructions)
+            throws ClientException;
+
+    /**
+     * Updates the directories or files from repository
+     * @param path array of target files.
+     * @param revision the revision number to update.
+     *                 Revision.HEAD will update to the
+     *                 latest revision.
+     * @param recurse recursively update.
+     * @param ignoreExternals if externals are ignored during update
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    long[] update(String[] path, Revision revision, boolean recurse,
+                  boolean ignoreExternals,
+                  boolean allowUnverObstructions) throws ClientException;
+
+    /**
      * Commits changes to the repository.
      * @param path      files to commit.
      * @param message   log message.
@@ -359,7 +416,25 @@ public interface SVNClientInterface
                 boolean noUnlock) throws ClientException;
 
     /**
-     * Copies a versioned file with the history preserved.
+     * Copy versioned paths with the history preserved.
+     *
+     * @param sources A list of <code>CopySource</code> objects.
+     * @param destPath Destination path or URL.
+     * @param message Commit message.  May be <code>null</code> if
+     * <code>destPath</code> is not a URL.
+     * @param copyAsChild Whether to copy <code>srcPaths</code> as
+     * children of <code>destPath</code>.
+     * @exception ClientException If the copy operation fails.
+     * @since 1.5
+     */
+    void copy(CopySource[] sources, String destPath, String message,
+              boolean copyAsChild)
+        throws ClientException;
+
+    /**
+     * Copy versioned paths with the history preserved (with
+     * <code>copyAsChild</code> behavior).
+     *
      * @param srcPath   source path or url
      * @param destPath  destination path or url
      * @param message   commit message if destPath is an url
@@ -370,19 +445,36 @@ public interface SVNClientInterface
               Revision revision) throws ClientException;
 
     /**
-     * Moves or renames a file.
-     * @param srcPath   source path or url
-     * @param destPath  destination path or url
-     * @param message   commit message if destPath is an url
-     * @param revision  source revision (unused)
-     * @param force     even with local modifications.
-     * @exception ClientException
+     * Move or rename versioned paths.
+     *
+     * @param srcPaths Source paths or URLs.
+     * @param destPath Destination path or URL.
+     * @param message Commit message.  May be <code>null</code> if
+     * <code>destPath</code> is not a URL.
+     * @param force Whether to perform the move even if local
+     * modifications exist.
+     * @param moveAsChild Whether to move <code>srcPaths</code> as
+     * children of <code>destPath</code>.
+     * @exception ClientException If the move operation fails.
+     * @since 1.5
      */
-    void move(String srcPath, String destPath, String message,
-              Revision revision, boolean force) throws ClientException;
+    void move(String[] srcPaths, String destPath, String message,
+              boolean force, boolean moveAsChild)
+        throws ClientException;
 
     /**
-     * Moves or renames a file.
+     * @deprecated Use move() without a Revision parameter.
+     * @see org.tigris.subversion.javahl.SVNClientInterface.move(String[], String, String, boolean, boolean)
+     * @since 1.2
+     */
+    void move(String srcPath, String destPath, String message,
+              Revision ignored, boolean force)
+        throws ClientException;
+
+    /**
+     * Move or rename versioned paths (with <code>moveAsChild</code>
+     * behavior).
+     *
      * @param srcPath   source path or url
      * @param destPath  destination path or url
      * @param message   commit message if destPath is an url
@@ -449,6 +541,20 @@ public interface SVNClientInterface
     long doExport(String srcPath, String destPath, Revision revision,
                   Revision pegRevision, boolean force, boolean ignoreExternals,
                   boolean recurse, String nativeEOL) throws ClientException;
+
+    /**
+     * Update local copy to mirror a new url.
+     * @param path      the working copy path
+     * @param url       the new url for the working copy
+     * @param revision  the new base revision of working copy
+     * @param recurse   traverse into subdirectories
+     * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @exception ClientException
+     * @since 1.5
+     */
+    long doSwitch(String path, String url, Revision revision, boolean recurse,
+                  boolean allowUnverObstructions)
+            throws ClientException;
 
     /**
      * Update local copy to mirror a new url.
@@ -577,6 +683,65 @@ public interface SVNClientInterface
               Revision endRevision, String outFileName, boolean recurse,
               boolean ignoreAncestry, boolean noDiffDeleted, boolean force)
             throws ClientException;
+
+    /**
+     * Produce a diff summary which lists the items changed between
+     * path and revision pairs.
+     *
+     * @param target1 Path or URL.
+     * @param revision1 Revision of <code>target1</code>.
+     * @param target2 Path or URL.
+     * @param revision2 Revision of <code>target2</code>.
+     * @param recurse Whether to recurse.
+     * @param ignoreAncestry Whether to ignore unrelated files during
+     * comparison.  False positives may potentially be reported if
+     * this parameter <code>false</code>, since a file might have been
+     * modified between two revisions, but still have the same
+     * contents.
+     * @param receiver As each is difference is found, this callback
+     * is invoked with a description of the difference.
+     *
+     * @exception ClientException
+     * @since 1.5
+     */
+    void diffSummarize(String target1, Revision revision1,
+                       String target2, Revision revision2,
+                       boolean recurse, boolean ignoreAncestry,
+                       DiffSummaryReceiver receiver)
+            throws ClientException;
+
+    /**
+     * Produce a diff summary which lists the items changed between
+     * path and revision pairs.
+     *
+     * @param target Path or URL.
+     * @param pegRevision Revision at which to interpret
+     * <code>target</code>.  If {@link RevisionKind#unspecified} or
+     * <code>null</code>, behave identically to {@link
+     * diffSummarize(String, Revision, String, Revision, boolean,
+     * boolean, DiffSummaryReceiver)}, using <code>path</code> for
+     * both of that method's targets.
+     * @param startRevision Beginning of range for comparsion of
+     * <code>target</code>.
+     * @param endRevision End of range for comparsion of
+     * <code>target</code>.
+     * @param recurse Whether to recurse.
+     * @param ignoreAncestry Whether to ignore unrelated files during
+     * comparison.  False positives may potentially be reported if
+     * this parameter <code>false</code>, since a file might have been
+     * modified between two revisions, but still have the same
+     * contents.
+     * @param receiver As each is difference is found, this callback
+     * is invoked with a description of the difference.
+     *
+     * @exception ClientException
+     * @since 1.5
+     */
+    void diffSummarize(String target, Revision pegRevision,
+                       Revision startRevision, Revision endRevision,
+                       boolean recurse, boolean ignoreAncestry,
+                       DiffSummaryReceiver receiver)
+        throws ClientException;
 
     /**
      * Retrieves the properties of an item

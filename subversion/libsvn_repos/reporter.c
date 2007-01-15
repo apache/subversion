@@ -676,7 +676,12 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
   /* If there's a source and it's not related to the target, nuke it. */
   if (s_entry && !related)
     {
-      SVN_ERR(b->editor->delete_entry(e_path, SVN_INVALID_REVNUM, dir_baton,
+      svn_revnum_t deleted_rev;
+
+      SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root), t_path,
+                                    s_rev, b->t_rev, &deleted_rev,
+                                    pool));
+      SVN_ERR(b->editor->delete_entry(e_path, deleted_rev, dir_baton,
                                       pool));
       s_path = NULL;
     }
@@ -830,11 +835,23 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
           if (apr_hash_get(t_entries, s_entry->name,
                            APR_HASH_KEY_STRING) == NULL)
             {
+              svn_revnum_t deleted_rev;
+
               /* There is no corresponding target entry, so delete. */
               e_fullpath = svn_path_join(e_path, s_entry->name, subpool);
+<<<<<<< .working
               if (s_entry->kind != svn_node_dir)
+=======
+              SVN_ERR(svn_repos_deleted_rev(svn_fs_root_fs(b->t_root),
+                                           svn_path_join(t_path,
+                                                          s_entry->name,
+                                                          subpool),
+                                            s_rev, b->t_rev,
+                                            &deleted_rev, subpool));
+              if (b->recurse || s_entry->kind != svn_node_dir)
+>>>>>>> .merge-right.r23006
                 SVN_ERR(b->editor->delete_entry(e_fullpath,
-                                                SVN_INVALID_REVNUM,
+                                                deleted_rev,
                                                 dir_baton, subpool));
             }
         }
