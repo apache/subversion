@@ -75,7 +75,7 @@ Candidate changes:
     Justification:
       Very painful to build on VS200x without this fix.
     Votes:
-      +1: djh
+      +1: djh, dlr
   
 
 Approved changes:
