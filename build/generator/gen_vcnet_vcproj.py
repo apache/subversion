@@ -118,6 +118,7 @@ class Generator(gen_win.WinGeneratorBase):
           guid = line[pos+13:pos+13+38]
           return guid
         line = proj.readline()
+      proj.close()
     except IOError:
       return None
 
