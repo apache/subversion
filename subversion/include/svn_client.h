@@ -2025,8 +2025,8 @@ svn_client_resolved(const char *path,
 
 
 /**
- * A structure which describes a copy operation--its source, source revision,
- * and peg revision.
+ * A structure which describes the source of a copy operation--its path, 
+ * revision, and peg revision.
  *
  * @since New in 1.5.
  */
