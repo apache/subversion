@@ -23,7 +23,7 @@ module Svn
     class FileSystem
 
       class << self
-        def create(path, config)
+        def create(path, config={})
           Fs.create(path, config)
         end
 
@@ -31,7 +31,7 @@ module Svn
           Fs.delete_fs(path)
         end
 
-        def open(path, config)
+        def open(path, config={})
           Fs.open(path, config)
         end
         alias new open
