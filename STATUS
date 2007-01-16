@@ -60,11 +60,11 @@ Candidate changes:
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
   * r22209
-    Fix the order in which the Javahl targets are built on Windows
+    Fix the order in which the JavaHL targets are built on Windows
     Justification: 
       Needed for a clean build of JavaHL on Windows
     Votes:
-      +1: lgo
+      +1: lgo, dlr
 
   * r23018
     Fix the ability to change file permissions (via a work-around)
