@@ -2459,7 +2459,7 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
   apr_hash_t *entries, *entries_nohidden;
   svn_boolean_t entry_was_deleted_p = FALSE;
 
-  /* ENTRY is rather necessary, and ENTRY->kind is required to be valid! */
+  /* ENTRY is rather necessary! */
   assert(entry);
 
   /* Load ADM_ACCESS's whole entries file. */
