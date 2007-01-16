@@ -6,6 +6,7 @@ http://svn.collab.net/repos/svn/tags/1.4.3
   - Client:
     * fixed: crash using automatic auth protocols with Neon 0.26 (r22440, -61)
     * fixed: svn_load_dirs.pl cannot import file names containing '@' (r22203)
+    * fixed: error when committing replaced directories (r22991, -8)
     * include newest version of svn-graph.pl (r22969)
 
   - Server:
