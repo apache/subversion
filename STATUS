@@ -59,13 +59,6 @@ Candidate changes:
       +1: malcolm, dlr, hwright
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
-  * r23004
-    Fix generation of VS200x solutions.
-    Justification:
-      Very painful to build on VS200x without this fix.
-    Votes:
-      +1: djh, dlr
-
   * r23018
     Fix the ability to change file permissions (via a work-around)
     when we don't actually have permissions to change permissions.
@@ -76,3 +69,9 @@ Candidate changes:
 
 Approved changes:
 
+  * r23004
+    Fix generation of VS200x solutions.
+    Justification:
+      Very painful to build on VS200x without this fix.
+    Votes:
+      +1: djh, dlr, lgo
