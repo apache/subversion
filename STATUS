@@ -59,17 +59,6 @@ Candidate changes:
       +1: malcolm, dlr, hwright
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
-  * r22991,-8 (code), r22608,-910,-35,-84(test)
-    Fix error in post-commit phase of commit with replaced folder 
-    (merge test 30).
-    Justification:
-      Fixes a regression introduced in 1.4.2, includes test.
-    Branch: 1.4.x-r22991
-    Votes:
-      +1: lgo, dlr
-      -1: malcolm (to apply as is: needs a backport branch - the code has
-        changed between trunk and branch).
-
   * r23004
     Fix generation of VS200x solutions.
     Justification:
@@ -83,8 +72,16 @@ Candidate changes:
     Justification:
       Fixes a regression from 1.3.2.
     Votes:
-      +1: dlr
-  
+      +1: dlr, malcolm
 
 Approved changes:
+
+  * r22991,-8 (code), r22608,-910,-35,-84(test)
+    Fix error in post-commit phase of commit with replaced folder 
+    (merge test 30).
+    Justification:
+      Fixes a regression introduced in 1.4.2, includes test.
+    Branch: 1.4.x-r22991
+    Votes:
+      +1: lgo, dlr, malcolm
 
