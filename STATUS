@@ -75,10 +75,3 @@ Candidate changes:
       +1: dlr, malcolm
 
 Approved changes:
-
-  * r23004
-    Fix generation of VS200x solutions.
-    Justification:
-      Very painful to build on VS200x without this fix.
-    Votes:
-      +1: djh, dlr, lgo
