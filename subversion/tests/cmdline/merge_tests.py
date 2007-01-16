@@ -4178,22 +4178,23 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
   # understand.
   svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
 
-  # Merge changes from rev 6 of B (to alpha) into copy_of_B.
-  expected_output = wc.State(short_copy_of_B_path, {})
+  # Merge changes from rev 3:6 of A/B into A/copy_of_B.
+  expected_output = wc.State(short_copy_of_B_path, {
+    'F/E/alpha' : Item(status='U ')
+    })
   expected_status = wc.State(short_copy_of_B_path, {
     # When we merge multiple sub-targets, we record merge info on each
-    # child.  In this particular case, as we don't have a successful
-    # merge, there's no change in the WC.
-    ''          : Item(status='  ', wc_rev=6),
-    'F/E'       : Item(status='  ', wc_rev=6),
-    'F/E/alpha' : Item(status='  ', wc_rev=6),
+    # child.  
+    ''          : Item(status=' M', wc_rev=6),
+    'F/E'       : Item(status=' M', wc_rev=6),
+    'F/E/alpha' : Item(status='M ', wc_rev=6),
     'F/E/beta'  : Item(status='  ', wc_rev=6),
     'lambda'    : Item(status='  ', wc_rev=6),
     'F'         : Item(status='  ', wc_rev=6),
     })
   expected_disk = wc.State('', {
-    ''          : Item(),
-    'F/E'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B:4-6'}),
+    ''          : Item(props={SVN_PROP_MERGE_INFO : '/A/B:4-6'}),
+    'F/E'       : Item(props={SVN_PROP_MERGE_INFO : '/A/B/F/E:4-6'}),
     'F/E/alpha' : Item(new_content_for_alpha),
     'F/E/beta'  : Item("This is the file 'beta'.\n"),
     'F'         : Item(),
@@ -4263,7 +4264,7 @@ test_list = [ None,
               merge_conflict_markers_matching_eol,
               XFail(merge_eolstyle_handling),
               avoid_repeated_merge_using_inherited_merge_info,
-              XFail(avoid_repeated_merge_on_subtree_with_merge_info),
+              avoid_repeated_merge_on_subtree_with_merge_info,
              ]
 
 if __name__ == '__main__':

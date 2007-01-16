@@ -2210,7 +2210,12 @@ grok_range_info_from_opt_revisions(svn_merge_range_t *range,
    path.  The actual two paths to compare are then found by tracing
    copy history from this peg path to INITIAL_REVISION2 and
    INITIAL_REVISION1.
-*/
+
+   CHILDREN_WITH_MERGEINFO may contain child paths with merge info
+   which differs from that of the merge target root (it may be empty,
+   but not NULL).  Because of this, we drive the diff editor in such a
+   way that it avoids merging child paths when a merge is driven for
+   their parent path. */
 static svn_error_t *
 do_merge(const char *initial_URL1,
          const char *initial_path1,
@@ -2225,6 +2230,7 @@ do_merge(const char *initial_URL1,
          svn_boolean_t ignore_ancestry,
          const svn_wc_diff_callbacks2_t *callbacks,
          struct merge_cmd_baton *merge_b,
+         apr_hash_t *children_with_mergeinfo,
          apr_pool_t *pool)
 {
   apr_hash_t *target_mergeinfo;
@@ -2244,6 +2250,7 @@ do_merge(const char *initial_URL1,
   svn_opt_revision_t *revision1, *revision2;
   const svn_wc_entry_t *entry;
   int i;
+  apr_hash_index_t *hi;
 
   ENSURE_VALID_REVISION_KINDS(initial_revision1->kind,
                               initial_revision2->kind);
@@ -2400,6 +2407,38 @@ do_merge(const char *initial_URL1,
       SVN_ERR(reporter->set_path(report_baton, "",
                                  is_revert ? r->start : r->start - 1,
                                  FALSE, NULL, pool));
+      if (notify_b.same_urls)
+        {
+          /* Describe children with merge info overlapping this merge
+             operation such that no diff is retrieved for them from
+             the repository. */
+          apr_size_t target_wcpath_len = strlen(target_wcpath);
+
+          for (hi = apr_hash_first(NULL, children_with_mergeinfo);
+               hi;
+               hi = apr_hash_next(hi))
+            {
+              const void *key;
+              apr_ssize_t klen;
+              const char *child_repos_path;
+              const char *child_wcpath;
+
+              apr_hash_this(hi, &key, &klen, NULL);
+              child_wcpath = key;
+              if (klen < target_wcpath_len ||
+                  strcmp(child_wcpath, target_wcpath) == 0 ||
+                  strncmp(child_wcpath, target_wcpath, target_wcpath_len) != 0)
+                {
+                  /* Path is not a child of the WC's merge target. */
+                  continue;
+                }
+
+              child_repos_path = child_wcpath + target_wcpath_len + 1;
+              SVN_ERR(reporter->set_path(report_baton, child_repos_path,
+                                         is_revert ? r->end - 1 : r->end,
+                                         FALSE, NULL, pool));
+            }
+        }
 
       /* ### TODO: Print revision range separator line. */
 
@@ -3440,6 +3479,97 @@ svn_client_diff_summarize_peg(const char *path,
                            ctx, pool);
 }
 
+
+/* Fill CHILDREN_WITH_MERGEINFO with child paths which might have
+   intersecting merges (it should start be empty, but not NULL).  For
+   each such child, call do_merge() or do_single_file_merge() with the
+   appropriate arguments (based on the type of child).  Use
+   PARENT_ENTRY and ADM_ACCESS to fill CHILDREN_WITH_MERGEINFO.
+   Cascade PARENT_WC_URL, INITIAL_PATH1, REVISION1, INITIAL_PATH2,
+   REVISION2, PEG_REVISION, RECURSE, IGNORE_ANCESTRY, ADM_ACCESS, and
+   MERGE_CMD_BATON to do_merge() and do_single_file_merge().  All
+   allocation occurs in POOL. */
+static svn_error_t *
+do_child_merges(apr_hash_t *children_with_mergeinfo,
+                const svn_wc_entry_t *parent_entry,
+                const char *parent_wc_url,
+                const char *initial_path1,
+                const svn_opt_revision_t *revision1,
+                const char *initial_path2,
+                const svn_opt_revision_t *revision2,
+                const svn_opt_revision_t *peg_revision,
+                svn_boolean_t recurse,
+                svn_boolean_t ignore_ancestry,
+                svn_wc_adm_access_t *adm_access,
+                struct merge_cmd_baton *merge_cmd_baton,
+                apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  const svn_wc_entry_t *child_entry;
+
+  SVN_ERR(svn_client__get_prop_from_wc(children_with_mergeinfo,
+                                       SVN_PROP_MERGE_INFO,
+                                       merge_cmd_baton->target,
+                                       FALSE,
+                                       parent_entry,
+                                       adm_access,
+                                       TRUE,
+                                       merge_cmd_baton->ctx,
+                                       pool));
+  for (hi = apr_hash_first(pool, children_with_mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      const char *child_repos_path;
+      const char *child_wcpath;
+      const char *child_url;
+
+      apr_hash_this(hi, &key, NULL, NULL);
+      child_wcpath = key;
+      if (strcmp(child_wcpath, merge_cmd_baton->target) == 0)
+        continue;
+      SVN_ERR(svn_wc_entry(&child_entry, child_wcpath,
+                           adm_access, FALSE, pool));
+      if (child_entry == NULL)
+        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                 _("'%s' is not under version control"),
+                                 svn_path_local_style(child_wcpath, pool));
+
+      child_repos_path = child_wcpath + strlen(merge_cmd_baton->target) + 1;
+      child_url = svn_path_join(parent_wc_url, child_repos_path, pool);
+      if (child_entry->kind == svn_node_file)
+        {
+          SVN_ERR(do_single_file_merge(child_url, initial_path1, revision1,
+                                       child_url, initial_path2, revision2,
+                                       peg_revision,
+                                       child_wcpath,
+                                       adm_access,
+                                       merge_cmd_baton,
+                                       pool));
+        }
+      else if (child_entry->kind == svn_node_dir)
+        {
+          SVN_ERR(do_merge(child_url,
+                           initial_path1,
+                           revision1,
+                           child_url,
+                           initial_path2,
+                           revision2,
+                           peg_revision,
+                           child_wcpath,
+                           adm_access,
+                           recurse,
+                           ignore_ancestry,
+                           &merge_callbacks,
+                           merge_cmd_baton,
+                           children_with_mergeinfo,
+                           pool));
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_merge3(const char *source1,
                   const svn_opt_revision_t *revision1,
@@ -3461,6 +3591,7 @@ svn_client_merge3(const char *source1,
   const char *URL1, *URL2;
   const char *path1, *path2;
   svn_opt_revision_t peg_revision;
+  apr_hash_t *children_with_mergeinfo = apr_hash_make(pool);
 
   /* This is not a pegged merge. */
   peg_revision.kind = svn_opt_revision_unspecified;
@@ -3547,6 +3678,25 @@ svn_client_merge3(const char *source1,
      recursive diff-editor thing. */
   else if (entry->kind == svn_node_dir)
     {
+      if (strcmp(URL1, URL2) == 0)
+        {
+          /* Merge children with differing merge info. */
+          SVN_ERR(do_child_merges(children_with_mergeinfo,
+                                  entry,
+                                  URL1,
+                                  path1,
+                                  revision1,
+                                  merge_cmd_baton.path,
+                                  revision2,
+                                  &peg_revision,
+                                  recurse,
+                                  ignore_ancestry,
+                                  adm_access,
+                                  &merge_cmd_baton,
+                                  pool));
+        }
+
+      /* Merge of the actual target.*/
       SVN_ERR(do_merge(URL1,
                        path1,
                        revision1,
@@ -3560,6 +3710,7 @@ svn_client_merge3(const char *source1,
                        ignore_ancestry,
                        &merge_callbacks,
                        &merge_cmd_baton,
+                       children_with_mergeinfo,
                        pool));
     }
 
@@ -3625,6 +3776,7 @@ svn_client_merge_peg3(const char *source,
   struct merge_cmd_baton merge_cmd_baton;
   const char *URL;
   const char *path;
+  apr_hash_t *children_with_mergeinfo = apr_hash_make(pool);
 
   /* if source1 or source2 are paths, we need to get the underlying url
    * from the wc and save the initial path we were passed so we can use it as 
@@ -3696,6 +3848,22 @@ svn_client_merge_peg3(const char *source,
      recursive diff-editor thing. */
   else if (entry->kind == svn_node_dir)
     {
+      /* Merge children with differing merge info. */
+      SVN_ERR(do_child_merges(children_with_mergeinfo,
+                              entry,
+                              URL,
+                              path,
+                              revision1,
+                              path,
+                              revision2,
+                              peg_revision,
+                              recurse,
+                              ignore_ancestry,
+                              adm_access,
+                              &merge_cmd_baton,
+                              pool));
+
+      /* Merge of the actual target.*/
       SVN_ERR(do_merge(URL,
                        path,
                        revision1,
@@ -3709,6 +3877,7 @@ svn_client_merge_peg3(const char *source,
                        ignore_ancestry,
                        &merge_callbacks,
                        &merge_cmd_baton,
+                       children_with_mergeinfo,
                        pool));
     }
 
