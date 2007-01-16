@@ -111,21 +111,59 @@ merge info in the WC).</p>
 
 </div>  <!-- copy-move -->
 
+<div class="h2" id="meta-data">
+<h2>Merge Meta Data</h2>
+
+<p>Merge Tracking meta data is stored in housekeeping properties
+(e.g. <code>svn:mergeinfo</code>).</p>
+
+<div class="h3" id="meta-data-mainpulation">
+<h3>Meta Data Manipulation</h3>
+
+<p>While direct manipulation of housekeeping properties can be used to
+change merge info, commands will also be provided to manipulate this
+information.</p>
+
+<ul>
+  <li><code>merge --record-only</code> adds (or subtracts, if a
+    reversed revision range is supplied) merge info for a path
+    <i>without performing the actual merge</i>.</li>
+
+  <li><code>propedit</code>/<code>propset</code> changes merge info
+    for a path.</li>
+
+  <li><code>propdel</code> removes mere info for a path.</li>
+</ul>
+
+</div>  <!-- meta-data-mainpulation -->
+
+<div class="h3" id="meta-data-audit">
+<h3>Meta Data Audit and Query</h3>
+
+<p>TODO<!-- pull items from audit section --></p>
+
+</div>  <!-- meta-data-audit -->
+
+</div>  <!-- meta-data -->
+
 <div class="h2" id="repeated-merge">
 <h2>Repeated Merge</h2>
 
 <p>There are two general schemes for solving the <a
-href="requirements.html#repeated-merge">repeated merge</a>
-problem.</p>
+href="requirements.html#repeated-merge">repeated merge</a> problem.
+Subversion 1.5 uses the <a href="#mrca-merge">Most Recent Common
+Ancestor (MRCA)</a> approach.  If a later version of Subversion
+(e.g. 2.0) overhauls the Merge Tracking implementation, it'll likely
+use the <a href="#as-merge">Ancestry Set (AS)</a> approach.</p>
 
 <div class="h3" id="mrca-merge">
-<h3>The Most Recent Common Ancestor approach (MRCA)</h3>
+<h3>The Most Recent Common Ancestor approach</h3>
 
-<p>In this scheme, you record an optional set of merge sources in each
+<p>In this scheme, An optional set of merge sources in each
 node-revision.  When asked to do a merge with only one source (that
-is, just "svn merge URL", with no second argument), you compute the
-most recent ancestor and do a three-way merge between the common
-ancestor, the given URL, and the WC.</p>
+is, just <code>svn merge URL</code>, with no second argument), you
+compute the most recent ancestor and do a three-way merge between the
+common ancestor, the given URL, and the WC.</p>
 
 <p>To compute the most recent ancestor, you chain off the immediate
 predecessors of each node-revision.  The immediate predecessors are
@@ -136,7 +174,7 @@ find the most recent common ancestor.</p>
 </div>  <!-- mrca-merge -->
 
 <div class="h3" id="as-merge">
-<h3>The Ancestry Set approach (AS)</h3>
+<h3>The Ancestry Set approach</h3>
 
 <p>In this scheme, you record the full ancestry set for each
 node-revision -- that is, the set of all changes which are accounted
@@ -242,9 +280,9 @@ already be accounted for.</p>
 doing any bookkeeping.  MRCA requires you to merge changes from a
 branch in order.</p>
 
-<p>At first look, MRCA may be simpler to implement, since it results
-in a single three-way merge.  However, it likely does not handle all
-edge cases.  For instance, it may break down faster if the merging
+<p>MRCA is simpler to implement, since it results in a three-way merge
+(which is well-understood by Subversion).  However, it may not handle
+all edge cases.  For instance, it may break down faster if the merging
 topology is not hierarchical.</p>
 
 <p>MRCA may be easier for users to understand, even though AS is
