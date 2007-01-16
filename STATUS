@@ -76,12 +76,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r22991,-8 (code), r22608,-910,-35,-84(test)
-    Fix error in post-commit phase of commit with replaced folder 
-    (merge test 30).
-    Justification:
-      Fixes a regression introduced in 1.4.2, includes test.
-    Branch: 1.4.x-r22991
-    Votes:
-      +1: lgo, dlr, malcolm
-
