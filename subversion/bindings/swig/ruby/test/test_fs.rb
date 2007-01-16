@@ -37,8 +37,6 @@ class SvnFsTest < Test::Unit::TestCase
       abort
     end
     assert_equal(path, fs.path)
-    Svn::Fs::FileSystem.delete(path)
-    assert(!File.exist?(path))
   end
 
   def test_hotcopy
