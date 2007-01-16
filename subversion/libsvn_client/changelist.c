@@ -24,25 +24,41 @@
 
 #include "svn_client.h"
 #include "svn_wc.h"
+#include "svn_pools.h"
 
 
 /*** Code. ***/
 
 svn_error_t *
-svn_client_set_changelist(const char *path,
+svn_client_set_changelist(const apr_array_header_t *paths,
                           const char *changelist_name,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *pool)
 {
-  SVN_ERR(svn_wc_set_changelist(path, changelist_name, pool));
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
-  /* ### TODO(sussman): create new notification type, and send
-         notification feedback.  See locking-commands.c. */
-  if (changelist_name)
-    printf("Path '%s' is now part of changelist '%s'.\n",
-           path, changelist_name);
-  else
-    printf("Path '%s' is no longer associated with a changelist'.\n", path);
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+
+      /* Check for cancellation */
+      if (ctx->cancel_func)
+        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_wc_set_changelist(path, changelist_name, iterpool));
+
+      /* ### TODO(sussman): create new notification type, and send
+             notification feedback.  See locking-commands.c. */
+      if (changelist_name)
+        printf("Path '%s' is now part of changelist '%s'.\n",
+               path, changelist_name);
+      else
+        printf("Path '%s' is no longer associated with a changelist'.\n", path);
+    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

@@ -22,7 +22,6 @@
 
 /*** Includes. ***/
 
-#include "svn_pools.h"
 #include "svn_client.h"
 #include "svn_error.h"
 #include "cl.h"
@@ -37,12 +36,10 @@ svn_cl__changelist(apr_getopt_t *os,
                    void *baton,
                    apr_pool_t *pool)
 {
-  int i;
   const char *changelist_name;
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
-  apr_pool_t *subpool = svn_pool_create(pool);
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
@@ -61,21 +58,13 @@ svn_cl__changelist(apr_getopt_t *os,
     }
 
 
-  for (i = opt_state->clear ? 0 : 1; i < targets->nelts; i++)
-    {
-      const char *target = APR_ARRAY_IDX(targets, i, const char *);
-
-      svn_pool_clear(subpool);
-      SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-      SVN_ERR(svn_cl__try
-              (svn_client_set_changelist(target, changelist_name,
-                                         ctx, subpool),
-               NULL, opt_state->quiet,
-               SVN_ERR_UNVERSIONED_RESOURCE,
-               SVN_ERR_WC_PATH_NOT_FOUND,
-               SVN_NO_ERROR));
-    }
-  svn_pool_destroy(subpool);
+  SVN_ERR(svn_cl__try
+          (svn_client_set_changelist(targets, changelist_name,
+                                     ctx, pool),
+           NULL, opt_state->quiet,
+           SVN_ERR_UNVERSIONED_RESOURCE,
+           SVN_ERR_WC_PATH_NOT_FOUND,
+           SVN_NO_ERROR));
 
   return SVN_NO_ERROR;
 }
