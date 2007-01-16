@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 # -*-mode: python; coding: utf-8 -*-
 #
-# Inspired from svn-import.py by astrand@cendio.se (ref : http://svn.haxx.se/users/archive-2006-10/0857.shtml)
+# Inspired from svn-import.py by astrand@cendio.se (ref :
+# http://svn.haxx.se/users/archive-2006-10/0857.shtml)
 #
 # svn-merge-vendor.py (v1.0) - Import a new release, such as a vendor drop.
 #
@@ -15,8 +16,9 @@
 #
 # This utility tries to take you to this goal - automatically. Files
 # new in this release is added to version control, and files removed
-# in this new release are removed from version control.
-# It will detect the moved files by looking in the svn log to find the "copied-from" path !
+# in this new release are removed from version control.  It will
+# detect the moved files by looking in the svn log to find the
+# "copied-from" path !
 #
 # Compared to svn_load_dirs.pl, this utility:
 #
@@ -28,8 +30,13 @@
 # TODO :
 #   * support --username and --password
 #
-# This tool is provided under GPL license. Please read http://www.gnu.org/licenses/gpl.html for the original text.
-  
+# This tool is provided under GPL license.  Please read
+# http://www.gnu.org/licenses/gpl.html for the original text.
+#
+# $HeadURL$
+# $LastChangedRevision$
+# $LastChangedDate$
+# $LastChangedBy$
 
 import os
 import re
