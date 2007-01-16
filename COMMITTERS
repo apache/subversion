@@ -103,6 +103,7 @@ Commit access for specific areas:
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
        kameshj   Kamesh Jayachandran <kamesh@collab.net>     (svntest)
+        aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
 
   Translation of message files:
 
