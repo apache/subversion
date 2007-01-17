@@ -7,7 +7,7 @@
  *            file in the working copy).
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2722,31 +2722,63 @@ svn_error_t *svn_wc_remove_lock(const char *path,
 
 
 svn_error_t *
-svn_wc_set_changelist(const char *path,
+svn_wc_set_changelist(const apr_array_header_t *paths,
                       const char *changelist,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
                       apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
-  const svn_wc_entry_t *entry;
-  svn_wc_entry_t newentry;
+  int i;
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
-                                 TRUE, /* get write lock */
-                                 0, /* depth */
-                                 NULL, NULL, pool));
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      svn_wc_adm_access_t *adm_access;
+      const svn_wc_entry_t *entry;
+      svn_wc_entry_t newentry;
+      svn_wc_notify_t *notify;
+   
+      svn_pool_clear(iterpool);
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+      /* Check for cancellation */
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
 
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), path);
+      SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path,
+                                     TRUE, /* get write lock */
+                                     0, /* depth */
+                                     NULL, NULL, iterpool));
 
-  newentry.changelist = changelist;
+      SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, iterpool));
 
-  SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
-                               SVN_WC__ENTRY_MODIFY_CHANGELIST,
-                               TRUE, pool));
-  SVN_ERR(svn_wc_adm_close(adm_access));
+      if (! entry)
+        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                 _("'%s' is not under version control"), path);
+
+      newentry.changelist = changelist;
+
+      SVN_ERR(svn_wc__entry_modify(adm_access, entry->name, &newentry,
+                                   SVN_WC__ENTRY_MODIFY_CHANGELIST,
+                                   TRUE, iterpool));
+      SVN_ERR(svn_wc_adm_close(adm_access));
+
+      if (notify_func)
+        {
+          notify = svn_wc_create_notify(path,
+                                        changelist
+                                        ? svn_wc_notify_changelist_set
+                                        : svn_wc_notify_changelist_clear,
+                                        iterpool);
+          notify->changelist_name = changelist;
+
+          notify_func(notify_baton, notify, iterpool);
+        }
+    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

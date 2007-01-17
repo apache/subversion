@@ -3774,10 +3774,14 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
 
 /**
- * Associate @a path with changelist @a changelist by setting the
+ * Associate each item in @a paths with changelist @a changelist by setting the
  * 'changelist' attribute in its entry.  Obviously, this will
  * overwrite any existing value of the attribute.  If @a changelist is
- * NULL, then remove any 'changelist' attribute in @a path's entry.
+ * NULL, then remove any 'changelist' attribute for the entry for each item in
+ * @a paths.
+ *
+ * If @a cancel_func is non-null, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -3785,8 +3789,12 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_wc_set_changelist(const char *path,
+svn_wc_set_changelist(const apr_array_header_t *paths,
                       const char *changelist,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
                       apr_pool_t *pool);
 
 
