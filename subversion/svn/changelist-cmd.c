@@ -2,7 +2,7 @@
  * changelist-cmd.c -- Associate (or deassociate) a wc path with a changelist.
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -40,6 +40,8 @@ svn_cl__changelist(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
+  apr_array_header_t *paths;
+  int i;
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
@@ -48,18 +50,25 @@ svn_cl__changelist(apr_getopt_t *os,
     {
       if (targets->nelts < 1)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+
       changelist_name = NULL;
+      paths = targets;
     }
   else
     {
       if (targets->nelts < 2)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+
       changelist_name = APR_ARRAY_IDX(targets, 0, const char *);
+      paths = apr_array_make(pool, targets->nelts-1, sizeof(const char *));
+
+      for (i = 1; i < targets->nelts; i++)
+        APR_ARRAY_PUSH(paths, const char *) = APR_ARRAY_IDX(targets, i,
+                                                            const char *);
     }
 
-
   SVN_ERR(svn_cl__try
-          (svn_client_set_changelist(targets, changelist_name,
+          (svn_client_set_changelist(paths, changelist_name,
                                      ctx, pool),
            NULL, opt_state->quiet,
            SVN_ERR_UNVERSIONED_RESOURCE,
