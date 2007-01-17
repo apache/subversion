@@ -38,7 +38,7 @@ GetOptions('f|file=s' => \$log_file,
 my $filter = shift;
 $filter = '(?i)' . $filter if $caseless;
 
-my $log_cmd = "svk log -x";
+my $log_cmd = "svn log";
 
 my $log_separator = '-' x 72 . "\n";
 
