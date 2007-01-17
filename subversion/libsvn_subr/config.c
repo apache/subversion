@@ -187,6 +187,9 @@ read_all(svn_config_t **cfgp,
 }
 
 
+/* CONFIG_DIR provides an override for the default behavior of reading
+   the default set of overlay files described by read_all()'s doc
+   string. */
 static svn_error_t *
 get_category_config(svn_config_t **cfg,
                     const char *config_dir,
