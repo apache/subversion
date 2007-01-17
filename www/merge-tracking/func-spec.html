@@ -18,12 +18,12 @@
 
 <p style="color: red">*** UNDER CONSTRUCTION ***</p>
 
-<p><a href="index.html">Merge tracking</a> functional
-specification.</p>
+<p><a href="index.html">Merge tracking</a> functional specification.
+Describes Subversion 1.5.0, except where noted as
+<i>unimplemented.</i></p>
 
-<p style="color: red">TODO: Incorporate <a
-href="summit.html">CollabNet Summit findings</a>.  Describe how each
-<a href="requirements.html">requirement</a> will actually function for
+<p style="color: red">TODO: Describe how each <a
+href="requirements.html">requirement</a> will actually function for
 Subversion.  Remove redundancies.</p>
 
 <div class="h2" id="diff-status">
@@ -112,7 +112,7 @@ merge info in the WC).</p>
 </div>  <!-- copy-move -->
 
 <div class="h2" id="meta-data">
-<h2>Merge Meta Data</h2>
+<h2>Merge-related Meta Data</h2>
 
 <p>Merge Tracking meta data is stored in housekeeping properties
 (e.g. <code>svn:mergeinfo</code>).</p>
@@ -121,8 +121,13 @@ merge info in the WC).</p>
 <h3>Meta Data Manipulation</h3>
 
 <p>While direct manipulation of housekeeping properties can be used to
-change merge info, commands will also be provided to manipulate this
-information.</p>
+change merge info, commands to manipulate this information have been
+provided.  Either style of operation supports adjustment of merge info
+when <a href="requirements.html#manual-merge">manual merges</a> occur,
+and can also be used to fulfill <a
+href="requirements.html#revision-blocking">block changes undesired for
+merge</a> (later, this might be better-addressed by a separate
+ahousekeeping property).</p>
 
 <ul>
   <li><code>merge --record-only</code> adds (or subtracts, if a
@@ -155,6 +160,14 @@ Subversion 1.5 uses the <a href="#mrca-merge">Most Recent Common
 Ancestor (MRCA)</a> approach.  If a later version of Subversion
 (e.g. 2.0) overhauls the Merge Tracking implementation, it'll likely
 use the <a href="#as-merge">Ancestry Set (AS)</a> approach.</p>
+
+<p>Either solution also supports the <a
+href="requirements.html#cherry-picking">cherry picking</a>, <a
+href="requirements.html#rollback-merge">rollback</a>, and <a
+href="requirements.html#properties">property merging</a> use cases.  A
+<a href="requirements.html#merge-previews">merge preview</a> which is
+lighter-weight than an uncommitted merge into a WC is not
+supported.</p>
 
 <div class="h3" id="mrca-merge">
 <h3>The Most Recent Common Ancestor approach</h3>
@@ -301,6 +314,26 @@ advance of merging in the whole thing.</p>
 </div>  <!-- h3 -->
 
 </div>  <!-- repeated-merge -->
+
+
+<div class="h2" id="automated-merge">
+<h2>SCM Automated Merge</h2>
+
+<p>TODO: Talk about merge conflict resoultion callbacks as discussed
+on the dev@ list.</p>
+
+</div>  <!-- automated-merge -->
+
+
+<div class="h2" id="distributable-resolution">
+<h2>Distribution of Conflict Resolution</h2>
+
+<p>No explicit facility is provided for distribution of conflict
+resolution.  To support this use case, developers can co-ordinate with
+each other to resolve merge conflicts on portions of a tree, and trade
+patches.</p>
+
+</div>  <!-- distributable-resolution -->
 
 
 <div class="h2" id="related-documents">
