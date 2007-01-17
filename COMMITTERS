@@ -62,6 +62,7 @@ Commit access for specific areas:
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
       jpeacock   John Peacock <jpeacock@rowman.com>          (Swig-Perl b.)
+    nikclayton   Nik Clayton <nik@ngo.org.uk>                (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
 
