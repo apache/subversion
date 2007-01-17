@@ -4,7 +4,7 @@
 # Inspired from svn-import.py by astrand@cendio.se (ref :
 # http://svn.haxx.se/users/archive-2006-10/0857.shtml)
 #
-# svn-merge-vendor.py (v1.0) - Import a new release, such as a vendor drop.
+# svn-merge-vendor.py (v1.0.1) - Import a new release, such as a vendor drop.
 #
 # The "Vendor branches" chapter of "Version Control with Subversion"
 # describes how to do a new vendor drop with:
@@ -47,6 +47,7 @@ import shutil
 import sys
 import getopt
 from StringIO import StringIO
+# lxml module can be found here : http://codespeak.net/lxml/
 from lxml import etree
 import types
 
