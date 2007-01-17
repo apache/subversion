@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -650,7 +650,13 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_failed_unlock,
 
   /** Tried adding a path that already exists. @since New in 1.5. */
-  svn_wc_notify_exists
+  svn_wc_notify_exists,
+
+  /** Changelist name set. @since New in 1.5. */
+  svn_wc_notify_changelist_set,
+
+  /** Changelist name cleared. @since New in 1.5. */
+  svn_wc_notify_changelist_clear
 
 } svn_wc_notify_action_t;
 
@@ -754,6 +760,9 @@ typedef struct svn_wc_notify_t {
    * action is @c svn_wc_notify_blame_revision, processed revision.
    * In all other cases, it is @c SVN_INVALID_REVNUM. */
   svn_revnum_t revision;
+  /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
+   * cases, it is @c NULL. */
+  const char *changelist_name;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
