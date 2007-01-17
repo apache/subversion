@@ -35,38 +35,9 @@ svn_client_set_changelist(const apr_array_header_t *paths,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *pool)
 {
-  int i;
-  apr_pool_t *iterpool = svn_pool_create(pool);
-
-  for (i = 0; i < paths->nelts; i++)
-    {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      svn_wc_notify_t *notify;
-
-      /* Check for cancellation */
-      if (ctx->cancel_func)
-        SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
-      svn_pool_clear(iterpool);
-
-      SVN_ERR(svn_wc_set_changelist(path, changelist_name, iterpool));
-
-      if (ctx->notify_func2)
-        {
-          notify = svn_wc_create_notify(path,
-                                        changelist_name
-                                        ? svn_wc_notify_changelist_set
-                                        : svn_wc_notify_changelist_clear,
-                                        iterpool);
-          notify->changelist_name = changelist_name;
-
-          ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
-        }
-    }
-
-  svn_pool_destroy(iterpool);
-
-  return SVN_NO_ERROR;
+  return svn_wc_set_changelist(paths, changelist_name,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               ctx->notify_func2, ctx->notify_baton2, pool);
 }
 
 
