@@ -316,17 +316,49 @@ advance of merging in the whole thing.</p>
 </div>  <!-- repeated-merge -->
 
 
-<div class="h2" id="automated-merge">
-<h2>SCM Automated Merge</h2>
+<div class="h2" id="conflict-resolution">
+<h2>Merge Conflict Resolution</h2>
 
-<p>TODO: Talk about merge conflict resoultion callbacks as discussed
-on the dev@ list.</p>
+<p>Merging inevitably produces conflicts which cannot be resolved by
+an algorithm alone.  In such a case, human intervention is required to
+resolve the conflicts.  The merge algorithm used by Subversion's Merge
+Tracking implementation makes this problem worse, since it breaks a
+requested merge range into several merges to avoid <a
+href="requirements.html#repeated-merge">repeating merges</a> which
+have already been applied to a merge target or its children.</p>
 
-</div>  <!-- automated-merge -->
+<p>To help alleviate the pain of conflict resolution, a merge conflict
+resolution callback can be employed by Subversion clients
+(<i>unimplemented</i>).  This callback is invoked whenever merge
+conflicts are encountered, and can takes steps like launching a
+graphical merge tool (for interactive conflict resolution), or
+following a pre-specified directive like "always use the version from
+my merge source".  This last implementation can be used to support the
+<a href="requirements.html#automated-merge">SCM automated merge</a>
+use case.</p>
+
+<p>The command-line client supplies a default merge conflict
+resolution callback which will behavior much like <em>svk</em>, when
+in interactive mode displaying some context for each conflict and
+prompting for how to resolve it, or when in non-interactive mode,
+taking directives beforehand (<i>unimplemented</i>).</p>
+
+<p>Related discussion from the dev@ mailing list can be found
+here:</p>
+
+<ul>
+  <li><a
+  href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=121756">
+  Feedback solicited from IDE developers</a></li>
+
+  <li><a
+  href="http://subversion.tigris.org/servlets/ReadMsg?listName=dev&msgNo=121263"
+  >Original API proposal</a> (likely requires changes)</li>
+</ul>
 
 
-<div class="h2" id="distributable-resolution">
-<h2>Distribution of Conflict Resolution</h2>
+<div class="h3" id="distributable-resolution">
+<h3>Distribution of Conflict Resolution</h3>
 
 <p>No explicit facility is provided for distribution of conflict
 resolution.  To support this use case, developers can co-ordinate with
@@ -334,6 +366,8 @@ each other to resolve merge conflicts on portions of a tree, and trade
 patches.</p>
 
 </div>  <!-- distributable-resolution -->
+
+</div>  <!-- conflict-resolution -->
 
 
 <div class="h2" id="related-documents">
