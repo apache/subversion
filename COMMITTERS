@@ -61,8 +61,6 @@ Commit access for specific areas:
       markphip   Mark Phippard <markphip@gmail.com>          (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
-      jpeacock   John Peacock <jpeacock@rowman.com>          (Swig-Perl b.)
-    nikclayton   Nik Clayton <nik@ngo.org.uk>                (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
     jrvernooij   Jelmer Vernooij <jelmer@samba.org>          (Python bindings)
 
@@ -134,6 +132,10 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
       markphip   Mark Phippard <markphip@gmail.com>          (ebcdic)
+      jpeacock   John Peacock <jpeacock@rowman.com>          (perl-bindings-
+                                                              improvements br.)
+    nikclayton   Nik Clayton <nik@ngo.org.uk>                (perl-bindings-
+                                                              improvements br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
