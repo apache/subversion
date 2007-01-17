@@ -7,6 +7,7 @@ http://svn.collab.net/repos/svn/tags/1.4.3
     * fixed: crash using automatic auth protocols with Neon 0.26 (r22440, -61)
     * fixed: svn_load_dirs.pl cannot import file names containing '@' (r22203)
     * fixed: error when committing replaced directories (r22991, -8)
+    * fixed: inability to change file perms due to existing file perms (r23018)
     * include newest version of svn-graph.pl (r22969)
 
   - Server:
@@ -29,6 +30,7 @@ Developer-visible-changes:
 * javahl bindings:
     - fixed: auth cache is created in the current directory (r22780)
     - fixed: SVNAdmin's setLog() method always fails (r22387)
+    - fixed: target dependency order in generated build scripts (r22209)
 * SWIG/perl bindings:
     - fixed: ra_do_{update,switch,status} work with Perl delta editors (r22311)
     - fixed: memory leak when calling methods on a Perl commit editor (r22332)
@@ -642,7 +644,7 @@ the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
     * fixed: updating xml-unsafe dirname over http (issue #2268)
     * new translation of localized messages: French
     * continued improvement of localized message translations:
-        - German, Spanish, Polish, Brazilian Portuguese, Norwegian Bokmål,
+        - German, Spanish, Polish, Brazilian Portuguese, Norwegian BokmÃ¥l,
           Swedish, Traditional Chinese, Simplified Chinese, Korean, Japanese
         - more localized messages in all svn-related binaries
 
@@ -838,7 +840,7 @@ See the 1.1 release notes for a more verbose overview of the changes since
      - new 'peg' syntax for diff/merge:  'svn diff -r X:Y TARGET@REV'
      - now able to compare working copy with URL: 'svn diff --old WC --new URL'
  * new framework for localized error/info/help messages, initial translations:
-     - German, Polish, Swedish, Norwegian Bokmål, Traditional Chinese,
+     - German, Polish, Swedish, Norwegian BokmÃ¥l, Traditional Chinese,
        Japanese, Brazilian Portuguese.
  * speed improvements:
      - faster 'svn up' on complex working copies -- no more repos txns (r8840)
