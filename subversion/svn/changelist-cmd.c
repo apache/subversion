@@ -67,6 +67,9 @@ svn_cl__changelist(apr_getopt_t *os,
                                                             const char *);
     }
 
+  svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
+                       FALSE, FALSE, pool);
+
   SVN_ERR(svn_cl__try
           (svn_client_set_changelist(paths, changelist_name,
                                      ctx, pool),

@@ -41,21 +41,27 @@ svn_client_set_changelist(const apr_array_header_t *paths,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      svn_wc_notify_t *notify;
 
       /* Check for cancellation */
       if (ctx->cancel_func)
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
 
       svn_pool_clear(iterpool);
+
       SVN_ERR(svn_wc_set_changelist(path, changelist_name, iterpool));
 
-      /* ### TODO(sussman): create new notification type, and send
-             notification feedback.  See locking-commands.c. */
-      if (changelist_name)
-        printf("Path '%s' is now part of changelist '%s'.\n",
-               path, changelist_name);
-      else
-        printf("Path '%s' is no longer associated with a changelist'.\n", path);
+      if (ctx->notify_func2)
+        {
+          notify = svn_wc_create_notify(path,
+                                        changelist_name
+                                        ? svn_wc_notify_changelist_set
+                                        : svn_wc_notify_changelist_clear,
+                                        iterpool);
+          notify->changelist_name = changelist_name;
+
+          ctx->notify_func2(ctx->notify_baton2, notify, iterpool);
+        }
     }
 
   svn_pool_destroy(iterpool);
