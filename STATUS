@@ -60,18 +60,3 @@ Candidate changes:
       -1: jerenkrantz (This is an unnecessary change to backport.)
 
 Approved changes:
-
-  * r22209
-    Fix the order in which the JavaHL targets are built on Windows
-    Justification: 
-      Needed for a clean build of JavaHL on Windows
-    Votes:
-      +1: lgo, dlr, djh
-
-  * r23018
-    Fix the ability to change file permissions (via a work-around)
-    when we don't actually have permissions to change permissions.
-    Justification:
-      Fixes a regression from 1.3.2.
-    Votes:
-      +1: dlr, malcolm, danderson
