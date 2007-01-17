@@ -5,12 +5,22 @@ use SVN::Core;
 use SVN::Wc;
 
 package SVN::Client;
-use SVN::Base qw(Client svn_client_ checkout update switch add mkdir delete
-                 commit status log blame diff merge cleanup relocate
-                 revert resolved copy move revprop_set propset
-                 proplist revvprop_list export ls cat import propget
-                 uuid_from_url uuid_from_path url_from_path revprop_get
-                 revprop_list info); 
+my @_all_fns;
+BEGIN {
+    @_all_fns = qw(add add3 blame blame3 cat cat2 checkout checkout2 cleanup
+                   commit commit3 commit_item2_dup copy copy3 delete delete2
+                   diff diff3 diff_peg3 diff_summarize diff_summarize_peg
+                   export export3 import import2 info info_dup list lock
+                   log log2 log3 ls ls3
+                   merge merge2 merge_peg2 mkdir mkdir2 move move4
+                   propget propget2 proplist proplist2 proplist_item_dup
+                   propset propset2 relocate resolved revert
+                   revprop_get revprop_list revprop_set
+                   status status2 switch unlock update update2
+                   url_from_path uuid_from_path uuid_from_url);
+    require SVN::Base;
+    import SVN::Base (qw(Client svn_client_), @_all_fns);
+}
 
 =head1 NAME
 
@@ -820,13 +830,7 @@ Return repository uuid for url.
 
 # import methods into our name space and wrap them in a closure
 # to support method calling style $ctx->log()
-foreach my $function (qw(checkout update switch add mkdir delete commit
-                       status log blame diff merge cleanup relocate
-                       revert resolved copy move revprop_set propset
-                       proplist revvprop_list export ls cat import
-                       propget uuid_from_url uuid_from_path
-                       url_from_path revprop_get revprop_list
-                       info))
+foreach my $function (@_all_fns)
 {
     no strict 'refs';
     my $real_function = \&{"SVN::_Client::svn_client_$function"};
