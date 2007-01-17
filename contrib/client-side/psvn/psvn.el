@@ -464,6 +464,7 @@ A useful setting might be: '\(\"\#trunk\" \"\#1\#tags\" \"\#1\#branches\")")
   "*Whether to automatically restore state from ++psvn.state file before running svn-status.")
 
 ;;; hooks
+(defvar svn-status-mode-hook nil "Hook run when entering `svn-status-mode'.")
 (defvar svn-log-edit-mode-hook nil "Hook run when entering `svn-log-edit-mode'.")
 (defvar svn-log-edit-done-hook nil "Hook run after commiting files via svn.")
 ;; (put 'svn-log-edit-mode-hook 'risky-local-variable t)
@@ -1864,6 +1865,7 @@ The following keys are defined:
   (setq major-mode 'svn-status-mode)
   (setq mode-name "svn-status")
   (setq mode-line-process 'svn-status-mode-line-process)
+  (run-hooks 'svn-status-mode-hook)
   (let ((view-read-only nil))
     (toggle-read-only 1)))
 
