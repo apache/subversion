@@ -539,10 +539,11 @@ process_committed_internal(int *log_number,
                      remove_changelist, NULL, subpool));
           else
             {
-              /* No log file is executed at this time. In case this folder
-                 gets replaced, the entries file might still contain files 
-                 scheduled for deletion. No need to process those here, they
-                 will be when the parent is processed. */
+              /* Suppress log creation for deleted entries in a replaced
+                 directory.  By the time any log we create here is run,
+                 those entries will already have been removed (as a result
+                 of running the log for the replaced directory that was
+                 created at the start of this function). */
               if (current_entry->schedule == svn_wc_schedule_delete)
                 {
                   svn_wc_entry_t *parent_entry;
