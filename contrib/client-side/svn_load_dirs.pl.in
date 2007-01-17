@@ -1381,7 +1381,7 @@ sub set_svn_use_repos_cmd_opts
   my $username = shift;
   my $password = shift;
 
-  @svn_use_repos_cmd_opts = ();
+  @svn_use_repos_cmd_opts = ('--non-interactive');
   if (defined $username and length $username)
     {
       push(@svn_use_repos_cmd_opts, '--username', $username);
