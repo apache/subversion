@@ -3780,8 +3780,13 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * NULL, then remove any 'changelist' attribute for the entry for each item in
  * @a paths.
  *
- * If @a cancel_func is non-null, call it with @a cancel_baton to determine
+ * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
+ *
+ * If @a notify_func is non-NULL, it will be called with @a
+ * notify_baton, the each path for changelist association, and the
+ * notification type (@c svn_wc_notify_changelist_set or @c
+ * svn_wc_notify_changelist_clear).
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
