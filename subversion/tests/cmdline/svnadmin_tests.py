@@ -86,8 +86,8 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
 
   output, errput = \
           svntest.main.run_command_stdin(
-    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
-    expected_stderr, 1, dump)
+    svntest.main.svnadmin_binary, expected_stderr, 1, dump,
+    'load', '--quiet', sbox.repo_dir)
 
   if expected_stdout:
     if expected_stdout == SVNAnyOutput:
