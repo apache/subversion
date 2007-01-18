@@ -1027,6 +1027,28 @@ def repos_to_wc(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
 #----------------------------------------------------------------------
+# Basic repos -> repos copy operation with Merge Tracking meta data.
+
+def repos_to_repos(sbox):
+  "repository to repository copy"
+
+  sbox.build(create_wc = False)
+  src_iota_url = sbox.repo_url + "/iota"
+  dst_iota_url = sbox.repo_url + "/A/iota"
+
+  # Copy a file from one location in the repos to another.
+  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
+                                     [], 'copy', '-m', 'foo',
+                                     src_iota_url, dst_iota_url)
+
+  # Validate that the merge info of the copy destination matches the
+  # implied merge info from the copy source.
+  svntest.actions.run_and_verify_svn(None, ['/iota:1\n'],
+                                     [], 'propget', 'svn:mergeinfo',
+                                     dst_iota_url)
+
+
+#----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug
 
 def copy_to_root(sbox):
@@ -3172,6 +3194,7 @@ test_list = [ None,
               Skip(copy_preserve_executable_bit, (os.name != 'posix')),
               wc_to_repos,
               repos_to_wc,
+              repos_to_repos,
               copy_to_root,
               url_copy_parent_into_child,
               wc_copy_parent_into_child,
