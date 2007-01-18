@@ -35,6 +35,9 @@ Subversion.  Remove redundancies.</p>
   <li>Diffs pretty-print changes to merge info in an easily
     human-readable form.</li>
 
+  <li>Diffs sometimes report spurious property changes from merge info
+    (bug?).</li>
+
   <li>Status represents changes to the merge info for the root of a
     tree as a property change.</li>
 </ul>
@@ -127,7 +130,7 @@ when <a href="requirements.html#manual-merge">manual merges</a> occur,
 and can also be used to fulfill <a
 href="requirements.html#revision-blocking">block changes undesired for
 merge</a> (later, this might be better-addressed by a separate
-ahousekeeping property).</p>
+housekeeping property).</p>
 
 <ul>
   <li><code>merge --record-only</code> adds (or subtracts, if a
@@ -145,7 +148,19 @@ ahousekeeping property).</p>
 <div class="h3" id="meta-data-audit">
 <h3>Meta Data Audit and Query</h3>
 
-<p>TODO<!-- pull items from audit section --></p>
+<p>TODO: Describe how each will work (<i>unimplemented</i>, and not
+currently targeted for 1.5.0)</p>
+
+<ul>
+      <li>Show Change Sets Available for Merge</li>
+      <li>Show Change Sets Already Merged</li>
+      <li>Show Change Sets Blocked from Merging</li>
+      <li><em>Merged From</em> info for Change Set and/or Path</li>
+      <li><em>Merged To</em> info for Change Set and/or Path</li>
+      <li>Find Paths containing Specific Incarnation of Versioned Resource</li>
+      <li>Commutative Author Reporting From Merged Change Set and/or
+      Path (e.g. for <code>log</code> and <code>blame</code>)</li>
+</ul>
 
 </div>  <!-- meta-data-audit -->
 
