@@ -345,6 +345,7 @@ def authz_write_access(sbox):
   C_url = A_url + '/C'
   E_url = B_url + '/E'
   mu_url = A_url + '/mu'
+  iota_url = root_url + '/iota'
   lambda_url = B_url + '/lambda'
   D_url = A_url + '/D'
   
