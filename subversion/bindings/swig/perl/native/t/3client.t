@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 119;
+use Test::More tests => 127;
 use strict;
 
 # shut up about variables that are only used once.
@@ -338,23 +338,33 @@ ok(close(CAT),'close cat file');
 # the string around the $current_rev exists to expose a past
 # bug.  In the past we did not accept values that simply
 # had not been converted to a number yet.
-my ($dirents) = $ctx->ls($reposurl,"$current_rev", 1);
-isa_ok($dirents, 'HASH','ls returns a HASH');
-isa_ok($dirents->{'dir1'},'_p_svn_dirent_t',
-       'hash value is a _p_svn_dirent_t');
-is($dirents->{'dir1'}->kind(),$SVN::Core::node_dir,
-   'kind() returns a dir node');
-is($dirents->{'dir1'}->size(),0,
-   'size() returns 0 for a directory');
-is($dirents->{'dir1'}->has_props(),1,
-   'has_props() returns true');
-is($dirents->{'dir1'}->created_rev(),$dir1_rev,
-   'created_rev() returns expected rev');
-ok($dirents->{'dir1'}->time(),
-   'time is defined');
-#diag(scalar(localtime($dirents->{'dir1'}->time() / 1000000)));
-is($dirents->{'dir1'}->last_author(),$username,
-   'last_auth() returns expected username');
+
+# Going to call ls() multiple times, with different sets of arguments
+my @ls_args = ([ $reposurl, "$current_rev", 1 ],
+	       [ { path_or_url => $reposurl,
+		   revision    => "$current_rev",
+		   recurse     => 1 } ],
+	       );
+
+foreach my $ls_args (@ls_args) {
+    my ($dirents) = $ctx->ls(@{ $ls_args });
+    isa_ok($dirents, 'HASH','ls returns a HASH');
+    isa_ok($dirents->{'dir1'},'_p_svn_dirent_t',
+	   'hash value is a _p_svn_dirent_t');
+    is($dirents->{'dir1'}->kind(),$SVN::Core::node_dir,
+       'kind() returns a dir node');
+    is($dirents->{'dir1'}->size(),0,
+       'size() returns 0 for a directory');
+    is($dirents->{'dir1'}->has_props(),1,
+       'has_props() returns true');
+    is($dirents->{'dir1'}->created_rev(),$dir1_rev,
+       'created_rev() returns expected rev');
+    ok($dirents->{'dir1'}->time(),
+       'time is defined');
+    #diag(scalar(localtime($dirents->{'dir1'}->time() / 1000000)));
+    is($dirents->{'dir1'}->last_author(),$username,
+       'last_auth() returns expected username');
+}
 
 # test removing a property
 is($ctx->propset('perl-test', undef, "$wcpath/dir1", 0),undef,

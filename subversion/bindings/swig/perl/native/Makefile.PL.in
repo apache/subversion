@@ -67,7 +67,10 @@ WriteMakefile(%config, NAME => 'SVN::_Core', C => ['core.c'],
          map { perlish $_ }
          ('base', 'core', @modules)},
         clean => { FILES => "*.bs".
-                         join(' Makefile.','',@modules) }
+                         join(' Makefile.','',@modules) },
+	    PREREQ_FATAL => 1,
+	    PREREQ_PM => { 'Params::Validate' => 0,
+		       },
        );
 
 for (@modules) {

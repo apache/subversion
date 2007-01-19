@@ -6,12 +6,15 @@ use SVN::Wc;
 
 package SVN::Client;
 my @_all_fns;
+my @_fns_with_named_params;
+
 BEGIN {
+    @_fns_with_named_params = qw(ls);
     @_all_fns = qw(add add3 blame blame3 cat cat2 checkout checkout2 cleanup
                    commit commit3 commit_item2_dup copy copy3 delete delete2
                    diff diff3 diff_peg3 diff_summarize diff_summarize_peg
                    export export3 import import2 info info_dup list lock
-                   log log2 log3 ls ls3
+                   log log2 log3 ls3
                    merge merge2 merge_peg2 mkdir mkdir2 move move4
                    propget propget2 proplist proplist2 proplist_item_dup
                    propset propset2 relocate resolved revert
@@ -19,8 +22,10 @@ BEGIN {
                    status status2 switch unlock update update2
                    url_from_path uuid_from_path uuid_from_url);
     require SVN::Base;
-    import SVN::Base (qw(Client svn_client_), @_all_fns);
+    import SVN::Base (qw(Client svn_client_), @_all_fns, @_fns_with_named_params);
 }
+
+use Params::Validate qw(:all);
 
 =head1 NAME
 
@@ -145,6 +150,26 @@ Pool is always an option parameter.  If you wish to pass a pool parameter it
 should be a SVN::Pool or an apr_pool_t object.
 
 =back
+
+=head1 NAMED PARAMETERS AND POSITIONAL PARAMETERS
+
+Some methods, such as C<ls()>, can be called with either named parameters
+or positional parameters.  Named parameters are passed by specifying
+a hashref as the single parameter, with keys corresponding to argument names.
+
+Where a method supports both mechanisms it is shown as follows.
+
+=head2 method
+
+  method({
+      arg1 => 'val1',
+      arg2 => 'val2',
+  });
+
+To call that method with positional parameters just list the arguments
+in the same order.
+
+  method(val1, val2);
 
 =head1 METHODS
 
@@ -486,7 +511,14 @@ If $changed_paths is defined it references a hash with the keys
 every path committed in $revision; the values are svn_log_changed_path_t
 objects.  
 
-=item $ctx-E<gt>ls($target, $revision, $recursive, $pool);
+=item $ctx-E<gt>ls
+
+  my %dirents = $ctx->ls({
+      path_or_url => $target,
+      revision    => $revision,    # optional, default is 'HEAD'
+      recurse     => $recursive,   # optional, default is 0
+      pool        => $pool,        # optional
+  });
 
 Returns a hash of svn_dirent_t objects for $target at $revision.
 
@@ -827,6 +859,123 @@ Return repository uuid for url.
 =back
 
 =cut
+
+my %method_defs = (
+    # Keys are method names
+    # Value is a hash ref.  Keys in the hash mean:
+    #
+    # type -- method type, 'obj' == object method, takes SVN::Client
+    #         as first param.  'class' == class method, does not take
+    #         SVN::Client as first param
+    #
+    # args -- array ref of argument specs.
+    #
+    #         Each entry is a hash ref (in order of the params appearance
+    #         in the positional list).  The hash has two keys.  'name' is
+    #         params name, 'spec' is a hash ref suitable for feeding to
+    #         Params::Validate to validate this parameter.
+    'ls' => {
+	type => 'obj',
+	args => [
+	    { name => 'path_or_url',
+	      spec => { type     => SCALAR, }, },
+	    { name => 'revision',
+	      spec => { type     => SCALAR,
+			default  => 'HEAD', }, },
+	    { name => 'recurse',
+	      spec => { type     => BOOLEAN,
+			default  => 0, }, },
+	],
+    },
+);
+
+# Build object methods
+foreach my $method (keys %method_defs) {
+    no strict 'refs';
+    my $real_func = \&{"SVN::_Client::svn_client_$method"};
+
+    if($method_defs{$method}{type} eq 'obj') {
+	*{"SVN::Client::$method"} = sub {
+	    my $self = shift;
+	    my @args = @_;
+
+	    my $ctx = $self->{ctx};
+
+	    my @call_args = (); # Args to call the real function with
+
+	    # If $args[0] is a hash ref then we're using named params
+	    if(ref $args[0] eq 'HASH') {
+		# The definition in %method_defs isn't a valid
+		# Params::Validate definition.  Turn it in to one,
+		# caching the result in $method_defs{$method}{_nam_valid}
+		my %v_spec;
+		if(! exists $method_defs{$method}{_nam_valid} ) {
+		    foreach my $arg (@{ $method_defs{$method}{args} }) {
+			$v_spec{$arg->{name}} = $arg->{spec};
+		    }
+
+		    $method_defs{$method}{_nam_valid} = \%v_spec;
+		} else {
+		    %v_spec = %{ $method_defs{$method}{_nam_valid} };
+		}
+		
+		my %v_args = validate(
+		    @args, { %v_spec,
+			     pool => { optional => 1 } }
+		);
+
+		# Populate @call_args with the validated arguments, in order
+		foreach my $arg (@{ $method_defs{$method}{args} }) {
+		    push @call_args, $v_args{$arg->{name}};
+		}
+
+		# Add the pool if it was provided
+		push @call_args, $v_args{pool} if exists $v_args{pool};
+	    } else {		# Using positional params
+		# The definition in %method_defs isn't a valid
+		# Params::Validate definition.  Turn it in to one,
+		# caching the result in $method_defs{$method}{_pos_valid}
+		my @spec = ();
+		if(! exists $method_defs{$method}{_pos_valid}) {
+		    foreach my $arg (@{ $method_defs{$method}{args} }) {
+			push @spec, $arg->{spec};
+
+			$method_defs{$method}{_pos_valid} = \@spec;
+		    }
+		} else {
+		    @spec = @{ $method_defs{$method}{_pos_valid} };
+		}
+
+		my @v_args = validate_pos(@args, @spec, { optional => 1 });
+		
+		@call_args = @v_args;
+	    }
+
+	    # If the user supplied a pool then we need to insert $ctx into
+	    # the argument list as the last but one arg.
+	    if(ref($call_args[-1]) eq '_p_apr_pool_t' or
+		   ref($call_args[-1]) eq 'SVN::Pool') {
+		splice(@call_args, $#call_args, 0, $ctx);
+	    } else {
+		# No pool supplied.  Add the $ctx as the next argument
+		push @call_args, $ctx;
+
+		# If the SVN::Client object has a valid pool then add
+		# that too
+		if(defined $self->{pool} and
+		       (ref $self->{pool} eq '_p_apr_pool_t' or
+			    ref($self->{pool} eq 'SVN::Pool'))) {
+		    push @call_args, $self->{pool};
+		}
+	    }
+
+	    # Call the real function with the final argument list
+	    return $real_func->(@call_args);
+	};
+    } else {
+	# Code to deal with class methods goes here...
+    }
+}
 
 # import methods into our name space and wrap them in a closure
 # to support method calling style $ctx->log()
