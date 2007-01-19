@@ -922,7 +922,7 @@ svn_fs_lock_many(apr_hash_t **locks, svn_fs_t *fs, apr_array_header_t *paths,
       if (! svn_xml_is_xml_safe(comment, strlen(comment)))
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-           _("Lock comment has illegal characters"));      
+           _("Lock comment contains illegal characters"));      
     }
 
   if (expiration_date < 0)
