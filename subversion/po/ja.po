@@ -170,8 +170,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-17 13:14+0900\n"
-"PO-Revision-Date: 2007-01-17 13:25+0900\n"
+"POT-Creation-Date: 2007-01-19 19:08+0900\n"
+"PO-Revision-Date: 2007-01-19 19:04+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1073,7 +1073,7 @@ msgstr "'%s' は未知またはバージョン管理できない種別です"
 msgid "New entry name required when importing a file"
 msgstr "ファイルのインポートをするときは新しいエントリ名が必要です"
 
-#: libsvn_client/commit.c:546 libsvn_wc/adm_ops.c:996 libsvn_wc/questions.c:91
+#: libsvn_client/commit.c:546 libsvn_wc/adm_ops.c:997 libsvn_wc/questions.c:91
 #, c-format
 msgid "'%s' does not exist"
 msgstr "'%s' は存在しません"
@@ -1084,7 +1084,7 @@ msgid "Path '%s' does not exist"
 msgstr "パス '%s' は存在しません"
 
 #: libsvn_client/commit.c:737 libsvn_client/copy.c:292
-#: libsvn_client/copy.c:617 libsvn_client/copy.c:868 libsvn_client/copy.c:1193
+#: libsvn_client/copy.c:617 libsvn_client/copy.c:868 libsvn_client/copy.c:1194
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "パス '%s' は既に存在しています"
@@ -1159,7 +1159,7 @@ msgstr ""
 "りません"
 
 #: libsvn_client/commit_util.c:705 libsvn_client/commit_util.c:853
-#: libsvn_client/copy.c:1484 libsvn_client/delete.c:67
+#: libsvn_client/copy.c:1485 libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1468 libsvn_client/diff.c:2198
 #: libsvn_client/diff.c:2793 libsvn_client/diff.c:2921
 #: libsvn_client/locking_commands.c:259 libsvn_client/log.c:133
@@ -1168,8 +1168,8 @@ msgstr ""
 #: libsvn_client/ra.c:181 libsvn_client/revisions.c:89
 #: libsvn_client/status.c:256 libsvn_client/switch.c:107
 #: libsvn_wc/adm_crawler.c:453 libsvn_wc/adm_crawler.c:477
-#: libsvn_wc/adm_ops.c:1349 libsvn_wc/adm_ops.c:2637 libsvn_wc/adm_ops.c:2663
-#: libsvn_wc/adm_ops.c:2699 libsvn_wc/adm_ops.c:2741 libsvn_wc/copy.c:307
+#: libsvn_wc/adm_ops.c:1350 libsvn_wc/adm_ops.c:2638 libsvn_wc/adm_ops.c:2664
+#: libsvn_wc/adm_ops.c:2700 libsvn_wc/adm_ops.c:2759 libsvn_wc/copy.c:307
 #: libsvn_wc/copy.c:663 libsvn_wc/copy.c:785 libsvn_wc/copy.c:792
 #: libsvn_wc/diff.c:1793 libsvn_wc/entries.c:2276 libsvn_wc/entries.c:2872
 #: libsvn_wc/props.c:484 libsvn_wc/props.c:1092 libsvn_wc/props.c:1543
@@ -1227,7 +1227,7 @@ msgstr ""
 "コミット対象の項目 '%s' にはコピーフラグがついていますが、リビジョンが不正で"
 "す"
 
-#: libsvn_client/copy.c:302 libsvn_client/copy.c:1203
+#: libsvn_client/copy.c:302 libsvn_client/copy.c:1204
 #: libsvn_client/update.c:78
 #, c-format
 msgid "Path '%s' is not a directory"
@@ -1252,58 +1252,58 @@ msgstr "URL '%s' は自身には移動できません"
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "パス '%s' がリビジョン %ld に存在しません"
 
-#: libsvn_client/copy.c:1042
+#: libsvn_client/copy.c:1043
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr ""
 "コピー元 (もしくは移動元) の URL '%s' は別のリポジトリに由来しています。一緒"
 "に扱えない作業コピーのままにしておきます"
 
-#: libsvn_client/copy.c:1180
+#: libsvn_client/copy.c:1181
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "パス '%s' がリビジョン %ld に見つかりません"
 
-#: libsvn_client/copy.c:1185
+#: libsvn_client/copy.c:1186
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "パス '%s' が HEAD リビジョンに見つかりません"
 
-#: libsvn_client/copy.c:1228
+#: libsvn_client/copy.c:1229
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "'%s' のエントリが存在します (それなのに作業ファイルがありません)"
 
-#: libsvn_client/copy.c:1322 libsvn_client/log.c:86
+#: libsvn_client/copy.c:1323 libsvn_client/log.c:86
 msgid "Revision type requires a working copy path, not a URL"
 msgstr "リビジョン形式には URL ではなく作業コピーパスが必要となります。"
 
-#: libsvn_client/copy.c:1356
+#: libsvn_client/copy.c:1357
 msgid "Cannot mix repository and working copy paths in source list"
 msgstr ""
 "コピー元 (または移動元) のリストにリポジトリと作業コピーパスを混ぜることはで"
 "きません"
 
-#: libsvn_client/copy.c:1397
+#: libsvn_client/copy.c:1398
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "パス '%s' は自身の子ノード '%s' にはコピーできません"
 
-#: libsvn_client/copy.c:1417
+#: libsvn_client/copy.c:1418
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "パス '%s' は自身には移動できません"
 
-#: libsvn_client/copy.c:1426
+#: libsvn_client/copy.c:1427
 msgid "No support for repos <--> working copy moves"
 msgstr "リポジトリ <--> 作業コピーの移動操作はサポートされていません"
 
-#: libsvn_client/copy.c:1490
+#: libsvn_client/copy.c:1491
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' に該当する URL は存在しないようです"
 
-#: libsvn_client/copy.c:1816 svn/move-cmd.c:67
+#: libsvn_client/copy.c:1817 svn/move-cmd.c:67
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "移動操作に (HEAD 以外の) リビジョンは指定できません"
 
@@ -2894,10 +2894,9 @@ msgstr "file-revs レポートにリビジョンが含まれていません"
 msgid "Invalid creation date header value in response."
 msgstr "レスポンス内の作成日時ヘッダの値が不正です。"
 
-# FIXME: A trailing period should be removed.
 #: libsvn_ra_dav/lock.c:213
-msgid "Invalid timeout value."
-msgstr "タイムアウトの値が不正です。"
+msgid "Invalid timeout value"
+msgstr "タイムアウトの値が不正です"
 
 #: libsvn_ra_dav/lock.c:377
 msgid "Failed to parse URI"
@@ -3094,15 +3093,13 @@ msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr ""
 "ra_dav 用のリポジトリアクセスローダバージョン (%d) はサポートされていません"
 
-# FIXME: Remove a trailing period.
 #: libsvn_ra_dav/util.c:166
-msgid "The request response contained at least one error."
-msgstr "リクエストのレスポンスに 1 つ以上のエラーが含まれていました。"
+msgid "The request response contained at least one error"
+msgstr "リクエストのレスポンスに 1 つ以上のエラーが含まれていました"
 
-# FIXME: Remove a trailing period.
 #: libsvn_ra_dav/util.c:186
-msgid "The response contains a non-conforming HTTP status line."
-msgstr "仕様に準拠していない HTTP ステータス行がレスポンスに含まれています。"
+msgid "The response contains a non-conforming HTTP status line"
+msgstr "仕様に準拠していない HTTP ステータス行がレスポンスに含まれています"
 
 # * Arguments are (1) method and (2) url.
 #: libsvn_ra_dav/util.c:413
@@ -3232,10 +3229,9 @@ msgstr "パス '%s' は存在しません"
 msgid "Failed writing updated file"
 msgstr "更新されたファイルを書き込めませんでした"
 
-# FIXME: "Adding directory failed" is better
 #: libsvn_ra_serf/commit.c:1216
 #, c-format
-msgid "Add directory failed: %s on %s (%d)"
+msgid "Adding a directory failed: %s on %s (%d)"
 msgstr "ディレクトリの追加が失敗しました: %s (対象: %s) (%d)"
 
 #: libsvn_ra_serf/getlocations.c:289
@@ -4890,22 +4886,22 @@ msgstr "URL '%s' が、対象において現存する URL '%s' と一致しま�
 msgid "Unrecognized node kind: '%s'"
 msgstr "認識できないノード種別です: '%s'"
 
-#: libsvn_wc/adm_ops.c:1387
+#: libsvn_wc/adm_ops.c:1388
 #, c-format
 msgid "'%s' not found"
 msgstr "'%s' が見つかりません"
 
-#: libsvn_wc/adm_ops.c:1391
+#: libsvn_wc/adm_ops.c:1392
 #, c-format
 msgid "Unsupported node kind for path '%s'"
 msgstr "パス '%s' のノード種別はサポートされていません"
 
-#: libsvn_wc/adm_ops.c:1421
+#: libsvn_wc/adm_ops.c:1422
 #, c-format
 msgid "'%s' is already under version control"
 msgstr "'%s' は既にバージョン管理下におかれています"
 
-#: libsvn_wc/adm_ops.c:1433
+#: libsvn_wc/adm_ops.c:1434
 #, c-format
 msgid ""
 "Can't replace '%s' with a node of a differing type; the deletion must be "
@@ -4914,43 +4910,43 @@ msgstr ""
 "'%s' は、異なる種別のノードに置換できません。'%s' を追加する前に、削除をコ"
 "ミットして親ディレクトリを更新しなければいけません"
 
-#: libsvn_wc/adm_ops.c:1450
+#: libsvn_wc/adm_ops.c:1451
 #, c-format
 msgid "Can't find parent directory's entry while trying to add '%s'"
 msgstr ""
 "'%s' を追加しようとしましたが、親ディレクトリのエントリが見つかりませんでした"
 
-#: libsvn_wc/adm_ops.c:1455
+#: libsvn_wc/adm_ops.c:1456
 #, c-format
 msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr "削除準備中の親ディレクトリに '%s' を加えることはできません"
 
-#: libsvn_wc/adm_ops.c:1471
+#: libsvn_wc/adm_ops.c:1472
 #, c-format
 msgid "The URL '%s' has a different repository root than its parent"
 msgstr "URL '%s' のリポジトリルートが親と異なっています"
 
-#: libsvn_wc/adm_ops.c:1803
+#: libsvn_wc/adm_ops.c:1804
 #, c-format
 msgid "Error restoring text for '%s'"
 msgstr "'%s' のテキストを元に戻す際にエラーが発生しました"
 
-#: libsvn_wc/adm_ops.c:1934
+#: libsvn_wc/adm_ops.c:1935
 #, c-format
 msgid "Cannot revert: '%s' is not under version control"
 msgstr "元に戻せません: '%s' はバージョン管理下におかれていません"
 
-#: libsvn_wc/adm_ops.c:1962
+#: libsvn_wc/adm_ops.c:1963
 #, c-format
 msgid "Cannot revert '%s': unsupported entry node kind"
 msgstr "'%s' を元に戻せません: エントリのノード種別がサポートされていません"
 
-#: libsvn_wc/adm_ops.c:1973
+#: libsvn_wc/adm_ops.c:1974
 #, c-format
 msgid "Cannot revert '%s': unsupported node kind in working copy"
 msgstr "'%s' を元に戻せません: 作業コピーのノード種別がサポートされていません"
 
-#: libsvn_wc/adm_ops.c:2020
+#: libsvn_wc/adm_ops.c:2021
 msgid ""
 "Cannot revert addition of current directory; please try again from the "
 "parent directory"
@@ -4958,12 +4954,12 @@ msgstr ""
 "カレントディレクトリの追加は元に戻せません。親ディレクトリでもう一度試してみ"
 "てください"
 
-#: libsvn_wc/adm_ops.c:2042
+#: libsvn_wc/adm_ops.c:2043
 #, c-format
 msgid "Unknown or unexpected kind for path '%s'"
 msgstr "パス '%s' の種別が不明または予想外です"
 
-#: libsvn_wc/adm_ops.c:2204
+#: libsvn_wc/adm_ops.c:2205
 #, c-format
 msgid "File '%s' has local modifications"
 msgstr "ファイル '%s' にはローカルでの変更が加えられています"
@@ -7948,35 +7944,32 @@ msgstr "置換しています              %s\n"
 #: svn/notify.c:368
 #, c-format
 msgid "Transmitting file data "
-msgstr "ファイルのデータを送信中です"
+msgstr "ファイルのデータを送信しています"
 
 #: svn/notify.c:377
 #, c-format
 msgid "'%s' locked by user '%s'.\n"
-msgstr "'%s' をユーザ '%s' がロックしています。\n"
+msgstr "'%s' はユーザ '%s' にロックされました。\n"
 
 #: svn/notify.c:383
 #, c-format
 msgid "'%s' unlocked.\n"
-msgstr "'%s' のロックが解除されました。\n"
+msgstr "'%s' のロックは解除されました。\n"
 
-# FIXME: Remove a trailing period and trailing newline.
 #: svn/notify.c:394
 #, c-format
 msgid "Path '%s' is now part of changelist '%s'.\n"
-msgstr "パス '%s' は現在、変更リスト '%s' の一部です。\n"
+msgstr "パス '%s' は変更リスト '%s' の一部になりました。\n"
 
-# FIXME: "a changelist" => "any changelists"?
-# FIXME: Remove a trailing period and trailing newline.
 #: svn/notify.c:401
 #, c-format
 msgid "Path '%s' is no longer associated with a changelist.\n"
-msgstr "パス '%s' はもはや変更リストとは関連づけられていません。\n"
+msgstr "パス '%s' の変更リストとの関連づけは解消されました。\n"
 
 #: svn/propdel-cmd.c:77
 #, c-format
 msgid "property '%s' deleted from repository revision %ld\n"
-msgstr "属性 '%s' がリポジトリのリビジョン %ld から削除されました\n"
+msgstr "属性 '%s' をリポジトリのリビジョン %ld から削除しました\n"
 
 #: svn/propdel-cmd.c:86
 #, c-format
@@ -7987,12 +7980,12 @@ msgstr ""
 #: svn/propdel-cmd.c:116
 #, c-format
 msgid "property '%s' deleted (recursively) from '%s'.\n"
-msgstr "属性 '%s' が (再帰的に) '%s' から削除されました\n"
+msgstr "属性 '%s' を '%s' から (再帰的に) 削除しました。\n"
 
 #: svn/propdel-cmd.c:117
 #, c-format
 msgid "property '%s' deleted from '%s'.\n"
-msgstr "属性 '%s' が '%s' から削除されました\n"
+msgstr "属性 '%s' を '%s' から削除しました。\n"
 
 #: svn/propedit-cmd.c:60
 #, c-format
@@ -9633,27 +9626,27 @@ msgstr "アドレス情報を取得できません"
 msgid "Can't create server socket"
 msgstr "サーバソケットを作成できません"
 
-#: svnserve/main.c:637
+#: svnserve/main.c:636
 #, c-format
 msgid "Can't bind server socket"
 msgstr "サーバソケットをバインドできません"
 
-#: svnserve/main.c:705
+#: svnserve/main.c:704
 #, c-format
 msgid "Can't accept client connection"
 msgstr "クライアントの接続を受け入れることができません"
 
-#: svnserve/main.c:759
+#: svnserve/main.c:758
 #, c-format
 msgid "Can't create threadattr"
 msgstr "スレッド属性を作成できません"
 
-#: svnserve/main.c:767
+#: svnserve/main.c:766
 #, c-format
 msgid "Can't set detached state"
 msgstr "独立した状態を設定できません"
 
-#: svnserve/main.c:780
+#: svnserve/main.c:779
 #, c-format
 msgid "Can't create thread"
 msgstr "スレッドを作成できません"
@@ -13977,3 +13970,16 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "ださい。\n"
 #~ "\n"
 #~ "利用可能なサブコマンド:\n"
+
+#~ msgid "Invalid timeout value."
+#~ msgstr "タイムアウトの値が不正です。"
+
+#~ msgid "The request response contained at least one error."
+#~ msgstr "リクエストのレスポンスに 1 つ以上のエラーが含まれていました。"
+
+#~ msgid "The response contains a non-conforming HTTP status line."
+#~ msgstr ""
+#~ "仕様に準拠していない HTTP ステータス行がレスポンスに含まれています。"
+
+#~ msgid "Add directory failed: %s on %s (%d)"
+#~ msgstr "ディレクトリの追加が失敗しました: %s (対象: %s) (%d)"
