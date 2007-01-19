@@ -556,6 +556,9 @@ def use_editor(func):
 def is_ra_type_dav():
   return test_area_url.startswith('http')
 
+def is_ra_type_svn():
+  return test_area_url.startswith('svn')
+
 def is_fs_type_fsfs():
   # This assumes that fsfs is the default fs implementation.
   return (fs_type == 'fsfs' or fs_type is None)
