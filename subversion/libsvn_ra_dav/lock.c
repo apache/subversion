@@ -210,7 +210,7 @@ lock_from_baton(svn_lock_t **lock,
             }
           else
             return svn_error_create(SVN_ERR_RA_DAV_RESPONSE_HEADER_BADNESS,
-                                    NULL, _("Invalid timeout value."));
+                                    NULL, _("Invalid timeout value"));
         }
       else
         lck->expiration_date = 0;

@@ -164,7 +164,7 @@ end_207_element(void *baton, int state,
       if (b->contains_error)
         return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                 _("The request response contained at least "
-                                  "one error."));
+                                  "one error"));
       break;
 
     case ELEM_responsedescription:
@@ -184,7 +184,7 @@ end_207_element(void *baton, int state,
         else
           return svn_error_create(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
                                   _("The response contains a non-conforming "
-                                    "HTTP status line."));
+                                    "HTTP status line"));
       }
 
     default:
