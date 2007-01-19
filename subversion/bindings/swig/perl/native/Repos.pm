@@ -207,7 +207,7 @@ If $strict_node_history is true then copies will not be traversed.
 
 =back
 
-=cut
+=back
 
 =head2 ADDITIONAL METHODS
 

@@ -1454,6 +1454,8 @@ also only useful when working with a WC.
 
 =item $info->prejfile()
 
+=back
+
 =cut
 
 package _p_svn_client_commit_info_t;
