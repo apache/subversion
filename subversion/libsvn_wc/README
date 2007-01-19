@@ -478,6 +478,11 @@ lock-creation-date:
 changelist:
    Which changelist this entry is part of, or empty if none.
 
+keep-local:
+   A boolean: true iff this entry should be kept after a scheduled
+   deletion is committed.  This is only allowed on the this_dir entry,
+   and only when the schedule is 'delete'.
+
 The only fields allowed in an entry for a directory (other than the
 this_dir entry) are name, absent, deleted, schedule, copied,
 copyfrom-url, copyfrom-rev and kind.  The other fields are only stored

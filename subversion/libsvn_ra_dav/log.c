@@ -2,7 +2,7 @@
  * log.c :  routines for requesting and parsing log reports
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -399,7 +399,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
         {
           const char *this_path =
             apr_xml_quote_string(pool,
-                                 ((const char **)paths->elts)[i],
+                                 APR_ARRAY_IDX(paths, i, const char *),
                                  0);
           svn_stringbuf_appendcstr(request_body, "<S:path>");
           svn_stringbuf_appendcstr(request_body, this_path);

@@ -153,6 +153,10 @@ class WinGeneratorBase(GeneratorBase):
     # Find db-4.0.x or db-4.1.x
     self._find_bdb()
 
+    # Find the right Ruby include and libraries dirs and
+    # library name to link SWIG bindings with
+    self._find_ruby()
+
     # Find the right Perl library name to link SWIG bindings with
     self._find_perl()
 
@@ -322,6 +326,10 @@ class WinGeneratorBase(GeneratorBase):
                                   'msvc-name' : dep.name + "_dll" }, 
                                 self)
     target.msvc_export = dep.msvc_export
+
+    # move the description from the static library target to the dll.
+    target.desc = dep.desc
+    dep.desc = None
 
     # The dependency should now be static.
     dep.msvc_export = None
@@ -776,6 +784,8 @@ class WinGeneratorBase(GeneratorBase):
         fakeincludes.append(self.swig_libdir)
       if target.lang == "python":
         fakeincludes.extend(self.python_includes)
+      if target.lang == "ruby":
+        fakeincludes.extend(self.ruby_includes)
 
     fakeincludes.extend([
                          self.apath(self.zlib_path),
@@ -811,6 +821,8 @@ class WinGeneratorBase(GeneratorBase):
             or isinstance(target, gen_base.TargetSWIGLib)):
       if target.lang == "python" and self.python_libdir:
         fakelibdirs.append(self.python_libdir)
+      if target.lang == "ruby" and self.ruby_libdir:
+        fakelibdirs.append(self.ruby_libdir)
 
     return fakelibdirs
 
@@ -854,6 +866,11 @@ class WinGeneratorBase(GeneratorBase):
          or isinstance(target, gen_base.TargetSWIGLib))
         and target.lang == 'perl'):
       nondeplibs.append(self.perl_lib)
+
+    if ((isinstance(target, gen_base.TargetSWIG)
+         or isinstance(target, gen_base.TargetSWIGLib))
+        and target.lang == 'ruby'):
+      nondeplibs.append(self.ruby_lib)
 
     for dep in self.get_win_depends(target, FILTER_LIBS):
       nondeplibs.extend(dep.msvc_libs)
@@ -1028,6 +1045,29 @@ class WinGeneratorBase(GeneratorBase):
                        % (msg, self.perl_lib))
     finally:
       fp.close()
+
+  def _find_ruby(self):
+    "Find the right Ruby library name to link swig bindings with"
+    self.ruby_includes = []
+    self.ruby_libdir = None
+    proc = os.popen('ruby -rrbconfig -e ' + escape_shell_arg(
+                    "puts Config::CONFIG['LIBRUBY'];"
+                    "puts Config::CONFIG['archdir'];"
+                    "puts Config::CONFIG['libdir'];"), 'r')
+    try:
+      libruby = proc.readline()[:-1]
+      if libruby:
+        msg = 'Found installed ruby.'
+        self.ruby_lib = libruby
+        self.ruby_includes.append(proc.readline()[:-1])
+        self.ruby_libdir = proc.readline()[:-1]
+      else:
+        msg = 'Could not detect Ruby version.'
+        self.ruby_lib = 'msvcrt-ruby18.lib'
+      sys.stderr.write('%s\n  Ruby bindings will be linked with %s\n'
+                       % (msg, self.ruby_lib))
+    finally:
+      proc.close()
 
   def _find_python(self):
     "Find the appropriate options for creating SWIG-based Python modules"

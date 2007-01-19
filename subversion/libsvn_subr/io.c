@@ -26,6 +26,7 @@
 #endif
 
 #ifndef APR_STATUS_IS_EPERM
+#include <errno.h>
 #ifdef EPERM
 #define APR_STATUS_IS_EPERM(s)   ((s) == EPERM)
 #else

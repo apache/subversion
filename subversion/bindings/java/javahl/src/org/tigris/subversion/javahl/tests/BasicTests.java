@@ -671,14 +671,19 @@ public class BasicTests extends SVNTests
     {
         OneTest thisTest = new OneTest();
         WC wc = thisTest.getWc();
+        final Revision firstRevision = Revision.getInstance(1);
+        final Revision pegRevision = null;  // Defaults to Revision.HEAD.
 
         // Copy files from A/B/E to A/B/F.
         String[] srcPaths = { "alpha", "beta" };
+        CopySource[] sources = new CopySource[srcPaths.length];
         for (int i = 0; i < srcPaths.length; i++)
         {
             String fileName = srcPaths[i];
-            srcPaths[i] = new File(thisTest.getWorkingCopy(),
-                                   "A/B/E/" + fileName).getPath();
+            sources[i] =
+                new CopySource(new File(thisTest.getWorkingCopy(),
+                                        "A/B/E/" + fileName).getPath(),
+                               firstRevision, pegRevision);
             wc.addItem("A/B/F/" + fileName,
                        wc.getItemContent("A/B/E/" + fileName));
             wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
@@ -687,10 +692,9 @@ public class BasicTests extends SVNTests
                                   CommitItemStateFlags.Add |
                                   CommitItemStateFlags.IsCopy);
         }
-        Revision pegRevision = null;
-        client.copy(srcPaths,
+        client.copy(sources,
                     new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
-                    null, Revision.getInstance(1), pegRevision, true);
+                    null, true);
 
         // Commit the changes, and check the state of the WC.
         assertEquals("Unexpected WC revision number after commit",

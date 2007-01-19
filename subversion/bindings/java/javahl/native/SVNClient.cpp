@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -23,6 +23,7 @@
 #include "JNIUtil.h"
 #include "Notify.h"
 #include "Notify2.h"
+#include "CopySources.h"
 #include "DiffSummaryReceiver.h"
 #include "ProgressListener.h"
 #include "Prompter.h"
@@ -724,17 +725,16 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     return -1;
 }
 
-void SVNClient::copy(Targets &srcPaths, const char *destPath, 
-                     const char *message, Revision &revision,
-                     Revision &pegRevision, bool copyAsChild)
+void SVNClient::copy(CopySources &copySources, const char *destPath, 
+                     const char *message, bool copyAsChild)
 {
     Pool requestPool;
 
-    const apr_array_header_t *srcs = srcPaths.array(requestPool);
-    svn_error_t *err = srcPaths.error_occured();
-    if (err)
+    apr_array_header_t *srcs = copySources.array(requestPool);
+    if (srcs == NULL)
     {
-        JNIUtil::handleSVNError(err);
+        JNIUtil::throwNativeException(JAVA_PACKAGE "/ClientException",
+                                      "Invalid copy sources");
         return;
     }
     if (destPath == NULL)
@@ -743,7 +743,7 @@ void SVNClient::copy(Targets &srcPaths, const char *destPath,
         return;
     }
     Path destinationPath(destPath);
-    err = destinationPath.error_occured();
+    svn_error_t *err = destinationPath.error_occured();
     if (err)
     {
         JNIUtil::handleSVNError(err);
@@ -754,11 +754,8 @@ void SVNClient::copy(Targets &srcPaths, const char *destPath,
     if (ctx == NULL)
         return;
     svn_commit_info_t *commit_info;
-    // ### TODO: Use pegRevision once there is a Subversion API which
-    // ### supports it.
-    err = svn_client_copy4(&commit_info, (apr_array_header_t *) srcs,
-                           revision.revision(), destinationPath.c_str(),
-                           copyAsChild, ctx, requestPool.pool());
+    err = svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
+			   copyAsChild, ctx, requestPool.pool());
     if (err)
         JNIUtil::handleSVNError(err);
 }

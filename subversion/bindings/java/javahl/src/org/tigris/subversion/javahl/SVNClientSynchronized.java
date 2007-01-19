@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -619,29 +619,23 @@ public class SVNClientSynchronized implements SVNClientInterface
     /**
      * Copy versioned paths with the history preserved.
      *
-     * @param srcPaths Source paths or URLs.
+     * @param sources A list of <code>CopySource</code> objects.
      * @param destPath Destination path or URL.
-     * @param message Commit message if <code>destPath</code> is a URL.
-     * @param revision Source revision.
-     * @param pegRevision Ignored until supported by the underlying
-     * Subversion APIs.  Defaults to {@link
-     * org.tigris.subversion.javahl.Revision#HEAD} (if
-     * <code>null</code>).
+     * @param message Commit message.  May be <code>null</code> if
+     * <code>destPath</code> is not a URL.
      * @param copyAsChild Whether to copy <code>srcPaths</code> as
      * children of <code>destPath</code>.
      * @exception ClientException If the copy operation fails.
      * @since 1.5
      * @see org.tigris.subversion.javahl.SVNClientInterface.copy(String[], String, String, Revision, boolean)
      */
-    public void copy(String[] srcPaths, String destPath, String message,
-                     Revision revision, Revision pegRevision,
+    public void copy(CopySource[] sources, String destPath, String message,
                      boolean copyAsChild)
         throws ClientException
     {
         synchronized (clazz)
         {
-            worker.copy(srcPaths, destPath, message, revision, pegRevision,
-                        copyAsChild);
+            worker.copy(sources, destPath, message, copyAsChild);
         }
     }
 

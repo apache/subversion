@@ -46,6 +46,17 @@ class JNIUtil
 {
 public:
     static svn_error_t *preprocessPath(const char *&path, apr_pool_t * pool);
+
+    /**
+     * Throw the NativeException instance named by exceptionClassName.
+     * NativeException sub-class must supply a matching 3-arg
+     * constructor.
+     */
+    static void throwNativeException(const char *exceptionClassName,
+                                     const char *msg,
+                                     const char *fileName = NULL,
+                                     int aprErr = -1);
+
     static void throwNullPointerException(const char *message);
     static jbyteArray makeJByteArray(const signed char *data, int length);
     static void setRequestPool(Pool *pool);

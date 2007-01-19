@@ -365,7 +365,12 @@ svn_error_t *svn_client__get_auto_props(apr_hash_t **properties,
 
 /* The main logic for client deletion from a working copy. Deletes PATH
    from ADM_ACCESS.  If PATH (or any item below a directory PATH) is
-   modified the delete will fail and return an error unless FORCE is TRUE.
+   modified the delete will fail and return an error unless FORCE or KEEP_LOCAL
+   is TRUE.
+
+   If KEEP_LOCAL is TRUE then PATH is only scheduled from deletion from the
+   repository and a local copy of PATH will be kept in the working copy.
+
    If DRY_RUN is TRUE all the checks are made to ensure that the delete can
    occur, but the working copy is not modified.  If NOTIFY_FUNC is not
    null, it is called with NOTIFY_BATON for each file or directory deleted. */
@@ -373,6 +378,7 @@ svn_error_t * svn_client__wc_delete(const char *path,
                                     svn_wc_adm_access_t *adm_access,
                                     svn_boolean_t force,
                                     svn_boolean_t dry_run,
+                                    svn_boolean_t keep_local,
                                     svn_wc_notify_func2_t notify_func,
                                     void *notify_baton,
                                     svn_client_ctx_t *ctx,
@@ -542,7 +548,7 @@ svn_client__get_diff_summarize_editor(const char *target,
 */
 typedef struct
 {
-    /* The source path or url */
+    /* The source path or url. */
     const char *src;
 
     /* The source path relative to the wc root */
@@ -557,6 +563,19 @@ typedef struct
 
     /* The node kind of the source */
     svn_node_kind_t src_kind;
+
+    /* The original source name.  (Used when the source gets overwritten by a
+       peg revision lookup.) */
+    const char *src_original;
+
+    /* The source operational revision. */
+    svn_opt_revision_t src_op_revision;
+
+    /* The source peg revision. */
+    svn_opt_revision_t src_peg_revision;
+
+    /* The source revision number. */
+    svn_revnum_t src_revnum;
 
     /* The destination path or url */
     const char *dst;

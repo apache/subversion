@@ -2,7 +2,7 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -192,6 +192,8 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("operate only on members of changelist ARG")},
   {"keep-changelist", svn_cl__keep_changelist_opt, 0,
                     N_("don't delete changelist after commit")},
+  {"keep-local",    svn_cl__keep_local_opt, 0,
+                    N_("keep path in working copy")},   
   {0,               0, 0, 0}
 };
 
@@ -318,7 +320,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "copy", svn_cl__copy, {"cp"}, N_
     ("Duplicate something in working copy or repository, remembering history.\n"
-     "usage: copy SRC... DST\n"
+     "usage: copy SRC[@REV]... DST\n"
      "\n"
      "When copying multiple sources, they will be added as children of DST, \n"
      "which must be a directory.\n"
@@ -339,14 +341,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  1. Each item specified by a PATH is scheduled for deletion upon\n"
      "    the next commit.  Files, and directories that have not been\n"
-     "    committed, are immediately removed from the working copy.\n"
+     "    committed, are immediately removed from the working copy\n"
+     "    unless --keep-local option is given.\n"
      "    PATHs that are, or contain, unversioned or modified items will\n"
      "    not be removed unless the --force option is given.\n"
      "\n"
      "  2. Each item specified by a URL is deleted from the repository\n"
      "    via an immediate commit.\n"),
     {svn_cl__force_opt, 'q', svn_cl__targets_opt,
-     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
+     svn_cl__keep_local_opt} },
 
   { "diff", svn_cl__diff, {"di"}, N_
     ("Display the differences between two revisions or paths.\n"
@@ -1269,6 +1273,9 @@ main(int argc, const char *argv[])
         break;
       case svn_cl__keep_changelist_opt:
         opt_state.keep_changelist = TRUE;
+        break;
+      case svn_cl__keep_local_opt:
+        opt_state.keep_local = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

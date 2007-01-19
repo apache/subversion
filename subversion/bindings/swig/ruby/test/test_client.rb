@@ -828,7 +828,7 @@ class SvnClientTest < Test::Unit::TestCase
   def test_merge
     log = "sample log"
     file = "sample.txt"
-    src = "sample\n"
+    src = normalize_line_break("sample\n")
     trunk = File.join(@wc_path, "trunk")
     branch = File.join(@wc_path, "branch")
     trunk_path = File.join(trunk, file)
@@ -875,7 +875,7 @@ class SvnClientTest < Test::Unit::TestCase
   def test_merge_peg
     log = "sample log"
     file = "sample.txt"
-    src = "sample\n"
+    src = normalize_line_break("sample\n")
     trunk = File.join(@wc_path, "trunk")
     branch = File.join(@wc_path, "branch")
     trunk_path = File.join(trunk, file)
@@ -1274,8 +1274,8 @@ class SvnClientTest < Test::Unit::TestCase
   
   def test_cat
     log = "sample log"
-    src1 = "source1\n"
-    src2 = "source2\n"
+    src1 = normalize_line_break("source1\n")
+    src2 = normalize_line_break("source2\n")
     file = "sample.txt"
     path = File.join(@wc_path, file)
 
@@ -1553,8 +1553,8 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_switch
     log = "sample log"
-    trunk_src = "trunk source\n"
-    tag_src = "tag source\n"
+    trunk_src = normalize_line_break("trunk source\n")
+    tag_src = normalize_line_break("tag source\n")
     file = "sample.txt"
     file = "sample.txt"
     trunk_dir = "trunk"
@@ -1615,7 +1615,7 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_authentication
     log = "sample log"
-    src = "source\n"
+    src = normalize_line_break("source\n")
     file = "sample.txt"
     path = File.join(@wc_path, file)
     svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
@@ -1660,7 +1660,7 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_simple_provider
     log = "sample log"
-    src = "source\n"
+    src = normalize_line_break("source\n")
     file = "sample.txt"
     path = File.join(@wc_path, file)
     svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
@@ -1699,7 +1699,7 @@ class SvnClientTest < Test::Unit::TestCase
     return unless Svn::Core.respond_to?(:add_windows_simple_provider)
 
     log = "sample log"
-    src = "source\n"
+    src = normalize_line_break("source\n")
     file = "sample.txt"
     path = File.join(@wc_path, file)
     svnserve_uri = "#{@repos_svnserve_uri}/#{file}"

@@ -2,7 +2,7 @@
  * commit.c :  routines for committing changes to the server
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -502,7 +502,7 @@ static void record_prop_change(apr_pool_t *pool,
       /* deleted property. */
       if (r->prop_deletes == NULL)
         r->prop_deletes = apr_array_make(pool, 5, sizeof(char *));
-      *(const char **)apr_array_push(r->prop_deletes) = name;
+      APR_ARRAY_PUSH(r->prop_deletes, const char *) = name;
     }
 }
 

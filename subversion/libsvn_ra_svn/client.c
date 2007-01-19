@@ -2,7 +2,7 @@
  * client.c :  Functions for repository access via the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -147,7 +147,7 @@ static svn_error_t *parse_proplist(apr_array_header_t *list, apr_pool_t *pool,
   *props = apr_hash_make(pool);
   for (i = 0; i < list->nelts; i++)
     {
-      elt = &((svn_ra_svn_item_t *) list->elts)[i];
+      elt = &APR_ARRAY_IDX(list, i, svn_ra_svn_item_t);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Proplist element not a list"));
@@ -986,7 +986,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
   *dirents = apr_hash_make(pool);
   for (i = 0; i < dirlist->nelts; i++)
     {
-      elt = &((svn_ra_svn_item_t *) dirlist->elts)[i];
+      elt = &APR_ARRAY_IDX(dirlist, i, svn_ra_svn_item_t);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Dirlist element not a list"));
@@ -1184,7 +1184,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
     {
       for (i = 0; i < paths->nelts; i++)
         {
-          path = ((const char **) paths->elts)[i];
+          path = APR_ARRAY_IDX(paths, i, const char *);
           SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
         }
     }
@@ -1212,7 +1212,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           cphash = apr_hash_make(subpool);
           for (i = 0; i < cplist->nelts; i++)
             {
-              elt = &((svn_ra_svn_item_t *) cplist->elts)[i];
+              elt = &APR_ARRAY_IDX(cplist, i, svn_ra_svn_item_t);
               if (elt->kind != SVN_RA_SVN_LIST)
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
@@ -1340,7 +1340,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
                                  "get-locations", path, peg_revision));
   for (i = 0; i < location_revisions->nelts; i++)
     {
-      revision = ((svn_revnum_t *)location_revisions->elts)[i];
+      revision = APR_ARRAY_IDX(location_revisions, i, svn_revnum_t);
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!r!", revision));
     }
 

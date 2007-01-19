@@ -754,7 +754,7 @@ struct apr_pool_wrapper_t
 
   ~apr_pool_wrapper_t() {
     apr_pool_wrapper_destroy(self);
-    free(self);
+    xfree(self);
   }
 };
 

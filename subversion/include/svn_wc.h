@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -650,7 +650,13 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_failed_unlock,
 
   /** Tried adding a path that already exists. @since New in 1.5. */
-  svn_wc_notify_exists
+  svn_wc_notify_exists,
+
+  /** Changelist name set. @since New in 1.5. */
+  svn_wc_notify_changelist_set,
+
+  /** Changelist name cleared. @since New in 1.5. */
+  svn_wc_notify_changelist_clear
 
 } svn_wc_notify_action_t;
 
@@ -754,6 +760,9 @@ typedef struct svn_wc_notify_t {
    * action is @c svn_wc_notify_blame_revision, processed revision.
    * In all other cases, it is @c SVN_INVALID_REVNUM. */
   svn_revnum_t revision;
+  /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
+   * cases, it is @c NULL. */
+  const char *changelist_name;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
@@ -1319,6 +1328,13 @@ typedef struct svn_wc_entry_t
    * @since New in 1.5.
    */
   const char *changelist;
+
+  /** Whether a local copy of this entry should be kept in the working copy
+   * after a deletion has been committed,  Only valid for the this-dir entry
+   * when it is scheduled for deletion.
+   *
+   * @since New in 1.5. */
+  svn_boolean_t keep_local;
 
   /* IMPORTANT: If you extend this structure, check svn_wc_entry_dup() to see
      if you need to extend that as well. */
@@ -2060,11 +2076,14 @@ svn_error_t *svn_wc_copy(const char *src,
  * deletion will occur.  @a adm_access must hold a write lock for the parent 
  * of @a path.
  *
- * This function immediately deletes all files, modified and unmodified,
- * versioned and unversioned from the working copy. It also immediately
- * deletes unversioned directories and directories that are scheduled to be
- * added.  Only versioned directories will remain in the working copy,
- * these get deleted by the update following the commit.
+ * If @a keep_local is FALSE, this function immediately deletes all files,
+ * modified and unmodified, versioned and unversioned from the working copy.
+ * It also immediately deletes unversioned directories and directories that
+ * are scheduled to be added.  Only versioned directories will remain in the
+ * working copy, these get deleted by the update following the commit.
+ *
+ * If @a keep_local is TRUE, all files and directories will be kept in the
+ * working copy (and will become unversioned on the next commit).
  *
  * If @a cancel_func is non-null, call it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -2074,7 +2093,21 @@ svn_error_t *svn_wc_copy(const char *src,
  * the @a notify_baton and that path. The @a notify_func callback may be
  * @c NULL if notification is not needed.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_wc_delete3(const char *path,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            svn_wc_notify_func2_t notify_func,
+                            void *notify_baton,
+                            svn_boolean_t keep_local,
+                            apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_delete3(), but with @a keep_local always set to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_wc_delete2(const char *path,
                             svn_wc_adm_access_t *adm_access,
@@ -3741,10 +3774,19 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
 
 /**
- * Associate @a path with changelist @a changelist by setting the
+ * Associate each item in @a paths with changelist @a changelist by setting the
  * 'changelist' attribute in its entry.  Obviously, this will
  * overwrite any existing value of the attribute.  If @a changelist is
- * NULL, then remove any 'changelist' attribute in @a path's entry.
+ * NULL, then remove any 'changelist' attribute for the entry for each item in
+ * @a paths.
+ *
+ * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
+ *
+ * If @a notify_func is non-NULL, it will be called with @a
+ * notify_baton, the each path for changelist association, and the
+ * notification type (@c svn_wc_notify_changelist_set or @c
+ * svn_wc_notify_changelist_clear).
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -3752,8 +3794,12 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_wc_set_changelist(const char *path,
+svn_wc_set_changelist(const apr_array_header_t *paths,
                       const char *changelist,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
                       apr_pool_t *pool);
 
 

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1162,6 +1162,11 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * modified and/or unversioned items. If @a force is set such items
  * will be deleted.
  *
+ * If the paths are working copy paths and @a keep_local is true then
+ * the paths will not be removed from the working copy, only scheduled
+ * for removal from the repository.  Once the scheduled deletion is
+ * committed, they will appear as unversioned paths in the working copy.
+ *
  * @a ctx->log_msg_func3/@a ctx->log_msg_baton3 are a callback/baton
  * combo that this function can use to query for a commit log message
  * when one is needed.
@@ -1170,7 +1175,21 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
  * @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of the deleted
  * item.
  *
- * @since New in 1.3.
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_delete3(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *paths,
+                   svn_boolean_t force,
+                   svn_boolean_t keep_local,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_delete3(), but with @a keep_local always set
+ * to false.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_delete2(svn_commit_info_t **commit_info_p,
@@ -1178,7 +1197,6 @@ svn_client_delete2(svn_commit_info_t **commit_info_p,
                    svn_boolean_t force,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
-
 
 /**
  * Similar to svn_client_delete2(), but takes the @c svn_client_commit_info_t
@@ -2069,29 +2087,49 @@ svn_client_resolved(const char *path,
                     apr_pool_t *pool);
 
 
-/** Copy @a src_paths to @a dst_path.
+/**
+ * A structure which describes the source of a copy operation--its path, 
+ * revision, and peg revision.
  *
- * If multiple @a src_paths are given, @a dst_path must be a directory,
- * and @a src_paths will be copied as children of @a dst_path.
+ * @since New in 1.5.
+ */
+typedef struct svn_client_copy_source_t
+{
+    /** The source path or URL. */
+    const char *path;
+
+    /** The source operational revision. */
+    const svn_opt_revision_t *revision;
+
+    /** The source peg revision. */
+    const svn_opt_revision_t *peg_revision;
+} svn_client_copy_source_t;
+
+/** Copy each @a src in @a sources to @a dst_path.
  *
- * @a src_paths must be files or directories under version control, or
- * URLs of a versioned item in the repository.  If @a src_paths has multiple
- * items, they must be all repository URLs or all working copy paths.
- * @a src_revision is used to choose the revision from which to copy the
- * @a src_paths.
+ * If multiple @a sources are given, @a dst_path must be a directory,
+ * and @a sources will be copied as children of @a dst_path.
+ *
+ * @a sources must be an array of elements of type
+ * <tt>svn_client_copy_item_t *</tt>.
+ *
+ * Each @src in @a sources must be files or directories under version control,
+ * or URLs of a versioned item in the repository.  If @a sources has multiple
+ * items, the @src members must be all repository URLs or all working copy
+ * paths.
  *
  * The parent of @a dst_path must already exist.
  *
- * If @a src_paths has only one item, attempt to copy it to @a dst_path.  If
+ * If @a sources has only one item, attempt to copy it to @a dst_path.  If
  * @a copy_as_child is TRUE and @a dst_path already exists, attempt to copy the
  * item as a child of @a dst_path.  If @a copy_as_child is FALSE and
  * @a dst_path already exists, fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path
  * is a working copy path and @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a
  * URL.
  *
- * If @a src_paths has multiple items, and @a copy_as_child is TRUE, all
- * @a src_paths are copied as children of @a dst_path.  If any child of
- * @a dst_path already exists with the same name any item in @a src_paths,
+ * If @a sources has multiple items, and @a copy_as_child is TRUE, all
+ * @a sources are copied as children of @a dst_path.  If any child of
+ * @a dst_path already exists with the same name any item in @a sources,
  * fail with @c SVN_ERR_ENTRY_EXISTS if @a dst_path is a working copy path and
  * @c SVN_ERR_FS_ALREADY_EXISTS if @a dst_path is a URL.
  *
@@ -2104,7 +2142,7 @@ svn_client_resolved(const char *path,
  * succeeds, allocate (in @a pool) and populate @a *commit_info_p.
  *
  * If @a dst_path is not a URL, then this is just a variant of 
- * svn_client_add(), where the @a src_path items are scheduled for addition
+ * svn_client_add(), where the @a sources are scheduled for addition
  * as copies.  No changes will happen to the repository until a commit occurs.
  * This scheduling can be removed with svn_client_revert().
  *
@@ -2120,8 +2158,7 @@ svn_client_resolved(const char *path,
  */
 svn_error_t *
 svn_client_copy4(svn_commit_info_t **commit_info_p,
-                 apr_array_header_t *src_paths,
-                 const svn_opt_revision_t *src_revision,
+                 apr_array_header_t *sources,
                  const char *dst_path,
                  svn_boolean_t copy_as_child,
                  svn_client_ctx_t *ctx,
@@ -2877,10 +2914,10 @@ svn_client_cat(svn_stream_t *out,
 
 
 /**
- * Associate @a path with changelist @a changelist, overwriting any
- * existing changelist association.  (A path cannot be a member of
+ * Associate each item in @a paths with changelist @a changelist, overwriting
+ * any existing changelist association.  (A path cannot be a member of
  * more than one changelist.)  If @a changelist is NULL, then
- * deassociate any existing changelist from @a path.
+ * deassociate any existing changelist from each item in @a paths.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -2888,7 +2925,7 @@ svn_client_cat(svn_stream_t *out,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_set_changelist(const char *path,
+svn_client_set_changelist(const apr_array_header_t *paths,
                           const char *changelist,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *pool);

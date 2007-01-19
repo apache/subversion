@@ -39,7 +39,7 @@ Blanket commit access:
   jszakmeister   John Szakmeister <john@szakmeister.net>
       dionisos   Erik Hülsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
-           djh   D.J. Heap <dj@shadyvale.net>
+           djh   D.J. Heap <djheap@gmail.com>
           maxb   Max Bowsher <maxb1@ukf.net>
       lundblad   Peter N. Lundblad <peter@famlundblad.se>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
@@ -58,7 +58,7 @@ Commit access for specific areas:
   Bindings:
 
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
-      markphip   Mark Phippard <MarkP@softlanding.com>       (JavaHL bindings)
+      markphip   Mark Phippard <markphip@gmail.com>          (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
@@ -103,6 +103,7 @@ Commit access for specific areas:
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
        kameshj   Kamesh Jayachandran <kamesh@collab.net>     (svntest)
+        aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
 
   Translation of message files:
 
@@ -130,7 +131,11 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
-      markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
+      markphip   Mark Phippard <markphip@gmail.com>          (ebcdic)
+      jpeacock   John Peacock <jpeacock@rowman.com>          (perl-bindings-
+                                                              improvements br.)
+    nikclayton   Nik Clayton <nik@ngo.org.uk>                (perl-bindings-
+                                                              improvements br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

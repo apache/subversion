@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -1373,7 +1373,7 @@ def update_schedule_add_dir(sbox):
   # (Standard procedure when trying to resurrect the directory.)
   D_path = os.path.join(wc_dir, 'A', 'D')
   svntest.actions.run_and_verify_svn("Copy error:", None, [],
-                                     'cp', '-r', '1', G_url, D_path)
+                                     'cp', G_url + '@1', D_path)
 
   # status should now show the dir scheduled for addition-with-history
   expected_status.add({

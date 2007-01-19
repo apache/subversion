@@ -1,6 +1,3 @@
-See 
-
- http://svn.collab.net/repos/svn/branches/incomplete-directories/README.branch
-
-for up-to-date information on incomplete directories support in
-Subversion (a.k.a., "sparse directories", "partial directories").
+This feature is now under development as "sparse directories".  See 
+http://svn.collab.net/repos/svn/branches/sparse-directories/README.branch
+for up-to-date information.

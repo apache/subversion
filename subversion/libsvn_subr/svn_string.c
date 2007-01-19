@@ -4,7 +4,7 @@
  *                
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -498,7 +498,7 @@ svn_cstring_split_append(apr_array_header_t *array,
         }
 
       if (p[0] != '\0')
-        (*((const char **) apr_array_push(array))) = p;
+        APR_ARRAY_PUSH(array, const char *) = p;
 
       p = apr_strtok(NULL, sep_chars, &last);
     }
@@ -570,7 +570,7 @@ svn_cstring_join(apr_array_header_t *strings,
   
   for (i = 0; i < strings->nelts; i++)
     {
-      const char *string = ((const char **) (strings->elts))[i];
+      const char *string = APR_ARRAY_IDX(strings, i, const char *);
       svn_stringbuf_appendbytes(new_str, string, strlen(string));
       svn_stringbuf_appendbytes(new_str, separator, sep_len);
     }

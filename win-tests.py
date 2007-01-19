@@ -57,10 +57,11 @@ all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
 client_tests = filter(lambda x: x.startswith(CMDLINE_TEST_SCRIPT_PATH),
                       all_tests)
 
-dll_paths = []
+svn_dlls = []
 for section in gen_obj.sections.values():
   if section.options.get("msvc-export"):
-    dll_paths.append(os.path.join("subversion", section.name))
+    dll_basename = section.name + "-" + str(gen_obj.version) + ".dll"
+    svn_dlls.append(os.path.join("subversion", section.name, dll_basename))
 
 opts, args = my_getopt(sys.argv[1:], 'hrdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
@@ -173,7 +174,7 @@ def copy_execs(baton, dirname, names):
   copied_execs = baton
   for name in names:
     ext = os.path.splitext(name)[1]
-    if ext != ".exe" and ext != ".so":
+    if ext != ".exe":
       continue
     src = os.path.join(dirname, name)
     tgt = os.path.join(abs_builddir, dirname, name)
@@ -215,10 +216,22 @@ def locate_libs():
     libintl_dll_path = os.path.join(libintl_path, 'bin', 'intl3_svn.dll')
     copy_changed_file(libintl_dll_path, abs_objdir)
 
-  dll_path = reduce(lambda x, y: x + os.path.join(abs_objdir, y) + os.pathsep,
-                    dll_paths, "")
+  # Copy the Subversion library DLLs
+  if not cp.has_option('options', '--disable-shared'):
+    for svn_dll in svn_dlls:
+      copy_changed_file(os.path.join(abs_objdir, svn_dll), abs_objdir)
+
+  # Copy the Apache modules
+  if run_httpd and cp.has_option('options', '--with-httpd'):
+    mod_dav_svn_path = os.path.join(abs_objdir, 'subversion',
+                                    'mod_dav_svn', 'mod_dav_svn.so')
+    mod_authz_svn_path = os.path.join(abs_objdir, 'subversion',
+                                      'mod_authz_svn', 'mod_authz_svn.so')
+    copy_changed_file(mod_dav_svn_path, abs_objdir)
+    copy_changed_file(mod_authz_svn_path, abs_objdir)
+
   os.environ['APR_ICONV_PATH'] = os.path.abspath(apriconv_so_path)
-  os.environ['PATH'] = abs_objdir + os.pathsep + dll_path + os.environ['PATH']
+  os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
   
 def fix_case(path):
     path = os.path.normpath(path)
@@ -286,7 +299,7 @@ class Svnserve:
 
 class Httpd:
   "Run httpd for ra_dav tests"
-  def __init__(self, abs_httpd_dir, abs_builddir, httpd_port):
+  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir 
@@ -307,6 +320,7 @@ class Httpd:
     self.httpd_users = os.path.join(self.root, 'users')
     self.httpd_mime_types = os.path.join(self.root, 'mime.types')
     self.abs_builddir = abs_builddir
+    self.abs_objdir = abs_objdir
     self.service_name = 'svn-test-httpd-' + str(httpd_port)
     self.httpd_args = [self.name, '-n', self._quote(self.service_name),
                        '-f', self._quote(self.httpd_config)]
@@ -353,10 +367,8 @@ class Httpd:
     fp.write(self._sys_module('log_config_module', 'mod_log_config.so'))
     
     # Write LoadModule for Subversion modules
-    fp.write(self._svn_module('dav_svn_module', os.path.join('mod_dav_svn',
-             'mod_dav_svn.so')))
-    fp.write(self._svn_module('authz_svn_module', os.path.join(
-             'mod_authz_svn', 'mod_authz_svn.so')))
+    fp.write(self._svn_module('dav_svn_module', 'mod_dav_svn.so'))
+    fp.write(self._svn_module('authz_svn_module', 'mod_authz_svn.so'))
 
     # Define two locations for repositories
     fp.write(self._svn_repo('repositories'))
@@ -396,7 +408,7 @@ class Httpd:
     return 'LoadModule ' + name + " " + self._quote(full_path) + '\n'
 
   def _svn_module(self, name, path):
-    full_path = os.path.join(self.abs_builddir, 'subversion', path)
+    full_path = os.path.join(self.abs_objdir, path)
     return 'LoadModule ' + name + ' ' + self._quote(full_path) + '\n' 
 
   def _svn_repo(self, name):
@@ -451,7 +463,7 @@ if run_svnserve:
   daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
 if run_httpd:
-  daemon = Httpd(abs_httpd_dir, abs_builddir, httpd_port)
+  daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port)
 
 # Start service daemon, if any
 if daemon:

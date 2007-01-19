@@ -2,7 +2,7 @@
  * commit.c:  wrappers around wc commit functionality.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -495,7 +495,7 @@ import(const char *path,
           if ((i == new_entries->nelts - 1) && (kind == svn_node_file))
             break;
 
-          *((void **) apr_array_push(batons)) = root_baton;
+          APR_ARRAY_PUSH(batons, void *) = root_baton;
           SVN_ERR(editor->add_directory(edit_path,
                                         root_baton,
                                         NULL, SVN_INVALID_REVNUM,
@@ -701,7 +701,7 @@ svn_client_import2(svn_commit_info_t **commit_info_p,
             svn_error_clear(err);
           
           svn_path_split(url, &temp, &dir, pool);
-          *((const char **) apr_array_push(new_entries)) = 
+          APR_ARRAY_PUSH(new_entries, const char *) = 
             svn_path_uri_decode(dir, pool);
           url = temp;
         }

@@ -264,6 +264,59 @@ svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
 }
 
 
+svn_error_t *
+svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
+                    svn_boolean_t adm_only,
+                    apr_pool_t *pool)
+{
+  const char *path;
+
+  SVN_ERR(svn_wc__adm_write_check(adm_access));
+
+  path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
+                              NULL, FALSE, pool, SVN_WC__ADM_KILLME, NULL);
+
+  return svn_io_file_create(path, adm_only ? SVN_WC__KILL_ADM_ONLY : "", pool);
+}
+
+svn_error_t *
+svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
+                     svn_boolean_t *exists,
+                     svn_boolean_t *kill_adm_only,
+                     apr_pool_t *pool)
+{
+  const char *path;
+  svn_error_t *err;
+  svn_stringbuf_t *contents;
+
+  path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
+                              NULL, FALSE, pool, SVN_WC__ADM_KILLME, NULL);
+  
+  err = svn_stringbuf_from_file(&contents, path, pool);
+
+  if (err)
+    {
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* Killme file doesn't exist. */
+          *exists = FALSE;
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+
+      return err;
+    }
+
+  *exists = TRUE;
+
+  /* If the killme file contains the string 'adm-only' then only the
+     administrative area should be removed. */
+  *kill_adm_only = svn_string_compare_stringbuf
+    (svn_string_create(SVN_WC__KILL_ADM_ONLY, pool), contents);
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Syncing files in the adm area. ***/
 

@@ -2,7 +2,7 @@
  * prop_commands.c:  Implementation of propset, propget, and proplist.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -899,7 +899,7 @@ push_props_on_list(apr_array_header_t *list,
       item->node_name = svn_stringbuf_create(path, pool);
       item->prop_hash = prop_hash;
       
-      *((svn_client_proplist_item_t **) apr_array_push(list)) = item;
+      APR_ARRAY_PUSH(list, svn_client_proplist_item_t *) = item;
     }
 }
 
@@ -1119,6 +1119,7 @@ svn_client_proplist2(apr_array_header_t **props,
     {
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       /* Get an RA session for this URL. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
@@ -1129,7 +1130,8 @@ svn_client_proplist2(apr_array_header_t **props,
 
       SVN_ERR(remote_proplist(*props, url, "",
                               kind, revnum, ra_session,
-                              recurse, pool, svn_pool_create(pool)));
+                              recurse, pool, subpool));
+      svn_pool_destroy(subpool);
     }
   else  /* working copy path */
     {

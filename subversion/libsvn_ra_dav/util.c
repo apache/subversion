@@ -242,6 +242,8 @@ dav_request_cleanup(void *baton)
 {
   svn_ra_dav__request_t *req = baton;
   apr_pool_cleanup_run(req->sess->pool, req, dav_request_sess_cleanup);
+
+  return APR_SUCCESS;
 }
 
 

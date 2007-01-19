@@ -318,10 +318,7 @@ text
   svntest.main.create_repos(sbox.repo_dir)
 
   # load dumpfile with inconsistent newlines into repos.
-  output, errput = \
-    svntest.main.run_command_stdin(
-    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
-    None, 1, dump_str)
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
 
   output, errput = svntest.main.run_svnlook("info", sbox.repo_dir, "-r1")
   if errput:

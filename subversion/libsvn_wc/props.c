@@ -18,7 +18,6 @@
 
 
 
-#include <stdio.h>       /* temporary, for printf() */
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>

@@ -1067,9 +1067,9 @@ log_do_committed(struct log_runner *loggy,
           loggy->entries_modified = TRUE;
 
           /* Drop the 'killme' file. */
-          err = svn_wc__make_adm_thing(loggy->adm_access, SVN_WC__ADM_KILLME,
-                                       svn_node_file, APR_OS_DEFAULT,
-                                       0, pool);
+          err = svn_wc__make_killme(loggy->adm_access, entry->keep_local,
+                                    pool);
+
           if (err)
             {
               if (loggy->rerun && APR_STATUS_IS_EEXIST(err->apr_err))
@@ -1077,8 +1077,8 @@ log_do_committed(struct log_runner *loggy,
               else
                 return err;
             }
+ 
           return SVN_NO_ERROR;
-
         }
 
       /* Else, we're deleting a file, and we can safely remove files
@@ -1638,10 +1638,12 @@ start_handler(void *userData, const char *eltname, const char **atts)
   return;
 }
 
-/* Process the "KILLME" file in ADM_ACCESS
- */
+/* Process the "KILLME" file in ADM_ACCESS: remove the administrative area
+   for ADM_ACCESS and its children, and, if ADM_ONLY is false, also remove
+   the contents of the working copy (leaving only locally-modified files). */
 static svn_error_t *
 handle_killme(svn_wc_adm_access_t *adm_access,
+              svn_boolean_t adm_only,
               svn_cancel_func_t cancel_func,
               void *cancel_baton,
               apr_pool_t *pool)
@@ -1653,10 +1655,11 @@ handle_killme(svn_wc_adm_access_t *adm_access,
                        svn_wc_adm_access_path(adm_access), adm_access,
                        FALSE, pool));
 
-  /* Blow away the entire directory, and all those below it too. */
+  /* Blow away the administrative directories, and possibly the working
+     copy tree too. */
   err = svn_wc_remove_from_revision_control(adm_access,
                                             SVN_WC_ENTRY_THIS_DIR,
-                                            TRUE, /* destroy */
+                                            !adm_only, /* destroy */
                                             FALSE, /* no instant err */
                                             cancel_func, cancel_baton,
                                             pool);
@@ -1765,6 +1768,7 @@ run_log(svn_wc_adm_access_t *adm_access,
   const char *logfile_path;
   int log_number;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_boolean_t killme, kill_adm_only;
 
   /* kff todo: use the tag-making functions here, now. */
   const char *log_start
@@ -1857,10 +1861,10 @@ run_log(svn_wc_adm_access_t *adm_access,
     SVN_ERR(svn_wc__wcprops_write(loggy->adm_access, pool));
 
   /* Check for a 'killme' file in the administrative area. */
-  if (svn_wc__adm_path_exists(svn_wc_adm_access_path(adm_access), 0, pool,
-                              SVN_WC__ADM_KILLME, NULL))
+  SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only, pool));
+  if (killme)
     {
-      SVN_ERR(handle_killme(adm_access, NULL, NULL, pool));
+      SVN_ERR(handle_killme(adm_access, kill_adm_only, NULL, NULL, pool));
     }
   else
     {
@@ -2470,6 +2474,7 @@ svn_wc_cleanup2(const char *path,
   svn_boolean_t cleanup;
   int wc_format_version;
   apr_pool_t *subpool;
+  svn_boolean_t killme, kill_adm_only;
 
   /* Check cancellation; note that this catches recursive calls too. */
   if (cancel_func)
@@ -2527,11 +2532,13 @@ svn_wc_cleanup2(const char *path,
     }
   svn_pool_destroy(subpool);
 
-  if (svn_wc__adm_path_exists(svn_wc_adm_access_path(adm_access), 0, pool,
-                              SVN_WC__ADM_KILLME, NULL))
+  SVN_ERR(svn_wc__check_killme(adm_access, &killme, &kill_adm_only, pool));
+
+  if (killme)
     {
       /* A KILLME indicates that the log has already been run */
-      SVN_ERR(handle_killme(adm_access, cancel_func, cancel_baton, pool));
+      SVN_ERR(handle_killme(adm_access, kill_adm_only, cancel_func,
+                            cancel_baton, pool));
     }
   else
     {

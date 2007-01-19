@@ -1178,7 +1178,7 @@ def action_merge(branch_dir, branch_props):
 
         if not record_only:
             # Do the merge
-            svn_command("merge -r %d:%d %s %s" % \
+            svn_command("merge --force -r %d:%d %s %s" % \
                         (start - 1, end, opts["source-url"], branch_dir))
 
     # Write out commit message if desired
@@ -1322,7 +1322,7 @@ def action_rollback(branch_dir, branch_props):
     for start, end in rollback_intervals:
         if not record_only:
             # Do the merge
-            svn_command("merge -r %d:%d %s %s" % \
+            svn_command("merge --force -r %d:%d %s %s" % \
                         (end, start - 1, opts["source-url"], branch_dir))
 
     # Write out commit message if desired

@@ -1225,7 +1225,7 @@ while (defined (my $load_dir = &get_next_load_dir))
     # directory paths will have an older revisions associated with
     # them and any future commits will fail because they are out of
     # date.
-    read_from_process($svn, 'update');
+    read_from_process($svn, 'update', @svn_use_repos_cmd_opts);
 
     # Now remove any files and directories to be deleted in the
     # repository.
@@ -1381,7 +1381,7 @@ sub set_svn_use_repos_cmd_opts
   my $username = shift;
   my $password = shift;
 
-  @svn_use_repos_cmd_opts = ();
+  @svn_use_repos_cmd_opts = ('--non-interactive');
   if (defined $username and length $username)
     {
       push(@svn_use_repos_cmd_opts, '--username', $username);

@@ -2,7 +2,7 @@
  * ra_plugin.c : the main RA module for local repository access
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -831,13 +831,13 @@ svn_ra_local__get_log(svn_ra_session_t *session,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *abs_path = "";
-          const char *relative_path = (((const char **)(paths)->elts)[i]);
+          const char *relative_path = APR_ARRAY_IDX(paths, i, const char *);
           
           /* Append the relative paths to the base FS path to get an
              absolute repository path. */
           abs_path = svn_path_join(sbaton->fs_path->data, relative_path,
                                    pool);
-          (*((const char **)(apr_array_push(abs_paths)))) = abs_path;
+          APR_ARRAY_PUSH(abs_paths, const char *) = abs_path;
         }
     }
 

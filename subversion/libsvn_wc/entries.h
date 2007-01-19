@@ -72,6 +72,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CACHABLE_PROPS     "cachable-props"
 #define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
 #define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
+#define SVN_WC__ENTRY_ATTR_KEEP_LOCAL         "keep-local"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -149,14 +150,15 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS     APR_INT64_C(0x10000000)
 #define SVN_WC__ENTRY_MODIFY_PRESENT_PROPS      APR_INT64_C(0x20000000)
 #define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x40000000)
+#define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x80000000)
 
 
 /* ...or perhaps this to mean all of those above... */
-#define SVN_WC__ENTRY_MODIFY_ALL           APR_INT64_C(0x7FFFFFFF)
+#define SVN_WC__ENTRY_MODIFY_ALL           APR_INT64_C(0xFFFFFFFF)
 
 /* ...ORed together with this to mean "I really mean this, don't be
    trying to protect me from myself on this one." */
-#define SVN_WC__ENTRY_MODIFY_FORCE         APR_INT64_C(0x80000000)
+#define SVN_WC__ENTRY_MODIFY_FORCE         APR_INT64_C(0x100000000)
 
 
 /* Modify an entry for NAME in access baton ADM_ACCESS by folding in
@@ -165,12 +167,8 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
    MODIFY_FLAGS is a bitmask to specify which of those field to pay
    attention to.  ADM_ACCESS must hold a write lock.
 
-   - ENTRY->kind specifies the node kind for this entry, and is
-     *required* to be set to one of the following valid values:
-     'svn_node_dir', 'svn_node_file'.
-
-   - NAME can be NULL to specify that the caller wishes to modify the
-     "this dir" entry in ADM_ACCESS.
+   NAME can be NULL to specify that the caller wishes to modify the
+   "this dir" entry in ADM_ACCESS.
 
    If DO_SYNC is FALSE then the modification will be entirely local to the
    access baton, if DO_SYNC is TRUE the modification will be written to

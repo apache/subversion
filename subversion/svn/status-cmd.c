@@ -2,7 +2,7 @@
  * status-cmd.c -- Display status information in current directory
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -185,7 +185,7 @@ print_status(void *baton,
                        APR_HASH_KEY_STRING, path_array);
         }
 
-      (*((struct status_cache **) apr_array_push(path_array))) = scache;
+      APR_ARRAY_PUSH(path_array, struct status_cache *) = scache;
       return;
     }
 

@@ -627,7 +627,7 @@ array_push_str(apr_array_header_t *array,
      transfer str's lifetime to pool.  Is that something callers are
      depending on? */
 
-  (*((const char **) apr_array_push(array))) = apr_pstrdup(pool, str);
+  APR_ARRAY_PUSH(array, const char *) = apr_pstrdup(pool, str);
 }
 
 
@@ -810,7 +810,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
              because we needed to split up the list with svn_cstring_split. */
           const char *utf8_target = APR_ARRAY_IDX(known_targets,
                                                   i, const char *);
-          (*((const char **) apr_array_push(input_targets))) = utf8_target;
+          APR_ARRAY_PUSH(input_targets, const char *) = utf8_target;
         }
     }
 
@@ -892,7 +892,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
             continue;
         }
 
-      (*((const char **) apr_array_push(output_targets))) = target;
+      APR_ARRAY_PUSH(output_targets, const char *) = target;
     }
 
 
@@ -925,22 +925,22 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
 
       if (output_targets->nelts > 0)
         {
-          path = ((const char **) (output_targets->elts))[0];
+          path = APR_ARRAY_IDX(output_targets, 0, const char *);
           SVN_ERR(svn_opt_parse_path(&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[0] = path;
+              APR_ARRAY_IDX(output_targets, 0, const char *) = path;
               start_revision->kind = temprev.kind;
               start_revision->value = temprev.value;
             }
         }
       if (output_targets->nelts > 1)
         {
-          path = ((const char **) (output_targets->elts))[1];
+          path = APR_ARRAY_IDX(output_targets, 1, const char *);
           SVN_ERR(svn_opt_parse_path(&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[1] = path;
+              APR_ARRAY_IDX(output_targets, 1, const char *) = path;
               end_revision->kind = temprev.kind;
               end_revision->value = temprev.value;
             }
@@ -1011,7 +1011,7 @@ svn_opt_print_help2(apr_getopt_t *os,
   if (os && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_opt_subcommand_help2(((const char **) (targets->elts))[i],
+        svn_opt_subcommand_help2(APR_ARRAY_IDX(targets, i, const char *),
                                  cmd_table, option_table, pool);
       }
   else if (print_version)   /* just --version */
@@ -1052,7 +1052,7 @@ svn_opt_print_help(apr_getopt_t *os,
   if (os && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_opt_subcommand_help(((const char **) (targets->elts))[i],
+        svn_opt_subcommand_help(APR_ARRAY_IDX(targets, i, const char *),
                                 cmd_table, option_table, pool);
       }
   else if (print_version)   /* just --version */

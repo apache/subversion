@@ -670,10 +670,7 @@ PROPS-END
 
   # load dumpfile with control character into repos to get
   # a log with control char content
-  output, errput = \
-    svntest.main.run_command_stdin(
-    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
-    None, 1, dump_str)
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
 
   # run log
   output, errput = svntest.actions.run_and_verify_svn(None, None, [], 'log', 

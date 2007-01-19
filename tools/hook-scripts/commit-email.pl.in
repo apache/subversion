@@ -38,19 +38,18 @@ BEGIN {
 
 use strict;
 use Carp;
-my ($sendmail, $smtp_server, $stdout);
+my ($sendmail, $smtp_server);
 
 ######################################################################
 # Configuration section.
 
-# Sendmail path, SMTP server address, or stdout.
-# You should define exactly one of these three configuration variables,
-# leaving the other commented out, to select which method of creating
+# Sendmail path, or SMTP server address.
+# You should define exactly one of these two configuration variables,
+# leaving the other commented out, to select which method of sending
 # email should be used.
+# Using --stdout on the command line overrides both.
 #$sendmail = "/usr/sbin/sendmail";
 $smtp_server = "127.0.0.1";
-# Use stdout if you like to get the message in mbox format to stdout.
-#$stdout = 1;
 
 # Svnlook path.
 my $svnlook = "@SVN_BINDIR@/svnlook";
@@ -92,10 +91,10 @@ my $no_diff_added = 0;
           $ok = 0;
         }
     }
-  if (not (defined $sendmail xor defined $smtp_server xor defined $stdout))
+  if (not (defined $sendmail xor defined $smtp_server))
     {
-      warn "$0: exactly one of \$sendmail, \$smtp_server, or \$stdout ",
-           "must be set, edit $0.\n";
+      warn "$0: exactly one of \$sendmail or \$smtp_server must be ",
+           "set, edit $0.\n";
       $ok = 0;
     }
   exit 1 unless $ok;
@@ -142,7 +141,8 @@ my %opt_to_hash_key = ('--from' => 'from_address',
                        '-m'     => '',
                        '-r'     => 'reply_to',
                        '-s'     => 'subject_prefix',
-                       '--diff' => '');
+                       '--diff' => '',
+                       '--stdout' => '');
 
 while (@ARGV)
   {
@@ -156,7 +156,7 @@ while (@ARGV)
           }
 
         my $value;
-        if ($arg ne '--revprop-change')
+        if ($arg ne '--revprop-change' and $arg ne '--stdout')
           {
             unless (@ARGV)
               {
@@ -203,6 +203,10 @@ while (@ARGV)
             elsif ($arg eq '--diff')
               {
                 $current_project->{show_diff} = parse_boolean($value);
+              }
+            elsif ($arg eq '--stdout')
+              {
+                $current_project->{stdout} = 1;
               }
             else
               {
@@ -518,6 +522,7 @@ foreach my $project (@project_settings_list)
     my $subject_prefix  = $project->{subject_prefix};
     my $subject         = $subject_base;
     my $diff_wanted     = ($project->{show_diff} and $mode eq 'commit');
+    my $stdout          = $project->{stdout};
 
     if ($subject_prefix =~ /\w/)
       {
@@ -533,7 +538,7 @@ foreach my $project (@project_settings_list)
       {
         $mail_from = "$mail_from\@$hostname";
       }
-    elsif (defined $smtp_server)
+    elsif (defined $smtp_server and ! $stdout)
       {
         die "$0: use of either `-h' or `--from' is mandatory when ",
             "sending email using direct SMTP.\n";
@@ -598,7 +603,12 @@ foreach my $project (@project_settings_list)
         @difflines = map { /[\r\n]+$/ ? $_ : "$_\n" } @difflines;
       }
 
-    if (defined $sendmail and @email_addresses)
+    if ($stdout)
+      {
+        print @head, @body;
+        print @difflines if $diff_wanted;
+      }
+    elsif (defined $sendmail and @email_addresses)
       {
         # Open a pipe to sendmail.
         my $command = "$sendmail -f'$mail_from' $userlist";
@@ -627,11 +637,6 @@ foreach my $project (@project_settings_list)
           }
         handle_smtp_error($smtp, $smtp->dataend());
         handle_smtp_error($smtp, $smtp->quit());
-      }
-    elsif (defined $stdout)
-      {
-        print @head, @body;
-        print @difflines if $diff_wanted;
       }
 
     # Dump the output to logfile (if its name is not empty).
@@ -679,6 +684,7 @@ sub usage
       "  -s subject_prefix     Subject line prefix\n",
       "  --diff y|n            Include diff in message (default: y)\n",
       "                        (applies to commit mode only)\n",
+      "  --stdout              Spit the message in mbox format to stdout.\n",
       "\n",
       "This script supports a single repository with multiple projects,\n",
       "where each project receives email only for actions that affect that\n",
@@ -718,7 +724,8 @@ sub new_project
           match_regex     => '.',
           reply_to        => '',
           subject_prefix  => '',
-          show_diff       => 1};
+          show_diff       => 1,
+          stdout          => 0};
 }
 
 sub parse_boolean

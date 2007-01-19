@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -195,7 +195,7 @@ def cat_avoids_false_identities(sbox):
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # r4
-  svntest.main.run_svn(None, 'cp', '-r', '1', iota_url, wc_dir)
+  svntest.main.run_svn(None, 'cp', iota_url + '@1', wc_dir)
   svntest.main.run_svn(None, 'ci', '-m', 'log msg',
                        '--username', svntest.main.wc_author,
                        '--password', svntest.main.wc_passwd,

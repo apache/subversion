@@ -2,7 +2,7 @@
  * checkout-cmd.c -- Subversion checkout command
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -96,7 +96,7 @@ svn_cl__checkout(apr_getopt_t *os,
         {
           local_dir = "";
         }
-      (*((const char **) apr_array_push(targets))) = local_dir;
+      APR_ARRAY_PUSH(targets, const char *) = local_dir;
     }
   else
     {

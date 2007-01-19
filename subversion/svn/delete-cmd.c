@@ -70,7 +70,8 @@ svn_cl__delete(apr_getopt_t *os,
                                          NULL, ctx->config, pool));
     }
 
-  err = svn_client_delete2(&commit_info, targets, opt_state->force, ctx, pool);
+  err = svn_client_delete3(&commit_info, targets, opt_state->force,
+                           opt_state->keep_local, ctx, pool);
   if (err)
     err = svn_cl__may_need_force(err);
 
