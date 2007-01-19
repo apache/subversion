@@ -862,7 +862,7 @@ test_list = [ None,
               authz_partial_export_test,
               authz_aliases,
               authz_validate,
-              XFail(authz_locking, svntest.main.is_ra_type_svn),
+              authz_locking,
              ]
 
 if __name__ == '__main__':
