@@ -902,6 +902,14 @@ def wc_to_repos(sbox):
                                         expected_disk,
                                         expected_status)
 
+  # Validate that the merge info of the copy destination matches the
+  # implied merge info from the copy source.
+  for dest, merge_info in ((beta2_url, '/A/B/E/beta:1'),
+                           (H2_url, '/A/D/H:1'),
+                           (H2_url + '/beta', '/A/B/E/beta:1')):
+    svntest.actions.run_and_verify_svn(None, [merge_info + '\n'], [],
+                                       'propget', 'svn:mergeinfo', dest)
+
   # check local property was copied
   svntest.actions.run_and_verify_svn(None, ['bar\n'], [], 'propget', 'foo',
                                      beta_path + "2")
@@ -1028,27 +1036,10 @@ def repos_to_wc(sbox):
     })
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
-#----------------------------------------------------------------------
-# Basic repos -> repos copy operation with Merge Tracking meta data.
-
-def repos_to_repos(sbox):
-  "repository to repository copy"
-
-  sbox.build(create_wc = False)
-  src_iota_url = sbox.repo_url + "/iota"
-  dst_iota_url = sbox.repo_url + "/A/iota"
-
-  # Copy a file from one location in the repos to another.
-  svntest.actions.run_and_verify_svn(None, ['\n', 'Committed revision 2.\n'],
-                                     [], 'copy', '-m', 'foo',
-                                     src_iota_url, dst_iota_url)
-
   # Validate that the merge info of the copy destination matches the
   # implied merge info from the copy source.
-  svntest.actions.run_and_verify_svn(None, ['/iota:1\n'],
-                                     [], 'propget', 'svn:mergeinfo',
-                                     dst_iota_url)
-
+  svntest.actions.run_and_verify_svn(None, ['/A/B:1\n'], [],
+                                     'propget', 'svn:mergeinfo', D_dir)
 
 #----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug
@@ -3333,6 +3324,11 @@ def copy_peg_rev_url(sbox):
                                      iota_url + '@HEAD', '-r', '1',
                                      sigma_url, '-m', 'rev 3')
 
+  # Validate that the merge info of the copy destination matches the
+  # implied merge info from the copy source.
+  svntest.actions.run_and_verify_svn(None, ['/A/D/H/psi:1\n'], [],
+                                     'propget', 'svn:mergeinfo', sigma_url)
+
   # Update to HEAD and verify disk contents
   expected_output = svntest.wc.State(wc_dir, {
     'sigma' : Item(status='A '),
@@ -3373,9 +3369,8 @@ test_list = [ None,
               mv_and_revert_directory,
               Skip(copy_preserve_executable_bit, (os.name != 'posix')),
               wc_to_repos,
-              repos_to_wc,
-              repos_to_repos,
-              copy_to_root,
+              XFail(repos_to_wc),
+              XFail(copy_to_root),
               url_copy_parent_into_child,
               wc_copy_parent_into_child,
               resurrect_deleted_file,
