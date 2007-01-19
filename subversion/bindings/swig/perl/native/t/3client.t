@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 118;
+use Test::More tests => 119;
 use strict;
 
 # shut up about variables that are only used once.
@@ -179,9 +179,11 @@ is($ctx->info("$wcpath/dir1/new", undef, 'WORKING',
    undef,
    'info should return undef');
 
-isa_ok($ctx->info("$wcpath/dir1/newxyz", undef, 'WORKING', sub {}, 0),
-       '_p_svn_error_t',
+my $r = $ctx->info("$wcpath/dir1/newxyz", undef, 'WORKING', sub {}, 0);
+isa_ok($r, '_p_svn_error_t',
        'info should return _p_svn_error_t for a nonexistent file');
+$r->clear();			# Clear the error, avoid core dump
+                                # if built with --enable-maintainer-mode
 
 # test getting the log
 is($ctx->log("$reposurl/dir1/new",$current_rev,$current_rev,1,0,
@@ -446,4 +448,5 @@ SKIP: {
 END {
 diag('cleanup');
 rmtree($testpath);
+pass('END block ran through to completion');
 }
