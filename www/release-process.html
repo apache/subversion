@@ -34,24 +34,21 @@ $LastChangedDate: 2006-04-03 18:57:54 +0200 (Mon, 03 Apr 2006) $
 <div class="h1"><!-- no 'id' or 'title' attribute for ToC -->
 <h1>Table of Contents</h1>
 
-<ul>
-<li><a href="#release-manager-role"
-             >Being the Release Manager</a></li>
-<li><a href="#release-branches"
-             >Creating and maintaining release branches</a></li>
-<li><a href="#porting-changes"
-             >Porting changes to release branches</a></li>
-<li><a href="#the-changes-file"
-             >Managing the CHANGES file</a></li>
-<li><a href="#before-release"
-             >Preparing to roll a release</a></li>
-<li><a href="#rolling-release"
-             >Rolling a release</a></li>
-<li><a href="#blessing-release"
-             >Blessing a release</a></li>
-<li><a href="#releasing-release"
-             >The actual releasing</a></li>
-</ul>
+<ol id="toc">
+  <li><a href="#release-manager-role">Being the Release Manager</a></li>
+  <li><a href="#release-branches">Creating and maintaining release branches</a></li>
+  <li><a href="#porting-changes">Porting changes to release branches</a></li>
+  <li><a href="#the-changes-file">Managing the CHANGES file</a>
+  <ol>
+    <li><a href="#writing-initial-changes">Writing the initial content for a branch</a></li>
+    <li><a href="#adding-changes">Adding content for patch release</a></li>
+  </ol>
+  </li> <!-- the-changes-file -->
+  <li><a href="#before-release">Preparing to roll a release</a></li>
+  <li><a href="#rolling-release">Rolling a release</a></li>
+  <li><a href="#blessing-release">Blessing a release</a></li>
+  <li><a href="#releasing-release">The actual releasing</a></li>
+</ol>
 
 </div>
 
@@ -163,8 +160,7 @@ in from trunk.</p>
 
 <p>The protocol used to accept or refuse the merging of changes from
 trunk is of interest to all Subversion developers, and as such is
-documented in <a
-href="hacking.html#release-stabilization">the
+documented in <a href="hacking.html#release-stabilization">the
 release stabilization section of the hacking guide</a>.</p>
 
 </div>
