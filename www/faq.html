@@ -83,7 +83,7 @@
     after it's been committed?</a></li>
 <li><a href="#patch">How do I submit a patch for Subversion?</a></li>
 <li><a href="#in-place-import">How can I do an in-place 'import'
-    (i.e. add a tree to subversion such that the original data becomes
+    (i.e. add a tree to Subversion such that the original data becomes
     a working copy directly)?</a></li> 
 <li><a href="#dumpload">What is this "dump/load cycle" people
     sometimes talk about when upgrading a Subversion server?</a></li> 
@@ -658,7 +658,7 @@ again.</p>
 
 <div class="h3" id="co-svn" title="co-svn">
 <h3>How do I check out the Subversion code?</h3>
-<p>Use the subversion client:</p>
+<p>Use the Subversion client:</p>
 <pre>
 	$ svn co http://svn.collab.net/repos/svn/trunk subversion
 </pre>
@@ -780,7 +780,7 @@ attempt the checkout over SSL, which many proxies allow:</p>
 </pre>
 
 <p>Of course, your svn client will have to have been built with ssl
-support; just pass <tt>--with-ssl</tt> to subversion's
+support; just pass <tt>--with-ssl</tt> to Subversion's
 <tt>./configure</tt> script.  You can check to see whether the 'https'
 scheme is supported by running <tt>svn --version</tt>.</p>
 
@@ -1240,7 +1240,7 @@ it <em>before</em> actually hacking the code, right? :)</p>
 
 <div class="h3" id="in-place-import" title="in-place-import">
 <h3>How can I do an in-place 'import'
-    (i.e. add a tree to subversion such that the original data becomes
+    (i.e. add a tree to Subversion such that the original data becomes
     a working copy directly)?</h3> 
 
 <p>Suppose, for example, that you wanted to put some of /etc under
@@ -1697,14 +1697,14 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</h
       
       <p>You've tried fiddling with their various login files, like
         <tt>.bash_profile</tt>, and nothing works!  That's because ssh
-        ignores those files when the subversion client invokes it.
+        ignores those files when the Subversion client invokes it.
         But there's no need to modify <tt>PATH</tt>; instead, you can
         directly give ssh the full name of the <tt>svnserve</tt> command.
         Here's how to do it:</p>
 
       <p>For each user who needs svn+ssh access, generate a new ssh
         public-key pair which they will use <em>only</em> for
-        subversion&mdash;not for logging in normally.  Have them give
+        Subversion&mdash;not for logging in normally.  Have them give
         the keypair a distinctive name, like
         <tt>~/.ssh/id_dsa.subversion</tt>.  Add the public part of the
         key to their <tt>~/.ssh/authorized_keys</tt> file on the
@@ -1723,7 +1723,7 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</h
 
       <p>Obviously, replace <tt>/opt/subversion/bin/svnserve</tt> with
       whatever is appropriate for your system.  You also might want to
-      specify the full path to the subversion repository in the
+      specify the full path to the Subversion repository in the
       command (by using the <tt>-r</tt> option), to save your users
       some typing.</p>
       
@@ -1732,7 +1732,7 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</h
         some other command.  See the sshd(8) man page (section
         <tt>AUTHORIZED_KEYS FILE FORMAT</tt>) for details.</p>
       
-      <p>Now when your users run the subversion client, make sure they
+      <p>Now when your users run the Subversion client, make sure they
       have an <tt>SVN_SSH</tt> environment variable that "points to"
       the private half of their keypair, by doing something like this
       (for the Bourne Again shell):</p>
@@ -2467,13 +2467,13 @@ and when I try to check out Subversion, I get an error about an
 Currently there are three of these plugins: ra_local allows access to
 a local repository, ra_dav which allows access to a repository via
 WebDAV, and ra_svn allows local or remote access via the svnserve
-server.  When you attempt to perform an operation in subversion, the
+server.  When you attempt to perform an operation in Subversion, the
 program tries to dynamically load a plugin based on the URL scheme.  A
 `file://' URL will try to load ra_local, and an `http://' URL will try
 to load ra_dav.</p>
 
 <p>The error you are seeing means that the dynamic linker/loader can't find
-the plugins to load.  This normally happens when you build subversion with
+the plugins to load.  This normally happens when you build Subversion with
 shared libraries, then attempt to run it without first running 'make
 install'.  Another possible cause is that you ran make install, but the
 libraries were installed in a location that the dynamic linker/loader
@@ -3026,7 +3026,7 @@ following these steps:</p>
 <h3>Why does my --diff-cmd complain about '-u'?
     I tried to override it with --extensions, but it's not working.</h3>
 
-<p>When using an external diff command, subversion builds a fairly
+<p>When using an external diff command, Subversion builds a fairly
 complicated command line. First is the specified --diff-cmd. Next comes
 the specified --extensions (although empty --extensions are ignored), or
 '-u' if --extensions is unspecified (or specified as ''). Third and
@@ -3567,7 +3567,7 @@ design, pronounces "Subversion" <a href="http://svn.collab.net/repos/svn-committ
 <div class="h3" id="baton" title="baton">
 <h3>What's a 'baton'?</h3>
 
-<p>Throughout subversion's source code there are many references to
+<p>Throughout Subversion's source code there are many references to
 'baton' objects.  These are just <tt>void *</tt> datastructures that
 provide context to a function.  In other APIs, they're often called
 <tt>void *ctx</tt> or <tt>void *userdata</tt>  Subversion
