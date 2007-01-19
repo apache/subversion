@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 127;
+use Test::More tests => 133;
 use strict;
 
 # shut up about variables that are only used once.
@@ -60,11 +60,56 @@ isa_ok($ci_dir1,'_p_svn_client_commit_info_t');
 $current_rev++;
 is($ci_dir1->revision,$current_rev,"commit info revision equals $current_rev");
 
+# Notes on testing methods that support both named and positional parameters,
+# with or without optional parameters.
+#
+# This is going to involve repeated calls to the same functions, with slightly
+# different argument lists.  At the moment I'm doing this by creating an
+# anonymous function that contains the tests, and takes a 'name' param.
+# This 'name' param indicates whether the test was exercised against
+# positional arguments with all present ('pos/man'), positional arguments
+# with optional arguments omitted ('pos/opt'), named arguments with all
+# present ('nam/man'), or named arguments with optional arguments omitted
+# ('nam/opt').
+#
+# Hopefully this will make tests relatively easy to write, and, in
+# case of testing errors, make it easy to see which test failed.
 
+my $tester;
 
-my ($rpgval,$rpgrev) = $ctx->revprop_get('svn:author',$reposurl,$current_rev);
-is($rpgval,$username,'svn:author set to expected username from revprop_get');
-is($rpgrev,$current_rev,'Returned revnum of current rev from revprop_get');
+# ------------------------------------------------------------------------
+
+my($rpgval, $rpgrev);
+
+$tester = sub {		# Tests to carry out on revprop_get results
+    my $name = shift;
+    is($rpgval, $username,
+       "svn:author set to expected username from revprop_get ($name)");
+    is($rpgrev, $current_rev,
+       "Returned revnum of current rev from revprop_get ($name)");
+};
+
+($rpgval,$rpgrev) = $ctx->revprop_get('svn:author',$reposurl,$current_rev);
+$tester->('pos/man');
+
+($rpgval,$rpgrev) = $ctx->revprop_get('svn:author', $reposurl);
+$tester->('pos/opt');
+
+($rpgval, $rpgrev) = $ctx->revprop_get({
+    propname => 'svn:author',
+    url      => $reposurl,
+    revision => $current_rev,
+});
+$tester->('nam/man');
+
+($rpgval, $rpgrev) = $ctx->revprop_get({
+    propname => 'svn:author',
+    url      => $reposurl,
+    revision => $current_rev,
+});
+$tester->('nam/opt');
+
+# ------------------------------------------------------------------------
 
 SKIP: {
     skip 'Difficult to test on Win32', 3 if $^O eq 'MSWin32';

@@ -9,7 +9,8 @@ my @_all_fns;
 my @_fns_with_named_params;
 
 BEGIN {
-    @_fns_with_named_params = qw(ls);
+    @_fns_with_named_params = qw(ls
+			     revprop_get);
     @_all_fns = qw(add add3 blame blame3 cat cat2 checkout checkout2 cleanup
                    commit commit3 commit_item2_dup copy copy3 delete delete2
                    diff diff3 diff_peg3 diff_summarize diff_summarize_peg
@@ -18,7 +19,7 @@ BEGIN {
                    merge merge2 merge_peg2 mkdir mkdir2 move move4
                    propget propget2 proplist proplist2 proplist_item_dup
                    propset propset2 relocate resolved revert
-                   revprop_get revprop_list revprop_set
+                   revprop_list revprop_set
                    status status2 switch unlock update update2
                    url_from_path uuid_from_path uuid_from_url);
     require SVN::Base;
@@ -689,7 +690,13 @@ any local mods.
 For each path in $paths, if it is a directory and $recursive
 is true, this will be a recursive operation.
 
-=item $ctx-E<gt>revprop_get($propname, $url, $revision, $pool);
+=item $ctx-E<gt>revprop_get($propname, $url, $revision);
+
+  my($prop_value, $revision) = $ctx->revprop_get({
+      propname => '...',
+      url      => '...',
+      revision => '...',    # optional, default is 'HEAD'
+  });
 
 Returns two values, the first of which is the value of $propname on revision
 $revision in the repository represented by $url.  The second value is the
@@ -885,6 +892,18 @@ my %method_defs = (
 	    { name => 'recurse',
 	      spec => { type     => BOOLEAN,
 			default  => 0, }, },
+	],
+    },
+    'revprop_get' => {
+	type => 'obj',
+	args => [
+	    { name => 'propname',
+	      spec => { type    => SCALAR }, },
+	    { name => 'url',
+	      spec => { type    => SCALAR }, },
+	    { name => 'revision',
+	      spec => { type    => SCALAR,
+			default => 'HEAD', }, },
 	],
     },
 );
