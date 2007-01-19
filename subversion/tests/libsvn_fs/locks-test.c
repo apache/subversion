@@ -1041,6 +1041,154 @@ lock_out_of_date(const char **msg,
 }
 
 
+/* Test that a lock can be broken, stolen, or refreshed */
+static svn_error_t *
+lock_many(const char **msg,
+          svn_boolean_t msg_only,
+          svn_test_opts_t *opts,
+          apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  const char *conflict;
+  svn_revnum_t newrev;
+  svn_fs_access_t *access;
+  svn_lock_t *lock;
+  apr_array_header_t *paths;
+  apr_hash_t *locks;
+  svn_error_t *err;
+  int i;
+
+  *msg = "atomically locking more than one path";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  /* Prepare a filesystem and a new txn. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-lock-many",
+                              opts->fs_type, pool));
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, SVN_FS_TXN_CHECK_LOCKS, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+
+  /* Create the greek tree and commit it. */
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_fs_commit_txn(&conflict, &newrev, txn, pool));
+
+  /* Become 'bubba' and lock "/A/D/G/rho". */
+  SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
+  SVN_ERR(svn_fs_set_access(fs, access));
+  SVN_ERR(svn_fs_lock(&lock, fs, "/A/D/G/rho", NULL, "", 0, 0,
+                      SVN_INVALID_REVNUM, FALSE, pool));
+
+  /* Become 'hortense'. */
+  SVN_ERR(svn_fs_create_access(&access, "hortense", pool));
+  SVN_ERR(svn_fs_set_access(fs, access));
+
+  /* Now try to lock multiple paths.  This should fail, though,
+     because 'bubba' owns a lock on one of these paths. */
+  paths = apr_array_make(pool, 4, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = "/A/B/E/alpha";
+  APR_ARRAY_PUSH(paths, const char *) = "/iota";
+  APR_ARRAY_PUSH(paths, const char *) = "/A/D/H/omega";
+  APR_ARRAY_PUSH(paths, const char *) = "/A/D/G/rho";
+  err = svn_fs_lock_many(&locks, fs, paths, "", 0, 0,
+                         SVN_INVALID_REVNUM, FALSE, pool);
+  if (! err)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Expected svn_fs_lock_many() to fail; it didn't");
+  else if (err->apr_err == SVN_ERR_FS_PATH_ALREADY_LOCKED)
+    svn_error_clear(err);
+  else
+    return svn_error_create(SVN_ERR_TEST_FAILED, err,
+                            "svn_fs_lock_many() failed for the wrong reason");
+
+  /* Further, the state of the filesystem should be such that 'bubba'
+     still owns his lock, and the other paths 'hortense' tried to lock
+     remain unlocked. */
+  SVN_ERR(svn_fs_get_lock(&lock, fs, "/A/B/E/alpha", pool));
+  if (lock)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Path '/A/B/E/alpha' locked unexpectedly.");
+  SVN_ERR(svn_fs_get_lock(&lock, fs, "/iota", pool));
+  if (lock)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Path '/iota' locked unexpectedly.");
+  SVN_ERR(svn_fs_get_lock(&lock, fs, "/A/D/H/omega", pool));
+  if (lock)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Path '/A/D/H/omega' locked unexpectedly.");
+  SVN_ERR(svn_fs_get_lock(&lock, fs, "/A/D/G/rho", pool));
+  if (! lock)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Expected lock on '/A/D/G/rho'; didn't find one.");
+  if (strcmp(lock->owner, "bubba") != 0)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Path '/A/D/G/rho' locked by the wrong user.");
+
+  /* Now try again to lock those same paths, sans the one that 'bubba'
+     owns. */
+  paths = apr_array_make(pool, 4, sizeof(const char *));
+  APR_ARRAY_PUSH(paths, const char *) = "/A/B/E/alpha";
+  APR_ARRAY_PUSH(paths, const char *) = "/iota";
+  APR_ARRAY_PUSH(paths, const char *) = "/A/D/H/omega";
+  SVN_ERR(svn_fs_lock_many(&locks, fs, paths, "", 0, 0,
+                           SVN_INVALID_REVNUM, FALSE, pool));
+
+  /* Verify that 'bubba' owns the three new locks, and 'bubba' still
+     has his one. */
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      SVN_ERR(svn_fs_get_lock(&lock, fs, path, pool));
+      if (! lock)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected lock on '%s'; didn't find one.",
+                                 path);
+      if (strcmp(lock->owner, "hortense") != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Path '%s' locked by the wrong user.",
+                                 path);
+    }
+  SVN_ERR(svn_fs_get_lock(&lock, fs, "/A/D/G/rho", pool));
+  if (! lock)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Expected lock on '/A/D/G/rho'; didn't find one.");
+  if (strcmp(lock->owner, "bubba") != 0)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Path '/A/D/G/rho' locked by the wrong user.");
+
+  /* Become 'bubba', and steal 'hortense's paths. */
+  SVN_ERR(svn_fs_create_access(&access, "bubba", pool));
+  SVN_ERR(svn_fs_set_access(fs, access));
+  SVN_ERR(svn_fs_lock_many(&locks, fs, paths, "", 0, 0,
+                           SVN_INVALID_REVNUM, TRUE, pool));
+
+  /* Verify that 'bubba' owns all four locks. */
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      SVN_ERR(svn_fs_get_lock(&lock, fs, path, pool));
+      if (! lock)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Expected lock on '%s'; didn't find one.",
+                                 path);
+      if (strcmp(lock->owner, "bubba") != 0)
+        return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                                 "Path '%s' locked by the wrong user.",
+                                 path);
+    }
+  SVN_ERR(svn_fs_get_lock(&lock, fs, "/A/D/G/rho", pool));
+  if (! lock)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Expected lock on '/A/D/G/rho'; didn't find one.");
+  if (strcmp(lock->owner, "bubba") != 0)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Path '/A/D/G/rho' locked by the wrong user.");
+
+  return SVN_NO_ERROR;
+}
+
 
 /* ------------------------------------------------------------------------ */
 
@@ -1062,5 +1210,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(lock_expiration),
     SVN_TEST_PASS(lock_break_steal_refresh),
     SVN_TEST_PASS(lock_out_of_date),
+    SVN_TEST_PASS(lock_many),
     SVN_TEST_NULL
   };

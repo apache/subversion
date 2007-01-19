@@ -911,6 +911,30 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
 }
 
 svn_error_t *
+svn_fs_lock_many(apr_hash_t **locks, svn_fs_t *fs, apr_array_header_t *paths,
+                 const char *comment, svn_boolean_t is_dav_comment, 
+                 apr_time_t expiration_date, svn_revnum_t current_rev, 
+                 svn_boolean_t steal_lock, apr_pool_t *pool)
+{
+  /* Enforce that the comment be xml-escapable. */
+  if (comment)
+    {
+      if (! svn_xml_is_xml_safe(comment, strlen(comment)))
+        return svn_error_create
+          (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
+           _("Lock comment has illegal characters"));      
+    }
+
+  if (expiration_date < 0)
+        return svn_error_create
+          (SVN_ERR_INCORRECT_PARAMS, NULL,
+           _("Negative expiration date passed to svn_fs_lock"));      
+
+  return fs->vtable->lock_many(locks, fs, paths, comment, is_dav_comment,
+                               expiration_date, current_rev, steal_lock, pool);
+}
+
+svn_error_t *
 svn_fs_generate_lock_token(const char **token, svn_fs_t *fs, apr_pool_t *pool)
 {
   return fs->vtable->generate_lock_token(token, fs, pool);  

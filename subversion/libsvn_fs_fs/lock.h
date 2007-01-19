@@ -38,6 +38,16 @@ svn_error_t *svn_fs_fs__lock(svn_lock_t **lock,
                              svn_boolean_t steal_lock,
                              apr_pool_t *pool);
 
+svn_error_t *svn_fs_fs__lock_many(apr_hash_t **locks,
+                                  svn_fs_t *fs,
+                                  apr_array_header_t *paths,
+                                  const char *comment,
+                                  svn_boolean_t is_dav_comment,
+                                  apr_time_t expiration_date,
+                                  svn_revnum_t current_rev,
+                                  svn_boolean_t steal_lock,
+                                  apr_pool_t *pool);
+
 svn_error_t *svn_fs_fs__generate_lock_token(const char **token,
                                             svn_fs_t *fs,
                                             apr_pool_t *pool);

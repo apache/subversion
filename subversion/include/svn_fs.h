@@ -1657,6 +1657,54 @@ svn_error_t *svn_fs_lock(svn_lock_t **lock,
                          apr_pool_t *pool);
 
 
+/** Lock @a paths in @a fs, and set @a *locks to a hash mapping
+ * <tt>const char *</tt> paths to @c svn_lock_t locks, as an atomic
+ * operation.  (In other words, either all the locks are successfully
+ * obtained, or none of them are.  Allocate the hash and its contents
+ * in @a pool.
+ *
+ * @warning You may prefer to use svn_repos_fs_lock_many() instead,
+ * which see.
+ *
+ * @a fs must have a username associated with it (see @c
+ * svn_fs_access_t), else return @c SVN_ERR_FS_NO_USER.  Set the
+ * 'owner' field in the new locks to the fs username.
+ *
+ * @a comment is optional: it's either an xml-escapable UTF8 string
+ * which describes the lock, or it is @c NULL. 
+ *
+ * @a is_dav_comment describes whether the comment was created by a
+ * generic DAV client; only mod_dav_svn's autoversioning feature needs
+ * to use it.  If in doubt, pass 0.
+ *
+ * If a path is already locked, then return @c SVN_ERR_FS_PATH_ALREADY_LOCKED,
+ * unless @a steal_lock is true, in which case "steal" any existing
+ * locks, even if the FS access-context's username does not match the
+ * current lock's owner: delete the existing lock on a path, and
+ * create a new one.
+ *
+ * If @a expiration_date is zero, then create a non-expiring lock.
+ * Else, the locks will expire at @a expiration_date.
+ *
+ * If @a current_rev is a valid revnum, then do an out-of-dateness
+ * check.  If the revnum is less than the last-changed-revision of any
+ * of the paths (or if a path doesn't exist in HEAD), return @c
+ * SVN_ERR_FS_OUT_OF_DATE.
+ *
+ * @note At this time, only files can be locked.
+ *
+ * @since New in 1.?
+ */
+svn_error_t *svn_fs_lock_many(apr_hash_t **locks,
+                              svn_fs_t *fs,
+                              apr_array_header_t *paths,
+                              const char *comment,
+                              svn_boolean_t is_dav_comment,
+                              apr_time_t expiration_date,
+                              svn_revnum_t current_rev,
+                              svn_boolean_t steal_locks,
+                              apr_pool_t *pool);
+
 /** Generate a unique lock-token using @a fs. Return in @a *token,
  * allocated in @a pool.
  *

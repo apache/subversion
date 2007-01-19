@@ -155,6 +155,12 @@ typedef struct fs_vtable_t
                        apr_time_t expiration_date,
                        svn_revnum_t current_rev, svn_boolean_t steal_lock,
                        apr_pool_t *pool);
+  svn_error_t *(*lock_many)(apr_hash_t **locks, svn_fs_t *fs,
+                            apr_array_header_t *paths,
+                            const char *comment, svn_boolean_t is_dav_comment,
+                            apr_time_t expiration_date,
+                            svn_revnum_t current_rev, svn_boolean_t steal_lock,
+                            apr_pool_t *pool);
   svn_error_t *(*generate_lock_token)(const char **token, svn_fs_t *fs,
                                       apr_pool_t *pool);
   svn_error_t *(*unlock)(svn_fs_t *fs, const char *path, const char *token,

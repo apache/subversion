@@ -62,6 +62,153 @@ delete_lock_and_token(const char *lock_token,
 }
 
 
+/* Lock PATH in TRAIL->fs, and set *LOCK_P to a lock representing the
+   new lock, allocated in TRAIL->pool.
+  
+   TRAIL->fs must have a username associated with it (see @c
+   svn_fs_access_t), else return SVN_ERR_FS_NO_USER.  Set the 'owner'
+   field in the new lock to the fs username.
+  
+   TOKEN is a lock token such as can be generated using
+   svn_fs_generate_lock_token().
+  
+   COMMENT is optional: it's either an xml-escapable UTF8 string which
+   describes the lock, or it is NULL.
+  
+   IS_DAV_COMMENT describes whether the comment was created by a
+   generic DAV client; only mod_dav_svn's autoversioning feature needs
+   to use it.  If in doubt, pass 0.
+  
+   If EXPIRATION_DATE is zero, then create a non-expiring lock.
+   Else, the lock will expire at EXPIRATION_DATE.
+  
+   If CURRENT_REV is a valid revnum, then do an out-of-dateness
+   check.  If the revnum is less than the last-changed-revision of PATH
+   (or if PATH doesn't exist in HEAD), return SVN_ERR_FS_OUT_OF_DATE.
+  
+   If PATH is already locked, then return SVN_ERR_FS_PATH_ALREADY_LOCKED,
+   unless STEAL_LOCK is true, in which case "steal" the existing
+   lock, even if the FS access-context's username does not match the
+   current lock's owner: delete the existing lock on PATH, and
+   create a new one.
+ */
+static svn_error_t *
+lock_single_path(svn_lock_t **lock_p,
+                 const char *path,
+                 const char *token,
+                 const char *comment,
+                 svn_boolean_t is_dav_comment,
+                 apr_time_t expiration_date,
+                 svn_revnum_t current_rev,
+                 svn_boolean_t steal_lock,
+                 trail_t *trail)
+{
+  svn_node_kind_t kind = svn_node_file;
+  svn_lock_t *existing_lock, *lock, *lock_from_token;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  SVN_ERR(svn_fs_base__get_path_kind(&kind, path, trail, trail->pool));
+
+  /* Until we implement directory locks someday, we only allow locks
+     on files or non-existent paths. */
+  if (kind == svn_node_dir)
+    return svn_fs_base__err_not_file(trail->fs, path);
+
+  /* While our locking implementation easily supports the locking of
+     nonexistent paths, we deliberately choose not to allow such madness. */
+  if (kind == svn_node_none)
+    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                             "Path '%s' doesn't exist in HEAD revision", path);
+
+  /* There better be a username attached to the fs. */
+  if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
+    return svn_fs_base__err_no_user(trail->fs);
+
+  /* Is the caller attempting to lock an out-of-date working file? */
+  if (SVN_IS_VALID_REVNUM(current_rev))
+    {
+      svn_revnum_t created_rev;
+      SVN_ERR(svn_fs_base__get_path_created_rev(&created_rev, path,
+                                                trail, trail->pool));
+
+      /* SVN_INVALID_REVNUM means the path doesn't exist.  So
+         apparently somebody is trying to lock something in their
+         working copy, but somebody else has deleted the thing
+         from HEAD.  That counts as being 'out of date'. */     
+      if (! SVN_IS_VALID_REVNUM(created_rev))
+        return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                 "Path '%s' doesn't exist in HEAD revision",
+                                 path);
+
+      if (current_rev < created_rev)
+        return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
+                                 "Lock failed: newer version of '%s' exists",
+                                 path);
+    }
+
+  /* See if a lock already exists with that token, and if so, verify
+     that the lock's path matches PATH.  Otherwise we run the risk of
+     breaking the 1-to-1 mapping of lock tokens to locked paths. */
+  err = svn_fs_bdb__lock_get(&lock_from_token, trail->fs, 
+                             token, trail, trail->pool);
+  if (err && ((err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
+              || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
+    {
+      svn_error_clear(err);
+    }
+  else
+    {
+      SVN_ERR(err);
+      if (strcmp(lock_from_token->path, path) != 0)
+        return svn_error_create(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
+                                "Lock failed: token refers to existing "
+                                "lock with non-matching path.");
+    }
+
+  /* Is the path already locked?   
+
+     Note that this next function call will automatically ignore any
+     errors about {the path not existing as a key, the path's token
+     not existing as a key, the lock just having been expired}.  And
+     that's totally fine.  Any of these three errors are perfectly
+     acceptable to ignore; it means that the path is now free and
+     clear for locking, because the bdb funcs just cleared out both
+     of the tables for us.   */
+  SVN_ERR(svn_fs_base__get_lock_helper(&existing_lock, path, 
+                                       trail, trail->pool));
+  if (existing_lock)
+    {
+      if (! steal_lock)
+        {
+          /* Sorry, the path is already locked. */
+          return svn_fs_base__err_path_already_locked(trail->fs,
+                                                      existing_lock);
+        }
+      else
+        {
+          /* STEAL_LOCK is set, so the fs user is "stealing" the
+             lock from lock->owner.  Destroy the existing lock. */
+          SVN_ERR(delete_lock_and_token(existing_lock->token,
+                                        existing_lock->path, trail));
+        }          
+    }
+
+  /* Create a new lock, and add it to the tables. */    
+  lock = svn_lock_create(trail->pool);
+  lock->token = apr_pstrdup(trail->pool, token);
+  lock->path = apr_pstrdup(trail->pool, path);
+  lock->owner = apr_pstrdup(trail->pool, trail->fs->access_ctx->username);
+  lock->comment = apr_pstrdup(trail->pool, comment);
+  lock->is_dav_comment = is_dav_comment;
+  lock->creation_date = apr_time_now();
+  lock->expiration_date = expiration_date;
+  SVN_ERR(add_lock_and_token(lock, lock->token, path, trail));
+  *lock_p = lock;
+
+  return SVN_NO_ERROR;
+}
+
+
 struct lock_args
 {
   svn_lock_t **lock_p;
@@ -79,125 +226,16 @@ static svn_error_t *
 txn_body_lock(void *baton, trail_t *trail)
 {
   struct lock_args *args = baton;
-  svn_node_kind_t kind = svn_node_file;
-  svn_lock_t *existing_lock;
-  const char *fs_username;
-  svn_lock_t *lock;
-
-  SVN_ERR(svn_fs_base__get_path_kind(&kind, args->path, trail, trail->pool));
-
-  /* Until we implement directory locks someday, we only allow locks
-     on files or non-existent paths. */
-  if (kind == svn_node_dir)
-    return svn_fs_base__err_not_file(trail->fs, args->path);
-
-  /* While our locking implementation easily supports the locking of
-     nonexistent paths, we deliberately choose not to allow such madness. */
-  if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                             "Path '%s' doesn't exist in HEAD revision",
-                             args->path);
-
-  /* There better be a username attached to the fs. */
-  if (!trail->fs->access_ctx || !trail->fs->access_ctx->username)
-    return svn_fs_base__err_no_user(trail->fs);
-  else
-    fs_username = trail->fs->access_ctx->username; /* for convenience */
-
-  /* Is the caller attempting to lock an out-of-date working file? */
-  if (SVN_IS_VALID_REVNUM(args->current_rev))
-    {
-      svn_revnum_t created_rev;
-      SVN_ERR(svn_fs_base__get_path_created_rev(&created_rev, args->path,
-                                                trail, trail->pool));
-
-      /* SVN_INVALID_REVNUM means the path doesn't exist.  So
-         apparently somebody is trying to lock something in their
-         working copy, but somebody else has deleted the thing
-         from HEAD.  That counts as being 'out of date'. */     
-      if (! SVN_IS_VALID_REVNUM(created_rev))
-        return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                 "Path '%s' doesn't exist in HEAD revision",
-                                 args->path);
-
-      if (args->current_rev < created_rev)
-        return svn_error_createf(SVN_ERR_FS_OUT_OF_DATE, NULL,
-                                 "Lock failed: newer version of '%s' exists",
-                                 args->path);
-    }
-
-  /* If the caller provided a TOKEN, we *really* need to see
-     if a lock already exists with that token, and if so, verify that
-     the lock's path matches PATH.  Otherwise we run the risk of
-     breaking the 1-to-1 mapping of lock tokens to locked paths. */
+  const char *token;
+  
   if (args->token)
-    {
-      svn_lock_t *lock_from_token;
-      svn_error_t *err = svn_fs_bdb__lock_get(&lock_from_token, trail->fs,
-                                              args->token, trail, 
-                                              trail->pool);
-      if (err && ((err->apr_err == SVN_ERR_FS_LOCK_EXPIRED)
-                  || (err->apr_err == SVN_ERR_FS_BAD_LOCK_TOKEN)))
-        {
-          svn_error_clear(err);
-        }
-      else
-        {
-          SVN_ERR(err);
-          if (strcmp(lock_from_token->path, args->path) != 0)
-            return svn_error_create(SVN_ERR_FS_BAD_LOCK_TOKEN, NULL,
-                                    "Lock failed: token refers to existing "
-                                    "lock with non-matching path.");
-        }
-    }
-
-  /* Is the path already locked?   
-
-     Note that this next function call will automatically ignore any
-     errors about {the path not existing as a key, the path's token
-     not existing as a key, the lock just having been expired}.  And
-     that's totally fine.  Any of these three errors are perfectly
-     acceptable to ignore; it means that the path is now free and
-     clear for locking, because the bdb funcs just cleared out both
-     of the tables for us.   */
-  SVN_ERR(svn_fs_base__get_lock_helper(&existing_lock, args->path, 
-                                       trail, trail->pool));
-  if (existing_lock)
-    {
-      if (! args->steal_lock)
-        {
-          /* Sorry, the path is already locked. */
-          return svn_fs_base__err_path_already_locked(trail->fs,
-                                                      existing_lock);
-        }
-      else
-        {
-          /* ARGS->steal_lock is set, so fs_username is "stealing" the
-             lock from lock->owner.  Destroy the existing lock. */
-          SVN_ERR(delete_lock_and_token(existing_lock->token,
-                                        existing_lock->path, trail));
-        }          
-    }
-
-  /* Create a new lock, and add it to the tables. */    
-  lock = svn_lock_create(trail->pool);
-  if (args->token)
-    lock->token = apr_pstrdup(trail->pool, args->token);
+    token = args->token;
   else
-    SVN_ERR(svn_fs_base__generate_lock_token(&(lock->token), trail->fs, 
-                                             trail->pool));
-  lock->path = apr_pstrdup(trail->pool, args->path);
-  lock->owner = apr_pstrdup(trail->pool, trail->fs->access_ctx->username);
-  lock->comment = apr_pstrdup(trail->pool, args->comment);
-  lock->is_dav_comment = args->is_dav_comment;
-  lock->creation_date = apr_time_now();
-  lock->expiration_date = args->expiration_date;
-  SVN_ERR(add_lock_and_token(lock, lock->token, args->path, trail));
-  *(args->lock_p) = lock;
-
-  return SVN_NO_ERROR;
+    SVN_ERR(svn_fs_base__generate_lock_token(&token, trail->fs, trail->pool));
+  return lock_single_path(args->lock_p, args->path, token, args->comment,
+                          args->is_dav_comment, args->expiration_date,
+                          args->current_rev, args->steal_lock, trail);
 }
-
 
 
 svn_error_t *
@@ -226,6 +264,72 @@ svn_fs_base__lock(svn_lock_t **lock,
   args.current_rev = current_rev;
 
   return svn_fs_base__retry_txn(fs, txn_body_lock, &args, pool);
+
+}
+
+
+struct lock_many_args
+{
+  apr_hash_t **locks;
+  apr_array_header_t *paths;
+  const char *comment;
+  svn_boolean_t is_dav_comment;
+  svn_boolean_t steal_lock;
+  apr_time_t expiration_date;
+  svn_revnum_t current_rev;
+};
+
+
+static svn_error_t *
+txn_body_lock_many(void *baton, trail_t *trail)
+{
+  struct lock_many_args *args = baton;
+  apr_hash_t *locks;
+  int i;
+
+  locks = apr_hash_make(trail->pool);
+  for (i = 0; i < args->paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(args->paths, i, const char *);
+      const char *token;
+      svn_lock_t *lock;
+
+      path = svn_fs_base__canonicalize_abspath(path, trail->pool);
+      SVN_ERR(svn_fs_base__generate_lock_token(&token, trail->fs, 
+                                               trail->pool));
+      SVN_ERR(lock_single_path(&lock, path, token, args->comment,
+                               args->is_dav_comment, args->expiration_date,
+                               args->current_rev, args->steal_lock, trail));
+      apr_hash_set(locks, path, APR_HASH_KEY_STRING, lock);
+    }
+  args->locks = &locks;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_base__lock_many(apr_hash_t **locks,
+                       svn_fs_t *fs,
+                       apr_array_header_t *paths,
+                       const char *comment,
+                       svn_boolean_t is_dav_comment,
+                       apr_time_t expiration_date,
+                       svn_revnum_t current_rev,
+                       svn_boolean_t steal_lock,
+                       apr_pool_t *pool)
+{
+  struct lock_many_args args;
+
+  SVN_ERR(svn_fs_base__check_fs(fs));
+  args.locks = NULL;
+  args.paths = paths;
+  args.comment = comment;
+  args.is_dav_comment = is_dav_comment;
+  args.steal_lock = steal_lock;
+  args.expiration_date = expiration_date;
+  args.current_rev = current_rev;
+
+  return svn_fs_base__retry_txn(fs, txn_body_lock_many, &args, pool);
 
 }
 
