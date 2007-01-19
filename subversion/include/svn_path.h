@@ -413,7 +413,7 @@ svn_error_t *svn_path_check_valid(const char *path, apr_pool_t *pool);
  * @{
  */
 
-/** Return @c TRUE iff @a path looks like a valid URL, @c FALSE otherwise. */
+/** Return true iff @a path looks like a valid absolute URL. */
 svn_boolean_t svn_path_is_url(const char *path);
 
 /** Return @c TRUE iff @a path is URI-safe, @c FALSE otherwise. */
