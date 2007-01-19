@@ -1377,7 +1377,7 @@ This is the file 'pi'.
   
   # Do the switch and check the results in three ways.
   F_path = os.path.join(sbox.wc_dir, 'A', 'B', 'F')
-  D_url = svntest.main.current_repo_url + '/A/D'
+  D_url = sbox.repo_url + '/A/D'
 
   svntest.actions.run_and_verify_switch(sbox.wc_dir, F_path, D_url,
                                         expected_output,
