@@ -24,27 +24,20 @@
 
 #include "svn_client.h"
 #include "svn_wc.h"
+#include "svn_pools.h"
 
 
 /*** Code. ***/
 
 svn_error_t *
-svn_client_set_changelist(const char *path,
+svn_client_set_changelist(const apr_array_header_t *paths,
                           const char *changelist_name,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *pool)
 {
-  SVN_ERR(svn_wc_set_changelist(path, changelist_name, pool));
-
-  /* ### TODO(sussman): create new notification type, and send
-         notification feedback.  See locking-commands.c. */
-  if (changelist_name)
-    printf("Path '%s' is now part of changelist '%s'.\n",
-           path, changelist_name);
-  else
-    printf("Path '%s' is no longer associated with a changelist'.\n", path);
-
-  return SVN_NO_ERROR;
+  return svn_wc_set_changelist(paths, changelist_name,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               ctx->notify_func2, ctx->notify_baton2, pool);
 }
 
 

@@ -2243,8 +2243,8 @@ svn_client_resolved(const char *path,
 
 
 /**
- * A structure which describes a copy operation--its source, source revision,
- * and peg revision.
+ * A structure which describes the source of a copy operation--its path, 
+ * revision, and peg revision.
  *
  * @since New in 1.5.
  */
@@ -3118,10 +3118,10 @@ svn_client_cat(svn_stream_t *out,
 
 
 /**
- * Associate @a path with changelist @a changelist, overwriting any
- * existing changelist association.  (A path cannot be a member of
+ * Associate each item in @a paths with changelist @a changelist, overwriting
+ * any existing changelist association.  (A path cannot be a member of
  * more than one changelist.)  If @a changelist is NULL, then
- * deassociate any existing changelist from @a path.
+ * deassociate any existing changelist from each item in @a paths.
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -3129,7 +3129,7 @@ svn_client_cat(svn_stream_t *out,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_client_set_changelist(const char *path,
+svn_client_set_changelist(const apr_array_header_t *paths,
                           const char *changelist,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *pool);

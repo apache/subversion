@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -203,6 +203,14 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
     case svn_wc_notify_exists:
         /* Tried adding a path that already exists. */
         jAction = org_tigris_subversion_javahl_NotifyAction_exists;
+        break;
+    case svn_wc_notify_changelist_set:
+        /* Changelist name set. */
+        jAction = org_tigris_subversion_javahl_NotifyAction_changelist_set;
+        break;
+    case svn_wc_notify_changelist_clear:
+        /* Changelist name cleared. */
+        jAction = org_tigris_subversion_javahl_NotifyAction_changelist_clear;
         break;
     }
     return jAction;

@@ -40,20 +40,20 @@ public class Revision
     {
         if(kind < RevisionKind.unspecified || kind > RevisionKind.head)
             throw new IllegalArgumentException(
-                    kind+" is not a legel revision kind");
+                    kind+" is not a legal revision kind");
         revKind = kind;
     }
 
     /**
      * Internally create a new revision
-     * @param kind      kind of revision
-     * @param marker    marker to differtiate from the public deprecated version
+     * @param kind    kind of revision
+     * @param marker  marker to differentiate from the public deprecated version
      */
     protected Revision(int kind, boolean marker)
     {
         if(kind < RevisionKind.unspecified || kind > RevisionKind.head)
             throw new IllegalArgumentException(
-                    kind+" is not a legel revision kind");
+                    kind+" is not a legal revision kind");
         revKind = kind;
     }
 

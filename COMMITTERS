@@ -103,6 +103,7 @@ Commit access for specific areas:
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
        kameshj   Kamesh Jayachandran <kamesh@collab.net>     (svntest)
+        aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
 
   Translation of message files:
 
@@ -131,6 +132,10 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
       markphip   Mark Phippard <markphip@gmail.com>          (ebcdic)
+      jpeacock   John Peacock <jpeacock@rowman.com>          (perl-bindings-
+                                                              improvements br.)
+    nikclayton   Nik Clayton <nik@ngo.org.uk>                (perl-bindings-
+                                                              improvements br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

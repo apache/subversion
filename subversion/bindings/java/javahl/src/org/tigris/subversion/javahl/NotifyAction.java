@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -118,6 +118,18 @@ public interface NotifyAction
      * Tried adding a path that already exists.
      */
     public static final int exists = 25;
+
+    /**
+     * @since 1.5
+     * Set the changelist for a path.
+     */
+    public static final int changelist_set = 26;
+
+    /**
+     * @since 1.5
+     * Clear the changelist for a path.
+     */
+    public static final int changelist_clear = 27;
 
     /**
      * textual representation of the action types

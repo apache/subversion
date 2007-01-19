@@ -1,7 +1,5 @@
 #!/usr/bin/env python2.4
 
-# $Id: svn-fast-backup 8698 2005-09-02 07:28:22Z quarl $
-
 # svn-fast-backup: use rsync snapshots for very fast FSFS repository backup.
 #    Multiple FSFS backups share data via hardlinks, meaning old backups are
 #    almost free, since a newer revision of a repository is almost a complete
@@ -19,6 +17,10 @@
 ## quarl 2005-09-01 refactor, documentation; new options: --force, --keep,
 ##                  --simulate, --trace
 
+# $HeadURL$
+# $LastChangedRevision$
+# $LastChangedDate$
+# $LastChangedBy$
 
 # Originally based on svn-hot-backup.py, whose copyright notice states:
 

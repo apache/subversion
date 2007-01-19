@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -654,7 +654,13 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_failed_unlock,
 
   /** Tried adding a path that already exists. @since New in 1.5. */
-  svn_wc_notify_exists
+  svn_wc_notify_exists,
+
+  /** Changelist name set. @since New in 1.5. */
+  svn_wc_notify_changelist_set,
+
+  /** Changelist name cleared. @since New in 1.5. */
+  svn_wc_notify_changelist_clear
 
 } svn_wc_notify_action_t;
 
@@ -758,6 +764,9 @@ typedef struct svn_wc_notify_t {
    * action is @c svn_wc_notify_blame_revision, processed revision.
    * In all other cases, it is @c SVN_INVALID_REVNUM. */
   svn_revnum_t revision;
+  /** When @c action is @c svn_wc_notify_changelist_add or name.  In all other
+   * cases, it is @c NULL. */
+  const char *changelist_name;
   /* NOTE: Add new fields at the end to preserve binary compatibility.
      Also, if you add fields here, you have to update svn_wc_create_notify
      and svn_wc_dup_notify. */
@@ -3855,10 +3864,19 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
 
 /**
- * Associate @a path with changelist @a changelist by setting the
+ * Associate each item in @a paths with changelist @a changelist by setting the
  * 'changelist' attribute in its entry.  Obviously, this will
  * overwrite any existing value of the attribute.  If @a changelist is
- * NULL, then remove any 'changelist' attribute in @a path's entry.
+ * NULL, then remove any 'changelist' attribute for the entry for each item in
+ * @a paths.
+ *
+ * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
+ * if the client has cancelled the operation.
+ *
+ * If @a notify_func is non-NULL, it will be called with @a
+ * notify_baton, the each path for changelist association, and the
+ * notification type (@c svn_wc_notify_changelist_set or @c
+ * svn_wc_notify_changelist_clear).
  *
  * @note This metadata is purely a client-side "bookkeeping"
  * convenience, and is entirely managed by the working copy.
@@ -3866,8 +3884,12 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
  * @since New in 1.5.
  */
 svn_error_t *
-svn_wc_set_changelist(const char *path,
+svn_wc_set_changelist(const apr_array_header_t *paths,
                       const char *changelist,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
                       apr_pool_t *pool);
 
 

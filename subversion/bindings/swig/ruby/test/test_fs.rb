@@ -37,8 +37,6 @@ class SvnFsTest < Test::Unit::TestCase
       abort
     end
     assert_equal(path, fs.path)
-    Svn::Fs::FileSystem.delete(path)
-    assert(!File.exist?(path))
   end
 
   def test_hotcopy
@@ -155,7 +153,14 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal([Svn::Core::PROP_REVISION_DATE], txn1.proplist.keys)
     assert_instance_of(Time, txn1.proplist[Svn::Core::PROP_REVISION_DATE])
     date = txn1.prop(Svn::Core::PROP_REVISION_DATE)
-    assert_operator(start_time..(Time.now), :include?, date)
+
+    # Subversion's clock is more precise than Ruby's on
+    # Windows.  So this test can fail intermittently because
+    # the begin and end of the range are the same (to 3
+    # decimal places), but the time from Subversion has 6
+    # decimal places so it looks like it's not in the range.
+    # So we just add a smidgen to the end of the Range.
+    assert_operator(start_time..(Time.now + 0.001), :include?, date)
     txn1.set_prop(Svn::Core::PROP_REVISION_DATE, nil)
     assert_equal([], txn1.proplist.keys)
     assert_equal(youngest_rev, txn1.base_revision)

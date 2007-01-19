@@ -1102,6 +1102,7 @@ svn_client_proplist2(apr_array_header_t **props,
     {
       svn_ra_session_t *ra_session;
       svn_node_kind_t kind;
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       /* Get an RA session for this URL. */
       SVN_ERR(svn_client__ra_session_from_path(&ra_session, &revnum,
@@ -1112,7 +1113,8 @@ svn_client_proplist2(apr_array_header_t **props,
 
       SVN_ERR(remote_proplist(*props, url, "",
                               kind, revnum, ra_session,
-                              recurse, pool, svn_pool_create(pool)));
+                              recurse, pool, subpool));
+      svn_pool_destroy(subpool);
     }
   else  /* working copy path */
     {

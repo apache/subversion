@@ -968,7 +968,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   return reconcile_errors(cmt_err, unlock_err, cleanup_err, pool);
 }
 
-
+/* Peform each individual copy operation for a repos -> wc copy.  A
+   helper for repos_to_wc_copy(). */
 static svn_error_t *
 repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                         svn_boolean_t same_repositories,

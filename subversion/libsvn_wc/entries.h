@@ -170,12 +170,8 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
    MODIFY_FLAGS is a bitmask to specify which of those field to pay
    attention to.  ADM_ACCESS must hold a write lock.
 
-   - ENTRY->kind specifies the node kind for this entry, and is
-     *required* to be set to one of the following valid values:
-     'svn_node_dir', 'svn_node_file'.
-
-   - NAME can be NULL to specify that the caller wishes to modify the
-     "this dir" entry in ADM_ACCESS.
+   NAME can be NULL to specify that the caller wishes to modify the
+   "this dir" entry in ADM_ACCESS.
 
    If DO_SYNC is FALSE then the modification will be entirely local to the
    access baton, if DO_SYNC is TRUE the modification will be written to
