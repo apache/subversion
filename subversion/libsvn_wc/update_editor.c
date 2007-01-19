@@ -1247,10 +1247,12 @@ add_directory(const char *path,
     }
 
   {
-    svn_depth_t depth =
-      (eb->depth == svn_depth_zero || eb->depth == svn_depth_one)
-      ? svn_depth_zero
-      : svn_depth_infinity;
+    svn_depth_t depth = svn_depth_infinity;
+
+    if (eb->depth == svn_depth_empty
+        || eb->depth == svn_depth_files
+        || eb->depth == svn_depth_immediates)
+      depth = svn_depth_empty;
 
     SVN_ERR(prep_directory(db,
                            db->new_URL,

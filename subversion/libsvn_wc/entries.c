@@ -460,12 +460,22 @@ read_entry(svn_wc_entry_t **new_entry,
   {
     const char *result;
     SVN_ERR(read_val(&result, buf, end));
-    if (strcmp(result, "depth-zero") == 0)
-      entry->depth = svn_depth_zero;
-    else if (strcmp(result, "depth-one") == 0)
-      entry->depth = svn_depth_one;
+
+    /* ### TODO: We could save some entries file bytes and some code
+       ### by using svn_depth_from_word() here.  But it doesn't have
+       ### the nice fall-through-to-infinity behavior... Unless we
+       ### make it treat the empty string as infinity, which would be
+       ### reasonable.  Think about it.  See similar comment about
+       ### svn_depth_from_word() in ../svn/main.c, though; and see
+       ### the similar comment in write_entry() in this file. */
+    if (strcmp(result, "depth-empty") == 0)
+      entry->depth = svn_depth_empty;
+    else if (strcmp(result, "depth-files") == 0)
+      entry->depth = svn_depth_files;
+    else if (strcmp(result, "depth-immediates") == 0)
+      entry->depth = svn_depth_immediates;
     else
-      /* svn_depth_exclude "can't happen" here, so assume infinity. */
+      /* svn_depth_exclude/unknown "can't happen" here, so assume infinity. */
       entry->depth = svn_depth_infinity;
   }
 
@@ -1573,11 +1583,16 @@ write_entry(svn_stringbuf_t *buf,
     const char *val;
     switch (entry->depth)
       {
-      case svn_depth_zero:
-        val = "depth-zero";
+        /* ### TODO: See comment in read_entry() about using
+           ### svn_depth_from_word().  The inverse applies here. */
+      case svn_depth_empty:
+        val = "depth-empty";
         break;
-      case svn_depth_one:
-        val = "depth-one";
+      case svn_depth_files:
+        val = "depth-files";
+        break;
+      case svn_depth_immediates:
+        val = "depth-immediates";
         break;
       default:
         /* Else assume 2 (svn_depth_infinity), which we represent as "",
@@ -2725,8 +2740,9 @@ svn_wc__entries_init(const char *path,
 
   /* Sanity checks. */
   assert(! repos || svn_path_is_ancestor(repos, url));
-  assert(depth == svn_depth_zero
-         || depth == svn_depth_one
+  assert(depth == svn_depth_empty
+         || depth == svn_depth_files
+         || depth == svn_depth_immediates
          || depth == svn_depth_infinity);
 
   /* Create the entries file, which must not exist prior to this. */

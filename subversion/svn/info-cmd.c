@@ -94,27 +94,6 @@ schedule_str(svn_wc_schedule_t schedule)
 }
 
 
-/* Return string representation of DEPTH */
-static const char *
-depth_str(svn_depth_t depth)
-{
-  switch (depth)
-    {
-    case svn_depth_unknown:
-      return "unknown";
-    case svn_depth_zero:
-      return "zero";
-    case svn_depth_one:
-      return "one";
-    case svn_depth_infinity:
-      return "infinity";
-    default:
-      /* Remember that svn_depth_exclude should never happen here. */
-      return "INVALID";
-    }
-}
-
-
 /* prints svn info in xml mode to standard out */
 static svn_error_t *
 print_info_xml(const char *target,
@@ -167,7 +146,7 @@ print_info_xml(const char *target,
 
       /* "<depth> xx </depth>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "depth",
-                               depth_str(info->depth));
+                               svn_depth_to_word(info->depth));
 
       /* "<copy-from-url> xx </copy-from-url>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "copy-from-url",
@@ -364,12 +343,16 @@ print_info(const char *target,
              not bother to print it. */
           break;
       
-        case svn_depth_zero:
-          SVN_ERR(svn_cmdline_printf(pool, _("Depth: zero\n")));
+        case svn_depth_empty:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: empty\n")));
           break;
       
-        case svn_depth_one:
-          SVN_ERR(svn_cmdline_printf(pool, _("Depth: one\n")));
+        case svn_depth_files:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: files\n")));
+          break;
+      
+        case svn_depth_immediates:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: immediates\n")));
           break;
       
         case svn_depth_infinity:
@@ -561,7 +544,7 @@ svn_cl__info(apr_getopt_t *os,
     }
   
   if (opt_state->depth == svn_depth_unknown)
-    opt_state->depth = svn_depth_one;
+    opt_state->depth = svn_depth_immediates;
 
   for (i = 0; i < targets->nelts; i++)
     {

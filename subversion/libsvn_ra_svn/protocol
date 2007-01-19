@@ -484,14 +484,14 @@ call).  Errors resulting from an abort-report call are ignored.
 
   set-path:
     params: ( path:string rev:number start-empty:bool
-              ? [ lock-token:string ] ? [ depth:number ] )
+              ? [ lock-token:string ] ? [ depth:word ] )
 
   delete-path:
     params: ( path:string )
 
   link-path:
     params: ( path:string url:string rev:number start-empty:bool 
-              ? [ lock-token:string ] ? [ depth:number ] )
+              ? [ lock-token:string ] ? [ depth:word ] )
 
   finish-report:
     params: ( )

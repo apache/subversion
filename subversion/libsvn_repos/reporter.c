@@ -48,7 +48,7 @@
          <revnum>:            Revnum of set_path or link_path
        +/-                    '+' indicates depth other than svn_depth_infinity
        If previous is +:
-         <depth>:             "0" is svn_depth_zero, "1" is svn_depth_one
+         <depth>:             "0","1","2" => svn_depth_{empty,files,immediates}
        +/-                    '+' indicates start_empty field set
        +/-                    '+' indicates presence of lock_token field.
        If previous is +:
@@ -201,11 +201,18 @@ read_path_info(path_info_t **pi, apr_file_t *temp, apr_pool_t *pool)
       switch (num)
         {
         case 0:
-          (*pi)->depth = svn_depth_zero;
+          (*pi)->depth = svn_depth_empty;
           break;
         case 1:
-          (*pi)->depth = svn_depth_one;
+          (*pi)->depth = svn_depth_files;
           break;
+        case 2:
+          (*pi)->depth = svn_depth_immediates;
+          break;
+
+          /* Note that we do not tolerate explicit representation of
+             svn_depth_infinity as "3" here, because that's the
+             default and should never be sent. */ 
         default:
           return svn_error_createf(SVN_ERR_REPOS_BAD_REVISION_REPORT, NULL,
                                    _("Invalid depth (%"
@@ -592,13 +599,15 @@ fake_dirent(const svn_fs_dirent_t **entry, svn_fs_root_t *root,
 
    If DEPTH is svn_depth_infinity, then emit editing operations for
    properties, for files, for subdirectories, and recurse into the
-   subdirectories.  If svn_depth_one, then do the same except don't
-   recurse into subdirectories, just delete or add them.  If
-   svn_depth_zero, just emit editing operations for files.
+   subdirectories.  If svn_depth_immediates, do the same, except
+   don't recurse into subdirectories, just delete or add them.  If
+   svn_depth_files, emit editing operations for properties and files
+   but not subdirectories.  If svn_depth_empty, just emit editing
+   operations for properties.
 
-   (Normally DEPTH is simply taken from B->depth, but drive() needs to
-   force us to at least recurse into the target even if B->depth would
-   indicate otherwise.) */
+   (You might expect DEPTH to be taken from B->depth, but drive()
+   needs to force us to at least recurse into the target even if
+   B->depth would indicate otherwise.) */
 static svn_error_t *
 update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
              const svn_fs_dirent_t *s_entry, const char *t_path,
@@ -703,7 +712,7 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   if (t_entry->kind == svn_node_dir)
     {
-      svn_depth_t depth_from_here = depth;
+      svn_depth_t depth_beneath_here = depth;
 
       if (related)
         SVN_ERR(b->editor->open_directory(e_path, dir_baton, s_rev, pool, 
@@ -714,13 +723,13 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                                          &new_baton));
 
       /* If we're descending to update a subdir because its parent
-         is depth one, then the subdir should only get depth zero. */
-      if (depth == svn_depth_one)
-        depth_from_here = svn_depth_zero;
+         is depth-immediates, then the subdir is just depth-empty. */
+      if (depth == svn_depth_immediates)
+        depth_beneath_here = svn_depth_empty;
 
       SVN_ERR(delta_dirs(b, s_rev, s_path, t_path, new_baton, e_path,
                          info ? info->start_empty : FALSE,
-                         depth_from_here, pool));
+                         depth_beneath_here, pool));
       return b->editor->close_directory(new_baton, pool);
     }
   else
@@ -824,7 +833,9 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
 
   /* Remove any deleted entries.  Do this before processing the
      target, for graceful handling of case-only renames. */
-  if (s_entries && (depth == svn_depth_one || depth == svn_depth_infinity))
+  if (s_entries && (depth == svn_depth_files
+                    || depth == svn_depth_immediates
+                    || depth == svn_depth_infinity))
     {
       for (hi = apr_hash_first(pool, s_entries); hi; hi = apr_hash_next(hi))
         {
@@ -845,6 +856,10 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                                                           subpool),
                                             s_rev, b->t_rev,
                                             &deleted_rev, subpool));
+
+              /* Because we only emit a delete for a non-directory,
+                 we don't have to special-case depth==svn_depth_files.
+                 But if it weren't for this conditional, we would. */
               if (s_entry->kind != svn_node_dir)
                 SVN_ERR(b->editor->delete_entry(e_fullpath,
                                                 deleted_rev,
@@ -854,7 +869,9 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
     }
 
   /* Loop over the dirents in the target. */
-  if (depth == svn_depth_one || depth == svn_depth_infinity)
+  if (depth == svn_depth_files
+      || depth == svn_depth_immediates
+      || depth == svn_depth_infinity)
     {
       for (hi = apr_hash_first(pool, t_entries); hi; hi = apr_hash_next(hi))
       {
@@ -863,6 +880,14 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         apr_hash_this(hi, NULL, NULL, &val);
         t_entry = val;
         
+        if (t_entry->kind == svn_node_dir)
+          {
+            if (depth == svn_depth_files)
+              continue;
+            else if (depth == svn_depth_immediates)
+              depth_from_here = svn_depth_empty;
+          }
+
         /* Compose the report, editor, and target paths for this entry. */
         e_fullpath = svn_path_join(e_path, t_entry->name, subpool);
         t_fullpath = svn_path_join(t_path, t_entry->name, subpool);
@@ -873,11 +898,6 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
         s_fullpath = s_entry ? svn_path_join(s_path, t_entry->name, subpool)
           : NULL;
         
-        /* If we're descending to update a subdir because its parent
-           is depth one, then the subdir should only get depth zero. */
-        if (t_entry->kind == svn_node_dir && depth == svn_depth_one)
-          depth_from_here = svn_depth_zero;
-
         SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
                              t_entry, dir_baton, e_fullpath, NULL,
                              depth_from_here, subpool));
@@ -1023,8 +1043,16 @@ write_path_info(report_baton_t *b, const char *path, const char *lpath,
                               strlen(lpath), lpath) : "-";
   rrep = (SVN_IS_VALID_REVNUM(rev)) ?
     apr_psprintf(pool, "+%ld:", rev) : "-";
-  drep = (depth == svn_depth_infinity) ? "-"
-    : ((depth == svn_depth_zero) ? "+0:" : "+1:");
+
+  if (depth == svn_depth_empty)
+    drep = "+0:";
+  else if (depth == svn_depth_files)
+    drep = "+1:";
+  else if (depth == svn_depth_immediates)
+    drep = "+2:";
+  else           /* svn_depth_infinity */
+    drep = "-";
+
   ltrep = lock_token ? apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s",
                                     strlen(lock_token), lock_token) : "-";
   rep = apr_psprintf(pool, "+%" APR_SIZE_T_FMT ":%s%s%s%s%c%s",
@@ -1195,7 +1223,7 @@ svn_repos_begin_report(void **report_baton,
                                  s_operand,
                                  switch_path,
                                  text_deltas,
-                                 recurse ? svn_depth_infinity : svn_depth_zero,
+                                 recurse ? svn_depth_infinity : svn_depth_files,
                                  ignore_ancestry,
                                  editor,
                                  edit_baton,

@@ -85,7 +85,11 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                               &write_required,
                               svn_wc_adm_access_pool(dirpath)));
 
-  if (depth == svn_depth_one || depth == svn_depth_infinity)
+  /* ### TODO: I think proceeding even in the depth==svn_depth_files
+         case is correct, but am not 100% certain yet... */
+  if (depth == svn_depth_files
+      || depth == svn_depth_immediates
+      || depth == svn_depth_infinity)
     {
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
       {
@@ -1516,7 +1520,7 @@ svn_wc_add2(const char *path,
          ### we don't have any other source of depth information in
          ### the current context, and if svn_wc_ensure_adm3() *does*
          ### create a new admin directory, it ought to default to
-         ### svn_depth_infinity.  However, if we 'svn add' ever takes
+         ### svn_depth_infinity.  However, if 'svn add' ever takes
          ### a depth parameter, then this would need to change. */
 
       if (! copyfrom_url)

@@ -1874,15 +1874,25 @@ set_path(void *report_baton,
   /* ### TODO: Or should this be 'if (depth != report->depth) ...' ? */
   if (depth != svn_depth_infinity)
     {
+      /* ### It's a bit distressing to hand-code the depth words here,
+         ### instead of using svn_depth_to_word() the way
+         ### libsvn_ra_dav does.  But I'm not sure enough about the
+         ### general style of libsvn_ra_serf to know whether redoing
+         ### the code here would be a good thing.  Same in link_path(). */
       switch (depth) {
-      case svn_depth_zero:
-        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"0\"",
-                                            sizeof(" depth=\"0\"")-1,
+      case svn_depth_empty:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"empty\"",
+                                            sizeof(" depth=\"empty\"")-1,
                                             report->sess->bkt_alloc);
         break;
-      case svn_depth_one:
-        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"1\"",
-                                            sizeof(" depth=\"1\"")-1,
+      case svn_depth_files:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"files\"",
+                                            sizeof(" depth=\"files\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      case svn_depth_immediates:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"immediates\"",
+                                            sizeof(" depth=\"immediates\"")-1,
                                             report->sess->bkt_alloc);
         break;
       default:
@@ -2003,15 +2013,25 @@ link_path(void *report_baton,
   /* ### TODO: Or should this be 'if (depth != report->depth) ...' ? */
   if (depth != svn_depth_infinity)
     {
+      /* ### It's a bit distressing to hand-code the depth words here,
+         ### instead of using svn_depth_to_word() the way
+         ### libsvn_ra_dav does.  But I'm not sure enough about the
+         ### general style of libsvn_ra_serf to know whether redoing
+         ### the code here would be a good thing.  Same in set_path(). */
       switch (depth) {
-      case svn_depth_zero:
-        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"0\"",
-                                            sizeof(" depth=\"0\"")-1,
+      case svn_depth_empty:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"empty\"",
+                                            sizeof(" depth=\"empty\"")-1,
                                             report->sess->bkt_alloc);
         break;
-      case svn_depth_one:
-        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"1\"",
-                                            sizeof(" depth=\"1\"")-1,
+      case svn_depth_files:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"files\"",
+                                            sizeof(" depth=\"files\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      case svn_depth_immediates:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"immediates\"",
+                                            sizeof(" depth=\"immediates\"")-1,
                                             report->sess->bkt_alloc);
         break;
       default:

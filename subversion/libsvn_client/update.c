@@ -83,7 +83,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
      ### we didn't need to is a performance hit, but (except for
      ### access contention) not a correctness problem. */
 
-  if (depth == svn_depth_zero || depth == svn_depth_one)
+  if (depth == svn_depth_empty
+      || depth == svn_depth_files
+      || depth == svn_depth_immediates)
     adm_open_depth = 0;
   else
     adm_open_depth = -1;

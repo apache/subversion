@@ -1018,10 +1018,7 @@ dav_svn__update_report(const dav_resource *resource,
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          /* ### TODO: is this an abuse of SVN_STR_TO_REV()?
-             ### Should we make a new macro, or just convert
-             ### by hand? */
-          depth = SVN_STR_TO_REV(cdata);
+          depth = svn_depth_from_word(cdata);
         }
       if (child->ns == ns && strcmp(child->name, "recursive") == 0)
         {
@@ -1029,7 +1026,7 @@ dav_svn__update_report(const dav_resource *resource,
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
           if ((depth == svn_depth_unknown) && (strcmp(cdata, "no") == 0))
-            depth = svn_depth_zero;
+            depth = svn_depth_empty;
           /* The "yes" case is handled later, by checking if depth is
              still svn_depth_unknown. */
         }
@@ -1196,10 +1193,7 @@ dav_svn__update_report(const dav_resource *resource,
                 if (! strcmp(this_attr->name, "rev"))
                   rev = SVN_STR_TO_REV(this_attr->value);
                 else if (! strcmp(this_attr->name, "depth"))
-                  /* ### TODO: is this an abuse of SVN_STR_TO_REV()?
-                     ### Should we make a new macro, or just convert
-                     ### by hand? */
-                  depth = SVN_STR_TO_REV(this_attr->value);
+                  depth = svn_depth_from_word(this_attr->value);
                 else if (! strcmp(this_attr->name, "linkpath"))
                   linkpath = this_attr->value;
                 else if (! strcmp(this_attr->name, "start-empty"))

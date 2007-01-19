@@ -64,8 +64,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {NULL,            '?', 0, N_("show help on a subcommand")},
   {"message",       'm', 1, N_("specify log message ARG")},
   {"quiet",         'q', 0, N_("print as little as possible")},
-  {"recursive",     'R', 0, N_("descend recursively, same as --depth=2")},
-  {"non-recursive", 'N', 0, N_("obsolete; use --depth=1 or --depth=0 instead")},
+  {"recursive",     'R', 0, N_("descend recursively, same as --depth=infinity")},
+  {"non-recursive", 'N', 0, N_("obsolete; try --depth=files or --depth=immediates")},
   {"change",        'c', 1, N_
    ("the change made by revision ARG (like -r ARG-1:ARG)\n"
     "                             If ARG is negative this is like -r ARG:ARG-1")
@@ -129,7 +129,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"targets",       svn_cl__targets_opt, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         svn_cl__depth_opt, 1,
-                    N_("pass desired depth (0, 1, or 2) as additional arg")},
+                    N_("pass depth (empty, files, or immediates) as additional arg")},
   {"xml",           svn_cl__xml_opt, 0, N_("output in XML")},
   {"strict",        svn_cl__strict_opt, 0, N_("use strict semantics")},
   {"stop-on-copy",  svn_cl__stop_on_copy_opt, 0,
@@ -1147,11 +1147,20 @@ main(int argc, const char *argv[])
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                _("Error converting depth "
                                  "from locale to UTF8")), pool, "svn: ");
-        if (strcmp(utf8_opt_arg, "0") == 0)
-          opt_state.depth = svn_depth_zero;
-        else if (strcmp(utf8_opt_arg, "1") == 0)
-          opt_state.depth = svn_depth_one;
-        else if (strcmp(utf8_opt_arg, "2") == 0)
+        /* ### TODO: Use svn_depth_from_word() here?  That could work
+           ### as long as that function continues to return
+           ### svn_depth_unknown for unrecognized words, but there's
+           ### a movement afoot (in my head, anyway) to make it
+           ### return svn_depth_infinity, for forwards compatibility
+           ### with Subversion's default depth.  Must decide that
+           ### before tweaking this code. */
+        if (strcmp(utf8_opt_arg, "empty") == 0)
+          opt_state.depth = svn_depth_empty;
+        else if (strcmp(utf8_opt_arg, "files") == 0)
+          opt_state.depth = svn_depth_files;
+        else if (strcmp(utf8_opt_arg, "immediates") == 0)
+          opt_state.depth = svn_depth_immediates;
+        else if (strcmp(utf8_opt_arg, "infinity") == 0)
           opt_state.depth = svn_depth_infinity;
         else
           return svn_cmdline_handle_exit_error

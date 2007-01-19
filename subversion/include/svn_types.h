@@ -199,27 +199,62 @@ enum svn_recurse_kind
   svn_recursive
 };
 
-/** The WebDAV / LDAP concept of depth for directory operations.
- *
- * In WebDAV, these depths are called "zero", "one", and "infinity".
- * In LDAP, they are called "base", "onelevel", and "subtree", but
- * they mean the same thing as in WebDAV.
- *
- * @note LDAP sometimes uses "exact" as a synonym for "base".  Also,
- * Subversion does not implement the LDAP "children" depth, which
- * means "subtree minus exact", that is, the children of a directory
- * but not the directory itself.
+/** The concept of depth for directories.
+ * 
+ * @note This is similar to, but not exactly the same as, the WebDAV
+ * and LDAP concepts of depth.
  *
  * @since New in 1.5.
  */
 typedef enum
 {
-  svn_depth_unknown  = -2, /* Depth undetermined or ignored. */
-  svn_depth_exclude  = -1, /* Exclude (remove, whatever) directory D. */
-  svn_depth_zero     =  0, /* Just the named directory D, no entries. */
-  svn_depth_one      =  1, /* D + immediate children (D and its entries) */
-  svn_depth_infinity =  2, /* D + all descendants (full recursion from D) */
+  /* Depth undetermined or ignored.
+    ### TODO: This depth may turn out to be unnecessary. ### */
+  svn_depth_unknown    = -2,
+
+  /* Exclude (remove, whatever) directory D.
+     ### TODO: This depth may turn out to be unnecessary. ### */
+  svn_depth_exclude    = -1,
+
+  /* Just the named directory D, no entries.  Updates will not pull in
+     any files or subdirectories not already present. */
+  svn_depth_empty      =  0,
+
+  /* D + its file children, but not subdirs.  Updates will pull in any
+     files not already present, but not subdirectories. */
+  svn_depth_files      =  1,
+
+  /* D + immediate children (D and its entries).  Updates will pull in
+     any files or subdirectories not already present; those
+     subdirectories' this_dir entries will have depth-empty. */
+  svn_depth_immediates =  2,
+  
+  /* D + all descendants (full recursion from D).  Updates will pull
+     in any files or subdirectories not already present; those
+     subdirectories' this_dir entries will have depth-infinity.
+     Equivalent to the pre-1.5 default update behavior. */
+  svn_depth_infinity   =  3,
+
 } svn_depth_t;
+
+
+/** Return a constant string expressing @a depth as an English word,
+ * e.g., "infinity", "immediates", etc.  The string is not localized,
+ * as it may be used for client<->server communications.
+ *
+ * @since New in 1.5.
+ */
+const char *
+svn_depth_to_word(svn_depth_t depth);
+
+
+/** Return the appropriate depth for @a depth_str.  @a word is as
+ * returned from svn_depth_to_word().
+ *
+ * @since New in 1.5.
+ */
+svn_depth_t
+svn_depth_from_word(const char *word);
 
 
 /* Return an @c svn_depth_t depth based on boolean @a recurse.
@@ -230,7 +265,7 @@ typedef enum
  * @since New in 1.5.
  */
 #define SVN_DEPTH_FROM_RECURSE(recurse) \
-  ((recurse) ? svn_depth_infinity : svn_depth_one)
+  ((recurse) ? svn_depth_infinity : svn_depth_files)
 
 /* Return a recursion boolean based on @a depth.
  *

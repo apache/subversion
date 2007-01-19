@@ -2792,7 +2792,7 @@ static svn_error_t * reporter_set_path(void *report_baton,
   const char *tokenstring = "";
 
   if (depth != svn_depth_infinity)
-    depthstring = apr_psprintf(pool, "depth=\"%d\"", depth);
+    depthstring = apr_psprintf(pool, "depth=\"%s\"", svn_depth_to_word(depth));
     
   if (lock_token)
     tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
@@ -2830,7 +2830,7 @@ static svn_error_t * reporter_link_path(void *report_baton,
   const char *tokenstring = "";
 
   if (depth != svn_depth_infinity)
-    depthstring = apr_psprintf(pool, "depth=\"%d\"", depth);
+    depthstring = apr_psprintf(pool, "depth=\"%s\"", svn_depth_to_word(depth));
     
   if (lock_token)
     tokenstring = apr_psprintf(pool, "lock-token=\"%s\"", lock_token);
@@ -3107,7 +3107,8 @@ make_reporter(svn_ra_session_t *session,
 
   /* mod_dav_svn defaults to svn_depth_infinity, but we always send anyway. */
   {
-    s = apr_psprintf(pool, "<S:depth>%d</S:depth>" DEBUG_CR, depth);
+    s = apr_psprintf(pool, "<S:depth>%s</S:depth>" DEBUG_CR,
+                     svn_depth_to_word(depth));
     SVN_ERR(svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool));
   }
   
