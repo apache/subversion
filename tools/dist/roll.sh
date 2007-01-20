@@ -29,18 +29,18 @@ mkdir deploy
 (cd unix-dependencies &&
   ../dist.sh -v $VERSION -pr branches/$BRANCH -r $REV $EXTRA &&
   mv subversion-* ../deploy/ &&
-  mv svn_version.h.dist ../deploy/)
+  mv svn_version.h.dist ../deploy/) || exit $?
 
 (cd win32-dependencies &&
   ../dist.sh -v $VERSION -pr branches/$BRANCH -r $REV -zip $EXTRA &&
   mv subversion-* ../deploy/ &&
-  rm svn_version.h.dist)
+  rm svn_version.h.dist) || exit $?
 
 (cd deploy &&
   md5sum subversion-* svn_version.h.dist > md5sums &&
   sha1sum subversion-* svn_version.h.dist > sha1sums &&
   mkdir to-tigris &&
   cd to-tigris &&
-  for i in ../subversion-*; do ln -s "$i"; done)
+  for i in ../subversion-*; do ln -s "$i"; done) || exit $?
 
 rm -f dist.sh
