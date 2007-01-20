@@ -123,6 +123,10 @@ def attrlist_to_dict(l):
   return d
 
 
+def escape_entities(s):
+  return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+
+
 class IndexInsertParse(ExpatParseJob):
   do_not_minimize = {'script':None}
   temp_do_not_indent = {'div':None, 'a': None, 'strong': None, 'em': None}
@@ -141,8 +145,8 @@ class IndexInsertParse(ExpatParseJob):
     if self._element_open:
       self._element_open = False
       if due_to_end:
-        self.linepos += 2
-        self.outfp.write('/>')
+        self.linepos += 3
+        self.outfp.write(' />')
         return True
       else:
         self.linepos += 1
@@ -162,7 +166,7 @@ class IndexInsertParse(ExpatParseJob):
       toks = [ "<%s" % name ]
       while attrs:
         aname = attrs.pop(0)
-        aval = attrs.pop(0)
+        aval = escape_entities(attrs.pop(0))
         toks.append(' %s="%s"' % (aname, aval))
       for t in toks:
         self.linepos += len(t)
