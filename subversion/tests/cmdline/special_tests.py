@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import os, re
+import sys, os, re
 
 # Our testing module
 import svntest
@@ -460,6 +460,35 @@ def merge_file_into_symlink(sbox):
   svntest.main.run_svn(None, 'merge', '-r', '4:5', d_url,
                        os.path.join(wc_dir, 'A', 'Dprime'))
 
+# Issue 2701: Tests to see repository with symlinks can be checked out on all 
+# platforms.
+def checkout_repo_with_symlinks(sbox):
+  "checkout a repository containing symlinks"
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  # Load the dumpfile into the repos.
+  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                          'special_tests_data')
+  dump_str = file(os.path.join(data_dir,
+                               "symlink.dump"), "rb").read()
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+  
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'from': Item(status='A '),
+    'to': Item(status='A '),
+    })
+                                     
+  expected_wc = svntest.wc.State('', {
+    'from' : Item(contents='line\nline2\n'),
+    'to'   : Item(contents=''),
+    })
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc)
 
 ########################################################################
 # Run the tests
@@ -475,6 +504,7 @@ test_list = [ None,
               Skip(remove_symlink, (os.name != 'posix')),
               Skip(merge_symlink_into_file, (os.name != 'posix')),
               XFail(Skip(merge_file_into_symlink, (os.name != 'posix'))),
+              XFail(checkout_repo_with_symlinks, svntest.main.is_os_windows),
              ]
 
 if __name__ == '__main__':
