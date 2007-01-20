@@ -456,18 +456,6 @@ def authz_write_access(sbox):
                                      '-m', 'logmsg',
                                      B_url, D_url)
 
-  if sbox.repo_url.startswith('svn'):
-    expected_err = ".*svn: Authorization failed.*"
-    
-  # lock a file, target is readonly: should fail
-  svntest.actions.run_and_verify_svn("",
-                                     None, expected_err,
-                                     'lock',
-                                     '--username', svntest.main.wc_author,
-                                     '--password', svntest.main.wc_passwd,
-                                     '-m', 'lock msg',
-                                     iota_url)
-
 #----------------------------------------------------------------------
 
 def authz_checkout_test(sbox):
@@ -841,6 +829,74 @@ users = @devs1, @devs2, user1, user2""" })
                                      '--password', svntest.main.wc_passwd,
                                      A_url)
 
+# test locking/unlocking with authz
+def authz_locking(sbox):
+  "test authz for locking"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build()
+
+  write_authz_file(sbox, {"/": "", "/A": "jrandom = rw"})
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  if sbox.repo_url.startswith('http'):
+    expected_err = ".*403 Forbidden.*"
+  else:
+    expected_err = ".*svn: Authorization failed.*"
+
+  root_url = sbox.repo_url
+  wc_dir = sbox.wc_dir
+  iota_url = root_url + '/iota'
+  iota_path = os.path.join(wc_dir, 'iota')
+  A_url = root_url + '/A'
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+
+  # lock a file url, target is readonly: should fail
+  svntest.actions.run_and_verify_svn(None,
+                                     None, expected_err,
+                                     'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'lock msg',
+                                     iota_url)
+
+  # lock a file path, target is readonly: should fail
+  svntest.actions.run_and_verify_svn(None,
+                                     None, expected_err,
+                                     'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'lock msg',
+                                     iota_path)
+
+  # Test for issue 2700: we have write access in folder /A, but not in root. 
+  # Get a lock on /A/mu and try to commit it.
+ 
+  # lock a file path, target is writeable: should succeed
+  svntest.actions.run_and_verify_svn(None,
+                                     None, [],
+                                     'lock',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     '-m', 'lock msg',
+                                     mu_path)
+
+  svntest.main.file_append(mu_path, "hi")
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/mu' : Item(verb='Sending'),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        [],
+                                        None,
+                                        None, None,
+                                        None, None,
+                                        mu_path)
+  
+
 ########################################################################
 # Run the tests
 
@@ -859,6 +915,7 @@ test_list = [ None,
               authz_checkout_and_update_test,
               authz_partial_export_test,
               authz_validate,
+              authz_locking,
              ]
 
 if __name__ == '__main__':
