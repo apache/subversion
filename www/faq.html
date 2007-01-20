@@ -346,8 +346,7 @@ href="http://apr.apache.org">Apache Portable Runtime</a> library, as a
 portability layer.  The Subversion client will run anywhere APR runs,
 which is most places.  The Subversion server (i.e., the repository
 side) is the same, except that it will not host a Berkeley DB repository
-on Win9x platforms (Win95/Win98/WinME), because <a
-href="http://www.sleepycat.com">Berkeley DB</a> has
+on Win9x platforms (Win95/Win98/WinME), because Berkeley DB has
 shared-memory segment problems on Win9x.  FSFS repositories
 (introduced in version 1.1) do not have this restriction; however, due
 to a limitation in Win9x's file-locking support, they also don't work
@@ -1013,7 +1012,7 @@ $ db_archive -a -h /repos/db | xargs rm
 create new repositories with automatic log file removal enabled. You
 can change this by passing the <code>--bdb-log-keep</code> option to
 <code>svnadmin create</code>. Refer to the section about the <a
-href="http://www.sleepycat.com/docs/api_c/env_set_flags.html#DB_LOG_AUTOREMOVE">
+href="http://www.oracle.com/technology/documentation/berkeley-db/db/api_c/env_set_flags.html#DB_LOG_AUTOREMOVE">
 <code>DB_LOG_AUTOREMOVE</code></a> flag in the Berkeley DB manual.</p>
 
 </div>
@@ -2231,8 +2230,8 @@ give errors like this:</p>
 </pre>
 
 <p>In that case, try Berkeley DB's native <b>db_recover</b> utility
-(see <a href="http://www.sleepycat.com/docs/utility/db_recover.html"
->http://www.sleepycat.com/docs/utility/db_recover.html</a>).  It
+(see <a href="http://www.oracle.com/technology/documentation/berkeley-db/db/utility/db_recover.html"
+>db_recover documentation</a>).  It
 usually lives in a "bin/" subdirectory of the Berkeley DB installation,
 for example if you installed Berkeley DB from source, it might be
 <tt>/usr/local/BerkeleyDB.4.2/bin/db_recover</tt>; or on systems where
