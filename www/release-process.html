@@ -327,7 +327,7 @@ PATH="/opt/svnrm/bin:$PATH" ./dist.sh -v X.Y.Z -r 1234 -pr branches/X.Y.Z -zip
 smoothly; when it's done, you'll have zipfiles in the cwd.</p> 
  
 <pre>
-9.  Test one or both of the tarballs:
+Test one or both of the tarballs:
  
     a) tar zxvf subversion-X.Y.Z.tar.gz;  cd subversion-X.Y.Z
     b) ./configure
@@ -451,70 +451,77 @@ and copy from the working copy to the tag URL.  For example:</p>
 1.0.2 then svn_version.h should have the proper values for 1.0.3 and
 so on.</p>
 
-<pre>
-12. Upload the tarballs to http://subversion.tigris.org/downloads/.
+<p><b>Upload the tarballs to
+  http://subversion.tigris.org/downloads/.</b></p>
+<p>The RM will be given details on how to do this via private
+channels.</p>
 
-    The RM will be given details on how to do this via private channels.
+<p><b>Update Tigris "Documents &amp; files" area</b></p>
+<p>Update the links to the tarballs in the Documents &amp; files
+Tigris webapp.</p>
 
+<ol>
+  <li>Log into <a href="http://subversion.tigris.org/">Tigris</a></li>
+  <li>Click on 'Documents &amp; files'.</li>
+  <li>Navigate to the 'subversion/Releases/Source code/' folder.</li>
+  <li>For each of the 12 files:
+  <ol>
+    <li>Click on the 'Add new file' link.</li>
+    <li>Fill in the following fields:
+    <ul>
+      <li>Name: &lt;file name&gt;</li>
+      <li>Status: Stable</li>
+      <li>Description: <i>(one of:)</i>
+      <ul>
+        <li>Subversion release X.Y.Z (MD5: &lt;md5sum of
+        tarball&gt;)</li>
+        <li>Subversion dependencies X.Y.Z (MD5: &lt;md5sum of
+        tarball&gt;)</li>
+        <li>PGP Signatures for Subversion release X.Y.Z.</li>
+      </ul>
+      </li>
+      <li>Contents: <i>(choose 'Link', then enter:)</i>
+      http://subversion.tigris.org/downloads/&lt;file name&gt;
+      </li>
+    </ul>
+    <li>Click Submit.</li>
+  </ol>
+  </li>
+</ol>
 
-13. Link to the tarballs from the Downloads page:
+<p><b>Announcements</b></p>
+<p>Write a release announcement, referring to previous ones for
+guidance.  Remember to include the URL and MD5 checksums in the
+announcement!</p>
 
-       http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=260
+<p>Post a project news item <a
+href="http://subversion.tigris.org/servlets/ProjectNewsList">here</a>.
+If the link reads "Suggest an announcement" instead of "Add new
+announcement", then you do not have the required permission - ask to
+be granted the 'Release Manager' Tigris role.  Note that the
+Tigris news items are in HTML format not plain text.</p>
 
-    a) Log into http://subversion.tigris.org/
-    b) Click on the 'Downloads link (left frame at the top)
-    c) Click on the 'Source tarballs' link (main frame)
-    d) Click on the 'Add a file' link (top, main frame, under 'File Sharing')
-    e) Fill in the following fields:
+<p>Send an announcement to dev@, users@, and announce@ lists.  Ensure
+that your mailer doesn't wrap the URLs over multiple lines.</p>
 
-       Name: subversion-X.Y.Z.tar.gz (replace X.Y.Z with the release number)
-       Status: Stable
-       Description: Subversion release X.Y.Z (MD5: &lt;md5sum of tarball&gt;)
-       Contents: (choose 'Link', then enter
-           http://subversion.tigris.org/downloads/subversion-X.Y.Z.tar.gz)
+<p>You should also notify freshmeat of the new release.  You need to
+be listed as a release manager or admin for the <a
+href=http://freshmeat.net/projects/subversion/">Subversion project
+  on Freshmeat</a>.  Contact one of the folks who are already listed
+if you need access.  Your submission will also be tweaked by the
+freshmeat crew before it goes public.</p>
 
-    f) Click Submit
-
-15. Update the website.
-
-   a) Edit the www/project_status.html file appropriately in /trunk *NOT*
-      in the release branch and commit. Remember edit a search term at the
-      end of release's issue link. 
-
-      If you used 'svn switch' in 3b above, you can simply 'switch' back
-      to /trunk using:
-
-         svn switch https://svn.collab.net/repos/svn/trunk
-
-      then edit the www/project_status.html file appropriately.
-
-   b) Update the best available version at the top of www/project_packages.html
-
-   c) Commit the modifications.
-
-16. Post news item http://subversion.tigris.org/servlets/ProjectNewsAdd,
-    and send an announcement to dev@, users@, and announce@ lists.
-    Remember to include the URL and MD5 checksums in the announcement!
-
-    Note that the subversion.tigris.org news item is in HTML format not
-    plain text.  A tigris.org user with RM or higher status must approve
-    the subversion.tigris.org news item.
-
-    For the email to the lists, ensure that your mailer doesn't wrap over
-    80 character lines.
-
-    You should also notify freshmeat of the new release:
-
-       http://freshmeat.net/projects/subversion/
-
-    You need to be listed as a release manager or admin on Freshmeat.
-    Contact one of the folks listed on the Subversion project page for
-    access.  Your submission will also be tweaked by the freshmeat crew
-    before it goes public.
-
-17. Once the announcement has shown up, update the "Latest Release"
-    section of www/index.html to point to it.
-</pre>
+<p><b>Update the website</b></p>
+<ol>
+  <li>Edit the www/project_status.html file appropriately in /trunk
+  *NOT* in the release branch and commit. Remember edit a search term
+  at the end of release's issue link.</li>
+  <li>Update the best available version at the top of
+  www/project_packages.html</li>
+  <li>Update the "Latest Release" section of www/index.html to point
+  to the new announcement.</li>
+  <li>Commit the modifications.</li>
+</ol>
 
 <p>If you've made it this far, go and enjoy your $favorite_beverage now.</p>
 
