@@ -404,12 +404,16 @@ smoothly; when it's done, you'll have zipfiles in the cwd.</p>
           make javahl
           sudo make install-javahl
           make check-javahl
+</pre>
 
-10. Use GPG to sign release. 
-
-    gpg -b --armor subversion-X.Y.Z.tar.gz
-    gpg -b --armor subversion-X.Y.Z.tar.bz2
-    gpg -b --armor subversion-X.Y.Z.zip
+<p><b>Use GnuPG to sign release:</b></p>
+<pre>
+    gpg -ba subversion-X.Y.Z.tar.bz2
+    gpg -ba subversion-X.Y.Z.tar.gz
+    gpg -ba subversion-X.Y.Z.zip
+    gpg -ba subversion-deps-X.Y.Z.tar.bz2
+    gpg -ba subversion-deps-X.Y.Z.tar.gz
+    gpg -ba subversion-deps-X.Y.Z.zip
 </pre>
 
 </div>
@@ -423,29 +427,35 @@ smoothly; when it's done, you'll have zipfiles in the cwd.</p>
 <div class="h2" id="releasing-release" title="releasing-release">
 <h2>The actual releasing</h2>
 
+<p><b>Subversion Operations</b></p>
+<p>Create the tag with the svn_version.h that reflects the final
+release.  You do this by updating your working copy to the release
+revision, 1234 in the example below.  Run svnversion to verify that
+you do not have a mixed working copy or modified working copy, i.e.
+svnversion outputs only the release revision (not 1234:1235 or 1234M).
+Then place the svn_version.h.dist file in place in the working copy
+and copy from the working copy to the tag URL.  For example:</p>
+
 <pre>
-11. Create the tag with the svn_version.h that reflects the final release.
-    You do this by updating your working copy to the release revision, 1234 in
-    the example below.  Run svnversion to verify that you do not have a mixed
-    working copy or modified working copy, i.e. svnversion outputs only the
-    release revision (not 1234:1235 or 1234M).  Then place the 
-    svn_version.h.dist file in place in the working copy and copy from
-    the working copy to the tag URL.
+    svn up -r 1234
+    svnversion .
+    cp svn_version.h.dist subversion/include/svn_version.h
+    svn cp . \
+           https://svn.collab.net/repos/svn/tags/X.Y.Z \
+           -m "Tagging release X.Y.Z with svn_version.h matching tarball"
+</pre>
 
-    For example:
-      
-       svn up -r 1234
-       svnversion .
-       cp svn_version.h.dist subversion/include/svn_version.h
-       svn cp . \
-              https://svn.collab.net/repos/svn/tags/X.Y.Z \
-              -m "Tagging release X.Y.Z with svn_version.h matching tarball"
+<p>Note: Please always make a tag, even for release candidates.</p>
 
-    Note: Please always make a tag, even for release candidates.
+<p>Bump the svn_version.h for the original branch.  If you just did
+1.0.2 then svn_version.h should have the proper values for 1.0.3 and
+so on.</p>
 
+<pre>
 12. Upload the tarballs to http://subversion.tigris.org/downloads/.
 
     The RM will be given details on how to do this via private channels.
+
 
 13. Link to the tarballs from the Downloads page:
 
@@ -464,12 +474,6 @@ smoothly; when it's done, you'll have zipfiles in the cwd.</p>
            http://subversion.tigris.org/downloads/subversion-X.Y.Z.tar.gz)
 
     f) Click Submit
-
-14. Bump the svn_version.h for the original branch.
-
-    Modify subversion/include/svn_version.h.  If you just did 1.0.2
-    then svn_version.h should have the proper values for 1.0.3 and so
-    on.
 
 15. Update the website.
 
@@ -510,13 +514,23 @@ smoothly; when it's done, you'll have zipfiles in the cwd.</p>
 
 17. Once the announcement has shown up, update the "Latest Release"
     section of www/index.html to point to it.
-
-18. Someone with administrative access should upgrade svn.collab.net
-    to head.  (This is not usually the release manager.)
-
-19. If you've made it this far, go and enjoy your $favorite_beverage now.
 </pre>
+
+<p>If you've made it this far, go and enjoy your $favorite_beverage now.</p>
+
 </div>
+
+
+<div class="h2" id="afterwards" title="afterwards">
+<h2>After a release has been made</h2>
+
+<p>When someone with administrative access to <tt>svn.collab.net</tt>
+has time available, they will upgrade it to the latest release or
+release candidate.  (This person is not usually the release
+manager.)</p>
+
+</div>
+
 
 </div>
 </body>
