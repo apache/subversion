@@ -2,7 +2,7 @@
  * ra_svn.h :  private declarations for the ra_svn module
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -68,6 +68,7 @@ struct svn_ra_svn_conn_st {
      interface, SASL still needs direct access to the underlying socket
      for stuff like IP addresses and port numbers. */
   apr_socket_t *sock;
+  svn_boolean_t encrypted;
 #endif
   char read_buf[SVN_RA_SVN__READBUF_SIZE];
   char *read_ptr;
