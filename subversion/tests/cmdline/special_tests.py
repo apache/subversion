@@ -482,7 +482,7 @@ def checkout_repo_with_symlinks(sbox):
     })
                                      
   expected_wc = svntest.wc.State('', {
-    'from' : Item(contents='line\nline2\n'),
+    'from' : Item(contents=''),
     'to'   : Item(contents=''),
     })
   svntest.actions.run_and_verify_checkout(sbox.repo_url,
