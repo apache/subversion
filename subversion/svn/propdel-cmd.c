@@ -91,7 +91,7 @@ svn_cl__propdel(apr_getopt_t *os,
       apr_pool_t *subpool = svn_pool_create(pool);
 
       if (opt_state->depth == svn_depth_unknown)
-        opt_state->depth = svn_depth_infinity;
+        opt_state->depth = svn_depth_empty;
 
       /* For each target, remove the property PNAME. */
       for (i = 0; i < targets->nelts; i++)
