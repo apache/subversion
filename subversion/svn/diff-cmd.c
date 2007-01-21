@@ -230,6 +230,15 @@ svn_cl__diff(apr_getopt_t *os,
 
     }
 
+  /* ### TODO: Will this behave correctly in working copies with
+   * ### complex depth mixtures?  It should, because they'll just
+   * ### report their state as for an update, and the editor drive
+   * ### that results will take depth into account.  But this needs
+   * ### to be tested.
+   */
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = svn_depth_infinity;
+
   svn_opt_push_implicit_dot_target(targets, pool);
 
   iterpool = svn_pool_create(pool);
