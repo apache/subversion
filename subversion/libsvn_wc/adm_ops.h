@@ -52,12 +52,13 @@ extern "C" {
    according to DEPTH thusly:
 
    If DEPTH is svn_depth_infinity, perform the following actions on
-   every entry below PATH, if svn_depth_one or svn_depth_zero, perform
-   it only on PATH: if NEW_REVISION is valid, then tweak every entry
-   to have this new working revision (excluding files that are
-   scheduled for addition or replacement.)  Likewise, if BASE_URL is
-   non-null, then rewrite all urls to be "telescoping" children of the
-   base_url.
+   every entry below PATH; if svn_depth_immediates, svn_depth_files,
+   or svn_depth_empty, perform them only on PATH:
+
+   If NEW_REVISION is valid, then tweak every entry to have this new
+   working revision (excluding files that are scheduled for addition
+   or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
+   all urls to be "telescoping" children of the base_url.
 
    ### TODO: See README.branch about depth behavior above!
 

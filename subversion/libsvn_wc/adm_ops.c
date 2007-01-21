@@ -85,8 +85,6 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                               &write_required,
                               svn_wc_adm_access_pool(dirpath)));
 
-  /* ### TODO: I think proceeding even in the depth==svn_depth_files
-         case is correct, but am not 100% certain yet... */
   if (depth == svn_depth_files
       || depth == svn_depth_immediates
       || depth == svn_depth_infinity)
@@ -1593,7 +1591,8 @@ svn_wc_add2(const char *path,
             svn_path_url_add_component(parent_entry->url, base_name, pool);
 
           /* Change the entry urls recursively (but not the working rev). */
-          SVN_ERR(svn_wc__do_update_cleanup(path, adm_access, TRUE, new_url, 
+          SVN_ERR(svn_wc__do_update_cleanup(path, adm_access,
+                                            svn_depth_infinity, new_url,
                                             parent_entry->repos,
                                             SVN_INVALID_REVNUM, NULL, 
                                             NULL, FALSE, pool));
