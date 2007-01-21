@@ -1579,13 +1579,13 @@ create_special_file_from_stringbuf(svn_stringbuf_t *src, const char *dst,
     {
       if (*remainder == ' ')
         {
-          *remainder = '\0';
           remainder++;
           break;
         }
     }
 
-  if (! strcmp(identifier, SVN_SUBST__SPECIAL_LINK_STR))
+  if (! strncmp(identifier, SVN_SUBST__SPECIAL_LINK_STR " ",
+                strlen(SVN_SUBST__SPECIAL_LINK_STR " ")))
     {
       /* For symlinks, the type specific data is just a filesystem
          path that the symlink should reference. */
