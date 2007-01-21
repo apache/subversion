@@ -480,9 +480,14 @@ def checkout_repo_with_symlinks(sbox):
     'from': Item(status='A '),
     'to': Item(status='A '),
     })
-                                     
+
+  if svntest.main.is_os_windows():
+    expected_link_contents = 'link to'
+  else:
+    expected_link_contents = ''
+
   expected_wc = svntest.wc.State('', {
-    'from' : Item(contents=''),
+    'from' : Item(contents=expected_link_contents),
     'to'   : Item(contents=''),
     })
   svntest.actions.run_and_verify_checkout(sbox.repo_url,
