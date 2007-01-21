@@ -129,7 +129,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"targets",       svn_cl__targets_opt, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         svn_cl__depth_opt, 1,
-                    N_("pass depth (empty, files, or immediates) as additional arg")},
+                    N_("pass depth ('empty', 'files', 'immediates') as arg")},
   {"xml",           svn_cl__xml_opt, 0, N_("output in XML")},
   {"strict",        svn_cl__strict_opt, 0, N_("use strict semantics")},
   {"stop-on-copy",  svn_cl__stop_on_copy_opt, 0,

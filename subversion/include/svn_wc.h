@@ -1573,8 +1573,8 @@ svn_error_t *svn_wc_mark_missing_deleted(const char *path,
  * root URL @a repos.  
  *
  * @a depth must be a definite depth, it cannot be @c svn_depth_unknown
- * or @c svn_depth_ignore.  @a uuid and @a repos may be @c NULL.  If
- * non-@c NULL, @a repos must be a prefix of @a url.
+ * @a uuid and @a repos may be @c NULL.  If non-@c NULL, @a repos must
+ * be a prefix of @a url.
  *
  * If the administrative area does not exist, then create it and
  * initialize it to an unlocked state.
@@ -1669,9 +1669,9 @@ svn_wc_maybe_set_repos_root(svn_wc_adm_access_t *adm_access,
  * become cumbersome: you'd have to roll through a hash to find one
  * lone status.
  * 
- * So we have svn_wc_status() for depth 0, and 
- * svn_wc_get_status_editor() for depths 1 and 2, since the latter
- * two involve multiple return values.
+ * So we have svn_wc_status() for depth-empty (just D itself), and
+ * svn_wc_get_status_editor() for depth-immediates and depth-infinity,
+ * since the latter two involve multiple return values.
  *
  * @note The status structures may contain a @c NULL ->entry field.
  * This indicates an item that is not versioned in the working copy.
@@ -2613,7 +2613,7 @@ svn_wc_crawl_revisions3(const char *path,
 /**
  * Similar to svn_wc_crawl_revisions3, but taking svn_ra_reporter2_t
  * instead of svn_ra_reporter3_t, and therefore only able to report
- * svn_depth_infinity for depths.
+ * @c svn_depth_infinity for depths.
  *
  * @deprecated Provided for compatibility with the 1.4 API.
  */
@@ -2723,10 +2723,16 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * obstructions when adding a path.
  *
  * If @a depth is @c svn_depth_infinity, update fully recursively.
- * Else if it is @c svn_depth_one, update the uppermost directory and
+ * Else if it is @c svn_depth_files, update the uppermost directory and
  * its immediate entries, but not subdirectories.  Else if it is
- * @c svn_depth_zero, update exactly the uppermost target, and don't
+ * @c svn_depth_immediates, update the uppermost directory, its file
+ * entries, and the presence or absence of subdirectories (but do not
+ * descend into the subdirectories).  Else if it is @c
+ * svn_depth_empty, update exactly the uppermost target, and don't
  * touch its entries.
+ *
+ * ### TODO: Are those extravagent claims of sophisticated depth
+ * ### behavior above really true?
  *
  * @note @a depth overrides whatever depth is already set in @a anchor
  * or @a target.  To use those depths, the caller should detect them
@@ -3063,12 +3069,16 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * @a callbacks/@a callback_baton is the callback table to use when two
  * files are to be compared.
  *
- * If @a depth is @c svn_depth_zero, just diff exactly @a target or
- * @a anchor if @a target is empty.  If @c svn_depth_one, then do the
- * same and top-level entries as well (if any).  If @c svn_depth_infinity,
- * then diff fully recursively.  In the latter case, @a anchor should
- * be part of an access baton set for the @a target hierarchy.
+ * If @a depth is @c svn_depth_empty, just diff exactly @a target or
+ * @a anchor if @a target is empty.  If @c svn_depth_files or
+ * @c svn_depth_immediates, then do the same and for top-level file
+ * entries as well (if any).  If @c svn_depth_infinity, then diff
+ * fully recursively.  In the latter case, @a anchor should be part of
+ * an access baton set for the @a target hierarchy. 
  * ### TODO: I'm not sure what the last part of that last sentence means.
+ *
+ * ### TODO: Also, is same behavior for svn_depth_files and
+ * ### svn_depth_immediates the correct thing here?
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node
  * ancestry are treated as delete/add or as simple modifications.  If
@@ -3101,7 +3111,7 @@ svn_error_t *svn_wc_get_diff_editor4(svn_wc_adm_access_t *anchor,
                                      apr_pool_t *pool);
 /**
  * Similar to svn_wc_get_diff_editor4(), but with @a depth set to
- * @c svn_depth_infinity if @a recurse is true, or @a svn_depth_zero
+ * @c svn_depth_infinity if @a recurse is true, or @a svn_depth_files
  * if @a recurse is false.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.

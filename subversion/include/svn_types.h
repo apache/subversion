@@ -272,7 +272,7 @@ svn_depth_from_word(const char *word);
  * Although much code has been converted to use depth, some code still
  * takes a recurse boolean.  In most cases, it makes sense to treat
  * unknown or infinite depth as recursive, and any other depth as
- * non-recursive.
+ * non-recursive (which in turn usually translates to @c svn_depth_files).
  */
 #define SVN_DEPTH_TO_RECURSE(depth)                                \
   (((depth) == svn_depth_infinity || (depth) == svn_depth_unknown) \

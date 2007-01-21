@@ -1595,7 +1595,7 @@ write_entry(svn_stringbuf_t *buf,
         val = "depth-immediates";
         break;
       default:
-        /* Else assume 2 (svn_depth_infinity), which we represent as "",
+        /* Else assume svn_depth_infinity, which we represent as "",
            which write_val() will emit if handed NULL. */
         /* ### TODO: Except that for now we use "depth-infinity", to
            ### ease debugging while implementing the depth feature. */

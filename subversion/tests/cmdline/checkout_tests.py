@@ -350,35 +350,6 @@ def import_and_checkout(sbox):
                                           '--force')
 
 #----------------------------------------------------------------------
-# Ensure that 'checkout -N' results in a depth 1 working directory.
-def depth_one_checkout(sbox):
-  "non-recursive (depth one) checkout"
-
-  sbox.build(create_wc = False)
-  if os.path.exists(sbox.wc_dir):
-    svntest.main.safe_rmtree(sbox.wc_dir)
-
-  svntest.actions.run_and_verify_svn("Unexpected error during co -N",
-                                     SVNAnyOutput, [], "co", "-N",
-                                     svntest.main.current_repo_url,
-                                     sbox.wc_dir)
-
-  # -N should create a depth one top directory, so both iota and A
-  # should exist, and A should be empty and depth zero.
-
-  if not os.path.exists(os.path.join(sbox.wc_dir, "A")):
-    raise svntest.Failure("non-recursive checkout failed to create subdir 'A'")
-
-  svntest.actions.run_and_verify_svn(
-    "Expected depth one for top of WC, got some other depth",
-    "Depth: one", [], "info", sbox.wc_dir)
-                    
-  svntest.actions.run_and_verify_svn(
-    "Expected depth zero for subdir A, got some other depth",
-    "Depth: zero", [], "info", os.path.join(sbox.wc_dir, "A"))
-                    
-
-#----------------------------------------------------------------------
 # Issue #2529.
 def checkout_broken_eol(sbox):
   "checkout file with broken eol style"
@@ -765,7 +736,6 @@ test_list = [ None,
               checkout_peg_rev,
               checkout_peg_rev_date,
               co_with_obstructing_local_adds,
-              XFail(depth_one_checkout),
             ]
 
 if __name__ == "__main__":

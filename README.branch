@@ -283,7 +283,7 @@ Contents
 5. Current Status
 =================
 
-   http://svn.collab.net/repos/svn/branches/incomplete-directories/
+   http://svn.collab.net/repos/svn/branches/sparse-directories/
    contains the latest code.
 
    *** The most important thing to know is that the branch code  ***
@@ -321,6 +321,9 @@ Contents
    had been transmitted.
 
    Work remaining, in no particular order:
+
+      * svn_wc__do_update_cleanup(), and by implication
+        tweak_entries(), need carefuller depth thinking.
 
       * There is still no compatibility code for new clients dealing
         with old servers.  This is the "legacy servers will send back

@@ -390,9 +390,9 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  * to recurse by default.  This depth can be overridden for subpaths
  * by explicitly telling the reporter that they are at different
  * depths.  For example, if the reported tree is the @c A subdir of
- * the Greek Tree, at depth @c svn_depth_zero, but the @c A/B subdir
+ * the Greek Tree, at depth @c svn_depth_empty, but the @c A/B subdir
  * is reported at depth @c svn_depth_infinity, then repository-side
- * changes to @c A/mu, or underneath @c A/C and @c A/D, will not be
+ * changes to @c A/mu, or underneath @c A/C and @c A/D, would not be
  * reflected in the editor drive, but changes underneath @c A/B would
  * be.
  *
@@ -431,14 +431,7 @@ svn_repos_begin_report2(void **report_baton,
  *
  * If @a recurse is true, the editor drive will behave as it would for
  * a depth of @c svn_depth_infinity; if @a recurse is false, then as
- * for @c svn_depth_zero.
- *
- * ### TODO: Here is the place where the difference between 'depth'
- * ### and 'recurse' is most conspicuous.  If we had a depth like
- * ### 'svn_depth_files_only', that would be a true equivalent to
- * ### what recurse=false means today.  I think we've decided not to
- * ### do that, and to just live with the subtle behavior change, but
- * ### am dropping this comment here to make sure to confirm that.
+ * for @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */
@@ -691,7 +684,7 @@ svn_repos_dir_delta2(svn_fs_root_t *src_root,
 /**
  * Similar to svn_repos_dir_delta2(), but if @a recurse is true, pass
  * @c svn_depth_infinity for @a depth, and if @a recurse is false,
- * pass @c svn_depth_zero for @a depth.
+ * pass @c svn_depth_files for @a depth.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */

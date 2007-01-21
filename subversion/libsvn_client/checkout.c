@@ -113,21 +113,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         /* Bootstrap: create an incomplete working-copy root dir.  Its
            entries file should only have an entry for THIS_DIR with a
            URL, revnum, and an 'incomplete' flag.  */
-
-        if (depth == svn_depth_unknown)
-          depth = svn_depth_infinity;
-
         SVN_ERR(svn_io_make_dir_recursively(path, pool));          
-        SVN_ERR(svn_wc_ensure_adm3(path, uuid, session_url,
-                                   repos, revnum, depth, pool));
-        
-        /* Have update fix the incompleteness.  Pass svn_depth_unknown
-           because the newly-created admin area knows the correct
-           depth, and we might as well exercise the code that sniffs it. */
-        err = svn_client__update_internal(result_rev, path, revision,
-                                          svn_depth_unknown, ignore_externals,
-                                          allow_unver_obstructions,
-                                          use_sleep, ctx, pool);
+        goto initialize_area;
       }
     else if (kind == svn_node_dir)
       {
@@ -138,12 +125,17 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         SVN_ERR(svn_wc_check_wc(path, &wc_format, pool));
         if (! wc_format)
           {
+          initialize_area:
+
+            if (depth == svn_depth_unknown)
+              depth = svn_depth_infinity;
+
             /* Make the unversioned directory into a versioned one.  */
             SVN_ERR(svn_wc_ensure_adm3(path, uuid, session_url,
                                        repos, revnum, depth, pool));
-            /* Pass svn_depth_unknown because the newly-created admin
-               area knows the correct depth, and we might as well
-               exercise the code that sniffs it. */
+            /* Have update fix the incompleteness.  Pass svn_depth_unknown
+               because the newly-created admin area knows the correct
+               depth, and we might as well exercise the code that sniffs it. */
             err = svn_client__update_internal(result_rev, path, revision,
                                               svn_depth_unknown,
                                               ignore_externals,
