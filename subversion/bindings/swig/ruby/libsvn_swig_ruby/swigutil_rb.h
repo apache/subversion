@@ -50,6 +50,11 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_delta_text_delta_window_handler(void);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
+void svn_swig_rb_raise_svn_fs_already_close(void);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+void svn_swig_rb_raise_svn_repos_already_close(void);
+
+SVN_RB_SWIG_SWIGUTIL_EXPORT
 VALUE svn_swig_rb_svn_error_new(VALUE code, VALUE message,
                                 VALUE file, VALUE line);
 SVN_RB_SWIG_SWIGUTIL_EXPORT

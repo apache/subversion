@@ -40,9 +40,9 @@ int dav_svn__proxy_merge_fixup(request_rec *r)
             return OK;
         }
 
-        seg = strstr(r->unparsed_uri, root_dir);
+        seg = ap_strstr(r->unparsed_uri, root_dir);
         if (seg && (r->method_number == M_MERGE ||
-            strstr(seg, dav_svn__get_special_uri(r)))) {
+            ap_strstr_c(seg, dav_svn__get_special_uri(r)))) {
             seg += strlen(root_dir);
 
             r->proxyreq = PROXYREQ_PROXY;
@@ -153,7 +153,7 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
 
         location = apr_table_get(r->headers_out, "Location");
         if (location) {
-            start_foo = strstr(location, master_uri);
+            start_foo = ap_strstr_c(location, master_uri);
         }
         if (start_foo) {
             const char *new_uri;

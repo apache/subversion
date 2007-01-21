@@ -1,7 +1,6 @@
 #!/bin/sh
 
 # USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
-#                  [-rs REVISION-VER-TAG]
 #                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM]
 #                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
 #                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
@@ -9,10 +8,6 @@
 #                  [-zip] [-sign] [-nodeps]
 #
 #   Create a distribution tarball, labelling it with the given VERSION.
-#   The REVISION will be used in the version string, unless
-#   REVISION-VER-TAG is also used to put a different revision in the
-#   version tag than is actually used.  [But why would we want to do
-#   such a weird thing? Should this feature of dist.sh be removed?]
 #   The tarball will be constructed from the root located at REPOS-PATH,
 #   in REVISION.  For example, the command line:
 #
@@ -44,7 +39,6 @@
 
 
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
-[-rs REVISION-VER-TAG ] \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM] \
 [-apr APR_PATH ] [-apru APR_UTIL_PATH] [-apri APR_ICONV_PATH] \
 [-neon NEON_PATH ] [-zlib ZLIB_PATH] [-zip] [-sign] [-nodeps]
@@ -63,7 +57,6 @@ do
     case $ARG_PREV in
          -v)  VERSION="$ARG" ;;
          -r)  REVISION="$ARG" ;;
-        -rs)  REVISION_VER_TAG="$ARG" ;;
         -pr)  REPOS_PATH="$ARG" ;;
      -alpha)  ALPHA="$ARG" ;;
       -beta)  BETA="$ARG" ;;
@@ -91,10 +84,6 @@ do
   fi
 done
 
-if [ -z "$REVISION_VER_TAG" ]; then
-  REVISION_VER_TAG=$REVISION
-fi
-
 if [ -n "$ALPHA" ] && [ -n "$BETA" ] ||
    [ -n "$ALPHA" ] && [ -n "$RC" ] ||
    [ -n "$BETA" ] && [ -n "$RC" ] ; then
@@ -110,7 +99,7 @@ elif [ -n "$RC" ] ; then
   VER_TAG="Release Candidate $RC"
   VER_NUMTAG="-rc$RC"
 else
-  VER_TAG="r$REVISION_VER_TAG"
+  VER_TAG="r$REVISION"
   VER_NUMTAG=""
 fi
   
@@ -175,7 +164,6 @@ DEPSPATH="$DIST_SANDBOX/deps/$DISTNAME"
 echo "Distribution will be named: $DISTNAME"
 echo "     constructed from path: /$REPOS_PATH"
 echo " constructed from revision: $REVISION"
-echo "revision in version string: $REVISION_VER_TAG"
 
 rm -rf "$DIST_SANDBOX"
 mkdir "$DIST_SANDBOX"
@@ -269,7 +257,7 @@ sed \
  -e "/#define *SVN_VER_PATCH/s/[0-9]\+/$ver_patch/" \
  -e "/#define *SVN_VER_TAG/s/\".*\"/\" ($VER_TAG)\"/" \
  -e "/#define *SVN_VER_NUMTAG/s/\".*\"/\"$VER_NUMTAG\"/" \
- -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION_VER_TAG/" \
+ -e "/#define *SVN_VER_REVISION/s/[0-9]\+/$REVISION/" \
   < "$vsn_file" > "$vsn_file.tmp"
 
 mv -f "$vsn_file.tmp" "$vsn_file"

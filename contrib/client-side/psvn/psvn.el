@@ -3500,37 +3500,49 @@ user can enter a new file name, or an existing directory: this is used as the ar
     (dolist (original marked-files)
       (let ((original-name (svn-status-line-info->filename original))
             (original-filemarks (svn-status-line-info->filemark original))
-            (original-propmarks (svn-status-line-info->propmark original)))
+            (original-propmarks (svn-status-line-info->propmark original))
+            (moved nil))
         (cond
-         ((or (eq original-filemarks 77)  ;local mods: maybe do `svn mv --force'
-              (eq original-propmarks 77)) ;local prop mods: maybe do `svn mv --force'
+         ((or (eq original-filemarks ?M)  ;local mods: maybe do `svn mv --force'
+              (eq original-propmarks ?M)) ;local prop mods: maybe do `svn mv --force'
           (if (yes-or-no-p
-               (format "%s has local modifications; use `--force' to really move it? "
-                       original-name))
-              (svn-status-run-mv-cp command original-name dest t)
+               (format "%s has local modifications; use `--force' to really move it? " original-name))
+              (progn
+                (svn-status-run-mv-cp command original-name dest t)
+                (setq moved t))
             (message "Not acting on %s" original-name)))
-         ((eq original-filemarks 63) ;original is unversioned: use fallback
+         ((eq original-filemarks ??) ;original is unversioned: use fallback
           (if (yes-or-no-p (format "%s is unversioned.  Use `%s -i -- %s %s'? "
                                    original-name fallback original-name dest))
-              (call-process fallback nil (get-buffer-create svn-process-buffer-name) nil
-                            "-i" "--" original-name dest)
+              (progn (call-process fallback nil (get-buffer-create svn-process-buffer-name) nil
+                                   "-i" "--" original-name dest)
+                     (setq moved t))
             ;;new files created by fallback are not in *svn-status* now,
             ;;TODO: so call (svn-status-update) here?
             (message "Not acting on %s" original-name)))
 
-         ((eq original-filemarks 65) ;;`A' (`svn add'ed, but not committed)
+         ((eq original-filemarks ?A) ;;`A' (`svn add'ed, but not committed)
           (message "Not acting on %s (commit it first)" original-name))
 
-         ((eq original-filemarks 32) ;original is unmodified: can proceed
-          (svn-status-run-mv-cp command original-name dest))
+         ((eq original-filemarks ? ) ;original is unmodified: can proceed
+          (svn-status-run-mv-cp command original-name dest)
+          (setq moved t))
 
          ;;file has some other mark (eg conflicted)
          (t
           (if (yes-or-no-p
                (format "The status of %s looks scary.  Risk moving it anyway? "
                        original-name))
-              (svn-status-run-mv-cp command original-name dest)
-            (message "Not acting on %s" original-name))))))
+              (progn
+                (svn-status-run-mv-cp command original-name dest)
+                (setq moved t))
+            (message "Not acting on %s" original-name))))
+        (when moved
+          (message "psvn: moved %s to %s" original-name dest)
+          ;; Silently rename the visited file of any buffer visiting this file.
+          (when (get-file-buffer original-name)
+            (with-current-buffer (get-file-buffer original-name)
+              (set-visited-file-name dest nil t))))))
     (svn-status-update)))
 
 (defun svn-status-run-mv-cp (command original destination &optional force)

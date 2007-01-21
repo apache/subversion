@@ -449,7 +449,13 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 /* Not wrapped, use svn_strerror instead. */
 %ignore apr_strerror;
 /* Wrap the APR status and error codes. */
+/* Sigh, or not. This would mean actually having access to apr_errno.h at
+   wrapper generation time, which, when rolling tarballs, the include paths
+   are not currently set up to give us. FIXME. So, instead, we replicate
+   one important typedef here instead.
 %include apr_errno.h
+*/
+typedef int apr_status_t;
 
 /* -----------------------------------------------------------------------
    pool functions renaming since swig doesn't take care of the #define's
@@ -696,6 +702,10 @@ struct apr_pool_wrapper_t
   ~apr_pool_wrapper_t() {
     apr_pool_wrapper_destroy(self);
     xfree(self);
+  }
+
+  void destroy(void) {
+    apr_pool_wrapper_destroy(self);
   }
 };
 

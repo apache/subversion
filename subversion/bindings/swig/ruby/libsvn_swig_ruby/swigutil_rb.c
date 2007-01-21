@@ -46,6 +46,7 @@ static VALUE cSvnDelta = Qnil;
 static VALUE cSvnDeltaEditor = Qnil;
 static VALUE cSvnDeltaTextDeltaWindowHandler = Qnil;
 static VALUE cSvnError = Qnil;
+static VALUE cSvnErrorSvnError = Qnil;
 static VALUE cSvnFs = Qnil;
 static VALUE cSvnFsFileSystem = Qnil;
 
@@ -213,6 +214,15 @@ rb_svn_error(void)
     cSvnError = rb_const_get(rb_svn(), rb_intern("Error"));
   }
   return cSvnError;
+}
+
+static VALUE
+rb_svn_error_svn_error(void)
+{
+  if (NIL_P(cSvnErrorSvnError)) {
+    cSvnErrorSvnError = rb_const_get(rb_svn_error(), rb_intern("SvnError"));
+  }
+  return cSvnErrorSvnError;
 }
 
 static VALUE
@@ -541,10 +551,36 @@ svn_swig_rb_pop_pool(VALUE pool)
 
 
 /* error */
+void
+svn_swig_rb_raise_svn_fs_already_close(void)
+{
+  static VALUE rb_svn_error_fs_already_close = 0;
+
+  if (!rb_svn_error_fs_already_close) {
+    rb_svn_error_fs_already_close =
+      rb_const_get(rb_svn_error(), rb_intern("FsAlreadyClose"));
+  }
+
+  rb_raise(rb_svn_error_fs_already_close, "closed file system");
+}
+
+void
+svn_swig_rb_raise_svn_repos_already_close(void)
+{
+  static VALUE rb_svn_error_repos_already_close = 0;
+
+  if (!rb_svn_error_repos_already_close) {
+    rb_svn_error_repos_already_close =
+      rb_const_get(rb_svn_error(), rb_intern("ReposAlreadyClose"));
+  }
+
+  rb_raise(rb_svn_error_repos_already_close, "closed repository");
+}
+
 VALUE
 svn_swig_rb_svn_error_new(VALUE code, VALUE message, VALUE file, VALUE line)
 {
-  return rb_funcall(rb_svn_error(),
+  return rb_funcall(rb_svn_error_svn_error(),
                     rb_id_new_corresponding_error(),
                     4, code, message, file, line);
 }
