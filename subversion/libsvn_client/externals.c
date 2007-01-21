@@ -197,7 +197,8 @@ switch_external(const char *path,
           if (strcmp(entry->url, url) == 0)
             {
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
-                                                  TRUE, FALSE, FALSE,
+                                                  svn_depth_unknown,
+                                                  FALSE, FALSE,
                                                   timestamp_sleep, ctx,
                                                   pool));
               return SVN_NO_ERROR;
@@ -363,7 +364,8 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
         SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,
                                               &(new_item->revision),
                                               &(new_item->revision),
-                                              TRUE, FALSE, FALSE,
+                                              SVN_DEPTH_FROM_RECURSE(TRUE),
+                                              FALSE, FALSE,
                                               ib->timestamp_sleep,
                                               ib->ctx, ib->pool));
     }

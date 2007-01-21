@@ -2022,6 +2022,8 @@ svn_client_diff_summarize_peg(const char *path,
  * ### TODO: Improve above wording when figure out exactly what all
  * ### that means.
  *
+ * If @a depth is @c svn_depth_unknown, use the depth of @a target_wcpath.
+ *
  * Use @a ignore_ancestry to control whether or not items being
  * diffed will be checked for relatedness first.  Unrelated items
  * are typically transmitted to the editor as a deletion of one thing

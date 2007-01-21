@@ -2901,6 +2901,9 @@ svn_client_merge3(const char *source1,
                              _("'%s' is not under version control"), 
                              svn_path_local_style(target_wcpath, pool));
 
+  if (depth == svn_depth_unknown)
+    depth = entry->depth;
+
   merge_cmd_baton.force = force;
   merge_cmd_baton.dry_run = dry_run;
   merge_cmd_baton.merge_options = merge_options;
@@ -3049,6 +3052,9 @@ svn_client_merge_peg3(const char *source,
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
                              _("'%s' is not under version control"), 
                              svn_path_local_style(target_wcpath, pool));
+
+  if (depth == svn_depth_unknown)
+    depth = entry->depth;
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.dry_run = dry_run;
