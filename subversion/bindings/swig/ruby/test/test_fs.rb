@@ -25,18 +25,28 @@ class SvnFsTest < Test::Unit::TestCase
 
   def test_create
     path = File.join(@tmp_path, "fs")
-    fs_type = Svn::Fs::TYPE_BDB
+    fs_type = Svn::Fs::TYPE_FSFS
     config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
 
     assert(!File.exist?(path))
-    fs = Svn::Fs::FileSystem.create(path, config)
-    assert(File.exist?(path))
-    assert_equal(fs_type, Svn::Fs.type(path))
-    fs.set_warning_func do |err|
-      p err
-      abort
+    fs = nil
+    Svn::Fs::FileSystem.create(path, config) do |fs|
+      assert(File.exist?(path))
+      assert_equal(fs_type, Svn::Fs.type(path))
+      fs.set_warning_func do |err|
+        p err
+        abort
+      end
+      assert_equal(path, fs.path)
     end
-    assert_equal(path, fs.path)
+
+    assert(fs.closed?)
+    assert_raises(Svn::Error::FsAlreadyClose) do
+      fs.path
+    end
+
+    Svn::Fs::FileSystem.delete(path)
+    assert(!File.exist?(path))
   end
 
   def test_hotcopy

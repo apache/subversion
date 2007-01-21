@@ -139,7 +139,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.update(@wc_path)
     assert(File.exist?(dir2_path))
 
-    assert_raises(Svn::Error) do
+    assert_raises(Svn::Error::SvnError) do
       ctx.mkdir(deep_dir_path)
     end
   end

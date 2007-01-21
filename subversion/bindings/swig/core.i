@@ -703,6 +703,10 @@ struct apr_pool_wrapper_t
     apr_pool_wrapper_destroy(self);
     xfree(self);
   }
+
+  void destroy(void) {
+    apr_pool_wrapper_destroy(self);
+  }
 };
 
 %ignore apr_pool_wrapper_destroy;
