@@ -268,7 +268,8 @@ switch_external(const char *path,
 
   /* ... Hello, new hotness. */
   SVN_ERR(svn_client__checkout_internal(NULL, url, path, revision, revision,
-                                        TRUE, FALSE, FALSE, timestamp_sleep,
+                                        SVN_DEPTH_FROM_RECURSE(TRUE),
+                                        FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
   return SVN_NO_ERROR;
