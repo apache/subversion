@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -509,7 +509,7 @@ test_list = [ None,
               Skip(remove_symlink, (os.name != 'posix')),
               Skip(merge_symlink_into_file, (os.name != 'posix')),
               XFail(Skip(merge_file_into_symlink, (os.name != 'posix'))),
-              XFail(checkout_repo_with_symlinks, svntest.main.is_os_windows),
+              checkout_repo_with_symlinks,
              ]
 
 if __name__ == '__main__':

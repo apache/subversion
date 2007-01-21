@@ -2,7 +2,7 @@
  * subst.c :  generic eol/keyword substitution routines
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1606,11 +1606,18 @@ create_special_file_from_stringbuf(svn_stringbuf_t *src, const char *dst,
     {
       if (err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
         {
+          apr_file_t *dst_tmp_file;
+          apr_size_t written;
+
           svn_error_clear(err);
+
           /* Fall back to just copying the text-base. */
-          SVN_ERR(svn_io_open_unique_file2(NULL, &dst_tmp, dst, ".tmp",
-                                           svn_io_file_del_none, pool));
-          SVN_ERR(svn_io_file_create(dst_tmp, src->data, pool));
+          SVN_ERR(svn_io_open_unique_file2(&dst_tmp_file, &dst_tmp,
+                                           dst, ".tmp", svn_io_file_del_none,
+                                           pool));
+          SVN_ERR(svn_io_file_write_full(dst_tmp_file, src->data, src->len,
+                                         &written, pool));
+          SVN_ERR(svn_io_file_close(dst_tmp_file, pool));
         }
       else
         return err;
