@@ -857,10 +857,24 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                                             s_rev, b->t_rev,
                                             &deleted_rev, subpool));
 
-              /* Because we only emit a delete for a non-directory,
-                 we don't have to special-case depth==svn_depth_files.
-                 But if it weren't for this conditional, we would. */
-              if (s_entry->kind != svn_node_dir)
+              /* ### TODO: There's a big outstanding question here:
+               * ### what if depth==svn_depth_immediates &&
+               * ### s_entry->kind==svn_node_dir ? Should we delete
+               * ### the subdirectory or not?  I think the answer
+               * ### (from the client's point of view) is yes iff the
+               * ### subdir is svn_depth_empty, no otherwise.  But do
+               * ### we know enough to answer that question on the
+               * ### server side?  I think maybe we do -- at least, we
+               * ### did in the while(1) loop above, where we loop
+               * ### over a path_info_t, updating the target.  IOW, it
+               * ### may be the case that by the time we get here, if
+               * ### depth==svn_depth_immediates and the subdir is
+               * ### actually empty, then we can behave just as if the
+               * ### subdir is also svn_depth_empty.  But I want to
+               * ### get it working for infinity first; one step at a
+               * ### time, one step at a time.
+               */
+              if (depth == svn_depth_infinity || s_entry->kind != svn_node_dir)
                 SVN_ERR(b->editor->delete_entry(e_fullpath,
                                                 deleted_rev,
                                                 dir_baton, subpool));
