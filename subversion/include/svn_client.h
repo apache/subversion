@@ -649,8 +649,8 @@ svn_client_diff_summarize_dup(const svn_client_diff_summarize_t *diff,
                               apr_pool_t *pool);
 
 
-/** A callback used in svn_client_diff_summarize() and
- * svn_client_diff_summarize_peg() for reporting a @a diff summary.
+/** A callback used in svn_client_diff_summarize2() and
+ * svn_client_diff_summarize_peg2() for reporting a @a diff summary.
  *
  * All allocations should be performed in @a pool.
  *
@@ -1258,7 +1258,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * when one is needed.
  *
  * ### TODO: For consistency, this should probably take svn_depth_t
- * ### depth instead of svn_boolean_t non_recursive.  But it's not
+ * ### depth instead of svn_boolean_t nonrecursive.  But it's not
  * ### needed for the sparse-directories work right now, so leaving it
  * ### alone.
  *
@@ -1946,11 +1946,11 @@ svn_client_diff_summarize(const char *path1,
  * be either a working-copy path or URL.
  *
  * If @a peg_revision is @c svn_opt_revision_unspecified, behave
- * identically to svn_client_diff_summarize(), using @a path for both
+ * identically to svn_client_diff_summarize2(), using @a path for both
  * of that function's @a path1 and @a path2 argments.
  *
  * The function may report false positives if @a ignore_ancestry is false,
- * as described in the documentation for svn_client_diff_summarize().
+ * as described in the documentation for svn_client_diff_summarize2().
  *
  * Call @a summarize_func with @a summarize_baton for each difference
  * with a @c svn_client_diff_summarize_t structure describing the difference.

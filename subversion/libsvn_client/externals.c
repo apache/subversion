@@ -354,10 +354,10 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
            exist before the parent export process unless a versioned
            directory above it did, which means the user would have
            already had to force these creations to occur. */
-        SVN_ERR(svn_client_export3(NULL, new_item->url, path,
+        SVN_ERR(svn_client_export4(NULL, new_item->url, path,
                                    &(new_item->revision),
                                    &(new_item->revision),
-                                   TRUE, FALSE, TRUE, NULL,
+                                   TRUE, FALSE, svn_depth_infinity, NULL,
                                    ib->ctx, ib->pool));
       else
         SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,

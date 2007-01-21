@@ -84,7 +84,7 @@ file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
 
 /* A helper func that writes out verbal descriptions of property diffs
    to FILE.   Of course, the apr_file_t will probably be the 'outfile'
-   passed to svn_client_diff3, which is probably stdout. */
+   passed to svn_client_diff4, which is probably stdout. */
 static svn_error_t *
 display_prop_diffs(const apr_array_header_t *propchanges,
                    apr_hash_t *original_props,
@@ -250,7 +250,7 @@ struct diff_cmd_baton {
   const char *orig_path_2;
 
   /* These are the numeric representations of the revisions passed to
-     svn_client_diff3, either may be SVN_INVALID_REVNUM.  We need these
+     svn_client_diff4, either may be SVN_INVALID_REVNUM.  We need these
      because some of the svn_wc_diff_callbacks2_t don't get revision
      arguments.
 
@@ -1986,8 +1986,8 @@ do_single_file_merge(const char *initial_URL1,
 
 /* A Theoretical Note From Ben, regarding do_diff().
 
-   This function is really svn_client_diff3().  If you read the public
-   API description for svn_client_diff, it sounds quite Grand.  It
+   This function is really svn_client_diff4().  If you read the public
+   API description for svn_client_diff4(), it sounds quite Grand.  It
    sounds really generalized and abstract and beautiful: that it will
    diff any two paths, be they working-copy paths or URLs, at any two
    revisions.
@@ -2007,7 +2007,7 @@ do_single_file_merge(const char *initial_URL1,
    pigeonholed into one of these three use-cases, we currently bail
    with a friendly apology.
 
-   Perhaps someday a brave soul will truly make svn_client_diff3
+   Perhaps someday a brave soul will truly make svn_client_diff4
    perfectly general.  For now, we live with the 90% case.  Certainly,
    the commandline client only calls this function in legal ways.
    When there are other users of svn_client.h, maybe this will become
@@ -2020,7 +2020,7 @@ static svn_error_t *
 unsupported_diff_error(svn_error_t *child_err)
 {
   return svn_error_create(SVN_ERR_INCORRECT_PARAMS, child_err,
-                          _("Sorry, svn_client_diff3 was called in a way "
+                          _("Sorry, svn_client_diff4 was called in a way "
                             "that is not yet supported"));
 }
 
@@ -2033,7 +2033,7 @@ unsupported_diff_error(svn_error_t *child_err)
    ### TODO: I think RECURSE instead of DEPTH is okay here, because
    ### this is strictly within a wc anyway.
 
-   All other options are the same as those passed to svn_client_diff3(). */
+   All other options are the same as those passed to svn_client_diff4(). */
 static svn_error_t *
 diff_wc_wc(const apr_array_header_t *options,
            const char *path1,
@@ -2090,7 +2090,7 @@ diff_wc_wc(const apr_array_header_t *options,
    DIFF_PARAM.PATH2 is the path at the peg revision, and the actual two
    paths compared are determined by following copy history from PATH2.
 
-   All other options are the same as those passed to svn_client_diff3(). */
+   All other options are the same as those passed to svn_client_diff4(). */
 static svn_error_t *
 diff_repos_repos(const struct diff_parameters *diff_param,
                  const svn_wc_diff_callbacks2_t *callbacks,
@@ -2163,7 +2163,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
    revision, and the actual repository path to be compared is
    determined by following copy history.
 
-   All other options are the same as those passed to svn_client_diff3(). */
+   All other options are the same as those passed to svn_client_diff4(). */
 static svn_error_t *
 diff_repos_wc(const apr_array_header_t *options,
               const char *path1,
@@ -2781,10 +2781,10 @@ svn_client_diff_summarize(const char *path1,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *pool)
 {
-  return svn_client_diff_summarize(path1, revision1, path2,
-                                   revision2, SVN_DEPTH_FROM_RECURSE(recurse),
-                                   ignore_ancestry, summarize_func,
-                                   summarize_baton, ctx, pool);
+  return svn_client_diff_summarize2(path1, revision1, path2,
+                                    revision2, SVN_DEPTH_FROM_RECURSE(recurse),
+                                    ignore_ancestry, summarize_func,
+                                    summarize_baton, ctx, pool);
 }
 
 svn_error_t *

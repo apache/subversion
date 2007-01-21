@@ -300,7 +300,7 @@ svn_cl__diff(apr_getopt_t *os,
                      ((svn_cl__cmd_baton_t *)baton)->ctx,
                      iterpool));
           else
-            SVN_ERR(svn_client_diff_peg3
+            SVN_ERR(svn_client_diff_peg4
                     (options,
                      truepath,
                      &peg_revision,
