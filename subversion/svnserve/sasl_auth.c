@@ -2,7 +2,7 @@
  * sasl_auth.c :  Functions for SASL-based authentication
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -229,7 +229,7 @@ svn_error_t *sasl_auth_request(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   apr_status_t apr_err;
   const char *localaddrport = NULL, *remoteaddrport = NULL;
-  const char *mechlist;
+  const char *mechlist, *val;
   char hostname[APRMAXHOSTLEN + 1];
   sasl_security_properties_t secprops;
   svn_boolean_t success, no_anonymous;
@@ -261,7 +261,7 @@ svn_error_t *sasl_auth_request(svn_ra_svn_conn_t *conn,
     }
 
   /* Make sure the context is always destroyed. */
-  apr_pool_cleanup_register(pool, sasl_ctx, sasl_dispose_cb,
+  apr_pool_cleanup_register(b->pool, sasl_ctx, sasl_dispose_cb,
                             apr_pool_cleanup_null);
 
   /* Initialize security properties. */
@@ -274,6 +274,18 @@ svn_error_t *sasl_auth_request(svn_ra_svn_conn_t *conn,
   no_anonymous = needs_username || get_access(b, UNAUTHENTICATED) < required;
   if (no_anonymous)
     secprops.security_flags |= SASL_SEC_NOANONYMOUS;
+
+  svn_config_get(b->cfg, &val, 
+                 SVN_CONFIG_SECTION_SASL,
+                 SVN_CONFIG_OPTION_MIN_SSF,
+                 "0");
+  secprops.min_ssf = atoi(val);
+
+  svn_config_get(b->cfg, &val,
+                 SVN_CONFIG_SECTION_SASL,
+                 SVN_CONFIG_OPTION_MAX_SSF,
+                 "256");
+  secprops.max_ssf = atoi(val);
 
   /* Set security properties. */
   result = sasl_setprop(sasl_ctx, SASL_SEC_PROPS, &secprops);
@@ -315,6 +327,8 @@ svn_error_t *sasl_auth_request(svn_ra_svn_conn_t *conn,
     }
   while (!success);
   svn_pool_destroy(subpool);
+
+  SVN_ERR(svn_ra_svn__enable_sasl_encryption(conn, sasl_ctx, pool));
 
   if (no_anonymous)
     {
