@@ -325,7 +325,7 @@ svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
 }
 
 /* Helper for get_merge_info_for_path() that retrieves merge info for
-   PATH at the revision LASTMERGED_REV, returning it in the the merge
+   PATH at the revision LASTMERGED_REV, returning it in the merge
    info hash *RESULT. */
 static svn_error_t *
 parse_mergeinfo_from_db(sqlite3 *db,

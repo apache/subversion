@@ -33,21 +33,26 @@ svn_error_t *
 svn_fs_merge_info__create_index(const char *path, apr_pool_t *pool);
 
 /* Update the merge info index according to the changes made in
-   transaction TXN for revision NEW_REV, if TXN_CONTAINS_MERGE_INFO is
-   TRUE.  Use POOL for any temporary allocations. */
+   transaction TXN for revision NEW_REV.  If TXN_CONTAINS_MERGE_INFO
+   is TRUE, then merge info is read from the transaction.  Else, the
+   transaction is assumed to have no merge info.  Use POOL for
+   any temporary allocations.
+
+   NOTE: Even if there is no merge info, this function should be
+   called to make sure there is no stray merge info for this revision
+   left from a previous failed commit.  */
 svn_error_t *
 svn_fs_merge_info__update_index(svn_fs_txn_t *txn, svn_revnum_t new_rev,
                                 svn_boolean_t txn_contains_merge_info,
                                 apr_pool_t *pool);
 
-/* Get the merge info for the set of PATHS(an array of
-   absolute-in-the-fs paths) under ROOT and have it as
-   *MERGEINFO(char* path_from_PATHS -> char* mergeinfo), If
-   INCLUDE_PARENTS is TRUE elide for mergeinfo.  Use POOL for any
-   temporary allocations. This function would return error if
-   mergeinfo store does not exist with default 'mergeinfo' schema.
-   This function won't return error if path does not have
-   mergeinfo. */
+/* Get the merge info for the set of PATHS (an array of
+   absolute-in-the-fs paths) under ROOT and return it in *MERGEINFO,
+   mapping char * paths to char * strings with mergeinfo, allocated in
+   POOL.  If INCLUDE_PARENTS is TRUE elide for mergeinfo.  If a path
+   has no mergeinfo, just return no info for that path.  Return an
+   error if the mergeinfo store does not exist or doesn't use the
+   'mergeinfo' schema.  */
 svn_error_t *
 svn_fs_merge_info__get_merge_info(apr_hash_t **mergeinfo,
                                   svn_fs_root_t *root,

@@ -713,12 +713,12 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                             apr_pool_t *pool);
 
 /**
- * Fetch the merge info for @a paths at @rev, and save it to @a
+ * Fetch the merge info for @a paths at @a rev, and save it to @a
  * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
  * (from @a paths) to hashes mapping merged-from paths (of @c char *)
  * to revision range lists (of @c apr_array_header_t * with @c
  * svn_merge_range_t * elements), or @c NULL if there is no merge
- * info available.
+ * info available.  Allocate the returned values in @a pool.
  *
  * When @a include_parents is @c TRUE, include inherited merge info
  * from parent directories of @a paths.
