@@ -73,6 +73,7 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_PRESENT_PROPS      "present-props"
 #define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
 #define SVN_WC__ENTRY_ATTR_KEEP_LOCAL         "keep-local"
+#define SVN_WC__ENTRY_ATTR_DEPTH              "depth"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
@@ -154,7 +155,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_PRESENT_PROPS      APR_INT64_C(0x20000000)
 #define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x40000000)
 #define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x80000000)
-
+/* No #define for DEPTH, because it's only meaningful on this-dir anyway. */
 
 /* ...or perhaps this to mean all of those above... */
 #define SVN_WC__ENTRY_MODIFY_ALL           APR_INT64_C(0xFFFFFFFF)

@@ -460,23 +460,10 @@ read_entry(svn_wc_entry_t **new_entry,
   {
     const char *result;
     SVN_ERR(read_val(&result, buf, end));
-
-    /* ### TODO: We could save some entries file bytes and some code
-       ### by using svn_depth_from_word() here.  But it doesn't have
-       ### the nice fall-through-to-infinity behavior... Unless we
-       ### make it treat the empty string as infinity, which would be
-       ### reasonable.  Think about it.  See similar comment about
-       ### svn_depth_from_word() in ../svn/main.c, though; and see
-       ### the similar comment in write_entry() in this file. */
-    if (strcmp(result, "depth-empty") == 0)
-      entry->depth = svn_depth_empty;
-    else if (strcmp(result, "depth-files") == 0)
-      entry->depth = svn_depth_files;
-    else if (strcmp(result, "depth-immediates") == 0)
-      entry->depth = svn_depth_immediates;
-    else
-      /* svn_depth_exclude/unknown "can't happen" here, so assume infinity. */
+    if (result[0] == '\0')
       entry->depth = svn_depth_infinity;
+    else
+      entry->depth = svn_depth_from_word(result);
   }
 
  done:
@@ -1579,30 +1566,15 @@ write_entry(svn_stringbuf_t *buf,
   write_bool(buf, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, entry->keep_local);
 
   /* Depth. */
-  {
-    const char *val;
-    switch (entry->depth)
-      {
-        /* ### TODO: See comment in read_entry() about using
-           ### svn_depth_from_word().  The inverse applies here. */
-      case svn_depth_empty:
-        val = "depth-empty";
-        break;
-      case svn_depth_files:
-        val = "depth-files";
-        break;
-      case svn_depth_immediates:
-        val = "depth-immediates";
-        break;
-      default:
-        /* Else assume svn_depth_infinity, which we represent as "",
-           which write_val() will emit if handed NULL. */
-        /* ### TODO: Except that for now we use "depth-infinity", to
-           ### ease debugging while implementing the depth feature. */
-        val = "depth-infinity";
-      }
-    write_val(buf, val, strlen(val));
-  }
+  if (is_subdir || entry->depth == svn_depth_infinity)
+    {
+      write_val(buf, NULL, 0);
+    }
+  else
+    {
+      const char *val = svn_depth_to_word(entry->depth);
+      write_val(buf, val, strlen(val));
+    }
 
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
@@ -1734,6 +1706,11 @@ write_entry_xml(svn_stringbuf_t **output,
   /* Keep in wc flag  */
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, APR_HASH_KEY_STRING,
                (entry->keep_local ? "true" : NULL));
+
+  /* Depth, but only if it's not the default depth. */
+  if (entry->depth != svn_depth_infinity)
+    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_DEPTH, APR_HASH_KEY_STRING,
+                 (svn_depth_to_word(entry->depth)));
 
   /* Timestamps */
   if (entry->text_time)
@@ -2215,6 +2192,9 @@ fold_entry(apr_hash_t *entries,
 
   if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
     cur_entry->keep_local = entry->keep_local;
+
+  /* Note that we don't bother to fold entry->depth, because it is
+     only meaningful on the this-dir entry anyway. */
 
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */

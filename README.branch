@@ -321,18 +321,6 @@ Contents
 
    Work remaining, in no particular order:
 
-      * Small bug in how depth is stored in entries file format:
-
-        Suppose we have A at depth:empty and A/B at depth:files.
-        A/.svn/entries will have a short "dir" entry for B.
-        Naturally, that entry does not mention B's revision or other
-        details, because that stuff should live in A/B/.svn/entries.
-        But for some reason, A/.svn/entries *does* list B's depth.
-        That's bad.  It shouldn't talk about B's depth, one should go
-        look in A/B/.svn/entries for B's depth.  I'm sure this is a
-        simple fix in the entry reading/writing code, just haven't had
-        a chance to chase it down yet.
-
       * There is still no compatibility code for new clients dealing
         with old servers.  This is the "legacy servers will send back
         a bunch of information the client doesn't want" scenario
