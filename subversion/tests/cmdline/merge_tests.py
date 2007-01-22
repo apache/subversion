@@ -2722,6 +2722,7 @@ def merge_dir_replace(sbox):
     'A/B/F/foo/file foo'    : Item(status='  ', wc_rev=5),    
     'A/B/F/foo/bar'         : Item(status='  ', wc_rev=5),
     'A/B/F/foo/bar/new file 3'  : Item(status='  ', wc_rev=5),
+    'A/C'                   : Item(status='  ', wc_rev=3),
     'A/C/foo'               : Item(status='  ', wc_rev=3),
     'A/C/foo/new file'      : Item(status='  ', wc_rev=3),
     'A/C/foo/new file 2'    : Item(status='  ', wc_rev=3),    
@@ -2768,6 +2769,7 @@ def merge_dir_replace(sbox):
 
   # Commit merge of foo onto C
   expected_output = svntest.wc.State(wc_dir, {
+    'A/C'                    : Item(verb='Sending'),
     'A/C/foo'    : Item(verb='Replacing'),
     'A/C/foo/file foo'       : Item(verb='Adding'),
     'A/C/foo/bar'            : Item(verb='Adding'),
@@ -2781,6 +2783,7 @@ def merge_dir_replace(sbox):
     'A/B/F/foo/file foo'    : Item(status='  ', wc_rev=5),
     'A/B/F/foo/bar'         : Item(status='  ', wc_rev=5),
     'A/B/F/foo/bar/new file 3'  : Item(status='  ', wc_rev=5),
+    'A/C'                       : Item(status='  ', wc_rev=6),
     'A/C/foo'                   : Item(status='  ', wc_rev=6),
     'A/C/foo/file foo'          : Item(status='  ', wc_rev=6),    
     'A/C/foo/bar'               : Item(status='  ', wc_rev=6),
