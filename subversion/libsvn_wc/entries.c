@@ -455,6 +455,7 @@ read_entry(svn_wc_entry_t **new_entry,
   /* Keep entry in working copy after deletion? */
   SVN_ERR(read_bool(&entry->keep_local, SVN_WC__ENTRY_ATTR_KEEP_LOCAL,
                     buf, end));
+  MAYBE_DONE;
 
   /* Depth. */
   {
@@ -465,6 +466,7 @@ read_entry(svn_wc_entry_t **new_entry,
     else
       entry->depth = svn_depth_from_word(result);
   }
+  MAYBE_DONE;
 
  done:
   *new_entry = entry;
