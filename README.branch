@@ -250,7 +250,7 @@ Contents
    depth infinity ones.
    
    But consider 'checkout --depth=immediates'.  The desired state is a
-   depth-files directory D, with all files up-to-date, and with
+   depth-immediates directory D, with all files up-to-date, and with
    skeleton subdirs at depth empty.  Plain updates should preserve this
    state of affairs.
    
@@ -286,18 +286,17 @@ Contents
    http://svn.collab.net/repos/svn/branches/sparse-directories/
    contains the latest code.
 
-   *** The most important thing to know is that the branch code  ***
-   *** implements an earlier three-depth scheme (0, 1, infinity) ***
-   *** and does not yet reflect the new four-depth universe.     ***
-
    A new enum type 'svn_depth_t depth' is defined in svn_types.h.
    Both client and server side now understand the concept of depth,
    and the basic update use cases handle depth.  See depth_tests.py
-   for what is known to be working.  (Many edge cases are not yet
-   handled correctly.)
+   for what is known to be working.  (Many cases are not yet tested,
+   and almost certainly some of them will fail right now.)
 
    On the client side, most of the svn_client.h interfaces that
    formerly took 'svn_boolean_t recurse' now take 'svn_depth_t depth'.
+   (The -N option is deprecated, but it still works: it simply maps to
+   --depth=files, which results in the same behavior as -N used to.)
+
    Some of this recurse-becomes-depth change has propagated down into
    libsvn_wc, which now stores a depth field in svn_wc_entry_t (and
    therefore in .svn/entries).  The update reporter knows to report
@@ -317,13 +316,22 @@ Contents
    relevant svn_ra_* APIs now take depth arguments, which sometimes
    supersede older 'recurse' booleans.  In these cases, the RA layer
    does the usual compatibility dance: receiving "recurse=FALSE" from
-   an older client causes the server to behave as if "depth=immediates"
+   an older client causes the server to behave as if "depth=files"
    had been transmitted.
 
    Work remaining, in no particular order:
 
-      * svn_wc__do_update_cleanup(), and by implication
-        tweak_entries(), need carefuller depth thinking.
+      * Small bug in how depth is stored in entries file format:
+
+        Suppose we have A at depth:empty and A/B at depth:files.
+        A/.svn/entries will have a short "dir" entry for B.
+        Naturally, that entry does not mention B's revision or other
+        details, because that stuff should live in A/B/.svn/entries.
+        But for some reason, A/.svn/entries *does* list B's depth.
+        That's bad.  It shouldn't talk about B's depth, one should go
+        look in A/B/.svn/entries for B's depth.  I'm sure this is a
+        simple fix in the entry reading/writing code, just haven't had
+        a chance to chase it down yet.
 
       * There is still no compatibility code for new clients dealing
         with old servers.  This is the "legacy servers will send back
@@ -334,6 +342,9 @@ Contents
         useful the compatibility mode is, since it wouldn't really
         shorten the wall clock time of the operations by much,
         although it would still save the disk space.
+
+      * svn_wc__do_update_cleanup(), and by implication
+        tweak_entries(), need carefuller depth thinking.
 
       * There's no interface for getting rid of stuff once you've
         brought it into your working copy -- no "exclusion" interface,
@@ -362,17 +373,13 @@ Contents
         the depth from the working copy, and either use it directly or
         calculate the appropriate depth based on it".
 
-        Right now, only svn_client_checkout3 really does this
-        properly (see r21910 and r21829).  Other APIs that probably
-        should do it are:
+        Most APIs that need to do this do it, but some still need to
+        be tweaked:
 
            svn_client_diff4()
            svn_client_diff_summarize2()
            svn_client_diff_summarize_peg2()
            svn_client_diff_peg3()
-           svn_client_merge3()
-           svn_client_merge_peg3()
-           svn_client_update3()
 
       * Some APIs still take recurse booleans.  It's not clear to me
         that all of these should be switched to depth, but the
@@ -386,18 +393,6 @@ Contents
          svn_client_proplist2() # Same question here.
          svn_client_resolved()  # Same question here.
 
-      * Small bug in how depth is stored in entries file format:
-
-        Suppose we have A at depth:empty and A/B at depth:files.
-        A/.svn/entries will have a short "dir" entry for B.
-        Naturally, that entry does not mention B's revision or other
-        details, because that stuff should live in A/B/.svn/entries.
-        But for some reason, A/.svn/entries *does* list B's depth.
-        That's bad.  It shouldn't talk about B's depth, one should go
-        look in A/B/.svn/entries for B's depth.  I'm sure this is a
-        simple fix in the entry reading/writing code, just haven't had
-        a chance to chase it down yet.
-
       * I haven't done anything with 'svn status' yet, don't know if
         it would behave correctly w.r.t. depths out of the box or not.
         Clearly, this needs investigation.
@@ -405,7 +400,3 @@ Contents
       * I haven't done anything with either 'svn switch --depth' or
         'svn switch' handling mixed-depth working copies automatically.  
         Probably some bits work right now, and other bits don't.
-
-      * All of my testing has been over svn:// and sometimes local://.
-        All the necessary changes are in for http:// as well, but they
-        are still untested.

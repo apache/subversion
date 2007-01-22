@@ -910,6 +910,9 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * if @c svn_depth_empty, update exactly each target, nonrecursively
  * (essentially, update the target's properties).
  *
+ * If @a depth is @c svn_depth_unknown, take the working depth from
+ * @a paths and then behave as described above.
+ *
  * ### TODO: In the @c svn_depth_immediates case, shouldn't we update
  * ### the presence/absence of subdirs, even though we don't update
  * ### inside the subdirs themselves?
