@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 133;
+use Test::More tests => 148;
 use strict;
 
 # shut up about variables that are only used once.
@@ -77,7 +77,7 @@ is($ci_dir1->revision,$current_rev,"commit info revision equals $current_rev");
 
 my $tester;
 
-# ------------------------------------------------------------------------
+# revprop_get ------------------------------------------------------------
 
 my($rpgval, $rpgrev);
 
@@ -127,21 +127,47 @@ SKIP: {
 
 }
 
-my ($rph, $rplrev) = $ctx->revprop_list($reposurl,$current_rev);
-isa_ok($rph,'HASH','Returned hash reference form revprop_list');
-is($rplrev,$current_rev,'Returned current rev from revprop_list');
-is($rph->{'svn:author'},$username,
-   'svn:author is expected user from revprop_list');
-if ($^O eq 'MSWin32') {
-    # we skip the log change test on win32 so we have to test
-    # for a different var here
-    is($rph->{'svn:log'},'Make dir1',
-       'svn:log is expected value from revprop_list');
-} else {
-    is($rph->{'svn:log'},'mkdir dir1',
-       'svn:log is expected value from revprop_list');
-}
-ok($rph->{'svn:date'},'svn:date is set from revprop_list');
+# revprop_list ----------------------------------------------------------
+
+my ($rph, $rplrev);
+
+$tester = sub {
+    my $name = shift;
+
+    isa_ok($rph,'HASH','Returned hash reference form revprop_list');
+    is($rplrev,$current_rev,'Returned current rev from revprop_list');
+    is($rph->{'svn:author'},$username,
+       'svn:author is expected user from revprop_list');
+    if ($^O eq 'MSWin32') {
+	# we skip the log change test on win32 so we have to test
+	# for a different var here
+	is($rph->{'svn:log'},'Make dir1',
+	   'svn:log is expected value from revprop_list');
+    } else {
+	is($rph->{'svn:log'},'mkdir dir1',
+	   'svn:log is expected value from revprop_list');
+    }
+    ok($rph->{'svn:date'},'svn:date is set from revprop_list');
+};
+
+($rph, $rplrev) = $ctx->revprop_list($reposurl, $current_rev);
+$tester->('pos/man');
+
+($rph, $rplrev) = $ctx->revprop_list($reposurl);
+$tester->('pos/opt');
+
+($rph, $rplrev) = $ctx->revprop_list({
+    url      => $reposurl,
+    revision => $current_rev
+});
+$tester->('nam/man');
+
+($rph, $rplrev) = $ctx->revprop_list({
+    url      => $reposurl,
+});
+$tester->('nam/opt');
+
+# ------------------------------------------------------------------------
 
 is($ctx->checkout($reposurl,$wcpath,'HEAD',1),$current_rev,
    'Returned current rev from checkout');

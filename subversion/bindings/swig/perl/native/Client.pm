@@ -10,7 +10,7 @@ my @_fns_with_named_params;
 
 BEGIN {
     @_fns_with_named_params = qw(ls
-			     revprop_get);
+			     revprop_get revprop_list);
     @_all_fns = qw(add add3 blame blame3 cat cat2 checkout checkout2 cleanup
                    commit commit3 commit_item2_dup copy copy3 delete delete2
                    diff diff3 diff_peg3 diff_summarize diff_summarize_peg
@@ -19,7 +19,7 @@ BEGIN {
                    merge merge2 merge_peg2 mkdir mkdir2 move move4
                    propget propget2 proplist proplist2 proplist_item_dup
                    propset propset2 relocate resolved revert
-                   revprop_list revprop_set
+                   revprop_set
                    status status2 switch unlock update update2
                    url_from_path uuid_from_path uuid_from_url);
     require SVN::Base;
@@ -690,7 +690,7 @@ any local mods.
 For each path in $paths, if it is a directory and $recursive
 is true, this will be a recursive operation.
 
-=item $ctx-E<gt>revprop_get($propname, $url, $revision);
+=item $ctx-E<gt>revprop_get
 
   my($prop_value, $revision) = $ctx->revprop_get({
       propname => '...',
@@ -707,7 +707,12 @@ working copy at all; it's a pure network operation that queries an
 B<unversioned> property attached to a revision.  This can be used to query
 log messages, dates, authors, and the like.
 
-=item $ctx-E<gt>revprop_list($url, $revision, $pool);
+=item $ctx-E<gt>revprop_list
+
+  my($prop_hash, $revision) = $ctx->revprop_list({
+      url      => '...',
+      revision => '...',    # optional, default is 'HEAD'
+  });
 
 Returns two values, the first of which is a reference to a hash containing
 the properties attached to $revision in the repository represented by $url.
@@ -903,6 +908,16 @@ my %method_defs = (
 	      spec => { type    => SCALAR }, },
 	    { name => 'revision',
 	      spec => { type    => SCALAR,
+			default => 'HEAD', }, },
+	],
+    },
+    'revprop_list' => {
+	type => 'obj',
+	args => [
+	    { name => 'url',
+	      spec => { type => SCALAR }, },
+	    { name => 'revision', 
+	      spec => { type => SCALAR,
 			default => 'HEAD', }, },
 	],
     },
