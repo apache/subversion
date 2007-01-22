@@ -150,7 +150,7 @@ Implement auditing/reporting and other high-level features.
     integrated    Show merged revisions available for PATH as a revision list
       --diff        show corresponding diff instead of revision list
       --log         show corresponding log history instead of revision list
-    merge/rollback
+    merge
       --record-only do not perform an actual merge of the changes, yet record
                     that a merge happened  (likely phase 1?)
     unblock       Revert the effect of 'block'
