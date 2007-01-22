@@ -6,9 +6,9 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-10 17:42+0800\n"
-"PO-Revision-Date: 2007-01-16 13:57+0800\n"
-"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
+"POT-Creation-Date: 2007-01-22 11:09+0800\n"
+"PO-Revision-Date: 2007-01-22 11:13+0800\n"
+"Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -521,9 +521,9 @@ msgstr "执行WebDAV PROPPATCH失败"
 
 #: include/svn_error_codes.h:722
 #: include/svn_error_codes.h:763
-#: libsvn_ra_svn/marshal.c:611
-#: libsvn_ra_svn/marshal.c:719
-#: libsvn_ra_svn/marshal.c:746
+#: libsvn_ra_svn/marshal.c:612
+#: libsvn_ra_svn/marshal.c:720
+#: libsvn_ra_svn/marshal.c:747
 msgid "Malformed network data"
 msgstr "非法网络数据"
 
@@ -911,7 +911,7 @@ msgid "New entry name required when importing a file"
 msgstr "导入文件时，需要一个新的条目名称"
 
 #: libsvn_client/commit.c:546
-#: libsvn_wc/adm_ops.c:996
+#: libsvn_wc/adm_ops.c:997
 #: libsvn_wc/questions.c:91
 #, c-format
 msgid "'%s' does not exist"
@@ -928,7 +928,7 @@ msgstr "路径“%s”不存在"
 #: libsvn_client/copy.c:292
 #: libsvn_client/copy.c:617
 #: libsvn_client/copy.c:868
-#: libsvn_client/copy.c:1193
+#: libsvn_client/copy.c:1194
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "路径“%s”已经存在"
@@ -1004,7 +1004,7 @@ msgstr "提交项目“%s”有复制标记，但是没有源地址(copyfrom URL
 
 #: libsvn_client/commit_util.c:705
 #: libsvn_client/commit_util.c:853
-#: libsvn_client/copy.c:1484
+#: libsvn_client/copy.c:1485
 #: libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1468
 #: libsvn_client/diff.c:2198
@@ -1022,11 +1022,11 @@ msgstr "提交项目“%s”有复制标记，但是没有源地址(copyfrom URL
 #: libsvn_client/switch.c:107
 #: libsvn_wc/adm_crawler.c:453
 #: libsvn_wc/adm_crawler.c:477
-#: libsvn_wc/adm_ops.c:1349
-#: libsvn_wc/adm_ops.c:2637
-#: libsvn_wc/adm_ops.c:2663
-#: libsvn_wc/adm_ops.c:2699
-#: libsvn_wc/adm_ops.c:2741
+#: libsvn_wc/adm_ops.c:1350
+#: libsvn_wc/adm_ops.c:2638
+#: libsvn_wc/adm_ops.c:2664
+#: libsvn_wc/adm_ops.c:2700
+#: libsvn_wc/adm_ops.c:2759
 #: libsvn_wc/copy.c:307
 #: libsvn_wc/copy.c:663
 #: libsvn_wc/copy.c:785
@@ -1034,9 +1034,9 @@ msgstr "提交项目“%s”有复制标记，但是没有源地址(copyfrom URL
 #: libsvn_wc/diff.c:1793
 #: libsvn_wc/entries.c:2276
 #: libsvn_wc/entries.c:2872
-#: libsvn_wc/props.c:485
-#: libsvn_wc/props.c:1093
-#: libsvn_wc/props.c:1544
+#: libsvn_wc/props.c:484
+#: libsvn_wc/props.c:1092
+#: libsvn_wc/props.c:1543
 #: libsvn_wc/questions.c:186
 #: libsvn_wc/questions.c:300
 #: libsvn_wc/status.c:729
@@ -1059,8 +1059,13 @@ msgstr "在未纳入版本控制的父目录，“%s”被加入新增调度"
 
 #: libsvn_client/commit_util.c:761
 #, c-format
-msgid "Entry for '%s' is marked as 'copied' but is not itself scheduled\nfor addition.  Perhaps you're committing a target that is\ninside an unversioned (or not-yet-versioned) directory?"
-msgstr "条目“%s”被标记为“已复制”，但是本身尚未加入新增调度。也许您提交的\n目标在未纳入版本控制的目录中？"
+msgid ""
+"Entry for '%s' is marked as 'copied' but is not itself scheduled\n"
+"for addition.  Perhaps you're committing a target that is\n"
+"inside an unversioned (or not-yet-versioned) directory?"
+msgstr ""
+"条目“%s”被标记为“已复制”，但是本身尚未加入新增调度。也许您提交的\n"
+"目标在未纳入版本控制的目录中？"
 
 #: libsvn_client/commit_util.c:802
 #, c-format
@@ -1078,7 +1083,7 @@ msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "提交项目“%s”有复制标志，但是版本无效"
 
 #: libsvn_client/copy.c:302
-#: libsvn_client/copy.c:1203
+#: libsvn_client/copy.c:1204
 #: libsvn_client/update.c:78
 #, c-format
 msgid "Path '%s' is not a directory"
@@ -1100,55 +1105,55 @@ msgstr "无法移动URL“%s”到本身"
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "版本 %2$ld 中不存在路径“%1$s”"
 
-#: libsvn_client/copy.c:1042
+#: libsvn_client/copy.c:1043
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr "源URL“%s”来自其它仓库；把它当作脱离的工作副本"
 
-#: libsvn_client/copy.c:1180
+#: libsvn_client/copy.c:1181
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "版本 %2$ld 中找不到路径“%1$s”"
 
-#: libsvn_client/copy.c:1185
+#: libsvn_client/copy.c:1186
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "HEAD 版本中找不到路径“%s”"
 
-#: libsvn_client/copy.c:1228
+#: libsvn_client/copy.c:1229
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "“%s”的入口存在(尽管丢失了工作文件)"
 
-#: libsvn_client/copy.c:1322
+#: libsvn_client/copy.c:1323
 #: libsvn_client/log.c:86
 msgid "Revision type requires a working copy path, not a URL"
 msgstr "版本类型需要工作目录，不是URL"
 
-#: libsvn_client/copy.c:1356
+#: libsvn_client/copy.c:1357
 msgid "Cannot mix repository and working copy paths in source list"
 msgstr "不能在源列表中混合版本库和工作副本路径"
 
-#: libsvn_client/copy.c:1397
+#: libsvn_client/copy.c:1398
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "无法复制路径“%s”到其子目录“%s”中"
 
-#: libsvn_client/copy.c:1417
+#: libsvn_client/copy.c:1418
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "无法移动路径“%s”到本身"
 
-#: libsvn_client/copy.c:1426
+#: libsvn_client/copy.c:1427
 msgid "No support for repos <--> working copy moves"
 msgstr "不支持仓库 <--> 工作副本移动"
 
-#: libsvn_client/copy.c:1490
+#: libsvn_client/copy.c:1491
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "“%s”似乎没有关联的URL"
 
-#: libsvn_client/copy.c:1816
+#: libsvn_client/copy.c:1817
 #: svn/move-cmd.c:67
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "移动操作不能指定版本"
@@ -1329,7 +1334,6 @@ msgid "'%s' is not locked"
 msgstr "“%s”没有被锁定"
 
 #: libsvn_client/locking_commands.c:409
-#: libsvn_fs/fs-loader.c:901
 #: libsvn_ra/ra_loader.c:625
 msgid "Lock comment has illegal characters"
 msgstr "锁定注释有非法字符"
@@ -1581,6 +1585,11 @@ msgstr "无法获取文件系统互斥体"
 #, c-format
 msgid "Can't ungrab FS mutex"
 msgstr "不能释放文件系统互斥体"
+
+#: libsvn_fs/fs-loader.c:901
+#, fuzzy
+msgid "Lock comment contains illegal characters"
+msgstr "锁定注释有非法字符"
 
 #: libsvn_fs/fs-loader.c:907
 msgid "Negative expiration date passed to svn_fs_lock"
@@ -1844,8 +1853,14 @@ msgstr "试图设置不变节点的文本内容"
 
 #: libsvn_fs_base/dag.c:1235
 #, c-format
-msgid "Checksum mismatch, rep '%s':\n   expected:  %s\n     actual:  %s\n"
-msgstr "校验和不匹配，仓库“%s”: \n  期望: %s\n  实际: %s\n"
+msgid ""
+"Checksum mismatch, rep '%s':\n"
+"   expected:  %s\n"
+"     actual:  %s\n"
+msgstr ""
+"校验和不匹配，仓库“%s”: \n"
+"  期望: %s\n"
+"  实际: %s\n"
 
 #: libsvn_fs_base/dag.c:1290
 #, c-format
@@ -2004,12 +2019,24 @@ msgid "Expected FS format '%d'; found format '%d'"
 msgstr "期望文件系统格式“%d”；发现格式“%d”"
 
 #: libsvn_fs_base/fs.c:1094
-msgid "Error copying logfile;  the DB_LOG_AUTOREMOVE feature \nmay be interfering with the hotcopy algorithm.  If \nthe problem persists, try deactivating this feature \nin DB_CONFIG"
-msgstr "复制日志文件出错；DB_LOG_AUTOREMOVE 特性可能妨碍热复制。\n如果问题依旧存在，请尝试在 DB_CONFIG 中禁用此特性。"
+msgid ""
+"Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
+"may be interfering with the hotcopy algorithm.  If \n"
+"the problem persists, try deactivating this feature \n"
+"in DB_CONFIG"
+msgstr ""
+"复制日志文件出错；DB_LOG_AUTOREMOVE 特性可能妨碍热复制。\n"
+"如果问题依旧存在，请尝试在 DB_CONFIG 中禁用此特性。"
 
 #: libsvn_fs_base/fs.c:1113
-msgid "Error running catastrophic recovery on hotcopy;  the \nDB_LOG_AUTOREMOVE feature may be interfering with the \nhotcopy algorithm.  If the problem persists, try deactivating \nthis feature in DB_CONFIG"
-msgstr "热复制时执行灾难恢复出错；DB_LOG_AUTOREMOVE 特性可能妨碍热复制。\n如果问题依旧存在，请尝试在 DB_CONFIG 中禁用此特性。"
+msgid ""
+"Error running catastrophic recovery on hotcopy;  the \n"
+"DB_LOG_AUTOREMOVE feature may be interfering with the \n"
+"hotcopy algorithm.  If the problem persists, try deactivating \n"
+"this feature in DB_CONFIG"
+msgstr ""
+"热复制时执行灾难恢复出错；DB_LOG_AUTOREMOVE 特性可能妨碍热复制。\n"
+"如果问题依旧存在，请尝试在 DB_CONFIG 中禁用此特性。"
 
 #: libsvn_fs_base/fs.c:1222
 msgid "Module for working with a Berkeley DB repository."
@@ -2076,8 +2103,14 @@ msgstr "读取版本“%s”失败"
 #: libsvn_fs_base/reps-strings.c:811
 #: libsvn_fs_base/reps-strings.c:897
 #, c-format
-msgid "Checksum mismatch on rep '%s':\n   expected:  %s\n     actual:  %s\n"
-msgstr "版本“%s”的校验和不匹配: \n       期望:  %s\n       实际:  %s\n"
+msgid ""
+"Checksum mismatch on rep '%s':\n"
+"   expected:  %s\n"
+"     actual:  %s\n"
+msgstr ""
+"版本“%s”的校验和不匹配: \n"
+"       期望:  %s\n"
+"       实际:  %s\n"
 
 #: libsvn_fs_base/reps-strings.c:911
 msgid "Null rep, but offset past zero already"
@@ -2222,8 +2255,14 @@ msgstr "当前不支持从可变的树复制"
 #: libsvn_fs_base/tree.c:3433
 #: libsvn_fs_fs/tree.c:2389
 #, c-format
-msgid "Base checksum mismatch on '%s':\n   expected:  %s\n     actual:  %s\n"
-msgstr "“%s”的基校验和不匹配: \n  期望: %s\n  实际: %s\n"
+msgid ""
+"Base checksum mismatch on '%s':\n"
+"   expected:  %s\n"
+"     actual:  %s\n"
+msgstr ""
+"“%s”的基校验和不匹配: \n"
+"  期望: %s\n"
+"  实际: %s\n"
 
 #: libsvn_fs_base/tree.c:3686
 #: libsvn_fs_fs/tree.c:2625
@@ -2245,8 +2284,14 @@ msgstr "不能获取非目录的条目"
 
 #: libsvn_fs_fs/dag.c:931
 #, c-format
-msgid "Checksum mismatch, file '%s':\n   expected:  %s\n     actual:  %s\n"
-msgstr "文件“%s”的校验和不匹配: \n  期望: %s\n  实际: %s\n"
+msgid ""
+"Checksum mismatch, file '%s':\n"
+"   expected:  %s\n"
+"     actual:  %s\n"
+msgstr ""
+"文件“%s”的校验和不匹配: \n"
+"  期望: %s\n"
+"  实际: %s\n"
 
 #: libsvn_fs_fs/err.c:107
 #, c-format
@@ -2423,8 +2468,14 @@ msgstr "svndiff 的窗体长度已损坏"
 
 #: libsvn_fs_fs/fs_fs.c:1970
 #, c-format
-msgid "Checksum mismatch while reading representation:\n   expected:  %s\n     actual:  %s\n"
-msgstr "读取修订版时校验和不匹配: \n       期望:  %s\n       实际:  %s\n"
+msgid ""
+"Checksum mismatch while reading representation:\n"
+"   expected:  %s\n"
+"     actual:  %s\n"
+msgstr ""
+"读取修订版时校验和不匹配: \n"
+"       期望:  %s\n"
+"       实际:  %s\n"
 
 #: libsvn_fs_fs/fs_fs.c:2193
 #: libsvn_fs_fs/fs_fs.c:2206
@@ -2604,8 +2655,14 @@ msgstr "无法保存文件"
 #: libsvn_ra_dav/fetch.c:778
 #: libsvn_ra_svn/client.c:909
 #, c-format
-msgid "Checksum mismatch for '%s':\n   expected checksum:  %s\n   actual checksum:    %s\n"
-msgstr "“%s”的校验和不匹配: \n  期望的校验和: %s\n  实际的校验和: %s\n"
+msgid ""
+"Checksum mismatch for '%s':\n"
+"   expected checksum:  %s\n"
+"   actual checksum:    %s\n"
+msgstr ""
+"“%s”的校验和不匹配: \n"
+"  期望的校验和: %s\n"
+"  实际的校验和: %s\n"
 
 #: libsvn_ra_dav/fetch.c:1024
 msgid "Server response missing the expected deadprop-count property"
@@ -2678,7 +2735,8 @@ msgid "Invalid creation date header value in response."
 msgstr "在响应头中有非法创建日期"
 
 #: libsvn_ra_dav/lock.c:213
-msgid "Invalid timeout value."
+#, fuzzy
+msgid "Invalid timeout value"
 msgstr "非法超时取值"
 
 #: libsvn_ra_dav/lock.c:377
@@ -2856,66 +2914,68 @@ msgid "Unsupported RA loader version (%d) for ra_dav"
 msgstr "不支持ra_dav RA加载器的%d版本"
 
 #: libsvn_ra_dav/util.c:166
-msgid "The request response contained at least one error."
+#, fuzzy
+msgid "The request response contained at least one error"
 msgstr "请求的响应至少有一个错误"
 
 #: libsvn_ra_dav/util.c:186
-msgid "The response contains a non-conforming HTTP status line."
+#, fuzzy
+msgid "The response contains a non-conforming HTTP status line"
 msgstr "响应包含了不一致的HTTP状态行"
 
-#: libsvn_ra_dav/util.c:413
+#: libsvn_ra_dav/util.c:451
 #, c-format
 msgid "%s of '%s'"
 msgstr "对“%2$s”的方法 %1$s 失败"
 
-#: libsvn_ra_dav/util.c:425
+#: libsvn_ra_dav/util.c:463
 #, c-format
 msgid "'%s' path not found"
 msgstr "找不到路径“%s”"
 
-#: libsvn_ra_dav/util.c:434
+#: libsvn_ra_dav/util.c:472
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
 msgstr "仓库永久移到‘%s’；请重新定位。"
 
-#: libsvn_ra_dav/util.c:436
+#: libsvn_ra_dav/util.c:474
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
 msgstr "仓库临时移到‘%s’；请重新定位。"
 
-#: libsvn_ra_dav/util.c:444
+#: libsvn_ra_dav/util.c:482
 #, c-format
 msgid "Server sent unexpected return value (%d %s) in response to %s request for '%s'"
 msgstr "在请求“%4$s”的响应“%3$s”中，服务器发送了意外的返回值(%1$d %2$s)"
 
-#: libsvn_ra_dav/util.c:450
+#: libsvn_ra_dav/util.c:488
 msgid "authorization failed"
 msgstr "授权失败"
 
-#: libsvn_ra_dav/util.c:454
+#: libsvn_ra_dav/util.c:492
 msgid "could not connect to server"
 msgstr "无法连接到服务器"
 
-#: libsvn_ra_dav/util.c:458
+#: libsvn_ra_dav/util.c:496
 msgid "timed out waiting for server"
 msgstr "等待服务器超时"
 
-#: libsvn_ra_dav/util.c:791
+#: libsvn_ra_dav/util.c:829
 #, c-format
 msgid "Can't calculate the request body size"
 msgstr "无法计算请求主体大小"
 
-#: libsvn_ra_dav/util.c:1118
+#: libsvn_ra_dav/util.c:1156
 #, c-format
 msgid "Error reading spooled %s request response"
 msgstr "读取请求 %s 响应的脱机数据时出现错误"
 
-#: libsvn_ra_dav/util.c:1128
+#: libsvn_ra_dav/util.c:1166
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr "%s 请求的响应返回无效XML: %s (%s)"
 
-#: libsvn_ra_dav/util.c:1160
+#: libsvn_ra_dav/util.c:1198
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "对“%2$s”的请求 %1$s 失败"
@@ -2924,8 +2984,15 @@ msgstr "对“%2$s”的请求 %1$s 失败"
 #: libsvn_ra_local/ra_plugin.c:588
 #: libsvn_wc/update_editor.c:2603
 #, c-format
-msgid "'%s'\nis not the same repository as\n'%s'"
-msgstr "“%s”\n与\n“%s”\n并不在同一个仓库中"
+msgid ""
+"'%s'\n"
+"is not the same repository as\n"
+"'%s'"
+msgstr ""
+"“%s”\n"
+"与\n"
+"“%s”\n"
+"并不在同一个仓库中"
 
 #. ----------------------------------------------------------------
 #. * The RA vtable routines *
@@ -2976,8 +3043,8 @@ msgid "Failed writing updated file"
 msgstr "更新文件失败"
 
 #: libsvn_ra_serf/commit.c:1216
-#, c-format
-msgid "Add directory failed: %s on %s (%d)"
+#, fuzzy, c-format
+msgid "Adding a directory failed: %s on %s (%d)"
 msgstr "增加目录失败: 在路径 “%2$s”执行方法 “%1$s”(%3$d)"
 
 #: libsvn_ra_serf/getlocations.c:289
@@ -3277,42 +3344,42 @@ msgid "Apply-textdelta not active"
 msgstr "没有激活 Apply-textdelta"
 
 #: libsvn_ra_svn/editorp.c:891
-#: libsvn_ra_svn/marshal.c:844
+#: libsvn_ra_svn/marshal.c:845
 #, c-format
 msgid "Unknown command '%s'"
 msgstr "未知命令: “%s”"
 
-#: libsvn_ra_svn/marshal.c:85
+#: libsvn_ra_svn/marshal.c:86
 msgid "Capability entry is not a word"
 msgstr "容量类型不是 word "
 
-#: libsvn_ra_svn/marshal.c:252
+#: libsvn_ra_svn/marshal.c:253
 #: libsvn_ra_svn/streams.c:80
 #: libsvn_ra_svn/streams.c:155
 msgid "Connection closed unexpectedly"
 msgstr "连接意外关闭"
 
-#: libsvn_ra_svn/marshal.c:508
+#: libsvn_ra_svn/marshal.c:509
 msgid "String length larger than maximum"
 msgstr "字符串长度超出上限"
 
-#: libsvn_ra_svn/marshal.c:545
+#: libsvn_ra_svn/marshal.c:546
 msgid "Too many nested items"
 msgstr "太多嵌套的项"
 
-#: libsvn_ra_svn/marshal.c:564
+#: libsvn_ra_svn/marshal.c:565
 msgid "Number is larger than maximum"
 msgstr "数字超过上限"
 
-#: libsvn_ra_svn/marshal.c:767
+#: libsvn_ra_svn/marshal.c:768
 msgid "Empty error list"
 msgstr "错误列表为空"
 
-#: libsvn_ra_svn/marshal.c:776
+#: libsvn_ra_svn/marshal.c:777
 msgid "Malformed error list"
 msgstr "错误列表非法"
 
-#: libsvn_ra_svn/marshal.c:815
+#: libsvn_ra_svn/marshal.c:816
 #, c-format
 msgid "Unknown status '%s' in command response"
 msgstr "命令响应中的状态“%s”未知"
@@ -3339,7 +3406,7 @@ msgstr "无法取得密码"
 msgid "Unhandled SASL interaction"
 msgstr "未处理的 SASL 交互"
 
-#: libsvn_ra_svn/sasl_auth.c:581
+#: libsvn_ra_svn/sasl_auth.c:761
 #: libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
 #, c-format
@@ -3386,8 +3453,15 @@ msgstr "源URL“%s”来自其它仓库"
 
 #: libsvn_repos/commit.c:609
 #, c-format
-msgid "Checksum mismatch for resulting fulltext\n(%s):\n   expected checksum:  %s\n   actual checksum:    %s\n"
-msgstr "“%s”的全文校验和不匹配: \n  期望校验和: %s\n  实际校验和: %s\n"
+msgid ""
+"Checksum mismatch for resulting fulltext\n"
+"(%s):\n"
+"   expected checksum:  %s\n"
+"   actual checksum:    %s\n"
+msgstr ""
+"“%s”的全文校验和不匹配: \n"
+"  期望校验和: %s\n"
+"  实际校验和: %s\n"
 
 #: libsvn_repos/delta.c:180
 msgid "Unable to open root of edit"
@@ -3403,8 +3477,14 @@ msgstr "无效编辑器定位；至少一个输入路径不是目录，并且没
 
 #: libsvn_repos/dump.c:415
 #, c-format
-msgid "WARNING: Referencing data in revision %ld, which is older than the oldest\nWARNING: dumped revision (%ld).  Loading this dump into an empty repository\nWARNING: will fail.\n"
-msgstr "警告: 版本 %ld 的参考数据比最旧的转存数据版本 (%ld)还旧。\n警告:  装载这个转存到空的仓库会失败。\n\n"
+msgid ""
+"WARNING: Referencing data in revision %ld, which is older than the oldest\n"
+"WARNING: dumped revision (%ld).  Loading this dump into an empty repository\n"
+"WARNING: will fail.\n"
+msgstr ""
+"警告: 版本 %ld 的参考数据比最旧的转存数据版本 (%ld)还旧。\n"
+"警告:  装载这个转存到空的仓库会失败。\n"
+"\n"
 
 #: libsvn_repos/dump.c:932
 #, c-format
@@ -3527,7 +3607,9 @@ msgid "Failed to run '%s' hook; broken symlink"
 msgstr "运行钩子“%s”失败；符号连接损坏"
 
 #: libsvn_repos/hooks.c:677
-msgid "Repository has not been enabled to accept revision propchanges;\nask the administrator to create a pre-revprop-change hook"
+msgid ""
+"Repository has not been enabled to accept revision propchanges;\n"
+"ask the administrator to create a pre-revprop-change hook"
 msgstr "此仓库不允许修改版本属性；请管理员创建 pre-revprop-change 钩子"
 
 #: libsvn_repos/load.c:117
@@ -3619,13 +3701,25 @@ msgstr "完成。\n"
 
 #: libsvn_repos/load.c:1231
 #, c-format
-msgid "\n------- Committed revision %ld >>>\n\n"
-msgstr "\n------- 提交后版本 %ld >>>\n\n"
+msgid ""
+"\n"
+"------- Committed revision %ld >>>\n"
+"\n"
+msgstr ""
+"\n"
+"------- 提交后版本 %ld >>>\n"
+"\n"
 
 #: libsvn_repos/load.c:1237
 #, c-format
-msgid "\n------- Committed new rev %ld (loaded from original rev %ld) >>>\n\n"
-msgstr "\n------- 提交新版本 %ld (从原始版本 %ld 装载) >>>\n\n"
+msgid ""
+"\n"
+"------- Committed new rev %ld (loaded from original rev %ld) >>>\n"
+"\n"
+msgstr ""
+"\n"
+"------- 提交新版本 %ld (从原始版本 %ld 装载) >>>\n"
+"\n"
 
 #: libsvn_repos/node_tree.c:238
 #, c-format
@@ -3707,35 +3801,35 @@ msgstr "正在创建 post-revprop-change 钩子"
 msgid "Creating conf directory"
 msgstr "正在创建 conf 目录"
 
-#: libsvn_repos/repos.c:1468
+#: libsvn_repos/repos.c:1482
 msgid "Creating svnserve.conf file"
 msgstr "正在创建 svnserve.conf 文件"
 
-#: libsvn_repos/repos.c:1493
+#: libsvn_repos/repos.c:1507
 msgid "Creating passwd file"
 msgstr "正在创建 passwd 文件"
 
-#: libsvn_repos/repos.c:1553
+#: libsvn_repos/repos.c:1567
 msgid "Creating authz file"
 msgstr "正在创建 authz 文件"
 
-#: libsvn_repos/repos.c:1586
+#: libsvn_repos/repos.c:1600
 msgid "Could not create top-level directory"
 msgstr "无法创建最上层目录"
 
-#: libsvn_repos/repos.c:1590
+#: libsvn_repos/repos.c:1604
 msgid "Creating DAV sandbox dir"
 msgstr "正在创建 DAV 沙箱目录"
 
-#: libsvn_repos/repos.c:1671
+#: libsvn_repos/repos.c:1685
 msgid "Error opening db lockfile"
 msgstr "打开数据库锁文件出错"
 
-#: libsvn_repos/repos.c:1708
+#: libsvn_repos/repos.c:1722
 msgid "Repository creation failed"
 msgstr "创建仓库失败"
 
-#: libsvn_repos/repos.c:1789
+#: libsvn_repos/repos.c:1803
 #, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
 msgstr "期望仓库格式是“%d”或“%d”；发现格式是“%d”"
@@ -3766,12 +3860,12 @@ msgstr "遇到不可读的路径；拒绝访问。"
 msgid "Error initializing command line arguments"
 msgstr "初始化命令行参数出错"
 
-#: libsvn_subr/config.c:630
+#: libsvn_subr/config.c:633
 #, c-format
 msgid "Config error: invalid boolean value '%s'"
 msgstr "配置错误: 无效布尔值“%s”"
 
-#: libsvn_subr/config.c:880
+#: libsvn_subr/config.c:883
 #, c-format
 msgid "Config error: invalid integer value '%s'"
 msgstr "配置错误: 无效整数值“%s”"
@@ -4081,8 +4175,18 @@ msgstr "“%s” 返回 %d"
 
 #: libsvn_subr/io.c:2358
 #, c-format
-msgid "Error running '%s':  exitcode was %d, args were:\nin directory '%s', basenames:\n%s\n%s\n%s"
-msgstr "运行“%s”出错: 退出码是 %d，参数是: \n在目录“%s”，基本名字: \n%s\n%s\n%s"
+msgid ""
+"Error running '%s':  exitcode was %d, args were:\n"
+"in directory '%s', basenames:\n"
+"%s\n"
+"%s\n"
+"%s"
+msgstr ""
+"运行“%s”出错: 退出码是 %d，参数是: \n"
+"在目录“%s”，基本名字: \n"
+"%s\n"
+"%s\n"
+"%s"
 
 #: libsvn_subr/io.c:2411
 #, c-format
@@ -4231,8 +4335,12 @@ msgstr "不能把模块路径从UCS-2转换为UTF-8: “%s”"
 
 #: libsvn_subr/opt.c:217
 #: libsvn_subr/opt.c:295
-msgid "\nValid options:\n"
-msgstr "\n有效选项: \n"
+msgid ""
+"\n"
+"Valid options:\n"
+msgstr ""
+"\n"
+"有效选项: \n"
 
 #: libsvn_subr/opt.c:424
 msgid " arg"
@@ -4241,8 +4349,12 @@ msgstr " 参数"
 #: libsvn_subr/opt.c:447
 #: libsvn_subr/opt.c:470
 #, c-format
-msgid "\"%s\": unknown command.\n\n"
-msgstr "“%s”: 未知命令。\n\n"
+msgid ""
+"\"%s\": unknown command.\n"
+"\n"
+msgstr ""
+"“%s”: 未知命令。\n"
+"\n"
 
 #: libsvn_subr/opt.c:760
 #, c-format
@@ -4266,12 +4378,26 @@ msgstr "解析“%s”出错"
 
 #: libsvn_subr/opt.c:974
 #, c-format
-msgid "%s, version %s\n   compiled %s, %s\n\n"
-msgstr "%s，版本 %s\n   编译于 %s，%s\n\n"
+msgid ""
+"%s, version %s\n"
+"   compiled %s, %s\n"
+"\n"
+msgstr ""
+"%s，版本 %s\n"
+"   编译于 %s，%s\n"
+"\n"
 
 #: libsvn_subr/opt.c:977
-msgid "Copyright (C) 2000-2007 CollabNet.\nSubversion is open source software, see http://subversion.tigris.org/\nThis product includes software developed by CollabNet (http://www.Collab.Net/).\n\n"
-msgstr "版权所有 (C) 2000-2007 CollabNet。\nSubversion 是开放源代码软件，请参阅 http://subversion.tigris.org/\n此产品包含由 CollabNet (http://www.Collab.Net/)开发的软件。\n\n"
+msgid ""
+"Copyright (C) 2000-2007 CollabNet.\n"
+"Subversion is open source software, see http://subversion.tigris.org/\n"
+"This product includes software developed by CollabNet (http://www.Collab.Net/).\n"
+"\n"
+msgstr ""
+"版权所有 (C) 2000-2007 CollabNet。\n"
+"Subversion 是开放源代码软件，请参阅 http://subversion.tigris.org/\n"
+"此产品包含由 CollabNet (http://www.Collab.Net/)开发的软件。\n"
+"\n"
 
 #: libsvn_subr/opt.c:1028
 #: libsvn_subr/opt.c:1069
@@ -4332,7 +4458,9 @@ msgid "Error validating server certificate for '%s':\n"
 msgstr "验证“%s”的服务器证书时出错: \n"
 
 #: libsvn_subr/prompt.c:255
-msgid " - The certificate is not issued by a trusted authority. Use the\n   fingerprint to validate the certificate manually!\n"
+msgid ""
+" - The certificate is not issued by a trusted authority. Use the\n"
+"   fingerprint to validate the certificate manually!\n"
 msgstr " - 此证书并不是由信任的权威机权颁发。请使用此指纹手工验证其有效性！\n"
 
 #: libsvn_subr/prompt.c:262
@@ -4353,8 +4481,18 @@ msgstr " - 证书发生未知错误。\n"
 
 #: libsvn_subr/prompt.c:285
 #, c-format
-msgid "Certificate information:\n - Hostname: %s\n - Valid: from %s until %s\n - Issuer: %s\n - Fingerprint: %s\n"
-msgstr "证书信息: \n - 主机名称: %s\n - 有效时间: 自 %s 至 %s\n - 发行者: %s\n - 指纹: %s\n"
+msgid ""
+"Certificate information:\n"
+" - Hostname: %s\n"
+" - Valid: from %s until %s\n"
+" - Issuer: %s\n"
+" - Fingerprint: %s\n"
+msgstr ""
+"证书信息: \n"
+" - 主机名称: %s\n"
+" - 有效时间: 自 %s 至 %s\n"
+" - 发行者: %s\n"
+" - 指纹: %s\n"
 
 #: libsvn_subr/prompt.c:300
 msgid "(R)eject, accept (t)emporarily or accept (p)ermanently? "
@@ -4378,8 +4516,8 @@ msgstr "“%s”的密码: "
 msgid "'%s' has unsupported special file type '%s'"
 msgstr "“%s”有不支持的专用文件类型“%s”"
 
-#: libsvn_subr/subst.c:1730
-#: libsvn_wc/props.c:1500
+#: libsvn_subr/subst.c:1737
+#: libsvn_wc/props.c:1499
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "文件“%s”内的换行符不一致"
@@ -4445,8 +4583,16 @@ msgstr "检测到非ASCII字符 (代码 %d)，并且不能转换到/自 UTF-8"
 
 #: libsvn_subr/utf.c:624
 #, c-format
-msgid "Valid UTF-8 data\n(hex:%s)\nfollowed by invalid UTF-8 sequence\n(hex:%s)"
-msgstr "有效 UTF-8 数据\n(16进制: %s)\n后面是无效 UTF-8 序列\n(16进制: %s)"
+msgid ""
+"Valid UTF-8 data\n"
+"(hex:%s)\n"
+"followed by invalid UTF-8 sequence\n"
+"(hex:%s)"
+msgstr ""
+"有效 UTF-8 数据\n"
+"(16进制: %s)\n"
+"后面是无效 UTF-8 序列\n"
+"(16进制: %s)"
 
 #: libsvn_subr/validate.c:48
 #, c-format
@@ -4543,71 +4689,71 @@ msgstr "“%3$s”中的URL“%1$s”不匹配现有的URL“%2$s”"
 msgid "Unrecognized node kind: '%s'"
 msgstr "无法识别的节点种类: “%s”"
 
-#: libsvn_wc/adm_ops.c:1387
+#: libsvn_wc/adm_ops.c:1388
 #, c-format
 msgid "'%s' not found"
 msgstr "找不到“%s”"
 
-#: libsvn_wc/adm_ops.c:1391
+#: libsvn_wc/adm_ops.c:1392
 #, c-format
 msgid "Unsupported node kind for path '%s'"
 msgstr "路径“%s”有不支持的节点种类"
 
-#: libsvn_wc/adm_ops.c:1421
+#: libsvn_wc/adm_ops.c:1422
 #, c-format
 msgid "'%s' is already under version control"
 msgstr "“%s”已纳入版本控制"
 
-#: libsvn_wc/adm_ops.c:1433
+#: libsvn_wc/adm_ops.c:1434
 #, c-format
 msgid "Can't replace '%s' with a node of a differing type; the deletion must be committed and the parent updated before adding '%s'"
 msgstr "无法以不同类型的节点来替换“%s”；在新增“%s”前必须提交删除操作并更新父目录"
 
-#: libsvn_wc/adm_ops.c:1450
+#: libsvn_wc/adm_ops.c:1451
 #, c-format
 msgid "Can't find parent directory's entry while trying to add '%s'"
 msgstr "增加“%s”时无法找到父目录入口"
 
-#: libsvn_wc/adm_ops.c:1455
+#: libsvn_wc/adm_ops.c:1456
 #, c-format
 msgid "Can't add '%s' to a parent directory scheduled for deletion"
 msgstr "增加“%s”到调度删除的目录中"
 
-#: libsvn_wc/adm_ops.c:1471
+#: libsvn_wc/adm_ops.c:1472
 #, c-format
 msgid "The URL '%s' has a different repository root than its parent"
 msgstr "URL“%s”与其父目录的仓库根目录不相同"
 
-#: libsvn_wc/adm_ops.c:1803
+#: libsvn_wc/adm_ops.c:1804
 #, c-format
 msgid "Error restoring text for '%s'"
 msgstr "还原“%s”文本出错"
 
-#: libsvn_wc/adm_ops.c:1934
+#: libsvn_wc/adm_ops.c:1935
 #, c-format
 msgid "Cannot revert: '%s' is not under version control"
 msgstr "无法恢复: “%s”未纳入版本控制"
 
-#: libsvn_wc/adm_ops.c:1962
+#: libsvn_wc/adm_ops.c:1963
 #, c-format
 msgid "Cannot revert '%s': unsupported entry node kind"
 msgstr "无法恢复“%s”: 不支持的节点种类"
 
-#: libsvn_wc/adm_ops.c:1973
+#: libsvn_wc/adm_ops.c:1974
 #, c-format
 msgid "Cannot revert '%s': unsupported node kind in working copy"
 msgstr "无法恢复“%s”: 工作副本中有不支持的节点种类"
 
-#: libsvn_wc/adm_ops.c:2020
+#: libsvn_wc/adm_ops.c:2021
 msgid "Cannot revert addition of current directory; please try again from the parent directory"
 msgstr "无法恢复新增的当前目录；请从父目录重试"
 
-#: libsvn_wc/adm_ops.c:2042
+#: libsvn_wc/adm_ops.c:2043
 #, c-format
 msgid "Unknown or unexpected kind for path '%s'"
 msgstr "路径“%s”的种类未知或意外"
 
-#: libsvn_wc/adm_ops.c:2204
+#: libsvn_wc/adm_ops.c:2205
 #, c-format
 msgid "File '%s' has local modifications"
 msgstr "文件“%s”有本地修改"
@@ -5012,90 +5158,102 @@ msgstr "为“%s”写入日志出错"
 msgid "'%s' is not a working copy directory"
 msgstr "“%s”不是工作副本目录"
 
-#: libsvn_wc/props.c:93
+#: libsvn_wc/props.c:92
 #, c-format
 msgid "Can't parse '%s'"
 msgstr "无法解析“%s”"
 
-#: libsvn_wc/props.c:124
+#: libsvn_wc/props.c:123
 #, c-format
 msgid "Can't write property hash to '%s'"
 msgstr "无法将属性哈系写到“%s”"
 
-#: libsvn_wc/props.c:219
+#: libsvn_wc/props.c:218
 #, c-format
 msgid "Can't find entry '%s' in '%s'"
 msgstr "无法在“%2$s”中找到项目“%1$s”"
 
-#: libsvn_wc/props.c:634
+#: libsvn_wc/props.c:633
 #, c-format
-msgid "Trying to add new property '%s' with value '%s',\nbut property already exists with value '%s'."
-msgstr "试图增加值为“%2$s”的新属性“%1$s”，\n但是属性已经存在，值为“%3$s”。"
+msgid ""
+"Trying to add new property '%s' with value '%s',\n"
+"but property already exists with value '%s'."
+msgstr ""
+"试图增加值为“%2$s”的新属性“%1$s”，\n"
+"但是属性已经存在，值为“%3$s”。"
 
-#: libsvn_wc/props.c:657
+#: libsvn_wc/props.c:656
 #, c-format
-msgid "Trying to change property '%s' from '%s' to '%s',\nbut the property does not exist."
-msgstr "试图把属性“%s”的值从“%s”改为“%s”，\n但是属性并不存在。"
+msgid ""
+"Trying to change property '%s' from '%s' to '%s',\n"
+"but the property does not exist."
+msgstr ""
+"试图把属性“%s”的值从“%s”改为“%s”，\n"
+"但是属性并不存在。"
 
-#: libsvn_wc/props.c:685
+#: libsvn_wc/props.c:684
 #, c-format
 msgid "Trying to delete property '%s' but value has been modified from '%s' to '%s'."
 msgstr "试图删除属性“%s”，但是它的值已经从“%s”改为“%s”。"
 
-#: libsvn_wc/props.c:703
+#: libsvn_wc/props.c:702
 #, c-format
-msgid "Trying to change property '%s' from '%s' to '%s',\nbut property already exists with value '%s'."
-msgstr "试图把属性“%s”的值从“%s”改为“%s”，\n但是属性的值已经是“%s”了。"
+msgid ""
+"Trying to change property '%s' from '%s' to '%s',\n"
+"but property already exists with value '%s'."
+msgstr ""
+"试图把属性“%s”的值从“%s”改为“%s”，\n"
+"但是属性的值已经是“%s”了。"
 
-#: libsvn_wc/props.c:886
+#: libsvn_wc/props.c:885
 #, c-format
 msgid "Missing end of line in wcprops file for '%s'"
 msgstr "wcprops文件“%s”丢失了行结束符"
 
-#: libsvn_wc/props.c:1069
-#: libsvn_wc/props.c:1105
-#: libsvn_wc/props.c:1375
-#: libsvn_wc/props.c:1627
+#: libsvn_wc/props.c:1068
+#: libsvn_wc/props.c:1104
+#: libsvn_wc/props.c:1374
+#: libsvn_wc/props.c:1626
 msgid "Failed to load properties from disk"
 msgstr "无法从磁盘装载属性"
 
-#: libsvn_wc/props.c:1133
+#: libsvn_wc/props.c:1132
 #, c-format
 msgid "Cannot write property hash for '%s'"
 msgstr "无法写入“%s”的属性哈系"
 
-#: libsvn_wc/props.c:1367
-#: libsvn_wc/props.c:1536
+#: libsvn_wc/props.c:1366
+#: libsvn_wc/props.c:1535
 #, c-format
 msgid "Property '%s' is an entry property"
 msgstr "属性“%s”是项属性"
 
-#: libsvn_wc/props.c:1414
+#: libsvn_wc/props.c:1413
 #, c-format
 msgid "Cannot set '%s' on a directory ('%s')"
 msgstr "无法设定“%s”于目录 (“%s”)"
 
-#: libsvn_wc/props.c:1422
+#: libsvn_wc/props.c:1421
 #, c-format
 msgid "Cannot set '%s' on a file ('%s')"
 msgstr "无法设定“%s”于文件 (“%s”)"
 
-#: libsvn_wc/props.c:1428
+#: libsvn_wc/props.c:1427
 #, c-format
 msgid "'%s' is not a file or directory"
 msgstr "“%s”不是文件或目录"
 
-#: libsvn_wc/props.c:1509
+#: libsvn_wc/props.c:1508
 #, c-format
 msgid "File '%s' has binary mime type property"
 msgstr "文件“%s”有二进制的 mime 类型属性"
 
-#: libsvn_wc/props.c:2170
+#: libsvn_wc/props.c:2169
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "解析 %s 属性于“%s”出错: “%s”"
 
-#: libsvn_wc/props.c:2183
+#: libsvn_wc/props.c:2182
 #, c-format
 msgid "Invalid %s property on '%s': target involves '.' or '..' or is an absolute path"
 msgstr "无效属性 %s 于“%s”: 目标包含“.”或“..”或是绝对路径"
@@ -5112,8 +5270,14 @@ msgstr "此客户端太旧，不能存取工作副本“%s”；请取得 Subver
 
 #: libsvn_wc/questions.c:346
 #, c-format
-msgid "Checksum mismatch indicates corrupt text base: '%s'\n   expected:  %s\n     actual:  %s\n"
-msgstr "校验和不一致，表示文件参考基础损坏: “%s”\n       期望:  %s\n       实际:  %s\n"
+msgid ""
+"Checksum mismatch indicates corrupt text base: '%s'\n"
+"   expected:  %s\n"
+"     actual:  %s\n"
+msgstr ""
+"校验和不一致，表示文件参考基础损坏: “%s”\n"
+"       期望:  %s\n"
+"       实际:  %s\n"
 
 #: libsvn_wc/relocate.c:69
 msgid "Relocate can only change the repository part of an URL"
@@ -5263,17 +5427,45 @@ msgstr "目的目录已存在；请删除目录或用 --force 来覆盖目录"
 
 #: svn/help-cmd.c:45
 #, c-format
-msgid "usage: svn <subcommand> [options] [args]\nSubversion command-line client, version %s.\nType 'svn help <subcommand>' for help on a specific subcommand.\nType 'svn --version' to see the program version and RA modules\n  or 'svn --version --quiet' to see just the version number.\n\nMost subcommands take file and/or directory arguments, recursing\non the directories.  If no arguments are supplied to such a\ncommand, it recurses on the current directory (inclusive) by default.\n\nAvailable subcommands:\n"
-msgstr "用法: svn <subcommand> [options] [args]\nSubversion 命令行客户端，版本 %s。\n请使用 “svn help <subcommand>” 显示子命令的帮助信息。\n使用“svn --version”查看程序以及RA模块的版本号，或者\n使用“svn --version --quiet”仅查看程序版本号。\n大多数的子命令可接受文件或目录参数，对目录进行递归处理。\n如没有指定参数，则默对当前目录(包含当前目录)递归处理。\n\n可用的子命令: \n"
+msgid ""
+"usage: svn <subcommand> [options] [args]\n"
+"Subversion command-line client, version %s.\n"
+"Type 'svn help <subcommand>' for help on a specific subcommand.\n"
+"Type 'svn --version' to see the program version and RA modules\n"
+"  or 'svn --version --quiet' to see just the version number.\n"
+"\n"
+"Most subcommands take file and/or directory arguments, recursing\n"
+"on the directories.  If no arguments are supplied to such a\n"
+"command, it recurses on the current directory (inclusive) by default.\n"
+"\n"
+"Available subcommands:\n"
+msgstr ""
+"用法: svn <subcommand> [options] [args]\n"
+"Subversion 命令行客户端，版本 %s。\n"
+"请使用 “svn help <subcommand>” 显示子命令的帮助信息。\n"
+"使用“svn --version”查看程序以及RA模块的版本号，或者\n"
+"使用“svn --version --quiet”仅查看程序版本号。\n"
+"大多数的子命令可接受文件或目录参数，对目录进行递归处理。\n"
+"如没有指定参数，则默对当前目录(包含当前目录)递归处理。\n"
+"\n"
+"可用的子命令: \n"
 
 #: svn/help-cmd.c:58
-msgid "Subversion is a tool for version control.\nFor additional information, see http://subversion.tigris.org/\n"
-msgstr "Subversion 是个版本控制系统的工具。\n欲取得详细资料，请参考 http://subversion.tigris.org/\n"
+msgid ""
+"Subversion is a tool for version control.\n"
+"For additional information, see http://subversion.tigris.org/\n"
+msgstr ""
+"Subversion 是个版本控制系统的工具。\n"
+"欲取得详细资料，请参考 http://subversion.tigris.org/\n"
 
 #: svn/help-cmd.c:65
 #: svnsync/main.c:1296
-msgid "The following repository access (RA) modules are available:\n\n"
-msgstr "可使用以下的仓库存取 (RA) 模块: \n\n"
+msgid ""
+"The following repository access (RA) modules are available:\n"
+"\n"
+msgstr ""
+"可使用以下的仓库存取 (RA) 模块: \n"
+"\n"
 
 #: svn/import-cmd.c:82
 msgid "Repository URL required when importing"
@@ -5442,13 +5634,21 @@ msgstr "锁定过期的"
 
 #: svn/info-cmd.c:417
 #, c-format
-msgid "Lock Comment (%i lines):\n%s\n"
-msgstr "锁定注释(%i 行): \n%s\n"
+msgid ""
+"Lock Comment (%i lines):\n"
+"%s\n"
+msgstr ""
+"锁定注释(%i 行): \n"
+"%s\n"
 
 #: svn/info-cmd.c:418
 #, c-format
-msgid "Lock Comment (%i line):\n%s\n"
-msgstr "锁定注释(%i line): \n%s\n"
+msgid ""
+"Lock Comment (%i line):\n"
+"%s\n"
+msgstr ""
+"锁定注释(%i line): \n"
+"%s\n"
 
 #: svn/info-cmd.c:425
 #, c-format
@@ -5463,13 +5663,21 @@ msgstr "没有修改列表“%s”"
 
 #: svn/info-cmd.c:539
 #, c-format
-msgid "%s:  (Not a versioned resource)\n\n"
-msgstr "%s: (不是受版本控制的资源)\n\n"
+msgid ""
+"%s:  (Not a versioned resource)\n"
+"\n"
+msgstr ""
+"%s: (不是受版本控制的资源)\n"
+"\n"
 
 #: svn/info-cmd.c:548
 #, c-format
-msgid "%s:  (Not a valid URL)\n\n"
-msgstr "%s: (不是有效的URL)\n\n"
+msgid ""
+"%s:  (Not a valid URL)\n"
+"\n"
+msgstr ""
+"%s: (不是有效的URL)\n"
+"\n"
 
 #: svn/lock-cmd.c:52
 msgid "Lock comment contains a zero byte"
@@ -5539,12 +5747,32 @@ msgid "operate on single directory only"
 msgstr "只在单个目录操作"
 
 #: svn/main.c:70
-msgid "the change made by revision ARG (like -r ARG-1:ARG)\n                             If ARG is negative this is like -r ARG:ARG-1"
-msgstr "在ARG版本（如同 -r ARG-1:ARG）作的修改\n                             如果ARG为负数则等价于 -r ARG:ARG-1"
+msgid ""
+"the change made by revision ARG (like -r ARG-1:ARG)\n"
+"                             If ARG is negative this is like -r ARG:ARG-1"
+msgstr ""
+"在ARG版本（如同 -r ARG-1:ARG）作的修改\n"
+"                             如果ARG为负数则等价于 -r ARG:ARG-1"
 
 #: svn/main.c:74
-msgid "ARG (some commands also take ARG1:ARG2 range)\n                             A revision argument can be one of:\n                                NUMBER       revision number\n                                '{' DATE '}' revision at start of the date\n                                'HEAD'       latest in repository\n                                'BASE'       base rev of item's working copy\n                                'COMMITTED'  last commit at or before BASE\n                                'PREV'       revision just before COMMITTED"
-msgstr "ARG （一些命令也接受ARG1:ARG2范围）\n                             版本参数可以是: \n                                NUMBER         版本号\n                                \"{\" DATE \"}\" 在指定时间以后的版本\n                                \"HEAD\"       仓库中的最新版本\n                                \"BASE\"       工作副本的基线版本\n                                \"COMMITTED\"  最后提交或基线之前\n                                \"PREV\"       COMMITTED的前一版本"
+msgid ""
+"ARG (some commands also take ARG1:ARG2 range)\n"
+"                             A revision argument can be one of:\n"
+"                                NUMBER       revision number\n"
+"                                '{' DATE '}' revision at start of the date\n"
+"                                'HEAD'       latest in repository\n"
+"                                'BASE'       base rev of item's working copy\n"
+"                                'COMMITTED'  last commit at or before BASE\n"
+"                                'PREV'       revision just before COMMITTED"
+msgstr ""
+"ARG （一些命令也接受ARG1:ARG2范围）\n"
+"                             版本参数可以是: \n"
+"                                NUMBER         版本号\n"
+"                                \"{\" DATE \"}\" 在指定时间以后的版本\n"
+"                                \"HEAD\"       仓库中的最新版本\n"
+"                                \"BASE\"       工作副本的基线版本\n"
+"                                \"COMMITTED\"  最后提交或基线之前\n"
+"                                \"PREV\"       COMMITTED的前一版本"
 
 #: svn/main.c:84
 msgid "read log message from file ARG"
@@ -5587,8 +5815,32 @@ msgid "specify a password ARG"
 msgstr "指定密码 ARG"
 
 #: svn/main.c:101
-msgid "Default: '-u'. When Subversion is invoking an\n                             external diff program, ARG is simply passed along\n                             to the program. But when Subversion is using its\n                             default internal diff implementation, or when\n                             Subversion is displaying blame annotations, ARG\n                             could be any of the following:\n                                -u (--unified):\n                                   Output 3 lines of unified context.\n                                -b (--ignore-space-change):\n                                   Ignore changes in the amount of white space.\n                                -w (--ignore-all-space):\n                                   Ignore all white space.\n                                --ignore-eol-style:\n                                   Ignore changes in EOL style"
-msgstr "缺省: “-u”。当Subversion调用一个外部diff程序时，ARG直接传给这个程序。但是当Subversion\n                         使用使用缺省的内部diff实现，或者正显示blame评注时, ARG可以是: \n                                -u (--unified):\n                                   输出三行统一上下文。\n                                -b (--ignore-space-change):\n                                   忽略空白数量的修改。\n                                -w (--ignore-all-space):\n                                   忽略所有的空白。\n                                --ignore-eol-style:\n                                   忽略EOL样式的改变。"
+msgid ""
+"Default: '-u'. When Subversion is invoking an\n"
+"                             external diff program, ARG is simply passed along\n"
+"                             to the program. But when Subversion is using its\n"
+"                             default internal diff implementation, or when\n"
+"                             Subversion is displaying blame annotations, ARG\n"
+"                             could be any of the following:\n"
+"                                -u (--unified):\n"
+"                                   Output 3 lines of unified context.\n"
+"                                -b (--ignore-space-change):\n"
+"                                   Ignore changes in the amount of white space.\n"
+"                                -w (--ignore-all-space):\n"
+"                                   Ignore all white space.\n"
+"                                --ignore-eol-style:\n"
+"                                   Ignore changes in EOL style"
+msgstr ""
+"缺省: “-u”。当Subversion调用一个外部diff程序时，ARG直接传给这个程序。但是当Subversion\n"
+"                         使用使用缺省的内部diff实现，或者正显示blame评注时, ARG可以是: \n"
+"                                -u (--unified):\n"
+"                                   输出三行统一上下文。\n"
+"                                -b (--ignore-space-change):\n"
+"                                   忽略空白数量的修改。\n"
+"                                -w (--ignore-all-space):\n"
+"                                   忽略所有的空白。\n"
+"                                --ignore-eol-style:\n"
+"                                   忽略EOL样式的改变。"
 
 #: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
@@ -5684,8 +5936,15 @@ msgid "disable automatic properties"
 msgstr "使自动属性无效"
 
 #: svn/main.c:174
-msgid "use a different EOL marker than the standard\n                             system marker for files with the svn:eol-style\n                             property set to 'native'.\n                             ARG may be one of 'LF', 'CR', 'CRLF'"
-msgstr "使用一个与标准不同的 EOL 标记\n                             系统中立的文件标记 svn:eol-style 属性取值为 “native”。\n                             ARG 可以是以下之一“LF”，“CR”，“CRLF”"
+msgid ""
+"use a different EOL marker than the standard\n"
+"                             system marker for files with the svn:eol-style\n"
+"                             property set to 'native'.\n"
+"                             ARG may be one of 'LF', 'CR', 'CRLF'"
+msgstr ""
+"使用一个与标准不同的 EOL 标记\n"
+"                             系统中立的文件标记 svn:eol-style 属性取值为 “native”。\n"
+"                             ARG 可以是以下之一“LF”，“CR”，“CRLF”"
 
 #: svn/main.c:182
 msgid "maximum number of log entries"
@@ -5716,72 +5975,364 @@ msgid "keep path in working copy"
 msgstr "在工作副本中保留路径"
 
 #: svn/main.c:233
-msgid "Put files and directories under version control, scheduling\nthem for addition to repository.  They will be added in next commit.\nusage: add PATH...\n"
-msgstr "把文件和目录放入版本控制中，\n通过调度加到仓库。它们会在下一次提交时加入。\n用法: add 路径...\n"
+msgid ""
+"Put files and directories under version control, scheduling\n"
+"them for addition to repository.  They will be added in next commit.\n"
+"usage: add PATH...\n"
+msgstr ""
+"把文件和目录放入版本控制中，\n"
+"通过调度加到仓库。它们会在下一次提交时加入。\n"
+"用法: add 路径...\n"
 
 #: svn/main.c:241
-msgid "Output the content of specified files or\nURLs with revision and author information in-line.\nusage: blame TARGET[@REV]...\n\n  If specified, REV determines in which revision the target is first\n  looked up.\n"
-msgstr "输出指定文件或URL的内容，每行包含版本和作者信息。\n\n用法: blame 目标[@版本]...\n\n      如果指定了版本，将从指定的版本开始查找。\n  \n"
+msgid ""
+"Output the content of specified files or\n"
+"URLs with revision and author information in-line.\n"
+"usage: blame TARGET[@REV]...\n"
+"\n"
+"  If specified, REV determines in which revision the target is first\n"
+"  looked up.\n"
+msgstr ""
+"输出指定文件或URL的内容，每行包含版本和作者信息。\n"
+"\n"
+"用法: blame 目标[@版本]...\n"
+"\n"
+"      如果指定了版本，将从指定的版本开始查找。\n"
+"  \n"
 
 #: svn/main.c:251
-msgid "Output the content of specified files or URLs.\nusage: cat TARGET[@REV]...\n\n  If specified, REV determines in which revision the target is first\n  looked up.\n"
-msgstr "输出指定文件或URL的内容。\n用法: cat 目标[@版本]...\n\n      如果指定了版本，将从指定的版本开始查找。\n  \n"
+msgid ""
+"Output the content of specified files or URLs.\n"
+"usage: cat TARGET[@REV]...\n"
+"\n"
+"  If specified, REV determines in which revision the target is first\n"
+"  looked up.\n"
+msgstr ""
+"输出指定文件或URL的内容。\n"
+"用法: cat 目标[@版本]...\n"
+"\n"
+"      如果指定了版本，将从指定的版本开始查找。\n"
+"  \n"
 
 #: svn/main.c:259
-msgid "Associate (or deassociate) local paths with changelist CLNAME.\nusage: 1. changelist CLNAME TARGET...\n       2. changelist --clear TARGET...\n"
-msgstr "耦合 (或者解耦)本地路径与修改列表 CLNAME。\n使用: 1. changelist CLNAME TARGET...\n       2. changelist --clear TARGET...\n"
+msgid ""
+"Associate (or deassociate) local paths with changelist CLNAME.\n"
+"usage: 1. changelist CLNAME TARGET...\n"
+"       2. changelist --clear TARGET...\n"
+msgstr ""
+"耦合 (或者解耦)本地路径与修改列表 CLNAME。\n"
+"使用: 1. changelist CLNAME TARGET...\n"
+"       2. changelist --clear TARGET...\n"
 
 #: svn/main.c:265
-msgid "Check out a working copy from a repository.\nusage: checkout URL[@REV]... [PATH]\n\n  If specified, REV determines in which revision the URL is first\n  looked up.\n\n  If PATH is omitted, the basename of the URL will be used as\n  the destination. If multiple URLs are given each will be checked\n  out into a sub-directory of PATH, with the name of the sub-directory\n  being the basename of the URL.\n\n  If --force is used, unversioned obstructing paths in the working\n  copy destination do not automatically cause the check out to fail.\n  If the obstructing path is the same type (file or directory) as the\n  corresponding path in the repository it becomes versioned but its\n  contents are left 'as-is' in the working copy.  This means that an\n  obstructing directory's unversioned children may also obstruct and\n  become versioned.  For files, any content differences between the\n  obstruction and the repository are treated like a local modification\n  to the working copy.  All properties from the repository are applied\n  to the obstructing path.\n"
-msgstr "从仓库签出工作副本。\n使用: checkout URL[@REV]... [PATH]\n\n  如果指定 REV，那么它确定了从 URL 首先查找的版本。\n\n  如果省略路径参数，则URL最末尾的目录名作为目标目录名。如果指定多个URL，\n  则依次将其签出到 PATH 的子目录中，子目录名就是URL最末尾的目录名。\n\n  如果使用了“--force”选项，在工作副本中未版本化的障碍路径，不会自动导\n  致签出失败。 如果障碍路径与仓库中的对应路径类型相同(文件或目录),它将成\n  为版本化的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍路\n  径，那么也会版本化。对于障碍路径中的文件，如果与仓库内的不同，将视为工\n  作副本发生本地修改。仓库中的所有属性都应用于障碍路径。\n"
+msgid ""
+"Check out a working copy from a repository.\n"
+"usage: checkout URL[@REV]... [PATH]\n"
+"\n"
+"  If specified, REV determines in which revision the URL is first\n"
+"  looked up.\n"
+"\n"
+"  If PATH is omitted, the basename of the URL will be used as\n"
+"  the destination. If multiple URLs are given each will be checked\n"
+"  out into a sub-directory of PATH, with the name of the sub-directory\n"
+"  being the basename of the URL.\n"
+"\n"
+"  If --force is used, unversioned obstructing paths in the working\n"
+"  copy destination do not automatically cause the check out to fail.\n"
+"  If the obstructing path is the same type (file or directory) as the\n"
+"  corresponding path in the repository it becomes versioned but its\n"
+"  contents are left 'as-is' in the working copy.  This means that an\n"
+"  obstructing directory's unversioned children may also obstruct and\n"
+"  become versioned.  For files, any content differences between the\n"
+"  obstruction and the repository are treated like a local modification\n"
+"  to the working copy.  All properties from the repository are applied\n"
+"  to the obstructing path.\n"
+msgstr ""
+"从仓库签出工作副本。\n"
+"使用: checkout URL[@REV]... [PATH]\n"
+"\n"
+"  如果指定 REV，那么它确定了从 URL 首先查找的版本。\n"
+"\n"
+"  如果省略路径参数，则URL最末尾的目录名作为目标目录名。如果指定多个URL，\n"
+"  则依次将其签出到 PATH 的子目录中，子目录名就是URL最末尾的目录名。\n"
+"\n"
+"  如果使用了“--force”选项，在工作副本中未版本化的障碍路径，不会自动导\n"
+"  致签出失败。 如果障碍路径与仓库中的对应路径类型相同(文件或目录),它将成\n"
+"  为版本化的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍路\n"
+"  径，那么也会版本化。对于障碍路径中的文件，如果与仓库内的不同，将视为工\n"
+"  作副本发生本地修改。仓库中的所有属性都应用于障碍路径。\n"
 
 #: svn/main.c:290
-msgid "Recursively clean up the working copy, removing locks, resuming\nunfinished operations, etc.\nusage: cleanup [PATH...]\n"
-msgstr "递归清理工作副本，去除锁，继续未完成操作，等等。\n\n用法: cleanup [路径...]\n"
+msgid ""
+"Recursively clean up the working copy, removing locks, resuming\n"
+"unfinished operations, etc.\n"
+"usage: cleanup [PATH...]\n"
+msgstr ""
+"递归清理工作副本，去除锁，继续未完成操作，等等。\n"
+"\n"
+"用法: cleanup [路径...]\n"
 
 #: svn/main.c:297
-msgid "Send changes from your working copy to the repository.\nusage: commit [PATH...]\n\n  A log message must be provided, but it can be empty.  If it is not\n  given by a --message or --file option, an editor will be started.\n  If any targets are (or contain) locked items, those will be\n  unlocked after a successful commit.\n"
-msgstr "把修改从工作副本发送到仓库。\n用法: commit [路径...]\n\n     必须提供日志消息，但它可以是空的。如果没有指定 --message 或 --file     选项，会启动一个编辑器。如果任何目标是锁定的或者包含锁定条目，则在\n     成功提交后会被解锁。\n"
+msgid ""
+"Send changes from your working copy to the repository.\n"
+"usage: commit [PATH...]\n"
+"\n"
+"  A log message must be provided, but it can be empty.  If it is not\n"
+"  given by a --message or --file option, an editor will be started.\n"
+"  If any targets are (or contain) locked items, those will be\n"
+"  unlocked after a successful commit.\n"
+msgstr ""
+"把修改从工作副本发送到仓库。\n"
+"用法: commit [路径...]\n"
+"\n"
+"     必须提供日志消息，但它可以是空的。如果没有指定 --message 或 --file     选项，会启动一个编辑器。如果任何目标是锁定的或者包含锁定条目，则在\n"
+"     成功提交后会被解锁。\n"
 
 #: svn/main.c:305
-msgid "Send changes from your working copy to the repository.\nusage: commit [PATH...]\n\n  A log message must be provided, but it can be empty.\n  OS400 does not support the starting of an editor,\n  so --message or --file must be used. If any targets are\n  (or contain) locked items, those will be unlocked after a\n  successful commit.\n"
-msgstr "把修改从工作副本发送到仓库。\n用法: commit [路径...]\n\n     必须提供日志消息，但它可以是空的。OS400不支持启动编辑器，\n     因此必须指定 --message 或 --file 选项。如果一些目标（或\n     包含）锁定了条目，在一个提交成功后这些条目会被解除锁定。\n"
+msgid ""
+"Send changes from your working copy to the repository.\n"
+"usage: commit [PATH...]\n"
+"\n"
+"  A log message must be provided, but it can be empty.\n"
+"  OS400 does not support the starting of an editor,\n"
+"  so --message or --file must be used. If any targets are\n"
+"  (or contain) locked items, those will be unlocked after a\n"
+"  successful commit.\n"
+msgstr ""
+"把修改从工作副本发送到仓库。\n"
+"用法: commit [路径...]\n"
+"\n"
+"     必须提供日志消息，但它可以是空的。OS400不支持启动编辑器，\n"
+"     因此必须指定 --message 或 --file 选项。如果一些目标（或\n"
+"     包含）锁定了条目，在一个提交成功后这些条目会被解除锁定。\n"
 
 #: svn/main.c:320
-msgid "Duplicate something in working copy or repository, remembering history.\nusage: copy SRC[@REV]... DST\n\nWhen copying multiple sources, they will be added as children of DST, \nwhich must be a directory.\n\n  SRC and DST can each be either a working copy (WC) path or URL:\n    WC  -> WC:   copy and schedule for addition (with history)\n    WC  -> URL:  immediately commit a copy of WC to URL\n    URL -> WC:   check out URL into WC, schedule for addition\n    URL -> URL:  complete server-side copy;  used to branch & tag\n  All the SRCs must be of the same type.\n"
-msgstr "在工作副本或仓库中复制数据，保留历史。\n用法: copy SRC[@REV]... DST\n\n当复制多个源时，它们作为DST的子节点增加, DST必须是目录。\n\n  SRC 和 DST 可以是工作副本路径(WC)或仓库地址(URL): \n    WC   -> WC:  复制和调度增加(包含历史)\n    WC   -> URL: 马上提交一个工作副本到仓库\n    URL  -> WC:  签出URL到工作目录，调度增加\n    URL  -> URL: 完全服务器端复制；一般用于分支和标签\n  所有SRC必须是同一类型。\n"
+msgid ""
+"Duplicate something in working copy or repository, remembering history.\n"
+"usage: copy SRC[@REV]... DST\n"
+"\n"
+"When copying multiple sources, they will be added as children of DST, \n"
+"which must be a directory.\n"
+"\n"
+"  SRC and DST can each be either a working copy (WC) path or URL:\n"
+"    WC  -> WC:   copy and schedule for addition (with history)\n"
+"    WC  -> URL:  immediately commit a copy of WC to URL\n"
+"    URL -> WC:   check out URL into WC, schedule for addition\n"
+"    URL -> URL:  complete server-side copy;  used to branch & tag\n"
+"  All the SRCs must be of the same type.\n"
+msgstr ""
+"在工作副本或仓库中复制数据，保留历史。\n"
+"用法: copy SRC[@REV]... DST\n"
+"\n"
+"当复制多个源时，它们作为DST的子节点增加, DST必须是目录。\n"
+"\n"
+"  SRC 和 DST 可以是工作副本路径(WC)或仓库地址(URL): \n"
+"    WC   -> WC:  复制和调度增加(包含历史)\n"
+"    WC   -> URL: 马上提交一个工作副本到仓库\n"
+"    URL  -> WC:  签出URL到工作目录，调度增加\n"
+"    URL  -> URL: 完全服务器端复制；一般用于分支和标签\n"
+"  所有SRC必须是同一类型。\n"
 
 #: svn/main.c:336
-msgid "Remove files and directories from version control.\nusage: 1. delete PATH...\n       2. delete URL...\n\n  1. Each item specified by a PATH is scheduled for deletion upon\n    the next commit.  Files, and directories that have not been\n    committed, are immediately removed from the working copy\n    unless --keep-local option is given.\n    PATHs that are, or contain, unversioned or modified items will\n    not be removed unless the --force option is given.\n\n  2. Each item specified by a URL is deleted from the repository\n    via an immediate commit.\n"
-msgstr "从仓库中删除文件和目录。\n用法: 1、delete PATH...\n      2、delete URL...\n\n  1、每个PATH指定的项目会被调度删除，直到下次提交时从仓库删除。除非给出\n    --keep-local 参数，工作副本中没有提交的文件和目录会被立即删除。\n    如果PATH是未版本控制或者已修改的项目，或者包含这些项目，那么仅当给出\n    --force 参数时才会被删除。\n\n  2、每个URL指定的项目会通过立即提交从仓库中删除。\n    \n"
+msgid ""
+"Remove files and directories from version control.\n"
+"usage: 1. delete PATH...\n"
+"       2. delete URL...\n"
+"\n"
+"  1. Each item specified by a PATH is scheduled for deletion upon\n"
+"    the next commit.  Files, and directories that have not been\n"
+"    committed, are immediately removed from the working copy\n"
+"    unless --keep-local option is given.\n"
+"    PATHs that are, or contain, unversioned or modified items will\n"
+"    not be removed unless the --force option is given.\n"
+"\n"
+"  2. Each item specified by a URL is deleted from the repository\n"
+"    via an immediate commit.\n"
+msgstr ""
+"从仓库中删除文件和目录。\n"
+"用法: 1、delete PATH...\n"
+"      2、delete URL...\n"
+"\n"
+"  1、每个PATH指定的项目会被调度删除，直到下次提交时从仓库删除。除非给出\n"
+"    --keep-local 参数，工作副本中没有提交的文件和目录会被立即删除。\n"
+"    如果PATH是未版本控制或者已修改的项目，或者包含这些项目，那么仅当给出\n"
+"    --force 参数时才会被删除。\n"
+"\n"
+"  2、每个URL指定的项目会通过立即提交从仓库中删除。\n"
+"    \n"
 
 #: svn/main.c:354
-msgid "Display the differences between two revisions or paths.\nusage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n       2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n               [PATH...]\n       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n\n  1. Display the changes made to TARGETs as they are seen in REV between\n     two revisions.  TARGETs may be all working copy paths or all URLs.\n     If TARGETs are working copy paths, N defaults to BASE and M to the\n     working copy; if URLs, N must be specified and M defaults to HEAD.\n     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n     Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n\n  2. Display the differences between OLD-TGT as it was seen in OLDREV and\n     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n     OLD-TGT and NEW-TGT and restrict the output to differences for those\n     paths.  OLD-TGT and NEW-TGT may be working copy paths or URL[@REV]. \n     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV default\n     to N, -r N:M makes OLDREV default to N and NEWREV default to M.\n\n  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n\n  Use just 'svn diff' to display local modifications in a working copy.\n"
-msgstr "显示两个路径或者两个版本的差异。\n用法: 1、diff [-r N[:M]] [目标[@REV]...]\n      2、diff [-r N[:M]] --old=旧目标[@OLDREV] [--new=新目标[@NEWREV]] \\\n               [PATH...]\n      3、diff 旧URL[@OLDREV] 新URL[@NEWREV]\n\n  1、显示版本REV中“目标”在两个不同的版本之间的差异。“目标”要么全是\n     工作副本路径，要么全是URL。如果“目标”是工作副本路径，N 默认为\n     BASE，M 指工作副本；如果“目标”是URL，N 必须指定， M 默认是HEAD。\n    “-c M”等价与“-r M-1:M”，“-c -M”等价与“-r M:M-1”。\n\n  2、显示新旧版本中对应目标的差异。“路径”是相对于新旧目标的相对路径，\n     它限制只输出这些路径上的差异。新旧目标可以是工作副本路径或地址URL[@REV]。\n     新目标默认与旧目标相同，OLDREV 默认为 N，NEWREV 默认为 M。\n\n  3、“svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]”的简写。\n\n     不加参数使用“svn diff”显示工作副本中的本地修改。\n"
+msgid ""
+"Display the differences between two revisions or paths.\n"
+"usage: 1. diff [-c M | -r N[:M]] [TARGET[@REV]...]\n"
+"       2. diff [-r N[:M]] --old=OLD-TGT[@OLDREV] [--new=NEW-TGT[@NEWREV]] \\\n"
+"               [PATH...]\n"
+"       3. diff OLD-URL[@OLDREV] NEW-URL[@NEWREV]\n"
+"\n"
+"  1. Display the changes made to TARGETs as they are seen in REV between\n"
+"     two revisions.  TARGETs may be all working copy paths or all URLs.\n"
+"     If TARGETs are working copy paths, N defaults to BASE and M to the\n"
+"     working copy; if URLs, N must be specified and M defaults to HEAD.\n"
+"     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n"
+"     Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n"
+"\n"
+"  2. Display the differences between OLD-TGT as it was seen in OLDREV and\n"
+"     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n"
+"     OLD-TGT and NEW-TGT and restrict the output to differences for those\n"
+"     paths.  OLD-TGT and NEW-TGT may be working copy paths or URL[@REV]. \n"
+"     NEW-TGT defaults to OLD-TGT if not specified.  -r N makes OLDREV default\n"
+"     to N, -r N:M makes OLDREV default to N and NEWREV default to M.\n"
+"\n"
+"  3. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
+"\n"
+"  Use just 'svn diff' to display local modifications in a working copy.\n"
+msgstr ""
+"显示两个路径或者两个版本的差异。\n"
+"用法: 1、diff [-r N[:M]] [目标[@REV]...]\n"
+"      2、diff [-r N[:M]] --old=旧目标[@OLDREV] [--new=新目标[@NEWREV]] \\\n"
+"               [PATH...]\n"
+"      3、diff 旧URL[@OLDREV] 新URL[@NEWREV]\n"
+"\n"
+"  1、显示版本REV中“目标”在两个不同的版本之间的差异。“目标”要么全是\n"
+"     工作副本路径，要么全是URL。如果“目标”是工作副本路径，N 默认为\n"
+"     BASE，M 指工作副本；如果“目标”是URL，N 必须指定， M 默认是HEAD。\n"
+"    “-c M”等价与“-r M-1:M”，“-c -M”等价与“-r M:M-1”。\n"
+"\n"
+"  2、显示新旧版本中对应目标的差异。“路径”是相对于新旧目标的相对路径，\n"
+"     它限制只输出这些路径上的差异。新旧目标可以是工作副本路径或地址URL[@REV]。\n"
+"     新目标默认与旧目标相同，OLDREV 默认为 N，NEWREV 默认为 M。\n"
+"\n"
+"  3、“svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]”的简写。\n"
+"\n"
+"     不加参数使用“svn diff”显示工作副本中的本地修改。\n"
 
 #: svn/main.c:384
-msgid "Create an unversioned copy of a tree.\nusage: 1. export [-r REV] URL[@PEGREV] [PATH]\n       2. export [-r REV] PATH1[@PEGREV] [PATH2]\n\n  1. Exports a clean directory tree from the repository specified by\n     URL, at revision REV if it is given, otherwise at HEAD, into\n     PATH. If PATH is omitted, the last component of the URL is used\n     for the local directory name.\n\n  2. Exports a clean directory tree from the working copy specified by\n     PATH1, at revision REV if it is given, otherwise at WORKING, into\n     PATH2.  If PATH2 is omitted, the last component of the PATH1 is used\n     for the local directory name. If REV is not specified, all local\n     changes will be preserved.  Files not under version control will\n     not be copied.\n\n  If specified, PEGREV determines in which revision the target is first\n  looked up.\n"
-msgstr "产生一个无版本控制的目录树副本。\n用法: 1、export [-r REV] URL[@PEGREV] [PATH]\n      2、export [-r REV] PATH1[@PEGREV] [PATH2]\n\n  1、从 URL 指定的仓库，导出一个干净的目录树到 PATH。如果有指定\n     REV 的话，内容即为该版本的，否则就是 HEAD 版本。如果 PATH\n     被省略的话，URL的最后部份会被用来当成本地的目录名称。\n\n  2、在工作副本中，从指定的 PATH1 导出一个干净的目录树到 PATH2。如果\n     有指定 REV 的话，会从指定的版本导出，否则从 WORKING 导出。如果\n     PATH2 被省略的话，PATH1 的最后部份会被用来当成本地的目录名称。\n     如果没有指定 REV 的话，所有的本地修改都还会保持著，但是未纳入\n     版本控制的文件不会被复制。\n\n     如果指定了 PEGREV ，将从指定的版本本开始查找。\n\n"
+msgid ""
+"Create an unversioned copy of a tree.\n"
+"usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
+"       2. export [-r REV] PATH1[@PEGREV] [PATH2]\n"
+"\n"
+"  1. Exports a clean directory tree from the repository specified by\n"
+"     URL, at revision REV if it is given, otherwise at HEAD, into\n"
+"     PATH. If PATH is omitted, the last component of the URL is used\n"
+"     for the local directory name.\n"
+"\n"
+"  2. Exports a clean directory tree from the working copy specified by\n"
+"     PATH1, at revision REV if it is given, otherwise at WORKING, into\n"
+"     PATH2.  If PATH2 is omitted, the last component of the PATH1 is used\n"
+"     for the local directory name. If REV is not specified, all local\n"
+"     changes will be preserved.  Files not under version control will\n"
+"     not be copied.\n"
+"\n"
+"  If specified, PEGREV determines in which revision the target is first\n"
+"  looked up.\n"
+msgstr ""
+"产生一个无版本控制的目录树副本。\n"
+"用法: 1、export [-r REV] URL[@PEGREV] [PATH]\n"
+"      2、export [-r REV] PATH1[@PEGREV] [PATH2]\n"
+"\n"
+"  1、从 URL 指定的仓库，导出一个干净的目录树到 PATH。如果有指定\n"
+"     REV 的话，内容即为该版本的，否则就是 HEAD 版本。如果 PATH\n"
+"     被省略的话，URL的最后部份会被用来当成本地的目录名称。\n"
+"\n"
+"  2、在工作副本中，从指定的 PATH1 导出一个干净的目录树到 PATH2。如果\n"
+"     有指定 REV 的话，会从指定的版本导出，否则从 WORKING 导出。如果\n"
+"     PATH2 被省略的话，PATH1 的最后部份会被用来当成本地的目录名称。\n"
+"     如果没有指定 REV 的话，所有的本地修改都还会保持著，但是未纳入\n"
+"     版本控制的文件不会被复制。\n"
+"\n"
+"     如果指定了 PEGREV ，将从指定的版本本开始查找。\n"
+"\n"
 
 #: svn/main.c:407
-msgid "Describe the usage of this program or its subcommands.\nusage: help [SUBCOMMAND...]\n"
-msgstr "描述本程序或其子命令的用法。\n用法: help [子命令...]\n"
+msgid ""
+"Describe the usage of this program or its subcommands.\n"
+"usage: help [SUBCOMMAND...]\n"
+msgstr ""
+"描述本程序或其子命令的用法。\n"
+"用法: help [子命令...]\n"
 
 #: svn/main.c:413
-msgid "Commit an unversioned file or tree into the repository.\nusage: import [PATH] URL\n\n  Recursively commit a copy of PATH to URL.\n  If PATH is omitted '.' is assumed.\n  Parent directories are created as necessary in the repository.\n  If PATH is a directory, the contents of the directory are added\n  directly under URL.\n"
-msgstr "将未纳入版本控制的文件或目录树提交到仓库。\n用法: import [PATH] URL\n\n  递归地提交 PATH 的副本至URL，PATH默认为“.”。父目录会依需要于仓库内\n  创建。如果 PATH是一个目录，则其下的内容直接加入到URL指定的位置内。\n"
+msgid ""
+"Commit an unversioned file or tree into the repository.\n"
+"usage: import [PATH] URL\n"
+"\n"
+"  Recursively commit a copy of PATH to URL.\n"
+"  If PATH is omitted '.' is assumed.\n"
+"  Parent directories are created as necessary in the repository.\n"
+"  If PATH is a directory, the contents of the directory are added\n"
+"  directly under URL.\n"
+msgstr ""
+"将未纳入版本控制的文件或目录树提交到仓库。\n"
+"用法: import [PATH] URL\n"
+"\n"
+"  递归地提交 PATH 的副本至URL，PATH默认为“.”。父目录会依需要于仓库内\n"
+"  创建。如果 PATH是一个目录，则其下的内容直接加入到URL指定的位置内。\n"
 
 #: svn/main.c:426
-msgid "Display information about a local or remote item.\nusage: info [TARGET[@REV]...]\n\n  Print information about each TARGET (default: '.')\n  TARGET may be either a working-copy path or URL.  If specified, REV\n  determines in which revision the target is first looked up.\n"
-msgstr "显示本地或远端条目的信息。\n用法: info [TARGET...]\n\n  显示每个 TARGET 的信息 (默认: “.”)。\n  TARGET 可以是工作副本中的路径或仓库中的URL。REV指定在哪一个\n  版本中查找目标。\n"
+msgid ""
+"Display information about a local or remote item.\n"
+"usage: info [TARGET[@REV]...]\n"
+"\n"
+"  Print information about each TARGET (default: '.')\n"
+"  TARGET may be either a working-copy path or URL.  If specified, REV\n"
+"  determines in which revision the target is first looked up.\n"
+msgstr ""
+"显示本地或远端条目的信息。\n"
+"用法: info [TARGET...]\n"
+"\n"
+"  显示每个 TARGET 的信息 (默认: “.”)。\n"
+"  TARGET 可以是工作副本中的路径或仓库中的URL。REV指定在哪一个\n"
+"  版本中查找目标。\n"
 
 #: svn/main.c:436
-msgid "List directory entries in the repository.\nusage: list [TARGET[@REV]...]\n\n  List each TARGET file and the contents of each TARGET directory as\n  they exist in the repository.  If TARGET is a working copy path, the\n  corresponding repository URL will be used. If specified, REV determines\n  in which revision the target is first looked up.\n\n  The default TARGET is '.', meaning the repository URL of the current\n  working directory.\n\n  With --verbose, the following fields will be shown for each item:\n\n    Revision number of the last commit\n    Author of the last commit\n    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n    Size (in bytes)\n    Date and time of the last commit\n"
-msgstr "列出仓库中的目录内容。\n用法: list [TARGET[@REV]...]\n\n  显示仓库中文件和子目录列表。如果 TARGET 是工作副本路径，那么操作对应的档  案库URL上的TARGET。REV指定从在哪个版本查找TARGET。\n\n  TARGET默认是“.”，表示当前工作目录对应的仓库URL。\n\n  使用 --verbose 时，每个条目会显示以下额外信息: \n\n    最后一次提交的版本号码\n    最后一次提交的作者\n    如果被锁定，显示字母“O”。（使用“svn info URL”来查看详细信息）\n    大小 (以字节为单位)\n    最后一次提交的日期与时间\n"
+msgid ""
+"List directory entries in the repository.\n"
+"usage: list [TARGET[@REV]...]\n"
+"\n"
+"  List each TARGET file and the contents of each TARGET directory as\n"
+"  they exist in the repository.  If TARGET is a working copy path, the\n"
+"  corresponding repository URL will be used. If specified, REV determines\n"
+"  in which revision the target is first looked up.\n"
+"\n"
+"  The default TARGET is '.', meaning the repository URL of the current\n"
+"  working directory.\n"
+"\n"
+"  With --verbose, the following fields will be shown for each item:\n"
+"\n"
+"    Revision number of the last commit\n"
+"    Author of the last commit\n"
+"    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
+"    Size (in bytes)\n"
+"    Date and time of the last commit\n"
+msgstr ""
+"列出仓库中的目录内容。\n"
+"用法: list [TARGET[@REV]...]\n"
+"\n"
+"  显示仓库中文件和子目录列表。如果 TARGET 是工作副本路径，那么操作对应的档  案库URL上的TARGET。REV指定从在哪个版本查找TARGET。\n"
+"\n"
+"  TARGET默认是“.”，表示当前工作目录对应的仓库URL。\n"
+"\n"
+"  使用 --verbose 时，每个条目会显示以下额外信息: \n"
+"\n"
+"    最后一次提交的版本号码\n"
+"    最后一次提交的作者\n"
+"    如果被锁定，显示字母“O”。（使用“svn info URL”来查看详细信息）\n"
+"    大小 (以字节为单位)\n"
+"    最后一次提交的日期与时间\n"
 
 #: svn/main.c:458
-msgid "Lock working copy paths or URLs in the repository, so that\nno other user can commit changes to them.\nusage: lock TARGET...\n\n  Use --force to steal the lock from another user or working copy.\n"
-msgstr "锁定仓库中中的路径，使得其他用户不能向其提交修改。\n用法: lock TARGET...\n\n     使用 --force 选项可以从其他用户或工作副本窃取到锁。\n"
+msgid ""
+"Lock working copy paths or URLs in the repository, so that\n"
+"no other user can commit changes to them.\n"
+"usage: lock TARGET...\n"
+"\n"
+"  Use --force to steal the lock from another user or working copy.\n"
+msgstr ""
+"锁定仓库中中的路径，使得其他用户不能向其提交修改。\n"
+"用法: lock TARGET...\n"
+"\n"
+"     使用 --force 选项可以从其他用户或工作副本窃取到锁。\n"
 
 #: svn/main.c:466
 msgid "read lock comment from file ARG"
@@ -5792,68 +6343,610 @@ msgid "specify lock comment ARG"
 msgstr "指定加锁注释ARG"
 
 #: svn/main.c:470
-msgid "Show the log messages for a set of revision(s) and/or file(s).\nusage: 1. log [PATH]\n       2. log URL[@REV] [PATH...]\n\n  1. Print the log messages for a local PATH (default: '.').\n     The default revision range is BASE:1.\n\n  2. Print the log messages for the PATHs (default: '.') under URL.\n     If specified, REV determines in which revision the URL is first\n     looked up.  The default revision range is HEAD:1.\n\n  With -v, also print all affected paths with each log message.\n  With -q, don't print the log message body itself (note that this is\n  compatible with -v).\n\n  Each log message is printed just once, even if more than one of the\n  affected paths for that revision were explicitly requested.  Logs\n  follow copy history by default.  Use --stop-on-copy to disable this\n  behavior, which can be useful for determining branchpoints.\n\n  Examples:\n    svn log\n    svn log foo.c\n    svn log http://www.example.com/repo/project/foo.c\n    svn log http://www.example.com/repo/project foo.c bar.c\n"
-msgstr "显示一组版本与/或文件的提交日志信息。\n用法: 1、log [PATH]\n      2、log URL[@REV] [PATH...]\n\n  1、显示本地 PATH (默认: “.”) 的日志信息。默认的版本范围为\n     BASE:1。\n\n  2、显示 URL 下的 PATH (默认: “.”) 的日志信息。REV指定从哪一个版本开始查找\n     URL。默认的版本范围为 HEAD:1。\n\n  使用 -v 时，在日志信息中显示受影响的路径名。\n  使用 -q 时，不显示日志信息主体 (请注意，这可和 -v 并存)。\n\n  每一条日志信息只会显示一次，即使指定某一个修改中涉及到的多个文件。默认log信息会\n  追溯复制历史；使用 --stop-on-copy 可以关闭这种行为，这便于找出分支点。\n\n  范例: \n    svn log\n    svn log foo.c\n    svn log http://www.example.com/repo/project/foo.c\n    svn log http://www.example.com/repo/project foo.c bar.c\n"
+msgid ""
+"Show the log messages for a set of revision(s) and/or file(s).\n"
+"usage: 1. log [PATH]\n"
+"       2. log URL[@REV] [PATH...]\n"
+"\n"
+"  1. Print the log messages for a local PATH (default: '.').\n"
+"     The default revision range is BASE:1.\n"
+"\n"
+"  2. Print the log messages for the PATHs (default: '.') under URL.\n"
+"     If specified, REV determines in which revision the URL is first\n"
+"     looked up.  The default revision range is HEAD:1.\n"
+"\n"
+"  With -v, also print all affected paths with each log message.\n"
+"  With -q, don't print the log message body itself (note that this is\n"
+"  compatible with -v).\n"
+"\n"
+"  Each log message is printed just once, even if more than one of the\n"
+"  affected paths for that revision were explicitly requested.  Logs\n"
+"  follow copy history by default.  Use --stop-on-copy to disable this\n"
+"  behavior, which can be useful for determining branchpoints.\n"
+"\n"
+"  Examples:\n"
+"    svn log\n"
+"    svn log foo.c\n"
+"    svn log http://www.example.com/repo/project/foo.c\n"
+"    svn log http://www.example.com/repo/project foo.c bar.c\n"
+msgstr ""
+"显示一组版本与/或文件的提交日志信息。\n"
+"用法: 1、log [PATH]\n"
+"      2、log URL[@REV] [PATH...]\n"
+"\n"
+"  1、显示本地 PATH (默认: “.”) 的日志信息。默认的版本范围为\n"
+"     BASE:1。\n"
+"\n"
+"  2、显示 URL 下的 PATH (默认: “.”) 的日志信息。REV指定从哪一个版本开始查找\n"
+"     URL。默认的版本范围为 HEAD:1。\n"
+"\n"
+"  使用 -v 时，在日志信息中显示受影响的路径名。\n"
+"  使用 -q 时，不显示日志信息主体 (请注意，这可和 -v 并存)。\n"
+"\n"
+"  每一条日志信息只会显示一次，即使指定某一个修改中涉及到的多个文件。默认log信息会\n"
+"  追溯复制历史；使用 --stop-on-copy 可以关闭这种行为，这便于找出分支点。\n"
+"\n"
+"  范例: \n"
+"    svn log\n"
+"    svn log foo.c\n"
+"    svn log http://www.example.com/repo/project/foo.c\n"
+"    svn log http://www.example.com/repo/project foo.c bar.c\n"
 
 #: svn/main.c:500
-msgid "Apply the differences between two sources to a working copy path.\nusage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n       3. merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n\n  1. In the first form, the source URLs are specified at revisions\n     N and M.  These are the two sources to be compared.  The revisions\n     default to HEAD if omitted.\n\n  2. In the second form, the URLs corresponding to the source working\n     copy paths define the sources to be compared.  The revisions must\n     be specified.\n\n  3. In the third form, SOURCE can be a URL, or working copy item\n     in which case the corresponding URL is used.  This URL in\n     revision REV is compared as it existed between revisions N and \n     M.  If REV is not specified, HEAD is assumed.\n     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n     Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n\n  WCPATH is the working copy path that will receive the changes.\n  If WCPATH is omitted, a default value of '.' is assumed, unless\n  the sources have identical basenames that match a file within '.':\n  in which case, the differences will be applied to that file.\n"
-msgstr "将两个来源之间的差异应用至工作副本路径。\n用法: 1、merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n      2、merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n      3、merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n\n  1、第一种形式中，源 URL 的版本 N 与 M作为比较的来源。如果没有指定版本，默认为 HEAD。\n\n  2、在第二种形式中，两个源工作副本路径对应的仓库中的URL作为比较的来源。这里必须指定版本。\n\n  3、第三种形式中，SOURCE 可为 URL 或工作副本中的路径，后者会使用仓库中对应的URL。\n     比较源就是REV版本中的URL 在版本 N 和 M时的状态。REV默认为HEAD。\n\n  WCPATH 是接收修改的工作副本路径。WCPATH 默认值为“.”，除非来源中有与当前目录中同名的文件，\n  这时修改会直接应用至该文件去。\n"
+msgid ""
+"Apply the differences between two sources to a working copy path.\n"
+"usage: 1. merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
+"       2. merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
+"       3. merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n"
+"\n"
+"  1. In the first form, the source URLs are specified at revisions\n"
+"     N and M.  These are the two sources to be compared.  The revisions\n"
+"     default to HEAD if omitted.\n"
+"\n"
+"  2. In the second form, the URLs corresponding to the source working\n"
+"     copy paths define the sources to be compared.  The revisions must\n"
+"     be specified.\n"
+"\n"
+"  3. In the third form, SOURCE can be a URL, or working copy item\n"
+"     in which case the corresponding URL is used.  This URL in\n"
+"     revision REV is compared as it existed between revisions N and \n"
+"     M.  If REV is not specified, HEAD is assumed.\n"
+"     The '-c M' option is equivalent to '-r N:M' where N = M-1.\n"
+"     Using '-c -M' does the reverse: '-r M:N' where N = M-1.\n"
+"\n"
+"  WCPATH is the working copy path that will receive the changes.\n"
+"  If WCPATH is omitted, a default value of '.' is assumed, unless\n"
+"  the sources have identical basenames that match a file within '.':\n"
+"  in which case, the differences will be applied to that file.\n"
+msgstr ""
+"将两个来源之间的差异应用至工作副本路径。\n"
+"用法: 1、merge sourceURL1[@N] sourceURL2[@M] [WCPATH]\n"
+"      2、merge sourceWCPATH1@N sourceWCPATH2@M [WCPATH]\n"
+"      3、merge [-c M | -r N:M] SOURCE[@REV] [WCPATH]\n"
+"\n"
+"  1、第一种形式中，源 URL 的版本 N 与 M作为比较的来源。如果没有指定版本，默认为 HEAD。\n"
+"\n"
+"  2、在第二种形式中，两个源工作副本路径对应的仓库中的URL作为比较的来源。这里必须指定版本。\n"
+"\n"
+"  3、第三种形式中，SOURCE 可为 URL 或工作副本中的路径，后者会使用仓库中对应的URL。\n"
+"     比较源就是REV版本中的URL 在版本 N 和 M时的状态。REV默认为HEAD。\n"
+"\n"
+"  WCPATH 是接收修改的工作副本路径。WCPATH 默认值为“.”，除非来源中有与当前目录中同名的文件，\n"
+"  这时修改会直接应用至该文件去。\n"
 
 #: svn/main.c:529
-msgid "Create a new directory under version control.\nusage: 1. mkdir PATH...\n       2. mkdir URL...\n\n  Create version controlled directories.\n\n  1. Each directory specified by a working copy PATH is created locally\n    and scheduled for addition upon the next commit.\n\n  2. Each directory specified by a URL is created in the repository via\n    an immediate commit.\n\n  In both cases, all the intermediate directories must already exist.\n"
-msgstr "创建纳入版本控制下的新目录。\n用法: 1、mkdir PATH...\n      2、mkdir URL...\n\n  创建版本控制的目录。\n\n  1、每一个以工作副本 PATH 指定的目录，都会创建在本地端，并且加入新增\n     调度，以待下一次的提交。\n\n  2、每个以URL指定的目录，都会透过立即提交于仓库中创建。\n\n  在这两个情况下，所有的中间目录都必须事先存在。\n"
+msgid ""
+"Create a new directory under version control.\n"
+"usage: 1. mkdir PATH...\n"
+"       2. mkdir URL...\n"
+"\n"
+"  Create version controlled directories.\n"
+"\n"
+"  1. Each directory specified by a working copy PATH is created locally\n"
+"    and scheduled for addition upon the next commit.\n"
+"\n"
+"  2. Each directory specified by a URL is created in the repository via\n"
+"    an immediate commit.\n"
+"\n"
+"  In both cases, all the intermediate directories must already exist.\n"
+msgstr ""
+"创建纳入版本控制下的新目录。\n"
+"用法: 1、mkdir PATH...\n"
+"      2、mkdir URL...\n"
+"\n"
+"  创建版本控制的目录。\n"
+"\n"
+"  1、每一个以工作副本 PATH 指定的目录，都会创建在本地端，并且加入新增\n"
+"     调度，以待下一次的提交。\n"
+"\n"
+"  2、每个以URL指定的目录，都会透过立即提交于仓库中创建。\n"
+"\n"
+"  在这两个情况下，所有的中间目录都必须事先存在。\n"
 
 #: svn/main.c:546
-msgid "Move and/or rename something in working copy or repository.\nusage: move SRC... DST\n\nWhen moving multiple sources, they will be added as children of DST, \nwhich must be a directory.\n\n  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n  Note:  the --revision option has no use and is deprecated.\n\n  SRC and DST can both be working copy (WC) paths or URLs:\n    WC  -> WC:   move and schedule for addition (with history)\n    URL -> URL:  complete server-side rename.\n  All the SRCs must be of the same type.\n"
-msgstr "在工作副本或版本库中移动或改名文件或目录。\n用法: move SRC... DST\n\n当移动多个源时，它们作为DST的子节点增加，DST必须是目录。\n\n  注意: 本子命令等同于“copy”然后“delete”。\n  注意: 此命令中--revision选项没有作用，已经淘汰。\n\n  SRC 可同时为工作副本 (WC) 路径或URL: \n    WC  -> WC  :  移动并加入新增调度 (连同历史记录)\n    URL -> URL :  完全是服务器端更名。\n  所有SRC必须是同一类型。\n"
+msgid ""
+"Move and/or rename something in working copy or repository.\n"
+"usage: move SRC... DST\n"
+"\n"
+"When moving multiple sources, they will be added as children of DST, \n"
+"which must be a directory.\n"
+"\n"
+"  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n"
+"  Note:  the --revision option has no use and is deprecated.\n"
+"\n"
+"  SRC and DST can both be working copy (WC) paths or URLs:\n"
+"    WC  -> WC:   move and schedule for addition (with history)\n"
+"    URL -> URL:  complete server-side rename.\n"
+"  All the SRCs must be of the same type.\n"
+msgstr ""
+"在工作副本或版本库中移动或改名文件或目录。\n"
+"用法: move SRC... DST\n"
+"\n"
+"当移动多个源时，它们作为DST的子节点增加，DST必须是目录。\n"
+"\n"
+"  注意: 本子命令等同于“copy”然后“delete”。\n"
+"  注意: 此命令中--revision选项没有作用，已经淘汰。\n"
+"\n"
+"  SRC 可同时为工作副本 (WC) 路径或URL: \n"
+"    WC  -> WC  :  移动并加入新增调度 (连同历史记录)\n"
+"    URL -> URL :  完全是服务器端更名。\n"
+"  所有SRC必须是同一类型。\n"
 
 #: svn/main.c:563
-msgid "Remove a property from files, dirs, or revisions.\nusage: 1. propdel PROPNAME [PATH...]\n       2. propdel PROPNAME --revprop -r REV [TARGET]\n\n  1. Removes versioned props in working copy.\n  2. Removes unversioned remote prop on repos revision.\n     TARGET only determines which repository to access.\n"
-msgstr "移除目录、文件或版本的属性。\n用法: 1、propdel PROPNAME [PATH...]\n      2、propdel PROPNAME --revprop -r REV [URL]\n\n  1、移除工作副本中纳入版本管理的文件或目录上的属性。\n  2、移除仓库中版本上的属性。\n     TARGET只用来判断访问哪一个仓库。\n"
+msgid ""
+"Remove a property from files, dirs, or revisions.\n"
+"usage: 1. propdel PROPNAME [PATH...]\n"
+"       2. propdel PROPNAME --revprop -r REV [TARGET]\n"
+"\n"
+"  1. Removes versioned props in working copy.\n"
+"  2. Removes unversioned remote prop on repos revision.\n"
+"     TARGET only determines which repository to access.\n"
+msgstr ""
+"移除目录、文件或版本的属性。\n"
+"用法: 1、propdel PROPNAME [PATH...]\n"
+"      2、propdel PROPNAME --revprop -r REV [URL]\n"
+"\n"
+"  1、移除工作副本中纳入版本管理的文件或目录上的属性。\n"
+"  2、移除仓库中版本上的属性。\n"
+"     TARGET只用来判断访问哪一个仓库。\n"
 
 #: svn/main.c:575
-msgid "Edit a property with an external editor.\nusage: 1. propedit PROPNAME TARGET...\n       2. propedit PROPNAME --revprop -r REV [TARGET]\n\n  1. Edits versioned prop in working copy or repository.\n  2. Edits unversioned remote prop on repos revision.\n     TARGET only determines which repository to access.\n"
-msgstr "启动外部编辑器编辑属性。\n用法: 1、propedit PROPNAME TARGET...\n      2、propedit PROPNAME --revprop -r REV [TARGET]\n\n  1、编辑工作副本或者仓库中版本化的属性。\n  2、编辑仓库中非版本化的远程属性。\n     TARGET只用来判断访问哪一个仓库。\n"
+msgid ""
+"Edit a property with an external editor.\n"
+"usage: 1. propedit PROPNAME TARGET...\n"
+"       2. propedit PROPNAME --revprop -r REV [TARGET]\n"
+"\n"
+"  1. Edits versioned prop in working copy or repository.\n"
+"  2. Edits unversioned remote prop on repos revision.\n"
+"     TARGET only determines which repository to access.\n"
+msgstr ""
+"启动外部编辑器编辑属性。\n"
+"用法: 1、propedit PROPNAME TARGET...\n"
+"      2、propedit PROPNAME --revprop -r REV [TARGET]\n"
+"\n"
+"  1、编辑工作副本或者仓库中版本化的属性。\n"
+"  2、编辑仓库中非版本化的远程属性。\n"
+"     TARGET只用来判断访问哪一个仓库。\n"
 
 #: svn/main.c:588
-msgid "Print the value of a property on files, dirs, or revisions.\nusage: 1. propget PROPNAME [TARGET[@REV]...]\n       2. propget PROPNAME --revprop -r REV [TARGET]\n\n  1. Prints versioned props. If specified, REV determines in which\n     revision the target is first looked up.\n  2. Prints unversioned remote prop on repos revision.\n     TARGET only determines which repository to access.\n\n  By default, this subcommand will add an extra newline to the end\n  of the property values so that the output looks pretty.  Also,\n  whenever there are multiple paths involved, each property value\n  is prefixed with the path with which it is associated.  Use\n  the --strict option to disable these beautifications (useful,\n  for example, when redirecting binary property values to a file).\n"
-msgstr "显示目录、文件或版本的一个属性。\n用法: 1、propget PROPNAME [TARGET[@REV]...]\n      2、propget PROPNAME --revprop -r REV [URL]\n\n      1、显示目标上的属性。REV指定从哪一个版本开始查找目标。\n      2、显示仓库中版本上的属性。\n         TARGET只用来判断访问哪一个仓库。\n\n  本子命令默认会在属性内容加上额外的换行符，如此可得到较美观的输出。另外，当同时\n  处理多个路径时，每一个属性内容会在开头增加上它所对应的路径。使用 --strict 选项\n  以关闭这项美化行为 (这样做利于将二进制属性内容重定向至一个文件时)。\n"
+msgid ""
+"Print the value of a property on files, dirs, or revisions.\n"
+"usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
+"       2. propget PROPNAME --revprop -r REV [TARGET]\n"
+"\n"
+"  1. Prints versioned props. If specified, REV determines in which\n"
+"     revision the target is first looked up.\n"
+"  2. Prints unversioned remote prop on repos revision.\n"
+"     TARGET only determines which repository to access.\n"
+"\n"
+"  By default, this subcommand will add an extra newline to the end\n"
+"  of the property values so that the output looks pretty.  Also,\n"
+"  whenever there are multiple paths involved, each property value\n"
+"  is prefixed with the path with which it is associated.  Use\n"
+"  the --strict option to disable these beautifications (useful,\n"
+"  for example, when redirecting binary property values to a file).\n"
+msgstr ""
+"显示目录、文件或版本的一个属性。\n"
+"用法: 1、propget PROPNAME [TARGET[@REV]...]\n"
+"      2、propget PROPNAME --revprop -r REV [URL]\n"
+"\n"
+"      1、显示目标上的属性。REV指定从哪一个版本开始查找目标。\n"
+"      2、显示仓库中版本上的属性。\n"
+"         TARGET只用来判断访问哪一个仓库。\n"
+"\n"
+"  本子命令默认会在属性内容加上额外的换行符，如此可得到较美观的输出。另外，当同时\n"
+"  处理多个路径时，每一个属性内容会在开头增加上它所对应的路径。使用 --strict 选项\n"
+"  以关闭这项美化行为 (这样做利于将二进制属性内容重定向至一个文件时)。\n"
 
 #: svn/main.c:607
-msgid "List all properties on files, dirs, or revisions.\nusage: 1. proplist [TARGET[@REV]...]\n       2. proplist --revprop -r REV [TARGET]\n\n  1. Lists versioned props. If specified, REV determines in which\n     revision the target is first looked up.\n  2. Lists unversioned remote props on repos revision.\n     TARGET only determines which repository to access.\n"
-msgstr "列出目录、文件或版本上的所有属性。\n用法: 1、proplist [TARGET[@REV]...]\n      2、proplist --revprop -r REV [TARGET]\n\n      1、列出纳入版本管理的工作副本属性。REV指定从哪一个版本开始查找目标。\n      2、列出仓库中版本上的属性。\n         TARGET只用来判断访问哪一个仓库。\n"
+msgid ""
+"List all properties on files, dirs, or revisions.\n"
+"usage: 1. proplist [TARGET[@REV]...]\n"
+"       2. proplist --revprop -r REV [TARGET]\n"
+"\n"
+"  1. Lists versioned props. If specified, REV determines in which\n"
+"     revision the target is first looked up.\n"
+"  2. Lists unversioned remote props on repos revision.\n"
+"     TARGET only determines which repository to access.\n"
+msgstr ""
+"列出目录、文件或版本上的所有属性。\n"
+"用法: 1、proplist [TARGET[@REV]...]\n"
+"      2、proplist --revprop -r REV [TARGET]\n"
+"\n"
+"      1、列出纳入版本管理的工作副本属性。REV指定从哪一个版本开始查找目标。\n"
+"      2、列出仓库中版本上的属性。\n"
+"         TARGET只用来判断访问哪一个仓库。\n"
 
 #: svn/main.c:619
-msgid "Set the value of a property on files, dirs, or revisions.\nusage: 1. propset PROPNAME PROPVAL PATH...\n       2. propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n\n  1. Creates a versioned, local propchange in working copy.\n  2. Creates an unversioned, remote propchange on repos revision.\n     TARGET only determines which repository to access.\n\n  The value may be provided with the --file option instead of PROPVAL.\n\n  Note: svn recognizes the following special versioned properties\n  but will store any arbitrary properties set:\n    svn:ignore     - A newline separated list of file patterns to ignore.\n    svn:keywords   - Keywords to be expanded.  Valid keywords are:\n      URL, HeadURL             - The URL for the head version of the object.\n      Author, LastChangedBy    - The last person to modify the file.\n      Date, LastChangedDate    - The date/time the object was last modified.\n      Rev, Revision,           - The last revision the object changed.\n      LastChangedRevision\n      Id                       - A compressed summary of the previous\n                                   4 keywords.\n    svn:executable - If present, make the file executable.\n    svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'.\n    svn:mime-type  - The mimetype of the file.  Used to determine\n      whether to merge the file, and how to serve it from Apache.\n      A mimetype beginning with 'text/' (or an absent mimetype) is\n      treated as text.  Anything else is treated as binary.\n    svn:externals  - A newline separated list of module specifiers,\n      each of which consists of a relative directory path, optional\n      revision flags, and an URL.  For example\n        foo             http://example.com/repos/zig\n        foo/bar -r 1234 http://example.com/repos/zag\n    svn:needs-lock - If present, indicates that the file should be locked\n      before it is modified.  Makes the working copy file read-only\n      when it is not locked.\n  The svn:keywords, svn:executable, svn:eol-style, svn:mime-type and\n  svn:needs-lock properties cannot be set on a directory.  A non-recursive\n  attempt will fail, and a recursive attempt will set the property\n  only on the file children of the directory.\n"
-msgstr "设定目录、文件或版本的属性。\n用法: 1、propset PROPNAME PROPVAL PATH...\n      2、propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n\n  1、在工作副本中创建或者修改一个属性。\n  2、在仓库中REV版本上创建或者修改一个属性。\n     TARGET只用来判断访问哪一个仓库。\n\n  如果没有PROPVAL参数，则必须提供--file选项。\n\n  注意: svn 除了能存储任意属性外，还识别以下特殊版本控制属性: \n      svn:ignore     - 以换行符隔开的忽略文件模式列表。\n      svn:keywords   - 将被展开的关键字。有效的关键字为。\n        URL, HeadURL             - 此对象HEAD版本的URL。\n        Author, LastChangedBy    - 最后一次修改文件的人。\n        Date, LastChangedDate    - 此对象最近一次修改的日期。\n        Rev, Revision,           - 此对象最后一次修改的版本。\n        LastChangedRevision\n        Id                       - 前四个关键字的紧凑摘要。\n    svn:executable   - 如果存在此属性则设置文件为可执行的。\n    svn:eol-style    - “native”，“LF”，“CR”，“CRLF”之一。\n    svn:mime-type    - 文件的 mime 类型。用以决定是否该合并该文件，\n      以及Apache如何处理它。mime类型以“text/”(或是没有指定 mime 类型)\n      开头的文件会被视为纯文本文件，否则就是二进制数据。\n    svn:externals    - 以换行符隔开的模块说明列表，每一条说明都由一个相对路径、\n      可选的版本标志、一个URL组成。例如: \n        foo             http://example.com/repos/zig\n        foo/bar -r 1234 http://example.com/repos/zag\n    svn:needs-lock - 如果存在此属性则表明此文件在修改前应被加锁，如果没有被加锁\n        则此文件在工作副本中应被设为只读。\n\n    svn:keywords, svn:executable, svn:eol-style, svn:mime-type 以及\n    svn:needs-lock 属性不能设置在一个目录上。不能在设置这些属性时使用非递归选项\n    （-N），递归操作时只会作用于指定目录下的文件上。\n"
+msgid ""
+"Set the value of a property on files, dirs, or revisions.\n"
+"usage: 1. propset PROPNAME PROPVAL PATH...\n"
+"       2. propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n"
+"\n"
+"  1. Creates a versioned, local propchange in working copy.\n"
+"  2. Creates an unversioned, remote propchange on repos revision.\n"
+"     TARGET only determines which repository to access.\n"
+"\n"
+"  The value may be provided with the --file option instead of PROPVAL.\n"
+"\n"
+"  Note: svn recognizes the following special versioned properties\n"
+"  but will store any arbitrary properties set:\n"
+"    svn:ignore     - A newline separated list of file patterns to ignore.\n"
+"    svn:keywords   - Keywords to be expanded.  Valid keywords are:\n"
+"      URL, HeadURL             - The URL for the head version of the object.\n"
+"      Author, LastChangedBy    - The last person to modify the file.\n"
+"      Date, LastChangedDate    - The date/time the object was last modified.\n"
+"      Rev, Revision,           - The last revision the object changed.\n"
+"      LastChangedRevision\n"
+"      Id                       - A compressed summary of the previous\n"
+"                                   4 keywords.\n"
+"    svn:executable - If present, make the file executable.\n"
+"    svn:eol-style  - One of 'native', 'LF', 'CR', 'CRLF'.\n"
+"    svn:mime-type  - The mimetype of the file.  Used to determine\n"
+"      whether to merge the file, and how to serve it from Apache.\n"
+"      A mimetype beginning with 'text/' (or an absent mimetype) is\n"
+"      treated as text.  Anything else is treated as binary.\n"
+"    svn:externals  - A newline separated list of module specifiers,\n"
+"      each of which consists of a relative directory path, optional\n"
+"      revision flags, and an URL.  For example\n"
+"        foo             http://example.com/repos/zig\n"
+"        foo/bar -r 1234 http://example.com/repos/zag\n"
+"    svn:needs-lock - If present, indicates that the file should be locked\n"
+"      before it is modified.  Makes the working copy file read-only\n"
+"      when it is not locked.\n"
+"  The svn:keywords, svn:executable, svn:eol-style, svn:mime-type and\n"
+"  svn:needs-lock properties cannot be set on a directory.  A non-recursive\n"
+"  attempt will fail, and a recursive attempt will set the property\n"
+"  only on the file children of the directory.\n"
+msgstr ""
+"设定目录、文件或版本的属性。\n"
+"用法: 1、propset PROPNAME PROPVAL PATH...\n"
+"      2、propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n"
+"\n"
+"  1、在工作副本中创建或者修改一个属性。\n"
+"  2、在仓库中REV版本上创建或者修改一个属性。\n"
+"     TARGET只用来判断访问哪一个仓库。\n"
+"\n"
+"  如果没有PROPVAL参数，则必须提供--file选项。\n"
+"\n"
+"  注意: svn 除了能存储任意属性外，还识别以下特殊版本控制属性: \n"
+"      svn:ignore     - 以换行符隔开的忽略文件模式列表。\n"
+"      svn:keywords   - 将被展开的关键字。有效的关键字为。\n"
+"        URL, HeadURL             - 此对象HEAD版本的URL。\n"
+"        Author, LastChangedBy    - 最后一次修改文件的人。\n"
+"        Date, LastChangedDate    - 此对象最近一次修改的日期。\n"
+"        Rev, Revision,           - 此对象最后一次修改的版本。\n"
+"        LastChangedRevision\n"
+"        Id                       - 前四个关键字的紧凑摘要。\n"
+"    svn:executable   - 如果存在此属性则设置文件为可执行的。\n"
+"    svn:eol-style    - “native”，“LF”，“CR”，“CRLF”之一。\n"
+"    svn:mime-type    - 文件的 mime 类型。用以决定是否该合并该文件，\n"
+"      以及Apache如何处理它。mime类型以“text/”(或是没有指定 mime 类型)\n"
+"      开头的文件会被视为纯文本文件，否则就是二进制数据。\n"
+"    svn:externals    - 以换行符隔开的模块说明列表，每一条说明都由一个相对路径、\n"
+"      可选的版本标志、一个URL组成。例如: \n"
+"        foo             http://example.com/repos/zig\n"
+"        foo/bar -r 1234 http://example.com/repos/zag\n"
+"    svn:needs-lock - 如果存在此属性则表明此文件在修改前应被加锁，如果没有被加锁\n"
+"        则此文件在工作副本中应被设为只读。\n"
+"\n"
+"    svn:keywords, svn:executable, svn:eol-style, svn:mime-type 以及\n"
+"    svn:needs-lock 属性不能设置在一个目录上。不能在设置这些属性时使用非递归选项\n"
+"    （-N），递归操作时只会作用于指定目录下的文件上。\n"
 
 #: svn/main.c:661
 msgid "read property value from file ARG"
 msgstr "从文件 ARG 读取属性值"
 
 #: svn/main.c:664
-msgid "Remove 'conflicted' state on working copy files or directories.\nusage: resolved PATH...\n\n  Note:  this subcommand does not semantically resolve conflicts or\n  remove conflict markers; it merely removes the conflict-related\n  artifact files and allows PATH to be committed again.\n"
-msgstr "移除工作副本的目录或文件的“冲突”状态。\n用法: resolved PATH...\n\n  注意: 本子命令不会依语法来解决冲突或是移除冲突标记；它只是移除冲突的\n        相关文件，然后让 PATH 可以再次提交。\n"
+msgid ""
+"Remove 'conflicted' state on working copy files or directories.\n"
+"usage: resolved PATH...\n"
+"\n"
+"  Note:  this subcommand does not semantically resolve conflicts or\n"
+"  remove conflict markers; it merely removes the conflict-related\n"
+"  artifact files and allows PATH to be committed again.\n"
+msgstr ""
+"移除工作副本的目录或文件的“冲突”状态。\n"
+"用法: resolved PATH...\n"
+"\n"
+"  注意: 本子命令不会依语法来解决冲突或是移除冲突标记；它只是移除冲突的\n"
+"        相关文件，然后让 PATH 可以再次提交。\n"
 
 #: svn/main.c:673
-msgid "Restore pristine working copy file (undo most local edits).\nusage: revert PATH...\n\n  Note:  this subcommand does not require network access, and resolves\n  any conflicted states.  However, it does not restore removed directories.\n"
-msgstr "恢复原始未改变的工作副本文件 (恢复大部份的本地修改)。\n用法: revert PATH...\n\n  注意: 本子命令不会存取网络，并且会解除冲突的状况。但是它不会恢复\n        被删除的目录\n"
+msgid ""
+"Restore pristine working copy file (undo most local edits).\n"
+"usage: revert PATH...\n"
+"\n"
+"  Note:  this subcommand does not require network access, and resolves\n"
+"  any conflicted states.  However, it does not restore removed directories.\n"
+msgstr ""
+"恢复原始未改变的工作副本文件 (恢复大部份的本地修改)。\n"
+"用法: revert PATH...\n"
+"\n"
+"  注意: 本子命令不会存取网络，并且会解除冲突的状况。但是它不会恢复\n"
+"        被删除的目录\n"
 
 #: svn/main.c:682
-msgid "Print the status of working copy files and directories.\nusage: status [PATH...]\n\n  With no args, print only locally modified items (no network access).\n  With -u, add working revision and server out-of-date information.\n  With -v, print full revision information on every item.\n\n  The first six columns in the output are each one character wide:\n    First column: Says if item was added, deleted, or otherwise changed\n      ' ' no modifications\n      'A' Added\n      'C' Conflicted\n      'D' Deleted\n      'I' Ignored\n      'M' Modified\n      'R' Replaced\n      'X' item is unversioned, but is used by an externals definition\n      '?' item is not under version control\n      '!' item is missing (removed by non-svn command) or incomplete\n      '~' versioned item obstructed by some item of a different kind\n    Second column: Modifications of a file's or directory's properties\n      ' ' no modifications\n      'C' Conflicted\n      'M' Modified\n    Third column: Whether the working copy directory is locked\n      ' ' not locked\n      'L' locked\n    Fourth column: Scheduled commit will contain addition-with-history\n      ' ' no history scheduled with commit\n      '+' history scheduled with commit\n    Fifth column: Whether the item is switched relative to its parent\n      ' ' normal\n      'S' switched\n    Sixth column: Repository lock token\n      (without -u)\n      ' ' no lock token\n      'K' lock token present\n      (with -u)\n      ' ' not locked in repository, no lock token\n      'K' locked in repository, lock toKen present\n      'O' locked in repository, lock token in some Other working copy\n      'T' locked in repository, lock token present but sTolen\n      'B' not locked in repository, lock token present but Broken\n\n  The out-of-date information appears in the eighth column (with -u):\n      '*' a newer revision exists on the server\n      ' ' the working copy is up to date\n\n  Remaining fields are variable width and delimited by spaces:\n    The working revision (with -u or -v)\n    The last committed revision and last committed author (with -v)\n    The working copy path is always the final field, so it can\n      include spaces.\n\n  Example output:\n    svn status wc\n     M     wc/bar.c\n    A  +   wc/qax.c\n\n    svn status -u wc\n     M           965    wc/bar.c\n           *     965    wc/foo.c\n    A  +         965    wc/qax.c\n    Status against revision:   981\n\n    svn status --show-updates --verbose wc\n     M           965       938 kfogel       wc/bar.c\n           *     965       922 sussman      wc/foo.c\n    A  +         965       687 joe          wc/qax.c\n                 965       687 joe          wc/zig.c\n    Status against revision:   981\n"
-msgstr "显示工作副本中目录与文件的状态。\n用法: status [PATH...]\n\n  未指定参数时，只显示本地修改的条目 (没有网络的存取操作)。\n  使用 -u 时，加上工作版本与针对服务器上版本是否过期的信息。\n  使用 -v 时，显示每一个条目的完整版本信息。\n\n  输出的前六栏各占一个字符宽度: \n    第一栏: 表示一个项目是新增、删除，还是修改的\n      “ ” 无修改\n      “A” 新增\n      “C” 冲突\n      “D” 删除\n      “G” 合并\n      “I” 忽略\n      “M” 改变\n      “R” 替换\n      “X” 未纳入版本控制，但被外部定义所用\n      “?” 未纳入版本控制\n      “!” 该项目已遗失 (被非 svn 命令所删除) 或是不完整\n      “~” 版本控制下的项目与其它类型的项目重名\n    第二栏: 显示目录或文件的属性状态\n      “ ” 无修改\n      “C” 冲突\n      “M” 改变\n    第三栏: 工作副本目录是否被锁定\n      “ ” 未锁定\n      “L” 锁定\n    第四栏: 已调度的提交是否包含副本历史（区分是svn add还是svn copy引起的add）\n      “ ” 不包含\n      “+” 包含\n    第五栏: 该条目相对其父目录是否已切换（有无svn switch操作）\n      “ ” 正常\n      “S” 已切换\n    第六栏: 仓库锁定标记\n      （没有 -u时）\n      “ ” 没有锁定标记\n      “K” 存在锁定标记\n      （有 -u时）\n      “ ” 没有在仓库中锁定，没有锁定标记\n      “K” 在仓库中被锁定，存在锁定标记\n      “O” 在仓库中被锁定，锁定标记在一些其他工作副本中\n      “T” 在仓库中被锁定，存在锁定标记但已被窃取\n      “B” 没有在仓库中被锁定，存在锁定标记但已被中止\n\n  是否过期的信息出现的位置是第八栏 (与 -u 并用时): \n      “*” 服务器上有更新版本\n      “ ” 工作副本是最新版的\n\n  剩余的栏位皆为变动宽度，并以空白隔开: \n    工作版本号 (与 -u 或 -v 并用时)\n    最后提交的版本与最后提交的作者 (与 -v 并用时)\n    工作副本路径总是最后一栏，所以它可以包含空白字符。\n\n  范例输出: \n    svn status wc\n     M     wc/bar.c\n    A  +   wc/qax.c\n\n    svn status -u wc\n     M           965    wc/bar.c\n           *     965    wc/foo.c\n    A  +         965    wc/qax.c\n    Status against revision:   981\n\n    svn status --show-updates --verbose wc\n     M           965       938 kfogel       wc/bar.c\n           *     965       922 sussman      wc/foo.c\n    A  +         965       687 joe          wc/qax.c\n                 965       687 joe          wc/zig.c\n    Status against revision:   981\n"
+msgid ""
+"Print the status of working copy files and directories.\n"
+"usage: status [PATH...]\n"
+"\n"
+"  With no args, print only locally modified items (no network access).\n"
+"  With -u, add working revision and server out-of-date information.\n"
+"  With -v, print full revision information on every item.\n"
+"\n"
+"  The first six columns in the output are each one character wide:\n"
+"    First column: Says if item was added, deleted, or otherwise changed\n"
+"      ' ' no modifications\n"
+"      'A' Added\n"
+"      'C' Conflicted\n"
+"      'D' Deleted\n"
+"      'I' Ignored\n"
+"      'M' Modified\n"
+"      'R' Replaced\n"
+"      'X' item is unversioned, but is used by an externals definition\n"
+"      '?' item is not under version control\n"
+"      '!' item is missing (removed by non-svn command) or incomplete\n"
+"      '~' versioned item obstructed by some item of a different kind\n"
+"    Second column: Modifications of a file's or directory's properties\n"
+"      ' ' no modifications\n"
+"      'C' Conflicted\n"
+"      'M' Modified\n"
+"    Third column: Whether the working copy directory is locked\n"
+"      ' ' not locked\n"
+"      'L' locked\n"
+"    Fourth column: Scheduled commit will contain addition-with-history\n"
+"      ' ' no history scheduled with commit\n"
+"      '+' history scheduled with commit\n"
+"    Fifth column: Whether the item is switched relative to its parent\n"
+"      ' ' normal\n"
+"      'S' switched\n"
+"    Sixth column: Repository lock token\n"
+"      (without -u)\n"
+"      ' ' no lock token\n"
+"      'K' lock token present\n"
+"      (with -u)\n"
+"      ' ' not locked in repository, no lock token\n"
+"      'K' locked in repository, lock toKen present\n"
+"      'O' locked in repository, lock token in some Other working copy\n"
+"      'T' locked in repository, lock token present but sTolen\n"
+"      'B' not locked in repository, lock token present but Broken\n"
+"\n"
+"  The out-of-date information appears in the eighth column (with -u):\n"
+"      '*' a newer revision exists on the server\n"
+"      ' ' the working copy is up to date\n"
+"\n"
+"  Remaining fields are variable width and delimited by spaces:\n"
+"    The working revision (with -u or -v)\n"
+"    The last committed revision and last committed author (with -v)\n"
+"    The working copy path is always the final field, so it can\n"
+"      include spaces.\n"
+"\n"
+"  Example output:\n"
+"    svn status wc\n"
+"     M     wc/bar.c\n"
+"    A  +   wc/qax.c\n"
+"\n"
+"    svn status -u wc\n"
+"     M           965    wc/bar.c\n"
+"           *     965    wc/foo.c\n"
+"    A  +         965    wc/qax.c\n"
+"    Status against revision:   981\n"
+"\n"
+"    svn status --show-updates --verbose wc\n"
+"     M           965       938 kfogel       wc/bar.c\n"
+"           *     965       922 sussman      wc/foo.c\n"
+"    A  +         965       687 joe          wc/qax.c\n"
+"                 965       687 joe          wc/zig.c\n"
+"    Status against revision:   981\n"
+msgstr ""
+"显示工作副本中目录与文件的状态。\n"
+"用法: status [PATH...]\n"
+"\n"
+"  未指定参数时，只显示本地修改的条目 (没有网络的存取操作)。\n"
+"  使用 -u 时，加上工作版本与针对服务器上版本是否过期的信息。\n"
+"  使用 -v 时，显示每一个条目的完整版本信息。\n"
+"\n"
+"  输出的前六栏各占一个字符宽度: \n"
+"    第一栏: 表示一个项目是新增、删除，还是修改的\n"
+"      “ ” 无修改\n"
+"      “A” 新增\n"
+"      “C” 冲突\n"
+"      “D” 删除\n"
+"      “G” 合并\n"
+"      “I” 忽略\n"
+"      “M” 改变\n"
+"      “R” 替换\n"
+"      “X” 未纳入版本控制，但被外部定义所用\n"
+"      “?” 未纳入版本控制\n"
+"      “!” 该项目已遗失 (被非 svn 命令所删除) 或是不完整\n"
+"      “~” 版本控制下的项目与其它类型的项目重名\n"
+"    第二栏: 显示目录或文件的属性状态\n"
+"      “ ” 无修改\n"
+"      “C” 冲突\n"
+"      “M” 改变\n"
+"    第三栏: 工作副本目录是否被锁定\n"
+"      “ ” 未锁定\n"
+"      “L” 锁定\n"
+"    第四栏: 已调度的提交是否包含副本历史（区分是svn add还是svn copy引起的add）\n"
+"      “ ” 不包含\n"
+"      “+” 包含\n"
+"    第五栏: 该条目相对其父目录是否已切换（有无svn switch操作）\n"
+"      “ ” 正常\n"
+"      “S” 已切换\n"
+"    第六栏: 仓库锁定标记\n"
+"      （没有 -u时）\n"
+"      “ ” 没有锁定标记\n"
+"      “K” 存在锁定标记\n"
+"      （有 -u时）\n"
+"      “ ” 没有在仓库中锁定，没有锁定标记\n"
+"      “K” 在仓库中被锁定，存在锁定标记\n"
+"      “O” 在仓库中被锁定，锁定标记在一些其他工作副本中\n"
+"      “T” 在仓库中被锁定，存在锁定标记但已被窃取\n"
+"      “B” 没有在仓库中被锁定，存在锁定标记但已被中止\n"
+"\n"
+"  是否过期的信息出现的位置是第八栏 (与 -u 并用时): \n"
+"      “*” 服务器上有更新版本\n"
+"      “ ” 工作副本是最新版的\n"
+"\n"
+"  剩余的栏位皆为变动宽度，并以空白隔开: \n"
+"    工作版本号 (与 -u 或 -v 并用时)\n"
+"    最后提交的版本与最后提交的作者 (与 -v 并用时)\n"
+"    工作副本路径总是最后一栏，所以它可以包含空白字符。\n"
+"\n"
+"  范例输出: \n"
+"    svn status wc\n"
+"     M     wc/bar.c\n"
+"    A  +   wc/qax.c\n"
+"\n"
+"    svn status -u wc\n"
+"     M           965    wc/bar.c\n"
+"           *     965    wc/foo.c\n"
+"    A  +         965    wc/qax.c\n"
+"    Status against revision:   981\n"
+"\n"
+"    svn status --show-updates --verbose wc\n"
+"     M           965       938 kfogel       wc/bar.c\n"
+"           *     965       922 sussman      wc/foo.c\n"
+"    A  +         965       687 joe          wc/qax.c\n"
+"                 965       687 joe          wc/zig.c\n"
+"    Status against revision:   981\n"
 
 #: svn/main.c:758
-msgid "Update the working copy to a different URL.\nusage: 1. switch URL [PATH]\n       2. switch --relocate FROM TO [PATH...]\n\n  1. Update the working copy to mirror a new URL within the repository.\n     This behaviour is similar to 'svn update', and is the way to\n     move a working copy to a branch or tag within the same repository.\n\n  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n     This is used when repository's root URL changes (such as a scheme\n     or hostname change) but your working copy still reflects the same\n     directory within the same repository.\n\n  If --force is used, unversioned obstructing paths in the working\n  copy do not automatically cause a failure if the switch attempts to\n  add the same path.  If the obstructing path is the same type (file\n  or directory) as the corresponding path in the repository it becomes\n  versioned but its contents are left 'as-is' in the working copy.\n  This means that an obstructing directory's unversioned children may\n  also obstruct and become versioned.  For files, any content differences\n  between the obstruction and the repository are treated like a local\n  modification to the working copy.  All properties from the repository\n  are applied to the obstructing path.\n"
-msgstr "更新工作副本至不同的URL。\n用法: 1、 switch URL [PATH]\n      2、switch --relocate FROM TO [PATH...]\n\n  1、更新工作副本，切换到一个新的 URL，其行为跟“svn update”很像，\n     也是将工作拷贝迁移到同一档案库中某个分支或者标记的方法。\n\n  2、重写工作副本的URL元数据，以反映单纯的URL改变。当仓库的根URL改变 \n    (比如方案或者主机名称变动)，但是工作副本仍旧对应映同档案库的同目录\n    时，使用这个命令更新工作副本与档案库的对应关系。\n\n  如果使用了“--force”选项，在工作副本中未版本化的障碍路径，不会自动导\n  致签出失败。 如果障碍路径与仓库中的对应路径类型相同(文件或目录),它将成\n  为版本化的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍路\n  径，那么也会版本化。对于障碍路径中的文件，如果与仓库内的不同，将视为工\n  作副本发生本地修改。仓库中的所有属性都应用于障碍路径。\n"
+msgid ""
+"Update the working copy to a different URL.\n"
+"usage: 1. switch URL [PATH]\n"
+"       2. switch --relocate FROM TO [PATH...]\n"
+"\n"
+"  1. Update the working copy to mirror a new URL within the repository.\n"
+"     This behaviour is similar to 'svn update', and is the way to\n"
+"     move a working copy to a branch or tag within the same repository.\n"
+"\n"
+"  2. Rewrite working copy URL metadata to reflect a syntactic change only.\n"
+"     This is used when repository's root URL changes (such as a scheme\n"
+"     or hostname change) but your working copy still reflects the same\n"
+"     directory within the same repository.\n"
+"\n"
+"  If --force is used, unversioned obstructing paths in the working\n"
+"  copy do not automatically cause a failure if the switch attempts to\n"
+"  add the same path.  If the obstructing path is the same type (file\n"
+"  or directory) as the corresponding path in the repository it becomes\n"
+"  versioned but its contents are left 'as-is' in the working copy.\n"
+"  This means that an obstructing directory's unversioned children may\n"
+"  also obstruct and become versioned.  For files, any content differences\n"
+"  between the obstruction and the repository are treated like a local\n"
+"  modification to the working copy.  All properties from the repository\n"
+"  are applied to the obstructing path.\n"
+msgstr ""
+"更新工作副本至不同的URL。\n"
+"用法: 1、 switch URL [PATH]\n"
+"      2、switch --relocate FROM TO [PATH...]\n"
+"\n"
+"  1、更新工作副本，切换到一个新的 URL，其行为跟“svn update”很像，\n"
+"     也是将工作拷贝迁移到同一档案库中某个分支或者标记的方法。\n"
+"\n"
+"  2、重写工作副本的URL元数据，以反映单纯的URL改变。当仓库的根URL改变 \n"
+"    (比如方案或者主机名称变动)，但是工作副本仍旧对应映同档案库的同目录\n"
+"    时，使用这个命令更新工作副本与档案库的对应关系。\n"
+"\n"
+"  如果使用了“--force”选项，在工作副本中未版本化的障碍路径，不会自动导\n"
+"  致签出失败。 如果障碍路径与仓库中的对应路径类型相同(文件或目录),它将成\n"
+"  为版本化的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍路\n"
+"  径，那么也会版本化。对于障碍路径中的文件，如果与仓库内的不同，将视为工\n"
+"  作副本发生本地修改。仓库中的所有属性都应用于障碍路径。\n"
 
 #: svn/main.c:785
-msgid "Unlock working copy paths or URLs.\nusage: unlock TARGET...\n\n  Use --force to break the lock.\n"
-msgstr "解除工作副本或URL的锁定。\n用法: unlock TARGET...\n\n    使用 --force 中止锁定。\n"
+msgid ""
+"Unlock working copy paths or URLs.\n"
+"usage: unlock TARGET...\n"
+"\n"
+"  Use --force to break the lock.\n"
+msgstr ""
+"解除工作副本或URL的锁定。\n"
+"用法: unlock TARGET...\n"
+"\n"
+"    使用 --force 中止锁定。\n"
 
 #: svn/main.c:793
-msgid "Bring changes from the repository into the working copy.\nusage: update [PATH...]\n\n  If no revision given, bring working copy up-to-date with HEAD rev.\n  Else synchronize working copy to revision given by -r.\n\n  For each updated item a line will start with a character reporting the\n  action taken.  These characters have the following meaning:\n\n    A  Added\n    D  Deleted\n    U  Updated\n    C  Conflict\n    G  Merged\n    E  Existed\n\n  A character in the first column signifies an update to the actual file,\n  while updates to the file's properties are shown in the second column.\n  A 'B' in the third column signifies that the lock for the file has\n  been broken or stolen.\n\n  If --force is used, unversioned obstructing paths in the working\n  copy do not automatically cause a failure if the update attempts to\n  add the same path.  If the obstructing path is the same type (file\n  or directory) as the corresponding path in the repository it becomes\n  versioned but its contents are left 'as-is' in the working copy.\n  This means that an obstructing directory's unversioned children may\n  also obstruct and become versioned.  For files, any content differences\n  between the obstruction and the repository are treated like a local\n  modification to the working copy.  All properties from the repository\n  are applied to the obstructing path.  Obstructing paths are reported\n  in the first column with code 'E'.\n"
-msgstr "将仓库的更改合并到工作副本中。\n用法: update [PATH...]\n\n  如果没有指定版本，则将工作副本更新到 HEAD 版本。否则同步到 -r 选项所\n  指定的版本。\n\n  每更新一项就输出一行信息，使用首字符来报告执行的动作。这些字符的含义是: \n\n    A  已添加\n    D  已删除\n    U  已更新\n    C  有冲突\n    G  合并成功\n    E  已存在\n\n  第一列字符表示文件内容更新，第二列表示文件属性更新。第三列表示此文件上\n  的锁被中止或窃取\n\n  如果使用了“--force”选项，在工作副本中未版本化的障碍路径，不会自动导\n  致签出失败。 如果障碍路径与仓库中的对应路径类型相同(文件或目录),它将成\n  为版本化的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍路\n  径，那么也将版本化。对于障碍路径中的文件，如果与仓库内的不同，将视为工\n  作副本发生本地修改。仓库中的所有属性都应用于障碍路径。用第一列字符“E”\n  来报告障碍路径。\n"
+msgid ""
+"Bring changes from the repository into the working copy.\n"
+"usage: update [PATH...]\n"
+"\n"
+"  If no revision given, bring working copy up-to-date with HEAD rev.\n"
+"  Else synchronize working copy to revision given by -r.\n"
+"\n"
+"  For each updated item a line will start with a character reporting the\n"
+"  action taken.  These characters have the following meaning:\n"
+"\n"
+"    A  Added\n"
+"    D  Deleted\n"
+"    U  Updated\n"
+"    C  Conflict\n"
+"    G  Merged\n"
+"    E  Existed\n"
+"\n"
+"  A character in the first column signifies an update to the actual file,\n"
+"  while updates to the file's properties are shown in the second column.\n"
+"  A 'B' in the third column signifies that the lock for the file has\n"
+"  been broken or stolen.\n"
+"\n"
+"  If --force is used, unversioned obstructing paths in the working\n"
+"  copy do not automatically cause a failure if the update attempts to\n"
+"  add the same path.  If the obstructing path is the same type (file\n"
+"  or directory) as the corresponding path in the repository it becomes\n"
+"  versioned but its contents are left 'as-is' in the working copy.\n"
+"  This means that an obstructing directory's unversioned children may\n"
+"  also obstruct and become versioned.  For files, any content differences\n"
+"  between the obstruction and the repository are treated like a local\n"
+"  modification to the working copy.  All properties from the repository\n"
+"  are applied to the obstructing path.  Obstructing paths are reported\n"
+"  in the first column with code 'E'.\n"
+msgstr ""
+"将仓库的更改合并到工作副本中。\n"
+"用法: update [PATH...]\n"
+"\n"
+"  如果没有指定版本，则将工作副本更新到 HEAD 版本。否则同步到 -r 选项所\n"
+"  指定的版本。\n"
+"\n"
+"  每更新一项就输出一行信息，使用首字符来报告执行的动作。这些字符的含义是: \n"
+"\n"
+"    A  已添加\n"
+"    D  已删除\n"
+"    U  已更新\n"
+"    C  有冲突\n"
+"    G  合并成功\n"
+"    E  已存在\n"
+"\n"
+"  第一列字符表示文件内容更新，第二列表示文件属性更新。第三列表示此文件上\n"
+"  的锁被中止或窃取\n"
+"\n"
+"  如果使用了“--force”选项，在工作副本中未版本化的障碍路径，不会自动导\n"
+"  致签出失败。 如果障碍路径与仓库中的对应路径类型相同(文件或目录),它将成\n"
+"  为版本化的路径，但是内容不改变。它意味着障碍路径的孩子，如果也是障碍路\n"
+"  径，那么也将版本化。对于障碍路径中的文件，如果与仓库内的不同，将视为工\n"
+"  作副本发生本地修改。仓库中的所有属性都应用于障碍路径。用第一列字符“E”\n"
+"  来报告障碍路径。\n"
 
 #: svn/main.c:869
 #: svnadmin/main.c:78
@@ -5924,8 +7017,12 @@ msgstr "未知的命令: “%s”\n"
 
 #: svn/main.c:1376
 #, c-format
-msgid "Subcommand '%s' doesn't accept option '%s'\nType 'svn help %s' for usage.\n"
-msgstr "子命令“%s”不接受选项“%s”\n请输入“svn help %s”以取得用法。\n"
+msgid ""
+"Subcommand '%s' doesn't accept option '%s'\n"
+"Type 'svn help %s' for usage.\n"
+msgstr ""
+"子命令“%s”不接受选项“%s”\n"
+"请输入“svn help %s”以取得用法。\n"
 
 #: svn/main.c:1413
 msgid "Log message file is a versioned file; use '--force-log' to override"
@@ -6000,8 +7097,12 @@ msgstr "“%s”的已解决的冲突状态\n"
 
 #: svn/notify.c:222
 #, c-format
-msgid "\nFetching external item into '%s'\n"
-msgstr "\n正在取得外部项目至“%s”\n"
+msgid ""
+"\n"
+"Fetching external item into '%s'\n"
+msgstr ""
+"\n"
+"正在取得外部项目至“%s”\n"
 
 #: svn/notify.c:237
 #, c-format
@@ -6075,8 +7176,12 @@ msgstr "更新完成。\n"
 
 #: svn/notify.c:312
 #, c-format
-msgid "\nPerforming status on external item at '%s'\n"
-msgstr "\n对外部项目“%s”进行状态检查\n"
+msgid ""
+"\n"
+"Performing status on external item at '%s'\n"
+msgstr ""
+"\n"
+"对外部项目“%s”进行状态检查\n"
 
 #: svn/notify.c:320
 #, c-format
@@ -6122,6 +7227,16 @@ msgstr "“%s”被用户“%s”锁定。\n"
 #, c-format
 msgid "'%s' unlocked.\n"
 msgstr "“%s”被解除锁定。\n"
+
+#: svn/notify.c:394
+#, fuzzy, c-format
+msgid "Path '%s' is now part of changelist '%s'.\n"
+msgstr "路径“%s”不是文件"
+
+#: svn/notify.c:401
+#, c-format
+msgid "Path '%s' is no longer associated with a changelist.\n"
+msgstr ""
 
 #: svn/propdel-cmd.c:77
 #, c-format
@@ -6243,8 +7358,12 @@ msgstr "试图“svn revert --recursive”？"
 
 #: svn/status-cmd.c:317
 #, c-format
-msgid "\n--- Changelist '%s':\n"
-msgstr "\n--- 修改列表 '%s':\n"
+msgid ""
+"\n"
+"--- Changelist '%s':\n"
+msgstr ""
+"\n"
+"--- 修改列表 '%s':\n"
 
 #: svn/status.c:263
 #, c-format
@@ -6258,13 +7377,21 @@ msgstr "“%s”到“%s”不是有效的重定位"
 
 #: svn/util.c:60
 #, c-format
-msgid "\nCommitted revision %ld.\n"
-msgstr "\n提交后的版本为 %ld。\n"
+msgid ""
+"\n"
+"Committed revision %ld.\n"
+msgstr ""
+"\n"
+"提交后的版本为 %ld。\n"
 
 #: svn/util.c:68
 #, c-format
-msgid "\nWarning: %s\n"
-msgstr "\n警告: %s\n"
+msgid ""
+"\n"
+"Warning: %s\n"
+msgstr ""
+"\n"
+"警告: %s\n"
 
 #: svn/util.c:136
 msgid "None of the environment variables SVN_EDITOR, VISUAL or EDITOR is set, and no 'editor-cmd' run-time configuration option was found"
@@ -6318,7 +7445,9 @@ msgstr "将日志内容规格化为内部格式出错"
 
 #: svn/util.c:532
 msgid "Use of an external editor to fetch log message is not supported on OS400; consider using the --message (-m) or --file (-F) options"
-msgstr "OS400上不支持通过外部外部编辑器获得日志信息；请使用 --message (-m) 或\n--file (-F) 选项"
+msgstr ""
+"OS400上不支持通过外部外部编辑器获得日志信息；请使用 --message (-m) 或\n"
+"--file (-F) 选项"
 
 #: svn/util.c:618
 msgid "Cannot invoke editor to get log message when non-interactive"
@@ -6329,8 +7458,14 @@ msgid "Could not use external editor to fetch log message; consider setting the 
 msgstr "无法使用外部编辑器取得日志信息；请试图设定 $SVN_EDITOR 环境变数，或是使用 --message (-m) 或 --file (-F) 选项"
 
 #: svn/util.c:667
-msgid "\nLog message unchanged or not specified\na)bort, c)ontinue, e)dit\n"
-msgstr "\n日志信息未改变，或是未指定\na)中断，c)继续，e)编辑\n"
+msgid ""
+"\n"
+"Log message unchanged or not specified\n"
+"a)bort, c)ontinue, e)dit\n"
+msgstr ""
+"\n"
+"日志信息未改变，或是未指定\n"
+"a)中断，c)继续，e)编辑\n"
 
 #: svn/util.c:720
 msgid "Use --force to override this restriction"
@@ -6396,7 +7531,9 @@ msgid "disable automatic log file removal [Berkeley DB]"
 msgstr "禁用自动删除日志文件 [BDB]"
 
 #: svnadmin/main.c:275
-msgid "remove redundant Berkeley DB log files\n                             from source repository [Berkeley DB]"
+msgid ""
+"remove redundant Berkeley DB log files\n"
+"                             from source repository [Berkeley DB]"
 msgstr "删除源仓库中多余的BDB日志文件"
 
 #: svnadmin/main.c:279
@@ -6416,80 +7553,248 @@ msgid "call hook after changing revision property"
 msgstr "修改属性后调用钩子"
 
 #: svnadmin/main.c:291
-msgid "wait instead of exit if the repository is in\n                             use by another process"
-msgstr "如果仓库被其他进程占用，等待而不直接退出\n  "
+msgid ""
+"wait instead of exit if the repository is in\n"
+"                             use by another process"
+msgstr ""
+"如果仓库被其他进程占用，等待而不直接退出\n"
+"  "
 
 #: svnadmin/main.c:295
-msgid "use format compatible with Subversion versions\n                             earlier than 1.4"
+msgid ""
+"use format compatible with Subversion versions\n"
+"                             earlier than 1.4"
 msgstr "使用与1.4之前版本兼容的格式"
 
 #: svnadmin/main.c:308
-msgid "usage: svnadmin crashtest REPOS_PATH\n\nOpen the repository at REPOS_PATH, then abort, thus simulating\na process that crashes while holding an open repository handle.\n"
-msgstr "用法: svnadmin crashtest REPOS_PATH\n\n打开位于 REPOS_PATH 的仓库, 然后终止, 从而模拟一个持有仓库句柄进的程崩溃。\n"
+msgid ""
+"usage: svnadmin crashtest REPOS_PATH\n"
+"\n"
+"Open the repository at REPOS_PATH, then abort, thus simulating\n"
+"a process that crashes while holding an open repository handle.\n"
+msgstr ""
+"用法: svnadmin crashtest REPOS_PATH\n"
+"\n"
+"打开位于 REPOS_PATH 的仓库, 然后终止, 从而模拟一个持有仓库句柄进的程崩溃。\n"
 
 #: svnadmin/main.c:314
-msgid "usage: svnadmin create REPOS_PATH\n\nCreate a new, empty repository at REPOS_PATH.\n"
-msgstr "用法: svnadmin create REPOS_PATH\n\n于 REPOS_PATH 创建一个新的，空的 Subversion 仓库。\n"
+msgid ""
+"usage: svnadmin create REPOS_PATH\n"
+"\n"
+"Create a new, empty repository at REPOS_PATH.\n"
+msgstr ""
+"用法: svnadmin create REPOS_PATH\n"
+"\n"
+"于 REPOS_PATH 创建一个新的，空的 Subversion 仓库。\n"
 
 #: svnadmin/main.c:320
-msgid "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\nRun over the requested revision range, performing predecessor delti-\nfication on the paths changed in those revisions.  Deltification in\nessence compresses the repository by only storing the differences or\ndelta from the preceding revision.  If no revisions are specified,\nthis will simply deltify the HEAD revision.\n"
-msgstr "用法: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n在指定的版本范围中，对其中变动的路径作 deltification。藉由仅储存\n与前一版本的差异，deltification 本质上可压缩仓库。如果没有指定\n版本则直接对 HEAD 版本进行。\n"
+msgid ""
+"usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
+"\n"
+"Run over the requested revision range, performing predecessor delti-\n"
+"fication on the paths changed in those revisions.  Deltification in\n"
+"essence compresses the repository by only storing the differences or\n"
+"delta from the preceding revision.  If no revisions are specified,\n"
+"this will simply deltify the HEAD revision.\n"
+msgstr ""
+"用法: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
+"\n"
+"在指定的版本范围中，对其中变动的路径作 deltification。藉由仅储存\n"
+"与前一版本的差异，deltification 本质上可压缩仓库。如果没有指定\n"
+"版本则直接对 HEAD 版本进行。\n"
 
 #: svnadmin/main.c:329
-msgid "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\nDump the contents of filesystem to stdout in a 'dumpfile'\nportable format, sending feedback to stderr.  Dump revisions\nLOWER rev through UPPER rev.  If no revisions are given, dump all\nrevision trees.  If only LOWER is given, dump that one revision tree.\nIf --incremental is passed, then the first revision dumped will be\na diff against the previous revision, instead of the usual fulltext.\n"
-msgstr "用法: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n\n将文件系统的内容，以一种可携式“转存”格式输出到标准输出，并将信息\n报告输出到标准错误。将 LOWER 与 UPPER 之间版本内容转存出来。如果没\n有指定版本，则转储所有的版本树。如果只有指定 LOWER ，则只转储\n一个版本树。如果使用了 --incremental 选项，那么第一个转存的版本会\n是与前一个版本的差异，而非平常的全文输出。\n"
+msgid ""
+"usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
+"\n"
+"Dump the contents of filesystem to stdout in a 'dumpfile'\n"
+"portable format, sending feedback to stderr.  Dump revisions\n"
+"LOWER rev through UPPER rev.  If no revisions are given, dump all\n"
+"revision trees.  If only LOWER is given, dump that one revision tree.\n"
+"If --incremental is passed, then the first revision dumped will be\n"
+"a diff against the previous revision, instead of the usual fulltext.\n"
+msgstr ""
+"用法: svnadmin dump REPOS_PATH [-r LOWER[:UPPER]] [--incremental]\n"
+"\n"
+"将文件系统的内容，以一种可携式“转存”格式输出到标准输出，并将信息\n"
+"报告输出到标准错误。将 LOWER 与 UPPER 之间版本内容转存出来。如果没\n"
+"有指定版本，则转储所有的版本树。如果只有指定 LOWER ，则只转储\n"
+"一个版本树。如果使用了 --incremental 选项，那么第一个转存的版本会\n"
+"是与前一个版本的差异，而非平常的全文输出。\n"
 
 #: svnadmin/main.c:339
-msgid "usage: svnadmin help [SUBCOMMAND...]\n\nDescribe the usage of this program or its subcommands.\n"
-msgstr "用法: svnadmin help [SUBCOMMAND...]\n\n显示本程序或其子命令的用法。\n"
+msgid ""
+"usage: svnadmin help [SUBCOMMAND...]\n"
+"\n"
+"Describe the usage of this program or its subcommands.\n"
+msgstr ""
+"用法: svnadmin help [SUBCOMMAND...]\n"
+"\n"
+"显示本程序或其子命令的用法。\n"
 
 #: svnadmin/main.c:344
-msgid "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\nMakes a hot copy of a repository.\n"
-msgstr "用法: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n产生仓库的即时副本。\n"
+msgid ""
+"usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
+"\n"
+"Makes a hot copy of a repository.\n"
+msgstr ""
+"用法: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n"
+"\n"
+"产生仓库的即时副本。\n"
 
 #: svnadmin/main.c:349
-msgid "usage: svnadmin list-dblogs REPOS_PATH\n\nList all Berkeley DB log files.\n\nWARNING: Modifying or deleting logfiles which are still in use\nwill cause your repository to be corrupted.\n"
-msgstr "用法: svnadmin list-dblogs REPOS_PATH\n\n列出所有的BDB日志文件。\n\n警告: 修改或删除仍在使用中的记录文件将导致仓库损坏。\n"
+msgid ""
+"usage: svnadmin list-dblogs REPOS_PATH\n"
+"\n"
+"List all Berkeley DB log files.\n"
+"\n"
+"WARNING: Modifying or deleting logfiles which are still in use\n"
+"will cause your repository to be corrupted.\n"
+msgstr ""
+"用法: svnadmin list-dblogs REPOS_PATH\n"
+"\n"
+"列出所有的BDB日志文件。\n"
+"\n"
+"警告: 修改或删除仍在使用中的记录文件将导致仓库损坏。\n"
 
 #: svnadmin/main.c:356
-msgid "usage: svnadmin list-unused-dblogs REPOS_PATH\n\nList unused Berkeley DB log files.\n\n"
-msgstr "用法: svnadmin list-unused-dblogs REPOS_PATH\n\n列出无用的BDB日志文件。\n\n"
+msgid ""
+"usage: svnadmin list-unused-dblogs REPOS_PATH\n"
+"\n"
+"List unused Berkeley DB log files.\n"
+"\n"
+msgstr ""
+"用法: svnadmin list-unused-dblogs REPOS_PATH\n"
+"\n"
+"列出无用的BDB日志文件。\n"
+"\n"
 
 #: svnadmin/main.c:361
-msgid "usage: svnadmin load REPOS_PATH\n\nRead a 'dumpfile'-formatted stream from stdin, committing\nnew revisions into the repository's filesystem.  If the repository\nwas previously empty, its UUID will, by default, be changed to the\none specified in the stream.  Progress feedback is sent to stdout.\n"
-msgstr "用法: svnadmin load REPOS_PATH\n\n从标准输入读取“转存”格式的流，将新的版本提交至仓库的文件\n系统中。如果仓库原先是空的，默认会将其 UUID 以流中的数值代之。\n进度报告会送至标准输出。\n"
+msgid ""
+"usage: svnadmin load REPOS_PATH\n"
+"\n"
+"Read a 'dumpfile'-formatted stream from stdin, committing\n"
+"new revisions into the repository's filesystem.  If the repository\n"
+"was previously empty, its UUID will, by default, be changed to the\n"
+"one specified in the stream.  Progress feedback is sent to stdout.\n"
+msgstr ""
+"用法: svnadmin load REPOS_PATH\n"
+"\n"
+"从标准输入读取“转存”格式的流，将新的版本提交至仓库的文件\n"
+"系统中。如果仓库原先是空的，默认会将其 UUID 以流中的数值代之。\n"
+"进度报告会送至标准输出。\n"
 
 #: svnadmin/main.c:371
-msgid "usage: svnadmin lslocks REPOS_PATH\n\nPrint descriptions of all locks.\n"
-msgstr "用法: svnadmin lslocks REPOS_PATH\n\n显示所有锁的描述。\n"
+msgid ""
+"usage: svnadmin lslocks REPOS_PATH\n"
+"\n"
+"Print descriptions of all locks.\n"
+msgstr ""
+"用法: svnadmin lslocks REPOS_PATH\n"
+"\n"
+"显示所有锁的描述。\n"
 
 #: svnadmin/main.c:376
-msgid "usage: svnadmin lstxns REPOS_PATH\n\nPrint the names of all uncommitted transactions.\n"
-msgstr "用法: svnadmin lstxns REPOS_PATH\n\n显示所有未处理事务的名称。\n"
+msgid ""
+"usage: svnadmin lstxns REPOS_PATH\n"
+"\n"
+"Print the names of all uncommitted transactions.\n"
+msgstr ""
+"用法: svnadmin lstxns REPOS_PATH\n"
+"\n"
+"显示所有未处理事务的名称。\n"
 
 #: svnadmin/main.c:381
-msgid "usage: svnadmin recover REPOS_PATH\n\nRun the Berkeley DB recovery procedure on a repository.  Do\nthis if you've been getting errors indicating that recovery\nought to be run.  Recovery requires exclusive access and will\nexit if the repository is in use by another process.\n"
-msgstr "用法: svnadmin recover REPOS_PATH\n\n对仓库进行BDB修复程序。如果您遇到要求进行修复的\n错误信息，请执行本命令。\n\n警告: 只有在您绝对确定您是唯一存取仓库的人时，才执行本命令。\n本命令必须有独占的存取权限，如果仓库被其它进程所占用，它会马\n上结束。\n\n"
+msgid ""
+"usage: svnadmin recover REPOS_PATH\n"
+"\n"
+"Run the Berkeley DB recovery procedure on a repository.  Do\n"
+"this if you've been getting errors indicating that recovery\n"
+"ought to be run.  Recovery requires exclusive access and will\n"
+"exit if the repository is in use by another process.\n"
+msgstr ""
+"用法: svnadmin recover REPOS_PATH\n"
+"\n"
+"对仓库进行BDB修复程序。如果您遇到要求进行修复的\n"
+"错误信息，请执行本命令。\n"
+"\n"
+"警告: 只有在您绝对确定您是唯一存取仓库的人时，才执行本命令。\n"
+"本命令必须有独占的存取权限，如果仓库被其它进程所占用，它会马\n"
+"上结束。\n"
+"\n"
 
 #: svnadmin/main.c:389
-msgid "usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n\nUnconditionally remove lock from each LOCKED_PATH.\n"
-msgstr "用法: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n\n无条件地从每一个 LOCKED_PATH 删除锁。\n"
+msgid ""
+"usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n"
+"\n"
+"Unconditionally remove lock from each LOCKED_PATH.\n"
+msgstr ""
+"用法: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n"
+"\n"
+"无条件地从每一个 LOCKED_PATH 删除锁。\n"
 
 #: svnadmin/main.c:394
-msgid "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\nDelete the named transaction(s).\n"
-msgstr "用法: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\n从仓库删除命名事务。\n"
+msgid ""
+"usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
+"\n"
+"Delete the named transaction(s).\n"
+msgstr ""
+"用法: svnadmin rmtxns REPOS_PATH TXN_NAME...\n"
+"\n"
+"从仓库删除命名事务。\n"
 
 #: svnadmin/main.c:399
-msgid "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n\nSet the log-message on revision REVISION to the contents of FILE.  Use\n--bypass-hooks to avoid triggering the revision-property-related hooks\n(for example, if you do not want an email notification sent\nfrom your post-revprop-change hook, or because the modification of\nrevision properties has not been enabled in the pre-revprop-change\nhook).\n\nNOTE: Revision properties are not versioned, so this command will\noverwrite the previous log message.\n"
-msgstr "用法: svnadmin setlog REPOS_PATH -r REVISION FILE\n\n  将版本 REVISION 的日志信息设为 FILE 的内容。使用 --bypass-hooks 来避\n  免触发与修改属性相关的钩子(例如，你不需要你的 post-revprop-change 钩\n  子发送 email通知，或者在 pre-revprop-change 钩子中禁止了修改属性)。\n\n  注意: 修订属性并未纳入版本管理，所以这个命令会覆盖以前的属性取值。\n"
+msgid ""
+"usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
+"\n"
+"Set the log-message on revision REVISION to the contents of FILE.  Use\n"
+"--bypass-hooks to avoid triggering the revision-property-related hooks\n"
+"(for example, if you do not want an email notification sent\n"
+"from your post-revprop-change hook, or because the modification of\n"
+"revision properties has not been enabled in the pre-revprop-change\n"
+"hook).\n"
+"\n"
+"NOTE: Revision properties are not versioned, so this command will\n"
+"overwrite the previous log message.\n"
+msgstr ""
+"用法: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
+"\n"
+"  将版本 REVISION 的日志信息设为 FILE 的内容。使用 --bypass-hooks 来避\n"
+"  免触发与修改属性相关的钩子(例如，你不需要你的 post-revprop-change 钩\n"
+"  子发送 email通知，或者在 pre-revprop-change 钩子中禁止了修改属性)。\n"
+"\n"
+"  注意: 修订属性并未纳入版本管理，所以这个命令会覆盖以前的属性取值。\n"
 
 #: svnadmin/main.c:411
-msgid "usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n\nSet the property NAME on revision REVISION to the contents of FILE. Use\n--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\nthe revision property-related hooks (for example, if you want an email\nnotification sent from your post-revprop-change hook).\n\nNOTE: Revision properties are not versioned, so this command will\noverwrite the previous value of the property.\n"
-msgstr "用法: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n\n  将版本 REVISION 的属性 NAME 设为 FILE 的内容。使用\n  --use-pre-revprop-change-hook/--use-post-revprop-change-hook 来触发与修\n  改属性相关的钩子(例如，你需要在你的 post-revprop-change 钩子中发送 email\n  通知)。\n\n  注意: 修订属性并未纳入版本管理，所以这个命令会覆盖以前的属性取值。\n"
+msgid ""
+"usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
+"\n"
+"Set the property NAME on revision REVISION to the contents of FILE. Use\n"
+"--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\n"
+"the revision property-related hooks (for example, if you want an email\n"
+"notification sent from your post-revprop-change hook).\n"
+"\n"
+"NOTE: Revision properties are not versioned, so this command will\n"
+"overwrite the previous value of the property.\n"
+msgstr ""
+"用法: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
+"\n"
+"  将版本 REVISION 的属性 NAME 设为 FILE 的内容。使用\n"
+"  --use-pre-revprop-change-hook/--use-post-revprop-change-hook 来触发与修\n"
+"  改属性相关的钩子(例如，你需要在你的 post-revprop-change 钩子中发送 email\n"
+"  通知)。\n"
+"\n"
+"  注意: 修订属性并未纳入版本管理，所以这个命令会覆盖以前的属性取值。\n"
 
 #: svnadmin/main.c:422
-msgid "usage: svnadmin verify REPOS_PATH\n\nVerifies the data stored in the repository.\n"
-msgstr "用法: svnadmin verify REPOS_PATH\n\n校验储存于仓库的数据。\n"
+msgid ""
+"usage: svnadmin verify REPOS_PATH\n"
+"\n"
+"Verifies the data stored in the repository.\n"
+msgstr ""
+"用法: svnadmin verify REPOS_PATH\n"
+"\n"
+"校验储存于仓库的数据。\n"
 
 #: svnadmin/main.c:478
 msgid "Invalid revision specifier"
@@ -6516,23 +7821,45 @@ msgid "done.\n"
 msgstr "完成。\n"
 
 #: svnadmin/main.c:691
-msgid "general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\nType 'svnadmin help <subcommand>' for help on a specific subcommand.\nType 'svnadmin --version' to see the program version and FS modules.\n\nAvailable subcommands:\n"
-msgstr "一般用法: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n请使用“svnadmin help <subcommand>” 以取得特定子命令的帮助信息。\n请使用“svnadmin --version”已查看程序版本号以及可用的文件系统模块。\n\n可用的子命令: \n"
+msgid ""
+"general usage: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
+"Type 'svnadmin help <subcommand>' for help on a specific subcommand.\n"
+"Type 'svnadmin --version' to see the program version and FS modules.\n"
+"\n"
+"Available subcommands:\n"
+msgstr ""
+"一般用法: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
+"请使用“svnadmin help <subcommand>” 以取得特定子命令的帮助信息。\n"
+"请使用“svnadmin --version”已查看程序版本号以及可用的文件系统模块。\n"
+"\n"
+"可用的子命令: \n"
 
 #: svnadmin/main.c:698
 #: svnlook/main.c:1674
 #: svnserve/main.c:204
-msgid "The following repository back-end (FS) modules are available:\n\n"
-msgstr "以下的仓库后端(FS) 模块可用: \n\n"
+msgid ""
+"The following repository back-end (FS) modules are available:\n"
+"\n"
+msgstr ""
+"以下的仓库后端(FS) 模块可用: \n"
+"\n"
 
 #: svnadmin/main.c:775
 #, c-format
-msgid "Repository lock acquired.\nPlease wait; recovering the repository may take some time...\n"
-msgstr "已取得仓库锁定。\n请稍候；修复仓库也许得花费一些时间...\n"
+msgid ""
+"Repository lock acquired.\n"
+"Please wait; recovering the repository may take some time...\n"
+msgstr ""
+"已取得仓库锁定。\n"
+"请稍候；修复仓库也许得花费一些时间...\n"
 
 #: svnadmin/main.c:810
-msgid "Failed to get exclusive repository access; perhaps another process\nsuch as httpd, svnserve or svn has it open?"
-msgstr "无法取得独占存取权限；可能是其他如 httpd，svnserve 或 svn 的进程正在打开它\n并没有释放权限？"
+msgid ""
+"Failed to get exclusive repository access; perhaps another process\n"
+"such as httpd, svnserve or svn has it open?"
+msgstr ""
+"无法取得独占存取权限；可能是其他如 httpd，svnserve 或 svn 的进程正在打开它\n"
+"并没有释放权限？"
 
 #: svnadmin/main.c:815
 #, c-format
@@ -6541,8 +7868,12 @@ msgstr "等待仓库锁定中；也许其它的进程把它打开了？\n"
 
 #: svnadmin/main.c:822
 #, c-format
-msgid "\nRecovery completed.\n"
-msgstr "\n修复完成。\n"
+msgid ""
+"\n"
+"Recovery completed.\n"
+msgstr ""
+"\n"
+"修复完成。\n"
 
 #: svnadmin/main.c:829
 #, c-format
@@ -6602,13 +7933,25 @@ msgstr "过期: %s\n"
 
 #: svnadmin/main.c:1122
 #, c-format
-msgid "Comment (%i lines):\n%s\n\n"
-msgstr "注释(%i 行): \n%s\n\n"
+msgid ""
+"Comment (%i lines):\n"
+"%s\n"
+"\n"
+msgstr ""
+"注释(%i 行): \n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1123
 #, c-format
-msgid "Comment (%i line):\n%s\n\n"
-msgstr "注释(%i 行): \n%s\n\n"
+msgid ""
+"Comment (%i line):\n"
+"%s\n"
+"\n"
+msgstr ""
+"注释(%i 行): \n"
+"%s\n"
+"\n"
 
 #: svnadmin/main.c:1180
 #, c-format
@@ -6631,8 +7974,12 @@ msgstr "必须提供子命令参数\n"
 
 #: svnadmin/main.c:1510
 #, c-format
-msgid "subcommand '%s' doesn't accept option '%s'\nType 'svnadmin help %s' for usage.\n"
-msgstr "子命令“%s”不接受选项“%s”\n请使用“svnadmin help %s”以了解用法。\n"
+msgid ""
+"subcommand '%s' doesn't accept option '%s'\n"
+"Type 'svnadmin help %s' for usage.\n"
+msgstr ""
+"子命令“%s”不接受选项“%s”\n"
+"请使用“svnadmin help %s”以了解用法。\n"
 
 #: svnadmin/main.c:1543
 msgid "Try 'svnadmin help' for more info"
@@ -6683,20 +8030,45 @@ msgid "Don't filter revision properties."
 msgstr "不过滤版本属性。"
 
 #: svndumpfilter/main.c:805
-msgid "Filter out nodes with given prefixes from dumpstream.\nusage: svndumpfilter exclude PATH_PREFIX...\n"
-msgstr "自转存流移除匹配指定字首的节点。\n用法: svndumpfilter exclude PATH_PREFIX...\n"
+msgid ""
+"Filter out nodes with given prefixes from dumpstream.\n"
+"usage: svndumpfilter exclude PATH_PREFIX...\n"
+msgstr ""
+"自转存流移除匹配指定字首的节点。\n"
+"用法: svndumpfilter exclude PATH_PREFIX...\n"
 
 #: svndumpfilter/main.c:811
-msgid "Filter out nodes without given prefixes from dumpstream.\nusage: svndumpfilter include PATH_PREFIX...\n"
-msgstr "从转储串流中移除未包含指定前缀的节点。\n用法: svndumpfilter include PATH_PREFIX...\n"
+msgid ""
+"Filter out nodes without given prefixes from dumpstream.\n"
+"usage: svndumpfilter include PATH_PREFIX...\n"
+msgstr ""
+"从转储串流中移除未包含指定前缀的节点。\n"
+"用法: svndumpfilter include PATH_PREFIX...\n"
 
 #: svndumpfilter/main.c:817
-msgid "Describe the usage of this program or its subcommands.\nusage: svndumpfilter help [SUBCOMMAND...]\n"
-msgstr "一般用法: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n请使用“svndumpfilter help <subcommand>”以取得特定子命令的帮助信息。\n请使用“svndumpfilter --version”以查看程序版本号。\n\n可用的子命令: \n"
+msgid ""
+"Describe the usage of this program or its subcommands.\n"
+"usage: svndumpfilter help [SUBCOMMAND...]\n"
+msgstr ""
+"一般用法: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+"请使用“svndumpfilter help <subcommand>”以取得特定子命令的帮助信息。\n"
+"请使用“svndumpfilter --version”以查看程序版本号。\n"
+"\n"
+"可用的子命令: \n"
 
 #: svndumpfilter/main.c:888
-msgid "general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\nType 'svndumpfilter help <subcommand>' for help on a specific subcommand.\nType 'svndumpfilter --version' to see the program version.\n\nAvailable subcommands:\n"
-msgstr "一般用法: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n请使用 “svndumpfilter help <subcommand>”获得指定子命令的帮助信息。\n请使用 “svndumpfilter --version”获得本程序版本。\n\n可用的子命令: \n"
+msgid ""
+"general usage: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+"Type 'svndumpfilter help <subcommand>' for help on a specific subcommand.\n"
+"Type 'svndumpfilter --version' to see the program version.\n"
+"\n"
+"Available subcommands:\n"
+msgstr ""
+"一般用法: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
+"请使用 “svndumpfilter help <subcommand>”获得指定子命令的帮助信息。\n"
+"请使用 “svndumpfilter --version”获得本程序版本。\n"
+"\n"
+"可用的子命令: \n"
 
 #: svndumpfilter/main.c:943
 #, c-format
@@ -6720,8 +8092,12 @@ msgstr "包含的字首: \n"
 
 #: svndumpfilter/main.c:976
 #, c-format
-msgid "Dropped %d revision(s).\n\n"
-msgstr "丢弃 %d 版本。\n\n"
+msgid ""
+"Dropped %d revision(s).\n"
+"\n"
+msgstr ""
+"丢弃 %d 版本。\n"
+"\n"
 
 #: svndumpfilter/main.c:982
 msgid "Revisions renumbered as follows:\n"
@@ -6739,13 +8115,21 @@ msgstr "丢弃 %d 节点: \n"
 
 #: svndumpfilter/main.c:1245
 #, c-format
-msgid "\nError: no prefixes supplied.\n"
-msgstr "\n错误: 没有提供前置字首，\n"
+msgid ""
+"\n"
+"Error: no prefixes supplied.\n"
+msgstr ""
+"\n"
+"错误: 没有提供前置字首，\n"
 
 #: svndumpfilter/main.c:1289
 #, c-format
-msgid "Subcommand '%s' doesn't accept option '%s'\nType 'svndumpfilter help %s' for usage.\n"
-msgstr "子命令“%s”不接受选项“%s”\n请使用“svndumpfilter help %s”以了解用法。\n"
+msgid ""
+"Subcommand '%s' doesn't accept option '%s'\n"
+"Type 'svndumpfilter help %s' for usage.\n"
+msgstr ""
+"子命令“%s”不接受选项“%s”\n"
+"请使用“svndumpfilter help %s”以了解用法。\n"
 
 #: svndumpfilter/main.c:1307
 msgid "Try 'svndumpfilter help' for more info"
@@ -6788,68 +8172,174 @@ msgid "show details for copies"
 msgstr "显示各个副本的详细信息"
 
 #: svnlook/main.c:138
-msgid "usage: svnlook author REPOS_PATH\n\nPrint the author.\n"
-msgstr "用法: svnlook author REPOS_PATH\n\n显示作者。\n"
+msgid ""
+"usage: svnlook author REPOS_PATH\n"
+"\n"
+"Print the author.\n"
+msgstr ""
+"用法: svnlook author REPOS_PATH\n"
+"\n"
+"显示作者。\n"
 
 #: svnlook/main.c:143
-msgid "usage: svnlook cat REPOS_PATH FILE_PATH\n\nPrint the contents of a file.  Leading '/' on FILE_PATH is optional.\n"
-msgstr "用法: svnlook cat REPOS_PATH FILE_PATH\n\n显示文件的内容。FILE_PATH 前的 '/' 可省略。\n"
+msgid ""
+"usage: svnlook cat REPOS_PATH FILE_PATH\n"
+"\n"
+"Print the contents of a file.  Leading '/' on FILE_PATH is optional.\n"
+msgstr ""
+"用法: svnlook cat REPOS_PATH FILE_PATH\n"
+"\n"
+"显示文件的内容。FILE_PATH 前的 '/' 可省略。\n"
 
 #: svnlook/main.c:148
-msgid "usage: svnlook changed REPOS_PATH\n\nPrint the paths that were changed.\n"
-msgstr "用法: svnlook changed REPOS_PATH\n\n显示已改变的路径。\n"
+msgid ""
+"usage: svnlook changed REPOS_PATH\n"
+"\n"
+"Print the paths that were changed.\n"
+msgstr ""
+"用法: svnlook changed REPOS_PATH\n"
+"\n"
+"显示已改变的路径。\n"
 
 #: svnlook/main.c:153
-msgid "usage: svnlook date REPOS_PATH\n\nPrint the datestamp.\n"
-msgstr "用法: svnlook date REPOS_PATH\n\n显示日期。\n"
+msgid ""
+"usage: svnlook date REPOS_PATH\n"
+"\n"
+"Print the datestamp.\n"
+msgstr ""
+"用法: svnlook date REPOS_PATH\n"
+"\n"
+"显示日期。\n"
 
 #: svnlook/main.c:158
-msgid "usage: svnlook diff REPOS_PATH\n\nPrint GNU-style diffs of changed files and properties.\n"
-msgstr "用法: svnlook diff REPOS_PATH\n\n以 GNU 样式，显示仓库中改变的文件与属性差异。\n"
+msgid ""
+"usage: svnlook diff REPOS_PATH\n"
+"\n"
+"Print GNU-style diffs of changed files and properties.\n"
+msgstr ""
+"用法: svnlook diff REPOS_PATH\n"
+"\n"
+"以 GNU 样式，显示仓库中改变的文件与属性差异。\n"
 
 #: svnlook/main.c:164
-msgid "usage: svnlook dirs-changed REPOS_PATH\n\nPrint the directories that were themselves changed (property edits)\nor whose file children were changed.\n"
-msgstr "用法: svnlook dirs-changed REPOS_PATH\n\n显示本身曾改变 (或属性编辑) 过的目录，或是其下的文件更曾动过目录。\n"
+msgid ""
+"usage: svnlook dirs-changed REPOS_PATH\n"
+"\n"
+"Print the directories that were themselves changed (property edits)\n"
+"or whose file children were changed.\n"
+msgstr ""
+"用法: svnlook dirs-changed REPOS_PATH\n"
+"\n"
+"显示本身曾改变 (或属性编辑) 过的目录，或是其下的文件更曾动过目录。\n"
 
 #: svnlook/main.c:170
-msgid "usage: svnlook help [SUBCOMMAND...]\n\nDescribe the usage of this program or its subcommands.\n"
-msgstr "用法: svnlook help [SUBCOMMAND...]\n\n显示本程序或其子命令的用法。\n"
+msgid ""
+"usage: svnlook help [SUBCOMMAND...]\n"
+"\n"
+"Describe the usage of this program or its subcommands.\n"
+msgstr ""
+"用法: svnlook help [SUBCOMMAND...]\n"
+"\n"
+"显示本程序或其子命令的用法。\n"
 
 #: svnlook/main.c:175
-msgid "usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n\nPrint information about the history of a path in the repository (or\nthe root directory if no path is supplied).\n"
-msgstr "用法: svnlook history REPOS_PATH [PATH_IN_REPOS]\n\n显示仓库中，某个路径的历史记录信息 (如果没有指定路径，则为根目录)。\n"
+msgid ""
+"usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n"
+"\n"
+"Print information about the history of a path in the repository (or\n"
+"the root directory if no path is supplied).\n"
+msgstr ""
+"用法: svnlook history REPOS_PATH [PATH_IN_REPOS]\n"
+"\n"
+"显示仓库中，某个路径的历史记录信息 (如果没有指定路径，则为根目录)。\n"
 
 #: svnlook/main.c:181
-msgid "usage: svnlook info REPOS_PATH\n\nPrint the author, datestamp, log message size, and log message.\n"
-msgstr "用法: svnlook info REPOS_PATH\n\n显示作者，日期戳，日志信息大小，以及日志信息。\n"
+msgid ""
+"usage: svnlook info REPOS_PATH\n"
+"\n"
+"Print the author, datestamp, log message size, and log message.\n"
+msgstr ""
+"用法: svnlook info REPOS_PATH\n"
+"\n"
+"显示作者，日期戳，日志信息大小，以及日志信息。\n"
 
 #: svnlook/main.c:186
-msgid "usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n\nIf a lock exists on a path in the repository, describe it.\n"
-msgstr "用法: svnlook lock REPOS_PATH PATH_IN_REPOS\n\n如果仓库路径已经存在锁，描述它。\n"
+msgid ""
+"usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
+"\n"
+"If a lock exists on a path in the repository, describe it.\n"
+msgstr ""
+"用法: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
+"\n"
+"如果仓库路径已经存在锁，描述它。\n"
 
 #: svnlook/main.c:191
-msgid "usage: svnlook log REPOS_PATH\n\nPrint the log message.\n"
-msgstr "用法: svnlook log REPOS_PATH\n\n显示日志信息。\n"
+msgid ""
+"usage: svnlook log REPOS_PATH\n"
+"\n"
+"Print the log message.\n"
+msgstr ""
+"用法: svnlook log REPOS_PATH\n"
+"\n"
+"显示日志信息。\n"
 
 #: svnlook/main.c:196
-msgid "usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n\nPrint the raw value of a property on a path in the repository.\nWith --revprop, prints the raw value of a revision property.\n"
-msgstr "用法: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n\n显示仓库中某个路径上属性的原始值。\n用--revprop选项显示版本上属性的原始值。\n"
+msgid ""
+"usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n"
+"\n"
+"Print the raw value of a property on a path in the repository.\n"
+"With --revprop, prints the raw value of a revision property.\n"
+msgstr ""
+"用法: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n"
+"\n"
+"显示仓库中某个路径上属性的原始值。\n"
+"用--revprop选项显示版本上属性的原始值。\n"
 
 #: svnlook/main.c:202
-msgid "usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n\nList the properties of a path in the repository, or\nwith the --revprop option, revision properties.\nWith -v, show the property values too.\n"
-msgstr "用法: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n\n列出仓库中某个路径的属性。\n使用 --revprop 选项列出版本的属性。\n使用 -v 选项一并显示属性的内容。\n"
+msgid ""
+"usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n"
+"\n"
+"List the properties of a path in the repository, or\n"
+"with the --revprop option, revision properties.\n"
+"With -v, show the property values too.\n"
+msgstr ""
+"用法: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n"
+"\n"
+"列出仓库中某个路径的属性。\n"
+"使用 --revprop 选项列出版本的属性。\n"
+"使用 -v 选项一并显示属性的内容。\n"
 
 #: svnlook/main.c:209
-msgid "usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\nPrint the tree, starting at PATH_IN_REPOS (if supplied, at the root\nof the tree otherwise), optionally showing node revision ids.\n"
-msgstr "用法: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n显示目录树，从 PATH_IN_REPOS 开始 (如果省略此参数就从目录树的根目录开始)，\n可选的显示节点版本 id。\n"
+msgid ""
+"usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n"
+"\n"
+"Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
+"of the tree otherwise), optionally showing node revision ids.\n"
+msgstr ""
+"用法: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n"
+"\n"
+"显示目录树，从 PATH_IN_REPOS 开始 (如果省略此参数就从目录树的根目录开始)，\n"
+"可选的显示节点版本 id。\n"
 
 #: svnlook/main.c:215
-msgid "usage: svnlook uuid REPOS_PATH\n\nPrint the repository's UUID.\n"
-msgstr "用法: svnlook uuid REPOS_PATH\n\n显示仓库的 UUID。\n"
+msgid ""
+"usage: svnlook uuid REPOS_PATH\n"
+"\n"
+"Print the repository's UUID.\n"
+msgstr ""
+"用法: svnlook uuid REPOS_PATH\n"
+"\n"
+"显示仓库的 UUID。\n"
 
 #: svnlook/main.c:220
-msgid "usage: svnlook youngest REPOS_PATH\n\nPrint the youngest revision number.\n"
-msgstr "用法: svnlook youngest REPOS_PATH\n\n显示最新的版本号。\n"
+msgid ""
+"usage: svnlook youngest REPOS_PATH\n"
+"\n"
+"Print the youngest revision number.\n"
+msgstr ""
+"用法: svnlook youngest REPOS_PATH\n"
+"\n"
+"显示最新的版本号。\n"
 
 #: svnlook/main.c:815
 #, c-format
@@ -6900,13 +8390,21 @@ msgstr "路径“%s”不是文件"
 
 #: svnlook/main.c:1367
 #, c-format
-msgid "REVISION   PATH <ID>\n--------   ---------\n"
-msgstr "修 订 版   路径 <ID>\n--------   ---------\n"
+msgid ""
+"REVISION   PATH <ID>\n"
+"--------   ---------\n"
+msgstr ""
+"修 订 版   路径 <ID>\n"
+"--------   ---------\n"
 
 #: svnlook/main.c:1372
 #, c-format
-msgid "REVISION   PATH\n--------   ----\n"
-msgstr "修 订 版   路径\n--------   ----\n"
+msgid ""
+"REVISION   PATH\n"
+"--------   ----\n"
+msgstr ""
+"修 订 版   路径\n"
+"--------   ----\n"
 
 #: svnlook/main.c:1419
 #, c-format
@@ -6930,8 +8428,23 @@ msgid "Missing repository path argument"
 msgstr "未提供仓库路径参数"
 
 #: svnlook/main.c:1664
-msgid "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\nNote: any subcommand which takes the '--revision' and '--transaction'\n      options will, if invoked without one of those options, act on\n      the repository's youngest revision.\nType 'svnlook help <subcommand>' for help on a specific subcommand.\nType 'svnlook --version' to see the program version and FS modules.\n\nAvailable subcommands:\n"
-msgstr "一般用法: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n注意: 任何接受 “--revision”与 “--transaction”选项的子命令，在没有\n      指定两者其一的情况下会直接作用在仓库最新的版本上。\n请使用“svnlook help <subcommand>”以取得特定子命令的帮助信息。\n请使用“svnlook --version”以查看程序的版本以及可用的文件系统模块。\n\n可用的子命令: \n"
+msgid ""
+"general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
+"Note: any subcommand which takes the '--revision' and '--transaction'\n"
+"      options will, if invoked without one of those options, act on\n"
+"      the repository's youngest revision.\n"
+"Type 'svnlook help <subcommand>' for help on a specific subcommand.\n"
+"Type 'svnlook --version' to see the program version and FS modules.\n"
+"\n"
+"Available subcommands:\n"
+msgstr ""
+"一般用法: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
+"注意: 任何接受 “--revision”与 “--transaction”选项的子命令，在没有\n"
+"      指定两者其一的情况下会直接作用在仓库最新的版本上。\n"
+"请使用“svnlook help <subcommand>”以取得特定子命令的帮助信息。\n"
+"请使用“svnlook --version”以查看程序的版本以及可用的文件系统模块。\n"
+"\n"
+"可用的子命令: \n"
 
 #: svnlook/main.c:1720
 msgid "Missing path argument"
@@ -6939,13 +8452,21 @@ msgstr "丢失路径参数"
 
 #: svnlook/main.c:1745
 #, c-format
-msgid "Comment (%i lines):\n%s\n"
-msgstr "注释 (%i 行): \n%s\n"
+msgid ""
+"Comment (%i lines):\n"
+"%s\n"
+msgstr ""
+"注释 (%i 行): \n"
+"%s\n"
 
 #: svnlook/main.c:1746
 #, c-format
-msgid "Comment (%i line):\n%s\n"
-msgstr "注释 (%i 行): \n%s\n"
+msgid ""
+"Comment (%i line):\n"
+"%s\n"
+msgstr ""
+"注释 (%i 行): \n"
+"%s\n"
 
 #: svnlook/main.c:1792
 #, c-format
@@ -6981,8 +8502,12 @@ msgstr "“%s”是URL，但是应该是路径\n"
 
 #: svnlook/main.c:2160
 #, c-format
-msgid "Subcommand '%s' doesn't accept option '%s'\nType 'svnlook help %s' for usage.\n"
-msgstr "子命令“%s”并不接受选项“%s”\n请使用“svnlook help %s”以了解用法。\n"
+msgid ""
+"Subcommand '%s' doesn't accept option '%s'\n"
+"Type 'svnlook help %s' for usage.\n"
+msgstr ""
+"子命令“%s”并不接受选项“%s”\n"
+"请使用“svnlook help %s”以了解用法。\n"
 
 #: svnlook/main.c:2203
 msgid "Try 'svnlook help' for more info"
@@ -7051,8 +8576,14 @@ msgid "Type '%s --help' for usage.\n"
 msgstr "请使用“%s --help”以得到用法。\n"
 
 #: svnserve/main.c:187
-msgid "usage: svnserve [options]\n\nValid options:\n"
-msgstr "用户: svnserve [选项]\n\n有效选项: \n"
+msgid ""
+"usage: svnserve [options]\n"
+"\n"
+"Valid options:\n"
+msgstr ""
+"用户: svnserve [选项]\n"
+"\n"
+"有效选项: \n"
 
 #: svnserve/main.c:450
 #, c-format
@@ -7113,11 +8644,11 @@ msgstr "无法创建线程"
 msgid "Can't get hostname"
 msgstr "无法获取主机名称"
 
-#: svnserve/sasl_auth.c:299
+#: svnserve/sasl_auth.c:311
 msgid "Could not obtain the list of SASL mechanisms"
 msgstr "不能获得SASL机制列表"
 
-#: svnserve/sasl_auth.c:337
+#: svnserve/sasl_auth.c:351
 msgid "Couldn't obtain the authenticated username"
 msgstr "不能获得已经认证的用户名称"
 
@@ -7142,20 +8673,61 @@ msgid "The service failed to start; an internal error occurred while starting th
 msgstr "发生内部错误，启动服务失败"
 
 #: svnsync/main.c:56
-msgid "usage: svnsync initialize DEST_URL SOURCE_URL\n\nInitialize a destination repository for synchronization from\nanother repository.\n\nThe destination URL must point to the root of a repository with\nno committed revisions.  The destination repository must allow\nrevision property changes.\n\nYou should not commit to, or make revision property changes in,\nthe destination repository by any method other than 'svnsync'.\nIn other words, the destination repository should be a read-only\nmirror of the source repository.\n"
-msgstr "用法: svnsync initialize 目标URL 源URL\n\n初始化一个目标仓库以从另一个仓库同步。\n\n目标URL必须指向一个仓库的根目录，这个仓库必须没有提交过的版本并且允许\n修改版本属性。\n\n除了svnsync外，你不应该在目标仓库中提交或者修改版本属性。也就是说，目标\n仓库应该是源仓库的只读镜像。\n"
+msgid ""
+"usage: svnsync initialize DEST_URL SOURCE_URL\n"
+"\n"
+"Initialize a destination repository for synchronization from\n"
+"another repository.\n"
+"\n"
+"The destination URL must point to the root of a repository with\n"
+"no committed revisions.  The destination repository must allow\n"
+"revision property changes.\n"
+"\n"
+"You should not commit to, or make revision property changes in,\n"
+"the destination repository by any method other than 'svnsync'.\n"
+"In other words, the destination repository should be a read-only\n"
+"mirror of the source repository.\n"
+msgstr ""
+"用法: svnsync initialize 目标URL 源URL\n"
+"\n"
+"初始化一个目标仓库以从另一个仓库同步。\n"
+"\n"
+"目标URL必须指向一个仓库的根目录，这个仓库必须没有提交过的版本并且允许\n"
+"修改版本属性。\n"
+"\n"
+"除了svnsync外，你不应该在目标仓库中提交或者修改版本属性。也就是说，目标\n"
+"仓库应该是源仓库的只读镜像。\n"
 
 #: svnsync/main.c:71
-msgid "usage: svnsync synchronize DEST_URL\n\nTransfer all pending revisions from source to destination.\n"
-msgstr "用法: svnsync synchronize DEST_URL\n\n从源到目标传输所有改变。\n"
+msgid ""
+"usage: svnsync synchronize DEST_URL\n"
+"\n"
+"Transfer all pending revisions from source to destination.\n"
+msgstr ""
+"用法: svnsync synchronize DEST_URL\n"
+"\n"
+"从源到目标传输所有改变。\n"
 
 #: svnsync/main.c:76
-msgid "usage: svnsync copy-revprops DEST_URL REV\n\nCopy all revision properties for revision REV from source to\ndestination.\n"
-msgstr "用法: svnsync copy-revprops DEST_URL REV\n\n从源到目标复制所有版本REV属性。\n"
+msgid ""
+"usage: svnsync copy-revprops DEST_URL REV\n"
+"\n"
+"Copy all revision properties for revision REV from source to\n"
+"destination.\n"
+msgstr ""
+"用法: svnsync copy-revprops DEST_URL REV\n"
+"\n"
+"从源到目标复制所有版本REV属性。\n"
 
 #: svnsync/main.c:82
-msgid "usage: svnsync help [SUBCOMMAND...]\n\nDescribe the usage of this program or its subcommands.\n"
-msgstr "用法: svnsync help [SUBCOMMAND...]\n\n显示本程序或其子命令的用法。\n"
+msgid ""
+"usage: svnsync help [SUBCOMMAND...]\n"
+"\n"
+"Describe the usage of this program or its subcommands.\n"
+msgstr ""
+"用法: svnsync help [SUBCOMMAND...]\n"
+"\n"
+"显示本程序或其子命令的用法。\n"
 
 #: svnsync/main.c:184
 #, c-format
@@ -7237,13 +8809,26 @@ msgid "Invalid revision number"
 msgstr "提供了无效的版本号码"
 
 #: svnsync/main.c:1289
-msgid "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\nType 'svnsync help <subcommand>' for help on a specific subcommand.\nType 'svnsync --version' to see the program version and RA modules.\n\nAvailable subcommands:\n"
-msgstr "一般用法: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n请使用 “svnadmin help <subcommand>” 以取得特定子命令的帮助信息。\n\n可用的子命令: \n"
+msgid ""
+"general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
+"Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
+"Type 'svnsync --version' to see the program version and RA modules.\n"
+"\n"
+"Available subcommands:\n"
+msgstr ""
+"一般用法: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
+"请使用 “svnadmin help <subcommand>” 以取得特定子命令的帮助信息。\n"
+"\n"
+"可用的子命令: \n"
 
 #: svnsync/main.c:1479
 #, c-format
-msgid "subcommand '%s' doesn't accept option '%s'\nType 'svnsync help %s' for usage.\n"
-msgstr "子命令“%s”不接受选项“%s”\n请输入“svnsync help %s”以取得用法。\n"
+msgid ""
+"subcommand '%s' doesn't accept option '%s'\n"
+"Type 'svnsync help %s' for usage.\n"
+msgstr ""
+"子命令“%s”不接受选项“%s”\n"
+"请输入“svnsync help %s”以取得用法。\n"
 
 #: svnsync/main.c:1541
 msgid "Try 'svnsync help' for more info"
@@ -7256,8 +8841,58 @@ msgstr "请使用“svnversion --help”以得到用法和帮助。\n"
 
 #: svnversion/main.c:50
 #, c-format
-msgid "usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n\n  Produce a compact 'version number' for the working copy path\n  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n  determine if WC_PATH itself is switched (detection of switches\n  within WC_PATH does not rely on TRAIL_URL).  The version number\n  is written to standard output.  For example:\n\n    $ svnversion . /repos/svn/trunk \n    4168\n\n  The version number will be a single number if the working\n  copy is single revision, unmodified, not switched and with\n  an URL that matches the TRAIL_URL argument.  If the working\n  copy is unusual the version number will be more complex:\n\n   4123:4168     mixed revision working copy\n   4168M         modified working copy\n   4123S         switched working copy\n   4123:4168MS   mixed revision, modified, switched working copy\n\n  If invoked on a directory that is not a working copy, an\n  exported directory say, the program will output 'exported'.\n\n  If invoked without arguments WC_PATH will be the current directory.\n\nValid options:\n"
-msgstr "用法: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n\n  为工作副本路径 WC_PATH 产生紧凑的 “版本号”。 TRAIL_URL 是\n  URL 的结尾部分，用以判断 WC_PATH 是否已切换过 (探测WC_PATH\n  内的切换并不依靠 TRAIL_URL)。版本号码会写至标准输出。举例说明: \n\n    $ svnversion . /repos/svn/trunk \n    4168\n\n  如果工作副本是单一版本，未经修改，未经切换，而且其URL匹配\n  TRAIL_URL 参数，那么版本号码将会是单一数字。如果工作副本不普通，\n  那么版本号就会复杂得多: \n\n   4123:4168     混合版本的工作副本\n   4168M         有修改的工作副本\n   4123S         切换了的工作副本\n   4123:4168MS   混合版本，有修改，工作副本切换过\n\n  如果使用在非工作副本的目录上，例如导出的目录，那么它会输出“已导出”。\n\n  如果调用时没有参数则WC_PATH默认为当前目录。\n\n有效选项: \n"
+msgid ""
+"usage: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
+"\n"
+"  Produce a compact 'version number' for the working copy path\n"
+"  WC_PATH.  TRAIL_URL is the trailing portion of the URL used to\n"
+"  determine if WC_PATH itself is switched (detection of switches\n"
+"  within WC_PATH does not rely on TRAIL_URL).  The version number\n"
+"  is written to standard output.  For example:\n"
+"\n"
+"    $ svnversion . /repos/svn/trunk \n"
+"    4168\n"
+"\n"
+"  The version number will be a single number if the working\n"
+"  copy is single revision, unmodified, not switched and with\n"
+"  an URL that matches the TRAIL_URL argument.  If the working\n"
+"  copy is unusual the version number will be more complex:\n"
+"\n"
+"   4123:4168     mixed revision working copy\n"
+"   4168M         modified working copy\n"
+"   4123S         switched working copy\n"
+"   4123:4168MS   mixed revision, modified, switched working copy\n"
+"\n"
+"  If invoked on a directory that is not a working copy, an\n"
+"  exported directory say, the program will output 'exported'.\n"
+"\n"
+"  If invoked without arguments WC_PATH will be the current directory.\n"
+"\n"
+"Valid options:\n"
+msgstr ""
+"用法: svnversion [OPTIONS] [WC_PATH [TRAIL_URL]]\n"
+"\n"
+"  为工作副本路径 WC_PATH 产生紧凑的 “版本号”。 TRAIL_URL 是\n"
+"  URL 的结尾部分，用以判断 WC_PATH 是否已切换过 (探测WC_PATH\n"
+"  内的切换并不依靠 TRAIL_URL)。版本号码会写至标准输出。举例说明: \n"
+"\n"
+"    $ svnversion . /repos/svn/trunk \n"
+"    4168\n"
+"\n"
+"  如果工作副本是单一版本，未经修改，未经切换，而且其URL匹配\n"
+"  TRAIL_URL 参数，那么版本号码将会是单一数字。如果工作副本不普通，\n"
+"  那么版本号就会复杂得多: \n"
+"\n"
+"   4123:4168     混合版本的工作副本\n"
+"   4168M         有修改的工作副本\n"
+"   4123S         切换了的工作副本\n"
+"   4123:4168MS   混合版本，有修改，工作副本切换过\n"
+"\n"
+"  如果使用在非工作副本的目录上，例如导出的目录，那么它会输出“已导出”。\n"
+"\n"
+"  如果调用时没有参数则WC_PATH默认为当前目录。\n"
+"\n"
+"有效选项: \n"
 
 #: svnversion/main.c:121
 msgid "do not output the trailing newline"

@@ -170,7 +170,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-19 19:08+0900\n"
+"POT-Creation-Date: 2007-01-22 11:09+0800\n"
 "PO-Revision-Date: 2007-01-19 19:04+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
@@ -686,8 +686,8 @@ msgid "Failed to execute WebDAV PROPPATCH"
 msgstr "WebDAV PROPPATCH を実行できませんでした"
 
 #: include/svn_error_codes.h:722 include/svn_error_codes.h:763
-#: libsvn_ra_svn/marshal.c:611 libsvn_ra_svn/marshal.c:719
-#: libsvn_ra_svn/marshal.c:746
+#: libsvn_ra_svn/marshal.c:612 libsvn_ra_svn/marshal.c:720
+#: libsvn_ra_svn/marshal.c:747
 msgid "Malformed network data"
 msgstr "不正なネットワークデータです"
 
@@ -1483,8 +1483,7 @@ msgstr "'%s' はこの作業コピーでロックされていません"
 msgid "'%s' is not locked"
 msgstr "'%s' はロックされていません"
 
-#: libsvn_client/locking_commands.c:409 libsvn_fs/fs-loader.c:901
-#: libsvn_ra/ra_loader.c:625
+#: libsvn_client/locking_commands.c:409 libsvn_ra/ra_loader.c:625
 msgid "Lock comment has illegal characters"
 msgstr "ロックについてのコメントに不正な文字が含まれています"
 
@@ -1750,6 +1749,11 @@ msgstr "ファイルシステムの相互排他ロックを奪えません"
 #, c-format
 msgid "Can't ungrab FS mutex"
 msgstr "ファイルシステムの相互排他ロックを手放せません"
+
+#: libsvn_fs/fs-loader.c:901
+#, fuzzy
+msgid "Lock comment contains illegal characters"
+msgstr "ロックについてのコメントに不正な文字が含まれています"
 
 #: libsvn_fs/fs-loader.c:907
 msgid "Negative expiration date passed to svn_fs_lock"
@@ -3102,31 +3106,31 @@ msgid "The response contains a non-conforming HTTP status line"
 msgstr "仕様に準拠していない HTTP ステータス行がレスポンスに含まれています"
 
 # * Arguments are (1) method and (2) url.
-#: libsvn_ra_dav/util.c:413
+#: libsvn_ra_dav/util.c:451
 #, c-format
 msgid "%s of '%s'"
 msgstr "%s (URL: '%s')"
 
-#: libsvn_ra_dav/util.c:425
+#: libsvn_ra_dav/util.c:463
 #, c-format
 msgid "'%s' path not found"
 msgstr "パス '%s' が見つかりません"
 
-#: libsvn_ra_dav/util.c:434
+#: libsvn_ra_dav/util.c:472
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
 msgstr ""
 "リポジトリは恒久的に '%s' へ移動しました。relocate (参照 URL の変更) を実行し"
 "てください"
 
-#: libsvn_ra_dav/util.c:436
+#: libsvn_ra_dav/util.c:474
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
 msgstr ""
 "リポジトリは一時的に '%s' へ移動しました。relocate (参照 URL の変更) を実行し"
 "てください"
 
-#: libsvn_ra_dav/util.c:444
+#: libsvn_ra_dav/util.c:482
 #, c-format
 msgid ""
 "Server sent unexpected return value (%d %s) in response to %s request for '%"
@@ -3135,36 +3139,36 @@ msgstr ""
 "サーバが、リクエストへのレスポンスとして予想外の戻り値 (%d %s) を送信してきま"
 "した (リクエスト: %s, URL: '%s')"
 
-#: libsvn_ra_dav/util.c:450
+#: libsvn_ra_dav/util.c:488
 msgid "authorization failed"
 msgstr "認証が失敗しました"
 
-#: libsvn_ra_dav/util.c:454
+#: libsvn_ra_dav/util.c:492
 msgid "could not connect to server"
 msgstr "サーバに接続できませんでした"
 
-#: libsvn_ra_dav/util.c:458
+#: libsvn_ra_dav/util.c:496
 msgid "timed out waiting for server"
 msgstr "サーバからの応答を待っているうちにタイムアウトしました"
 
-#: libsvn_ra_dav/util.c:791
+#: libsvn_ra_dav/util.c:829
 #, c-format
 msgid "Can't calculate the request body size"
 msgstr "リクエストのボディのサイズを計算できません"
 
-#: libsvn_ra_dav/util.c:1118
+#: libsvn_ra_dav/util.c:1156
 #, c-format
 msgid "Error reading spooled %s request response"
 msgstr ""
 "スプールされた %s リクエストレスポンスを読み込む際にエラーが発生しました"
 
-#: libsvn_ra_dav/util.c:1128
+#: libsvn_ra_dav/util.c:1166
 #, c-format
 msgid "The %s request returned invalid XML in the response: %s (%s)"
 msgstr ""
 "%s リクエストに対するレスポンスとして不正な XML が返されました: %s (%s)"
 
-#: libsvn_ra_dav/util.c:1160
+#: libsvn_ra_dav/util.c:1198
 #, c-format
 msgid "%s request failed on '%s'"
 msgstr "%s リクエスト (相手: '%s') が失敗しました"
@@ -3527,41 +3531,41 @@ msgstr "apply-textdelta は既に使えるようになっています"
 msgid "Apply-textdelta not active"
 msgstr "apply-textdelta は使えません"
 
-#: libsvn_ra_svn/editorp.c:891 libsvn_ra_svn/marshal.c:844
+#: libsvn_ra_svn/editorp.c:891 libsvn_ra_svn/marshal.c:845
 #, c-format
 msgid "Unknown command '%s'"
 msgstr "'%s' は未知のコマンドです"
 
-#: libsvn_ra_svn/marshal.c:85
+#: libsvn_ra_svn/marshal.c:86
 msgid "Capability entry is not a word"
 msgstr "capability エントリが単語ではありません"
 
-#: libsvn_ra_svn/marshal.c:252 libsvn_ra_svn/streams.c:80
+#: libsvn_ra_svn/marshal.c:253 libsvn_ra_svn/streams.c:80
 #: libsvn_ra_svn/streams.c:155
 msgid "Connection closed unexpectedly"
 msgstr "接続が突然閉じました"
 
-#: libsvn_ra_svn/marshal.c:508
+#: libsvn_ra_svn/marshal.c:509
 msgid "String length larger than maximum"
 msgstr "文字列の長さが最大値を超えています"
 
-#: libsvn_ra_svn/marshal.c:545
+#: libsvn_ra_svn/marshal.c:546
 msgid "Too many nested items"
 msgstr "入れ子になっている項目が多すぎます"
 
-#: libsvn_ra_svn/marshal.c:564
+#: libsvn_ra_svn/marshal.c:565
 msgid "Number is larger than maximum"
 msgstr "数値が最大値を超えています"
 
-#: libsvn_ra_svn/marshal.c:767
+#: libsvn_ra_svn/marshal.c:768
 msgid "Empty error list"
 msgstr "エラーリストが空です"
 
-#: libsvn_ra_svn/marshal.c:776
+#: libsvn_ra_svn/marshal.c:777
 msgid "Malformed error list"
 msgstr "エラーリストが不正です"
 
-#: libsvn_ra_svn/marshal.c:815
+#: libsvn_ra_svn/marshal.c:816
 #, c-format
 msgid "Unknown status '%s' in command response"
 msgstr "コマンドへのレスポンス内に未知のステータス '%s' があります"
@@ -3586,7 +3590,7 @@ msgstr "パスワードを取得できません"
 msgid "Unhandled SASL interaction"
 msgstr "SASL 相互作用の扱いをやめました"
 
-#: libsvn_ra_svn/sasl_auth.c:581 libsvn_ra_svn/simple_auth.c:58
+#: libsvn_ra_svn/sasl_auth.c:761 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
@@ -4003,35 +4007,35 @@ msgstr "post-revprop-change フックを作成しています"
 msgid "Creating conf directory"
 msgstr "設定用のディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:1468
+#: libsvn_repos/repos.c:1482
 msgid "Creating svnserve.conf file"
 msgstr "svnserve.conf ファイルを作成しています"
 
-#: libsvn_repos/repos.c:1493
+#: libsvn_repos/repos.c:1507
 msgid "Creating passwd file"
 msgstr "パスワードファイルを作成しています"
 
-#: libsvn_repos/repos.c:1553
+#: libsvn_repos/repos.c:1567
 msgid "Creating authz file"
 msgstr "認証ファイルを作成しています"
 
-#: libsvn_repos/repos.c:1586
+#: libsvn_repos/repos.c:1600
 msgid "Could not create top-level directory"
 msgstr "トップレベルのディレクトリを作成できませんでした"
 
-#: libsvn_repos/repos.c:1590
+#: libsvn_repos/repos.c:1604
 msgid "Creating DAV sandbox dir"
 msgstr "DAV サンドボックスディレクトリを作成しています"
 
-#: libsvn_repos/repos.c:1671
+#: libsvn_repos/repos.c:1685
 msgid "Error opening db lockfile"
 msgstr "DB ロックファイルを開く際にエラーが発生しました"
 
-#: libsvn_repos/repos.c:1708
+#: libsvn_repos/repos.c:1722
 msgid "Repository creation failed"
 msgstr "リポジトリの作成に失敗しました"
 
-#: libsvn_repos/repos.c:1789
+#: libsvn_repos/repos.c:1803
 #, c-format
 msgid "Expected repository format '%d' or '%d'; found format '%d'"
 msgstr ""
@@ -4703,7 +4707,7 @@ msgstr "'%s' のパスフレーズ: "
 msgid "'%s' has unsupported special file type '%s'"
 msgstr "'%s' に、サポートされていない特別なファイル種別 '%s' があります"
 
-#: libsvn_subr/subst.c:1730 libsvn_wc/props.c:1499
+#: libsvn_subr/subst.c:1737 libsvn_wc/props.c:1499
 #, c-format
 msgid "File '%s' has inconsistent newlines"
 msgstr "ファイル '%s' は改行文字が一貫していません"
@@ -9656,11 +9660,11 @@ msgstr "スレッドを作成できません"
 msgid "Can't get hostname"
 msgstr "ホスト名を取得できません"
 
-#: svnserve/sasl_auth.c:299
+#: svnserve/sasl_auth.c:311
 msgid "Could not obtain the list of SASL mechanisms"
 msgstr "SASL 機構の一覧を取得できませんでした"
 
-#: svnserve/sasl_auth.c:337
+#: svnserve/sasl_auth.c:351
 msgid "Couldn't obtain the authenticated username"
 msgstr "認証済みのユーザ名を取得できませんでした"
 
