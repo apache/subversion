@@ -151,6 +151,88 @@
   void **set_locks_baton
 };
 
+#ifdef SWIGRUBY
+%typemap(argout) SWIGTYPE **OUTPARAM_WITH_BLOCK {
+  VALUE tmp;
+  tmp = SWIG_NewPointerObj(*$1, $*1_descriptor, 0);
+  if (rb_block_given_p()) {
+    rb_yield(tmp);
+    rb_funcall(_global_svn_swig_rb_pool, rb_intern("destroy"), 0);
+    DATA_PTR(tmp) = NULL;
+  } else {
+    %append_output(tmp);
+  }
+}
+
+%apply SWIGTYPE **OUTPARAM_WITH_BLOCK {
+  /* svn_fs */
+  svn_fs_t **,
+  /* svn_repos */
+  svn_repos_t **
+};
+#endif
+
+
+/* -----------------------------------------------------------------------
+   Check whether fs/repos was closed or not.
+*/
+#ifdef SWIGRUBY
+%define %raise_if_null(TYPE)
+%typemap(check) svn_ ## TYPE ## _t *
+{
+  if (!$1) {
+    svn_swig_rb_raise_svn_ ## TYPE ## _already_close();
+  }
+}
+%enddef
+
+%raise_if_null(fs);
+%raise_if_null(repos);
+
+%define %define_close_related_methods(TYPE)
+%ignore svn_ ## TYPE ## _swig_rb_close;
+%ignore svn_ ## TYPE ## _swig_rb_closed;
+
+%inline %{
+static VALUE
+svn_ ## TYPE ## _swig_rb_close(VALUE self)
+{
+  VALUE argv[1];
+  VALUE rb_pool;
+  apr_pool_t *pool;
+
+  if (!DATA_PTR(self)) {
+    svn_swig_rb_raise_svn_ ## TYPE ## _already_close();
+  }
+
+  argv[0] = self;
+  svn_swig_rb_get_pool(1, argv, self, &rb_pool, &pool);
+  rb_funcall(rb_pool, rb_intern("destroy"), 0);
+  DATA_PTR(self) = NULL;
+
+  return Qnil;
+}
+
+static VALUE
+svn_ ## TYPE ## _swig_rb_closed(VALUE self)
+{
+  return DATA_PTR(self) ? Qfalse : Qtrue;
+}
+%}
+
+%init %{
+  {
+    VALUE cSvn ## TYPE;
+    cSvn ## TYPE = rb_const_get(_mSWIG, rb_intern("TYPE_p_svn_" #TYPE "_t"));
+    rb_define_method(cSvn ## TYPE, "close",
+                     svn_ ## TYPE ## _swig_rb_close, 0);
+    rb_define_method(cSvn ## TYPE, "closed?",
+                     svn_ ## TYPE ## _swig_rb_closed, 0);
+  }
+%}
+%enddef
+#endif
+
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps
 */

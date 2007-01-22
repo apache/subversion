@@ -52,6 +52,7 @@ svn_ra_svn_conn_t *svn_ra_svn_create_conn(apr_socket_t *sock,
   assert((sock && !in_file && !out_file) || (!sock && in_file && out_file));
 #ifdef SVN_HAVE_SASL
   conn->sock = sock;
+  conn->encrypted = FALSE;
 #endif
   conn->session = NULL;
   conn->read_ptr = conn->read_buf;

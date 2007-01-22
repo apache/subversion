@@ -134,3 +134,7 @@ svn_error_t *svn_repos_dump_fs2(svn_repos_t *repos,
 #endif
 
 %include svn_repos_h.swg
+
+#ifdef SWIGRUBY
+%define_close_related_methods(repos)
+#endif

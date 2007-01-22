@@ -840,7 +840,7 @@ static svn_error_t *add_lock_tokens(svn_ra_svn_conn_t *conn,
 
   for (i = 0; i < lock_tokens->nelts; ++i)
     {
-      const char *token;
+      const char *path, *token, *full_path;
       svn_ra_svn_item_t *path_item, *token_item;
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(lock_tokens, i,
                                                svn_ra_svn_item_t);
@@ -858,8 +858,13 @@ static svn_error_t *add_lock_tokens(svn_ra_svn_conn_t *conn,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock token isn't a string");
 
+      path = path_item->u.string->data;
+      full_path = svn_path_join(sb->fs_path->data,
+                                svn_path_canonicalize(path, pool),
+                                pool);
+
       if (! lookup_access(pool, sb, svn_authz_write,
-                          path_item->u.string->data, TRUE))
+                          full_path, TRUE))
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED,
                                 NULL, NULL);
 

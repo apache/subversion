@@ -128,3 +128,7 @@ svn_fs_root_fs_wrapper(svn_fs_root_t *root, apr_pool_t *pool)
 %}
 
 %include svn_fs_h.swg
+
+#ifdef SWIGRUBY
+%define_close_related_methods(fs);
+#endif

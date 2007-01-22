@@ -2576,7 +2576,8 @@ def merge_prop_change_to_deleted_target(sbox):
 def setup_dir_replace(sbox):
   """Setup the working copy for directory replace tests, creating
   directory 'A/B/F/foo' with files 'new file' and 'new file2' within
-  it (r2), and merging 'foo' onto 'C' (r3)."""
+  it (r2), and merging 'foo' onto 'C' (r3), then deleting 'A/B/F/foo'
+  (r4)."""
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -2638,7 +2639,7 @@ def setup_dir_replace(sbox):
                                        expected_status,
                                        expected_skip)
 
-  # Commit merge of foo onto C
+  # Commit merge of foo onto C, creating r3.
   expected_output = svntest.wc.State(wc_dir, {
     'A/C'        : Item(verb='Sending'),
     'A/C/foo'    : Item(verb='Adding'),
@@ -2662,7 +2663,7 @@ def setup_dir_replace(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
 
-  # Delete foo on F
+  # Delete foo on F, creating r4.
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', foo_path)
   expected_output = svntest.wc.State(wc_dir, {
     'A/B/F/foo'   : Item(verb='Deleting'),
@@ -2701,8 +2702,7 @@ def merge_dir_replace(sbox):
   foo_file = os.path.join(foo_path, "file foo")
   new_file3 = os.path.join(bar_path, "new file 3")
 
-  # Make a couple of directories (creating r4 and r5), and populate
-  # some content within them.
+  # Make a couple of directories, and add some files within them.
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', bar_path)
   svntest.main.file_append(new_file3, "Initial text in new file 3.\n")
@@ -2710,6 +2710,7 @@ def merge_dir_replace(sbox):
   svntest.main.file_append(foo_file, "Initial text in file foo.\n")  
   svntest.main.run_svn(None, "add", foo_file)
 
+  # Commit the new content, creating r5.
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo'                : Item(verb='Adding'),
     'A/B/F/foo/file foo'       : Item(verb='Adding'),

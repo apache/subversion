@@ -1213,7 +1213,7 @@ add_directory(const char *path,
     {
       SVN_ERR(add_dir_ctx->server_error.error);
       return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
-                               _("Add directory failed: %s on %s (%d)"),
+                               _("Adding a directory failed: %s on %s (%d)"),
                                handler->method, handler->path,
                                add_dir_ctx->status);
     }

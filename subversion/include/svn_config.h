@@ -1,7 +1,7 @@
 /** 
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -107,6 +107,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
 #define SVN_CONFIG_SECTION_SASL                 "sasl"
 #define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
+#define SVN_CONFIG_OPTION_MIN_SSF                   "min-encryption"
+#define SVN_CONFIG_OPTION_MAX_SSF                   "max-encryption"
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"

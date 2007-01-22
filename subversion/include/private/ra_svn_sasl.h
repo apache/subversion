@@ -3,7 +3,7 @@
  * ra_svn and svnserve module
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -50,6 +50,13 @@ svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport,
                                        const char **remote_addrport,
                                        svn_ra_svn_conn_t *conn,
                                        apr_pool_t *pool);
+
+/* If a security layer was negotiated during the authentication exchange,
+   create an encrypted stream for conn. */
+svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
+                                                sasl_conn_t *sasl_ctx,
+                                                apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
