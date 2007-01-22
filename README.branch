@@ -331,9 +331,6 @@ Contents
         shorten the wall clock time of the operations by much,
         although it would still save the disk space.
 
-      * svn_wc__do_update_cleanup(), and by implication
-        tweak_entries(), need carefuller depth thinking.
-
       * There's no interface for getting rid of stuff once you've
         brought it into your working copy -- no "exclusion" interface,
         in other words.  So you can do this:
