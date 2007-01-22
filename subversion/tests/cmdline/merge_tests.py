@@ -2517,7 +2517,9 @@ def merge_prop_change_to_deleted_target(sbox):
 
  
 def setup_dir_replace(sbox):
-  "setup the working copy for directory replace tests"
+  """Setup the working copy for directory replace tests, creating
+  directory 'A/B/F/foo' with files 'new file' and 'new file2' within
+  it (r2), and merging 'foo' onto 'C' (r3)."""
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -2530,13 +2532,14 @@ def setup_dir_replace(sbox):
   new_file = os.path.join(foo_path, "new file")
   new_file2 = os.path.join(foo_path, "new file 2")
 
-  # Create foo in F and add some files
+  # Make directory foo in F, and add some files within it.
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
   svntest.main.file_append(new_file, "Initial text in new file.\n")
   svntest.main.file_append(new_file2, "Initial text in new file 2.\n")
   svntest.main.run_svn(None, "add", new_file)
   svntest.main.run_svn(None, "add", new_file2)
 
+  # Commit all the new content, creating r2.
   expected_output = wc.State(wc_dir, {
     'A/B/F/foo'            : Item(verb='Adding'),
     'A/B/F/foo/new file'   : Item(verb='Adding'),
@@ -2638,6 +2641,8 @@ def merge_dir_replace(sbox):
   foo_file = os.path.join(foo_path, "file foo")
   new_file3 = os.path.join(bar_path, "new file 3")
 
+  # Make a couple of directories (creating r4 and r5), and populate
+  # some content within them.
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', foo_path)
   svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', bar_path)
   svntest.main.file_append(new_file3, "Initial text in new file 3.\n")
