@@ -127,8 +127,8 @@ public:
 
 private:
     static void assembleErrorMessage(svn_error_t *err, int depth,
-                                         apr_status_t parent_apr_err,
-                                         std::string &buffer);
+                                     apr_status_t parent_apr_err,
+                                     std::string &buffer);
     static void setExceptionThrown();
     /** 
      * the log level of this module

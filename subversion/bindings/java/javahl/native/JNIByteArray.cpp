@@ -49,8 +49,7 @@ JNIByteArray::~JNIByteArray()
     if(m_array != NULL)
     {
         // release the bytes
-        JNIUtil::getEnv()->ReleaseByteArrayElements(m_array, m_data, 
-            JNI_ABORT);
+        JNIUtil::getEnv()->ReleaseByteArrayElements(m_array, m_data, JNI_ABORT);
         if(m_deleteByteArray)
             // and if needed the byte array
             JNIUtil::getEnv()->DeleteLocalRef(m_array);

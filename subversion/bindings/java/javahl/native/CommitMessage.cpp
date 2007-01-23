@@ -176,7 +176,8 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
 
         // create the java object
         jobject jitem = env->NewObject(clazz, midConstructor, jpath,
-            jnodeKind, jstateFlags, jurl, jcopyUrl, jcopyRevision);
+                                       jnodeKind, jstateFlags, jurl, 
+                                       jcopyUrl, jcopyRevision);
         if(JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
@@ -216,8 +217,9 @@ CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
     }
 
     // call the java callback method
-    jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage,
-                                            midCallback, jitems);
+    jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage, 
+                                                      midCallback, 
+                                                      jitems);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return NULL;

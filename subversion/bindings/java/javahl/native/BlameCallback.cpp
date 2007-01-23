@@ -51,8 +51,8 @@ BlameCallback::~BlameCallback()
  * @param pool      memory pool for the use of this function
  */
 svn_error_t* BlameCallback::callback(svn_revnum_t revision, const char *author, 
-                             const char *date, const char *line, 
-                             apr_pool_t *pool)
+                                     const char *date, const char *line, 
+                                     apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
@@ -89,7 +89,7 @@ svn_error_t* BlameCallback::callback(svn_revnum_t revision, const char *author,
     if(date != NULL && *date != '\0')
     {
         apr_time_t timeTemp;
-        svn_error_t *err = svn_time_from_cstring (&timeTemp, date, pool);
+        svn_error_t *err = svn_time_from_cstring(&timeTemp, date, pool);
         if(err != SVN_NO_ERROR)
             return err;
 
@@ -106,8 +106,8 @@ svn_error_t* BlameCallback::callback(svn_revnum_t revision, const char *author,
     }
 
     // call the java method
-    env->CallVoidMethod(m_callback, mid, jdate, (jlong)revision, jauthor, 
-        jline);
+    env->CallVoidMethod(m_callback, mid, jdate, 
+                        (jlong)revision, jauthor, jline);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
