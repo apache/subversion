@@ -1503,6 +1503,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
   /* Now, call the right handler for the operation. */
   if ((! srcs_are_urls) && (! dst_is_url))
     {
+      *commit_info_p = NULL;
       SVN_ERR(wc_to_wc_copy(copy_pairs, is_move,
                             ctx, pool));
     }
@@ -1513,6 +1514,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
+      *commit_info_p = NULL;
       SVN_ERR(repos_to_wc_copy(copy_pairs, ctx, pool));
     }
   else

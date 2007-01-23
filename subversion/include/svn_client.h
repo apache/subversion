@@ -2076,7 +2076,9 @@ typedef struct svn_client_copy_source_t
  * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to immediately 
  * attempt to commit the copy action in the repository.  If the commit 
- * succeeds, allocate (in @a pool) and populate @a *commit_info_p.
+ * succeeds, allocate (in @a pool) and populate @a *commit_info_p.  If
+ * @a dst_path is not a URL, and the copy succeeds, set @a
+ * *commit_info_p to @c NULL.
  *
  * If @a dst_path is not a URL, then this is just a variant of 
  * svn_client_add(), where the @a sources are scheduled for addition
@@ -2188,6 +2190,8 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *   - If one of @a src_paths contains locally modified and/or unversioned
  *     items and @a force is not set, the move will fail. If @a force is set
  *     such items will be removed.
+ *
+ *   - If the move succeeds, set @a *commit_info_p to @c NULL.
  *
  * The parent of @a dst_path must already exist.
  *
