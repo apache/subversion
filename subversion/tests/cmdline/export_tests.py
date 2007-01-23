@@ -64,6 +64,17 @@ def export_greek_tree(sbox):
                                         expected_output,
                                         svntest.main.greek_state.copy())
 
+def export_nonexistent_url(sbox):
+  "attempt to export a nonexistent URL"
+  sbox.build(create_wc = False)
+
+  svntest.main.safe_rmtree(sbox.wc_dir)
+  export_target = os.path.join(sbox.wc_dir, 'nonexistent')
+  nonexistent_url = sbox.repo_url
+  svntest.actions.run_and_verify_svn("Error about nonexistent URL expected",
+                                     None, svntest.SVNAnyOutput,
+                                     'export', nonexistent_url, export_target)
+
 def export_working_copy(sbox):
   "export working copy"
   sbox.build()
@@ -393,6 +404,7 @@ def export_creates_intermediate_folders(sbox):
 test_list = [ None,
               export_empty_directory,
               export_greek_tree,
+              XFail(export_nonexistent_url),
               export_working_copy,
               export_working_copy_with_mods,
               export_over_existing_dir,
