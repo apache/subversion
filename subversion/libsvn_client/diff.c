@@ -130,11 +130,10 @@ display_mergeinfo_diff(const char *orig_mergeinfo_val,
       void *val;
 
       apr_hash_this(hi, &key, NULL, &val);
-
       from_path = key;
       merge_revarray = val;
 
-      svn_rangelist_to_string(&merge_revstr, merge_revarray, pool);
+      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
                                     "   Reverted %s:r%s" APR_EOL_STR,
@@ -148,11 +147,10 @@ display_mergeinfo_diff(const char *orig_mergeinfo_val,
       void *val;
 
       apr_hash_this(hi, &key, NULL, &val);
-
       from_path = key;
       merge_revarray = val;
 
-      svn_rangelist_to_string(&merge_revstr, merge_revarray, pool);
+      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
                                     "   Merged %s:r%s" APR_EOL_STR,
