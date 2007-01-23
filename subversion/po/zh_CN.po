@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.4.3\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-23 10:24+0800\n"
+"POT-Creation-Date: 2007-01-23 13:28+0800\n"
 "PO-Revision-Date: 2007-01-22 19:33+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
@@ -4165,7 +4165,7 @@ msgstr ""
 #: libsvn_subr/opt.c:1030 libsvn_subr/opt.c:1073
 #, c-format
 msgid "Type '%s help' for usage.\n"
-msgstr "请使用“%s help”以得到用法。\n"
+msgstr "使用“%s help”得到用法。\n"
 
 #: libsvn_subr/path.c:1054
 #, c-format
@@ -5190,9 +5190,9 @@ msgid ""
 msgstr ""
 "用法: svn <subcommand> [options] [args]\n"
 "Subversion 命令行客户端，版本 %s。\n"
-"使用“svn help <subcommand>” 显示子命令的详细信息。\n"
-"使用“svn --version”查看程序以及RA模块的版本号，或者\n"
-"使用“svn --version --quiet”仅查看程序版本号。\n"
+"使用“svn help <subcommand>” 显示子命令的帮助信息。\n"
+"使用“svn --version”查看程序的版本号和仓库访问模块，或者\n"
+"使用“svn --version --quiet”只查看程序的版本号。\n"
 "\n"
 "大多数的子命令可接受文件或目录参数，对目录进行递归处理。\n"
 "如果没有指定参数，默认对当前目录(包含当前目录)递归处理。\n"
@@ -5205,7 +5205,7 @@ msgid ""
 "For additional information, see http://subversion.tigris.org/\n"
 msgstr ""
 "Subversion 是版本控制工具。\n"
-"欲取得详细资料，参见 http://subversion.tigris.org/\n"
+"欲取得详细资料，请参见 http://subversion.tigris.org/\n"
 
 #: svn/help-cmd.c:65 svnsync/main.c:1275
 msgid ""
@@ -5456,7 +5456,7 @@ msgstr "强制校验日志信息资源"
 #: svndumpfilter/main.c:780 svndumpfilter/main.c:783 svnlook/main.c:90
 #: svnlook/main.c:93 svnsync/main.c:104 svnsync/main.c:106
 msgid "show help on a subcommand"
-msgstr "显示子命令帮助"
+msgstr "显示子命令帮助信息"
 
 #: svn/main.c:65
 msgid "specify log message ARG"
@@ -5996,7 +5996,7 @@ msgstr ""
 "\n"
 "    最后一次提交的版本号码\n"
 "    最后一次提交的作者\n"
-"    如果被锁定，显示字母“O”。（使用“svn info URL”来查看详细信息）\n"
+"    如果被锁定，显示字母“O”。（使用“svn info URL”查看详细信息）\n"
 "    大小 (以字节为单位)\n"
 "    最后一次提交的日期与时间\n"
 
@@ -6662,7 +6662,7 @@ msgid ""
 "Type 'svn help %s' for usage.\n"
 msgstr ""
 "子命令“%s”不接受选项“%s”\n"
-"请输入“svn help %s”以取得用法。\n"
+"输入“svn help %s”得到用法。\n"
 
 #: svn/main.c:1338
 msgid "Log message file is a versioned file; use '--force-log' to override"
@@ -6689,8 +6689,7 @@ msgstr "锁注释是路径名称 (本来想用-F 选项的吗？)；请使用“
 msgid ""
 "svn: run 'svn cleanup' to remove locks (type 'svn help cleanup' for "
 "details)\n"
-msgstr ""
-"svn: 请使用“svn cleanup”删除锁定 (输入“svn help cleanup”取得详细用法)\n"
+msgstr "svn: 运行“svn cleanup”删除锁定 (输入“svn help cleanup”得到用法)\n"
 
 #: svn/merge-cmd.c:59
 msgid "Second revision required"
@@ -7065,8 +7064,8 @@ msgid ""
 "Use of an external editor to fetch log message is not supported on OS400; "
 "consider using the --message (-m) or --file (-F) options"
 msgstr ""
-"OS400上不支持通过外部编辑器获得日志信息；请使用 --message (-m) 或\n"
-"--file (-F) 选项"
+"OS400上不支持通过外部编辑器获得日志信息；请使用 --message (-m) 或 -file (-F) "
+"选项"
 
 #: svn/util.c:592
 msgid "Cannot invoke editor to get log message when non-interactive"
@@ -7093,7 +7092,7 @@ msgstr ""
 
 #: svn/util.c:694
 msgid "Use --force to override this restriction"
-msgstr "请用 --force 来强制执行"
+msgstr "请使用 --force 选项强制执行"
 
 #: svnadmin/main.c:95 svndumpfilter/main.c:62
 #, c-format
@@ -7415,8 +7414,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "一般用法: svnadmin SUBCOMMAND REPOS_PATH  [ARGS & OPTIONS ...]\n"
-"使用“svnadmin help <subcommand>” 以取得子命令的帮助信息。\n"
-"使用“svnadmin --version”查看程序版本号以及可用的文件系统模块。\n"
+"使用“svnadmin help <subcommand>” 得到子命令的帮助信息。\n"
+"使用“svnadmin --version”查看程序的版本号和文件系统模块。\n"
 "\n"
 "可用的子命令: \n"
 
@@ -7553,7 +7552,7 @@ msgid ""
 "Type 'svnadmin help %s' for usage.\n"
 msgstr ""
 "子命令“%s”不接受选项“%s”\n"
-"请使用“svnadmin help %s”获得用法。\n"
+"使用“svnadmin help %s”得到用法。\n"
 
 #: svndumpfilter/main.c:319
 msgid "This is an empty revision for padding."
@@ -7632,8 +7631,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "一般用法: svndumpfilter SUBCOMMAND [ARGS & OPTIONS ...]\n"
-"请使用“svndumpfilter help <subcommand>”以取得子命令的帮助信息。\n"
-"请使用“svndumpfilter --version”察看程序版本号。\n"
+"使用“svndumpfilter help <subcommand>”得到子命令的帮助信息。\n"
+"使用“svndumpfilter --version”察看程序的版本号。\n"
 "\n"
 "可用的子命令: \n"
 
@@ -7696,7 +7695,7 @@ msgid ""
 "Type 'svndumpfilter help %s' for usage.\n"
 msgstr ""
 "子命令“%s”不接受选项“%s”\n"
-"请使用“svndumpfilter help %s”以了解用法。\n"
+"使用“svndumpfilter help %s”得到用法。\n"
 
 #: svnlook/main.c:99
 msgid "specify revision number ARG"
@@ -7996,8 +7995,8 @@ msgstr ""
 "一般用法: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "注意: 任何接受 “--revision”与 “--transaction”选项的子命令，在没有\n"
 "      指定两者其一的情况下会直接作用在仓库最新的版本上。\n"
-"请使用“svnlook help <subcommand>”以取得特定子命令的帮助信息。\n"
-"请使用“svnlook --version”以查看程序的版本以及可用的文件系统模块。\n"
+"使用“svnlook help <subcommand>”得到子命令的帮助信息。\n"
+"使用“svnlook --version”查看程序的版本号和文件系统模块。\n"
 "\n"
 "可用的子命令: \n"
 
@@ -8063,7 +8062,7 @@ msgid ""
 "Type 'svnlook help %s' for usage.\n"
 msgstr ""
 "子命令“%s”并不接受选项“%s”\n"
-"请使用“svnlook help %s”获得用法。\n"
+"使用“svnlook help %s”得到用法。\n"
 
 #: svnserve/main.c:140
 msgid "daemon mode"
@@ -8124,7 +8123,7 @@ msgstr "作为windows服务运行(仅SCM)"
 #: svnserve/main.c:177
 #, c-format
 msgid "Type '%s --help' for usage.\n"
-msgstr "请使用“%s --help”获得用法。\n"
+msgstr "使用“%s --help”得到用法。\n"
 
 #: svnserve/main.c:186
 msgid ""
@@ -8360,8 +8359,8 @@ msgid ""
 "Available subcommands:\n"
 msgstr ""
 "一般用法: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
-"请使用“svnsync help <subcommand>” 取得子命令的帮助信息。\n"
-"请使用“svnsync --version”察看程序版本和可用的RA模块。\n"
+"使用“svnsync help <subcommand>” 得到子命令的帮助信息。\n"
+"使用“svnsync --version”察看程序的版本号和仓库访问模块。\n"
 "\n"
 "可用的子命令: \n"
 
@@ -8372,7 +8371,7 @@ msgid ""
 "Type 'svnsync help %s' for usage.\n"
 msgstr ""
 "子命令“%s”不接受选项“%s”\n"
-"请输入“svnsync help %s”取得用法。\n"
+"输入“svnsync help %s”得到用法。\n"
 
 #: svnsync/main.c:1519
 msgid "Not enough arguments provided; try 'svnsync help' for more info"
@@ -8381,7 +8380,7 @@ msgstr "参数不足；用“svnsync help”获得更多信息"
 #: svnversion/main.c:39
 #, c-format
 msgid "Type 'svnversion --help' for usage.\n"
-msgstr "请使用“svnversion --help”得到用法。\n"
+msgstr "使用“svnversion --help”得到用法。\n"
 
 #: svnversion/main.c:50
 #, c-format
