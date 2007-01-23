@@ -136,8 +136,9 @@ display_mergeinfo_diff(const char *orig_mergeinfo_val,
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
-                                    "   Reverted %s:r%s" APR_EOL_STR,
-                                    from_path, merge_revstr->data));
+                                    _("   Reverted %s:r%s%s"),
+                                    from_path, merge_revstr->data,
+                                    APR_EOL_STR));
     }
 
   for (hi = apr_hash_first(pool, added); 
@@ -153,8 +154,9 @@ display_mergeinfo_diff(const char *orig_mergeinfo_val,
       SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
-                                    "   Merged %s:r%s" APR_EOL_STR,
-                                    from_path, merge_revstr->data));
+                                    _("   Merged %s:r%s%s"),
+                                    from_path, merge_revstr->data,
+                                    APR_EOL_STR));
     }
 
   return SVN_NO_ERROR;
