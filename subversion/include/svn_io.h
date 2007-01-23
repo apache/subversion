@@ -438,8 +438,8 @@ svn_error_t *svn_io_files_contents_same_p(svn_boolean_t *same,
                                           const char *file2,
                                           apr_pool_t *pool);
 
-/** Create file at @a file with contents @a contents.
- * will be created.  Path @a file is utf8-encoded.
+/** Create file at utf8-encoded @a file with contents @a contents.
+ * @a file must not already exist.
  * Use @a pool for memory allocations.
  */
 svn_error_t *svn_io_file_create(const char *file,
