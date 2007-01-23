@@ -404,7 +404,7 @@ def export_creates_intermediate_folders(sbox):
 test_list = [ None,
               export_empty_directory,
               export_greek_tree,
-              XFail(export_nonexistent_url),
+              export_nonexistent_url,
               export_working_copy,
               export_working_copy_with_mods,
               export_over_existing_dir,
