@@ -872,6 +872,21 @@ Return repository uuid for url.
 
 =cut
 
+my $arg_revision = {
+    name => 'revision',
+    spec => {
+	type => SCALAR,
+	default => 'HEAD',
+    }
+};
+
+my $arg_url = {
+    name => 'url',
+    spec => {
+	type => SCALAR,
+    },
+};
+
 my %method_defs = (
     # Keys are method names
     # Value is a hash ref.  Keys in the hash mean:
@@ -891,9 +906,7 @@ my %method_defs = (
 	args => [
 	    { name => 'path_or_url',
 	      spec => { type     => SCALAR, }, },
-	    { name => 'revision',
-	      spec => { type     => SCALAR,
-			default  => 'HEAD', }, },
+	    $arg_revision,
 	    { name => 'recurse',
 	      spec => { type     => BOOLEAN,
 			default  => 0, }, },
@@ -904,21 +917,15 @@ my %method_defs = (
 	args => [
 	    { name => 'propname',
 	      spec => { type    => SCALAR }, },
-	    { name => 'url',
-	      spec => { type    => SCALAR }, },
-	    { name => 'revision',
-	      spec => { type    => SCALAR,
-			default => 'HEAD', }, },
+	    $arg_url,
+	    $arg_revision,
 	],
     },
     'revprop_list' => {
 	type => 'obj',
 	args => [
-	    { name => 'url',
-	      spec => { type => SCALAR }, },
-	    { name => 'revision', 
-	      spec => { type => SCALAR,
-			default => 'HEAD', }, },
+	    $arg_url,
+	    $arg_revision,
 	],
     },
 );
