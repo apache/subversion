@@ -32,7 +32,7 @@ functions.  Aside from the repeated IO itself, each IO operation also
 has to repeat the UTF-8 to native path conversion.
 
 The current entries caching makes things faster than in the past, but
-has it's own problems.  Most operations now cache the entire entries
+has its own problems.  Most operations now cache the entire entries
 hierarchy in memory which limits the size of the working copies that
 can be handled.  The problem is difficult to solve as some operations
 make multiple passes--commit for instance makes a first pass searching

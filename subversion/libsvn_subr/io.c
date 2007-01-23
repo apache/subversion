@@ -211,7 +211,7 @@ file_open(apr_file_t **f,
   apr_status_t apr_err;
   if (flag & APR_CREATE)
     {
-      /* If we are trying to create a file on OS400 ensure it's CCSID is
+      /* If we are trying to create a file on OS400 ensure its CCSID is
        * 1208. */  
       apr_err = apr_file_open(f, fname, flag & ~APR_BINARY, perm, pool);
 

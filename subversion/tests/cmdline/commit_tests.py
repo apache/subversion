@@ -1263,7 +1263,7 @@ def commit_from_long_dir(sbox):
     })
 
   # Any length name was enough to provoke the original bug, but
-  # keeping it's length less than that of the filename 'iota' avoided
+  # keeping its length less than that of the filename 'iota' avoided
   # random behaviour, but still caused the test to fail
   extra_name = 'xx'
 
