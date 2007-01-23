@@ -68,4 +68,12 @@ Candidate changes:
       +1: lgo
       +0: dlr
 
+  * r23191, r23193
+    Fix attempts to export a nonexistent URL to return an error,
+    instead of reporting a successful export.
+    Justification:
+      Apparently a common user error.
+    Votes:
+      +1: dlr
+
 Approved changes:
