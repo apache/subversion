@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 148;
+use Test::More tests => 158;
 use strict;
 
 # shut up about variables that are only used once.
@@ -167,15 +167,53 @@ $tester->('nam/man');
 });
 $tester->('nam/opt');
 
-# ------------------------------------------------------------------------
+# checkout ---------------------------------------------------------------
 
-is($ctx->checkout($reposurl,$wcpath,'HEAD',1),$current_rev,
-   'Returned current rev from checkout');
+my $rev;
+$tester = sub {
+    my $name = shift;
+    is($rev, $current_rev, "Returned current rev from checkout ($name)");
+    ok(-d $wcpath, "$wcpath was created ($name)");
+};
+
+$rev = $ctx->checkout($reposurl, $wcpath, 'HEAD', 0);
+$tester->('pos/man');
+
+rmtree([ $wcpath ]);
+$rev = $ctx->checkout($reposurl, $wcpath);
+$tester->('pos/opt');
+
+rmtree([ $wcpath ]);
+$rev = $ctx->checkout({
+    url      => $reposurl,
+    path     => $wcpath,
+    revision => 'HEAD',
+    recurse  => 0,
+});
+$tester->('nam/man');
+
+rmtree([ $wcpath ]);
+$rev = $ctx->checkout({
+    url      => $reposurl,
+    path     => $wcpath,
+});
+$tester->('nam/opt');
+
+rmtree([ $wcpath ]);
+$rev = $ctx->checkout({
+    url      => $reposurl,
+    path     => $wcpath,
+    recurse  => 1,
+});
+$tester->('nam/opt - with recursion');
+ok(-d "$wcpath/dir1", "Recursive checkout worked");
+
+# ------------------------------------------------------------------------
 
 is(SVN::Client::url_from_path($wcpath),$reposurl,
    "Returned $reposurl from url_from_path");
 
-ok(open(NEW, ">$wcpath/dir1/new"),'Open new file for writing');
+ok(open(NEW, ">$wcpath/dir1/new"),'Open new file for writing') or die $!;
 ok(print(NEW 'addtest'), 'Print to new file');
 ok(close(NEW),'Close new file');
 

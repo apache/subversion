@@ -9,9 +9,11 @@ my @_all_fns;
 my @_fns_with_named_params;
 
 BEGIN {
-    @_fns_with_named_params = qw(ls
-			     revprop_get revprop_list);
-    @_all_fns = qw(add add3 blame blame3 cat cat2 checkout checkout2 cleanup
+    @_fns_with_named_params = qw(
+				 checkout
+				 ls
+				 revprop_get revprop_list);
+    @_all_fns = qw(add add3 blame blame3 cat cat2 checkout2 cleanup
                    commit commit3 commit_item2_dup copy copy3 delete delete2
                    diff diff3 diff_peg3 diff_summarize diff_summarize_peg
                    export export3 import import2 info info_dup list lock
@@ -312,7 +314,14 @@ If $target is not a local path and if $revision is 'PREV' (or some
 other kind that requires a local path), then an error will be raised,
 because the desired revision can not be determined.
 
-=item $ctx-E<gt>checkout($url, $path, $revision, $recursive, $pool);
+=item $ctx-E<gt>checkout
+
+  my $revision = $ctx->checkout({
+      url      => '...',
+      path     => '...',
+      revision => $revision,    # optional, default is 'HEAD'
+      recurse  => $recursive,   # optional, default is 0
+  });
 
 Checkout a working copy of $url at $revision using $path as the root directory
 of the newly checked out working copy.  
@@ -872,6 +881,14 @@ Return repository uuid for url.
 
 =cut
 
+my $arg_recurse = {
+    name => 'recurse',
+    spec => {
+	type    => BOOLEAN,
+	default => 0,
+    },
+};
+
 my $arg_revision = {
     name => 'revision',
     spec => {
@@ -901,15 +918,23 @@ my %method_defs = (
     #         in the positional list).  The hash has two keys.  'name' is
     #         params name, 'spec' is a hash ref suitable for feeding to
     #         Params::Validate to validate this parameter.
+    'checkout' => {
+	type => 'obj',
+	args => [
+	    $arg_url,
+	    { name => 'path',
+	      spec => { type => SCALAR }, },
+	    $arg_revision,
+	    $arg_recurse,
+	],
+    },
     'ls' => {
 	type => 'obj',
 	args => [
 	    { name => 'path_or_url',
 	      spec => { type     => SCALAR, }, },
 	    $arg_revision,
-	    { name => 'recurse',
-	      spec => { type     => BOOLEAN,
-			default  => 0, }, },
+	    $arg_recurse,
 	],
     },
     'revprop_get' => {
