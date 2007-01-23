@@ -1354,7 +1354,7 @@ setup_copy(svn_commit_info_t **commit_info_p,
           if (svn_path_is_url(pair->src) != srcs_are_urls)
             return svn_error_create
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-               _("Cannot mix repository and working copy paths in source list"));
+               _("Cannot mix repository and working copy sources"));
 
           pair->dst = svn_path_join(dst_path_in, src_basename, pool);
           APR_ARRAY_PUSH(copy_pairs, svn_client__copy_pair_t *) = pair;
