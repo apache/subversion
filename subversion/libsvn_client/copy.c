@@ -1109,7 +1109,7 @@ repos_to_wc_copy(const apr_array_header_t *copy_pairs,
   apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
-  /* Get the real path for the source, based upon it's peg revision. */
+  /* Get the real path for the source, based upon its peg revision. */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,

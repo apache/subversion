@@ -807,7 +807,7 @@ II.   INSTALLATION
    E.4 Building the Binaries
 
     To build the binaries either follow the instructions here or use
-    build\win32\vc6-build.bat.in after editing it's default paths to match
+    build\win32\vc6-build.bat.in after editing its default paths to match
     yours and saving it as vc6-build.bat.  The vc6-build.bat does a full build
     using all options so it requires Apache 2 source and the other optional
     components.
@@ -874,7 +874,7 @@ II.   INSTALLATION
         using the latest cygwin, you probably don't want the zip file source
         distribution though. ymmv.
       * The /USEENV switch to msdev makes it take notice of the INCLUDE and
-        LIB environment variables, it also makes it ignore it's own lib and
+        LIB environment variables, it also makes it ignore its own lib and
         include settings so you need to have the Windows SDK lib and include
         directories in the LIB and INCLUDE environment variables.  Do *not*
         use this switch when starting up the msdev Visual environment.  If you
