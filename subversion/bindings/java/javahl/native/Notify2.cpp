@@ -94,10 +94,7 @@ Notify2 * Notify2::makeCNotify(jobject notify)
    */
 
 void
-Notify2::notify (
-    void *baton,
-    const svn_wc_notify_t *notify,
-    apr_pool_t *pool)
+Notify2::notify(void *baton, const svn_wc_notify_t *notify, apr_pool_t *pool)
 {
     // an Notify object is used as the baton
     Notify2 * that = (Notify2 *) baton;
@@ -114,9 +111,7 @@ Notify2::notify (
    * @param pool an apr pool to allocated memory
    */
 void
-Notify2::onNotify (
-    const svn_wc_notify_t *wcNotify,
-    apr_pool_t *pool)
+Notify2::onNotify(const svn_wc_notify_t *wcNotify, apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
     // java method id will not change during the time this library is loaded,
@@ -186,9 +181,10 @@ Notify2::onNotify (
     jint jPropState = EnumMapper::mapNotifyState(wcNotify->prop_state);
     jint jLockState = EnumMapper::mapNotifyLockState(wcNotify->lock_state);
     // call the java method
-    jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction, jKind, 
-        jMimeType, jLock, jErr, jContentState, jPropState, jLockState, 
-        (jlong) wcNotify->revision);
+    jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
+                                   jKind, jMimeType, jLock, jErr,
+                                   jContentState, jPropState, jLockState, 
+                                   (jlong) wcNotify->revision);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return;

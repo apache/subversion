@@ -110,7 +110,9 @@ JNIStackElement::~JNIStackElement()
     {
         // generate a log message
         char *buffer = JNIUtil::getFormatBuffer();
-        apr_snprintf(buffer, JNIUtil::formatBufferSize, "exit class %s method %s object %s", m_clazz, m_method, m_objectID);
+        apr_snprintf(buffer, JNIUtil::formatBufferSize, 
+                     "exit class %s method %s object %s", m_clazz, 
+                     m_method, m_objectID);
         JNIUtil::logMessage(buffer);
     }
     JNIThreadData::popThreadData();
