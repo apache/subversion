@@ -2105,7 +2105,8 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_copy4(), with only one @a src_path and
- * @a copy_as_child set to FALSE.
+ * @a copy_as_child set to FALSE.  Also, use @a src_revision as both 
+ * the operational and peg revision.
  *
  * @since New in 1.4.
  *
