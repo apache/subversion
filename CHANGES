@@ -2,7 +2,7 @@ Version 1.4.3
 (18 January 2007, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.3
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: crash using automatic auth protocols with Neon 0.26 (r22440, -61)
     * fixed: svn_load_dirs.pl cannot import file names containing '@' (r22203)
@@ -20,7 +20,7 @@ http://svn.collab.net/repos/svn/tags/1.4.3
     * translation updates for Korean, Spanish, Italian, Simplified Chinese,
           and Japanese (fixing issues #2649 and #2681)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * support Neon 0.26.2 (issue #2666)
  * update (experimental) ra_serf repository access module for DAV (r22872)
  * Windows installer improvements (r21516, r22155, r22224)
@@ -40,7 +40,7 @@ Version 1.4.2
 (2 November 2006, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.2
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * new "notes/svnsync.txt" file explains common svnsync usage
     * install a manpage for svnsync (r21403)
@@ -68,7 +68,7 @@ http://svn.collab.net/repos/svn/tags/1.4.2
     * improved error checking when running hook scripts, etc (r21483)
     * mailer.py: new commit_url option links to web page for a commit (r21333)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * support Neon 0.26.0 and 0.26.1 (r21289, r21293, r21956)
  * support current CVS versions of libtool (post-1.5.22) (r22120)
  * now compiles on architectures without APR_HAS_DSO (e.g. RISC OS) (r21473)
@@ -96,7 +96,7 @@ Version 1.4.0
 (10 September 2006, from /branches/1.4.x)
 http://svn.collab.net/repos/svn/tags/1.4.0
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * new 'svnsync' commandline tool for repository replication
     * numerous working copy improvements (WARNING! upgrades to new format!):
@@ -194,7 +194,7 @@ http://svn.collab.net/repos/svn/tags/1.4.0
     * improve speed of non-verbose svn ls (r17067 -71)
     * fixed: delta combiner reading past EOF (r17743)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * require APR >= 0.9.7 to improve error detection for FSFS repos (r19915)
  * require zlib, for svndiff1 delta encoding (r18363)
  * support SWIG 1.3.29 (r19968)
@@ -267,7 +267,7 @@ Version 1.3.2
 (23 May 2006, from /branches/1.3.x)
 http://svn.collab.net/repos/svn/tags/1.3.2
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: 'svn st -u' crash on missing subdirs (r19348, -71, issue #2551)
     * fixed: leaving stray working copy locks on cancellation (r18893)
@@ -284,7 +284,7 @@ http://svn.collab.net/repos/svn/tags/1.3.2
     * fixed: authz requires read access for root for writes (issue #2486)
     * svnauthz-validate: add config file validation tool (r18504, -09)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * fixed: tests don't catch repository creation failure properly (r19149,-51)
  * support SWIG 1.3.28
  * support APR 0.9.x >= 0.9.10 (r19039, -57, -60)
@@ -299,7 +299,7 @@ Version 1.3.1
 (25 March 2006, from /branches/1.3.x)
 http://svn.collab.net/repos/svn/tags/1.3.1
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: segfault moving unversioned files (issue #2436)
     * fixed: verbose list broken over ra_dav (issue #2442)
@@ -327,7 +327,7 @@ http://svn.collab.net/repos/svn/tags/1.3.1
   - Both:
     * fixed: copyright years updated to include 2006 (r18021, -127)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * fixed: missing #include (r18065)
  * fixed: allow building with Neon 0.25.5 (r18215)
  * fixed: error leaks (18196, -249)
@@ -349,7 +349,7 @@ Version 1.3.0
 (30 December 2005, from /branches/1.3.x)
 http://svn.collab.net/repos/svn/tags/1.3.0
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * 'svn ls -v' now shows remote locks (issue #2291)
     * 'svn status' speedup (r15061, r15103)
@@ -415,7 +415,7 @@ http://svn.collab.net/repos/svn/tags/1.3.0
     * faster multiple (un)locks in a single svn:// request (issue #2264)
     * the Subversion Book is no longer bundled (r17466)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * reorganization of automated tests, including ability to run on ramdisk
  * lots of Doxygen/API documentation cleanup
  * numerous improvements to gen-make.py build system, especially on win32
@@ -450,7 +450,7 @@ Version 1.2.3
 (19 August 2005, from /branches/1.2.x)
 http://svn.collab.net/repos/svn/tags/1.2.3
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: 'svn status -u' fails against pre-1.2 mod_dav_svn (r15359, r15423)
     * fixed: 'svn export' segfault (r15516)
@@ -470,7 +470,7 @@ http://svn.collab.net/repos/svn/tags/1.2.3
     * fixed: crash when >50 options passed to any commandline app (r15251)
     * fixed: memory leak in character translation handle caching (r15379,-398)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * fixed: crash when calling svn_client_(un)lock with no targets (r15734)
  * rhel-4 RPM bugfix for python bindings (r15616)
  * missing #include in SWIG bindings (r15683)
@@ -496,7 +496,7 @@ Version 1.2.1
 (5 July 2005, from /branches/1.2.x)
 http://svn.collab.net/repos/svn/tags/1.2.1
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: 'svn lock' on switched file locks wrong thing (issue #2307)
     * fixed: 'svn (un)lock' errors on multiple targets (r14736, 14775)
@@ -515,7 +515,7 @@ http://svn.collab.net/repos/svn/tags/1.2.1
     * fixed: 'svn log -v' performance regression, FSFS-specific (r15016)
     * fixed: mod_dav_svn bug sets content-type incorrectly (r15046)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * fixed: win32 innosetup's add/repair/remove features (r14830)
  * fixed: OBOE with 'limit' parameter of svn_repos_get_logs3(). (r15119)
  * redhat RPM fixes (r15050)
@@ -532,7 +532,7 @@ http://svn.collab.net/repos/svn/tags/1.2.0
 See the 1.2 release notes for a more verbose overview of the changes since
 the 1.1 release:  http://subversion.tigris.org/svn_1.2_releasenotes.html
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * add peg-rev syntax to co/blame/cat/ls/pget/plist/export (issue #1093)
     * 'svn info' now works on URLs (r13123, 13144)
@@ -678,7 +678,7 @@ Version 1.1.4
 (1 April 2005, from /branches/1.1.x)
 http://svn.collab.net/repos/svn/tags/1.1.4
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: win32 not ignoring versioned symlinks (issue #2173)
     * fixed: 'svn merge' can cause broken working copy (issue #2222)
@@ -701,7 +701,7 @@ http://svn.collab.net/repos/svn/tags/1.1.4
   - Both:
     * fixed: (win32) retry file operation if sharing violation (r12983, r12986)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * add SWIG 1.3.24 and .25 compatibility (r12551, r12717-9, r12722, r13504)
  * fixed: JavaHL run-time link error (r12576), path/url cleanups (r13090)
  * fixed: python bindings log_receiver failure with SWIG 1.3.24 (r13487)
@@ -712,11 +712,11 @@ Version 1.1.3
 (14 January 2005, from /branches/1.1.x)
 http://svn.collab.net/repos/svn/tags/1.1.3
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * translation updates for localized client messages.
     
- Developer-visible-changes:
+ Developer-visible changes:
  * Fix a compile error in the Perl bindings.
 
  
@@ -724,7 +724,7 @@ Version 1.1.2
 (20 December 2004, from /branches/1.1.x)
 http://svn.collab.net/repos/svn/tags/1.1.2
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: 'svn switch' interruption can break working copy (issue #1826)
     * fixed: 'svn switch' memleak over ra_dav (issue #2106)
@@ -759,7 +759,7 @@ http://svn.collab.net/repos/svn/tags/1.1.2
     * fixed: canonicalize paths sent by ra_svn/svnserve (issue #2119)
     * fixed: memleak into UTF8 translation routines (r11689)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * add support for BerkeleyDB 4.3 (if using a compatible apr-util)
  * add support for any apr/apr-util 1.X
  * disallow incompatible SWIG versions (r12450)
@@ -777,7 +777,7 @@ Version 1.1.1
 (22 October 2004, from /branches/1.1.x)
 http://svn.collab.net/repos/svn/tags/1.1.1
 
- User-visible-changes:
+ User-visible changes:
   - Client:
     * fixed: 'svn status' win32 performance regression (issue #2016)
     * fixed: 'svn ls' dying on non-ascii paths over DAV (issue #2060)
@@ -801,7 +801,7 @@ http://svn.collab.net/repos/svn/tags/1.1.1
     * fixed: XML-escape author and date strings before sending (issue #2071)
     * fixed: invalid XML being sent over DAV (issue #2090)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * fixed: IRIX compile error (issue #2082)
  * fixed: error in perl bindings (r11290)
  * fixed: error leaks in mod_dav_svn (r11458)
@@ -812,12 +812,12 @@ Version 1.0.9
 (13 October 2004, from /branches/1.0.9)
 http://svn.collab.net/repos/svn/tags/1.0.9
 
- User-visible-changes:
+ User-visible changes:
   - Server:
     * fixed: 'svn ls' HTTP performance regression (r11211, -232, -285)
     * fixed: 'svn log -v' hiding too much info on 'empty' revisions. (r11137)
 
- Developer-visible-changes:
+ Developer-visible changes:
  * fixed: make redhat 7/8 rpm scripts build the book correctly (11143)
 
 
@@ -828,7 +828,7 @@ http://svn.collab.net/repos/svn/tags/1.1.0
 See the 1.1 release notes for a more verbose overview of the changes since
 1.0.x: http://subversion.tigris.org/svn_1.1_releasenotes.html
 
- User-visible-changes:
+ User-visible changes:
  * new non-database repository back-end (libsvn_fs_fs)
  * symlinks can now be placed under version control (unix systems only)
  * cmdline client now supports psuedo-IRIs and autoescapes chars (issue #1910)
@@ -953,7 +953,7 @@ Version 1.0.8
 (22 September 2004, from /branches/1.0.8)
 http://svn.collab.net/repos/svn/tags/1.0.8
 
- User-visible-changes:
+ User-visible changes:
  * fixed: mod_authz_svn path and log-message metadata leaks.
           See CAN-2004-0749, and descriptive advisory at 
           http://subversion.tigris.org/security/CAN-2004-0749-advisory.txt
@@ -963,7 +963,7 @@ Version 1.0.7
 (17 September 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.7
 
- User-visible-changes:
+ User-visible changes:
  * fixed: win32 'file not found' error [issue #1862]
  * fixed: 'svn st -u' crash (r10841)
  * fixed: potential repos corruption; ensure stdin/out/err always open (r10819)
@@ -982,7 +982,7 @@ Version 1.0.6
 (19 July 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.6
 
- User-visible-changes:
+ User-visible changes:
  * fixed: crash in status command, caused by race (r10144)
  * fixed: crashes when deleting a revision-prop (r10148, r10185, r10192)
  * fixed: mod_authz_svn allows COPY method on repos with space in name (#1837)
@@ -996,7 +996,7 @@ Version 1.0.5
 (10 Jun 2004, from /branches/1.0.5)
 http://svn.collab.net/repos/svn/tags/1.0.5
 
- User-visible-changes:
+ User-visible changes:
  * fixed: security bug in svn protocol string parsing. (CAN-2004-0413)
 
 
@@ -1004,7 +1004,7 @@ Version 1.0.4
 (21 May 2004, from /branches/1.0.x)
 http://svn.collab.net/repos/svn/tags/1.0.4
 
- User-visible-changes:
+ User-visible changes:
  * fixed: 'svn up' can delete unversioned data on win32 fs (issue #1854)
  * fixed: pool leaks in 'svnlook diff/changed/dirs-changed'
  * fixed: insecure script example in pre-commit-hook template
@@ -1023,7 +1023,7 @@ Version 1.0.3
 (19 May 2004, from /branches/1.0.3)
 http://svn.collab.net/repos/svn/tags/1.0.3
 
- User-visible-changes:
+ User-visible changes:
  * fixed: security bug in date parsing. (CAN-2004-0397)
 
 
