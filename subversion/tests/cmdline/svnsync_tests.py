@@ -376,8 +376,6 @@ def copy_from_unreadable_dir(sbox):
 
   run_sync(dest_sbox.repo_url)
 
-  lambda_url = dest_sbox.repo_url + '/A/B/lambda'
-
   expected_out = [
     'Changed paths:\n',
     '   A /A/P\n',
