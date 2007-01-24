@@ -1538,17 +1538,19 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
                  apr_pool_t *pool)
 {
   svn_error_t *err;
+  svn_commit_info_t *commit_info = NULL;
+  apr_pool_t *subpool = svn_pool_create(pool);
 
   if (sources->nelts > 1 && !copy_as_child)
     return svn_error_create(SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED,
                             NULL, NULL);
 
-  err = setup_copy(commit_info_p,
+  err = setup_copy(&commit_info,
                    sources, dst_path,
                    FALSE /* is_move */,
                    TRUE /* force, set to avoid deletion check */,
                    ctx,
-                   pool);
+                   subpool);
 
   /* If the destination exists, try to copy the sources as children of the
      destination. */
@@ -1561,18 +1563,25 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
       const char *src_basename;
 
       svn_error_clear(err);
+      svn_pool_clear(subpool);
 
-      src_basename = svn_path_basename(src_path, pool);
+      src_basename = svn_path_basename(src_path, subpool);
 
-      err = setup_copy(commit_info_p,
+      err = setup_copy(&commit_info,
                        sources,
                        svn_path_join(dst_path, src_basename, pool),
                        FALSE /* is_move */,
                        TRUE /* force, set to avoid deletion check */,
                        ctx,
-                       pool);
+                       subpool);
     }
 
+  if (commit_info)
+    *commit_info_p = svn_commit_info_dup(commit_info, pool);
+  else
+    *commit_info_p = commit_info;
+
+  svn_pool_destroy(subpool);
   return err;
 }
 
@@ -1663,10 +1672,12 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
+  svn_commit_info_t *commit_info = NULL;
   const svn_opt_revision_t head_revision
     = { svn_opt_revision_head, { 0 } };
   svn_error_t *err;
   int i;
+  apr_pool_t *subpool = svn_pool_create(pool);
   apr_array_header_t *sources = apr_array_make(pool, src_paths->nelts,
                                   sizeof(const svn_client_copy_source_t *));
 
@@ -1687,11 +1698,11 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
       APR_ARRAY_PUSH(sources, svn_client_copy_source_t *) = copy_source;
     }
 
-  err = setup_copy(commit_info_p, sources, dst_path,
+  err = setup_copy(&commit_info, sources, dst_path,
                    TRUE /* is_move */,
                    force,
                    ctx,
-                   pool);
+                   subpool);
 
   /* If the destination exists, try to move the sources as children of the
      destination. */
@@ -1703,17 +1714,24 @@ svn_client_move5(svn_commit_info_t **commit_info_p,
       const char *src_basename;
 
       svn_error_clear(err);
+      svn_pool_clear(subpool);
 
       src_basename = svn_path_basename(src_path, pool);
 
-      err = setup_copy(commit_info_p, sources,
+      err = setup_copy(&commit_info, sources,
                        svn_path_join(dst_path, src_basename, pool),
                        TRUE /* is_move */,
                        force,
                        ctx,
-                       pool);
+                       subpool);
     }
   
+  if (commit_info)
+    *commit_info_p = svn_commit_info_dup(commit_info, pool);
+  else
+    *commit_info_p = commit_info;
+
+  svn_pool_destroy(subpool);
   return err;
 }
 
