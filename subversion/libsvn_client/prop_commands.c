@@ -721,8 +721,15 @@ wc_walker_error_handler(const char *path,
                         apr_pool_t *pool)
 {
   /* Suppress errors from missing paths. */
-  return (svn_error_root_cause_is(err, SVN_ERR_WC_PATH_NOT_FOUND) ?
-          SVN_NO_ERROR : err);
+  if (svn_error_root_cause_is(err, SVN_ERR_WC_PATH_NOT_FOUND))
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      return err;
+    }
 }
 
 svn_error_t *
