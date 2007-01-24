@@ -44,6 +44,7 @@
 # close-file element      close-file 要素
 # commit                  コミット
 # conflict                競合
+# conflict marker         競合マーカー
 # contents                内容
 # copyfrom                コピー元
 # creating ...            〜を作成しています
@@ -170,8 +171,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-25 02:19+0900\n"
-"PO-Revision-Date: 2007-01-25 02:32+0900\n"
+"POT-Creation-Date: 2007-01-25 02:38+0900\n"
+"PO-Revision-Date: 2007-01-25 02:39+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -7307,11 +7308,11 @@ msgstr ""
 "作業コピー内やディレクトリ内の「競合」状態を取り除きます。\n"
 "使用方法: resolved <パス>...\n"
 "\n"
-"  注意:  このサブコマンドは、意味的に競合を解消したり衝突の標識を取り除いた"
-"り\n"
-"  するわけではありません。単に、競合に際して機械的に作り出されたファイルを"
-"削\n"
-"  除し、<パス> を再びコミットできるようにするだけです。\n"
+"  注意:  このサブコマンドは、意味的に競合を解消したり競合マーカーを取り除い"
+"た\n"
+"  りするわけではありません。単に、競合に際して機械的に作り出されたファイル"
+"を\n"
+"  削除し、<パス> を再びコミットできるようにするだけです。\n"
 
 # * Description for 'svn revert'.
 # * "revert: " is displayed at the head of the first line.
@@ -7947,7 +7948,7 @@ msgstr "置換しています              %s\n"
 #: svn/notify.c:368
 #, c-format
 msgid "Transmitting file data "
-msgstr "ファイルのデータを送信しています"
+msgstr "ファイルのデータを送信しています "
 
 #: svn/notify.c:377
 #, c-format
@@ -8008,7 +8009,7 @@ msgstr "属性 '%s' の新しい値をリビジョン %ld に設定しました\
 #: svn/propedit-cmd.c:120
 #, c-format
 msgid "No changes to property '%s' on revision %ld\n"
-msgstr "属性 '%s' (リビジョン %ld) に変更がありません\n"
+msgstr "属性 '%s' はリビジョン %ld では変更されませんでした\n"
 
 #: svn/propedit-cmd.c:128
 #, c-format
@@ -8032,7 +8033,7 @@ msgstr "属性 '%s' の新しい値を '%s' に設定しました\n"
 #: svn/propedit-cmd.c:274
 #, c-format
 msgid "No changes to property '%s' on '%s'\n"
-msgstr "属性 '%s' は '%s' では変更されていません\n"
+msgstr "属性 '%s' は '%s' では変更されませんでした\n"
 
 #: svn/proplist-cmd.c:71
 #, c-format
@@ -8078,12 +8079,12 @@ msgstr "対象の明示的な指定が必要です ('%s' は属性値と解釈�
 #: svn/propset-cmd.c:184
 #, c-format
 msgid "property '%s' set (recursively) on '%s'\n"
-msgstr "属性 '%s' を (再帰的に) '%s' にセットしました\n"
+msgstr "属性 '%s' を (再帰的に) '%s' に設定しました\n"
 
 #: svn/propset-cmd.c:185
 #, c-format
 msgid "property '%s' set on '%s'\n"
-msgstr "属性 '%s' を '%s' にセットしました\n"
+msgstr "属性 '%s' を '%s' に設定しました\n"
 
 #: svn/revert-cmd.c:86
 msgid "Try 'svn revert --recursive' instead?"
