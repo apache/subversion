@@ -418,6 +418,114 @@ def copy_from_unreadable_dir(sbox):
                                      'baz',
                                      dest_sbox.repo_url + '/A/P')
 
+# Issue 2705.
+def copy_with_mod_from_unreadable_dir(sbox):
+  "verify copies with mods from unreadable dirs"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build("svnsync-copy-with-mod-from-unreadable-dir")
+
+  # Make a copy of the B directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'cp',
+                                     sbox.wc_dir + '/A/B',
+                                     sbox.wc_dir + '/A/P')
+
+  # Set a property inside the copied directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'pset',
+                                     'foo',
+                                     'bar',
+                                     sbox.wc_dir + '/A/P/lambda')
+
+  # Commit the copy-with-modification.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'ci',
+                                     sbox.wc_dir,
+                                     '-m', 'log_msg')
+
+  # Lock down the source repository.
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+
+  fp = open(sbox.authz_file, 'w')
+
+  # For mod_dav_svn's parent path setup we need per-repos permissions in
+  # the authz file...
+  if sbox.repo_url.startswith('http'):
+    fp.write("[svnsync-copy-from-unreadable-dir:/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[svnsync-copy-from-unreadable-dir:/A/B]\n" +
+             "* = \n" +
+             "\n" +
+             "[svnsync-copy-from-unreadable-dir-1:/]\n" +
+             "* = rw")
+
+  # Otherwise we can just go with the permissions needed for the source
+  # repository.
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[/A/B]\n" +
+             "* =\n")
+  fp.close()
+
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+
+  # Currently (r23212), this run_sync fails.  It is possible that the
+  # rest of the test below this line is not accurate, because it has
+  # never been executed.
+  run_sync(dest_sbox.repo_url)
+
+  expected_out = [
+    'Changed paths:\n',
+    '   A /A/P\n',
+    '   A /A/P/E\n',
+    '   A /A/P/E/alpha\n',
+    '   A /A/P/E/beta\n',
+    '   A /A/P/F\n',
+    '   A /A/P/lambda\n',
+    '\n',
+    'Copy B to P\n',
+  ]
+
+  out, err = svntest.main.run_svn(None,
+                                  'log',
+                                  '--username', svntest.main.wc_author,
+                                  '--password', svntest.main.wc_passwd,
+                                  '-r', '2',
+                                  '-v',
+                                  dest_sbox.repo_url)
+
+  if err:
+    raise svntest.actions.SVNUnexpectedStderr(err)
+
+  svntest.actions.compare_and_display_lines(None,
+                                            'LOG',
+                                            expected_out,
+                                            out[2:11])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ['bar\n'],
+                                     [],
+                                     'pget',
+                                     'foo',
+                                     dest_sbox.repo_url + '/A/P/lambda')
+
+
 def url_encoding(sbox):
   "test url encoding issues"
   run_test(sbox, "url-encoding-bug.dump")
@@ -452,6 +560,7 @@ test_list = [ None,
               detect_meddling,
               basic_authz,
               copy_from_unreadable_dir,
+              XFail(copy_with_mod_from_unreadable_dir),
               url_encoding,
               no_author,
              ]
