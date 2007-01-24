@@ -2,7 +2,7 @@
  * notify.c:  feedback handlers for cmdline client.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -58,7 +58,10 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
   const char *path_local;
   svn_error_t *err;
 
-  path_local = svn_path_local_style(n->path, pool);
+  if (svn_path_is_url(n->path))
+    path_local = n->path;
+  else
+    path_local = svn_path_local_style(n->path, pool);
 
   switch (n->action)
     {
@@ -100,7 +103,17 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
 
     case svn_wc_notify_exists:
       nb->received_some_change = TRUE;
-      if ((err = svn_cmdline_printf(pool, "E    %s\n", path_local)))
+      if (n->content_state == svn_wc_notify_state_conflicted)
+        statchar_buf[0] = 'C';
+      else
+        statchar_buf[0] = 'E';
+
+      if (n->prop_state == svn_wc_notify_state_conflicted)
+        statchar_buf[1] = 'C';
+      else if (n->prop_state == svn_wc_notify_state_merged)
+        statchar_buf[1] = 'G';
+      
+      if ((err = svn_cmdline_printf(pool, "%s %s\n", statchar_buf, path_local)))
         goto print_error;
       break;
 
@@ -375,6 +388,20 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
     case svn_wc_notify_failed_lock:
     case svn_wc_notify_failed_unlock:
       svn_handle_warning(stderr, n->err);
+      break;
+
+    case svn_wc_notify_changelist_set:
+      if ((err = svn_cmdline_printf(pool, _("Path '%s' is now part of "
+                                            "changelist '%s'.\n"),
+                                    path_local, n->changelist_name)))
+        goto print_error;
+      break;
+
+    case svn_wc_notify_changelist_clear:
+      if ((err = svn_cmdline_printf(pool, _("Path '%s' is no longer associated "
+                                            "with a changelist.\n"),
+                                    path_local)))
+        goto print_error;
       break;
 
     default:

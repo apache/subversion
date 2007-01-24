@@ -22,7 +22,7 @@ Blanket commit access:
          kevin   Kevin Pilch-Bisson <kevin@pilch-bisson.net>
         philip   Philip Martin <philip@codematters.co.uk>
    jerenkrantz   Justin Erenkrantz <justin@erenkrantz.com>
-        rooneg   Garrett Rooney <grooney@collab.net>
+        rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
       bcollins   Ben Collins <bcollins@debian.org>
          blair   Blair Zajac <blair@orcaware.com>
        striker   Sander Striker <striker@apache.org>
@@ -39,23 +39,26 @@ Blanket commit access:
   jszakmeister   John Szakmeister <john@szakmeister.net>
       dionisos   Erik Hülsmann <e.huelsmann@gmx.net>
         breser   Ben Reser <ben@reser.org>
-           djh   D.J. Heap <dj@shadyvale.net>
+           djh   D.J. Heap <djheap@gmail.com>
           maxb   Max Bowsher <maxb1@ukf.net>
       lundblad   Peter N. Lundblad <peter@famlundblad.se>
        dberlin   Daniel Berlin <dberlin@dberlin.org>
-     danderson   David Anderson <david.anderson@calixo.net>
+     danderson   David Anderson <david.anderson@natulte.net>
         zhakov   Ivan Zhakov <chemodax@gmail.com>
-        djames   David James <djames@collab.net>
+        djames   David James <james@cs.toronto.edu>
        malcolm   Malcolm Rowe <malcolm-svn-dev@farside.org.uk>
-        pburba   Paul Burba <PaulB@softlanding.com>
+        pburba   Paul Burba <ptbsvn@adelphia.net>
        glasser   David Glasser <glasser@mit.edu>
+           lgo   Lieven Govaerts <lgo@mobsol.be>
+       hwright   Hyrum Wright <hyrum_wright@mail.utexas.edu>
+    vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
 
 Commit access for specific areas:
 
   Bindings:
 
        pmayweg   Patrick Mayweg <mayweg@qint.de>             (JavaHL bindings)
-      markphip   Mark Phippard <MarkP@softlanding.com>       (JavaHL bindings)
+      markphip   Mark Phippard <markphip@gmail.com>          (JavaHL bindings)
           rey4   Russell Yanofsky <rey4@columbia.edu>        (Swig bindings)
          clkao   Chia-liang Kao <clkao@clkao.org>            (Swig-Perl b.)
            kou   Kouhei Sutou <kou@cozmixng.org>             (Swig-Ruby b.)
@@ -89,17 +92,18 @@ Commit access for specific areas:
         offby1   Eric Hanchrow <offby1@blarg.net>            (doc)
        nomis80   Simon Perreault <nomis80@nomis80.org>       (svn-clean)
       jlvarner   Joshua Varner <jlvarner@gmail.com>          (doc)
-          nori   KOBAYASHI Noritada                          (Ruby tools,
-                 <nori1@dolphin.c.u-tokyo.ac.jp>              po: ja)
+          nori   Kobayashi Noritada <nori1@dolphin.c.u-tokyo.ac.jp> (Ruby tools,
+                                                              po: ja)
             mf   Martin Furter <mf@rola.ch>                  (svnmirror.sh
                                                           svn-backup-dumps.py)
        adejong   Arthur de Jong <arthur@ch.tudelft.nl>       (svn2cl)
       wsanchez   Wilfredo Sánchez <wsanchez@wsanchez.net>    (various contrib)
        mhagger   Michael Haggerty <mhagger@alum.mit.edu>     (svntest)
-           lgo   Lieven Govaerts <lgo@mobsol.be>             (tests)
        madanus   Madan U S <madan@collab.net>                (svnmerge)
           wein   Mathias Weinert <wein@mccw.de>              (mailer)
         bhuvan   Bhuvaneswaran <bhuvan@collab.net>           (svn2feed.py)
+       kameshj   Kamesh Jayachandran <kamesh@collab.net>     (svntest)
+        aogier   Anthony Ogier <aogier@iorga.com>            (svn-merge-vendor.py)
 
   Translation of message files:
 
@@ -111,9 +115,10 @@ Commit access for specific areas:
       karolszk   Karol Szkudlarek <karol@mikronika.com.pl>   (po: pl)
         plasma   Wei-Hon Chen <plasma@ms9.hinet.net>         (po: zh_TW)
        jihuang   June-Yen Huang <jihuang@iis.sinica.edu.tw>  (po: zh_TW)
-       marcosc   Marcos Chaves <mchvs@hotmail.com>           (po: pt_BR)
+       marcosc   Marcos Chaves <marcos.nospam@gmail.com>     (po: pt_BR)
         pynoos   Hojin Choi <hojin.choi@gmail.com>           (po: ko)
        blueboh   Jeong Seolin <blueboh@ahnlab.com>           (po: ko)
+        cauchy   Dongsheng Song <dongsheng.song@gmail.com>   (po: zh_CN)
         hynnet   YingNing Huang <hyn@bao.hynnet.com>         (po: zh_CN)
           lark   Wang Jian <lark@linux.net.cn>               (po: zh_CN)
 giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
@@ -126,7 +131,11 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
      gthompson   Glenn A. Thompson <gthompson@cdr.net>       (pluggable-db br.)
        sigfred   Sigfred Håversen <bsdlist@mumak.com>        (svnserve-ssl br.)
         pmarek   Ph. Marek <philipp.marek@bmlv.gv.at>        (meta-data-v br.)
-      markphip   Mark Phippard <MarkP@softlanding.com>       (ebcdic)
+      markphip   Mark Phippard <markphip@gmail.com>          (ebcdic)
+      jpeacock   John Peacock <jpeacock@rowman.com>          (perl-bindings-
+                                                              improvements br.)
+    nikclayton   Nik Clayton <nik@ngo.org.uk>                (perl-bindings-
+                                                              improvements br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
@@ -150,7 +159,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
 
 Committers who have asked to be listed as dormant:
 
-        bdenny   Brian Denny <brian@briandenny.net>
+        bdenny   Brian Estlin <brian@implementality.com>
       rassilon   Bill Tutt <rassilon@lyra.org> (Win32, COM, issue-1003-dev br.)
 
 ## Local Variables:

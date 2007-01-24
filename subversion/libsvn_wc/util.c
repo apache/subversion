@@ -5,7 +5,7 @@
  *          specific to working copies.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -123,6 +123,7 @@ svn_wc_create_notify(const char *path, svn_wc_notify_action_t action,
   ret->content_state = ret->prop_state = svn_wc_notify_state_unknown;
   ret->lock_state = svn_wc_notify_lock_state_unknown;
   ret->revision = SVN_INVALID_REVNUM;
+  ret->changelist_name = NULL;
 
   return ret;
 }
@@ -154,6 +155,8 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify, apr_pool_t *pool)
       apr_pool_cleanup_register(pool, ret->err, err_cleanup,
                                 apr_pool_cleanup_null);
     }
+  if (ret->changelist_name)
+    ret->changelist_name = apr_pstrdup(pool, ret->changelist_name);
 
   return ret;
 }

@@ -315,8 +315,9 @@ TODO - doesn't seem to work in Subversion 1.3
 
 =item $ra-E<gt>get_log(\@paths, $start, $end, $limit, $discover_changed_paths, $strict_node_history, \&callback)
 
-For each revision from C<$start> to C<$end>, invoke C<callback()> with
-information about the changes made in the revision (log message, time, etc.).
+For C<$limit> revisions from C<$start> to C<$end>, invoke the receiver
+C<callback()> with information about the changes made in the revision
+(log message, time, etc.).
 
 The caller may not invoke any RA operations using C<$ra> from
 within the callback function.  They may work in some situations, but
@@ -336,8 +337,9 @@ C<$SVN::Core::INVALID_REVNUM> then it defaults to the latest revision.
 TODO - the previous sentence should also be true of $end, but doing that
 gets an error message in Subversion 1.3.
 
-C<$limit> is a number indicating the maximum number of times that
-C<callback()> should be called.  If it is 0 then there will be no limit.
+C<$limit> is a number indicating the maximum number of times that the
+receiver C<callback()> should be called.  If it is 0, there will be no
+limit.
 
 If C<$discover_changed_paths> is true, then information about which changes
 were made to which paths is passed to C<callback()>.

@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import os
 
 # Our testing module
 import svntest
@@ -68,7 +68,7 @@ def get_txns(repo_dir):
   "Get the txn names using 'svnadmin lstxns'."
 
   output_lines, error_lines = svntest.main.run_svnadmin('lstxns', repo_dir)
-  txns = map(string.strip, output_lines)
+  txns = map(output_lines.strip, output_lines)
 
   # sort, just in case
   txns.sort()
@@ -86,8 +86,8 @@ def load_and_verify_dumpstream(sbox, expected_stdout, expected_stderr,
 
   output, errput = \
           svntest.main.run_command_stdin(
-    "%s load --quiet %s" % (svntest.main.svnadmin_binary, sbox.repo_dir),
-    expected_stderr, 1, dump)
+    svntest.main.svnadmin_binary, expected_stderr, 1, dump,
+    'load', '--quiet', sbox.repo_dir)
 
   if expected_stdout:
     if expected_stdout == SVNAnyOutput:
@@ -144,14 +144,13 @@ def test_create(sbox):
   svntest.main.safe_rmtree(wc_dir)
 
   svntest.main.create_repos(repo_dir)
-  svntest.main.set_repos_paths(repo_dir)
 
   svntest.actions.run_and_verify_svn("Creating rev 0 checkout",
                                      ["Checked out revision 0.\n"], [],
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      "checkout",
-                                     svntest.main.current_repo_url, wc_dir)
+                                     sbox.repo_url, wc_dir)
 
 
   svntest.actions.run_and_verify_svn(
@@ -356,6 +355,45 @@ def hotcopy_format(sbox):
     print "Error: db/format file contents do not match after hotcopy"
     raise svntest.Failure
   
+#----------------------------------------------------------------------
+
+def setrevprop(sbox):
+  "'setlog' and 'setrevprop', bypassing hooks'"
+  sbox.build()
+
+  # Try a simple log property modification.
+  iota_path = os.path.join(sbox.wc_dir, "iota")
+  output, errput = svntest.main.run_svnadmin("setlog", sbox.repo_dir,
+                                             "-r0", "--bypass-hooks",
+                                             iota_path)
+  if errput:
+    print "Error: 'setlog' failed"
+    raise svntest.Failure
+
+  # Verify that the revprop value matches what we set when retrieved
+  # through the client.
+  svntest.actions.run_and_verify_svn(None,
+                                     [ "This is the file 'iota'.\n", "\n" ],
+                                     [], "propget", "--revprop", "-r0",
+                                     "svn:log", sbox.wc_dir)
+
+  # Try an author property modification.
+  foo_path = os.path.join(sbox.wc_dir, "foo")
+  svntest.main.file_write(foo_path, "foo")
+
+  output, errput = svntest.main.run_svnadmin("setrevprop", sbox.repo_dir,
+                                             "-r0", "svn:author", foo_path)
+  if errput:
+    print "Error: 'setrevprop' failed"
+    raise svntest.Failure
+
+  # Verify that the revprop value matches what we set when retrieved
+  # through the client.
+  svntest.actions.run_and_verify_svn(None, [ "foo\n" ], [], "propget",
+                                     "--revprop", "-r0", "svn:author",
+                                     sbox.wc_dir)
+
+#----------------------------------------------------------------------
 
 def build_repos(path):
   "Helper function for creating an empty repository"
@@ -434,6 +472,7 @@ test_list = [ None,
               dump_quiet,
               hotcopy_dot,
               hotcopy_format,
+              setrevprop,
               basic_move,
               move_plus_copy,
               move_plus_delete,

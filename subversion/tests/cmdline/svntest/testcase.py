@@ -15,7 +15,7 @@
 #
 ######################################################################
 
-import os, sys, string, types
+import os, types
 
 import svntest
 
@@ -40,16 +40,28 @@ class TestCase:
       print 'WARNING: Test doc string exceeds 50 characters'
     if description[-1] == '.':
       print 'WARNING: Test doc string ends in a period (.)'
-    if not string.lower(description[0]) == description[0]:
+    if not description[0].lower() == description[0]:
       print 'WARNING: Test doc string is capitalized'
 
   def need_sandbox(self):
+    """Return True iff this test needs a Sandbox for its execution."""
+
     return 0
 
   def get_sandbox_name(self):
+    """Return the name that should be used for the sandbox.
+
+    This method is only called if self.need_sandbox() returns True."""
+
     return 'sandbox'
 
-  def run(self, args):
+  def run(self, sandbox=None):
+    """Run the test.
+
+    If self.need_sandbox() returns True, then a Sandbox instance is
+    passed to this method as the SANDBOX keyword argument; otherwise,
+    no argument is passed to this method."""
+
     raise NotImplementedError()
 
   def list_mode(self):
@@ -99,8 +111,11 @@ class FunctionTestCase(TestCase):
     filename = self.func.func_code.co_filename
     return os.path.splitext(os.path.basename(filename))[0]
 
-  def run(self, args):
-    return apply(self.func, args)
+  def run(self, sandbox=None):
+    if self.need_sandbox():
+      return self.func(sandbox)
+    else:
+      return self.func()
 
 
 class XFail(TestCase):
@@ -161,11 +176,13 @@ class Skip(TestCase):
     else:
       return self.test_case.need_sandbox()
 
-  def run(self, args):
+  def run(self, sandbox=None):
     if self.cond:
       raise svntest.Skip
+    elif self.need_sandbox():
+      return self.test_case.run(sandbox=sandbox)
     else:
-      return self.test_case.run(args)
+      return self.test_case.run()
 
 
 def create_test_case(func):

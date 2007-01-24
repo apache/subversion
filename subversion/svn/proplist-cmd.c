@@ -80,7 +80,7 @@ svn_cl__proplist(apr_getopt_t *os,
 
       for (i = 0; i < targets->nelts; i++)
         {
-          const char *target = ((const char **) (targets->elts))[i];
+          const char *target = APR_ARRAY_IDX(targets, i, const char *);
           apr_array_header_t *props;
           int j;
           svn_boolean_t is_url = svn_path_is_url(target);
@@ -107,7 +107,7 @@ svn_cl__proplist(apr_getopt_t *os,
           for (j = 0; j < props->nelts; ++j)
             {
               svn_client_proplist_item_t *item 
-                = ((svn_client_proplist_item_t **)props->elts)[j];
+                = APR_ARRAY_IDX(props, j, svn_client_proplist_item_t *);
               const char *name_local;
 
               if (! is_url)

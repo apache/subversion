@@ -2,7 +2,7 @@
  * swigutil_pl.c: utility functions for the SWIG Perl bindings
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -426,6 +426,7 @@ svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
 	SvREFCNT_inc(*result);
     }
 
+    PUTBACK;
     FREETMPS ;
     LEAVE ;
 
@@ -1068,10 +1069,11 @@ void svn_swig_pl_notify_func(void * baton,
     
 }
 
-/* Thunked version of svn_client_get_commit_log_t callback type. */
+/* Thunked version of svn_client_get_commit_log3_t callback type. */
 svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
-                                             apr_array_header_t *commit_items,
+                                             const apr_array_header_t *
+                                             commit_items,
                                              void *baton,
                                              apr_pool_t *pool)
 {
@@ -1090,7 +1092,7 @@ svn_error_t *svn_swig_pl_get_commit_log_func(const char **log_msg,
     log_msg_sv = newRV_noinc(sv_newmortal());
     tmp_file_sv = newRV_noinc(sv_newmortal());
     commit_items_sv = svn_swig_pl_convert_array
-      (commit_items, _SWIG_TYPE("svn_client_commit_item_t *"));
+      (commit_items, _SWIG_TYPE("svn_client_commit_item3_t *"));
 
     svn_swig_pl_callback_thunk(CALL_SV,
                                baton, &result,

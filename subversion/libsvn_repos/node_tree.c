@@ -50,7 +50,7 @@ create_node(const char *name,
             svn_repos_node_t *parent,
             apr_pool_t *pool)
 {
-  svn_repos_node_t *node = apr_pcalloc(pool, sizeof(svn_repos_node_t));
+  svn_repos_node_t *node = apr_pcalloc(pool, sizeof(*node));
   node->action = 'R';
   node->kind = svn_node_unknown;
   node->name = apr_pstrdup(pool, name);

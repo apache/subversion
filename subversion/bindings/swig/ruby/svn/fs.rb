@@ -11,28 +11,28 @@ module Svn
     Util.set_methods(Ext::Fs, self)
 
     @@fs_pool = Svn::Core::Pool.new
-    Fs.initialize(@@fs_pool)
+    initialize(@@fs_pool)
 
     class << self
       def modules
         print_modules("")
       end
     end
-    
+
     FileSystem = SWIG::TYPE_p_svn_fs_t
     class FileSystem
 
       class << self
-        def create(path, config)
-          Fs.create(path, config)
+        def create(path, config={}, &block)
+          Fs.create(path, config, &block)
         end
 
         def delete(path)
           Fs.delete_fs(path)
         end
 
-        def open(path, config)
-          Fs.open(path, config)
+        def open(path, config={}, &block)
+          Fs.open(path, config, &block)
         end
         alias new open
 

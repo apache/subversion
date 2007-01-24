@@ -180,17 +180,19 @@ int svn_path_is_empty(const char *path);
 /** Return TRUE if @a path is considered a root path on the platform at 
  * hand, amongst which '/' on all platforms or 'X:/', '\\\\?\\X:/', 
  * '\\\\.\\..', '\\\\server\\share' on Windows.
+ *
+ * @since New in 1.5.
  */
-svn_boolean_t svn_path_is_root(const char *path, apr_size_t len, 
-                               apr_pool_t *pool);
+svn_boolean_t svn_path_is_root(const char *path, apr_size_t len);
 
 
 /** Return TRUE if @a path is considered absolute on the platform at 
  * hand, amongst which '/foo' on all platforms or 'X:/foo', '\\\\?\\X:/foo',
  * '\\\\server\\share\\foo' on Windows.
+ *
+ * @since New in 1.5.
  */
-svn_boolean_t svn_path_is_absolute(const char *path, apr_size_t len, 
-                                   apr_pool_t *pool);
+svn_boolean_t svn_path_is_absolute(const char *path, apr_size_t len);
 
 /** Return a new path (or URL) like @a path, but transformed such that
  * some types of path specification redundancies are removed.
@@ -411,7 +413,7 @@ svn_error_t *svn_path_check_valid(const char *path, apr_pool_t *pool);
  * @{
  */
 
-/** Return @c TRUE iff @a path looks like a valid URL, @c FALSE otherwise. */
+/** Return true iff @a path looks like a valid absolute URL. */
 svn_boolean_t svn_path_is_url(const char *path);
 
 /** Return @c TRUE iff @a path is URI-safe, @c FALSE otherwise. */

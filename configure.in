@@ -69,9 +69,9 @@ SVN_LIB_APRUTIL($APU_VER_REGEXES)
 
 # Either a space-separated list of allowable Neon versions, or "any" to
 # mean allow anything.
-NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5"
-NEON_LATEST_WORKING_VER=0.25.5
-NEON_URL="http://www.webdav.org/neon/neon-${NEON_LATEST_WORKING_VER}.tar.gz"
+NEON_ALLOWED_LIST="0.25.0 0.25.1 0.25.2 0.25.3 0.25.4 0.25.5 0.26.0 0.26.1 0.26.2"
+NEON_RECOMMENDED_VER=0.25.5
+NEON_URL="http://www.webdav.org/neon/neon-${NEON_RECOMMENDED_VER}.tar.gz"
 dnl You can skip the neon version check only if you know what you are doing 
 AC_ARG_ENABLE(neon-version-check,
   AC_HELP_STRING([--disable-neon-version-check],
@@ -82,7 +82,7 @@ AC_ARG_ENABLE(neon-version-check,
     fi
   ],
   [])
-SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_LATEST_WORKING_VER, $NEON_URL)
+SVN_LIB_NEON($NEON_ALLOWED_LIST, $NEON_RECOMMENDED_VER, $NEON_URL)
 
 dnl Search for serf as an alternative to neon
 SVN_LIB_SERF
@@ -553,8 +553,10 @@ if test -z "$PYTHON"; then
 fi
 AC_PATH_PROGS(PYTHON, "$PYTHON", none)
 
+# The minimum version for the JVM runtime for our Java bytecode.
+JAVA_OLDEST_WORKING_VER='1.2'
 # SVN_CHECK_JDK sets $JAVA_CLASSPATH
-SVN_CHECK_JDK
+SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_PATH_PROG(PERL, perl, none)
 

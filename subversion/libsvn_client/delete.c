@@ -136,9 +136,9 @@ delete_urls(svn_commit_info_t **commit_info_p,
     }
 
   /* Create new commit items and add them to the array. */
-  if (ctx->log_msg_func || ctx->log_msg_func2)
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
-      svn_client_commit_item2_t *item;
+      svn_client_commit_item3_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make(pool, targets->nelts, sizeof(item));
@@ -146,10 +146,11 @@ delete_urls(svn_commit_info_t **commit_info_p,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
-          item = apr_pcalloc(pool, sizeof(*item));
+          SVN_ERR(svn_client_commit_item_create
+                  ((const svn_client_commit_item3_t **) &item, pool));
           item->url = svn_path_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_DELETE;
-          APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+          APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
       SVN_ERR(svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
                                       ctx, pool));
@@ -212,30 +213,32 @@ svn_error_t *
 svn_client__wc_delete(const char *path,
                       svn_wc_adm_access_t *adm_access,
                       svn_boolean_t force, 
-                      svn_boolean_t dry_run, 
+                      svn_boolean_t dry_run,
+                      svn_boolean_t keep_local,
                       svn_wc_notify_func2_t notify_func,
                       void *notify_baton,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
 
-  if (!force)
+  if (!force && !keep_local)
     /* Verify that there are no "awkward" files */
     SVN_ERR(svn_client__can_delete(path, ctx, pool));
 
   if (!dry_run)
     /* Mark the entry for commit deletion and perform wc deletion */
-    SVN_ERR(svn_wc_delete2(path, adm_access,
+    SVN_ERR(svn_wc_delete3(path, adm_access,
                            ctx->cancel_func, ctx->cancel_baton,
-                           notify_func, notify_baton, pool));
+                           notify_func, notify_baton, keep_local, pool));
   return SVN_NO_ERROR;
 }
 
 
 svn_error_t *
-svn_client_delete2(svn_commit_info_t **commit_info_p,
+svn_client_delete3(svn_commit_info_t **commit_info_p,
                    const apr_array_header_t *paths,
-                   svn_boolean_t force, 
+                   svn_boolean_t force,
+                   svn_boolean_t keep_local, 
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool)
 {
@@ -269,7 +272,7 @@ svn_client_delete2(svn_commit_info_t **commit_info_p,
                                    TRUE, 0, ctx->cancel_func,
                                    ctx->cancel_baton, subpool));
           SVN_ERR(svn_client__wc_delete(path, adm_access, force, 
-                                        FALSE,
+                                        FALSE, keep_local,
                                         ctx->notify_func2,
                                         ctx->notify_baton2,
                                         ctx, subpool));
@@ -281,6 +284,15 @@ svn_client_delete2(svn_commit_info_t **commit_info_p,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_delete2(svn_commit_info_t **commit_info_p,
+                   const apr_array_header_t *paths,
+                   svn_boolean_t force,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_delete3(commit_info_p, paths, force, FALSE, ctx, pool);
+}
 
 svn_error_t *
 svn_client_delete(svn_client_commit_info_t **commit_info_p,

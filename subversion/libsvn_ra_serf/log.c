@@ -2,7 +2,7 @@
  * log.c :  entry point for log RA functions for ra_serf
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -49,6 +49,10 @@ typedef enum {
   CREATOR,
   DATE,
   COMMENT,
+  ADDED_PATH,
+  REPLACED_PATH,
+  DELETED_PATH,
+  MODIFIED_PATH,
 } log_state_e;
 
 typedef struct {
@@ -58,9 +62,11 @@ typedef struct {
   const char *tmp;
   apr_size_t tmp_len;
 
+  /* Temporary change path - ultimately inserted into changed_paths hash. */
+  svn_log_changed_path_t *tmp_path;
+
   /* Hashtable of paths */
-  /* TODO implement changed-paths support */
-  apr_hash_t *paths;
+  apr_hash_t *changed_paths;
 
   /* Other log fields */
   svn_revnum_t version;
@@ -105,6 +111,20 @@ push_state(svn_ra_serf__xml_parser_t *parser,
       parser->state->private = info;
     }
 
+  if (state == ADDED_PATH || state == REPLACED_PATH ||
+      state == DELETED_PATH || state == MODIFIED_PATH)
+    {
+      log_info_t *info = parser->state->private;
+
+      if (!info->changed_paths)
+        {
+          info->changed_paths = apr_hash_make(info->pool);
+        }
+
+      info->tmp_path = apr_pcalloc(info->pool, sizeof(*info->tmp_path));
+      info->tmp_path->copyfrom_rev = SVN_INVALID_REVNUM;
+    }
+
   return parser->state->private;
 }
 
@@ -137,6 +157,8 @@ start_log(svn_ra_serf__xml_parser_t *parser,
     }
   else if (state == ITEM)
     {
+      log_info_t *info;
+
       if (strcmp(name.name, "version-name") == 0)
         {
           push_state(parser, log_ctx, VERSION);
@@ -152,6 +174,60 @@ start_log(svn_ra_serf__xml_parser_t *parser,
       else if (strcmp(name.name, "comment") == 0)
         {
           push_state(parser, log_ctx, COMMENT);
+        }
+      else if (strcmp(name.name, "added-path") == 0)
+        {
+          const char *copy_path, *copy_rev_str;
+
+          info = push_state(parser, log_ctx, ADDED_PATH);
+          info->tmp_path->action = 'A';
+
+          copy_path = svn_ra_serf__find_attr(attrs, "copyfrom-path");
+          copy_rev_str = svn_ra_serf__find_attr(attrs, "copyfrom-rev");
+          if (copy_path && copy_rev_str)
+            {
+              svn_revnum_t copy_rev;
+
+              copy_rev = SVN_STR_TO_REV(copy_rev_str);
+              if (SVN_IS_VALID_REVNUM(copy_rev))
+                {
+                  info->tmp_path->copyfrom_path = apr_pstrdup(info->pool,
+                                                              copy_path);
+                  info->tmp_path->copyfrom_rev = copy_rev;
+                }
+            }
+        }
+      else if (strcmp(name.name, "replaced-path") == 0)
+        {
+          const char *copy_path, *copy_rev_str;
+
+          info = push_state(parser, log_ctx, REPLACED_PATH);
+          info->tmp_path->action = 'R';
+
+          copy_path = svn_ra_serf__find_attr(attrs, "copyfrom-path");
+          copy_rev_str = svn_ra_serf__find_attr(attrs, "copyfrom-rev");
+          if (copy_path && copy_rev_str)
+            {
+              svn_revnum_t copy_rev;
+
+              copy_rev = SVN_STR_TO_REV(copy_rev_str);
+              if (SVN_IS_VALID_REVNUM(copy_rev))
+                {
+                  info->tmp_path->copyfrom_path = apr_pstrdup(info->pool,
+                                                              copy_path);
+                  info->tmp_path->copyfrom_rev = copy_rev;
+                }
+            }
+        }
+      else if (strcmp(name.name, "deleted-path") == 0)
+        {
+          info = push_state(parser, log_ctx, DELETED_PATH);
+          info->tmp_path->action = 'D';
+        }
+      else if (strcmp(name.name, "modified-path") == 0)
+        {
+          info = push_state(parser, log_ctx, MODIFIED_PATH);
+          info->tmp_path->action = 'M';
         }
     }
 
@@ -180,7 +256,7 @@ end_log(svn_ra_serf__xml_parser_t *parser,
     {
       /* Give the info to the reporter */
       SVN_ERR(log_ctx->receiver(log_ctx->receiver_baton,
-                                info->paths,
+                                info->changed_paths,
                                 info->version,
                                 info->creator,
                                 info->date,
@@ -217,6 +293,24 @@ end_log(svn_ra_serf__xml_parser_t *parser,
       info->tmp_len = 0;
       svn_ra_serf__xml_pop_state(parser);
     }
+  else if ((state == ADDED_PATH &&
+            strcmp(name.name, "added-path") == 0) ||
+           (state == DELETED_PATH &&
+            strcmp(name.name, "deleted-path") == 0) ||
+           (state == MODIFIED_PATH &&
+            strcmp(name.name, "modified-path") == 0) ||
+           (state == REPLACED_PATH &&
+            strcmp(name.name, "replaced-path") == 0))
+    {
+      char *path;
+
+      path = apr_pstrmemdup(info->pool, info->tmp, info->tmp_len);
+      info->tmp_len = 0;
+
+      apr_hash_set(info->changed_paths, path, APR_HASH_KEY_STRING,
+                   info->tmp_path);
+      svn_ra_serf__xml_pop_state(parser);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -240,6 +334,10 @@ cdata_log(svn_ra_serf__xml_parser_t *parser,
       case CREATOR:
       case DATE:
       case COMMENT:
+      case ADDED_PATH:
+      case REPLACED_PATH:
+      case DELETED_PATH:
+      case MODIFIED_PATH:
         svn_ra_serf__expand_string(&info->tmp, &info->tmp_len,
                                    data, len, parser->state->pool);
         break;
@@ -330,7 +428,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
       for (i = 0; i < paths->nelts; i++)
         {
           svn_ra_serf__add_tag_buckets(buckets,
-                                       "S:path", ((const char**)paths->elts)[i],
+                                       "S:path", APR_ARRAY_IDX(paths, i, 
+                                                               const char*),
                                        session->bkt_alloc);
         }
     }

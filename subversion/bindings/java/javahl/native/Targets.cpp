@@ -49,7 +49,8 @@ void Targets::add(const char *path)
 {
     m_targets.push_back (path);
 }
-const apr_array_header_t *Targets::array (const Pool & pool)
+
+const apr_array_header_t *Targets::array(const Pool & pool)
 {
     if(m_targetArray != NULL)
     {
@@ -94,9 +95,9 @@ const apr_array_header_t *Targets::array (const Pool & pool)
             {
                 return NULL;
             }
-            JNIUtil::getEnv()->DeleteLocalRef(elem);
+            env->DeleteLocalRef(elem);
         }
-        JNIUtil::getEnv()->DeleteLocalRef(clazz);
+        env->DeleteLocalRef(clazz);
         //JNIUtil::getEnv()->DeleteLocalRef(m_targetArray);
         m_targetArray = NULL;
     }

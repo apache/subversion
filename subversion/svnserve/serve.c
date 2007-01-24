@@ -2,7 +2,7 @@
  * serve.c :  Functions for serving the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -43,24 +43,6 @@
 #include "server.h"
 
 typedef struct {
-  svn_repos_t *repos;
-  svn_fs_t *fs;            /* For convenience; same as svn_repos_fs(repos) */
-  svn_config_t *cfg;       /* Parsed repository svnserve.conf */
-  svn_config_t *pwdb;      /* Parsed password database */
-  svn_authz_t *authzdb;    /* Parsed authz rules */
-  const char *authz_repos_name; /* The name of the repository */
-  const char *realm;       /* Authentication realm */
-  const char *repos_url;   /* URL to base of repository */
-  svn_stringbuf_t *fs_path;/* Decoded base path inside repository */
-  const char *user;
-  svn_boolean_t tunnel;    /* Tunneled through login agent */
-  const char *tunnel_user; /* Allow EXTERNAL to authenticate as this */
-  svn_boolean_t read_only; /* Disallow write access (global flag) */
-  int protocol_version;
-  apr_pool_t *pool;
-} server_baton_t;
-
-typedef struct {
   apr_pool_t *pool;
   svn_revnum_t *new_rev;
   const char **date;
@@ -84,9 +66,6 @@ typedef struct {
   svn_ra_svn_conn_t *conn;
   apr_pool_t *pool;  /* Pool provided in the handler call. */
 } file_revs_baton_t;
-
-enum authn_type { UNAUTHENTICATED, AUTHENTICATED };
-enum access_type { NO_ACCESS, READ_ACCESS, WRITE_ACCESS };
 
 /* Verify that URL is inside REPOS_URL and get its fs path. Assume that 
    REPOS_URL and URL are already URI-decoded. */
@@ -182,7 +161,7 @@ static svn_error_t *authz_commit_cb(svn_repos_authz_access_t required,
 }
 
 
-static enum access_type get_access(server_baton_t *b, enum authn_type auth)
+enum access_type get_access(server_baton_t *b, enum authn_type auth)
 {
   const char *var = (auth == AUTHENTICATED) ? SVN_CONFIG_OPTION_AUTH_ACCESS :
     SVN_CONFIG_OPTION_ANON_ACCESS;
@@ -313,13 +292,11 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 "Must authenticate with listed mechanism");
 }
 
-/* Perform an authentication request in order to get an access level of
- * REQUIRED or higher.  Since the client may escape the authentication
- * exchange, the caller should check current_access(b) to see if
- * authentication succeeded. */
-static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                 server_baton_t *b, enum access_type required,
-                                 svn_boolean_t needs_username)
+/* Perform an authentication request using the built-in SASL implementation. */
+static svn_error_t *
+simple_auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                    server_baton_t *b, enum access_type required,
+                    svn_boolean_t needs_username)
 {
   svn_boolean_t success;
   const char *mech, *mecharg;
@@ -336,6 +313,23 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                    &success));
     }
   while (!success);
+  return SVN_NO_ERROR;
+}
+
+/* Perform an authentication request in order to get an access level of
+ * REQUIRED or higher.  Since the client may escape the authentication
+ * exchange, the caller should check current_access(b) to see if
+ * authentication succeeded. */
+static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                                 server_baton_t *b, enum access_type required,
+                                 svn_boolean_t needs_username)
+{
+#ifdef SVN_HAVE_SASL
+  if (b->use_sasl)
+    SVN_ERR(sasl_auth_request(conn, pool, b, required, needs_username));
+  else
+#endif
+  SVN_ERR(simple_auth_request(conn, pool, b, required, needs_username));
   return SVN_NO_ERROR;
 }
 
@@ -437,7 +431,11 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
      the first time round. */
   if (b->user == NULL
       && get_access(b, AUTHENTICATED) >= req
-      && (b->tunnel_user || b->pwdb) && b->protocol_version >= 2)
+      && (b->tunnel_user || b->pwdb
+#ifdef SVN_HAVE_SASL
+          || b->use_sasl
+#endif
+      ) && b->protocol_version >= 2)
     SVN_ERR(auth_request(conn, pool, b, req, TRUE));
 
   /* Now that an authentication has been done get the new take of
@@ -504,7 +502,8 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   path = svn_path_canonicalize(path, pool);
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   if (!b->err)
-    b->err = get_fs_path(b->repos_url, url, &fs_path, pool);
+    b->err = get_fs_path(svn_path_uri_decode(b->repos_url, pool), url,
+                         &fs_path, pool);
   if (!b->err)
     b->err = svn_repos_link_path2(b->report_baton, path, fs_path, rev,
                                   start_empty, lock_token, pool);
@@ -712,7 +711,8 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &url));
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(get_fs_path(b->repos_url, url, &fs_path, pool));
+  SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool), url,
+                          &fs_path, pool));
   svn_stringbuf_set(b->fs_path, fs_path);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
@@ -758,8 +758,8 @@ static svn_error_t *change_rev_prop(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
      optional element pattern "(?s)" isn't used. */
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "rc?s", &rev, &name, &value));
   SVN_ERR(must_have_access(conn, pool, b, svn_authz_write, NULL, FALSE));
-  SVN_CMD_ERR(svn_repos_fs_change_rev_prop2(b->repos, rev, b->user,
-                                            name, value,
+  SVN_CMD_ERR(svn_repos_fs_change_rev_prop3(b->repos, rev, b->user,
+                                            name, value, TRUE, TRUE,
                                             authz_check_access_cb_func(b), b,
                                             pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
@@ -839,7 +839,7 @@ static svn_error_t *add_lock_tokens(svn_ra_svn_conn_t *conn,
 
   for (i = 0; i < lock_tokens->nelts; ++i)
     {
-      const char *token;
+      const char *path, *token, *full_path;
       svn_ra_svn_item_t *path_item, *token_item;
       svn_ra_svn_item_t *item = &APR_ARRAY_IDX(lock_tokens, i,
                                                svn_ra_svn_item_t);
@@ -857,8 +857,13 @@ static svn_error_t *add_lock_tokens(svn_ra_svn_conn_t *conn,
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Lock token isn't a string");
 
+      path = path_item->u.string->data;
+      full_path = svn_path_join(sb->fs_path->data,
+                                svn_path_canonicalize(path, pool),
+                                pool);
+
       if (! lookup_access(pool, sb, svn_authz_write,
-                          path_item->u.string->data, TRUE))
+                          full_path, TRUE))
         return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED,
                                 NULL, NULL);
 
@@ -1402,7 +1407,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   full_paths = apr_array_make(pool, paths->nelts, sizeof(const char *));
   for (i = 0; i < paths->nelts; i++)
     {
-      elt = &((svn_ra_svn_item_t *) paths->elts)[i];
+      elt = &APR_ARRAY_IDX(paths, i, svn_ra_svn_item_t);
       if (elt->kind != SVN_RA_SVN_STRING)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 "Log path entry not a string");
@@ -1410,7 +1415,7 @@ static svn_error_t *log_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                 svn_path_canonicalize(elt->u.string->data,
                                                       pool),
                                 pool);
-      *((const char **) apr_array_push(full_paths)) = full_path;
+      APR_ARRAY_PUSH(full_paths, const char *) = full_path;
     }
   SVN_ERR(trivial_auth_request(conn, pool, b));
 
@@ -1932,7 +1937,6 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   const char *full_path;
   apr_hash_t *locks;
   apr_hash_index_t *hi;
-  const void *key;
   void *val;
   svn_lock_t *l;
 
@@ -1950,7 +1954,7 @@ static svn_error_t *get_locks(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
   for (hi = apr_hash_first(pool, locks); hi; hi = apr_hash_next(hi))
     {
-      apr_hash_this(hi, &key, NULL, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
       l = val;
       SVN_ERR(write_lock(conn, pool, l));
     }
@@ -2150,14 +2154,18 @@ static svn_error_t *find_repos(const char *url, const char *root,
         svn_error_clear(err);
       else if (err)
         return err;
-      else
-        {
-          /* Use the repository UUID as the default realm. */
-          SVN_ERR(svn_fs_get_uuid(b->fs, &b->realm, pool));
-          svn_config_get(b->cfg, &b->realm, SVN_CONFIG_SECTION_GENERAL,
-                         SVN_CONFIG_OPTION_REALM, b->realm);
-        }
     }
+
+#ifdef SVN_HAVE_SASL
+  /* Should we use Cyrus SASL? */
+  svn_config_get_bool(b->cfg, &b->use_sasl, SVN_CONFIG_SECTION_SASL,
+                      SVN_CONFIG_OPTION_USE_SASL, FALSE);
+#endif
+
+  /* Use the repository UUID as the default realm. */
+  SVN_ERR(svn_fs_get_uuid(b->fs, &b->realm, pool));
+  svn_config_get(b->cfg, &b->realm, SVN_CONFIG_SECTION_GENERAL,
+                 SVN_CONFIG_OPTION_REALM, b->realm);
 
   /* Read authz configuration. */
   svn_config_get(b->cfg, &authz_path, SVN_CONFIG_SECTION_GENERAL,
@@ -2180,7 +2188,11 @@ static svn_error_t *find_repos(const char *url, const char *root,
      are given by the client. */
   if (get_access(b, UNAUTHENTICATED) == NO_ACCESS
       && (get_access(b, AUTHENTICATED) == NO_ACCESS
-          || (!b->tunnel_user && !b->pwdb)))
+          || (!b->tunnel_user && !b->pwdb
+#ifdef SVN_HAVE_SASL
+              && !b->use_sasl
+#endif
+              )))
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             "No access allowed to this repository");
   return SVN_NO_ERROR;

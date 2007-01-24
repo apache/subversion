@@ -15,7 +15,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
 
-    self.path = tempfile.mktemp()
+    self.path = core.svn_path_canonicalize(tempfile.mktemp())
 
     client_ctx = client.create_context()
     
@@ -92,7 +92,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
               pass
 
       # Remove trunk/README.txt
-      readme_path = os.path.join(self.path, "trunk", "README.txt")
+      readme_path = '%s/trunk/README.txt' % self.path
       self.assert_(os.path.exists(readme_path))
       os.remove(readme_path)
 
@@ -145,9 +145,10 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.failIf(wc.is_entry_prop('foreign:foo:bar'))
 
   def test_get_pristine_copy_path(self):
-      self.assertEqual(
-        wc.get_pristine_copy_path(os.path.join(self.path, 'foo')),
-        os.path.join(self.path, wc.get_adm_dir(), 'text-base', 'foo.svn-base'))
+      path_to_file = '%s/%s' % (self.path, 'foo')
+      path_to_text_base = '%s/%s/text-base/foo.svn-base' % (self.path,
+        wc.get_adm_dir())
+      self.assertEqual(path_to_text_base, wc.get_pristine_copy_path(path_to_file))
 
   def test_entries_read(self):
       entries = wc.entries_read(self.wc, True)
@@ -159,7 +160,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
   def tearDown(self):
       wc.adm_close(self.wc)
-      shutil.rmtree(self.path)
+      core.svn_io_remove_dir(self.path)
 
 def suite():
     return unittest.makeSuite(SubversionWorkingCopyTestCase, 'test',

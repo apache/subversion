@@ -4,12 +4,12 @@
 <head>
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
 <style type="text/css"> /* <![CDATA[ */
-  @import "tigris-branding/css/tigris.css";
-  @import "tigris-branding/css/inst.css";
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="tigris-branding/css/print.css"/>
-<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
 <title>Subversion FAQ</title>
 </head>
 
@@ -18,7 +18,6 @@
 
 <h1>Subversion FAQ</h1>
 
-<![CDATA[=========================================================]]>
 
 <div class="h2"><!-- no 'id' or 'title' attribute for TOC -->
 <h2>Table of Contents</h2>
@@ -83,7 +82,7 @@
     after it's been committed?</a></li>
 <li><a href="#patch">How do I submit a patch for Subversion?</a></li>
 <li><a href="#in-place-import">How can I do an in-place 'import'
-    (i.e. add a tree to subversion such that the original data becomes
+    (i.e. add a tree to Subversion such that the original data becomes
     a working copy directly)?</a></li> 
 <li><a href="#dumpload">What is this "dump/load cycle" people
     sometimes talk about when upgrading a Subversion server?</a></li> 
@@ -231,6 +230,12 @@ a <tt>file:</tt> URL?</a></li>
   svnserve, but it doesn't seem to be listening on port 3690.</a></li>
 <li><a href="#already-under-version-control">I can't add a directory
     because Subversion says it's "already under version control".</a></li>
+<li><a href="#slow-private-svnserve">Accessing non-public repositories
+    via svnserve is really slow sometimes.</a></li>
+<li><a href="#ssl-negotiation-error">When performing Subversion
+    operations involving a lot of data over SSL, I get the error
+    <tt>SSL negotiation failed: SSL error: decryption failed or bad
+    record mac</tt>.</a></li>
 </ul>
 
 <h4>Developer questions:</h4>
@@ -258,14 +263,12 @@ a <tt>file:</tt> URL?</a></li>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <hr/>
 
 <div class="h2" id="general-questions" title="general-questions">
 <h2>General questions:</h2>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="why" title="why">
 <h3>Why does this project exist?</h3>
@@ -276,7 +279,6 @@ things that are broken.  See our front page.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="collab" title="collab">
 <h3>Is Subversion proprietary?  I heard that it
@@ -285,7 +287,7 @@ belongs to CollabNet.</h3>
 <p>No, Subversion is open source / free software.  CollabNet pays the
 salaries of several full-time developers, and holds the copyright on
 the code, but that copyright is <a
-href="http://subversion.tigris.org/project_license.html">an
+href="http://subversion.tigris.org/license-1.html">an
 Apache/BSD-style license</a>
 which is fully compliant with the <a
 href="http://www.debian.org/social_contract#guidelines">Debian Free
@@ -295,7 +297,6 @@ CollabNet or anyone else is required.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="stable" title="stable">
 <h3>Is Subversion stable enough for me to use for my
@@ -317,7 +318,6 @@ stuck to that same standard.</p>
 </div>
 
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="interop" title="interop">
 <h3>What is Subversion's client/server
@@ -334,7 +334,6 @@ to Subversion</a>.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="portability" title="portability">
 <h3>What operating systems does Subversion run
@@ -347,8 +346,7 @@ href="http://apr.apache.org">Apache Portable Runtime</a> library, as a
 portability layer.  The Subversion client will run anywhere APR runs,
 which is most places.  The Subversion server (i.e., the repository
 side) is the same, except that it will not host a Berkeley DB repository
-on Win9x platforms (Win95/Win98/WinME), because <a
-href="http://www.sleepycat.com">Berkeley DB</a> has
+on Win9x platforms (Win95/Win98/WinME), because Berkeley DB has
 shared-memory segment problems on Win9x.  FSFS repositories
 (introduced in version 1.1) do not have this restriction; however, due
 to a limitation in Win9x's file-locking support, they also don't work
@@ -361,7 +359,6 @@ Win95/Win98/WinMe.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="filesystem" title="filesystem">
 <h3>What's all this about a new filesystem?  Is
@@ -379,7 +376,6 @@ recent state.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="server-requirements" title="server-requirements">          
 <h3>What kind of hardware do I need to run a Subversion server?</h3>           
@@ -402,7 +398,6 @@ would for comparable CVS repositories.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="apache-extension" title="apache-extension">
 <h3>I heard that Subversion is an Apache
@@ -421,7 +416,6 @@ in the Subversion book to learn more.</p>
 </div>
 
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="need-apache" title="need-apache">
 <h3>Does this mean I have to set up Apache to
@@ -442,7 +436,6 @@ in the Subversion book.</p>
 </div>
 
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="multiple-apachim" title="multiple-apachim">
 <h3>I run Apache 1.x right now, and can't
@@ -464,7 +457,6 @@ sure to specify that port when you publish your repository URL (e.g.,
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="feature-x" title="feature-x">
 <h3>Why don't you do X, just like SCM system Y?</h3>
@@ -475,7 +467,6 @@ there.  We're trying to replace CVS.  See the first question.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="globalrev" title="globalrev">
 <h3>Why does the entire repository share the 
@@ -501,7 +492,6 @@ get a much better picture of a code-base's rate of change.
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="changesets" title="changesets">
 <h3>Does Subversion have Changesets?</h3>
@@ -553,7 +543,6 @@ CVS.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="release" title="release">
 <h3>When's the next release?</h3>
@@ -564,7 +553,6 @@ http://subversion.tigris.org/project_status.html</a>.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="symlinks" title="symlinks">
 <h3>Does Subversion support symlinks?</h3>
@@ -581,7 +569,6 @@ translation: the object appears as a normal file.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="logo" title="logo">
 <h3>I need a high resolution version of the Subversion logo,
@@ -600,7 +587,6 @@ Illustrator document</a> are available.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="more-information" title="more-information">
 <h3>I have other questions.  Where can I get more information?</h3>
@@ -625,7 +611,6 @@ other resources available:</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="moderation" title="moderation">
 <h3>Why isn't my post showing up on the mailing list?</h3>
@@ -640,7 +625,6 @@ again.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 </div>
 
@@ -648,11 +632,10 @@ again.</p>
 <h2>How-to:</h2>
 <p/>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="co-svn" title="co-svn">
 <h3>How do I check out the Subversion code?</h3>
-<p>Use the subversion client:</p>
+<p>Use the Subversion client:</p>
 <pre>
 	$ svn co http://svn.collab.net/repos/svn/trunk subversion
 </pre>
@@ -661,7 +644,6 @@ directory named subversion on your local machine.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="repository" title="repository">
 <h3>How do I create a repository?  How do I
@@ -678,7 +660,6 @@ at section IV, the "Quickstart Guide".</p>
 </div>
 
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="cvs2svn" title="cvs2svn">
 <h3>How do I convert an existing CVS repository
@@ -716,7 +697,6 @@ page.</p>
 </div>
 
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="proxy" title="proxy">
 <h3>What if I'm behind a proxy?</h3>
@@ -774,13 +754,12 @@ attempt the checkout over SSL, which many proxies allow:</p>
 </pre>
 
 <p>Of course, your svn client will have to have been built with ssl
-support; just pass <tt>--with-ssl</tt> to subversion's
+support; just pass <tt>--with-ssl</tt> to Subversion's
 <tt>./configure</tt> script.  You can check to see whether the 'https'
 scheme is supported by running <tt>svn --version</tt>.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="paranoid" title="paranoid">
 <h3>My admins don't want me to have a HTTP server for
@@ -861,7 +840,6 @@ in MOVE and COPY requests, so you have to be a little careful here - a
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="multi-proj" title="multi-proj">
 <h3>How do I manage several different projects under Subversion?</h3>
@@ -916,7 +894,6 @@ Ben Collins-Sussman &lt;sussman@collab.net&gt;):</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
   
 <div class="h3" id="multi-merge" title="multi-merge">
 <h3>How do I merge two completely separate repositories?</h3>
@@ -952,7 +929,6 @@ equivalent to CVS modules:</p>
 </div>
 
 
-<![CDATA[=========================================================]]>
   
 <div class="h3" id="nfs" title="nfs">
 <h3>Should I store my repository / working copy on a NFS
@@ -989,7 +965,6 @@ newer Samba (3.0.6).</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
   
 <div class="h3" id="bdblogs" title="bdblogs">
 <h3>Why is my repository taking up so much disk space?</h3>
@@ -1037,12 +1012,11 @@ $ db_archive -a -h /repos/db | xargs rm
 create new repositories with automatic log file removal enabled. You
 can change this by passing the <code>--bdb-log-keep</code> option to
 <code>svnadmin create</code>. Refer to the section about the <a
-href="http://www.sleepycat.com/docs/api_c/env_set_flags.html#DB_LOG_AUTOREMOVE">
+href="http://www.oracle.com/technology/documentation/berkeley-db/db/api_c/env_set_flags.html#DB_LOG_AUTOREMOVE">
 <code>DB_LOG_AUTOREMOVE</code></a> flag in the Berkeley DB manual.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="reposperms" title="reposperms">
 <h3>How do I set repository
@@ -1088,7 +1062,6 @@ access the repository.</p>
 </div>
 
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="readonly" title="readonly">
 <h3>Why do read-only operations still need repository
@@ -1112,7 +1085,6 @@ backend</a> does not exhibit this behaviour.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="removal" title="removal">
 <h3>
@@ -1141,7 +1113,6 @@ of the Subversion book for details about this.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="change-log-msg" title="change-log-msg">
 <h3>
@@ -1195,7 +1166,6 @@ systems that keep track of revision properties.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="patch" title="patch">
 <h3>How do I submit a patch for Subversion?</h3>
@@ -1230,11 +1200,10 @@ it <em>before</em> actually hacking the code, right? :)</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="in-place-import" title="in-place-import">
 <h3>How can I do an in-place 'import'
-    (i.e. add a tree to subversion such that the original data becomes
+    (i.e. add a tree to Subversion such that the original data becomes
     a working copy directly)?</h3> 
 
 <p>Suppose, for example, that you wanted to put some of /etc under
@@ -1264,7 +1233,6 @@ see <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1328"
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="dumpload" title="dumpload">
 <h3>What is this "dump/load cycle" people
@@ -1330,7 +1298,6 @@ change, and no dump/load is necessary. </p>
 
 </div>
 
-<![CDATA[=========================================================]]>
  
 <div class="h3" id="sspi" title="sspi">
 <h3>How do I allow clients to authenticate against a
@@ -1338,8 +1305,8 @@ change, and no dump/load is necessary. </p>
 
 <p><a href="http://tortoisesvn.tigris.org">TortoiseSVN</a> has an excellent
 document that describes setting up a Subversion server on Windows. Go to
-<a href="http://tortoisesvn.sourceforge.net/docs/release/TortoiseSVN_en/ch03.html#tsvn-serversetup-apache-5"
->http://tortoisesvn.sourceforge.net/docs/release/TortoiseSVN_en/ch03.html#tsvn-serversetup-apache-5</a>,
+<a href="http://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-serversetup.html#tsvn-serversetup-apache-5"
+>http://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-serversetup.html#tsvn-serversetup-apache-5</a>,
 to see the section on SSPI authentication.</p>
 
 <p>An important part of the configuration is the line:</p>
@@ -1358,7 +1325,6 @@ the credentials.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
   
 <div class="h3" id="adm-dir" title="adm-dir">
 <h3>I don't like the ".svn" directory name, and
@@ -1393,7 +1359,6 @@ then recompile your client.
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="case-change" title="case-change">
 <h3>How do I change the case of a filename?</h3>
@@ -1461,7 +1426,6 @@ source tarball, in the directory <tt>contrib/hook-scripts</tt>.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="merge-using-tags" title="merge-using-tags">
 <h3>I can't use tags to merge changes from a 
@@ -1514,7 +1478,6 @@ $ svn copy file:///home/repos/branches/bar_branch                     \
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="version-value-in-source" title="version-value-in-source">
 <h3>Why doesn't the $Revision$
@@ -1579,14 +1542,13 @@ svn_version.c: FORCE
 <p>
 Windows users may want to use <tt>SubWCRev.exe</tt>, available from
 the <a
-href='http://tortoisesvn.tigris.org/download.html'>TortoiseSVN
+href='http://tortoisesvn.net/downloads'>TortoiseSVN
 download page</a>; it replaces all <tt>$WCREV$</tt> tags in a given
 file with the current working copy revision.
 </p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="log-in-source" title="log-in-source">
 <h3>Does Subversion have a keyword which
@@ -1621,7 +1583,6 @@ around this limitation in your build system.</p>
 </div>
 
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="ignore-commit" title="ignore-commit">
 <h3>I have a file in my project that every
@@ -1641,7 +1602,6 @@ as '?'  in the 'svn status' command.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="ssh-auth-cache" title="ssh-auth-cache">
 <h3>When I access a repository using
@@ -1677,7 +1637,6 @@ if you're <i>really</i> impatient, try one of these:</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="ssh-svnserve-location" title="ssh-svnserve-location">
 <h3>My
@@ -1691,14 +1650,14 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</h
       
       <p>You've tried fiddling with their various login files, like
         <tt>.bash_profile</tt>, and nothing works!  That's because ssh
-        ignores those files when the subversion client invokes it.
+        ignores those files when the Subversion client invokes it.
         But there's no need to modify <tt>PATH</tt>; instead, you can
         directly give ssh the full name of the <tt>svnserve</tt> command.
         Here's how to do it:</p>
 
       <p>For each user who needs svn+ssh access, generate a new ssh
         public-key pair which they will use <em>only</em> for
-        subversion&mdash;not for logging in normally.  Have them give
+        Subversion&mdash;not for logging in normally.  Have them give
         the keypair a distinctive name, like
         <tt>~/.ssh/id_dsa.subversion</tt>.  Add the public part of the
         key to their <tt>~/.ssh/authorized_keys</tt> file on the
@@ -1717,7 +1676,7 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</h
 
       <p>Obviously, replace <tt>/opt/subversion/bin/svnserve</tt> with
       whatever is appropriate for your system.  You also might want to
-      specify the full path to the subversion repository in the
+      specify the full path to the Subversion repository in the
       command (by using the <tt>-r</tt> option), to save your users
       some typing.</p>
       
@@ -1726,7 +1685,7 @@ out how to modify their <tt>PATH</tt> so that they can run <tt>svnserve</tt>.</h
         some other command.  See the sshd(8) man page (section
         <tt>AUTHORIZED_KEYS FILE FORMAT</tt>) for details.</p>
       
-      <p>Now when your users run the subversion client, make sure they
+      <p>Now when your users run the Subversion client, make sure they
       have an <tt>SVN_SSH</tt> environment variable that "points to"
       the private half of their keypair, by doing something like this
       (for the Bourne Again shell):</p>
@@ -1742,7 +1701,6 @@ export SVN_SSH
       
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="ssh-authorized-keys-trick" title="ssh-authorized-keys-trick">
 <h3>I want to allow access via svn+ssh://, but am paranoid.  I hate the
@@ -1754,7 +1712,6 @@ to <a href="#ssh-svnserve-location">this other question</a>; ignore the stuff
 about getting <tt>svnserve</tt> on your PATH.</p>
 </div>      
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="auto-props" title="auto-props">
 <h3>How can I set certain properties on
@@ -1801,7 +1758,6 @@ and isn't being worked on yet.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="svn-editor" title="auto-props">
 <h3>How do I deal with spaces in the editor path?&nbsp; Also, how can
@@ -1864,7 +1820,6 @@ with Subversion it is best to use the SVN_EDITOR variable.
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="divining-bdb-version" title="divining-bdb-version">
 <h3>How do I determine which version of
@@ -1897,7 +1852,6 @@ the log format version
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="website-auto-update" title="website-auto-update">
 <h3>I'm managing a website in my
@@ -1955,7 +1909,6 @@ binary.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="single-file-checkout" title="single-file-checkout">
 <h3>How do I check out a single file?</h3>
@@ -1969,7 +1922,6 @@ copy.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="wc-change-detection" title="wc-change-detection">
 <h3>How do I detect adds, deletes,
@@ -2006,15 +1958,18 @@ changes made to the volume cause automatic commits on the server.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="svnserve-win-service" title="svnserve-win-service">
 <h3>How do I run svnserve as a service
 on Windows?</h3>
 
-<p>The <tt>svnserve</tt> binary itself cannot be installed as a
-Windows service, but there are a number of &ldquo;service
-wrappers&rdquo; that can do the job; for example:</p>
+<p>For versions 1.4.0 and later, you can find
+instructions <a
+href="http://svn.collab.net/repos/svn/trunk/notes/windows-service.txt">here</a>.</p>
+
+<p>In versions before 1.4.0, the <tt>svnserve</tt> binary itself could
+not be installed as a Windows service, but there are a number of
+&ldquo;service wrappers&rdquo; that can do the job; for example:</p>
 
 <ul>
 <li><a href="http://www.clanlib.org/~mbn/svnservice/">SVNService</a>
@@ -2025,23 +1980,23 @@ is avaliable free of charge from Microsoft</li>
 
 <p>There is a bit more about running <tt>svnserve</tt> as a service in
 <a
-href="http://tortoisesvn.sourceforge.net/docs/release/TortoiseSVN_en/ch03s02.html#tsvn-serversetup-svnserve-2">the
+href="http://tortoisesvn.net/docs/release/TortoiseSVN_en/tsvn-serversetup-svnserve.html">the
 TortoiseSVN manual</a>.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="bdb-fsfs-convert" title="bdb-fsfs-convert">
 <h3>How do I convert my repository from using BDB
 to FSFS or from FSFS to BDB?</h3>
 
-<p>There are two steps:</p>
+<p>There are three steps:</p>
 
 <ol>
   <li>A <a href="#dumpload">dump/load</a> from the old format to the new
   one.</li>
   <li>Copy the hook scripts.</li>
+  <li>Copy the configuration files.</li>
 </ol>
 
 <p>Say you have a repository <tt>/svn/myrepos</tt> which is using the BDB
@@ -2064,6 +2019,11 @@ backend and you would like to switch to using the FSFS backend:</p>
   put in <tt>/svn/myreposfsfs/hooks</tt> with those in
   <tt>/svn/myrepos/hooks</tt> and incorporate any changes which you would like
   into your active hook scripts.</li>
+  <li>Copy configuration files from <tt>/svn/myrepos/conf</tt>
+  into <tt>/svn/myreposfsfs/conf</tt> (and don't forget a password
+  file, if you use one).  Or you might instead want to merge
+  the <em>changes</em> that you made to your configuration files into
+  the new default ones.</li>
   <li>Rename <tt>/svn/myrepos</tt> to <tt>/svn/myreposbdb</tt> and then
   <tt>/svn/myreposfsfs</tt> to <tt>/svn/myrepos</tt> ensuring that the
   file permissions are the same as those  that the BDB version had.</li>
@@ -2149,7 +2109,6 @@ Version 1.4 of the <tt>svn diff</tt> command will have a "--summarize"
 option.
 </div>
 
-<![CDATA[=========================================================]]>
 
 </div>
 
@@ -2157,7 +2116,6 @@ option.
 <h2>Troubleshooting:</h2>
 <p/>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div id="permissions"></div>
 <div class="h3" id="stuck-bdb-repos" title="stuck-bdb-repos">
@@ -2196,7 +2154,6 @@ for our recommendations.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div id="wedged-repos"></div>
 <div class="h3" id="bdb-recovery" title="bdb-recovery">
@@ -2273,8 +2230,8 @@ give errors like this:</p>
 </pre>
 
 <p>In that case, try Berkeley DB's native <b>db_recover</b> utility
-(see <a href="http://www.sleepycat.com/docs/utility/db_recover.html"
->http://www.sleepycat.com/docs/utility/db_recover.html</a>).  It
+(see <a href="http://www.oracle.com/technology/documentation/berkeley-db/db/utility/db_recover.html"
+>db_recover documentation</a>).  It
 usually lives in a "bin/" subdirectory of the Berkeley DB installation,
 for example if you installed Berkeley DB from source, it might be
 <tt>/usr/local/BerkeleyDB.4.2/bin/db_recover</tt>; or on systems where
@@ -2299,7 +2256,6 @@ repository while you do this (e.g., shut down svnserve or Apache).</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="bdb-cannot-allocate-memory" title="bdb-cannot-allocate-memory">
 <h3>My repository keeps giving errors saying "Cannot allocate memory".
@@ -2336,7 +2292,6 @@ remember to run recovery afterwards.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="wedged-wc" title="wedged-wc">
 <h3>Every time I try to run a svn command, it says my
@@ -2360,7 +2315,6 @@ svn cleanup working-copy
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="wc-out-of-date" title="wc-out-of-date">
 <h3>I'm trying to commit, but Subversion says my
@@ -2415,7 +2369,6 @@ working copy is out of date?</h3>
 </ol>
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="obstructed-add" title="obstructed-add">
 <h3>I've contributed a patch to a project and the patch added a new file.
@@ -2440,7 +2393,6 @@ the file in your working copy.  The steps to correct this problem are:</p>
 <p>You might want to compare the new file from the repository with your original file.</p>
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="unrecognized-url-error" title="unrecognized-url-error">
 <h3>I just built the distribution binary,
@@ -2451,13 +2403,13 @@ and when I try to check out Subversion, I get an error about an
 Currently there are three of these plugins: ra_local allows access to
 a local repository, ra_dav which allows access to a repository via
 WebDAV, and ra_svn allows local or remote access via the svnserve
-server.  When you attempt to perform an operation in subversion, the
+server.  When you attempt to perform an operation in Subversion, the
 program tries to dynamically load a plugin based on the URL scheme.  A
 `file://' URL will try to load ra_local, and an `http://' URL will try
 to load ra_dav.</p>
 
 <p>The error you are seeing means that the dynamic linker/loader can't find
-the plugins to load.  This normally happens when you build subversion with
+the plugins to load.  This normally happens when you build Subversion with
 shared libraries, then attempt to run it without first running 'make
 install'.  Another possible cause is that you ran make install, but the
 libraries were installed in a location that the dynamic linker/loader
@@ -2469,7 +2421,6 @@ variable.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="db-recover" title="db-recover">
 <h3>I'm getting errors finding or opening a repository,
@@ -2480,7 +2431,6 @@ variable.</p>
 </div>
 
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="configure-sed-error" title="configure-sed-error">
 <h3>When I run `<tt>configure</tt>', I get errors about
@@ -2497,7 +2447,6 @@ building with are completely up-to-date, and try again.
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
  
 <div class="h3" id="windows-msvc-build" title="windows-msvc-build">
 <h3>I'm having trouble building Subversion
@@ -2510,7 +2459,6 @@ ships with VC++ 6.0 is not recent enough.
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="windows-drive-letter" title="windows-drive-letter">
 <h3>How can I specify a Windows drive letter in
@@ -2526,7 +2474,6 @@ Repository URLs</a> in the Subversion Book for more details.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
   
 <div class="h3" id="vs-asp-net" title="vs-asp-net">
 <h3>VS.NET/ASP.NET seems to have a problem with
@@ -2550,7 +2497,6 @@ customize the administrative directory name.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="write-over-dav" title="write-over-dav">
 <h3>I'm having trouble doing write
@@ -2582,7 +2528,6 @@ to the <tt>dav/</tt> directory (and to <tt>db/</tt>, of course).  </p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 
 <div class="h3" id="windows-xp-server" title="windows-xp-server">
@@ -2600,7 +2545,6 @@ sorts of information about that Service Pack here:</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="ethereal" title="ethereal">
 <h3>What is the best method of doing a network
@@ -2643,7 +2587,6 @@ configuration file.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="revert" title="revert">
 <h3>Why does the <tt>svn revert</tt> require an
@@ -2668,7 +2611,6 @@ forever.</p>
 </div>
 
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="db3db4" title="db3db4">
 <h3>When I start Apache, mod_dav_svn complains about
@@ -2687,7 +2629,6 @@ apache's configure: "--with-dbm=db4 --with-berkeley-db=/the/db/prefix".</p>
 </div>
 
 
-<![CDATA[=========================================================]]>
 
 <div class="h3" id="redhat-db" title="redhat-db">
 <h3>I'm getting "Function not implemented" errors on Red Hat
@@ -2728,7 +2669,6 @@ http://svn.haxx.se/users/archive-2004-03/0488.shtml
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="no-author" title="no-author">
 <h3>Why does SVN log say "(no author)" for files
@@ -2754,7 +2694,6 @@ to learn about configuring access restrictions in Apache.</p>
 </div>
 
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="windows-access-denied" title="windows-access-denied">
 <h3>I'm getting occasional "Access Denied"
@@ -2773,7 +2712,6 @@ update to the latest release.
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="freebsd-hang" title="freebsd-hang">
 <h3>On FreeBSD, certain operations (especially
@@ -2787,7 +2725,6 @@ this change.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <a name="301-error"></a> <!-- for compatibility with old
   non-XML-name-compliant fragment id -->
@@ -2825,7 +2762,6 @@ a 301 error to occur.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="no-copy-history" title="no-copy-history">
 <h3>I'm trying to look at an old version of my
@@ -2879,7 +2815,6 @@ $ svn diff -r1000:2000 http://host/repos/trunk/foo.c
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="digest-auth" title="digest-auth">
 <h3>Why doesn't HTTP Digest auth work?</h3>
@@ -2896,7 +2831,6 @@ to see if the description there matches your symptoms.
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="xlc-compile" title="xlc-compile">
 <h3>Compiling with xlc on AIX, I get compilation
@@ -2913,7 +2847,6 @@ its associated thread for more details.
 
 </div>
  
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="nonrecursive-checkout" title="nonrecursive-checkout">
 <h3>I checked out a directory non-recursively
@@ -2933,7 +2866,6 @@ copies.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="mod_dav_svn-win32" title="mod_dav_svn-win32">
 <h3>I am trying to use mod_dav_svn
@@ -2957,7 +2889,6 @@ dependencies.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <a name="win32-hooks"></a> <!-- for compatibility with old question -->
 <a name="hook-environment"></a> <!-- for yet more compatibility with old question -->
@@ -3004,13 +2935,12 @@ following these steps:</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="diff-cmd" title="diff-cmd">
 <h3>Why does my --diff-cmd complain about '-u'?
     I tried to override it with --extensions, but it's not working.</h3>
 
-<p>When using an external diff command, subversion builds a fairly
+<p>When using an external diff command, Subversion builds a fairly
 complicated command line. First is the specified --diff-cmd. Next comes
 the specified --extensions (although empty --extensions are ignored), or
 '-u' if --extensions is unspecified (or specified as ''). Third and
@@ -3033,7 +2963,6 @@ working copy.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="plaintext-passwords" title="plaintext-passwords">
 <h3>Ahhh!  I just discovered that my
@@ -3069,12 +2998,11 @@ encrypted, but in fact they're only lightly scrambled with an
 algorithm that's the moral equivalent to rot13.  They can be cracked
 instantly.  The only utility of the the scrambling is to prevent users
 (like root) from accidentally seeing the password.  Nobody's cared
-enough to to do this for Subversion yet; if you're interested, send
+enough to do this for Subversion yet; if you're interested, send
 patches to the dev@ list.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="bdb41-tabletype-bug" title="bdb41-tabletype-bug">
 <h3>I'm getting the error "svn: bdb: call
@@ -3115,7 +3043,6 @@ succeed, you should contact the Subversion Users <a
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="hotcopy-large-repos" title="hotcopy-large-repos">
 <h3>I can't hotbackup my repository,
@@ -3130,7 +3057,6 @@ on all platforms, but works on Linux.
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="hidden-log" title="hidden-log">
 <h3>I cannot see the log entry for the file
@@ -3174,7 +3100,6 @@ is still at r7, you do not see the log information for r8.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="bdb43-upgrade" title="bdb43-upgrade">
 <h3>After upgrading to Berkeley DB
@@ -3219,7 +3144,6 @@ etc.)</li>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="tiger-apr-0.9.6" title="tiger-apr-0.9.6">
 <h3>Why do I get occasional, seemingly inconsistent errors checking
@@ -3281,7 +3205,6 @@ where the problem lies.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="debian-libtool" title="debian-libtool">
 <h3>I can't build Subversion from working copy
@@ -3323,7 +3246,6 @@ solution described here was not mentioned in that thread.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="freebsd-listen-host" title="freebsd-listen-host">
 <h3>I'm using FreeBSD, and I've started svnserve, but it doesn't seem
@@ -3356,7 +3278,34 @@ solution described here was not mentioned in that thread.</p>
   and you should ensure that by adding this directory, you won't be
   making an unwanted copy of it in your repository.
 </p>
-<![CDATA[=========================================================]]>
+
+</div>
+
+<div class="h3" id="slow-private-svnserve" title="slow-private-svnserve">
+<h3>Accessing non-public repositories
+    via svnserve is really slow sometimes.</h3>
+
+<p>This often happens when APR is compiled to use <tt>/dev/random</tt>
+and the server is unable to gather enough entropy.  If Subversion is the
+only application using APR on the server, you can safely recompile APR
+with the <tt>--with-devrandom=/dev/urandom</tt> option passed to
+<tt>configure</tt>.  This should <b>not</b> be done on systems that use
+APR for other processes, however, as it could make other services
+insecure.</p>
+
+</div>
+
+<div class="h3" id="ssl-negotiation-error" title="ssl-negotiation-error">
+<h3>When performing Subversion operations involving a lot of data over
+    SSL, I get the error <tt>SSL negotiation failed: SSL error:
+    decryption failed or bad record mac</tt>.</h3>
+
+<p>This can occur due to a problem with OpenSSL 0.9.8.  Downgrading to
+an older version (or possibly upgrading to a newer version) is known
+to fix this issue.</p>
+
+
+</div>
 
 </div>
 
@@ -3402,7 +3351,6 @@ original authoritative discussion on use of RAM disks.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="dynamic-exe-debugging" title="dynamic-exe-debugging">
 
@@ -3436,7 +3384,6 @@ libtool-generated shell scripts for the white box tests.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="avoiding-compiler-inlining"
 title="avoiding-compiler-inlining">
@@ -3448,24 +3395,26 @@ title="avoiding-compiler-inlining">
 functions, inlining the associated operations.  This can complicate
 stepping through the code in a debugger.</p>
 
-<p>Work around this by turning off optimization.  Before the
-<code>make</code> step on unix-y systems, do the following:</p>
+<p>Work around this by turning off optimization during the
+<code>make</code> step on unix-y systems:</p>
 
 <blockquote>
-<div><code>subversion$ perl -pi -e 's/-O2//g' config.status</code></div>
-<div><code>subversion$ ./config.status</code></div>
+<div><code>subversion$ make EXTRA_CFLAGS=-O0</code></div>
 </blockquote>
 
-<p>Alternately, you can explicitly set <code>CFLAGS</code> before
-running <code>configure</code>.</p>
+<p>(That's "dash ohh zero".)  Alternately, you can make this change
+more permanent by running <code>configure</code> as follows:</p>
 
-<p>Remember to undo this operation before installing Subversion from
-source, by regenerating config.status, or unsetting
-<code>CFLAGS</code> before running <code>configure</code>.</p>
+<blockquote>
+<div><code>subversion$ ./configure --enable-debug</code></div>
+</blockquote>
+
+<p>For a production install, remember to undo this operation before
+installing Subversion from source, by re-running <code>make</code> or
+<code>configure</code> without the extra flag.</p>
 
 </div>
 
-<![CDATA[=========================================================]]>
 
 </div>
 
@@ -3488,13 +3437,12 @@ source, by regenerating config.status, or unsetting
 
 <p>The details of the protocol are documented here:</p>
 
-<a href="http://svn.collab.net/repos/svn/trunk/subversion/libsvn_ra_dav/protocol">http://svn.collab.net/repos/svn/trunk/subversion/libsvn_ra_dav/protocol</a>
+<a href="http://svn.collab.net/repos/svn/trunk/notes/webdav-protocol">http://svn.collab.net/repos/svn/trunk/notes/webdav-protocol</a>
 
 
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="bikeshed" title="bikeshed">
 <h3>What's a 'bikeshed'?</h3>
@@ -3504,7 +3452,6 @@ source, by regenerating config.status, or unsetting
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="pronounce" title="pronounce">
 <h3>How do you pronounce "Subversion"?</h3>
@@ -3515,12 +3462,11 @@ design, pronounces "Subversion" <a href="http://svn.collab.net/repos/svn-committ
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="baton" title="baton">
 <h3>What's a 'baton'?</h3>
 
-<p>Throughout subversion's source code there are many references to
+<p>Throughout Subversion's source code there are many references to
 'baton' objects.  These are just <tt>void *</tt> datastructures that
 provide context to a function.  In other APIs, they're often called
 <tt>void *ctx</tt> or <tt>void *userdata</tt>  Subversion
@@ -3529,7 +3475,6 @@ quite a bit.</p>
 
 </div>
 
-<![CDATA[-----------------------------------------------------------]]>
 
 <div class="h3" id="def-wedged-repository" title="def-wedged-repository">
 <h3>What do you mean when you say that

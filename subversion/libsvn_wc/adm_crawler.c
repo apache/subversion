@@ -2,7 +2,7 @@
  * adm_crawler.c:  report local WC mods to an Editor.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -237,8 +237,8 @@ report_revisions(svn_wc_adm_access_t *adm_access,
          knows it's gone... */
       if (current_entry->deleted || current_entry->absent)
         {
-          /* ...unless we're reporting everything, in which case it's already
-             missing on the server.  */
+          /* ...unless we're reporting everything, in which case we're
+             going to report it missing later anyway. */
           if (! report_everything)
             SVN_ERR(reporter->delete_path(report_baton, this_path, iterpool));
           continue;
@@ -704,6 +704,67 @@ svn_wc_crawl_revisions(const char *path,
                                  pool);
 }
 
+
+/*** Copying stream ***/
+
+/* A copying stream is a bit like the unix tee utility:
+ *
+ * It reads the SOURCE when asked for data and while returning it,
+ * also writes the same data to TARGET.
+ */
+struct copying_stream_baton
+{
+  /* Stream to read input from. */
+  svn_stream_t *source;
+
+  /* Stream to write all data read to. */
+  svn_stream_t *target;
+};
+
+
+static svn_error_t *
+read_handler_copy(void *baton, char *buffer, apr_size_t *len)
+{
+  struct copying_stream_baton *btn = baton;
+
+  SVN_ERR(svn_stream_read(btn->source, buffer, len));
+
+  return svn_stream_write(btn->target, buffer, len);
+}
+
+static svn_error_t *
+close_handler_copy(void *baton)
+{
+  struct copying_stream_baton *btn = baton;
+
+  SVN_ERR(svn_stream_close(btn->target));
+  return svn_stream_close(btn->source);
+}
+
+
+/* Return a stream - allocated in POOL - which reads its input
+ * from SOURCE and, while returning that to the caller, at the
+ * same time writes that to TARGET.
+ */
+static svn_stream_t *
+copying_stream(svn_stream_t *source,
+               svn_stream_t *target,
+               apr_pool_t *pool)
+{
+  struct copying_stream_baton *baton;
+  svn_stream_t *stream;
+
+  baton = apr_palloc(pool, sizeof (*baton));
+  baton->source = source;
+  baton->target = target;
+
+  stream = svn_stream_create(baton, pool);
+  svn_stream_set_read(stream, read_handler_copy);
+  svn_stream_set_close(stream, close_handler_copy);
+
+  return stream;
+}
+
 svn_error_t *
 svn_wc_transmit_text_deltas2(const char **tempfile,
                              unsigned char digest[],
@@ -714,165 +775,149 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
                              void *file_baton,
                              apr_pool_t *pool)
 {
-  const char *tmpf, *tmp_base;
+  const char *tmp_base;
   svn_txdelta_window_handler_t handler;
   void *wh_baton;
   svn_txdelta_stream_t *txdelta_stream;
-  apr_file_t *localfile = NULL;
   apr_file_t *basefile = NULL;
-  const char *entry_digest_hex = NULL;
+  apr_file_t *tempbasefile;
   const char *base_digest_hex = NULL;
-  const unsigned char *base_digest;
-  const unsigned char *local_digest;
+  const unsigned char *base_digest = NULL;
+  const unsigned char *local_digest = NULL;
+  svn_error_t *err;
+  const svn_wc_entry_t *ent;
   svn_stream_t *base_stream;
   svn_stream_t *local_stream;
   apr_time_t wf_time;
-  svn_error_t *err, *err2;
-  
+
+  SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+
   /* Get timestamp of working file, to check for modifications during
      commit. */
   SVN_ERR(svn_io_file_affected_time(&wf_time, path, pool));
 
   /* Make an untranslated copy of the working file in the
-     administrative tmp area because a) we want this to work even if
-     someone changes the working file while we're generating the
-     txdelta, b) we need to detranslate eol and keywords anyway, and
-     c) after the commit, we're going to copy the tmp file to become
-     the new text base anyway. */
-  SVN_ERR(svn_wc_translated_file2(&tmpf, path, path,
-                                  adm_access,
-                                  SVN_WC_TRANSLATE_TO_NF,
-                                  pool));
+     administrative tmp area because a) we need to detranslate eol
+     and keywords anyway, and b) after the commit, we're going to
+     copy the tmp file to become the new text base anyway. */
 
-  /* If the translation didn't create a new file then we need an explicit
-     copy, if it did create a new file we need to rename it. */
   tmp_base = svn_wc__text_base_path(path, TRUE, pool);
-  if (tmpf == path)
-    SVN_ERR(svn_io_copy_file(tmpf, tmp_base, FALSE, pool));
-  else
-    SVN_ERR(svn_io_file_rename(tmpf, tmp_base, pool));
-
-  /* Set timestamp of tmp_base to that of the working file.  It will
-     be used after the commit, when installing the new text base, to
-     detect modifications of the working file that happens during the
-     commit. */
-  SVN_ERR(svn_io_set_file_affected_time(wf_time, tmp_base, pool));
-
-  /* If we're not sending fulltext, we'll be sending diffs against the
-     text-base. */
-  if (! fulltext)
-    {
-      /* Get the text base checksum from the entries file. */
-      const svn_wc_entry_t *ent;
-      SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
-      if (! ent)
-        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                 _("'%s' is not under version control"),
-                                 svn_path_local_style(path, pool));
-
-      entry_digest_hex = ent->checksum;
-      SVN_ERR(svn_wc__open_text_base(&basefile, path, APR_READ, pool));
-    }
-
-  base_stream = svn_stream_from_aprfile2(basefile, TRUE, pool);
-
-  /* If we have an entry with a checksum, tack on a checksumming
-     stream, so we can check that it actually matches. */
-  if (entry_digest_hex)
-    base_stream = svn_stream_checksummed(base_stream, &base_digest, NULL,
-                                         TRUE, pool);
-
-  /* Tell the editor that we're about to apply a textdelta to the
-     file baton; the editor returns to us a window consumer routine
-     and baton.  */
-  SVN_ERR(editor->apply_textdelta
-          (file_baton,
-           entry_digest_hex, pool, &handler, &wh_baton));
-
   /* Alert the caller that we have created a temporary file that might
      need to be cleaned up. */
   if (tempfile)
     *tempfile = tmp_base;
 
-  /* Open a filehandle for tmp text-base. */
-  SVN_ERR_W(svn_io_file_open(&localfile, tmp_base,
-                             APR_READ, APR_OS_DEFAULT, pool),
-            _("Error opening local file"));
+  /* Translated input */
+  SVN_ERR(svn_wc_translated_stream(&local_stream, path, path,
+                                   adm_access, SVN_WC_TRANSLATE_TO_NF, pool));
 
-  local_stream = svn_stream_from_aprfile2(localfile, FALSE, pool);
+  /* Translation output: the new text base */
+  SVN_ERR(svn_io_file_open(&tempbasefile, tmp_base,
+                           APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
 
-  /* Create a text-delta stream object that pulls data out of the two
-     files. */
+  /* Wrap the translated stream with a new stream that writes the
+     translated contents into the new text base file as we read from it.
+     Note that the new text base file will be closed when the new stream
+     is closed. */
+  local_stream
+    = copying_stream(local_stream,
+                     svn_stream_from_aprfile2(tempbasefile, FALSE, pool), pool);
+
+  if (! fulltext)
+    {
+      if (! ent->checksum)
+        {
+          /*### FIXME: The entries file should hold a checksum */
+          unsigned char tmp_digest[APR_MD5_DIGESTSIZE];
+
+          /* If there's no checksum in this entry, calculate one */
+          const char *tb = svn_wc__text_base_path (path, FALSE, pool);
+
+          SVN_ERR (svn_io_file_checksum (tmp_digest, tb, pool));
+          base_digest_hex = svn_md5_digest_to_cstring_display(tmp_digest, pool);
+        }
+      else
+        base_digest_hex = ent->checksum;
+
+      SVN_ERR(svn_wc__open_text_base(&basefile, path, APR_READ, pool));
+    }
+
+  /* Tell the editor that we're about to apply a textdelta to the
+     file baton; the editor returns to us a window consumer and baton.  */
+  SVN_ERR(editor->apply_textdelta
+          (file_baton, base_digest_hex, pool, &handler, &wh_baton));
+
+  /* Create a text-delta stream object that pulls
+     data out of the two files. */
+  base_stream = svn_stream_from_aprfile2(basefile, TRUE, pool);
+  if (! fulltext)
+    base_stream
+      = svn_stream_checksummed(base_stream, &base_digest, NULL, TRUE, pool);
+
   svn_txdelta(&txdelta_stream, base_stream, local_stream, pool);
-  
-  /* Pull windows from the delta stream and feed to the consumer.
-     We don't handle a possible error right away, since it might be
-     caused by a corrupt textbase, in which case we prefer a checksum
-     error being returned over some obscure error from the repository. */
+
+  /* Pull windows from the delta stream and feed to the consumer. */
   err = svn_txdelta_send_txstream(txdelta_stream, handler, wh_baton, pool);
 
-  /* Close the base stream so the MD5 sum gets calculated. */
-  err2 = svn_stream_close(base_stream);
-  if (err2 && err)
+  /* Close the two streams to force writing the digest,
+     if we already have an error, ignore this one. */
+  if (err)
     {
-      svn_error_clear(err2);
-      return err;
+      svn_error_clear(svn_stream_close(base_stream));
+      svn_error_clear(svn_stream_close(local_stream));
     }
-  else if (err2)
-    return err2;
-    
-  /* And since we might want to remove the temporary local file below,
-     make sure it is closed. */
-  err2 = svn_stream_close(local_stream);
-  if (err2 && err)
+  else
     {
-      svn_error_clear(err2);
-      return err;
+      SVN_ERR(svn_stream_close(base_stream));
+      SVN_ERR(svn_stream_close(local_stream));
     }
-  else if (err2)
-    return err2;
-  
-  /* Make sure the old text base still matches its checksum.
-     Otherwise we could have sent corrupt data and never know it.
-     For backwards compatibility, no checksum means assume a match. */
-  if (entry_digest_hex)
+
+  /* If we have an error, it may be caused by a corrupt text base.
+     Check the checksum and discard `err' if they don't match. */
+  if (! fulltext && ent->checksum && base_digest)
     {
+      /*### FIXME: The entries file should hold a checksum,
+        meaning the above condition should not include ent->checksum */
+
       base_digest_hex = svn_md5_digest_to_cstring_display(base_digest, pool);
-      if (strcmp(entry_digest_hex, base_digest_hex) != 0)
+
+      if (strcmp(base_digest_hex, ent->checksum) != 0)
         {
-          /* There is an entry checksum, but it does not match
-             the actual text base checksum.  Extreme badness. */
+          /* The entry checksum does not match the actual text
+             base checksum.  Extreme badness. Of course,
+             theoretically we could just switch to
+             fulltext transmission here, and everything would
+             work fine; after all, we're going to replace the
+             text base with a new one in a moment anyway, and
+             we'd fix the checksum then.  But it's better to
+             error out.  People should know that their text
+             bases are getting corrupted, so they can
+             investigate.  Other commands could be affected,
+             too, such as `svn diff'.  */
 
-          /* Deliberately ignore error; the error about the
-             checksum mismatch is more important to return.
-             And wrapping the above error into the checksum
-             error would be weird, as they're unrelated.
-             The function is documented to remove the temporary file
-             for *this* particular error. Well... */
-          svn_error_clear(svn_io_remove_file(tmp_base, pool));
-
-          /* Also, ignore a possible error from the delta transmission
-             above, because it *might* be caused by the corrupt
-             textbase, and if it isn't, the user needs to rerun this
-             operation after repairing the textbase anyway. */
+          /* Deliberately ignore errors; the error about the
+             checksum mismatch is more important to return. */
           svn_error_clear(err);
+          svn_error_clear(svn_io_remove_file(tmp_base, pool));
 
           if (tempfile)
             *tempfile = NULL;
-                  
+
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
              _("Checksum mismatch for '%s'; "
                "expected '%s', actual: '%s'"),
              svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
-                                  pool),
-             entry_digest_hex, base_digest_hex);
+                                   pool),
+             ent->checksum, base_digest_hex);
         }
-    }
+   }
 
   /* Now, handle that delta transmission error if any, so we can stop
      thinking about it after this point. */
-  SVN_ERR(err);
+  SVN_ERR_W(err, apr_psprintf(pool,
+                              _("While preparing '%s' for commit"),
+                              svn_path_local_style(path, pool)));
 
   /* Close base file, if it was opened. */
   if (basefile)

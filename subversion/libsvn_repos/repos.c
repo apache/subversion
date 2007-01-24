@@ -1,7 +1,7 @@
 /* repos.c : repository creation; shared and exclusive repository locking
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1419,6 +1419,10 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### the file's location is relative to the conf directory."
       APR_EOL_STR
+#ifdef SVN_HAVE_SASL
+      "### If use-sasl is set to \"true\" below, this file will NOT be used."
+      APR_EOL_STR
+#endif
       "### Uncomment the line below to use the default password file."
       APR_EOL_STR
       "# password-db = passwd"
@@ -1446,6 +1450,31 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       "### is repository's uuid."
       APR_EOL_STR
       "# realm = My First Repository"
+#ifdef SVN_HAVE_SASL
+      APR_EOL_STR
+      APR_EOL_STR
+      "[sasl]"
+      APR_EOL_STR
+      "### This option specifies whether you want to use the Cyrus SASL"
+      APR_EOL_STR
+      "### library for authentication. Default is false."
+      APR_EOL_STR
+      "# use-sasl = true"
+      APR_EOL_STR
+      "### These options specify the desired strength of the security layer"
+      APR_EOL_STR
+      "### that you want SASL to provide. 0 means no encryption, 1 means"
+      APR_EOL_STR
+      "### integrity-checking only, values larger than 1 are correlated"
+      APR_EOL_STR
+      "### to the effective key length for encryption (e.g. 128 means 128-bit"
+      APR_EOL_STR
+      "### encryption). The values below are the defaults."
+      APR_EOL_STR
+      "# min-encryption = 0"
+      APR_EOL_STR
+      "# max-encryption = 256"
+#endif
       APR_EOL_STR;
 
     SVN_ERR_W(svn_io_file_create(svn_repos_svnserve_conf(repos, pool),
@@ -1494,21 +1523,32 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### single user, to a group of users defined in a special [groups]"
       APR_EOL_STR
-      "### section, or to anyone using the '*' wildcard.  Each definition can"
+      "### section, to an alias defined in a special [aliases] section or"
+      APR_EOL_STR
+      "### to anyone using the '*' wildcard.  Each definition can"
       APR_EOL_STR
       "### grant read ('r') access, read-write ('rw') access, or no access"
       APR_EOL_STR
       "### ('')."
       APR_EOL_STR
       APR_EOL_STR
+      "[aliases]"
+      APR_EOL_STR
+      "# joe = /C=XZ/ST=Dessert/L=Snake City/O=Snake Oil, Ltd./OU=Research Institute/CN=Joe Average"
+      APR_EOL_STR
+      APR_EOL_STR
       "[groups]"
       APR_EOL_STR
       "# harry_and_sally = harry,sally"
+      APR_EOL_STR
+      "# harry_sally_and_joe = harry,sally,&joe"
       APR_EOL_STR
       APR_EOL_STR
       "# [/foo/bar]"
       APR_EOL_STR
       "# harry = rw"
+      APR_EOL_STR
+      "# &joe = r"
       APR_EOL_STR
       "# * ="
       APR_EOL_STR
@@ -1825,8 +1865,11 @@ svn_repos_find_root_path(const char *path,
       if (!err && check_repos_path(candidate, pool))
         break;
       svn_error_clear(err);
-      if (candidate[0] == '\0' || strcmp(candidate, "/") == 0)
+
+      if (candidate[0] == '\0' ||
+          svn_path_is_root(candidate, strlen(candidate)))
         return NULL;
+
       candidate = svn_path_dirname(candidate, pool);
     }
 

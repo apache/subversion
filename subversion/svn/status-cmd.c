@@ -2,7 +2,7 @@
  * status-cmd.c -- Display status information in current directory
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -185,7 +185,7 @@ print_status(void *baton,
                        APR_HASH_KEY_STRING, path_array);
         }
 
-      (*((struct status_cache **) apr_array_push(path_array))) = scache;
+      APR_ARRAY_PUSH(path_array, struct status_cache *) = scache;
       return;
     }
 
@@ -271,7 +271,7 @@ svn_cl__status(apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      const char *target = ((const char **) (targets->elts))[i];
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       svn_pool_clear(subpool);
 
@@ -320,7 +320,7 @@ svn_cl__status(apr_getopt_t *os,
               for (j = 0; j < path_array->nelts; j++)
                 {
                   struct status_cache *scache =
-                    ((struct status_cache **) (path_array->elts))[j];
+                    APR_ARRAY_IDX(path_array, j, struct status_cache *);
                   print_status_normal_or_xml(&sb, scache->path, scache->status);
                 }
             }

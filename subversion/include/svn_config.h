@@ -1,7 +1,7 @@
 /** 
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -67,6 +67,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_TIMEOUT              "http-timeout"
 #define SVN_CONFIG_OPTION_HTTP_COMPRESSION          "http-compression"
 #define SVN_CONFIG_OPTION_NEON_DEBUG_MASK           "neon-debug-mask"
+#define SVN_CONFIG_OPTION_HTTP_AUTH_TYPES           "http-auth-types"
 #define SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES       "ssl-authority-files"
 #define SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA      "ssl-trust-default-ca"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE      "ssl-client-cert-file"
@@ -104,6 +105,10 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_PASSWORD_DB               "password-db"
 #define SVN_CONFIG_OPTION_REALM                     "realm"
 #define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
+#define SVN_CONFIG_SECTION_SASL                 "sasl"
+#define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
+#define SVN_CONFIG_OPTION_MIN_SSF                   "min-encryption"
+#define SVN_CONFIG_OPTION_MAX_SSF                   "max-encryption"
 
 /* For repository password database */
 #define SVN_CONFIG_SECTION_USERS                "users"

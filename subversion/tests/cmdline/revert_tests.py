@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, sys, stat, re, os
+import re, os
 
 # Our testing module
 import svntest
@@ -46,16 +46,16 @@ def revert_replacement_with_props(sbox, wc_copy):
   # Use a temp file to set properties with wildcards in their values
   # otherwise Win32/VS2005 will expand them
   prop_path = os.path.join(wc_dir, 'proptmp')
-  svntest.main.file_append (prop_path, '*')
+  svntest.main.file_append(prop_path, '*')
 
   # Set props on file which is copy-source later on
   pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   rho_path = os.path.join(wc_dir, 'A', 'D', 'G', 'rho')
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ps', 'phony-prop', '-F', prop_path,
                                      pi_path)
   os.remove(prop_path)
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ps', 'svn:eol-style', 'LF', rho_path)
 
   # Verify props having been set
@@ -75,7 +75,6 @@ def revert_replacement_with_props(sbox, wc_copy):
     'A/D/G/rho': Item(verb='Sending'),
     })
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak(repos_rev='2')
   expected_status.tweak('A/D/G/pi',  wc_rev='2')
   expected_status.tweak('A/D/G/rho', wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
@@ -85,7 +84,7 @@ def revert_replacement_with_props(sbox, wc_copy):
                                         wc_dir)
 
   # Bring wc into sync
-  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   # File scheduled for deletion
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', rho_path)
@@ -99,9 +98,9 @@ def revert_replacement_with_props(sbox, wc_copy):
   if wc_copy:
     pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
   else:
-    pi_src = svntest.main.current_repo_url + '/A/D/G/pi'
+    pi_src = sbox.repo_url + '/A/D/G/pi'
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
@@ -115,14 +114,11 @@ def revert_replacement_with_props(sbox, wc_copy):
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
-  expected_status.tweak(repos_rev='3')
-  expected_status.tweak('A/D/G/rho', status='  ', copied=None,
-                        repos_rev='3', wc_rev='3')
-  expected_output = svntest.wc.State(wc_dir, {
-    'A/D/G/rho': Item(verb='Replacing'),
-    })
-  svntest.actions.run_and_verify_svn("", None, [],
+  expected_status.tweak('A/D/G/rho', status='  ', copied=None, wc_rev='2')
+  expected_output = ["Reverted '" + rho_path + "'\n"]
+  svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Check disk status
   expected_disk = svntest.main.greek_state.copy()
@@ -191,7 +187,7 @@ def revert_from_wc_root(sbox):
       'A/D/H/zeta' : Item(status='A ', wc_rev=0),
       })
 
-    svntest.actions.run_and_verify_status ('', expected_output)
+    svntest.actions.run_and_verify_status('', expected_output)
 
     # Run revert
     svntest.actions.run_and_verify_svn("Revert command", None, [],
@@ -218,7 +214,7 @@ def revert_from_wc_root(sbox):
     # Verify unmodified status.
     expected_output = svntest.actions.get_virginal_state('', 1)
 
-    svntest.actions.run_and_verify_status ('', expected_output)
+    svntest.actions.run_and_verify_status('', expected_output)
 
   finally:
     os.chdir(saved_dir)
@@ -245,9 +241,7 @@ def revert_reexpand_keyword(sbox):
   unexpanded_contents = "This is newfile: $Rev$.\n"
 
   # Put an unexpanded keyword into iota.
-  fp = open(newfile_path, 'w')
-  fp.write(unexpanded_contents)
-  fp.close()
+  svntest.main.file_write(newfile_path, unexpanded_contents)
 
   # Commit, without svn:keywords property set.
   svntest.main.run_svn(None, 'add', newfile_path)
@@ -268,9 +262,7 @@ def revert_reexpand_keyword(sbox):
   check_expanded(newfile_path)
 
   # Now un-expand the keyword again.
-  fp = open(newfile_path, 'w')
-  fp.write(unexpanded_contents)
-  fp.close()
+  svntest.main.file_write(newfile_path, unexpanded_contents)
 
   fp = open(newfile_path, 'r')
   lines = fp.readlines()
@@ -303,15 +295,14 @@ def revert_replaced_file_without_props(sbox):
     'file1' : Item(verb='Adding')
     })
   
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
-  expected_status.tweak(wc_rev=1)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
     'file1' : Item(status='  ', wc_rev=2),
     })
 
-  svntest.actions.run_and_verify_commit (wc_dir, expected_output,
-                                         expected_status, None, None,
-                                         None, None, None, wc_dir)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None,
+                                        None, None, None, wc_dir)
 
   # delete file1 
   svntest.actions.run_and_verify_svn(None, None, [], 'rm', file1_path)
@@ -401,9 +392,7 @@ def revert_file_merge_replace_with_history(sbox):
                                         None, None, None, None, None,
                                         wc_dir)
   # create new rho file
-  fp = open(rho_path, 'w')
-  fp.write("new rho\n")
-  fp.close()
+  svntest.main.file_write(rho_path, "new rho\n")
 
   # Add the new file
   svntest.actions.run_and_verify_svn(None, None, [], 'add', rho_path)
@@ -443,7 +432,7 @@ def revert_file_merge_replace_with_history(sbox):
   expected_skip = wc.State(wc_dir, { })
   expected_disk.tweak('A/D/G/rho', contents="This is the file 'rho'.\n")
   svntest.actions.run_and_verify_merge(wc_dir, '3', '1',
-                                       svntest.main.current_repo_url,
+                                       sbox.repo_url,
                                        expected_output,
                                        expected_disk,
                                        expected_status,
@@ -491,7 +480,7 @@ def revert_after_second_replace(sbox):
   # Replace file for the first time
   pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'cp', pi_src, rho_path)
 
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
@@ -508,13 +497,13 @@ def revert_after_second_replace(sbox):
   # Replace file for the second time
   pi_src = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
 
-  svntest.actions.run_and_verify_svn("", None, [], 'cp', pi_src, rho_path)
+  svntest.actions.run_and_verify_svn(None, None, [], 'cp', pi_src, rho_path)
 
   expected_status.tweak('A/D/G/rho', status='R ', copied='+', wc_rev='-')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Now revert
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'revert', '-R', wc_dir)
 
   # Check disk status
@@ -583,6 +572,54 @@ def revert_after_manual_conflict_resolution__prop(sbox):
   svntest.actions.run_and_verify_svn(None, [], [], "diff", wc_dir_2)
   svntest.actions.run_and_verify_svn(None, [], [], "revert", "-R", wc_dir_2)
 
+def revert_propset__dir(sbox):
+  "revert a simple propset on a dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  a_path = os.path.join(wc_dir, 'A')
+  svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
+  expected_output = re.escape("Reverted '" + a_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     a_path)
+
+def revert_propset__file(sbox):
+  "revert a simple propset on a file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
+  expected_output = re.escape("Reverted '" + iota_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     iota_path)
+
+def revert_propdel__dir(sbox):
+  "revert a simple propdel on a dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  a_path = os.path.join(wc_dir, 'A')
+  svntest.main.run_svn(None, 'propset', 'foo', 'x', a_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'ps', a_path)
+  svntest.main.run_svn(None, 'propdel', 'foo', a_path)
+  expected_output = re.escape("Reverted '" + a_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     a_path)
+
+def revert_propdel__file(sbox):
+  "revert a simple propdel on a file"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  svntest.main.run_svn(None, 'propset', 'foo', 'x', iota_path)
+  svntest.main.run_svn(None, 'commit', '-m', 'ps', iota_path)
+  svntest.main.run_svn(None, 'propdel', 'foo', iota_path)
+  expected_output = re.escape("Reverted '" + iota_path + "'")
+  svntest.actions.run_and_verify_svn(None, expected_output, [], "revert",
+                                     iota_path)
+
 
 ########################################################################
 # Run the tests
@@ -600,6 +637,10 @@ test_list = [ None,
               revert_after_second_replace,
               revert_after_manual_conflict_resolution__text,
               revert_after_manual_conflict_resolution__prop,
+              revert_propset__dir,
+              revert_propset__file,
+              revert_propdel__dir,
+              revert_propdel__file,
              ]
 
 if __name__ == '__main__':

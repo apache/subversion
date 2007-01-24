@@ -2,7 +2,7 @@
  * diff.c: comparing and merging
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -355,8 +355,7 @@ diff_content_changed(const char *path,
       args = apr_palloc(subpool, nargs * sizeof(char *));
       for (i = 0; i < diff_cmd_baton->options->nelts; i++)
         {
-          args[i] = 
-            ((const char **)(diff_cmd_baton->options->elts))[i];
+          args[i] = APR_ARRAY_IDX(diff_cmd_baton->options, i, const char *);
         }
       assert(i == nargs);
     }
@@ -726,9 +725,9 @@ svn_client__dry_run_deletions(void *merge_cmd_baton)
 static APR_INLINE svn_boolean_t
 dry_run_deleted_p(struct merge_cmd_baton *merge_b, const char *wcpath)
 {
-    return (merge_b->dry_run &&
-            apr_hash_get(merge_b->dry_run_deletions, wcpath,
-                         APR_HASH_KEY_STRING) != NULL);
+  return (merge_b->dry_run &&
+          apr_hash_get(merge_b->dry_run_deletions, wcpath,
+                       APR_HASH_KEY_STRING) != NULL);
 }
 
 
@@ -763,6 +762,7 @@ merge_props_changed(svn_wc_adm_access_t *adm_access,
           if (state)
             *state = svn_wc_notify_state_missing;
           svn_error_clear(err);
+          svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
         }
       else if (err)
@@ -802,6 +802,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
         *content_state = svn_wc_notify_state_missing;
       if (prop_state)
         *prop_state = svn_wc_notify_state_missing;
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
   
@@ -825,6 +826,7 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
           *content_state = svn_wc_notify_state_missing;
         if (prop_state)
           *prop_state = svn_wc_notify_state_missing;
+        svn_pool_destroy(subpool);
         return SVN_NO_ERROR;
       }
   }
@@ -976,6 +978,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
         }
       else
         *content_state = svn_wc_notify_state_missing;
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
@@ -991,6 +994,7 @@ merge_file_added(svn_wc_adm_access_t *adm_access,
             /* It's versioned but missing. */
             if (content_state)
               *content_state = svn_wc_notify_state_obstructed;
+            svn_pool_destroy(subpool);
             return SVN_NO_ERROR;
           }
         if (! merge_b->dry_run)
@@ -1114,6 +1118,7 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
     {
       if (state)
         *state = svn_wc_notify_state_missing;
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
@@ -1124,14 +1129,11 @@ merge_file_deleted(svn_wc_adm_access_t *adm_access,
       svn_path_split(mine, &parent_path, NULL, subpool);
       SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                   subpool));
-      {
-        /* Passing NULL for the notify_func and notify_baton because
-         * repos_diff.c:delete_entry() will do it for us. */
-        err = svn_client__wc_delete(mine, parent_access, merge_b->force,
-                                    merge_b->dry_run, 
-                                    NULL, NULL,
-                                    merge_b->ctx, subpool);
-      }
+      /* Passing NULL for the notify_func and notify_baton because
+         repos_diff.c:delete_entry() will do it for us. */
+      err = svn_client__wc_delete(mine, parent_access, merge_b->force,
+                                  merge_b->dry_run, FALSE, NULL, NULL,
+                                  merge_b->ctx, subpool);
       if (err && state)
         {
           *state = svn_wc_notify_state_obstructed;
@@ -1189,6 +1191,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           else
             *state = svn_wc_notify_state_missing;
         }
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
 
@@ -1207,6 +1210,7 @@ merge_dir_added(svn_wc_adm_access_t *adm_access,
           /* Versioned but missing */
           if (state)
             *state = svn_wc_notify_state_obstructed;
+          svn_pool_destroy(subpool);
           return SVN_NO_ERROR;
         }
       if (! merge_b->dry_run)
@@ -1342,6 +1346,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
     {
       if (state)
         *state = svn_wc_notify_state_missing;
+      svn_pool_destroy(subpool);
       return SVN_NO_ERROR;
     }
   
@@ -1359,7 +1364,7 @@ merge_dir_deleted(svn_wc_adm_access_t *adm_access,
         SVN_ERR(svn_wc_adm_retrieve(&parent_access, adm_access, parent_path,
                                     subpool));
         err = svn_client__wc_delete(path, parent_access, merge_b->force,
-                                    merge_b->dry_run,
+                                    merge_b->dry_run, FALSE,
                                     merge_delete_notify_func, &mdb,
                                     merge_b->ctx, subpool);
         if (err && state)

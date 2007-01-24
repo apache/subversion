@@ -2,7 +2,7 @@
  * opt.c :  option and argument parsing for Subversion command lines
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -627,7 +627,7 @@ array_push_str(apr_array_header_t *array,
      transfer str's lifetime to pool.  Is that something callers are
      depending on? */
 
-  (*((const char **) apr_array_push(array))) = apr_pstrdup(pool, str);
+  APR_ARRAY_PUSH(array, const char *) = apr_pstrdup(pool, str);
 }
 
 
@@ -730,9 +730,29 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
             }
           else  /* looking at non-empty peg revision */
             {
+              const char *rev_str = path + i + 1;
+
+              if (is_url)
+                {
+                  /* URLs are URI-encoded, so we look for dates with
+                     URI-encoded delimeters.  */
+                  int rev_len = strlen(rev_str);
+                  if (rev_len > 6
+                      && rev_str[0] == '%' 
+                      && rev_str[1] == '7' 
+                      && (rev_str[2] == 'B' 
+                          || rev_str[2] == 'b')
+                      && rev_str[rev_len-3] == '%' 
+                      && rev_str[rev_len-2] == '7' 
+                      && (rev_str[rev_len-1] == 'D' 
+                          || rev_str[rev_len-1] == 'd'))
+                    {
+                      rev_str = svn_path_uri_decode(rev_str, pool);
+                    }
+                }
               ret = svn_opt_parse_revision(&start_revision,
                                            &end_revision,
-                                           path + i + 1, pool);
+                                           rev_str, pool);
             }
 
           if (ret || end_revision.kind != svn_opt_revision_unspecified)
@@ -790,7 +810,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
              because we needed to split up the list with svn_cstring_split. */
           const char *utf8_target = APR_ARRAY_IDX(known_targets,
                                                   i, const char *);
-          (*((const char **) apr_array_push(input_targets))) = utf8_target;
+          APR_ARRAY_PUSH(input_targets, const char *) = utf8_target;
         }
     }
 
@@ -872,7 +892,7 @@ svn_opt_args_to_target_array2(apr_array_header_t **targets_p,
             continue;
         }
 
-      (*((const char **) apr_array_push(output_targets))) = target;
+      APR_ARRAY_PUSH(output_targets, const char *) = target;
     }
 
 
@@ -905,22 +925,22 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
 
       if (output_targets->nelts > 0)
         {
-          path = ((const char **) (output_targets->elts))[0];
+          path = APR_ARRAY_IDX(output_targets, 0, const char *);
           SVN_ERR(svn_opt_parse_path(&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[0] = path;
+              APR_ARRAY_IDX(output_targets, 0, const char *) = path;
               start_revision->kind = temprev.kind;
               start_revision->value = temprev.value;
             }
         }
       if (output_targets->nelts > 1)
         {
-          path = ((const char **) (output_targets->elts))[1];
+          path = APR_ARRAY_IDX(output_targets, 1, const char *);
           SVN_ERR(svn_opt_parse_path(&temprev, &path, path, pool));
           if (temprev.kind != svn_opt_revision_unspecified)
             {
-              ((const char **) (output_targets->elts))[1] = path;
+              APR_ARRAY_IDX(output_targets, 1, const char *) = path;
               end_revision->kind = temprev.kind;
               end_revision->value = temprev.value;
             }
@@ -954,7 +974,7 @@ print_version_info(const char *pgm_name,
   SVN_ERR(svn_cmdline_printf(pool, _("%s, version %s\n"
                                      "   compiled %s, %s\n\n"), pgm_name,
                              SVN_VERSION, __DATE__, __TIME__));
-  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2006 CollabNet.\n"
+  SVN_ERR(svn_cmdline_fputs(_("Copyright (C) 2000-2007 CollabNet.\n"
                               "Subversion is open source software, see"
                               " http://subversion.tigris.org/\n"
                               "This product includes software developed by "
@@ -991,7 +1011,7 @@ svn_opt_print_help2(apr_getopt_t *os,
   if (os && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_opt_subcommand_help2(((const char **) (targets->elts))[i],
+        svn_opt_subcommand_help2(APR_ARRAY_IDX(targets, i, const char *),
                                  cmd_table, option_table, pool);
       }
   else if (print_version)   /* just --version */
@@ -1032,7 +1052,7 @@ svn_opt_print_help(apr_getopt_t *os,
   if (os && targets->nelts)  /* help on subcommand(s) requested */
     for (i = 0; i < targets->nelts; i++)
       {
-        svn_opt_subcommand_help(((const char **) (targets->elts))[i],
+        svn_opt_subcommand_help(APR_ARRAY_IDX(targets, i, const char *),
                                 cmd_table, option_table, pool);
       }
   else if (print_version)   /* just --version */

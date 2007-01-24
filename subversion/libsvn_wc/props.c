@@ -18,7 +18,6 @@
 
 
 
-#include <stdio.h>       /* temporary, for printf() */
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
@@ -101,10 +100,14 @@ svn_wc__load_prop_file(const char *propfile_path,
 
 
 /* Given a HASH full of property name/values, write them to a file
-   located at PROPFILE_PATH.  */
+   located at PROPFILE_PATH.  If WRITE_EMPTY is TRUE then writing
+   an emtpy property hash will result in an actual empty property
+   file on disk, otherwise an empty hash will result in no file
+   being written at all. */
 svn_error_t *
 svn_wc__save_prop_file(const char *propfile_path,
                        apr_hash_t *hash,
+                       svn_boolean_t write_empty,
                        apr_pool_t *pool)
 {
   apr_file_t *prop_tmp;
@@ -114,7 +117,7 @@ svn_wc__save_prop_file(const char *propfile_path,
                             | APR_BUFFERED), 
                            APR_OS_DEFAULT, pool));
 
-  if (apr_hash_count(hash) != 0)
+  if (apr_hash_count(hash) != 0 || write_empty)
     SVN_ERR_W(svn_hash_write(hash, prop_tmp, pool),
               apr_psprintf(pool, 
                            _("Can't write property hash to '%s'"),
@@ -172,7 +175,7 @@ open_reject_tmp_file(apr_file_t **fp, const char **reject_tmp_path,
 
 
 /* Assuming FP is a filehandle already open for appending, write
-   CONFLICT_DESCRIPTION to file. */
+   CONFLICT_DESCRIPTION to file, plus a trailing EOL sequence. */
 static svn_error_t *
 append_prop_conflict(apr_file_t *fp,
                      const svn_string_t *conflict_description,
@@ -181,11 +184,13 @@ append_prop_conflict(apr_file_t *fp,
   /* TODO:  someday, perhaps prefix each conflict_description with a
      timestamp or something? */
   apr_size_t written;
-  const char *conflict_description_native =
+  const char *native_text =
     svn_utf_cstring_from_utf8_fuzzy(conflict_description->data, pool);
+  SVN_ERR(svn_io_file_write_full(fp, native_text, strlen(native_text),
+                                 &written, pool));
 
-  SVN_ERR(svn_io_file_write_full(fp, conflict_description_native,
-                                 strlen(conflict_description_native),
+  native_text = svn_utf_cstring_from_utf8_fuzzy(APR_EOL_STR, pool);
+  SVN_ERR(svn_io_file_write_full(fp, native_text, strlen(native_text),
                                  &written, pool));
 
   return SVN_NO_ERROR;
@@ -394,7 +399,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
       /* Write the working prop hash to path/.svn/tmp/props/name or
          path/.svn/tmp/dir-props */
       SVN_ERR(svn_wc__save_prop_file(working_prop_tmp_path, working_props,
-                                     pool));
+                                     FALSE, pool));
   
       /* Compute pathnames for the "mv" log entries.  Notice that these
          paths are RELATIVE pathnames (each beginning with ".svn/"), so
@@ -432,7 +437,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                                          kind, TRUE, pool));
 
           SVN_ERR(svn_wc__save_prop_file(base_prop_tmp_path, base_props,
-                                         pool));
+                                         FALSE, pool));
 
           tmp_prop_base = apr_pstrdup(pool, base_prop_tmp_path + access_len);
 
@@ -914,10 +919,9 @@ svn_wc__wcprops_write(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
   for (hi = apr_hash_first(pool, wcprops); hi && ! any_props;
        hi = apr_hash_next(hi))
     {
-      const void *key;
       void *val;
 
-      apr_hash_this(hi, &key, NULL, &val);
+      apr_hash_this(hi, NULL, NULL, &val);
       proplist = val;
       if (apr_hash_count(proplist) > 0)
         any_props = TRUE;
@@ -1396,6 +1400,8 @@ validate_prop_against_node_kind(const char *name,
                                  SVN_PROP_NEEDS_LOCK,
                                  NULL };
   const char **node_kind_prohibit;
+  const char *path_display
+    = svn_path_is_url(path) ? path : svn_path_local_style(path, pool);
 
   switch (node_kind)
     {
@@ -1405,7 +1411,7 @@ validate_prop_against_node_kind(const char *name,
         if (strcmp(name, *node_kind_prohibit++) == 0)
           return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                    _("Cannot set '%s' on a directory ('%s')"),
-                                   name, svn_path_local_style(path, pool));
+                                   name, path_display);
       break;
     case svn_node_file:
       node_kind_prohibit = file_prohibit;
@@ -1414,62 +1420,94 @@ validate_prop_against_node_kind(const char *name,
           return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                    _("Cannot set '%s' on a file ('%s')"),
                                    name,
-                                   svn_path_local_style(path, pool));
+                                   path_display);
       break;
     default:
       return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                                _("'%s' is not a file or directory"),
-                               svn_path_local_style(path, pool));
+                               path_display);
     }
 
   return SVN_NO_ERROR;
 }                             
 
 
-static svn_error_t *
-validate_eol_prop_against_file(const char *path, 
-                               svn_wc_adm_access_t *adm_access,
-                               apr_pool_t *pool)
-{
-  apr_file_t *fp;
-  svn_stream_t *read_stream, *write_stream;
-  svn_error_t *err;
-  const svn_string_t *mime_type;
+struct getter_baton {
+  const char *path;
+  svn_wc_adm_access_t *adm_access;
+};
 
-  /* See if this file has been determined to be binary. */
-  SVN_ERR(svn_wc_prop_get(&mime_type, SVN_PROP_MIME_TYPE, path, adm_access,
-                          pool));
-  if (mime_type && svn_mime_type_is_binary(mime_type->data))
-    return svn_error_createf 
-      (SVN_ERR_ILLEGAL_TARGET, NULL,
-       _("File '%s' has binary mime type property"),
-       svn_path_local_style(path, pool));
+
+static svn_error_t *
+get_file_for_validation(const svn_string_t **mime_type,
+                        svn_stream_t *stream,
+                        void *baton,
+                        apr_pool_t *pool)
+{
+  struct getter_baton *gb = baton;
+  apr_file_t *fp;
+  svn_stream_t *read_stream;
+
+  SVN_ERR(svn_wc_prop_get(mime_type, SVN_PROP_MIME_TYPE,
+                          gb->path, gb->adm_access, pool));
 
   /* Open PATH. */
-  SVN_ERR(svn_io_file_open(&fp, path, 
+  SVN_ERR(svn_io_file_open(&fp, gb->path, 
                            (APR_READ | APR_BINARY | APR_BUFFERED),
                            0, pool));
 
   /* Get a READ_STREAM from the file we just opened. */
   read_stream = svn_stream_from_aprfile(fp, pool);
 
-  /* Now, make an empty WRITE_STREAM. */
-  write_stream = svn_stream_empty(pool);
+  /* Copy from the file into the translating stream. */
+  SVN_ERR(svn_stream_copy(read_stream, stream, pool));
 
-  /* Do a newline translation.  Of course, all we really care about
-     here is whether or not the function fails on inconsistent line
-     endings.  The function is "translating" to an empty stream.  This
-     is sneeeeeeeeeeeaky. */
-  err = svn_subst_translate_stream3(read_stream, write_stream,
-                                    "", FALSE, NULL, FALSE, pool);
+  SVN_ERR(svn_stream_close(read_stream));
+  SVN_ERR(svn_io_file_close(fp, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+validate_eol_prop_against_file(const char *path, 
+                               svn_wc_canonicalize_svn_prop_get_file_t getter,
+                               void *getter_baton,
+                               apr_pool_t *pool)
+{
+  svn_stream_t *translating_stream;
+  svn_error_t *err;
+  const svn_string_t *mime_type;
+  const char *path_display
+    = svn_path_is_url(path) ? path : svn_path_local_style(path, pool);
+
+  /* The "getter" will do a newline translation.  All we really care
+     about here is whether or not the function fails on inconsistent
+     line endings.  The function is "translating" to an empty stream.
+     This is sneeeeeeeeeeeaky. */
+  translating_stream = svn_subst_stream_translated(svn_stream_empty(pool),
+                                                   "", FALSE, NULL, FALSE,
+                                                   pool);
+
+  err = getter(&mime_type, translating_stream, getter_baton, pool);
+
+  if (!err)
+    err = svn_stream_close(translating_stream);
+
   if (err && err->apr_err == SVN_ERR_IO_INCONSISTENT_EOL)
     return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, err,
                              _("File '%s' has inconsistent newlines"),
-                             svn_path_local_style(path, pool));
+                             path_display);
   else if (err)
     return err;
 
-  SVN_ERR(svn_io_file_close(fp, pool));
+  /* See if this file has been determined to be binary. */
+  if (mime_type && svn_mime_type_is_binary(mime_type->data))
+    return svn_error_createf 
+      (SVN_ERR_ILLEGAL_TARGET, NULL,
+       _("File '%s' has binary mime type property"),
+       path_display);
+
   return SVN_NO_ERROR;
 }
 
@@ -1484,7 +1522,6 @@ svn_wc_prop_set2(const char *name,
 {
   svn_error_t *err;
   apr_hash_t *prophash, *base_prophash;
-  svn_stringbuf_t *new_value = NULL;
   enum svn_prop_kind prop_kind = svn_property_kind(NULL, name);
   const char *base_name;
   svn_stringbuf_t *log_accum = svn_stringbuf_create("", pool);
@@ -1520,52 +1557,18 @@ svn_wc_prop_set2(const char *name,
      inappropriate property is allowed, however, since older clients
      allowed (and other clients possibly still allow) setting it in
      the first place. */
-  if (value)
+  if (value && svn_prop_is_svn_prop(name))
     {
-      SVN_ERR(validate_prop_against_node_kind(name, path, entry->kind,
-                                              pool));
-      if (!skip_checks && (strcmp(name, SVN_PROP_EOL_STYLE) == 0))
-        {
-          new_value = svn_stringbuf_create_from_string(value, pool);
-          svn_stringbuf_strip_whitespace(new_value);
-          SVN_ERR(validate_eol_prop_against_file(path, adm_access, pool));
-        }
-      else if (!skip_checks && (strcmp(name, SVN_PROP_MIME_TYPE) == 0))
-        {
-          new_value = svn_stringbuf_create_from_string(value, pool);
-          svn_stringbuf_strip_whitespace(new_value);
-          SVN_ERR(svn_mime_type_validate(new_value->data, pool));
-        }
-      else if (strcmp(name, SVN_PROP_IGNORE) == 0
-               || strcmp(name, SVN_PROP_EXTERNALS) == 0)
-        {
-          /* Make sure that the last line ends in a newline */
-          if (value->data[value->len - 1] != '\n')
-            {
-              new_value = svn_stringbuf_create_from_string(value, pool);
-              svn_stringbuf_appendbytes(new_value, "\n", 1);
-            }
+      const svn_string_t *new_value;
+      struct getter_baton *gb = apr_pcalloc(pool, sizeof(*gb));
+      
+      gb->path = path;
+      gb->adm_access = adm_access;
 
-          /* Make sure this is a valid externals property.  Do not
-             allow 'skip_checks' to override, as there is no circumstance in
-             which this is proper (because there is no circumstance in
-             which Subversion can handle it). */
-          if (strcmp(name, SVN_PROP_EXTERNALS) == 0)
-            {
-              /* We don't allow "." nor ".." as target directories in
-                 an svn:externals line.  As it happens, our parse code
-                 checks for this, so all we have to is invoke it --
-                 we're not interested in the parsed result, only in
-                 whether or the parsing errored. */
-              SVN_ERR(svn_wc_parse_externals_description2
-                      (NULL, path, value->data, pool));
-            }
-        }
-      else if (strcmp(name, SVN_PROP_KEYWORDS) == 0)
-        {
-          new_value = svn_stringbuf_create_from_string(value, pool);
-          svn_stringbuf_strip_whitespace(new_value);
-        }
+      SVN_ERR(svn_wc_canonicalize_svn_prop(&new_value, name, value, path,
+                                           entry->kind, skip_checks,
+                                           get_file_for_validation, gb, pool));
+      value = new_value;
     }
 
   if (entry->kind == svn_node_file && strcmp(name, SVN_PROP_EXECUTABLE) == 0)
@@ -1614,9 +1617,6 @@ svn_wc_prop_set2(const char *name,
           /* And we'll set the file to read-only at commit time. */
         }
     }
-
-  if (new_value)
-    value = svn_string_create_from_buf(new_value, pool);
 
   err = svn_wc__load_props(&base_prophash, &prophash, adm_access, base_name,
                            pool);
@@ -1683,6 +1683,72 @@ svn_wc_prop_set(const char *name,
   return svn_wc_prop_set2(name, value, path, adm_access, FALSE, pool);
 }
 
+
+svn_error_t *
+svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
+                             const char *propname,
+                             const svn_string_t *propval,
+                             const char *path,
+                             svn_node_kind_t kind,
+                             svn_boolean_t skip_some_checks,
+                             svn_wc_canonicalize_svn_prop_get_file_t getter,
+                             void *getter_baton,
+                             apr_pool_t *pool)
+{
+  svn_stringbuf_t *new_value = NULL;
+
+  SVN_ERR(validate_prop_against_node_kind(propname, path, kind, pool));
+  
+  if (!skip_some_checks && (strcmp(propname, SVN_PROP_EOL_STYLE) == 0))
+    {
+      new_value = svn_stringbuf_create_from_string(propval, pool);
+      svn_stringbuf_strip_whitespace(new_value);
+      SVN_ERR(validate_eol_prop_against_file(path, getter, getter_baton, pool));
+    }
+  else if (!skip_some_checks && (strcmp(propname, SVN_PROP_MIME_TYPE) == 0))
+    {
+      new_value = svn_stringbuf_create_from_string(propval, pool);
+      svn_stringbuf_strip_whitespace(new_value);
+      SVN_ERR(svn_mime_type_validate(new_value->data, pool));
+    }
+  else if (strcmp(propname, SVN_PROP_IGNORE) == 0
+           || strcmp(propname, SVN_PROP_EXTERNALS) == 0)
+    {
+      /* Make sure that the last line ends in a newline */
+      if (propval->data[propval->len - 1] != '\n')
+        {
+          new_value = svn_stringbuf_create_from_string(propval, pool);
+          svn_stringbuf_appendbytes(new_value, "\n", 1);
+        }
+      
+      /* Make sure this is a valid externals property.  Do not
+         allow 'skip_some_checks' to override, as there is no circumstance in
+         which this is proper (because there is no circumstance in
+         which Subversion can handle it). */
+      if (strcmp(propname, SVN_PROP_EXTERNALS) == 0)
+        {
+          /* We don't allow "." nor ".." as target directories in
+             an svn:externals line.  As it happens, our parse code
+             checks for this, so all we have to is invoke it --
+             we're not interested in the parsed result, only in
+             whether or the parsing errored. */
+          SVN_ERR(svn_wc_parse_externals_description2
+                  (NULL, path, propval->data, pool));
+        }
+    }
+  else if (strcmp(propname, SVN_PROP_KEYWORDS) == 0)
+    {
+      new_value = svn_stringbuf_create_from_string(propval, pool);
+      svn_stringbuf_strip_whitespace(new_value);
+    }
+
+  if (new_value)
+    *propval_p = svn_string_create_from_buf(new_value, pool);
+  else
+    *propval_p = propval;
+
+  return SVN_NO_ERROR;
+}
 
 
 svn_boolean_t
@@ -2016,6 +2082,8 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
 {
   apr_array_header_t *lines = svn_cstring_split(desc, "\n\r", TRUE, pool);
   int i;
+  const char *parent_directory_display = svn_path_is_url(parent_directory) ?
+    parent_directory : svn_path_local_style(parent_directory, pool);
   
   if (externals_p)
     *externals_p = apr_array_make(pool, 1, sizeof(svn_wc_external_item_t *));
@@ -2100,7 +2168,7 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
             (SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION, NULL,
              _("Error parsing %s property on '%s': '%s'"),
              SVN_PROP_EXTERNALS,
-             svn_path_local_style(parent_directory, pool),
+             parent_directory_display,
              line);
         }
 
@@ -2114,7 +2182,7 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
              _("Invalid %s property on '%s': "
                "target involves '.' or '..' or is an absolute path"),
              SVN_PROP_EXTERNALS,
-             svn_path_local_style(parent_directory, pool));
+             parent_directory_display);
       }
 
       item->url = svn_path_canonicalize(item->url, pool);

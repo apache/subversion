@@ -38,7 +38,8 @@ public:
     BlameCallback(jobject jcallback);
     ~BlameCallback();
     svn_error_t *callback(svn_revnum_t revision, const char *author,
-                      const char *date, const char *line, apr_pool_t *pool);
+                          const char *date, const char *line, 
+                          apr_pool_t *pool);
 private:
     /**
      * this a local reference to the java object.

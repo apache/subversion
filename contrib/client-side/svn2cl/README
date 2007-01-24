@@ -31,10 +31,10 @@
 INTRODUCTION
 ============
 
-svn2cl is a simple xsl transformation and shellscript wrapper for generating a
-classic GNU-style ChangeLog from a subversion repository log. It is made from
-several changelog-like scripts using common xslt constructs found in different
-places.
+svn2cl is a simple xsl transformation and shell script wrapper for generating
+a classic GNU-style ChangeLog from a subversion repository log. It is made
+from several changelog-like scripts using common xslt constructs found in
+different places.
 
 I made it because it was the only thing that I missed from cvs after I
 converted a repository to subversion. I used cvs2cl before. 
@@ -42,12 +42,47 @@ converted a repository to subversion. I used cvs2cl before.
 INSTALLING SVN2CL
 =================
 
-Just unpack the tarball in some directory (e.g. /opt/svn2cl-0.7)
+Just unpack the tarball in some directory (e.g. /opt/svn2cl-0.8)
 and symlink the svn2cl.sh script in your path somewhere (e.g.
-ln -s /opt/svn2cl-0.7/svn2cl.sh /usr/local/bin/svn2cl).
+ln -s /opt/svn2cl-0.8/svn2cl.sh /usr/local/bin/svn2cl).
 
 Note: Be sure to keep the svn2cl.xsl file in the same directory as the
 svn2cl.sh script as the script looks for it there (symlinking is ok).
+
+USING SVN2CL IN AN ANT TARGET
+=============================
+
+It is possible to use svn2cl in an ant target with a snippet like:
+
+<tempfile property="info.xml.file"
+          prefix="info-" suffix=".xml"
+          destdir="${java.io.tmpdir}" />
+<java classname="org.tmatesoft.svn.cli.SVN" dir="${basedir}"
+      fork="true" output="${info.xml.file}"
+      classpathref="javasvn-classpath">
+ <arg line="log --xml --verbose" />
+</java>
+<xslt in="${info.xml.file}" out="ChangeLog" style="svn2cl.xsl">
+ <param name="strip-prefix" expression="trunk/myProject/" />
+ <param name="groupbyday" expression="yes" />
+ <param name="separate-daylogs" expression="yes" />
+ <param name="include-rev" expression="yes" />
+ <param name="breakbeforemsg" expression="yes" />
+ <param name="reparagraph" expression="yes" />
+</xslt>
+<delete file="${info.xml.file}" />
+
+Although it seems that currently the xslt processor that is used by ant
+inserts newlines in places it shouldn't. This can be worked around by
+replacing &newl; throughout the xsl files by &#xa;.
+
+WINDOWS PORT
+============
+
+A VBScript port of the wrapper shell script has been made by Iwasa Kazmi,
+which allows running svn2cl on Microsoft Windows without a POSIX compatibility
+layer and xsltproc. More information is available here:
+http://www.cosmo-system.jp/iwasa/svn2clwin.html
 
 NOTES
 =====

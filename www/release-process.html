@@ -2,14 +2,14 @@
 "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <style type="text/css"> /* <![CDATA[ */
-  @import "tigris-branding/css/tigris.css";
-  @import "tigris-branding/css/inst.css";
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="tigris-branding/css/print.css"/>
-<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+  href="branding/css/print.css" />
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
 <title>The Subversion Release Procedure</title>
 </head>
 
@@ -25,7 +25,6 @@ or aspire to be, you should read and follow this procedure.</p>
 $LastChangedDate: 2006-04-03 18:57:54 +0200 (Mon, 03 Apr 2006) $
 </pre>
 
-<![CDATA[=========================================================]]>
 
 <!-- Other pages seem to use "h2" for ToC, but I think "h1" works
      better, because the ToC is fundamentally different from other
@@ -34,28 +33,24 @@ $LastChangedDate: 2006-04-03 18:57:54 +0200 (Mon, 03 Apr 2006) $
 <div class="h1"><!-- no 'id' or 'title' attribute for ToC -->
 <h1>Table of Contents</h1>
 
-<ul>
-<li><a href="#release-manager-role"
-             >Being the Release Manager</a></li>
-<li><a href="#release-branches"
-             >Creating and maintaining release branches</a></li>
-<li><a href="#porting-changes"
-             >Porting changes to release branches</a></li>
-<li><a href="#the-changes-file"
-             >Managing the CHANGES file</a></li>
-<li><a href="#before-release"
-             >Preparing to roll a release</a></li>
-<li><a href="#rolling-release"
-             >Rolling a release</a></li>
-<li><a href="#blessing-release"
-             >Blessing a release</a></li>
-<li><a href="#releasing-release"
-             >The actual releasing</a></li>
-</ul>
+<ol id="toc">
+  <li><a href="#release-manager-role">Being the Release Manager</a></li>
+  <li><a href="#release-branches">Creating and maintaining release branches</a></li>
+  <li><a href="#porting-changes">Porting changes to release branches</a></li>
+  <li><a href="#the-changes-file">Managing the CHANGES file</a>
+  <ol>
+    <li><a href="#writing-initial-changes">Writing the initial content for a branch</a></li>
+    <li><a href="#adding-changes">Adding content for patch release</a></li>
+  </ol>
+  </li> <!-- the-changes-file -->
+  <li><a href="#before-release">Preparing to roll a release</a></li>
+  <li><a href="#rolling-release">Rolling a release</a></li>
+  <li><a href="#blessing-release">Blessing a release</a></li>
+  <li><a href="#releasing-release">The actual releasing</a></li>
+</ol>
 
-</div>
+</div> <!-- h1 -->
 
-<![CDATA[=========================================================]]>
 
 <div class="h2" id="release-manager-role" title="release-manager-role">
 <h2>Being the Release Manager</h2>
@@ -85,9 +80,8 @@ care about releases focus on code, then RMing is for you.</p>
 <p>So, you are the Release Manager.  What do you need to do?  This is
 what the rest of this document is about.</p>
 
-</div>
+</div> <!-- release-manager-role -->
 
-<![CDATA[=========================================================]]>
 
 <div class="h2" id="release-branches" title="release-branches">
 <h2>Creating and maintaining release branches</h2>
@@ -149,9 +143,8 @@ A.B with the version you're preparing, eg. 1.3, or 2.0):</p>
     </pre></li>
 </ul>
 
-</div>
+</div> <!-- release-branches -->
 
-<![CDATA[=========================================================]]>
 
 <div class="h2" id="porting-changes" title="porting-changes">
 <h2>Porting changes to release branches</h2>
@@ -163,13 +156,11 @@ in from trunk.</p>
 
 <p>The protocol used to accept or refuse the merging of changes from
 trunk is of interest to all Subversion developers, and as such is
-documented in <a
-href="hacking.html#release-stabilization">the
+documented in <a href="hacking.html#release-stabilization">the
 release stabilization section of the hacking guide</a>.</p>
 
-</div>
+</div> <!-- porting-changes -->
 
-<![CDATA[=========================================================]]>
 
 <div class="h2" id="the-changes-file" title="the-changes-file">
 <h2>Managing the CHANGES file</h2>
@@ -223,18 +214,17 @@ general either.  Set your filter-level by reading through a few pages
 of the CHANGES file before starting on the new section, just to keep
 things consistent.</p>
 
-</div>  <!-- writing-initial-changes -->
+</div> <!-- writing-initial-changes -->
 
 <div class="h3" id="adding-changes">
 <h3>Adding content for patch release</h3>
 
 <p>TODO</p>
 
-</div>  <!-- adding-changes -->
+</div> <!-- adding-changes -->
 
-</div>  <!-- the-changes-file -->
+</div> <!-- the-changes-file -->
 
-<![CDATA[=========================================================]]>
 
 <div class="h2" id="before-release" title="before-release">
 <h2>Preparing to roll a release</h2>
@@ -309,9 +299,8 @@ extract.  You must then copy the <tt>neon</tt> and <tt>zlib</tt>
 directories from the Unix dependency directory into the Win32 one too.
 Do not use symlinks, <tt>dist.sh</tt> does not support them.</p>
 
-</div>
+</div> <!-- before-release -->
 
-<![CDATA[=========================================================]]>
 
 <div class="h2" id="rolling-release" title="rolling-release">
 <h2>Rolling a release</h2>
@@ -338,7 +327,7 @@ PATH="/opt/svnrm/bin:$PATH" ./dist.sh -v X.Y.Z -r 1234 -pr branches/X.Y.Z -zip
 smoothly; when it's done, you'll have zipfiles in the cwd.</p> 
  
 <pre>
-9.  Test one or both of the tarballs:
+Test one or both of the tarballs:
  
     a) tar zxvf subversion-X.Y.Z.tar.gz;  cd subversion-X.Y.Z
     b) ./configure
@@ -415,119 +404,142 @@ smoothly; when it's done, you'll have zipfiles in the cwd.</p>
           make javahl
           sudo make install-javahl
           make check-javahl
-
-10. Use GPG to sign release. 
-
-    gpg -b --armor subversion-X.Y.Z.tar.gz
-    gpg -b --armor subversion-X.Y.Z.tar.bz2
-    gpg -b --armor subversion-X.Y.Z.zip
 </pre>
 
-</div>
+<p><b>Use GnuPG to sign release:</b></p>
+<pre>
+    gpg -ba subversion-X.Y.Z.tar.bz2
+    gpg -ba subversion-X.Y.Z.tar.gz
+    gpg -ba subversion-X.Y.Z.zip
+    gpg -ba subversion-deps-X.Y.Z.tar.bz2
+    gpg -ba subversion-deps-X.Y.Z.tar.gz
+    gpg -ba subversion-deps-X.Y.Z.zip
+</pre>
 
-<![CDATA[=========================================================]]>
+</div> <!-- rolling-release -->
+
 
 <div class="h2" id="blessing-release" title="blessing-release">
 <h2>Blessing a release</h2>
-</div>
+</div> <!-- blessing-release -->
 
-<![CDATA[=========================================================]]>
 
 <div class="h2" id="releasing-release" title="releasing-release">
 <h2>The actual releasing</h2>
 
+<p><b>Subversion Operations</b></p>
+<p>Create the tag with the svn_version.h that reflects the final
+release.  You do this by updating your working copy to the release
+revision, 1234 in the example below.  Run svnversion to verify that
+you do not have a mixed working copy or modified working copy, i.e.
+svnversion outputs only the release revision (not 1234:1235 or 1234M).
+Then place the svn_version.h.dist file in place in the working copy
+and copy from the working copy to the tag URL.  For example:</p>
+
 <pre>
-11. Create the tag with the svn_version.h that reflects the final release.
-    You do this by updating your working copy to the release revision, 1234 in
-    the example below.  Run svnversion to verify that you do not have a mixed
-    working copy or modified working copy, i.e. svnversion outputs only the
-    release revision (not 1234:1235 or 1234M).  Then place the 
-    svn_version.h.dist file in place in the working copy and copy from
-    the working copy to the tag URL.
-
-    For example:
-      
-       svn up -r 1234
-       svnversion .
-       cp svn_version.h.dist subversion/include/svn_version.h
-       svn cp . \
-              https://svn.collab.net/repos/svn/tags/X.Y.Z \
-              -m "Tagging release X.Y.Z with svn_version.h matching tarball"
-
-    Note: Please always make a tag, even for release candidates.
-
-12. Upload the tarballs to http://subversion.tigris.org/downloads/.
-
-    The RM will be given details on how to do this via private channels.
-
-13. Link to the tarballs from the Downloads page:
-
-       http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=260
-
-    a) Log into http://subversion.tigris.org/
-    b) Click on the 'Downloads link (left frame at the top)
-    c) Click on the 'Source tarballs' link (main frame)
-    d) Click on the 'Add a file' link (top, main frame, under 'File Sharing')
-    e) Fill in the following fields:
-
-       Name: subversion-X.Y.Z.tar.gz (replace X.Y.Z with the release number)
-       Status: Stable
-       Description: Subversion release X.Y.Z (MD5: &lt;md5sum of tarball&gt;)
-       Contents: (choose 'Link', then enter
-           http://subversion.tigris.org/downloads/subversion-X.Y.Z.tar.gz)
-
-    f) Click Submit
-
-14. Bump the svn_version.h for the original branch.
-
-    Modify subversion/include/svn_version.h.  If you just did 1.0.2
-    then svn_version.h should have the proper values for 1.0.3 and so
-    on.
-
-15. Update the website.
-
-   a) Edit the www/project_status.html file appropriately in /trunk *NOT*
-      in the release branch and commit. Remember edit a search term at the
-      end of release's issue link. 
-
-      If you used 'svn switch' in 3b above, you can simply 'switch' back
-      to /trunk using:
-
-         svn switch https://svn.collab.net/repos/svn/trunk
-
-      then edit the www/project_status.html file appropriately.
-
-   b) Update the best available version at the top of www/project_packages.html
-
-   c) Commit the modifications.
-
-16. Post news item http://subversion.tigris.org/servlets/ProjectNewsAdd,
-    and send an announcement to dev@, users@, and announce@ lists.
-    Remember to include the URL and MD5 checksums in the announcement!
-
-    Note that the subversion.tigris.org news item is in HTML format not
-    plain text.  A tigris.org user with RM or higher status must approve
-    the subversion.tigris.org news item.
-
-    For the email to the lists, ensure that your mailer doesn't wrap over
-    80 character lines.
-
-    You should also notify freshmeat of the new release:
-
-       http://freshmeat.net/projects/subversion/
-
-    You need to be listed as a release manager or admin on Freshmeat.
-    Contact one of the folks listed on the Subversion project page for
-    access.  Your submission will also be tweaked by the freshmeat crew
-    before it goes public.
-
-17. Someone with administrative access should upgrade svn.collab.net
-    to head.  (This is not usually the release manager.)
-
-18. If you've made it this far, go and enjoy your $favorite_beverage now.
+    svn up -r 1234
+    svnversion .
+    cp svn_version.h.dist subversion/include/svn_version.h
+    svn cp . \
+           https://svn.collab.net/repos/svn/tags/X.Y.Z \
+           -m "Tagging release X.Y.Z with svn_version.h matching tarball"
 </pre>
-</div>
 
-</div>
+<p>Note: Please always make a tag, even for release candidates.</p>
+
+<p>Bump the svn_version.h for the original branch.  If you just did
+1.0.2 then svn_version.h should have the proper values for 1.0.3 and
+so on.</p>
+
+<p><b>Upload the tarballs to
+  http://subversion.tigris.org/downloads/.</b></p>
+<p>The RM will be given details on how to do this via private
+channels.</p>
+
+<p><b>Update Tigris "Documents &amp; files" area</b></p>
+<p>Update the links to the tarballs in the Documents &amp; files
+Tigris webapp.</p>
+
+<ol>
+  <li>Log into <a href="http://subversion.tigris.org/">Tigris</a></li>
+  <li>Click on 'Documents &amp; files'.</li>
+  <li>Navigate to the 'subversion/Releases/Source code/' folder.</li>
+  <li>For each of the 12 files:
+  <ol>
+    <li>Click on the 'Add new file' link.</li>
+    <li>Fill in the following fields:
+    <ul>
+      <li>Name: &lt;file name&gt;</li>
+      <li>Status: Stable</li>
+      <li>Description: <i>(one of:)</i>
+      <ul>
+        <li>Subversion release X.Y.Z (MD5: &lt;md5sum of
+        tarball&gt;)</li>
+        <li>Subversion dependencies X.Y.Z (MD5: &lt;md5sum of
+        tarball&gt;)</li>
+        <li>PGP Signatures for Subversion release X.Y.Z.</li>
+      </ul>
+      </li>
+      <li>Contents: <i>(choose 'Link', then enter:)</i>
+      http://subversion.tigris.org/downloads/&lt;file name&gt;
+      </li>
+    </ul>
+    </li>
+    <li>Click Submit.</li>
+  </ol>
+  </li>
+</ol>
+
+<p><b>Announcements</b></p>
+<p>Write a release announcement, referring to previous ones for
+guidance.  Remember to include the URL and MD5 checksums in the
+announcement!</p>
+
+<p>Post a project news item <a
+href="http://subversion.tigris.org/servlets/ProjectNewsList">here</a>.
+If the link reads "Suggest an announcement" instead of "Add new
+announcement", then you do not have the required permission - ask to
+be granted the 'Release Manager' Tigris role.  Note that the
+Tigris news items are in HTML format not plain text.</p>
+
+<p>Send an announcement to dev@, users@, and announce@ lists.  Ensure
+that your mailer doesn't wrap the URLs over multiple lines.</p>
+
+<p>You should also notify freshmeat of the new release.  You need to
+be listed as a release manager or admin for the <a
+href="http://freshmeat.net/projects/subversion/">Subversion project
+  on Freshmeat</a>.  Contact one of the folks who are already listed
+if you need access.  Your submission will also be tweaked by the
+freshmeat crew before it goes public.</p>
+
+<p><b>Update the website</b></p>
+<ol>
+  <li>Edit the www/project_status.html file appropriately in /trunk
+  *NOT* in the release branch and commit. Remember edit a search term
+  at the end of release's issue link.</li>
+  <li>Update the best available version at the top of
+  www/project_packages.html</li>
+  <li>Update the "Latest Release" section of www/index.html to point
+  to the new announcement.</li>
+  <li>Commit the modifications.</li>
+</ol>
+
+<p>If you've made it this far, go and enjoy your $favorite_beverage now.</p>
+
+</div> <!-- releasing-release -->
+
+
+<div class="h2" id="afterwards" title="afterwards">
+<h2>After a release has been made</h2>
+
+<p>When someone with administrative access to <tt>svn.collab.net</tt>
+has time available, they will upgrade it to the latest release or
+release candidate.  (This person is not usually the release
+manager.)</p>
+
+</div> <!-- afterwards -->
+
+
+</div> <!-- app -->
 </body>
 </html>

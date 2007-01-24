@@ -3,12 +3,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
-  @import "tigris-branding/css/tigris.css";
-  @import "tigris-branding/css/inst.css";
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="tigris-branding/css/print.css"/>
-<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
 <title>What Needs Doing?</title>
 </head>
 
@@ -80,22 +80,6 @@ previous experience in Subversion development.</p>
 
 </div>
 
-<div class="h3" id="python-bindings" title="python-bindings">
-<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2342"
->Issue&nbsp;#2342</a>: Improving the Python bindings</h3>
-
-<p>The Subversion Python bindings are currently incomplete in the
-functionality that they expose (for one example see the above issue).
-Furthermore, the Python bindings are currently extremely unpythonic in
-their structure, and could do with a layer of python code to make them
-so.  The bindings should first be brought up to date and all
-functionnalities completely implemented, and second be wrapped in a
-set of Python classes implementing an interface more friendly to
-python developers.</p>
-
-</div>
-
-
 <div class="h3" id="svnserve-logging" title="svnserve-logging">
 <h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2409"
 >Issue&nbsp;#2409</a>: Operation and error logging for svnserve</h3>
@@ -128,6 +112,19 @@ previous experience in Subversion development.</p>
 
 </div>
 
+
+<div class="h3" id="python-bindings" title="python-bindings">
+<h3>Improving the Python bindings</h3>
+
+<p>The Subversion Python bindings are currently incomplete in the
+functionality that they expose.  Furthermore, the Python bindings are
+currently extremely unpythonic in their structure, and could do with a layer
+of python code to make them so.  The bindings should first be brought up to date
+and all functionnalities completely implemented, and second be wrapped in a
+set of Python classes implementing an interface more friendly to
+python developers.</p>
+
+</div>
 
 <div class="h3" id="dav-performance-analysis" title="dav-performance-analysis">
 <h3>Performance analysis tool for mod_dav_svn</h3>

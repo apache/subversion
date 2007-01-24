@@ -806,6 +806,13 @@ svn_boolean_t svn_fs_is_revision_root(svn_fs_root_t *root);
 const char *svn_fs_txn_root_name(svn_fs_root_t *root,
                                  apr_pool_t *pool);
 
+/** If @a root is the root of a transaction, return the number of the
+ * revision on which is was based when created.  Otherwise, return @c
+ * SVN_INVALID_REVNUM.
+ *
+ * @since New in 1.5.
+ */
+svn_revnum_t svn_fs_txn_root_base_revision(svn_fs_root_t *root);
 
 /** If @a root is the root of a revision, return the revision number.
  * Otherwise, return @c SVN_INVALID_REVNUM.
@@ -1001,7 +1008,9 @@ svn_error_t *svn_fs_node_id(const svn_fs_id_t **id_p,
 /** Set @a *revision to the revision in which @a path under @a root was 
  * created.  Use @a pool for any temporary allocations.  @a *revision will 
  * be set to @c SVN_INVALID_REVNUM for uncommitted nodes (i.e. modified nodes 
- * under a transaction root).
+ * under a transaction root).  Note that the root of an unmodified transaction
+ * is not itself considered to be modified; in that case, return the revision
+ * upon which the transaction was based.
  */
 svn_error_t *svn_fs_node_created_rev(svn_revnum_t *revision,
                                      svn_fs_root_t *root,
@@ -1422,7 +1431,8 @@ svn_error_t *svn_fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
  *
  * Set @a *contents_p to a stream ready to receive full textual data.
  * When the caller closes this stream, the data replaces the previous
- * contents of the file.
+ * contents of the file.  The caller must write all file data and close
+ * the stream before making further changes to the transaction.
  *
  * If @a path does not exist in @a root, return an error.  (You cannot use
  * this routine to create new files;  use svn_fs_make_file() to create

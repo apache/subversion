@@ -57,7 +57,7 @@ module Svn
         undef new
         def new
           obj = Client.create_context
-          obj.__send__("initialize")
+          obj.funcall("initialize")
           obj
         end
       end
@@ -522,7 +522,7 @@ module Svn
       end
 
       def set_log_msg_func(callback=Proc.new)
-        @log_msg_baton = Client.set_log_msg_func2(self, callback)
+        @log_msg_baton = Client.set_log_msg_func3(self, callback)
       end
       
       def set_notify_func(callback=Proc.new)

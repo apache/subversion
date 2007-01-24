@@ -18,7 +18,7 @@
 ######################################################################
 
 # General modules
-import shutil, stat, sys, re, os.path, os, locale
+import sys, re, os, locale
 
 # Our testing module
 import svntest
@@ -118,7 +118,7 @@ else:
     localeregex = re.compile('^ISO-?8859-1$', re.I)
     localematch = localeregex.search(localeenc)
     try:
-      svntest.actions.run_and_verify_svn("",svntest.SVNAnyOutput, [],"help")
+      svntest.actions.run_and_verify_svn(None, svntest.SVNAnyOutput, [],"help")
     except:
       # We won't be able to run the client; this might be because the
       # system does not support the iso-8859-1 locale. Anyhow, it makes

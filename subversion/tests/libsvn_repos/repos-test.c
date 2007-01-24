@@ -1,7 +1,7 @@
 /* repos-test.c --- tests for the filesystem
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -457,7 +457,7 @@ print_chrevs(const apr_array_header_t *revs_got,
     {
       for (i = 0; i < revs_got->nelts; i++)
         {
-          rev = ((svn_revnum_t *)revs_got->elts)[i];
+          rev = APR_ARRAY_IDX(revs_got, i, svn_revnum_t);
           outstr = apr_pstrcat(pool, 
                                outstr,
                                apr_psprintf(pool, "%ld ", rev),
@@ -686,7 +686,7 @@ revisions_changed(const char **msg,
         /* Do the revisions lists match up exactly? */
         for (i = 0; i < num_revs; i++)
           {
-            svn_revnum_t rev = ((svn_revnum_t *)revs->elts)[i];
+            svn_revnum_t rev = APR_ARRAY_IDX(revs, i, svn_revnum_t);
             if (rev != revs_changed[i])
               return svn_error_createf
                 (SVN_ERR_FS_GENERAL, NULL,
@@ -749,7 +749,7 @@ check_locations(svn_fs_t *fs, struct locations_info *info,
   struct locations_info *iter;
 
   for (iter = info; iter->rev != 0; ++iter)
-    *(svn_revnum_t *) apr_array_push(a) = iter->rev;
+    APR_ARRAY_PUSH(a, svn_revnum_t) = iter->rev;
 
   SVN_ERR(svn_repos_trace_node_locations(fs, &h, path, peg_revision, a,
                                          NULL, NULL, pool));
@@ -1561,7 +1561,7 @@ commit_editor_authz  (const char **msg,
   /* Open directory /A, to which we have read/write access. */
   SVN_ERR(editor->open_directory("/A", root_baton,
                                  SVN_INVALID_REVNUM,
-                                 pool, &dir_baton));
+                                 subpool, &dir_baton));
 
   /* Test denied file addition.  Denied because of a conflicting rule
      on the file path itself. */

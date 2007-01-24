@@ -78,40 +78,40 @@ const svn_version_t *svn_delta_version(void);
  * @{
  */
 
-
+/** Action codes for text delta instructions. */
 enum svn_delta_action {
-    /** Append the @a len bytes at @a offset in the source view to the
+    /** Append the @a length bytes at @a offset in the source view to the
      * target.
      *
      * It must be the case that @a 0 <= @a offset < @a offset + 
-     * @a len <= size of source view.
+     * @a length <= size of source view.
      */
     svn_txdelta_source,
 
-    /** Append the @a len bytes at @a offset in the target view, to the
+    /** Append the @a length bytes at @a offset in the target view, to the
      * target.
      *
      * It must be the case that @a 0 <= @a offset < current position in the 
      * target view.
      *
-     * However!  @a offset + @a len may be *beyond* the end of the existing
+     * However!  @a offset + @a length may be *beyond* the end of the existing
      * target data.  "Where the heck does the text come from, then?"
-     * If you start at @a offset, and append @a len bytes one at a time,
+     * If you start at @a offset, and append @a length bytes one at a time,
      * it'll work out --- you're adding new bytes to the end at the
      * same rate you're reading them from the middle.  Thus, if your
      * current target text is "abcdefgh", and you get an @c svn_txdelta_target
-     * instruction whose @a offset is @a 6 and whose @a len is @a 7, 
+     * instruction whose @a offset is @a 6 and whose @a length is @a 7, 
      * the resulting string is "abcdefghghghghg".  This trick is actually 
      * useful in encoding long runs of consecutive characters, long runs 
      * of CR/LF pairs, etc.
      */
     svn_txdelta_target,
 
-    /** Append the @a len bytes at @a offset in the window's @a new string 
+    /** Append the @a length bytes at @a offset in the window's @a new string 
      * to the target.
      *
      * It must be the case that @a 0 <= @a offset < @a offset +
-     * @a len <= length of @a new.  Windows MUST use new data in ascending
+     * @a length <= length of @a new.  Windows MUST use new data in ascending
      * order with no overlap at the moment; svn_txdelta_to_svndiff()
      * depends on this.
      */
@@ -121,8 +121,11 @@ enum svn_delta_action {
 /** A single text delta instruction.  */
 typedef struct svn_txdelta_op_t
 {
+  /** Action code of delta instruction */
   enum svn_delta_action action_code;
+  /** Offset of delta, see #svn_delta_action for more details. */
   apr_size_t offset;
+   /** Number of bytes of delta, see #svn_delta_action for more details. */
   apr_size_t length;
 } svn_txdelta_op_t;
 
@@ -469,10 +472,11 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * - The client examines its working copy data, and produces a tree
  *   delta describing the changes to be committed.
  * - The client networking library consumes that delta, and sends them
- *   across the wire as an equivalent series of WebDAV requests.
- * - The Apache WebDAV module receives those requests and produces a
- *   tree delta --- hopefully equivalent to the one the client
- *   produced above.
+ *   across the wire as an equivalent series of network requests (for
+ *   example, to svnserve as an ra_svn protocol stream, or to an
+ *   Apache httpd server as WebDAV commands)
+ * - The server receives those requests and produces a tree delta ---
+ *   hopefully equivalent to the one the client produced above.
  * - The Subversion server module consumes that delta and commits an
  *   appropriate transaction to the filesystem.
  *
@@ -480,19 +484,19 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * - The Subversion server module talks to the filesystem and produces
  *   a tree delta describing the changes necessary to bring the
  *   client's working copy up to date.
- * - The Apache WebDAV module consumes this delta, and assembles a
- *   WebDAV reply representing the appropriate changes.
- * - The client networking library receives that WebDAV reply, and
- *   produces a tree delta --- hopefully equivalent to the one the
- *   Subversion server produced above.
+ * - The server consumes this delta, and assembles a reply
+ *   representing the appropriate changes.
+ * - The client networking library receives that reply, and produces a
+ *   tree delta --- hopefully equivalent to the one the Subversion
+ *   server produced above. 
  * - The working copy library consumes that delta, and makes the
  *   appropriate changes to the working copy.
  *
  * The simplest approach would be to represent tree deltas using the
  * obvious data structure.  To do an update, the server would
  * construct a delta structure, and the working copy library would
- * apply that structure to the working copy; WebDAV's job would simply
- * be to get the structure across the net intact.
+ * apply that structure to the working copy; the network layer's job
+ * would simply be to get the structure across the net intact.
  *
  * However, we expect that these deltas will occasionally be too large
  * to fit in a typical workstation's swap area.  For example, in
@@ -533,7 +537,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * At the start of traversal, the consumer provides @a edit_baton, a
  * baton global to the entire delta edit.  If there is a target
  * revision that needs to be set for this operation, the producer
- * should called the @c set_target_revision function at this point.
+ * should call the @c set_target_revision function at this point.
  *
  * Next, if there are any tree deltas to express, the producer should
  * pass the @a edit_baton to the @c open_root function, to get a baton
@@ -650,7 +654,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * So, the producer needs to use directory and file batons as if it
  * is doing a single depth-first traversal of the tree, with the
  * exception that the producer may keep file batons open in order to
- * make apply_textdelta calls at the end.
+ * make @c apply_textdelta calls at the end.
  *
  *
  * <h3>Pool Usage</h3>
@@ -662,7 +666,7 @@ svn_error_t *svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * the appropriate pool on each function invocation. 
  *
  * Based on the requirement of calling the editor functions in a
- * depth-first style, it is usually customary for the driver to similar
+ * depth-first style, it is usually customary for the driver to similarly
  * nest the pools. However, this is only a safety feature to ensure
  * that pools associated with deeper items are always cleared when the
  * top-level items are also cleared. The interface does not assume, nor
@@ -721,9 +725,9 @@ typedef struct {
 
 
   /** Remove the directory entry named @a path, a child of the directory
-   * represented by @a parent_baton.  If @a revision is set, it is used as a
-   * sanity check to ensure that you are removing the revision of @a path
-   * that you really think you are.
+   * represented by @a parent_baton.  If @a revision is a valid
+   * revision number, it is used as a sanity check to ensure that you
+   * are really removing the revision of @a path that you think you are.
    *
    * All allocations should be performed in @a pool.
    */
@@ -827,7 +831,7 @@ typedef struct {
    *
    * The callback can store a baton for this new file in @a **file_baton;
    * whatever value it stores there should be passed through to
-   * apply_textdelta.  If a valid revnum, @a base_revision is the
+   * @c apply_textdelta.  If a valid revnum, @a base_revision is the
    * current revision of the file.
    *
    * Allocations for the returned @a file_baton should be performed in
@@ -856,7 +860,7 @@ typedef struct {
    * which the delta is being applied; it is ignored if null, and may
    * be ignored even if not null.  If it is not ignored, it must match
    * the checksum of the base text against which svndiff data is being
-   * applied; if it does not, apply_textdelta or the @a *handler call
+   * applied; if it does not, @c apply_textdelta or the @a *handler call
    * which detects the mismatch will return the error
    * SVN_ERR_CHECKSUM_MISMATCH (if there is no base text, there may
    * still be an error if @a base_checksum is neither null nor the hex
@@ -1097,20 +1101,21 @@ svn_delta_editor_to_editor2(const svn_delta_editor_t *editor,
 
 /** A text-delta window handler which does nothing.
  *
- * Editors can return this handler from apply_textdelta if they don't
+ * Editors can return this handler from @c apply_textdelta if they don't
  * care about text delta windows.
  */
 svn_error_t *svn_delta_noop_window_handler(svn_txdelta_window_t *window,
                                            void *baton);
 
-/** Return a cancellation editor that wraps @a wrapped_editor.
+/** Set @a *editor and @a *edit_baton to a cancellation editor that
+ * wraps @a wrapped_editor and @a wrapped_baton.
  *
  * The @a editor will call @a cancel_func with @a cancel_baton when each of 
  * its functions is called, continuing on to call the corresponding wrapped 
- * function if it returns @c SVN_NO_ERROR.
+ * function if @a cancel_func returns @c SVN_NO_ERROR.
  *
- * If @a cancel_func is @c NULL, @a *editor is set to @a wrapped_editor and 
- * @a *edit_baton is set to @a wrapped_baton.
+ * If @a cancel_func is @c NULL, set @a *editor to @a wrapped_editor and 
+ * @a *edit_baton to @a wrapped_baton.
  */
 svn_error_t *
 svn_delta_get_cancellation_editor(svn_cancel_func_t cancel_func,

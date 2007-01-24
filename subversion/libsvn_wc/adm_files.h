@@ -58,6 +58,25 @@ svn_error_t *svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
                                     svn_boolean_t tmp,
                                     apr_pool_t *pool);
 
+/* Create a killme file in the administrative area, indicating that the
+   directory containing the administrative area should be removed.
+
+   If ADM_ONLY is true then remove only the administrative areas for the
+   directory and subdirectories. */
+svn_error_t *svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
+                                 svn_boolean_t adm_only,
+                                 apr_pool_t *pool);
+
+/* Set EXISTS to TRUE if a killme file exists in the administrative area,
+   FALSE otherwise.
+
+   If EXISTS is true, set KILL_ADM_ONLY to the value passed to
+   svn_wc__make_killme() above. */
+svn_error_t *svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
+                                  svn_boolean_t *exists,
+                                  svn_boolean_t *kill_adm_only,
+                                  apr_pool_t *pool);
+
 /* Atomically rename a temporary text-base file to its canonical
    location.  The tmp file should be closed already. */
 svn_error_t *
@@ -172,6 +191,15 @@ svn_error_t *svn_wc__open_text_base(apr_file_t **handle,
                                     apr_int32_t flags,
                                     apr_pool_t *pool);
 
+/* Open the revert-base for FILE.
+ * FILE can be any kind of path ending with a filename.
+ * Behaves like svn_wc__open_adm_file(), which see.
+ */
+svn_error_t *svn_wc__open_revert_base(apr_file_t **handle,
+                                      const char *file,
+                                      apr_int32_t flags,
+                                      apr_pool_t *pool);
+
 /* Close the text-base for FILE.
  * FP was obtained from svn_wc__open_text_base().
  * Behaves like svn_wc__close_adm_file(), which see.
@@ -180,6 +208,15 @@ svn_error_t *svn_wc__close_text_base(apr_file_t *fp,
                                      const char *file,
                                      int sync,
                                      apr_pool_t *pool);
+
+/* Close the revert-base for FILE.
+ * FP was obtained from svn_wc__open_revert_base().
+ * Behaves like svn_wc__close_adm_file(), which see.
+ */
+svn_error_t *svn_wc__close_revert_base(apr_file_t *fp,
+                                       const char *file,
+                                       int sync,
+                                       apr_pool_t *pool);
 
 /* Open the property file for PATH.
  * PATH can be any kind of path, either file or dir.

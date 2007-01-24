@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # -*- mode: shell-script; -*-
 # $Id$
 
@@ -41,12 +41,11 @@
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
 
-trap trap_cleanup SIGHUP SIGTERM SIGINT
+trap stop_httpd_and_die SIGHUP SIGTERM SIGINT
 
-function trap_cleanup() {
-    [ -e  "$HTTPD_PID" ] \
-      && kill $(cat "$HTTPD_PID")
-    exit 1
+function stop_httpd_and_die() {
+  [ -e "$HTTPD_PID" ] && kill $(cat "$HTTPD_PID")
+  exit 1
 }
 
 function say() {
@@ -55,7 +54,7 @@ function say() {
 
 function fail() {
   say $*
-  exit 1
+  stop_httpd_and_die
 }
 
 function query() {
@@ -98,6 +97,15 @@ function get_prog_name() {
 
 # dont assume sbin is in the PATH
 PATH="/usr/sbin:/usr/local/sbin:$PATH"
+
+# Remove any proxy environmental variables that affect wget or curl.
+# We don't need a proxy to connect to localhost and having the proxy
+# environmental variables set breaks the Apache configuration file
+# test below, since wget or curl will ask the proxy to connect to
+# localhost.
+unset PROXY
+unset http_proxy
+unset HTTPS_PROXY
 
 # Pick up value from environment or PATH (also try apxs2 - for Debian)
 [ ${APXS:+set} ] \
@@ -158,15 +166,25 @@ LOAD_MOD_LOG_CONFIG=$(get_loadmodule_config mod_log_config) \
 LOAD_MOD_MIME=$(get_loadmodule_config mod_mime) \
   || fail "MIME module not found"
 
-# needed for Auth*
+# needed for Auth*, Require, etc. directives
 LOAD_MOD_AUTH=$(get_loadmodule_config mod_auth) \
   || {
 say "Monolithic Auth module not found. Assuming we run against Apache 2.1+"
 LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_basic)" \
     || fail "Auth_Basic module not found."
-LOAD_MOD_AUTHN="$(get_loadmodule_config mod_authn_file)" \
+LOAD_MOD_ACCESS_COMPAT="$(get_loadmodule_config mod_access_compat)" \
+    && {
+say "Found Auth modules for Apache 2.3.0+"
+LOAD_MOD_AUTHN_CORE="$(get_loadmodule_config mod_authn_core)" \
+    || fail "Authn_Core module not found."
+LOAD_MOD_AUTHZ_CORE="$(get_loadmodule_config mod_authz_core)" \
+    || fail "Authz_Core module not found."
+LOAD_MOD_AUTHZ_HOST="$(get_loadmodule_config mod_authz_host)" \
+    || fail "Authz_Host module not found."
+}
+LOAD_MOD_AUTHN_FILE="$(get_loadmodule_config mod_authn_file)" \
     || fail "Authn_File module not found."
-LOAD_MOD_AUTHZ="$(get_loadmodule_config mod_authz_user)" \
+LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
 }
 
@@ -191,14 +209,18 @@ $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 touch $HTTPD_MIME_TYPES
 
 cat > "$HTTPD_CFG" <<__EOF__
-$LOAD_MOD_DAV
-LoadModule          dav_svn_module "$MOD_DAV_SVN"
-LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
+$LOAD_MOD_DAV
+LoadModule          dav_svn_module "$MOD_DAV_SVN"
 $LOAD_MOD_AUTH
-$LOAD_MOD_AUTHN
-$LOAD_MOD_AUTHZ
+$LOAD_MOD_AUTHN_CORE
+$LOAD_MOD_AUTHN_FILE
+$LOAD_MOD_AUTHZ_CORE
+$LOAD_MOD_AUTHZ_USER
+$LOAD_MOD_AUTHZ_HOST
+LoadModule          authz_svn_module "$MOD_AUTHZ_SVN"
+
 LockFile            lock
 User                $(whoami)
 Group               $(groups | awk '{print $1}')
@@ -227,6 +249,7 @@ CustomLog           "$HTTPD_ROOT/req" format
 </Directory>
 <Directory "$HTTPD_ROOT">
   AllowOverride     none
+  #Require           all granted
 </Directory>
 
 <Location /svn-test-work/repositories>
@@ -260,10 +283,26 @@ sleep 2
 
 say "HTTPD started and listening on '$BASE_URL'..."
 
-# use wget to download configuration file through HTTPD and compare it to the original
-wget -q -O "$HTTPD_CFG-copy" "$BASE_URL/cfg"
-diff -q "$HTTPD_CFG" "$HTTPD_CFG-copy" \
-  || fail "HTTPD doesn't operate according to the configuration"
+# Perform a trivial validation of our httpd configuration by
+# downloading a file and comparing it to the original copy.
+### The file at the path "/cfg" can't be retrieved from Apache 2.3+.
+### We get a 500 ISE, with the following error in the log from httpd's
+### server/request.c:ap_process_request_internal():
+###   [Wed Feb 22 13:06:55 2006] [crit] [client 127.0.0.1] configuration error:  couldn't check user: /cfg
+HTTP_FETCH=wget
+HTTP_FETCH_OUTPUT="-q -O"
+type wget > /dev/null 2>&1
+if [ $? -ne 0 ]; then
+  type curl > /dev/null 2>&1
+  if [ $? -ne 0 ]; then
+    fail "Neither curl or wget found."
+  fi
+  HTTP_FETCH=curl
+  HTTP_FETCH_OUTPUT="-s -o"
+fi
+$HTTP_FETCH $HTTP_FETCH_OUTPUT "$HTTPD_CFG-copy" "$BASE_URL/cfg"
+diff -q "$HTTPD_CFG" "$HTTPD_CFG-copy" > /dev/null \
+  || fail "HTTPD doesn't operate according to the generated configuration"
 rm "$HTTPD_CFG-copy"
 
 say "HTTPD is good, starting the tests..."
@@ -275,7 +314,7 @@ else
   pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
   TEST="$1"
   shift
-  time "./${TEST}_tests.py" "--url=$BASE_URL" $*
+  time "$SCRIPTDIR/${TEST}_tests.py" "--url=$BASE_URL" $*
   r=$?
   popd >/dev/null
 fi

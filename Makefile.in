@@ -117,6 +117,7 @@ SWIG_PL_INCLUDES = @SWIG_PL_INCLUDES@
 SWIG_RB_INCLUDES = @SWIG_RB_INCLUDES@ -I$(SWIG_SRC_DIR)/ruby/libsvn_swig_ruby
 SWIG_RB_COMPILE = @SWIG_RB_COMPILE@
 SWIG_RB_LINK = @SWIG_RB_LINK@
+SWIG_RB_LIBS = @SWIG_RB_LIBS@
 SWIG_RB_SITE_LIB_DIR = @SWIG_RB_SITE_LIB_DIR@
 SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
 SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
@@ -338,13 +339,22 @@ install-static: @INSTALL_STATIC_RULES@
 # JavaHL target aliases
 javahl: javahl-java javahl-javah javahl-lib @JAVAHL_TESTS_TARGET@
 install-javahl: install-javahl-java install-javahl-javah install-javahl-lib
+
+### FIXME: We need to delete {*.lo,*.la,*.o} from the javahl/native/
+### dir, or we get complaints from g++.
+### FIXME: Instead of removing the contents of javahl_java_PATH, we should
+### remove the entire directory, and create it again when running the 'javahl'
+### target.
+clean-javahl:
+	rm -rf $(javahl_java_PATH)/* $(javahl_javah_PATH) @JAVAHL_OBJDIR@
+
 check-javahl: javahl
 	@if [ -z "@JAVAHL_TESTS_TARGET@" ]; then \
         echo "--with-junit flag must be passed to configure"; \
         exit 1; \
     fi
 	@FIX_JAVAHL_LIB@
-	$(JAVA) -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) org.tigris.subversion.javahl.tests.BasicTests
+	$(JAVA) -Dtest.rootdir=$(abs_builddir)/subversion/bindings/java/javahl/test-work -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) org.tigris.subversion.javahl.tests.RunTests
 
 # "make check CLEANUP=true" will clean up directories for successful tests.
 # "make check TESTS=subversion/tests/cmdline/basic_tests.py"
@@ -360,6 +370,9 @@ check: $(TEST_DEPS) @BDB_TEST_DEPS@
 	  fi;                                                                \
 	  if test "$(FS_TYPE)" != ""; then                                   \
 	    flags="--fs-type $(FS_TYPE) $$flags";                            \
+	  fi;                                                                \
+	  if test "$(ENABLE_SASL)" != ""; then                               \
+	    flags="--enable-sasl $$flags";                                   \
 	  fi;                                                                \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py $$flags                 \
 		    '$(abs_srcdir)' '$(abs_builddir)' $(TESTS);              \
@@ -382,7 +395,11 @@ davautocheck:
 # First, run:
 #   subversion/svnserve/svnserve -d -r `pwd`/subversion/tests/cmdline
 svncheck: 
-	@$(MAKE) check BASE_URL=svn://localhost
+	@$(MAKE) check BASE_URL=svn://127.0.0.1
+
+# 'make svnserveautocheck' runs svnserve for you and kills it.
+svnserveautocheck: svnserve
+	bash $(top_srcdir)/subversion/tests/cmdline/svnserveautocheck.sh
 
 # First, run:
 #   subversion/svnserve/svnserve --listen-host "::1" -d -r `pwd`/subversion/tests/cmdline
@@ -396,8 +413,8 @@ svnsshcheck:
 	@$(MAKE) check \
 	  BASE_URL=svn+ssh://localhost`pwd`/subversion/tests/cmdline
 
-fsfscheck:
-	@$(MAKE) check FS_TYPE=fsfs
+bdbcheck:
+	@$(MAKE) check FS_TYPE=bdb
 
 check-clean:
 	rm -rf subversion/tests/cmdline/svn-test-work              \
@@ -406,6 +423,7 @@ check-clean:
                subversion/tests/libsvn_ra_local/test-repo-*    \
                subversion/tests/libsvn_repos/test-repo-*       \
                subversion/tests/libsvn_subr/z                  \
+               subversion/tests/svnserveautocheck.pid          \
                tests.log
 
 mkdir-init:

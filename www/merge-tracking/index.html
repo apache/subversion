@@ -3,12 +3,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
-  @import "tigris-branding/css/tigris.css";
-  @import "tigris-branding/css/inst.css";
+  @import "../branding/css/tigris.css";
+  @import "../branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="tigris-branding/css/print.css"/>
-<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+  href="../branding/css/print.css"/>
+<script type="text/javascript" src="../branding/scripts/tigris.js"></script>
 <title>Merge Tracking</title>
 </head>
 
@@ -22,9 +22,9 @@
 <div class="h3" id="internal">
 <h3>Subversion's own Merge Tracking</h3>
 
-<p>Subversion's own merge tracking support is still in the conception
-stage.  Email the development list if you're interested in
-participating in its definition or implementation.</p>
+<p>Early development of Subversion's own merge tracking support is
+currently underway.  Email the development list if you're interested
+in participating in its definition or implementation.</p>
 
 <ul>
   <li><a href="requirements.html">Use Cases and Requirements</a></li>
@@ -34,23 +34,38 @@ participating in its definition or implementation.</p>
   <li><a href="design.html">Design Specification</a></li>
 </ul>
 
+<p>A <a
+href="http://svn.collab.net/repos/svn/branches/merge-tracking/">prototype</a>
+of the above exists which is roughly equivalent in functionality to <a
+href="http://www.orcaware.com/svn/wiki/Svnmerge.py">svnmerge.py</a>.
+The protoype adds <a href="http://www.sqlite.org/">sqlite</a> as a
+dependency, and supports both the FSFS and BerkeleyDB Subversion file
+system backends.  Tasks remaining for the initial implementation are
+tracked <a
+href="http://svn.collab.net/repos/svn/branches/merge-tracking/TODO"
+>here</a>.</p>
+
+
 </div>  <!-- internal -->
 
 
 <div class="h3" id="external">
 <h3>External Merge Tracking</h3>
 
+<div class="h4" id="leveraged">
 <h4>Tools built on top of Subversion</h4>
 
 <ul>
-  <li><a href="http://www.orcaware.com/svn/wiki/index.php/Svnmerge.py"
+  <li><a href="http://www.orcaware.com/svn/wiki/Svnmerge.py"
   >svnmerge</a></li>
 
   <li><a href="http://svk.elixus.org/">svk</a></li>
 </ul>
+</div>
 
 <!-- ### Do we want this info here, or buried deeper in this web
 space?
+<div class="h4" id="non-svn">
 <h4>Other tools</h4>
 
 <ul>
@@ -63,6 +78,7 @@ space?
 
   <li><a href="http://users.footprints.net/~kaz/mcvs.html">MetaCVS</a></li>
 </ul>
+</div>
 -->
 
 </div>  <!-- external -->

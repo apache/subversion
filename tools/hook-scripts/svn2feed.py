@@ -148,7 +148,7 @@ class Svn2Feed:
             'title': "Revision %s" % revision,
             'link': self.item_url and "%s?rev=%s" % (self.item_url, revision),
             'date': self._format_updated_ts(info_lines[1]),
-            'description': desc,
+            'description': "<pre>" + desc + "</pre>",
             }
 
         return item_dict

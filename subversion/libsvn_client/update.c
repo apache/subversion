@@ -73,6 +73,11 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   /* Sanity check.  Without this, the update is meaningless. */
   assert(path);
 
+  if (svn_path_is_url(path))
+    return svn_error_createf(SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                             _("Path '%s' is not a directory"),
+                             path);
+
   /* Use PATH to get the update's anchor and targets and get a write lock */
   SVN_ERR(svn_wc_adm_open_anchor(&adm_access, &dir_access, &target, path,
                                  TRUE, recurse ? -1 : 0,

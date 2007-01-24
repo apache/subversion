@@ -167,7 +167,7 @@ I.    BUILD REQUIREMENTS
       newer. The autogen.sh script knows about that.
 
 
-      4.  Neon library 0.25.5 (http://www.webdav.org/neon/)
+      4.  Neon library 0.25 or 0.26 (http://www.webdav.org/neon/)
 
       The Neon library allows a Subversion client to interact with remote
       repositories over the Internet via a WebDAV based protocol.  If you
@@ -180,6 +180,7 @@ I.    BUILD REQUIREMENTS
       and it can also be obtained from:
 
           http://www.webdav.org/neon/neon-0.25.5.tar.gz
+          http://www.webdav.org/neon/neon-0.26.1.tar.gz
 
       Building Neon inside the subversion build:
 
@@ -218,21 +219,27 @@ I.    BUILD REQUIREMENTS
       or if you are building a Subversion client that will only speak
       to remote (networked) repositories, you don't need it.
 
-      The current recommended version is 4.3.27. We *strongly* recommend
-      using 4.3 or 4.2 over 4.1 or 4.0.  Not only are these the fastest
-      and most stable we've seen, but they also enable Subversion
-      repositories to automatically clean up database journal files to
-      save disk space.
+      The current recommended version is 4.4.20, which brings
+      auto-recovery functionality to the Berkeley DB database
+      environment.  (Preliminary testing indicates that Subversion
+      will also work with Berkeley DB 4.5 once APR grows support for
+      that release.)
+
+      If you must use an older version of Berkeley DB, we *strongly*
+      recommend using 4.3 or 4.2 over the 4.1 or 4.0 versions.  Not
+      only are these significantly faster and more stable, but they
+      also enable Subversion repositories to automatically clean up
+      database journal files to save disk space.
 
       You'll need Berkeley DB installed on your system.  You can
       get it from:
 
-          http://www.sleepycat.com/download/index.shtml
+          http://www.oracle.com/technology/software/products/berkeley-db/index.html
 
       If you have Berkeley DB installed in a place not searched by default
       for includes and libraries, add something like this:
 
-          --with-berkeley-db=/usr/local/BerkeleyDB.4.3
+          --with-berkeley-db=/usr/local/BerkeleyDB.4.4
 
       to your `configure' switches, and the build process will use the
       Berkeley library in the named directory.  You may need to use a
@@ -641,10 +648,11 @@ II.   INSTALLATION
         needed to compile Apache or APR.  Note that this is the actual awk
         program, not an installer - just rename it to awk.exe and it is
         ready to use.
-      * Neon 0.25.0 or higher, downloaded from
-        http://www.webdav.org/neon/neon-0.25.0.tar.gz which is required
+      * Neon 0.26.1 or higher, downloaded from
+        http://www.webdav.org/neon/neon-0.26.1.tar.gz which is required
         for building the client components.  Neon is included in the zip file
-        distribution.
+        distribution.  (0.25.0+ compiles, but does not properly support all
+        HTTP auth types.)
       * Apache apr, apr-util, and apr-iconv libraries, version 0.9.12.
         Included in both the Subversion dependencies ZIP file and the
         Apache 2.058 source zip.  If you are building from a Subversion
@@ -664,13 +672,12 @@ II.   INSTALLATION
 
       * [Optional] Apache 2 source, downloaded from
         http://httpd.apache.org/download.cgi, these instructions assume
-        version 2.0.58.  Only needed for building the server dso modules.
-        Note that although Subversion will compile against Apache 2.2.2
-        and APR 1.2.7, there is a bug that causes runtime failures with
-        Subversion on Windows.  It will hopefully be fixed in the
-        Apache 2.2.3 and APR 1.2.8 release.  The patch is available at:
-        http://www.mail-archive.com/dev@apr.apache.org/msg15242.html if
-        you want to patch and build APR yourself.
+        version 2.0.58.  This is only needed for building the Subversion
+        server Apache modules.  Note that although Subversion will compile
+        against Apache 2.2.3 and APR 1.2.7, there is a bug that causes
+        runtime failures with Subversion on Windows.  The fix is included in
+        APR 1.2.8 and will be bundled in the next HTTP Server release
+        (likely to be 2.2.4).
       * [Optional] Apache 2 msi install file, also from
         http://httpd.apache.org/download.cgi (required for running the
         tests).  Only needed for testing the server dso modules and if
@@ -800,7 +807,7 @@ II.   INSTALLATION
    E.4 Building the Binaries
 
     To build the binaries either follow the instructions here or use
-    build\win32\vc6-build.bat.in after editing it's default paths to match
+    build\win32\vc6-build.bat.in after editing its default paths to match
     yours and saving it as vc6-build.bat.  The vc6-build.bat does a full build
     using all options so it requires Apache 2 source and the other optional
     components.
@@ -867,7 +874,7 @@ II.   INSTALLATION
         using the latest cygwin, you probably don't want the zip file source
         distribution though. ymmv.
       * The /USEENV switch to msdev makes it take notice of the INCLUDE and
-        LIB environment variables, it also makes it ignore it's own lib and
+        LIB environment variables, it also makes it ignore its own lib and
         include settings so you need to have the Windows SDK lib and include
         directories in the LIB and INCLUDE environment variables.  Do *not*
         use this switch when starting up the msdev Visual environment.  If you

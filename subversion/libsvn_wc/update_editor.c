@@ -139,6 +139,14 @@ struct dir_baton
      yet in the parent's list of entries */
   svn_boolean_t added;
 
+  /* Set if an unversioned dir of the same name already existed in
+     this directory. */
+  svn_boolean_t existed;
+
+  /* Set if a dir of the same name already exists and is
+     scheduled for addition without history. */
+  svn_boolean_t add_existed;
+
   /* An array of svn_prop_t structures, representing all the property
      changes to be applied to this directory. */
   apr_array_header_t *propchanges;
@@ -211,8 +219,7 @@ get_entry_url(svn_wc_adm_access_t *associated_access,
     }
   if (err || (! entry) || (! entry->url))
     {
-      if (err)
-        svn_error_clear(err);
+      svn_error_clear(err);
       return NULL;
     }
 
@@ -342,6 +349,8 @@ make_dir_baton(const char *path,
   d->pool         = svn_pool_create(pool);
   d->propchanges  = apr_array_make(pool, 1, sizeof(svn_prop_t));
   d->added        = added;
+  d->existed      = FALSE;
+  d->add_existed  = FALSE;
   d->bump_info    = bdi;
   d->log_number   = 0;
 
@@ -522,6 +531,10 @@ struct file_baton
      this directory. */
   svn_boolean_t existed;
 
+  /* Set if a file of the same name already exists and is
+     scheduled for addition without history. */
+  svn_boolean_t add_existed;
+
   /* This gets set if the file underwent a text change, which guides
      the code that syncs up the adm dir and working copy. */
   svn_boolean_t text_changed;
@@ -585,6 +598,7 @@ make_file_baton(struct dir_baton *pb,
   f->bump_info    = pb->bump_info;
   f->added        = adding;
   f->existed      = FALSE;
+  f->add_existed  = FALSE;
   f->dir_baton    = pb;
 
   /* No need to initialize f->digest, since we used pcalloc(). */
@@ -687,10 +701,23 @@ prep_directory(struct dir_baton *db,
         = db->edit_baton->adm_access
         ? svn_wc_adm_access_pool(db->edit_baton->adm_access)
         : db->edit_baton->pool;
+      svn_error_t *err = svn_wc_adm_open3(&adm_access,
+                                          db->edit_baton->adm_access,
+                                          db->path, TRUE, 0, NULL, NULL,
+                                          adm_access_pool);
 
-      SVN_ERR(svn_wc_adm_open3(&adm_access, db->edit_baton->adm_access,
-                               db->path, TRUE, 0, NULL, NULL,
-                               adm_access_pool));
+      /* db->path may be scheduled for addition without history.
+         In that case db->edit_baton->adm_access already has it locked. */
+      if (err && err->apr_err == SVN_ERR_WC_LOCKED)
+        {
+           svn_error_clear(err);
+           err = svn_wc_adm_retrieve(&adm_access,
+                                     db->edit_baton->adm_access,
+                                     db->path, adm_access_pool);
+        }
+
+      SVN_ERR(err);
+
       if (!db->edit_baton->adm_access)
         db->edit_baton->adm_access = adm_access;
     }
@@ -715,7 +742,7 @@ accumulate_entry_props(svn_stringbuf_t *log_accum,
 {
   int i;
   svn_wc_entry_t tmp_entry;
-  apr_uint32_t flags = 0;
+  apr_uint64_t flags = 0;
 
   if (lock_state)
     *lock_state = svn_wc_notify_lock_state_unchanged;
@@ -836,7 +863,7 @@ open_root(void *edit_baton,
       /* For an update with a NULL target, this is equivalent to open_dir(): */
       svn_wc_adm_access_t *adm_access;
       svn_wc_entry_t tmp_entry;
-      apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
+      apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
         SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
                                      
       /* Mark directory as being at target_revision, but incomplete. */  
@@ -1058,7 +1085,6 @@ add_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   struct dir_baton *db = make_dir_baton(path, eb, pb, TRUE, pool);
   svn_node_kind_t kind;
-  svn_boolean_t exists = FALSE;
 
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
      NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
@@ -1068,59 +1094,70 @@ add_directory(const char *path,
 
   SVN_ERR(svn_io_check_path(db->path, &kind, db->pool));
 
-  /* Check for obstructions. */
-  if (eb->allow_unver_obstructions)
-    {
-      /* The path can exist, but it must be a directory... */
-      if (kind == svn_node_file || kind == svn_node_unknown)
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("Failed to add directory '%s': a non-directory object of the "
-             "same name already exists"),
-           svn_path_local_style(db->path, pool));
-      if (kind == svn_node_dir)
-        {
-          /* ...Ok, it's a directory but it can't be versioned. We don't
-             handle that, yet... */
-          svn_wc_adm_access_t *adm_access;
+  /* The path can exist, but it must be a directory... */
+  if (kind == svn_node_file || kind == svn_node_unknown)
+    return svn_error_createf
+      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+       _("Failed to add directory '%s': a non-directory object of the "
+         "same name already exists"),
+       svn_path_local_style(db->path, pool));
 
-          /* Test the obstructing dir to see if it's versioned. */
-          svn_error_t *err = svn_wc_adm_open3(&adm_access, NULL,
-                                              db->path, FALSE, 0,
-                                              NULL, NULL, pool);
-          if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
-            {
-              /* Something quite unexepected has happened. */
-              return err;
-            }
-          else if (err)
+  if (kind == svn_node_dir)
+    {
+      /* ...Ok, it's a directory but it can't be versioned or
+         scheduled for addition with history. */
+      svn_wc_adm_access_t *adm_access;
+
+      /* Test the obstructing dir to see if it's versioned. */
+      svn_error_t *err = svn_wc_adm_open3(&adm_access, NULL,
+                                          db->path, FALSE, 0,
+                                          NULL, NULL, pool);
+
+      if (err && err->apr_err != SVN_ERR_WC_NOT_DIRECTORY)
+        {
+          /* Something quite unexepected has happened. */
+          return err;
+        }
+      else if (err) /* Not a versioned dir. */
+        {
+          svn_error_clear(err);
+          if (eb->allow_unver_obstructions)
             {
               /* Obstructing dir is not versioned, just need to flag it as
                  existing then we are done here. */
-              exists = TRUE;
-              svn_error_clear(err);
+              db->existed = TRUE;
             }
           else
             {
-              /* Obstructing dir *is* versioned. */
               return svn_error_createf
                 (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                 _("Failed to forcibly add directory '%s': a versioned "
+                 _("Failed to add directory '%s': an unversioned "
                    "directory of the same name already exists"),
                  svn_path_local_style(db->path, pool));
             }
         }
-    }
-  else
-    {
-      /* There should be nothing with this name if obstructions are
-         not allowed. */
-      if (kind != svn_node_none)
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("Failed to add directory '%s': "
-             "object of the same name already exists"),
-           svn_path_local_style(db->path, pool));
+      else /* Obstructing dir *is* versioned or scheduled for addition. */
+        {
+          const svn_wc_entry_t *entry;
+          SVN_ERR(svn_wc_entry(&entry, db->path, adm_access, FALSE, pool));
+
+          /* Anything other than a dir scheduled for addition without
+             history is an error. */
+          if (entry 
+              && entry->schedule == svn_wc_schedule_add
+              && ! entry->copied)
+            {
+              db->add_existed = TRUE;
+            }
+          else
+            {
+              return svn_error_createf
+                (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                 _("Failed to add directory '%s': a versioned "
+                   "directory of the same name already exists"),
+                 svn_path_local_style(db->path, pool));
+            }
+        }
     }
 
   /* It may not be named the same as the administrative directory. */
@@ -1148,27 +1185,19 @@ add_directory(const char *path,
   else  /* ...or we got invalid copyfrom args. */
     {
       svn_wc_adm_access_t *adm_access;
-      const svn_wc_entry_t *dir_entry;
-      apr_hash_t *entries;
       svn_wc_entry_t tmp_entry;
+      apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND |
+        SVN_WC__ENTRY_MODIFY_DELETED | SVN_WC__ENTRY_MODIFY_ABSENT;
 
-      /* Extra check:  a directory by this name may not exist, but there
-         may still be one scheduled for addition.  That's a genuine
-         tree-conflict.  */
       SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                                   pb->path, db->pool));
-      SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, db->pool));
-      dir_entry = apr_hash_get(entries, db->name, APR_HASH_KEY_STRING);
-      if (dir_entry && dir_entry->schedule == svn_wc_schedule_add)
-        return svn_error_createf
-          (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-           _("Failed to add directory '%s': object of the same name "
-             "is already scheduled for addition"),
-           svn_path_local_style(path, pool));
 
       /* Immediately create an entry for the new directory in the parent.
          Note that the parent must already be either added or opened, and
-         thus it's in an 'incomplete' state just like the new dir.  */      
+         thus it's in an 'incomplete' state just like the new dir.
+         The entry may already exist if the new directory is already
+         scheduled for addition without history, in that case set
+         its schedule to normal. */
       tmp_entry.kind = svn_node_dir;
       /* Note that there may already exist a 'ghost' entry in the
          parent with the same name, in a 'deleted' or 'absent' state.
@@ -1176,11 +1205,43 @@ add_directory(const char *path,
          we get rid of the state flag when doing so: */
       tmp_entry.deleted = FALSE;
       tmp_entry.absent = FALSE;
+
+      if (db->add_existed)
+        {
+          tmp_entry.schedule = svn_wc_schedule_normal;
+          modify_flags |= SVN_WC__ENTRY_MODIFY_SCHEDULE |
+            SVN_WC__ENTRY_MODIFY_FORCE;
+        }
+
       SVN_ERR(svn_wc__entry_modify(adm_access, db->name, &tmp_entry,
-                                   (SVN_WC__ENTRY_MODIFY_KIND    |
-                                    SVN_WC__ENTRY_MODIFY_DELETED |
-                                    SVN_WC__ENTRY_MODIFY_ABSENT),
+                                   modify_flags,
                                    TRUE /* immediate write */, pool));
+
+      if (db->add_existed)
+        {
+          /* Immediately tweak the schedule for "this dir" so it too
+             is no longer scheduled for addition.  Change rev from 0
+             to the target revision allowing prep_directory() to do
+             its thing without error. */
+          modify_flags  = SVN_WC__ENTRY_MODIFY_SCHEDULE
+            | SVN_WC__ENTRY_MODIFY_FORCE | SVN_WC__ENTRY_MODIFY_REVISION;
+
+          SVN_ERR(svn_wc_adm_retrieve(&adm_access,
+                                      db->edit_baton->adm_access,
+                                      db->path, pool));
+          tmp_entry.revision = *(eb->target_revision);
+ 
+          if (eb->switch_url)
+            {
+              tmp_entry.url = svn_path_url_add_component(eb->switch_url,
+                                                         db->name, pool);
+              modify_flags |= SVN_WC__ENTRY_MODIFY_URL;
+            }
+ 
+          SVN_ERR(svn_wc__entry_modify(adm_access, NULL, &tmp_entry,
+                                       modify_flags,
+                                       TRUE /* immediate write */, pool));
+        }
     }
 
   SVN_ERR(prep_directory(db,
@@ -1190,11 +1251,15 @@ add_directory(const char *path,
 
   *child_baton = db;
 
-  if (eb->notify_func)
+  /* If this add was obstructed by dir scheduled for addition without
+     history let close_file() handle the notification because there
+     might be properties to deal with. */
+  if (eb->notify_func && !(db->add_existed))
     {
       svn_wc_notify_t *notify = svn_wc_create_notify(
         db->path,
-        exists ? svn_wc_notify_exists : svn_wc_notify_update_add,
+        db->existed ?
+        svn_wc_notify_exists : svn_wc_notify_update_add,
         pool);
       notify->kind = svn_node_dir;
       (*eb->notify_func)(eb->notify_baton, notify, pool);
@@ -1214,7 +1279,7 @@ open_directory(const char *path,
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   svn_wc_entry_t tmp_entry;
-  apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
+  apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
     SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
                                  
   svn_wc_adm_access_t *adm_access;
@@ -1392,11 +1457,17 @@ close_directory(void *dir_baton,
 
   /* Notify of any prop changes on this directory -- but do nothing
      if it's an added directory, because notification has already
-     happened in that case. */
-  if ((! db->added) && (db->edit_baton->notify_func))
+     happened in that case - unless the add was obstructed by a dir
+     scheduled for addition without history, in which case we handle
+     notification here). */
+  if ((db->add_existed || (! db->added)) && (db->edit_baton->notify_func))
     {
       svn_wc_notify_t *notify
-        = svn_wc_create_notify(db->path, svn_wc_notify_update_update, pool);
+        = svn_wc_create_notify(db->path,
+                               db->existed || db->add_existed
+                               ? svn_wc_notify_exists
+                               : svn_wc_notify_update_update,
+                               pool);
       notify->kind = svn_node_dir;
       notify->prop_state = prop_state;
     (*db->edit_baton->notify_func)(db->edit_baton->notify_baton,
@@ -1519,15 +1590,27 @@ add_or_open_file(const char *path,
   
   /* Sanity checks. */
 
-  /* If adding, there should be nothing with this name unless obstructions
-     are permitted. */
+  /* If adding, there should be nothing with this name unless unversioned
+     obstructions are permitted or the obstruction is scheduled for addition
+     without history. */
   if (adding && (kind != svn_node_none))
     {
-      if (eb->allow_unver_obstructions)
+      if (eb->allow_unver_obstructions
+          || (entry && entry->schedule == svn_wc_schedule_add))
         {
-          /* The name can exist, but it better *really* be a file.  If
-             it is treat the existing file as a WC modification by the
-             user. */
+          if (entry && entry->copied)
+            {
+              return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE,
+                                       NULL,
+                                       _("Failed to add file '%s': a "
+                                         "file of the same name is "
+                                         "already scheduled for addition "
+                                         "with history"),
+                                       svn_path_local_style(fb->path,
+                                                            pool));
+            }
+
+          /* The name can exist, but it better *really* be a file. */
           if (kind != svn_node_file)
             return svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE,
                                      NULL,
@@ -1536,7 +1619,11 @@ add_or_open_file(const char *path,
                                        "name already exists"),
                                      svn_path_local_style(fb->path,
                                                           pool));
-          fb->existed = TRUE;
+
+          if (entry)
+            fb->add_existed = TRUE; /* Flag as addition without history. */
+          else
+            fb->existed = TRUE;     /* Flag as unversioned obstruction. */
         }
       else
         {
@@ -1554,20 +1641,7 @@ add_or_open_file(const char *path,
      It certainly doesn't hurt to re-add the file.  We can't possibly
      get the entry showing up twice in `entries', since it's a hash;
      and we know that we won't lose any local mods.  Let the existing
-     entry be overwritten.
-
-     sussman follows up to himself, many months later: the above
-     scenario is fine, as long as the pre-existing entry isn't
-     scheduled for addition.  that's a genuine tree-conflict,
-     regardless of whether the working file still exists.  */
-
-  if (adding && entry && entry->schedule == svn_wc_schedule_add)
-    return svn_error_createf
-      (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-       _("Failed to add file '%s': object of the same name is already "
-         "scheduled for addition"),
-       svn_path_local_style(fb->path, pool));
-    
+     entry be overwritten. */
 
   /* If replacing, make sure the .svn entry already exists. */
   if ((! adding) && (! entry))
@@ -1629,6 +1703,7 @@ apply_textdelta(void *file_baton,
   svn_error_t *err;
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *ent;
+  svn_boolean_t replaced;
 
   /* Open the text base for reading, unless this is a checkout. */
   hb->source = NULL;
@@ -1652,7 +1727,9 @@ apply_textdelta(void *file_baton,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
                               svn_path_dirname(fb->path, pool), pool));
   SVN_ERR(svn_wc_entry(&ent, fb->path, adm_access, FALSE, pool));
-      
+
+  replaced = ent && ent->schedule == svn_wc_schedule_replace;
+
   /* Only compare checksums this file has an entry, and the entry has
      a checksum.  If there's no entry, it just means the file is
      created in this update, so there won't be any previously recorded
@@ -1663,8 +1740,11 @@ apply_textdelta(void *file_baton,
       unsigned char digest[APR_MD5_DIGESTSIZE];
       const char *hex_digest;
       const char *tb;
-      
-      tb = svn_wc__text_base_path(fb->path, FALSE, pool);
+
+      if (replaced)
+        tb = svn_wc__text_revert_path(fb->path, FALSE, pool);
+      else
+        tb = svn_wc__text_base_path(fb->path, FALSE, pool);
       SVN_ERR(svn_io_file_checksum(digest, tb, pool));
       hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
       
@@ -1680,7 +1760,7 @@ apply_textdelta(void *file_baton,
                svn_path_local_style(tb, pool), base_checksum, hex_digest);
         }
       
-      if (strcmp(hex_digest, ent->checksum) != 0)
+      if (! replaced && strcmp(hex_digest, ent->checksum) != 0)
         {
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
@@ -1688,14 +1768,26 @@ apply_textdelta(void *file_baton,
              svn_path_local_style(tb, pool), ent->checksum, hex_digest);
         }
     }
-  
-  err = svn_wc__open_text_base(&hb->source, fb->path, APR_READ,
-                               handler_pool);
+
+  if (replaced)
+    err = svn_wc__open_revert_base(&hb->source, fb->path,
+                                   APR_READ,
+                                   handler_pool);
+  else
+    err = svn_wc__open_text_base(&hb->source, fb->path, APR_READ,
+                                 handler_pool);
+
   if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
     {
       if (hb->source)
-        svn_error_clear(svn_wc__close_text_base(hb->source, fb->path,
-                                                0, handler_pool));
+        {
+          if (replaced)
+            svn_error_clear(svn_wc__close_revert_base(hb->source, fb->path,
+                                                      0, handler_pool));
+          else
+            svn_error_clear(svn_wc__close_text_base(hb->source, fb->path,
+                                                    0, handler_pool));
+        }
       svn_pool_destroy(handler_pool);
       return err;
     }
@@ -1704,17 +1796,30 @@ apply_textdelta(void *file_baton,
       svn_error_clear(err);
       hb->source = NULL;  /* make sure */
     }
-  
+
   /* Open the text base for writing (this will get us a temporary file).  */
   hb->dest = NULL;
-  err = svn_wc__open_text_base(&hb->dest, fb->path,
-                               (APR_WRITE | APR_TRUNCATE | APR_CREATE),
-                               handler_pool);
+
+  if (replaced)
+    err = svn_wc__open_revert_base(&hb->dest, fb->path,
+                                   (APR_WRITE | APR_TRUNCATE | APR_CREATE),
+                                   handler_pool);
+  else
+    err = svn_wc__open_text_base(&hb->dest, fb->path,
+                                 (APR_WRITE | APR_TRUNCATE | APR_CREATE),
+                                 handler_pool);
+
   if (err)
     {
       if (hb->dest)
-        svn_error_clear(svn_wc__close_text_base(hb->dest, fb->path, 0,
-                                                handler_pool));
+        {
+          if (replaced)
+            svn_error_clear(svn_wc__close_revert_base(hb->dest, fb->path, 0,
+                                                      handler_pool));
+          else
+            svn_error_clear(svn_wc__close_text_base(hb->dest, fb->path, 0,
+                                                    handler_pool));
+        }
       svn_pool_destroy(handler_pool);
       return err;
     }
@@ -1875,7 +1980,7 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
      in case we're overwriting an existing phantom 'deleted' or
      'absent' entry, be sure to remove the hiddenness. */
   svn_wc_entry_t tmp_entry;
-  apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND
+  apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND
     | SVN_WC__ENTRY_MODIFY_REVISION
     | SVN_WC__ENTRY_MODIFY_DELETED
     | SVN_WC__ENTRY_MODIFY_ABSENT;
@@ -1931,6 +2036,9 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
  * version control, and FILE_PATH differs from temporary text-base then
  * don't merge any textual changes, instead leave FILE_PATH as-is.
  *
+ * If ADD_EXISTED is TRUE, FILE_PATH exists and is scheduled for addition
+ * without history.
+ *
  * The caller also provides the property changes for the file in the
  * PROP_CHANGES array; if there are no prop changes, then the caller must pass 
  * NULL instead.  This argument is an array of svn_prop_t structures, 
@@ -1977,6 +2085,7 @@ merge_file(svn_stringbuf_t *log_accum,
            svn_revnum_t new_revision,
            svn_boolean_t has_new_text_base,
            svn_boolean_t use_obstruction,
+           svn_boolean_t add_existed,
            const apr_array_header_t *prop_changes,
            const char *new_URL,
            const char *diff3_cmd,
@@ -2048,21 +2157,43 @@ merge_file(svn_stringbuf_t *log_accum,
       if (entry && entry->schedule == svn_wc_schedule_replace)
         is_replaced = TRUE;
     }
-  
+
+  if (add_existed)
+    {
+      /* Immediately tweak schedule for FILE_PATH's entry so it is no
+         longer scheduled for addition.*/
+      svn_wc_entry_t tmp_entry;
+      tmp_entry.schedule = svn_wc_schedule_normal;
+      SVN_ERR(svn_wc__entry_modify(adm_access,
+                                   base_name,
+                                   &tmp_entry,
+                                   SVN_WC__ENTRY_MODIFY_SCHEDULE
+                                   | SVN_WC__ENTRY_MODIFY_FORCE,
+                                   TRUE,
+                                   pool));
+    }
+
   if (new_text_path)   /* is there a new text-base to install? */
     {
       if (!is_replaced)
         {
           txtb = svn_wc__text_base_path(base_name, FALSE, pool);
+
+          /* Files scheduled for addition without history don't have
+             a text-base so create an empty one. */
+          if (add_existed)
+            {
+              const char *txtb_fullpath = svn_path_join(
+                svn_path_dirname(file_path, pool), txtb, pool);
+              SVN_ERR(svn_io_file_create(txtb_fullpath, "", pool));
+            }
+
           tmp_txtb = svn_wc__text_base_path(base_name, TRUE, pool);
         }
       else
         {
-          const char *tmp_txtb_real = svn_wc__text_base_path(base_name, TRUE,
-                                                             pool);
           txtb = svn_wc__text_revert_path(base_name, FALSE, pool);
           tmp_txtb = svn_wc__text_revert_path(base_name, TRUE, pool);
-          SVN_ERR(svn_io_file_rename(tmp_txtb_real, tmp_txtb, pool));
         }
     }
   else if (magic_props_changed) /* no new text base, but... */
@@ -2097,18 +2228,18 @@ merge_file(svn_stringbuf_t *log_accum,
 
   /* For 'textual' merging, we implement this matrix.
 
-                        Text file                   Binary File
-                     -----------------------------------------------
-    Local Mods &&    | svn_wc_merge uses diff3, | svn_wc_merge     |
-    !USE_OBSTRUCTION | possibly makes backups & | makes backups,   |
-                     | marks file as conflicted.| marks conflicted |
-                     -----------------------------------------------
-    "Local Mods" &&  |        Just leave obstructing file as-is.   |
-    USE_OBSTRUCTION  |                                             |
-                     -----------------------------------------------
-    No Mods          |        Just overwrite working file.         |
-                     |                                             |
-                     -----------------------------------------------
+                          Text file                   Binary File
+                         -----------------------------------------------
+    "Local Mods" &&      | svn_wc_merge uses diff3, | svn_wc_merge     |
+    (!USE_OBSTRUCTION || | possibly makes backups & | makes backups,   |
+     ADD_EXISTED)        | marks file as conflicted.| marks conflicted |
+                         -----------------------------------------------
+    "Local Mods" &&      |        Just leave obstructing file as-is.   |
+    USE_OBSTRUCTION      |                                             |
+                         -----------------------------------------------
+    No Mods              |        Just overwrite working file.         |
+                         |                                             |
+                         -----------------------------------------------
 
    So the first thing we do is figure out where we are in the
    matrix. */
@@ -2137,7 +2268,7 @@ merge_file(svn_stringbuf_t *log_accum,
                                          svn_wc__copy_translate,
                                          tmp_txtb, base_name, FALSE, pool));
             }
-          else if (use_obstruction)
+          else if (use_obstruction && ! add_existed)
             {
               /* A valid obstruction to an added file exists and it's text
                  differs from the added file. */
@@ -2150,7 +2281,8 @@ merge_file(svn_stringbuf_t *log_accum,
                         &log_accum, adm_access, base_name, &tmp_entry,
                         SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool));
             }
-          else  /* working file exists, and has local mods.*/
+          else  /* working file exists and has local mods
+                   or is scheduled for addition.*/
             {                  
               /* Now we need to let loose svn_wc_merge2() to merge the
                  textual changes into the working file. */
@@ -2319,6 +2451,7 @@ close_file(void *file_baton,
                      (*eb->target_revision),
                      fb->text_changed,
                      fb->existed,
+                     fb->add_existed,
                      propchanges,
                      fb->new_URL,
                      eb->diff3_cmd,
@@ -2339,14 +2472,20 @@ close_file(void *file_baton,
        (lock_state != svn_wc_notify_lock_state_unchanged)) &&
       eb->notify_func)
     {
-      svn_wc_notify_t *notify
-        = svn_wc_create_notify(fb->path,
-                               (fb->existed
-                                ? svn_wc_notify_exists
-                                : (fb->added
-                                   ? svn_wc_notify_update_add
-                                   : svn_wc_notify_update_update)),
-                               pool);
+      svn_wc_notify_t *notify;
+      svn_wc_notify_action_t action = svn_wc_notify_update_update;
+
+      if (fb->existed || fb->add_existed)
+        {
+          if (content_state != svn_wc_notify_state_conflicted)
+            action = svn_wc_notify_exists;
+        }
+      else if (fb->added)
+        {
+          action = svn_wc_notify_update_add;
+        }
+
+      notify = svn_wc_create_notify(fb->path, action, pool);
       notify->kind = svn_node_file;
       notify->content_state = content_state;
       notify->prop_state = prop_state;
@@ -2824,7 +2963,7 @@ check_wc_root(svn_boolean_t *wc_root,
 
   /* If this is the root folder (of a drive), it should be the WC 
      root too. */
-  if (svn_path_is_root(path, strlen(path), pool))
+  if (svn_path_is_root(path, strlen(path)))
     return SVN_NO_ERROR;
 
   /* If we cannot get an entry for PATH's parent, PATH is a WC root. */
@@ -3056,6 +3195,28 @@ svn_wc_add_repos_file2(const char *dst_path,
         SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
                                    adm_access, dst_bprop, dst_rprop,
                                    FALSE, pool));
+      else if (kind == svn_node_none)
+        {
+          /* If there wasn't any prop base we still need an empty revert
+             propfile, otherwise a revert won't know that a change to the
+             props needs to be made (it'll just see no file, and do nothing).
+             So manufacture an empty propfile and force it to be written out. */
+
+          apr_hash_t *empty_hash = apr_hash_make(pool);
+          const char *propfile_path;
+
+          SVN_ERR(svn_wc__prop_path(&propfile_path, base_name,
+                                           svn_node_file, TRUE, pool));
+
+          SVN_ERR(svn_wc__save_prop_file(svn_path_join(full_path,
+                                                       propfile_path,
+                                                       pool),
+                                         empty_hash, TRUE, pool));
+
+          SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
+                                     adm_access, propfile_path, dst_rprop,
+                                     FALSE, pool));
+        }
     }
   
   /* Schedule this for addition first, before the entry exists.
@@ -3064,7 +3225,7 @@ svn_wc_add_repos_file2(const char *dst_path,
    */
   {
     svn_wc_entry_t tmp_entry;
-    apr_uint32_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
+    apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_SCHEDULE;
 
     tmp_entry.schedule = svn_wc_schedule_add;
 

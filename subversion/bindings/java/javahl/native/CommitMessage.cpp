@@ -80,12 +80,14 @@ CommitMessage * CommitMessage::makeCCommitMessage(jobject jcommitMessage)
     // create & return the holding object
     return new CommitMessage(myCommitMessage);
 }
+
 /**
  * Call the java callback method to retrieve the commit message
  * @param commit_items  the array of the items of this commit
  * @returns the commit message
  */
-jstring CommitMessage::getCommitMessage(apr_array_header_t *commit_items)
+jstring
+CommitMessage::getCommitMessage(const apr_array_header_t *commit_items)
 {
     JNIEnv *env = JNIUtil::getEnv();
     // create an java array for the commit items
@@ -141,9 +143,8 @@ jstring CommitMessage::getCommitMessage(apr_array_header_t *commit_items)
     // create a java CommitItem for each of the passed in commit items
     for(int i = 0; i < count; i++)
     {
-        // get the commit item
-        svn_client_commit_item_t *item
-            = ((svn_client_commit_item_t **) commit_items->elts)[i];
+        svn_client_commit_item3_t *item =
+            APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
 
         // convert the commit item members to the match java members
         jstring jpath = JNIUtil::makeJString(item->path);
@@ -175,7 +176,8 @@ jstring CommitMessage::getCommitMessage(apr_array_header_t *commit_items)
 
         // create the java object
         jobject jitem = env->NewObject(clazz, midConstructor, jpath,
-            jnodeKind, jstateFlags, jurl, jcopyUrl, jcopyRevision);
+                                       jnodeKind, jstateFlags, jurl, 
+                                       jcopyUrl, jcopyRevision);
         if(JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
@@ -215,8 +217,9 @@ jstring CommitMessage::getCommitMessage(apr_array_header_t *commit_items)
     }
 
     // call the java callback method
-    jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage,
-                                            midCallback, jitems);
+    jstring jmessage = (jstring)env->CallObjectMethod(m_jcommitMessage, 
+                                                      midCallback, 
+                                                      jitems);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return NULL;

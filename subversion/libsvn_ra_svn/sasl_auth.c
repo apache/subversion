@@ -2,7 +2,7 @@
  * sasl_auth.c :  functions for SASL-based authentication
  *
  * ====================================================================
- * Copyright (c) 2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2006-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -36,11 +36,11 @@
 #include "svn_base64.h"
 
 #include "private/svn_atomic.h"
+#include "private/ra_svn_sasl.h"
 
 #include "ra_svn.h"
-#include "ra_svn_sasl.h"
 
-/* Note: In addition to being used via svn_atomic_init_once to control
+/* Note: In addition to being used via svn_atomic__init_once to control
  *       initialization of the SASL code this will also be referenced in
  *       the various functions that work with sasl mutexes to determine
  *       if the sasl pool has been destroyed.  This should be safe, since
@@ -49,7 +49,7 @@
  *       in atexit processing, at which point we are already running in
  *       single threaded mode.
  */
-static volatile svn_atomic_t sasl_status;
+volatile svn_atomic_t svn_ra_svn__sasl_status;
 
 static volatile svn_atomic_t sasl_ctx_count;
 
@@ -59,9 +59,9 @@ static apr_pool_t *sasl_pool = NULL;
 /* Pool cleanup called when sasl_pool is destroyed. */
 static apr_status_t sasl_done_cb(void *data)
 {
-  /* Reset sasl_status, in case the client calls 
+  /* Reset svn_ra_svn__sasl_status, in case the client calls 
      apr_initialize()/apr_terminate() more than once. */
-  sasl_status = 0;
+  svn_ra_svn__sasl_status = 0;
   if (svn_atomic_dec(&sasl_ctx_count) == 0)
     sasl_done();
   return APR_SUCCESS;
@@ -89,7 +89,7 @@ static void *sasl_mutex_alloc_cb(void)
   apr_thread_mutex_t *mutex;
   apr_status_t apr_err;
 
-  if (!sasl_status)
+  if (!svn_ra_svn__sasl_status)
     return NULL;
 
   apr_err = apr_thread_mutex_lock(array_mutex);
@@ -116,21 +116,21 @@ static void *sasl_mutex_alloc_cb(void)
 
 static int sasl_mutex_lock_cb(void *mutex)
 {
-  if (!sasl_status)
+  if (!svn_ra_svn__sasl_status)
     return 0;
   return (apr_thread_mutex_lock(mutex) == APR_SUCCESS) ? 0 : -1;
 }
 
 static int sasl_mutex_unlock_cb(void *mutex)
 {
-  if (!sasl_status)
+  if (!svn_ra_svn__sasl_status)
     return 0;
   return (apr_thread_mutex_unlock(mutex) == APR_SUCCESS) ? 0 : -1;
 }
 
 static void sasl_mutex_free_cb(void *mutex)
 {
-  if (sasl_status)
+  if (svn_ra_svn__sasl_status)
     {
       apr_status_t apr_err = apr_thread_mutex_lock(array_mutex);
       if (apr_err == APR_SUCCESS)
@@ -182,7 +182,7 @@ static svn_error_t *sasl_init_cb(void)
 
 svn_error_t *svn_ra_svn__sasl_init(void)
 {
-  SVN_ERR(svn_atomic_init_once(&sasl_status, sasl_init_cb));
+  SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, sasl_init_cb));
   return SVN_NO_ERROR;
 }
 
@@ -195,6 +195,28 @@ static apr_status_t sasl_dispose_cb(void *data)
   return APR_SUCCESS;
 }
 
+void svn_ra_svn__default_secprops(sasl_security_properties_t *secprops)
+{
+  /* The minimum and maximum security strength factors that the chosen 
+     SASL mechanism should provide.  0 means 'no encryption', 256 means 
+     '256-bit encryption', which is about the best that any SASL
+     mechanism can provide.  Using these values effectively means 'use 
+     whatever encryption the other side wants'.  Note that SASL will try 
+     to use better encryption whenever possible, so if both the server and
+     the client use these values the highest possible encryption strength 
+     will be used. */
+  secprops->min_ssf = 0;
+  secprops->max_ssf = 256;
+
+  /* Set maxbufsize to the maximum amount of data we can read at any one time. 
+     This value needs to be commmunicated to the peer if a security layer 
+     is negotiated. */
+  secprops->maxbufsize = SVN_RA_SVN__READBUF_SIZE;
+
+  secprops->security_flags = 0;
+  secprops->property_names = secprops->property_values = NULL;
+}
+
 /* Create a new SASL context. */
 static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                                  svn_boolean_t is_tunneled,
@@ -203,7 +225,7 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
                                  const char *remote_addrport, 
                                  apr_pool_t *pool)
 {
-  sasl_security_properties_t secprops = SVN_RA_SVN__DEFAULT_SECPROPS;
+  sasl_security_properties_t secprops;
   int result;
 
   result = sasl_client_new("svn", hostname, local_addrport, remote_addrport,
@@ -232,6 +254,7 @@ static svn_error_t *new_sasl_ctx(sasl_conn_t **sasl_ctx,
 
   /* Set security properties. Don't allow PLAIN or LOGIN, since we 
      don't support TLS yet. */
+  svn_ra_svn__default_secprops(&secprops);
   secprops.security_flags = SASL_SEC_NOPLAINTEXT;
   sasl_setprop(*sasl_ctx, SASL_SEC_PROPS, &secprops);
 
@@ -246,19 +269,21 @@ static svn_error_t *handle_interact(svn_auth_cred_simple_t *creds,
 {
   sasl_interact_t *prompt;
 
-  if (!creds)
-    return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                             _("Authentication error from server: %s"),
-                             last_err);
   for (prompt = client_interact; prompt->id != SASL_CB_LIST_END; prompt++)
     {
       switch (prompt->id)
         {
         case SASL_CB_AUTHNAME:
+          if (!creds)
+            return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                    _("Can't get user name"));
           prompt->result = creds->username;
           prompt->len = strlen(creds->username);
           break;
         case SASL_CB_PASS:
+          if (!creds)
+            return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                    _("Can't get password"));
           prompt->result = creds->password;
           prompt->len = strlen(creds->password);
           break;
@@ -287,25 +312,51 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
   const svn_string_t *arg = NULL, *in;
   int result;
   unsigned int outlen;
+  svn_boolean_t again;
 
   do
     {
-      result = sasl_client_start(sasl_ctx,
-                                 mechstring,
-                                 &client_interact,
-                                 &out,
-                                 &outlen,
-                                 &mech);
+      again = FALSE;
+      do
+        {
+          result = sasl_client_start(sasl_ctx,
+                                     mechstring,
+                                     &client_interact,
+                                     &out,
+                                     &outlen,
+                                     &mech);
 
-      /* Fill in username and password, if required */
-      if (result == SASL_INTERACT)
-        SVN_ERR(handle_interact(creds, client_interact, *last_err, pool));
+          /* Fill in username and password, if required. */
+          if (result == SASL_INTERACT)
+            SVN_ERR(handle_interact(creds, client_interact, *last_err, pool));
+        }
+      while (result == SASL_INTERACT);
+
+      switch (result)
+        {
+          case SASL_OK:
+          case SASL_CONTINUE:
+            /* Success. */
+            break;
+          case SASL_NOMECH:
+          case SASL_BADPARAM:
+          case SASL_NOMEM:
+            /* Fatal error.  Fail the authentication. */
+            return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                    sasl_errdetail(sasl_ctx));
+          default:
+            /* For anything else, delete the mech from the list
+               and try again. */
+            {
+              char *dst = strstr(mechstring, mech);
+              char *src = dst + strlen(mech);
+              while ((*dst++ = *src++) != '\0') 
+                ;
+              again = TRUE;
+            }
+        }
     }
-  while (result == SASL_INTERACT);
-
-  if (result != SASL_OK && result != SASL_CONTINUE)
-    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            sasl_errdetail(sasl_ctx));
+  while (again);
 
   /* Prepare the initial authentication token. */
   if (outlen > 0 || strcmp(mech, "EXTERNAL") == 0) 
@@ -398,37 +449,219 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport, 
-                                      const char **remote_addrport,
-                                      apr_socket_t *sock,
-                                      apr_pool_t *pool)
+/* Baton for a SASL encrypted svn_ra_svn__stream_t. */
+typedef struct sasl_baton {
+  svn_ra_svn__stream_t *stream; /* Inherited stream. */
+  sasl_conn_t *ctx;             /* The SASL context for this connection. */
+  unsigned int maxsize;         /* The maximum amount of data we can encode. */
+  const char *read_buf;         /* The buffer returned by sasl_decode. */
+  unsigned int read_len;        /* Its current length. */
+  const char *write_buf;        /* The buffer returned by sasl_encode. */
+  unsigned int write_len;       /* Its length. */
+} sasl_baton_t;
+
+/* Functions to implement a SASL encrypted svn_ra_svn__stream_t. */
+
+/* Implements svn_read_fn_t. */
+static svn_error_t *sasl_read_cb(void *baton, char *buffer, apr_size_t *len)
 {
-  apr_status_t apr_err;
-  apr_sockaddr_t *local_sa, *remote_sa;
-  char *local_addr, *remote_addr;
+  sasl_baton_t *sasl_baton = baton;
+  int result;
+  /* A copy of *len, used by the wrapped stream. */
+  unsigned int len2 = *len;
 
-  apr_err = apr_socket_addr_get(&local_sa, APR_LOCAL, sock);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
+  /* sasl_decode might need more data than a single read can provide,
+     hence the need to put a loop around the decoding. */
+  while (! sasl_baton->read_buf || sasl_baton->read_len == 0)
+    {
+      SVN_ERR(svn_ra_svn__stream_read(sasl_baton->stream, buffer, &len2));
+      if (len2 == 0)
+        {
+          *len = 0;
+          return SVN_NO_ERROR;
+        }
+      result = sasl_decode(sasl_baton->ctx, buffer, len2, 
+                           &sasl_baton->read_buf, 
+                           &sasl_baton->read_len);
+      if (result != SASL_OK)
+        return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                sasl_errdetail(sasl_baton->ctx));
+    }
 
-  apr_err = apr_socket_addr_get(&remote_sa, APR_REMOTE, sock);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
+  /* The buffer returned by sasl_decode might be larger than what the 
+     caller wants.  If this is the case, we only copy back *len bytes now
+     (the rest will be returned by subsequent calls to this function).
+     If not, we just copy back the whole thing. */
+  if (*len >= sasl_baton->read_len)
+    {
+      memcpy(buffer, sasl_baton->read_buf, sasl_baton->read_len);
+      *len = sasl_baton->read_len;
+      sasl_baton->read_buf = NULL;
+      sasl_baton->read_len = 0;
+    }
+  else
+    {
+      memcpy(buffer, sasl_baton->read_buf, *len);
+      sasl_baton->read_len -= *len;
+      sasl_baton->read_buf += *len;
+    }
 
-  apr_err = apr_sockaddr_ip_get(&local_addr, local_sa);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
+  return SVN_NO_ERROR;
+}
 
-  apr_err = apr_sockaddr_ip_get(&remote_addr, remote_sa);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, NULL);
+/* Implements svn_write_fn_t. */
+static svn_error_t *
+sasl_write_cb(void *baton, const char *buffer, apr_size_t *len)
+{
+  sasl_baton_t *sasl_baton = baton;
+  int result;
 
-  /* Format the IP address and port number like this: a.b.c.d;port */
-  *local_addrport = apr_pstrcat(pool, local_addr, ";",
-                                apr_itoa(pool, (int)local_sa->port), NULL);
-  *remote_addrport = apr_pstrcat(pool, remote_addr, ";", 
-                                 apr_itoa(pool, (int)remote_sa->port), NULL);
+  if (! sasl_baton->write_buf || sasl_baton->write_len == 0)
+    {
+      /* Make sure we don't write too much. */
+      *len = (*len > sasl_baton->maxsize) ? sasl_baton->maxsize : *len;
+      result = sasl_encode(sasl_baton->ctx, buffer, *len, 
+                           &sasl_baton->write_buf, 
+                           &sasl_baton->write_len);
 
+      if (result != SASL_OK)
+        return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                sasl_errdetail(sasl_baton->ctx));
+    }
+
+  do 
+    {
+      unsigned int tmplen = sasl_baton->write_len;
+      SVN_ERR(svn_ra_svn__stream_write(sasl_baton->stream, 
+                                       sasl_baton->write_buf, 
+                                       &tmplen));
+      if (tmplen == 0)
+      {
+        /* The output buffer and its length will be preserved in sasl_baton
+           and will be written out during the next call to this function 
+           (which will have the same arguments). */
+        *len = 0;
+        return SVN_NO_ERROR;
+      }
+      sasl_baton->write_len -= tmplen;
+      sasl_baton->write_buf += tmplen;
+    } 
+  while (sasl_baton->write_len > 0);
+
+  sasl_baton->write_buf = NULL;
+  sasl_baton->write_len = 0;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements ra_svn_timeout_fn_t. */
+static void sasl_timeout_cb(void *baton, apr_interval_time_t interval)
+{
+  sasl_baton_t *sasl_baton = baton;
+  svn_ra_svn__stream_timeout(sasl_baton->stream, interval);
+}
+
+/* Implements ra_svn_pending_fn_t. */
+static svn_boolean_t sasl_pending_cb(void *baton)
+{
+  sasl_baton_t *sasl_baton = baton;
+  return svn_ra_svn__stream_pending(sasl_baton->stream);
+}
+
+svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
+                                                sasl_conn_t *sasl_ctx,
+                                                apr_pool_t *pool)
+{
+  sasl_baton_t *sasl_baton;
+  const sasl_ssf_t *ssfp;
+  int result;
+  const void *maxsize;
+
+  if (! conn->encrypted)
+    {
+      /* Get the strength of the security layer. */
+      result = sasl_getprop(sasl_ctx, SASL_SSF, (void*) &ssfp);
+      if (result != SASL_OK)
+        return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                sasl_errdetail(sasl_ctx));
+
+      if (*ssfp > 0)
+        {
+          /* Flush the connection, as we're about to replace its stream. */
+          SVN_ERR(svn_ra_svn_flush(conn, pool));
+
+          /* Create and initialize the stream baton. */
+          sasl_baton = apr_pcalloc(conn->pool, sizeof(*sasl_baton));
+          sasl_baton->ctx = sasl_ctx;
+
+          /* Find out the maximum input size for sasl_encode. */
+          result = sasl_getprop(sasl_ctx, SASL_MAXOUTBUF, &maxsize);
+          if (result != SASL_OK)
+            return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                    sasl_errdetail(sasl_ctx));
+          sasl_baton->maxsize = *((unsigned int *) maxsize);
+
+          /* If there is any data left in the read buffer at this point,
+             we need to decrypt it. */
+          if (conn->read_end > conn->read_ptr)
+            {
+              result = sasl_decode(sasl_ctx, conn->read_ptr,
+                                   conn->read_end - conn->read_ptr,
+                                   &sasl_baton->read_buf,
+                                   &sasl_baton->read_len);
+              if (result != SASL_OK)
+                return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                        sasl_errdetail(sasl_ctx));
+              conn->read_end = conn->read_ptr;
+            }
+
+          /* Wrap the existing stream. */
+          sasl_baton->stream = conn->stream;
+
+          conn->stream = svn_ra_svn__stream_create(sasl_baton, sasl_read_cb,
+                                                   sasl_write_cb, 
+                                                   sasl_timeout_cb,
+                                                   sasl_pending_cb, conn->pool);
+          /* Yay, we have a security layer! */
+          conn->encrypted = TRUE;
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport, 
+                                       const char **remote_addrport,
+                                       svn_ra_svn_conn_t *conn,
+                                       apr_pool_t *pool)
+{
+  if (conn->sock)
+    {
+      apr_status_t apr_err;
+      apr_sockaddr_t *local_sa, *remote_sa;
+      char *local_addr, *remote_addr;
+
+      apr_err = apr_socket_addr_get(&local_sa, APR_LOCAL, conn->sock);
+      if (apr_err)
+        return svn_error_wrap_apr(apr_err, NULL);
+
+      apr_err = apr_socket_addr_get(&remote_sa, APR_REMOTE, conn->sock);
+      if (apr_err)
+        return svn_error_wrap_apr(apr_err, NULL);
+
+      apr_err = apr_sockaddr_ip_get(&local_addr, local_sa);
+      if (apr_err)
+        return svn_error_wrap_apr(apr_err, NULL);
+
+      apr_err = apr_sockaddr_ip_get(&remote_addr, remote_sa);
+      if (apr_err)
+        return svn_error_wrap_apr(apr_err, NULL);
+
+      /* Format the IP address and port number like this: a.b.c.d;port */
+      *local_addrport = apr_pstrcat(pool, local_addr, ";",
+                                    apr_itoa(pool, (int)local_sa->port), NULL);
+      *remote_addrport = apr_pstrcat(pool, remote_addr, ";", 
+                                     apr_itoa(pool, (int)remote_sa->port), NULL);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -465,7 +698,7 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
   if (!sess->is_tunneled)
     {
       SVN_ERR(svn_ra_svn__get_addresses(&local_addrport, &remote_addrport,
-                                        sess->conn->sock, pool));
+                                        sess->conn, pool));
       SVN_ERR(get_remote_hostname(&hostname, sess->conn->sock));
     }
 
@@ -499,7 +732,7 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
       SVN_ERR(svn_auth_first_credentials(&creds, &iterstate,
                                          SVN_AUTH_CRED_SIMPLE, 
                                          realmstring,
-                                         sess->auth_baton, pool));
+                                         sess->callbacks->auth_baton, pool));
     }
 
   subpool = svn_pool_create(pool);
@@ -509,7 +742,7 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
 
       SVN_ERR(new_sasl_ctx(&sasl_ctx, sess->is_tunneled,
                            hostname, local_addrport, remote_addrport,
-                           pool));
+                           sess->conn->pool));
       SVN_ERR(try_auth(sess,
                        sasl_ctx,
                        creds,
@@ -521,9 +754,17 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
 
       if (!success && need_creds)
         SVN_ERR(svn_auth_next_credentials(&creds, iterstate, pool));
+      /* If we ran out of authentication providers, return the last 
+         error sent by the server. */
+      if (!creds)
+        return svn_error_createf(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                _("Authentication error from server: %s"),
+                                last_err);
     }
   while (!success);
   svn_pool_destroy(subpool);
+
+  SVN_ERR(svn_ra_svn__enable_sasl_encryption(sess->conn, sasl_ctx, pool));
 
   SVN_ERR(svn_auth_save_credentials(iterstate, pool));
 

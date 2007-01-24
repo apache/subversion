@@ -587,6 +587,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 43,
              "Unsupported FS format")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_REP_BEING_WRITTEN,
+             SVN_ERR_FS_CATEGORY_START + 44,
+             "Representation is being written")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -926,6 +931,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 13,
              "Path has no lock token")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED,
+             SVN_ERR_CLIENT_CATEGORY_START + 14,
+             "Operation does not support multiple sources")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,
@@ -1013,11 +1023,11 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
              SVN_ERR_CL_CATEGORY_START + 0,
-             "Client error in parsing arguments")
+             "Error parsing arguments")
 
   SVN_ERRDEF(SVN_ERR_CL_INSUFFICIENT_ARGS,
              SVN_ERR_CL_CATEGORY_START + 1,
-             "Not enough arguments provided; try 'svn help' for more info")
+             "Not enough arguments provided")
 
   SVN_ERRDEF(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS,
              SVN_ERR_CL_CATEGORY_START + 2,

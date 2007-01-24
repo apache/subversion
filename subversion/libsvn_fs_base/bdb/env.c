@@ -47,7 +47,7 @@
    threads, so all direct or indirect access to the pool is serialized
    with a global mutex.
 
-   Because several threads can now hse the same DB_ENV handle, we must
+   Because several threads can now use the same DB_ENV handle, we must
    use the DB_THREAD flag when opening the environments, otherwise the
    env handles (and all of libsvn_fs_base) won't be thread-safe.
 
@@ -382,7 +382,7 @@ bdb_init_cb(void)
 svn_error_t *
 svn_fs_bdb__init(void)
 {
-  SVN_ERR(svn_atomic_init_once(&bdb_cache_state, bdb_init_cb));
+  SVN_ERR(svn_atomic__init_once(&bdb_cache_state, bdb_init_cb));
   return SVN_NO_ERROR;
 }
 

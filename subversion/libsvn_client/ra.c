@@ -2,7 +2,7 @@
  * ra.c :  routines for interacting with the RA layer
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -57,7 +57,7 @@ open_tmp_file(apr_file_t **fp,
   svn_client__callback_baton_t *cb = callback_baton;
   const char *truepath;
 
-  if (cb->base_dir)
+  if (cb->base_dir && ! cb->read_only_wc)
     truepath = apr_pstrdup(pool, cb->base_dir);
   else
     SVN_ERR(svn_io_temp_dir(&truepath, pool));
@@ -92,9 +92,9 @@ get_wc_prop(void *baton,
       int i;
       for (i = 0; i < cb->commit_items->nelts; i++)
         {
-          svn_client_commit_item2_t *item
+          svn_client_commit_item3_t *item
             = APR_ARRAY_IDX(cb->commit_items, i,
-                            svn_client_commit_item2_t *);
+                            svn_client_commit_item3_t *);
           if (! strcmp(relpath, 
                        svn_path_uri_decode(item->url, pool)))
             return svn_wc_prop_get(value, name, item->path, cb->base_access,
@@ -134,12 +134,12 @@ push_wc_prop(void *baton,
 
   for (i = 0; i < cb->commit_items->nelts; i++)
     {
-      svn_client_commit_item2_t *item
-        = APR_ARRAY_IDX(cb->commit_items, i, svn_client_commit_item2_t *);
+      svn_client_commit_item3_t *item
+        = APR_ARRAY_IDX(cb->commit_items, i, svn_client_commit_item3_t *);
       
       if (strcmp(relpath, svn_path_uri_decode(item->url, pool)) == 0)
         {
-          apr_pool_t *cpool = item->wcprop_changes->pool;
+          apr_pool_t *cpool = item->incoming_prop_changes->pool;
           svn_prop_t *prop = apr_palloc(cpool, sizeof(*prop));
           
           prop->name = apr_pstrdup(cpool, name);
@@ -153,7 +153,7 @@ push_wc_prop(void *baton,
           
           /* Buffer the propchange to take effect during the
              post-commit process. */
-          *((svn_prop_t **) apr_array_push(item->wcprop_changes)) = prop;
+          APR_ARRAY_PUSH(item->incoming_prop_changes, svn_prop_t *) = prop;
           return SVN_NO_ERROR;
         }
     }
@@ -259,6 +259,14 @@ invalidate_wc_props(void *baton,
 }
 
 
+static svn_error_t *
+cancel_callback(void *baton)
+{
+  svn_client__callback_baton_t *b = baton;
+
+  return (b->ctx->cancel_func)(b->ctx->cancel_baton);
+}
+
 svn_error_t * 
 svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
                                      const char *base_url,
@@ -281,9 +289,11 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
   cbtable->auth_baton = ctx->auth_baton; /* new-style */
   cbtable->progress_func = ctx->progress_func;
   cbtable->progress_baton = ctx->progress_baton;
+  cbtable->cancel_func = ctx->cancel_func ? cancel_callback : NULL;
 
   cb->base_dir = base_dir;
   cb->base_access = base_access;
+  cb->read_only_wc = read_only_wc;
   cb->pool = pool;
   cb->commit_items = commit_items;
   cb->ctx = ctx;
@@ -874,42 +884,12 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("'%s' has no URL"), path_or_url);
 
-  /* If a peg revision was specified, but a desired revision was not,
-     assume it is the same as the peg revision. */
-  if (revision->kind == svn_opt_revision_unspecified &&
-      peg_revision_p->kind != svn_opt_revision_unspecified)
-    revision = peg_revision_p;
-  
-  if (svn_path_is_url(path_or_url))
-    {
-      /* URLs get a default starting rev of HEAD. */
-      if (revision->kind == svn_opt_revision_unspecified)
-        start_rev.kind = svn_opt_revision_head;
-      else
-        start_rev = *revision;
-          
-      /* If an explicit URL was passed in, the default peg revision is
-         HEAD. */
-      if (peg_revision_p->kind == svn_opt_revision_unspecified)
-        peg_revision.kind = svn_opt_revision_head;
-      else
-        peg_revision = *peg_revision_p;
-    }
-  else
-    {
-      /* And a default starting rev of BASE. */
-      if (revision->kind == svn_opt_revision_unspecified)
-        start_rev.kind = svn_opt_revision_base;
-      else
-        start_rev = *revision;
-      
-      /* WC paths have a default peg revision of WORKING. */
-      if (peg_revision_p->kind == svn_opt_revision_unspecified)
-        peg_revision.kind = svn_opt_revision_working;
-      else
-        peg_revision = *peg_revision_p;
-    }
-  
+  start_rev = *revision;
+  peg_revision = *peg_revision_p;
+  svn_client__resolve_revisions(&peg_revision, &start_rev,
+                                svn_path_is_url(path_or_url),
+                                TRUE);
+
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
                                                NULL, NULL, NULL,
                                                FALSE, FALSE, ctx, pool));

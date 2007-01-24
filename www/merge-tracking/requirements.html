@@ -3,12 +3,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
-  @import "tigris-branding/css/tigris.css";
-  @import "tigris-branding/css/inst.css";
+  @import "../branding/css/tigris.css";
+  @import "../branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="tigris-branding/css/print.css"/>
-<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+  href="../branding/css/print.css"/>
+<script type="text/javascript" src="../branding/scripts/tigris.js"></script>
 <title>Merge Tracking Requirements and Use Cases</title>
 </head>
 
@@ -25,16 +25,6 @@ users.  A few outliers are driven by <a
 href="../user-classifications.html#program">SCM automation</a>.</p>
 
 <div id="requirements">
-
-<p style="color: red">*** UNDER CONSTRUCTION ***</p>
-
-<p style="color: red">TODO:
-Incorporate <a href="summit.html">CollabNet Summit findings</a> into
-the material below.  There is a lot of data in those findings not
-reflected below.  For the most part the summit results are not
-surprising, but they represent the best writeup we have of certain
-requirements that were formerly only hinted at tangentially on the
-users@ list and in other forums.</p>
 
 <div class="h3" id="summary">
 <h3>Summary</h3>
@@ -108,13 +98,16 @@ already solved, what they're calling <em>star-merge</em>.</p>
 <div class="h4" id="cherry-picking">
 <h4>Cherry Picking</h4>
 
-<p>Merge of one or more individual changes from branch A into branch
-B.  This sometimes involves manual application of the changes from rN
-in branch A (e.g. not using <code>svn merge</code>), or manual
-adjustment of a change merged into a WC before it's committed to the
-repository.  Regardless of the merge method used, Subversion must
-provide a way to indicate that the change(s) have been merged into
-branch B.</p>
+<p>Merge of one or more individual changes from branch A into branch B
+(as opposed to merge of all previously unmerged changes).</p>
+
+<p>This sometimes involves manual adjustment of a change merged from
+branch A into a WC for branch B before the change is committed to the
+repository, or <a href="#manual-merge">manual application</a> of a
+change set from branch A to the WC (e.g. not using <code>svn
+merge</code>).  Regardless of the merge method used, Subversion must
+provide a way to <a href="#manual-merge">indicate that the change(s)
+have been merged</a> into branch B.</p>
 
 <p>Additionally, it's important to be able to cherry pick changes in
 multiple different directions.  For example, if you create a release
@@ -165,14 +158,14 @@ tracking.</p>
 <h4>Record Manual Merge</h4>
 
 <p>Allow change sets to be marked as merged, effectively a way to
-manipulate the merge memory on a source and destination.  This is
-related to the <a href="#revision-blocking">revision blocking</a>
+manipulate the merge memory on target for a given merge source.  This
+is related to the <a href="#revision-blocking">revision blocking</a>
 concept.</p>
 
-<p>Fundamentally, the use case is to support merge tracking of change
-set which is sufficiently different when ported to a different branch
-that use of <code>svn merge</code> is no longer appropriate.  Examples
-scenarios include:</p>
+<p>Fundamentally, the use case is to support merge tracking of a
+change set which is sufficiently different when ported to a different
+branch that use of <code>svn merge</code> is no longer appropriate.
+Examples scenarios include:</p>
 
 <ul>
   <li>The actual change you want to apply to branch has no overlap
@@ -182,21 +175,14 @@ scenarios include:</p>
   <li>Only a subset of a change set warrants application.</li>
 
   <li>The branch content has drifted far enough apart to make
-  automatic merging impossible.</li>
+  automatic merging impossible (e.g. excessive merge conflicts are
+  generated).</li>
 </ul>
-
-<p>David James cites a specific example from Subversion's own
-development:</p>
-
-<blockquote><p>"When I merge from trunk to 1.3.x, I often run into
-conflicts, so I create a temporary merge branch. If I tried to merge
-from the temporary merge branch to 1.3.x, the merge metadata would be
-lost because svnmerge.py does not track indirect metadata. To correct
-this metadata, I'd use [this feature]."</p></blockquote>
 
 <p>Use may be predicated on information from the <em>Show Change Sets
 Available for Merge</em> feature (<a href="#auditing">Auditing</a>
-section).</p>
+section).  Use supports <a href="#cherry-picking"><i>Cherry
+Picking</i></a>.</p>
 
 </div>  <!-- manual-merge -->
 

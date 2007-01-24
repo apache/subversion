@@ -1,7 +1,7 @@
 /* revs-txns.c : operations on revision and transactions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -425,7 +425,7 @@ svn_fs_base__add_txn_copy(svn_fs_t *fs,
     txn->copies = apr_array_make(pool, 1, sizeof(copy_id));
 
   /* Add COPY_ID to the array. */
-  (*((const char **)(apr_array_push(txn->copies)))) = copy_id;
+  APR_ARRAY_PUSH(txn->copies, const char *) = copy_id;
 
   /* Finally, write out the transaction. */
   return put_txn(fs, txn, txn_name, trail, pool);

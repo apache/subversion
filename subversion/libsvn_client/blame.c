@@ -2,7 +2,7 @@
  * blame.c:  return blame messages
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -725,7 +725,7 @@ old_blame(const char *target, const char *url,
                              _("URL '%s' refers to a directory"), url);
 
   condensed_targets = apr_array_make(pool, 1, sizeof(const char *));
-  (*((const char **)apr_array_push(condensed_targets))) = "";
+  APR_ARRAY_PUSH(condensed_targets, const char *) = "";
 
   SVN_ERR(svn_ra_get_repos_root(ra_session, &reposURL, pool));
 

@@ -128,7 +128,8 @@ static svn_fs_root_t *make_revision_root(svn_fs_t *fs, svn_revnum_t rev,
                                          apr_pool_t *pool);
 
 static svn_fs_root_t *make_txn_root(svn_fs_t *fs, const char *txn,
-                                    apr_uint32_t flags, apr_pool_t *pool);
+                                    svn_revnum_t base_rev, apr_uint32_t flags,
+                                    apr_pool_t *pool);
 
 
 /*** Node Caching in the Roots. ***/
@@ -270,7 +271,7 @@ svn_fs_fs__txn_root(svn_fs_root_t **root_p,
         flags |= SVN_FS_TXN_CHECK_LOCKS;
     }
   
-  root = make_txn_root(txn->fs, txn->id, flags, pool);
+  root = make_txn_root(txn->fs, txn->id, txn->base_rev, flags, pool);
 
   *root_p = root;
   
@@ -301,22 +302,18 @@ svn_fs_fs__revision_root(svn_fs_root_t **root_p,
 
 /* Return the error SVN_ERR_FS_NOT_FOUND, with a detailed error text,
    for PATH in ROOT. */
-static svn_error_t *
-not_found(svn_fs_root_t *root, const char *path)
-{
-  if (root->is_txn_root)
-    return
-      svn_error_createf
-      (SVN_ERR_FS_NOT_FOUND, 0,
-       _("File not found: transaction '%s', path '%s'"),
-       root->txn, path);
-  else
-    return
-      svn_error_createf
-      (SVN_ERR_FS_NOT_FOUND, 0,
-       _("File not found: revision %ld, path '%s'"),
-       root->rev, path);
-}
+#define NOT_FOUND(root, path) (                          \
+  root->is_txn_root ?                                    \
+    svn_error_createf                                    \
+      (SVN_ERR_FS_NOT_FOUND, 0,                          \
+       _("File not found: transaction '%s', path '%s'"), \
+         root->txn, path)                                \
+  :                                                      \
+    svn_error_createf                                    \
+      (SVN_ERR_FS_NOT_FOUND, 0,                          \
+       _("File not found: revision %ld, path '%s'"),     \
+         root->rev, path)                                \
+  )
 
 
 /* Return a detailed `file already exists' message for PATH in ROOT.  */
@@ -725,7 +722,7 @@ open_path(parent_path_t **parent_path_p,
                 {
                   /* Build a better error message than svn_fs_fs__dag_open
                      can provide, giving the root and full path name.  */
-                  return not_found(root, path);
+                  return NOT_FOUND(root, path);
                 }
             }
           
@@ -1196,7 +1193,7 @@ update_ancestry(svn_fs_t *fs,
   noderev->predecessor_count = source_pred_count;
   if (noderev->predecessor_count != -1)
     noderev->predecessor_count++;
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, target_id, noderev, pool));
+  SVN_ERR(svn_fs_fs__put_node_revision(fs, target_id, noderev, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1434,11 +1431,11 @@ merge(svn_stringbuf_t *conflict_p,
                                                s_entry->id,
                                                s_entry->kind,
                                                txn_id,
-                                               pool));
+                                               iterpool));
             }
           else
             {
-              SVN_ERR(svn_fs_fs__dag_delete(target, key, txn_id, pool));
+              SVN_ERR(svn_fs_fs__dag_delete(target, key, txn_id, iterpool));
             }
         }
 
@@ -2761,7 +2758,7 @@ fs_node_history(svn_fs_history_t **history_p,
   /* And we require that the path exist in the root. */
   SVN_ERR(svn_fs_fs__check_path(&kind, root, path, pool));
   if (kind == svn_node_none)
-    return not_found(root, path);
+    return NOT_FOUND(root, path);
 
   /* Okay, all seems well.  Build our history object and return it. */
   *history_p = assemble_history(root->fs,
@@ -3230,11 +3227,12 @@ make_revision_root(svn_fs_t *fs,
 
 
 /* Construct a root object referring to the root of the transaction
-   named TXN in FS, with FLAGS to describe transaction's behavior.
-   Create the new root in POOL.  */
+   named TXN and based on revision BASE_REV in FS, with FLAGS to
+   describe transaction's behavior.  Create the new root in POOL.  */
 static svn_fs_root_t *
 make_txn_root(svn_fs_t *fs,
               const char *txn,
+              svn_revnum_t base_rev,
               apr_uint32_t flags,
               apr_pool_t *pool)
 {
@@ -3242,6 +3240,7 @@ make_txn_root(svn_fs_t *fs,
   root->is_txn_root = TRUE;
   root->txn = apr_pstrdup(root->pool, txn);
   root->txn_flags = flags;
+  root->rev = base_rev;
 
   return root;
 }

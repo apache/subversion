@@ -16,8 +16,8 @@
 ######################################################################
 
 import re
-import string
 import os
+import sys
 
 import main  # the general svntest routines in this module.
 from svntest import Failure
@@ -182,20 +182,20 @@ class SVNTreeNode:
       newchild.path = os.path.join(self.path, newchild.name)
 
 
-  def pprint(self):
+  def pprint(self, stream = sys.stdout):
     "Pretty-print the meta data for this node."
-    print " * Node name:  ", self.name
-    print "    Path:      ", self.path
+    print >> stream, " * Node name:  ", self.name
+    print >> stream, "    Path:      ", self.path
     mime_type = self.props.get("svn:mime-type")
     if not mime_type or mime_type.startswith("text/"):
       if self.children is not None:
-        print "    Contents:   N/A (node is a directory)"
+        print >> stream, "    Contents:   N/A (node is a directory)"
       else:
-        print "    Contents:  ", self.contents
+        print >> stream, "    Contents:  ", self.contents
     else:
-      print "    Contents:   %d bytes (binary)" % len(self.contents)
-    print "    Properties:", self.props
-    print "    Attributes:", self.atts
+      print >> stream, "    Contents:   %d bytes (binary)" % len(self.contents)
+    print >> stream, "    Properties:", self.props
+    print >> stream, "    Attributes:", self.atts
     ### FIXME: I'd like to be able to tell the difference between
     ### self.children is None (file) and self.children == [] (empty
     ### directory), but it seems that most places that construct
@@ -203,9 +203,16 @@ class SVNTreeNode:
     ###
     ### See issue #1611 about this problem.  -kfogel
     if self.children is not None:
-      print "    Children:  ", len(self.children)
+      print >> stream, "    Children:  ", len(self.children)
     else:
-      print "    Children:   N/A (node is a file)"
+      print >> stream, "    Children:   N/A (node is a file)"
+
+  def __str__(self):
+    import StringIO
+    s = StringIO.StringIO()
+    self.pprint(s)
+    return s.getvalue()
+    
 
 # reserved name of the root of the tree
 root_node_name = "__SVN_ROOT_NODE"
@@ -270,15 +277,26 @@ def create_from_path(path, contents=None, props={}, atts={}):
   # get a list of all the names in the path
   # each of these will be a child of the former
   if os.sep != "/":
-    path = string.replace(path, os.sep, "/")
+    path = path.replace(os.sep, "/")
   elements = path.split("/")
   if len(elements) == 0:
     ### we should raise a less generic error here. which?
     raise SVNTreeError
 
-  root_node = SVNTreeNode(elements[0], None)
-
-  add_elements_as_path(root_node, elements[1:])
+  root_node = None
+  
+  # if this is Windows: if the path contains a drive name (X:), make it
+  # the root node.
+  if os.name == 'nt':
+    m = re.match("([a-zA-Z]:)(.+)", elements[0])
+    if m:
+      root_node = SVNTreeNode(m.group(1), None)
+      elements[0] = m.group(2)
+      add_elements_as_path(root_node, elements[0:])
+  
+  if not root_node:
+    root_node = SVNTreeNode(elements[0], None)
+    add_elements_as_path(root_node, elements[1:])
 
   # deposit contents in the very last node.
   node = root_node
@@ -312,8 +330,8 @@ def get_props(path):
     # Not a misprint; "> 0" really is preferable to ">= 0" in this case.
     if line.find(' : ') > 0:
       name, value = line.split(' : ')
-      name = string.strip(name)
-      value = string.strip(value)
+      name = name.strip()
+      value = value.strip()
       props[name] = value
       first_value = 1
     else:    # Multi-line property, so re-use the current name.
@@ -531,8 +549,8 @@ def dump_tree(n,indent=""):
   else:
     print "%s%s" % (indent, n.name)
 
-  indent = string.replace(indent, "-", " ")
-  indent = string.replace(indent, "+", " ")
+  indent = indent.replace("-", " ")
+  indent = indent.replace("+", " ")
   for i in range(len(tmp_children)):
     c = tmp_children[i]
     if i == len(tmp_children

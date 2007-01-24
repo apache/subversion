@@ -23,15 +23,15 @@ Added:
 
 Added: file1
 ==============================================================================
---- (empty file)
-+++ file1	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ file1	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file1
 
 Added: file2
 ==============================================================================
---- (empty file)
-+++ file2	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ file2	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file2
 
@@ -39,29 +39,29 @@ Diffs of changes in other areas also in this revision:
 
 Added: dir1/file3
 ==============================================================================
---- (empty file)
-+++ dir1/file3	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir1/file3	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file3
 
 Added: dir1/file4
 ==============================================================================
---- (empty file)
-+++ dir1/file4	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir1/file4	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file4
 
 Added: dir2/file5
 ==============================================================================
---- (empty file)
-+++ dir2/file5	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file5
 
 Added: dir2/file6
 ==============================================================================
---- (empty file)
-+++ dir2/file6	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir2/file6	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file6
 Group: All
@@ -86,43 +86,43 @@ Added:
 
 Added: dir1/file3
 ==============================================================================
---- (empty file)
-+++ dir1/file3	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir1/file3	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file3
 
 Added: dir1/file4
 ==============================================================================
---- (empty file)
-+++ dir1/file4	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir1/file4	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file4
 
 Added: dir2/file5
 ==============================================================================
---- (empty file)
-+++ dir2/file5	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file5
 
 Added: dir2/file6
 ==============================================================================
---- (empty file)
-+++ dir2/file6	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir2/file6	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file6
 
 Added: file1
 ==============================================================================
---- (empty file)
-+++ file1	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ file1	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file1
 
 Added: file2
 ==============================================================================
---- (empty file)
-+++ file2	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ file2	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file2
 Group: file
@@ -141,15 +141,15 @@ Added:
 
 Added: file1
 ==============================================================================
---- (empty file)
-+++ file1	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ file1	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file1
 
 Added: file2
 ==============================================================================
---- (empty file)
-+++ file2	Sun Sep  9 01:46:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ file2	Sun Sep  9 01:46:40 2001	(r1)
 @@ -0,0 +1 @@
 +file2
 Group: file plus other areas
@@ -173,21 +173,42 @@ Modified:
 
 Modified: file2
 ==============================================================================
---- file2	(original)
-+++ file2	Sun Sep  9 04:33:20 2001
+--- file2	Sun Sep  9 01:46:40 2001	(r1)
++++ file2	Sun Sep  9 04:33:20 2001	(r2)
 @@ -1 +1,2 @@
  file2
 +change C1
+
+Added property for: file1 (from r1, file1)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file1|prop1	Sun Sep  9 04:33:20 2001	(r2)
+@@ -0,0 +1 @@
++propval1
+
+Added property for: file2 (from r1, file2)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file2|prop1	Sun Sep  9 04:33:20 2001	(r2)
+@@ -0,0 +1 @@
++propval1
 
 Diffs of changes in other areas also in this revision:
 
 Modified: dir2/file5
 ==============================================================================
---- dir2/file5	(original)
-+++ dir2/file5	Sun Sep  9 04:33:20 2001
+--- dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
++++ dir2/file5	Sun Sep  9 04:33:20 2001	(r2)
 @@ -1 +1,2 @@
  file5
 +change C2
+
+Added property for: dir1/ (from r1, dir1)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ dir1|prop3	Sun Sep  9 04:33:20 2001	(r2)
+@@ -0,0 +1 @@
++propval3
 Group: All
 Subject: r2 -  dir1 dir2
 
@@ -204,21 +225,63 @@ Modified:
    file1   (props changed)
    file2   (contents, props changed)
 
+Property Changes:
+   dir1/
+      Added:
+         prop3
+   file1
+      Added:
+         prop1
+   file2
+      Added:
+         prop1
+         svn:keywords
+         svn:new_svn_prop
+
 Modified: dir2/file5
 ==============================================================================
---- dir2/file5	(original)
-+++ dir2/file5	Sun Sep  9 04:33:20 2001
+--- dir2/file5	Sun Sep  9 01:46:40 2001	(r1)
++++ dir2/file5	Sun Sep  9 04:33:20 2001	(r2)
 @@ -1 +1,2 @@
  file5
 +change C2
 
 Modified: file2
 ==============================================================================
---- file2	(original)
-+++ file2	Sun Sep  9 04:33:20 2001
+--- file2	Sun Sep  9 01:46:40 2001	(r1)
++++ file2	Sun Sep  9 04:33:20 2001	(r2)
 @@ -1 +1,2 @@
  file2
 +change C1
+
+Added property for: dir1/ (from r1, dir1)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ dir1|prop3	Sun Sep  9 04:33:20 2001	(r2)
+@@ -0,0 +1 @@
++propval3
+
+Added property for: file1 (from r1, file1)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file1|prop1	Sun Sep  9 04:33:20 2001	(r2)
+@@ -0,0 +1 @@
++propval1
+
+Added properties for: file2 (from r1, file2)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file2|prop1	Sun Sep  9 04:33:20 2001	(r2)
+@@ -0,0 +1 @@
++propval1
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file2|svn:keywords	Sun Sep  9 04:33:20 2001	(r2)
+@@ -0,0 +1 @@
++Id
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file2|svn:new_svn_prop	Sun Sep  9 04:33:20 2001	(r2)
+@@ -0,0 +1 @@
++val
 Group: file
 Subject: r2 -  dir1 dir2
 
@@ -233,13 +296,35 @@ Modified:
    file1   (props changed)
    file2   (contents, props changed)
 
+Property Changes:
+   file1
+      Added:
+         prop1
+   file2
+      Added:
+         prop1
+
 Modified: file2
 ==============================================================================
---- file2	(original)
-+++ file2	Sun Sep  9 04:33:20 2001
+--- file2	Sun Sep  9 01:46:40 2001	(r1)
++++ file2	Sun Sep  9 04:33:20 2001	(r2)
 @@ -1 +1,2 @@
  file2
 +change C1
+
+Added property for: file1 (from r1, file1)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file1|prop1	Sun Sep  9 04:33:20 2001	(r2)
+@@ -0,0 +1 @@
++propval1
+
+Added property for: file2 (from r1, file2)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file2|prop1	Sun Sep  9 04:33:20 2001	(r2)
+@@ -0,0 +1 @@
++propval1
 Group: All
 Subject: r3 - dir2 dir3
 
@@ -256,12 +341,35 @@ Added:
    dir3/   (props changed)
       - copied from r2, dir1/
 
+Property Changes:
+   dir2/file7
+      Copied path:
+         prop1
+   dir3/
+      Modified:
+         prop3
+
 Copied: dir2/file7 (from r2, file1)
 ==============================================================================
---- file1	(original)
-+++ dir2/file7	Sun Sep  9 07:20:00 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir2/file7	Sun Sep  9 07:20:00 2001	(r3, copy of r2, file1)
 @@ -0,0 +1 @@
 +file1
+
+Copied path property for: dir2/file7 (from r2, file1)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ dir2/file7|prop1	Sun Sep  9 07:20:00 2001	(r3, copy of r2, file1)
+@@ -0,0 +1 @@
++propval1
+
+Copied path and modified property for: dir3/ (from r2, dir1)
+==============================================================================
+--- dir1|prop3	Sun Sep  9 04:33:20 2001	(r2, copy source)
++++ dir3|prop3	Sun Sep  9 07:20:00 2001	(r3)
+@@ -1 +1 @@
+-propval3
++propval4
 Group: All
 Subject: r4 - dir3
 
@@ -276,13 +384,25 @@ Added:
    dir3/file8
       - copied, changed from r2, file1
 
+Property Changes:
+   dir3/file8
+      Copied path:
+         prop1
+
 Copied and modified: dir3/file8 (from r2, file1)
 ==============================================================================
---- file1	(original)
-+++ dir3/file8	Sun Sep  9 10:06:40 2001
+--- file1	Sun Sep  9 04:33:20 2001	(r2, copy source)
++++ dir3/file8	Sun Sep  9 10:06:40 2001	(r4)
 @@ -1 +1,2 @@
  file1
 +change C3
+
+Copied path property for: dir3/file8 (from r2, file1)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ dir3/file8|prop1	Sun Sep  9 10:06:40 2001	(r4, copy of r2, file1)
+@@ -0,0 +1 @@
++propval1
 Group: file plus other areas
 Subject: r5 -  dir1 dir3
 
@@ -300,6 +420,37 @@ Changes in other areas also in this revision:
 Modified:
    dir1/   (props changed)
    dir3/   (props changed)
+
+Added property for: file2 (from r4, file2)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file2|prop2	Sun Sep  9 12:53:20 2001	(r5)
+@@ -0,0 +1 @@
++propval2
+
+Deleted property for: file2 (from r4, file2)
+==============================================================================
+--- file2|prop1	Sun Sep  9 10:06:40 2001	(r4)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
+@@ -1 +0,0 @@
+-propval1
+
+Diffs of changes in other areas also in this revision:
+
+Copied path and modified property for: dir1/ (from r4, dir1)
+==============================================================================
+--- dir1|prop3	Sun Sep  9 10:06:40 2001	(r4)
++++ dir1|prop3	Sun Sep  9 12:53:20 2001	(r5)
+@@ -1 +1 @@
+-propval3
++propval4
+
+Deleted property for: dir3/ (from r4, dir3)
+==============================================================================
+--- dir3|prop3	Sun Sep  9 10:06:40 2001	(r4)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
+@@ -1 +0,0 @@
+-propval4
 Group: All
 Subject: r5 -  dir1 dir3
 
@@ -314,6 +465,63 @@ Modified:
    dir1/   (props changed)
    dir3/   (props changed)
    file2   (props changed)
+
+Property Changes:
+   dir1/
+      Modified:
+         prop3
+   dir3/
+      Deleted:
+         prop3
+   file2
+      Added:
+         prop2
+      Deleted:
+         prop1
+         svn:new_svn_prop
+      Modified:
+         svn:keywords
+
+Copied path and modified property for: dir1/ (from r4, dir1)
+==============================================================================
+--- dir1|prop3	Sun Sep  9 10:06:40 2001	(r4)
++++ dir1|prop3	Sun Sep  9 12:53:20 2001	(r5)
+@@ -1 +1 @@
+-propval3
++propval4
+
+Deleted property for: dir3/ (from r4, dir3)
+==============================================================================
+--- dir3|prop3	Sun Sep  9 10:06:40 2001	(r4)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
+@@ -1 +0,0 @@
+-propval4
+
+Added property for: file2 (from r4, file2)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file2|prop2	Sun Sep  9 12:53:20 2001	(r5)
+@@ -0,0 +1 @@
++propval2
+
+Deleted properties for: file2 (from r4, file2)
+==============================================================================
+--- file2|prop1	Sun Sep  9 10:06:40 2001	(r4)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
+@@ -1 +0,0 @@
+-propval1
+--- file2|svn:new_svn_prop	Sun Sep  9 10:06:40 2001	(r4)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
+@@ -1 +0,0 @@
+-val
+
+Copied path and modified property for: file2 (from r4, file2)
+==============================================================================
+--- file2|svn:keywords	Sun Sep  9 10:06:40 2001	(r4)
++++ file2|svn:keywords	Sun Sep  9 12:53:20 2001	(r5)
+@@ -1 +1 @@
+-Id
++Date
 Group: file
 Subject: r5 -  dir1 dir3
 
@@ -326,6 +534,27 @@ changes and deletes of properties
 
 Modified:
    file2   (props changed)
+
+Property Changes:
+   file2
+      Added:
+         prop2
+      Deleted:
+         prop1
+
+Added property for: file2 (from r4, file2)
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file2|prop2	Sun Sep  9 12:53:20 2001	(r5)
+@@ -0,0 +1 @@
++propval2
+
+Deleted property for: file2 (from r4, file2)
+==============================================================================
+--- file2|prop1	Sun Sep  9 10:06:40 2001	(r4)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
+@@ -1 +0,0 @@
+-propval1
 Group: file plus other areas
 Subject: r6 -  dir1 dir4
 
@@ -347,8 +576,8 @@ Modified:
 
 Added: file9
 ==============================================================================
---- (empty file)
-+++ file9	Sun Sep  9 15:40:00 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
 
@@ -356,8 +585,8 @@ Diffs of changes in other areas also in this revision:
 
 Modified: dir1/file3
 ==============================================================================
---- dir1/file3	(original)
-+++ dir1/file3	Sun Sep  9 15:40:00 2001
+--- dir1/file3	Sun Sep  9 12:53:20 2001	(r5)
++++ dir1/file3	Sun Sep  9 15:40:00 2001	(r6)
 @@ -1 +1,2 @@
  file3
 +change C4
@@ -379,16 +608,16 @@ Modified:
 
 Modified: dir1/file3
 ==============================================================================
---- dir1/file3	(original)
-+++ dir1/file3	Sun Sep  9 15:40:00 2001
+--- dir1/file3	Sun Sep  9 12:53:20 2001	(r5)
++++ dir1/file3	Sun Sep  9 15:40:00 2001	(r6)
 @@ -1 +1,2 @@
  file3
 +change C4
 
 Added: file9
 ==============================================================================
---- (empty file)
-+++ file9	Sun Sep  9 15:40:00 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
 Group: file
@@ -406,8 +635,8 @@ Added:
 
 Added: file9
 ==============================================================================
---- (empty file)
-+++ file9	Sun Sep  9 15:40:00 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
 Group: file plus other areas
@@ -434,8 +663,8 @@ Modified:
 
 Deleted: file2
 ==============================================================================
---- file2	Sun Sep  9 18:26:40 2001
-+++ (empty file)
+--- file2	Sun Sep  9 18:26:40 2001	(r6)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1,2 +0,0 @@
 -file2
 -change C1
@@ -444,15 +673,15 @@ Diffs of changes in other areas also in this revision:
 
 Added: dir1/file10
 ==============================================================================
---- (empty file)
-+++ dir1/file10	Sun Sep  9 18:26:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir1/file10	Sun Sep  9 18:26:40 2001	(r7)
 @@ -0,0 +1 @@
 +file10
 
 Modified: dir3/file3
 ==============================================================================
---- dir3/file3	(original)
-+++ dir3/file3	Sun Sep  9 18:26:40 2001
+--- dir3/file3	Sun Sep  9 15:40:00 2001	(r6)
++++ dir3/file3	Sun Sep  9 18:26:40 2001	(r7)
 @@ -1 +1,2 @@
  file3
 +change C5
@@ -475,28 +704,45 @@ Deleted:
 Modified:
    dir3/file3
 
+Property Changes:
+   file2
+      Deleted path:
+         prop2
+         svn:keywords
+
 Added: dir1/file10
 ==============================================================================
---- (empty file)
-+++ dir1/file10	Sun Sep  9 18:26:40 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir1/file10	Sun Sep  9 18:26:40 2001	(r7)
 @@ -0,0 +1 @@
 +file10
 
 Modified: dir3/file3
 ==============================================================================
---- dir3/file3	(original)
-+++ dir3/file3	Sun Sep  9 18:26:40 2001
+--- dir3/file3	Sun Sep  9 15:40:00 2001	(r6)
++++ dir3/file3	Sun Sep  9 18:26:40 2001	(r7)
 @@ -1 +1,2 @@
  file3
 +change C5
 
 Deleted: file2
 ==============================================================================
---- file2	Sun Sep  9 18:26:40 2001
-+++ (empty file)
+--- file2	Sun Sep  9 18:26:40 2001	(r6)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1,2 +0,0 @@
 -file2
 -change C1
+
+Deleted path properties for: file2 (from r6, file2)
+==============================================================================
+--- file2|prop2	Sun Sep  9 15:40:00 2001	(r6)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
+@@ -1 +0,0 @@
+-propval2
+--- file2|svn:keywords	Sun Sep  9 15:40:00 2001	(r6)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
+@@ -1 +0,0 @@
+-Date
 Group: file
 Subject: r7 -  dir1 dir2 dir3 dir3/dir5
 
@@ -512,8 +758,8 @@ Deleted:
 
 Deleted: file2
 ==============================================================================
---- file2	Sun Sep  9 18:26:40 2001
-+++ (empty file)
+--- file2	Sun Sep  9 18:26:40 2001	(r6)
++++ /dev/null	Thu Jan  1 00:00:00 1970	(deleted)
 @@ -1,2 +0,0 @@
 -file2
 -change C1
@@ -540,16 +786,16 @@ Modified:
 
 Copied: dir6/file3 (from r7, dir3/file3)
 ==============================================================================
---- dir3/file3	(original)
-+++ dir6/file3	Sun Sep  9 21:13:20 2001
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because file is newly added)
++++ dir6/file3	Sun Sep  9 21:13:20 2001	(r8, copy of r7, dir3/file3)
 @@ -0,0 +1,2 @@
 +file3
 +change C5
 
 Modified: dir6/file4
 ==============================================================================
---- dir3/file4	(original)
-+++ dir6/file4	Sun Sep  9 21:13:20 2001
+--- dir3/file4	Sun Sep  9 15:40:00 2001	(r6)
++++ dir6/file4	Sun Sep  9 21:13:20 2001	(r8)
 @@ -1 +1,2 @@
  file4
 +change C6
@@ -571,6 +817,11 @@ Modified:
 Added: file11
 ==============================================================================
 Binary file. No diff available.
+
+Added property for: file9 (from r8, file9)
+==============================================================================
+
+Binary property. No diff available.
 Group: All
 Subject: r9 - 
 
@@ -586,9 +837,29 @@ Added:
 Modified:
    file9   (props changed)
 
+Property Changes:
+   file11
+      Added path:
+         svn:mime-type
+   file9
+      Added:
+         prop2
+
 Added: file11
 ==============================================================================
 Binary file. No diff available.
+
+Added path property for: file11
+==============================================================================
+--- /dev/null	Thu Jan  1 00:00:00 1970	(empty, because property is newly added)
++++ file11|svn:mime-type	Mon Sep 10 00:00:00 2001	(r9)
+@@ -0,0 +1 @@
++application/octet-stream
+
+Added property for: file9 (from r8, file9)
+==============================================================================
+
+Binary property. No diff available.
 Group: file
 Subject: r9 - 
 
@@ -604,9 +875,19 @@ Added:
 Modified:
    file9   (props changed)
 
+Property Changes:
+   file9
+      Added:
+         prop2
+
 Added: file11
 ==============================================================================
 Binary file. No diff available.
+
+Added property for: file9 (from r8, file9)
+==============================================================================
+
+Binary property. No diff available.
 Group: file plus other areas
 Subject: r10 - 
 
@@ -623,7 +904,12 @@ Modified:
 
 Modified: file11
 ==============================================================================
-Binary files. No diff available.
+Binary file (source and/or target). No diff available.
+
+Copied path and modified property for: file9 (from r9, file9)
+==============================================================================
+
+Binary property (source and/or target). No diff available.
 Group: All
 Subject: r10 - 
 
@@ -638,9 +924,19 @@ Modified:
    file11
    file9   (props changed)
 
+Property Changes:
+   file9
+      Modified:
+         prop2
+
 Modified: file11
 ==============================================================================
-Binary files. No diff available.
+Binary file (source and/or target). No diff available.
+
+Copied path and modified property for: file9 (from r9, file9)
+==============================================================================
+
+Binary property (source and/or target). No diff available.
 Group: file
 Subject: r10 - 
 
@@ -655,6 +951,16 @@ Modified:
    file11
    file9   (props changed)
 
+Property Changes:
+   file9
+      Modified:
+         prop2
+
 Modified: file11
 ==============================================================================
-Binary files. No diff available.
+Binary file (source and/or target). No diff available.
+
+Copied path and modified property for: file9 (from r9, file9)
+==============================================================================
+
+Binary property (source and/or target). No diff available.

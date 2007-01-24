@@ -25,8 +25,8 @@
 #define SVN_ATOMIC_INITIALIZED   3
 
 svn_error_t*
-svn_atomic_init_once(volatile svn_atomic_t *global_status,
-                     svn_error_t *(*init_func)(void))
+svn_atomic__init_once(volatile svn_atomic_t *global_status,
+                      svn_error_t *(*init_func)(void))
 {
   /* We have to call init_func exactly once.  Because APR
      doesn't have statically-initialized mutexes, we implement a poor

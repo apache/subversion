@@ -2,7 +2,7 @@
  * update.c: handle the update-report request and response
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -412,7 +412,7 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
       for (i = 0; i < baton->removed_props->nelts; i++)
         {
           /* We already XML-escaped the property name in change_xxx_prop. */
-          qname = ((const char **)(baton->removed_props->elts))[i];
+          qname = APR_ARRAY_IDX(baton->removed_props, i, const char *);
           SVN_ERR(dav_svn__send_xml(baton->uc->bb, baton->uc->output,
                                     "<S:remove-prop name=\"%s\"/>" 
                                     DEBUG_CR, qname));
@@ -706,14 +706,14 @@ upd_change_xxx_prop(void *baton,
           if (! b->changed_props)
             b->changed_props = apr_array_make(b->pool, 1, sizeof(name));
           
-          (*((const char **)(apr_array_push(b->changed_props)))) = qname;
+          APR_ARRAY_PUSH(b->changed_props, const char *) = qname;
         }
       else
         {
           if (! b->removed_props)
             b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
           
-          (*((const char **)(apr_array_push(b->removed_props)))) = qname;
+          APR_ARRAY_PUSH(b->removed_props, const char *) = qname;
         }
     }
 

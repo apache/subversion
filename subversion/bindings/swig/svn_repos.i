@@ -40,7 +40,8 @@
     const char *user,
     const char *log_msg,
     const char *lock_token,
-    const char *tgt_path
+    const char *tgt_path,
+    const char *parent_dir
 };
 
 #ifdef SWIGPYTHON
@@ -131,3 +132,7 @@ svn_error_t *svn_repos_dump_fs2(svn_repos_t *repos,
 #endif
 
 %include svn_repos_h.swg
+
+#ifdef SWIGRUBY
+%define_close_related_methods(repos)
+#endif

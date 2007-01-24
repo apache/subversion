@@ -18,6 +18,7 @@ package org.tigris.subversion.javahl.tests;
  * @endcopyright
  */
 
+import org.tigris.subversion.javahl.Revision;
 import org.tigris.subversion.javahl.Status;
 import org.tigris.subversion.javahl.NodeKind;
 import org.tigris.subversion.javahl.DirEntry;
@@ -26,6 +27,7 @@ import java.io.*;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Date;
 
 import junit.framework.Assert;
 /**
@@ -134,6 +136,22 @@ public class WC
     }
 
     /**
+     * Set the revision number of all paths in a working copy.
+     * @param revision The revision number to associate with all
+     * paths.
+     */
+    public void setRevision(long revision)
+    {
+        Iterator iter = this.items.values().iterator();
+
+        while (iter.hasNext())
+        {
+            Item item = (Item) iter.next();
+            item.workingCopyRev = revision;
+        }
+    }
+
+    /**
      * Returns the file content of the item at a path
      * @param path  the path, where the content is retrieved
      * @return  the content of the file
@@ -204,6 +222,73 @@ public class WC
     }
 
     /**
+     * Set the youngest committed revision of an out of date item at
+     * <code>path</code>.
+     * @param path The path to set the last revision for.
+     * @param revision The last revision number for <code>path</code>
+     * known to the repository.
+     */
+    public void setItemReposLastCmtRevision(String path, long revision)
+    {
+        ((Item) items.get(path)).reposLastCmtRevision = revision;
+    }
+
+    /**
+     * Set the youngest committed revision of an out of date item at
+     * <code>path</code>.
+     * @param path The path to set the last author for.
+     * @param revision The last author for <code>path</code> known to
+     * the repository.
+     */
+    public void setItemReposLastCmtAuthor(String path, String author)
+    {
+        ((Item) items.get(path)).reposLastCmtAuthor = author;
+    }
+
+    /**
+     * Set the youngest committed revision of an out of date item at
+     * <code>path</cod>.
+     * @param path The path to set the last date for.
+     * @param revision The last date for <code>path</code> known to
+     * the repository.
+     */
+    public void setItemReposLastCmtDate(String path, long date)
+    {
+        ((Item) items.get(path)).reposLastCmtDate = date;
+    }
+
+    /**
+     * Set the youngest committed node kind of an out of date item at
+     * <code>path</code>.
+     * @param path The path to set the last node kind for.
+     * @param revision The last node kind for <code>path</code> known
+     * to the repository.
+     */
+    public void setItemReposKind(String path, int nodeKind)
+    {
+        ((Item) items.get(path)).reposKind = nodeKind;
+    }
+
+    /**
+     * Set the youngest committed rev, author, date, and node kind of an
+     * out of date item at <code>path</code>.
+     *
+     * @param path The path to set the repos info for.
+     * @param revision The last revision number.
+     * @param revision The last author.
+     * @param date The last date.
+     * @param nodeKind The last node kind.
+     */
+    public void setItemOODInfo(String path, long revision, String author,
+                               long date, int nodeKind)
+    {
+        this.setItemReposLastCmtRevision(path, revision);
+        this.setItemReposLastCmtAuthor(path, author);
+        this.setItemReposLastCmtDate(path, date);
+        this.setItemReposKind(path, nodeKind);
+    }
+
+    /**
      * Copy an expected working copy state
      * @return the copy of the exiting object
      */
@@ -222,9 +307,9 @@ public class WC
      * Check the result of a single file SVNClient.list call
      * @param tested            the result array
      * @param singleFilePath    the path to be checked
-     * @throws Exception
+     * @exception Exception
      */
-    void check(DirEntry[] tested, String singleFilePath) throws Exception
+    void check(DirEntry[] tested, String singleFilePath)
     {
         Assert.assertEquals("not a single dir entry", 1, tested.length);
         Item item = (Item)items.get(singleFilePath);
@@ -242,7 +327,6 @@ public class WC
      * @throws Exception
      */
     void check(DirEntry[] tested, String basePath, boolean recursive)
-            throws Exception
     {
         // clear the touched flag of all items
         Iterator it = items.values().iterator();
@@ -314,12 +398,33 @@ public class WC
     }
 
     /**
-     * Check the result of a SVNClient.status versus the expected state
+     * Check the result of a SVNClient.status() versus the expected
+     * state.  Does not extract "out of date" information from the
+     * repository.
+     *
      * @param tested            the result to be tested
      * @param workingCopyPath   the path of the working copy
-     * @throws Exception
+     * @exception IOException If there is a problem finding or reading
+     * the WC.
+     * @see #check(Status[], String, boolean)
      */
-    void check(Status[] tested, String workingCopyPath) throws Exception
+    void check(Status[] tested, String workingCopyPath)
+        throws IOException
+    {
+        check(tested, workingCopyPath, false);
+    }
+
+    /**
+     * Check the result of a SVNClient.status() versus the expected state.
+     *
+     * @param tested The result to be tested.
+     * @param workingCopyPath The path of the working copy.
+     * @param checkRepos Whether to compare the "out of date" statii.
+     * @exception IOException If there is a problem finding or reading
+     * the WC.
+     */
+    void check(Status[] tested, String workingCopyPath, boolean checkRepos)
+        throws IOException
     {
         // clear the touched flag of all items
         Iterator it = items.values().iterator();
@@ -391,6 +496,34 @@ public class WC
                         tested[i].getNodeKind(),
                         item.nodeKind == -1 ? NodeKind.dir : item.nodeKind);
             }
+
+            if (checkRepos)
+            {
+                Assert.assertEquals("Last commit revisions for OOD path '"
+                                    + item.myPath + "' don't match:",
+                                    item.reposLastCmtRevision,
+                                    tested[i].getReposLastCmtRevisionNumber());
+                Assert.assertEquals("Last commit kinds for OOD path '"
+                                    + item.myPath + "' don't match:",
+                                    item.reposKind, tested[i].getReposKind());
+
+                // Only the last committed rev and kind is available for
+                // paths deleted in the repos.
+                if (tested[i].getRepositoryTextStatus() != Status.Kind.deleted)
+                {
+                    long lastCmtTime =
+                        (tested[i].getReposLastCmtDate() == null ?
+                         0 : tested[i].getReposLastCmtDate().getTime());
+                    Assert.assertEquals("Last commit dates for OOD path '" +
+                                        item.myPath + "' don't match:",
+                                        new Date(item.reposLastCmtDate),
+                                        new Date(lastCmtTime));
+                    Assert.assertEquals("Last commit authors for OOD path '"
+                                        + item.myPath + "' don't match:",
+                                        item.reposLastCmtAuthor,
+                                        tested[i].getReposLastCmtAuthor());
+                }
+            }
             item.touched = true;
         }
 
@@ -414,42 +547,71 @@ public class WC
          * the content of a file. A directory has a null content
          */
         String myContent;
+
         /**
          * the relative path of the item
          */
         String myPath;
+
         /**
          * the text (content) status of the item
          */
         int textStatus = Status.Kind.normal;
+
         /**
          * the property status of the item.
          */
         int propStatus = Status.Kind.none;
+
         /**
          * the expected revision number. -1 means do not check.
          */
         long workingCopyRev = -1;
+
         /**
          * flag if item has been touched. To detect missing items.
          */
         boolean touched;
+
         /**
          * flag if the content will be checked
          */
         boolean checkContent;
+
         /**
          * expected node kind. -1 means do not check.
          */
         int nodeKind = -1;
+
         /**
          * expected locked status
          */
         boolean isLocked;
+
         /**
          * expected switched status
          */
         boolean isSwitched;
+
+        /**
+         * youngest committed revision on repos if out of date
+         */
+        long reposLastCmtRevision = Revision.SVN_INVALID_REVNUM;
+
+        /**
+         * most recent commit date on repos if out of date
+         */
+        long reposLastCmtDate = 0;
+
+        /**
+         * node kind of the youngest commit if out of date
+         */
+        int reposKind = NodeKind.none;
+
+        /**
+         * author of the youngest commit if out of date.
+         */
+        String reposLastCmtAuthor;
 
         /**
          * create a new item
@@ -462,6 +624,7 @@ public class WC
             myContent = content;
             items.put(path, this);
         }
+
         /**
          * copy constructor
          * @param source    the copy source.
@@ -475,6 +638,7 @@ public class WC
             propStatus = source.propStatus;
             owner.items.put(myPath, this);
         }
+
         /**
          * copy this item
          * @param owner the new WC

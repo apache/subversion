@@ -145,7 +145,7 @@ copy_added_dir_administratively(const char *src_path,
         SVN_ERR(cancel_func(cancel_baton));
 
       /* "Copy" the dir dst_path and schedule it, and possibly
-         it's children, for addition. */
+         its children, for addition. */
       SVN_ERR(svn_io_dir_make(dst_path, APR_OS_DEFAULT, pool));
 
       /* Add the directory, adding locking access for dst_path
@@ -530,7 +530,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
       void *val;
       svn_node_kind_t kind;
       svn_boolean_t deleted = FALSE;
-      apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
+      apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
 
       svn_pool_clear(subpool);
 
