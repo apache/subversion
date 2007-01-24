@@ -213,9 +213,10 @@ ok(-d "$wcpath/dir1", "Recursive checkout worked");
 is(SVN::Client::url_from_path($wcpath),$reposurl,
    "Returned $reposurl from url_from_path");
 
+# Failure of the next three should cause the test to immediately halt
 ok(open(NEW, ">$wcpath/dir1/new"),'Open new file for writing') or die $!;
-ok(print(NEW 'addtest'), 'Print to new file');
-ok(close(NEW),'Close new file');
+ok(print(NEW 'addtest'), 'Print to new file') or die $!;
+ok(close(NEW),'Close new file') or die $!;
 
 # no return means success
 is($ctx->add("$wcpath/dir1/new",0),undef,
