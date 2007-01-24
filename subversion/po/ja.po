@@ -170,8 +170,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-22 11:09+0800\n"
-"PO-Revision-Date: 2007-01-19 19:04+0900\n"
+"POT-Creation-Date: 2007-01-25 02:19+0900\n"
+"PO-Revision-Date: 2007-01-25 02:19+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1303,7 +1303,7 @@ msgstr "リポジトリ <--> 作業コピーの移動操作はサポートされ
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' に該当する URL は存在しないようです"
 
-#: libsvn_client/copy.c:1817 svn/move-cmd.c:67
+#: libsvn_client/copy.c:1809 svn/move-cmd.c:67
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "移動操作に (HEAD 以外の) リビジョンは指定できません"
 
@@ -1751,7 +1751,6 @@ msgid "Can't ungrab FS mutex"
 msgstr "ファイルシステムの相互排他ロックを手放せません"
 
 #: libsvn_fs/fs-loader.c:901
-#, fuzzy
 msgid "Lock comment contains illegal characters"
 msgstr "ロックについてのコメントに不正な文字が含まれています"
 
