@@ -196,6 +196,7 @@ switch_external(const char *path,
              externals definition, perform an update. */
           if (strcmp(entry->url, url) == 0)
             {
+              /* ### Why not use subpool here? */
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
                                                   TRUE, FALSE, FALSE,
                                                   timestamp_sleep, ctx,

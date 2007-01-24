@@ -956,6 +956,6 @@ svn_client__get_diff_editor(const char *target,
                                             edit_baton,
                                             pool));
 
-  svn_pool_destroy(subpool);
+  /* We don't destroy subpool, as it's managed by the edit baton. */
   return SVN_NO_ERROR;
 }
