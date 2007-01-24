@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 158;
+use Test::More tests => 159;
 use strict;
 
 # shut up about variables that are only used once.
@@ -337,6 +337,27 @@ is($ctx->propset('perl-test','test-val',"$wcpath/dir1",0),undef,
 my ($ph) = $ctx->propget('perl-test',"$wcpath/dir1",undef,0);
 isa_ok($ph,'HASH','propget returns a hash');
 is($ph->{"$wcpath/dir1"},'test-val','perl-test property has the correct value');
+
+# From Eric Miller <eric.miller@amd.com>
+#
+# When svn_path_basename is called during a svn_client_status call it
+# can barf on "." and core dumps the interpreter.
+#
+# perl: subversion/libsvn_subr/path.c:377: svn_path_basename: Assertion
+#     `is_canonical(path, len)' failed.
+#
+# As outlined in past discussions I found, the code fails because the
+# canonical version of "." is "" (empty string) and for some reason that
+# path is not getting canonicalized before being passed.
+#
+# The simple thing to do would be to map "." to "" before svn_client_status
+# (or status2) is called, since changing the api directly seems to be a
+# source of contention (at least it was 2 years ago J ).
+#
+SKIP: {
+    skip "Test dumps core", 1;
+    $ctx->status(".", "HEAD", sub {}, 0, 0, 0, 0);
+}
 
 # No revnum for the working copy so we should get INVALID_REVNUM
 is($ctx->status($wcpath, undef, sub { 
