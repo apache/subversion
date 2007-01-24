@@ -460,6 +460,15 @@ def copy_with_mod_from_unreadable_dir(sbox):
                                      'rm',
                                      sbox.wc_dir + '/A/P/E/beta')
 
+  # Copy a (readable) file into the copied directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'cp',
+                                     sbox.wc_dir + '/A/D/gamma',
+                                     sbox.wc_dir + '/A/P/E')
+
+
   # Commit the copy-with-modification.
   svntest.actions.run_and_verify_svn(None,
                                      None,
@@ -509,6 +518,7 @@ def copy_with_mod_from_unreadable_dir(sbox):
     '   A /A/P\n',
     '   A /A/P/E\n',
     '   A /A/P/E/alpha\n',
+    '   A /A/P/E/gamma (from /A/D/gamma:1)\n',
     '   A /A/P/E/new-file\n',
     '   A /A/P/F\n',
     '   A /A/P/NEW-DIR\n',
@@ -531,7 +541,7 @@ def copy_with_mod_from_unreadable_dir(sbox):
   svntest.actions.compare_and_display_lines(None,
                                             'LOG',
                                             expected_out,
-                                            out[2:12])
+                                            out[2:13])
 
   svntest.actions.run_and_verify_svn(None,
                                      ['bar\n'],
@@ -575,7 +585,7 @@ test_list = [ None,
               detect_meddling,
               basic_authz,
               copy_from_unreadable_dir,
-              copy_with_mod_from_unreadable_dir,
+              XFail(copy_with_mod_from_unreadable_dir),
               url_encoding,
               no_author,
              ]
