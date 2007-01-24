@@ -70,7 +70,7 @@ def export_nonexistent_url(sbox):
 
   svntest.main.safe_rmtree(sbox.wc_dir)
   export_target = os.path.join(sbox.wc_dir, 'nonexistent')
-  nonexistent_url = sbox.repo_url
+  nonexistent_url = sbox.repo_url + "/nonexistent"
   svntest.actions.run_and_verify_svn("Error about nonexistent URL expected",
                                      None, svntest.SVNAnyOutput,
                                      'export', nonexistent_url, export_target)
