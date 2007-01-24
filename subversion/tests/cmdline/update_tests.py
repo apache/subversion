@@ -2100,15 +2100,15 @@ def update_wc_on_windows_drive(sbox):
 
     # get the list of used drive letters, use some Windows specific function.
     try:
-  		import win32api
+      import win32api
 
-  		drives=win32api.GetLogicalDriveStrings()
-  		drives=drives.split('\000')
+      drives=win32api.GetLogicalDriveStrings()
+      drives=drives.split('\000')
 
-  		for d in range(ord('G'), ord('Z')+1):
-  		  drive = chr(d)
-  		  if not drive + ':\\' in drives:
-  			return drive
+      for d in range(ord('G'), ord('Z')+1):
+        drive = chr(d)
+        if not drive + ':\\' in drives:
+          return drive
     except ImportError:
       return None
 
