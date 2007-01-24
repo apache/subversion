@@ -91,6 +91,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
                                  list_func, baton, subpool));
     }
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
 

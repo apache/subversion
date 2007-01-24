@@ -956,5 +956,6 @@ svn_client__get_diff_editor(const char *target,
                                             edit_baton,
                                             pool));
 
+  svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
