@@ -171,7 +171,7 @@ msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-01-25 02:19+0900\n"
-"PO-Revision-Date: 2007-01-25 02:19+0900\n"
+"PO-Revision-Date: 2007-01-25 02:32+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -8003,7 +8003,7 @@ msgstr ""
 #: svn/propedit-cmd.c:114
 #, c-format
 msgid "Set new value for property '%s' on revision %ld\n"
-msgstr "属性 '%s' (リビジョン %ld) を新しい値を設定しました\n"
+msgstr "属性 '%s' の新しい値をリビジョン %ld に設定しました\n"
 
 #: svn/propedit-cmd.c:120
 #, c-format
@@ -8027,7 +8027,7 @@ msgstr "'%s' は作業コピーのパスではないようです"
 #: svn/propedit-cmd.c:264
 #, c-format
 msgid "Set new value for property '%s' on '%s'\n"
-msgstr "属性 '%s' に新しい値 '%s' を設定しました\n"
+msgstr "属性 '%s' の新しい値を '%s' に設定しました\n"
 
 #: svn/propedit-cmd.c:274
 #, c-format
