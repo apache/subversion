@@ -166,6 +166,8 @@ add_subdir(svn_fs_root_t *source_root,
   apr_hash_t *dirents;
   apr_hash_t *props;
 
+  /* ### If this directory was copied in this revision from somewhere
+     ### readable, should not lose history! */
   SVN_ERR(editor->add_directory(path, parent_baton, NULL,
                                 SVN_INVALID_REVNUM, pool, dir_baton));
 
@@ -237,6 +239,8 @@ add_subdir(svn_fs_root_t *source_root,
           svn_txdelta_stream_t *delta_stream;
           unsigned char digest[APR_MD5_DIGESTSIZE];
 
+          /* ### If this file was copied in this revision from somewhere
+             ### readable, should not lose history! */
           SVN_ERR(editor->add_file(new_path, *dir_baton, NULL,
                                    SVN_INVALID_REVNUM, pool, &file_baton));
 
