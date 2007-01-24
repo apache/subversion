@@ -443,6 +443,23 @@ def copy_with_mod_from_unreadable_dir(sbox):
                                      'bar',
                                      sbox.wc_dir + '/A/P/lambda')
 
+  # Add a new directory and file inside the copied directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'mkdir',
+                                     sbox.wc_dir + '/A/P/NEW-DIR')
+
+  svntest.main.file_append(sbox.wc_dir + '/A/P/E/new-file', "bla bla")
+  svntest.main.run_svn(None, 'add', sbox.wc_dir + '/A/P/E/new-file')
+
+  # Delete a file inside the copied directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'rm',
+                                     sbox.wc_dir + '/A/P/E/beta')
+
   # Commit the copy-with-modification.
   svntest.actions.run_and_verify_svn(None,
                                      None,
@@ -485,9 +502,6 @@ def copy_with_mod_from_unreadable_dir(sbox):
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
-  # Currently (r23212), this run_sync fails.  It is possible that the
-  # rest of the test below this line is not accurate, because it has
-  # never been executed.
   run_sync(dest_sbox.repo_url)
 
   expected_out = [
@@ -495,11 +509,12 @@ def copy_with_mod_from_unreadable_dir(sbox):
     '   A /A/P\n',
     '   A /A/P/E\n',
     '   A /A/P/E/alpha\n',
-    '   A /A/P/E/beta\n',
+    '   A /A/P/E/new-file\n',
     '   A /A/P/F\n',
+    '   A /A/P/NEW-DIR\n',
     '   A /A/P/lambda\n',
     '\n',
-    'Copy B to P\n',
+    'log_msg\n',
   ]
 
   out, err = svntest.main.run_svn(None,
@@ -516,7 +531,7 @@ def copy_with_mod_from_unreadable_dir(sbox):
   svntest.actions.compare_and_display_lines(None,
                                             'LOG',
                                             expected_out,
-                                            out[2:11])
+                                            out[2:12])
 
   svntest.actions.run_and_verify_svn(None,
                                      ['bar\n'],
@@ -560,7 +575,7 @@ test_list = [ None,
               detect_meddling,
               basic_authz,
               copy_from_unreadable_dir,
-              XFail(copy_with_mod_from_unreadable_dir),
+              copy_with_mod_from_unreadable_dir,
               url_encoding,
               no_author,
              ]
