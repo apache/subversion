@@ -171,8 +171,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-25 02:38+0900\n"
-"PO-Revision-Date: 2007-01-25 02:39+0900\n"
+"POT-Creation-Date: 2007-01-26 03:31+0900\n"
+"PO-Revision-Date: 2007-01-26 03:31+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1041,7 +1041,7 @@ msgstr "'%s' はディレクトリを指しています"
 msgid "(local)"
 msgstr "(ローカル)"
 
-#: libsvn_client/checkout.c:92
+#: libsvn_client/checkout.c:92 libsvn_client/export.c:895
 #, c-format
 msgid "URL '%s' doesn't exist"
 msgstr "URL '%s' は存在しません"
@@ -1280,10 +1280,9 @@ msgid "Revision type requires a working copy path, not a URL"
 msgstr "リビジョン形式には URL ではなく作業コピーパスが必要となります。"
 
 #: libsvn_client/copy.c:1357
-msgid "Cannot mix repository and working copy paths in source list"
+msgid "Cannot mix repository and working copy sources"
 msgstr ""
-"コピー元 (または移動元) のリストにリポジトリと作業コピーパスを混ぜることはで"
-"きません"
+"コピー元 (または移動元) にリポジトリと作業コピーを混ぜることはできません"
 
 #: libsvn_client/copy.c:1398
 #, c-format
@@ -1296,15 +1295,15 @@ msgid "Cannot move path '%s' into itself"
 msgstr "パス '%s' は自身には移動できません"
 
 #: libsvn_client/copy.c:1427
-msgid "No support for repos <--> working copy moves"
-msgstr "リポジトリ <--> 作業コピーの移動操作はサポートされていません"
+msgid "Repository to working copy moves are not supported"
+msgstr "リポジトリから作業コピーへの移動はサポートされていません"
 
 #: libsvn_client/copy.c:1491
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "'%s' に該当する URL は存在しないようです"
 
-#: libsvn_client/copy.c:1809 svn/move-cmd.c:67
+#: libsvn_client/copy.c:1829 svn/move-cmd.c:67
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "移動操作に (HEAD 以外の) リビジョンは指定できません"
 
@@ -1461,7 +1460,7 @@ msgstr "'%s' のエントリが読み込めません"
 msgid "URL '%s' non-existent in revision %ld"
 msgstr "URL '%s' は、リビジョン %ld には存在しません"
 
-#: libsvn_client/list.c:225
+#: libsvn_client/list.c:226
 #, c-format
 msgid "URL '%s' non-existent in that revision"
 msgstr "URL '%s' は、そのリビジョンには存在しません"
@@ -1484,8 +1483,9 @@ msgstr "'%s' はこの作業コピーでロックされていません"
 msgid "'%s' is not locked"
 msgstr "'%s' はロックされていません"
 
-#: libsvn_client/locking_commands.c:409 libsvn_ra/ra_loader.c:625
-msgid "Lock comment has illegal characters"
+#: libsvn_client/locking_commands.c:409 libsvn_fs/fs-loader.c:901
+#: libsvn_ra/ra_loader.c:625
+msgid "Lock comment contains illegal characters"
 msgstr "ロックについてのコメントに不正な文字が含まれています"
 
 #: libsvn_client/log.c:73
@@ -1750,10 +1750,6 @@ msgstr "ファイルシステムの相互排他ロックを奪えません"
 #, c-format
 msgid "Can't ungrab FS mutex"
 msgstr "ファイルシステムの相互排他ロックを手放せません"
-
-#: libsvn_fs/fs-loader.c:901
-msgid "Lock comment contains illegal characters"
-msgstr "ロックについてのコメントに不正な文字が含まれています"
 
 #: libsvn_fs/fs-loader.c:907
 msgid "Negative expiration date passed to svn_fs_lock"
@@ -3932,7 +3928,7 @@ msgstr ""
 msgid "'%s' not found in filesystem"
 msgstr "'%s' はファイルシステムに見つかりません"
 
-#: libsvn_repos/replay.c:367
+#: libsvn_repos/replay.c:387
 #, c-format
 msgid "Filesystem path '%s' is neither a file nor a directory"
 msgstr "ファイルシステムのパス '%s' はファイルでもディレクトリでもありません"
@@ -9984,6 +9980,12 @@ msgstr "エクスポートされたものです%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "'%s' はバージョン管理下になく、エクスポートされたものでもありません\n"
 
+#~ msgid "No support for repos <--> working copy moves"
+#~ msgstr "リポジトリ <--> 作業コピーの移動操作はサポートされていません"
+
+#~ msgid "Lock comment has illegal characters"
+#~ msgstr "ロックについてのコメントに不正な文字が含まれています"
+
 #~ msgid "Not enough arguments provided; try 'svn help' for more info"
 #~ msgstr ""
 #~ "与える引数が不十分です。より詳しく知りたいときは 'svn help' を試してみてく"
@@ -13987,3 +13989,8 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 
 #~ msgid "Add directory failed: %s on %s (%d)"
 #~ msgstr "ディレクトリの追加が失敗しました: %s (対象: %s) (%d)"
+
+#~ msgid "Cannot mix repository and working copy paths in source list"
+#~ msgstr ""
+#~ "コピー元 (または移動元) のリストにリポジトリと作業コピーパスを混ぜることは"
+#~ "できません"
