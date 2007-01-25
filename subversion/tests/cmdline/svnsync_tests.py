@@ -490,13 +490,13 @@ def copy_with_mod_from_unreadable_dir(sbox):
   # For mod_dav_svn's parent path setup we need per-repos permissions in
   # the authz file...
   if sbox.repo_url.startswith('http'):
-    fp.write("[svnsync-copy-from-unreadable-dir:/]\n" +
+    fp.write("[svnsync-copy-with-mod-from-unreadable-dir:/]\n" +
              "* = r\n" +
              "\n" +
-             "[svnsync-copy-from-unreadable-dir:/A/B]\n" +
+             "[svnsync-copy-with-mod-from-unreadable-dir:/A/B]\n" +
              "* = \n" +
              "\n" +
-             "[svnsync-copy-from-unreadable-dir-1:/]\n" +
+             "[svnsync-copy-with-mod-from-unreadable-dir-1:/]\n" +
              "* = rw")
 
   # Otherwise we can just go with the permissions needed for the source
