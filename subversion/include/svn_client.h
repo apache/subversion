@@ -286,6 +286,16 @@ typedef struct svn_client_proplist_item_t
 
 } svn_client_proplist_item_t;
 
+/**
+ * The callback invoked by svn_client_proplist3().  Each invocation
+ * describes the property specified by @a item.  Use @a pool for all
+ * temporary allocation.
+ */
+typedef svn_error_t *(*svn_proplist_receiver_t)
+  (void *baton,
+   const svn_client_proplist_item_t *item,
+   apr_pool_t *pool);
+
 /** 
  * Return a duplicate of @a item, allocated in @a pool. No part of the new
  * structure will be shared with @a item.
@@ -2550,7 +2560,26 @@ svn_client_revprop_get(const char *propname,
  *
  * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_proplist3(const char *target,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_proplist_receiver_t receiver,
+                     void *receiver_baton,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_proplist3(), except the properties are returned 
+ * as an array of @c svn_client_proplist_item_t * structures, instead of
+ * by invoking the receiver function.
+ *
  * @since New in 1.2.
+ *
+ * @deprecated Provided for backward compatiblility with the 1.2 API.
  */
 svn_error_t *
 svn_client_proplist2(apr_array_header_t **props,
