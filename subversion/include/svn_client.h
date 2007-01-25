@@ -2533,15 +2533,9 @@ svn_client_revprop_get(const char *propname,
                        apr_pool_t *pool);
 
 /**
- * Set @a *props to the regular properties of @a target, a URL or working
- * copy path.
- *
- * Each element of the returned array is (@c svn_client_proplist_item_t *).
- * For each @a item, @a item->node_name contains the name relative to the
- * same base as @a target, and @a item->prop_hash maps (<tt>const char *</tt>)
- * property names to (@c svn_string_t *) values.
- * 
- * Allocate @a *props and its contents in @a pool.
+ * Invoke @a receiver with @a receiver_baton to return the regular properies
+ * of @a target, a URL or working copy path.  @a receiver will be called
+ * for each path encountered.  See @c svn_client_proplist_item_t.
  *
  * If @a revision->kind is @c svn_opt_revision_unspecified, then get
  * properties from the working copy, if @a target is a working copy
