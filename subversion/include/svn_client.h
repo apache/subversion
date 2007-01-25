@@ -2060,9 +2060,9 @@ typedef struct svn_client_copy_source_t
  * @a sources must be an array of elements of type
  * <tt>svn_client_copy_item_t *</tt>.
  *
- * Each @src in @a sources must be files or directories under version control,
+ * Each @a src in @a sources must be files or directories under version control,
  * or URLs of a versioned item in the repository.  If @a sources has multiple
- * items, the @src members must be all repository URLs or all working copy
+ * items, the @a src members must be all repository URLs or all working copy
  * paths.
  *
  * The parent of @a dst_path must already exist.
