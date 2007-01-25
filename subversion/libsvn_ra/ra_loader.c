@@ -622,7 +622,7 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
   if (comment && ! svn_xml_is_xml_safe(comment, strlen(comment)))
     return svn_error_create
       (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-       _("Lock comment has illegal characters"));
+       _("Lock comment contains illegal characters"));
   
   return session->vtable->lock(session, path_revs, comment, steal_lock,
                                lock_func, lock_baton, pool);
