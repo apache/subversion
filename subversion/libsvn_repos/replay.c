@@ -211,7 +211,8 @@ add_subdir(svn_fs_root_t *source_root,
          changed path (because it was modified after the copy but before the
          commit), we remove it from the changed_paths hash so that future
          calls to path_driver_cb_func will ignore it. */
-      if (change = apr_hash_get(changed_paths, new_path, APR_HASH_KEY_STRING))
+      change = apr_hash_get(changed_paths, new_path, APR_HASH_KEY_STRING);
+      if (change)
         {
           apr_hash_set(changed_paths, new_path, APR_HASH_KEY_STRING, NULL);
           /* If it's a delete, skip this entry. */
