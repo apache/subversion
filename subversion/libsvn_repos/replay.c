@@ -166,8 +166,6 @@ add_subdir(svn_fs_root_t *source_root,
   apr_hash_t *dirents;
   apr_hash_t *props;
 
-  /* ### If this directory was copied in this revision from somewhere
-     ### readable, should not lose history! */
   SVN_ERR(editor->add_directory(path, parent_baton, NULL,
                                 SVN_INVALID_REVNUM, pool, dir_baton));
 
@@ -188,10 +186,14 @@ add_subdir(svn_fs_root_t *source_root,
                                       subpool));
     }
 
-  SVN_ERR(svn_fs_dir_entries(&dirents, target_root, path, pool));
+  /* We have to get the dirents from the source path, not the target, 
+     because we want nested copies from *readable* paths to be handled by
+     path_driver_cb_func, not add_subdir (in order to preserve history). */
+  SVN_ERR(svn_fs_dir_entries(&dirents, source_root, source_path, pool));
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
+      svn_fs_path_change_t *change;
       svn_boolean_t readable = TRUE;
       svn_fs_dirent_t *dent;
       const char *new_path;
@@ -209,8 +211,13 @@ add_subdir(svn_fs_root_t *source_root,
          changed path (because it was modified after the copy but before the
          commit), we remove it from the changed_paths hash so that future
          calls to path_driver_cb_func will ignore it. */
-      if (apr_hash_get(changed_paths, new_path, APR_HASH_KEY_STRING))
-        apr_hash_set(changed_paths, new_path, APR_HASH_KEY_STRING, NULL);
+      if (change = apr_hash_get(changed_paths, new_path, APR_HASH_KEY_STRING))
+        {
+          apr_hash_set(changed_paths, new_path, APR_HASH_KEY_STRING, NULL);
+          /* If it's a delete, skip this entry. */
+          if (change->change_kind == svn_fs_path_change_delete)
+            continue;
+        }
 
       if (authz_read_func)
         SVN_ERR(authz_read_func(&readable, target_root, new_path,
@@ -239,8 +246,6 @@ add_subdir(svn_fs_root_t *source_root,
           svn_txdelta_stream_t *delta_stream;
           unsigned char digest[APR_MD5_DIGESTSIZE];
 
-          /* ### If this file was copied in this revision from somewhere
-             ### readable, should not lose history! */
           SVN_ERR(editor->add_file(new_path, *dir_baton, NULL,
                                    SVN_INVALID_REVNUM, pool, &file_baton));
 

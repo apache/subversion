@@ -674,7 +674,7 @@ test_list = [ None,
               basic_authz,
               copy_from_unreadable_dir,
               copy_with_mod_from_unreadable_dir,
-              XFail(copy_with_mod_from_unreadable_dir_and_copy),
+              copy_with_mod_from_unreadable_dir_and_copy,
               url_encoding,
               no_author,
              ]
