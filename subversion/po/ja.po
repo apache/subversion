@@ -6862,7 +6862,9 @@ msgstr ""
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:466
 msgid "read lock comment from file ARG"
-msgstr "ファイル <引数> からロックについてのコメントを読み込みます"
+msgstr ""
+"ファイル <引数> からロックについてのコメントを読\n"
+"                             み込みます"
 
 # * Description for 'svn lock --message'.
 # * 29 half-size characters are displayed on the left.
