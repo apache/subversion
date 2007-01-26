@@ -119,13 +119,12 @@
 #endif
 
 
-/* svn_wc_cleanup2() */
+/* svn_wc_translated2() */
 #ifdef SWIGRUBY
 %apply const char **TO_TEMP_FILE {
     const char **xlated_path
 };
 #endif
-
 /* ----------------------------------------------------------------------- */
 
 %{

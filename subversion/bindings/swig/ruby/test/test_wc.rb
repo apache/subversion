@@ -412,12 +412,23 @@ EOE
                                                 Svn::Wc::TRANSLATE_TO_NF)
       File.open(src_path, "wb") {|f| f.print(translated_file.read)}
 
+      translated_file = access.translated_file(src_path, crlf_path,
+                                               Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(crlf_source, File.open(translated_file, "rb") {|f| f.read})
       translated_file = access.translated_file2(src_path, crlf_path,
                                                 Svn::Wc::TRANSLATE_FROM_NF)
       assert_equal(crlf_source, translated_file.read)
+
+      translated_file = access.translated_file(src_path, cr_path,
+                                               Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(cr_source, File.open(translated_file, "rb") {|f| f.read})
       translated_file = access.translated_file2(src_path, cr_path,
                                                 Svn::Wc::TRANSLATE_FROM_NF)
       assert_equal(cr_source, translated_file.read)
+
+      translated_file = access.translated_file(src_path, lf_path,
+                                               Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(lf_source, File.open(translated_file, "rb") {|f| f.read})
       translated_file = access.translated_file2(src_path, lf_path,
                                                 Svn::Wc::TRANSLATE_FROM_NF)
       assert_equal(lf_source, translated_file.read)
