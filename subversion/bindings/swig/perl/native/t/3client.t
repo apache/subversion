@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 215;
+use Test::More tests => 220;
 use strict;
 
 # shut up about variables that are only used once.
@@ -388,13 +388,40 @@ is($ctx->log3({
     receiver               => $receiver,
 }), undef, 'log3 returns undef (nam/man)');
 
-is($ctx->update($wcpath,'HEAD',1),$current_rev,
-   'Return from update is the current rev');
+# update -----------------------------------------------------------------
+
+is($ctx->update($wcpath,'HEAD', 1), $current_rev,
+   'Return from update is the current rev (pos/man)');
+is($ctx->update({
+    path     => $wcpath,
+    revision => 'HEAD',
+    recurse  => 1
+}), $current_rev, 'Return from update is the current rev (nam/man)');
+is($ctx->update({
+    path     => $wcpath,
+    recurse  => 1
+}), $current_rev, 'Return from update is the current rev (nam/opt)');
+
+# propset ----------------------------------------------------------------
 
 # no return so we should get undef as the result
 # we will get a _p_svn_error_t if there is an error. 
-is($ctx->propset('perl-test','test-val',"$wcpath/dir1",0),undef,
-   'propset on a working copy path returns undef');
+is($ctx->propset('perl-test', 'test-val', "$wcpath/dir1", 0), undef,
+   'propset on a working copy path returns undef (pos/man)');
+is($ctx->propset('perl-test', 'test-val', "$wcpath/dir1"), undef,
+   'propset on a working copy path returns undef (pos/opt)');
+is($ctx->propset({
+    propname => 'perl-test',
+    propval  => 'test-val',
+    target   => "$wcpath/dir1",
+    recurse  => 0,
+}), undef, 'propset on a working copy path returns undef (nam/man)');
+is($ctx->propset({
+    propname => 'perl-test',
+    propval  => 'test-val',
+    target   => "$wcpath/dir1",
+}), undef, 'propset on a working copy path returns undef (nam/opt)');
+
 
 my ($ph) = $ctx->propget('perl-test',"$wcpath/dir1",undef,0);
 isa_ok($ph,'HASH','propget returns a hash');

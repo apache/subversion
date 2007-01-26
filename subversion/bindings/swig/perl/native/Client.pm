@@ -13,7 +13,9 @@ BEGIN {
 				 checkout
 				 info
 				 log log2 log3 ls
-				 revprop_get revprop_list);
+				 propset
+				 revprop_get revprop_list
+				 update);
     @_all_fns = qw(add add3 blame blame3 cat cat2 checkout2 cleanup
                    commit commit3 commit_item2_dup copy copy3 delete delete2
                    diff diff3 diff_peg3 diff_summarize diff_summarize_peg
@@ -21,9 +23,9 @@ BEGIN {
                    ls3
                    merge merge2 merge_peg2 mkdir mkdir2 move move4
                    propget propget2 proplist proplist2 proplist_item_dup
-                   propset propset2 relocate resolved revert
+                   propset2 relocate resolved revert
                    revprop_set
-                   status status2 switch unlock update update2
+                   status status2 switch unlock update2
                    url_from_path uuid_from_path uuid_from_url);
     require SVN::Base;
     import SVN::Base (qw(Client svn_client_), @_all_fns, @_fns_with_named_params);
@@ -700,18 +702,25 @@ versioned entry below (and including) $target.
 
 If $target is not found, raises the $SVN::Error::ENTRY_NOT_FOUND error.
 
-=head2 $ctx-E<gt>propset($propname, $propval, $target, $recursive, $pool);
+=head2 propset
 
-Set $propname to $propval on $target (a working copy or URL path).
+  $ctx->propset({
+      propname => '...',
+      propval  => '...',
+      target   => '...',
+      recurse  => '...',   # optional, default is 0
+  });
 
-If $recursive is true, then $propname will be set recursively on $target
-and all children.  If $recursive is false, and $target is a directory,
-$propname will be set on B<only> $target.
+Set C<propname> to C<propval> on C<target> (a working copy or URL path).
 
-A $propval of undef will delete the property.
+If C<recurse> is true, then C<propname> will be set recursively on C<target>
+and all children.  If C<recursive> is false, and C<target> is a directory,
+C<propname> will be set on B<only> C<target>.
 
-If $propname is an svn-controlled property (i.e. prefixed with svn:),
-then the caller is responsible for ensuring that $propval is UTF8-encoded
+A C<propval> of C<undef> will delete the property.
+
+If C<propname> is an svn-controlled property (i.e. prefixed with C<svn:>),
+then the caller is responsible for ensuring that C<propval> is UTF8-encoded
 and uses LF line-endings.
 
 =head2 $ctx-E<gt>relocate($dir, $from, $to, $recursive, $pool);
@@ -894,18 +903,23 @@ scratch.
 Returns the value of the revision to which the working copy was actually
 switched. 
 
-=head2 $ctx-E<gt>update($path, $revision, $recursive, $pool)
+=head2 update
 
-Update a working copy $path to $revision.
+  $ctx->update({
+      path     => '...',
+      revision => '...',   # optional, default is 'HEAD',
+      recurse  => '...',   # optional, default is 0
+  });
 
-$revision must be a revision number, 'HEAD', or a date or this method will
-raise the $SVN::Error::CLIENT_BAD_REVISION error. 
+Update a working copy C<path> to C<revision>.
+
+C<revision> must be a revision number, 'HEAD', or a date or this method will
+raise the $SVN::Error::CLIENT_BAD_REVISION error.
 
 Calls the notify callback for each item handled by the update, and
 also for files restored from the text-base.
 
 Returns the revision to which the working copy was actually updated.
-
 
 =head2 $ctx-E<gt>url_from_path($target, $pool); or SVN::Client::url_from_path($target, $pool);
 
@@ -958,6 +972,13 @@ my $arg_limit = {
     },
 };
 
+my $arg_path = {
+    name => 'path',
+    spec => {
+	type => SCALAR,
+    },
+};
+
 my $arg_path_or_url = {
     name => 'path_or_url',
     spec => {
@@ -968,6 +989,20 @@ my $arg_peg_revision = {
     name => 'peg_revision',
     spec => {
 	type => SCALAR | UNDEF 
+    },
+};
+
+my $arg_propname = {
+    name => 'propname',
+    spec => {
+	type => SCALAR,
+    },
+};
+
+my $arg_propval = {
+    name => 'propval',
+    spec => {
+	type => SCALAR | UNDEF,
     },
 };
 
@@ -1015,6 +1050,13 @@ my $arg_targets = {
     },
 };
 
+my $arg_target = {
+    name => 'target',
+    spec => {
+	type => SCALAR,
+    },
+};
+
 # Create a copy of $arg_revision, and override the spec key
 my $arg_revision_no_default = { %$arg_revision };
 $arg_revision_no_default->{spec} = { type => SCALAR | UNDEF};
@@ -1044,8 +1086,7 @@ my %method_defs = (
 	type => 'obj',
 	args => [
 	    $arg_url,
-	    { name => 'path',
-	      spec => { type => SCALAR }, },
+	    $arg_path,
 	    $arg_revision,
 	    $arg_recurse,
 	],
@@ -1100,6 +1141,23 @@ my %method_defs = (
 	type => 'obj',
 	args => [
 	    $arg_path_or_url,
+	    $arg_revision,
+	    $arg_recurse,
+	],
+    },
+    'propset' => {
+	type => 'obj',
+	args => [
+	    $arg_propname,
+	    $arg_propval,
+	    $arg_target,
+	    $arg_recurse,
+	],
+    },
+    'update' => {
+	type => 'obj',
+	args => [
+	    $arg_path,
 	    $arg_revision,
 	    $arg_recurse,
 	],
