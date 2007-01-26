@@ -8,6 +8,11 @@ use strict;
 # by the bindings but not elsewhere in perl space.
 no warnings 'once'; 
 
+# Cause the listed functions to die() instead of returning false.  This halts
+# the test early, stopping errors in one test propogating down in to later
+# tests and causing confusion.
+use Fatal qw(open close ok is isa_ok);
+
 use_ok('SVN::Core');
 use_ok('SVN::Repos');
 use_ok('SVN::Client');
@@ -214,9 +219,9 @@ is(SVN::Client::url_from_path($wcpath),$reposurl,
    "Returned $reposurl from url_from_path");
 
 # Failure of the next three should cause the test to immediately halt
-ok(open(NEW, ">$wcpath/dir1/new"),'Open new file for writing') or die $!;
-ok(print(NEW 'addtest'), 'Print to new file') or die $!;
-ok(close(NEW),'Close new file') or die $!;
+ok(open(NEW, ">$wcpath/dir1/new"),'Open new file for writing');
+ok(print(NEW 'addtest'), 'Print to new file');
+ok(close(NEW),'Close new file');
 
 # no return means success
 is($ctx->add("$wcpath/dir1/new",0),undef,
