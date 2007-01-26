@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import os
+import os, sys
 
 # Our testing module
 import svntest
@@ -399,7 +399,6 @@ def build_repos(path):
   "Helper function for creating an empty repository"
   svntest.main.safe_rmtree(path)
   svntest.main.create_repos(path)
-  svntest.main.set_repos_paths(path)
 
 
 def run_dumpfile_test(sbox, dump_file_name):
