@@ -2,7 +2,7 @@
  * cl.h:  shared stuff in the command line program
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -416,6 +416,16 @@ void svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
                               apr_pool_t *pool,
                               const char *tagname,
                               const char *string);
+
+/* Print the XML header to stdout, using TAGNAME as the openning tag.
+   Use pool for temporary allocations. */
+svn_error_t *svn_cl__xml_print_header(const char *tagname,
+                                      apr_pool_t *pool);
+
+/* Print the XML footer to stdout, using TAGNAME for the closing tag.
+   Use pool for temporary allocations. */
+svn_error_t *svn_cl__xml_print_footer(const char *tagname,
+                                      apr_pool_t *pool);
 
 /* Return a (non-localised) string representation of KIND, being "dir" or
    "file" or, in any other case, the empty string. */

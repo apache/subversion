@@ -2,7 +2,7 @@
  * log-cmd.c -- Display log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -478,17 +478,7 @@ svn_cl__log(apr_getopt_t *os,
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-
-          /* <?xml version="1.0" encoding="utf-8"?> */
-          svn_xml_make_header(&sb, pool);
-          
-          /* "<log>" */
-          svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "log", NULL);
-
-          SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-        }
+        SVN_ERR(svn_cl__xml_print_header("log", pool));
       
       SVN_ERR(svn_client_log3(targets,
                               &peg_revision,
@@ -503,14 +493,7 @@ svn_cl__log(apr_getopt_t *os,
                               pool));
       
       if (! opt_state->incremental)
-        {
-          svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-
-          /* "</log>" */
-          svn_xml_make_close_tag(&sb, pool, "log");
-
-          SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
-        }
+        SVN_ERR(svn_cl__xml_print_footer("log", pool));
     }
   else  /* default output format */
     {
