@@ -12,13 +12,13 @@ BEGIN {
     @_fns_with_named_params = qw(
 				 checkout
 				 info
-				 log ls
+				 log log2 log3 ls
 				 revprop_get revprop_list);
     @_all_fns = qw(add add3 blame blame3 cat cat2 checkout2 cleanup
                    commit commit3 commit_item2_dup copy copy3 delete delete2
                    diff diff3 diff_peg3 diff_summarize diff_summarize_peg
                    export export3 import import2 info_dup list lock
-                   log2 log3 ls3
+                   ls3
                    merge merge2 merge_peg2 mkdir mkdir2 move move4
                    propget propget2 proplist proplist2 proplist_item_dup
                    propset propset2 relocate resolved revert
@@ -479,6 +479,69 @@ one is needed.
 
 Returns a L<svn_client_commit_info_t|/svn_client_commit_info_t> object.
 
+=item $ctx->log3
+
+  $ctx->log3({
+      targets                => '...', # or [ ... ],
+      peg_revision           => '...',
+      start                  => '...',
+      end                    => '...',
+      limit                  => '...',
+      discover_changed_paths => '...',
+      strict_node_history    => '...',
+      receiver               => sub { ... },
+  });
+
+Invoke the C<receiver> subroutine on each log message from C<start> to
+C<end> in turn, inclusive (but will never invoke receiver on a given
+log message more than once).  If C<limit> is greater than zero then
+only the first C<limit> logs are retrieved.
+
+C<targets> is either a single path, or a reference to an array
+containing all the paths or URLs for which the log messages are
+desired.  The C<receiver> is only invoked on messages whose revisions
+involved a change to some path in C<targets>.
+
+C<peg_revision> specifies the revision in which C<targets> are valid.
+If C<undef> it defaults to C<HEAD> for URLs, and C<WORKING> for
+working copy paths.
+
+If C<discover_changed_paths> is set, then the C<changed_paths>
+argument to the C<receiver> routine will be passed on each invocation.
+
+If C<strict_node_history> is set, copy history (if any exists) will
+not be traversed while harvesting revision logs for each target.
+
+If C<start> or C<end> is C<undef> the arp_err code will be set to:
+$SVN::Error::CLIENT_BAD_REVISION.
+
+Calls the notify subroutine with a $SVN::Wc::Notify::Action::skip
+signal on any unversioned targets.
+
+The log_receiver takes the following arguments: $changed_paths,
+$revision, $author, $date, $message, $pool
+
+It is called once for each log $message from the $revision on $date by
+$author.  $author, $date or $message may be undef.
+
+If $changed_paths is defined it references a hash with the keys every
+path committed in $revision; the values are
+L<svn_log_changed_path_t|SVN::Core/svn_log_changed_path_t> objects.
+
+=item $ctx->log2
+
+  $ctx->log2({
+      targets                => '...', # or [ ... ],
+      start                  => '...',
+      end                    => '...',
+      limit                  => '...',
+      discover_changed_paths => '...',
+      strict_node_history    => '...',
+      receiver               => sub { ... },
+  });
+
+Identical to calling L<log3()|/log3> with C<peg_revision> set to C<undef>.
+
 =item $ctx-E<gt>log
 
   $ctx->log({
@@ -490,47 +553,20 @@ Returns a L<svn_client_commit_info_t|/svn_client_commit_info_t> object.
       receiver               => sub { ... },
   });
 
-Invoke the C<receiver> subroutine on each log message from C<start> to C<end> in
-turn, inclusive (but will never invoke receiver on a given log message more
-than once).
+Identical to calling L<log3()|/log3> with C<peg_revision> set to
+C<undef>, and C<limit> set to 0.  In addition there is the following
+special case for repositories at revision 0:
 
-C<targets> is either a single path, or a reference to an array
-containing all the paths or URLs for which the log messages are
-desired.  The C<receiver> is only invoked on messages whose revisions
-involved a change to some path in C<targets>.
-
-If C<discover_changed_paths> is set, then the C<changed_paths> argument to the
-C<receiver> routine will be passed on each invocation.
-
-If C<strict_node_history> is set, copy history (if any exists) will not be
-traversed while harvesting revision logs for each target.
-
-If C<start> or C<end> is C<undef> the arp_err code will be set to:
-$SVN::Error::CLIENT_BAD_REVISION.
-
-Special case for repositories at revision 0:
-
-If C<start> is C<HEAD> and C<end> is C<1>, then handle an empty (no revisions)
-repository specially: instead of erroring because requested revision 1
-when the highest revision is 0, just invoke C<receiver> on revision 0,
-passing C<undef> to changed paths and empty strings for the author and date.
-This is because that particular combination of C<start> and C<end> usually indicates
-the common case of log invocation; the user wants to see all log messages from
-youngest to oldest, where the oldest commit is revision 1.  That works fine,
-except there are no commits in the repository, hence this special case.
-
-Calls the notify subroutine with a $SVN::Wc::Notify::Action::skip signal on any
-unversioned targets.
-
-The log_receiver takes the following arguments:
-$changed_paths, $revision, $author, $date, $message, $pool
-
-It is called once for each log $message from the $revision
-on $date by $author.  $author, $date or $message may be undef.
-
-If $changed_paths is defined it references a hash with the keys
-every path committed in $revision; the values are L<svn_log_changed_path_t|SVN::Core/svn_log_changed_path_t>
-objects.  
+If C<start> is C<HEAD> and C<end> is C<1>, then handle an empty (no
+revisions) repository specially: instead of erroring because requested
+revision 1 when the highest revision is 0, just invoke C<receiver> on
+revision 0, passing C<undef> to changed paths and empty strings for
+the author and date.  This is because that particular combination of
+C<start> and C<end> usually indicates the common case of log
+invocation; the user wants to see all log messages from youngest to
+oldest, where the oldest commit is revision 1.  That works fine,
+except there are no commits in the repository, hence this special
+case.
 
 =item $ctx-E<gt>ls
 
@@ -905,10 +941,38 @@ Return repository uuid for url.
 
 =cut
 
+my $arg_discover_changed_paths = {
+    name => 'discover_changed_paths',
+    spec => {
+	type => BOOLEAN,
+    },
+};
+
+my $arg_end = {
+    name => 'end',
+    spec => {
+	type => SCALAR,
+    },
+};
+
+my $arg_limit = {
+    name => 'limit',
+    spec => {
+	type => SCALAR,
+    },
+};
+
 my $arg_path_or_url = {
     name => 'path_or_url',
     spec => {
 	type => SCALAR, },
+};
+
+my $arg_peg_revision = {
+    name => 'peg_revision',
+    spec => {
+	type => SCALAR | UNDEF 
+    },
 };
 
 my $arg_receiver = {
@@ -932,6 +996,27 @@ my $arg_revision = {
 	type => SCALAR,
 	default => 'HEAD',
     }
+};
+
+my $arg_start = {
+    name => 'start',
+    spec => {
+	type => SCALAR,
+    },
+};
+
+my $arg_strict_node_history = {
+    name => 'strict_node_history',
+    spec => {
+	type => BOOLEAN,
+    },
+};
+
+my $arg_targets = {
+    name => 'targets',
+    spec => {
+	type => ARRAYREF | SCALAR,
+    },
 };
 
 # Create a copy of $arg_revision, and override the spec key
@@ -973,8 +1058,7 @@ my %method_defs = (
 	type => 'obj',
 	args => [
 	    $arg_path_or_url,
-	    { name => 'peg_revision',
-	      spec => { type => SCALAR | UNDEF }, },
+	    $arg_peg_revision,
 	    $arg_revision_no_default,
 	    $arg_receiver,
 	    $arg_recurse,
@@ -983,16 +1067,36 @@ my %method_defs = (
     'log' => {
 	type => 'obj',
 	args => [
-	    { name => 'targets',
-	      spec => { type => ARRAYREF | SCALAR }, },
-	    { name => 'start',
-	      spec => { type => SCALAR }, },
-	    { name => 'end',
-	      spec => { type => SCALAR }, },
-	    { name => 'discover_changed_paths',
-	      spec => { type => BOOLEAN }, },
-	    { name => 'strict_node_history',
-	      spec => { type => BOOLEAN }, },
+	    $arg_targets,
+	    $arg_start,
+	    $arg_end,
+	    $arg_discover_changed_paths,
+	    $arg_strict_node_history,
+	    $arg_receiver,
+	],
+    },
+    'log2' => {
+	type => 'obj',
+	args => [
+	    $arg_targets,
+	    $arg_start,
+	    $arg_end,
+	    $arg_limit,
+	    $arg_discover_changed_paths,
+	    $arg_strict_node_history,
+	    $arg_receiver,
+	],
+    },
+    'log3' => {
+	type => 'obj',
+	args => [
+	    $arg_targets,
+	    $arg_peg_revision,
+	    $arg_start,
+	    $arg_end,
+	    $arg_limit,
+	    $arg_discover_changed_paths,
+	    $arg_strict_node_history,
 	    $arg_receiver,
 	],
     },

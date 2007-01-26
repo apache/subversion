@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 193;
+use Test::More tests => 215;
 use strict;
 
 # shut up about variables that are only used once.
@@ -362,6 +362,31 @@ is($ctx->log({
     receiver               => $receiver,
 }), undef, 'log returns undef (nam/man)');
 
+# log2 -------------------------------------------------------------------
+
+is($ctx->log2({
+    targets                => "$reposurl/dir1/new",
+    start                  => $current_rev,
+    end                    => $current_rev,
+    limit                  => 0,
+    discover_changed_paths => 1,
+    strict_node_history    => 0,
+    receiver               => $receiver,
+}), undef, 'log3 returns undef (nam/man)');
+
+# log3 -------------------------------------------------------------------
+
+# Get the log with named params
+is($ctx->log3({
+    targets                => "$reposurl/dir1/new",
+    peg_revision           => undef,
+    start                  => $current_rev,
+    end                    => $current_rev,
+    limit                  => 0,
+    discover_changed_paths => 1,
+    strict_node_history    => 0,
+    receiver               => $receiver,
+}), undef, 'log3 returns undef (nam/man)');
 
 is($ctx->update($wcpath,'HEAD',1),$current_rev,
    'Return from update is the current rev');
