@@ -302,7 +302,7 @@ $line_no is the line number of the file (starting with 0).
 The line was last changed in revision number $revision
 by $author on $date and the contents were $line.
 
-The blame receiver subroutine can return an svn_error_t object
+The blame receiver subroutine can return an L<svn_error_t|SVN::Core/svn_error_t> object
 to return an error.  All other returns will be ignored.
 You can create an svn_error_t object with SVN::Error::create().
 
@@ -355,7 +355,7 @@ $SVN::Wc::Notify::Action::commit_postfix_txdelta.
 Use $nonrecursive to indicate that subdirectories of directory targets
 should be ignored.
 
-Returns a svn_client_commit_info_t object.  If the revision member of the
+Returns a L<svn_client_commit_info_t|/svn_client_commit_info_t> object.  If the revision member of the
 commit information object is $SVN::Core::INVALID_REVNUM and no error was
 raised, then the commit was a no-op; nothing needed to be committed.
 
@@ -371,7 +371,7 @@ or a repository URL, existing or not.
 
 If $dst_target is a URL, immediately attempt to commit the copy action
 to the repository.  The log_msg callback will be called to query for a commit
-log message.  If the commit succeeds, return a svn_client_commit_info_t
+log message.  If the commit succeeds, return a L<svn_client_commit_info_t|/svn_client_commit_info_t>
 object.
 
 If $dst_target is not a URL, then this is just a variant of $ctx-E<gt>add(),
@@ -389,7 +389,7 @@ Delete items from a repository or working copy.
 If the paths in $targets are URLs, immediately attempt to commit a deletion
 of the URLs from the repository.  The log_msg callback will be called to
 query for a commit log message.  If the commit succeeds, return a
-svn_client_commit_info_t object.  Every path must belong to the same
+L<svn_client_commit_info_t|/svn_client_commit_info_t object>.  Every path must belong to the same
 repository.
 
 Else, schedule the working copy paths in $targets for removal from the
@@ -477,7 +477,7 @@ into any subdirectories they may have.
 Uses the log_msg callback to determine the log message for the commit when
 one is needed.
 
-Returns a svn_client_commit_info_t object.  
+Returns a L<svn_client_commit_info_t|/svn_client_commit_info_t> object.
 
 =item $ctx-E<gt>log($targets, $start, $end, $discover_changed_paths, $strict_node_history, \&log_receiver, $pool);
 
@@ -519,7 +519,7 @@ It is called once for each log $message from the $revision
 on $date by $author.  $author, $date or $message may be undef.
 
 If $changed_paths is defined it references a hash with the keys
-every path committed in $revision; the values are svn_log_changed_path_t
+every path committed in $revision; the values are L<svn_log_changed_path_t|SVN::Core/svn_log_changed_path_t>
 objects.  
 
 =item $ctx-E<gt>ls
@@ -531,7 +531,7 @@ objects.
       pool        => $pool,        # optional
   });
 
-Returns a hash of svn_dirent_t objects for $target at $revision.
+Returns a hash of L<svn_dirent_t|SVN::Core/svn_dirent_t> objects for $target at $revision.
 
 If $target is a directory, returns entries for all of the directories'
 contents.  If $recursive is true, it will recurse subdirectories in $target.
@@ -583,7 +583,7 @@ Has no return.
 Create a directory, either in a repository or a working copy.
 
 If $targets contains URLs, immediately attempts to commit the creation of the
-directories in $targets in the repository.  Returns a svn_client_commit_info_t
+directories in $targets in the repository.  Returns a L<svn_client_commit_info_t|/svn_client_commit_info_t>
 object.
 
 Else, create the directories on disk, and attempt to schedule them for addition.
@@ -610,7 +610,7 @@ $src_path.
 * The log_msg callback will be called for the commit log message.
 
 * The move operation will be immediately committed.  If the commit succeeds,
-returns a svn_client_commit_info_t object.
+returns a L<svn_client_commit_info_t|/svn_client_commit_info_t> object.
 
 If $src_path is a working copy path
 
@@ -641,7 +641,7 @@ whose values represent the property value for $propname at that path.
 
 =item $ctx-E<gt>proplist($target, $revision, $recursive, $pool);
 
-Returns a reference to an array of svn_client_proplist_item_t objects.
+Returns a reference to an array of L<svn_client_proplist_item_t|/svn_client_proplist_item_t> objects.
 
 For each item the node_name member of the proplist_item object contains
 the name relative to the same base as $target.
@@ -759,7 +759,7 @@ in the repository, this feature will fail.
 =item $ctx-E<gt>status($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $pool);
 
 Given $path to a working copy directory (or single file), call status_func()
-with a set of svn_wc_status_t objects which describe the status of $path and
+with a set of L<svn_wc_status_t|SVN::Wc/svn_wc_status_t> objects which describe the status of $path and
 its children.
 
 If $recursive is true, recurse fully, else do only immediate children.
@@ -782,7 +782,7 @@ The status_func subroutine takes the following parameters:
 $path, $status
 
 $path is the pathname of the file or directory which status is being
-reported.  $status is a svn_wc_status_t object.
+reported.  $status is a L<svn_wc_status_t|SVN::Wc/svn_wc_status_t> object.
 
 The return of the status_func subroutine is ignored.
 
@@ -799,7 +799,7 @@ The return of the status_func subroutine is ignored.
 Invokes \&receiver passing it information about C<path_or_url> for C<revision>.
 The information returned is system-generated metadata, not the sort of
 "property" metadata created by users.  For methods available on the object
-passed to C<receiver>, B<see svn_info_t>.
+passed to C<receiver>, see L<svn_info_t|/svn_info_t>.
 
 If both revision arguments are either C<svn_opt_revision_unspecified> or undef,
 then information will be pulled solely from the working copy; no network
@@ -1245,11 +1245,11 @@ the commit you can set this scalar to undef.  The 2nd value is a path to a
 temporary file which might be holding that log message, or undef if no such
 field exists (though, if log_msg is undef, this value is undefined).  The 
 log message B<MUST> be a UTF8 string with LF line separators.  The 3rd parameter
-is a reference to an array of svn_client_commit_item3_t objects, which may
+is a reference to an array of L<svn_client_commit_item3_t|/svn_client_commit_item3_t> objects, which may
 be fully or only partially filled-in, depending on the type of commit
 operation.  The 4th and last parameter will be a pool.
 
-If the function wishes to return an error it should return a svn_error_t
+If the function wishes to return an error it should return a L<svn_error_t|SVN::Core/svn_error_t>
 object made with SVN::Error::create.  Any other return value will be
 interpreted as SVN_NO_ERROR.
 
@@ -1273,13 +1273,13 @@ The subroutine pointed to by this value will be called to see if the operation
 should be canceled.  If the operation should be canceled, the function may
 return one of the following values:
 
-An svn_error_t object made with SVN::Error::create.
+An L<svn_error_t|SVN::Core/svn_error_t> object made with SVN::Error::create.
 
-Any true value, in which case the bindings will generate an svn_error_t object
+Any true value, in which case the bindings will generate an L<svn_error_t|SVN::Core/svn_error_t> object
 for you with the error code of SVN_ERR_CANCELLED and the string set to "By
 cancel callback".
 
-A string, in which case the bindings will generate an svn_error_t object for you
+A string, in which case the bindings will generate an L<svn_error_t|SVN::Core/svn_error_t> object for you
 with the error code of SVN_ERR_CANCELLED and the string set to the string you
 returned.
 
@@ -1527,7 +1527,7 @@ An exclusive lock, if present.  Could be either local or remote.
 
 =back
 
-See SVN::Wc::svn_wc_entry_t for the rest of these.   svn_client.h indicates
+See L<SVN::Wc/svn_wc_entry_t> for the rest of these.   svn_client.h indicates
 that these were copied from that struct and mean the same things.   They are
 also only useful when working with a WC.
 
