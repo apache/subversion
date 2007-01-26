@@ -343,7 +343,15 @@ module Svn
       end
 
       def translated_file(src, versioned_file, flags)
-        Wc.translated_file2(src, versioned_file, self, flags)
+        pool = Core::Pool.new
+        file = Wc.translated_file2(src, versioned_file, self, flags, pool)
+        file
+      end
+
+      def translated_file2(src, versioned_file, flags)
+        pool = Core::Pool.new
+        file = Wc.translated_file2(src, versioned_file, self, flags, pool)
+        file
       end
 
       def transmit_text_deltas(path, editor, file_baton, fulltext=false)
