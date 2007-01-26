@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 159;
+use Test::More tests => 171;
 use strict;
 
 # shut up about variables that are only used once.
@@ -281,18 +281,36 @@ is($ci_commit1->revision,$current_rev,
 is($ctx->log_msg(undef),undef,
    'Clearing the log_msg callback works');
 
+# info -------------------------------------------------------------------
+
 # test info() on WC
-is($ctx->info("$wcpath/dir1/new", undef, 'WORKING',
-              sub
-              {
-                 my($infopath,$svn_info_t,$pool) = @_;
-                 is($infopath,"new",'path passed to receiver is same as WC');
-                 isa_ok($svn_info_t,'_p_svn_info_t');
-                 isa_ok($pool,'_p_apr_pool_t',
-                        'pool param is _p_apr_pool_t');
-              }, 0),
-   undef,
-   'info should return undef');
+my $receiver = sub {
+    my($infopath, $svn_info_t, $pool) = @_;
+    is($infopath, 'new', 'path passed to receiver is the same as WC');
+    isa_ok($svn_info_t, '_p_svn_info_t');
+    isa_ok($pool, '_p_apr_pool_t');
+};
+
+
+is($ctx->info("$wcpath/dir1/new", undef, 'WORKING', $receiver, 0),
+   undef, 'info should return undef (pos/man)');
+is($ctx->info("$wcpath/dir1/new", undef, 'WORKING', $receiver),
+   undef, 'info should return undef (pos/opt)');
+is($ctx->info({
+    path_or_url => "$wcpath/dir1/new",
+    peg_revision => undef,
+    revision     => 'WORKING',
+    receiver     => $receiver,
+    recurse      => 0,
+}), undef, 'info should return undef (nam/man)');
+is($ctx->info({
+    path_or_url => "$wcpath/dir1/new",
+    peg_revision => undef,
+    revision     => 'WORKING',
+    receiver     => $receiver,
+}), undef, 'info should return undef (nam/opt)');
+
+
 
 my $r = $ctx->info("$wcpath/dir1/newxyz", undef, 'WORKING', sub {}, 0);
 isa_ok($r, '_p_svn_error_t',

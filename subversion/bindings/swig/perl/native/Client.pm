@@ -11,12 +11,13 @@ my @_fns_with_named_params;
 BEGIN {
     @_fns_with_named_params = qw(
 				 checkout
+				 info
 				 ls
 				 revprop_get revprop_list);
     @_all_fns = qw(add add3 blame blame3 cat cat2 checkout2 cleanup
                    commit commit3 commit_item2_dup copy copy3 delete delete2
                    diff diff3 diff_peg3 diff_summarize diff_summarize_peg
-                   export export3 import import2 info info_dup list lock
+                   export export3 import import2 info_dup list lock
                    log log2 log3 ls3
                    merge merge2 merge_peg2 mkdir mkdir2 move move4
                    propget propget2 proplist proplist2 proplist_item_dup
@@ -785,37 +786,50 @@ reported.  $status is a svn_wc_status_t object.
 
 The return of the status_func subroutine is ignored.
 
-=item $ctx-E<gt>info($path_or_url, $peg_revision, $revision, \&receiver, $recurse);
+=item $ctx-E<gt>info
 
-Invokes \&receiver passing it information about $path_or_url for $revision.
+  $ctx->info({
+      path_or_url  => '...',
+      peg_revision => '...',
+      revision     => '...',
+      receiver     => sub { ... },
+      recurse      => 0,             # optional, default is 0
+  });
+
+Invokes \&receiver passing it information about C<path_or_url> for C<revision>.
 The information returned is system-generated metadata, not the sort of
 "property" metadata created by users.  For methods available on the object
-passed to \&receiver, B<see svn_info_t>.
+passed to C<receiver>, B<see svn_info_t>.
 
-If both revision arguments are either svn_opt_revision_unspecified or NULL,
+If both revision arguments are either C<svn_opt_revision_unspecified> or undef,
 then information will be pulled solely from the working copy; no network
 connections will be made.
 
 Otherwise, information will be pulled from a repository.  The actual node
-revision selected is determined by the $path_or_url as it exists in
-$peg_revision.  If $peg_revision is undef, then it defaults to HEAD for URLs
-or WORKING for WC targets.
+revision selected is determined by the C<path_or_url> as it exists in
+C<peg_revision>.  If C<peg_revision> is C<undef>, then it defaults to C<HEAD> for URLs
+or C<WORKING> for WC targets.
 
-If $path_or_url is not a local path, then if $revision is PREV (or some other
+If C<path_or_url> is not a local path, then if C<revision> is C<PREV> (or some other
 kind that requires a local path), an error will be returned, because the
 desired revision cannot be determined.
 
 Uses the authentication baton cached in ctx to authenticate against the
 repository.
 
-If $recurse is true (and $path_or_url is a directory) this will be a recursive
-operation, invoking $receiver on each child.
+If C<recurse> is true (and C<path_or_url> is a directory) this will be a recursive
+operation, invoking C<receiver> on each child.
 
- my $receiver = sub {
-     my( $path, $info, $pool ) = @_;
-     print "Current revision of $path is ", $info->rev, "\n";
- };
- $ctx->info( 'foo/bar.c', undef, 'WORKING', $receiver, 0 );
+  my $receiver = sub {
+      my( $path, $info, $pool ) = @_;
+      print "Current revision of $path is ", $info->rev, "\n";
+  };
+  $ctx->info({
+      path_or_url  => 'foo/bar.c',
+      peg_revision => undef,
+      revision     => 'WORKING',
+      receiver     => $receiver,
+  });
 
 =item $ctx-E<gt>switch($path, $url, $revision, $recursive, $pool);
 
@@ -881,6 +895,12 @@ Return repository uuid for url.
 
 =cut
 
+my $arg_path_or_url = {
+    name => 'path_or_url',
+    spec => {
+	type => SCALAR, },
+};
+
 my $arg_recurse = {
     name => 'recurse',
     spec => {
@@ -896,6 +916,10 @@ my $arg_revision = {
 	default => 'HEAD',
     }
 };
+
+# Create a copy of $arg_revision, and override the spec key
+my $arg_revision_no_default = { %$arg_revision };
+$arg_revision_no_default->{spec} = { type => SCALAR | UNDEF};
 
 my $arg_url = {
     name => 'url',
@@ -928,11 +952,22 @@ my %method_defs = (
 	    $arg_recurse,
 	],
     },
+    'info' => {
+	type => 'obj',
+	args => [
+	    $arg_path_or_url,
+	    { name => 'peg_revision',
+	      spec => { type => SCALAR | UNDEF }, },
+	    $arg_revision_no_default,
+	    { name => 'receiver',
+	      spec => { type => CODEREF }, },
+	    $arg_recurse,
+	],
+    },
     'ls' => {
 	type => 'obj',
 	args => [
-	    { name => 'path_or_url',
-	      spec => { type     => SCALAR, }, },
+	    $arg_path_or_url,
 	    $arg_revision,
 	    $arg_recurse,
 	],
