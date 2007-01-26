@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 171;
+use Test::More tests => 193;
 use strict;
 
 # shut up about variables that are only used once.
@@ -310,44 +310,58 @@ is($ctx->info({
     receiver     => $receiver,
 }), undef, 'info should return undef (nam/opt)');
 
-
-
 my $r = $ctx->info("$wcpath/dir1/newxyz", undef, 'WORKING', sub {}, 0);
 isa_ok($r, '_p_svn_error_t',
        'info should return _p_svn_error_t for a nonexistent file');
 $r->clear();			# Clear the error, avoid core dump
                                 # if built with --enable-maintainer-mode
 
-# test getting the log
-is($ctx->log("$reposurl/dir1/new",$current_rev,$current_rev,1,0,
-             sub 
-             {
-                 my ($changed_paths,$revision,
-                     $author,$date,$message,$pool) = @_;
-                 isa_ok($changed_paths,'HASH',
-                        'changed_paths param is a HASH');
-                 isa_ok($changed_paths->{'/dir1/new'},
-                        '_p_svn_log_changed_path_t',
-                        'Hash value is a _p_svn_log_changed_path_t');
-                 is($changed_paths->{'/dir1/new'}->action(),'A',
-                    'action returns A for add');
-                 is($changed_paths->{'/dir1/new'}->copyfrom_path(),undef,
-                    'copyfrom_path returns undef as it is not a copy');
-                 is($changed_paths->{'/dir1/new'}->copyfrom_rev(),
-                    $SVN::Core::INVALID_REVNUM,
-                    'copyfrom_rev is set to INVALID as it is not a copy');
-                 is($revision,$current_rev,
-                    'revision param matches current rev');
-                 is($author,$username,
-                    'author param matches expected username');
-                 ok($date,'date param is defined');
-                 is($message,'Add new',
-                    'message param is the expected value');
-                 isa_ok($pool,'_p_apr_pool_t',
-                        'pool param is _p_apr_pool_t');
-             }),
-   undef,
-   'log returns undef');
+# log --------------------------------------------------------------------
+
+$receiver = sub {
+    my($changed_paths, $revision, $author, $date, $message, $pool) = @_;
+
+    isa_ok($changed_paths, 'HASH', 'changed_paths param is a HASH');
+    isa_ok($changed_paths->{'/dir1/new'}, '_p_svn_log_changed_path_t',
+	   'Hash value is a _p_svn_log_changed_path_t');
+    is($changed_paths->{'/dir1/new'}->action(), 'A',
+       'action returns A for add');
+    is($changed_paths->{'/dir1/new'}->copyfrom_path(), undef,
+       'copyfrom_path returns undef as it is not a copy');
+    is($changed_paths->{'/dir1/new'}->copyfrom_rev(),
+       $SVN::Core::INVALID_REVNUM,
+       'copyfrom_rev is set to INVALID as it is not a copy');
+    is($revision, $current_rev, 'revision param matches current rev');
+    is($author, $username, 'author param matches expected username');
+    ok($date,'date param is defined');
+    is($message, 'Add new', 'message param is the expected value');
+    isa_ok($pool, '_p_apr_pool_t', 'pool param is _p_apr_pool_t');
+};
+
+# Get the log with positional params
+is($ctx->log("$reposurl/dir1/new", $current_rev, $current_rev, 1, 0,
+	     $receiver), undef, 'log returns undef (pos/man)');
+
+# Get the log with named params
+is($ctx->log({
+    targets                => "$reposurl/dir1/new",
+    start                  => $current_rev,
+    end                    => $current_rev,
+    discover_changed_paths => 1,
+    strict_node_history    => 0,
+    receiver               => $receiver,
+}), undef, 'log returns undef (nam/man)');
+
+# Get the log with named params, and an arrayref of targets
+is($ctx->log({
+    targets                => [ "$reposurl/dir1/new" ],
+    start                  => $current_rev,
+    end                    => $current_rev,
+    discover_changed_paths => 1,
+    strict_node_history    => 0,
+    receiver               => $receiver,
+}), undef, 'log returns undef (nam/man)');
+
 
 is($ctx->update($wcpath,'HEAD',1),$current_rev,
    'Return from update is the current rev');

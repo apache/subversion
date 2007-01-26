@@ -12,13 +12,13 @@ BEGIN {
     @_fns_with_named_params = qw(
 				 checkout
 				 info
-				 ls
+				 log ls
 				 revprop_get revprop_list);
     @_all_fns = qw(add add3 blame blame3 cat cat2 checkout2 cleanup
                    commit commit3 commit_item2_dup copy copy3 delete delete2
                    diff diff3 diff_peg3 diff_summarize diff_summarize_peg
                    export export3 import import2 info_dup list lock
-                   log log2 log3 ls3
+                   log2 log3 ls3
                    merge merge2 merge_peg2 mkdir mkdir2 move move4
                    propget propget2 proplist proplist2 proplist_item_dup
                    propset propset2 relocate resolved revert
@@ -479,32 +479,42 @@ one is needed.
 
 Returns a L<svn_client_commit_info_t|/svn_client_commit_info_t> object.
 
-=item $ctx-E<gt>log($targets, $start, $end, $discover_changed_paths, $strict_node_history, \&log_receiver, $pool);
+=item $ctx-E<gt>log
 
-Invoke the log_receiver subroutine on each log_message from $start to $end in
+  $ctx->log({
+      targets                => '...', # or [ ... ],
+      start                  => '...',
+      end                    => '...',
+      discover_changed_paths => '...',
+      strict_node_history    => '...',
+      receiver               => sub { ... },
+  });
+
+Invoke the C<receiver> subroutine on each log message from C<start> to C<end> in
 turn, inclusive (but will never invoke receiver on a given log message more
 than once).
 
-$targets is a reference to an array containing all the paths or URLs for
-which the log messages are desired.  The log_receiver is only invoked on
-messages whose revisions involved a change to some path in $targets.
+C<targets> is either a single path, or a reference to an array
+containing all the paths or URLs for which the log messages are
+desired.  The C<receiver> is only invoked on messages whose revisions
+involved a change to some path in C<targets>.
 
-If $discover_changed_paths is set, then the changed_paths argument to the
-log_receiver routine will be passed on each invocation.
+If C<discover_changed_paths> is set, then the C<changed_paths> argument to the
+C<receiver> routine will be passed on each invocation.
 
-If $strict_node_history is set, copy history (if any exists) will not be
+If C<strict_node_history> is set, copy history (if any exists) will not be
 traversed while harvesting revision logs for each target.
 
-If $start or $end is undef the arp_err code will be set to:
+If C<start> or C<end> is C<undef> the arp_err code will be set to:
 $SVN::Error::CLIENT_BAD_REVISION.
 
 Special case for repositories at revision 0:
 
-If $start is 'HEAD' and $end is 1, then handle an empty (no revisions)
+If C<start> is C<HEAD> and C<end> is C<1>, then handle an empty (no revisions)
 repository specially: instead of erroring because requested revision 1
-when the highest revision is 0, just invoke $log_receiver on revision 0,
-passing undef to changed paths and empty strings for the author and date.
-This is because that particular combination of $start and $end usually indicates
+when the highest revision is 0, just invoke C<receiver> on revision 0,
+passing C<undef> to changed paths and empty strings for the author and date.
+This is because that particular combination of C<start> and C<end> usually indicates
 the common case of log invocation; the user wants to see all log messages from
 youngest to oldest, where the oldest commit is revision 1.  That works fine,
 except there are no commits in the repository, hence this special case.
@@ -901,6 +911,13 @@ my $arg_path_or_url = {
 	type => SCALAR, },
 };
 
+my $arg_receiver = {
+    name => 'receiver',
+    spec => {
+	type => CODEREF
+    },
+};
+
 my $arg_recurse = {
     name => 'recurse',
     spec => {
@@ -959,9 +976,24 @@ my %method_defs = (
 	    { name => 'peg_revision',
 	      spec => { type => SCALAR | UNDEF }, },
 	    $arg_revision_no_default,
-	    { name => 'receiver',
-	      spec => { type => CODEREF }, },
+	    $arg_receiver,
 	    $arg_recurse,
+	],
+    },
+    'log' => {
+	type => 'obj',
+	args => [
+	    { name => 'targets',
+	      spec => { type => ARRAYREF | SCALAR }, },
+	    { name => 'start',
+	      spec => { type => SCALAR }, },
+	    { name => 'end',
+	      spec => { type => SCALAR }, },
+	    { name => 'discover_changed_paths',
+	      spec => { type => BOOLEAN }, },
+	    { name => 'strict_node_history',
+	      spec => { type => BOOLEAN }, },
+	    $arg_receiver,
 	],
     },
     'ls' => {
