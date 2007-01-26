@@ -91,6 +91,7 @@
 # malformed               不正な
 # merge                   マージ
 # MIME type               MIME タイプ
+# mix                     混在
 # modified                修正された
 # mutex                   相互排他ロック
 # name attr               name 属性
@@ -171,8 +172,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-26 03:31+0900\n"
-"PO-Revision-Date: 2007-01-26 03:31+0900\n"
+"POT-Creation-Date: 2007-01-26 14:41+0900\n"
+"PO-Revision-Date: 2007-01-26 14:40+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1281,8 +1282,7 @@ msgstr "リビジョン形式には URL ではなく作業コピーパスが必�
 
 #: libsvn_client/copy.c:1357
 msgid "Cannot mix repository and working copy sources"
-msgstr ""
-"コピー元 (または移動元) にリポジトリと作業コピーを混ぜることはできません"
+msgstr "コピー元 (または移動元) にリポジトリと作業コピーは混在できません"
 
 #: libsvn_client/copy.c:1398
 #, c-format
@@ -1341,8 +1341,7 @@ msgstr "URL にスキームがありません: '%s'"
 #: libsvn_client/diff.c:222
 #, c-format
 msgid "Access scheme mixtures not yet supported ('%s' and '%s')"
-msgstr ""
-"アクセススキームを混ぜることはまだサポートされていません ('%s' および '%s')"
+msgstr "アクセススキームの混在はまだサポートされていません ('%s' および '%s')"
 
 # * Label for the diff output from 'svn diff'.
 #: libsvn_client/diff.c:287
