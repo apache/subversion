@@ -58,6 +58,8 @@
 # end revision            終了リビジョン
 # entries file            entries ファイル
 # entry                   エントリ
+# EOL                     行末 (EOL)
+# EOL marker              行末 (EOL) マーカー
 # error ...ing            〜する際にエラーが発生しました / 〜中にエラーが
 #                         発生しました
 # expected                期待される
@@ -172,8 +174,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-26 14:41+0900\n"
-"PO-Revision-Date: 2007-01-26 21:46+0900\n"
+"POT-Creation-Date: 2007-01-26 23:42+0900\n"
+"PO-Revision-Date: 2007-01-26 23:41+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1317,7 +1319,7 @@ msgstr "'%s' は、現実にバージョン管理下にあるリソースを妨�
 msgid "'%s' has local modifications"
 msgstr "'%s' にはローカルで修正が加えられています"
 
-# 引数順番： APR_EOL_STR (改行文字), path, APR_EOL_STR (改行文字)
+# 引数順番： APR_EOL_STR, path, APR_EOL_STR
 #: libsvn_client/diff.c:99
 #, c-format
 msgid "%sProperty changes on: %s%s"
@@ -1425,7 +1427,7 @@ msgstr "'%s' に URL がありません"
 #: libsvn_client/export.c:87
 #, c-format
 msgid "'%s' is not a valid EOL value"
-msgstr "'%s' は不正な EOL 値です"
+msgstr "'%s' は行末 (EOL) の値として不正です"
 
 #: libsvn_client/export.c:271
 msgid "Destination directory exists, and will not be overwritten unless forced"
@@ -6170,7 +6172,7 @@ msgstr ""
 "                                -w (--ignore-all-space):\n"
 "                                   すべての空白文字を無視します。\n"
 "                                --ignore-eol-style:\n"
-"                                   改行 (EOL) スタイルの変更を無視します。"
+"                                   行末 (EOL) スタイルの変更を無視します。"
 
 # * Description for 'svn --targets'.
 # * 29 half-size characters are displayed on the left.
@@ -6321,9 +6323,10 @@ msgid ""
 msgstr ""
 "                             svn:eol-style 属性が 'native' に設定されたファ"
 "イ\n"
-"                             ルについて、システムで標準的な記号とは異なる改"
-"行\n"
-"                             (EOL) 記号を用います。<引数> は 'LF', 'CR',\n"
+"                             ルについて、システムで標準的な記号とは異なる行"
+"末\n"
+"                             (EOL) マーカーを用います。<引数> は "
+"'LF'、'CR'、\n"
 "                             'CRLF' のいずれかです。"
 
 # * Description for 'svn --limit'.
@@ -11267,9 +11270,10 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "                             svn:eol-style 属性が native に設定されたファ"
 #~ "イル\n"
-#~ "                             について、システムで標準的な記号とは異なる改"
-#~ "行\n"
-#~ "                             (EOL) 記号を用います。<引数> は 'LF', 'CR',\n"
+#~ "                             について、システムで標準的な記号とは異なる行"
+#~ "末\n"
+#~ "                             (EOL) 記号を用います。<引数> は "
+#~ "'LF'、'CR'、\n"
 #~ "                             'CRLF' のいずれかです。"
 
 #~ msgid "Can't open file at '%s' "
