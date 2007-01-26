@@ -566,7 +566,7 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   tree.compare_trees(myskiptree, skip_tree,
                      extra_skip, None, missing_skip, None)
 
-  mytree = tree.build_tree_from_checkout(out)
+  mytree = tree.build_tree_from_checkout(out, 0)
   verify_update (mytree, dir,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
