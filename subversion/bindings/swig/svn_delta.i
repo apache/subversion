@@ -199,9 +199,96 @@ svn_txdelta_apply_wrapper(svn_stream_t *source,
 }
 
 static svn_error_t *
+svn_delta_editor_invoke_open_root_wrapper(svn_delta_editor_t *editor,
+                                          void *edit_baton,
+                                          svn_revnum_t base_revision,
+                                          void **root_baton,
+                                          apr_pool_t *dir_pool)
+{
+  return svn_delta_editor_invoke_open_root(editor, edit_baton,
+                                           base_revision, dir_pool, root_baton);
+}
+
+static svn_error_t *
+svn_delta_editor_invoke_add_directory_wrapper(svn_delta_editor_t *editor,
+                                              const char *path,
+                                              void *parent_baton,
+                                              const char *copyfrom_path,
+                                              svn_revnum_t copyfrom_revision,
+                                              void **child_baton,
+                                              apr_pool_t *dir_pool)
+{
+  return svn_delta_editor_invoke_add_directory(editor, path, parent_baton,
+                                               copyfrom_path, copyfrom_revision,
+                                               dir_pool, child_baton);
+}
+
+static svn_error_t *
+svn_delta_editor_invoke_open_directory_wrapper(svn_delta_editor_t *editor,
+                                               const char *path,
+                                               void *parent_baton,
+                                               svn_revnum_t base_revision,
+                                               void **child_baton,
+                                               apr_pool_t *dir_pool)
+{
+  return svn_delta_editor_invoke_open_directory(editor, path, parent_baton,
+                                                base_revision, dir_pool,
+                                                child_baton);
+}
+
+static svn_error_t *
+svn_delta_editor_invoke_add_file_wrapper(svn_delta_editor_t *editor,
+                                         const char *path,
+                                         void *parent_baton,
+                                         const char *copyfrom_path,
+                                         svn_revnum_t copyfrom_revision,
+                                         void **file_baton,
+                                         apr_pool_t *file_pool)
+{
+  return svn_delta_editor_invoke_add_file(editor, path, parent_baton,
+                                          copyfrom_path,
+                                          copyfrom_revision,
+                                          file_pool, file_baton);
+}
+
+static svn_error_t *
+svn_delta_editor_invoke_open_file_wrapper(svn_delta_editor_t *editor,
+                                          const char *path,
+                                          void *parent_baton,
+                                          svn_revnum_t base_revision,
+                                          void **file_baton,
+                                          apr_pool_t *file_pool)
+{
+  return svn_delta_editor_invoke_open_file(editor, path, parent_baton,
+                                           base_revision,
+                                           file_pool, file_baton);
+}
+
+static svn_error_t *
+svn_delta_editor_invoke_apply_textdelta_wrapper(svn_delta_editor_t *editor,
+                                                void *file_baton,
+                                                const char *base_checksum,
+                                                svn_txdelta_window_handler_t *handler,
+                                                void **handler_baton,
+                                                apr_pool_t *pool)
+{
+  return svn_delta_editor_invoke_apply_textdelta(editor, file_baton,
+                                                 base_checksum, pool,
+                                                 handler, handler_baton);
+}
+
+static svn_error_t *
 svn_txdelta_invoke_window_handler_wrapper(VALUE obj,
                                           svn_txdelta_window_t *window,
                                           apr_pool_t *pool)
+{
+  return svn_swig_rb_invoke_txdelta_window_handler_wrapper(obj, window, pool);
+}
+
+static svn_error_t *
+svn_txdelta_editor_invoke_apply_textdelta_wrapper(VALUE obj,
+                                                  svn_txdelta_window_t *window,
+                                                  apr_pool_t *pool)
 {
   return svn_swig_rb_invoke_txdelta_window_handler_wrapper(obj, window, pool);
 }

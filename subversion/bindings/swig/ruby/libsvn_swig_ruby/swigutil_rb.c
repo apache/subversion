@@ -38,6 +38,7 @@
 
 static VALUE mSvn = Qnil;
 static VALUE mSvnClient = Qnil;
+static VALUE mSvnUtil = Qnil;
 static VALUE cSvnClientContext = Qnil;
 static VALUE mSvnCore = Qnil;
 static VALUE cSvnCorePool = Qnil;
@@ -107,6 +108,8 @@ DEFINE_ID(dir_props_changed, "dir_props_changed")
 DEFINE_ID(handler, "handler")
 DEFINE_ID(handler_baton, "handler_baton")
 DEFINE_ID(__batons__, "__batons__")
+DEFINE_ID(destroy, "destroy")
+DEFINE_ID(filename_to_temp_file, "filename_to_temp_file")
 
 typedef void *(*r2c_func)(VALUE value, void *ctx, apr_pool_t *pool);
 typedef VALUE (*c2r_func)(void *value, void *ctx);
@@ -130,6 +133,15 @@ rb_svn(void)
     mSvn = rb_const_get(rb_cObject, rb_intern("Svn"));
   }
   return mSvn;
+}
+
+static VALUE
+rb_svn_util(void)
+{
+  if (NIL_P(mSvnUtil)) {
+    mSvnUtil = rb_const_get(rb_svn(), rb_intern("Util"));
+  }
+  return mSvnUtil;
 }
 
 static VALUE
@@ -461,8 +473,6 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
                      VALUE *rb_pool, apr_pool_t **pool)
 {
   VALUE target;
-  apr_pool_wrapper_t *pool_wrapper;
-  apr_pool_wrapper_t **pool_wrapper_p;
   
   *rb_pool = Qnil;
   
@@ -488,35 +498,68 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
     *rb_pool = rb_pool_new(rb_get_pool(target));
   }
 
-  pool_wrapper_p = &pool_wrapper;
-  r2c_swig_type2(*rb_pool, "apr_pool_wrapper_t *", (void **)pool_wrapper_p);
-  *pool = pool_wrapper->pool;
+  if (pool) {
+    apr_pool_wrapper_t *pool_wrapper;
+    apr_pool_wrapper_t **pool_wrapper_p;
+
+    pool_wrapper_p = &pool_wrapper;
+    r2c_swig_type2(*rb_pool, "apr_pool_wrapper_t *", (void **)pool_wrapper_p);
+    *pool = pool_wrapper->pool;
+  }
 }
 
-static VALUE
+static svn_boolean_t
 rb_set_pool_if_swig_type_object(VALUE target, VALUE pool)
 {
   VALUE targets[1] = {target};
-  
+
   if (!NIL_P(find_swig_type_object(1, targets))) {
     rb_set_pool(target, pool);
+    return TRUE;
+  } else {
+    return FALSE;
   }
-
-  return Qnil;
 }
 
-void
+struct rb_set_pool_for_hash_arg {
+  svn_boolean_t set;
+  VALUE pool;
+};
+
+static int
+rb_set_pool_for_hash_callback(VALUE key, VALUE value,
+                              struct rb_set_pool_for_hash_arg *arg)
+{
+  if (rb_set_pool_if_swig_type_object(value, arg->pool))
+    arg->set = TRUE;
+  return ST_CONTINUE;
+}
+
+svn_boolean_t
 svn_swig_rb_set_pool(VALUE target, VALUE pool)
 {
   if (NIL_P(target)) {
-    return;
-  }
-    
-  if (!RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
-    target = rb_ary_new3(1, target);
+    return FALSE;
   }
 
-  rb_iterate(rb_each, target, rb_set_pool_if_swig_type_object, pool);
+  if (RTEST(rb_obj_is_kind_of(target, rb_cArray))) {
+    long i;
+    svn_boolean_t set = FALSE;
+
+    for (i = 0; i < RARRAY(target)->len; i++) {
+      if (rb_set_pool_if_swig_type_object(RARRAY(target)->ptr[i], pool))
+        set = TRUE;
+    }
+    return set;
+  } else if (RTEST(rb_obj_is_kind_of(target, rb_cHash))) {
+    struct rb_set_pool_for_hash_arg arg;
+    arg.set = FALSE;
+    arg.pool = pool;
+    rb_hash_foreach(target, rb_set_pool_for_hash_callback, (VALUE)&arg);
+    return arg.set;
+  } else {
+    return rb_set_pool_if_swig_type_object(target, pool);
+  }
 }
 
 void
@@ -546,6 +589,14 @@ svn_swig_rb_pop_pool(VALUE pool)
 {
   if (!NIL_P(pool)) {
     rb_holder_pop(rb_svn_pool_holder(), pool);
+  }
+}
+
+void
+svn_swig_rb_destroy_pool(VALUE pool)
+{
+  if (!NIL_P(pool)) {
+    rb_funcall(pool, rb_id_destroy(), 0);
   }
 }
 
@@ -1107,8 +1158,12 @@ static VALUE
 invoke_callback(VALUE baton, VALUE pool)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
-  cbb->pool = pool;
-  return rb_ensure(callback, baton, callback_ensure, pool);
+  VALUE sub_pool;
+  VALUE argv[] = {pool};
+
+  svn_swig_rb_get_pool(1, argv, Qnil, &sub_pool, NULL);
+  cbb->pool = sub_pool;
+  return rb_ensure(callback, baton, callback_ensure, sub_pool);
 }
 
 static VALUE
@@ -2595,6 +2650,13 @@ svn_swig_rb_make_stream(VALUE io)
   }
   
   return stream;
+}
+
+VALUE
+svn_swig_rb_filename_to_temp_file(const char *file_name)
+{
+  return rb_funcall(rb_svn_util(), rb_id_filename_to_temp_file(),
+                    1, rb_str_new2(file_name));
 }
 
 void

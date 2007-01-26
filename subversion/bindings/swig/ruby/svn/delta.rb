@@ -158,7 +158,7 @@ module Svn
       
       def open_root(base_revision)
         args = [self, @baton, base_revision]
-        Svn::Delta.editor_invoke_open_root(*args)
+        Svn::Delta.editor_invoke_open_root_wrapper(*args)
       end
         
       def delete_entry(path, revision, parent_baton)
@@ -169,12 +169,12 @@ module Svn
       def add_directory(path, parent_baton,
                         copyfrom_path, copyfrom_revision)
         args = [self, path, parent_baton, copyfrom_path, copyfrom_revision]
-        Svn::Delta.editor_invoke_add_directory(*args)
+        Svn::Delta.editor_invoke_add_directory_wrapper(*args)
       end
 
       def open_directory(path, parent_baton, base_revision)
         args = [self, path, parent_baton, base_revision]
-        Svn::Delta.editor_invoke_open_directory(*args)
+        Svn::Delta.editor_invoke_open_directory_wrapper(*args)
       end
 
       def change_dir_prop(dir_baton, name, value)
@@ -195,17 +195,18 @@ module Svn
       def add_file(path, parent_baton,
                    copyfrom_path, copyfrom_revision)
         args = [self, path, parent_baton, copyfrom_path, copyfrom_revision]
-        Svn::Delta.editor_invoke_add_file(*args)
+        Svn::Delta.editor_invoke_add_file_wrapper(*args)
       end
 
       def open_file(path, parent_baton, base_revision)
         args = [self, path, parent_baton, base_revision]
-        Svn::Delta.editor_invoke_open_file(*args)
+        Svn::Delta.editor_invoke_open_file_wrapper(*args)
       end
 
       def apply_textdelta(file_baton, base_checksum)
         args = [self, file_baton, base_checksum]
-        handler, handler_baton = Svn::Delta.editor_invoke_apply_textdelta(*args)
+        handler, handler_baton =
+          Svn::Delta.editor_invoke_apply_textdelta_wrapper(*args)
         handler.baton = handler_baton
         handler
       end

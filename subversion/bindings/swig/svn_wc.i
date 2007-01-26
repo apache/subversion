@@ -118,6 +118,14 @@
                   svn_swig_rb_wc_relocation_validator2)
 #endif
 
+
+/* svn_wc_cleanup2() */
+#ifdef SWIGRUBY
+%apply const char **TO_TEMP_FILE {
+    const char **xlated_path
+};
+#endif
+
 /* ----------------------------------------------------------------------- */
 
 %{
