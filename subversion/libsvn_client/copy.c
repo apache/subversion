@@ -400,12 +400,12 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
 }
 
 /* Obtain the implied merge info and the existing merge info of the
-   source path, combine them, and set as a svn_string_t * in
+   source path, combine them and return the result in
    *TARGET_MERGEINFO.  SRC_REL_PATH corresponds to SRC_URL, but is
    relative to RA_SESSION. */
 static svn_error_t *
 calculate_target_merge_info(svn_ra_session_t *ra_session,
-                            svn_string_t **target_mergeinfo,
+                            apr_hash_t **target_mergeinfo,
                             const char *src_url,
                             const char *src_rel_path,
                             svn_revnum_t src_revnum,
@@ -414,7 +414,6 @@ calculate_target_merge_info(svn_ra_session_t *ra_session,
   const char *repos_root;
   const char *src_path;
   apr_hash_t *implied_mergeinfo, *src_mergeinfo;
-  svn_stringbuf_t *mergeinfo_buf;
 
   /* Find src path relative to the repository root. */
   /* ### Why not use svn_client__path_relative_to_root() here? */
@@ -427,15 +426,48 @@ calculate_target_merge_info(svn_ra_session_t *ra_session,
   SVN_ERR(svn_client__get_merge_info_for_path(ra_session, &src_mergeinfo,
                                               src_path, src_revnum, pool));
 
-  /* Combine, stringify, and return all merge info. */
+  /* Combine and return all merge info. */
   if (src_mergeinfo)
-    SVN_ERR(svn_mergeinfo_merge(&src_mergeinfo, src_mergeinfo,
-                                implied_mergeinfo, pool));
+    {
+      return svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo,
+                                 implied_mergeinfo, pool);
+    }
   else
-    src_mergeinfo = implied_mergeinfo;
-  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_buf, src_mergeinfo, pool));
-  *target_mergeinfo = svn_string_create_from_buf(mergeinfo_buf, pool);
+    {
+      *target_mergeinfo = implied_mergeinfo;
+      return SVN_NO_ERROR;
+    }
+}
 
+/* Extend the merge info for the single WC path TARGET_WCPATH, adding
+   MERGEINFO to any merge info pre-existing in the WC. */
+static svn_error_t *
+extend_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
+                     apr_hash_t *mergeinfo, svn_wc_adm_access_t *adm_access,
+                     svn_client_ctx_t *ctx, apr_pool_t *pool)
+{
+  apr_hash_t *wc_mergeinfo;
+
+  /* Get a fresh copy of the pre-existing state of the WC's merge info
+     updating it. */
+  SVN_ERR(svn_client__parse_merge_info(&wc_mergeinfo, entry, target_wcpath,
+                                       adm_access, ctx, pool));
+
+  /* Combine the provided merge info with any merge info from the WC. */
+  SVN_ERR(svn_mergeinfo_merge(&wc_mergeinfo, wc_mergeinfo, mergeinfo, pool));
+
+  return svn_client__record_wc_merge_info(target_wcpath, wc_mergeinfo,
+                                          adm_access, pool);
+}
+
+/* Convert MERGEINFO into an svn_string_t *, and return in *S. */
+/* ### REFACTOR: This should go into svn_mergeinfo.h. */
+static svn_error_t *
+merge_info_to_string(svn_string_t **s, apr_hash_t *mergeinfo, apr_pool_t *pool)
+{
+  svn_stringbuf_t *mergeinfo_buf;
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_buf, mergeinfo, pool));
+  *s = svn_string_create_from_buf(mergeinfo_buf, pool);
   return SVN_NO_ERROR;
 }
 
@@ -774,10 +806,11 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
                                                path_driver_info_t *);
-
-      SVN_ERR(calculate_target_merge_info(ra_session, &info->mergeinfo,
+      apr_hash_t *mergeinfo;
+      SVN_ERR(calculate_target_merge_info(ra_session, &mergeinfo,
                                           info->src_url, info->src_path,
                                           info->src_revnum, pool));
+      SVN_ERR(merge_info_to_string(&info->mergeinfo, mergeinfo, pool));
 
       APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
       if (is_move && (! info->resurrection))
@@ -1088,6 +1121,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                         apr_pool_t *pool)
 {
   svn_revnum_t src_revnum = pair->src_revnum;
+  apr_hash_t *src_mergeinfo;
+  const svn_wc_entry_t *dst_entry;
 
   if (pair->src_kind == svn_node_dir)
     {
@@ -1096,39 +1131,41 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                &pair->src_op_revision,
                TRUE, FALSE, FALSE, NULL, ctx, pool));
 
-      if ((pair->src_op_revision.kind == svn_opt_revision_head) 
-           && same_repositories)
-        {
-          /* If we just checked out from the "head" revision, that's fine,
-             but we don't want to pass a '-1' as a copyfrom_rev to
-             svn_wc_add().  That function will dump it right into the
-             entry, and when we try to commit later on, the
-             'add-dir-with-history' step will be -very- unhappy; it only
-             accepts specific revisions.
-             
-             On the other hand, we *could* say that -1 is a legitimate
-             copyfrom_rev, but I think that's bogus.  Somebody made a copy
-             from a particular revision;  if they wait a long time to
-             commit, it would be terrible if the copied happened from a
-             newer revision!! */
-          
-          /* We just did a checkout; whatever revision we just got, that
-             should be the copyfrom_revision when we commit later. */
-          const svn_wc_entry_t *d_entry;
-          svn_wc_adm_access_t *dst_access;
-          SVN_ERR(svn_wc_adm_open3(&dst_access, adm_access, pair->dst,
-                                   TRUE, -1, ctx->cancel_func,
-                                   ctx->cancel_baton, pool));
-          SVN_ERR(svn_wc_entry(&d_entry, pair->dst, dst_access, FALSE, pool));
-          src_revnum = d_entry->revision;
-        }
-
       /* Rewrite URLs recursively, remove wcprops, and mark everything
          as 'copied' -- assuming that the src and dst are from the
          same repository.  (It's kind of weird that svn_wc_add() is the
          way to do this; see its doc for more about the controversy.) */
       if (same_repositories)
         {
+          svn_wc_adm_access_t *dst_access;
+          SVN_ERR(svn_wc_adm_open3(&dst_access, adm_access, pair->dst, TRUE,
+                                   -1, ctx->cancel_func, ctx->cancel_baton,
+                                   pool));
+          SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, dst_access, FALSE,
+                               pool));
+
+          if (pair->src_op_revision.kind == svn_opt_revision_head)
+            {
+              /* If we just checked out from the "head" revision,
+                 that's fine, but we don't want to pass a '-1' as a
+                 copyfrom_rev to svn_wc_add().  That function will
+                 dump it right into the entry, and when we try to
+                 commit later on, the 'add-dir-with-history' step will
+                 be -very- unhappy; it only accepts specific
+                 revisions.
+             
+                 On the other hand, we *could* say that -1 is a
+                 legitimate copyfrom_rev, but I think that's bogus.
+                 Somebody made a copy from a particular revision; if
+                 they wait a long time to commit, it would be terrible
+                 if the copied happened from a newer revision!! */
+        
+              /* We just did a checkout; whatever revision we just
+                 got, that should be the copyfrom_revision when we
+                 commit later. */
+              src_revnum = dst_entry->revision;
+            }
+
           /* Schedule dst_path for addition in parent, with copy history.
              (This function also recursively puts a 'copied' flag on every
              entry). */
@@ -1136,6 +1173,16 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
                               src_revnum,
                               ctx->cancel_func, ctx->cancel_baton, 
                               ctx->notify_func2, ctx->notify_baton2, pool));
+
+          /* ### Recording of implied merge info should really occur
+             ### *before* the notification callback is invoked by
+             ### svn_wc_add2(), but can't occur before we add the new
+             ### source path. */
+          SVN_ERR(calculate_target_merge_info(ra_session, &src_mergeinfo,
+                                              pair->src, pair->src_rel,
+                                              src_revnum, pool));
+          SVN_ERR(extend_wc_merge_info(pair->dst, dst_entry, src_mergeinfo,
+                                       dst_access, ctx, pool));
         }
       else  /* different repositories */
         {
@@ -1184,6 +1231,13 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
          same_repositories ? pair->src : NULL,
          same_repositories ? src_revnum : SVN_INVALID_REVNUM,
          pool);
+
+      SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, adm_access, FALSE, pool));
+      SVN_ERR(calculate_target_merge_info(ra_session, &src_mergeinfo,
+                                          pair->src, pair->src_rel,
+                                          src_revnum, pool));
+      SVN_ERR(extend_wc_merge_info(pair->dst, dst_entry, src_mergeinfo,
+                                   adm_access, ctx, pool));
 
       /* Ideally, svn_wc_add_repos_file() would take a notify function
          and baton, and we wouldn't have to make this call here.

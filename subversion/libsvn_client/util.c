@@ -20,10 +20,12 @@
 #include <apr_pools.h>
 #include <apr_strings.h>
 
+#include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_error.h"
 #include "svn_props.h"
 #include "svn_path.h"
+#include "svn_mergeinfo.h"
 #include "svn_client.h"
 #include "client.h"
 
@@ -226,4 +228,60 @@ svn_client__get_merge_info_for_path(svn_ra_session_t *ra_session,
     *target_mergeinfo = NULL;
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__parse_merge_info(apr_hash_t **mergeinfo,
+                             const svn_wc_entry_t *entry,
+                             const char *wcpath,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool)
+{
+  apr_hash_t *props = apr_hash_make(pool);
+  const svn_string_t *propval;
+
+  /* ### Use svn_wc_prop_get() would actually be sufficient for now.
+     ### DannyB thinks that later we'll need behavior more like
+     ### svn_client__get_prop_from_wc(). */
+  SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGE_INFO,
+                                       wcpath, FALSE, entry, adm_access,
+                                       TRUE, ctx, pool));
+  propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
+  if (propval)
+    SVN_ERR(svn_mergeinfo_parse(propval->data, mergeinfo, pool));
+  else
+    *mergeinfo = apr_hash_make(pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__record_wc_merge_info(const char *wcpath,
+                                 apr_hash_t *mergeinfo,
+                                 svn_wc_adm_access_t *adm_access,
+                                 apr_pool_t *pool)
+{
+  svn_string_t *mergeinfo_str;
+
+  /* Convert the merge info (if any) into text for storage as a
+     property value. */
+  if (apr_hash_count(mergeinfo) > 0)
+    {
+      /* The WC will contain merge info. */
+      /* ### REFACTOR: Need mergeinfo -> svn_string_t conversion API */
+      svn_stringbuf_t *mergeinfo_buf;
+      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_buf, mergeinfo, pool));
+      mergeinfo_str = svn_string_create_from_buf(mergeinfo_buf, pool);
+    }
+  else
+    {
+      mergeinfo_str = NULL;
+    }
+  
+  /* Record the new merge info in the WC. */
+  /* ### Later, we'll want behavior more analogous to
+     ### svn_client__get_prop_from_wc(). */
+  return svn_wc_prop_set2(SVN_PROP_MERGE_INFO, mergeinfo_str, wcpath,
+                          adm_access, TRUE /* skip checks */, pool);
 }
