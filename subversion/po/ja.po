@@ -58,6 +58,8 @@
 # end revision            終了リビジョン
 # entries file            entries ファイル
 # entry                   エントリ
+# EOL                     行末 (EOL)
+# EOL marker              行末 (EOL) マーカー
 # error ...ing            〜する際にエラーが発生しました / 〜中にエラーが
 #                         発生しました
 # expected                期待される
@@ -91,6 +93,7 @@
 # malformed               不正な
 # merge                   マージ
 # MIME type               MIME タイプ
+# mix                     混在
 # modified                修正された
 # mutex                   相互排他ロック
 # name attr               name 属性
@@ -171,8 +174,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-25 02:49+0900\n"
-"PO-Revision-Date: 2007-01-25 02:39+0900\n"
+"POT-Creation-Date: 2007-01-27 00:39+0900\n"
+"PO-Revision-Date: 2007-01-27 00:24+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1300,7 +1303,7 @@ msgstr "'%s' は、現実にバージョン管理下にあるリソースを妨�
 msgid "'%s' has local modifications"
 msgstr "'%s' にはローカルで修正が加えられています"
 
-# 引数順番： APR_EOL_STR (改行文字), path, APR_EOL_STR (改行文字)
+# 引数順番： APR_EOL_STR, path, APR_EOL_STR
 #: libsvn_client/diff.c:99
 #, c-format
 msgid "%sProperty changes on: %s%s"
@@ -1324,8 +1327,7 @@ msgstr "URL にスキームがありません: '%s'"
 #: libsvn_client/diff.c:222
 #, c-format
 msgid "Access scheme mixtures not yet supported ('%s' and '%s')"
-msgstr ""
-"アクセススキームを混ぜることはまだサポートされていません ('%s' および '%s')"
+msgstr "アクセススキームの混在はまだサポートされていません ('%s' および '%s')"
 
 # * Label for the diff output from 'svn diff'.
 #: libsvn_client/diff.c:287
@@ -1408,7 +1410,7 @@ msgstr "'%s' に URL がありません"
 #: libsvn_client/export.c:87
 #, c-format
 msgid "'%s' is not a valid EOL value"
-msgstr "'%s' は不正な EOL 値です"
+msgstr "'%s' は行末 (EOL) の値として不正です"
 
 #: libsvn_client/export.c:271
 msgid "Destination directory exists, and will not be overwritten unless forced"
@@ -2207,7 +2209,7 @@ msgstr ""
 #, c-format
 msgid "Cannot verify lock on path '%s'; no matching lock-token available"
 msgstr ""
-"パス '%s' にかけられたロックを検証できません。一致するロックトークンが利用不"
+"パス '%s' にかけられたロックを検証できません。対応するロックトークンが利用不"
 "可能です"
 
 #. Helper macro that evaluates to an error message indicating that
@@ -4453,7 +4455,7 @@ msgstr ""
 
 #: libsvn_subr/opt.c:424
 msgid " arg"
-msgstr " <引数>"
+msgstr " <ARG>"
 
 #: libsvn_subr/opt.c:447 libsvn_subr/opt.c:470
 #, c-format
@@ -5604,7 +5606,7 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"使用方法: svn <サブコマンド> [<オプション>] [<引数>]\n"
+"使用方法: svn <サブコマンド> [<オプション>] [<ARG>]\n"
 "Subversion コマンドラインクライアント, バージョン %s.\n"
 "特定のサブコマンドに関するヘルプを読みたいときは 'svn help <サブコマンド>' "
 "と\n"
@@ -5892,7 +5894,7 @@ msgstr "サブコマンドに関するヘルプを表示します"
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:65
 msgid "specify log message ARG"
-msgstr "ログメッセージを <引数> と指定します"
+msgstr "ログメッセージを <ARG> と指定します"
 
 # * Description for 'svn --quiet'.
 # * 29 half-size characters are displayed on the left.
@@ -5919,10 +5921,9 @@ msgid ""
 "the change made by revision ARG (like -r ARG-1:ARG)\n"
 "                             If ARG is negative this is like -r ARG:ARG-1"
 msgstr ""
-"リビジョン <引数> における変更\n"
-"                             (-r <引数>-1:<引数> と同等)\n"
-"                             <引数> が負の場合は -r <引数>:<引数>-1 と同等で"
-"す"
+"リビジョン <ARG> における変更\n"
+"                             (-r <ARG>-1:<ARG> と同等)\n"
+"                             <ARG> が負の場合は -r <ARG>:<ARG>-1 と同等です"
 
 # * Description for 'svn --revision'.
 # * 29 half-size characters are displayed on the left.
@@ -5938,8 +5939,8 @@ msgid ""
 "                                'COMMITTED'  last commit at or before BASE\n"
 "                                'PREV'       revision just before COMMITTED"
 msgstr ""
-"<引数> (一部のコマンドは <引数 1>:<引数 2> の範\n"
-"                             囲も引数にとることができます)\n"
+"<ARG> (一部のコマンドは <ARG 1>:<ARG 2> の範囲も\n"
+"                             引数にとることができます)\n"
 "                             リビジョン引数は次のいずれかを使って指定できま"
 "す:\n"
 "                                NUMBER       リビジョン番号\n"
@@ -5959,7 +5960,7 @@ msgstr ""
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:84
 msgid "read log message from file ARG"
-msgstr "ファイル <引数> からログメッセージを読み込みます"
+msgstr "ファイル <ARG> からログメッセージを読み込みます"
 
 # * Description for 'svn --incremental'.
 # * 29 half-size characters are displayed on the left.
@@ -5974,7 +5975,7 @@ msgstr ""
 #: svn/main.c:89
 msgid "treat value as being in charset encoding ARG"
 msgstr ""
-"文字エンコーディングが <引数> であるとして処理し\n"
+"文字エンコーディングが <ARG> であるとして処理し\n"
 "                             ます"
 
 # * Description for 'svn{,admin,dumpfilter,look,serve,sync,version} --version'.
@@ -6001,13 +6002,13 @@ msgstr "更新情報を表示します"
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:96 svnsync/main.c:96
 msgid "specify a username ARG"
-msgstr "ユーザ名を <引数> と指定します"
+msgstr "ユーザ名を <ARG> と指定します"
 
 # * Description for 'svn{,sync} --password'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:98 svnsync/main.c:98
 msgid "specify a password ARG"
-msgstr "パスワードを <引数> と指定します"
+msgstr "パスワードを <ARG> と指定します"
 
 # * Description for 'svn --extensions'.
 # * 29 half-size characters are displayed on the left.
@@ -6033,15 +6034,15 @@ msgid ""
 "                                   Ignore changes in EOL style"
 msgstr ""
 "デフォルト: '-u'。Subversion が外部の diff プロ\n"
-"                             グラムを呼び出すとき、<引数> は単純にそのプロ"
-"グ\n"
-"                             ラムに渡されます。しかし、Subversion がデフォ"
-"ル\n"
-"                             トの内部の diff の実装を呼び出す場合や blame "
-"の\n"
-"                             注釈情報を表示する場合、<引数> には以下のいず"
-"れ\n"
-"                             かを使ってください。\n"
+"                             グラムを呼び出すとき、<ARG> は単純にそのプログ"
+"ラ\n"
+"                             ムに渡されます。しかし、Subversion がデフォル"
+"ト\n"
+"                             の内部の diff の実装を呼び出す場合や blame の"
+"注\n"
+"                             釈情報を表示する場合、<ARG> には以下のいずれか"
+"を\n"
+"                             使ってください。\n"
 "                                -u (--unified):\n"
 "                                   3 行の unified context を出力します。\n"
 "                                -b (--ignore-space-change):\n"
@@ -6049,14 +6050,14 @@ msgstr ""
 "                                -w (--ignore-all-space):\n"
 "                                   すべての空白文字を無視します。\n"
 "                                --ignore-eol-style:\n"
-"                                   改行 (EOL) スタイルの変更を無視します。"
+"                                   行末 (EOL) スタイルの変更を無視します。"
 
 # * Description for 'svn --targets'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:130
 msgid "pass contents of file ARG as additional args"
 msgstr ""
-"ファイル <引数> の内容をサブコマンドの引数に追加\n"
+"ファイル <ARG> の内容をサブコマンドの引数に追加\n"
 "                             して渡します"
 
 # * Description for 'svn --xml'.
@@ -6131,31 +6132,31 @@ msgstr "外部定義を無視します"
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:153
 msgid "use ARG as diff command"
-msgstr "diff コマンドとして <引数> を用います"
+msgstr "diff コマンドとして <ARG> を用います"
 
 # * Description for 'svn --diff3-cmd'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:155
 msgid "use ARG as merge command"
-msgstr "merge コマンドとして <引数> を用います"
+msgstr "merge コマンドとして <ARG> を用います"
 
 # * Description for 'svn --editor-cmd'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:157
 msgid "use ARG as external editor"
-msgstr "外部エディタとして <引数> を用います"
+msgstr "外部エディタとして <ARG> を用います"
 
 # * Description for 'svn --old'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:160
 msgid "use ARG as the older target"
-msgstr "二者のうち古い方として <引数> を用います"
+msgstr "二者のうち古い方として <ARG> を用います"
 
 # * Description for 'svn --new'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:162
 msgid "use ARG as the newer target"
-msgstr "二者のうち新しい方として <引数> を用います"
+msgstr "二者のうち新しい方として <ARG> を用います"
 
 # * Description for 'svn --revprop'.
 # * 29 half-size characters are displayed on the left.
@@ -6174,7 +6175,7 @@ msgstr "URL を書き換え、参照するリポジトリを変更します"
 #: svn/main.c:168 svnadmin/main.c:269 svnsync/main.c:100
 msgid "read user configuration files from directory ARG"
 msgstr ""
-"ディレクトリ <引数> からユーザ設定ファイルを読み\n"
+"ディレクトリ <ARG> からユーザ設定ファイルを読み\n"
 "                             込みます"
 
 # * Description for 'svn --auto-props'.
@@ -6198,11 +6199,11 @@ msgid ""
 "                             property set to 'native'.\n"
 "                             ARG may be one of 'LF', 'CR', 'CRLF'"
 msgstr ""
-"                             svn:eol-style 属性が 'native' に設定されたファ"
-"イ\n"
-"                             ルについて、システムで標準的な記号とは異なる改"
-"行\n"
-"                             (EOL) 記号を用います。<引数> は 'LF', 'CR',\n"
+"svn:eol-style 属性が 'native' に設定されたファイ\n"
+"                             ルについて、システムで標準的な記号とは異なる行"
+"末\n"
+"                             (EOL) マーカーを用います。<ARG> は "
+"'LF'、'CR'、\n"
 "                             'CRLF' のいずれかです。"
 
 # * Description for 'svn --limit'.
@@ -6656,13 +6657,15 @@ msgstr ""
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:433
 msgid "read lock comment from file ARG"
-msgstr "ファイル <引数> からロックについてのコメントを読み込みます"
+msgstr ""
+"ファイル <ARG> からロックについてのコメントを読\n"
+"                             み込みます"
 
 # * Description for 'svn lock --message'.
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:434
 msgid "specify lock comment ARG"
-msgstr "ロックについてのコメントを <引数> と指定します"
+msgstr "ロックについてのコメントを <ARG> と指定します"
 
 # * Description for 'svn log'.
 # * "log: " is displayed at the head of the first line.
@@ -7073,7 +7076,7 @@ msgstr ""
 # * 29 half-size characters are displayed on the left.
 #: svn/main.c:624
 msgid "read property value from file ARG"
-msgstr "ファイル <引数> から属性値を読み込みます"
+msgstr "ファイル <ARG> から属性値を読み込みます"
 
 # * Description for 'svn resolved'.
 # * "resolved: " is displayed at the head of the first line.
@@ -7918,8 +7921,8 @@ msgstr "'%s' は URL です。そこはパスで指定するべきです"
 #: svnadmin/main.c:236
 msgid "specify revision number ARG (or X:Y range)"
 msgstr ""
-"リビジョン番号を <引数> (または範囲 X:Y) と指定\n"
-"                             します"
+"リビジョン番号を <ARG> (または範囲 X:Y) と指定し\n"
+"                             ます"
 
 # * Description for 'svnadmin --incremental'.
 # * 29 half-size characters are displayed on the left.
@@ -8663,13 +8666,13 @@ msgstr ""
 # * 29 half-size characters are displayed on the left.
 #: svnlook/main.c:99
 msgid "specify revision number ARG"
-msgstr "リビジョン番号を <引数> と指定します"
+msgstr "リビジョン番号を <ARG> と指定します"
 
 # * Description for 'svnlook --transaction'.
 # * 29 half-size characters are displayed on the left.
 #: svnlook/main.c:102
 msgid "specify transaction name ARG"
-msgstr "トランザクション名を <引数> と指定します"
+msgstr "トランザクション名を <ARG> と指定します"
 
 # * Description for 'svnlook --verbose'.
 # * 29 half-size characters are displayed on the left.
@@ -9193,7 +9196,7 @@ msgstr "一度だけ待ち受けます (デバッグに便利です)"
 #: svnserve/main.c:162
 msgid "write server process ID to file arg"
 msgstr ""
-"サーバのプロセス ID をファイル <引数> に書き込み\n"
+"サーバのプロセス ID をファイル <ARG> に書き込み\n"
 "                             ます"
 
 # * Description for 'svnserve --service'.
@@ -9604,13 +9607,17 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "Not enough arguments provided"
 #~ msgstr "十分な引数が与えられていません"
 
-#~ msgid "Cannot mix repository and working copy paths in source list"
-#~ msgstr ""
-#~ "コピー元 (または移動元) のリストにリポジトリと作業コピーパスを混ぜることは"
-#~ "できません"
+#~ msgid "Cannot mix repository and working copy sources"
+#~ msgstr "コピー元 (または移動元) にリポジトリと作業コピーは混在できません"
+
+#~ msgid "Repository to working copy moves are not supported"
+#~ msgstr "リポジトリから作業コピーへの移動はサポートされていません"
 
 #~ msgid "URL '%s' non-existent in revision %ld"
 #~ msgstr "URL '%s' は、リビジョン %ld には存在しません"
+
+#~ msgid "Lock comment contains illegal characters"
+#~ msgstr "ロックについてのコメントに不正な文字が含まれています"
 
 #~ msgid "Property '%s' is not a regular property"
 #~ msgstr "属性 '%s' はまともな属性ではありません"
@@ -9627,9 +9634,6 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 
 #~ msgid "'%s' does not exist in revision %ld"
 #~ msgstr "'%s' がリビジョン %ld に存在しません"
-
-#~ msgid "Lock comment contains illegal characters"
-#~ msgstr "ロックについてのコメントに不正な文字が含まれています"
 
 #~ msgid "Expected a valid revnum and path"
 #~ msgstr "正しいリビジョン番号やパスを期待しました"
@@ -9788,7 +9792,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 # * 29 half-size characters are displayed on the left.
 #~ msgid "operate only on members of changelist ARG"
 #~ msgstr ""
-#~ "変更リスト <引数> に含まれている項目のみに対して\n"
+#~ "変更リスト <ARG> に含まれている項目のみに対して\n"
 #~ "                             操作を実行します"
 
 # * Description for 'svn --keep-changelist'.
@@ -10373,7 +10377,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "\n"
 #~ "Available subcommands:\n"
 #~ msgstr ""
-#~ "使用方法: svn <サブコマンド> [<オプション>] [<引数>]\n"
+#~ "使用方法: svn <サブコマンド> [<オプション>] [<ARG>]\n"
 #~ "Subversion コマンドラインクライアント, バージョン %s.\n"
 #~ "特定のサブコマンドに関するヘルプを読みたいときは 'svn help <サブコマンド"
 #~ ">' と\n"
@@ -10744,12 +10748,12 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 # * Description for 'svn --file'.
 # * 29 half-size characters are displayed on the left.
 #~ msgid "read data from file ARG"
-#~ msgstr "ファイル <引数> からデータを読み込みます"
+#~ msgstr "ファイル <ARG> からデータを読み込みます"
 
 # * Description for 'svn --message'.
 # * 29 half-size characters are displayed on the left.
 #~ msgid "specify commit message ARG"
-#~ msgstr "コミットメッセージを <引数> と指定します"
+#~ msgstr "コミットメッセージを <ARG> と指定します"
 
 #~ msgid ""
 #~ "Copyright (C) 2000-2005 CollabNet.\n"
@@ -10958,8 +10962,8 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "                                \"PREV\"       revision just before "
 #~ "COMMITTED"
 #~ msgstr ""
-#~ "<引数> (一部のコマンドは <引数 1>:<引数 2> の範\n"
-#~ "                             囲も引数にとることができます)\n"
+#~ "<ARG> (一部のコマンドは <ARG 1>:<ARG 2> の範囲も\n"
+#~ "                             引数にとることができます)\n"
 #~ "                             リビジョン引数は次のいずれかを使って指定でき"
 #~ "ます:\n"
 #~ "                                NUMBER       リビジョン番号\n"
@@ -11502,9 +11506,9 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "                             svn:eol-style 属性が native に設定されたファ"
 #~ "イル\n"
-#~ "                             について、システムで標準的な記号とは異なる改"
-#~ "行\n"
-#~ "                             (EOL) 記号を用います。<引数> は 'LF', 'CR',\n"
+#~ "                             について、システムで標準的な記号とは異なる行"
+#~ "末\n"
+#~ "                             (EOL) 記号を用います。<ARG> は 'LF'、'CR'、\n"
 #~ "                             'CRLF' のいずれかです。"
 
 #~ msgid "Can't open file at '%s' "
@@ -12804,7 +12808,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "\n"
 #~ "Available subcommands:\n"
 #~ msgstr ""
-#~ "使用方法: svn <サブコマンド> [<オプション>] [<引数>]\n"
+#~ "使用方法: svn <サブコマンド> [<オプション>] [<ARG>]\n"
 #~ "特定のサブコマンドに関するヘルプを読みたいときは \"svn help <サブコマンド>"
 #~ "\"\n"
 #~ "と打ってください。\n"
@@ -12943,7 +12947,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "\n"
 #~ "Available subcommands:\n"
 #~ msgstr ""
-#~ "使用方法: svn <サブコマンド> [<オプション>] [<引数>]\n"
+#~ "使用方法: svn <サブコマンド> [<オプション>] [<ARG>]\n"
 #~ "特定のサブコマンドに関するヘルプを読みたいときは 'svn help <サブコマンド"
 #~ ">'\n"
 #~ "と打ってください。\n"
@@ -13523,8 +13527,8 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 # * 29 half-size characters are displayed on the left.
 #~ msgid "the change made by revision ARG (like -r ARG-1:ARG)"
 #~ msgstr ""
-#~ "リビジョン <引数> における変更\n"
-#~ "                             (-r <引数>-1:<引数> と同等)"
+#~ "リビジョン <ARG> における変更\n"
+#~ "                             (-r <ARG>-1:<ARG> と同等)"
 
 #~ msgid "Argument to -c must be positive"
 #~ msgstr "-c に渡す引数は正でなければなりません"
@@ -13756,7 +13760,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ "\n"
 #~ "Available subcommands:\n"
 #~ msgstr ""
-#~ "使用方法: svn <サブコマンド> [<オプション>] [<引数>]\n"
+#~ "使用方法: svn <サブコマンド> [<オプション>] [<ARG>]\n"
 #~ "          svn --version [--quiet]\n"
 #~ "Subversion コマンドラインクライアント, バージョン %s.\n"
 #~ "特定のサブコマンドに関するヘルプを読みたいときは 'svn help <サブコマンド"
@@ -13788,7 +13792,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 # * 29 half-size characters are displayed on the left.
 #~ msgid "pass ARG to --diff-cmd as options (default: '-u')"
 #~ msgstr ""
-#~ "<引数> をオプションとして --diff-cmd に渡します\n"
+#~ "<ARG> をオプションとして --diff-cmd に渡します\n"
 #~ "                             (デフォルト: '-u')"
 
 #~ msgid ""
@@ -13924,3 +13928,8 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "The response contains a non-conforming HTTP status line."
 #~ msgstr ""
 #~ "仕様に準拠していない HTTP ステータス行がレスポンスに含まれています。"
+
+#~ msgid "Cannot mix repository and working copy paths in source list"
+#~ msgstr ""
+#~ "コピー元 (または移動元) のリストにリポジトリと作業コピーパスを混ぜることは"
+#~ "できません"
