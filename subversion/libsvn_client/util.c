@@ -269,10 +269,7 @@ svn_client__record_wc_merge_info(const char *wcpath,
   if (apr_hash_count(mergeinfo) > 0)
     {
       /* The WC will contain merge info. */
-      /* ### REFACTOR: Need mergeinfo -> svn_string_t conversion API */
-      svn_stringbuf_t *mergeinfo_buf;
-      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_buf, mergeinfo, pool));
-      mergeinfo_str = svn_string_create_from_buf(mergeinfo_buf, pool);
+      SVN_ERR(svn_mergeinfo__to_string(&mergeinfo_str, mergeinfo, pool));
     }
   else
     {

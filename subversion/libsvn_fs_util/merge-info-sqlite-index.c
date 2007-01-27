@@ -570,7 +570,7 @@ svn_fs_merge_info__get_merge_info(apr_hash_t **mergeinfo,
 
   for (i = 0; i < paths->nelts; i++)
     {
-      svn_stringbuf_t *mergestring;
+      svn_stringbuf_t *mergeinfo_buf;
       apr_hash_t *currhash;
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
@@ -578,9 +578,9 @@ svn_fs_merge_info__get_merge_info(apr_hash_t **mergeinfo,
       if (currhash)
         {
           SVN_ERR(svn_mergeinfo_sort(currhash, pool));
-          SVN_ERR(svn_mergeinfo_to_string(&mergestring, currhash, pool));
+          SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, currhash, pool));
           apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING,
-                       mergestring->data);
+                       mergeinfo_buf->data);
         }
     }
   SQLITE_ERR(sqlite3_close(db), db);

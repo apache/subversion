@@ -1085,19 +1085,15 @@ fs_change_merge_info(svn_fs_root_t *root,
                      apr_pool_t *pool)
 {
   const char *txn_id;
-  svn_stringbuf_t *minfostr;
+  svn_string_t *mergeinfo_str;
   svn_fs_txn_t *txn;
 
   if (! root->is_txn_root)
     return not_txn(root);
   txn_id = root->txn;
   SVN_ERR(svn_fs_open_txn(&txn, root->fs, txn_id, pool));
-  SVN_ERR(svn_mergeinfo_to_string(&minfostr, mergeinfo, pool));
-  SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, 
-                                          path,
-                                          svn_string_create_from_buf(minfostr,
-                                                                     pool),
-                                          pool));
+  SVN_ERR(svn_mergeinfo__to_string(&mergeinfo_str, mergeinfo, pool));
+  SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, path, mergeinfo_str, pool));
 
   SVN_ERR(svn_fs_fs__change_txn_prop(txn, 
                                      SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,

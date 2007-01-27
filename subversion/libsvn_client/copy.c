@@ -460,17 +460,6 @@ extend_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
                                           adm_access, pool);
 }
 
-/* Convert MERGEINFO into an svn_string_t *, and return in *S. */
-/* ### REFACTOR: This should go into svn_mergeinfo.h. */
-static svn_error_t *
-merge_info_to_string(svn_string_t **s, apr_hash_t *mergeinfo, apr_pool_t *pool)
-{
-  svn_stringbuf_t *mergeinfo_buf;
-  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_buf, mergeinfo, pool));
-  *s = svn_string_create_from_buf(mergeinfo_buf, pool);
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
                     void *parent_baton,
@@ -810,7 +799,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(calculate_target_merge_info(ra_session, &mergeinfo,
                                           info->src_url, info->src_path,
                                           info->src_revnum, pool));
-      SVN_ERR(merge_info_to_string(&info->mergeinfo, mergeinfo, pool));
+      SVN_ERR(svn_mergeinfo__to_string(&info->mergeinfo, mergeinfo, pool));
 
       APR_ARRAY_PUSH(paths, const char *) = info->dst_path;
       if (is_move && (! info->resurrection))

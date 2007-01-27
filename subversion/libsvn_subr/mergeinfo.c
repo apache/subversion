@@ -700,10 +700,10 @@ svn_mergeinfo_remove(apr_hash_t **output, apr_hash_t *eraser,
   return SVN_NO_ERROR;
 }
 
-/* Convert a single svn_merge_range_t * back into a svn_stringbuf_t.  */
+/* Convert a single svn_merge_range_t * back into an svn_stringbuf_t *.  */
 static svn_error_t *
-svn_range_to_string(svn_stringbuf_t **result, svn_merge_range_t *range,
-                    apr_pool_t *pool)
+svn_range_to_stringbuf(svn_stringbuf_t **result, svn_merge_range_t *range,
+                       apr_pool_t *pool)
 {
   if (range->start == range->end)
     *result = svn_stringbuf_createf(pool, "%ld", range->start);
@@ -713,11 +713,9 @@ svn_range_to_string(svn_stringbuf_t **result, svn_merge_range_t *range,
   return SVN_NO_ERROR;
 }
 
-/* Take an array of svn_merge_range_t *'s in INPUT, and convert it
-   back to a text format rangelist in OUTPUT.  */
 svn_error_t *
-svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *input,
-                        apr_pool_t *pool)
+svn_rangelist_to_stringbuf(svn_stringbuf_t **output, apr_array_header_t *input,
+                           apr_pool_t *pool)
 {
   *output = svn_stringbuf_create("", pool);
 
@@ -731,24 +729,23 @@ svn_rangelist_to_string(svn_stringbuf_t **output, apr_array_header_t *input,
       for (i = 0; i < input->nelts - 1; i++)
         {
           range = APR_ARRAY_IDX(input, i, svn_merge_range_t *);
-          SVN_ERR(svn_range_to_string(&toappend, range, pool));
+          SVN_ERR(svn_range_to_stringbuf(&toappend, range, pool));
           svn_stringbuf_appendstr(*output, toappend);
           svn_stringbuf_appendcstr(*output, ",");
         }
 
       /* Now handle the last element, which needs no comma.  */
       range = APR_ARRAY_IDX(input, i, svn_merge_range_t *);
-      SVN_ERR(svn_range_to_string(&toappend, range, pool));
+      SVN_ERR(svn_range_to_stringbuf(&toappend, range, pool));
       svn_stringbuf_appendstr(*output, toappend);
     }
 
   return SVN_NO_ERROR;
 }
 
-/* Take a mergeinfo hash and turn it back into a string.  */
 svn_error_t *
-svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
-                        apr_pool_t *pool)
+svn_mergeinfo_to_stringbuf(svn_stringbuf_t **output, apr_hash_t *input,
+                           apr_pool_t *pool)
 {
   *output = svn_stringbuf_create("", pool);
 
@@ -765,7 +762,7 @@ svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
         {
           elt = APR_ARRAY_IDX(sorted, i, svn_sort__item_t);
 
-          SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
+          SVN_ERR(svn_rangelist_to_stringbuf(&revlist, elt.value, pool));
           combined = svn_stringbuf_createf(pool, "%s:%s\n", (char *) elt.key,
                                            revlist->data);
           svn_stringbuf_appendstr(*output, combined);
@@ -774,12 +771,22 @@ svn_mergeinfo_to_string(svn_stringbuf_t **output, apr_hash_t *input,
       /* Now handle the last element, which is not newline terminated.  */
       elt = APR_ARRAY_IDX(sorted, i, svn_sort__item_t);
 
-      SVN_ERR(svn_rangelist_to_string(&revlist, elt.value, pool));
+      SVN_ERR(svn_rangelist_to_stringbuf(&revlist, elt.value, pool));
       combined = svn_stringbuf_createf(pool, "%s:%s", (char *) elt.key,
                                        revlist->data);
       svn_stringbuf_appendstr(*output, combined);
     }
 
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_mergeinfo__to_string(svn_string_t **output, apr_hash_t *input,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *mergeinfo_buf;
+  SVN_ERR(svn_mergeinfo_to_stringbuf(&mergeinfo_buf, input, pool));
+  *output = svn_string_create_from_buf(mergeinfo_buf, pool);
   return SVN_NO_ERROR;
 }
 

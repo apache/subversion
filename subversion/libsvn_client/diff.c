@@ -133,7 +133,7 @@ display_mergeinfo_diff(const char *orig_mergeinfo_val,
       from_path = key;
       merge_revarray = val;
 
-      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
+      SVN_ERR(svn_rangelist_to_stringbuf(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
                                     _("   Reverted %s:r%s%s"),
@@ -151,7 +151,7 @@ display_mergeinfo_diff(const char *orig_mergeinfo_val,
       from_path = key;
       merge_revarray = val;
 
-      SVN_ERR(svn_rangelist_to_string(&merge_revstr, merge_revarray, pool));
+      SVN_ERR(svn_rangelist_to_stringbuf(&merge_revstr, merge_revarray, pool));
 
       SVN_ERR(file_printf_from_utf8(file, encoding,
                                     _("   Merged %s:r%s%s"),

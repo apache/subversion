@@ -485,21 +485,6 @@ diff_mergeinfo_props(apr_hash_t **deleted, apr_hash_t **added,
   return SVN_NO_ERROR;
 }
 
-/* Transform MERGEINFO into a textual representation, and store in
-   *OUTPUT. */
-static svn_error_t *
-mergeinfo_to_string(const svn_string_t **output, apr_hash_t *mergeinfo,
-                    apr_pool_t *pool)
-{
-  svn_stringbuf_t *prop_val;
-  SVN_ERR(svn_mergeinfo_to_string(&prop_val, mergeinfo, pool));
-  /* ### This conversion is somewhat wasteful.  It might be avoided by
-     ### restructuring the arguments of the callers, or the
-     ### svn_mergeinfo.h API. */
-  *output = svn_string_create_from_buf(prop_val, pool);
-  return SVN_NO_ERROR;
-}
-
 /* Parse the merge info from PROP_VAL1 and PROP_VAL2, combine it, then
    reconstitute it into *OUTPUT.  Call when the WC's merge info has
    been modified to combine it with incoming merge info from the
@@ -515,7 +500,8 @@ combine_mergeinfo_props(const svn_string_t **output,
   SVN_ERR(svn_mergeinfo_parse(prop_val2->data, &mergeinfo2, pool));
   SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo, mergeinfo1, mergeinfo2,
                               pool));
-  SVN_ERR(mergeinfo_to_string(output, combined_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) output,
+                                   combined_mergeinfo, pool));
   return SVN_NO_ERROR;
 }
 
@@ -547,7 +533,8 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
   SVN_ERR(svn_mergeinfo_remove(&combined_mergeinfo, deleted,
                                combined_mergeinfo, pool));
 
-  SVN_ERR(mergeinfo_to_string(output, combined_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) output,
+                                   combined_mergeinfo, pool));
   return SVN_NO_ERROR;
 }
 
@@ -758,8 +745,9 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                       SVN_ERR(diff_mergeinfo_props(&deleted_mergeinfo,
                                                    &added_mergeinfo,
                                                    from_val, to_val, pool));
-                      SVN_ERR(mergeinfo_to_string(&to_val, added_mergeinfo,
-                                                  pool));
+                      SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
+                                                       &to_val,
+                                                       added_mergeinfo, pool));
                     }
                   else
                     {
@@ -801,8 +789,10 @@ svn_wc__merge_props(svn_wc_notify_state_t *state,
                                                      &added_mergeinfo,
                                                      from_val, working_val,
                                                      pool));
-                        SVN_ERR(mergeinfo_to_string(&to_val, added_mergeinfo,
-                                                    pool));
+                        SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
+                                                         &to_val,
+                                                         added_mergeinfo,
+                                                         pool));
                       }
                     else
                       {

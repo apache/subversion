@@ -471,7 +471,7 @@ test_remove_rangelist(const char **msg,
 
   SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
   
-  SVN_ERR(svn_rangelist_to_string(&outputstring, result, pool));
+  SVN_ERR(svn_rangelist_to_stringbuf(&outputstring, result, pool));
 
   if (svn_stringbuf_compare(expected1, outputstring) != TRUE)
     return fail(pool, "Rangelist string not what we expected");
@@ -484,7 +484,7 @@ test_remove_rangelist(const char **msg,
 
   SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
   
-  SVN_ERR(svn_rangelist_to_string(&outputstring, result, pool));
+  SVN_ERR(svn_rangelist_to_stringbuf(&outputstring, result, pool));
 
   if (svn_stringbuf_compare(expected2, outputstring) != TRUE)
     return fail(pool, "Rangelist string not what we expected");
@@ -497,7 +497,7 @@ test_remove_rangelist(const char **msg,
 
   SVN_ERR(svn_rangelist_remove(&result, eraser, whiteboard, pool));
   
-  SVN_ERR(svn_rangelist_to_string(&outputstring, result, pool));
+  SVN_ERR(svn_rangelist_to_stringbuf(&outputstring, result, pool));
 
   if (svn_stringbuf_compare(expected3, outputstring) != TRUE)
     return fail(pool, "Rangelist string not what we expected");
@@ -554,7 +554,7 @@ test_rangelist_to_string(const char **msg,
   if (!result)
     return fail(pool, "Missing path in parsed mergeinfo");
   
-  SVN_ERR(svn_rangelist_to_string(&output, result, pool));
+  SVN_ERR(svn_rangelist_to_stringbuf(&output, result, pool));
 
   if (svn_stringbuf_compare(expected, output) != TRUE)
     return fail(pool, "Rangelist string not what we expected");
@@ -568,9 +568,9 @@ test_mergeinfo_to_string(const char **msg,
                          svn_test_opts_t *opts,
                          apr_pool_t *pool)
 {
-  svn_stringbuf_t *output;
-  svn_stringbuf_t *expected;
-  expected = svn_stringbuf_create("/fred:8-10\n/trunk:3,5,7-11,13-14", pool);
+  svn_string_t *output;
+  svn_string_t *expected;
+  expected = svn_string_create("/fred:8-10\n/trunk:3,5,7-11,13-14", pool);
 
   *msg = "turning mergeinfo back into a string";
 
@@ -579,9 +579,9 @@ test_mergeinfo_to_string(const char **msg,
 
   SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
   
-  SVN_ERR(svn_mergeinfo_to_string(&output, info1, pool));
+  SVN_ERR(svn_mergeinfo__to_string(&output, info1, pool));
 
-  if (svn_stringbuf_compare(expected, output) != TRUE)
+  if (svn_string_compare(expected, output) != TRUE)
     return fail(pool, "Mergeinfo string not what we expected");
 
   return SVN_NO_ERROR;

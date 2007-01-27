@@ -1312,15 +1312,14 @@ base_change_merge_info(svn_fs_root_t *root,
                        apr_hash_t *merge_info,
                        apr_pool_t *pool)
 {
-  svn_stringbuf_t *minfo_str;
   struct change_merge_info_args args;
 
   if (! root->is_txn_root)
     return NOT_TXN(root);
-  SVN_ERR(svn_mergeinfo_to_string(&minfo_str, merge_info, pool));
   args.root = root;
   args.path = path;
-  args.value = svn_string_create_from_buf(minfo_str, pool);
+  SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &args.value, merge_info,
+                                   pool));
   return svn_fs_base__retry_txn(root->fs, txn_body_change_merge_info, &args,
                                 pool);
 }

@@ -232,14 +232,14 @@
 %constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
 
 /* -----------------------------------------------------------------------
-   input rangelist to svn_rangelist_to_string
+   input rangelist to svn_rangelist_to_stringbuf
 */
 %apply apr_array_header_t *RANGELIST {
    apr_array_header_t *rangeinput
 }
 
 /* -----------------------------------------------------------------------
-   input mergeinfo hash to svn_mergeinfo_to_string
+   input mergeinfo hash to svn_mergeinfo_to_stringbuf
 */
 %apply apr_hash_t *MERGEINFO {
    apr_hash_t *mergeinput,
