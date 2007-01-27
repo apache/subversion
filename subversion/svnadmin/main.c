@@ -1507,7 +1507,7 @@ main(int argc, const char *argv[])
           else
             svn_error_clear
               (svn_cmdline_fprintf
-               (stderr, pool, _("subcommand '%s' doesn't accept option '%s'\n"
+               (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
                                 "Type 'svnadmin help %s' for usage.\n"),
                 subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);
