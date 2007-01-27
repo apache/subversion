@@ -160,7 +160,7 @@ static const apr_getopt_option_t svnserve__options[] =
 #endif
     {"listen-once",      'X', 0, N_("listen once (useful for debugging)")},
     {"pid-file",         SVNSERVE_OPT_PID_FILE, 1,
-     N_("write server process ID to file arg")},
+     N_("write server process ID to file ARG")},
 #ifdef WIN32
     {"service",          SVNSERVE_OPT_SERVICE, 0,
      N_("run as a windows service (SCM only)")},
