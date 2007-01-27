@@ -417,13 +417,13 @@ void svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
                               const char *tagname,
                               const char *string);
 
-/* Print the XML header to stdout, using TAGNAME as the openning tag.
-   Use pool for temporary allocations. */
+/* Print the XML prolog and document root element start-tag to stdout, using
+   TAGNAME as the root element name.  Use pool for temporary allocations. */
 svn_error_t *svn_cl__xml_print_header(const char *tagname,
                                       apr_pool_t *pool);
 
-/* Print the XML footer to stdout, using TAGNAME for the closing tag.
-   Use pool for temporary allocations. */
+/* Print the XML document root element end-tag to stdout, using TAGNAME as the 
+   root element name.  Use pool for temporary allocations. */
 svn_error_t *svn_cl__xml_print_footer(const char *tagname,
                                       apr_pool_t *pool);
 
