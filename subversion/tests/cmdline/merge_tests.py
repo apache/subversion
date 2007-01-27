@@ -1565,11 +1565,8 @@ def three_way_merge_add_of_existing_binary_file(sbox):
   # We should *not* see a conflict during the merge, but an 'A'.
   # And after the merge, the status should not report any differences.
 
-  ### FIXME: We're seeing a property merge (" G") from the property
-  ### delta "- /A:1" produced of by diff'ing /copy-of-A (with explicit
-  ### merge info "/A:1") with /A (with implied merge info "/A:1-3").
   expected_output = wc.State(short_wc, {
-    #"A"       : Item(status=" G"),
+    "A"       : Item(status=" G"),
     "A/theta" : Item(status="A "),
     })
 
@@ -4398,7 +4395,7 @@ test_list = [ None,
               merge_similar_unrelated_trees,
               merge_with_prev,
               merge_binary_file,
-              XFail(three_way_merge_add_of_existing_binary_file),
+              three_way_merge_add_of_existing_binary_file,
               merge_one_file_using_r,
               merge_one_file_using_c,
               merge_record_only,
