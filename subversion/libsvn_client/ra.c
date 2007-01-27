@@ -620,7 +620,7 @@ slow_locations(const char **start_path, const char** end_path,
   if (lrb.kind == svn_node_none)
     return svn_error_createf
       (SVN_ERR_FS_NOT_FOUND, NULL,
-       _("path '%s' doesn't exist in revision %ld"),
+       _("Path '%s' doesn't exist in revision %ld"),
        orig_path, peg_revnum);
 
   /* Populate most of our log receiver baton structure. */
