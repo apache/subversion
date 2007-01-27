@@ -595,7 +595,7 @@ msgstr "リポジトリフックの実行が失敗しました"
 
 #: include/svn_error_codes.h:607
 msgid "Incorrect arguments supplied"
-msgstr "不正な変数が入力されました"
+msgstr "不正な引数が与えられました"
 
 #: include/svn_error_codes.h:611
 msgid "A report cannot be generated because no data was supplied"
@@ -5717,7 +5717,7 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"使用方法: svn <サブコマンド> [<オプション>] [<ARG>]\n"
+"使用方法: svn <サブコマンド> [<オプション>] [<引数>]\n"
 "Subversion コマンドラインクライアント, バージョン %s.\n"
 "特定のサブコマンドに関するヘルプを読みたいときは 'svn help <サブコマンド>' "
 "と\n"
