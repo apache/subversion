@@ -92,11 +92,12 @@ or a url (when false) copy source is used."""
 
 # Helper for wc_copy_replace_with_props and
 # repos_to_wc_copy_replace_with_props
-def copy_replace_with_props(sbox, wc_copy):
+def copy_replace_with_props(sbox, wc_copy, contact_repos_for_merge_info = 0):
   """Tests for 'R'eplace functionanity for files with props.
 
-Depending on the value of wc_copy either a working copy (when true)
-or a url (when false) copy source is used."""
+Depending on the value of wc_copy either a working copy (when true) or
+a url (when false) copy source is used.  CONTACT_REPOS_FOR_MERGE_INFO
+is only relevant when WC_COPY is true."""
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -161,9 +162,12 @@ or a url (when false) copy source is used."""
                                      'cp', pi_src, rho_path)
 
   # Verify both content and props have been copied
+  props = { 'phony-prop' : '*' }
+  if not wc_copy or contact_repos_for_merge_info:
+    props['svn:mergeinfo'] = '/A/D/G/pi:1-2'
   expected_disk.tweak('A/D/G/rho',
                       contents="This is the file 'pi'.\n",
-                      props={ 'phony-prop': '*' })
+                      props=props)
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 1)
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
@@ -1795,7 +1799,9 @@ def wc_copy_replacement(sbox):
 def wc_copy_replace_with_props(sbox):
   "svn cp PATH PATH replace file with props"
 
-  copy_replace_with_props(sbox, 1)
+  copy_replace_with_props(sbox, 1, 0)
+  ### FIXME: WC -> WC copies don't yet handle merge info.
+  copy_replace_with_props(sbox, 1, 1)
 
 def repos_to_wc_copy_replacement(sbox):
   "svn cp URL PATH replace file"
@@ -3211,7 +3217,8 @@ def copy_peg_rev_local_files(sbox):
   expected_disk.tweak('iota', contents=psi_text)
   expected_disk.tweak('A/D/H/psi', contents=iota_text)
   expected_disk.add({
-    'sigma' : Item(contents=psi_text),
+    'sigma' : Item(contents=psi_text,
+                   props={ 'svn:mergeinfo' : '/A/D/H/psi:1' }),
     })
 
   actual_disk = svntest.tree.build_tree_from_wc(wc_dir, 3)
@@ -3280,6 +3287,7 @@ def copy_peg_rev_local_dirs(sbox):
     'A/B/E/rho'   : Item(contents="This is the file 'rho'.\n"),
     'A/B/E/tau'   : Item(contents="This is the file 'tau'.\n"),
     'A/D/G/beta'  : Item(contents="This is the file 'beta'.\n"),
+    'A/J'         : Item(props={ 'svn:mergeinfo' : '/A/B/E:1' }),
     'A/J/alpha'   : Item(contents="This is the file 'alpha'.\n"),
     'A/J/beta'  : Item(contents="This is the file 'beta'.\n"),
     })
@@ -3388,7 +3396,7 @@ test_list = [ None,
               wc_copy_dir_to_itself,
               mixed_wc_to_url,
               wc_copy_replacement,
-              wc_copy_replace_with_props,
+              XFail(wc_copy_replace_with_props),
               repos_to_wc_copy_replacement,
               repos_to_wc_copy_replace_with_props,
               delete_replaced_file,
