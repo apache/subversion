@@ -43,17 +43,6 @@ HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 
 /*** Code. ***/
 
-/* write string to file, allow printf style formatting */
-static void
-write_to_file(FILE *file, const char *format, ...)
-{
-  va_list argptr;
-
-  va_start(argptr, format);
-  vfprintf(file, format, argptr);
-  va_end(argptr);
-}
-
 /* Convert a wide-character string to utf-8. This function will create a buffer
  * large enough to hold the result string, the caller should free this buffer.
  * If the string can't be converted, NULL is returned.
@@ -77,7 +66,7 @@ convert_wbcs_to_utf8(const wchar_t *str)
 static const char *
 exception_string(int exception)
 {
-  #define EXCEPTION(x) case EXCEPTION_##x: return (#x);
+#define EXCEPTION(x) case EXCEPTION_##x: return (#x);
 
   switch (exception)
     {
@@ -107,6 +96,7 @@ exception_string(int exception)
       default:
         return "UNKNOWN_ERROR";
     }
+#undef EXCEPTION
 }
 
 /* Write the minidump to file. The callback function will at the same time
@@ -163,11 +153,11 @@ write_module_info_callback(void *data,
       MINIDUMP_MODULE_CALLBACK module = callback_input->Module;
 
       char *buf = convert_wbcs_to_utf8(module.FullPath);
-      write_to_file(log_file, "0x%08x", module.BaseOfImage);
-      write_to_file(log_file, "  %s", buf);
+      fprintf(log_file, "0x%08x", module.BaseOfImage);
+      fprintf(log_file, "  %s", buf);
       free(buf);
 
-      write_to_file(log_file, " (%d.%d.%d.%d, %d bytes)\n",
+      fprintf(log_file, " (%d.%d.%d.%d, %d bytes)\n",
                               HIWORD(module.VersionInfo.dwFileVersionMS),
                               LOWORD(module.VersionInfo.dwFileVersionMS),
                               HIWORD(module.VersionInfo.dwFileVersionLS),
@@ -188,11 +178,11 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
 
   /* write the command line */
   cmd_line = GetCommandLine();
-  write_to_file(log_file,
+  fprintf(log_file,
                 "Cmd line: %.65s\n", cmd_line);
 
   /* write the svn version number info. */
-  write_to_file(log_file,
+  fprintf(log_file,
                 "Version:  %s, compiled %s, %s\n",
                 SVN_VERSION, __DATE__, __TIME__);
 
@@ -200,28 +190,28 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
   oi.dwOSVersionInfoSize = sizeof(oi);
   GetVersionEx(&oi);
 
-  write_to_file(log_file,
+  fprintf(log_file,
                 "Platform: Windows OS version %d.%d build %d %s\n\n",
                 oi.dwMajorVersion, oi.dwMinorVersion, oi.dwBuildNumber,
                 oi.szCSDVersion);
 
   /* write the exception code */
-  write_to_file(log_file,
+  fprintf(log_file,
                "Exception: %s\n\n",
                exception_string(exception->ExceptionCode));
 
   /* write the register info. */
-  write_to_file(log_file,
+  fprintf(log_file,
                 "Registers:\n");
-  write_to_file(log_file,
+  fprintf(log_file,
                 "eax=%08x ebx=%08x ecx=%08x edx=%08x esi=%08x edi=%08x\n",
                 context->Eax, context->Ebx, context->Ecx,
                 context->Edx, context->Esi, context->Edi);
-  write_to_file(log_file,
+  fprintf(log_file,
                 "eip=%08x esp=%08x ebp=%08x efl=%08x\n",
                 context->Eip, context->Esp,
                 context->Ebp, context->EFlags);
-  write_to_file(log_file,
+  fprintf(log_file,
                 "cd=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x  gs=%04x\n",
                 context->SegCs, context->SegSs, context->SegDs,
                 context->SegEs, context->SegFs, context->SegGs);
@@ -384,19 +374,19 @@ write_var_values(PSYMBOL_INFO sym_info, ULONG sym_size, void *baton)
   if (log_params == TRUE && sym_info->Flags & SYMFLAG_PARAMETER)
     {
       if (last_nr_of_frame == nr_of_frame)
-        write_to_file(log_file, ", ", 2);
+        fprintf(log_file, ", ", 2);
       else
         last_nr_of_frame = nr_of_frame;
 
-      format_value((char *)value_str, sym_info->ModBase, sym_info->TypeIndex,
+      format_value(value_str, sym_info->ModBase, sym_info->TypeIndex,
                    (void *)var_data);
-      write_to_file(log_file, "%s=%s", sym_info->Name, value_str);
+      fprintf(log_file, "%s=%s", sym_info->Name, value_str);
     }
   if (log_params == FALSE && sym_info->Flags & SYMFLAG_LOCAL)
     {
-      format_value((char *)value_str, sym_info->ModBase, sym_info->TypeIndex,
+      format_value(value_str, sym_info->ModBase, sym_info->TypeIndex,
                    (void *)var_data);
-      write_to_file(log_file, "        %s = %s\n", sym_info->Name, value_str);
+      fprintf(log_file, "        %s = %s\n", sym_info->Name, value_str);
     }
 
   return TRUE;
@@ -431,7 +421,7 @@ write_function_detail(STACKFRAME stack_frame, void *data)
   pIHS->MaxNameLen = MAX_PATH;
   if (SymFromAddr_(proc, stack_frame.AddrPC.Offset, &func_disp, pIHS) == TRUE)
     {
-      write_to_file(log_file,
+      fprintf(log_file,
                     "#%d  0x%08x in %.200s (",
                     nr_of_frame, stack_frame.AddrPC.Offset,  pIHS->Name);
 
@@ -447,11 +437,11 @@ write_function_detail(STACKFRAME stack_frame, void *data)
       ensym.log_params = TRUE;
       SymEnumSymbols_(proc, 0, 0, write_var_values, &ensym);
 
-      write_to_file(log_file, ")", 1);
+      fprintf(log_file, ")");
     }
   else
     {
-      write_to_file(log_file,
+      fprintf(log_file,
                     "#%d  0x%08x in (unknown function)",
                     nr_of_frame, stack_frame.AddrPC.Offset);
     }
@@ -461,12 +451,12 @@ write_function_detail(STACKFRAME stack_frame, void *data)
   if (SymGetLineFromAddr_(proc, stack_frame.AddrPC.Offset,
                           &line_disp, &ih_line) != 0)
     {
-      write_to_file(log_file,
+      fprintf(log_file,
                     " at %s:%d\n", ih_line.FileName, ih_line.LineNumber);
     }
   else
     {
-      write_to_file(log_file, "\n");
+      fprintf(log_file, "\n");
     }
 
   /* log all function local variables */
@@ -724,7 +714,7 @@ get_temp_filename(char *filename, const char *prefix, const char *ext)
 
 /* unhandled exception callback set with SetUnhandledExceptionFilter() */
 LONG WINAPI
-svn_unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
+svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
 {
   char dmp_filename[MAX_PATH];
   char log_filename[MAX_PATH];
@@ -753,18 +743,18 @@ svn_unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
   log_file = fopen(log_filename, "w+");
 
   /* write information about the process */
-  write_to_file(log_file, "\nProcess info:\n");
+  fprintf(log_file, "\nProcess info:\n");
   write_process_info(ptrs ? ptrs->ExceptionRecord : NULL,
                      ptrs ? ptrs->ContextRecord : NULL,
                      log_file);
 
   /* write the stacktrace, if available */
-  write_to_file(log_file, "\nStacktrace:\n");
+  fprintf(log_file, "\nStacktrace:\n");
   write_stacktrace(ptrs ? ptrs->ContextRecord : NULL, log_file);
 
   /* write the minidump file and use the callback to write the list of modules
      to the log file */
-  write_to_file(log_file, "\n\nLoaded modules:\n");
+  fprintf(log_file, "\n\nLoaded modules:\n");
   write_minidump_file(dmp_filename, ptrs,
                       write_module_info_callback, (void *)log_file);
 

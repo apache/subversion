@@ -21,7 +21,7 @@
 
 #ifdef WIN32
 
-LONG WINAPI svn_unhandled_exception_filter(PEXCEPTION_POINTERS ptrs);
+LONG WINAPI svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs);
 
 #endif /* WIN32 */
 
