@@ -106,7 +106,7 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
 #endif /* _MSC_VER < 1400 */
 
   /* Attach (but don't load) the crash handler */
-  SetUnhandledExceptionFilter(svn_unhandled_exception_filter);
+  SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
 
 #endif /* WIN32 */
 
