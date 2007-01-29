@@ -1424,7 +1424,8 @@ setup_copy(svn_commit_info_t **commit_info_p,
           /* Disallow moves between the working copy and the repository. */
           return svn_error_create 
             (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-             _("Repository to working copy moves are not supported"));
+             _("Moves between the working copy and the repository are not "
+               "supported"));
         }
     }
   else
