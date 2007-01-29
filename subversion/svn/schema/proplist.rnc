@@ -1,0 +1,19 @@
+# XML RELAX NG schema for Subversion command-line client output
+# For "svn proplist"
+
+include "common.rnc"
+
+start = prop-list
+
+prop-list = element prop-list { target* }
+
+target = element target { attlist.target, property* }
+attlist.target &=
+  ## The target path.
+  attribute path { string }
+
+## Property information for one of the properties of path under target.
+property = element property { attlist.property, text }
+attlist.property &=
+  ## The property name
+  attribute name { string }

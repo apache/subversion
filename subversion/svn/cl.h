@@ -282,6 +282,14 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
 
+/* Same as svn_cl__print_prop_hash(), only output xml to SB.  If SB is NULL,
+   allocate it first from pool, otherwise append the xml to it. */
+svn_error_t *
+svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
+                            apr_hash_t *prop_hash,
+                            svn_boolean_t names_only,
+                            apr_pool_t *pool);
+
 /* Do the following things that are commonly required before accessing revision
    properties.  Ensure that REVISION is specified explicitly and is not
    relative to a working-copy item.  Ensure that exactly one target is
