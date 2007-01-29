@@ -2293,15 +2293,22 @@ do_merge(const char *initial_URL1,
          merge for the specified range. */
       if (merge_b->record_only)
         {
-          /* ### TODO: Support sub-tree merge info. */
-          /* ### Handle WC-local reverts which have modified our merge
-             ### info. */
-          apr_hash_t *merges;
-          SVN_ERR(determine_merges_performed(&merges, target_wcpath, &range,
-                                             &notify_b, pool));
-          return update_wc_merge_info(target_wcpath, entry, rel_path,
-                                      merges, is_revert, adm_access, ctx,
-                                      pool);
+          if (merge_b->dry_run)
+            {
+              /* ### Send property change notifications? */
+              return SVN_NO_ERROR;
+            }
+          else
+            {
+              /* ### Handle WC-local reverts which have modified our merge
+                 ### info. */
+              apr_hash_t *merges;
+              SVN_ERR(determine_merges_performed(&merges, target_wcpath,
+                                                 &range, &notify_b, pool));
+              return update_wc_merge_info(target_wcpath, entry, rel_path,
+                                          merges, is_revert, adm_access, ctx,
+                                          pool);
+            }
         }
 
       SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path,
@@ -2576,15 +2583,22 @@ do_single_file_merge(const char *initial_URL1,
          merge for the specified range. */
       if (merge_b->record_only)
         {
-          /* ### TODO: Support sub-tree merge info. */
-          /* ### Handle WC-local reverts which have modified our merge
-             ### info. */
-          apr_hash_t *merges;
-          SVN_ERR(determine_merges_performed(&merges, target_wcpath, &range,
-                                             &notify_b, pool));
-          return update_wc_merge_info(target_wcpath, entry, rel_path,
-                                      merges, is_revert, adm_access, ctx,
-                                      pool);
+          if (merge_b->dry_run)
+            {
+              /* ### Send property change notifications? */
+              return SVN_NO_ERROR;
+            }
+          else
+            {
+              /* ### Handle WC-local reverts which have modified our
+                 ### merge info. */
+              apr_hash_t *merges;
+              SVN_ERR(determine_merges_performed(&merges, target_wcpath,
+                                                 &range, &notify_b, pool));
+              return update_wc_merge_info(target_wcpath, entry, rel_path,
+                                          merges, is_revert, adm_access, ctx,
+                                          pool);
+            }
         }
 
       SVN_ERR(calculate_merge_ranges(&remaining_ranges, rel_path,
