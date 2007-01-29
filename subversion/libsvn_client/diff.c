@@ -2295,7 +2295,6 @@ do_merge(const char *initial_URL1,
         {
           if (merge_b->dry_run)
             {
-              /* ### Send property change notifications? */
               return SVN_NO_ERROR;
             }
           else
@@ -2585,7 +2584,6 @@ do_single_file_merge(const char *initial_URL1,
         {
           if (merge_b->dry_run)
             {
-              /* ### Send property change notifications? */
               return SVN_NO_ERROR;
             }
           else
