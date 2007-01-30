@@ -132,7 +132,7 @@ svn_cl__proplist(apr_getopt_t *os,
                                       &rev, ctx, pool));
      
       if (opt_state->xml)
-        SVN_ERR(svn_cl__xml_print_header("prop-list", pool));
+        SVN_ERR(svn_cl__xml_print_header("properties", pool));
 
       if (opt_state->xml)
         {
@@ -160,7 +160,7 @@ svn_cl__proplist(apr_getopt_t *os,
         }
 
       if (opt_state->xml)
-        SVN_ERR(svn_cl__xml_print_footer("prop-list", pool));
+        SVN_ERR(svn_cl__xml_print_footer("properties", pool));
     }
   else  /* operate on normal, versioned properties (not revprops) */
     {
@@ -169,7 +169,7 @@ svn_cl__proplist(apr_getopt_t *os,
 
       if (opt_state->xml)
         {
-          SVN_ERR(svn_cl__xml_print_header("prop-list", pool));
+          SVN_ERR(svn_cl__xml_print_header("properties", pool));
           pl_receiver = proplist_receiver_xml;
         }
       else
@@ -208,7 +208,7 @@ svn_cl__proplist(apr_getopt_t *os,
         }
 
       if (opt_state->xml)
-        SVN_ERR(svn_cl__xml_print_footer("prop-list", pool));
+        SVN_ERR(svn_cl__xml_print_footer("properties", pool));
 
       svn_pool_destroy(subpool);
     }
