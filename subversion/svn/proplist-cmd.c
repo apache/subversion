@@ -132,12 +132,11 @@ svn_cl__proplist(apr_getopt_t *os,
                                       &rev, ctx, pool));
      
       if (opt_state->xml)
-        SVN_ERR(svn_cl__xml_print_header("properties", pool));
-
-      if (opt_state->xml)
         {
           svn_stringbuf_t *sb = NULL;
           char *revstr = apr_psprintf(pool, "%ld", rev);
+
+          SVN_ERR(svn_cl__xml_print_header("properties", pool));
 
           svn_xml_make_open_tag(&sb, pool, svn_xml_normal,
                                 "revprops",
@@ -147,6 +146,7 @@ svn_cl__proplist(apr_getopt_t *os,
           svn_xml_make_close_tag(&sb, pool, "revprops");
 
           SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
+          SVN_ERR(svn_cl__xml_print_footer("properties", pool));
         }
       else
         {
@@ -158,9 +158,6 @@ svn_cl__proplist(apr_getopt_t *os,
           SVN_ERR(svn_cl__print_prop_hash
                   (proplist, (! opt_state->verbose), pool));
         }
-
-      if (opt_state->xml)
-        SVN_ERR(svn_cl__xml_print_footer("properties", pool));
     }
   else  /* operate on normal, versioned properties (not revprops) */
     {
