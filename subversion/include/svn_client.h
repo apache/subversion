@@ -753,6 +753,11 @@ typedef struct svn_client_ctx_t
   /** Callback baton for progress_func.
    * @since New in 1.3. */
   void *progress_baton;
+
+  /** MIME types map.
+   * @since New in 1.5. */
+  apr_hash_t *mimetypes_map;
+
 } svn_client_ctx_t;
 
 

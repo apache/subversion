@@ -89,6 +89,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
 #define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
+#define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 /** @} */

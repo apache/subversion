@@ -1489,10 +1489,22 @@ main(int argc, const char *argv[])
     svn_config_set(cfg, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
 
-  /* Update auto-props-enable option for add/import commands */
+  /* Update auto-props-enable option, and populate the MIME types map,
+     for add/import commands */
   if (subcommand->cmd_func == svn_cl__add
       || subcommand->cmd_func == svn_cl__import)
     {
+      const char *mimetypes_file;
+      svn_config_get(cfg, &mimetypes_file,
+                     SVN_CONFIG_SECTION_MISCELLANY,
+                     SVN_CONFIG_OPTION_MIMETYPES_FILE, FALSE);
+      if (mimetypes_file && *mimetypes_file)
+        {
+          if ((err = svn_io_parse_mimetypes_file(&(ctx->mimetypes_map),
+                                                 mimetypes_file, pool)))
+            svn_handle_error2(err, stderr, TRUE, "svn: ");
+        }
+
       if (opt_state.autoprops)
         {
           svn_config_set_bool(cfg, SVN_CONFIG_SECTION_MISCELLANY,
