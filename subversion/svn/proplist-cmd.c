@@ -165,9 +165,17 @@ svn_cl__proplist(apr_getopt_t *os,
   else  /* operate on normal, versioned properties (not revprops) */
     {
       apr_pool_t *subpool = svn_pool_create(pool);
+      svn_proplist_receiver_t pl_receiver;
 
       if (opt_state->xml)
-        SVN_ERR(svn_cl__xml_print_header("prop-list", pool));
+        {
+          SVN_ERR(svn_cl__xml_print_header("prop-list", pool));
+          pl_receiver = proplist_receiver_xml;
+        }
+      else
+        {
+          pl_receiver = proplist_receiver;
+        }
 
       for (i = 0; i < targets->nelts; i++)
         {
@@ -186,30 +194,17 @@ svn_cl__proplist(apr_getopt_t *os,
           SVN_ERR(svn_opt_parse_path(&peg_revision, &truepath, target,
                                      subpool));
          
-          if (opt_state->xml)
-            SVN_ERR(svn_cl__try
-                    (svn_client_proplist3(truepath, &peg_revision,
-                                          &(opt_state->start_revision),
-                                          opt_state->recursive,
-                                          proplist_receiver_xml,
-                                          &pl_baton,
-                                          ctx, subpool),
-                     NULL, opt_state->quiet,
-                     SVN_ERR_UNVERSIONED_RESOURCE,
-                     SVN_ERR_ENTRY_NOT_FOUND,
-                     SVN_NO_ERROR));
-          else
-            SVN_ERR(svn_cl__try
-                    (svn_client_proplist3(truepath, &peg_revision,
-                                          &(opt_state->start_revision),
-                                          opt_state->recursive,
-                                          proplist_receiver,
-                                          &pl_baton,
-                                          ctx, subpool),
-                     NULL, opt_state->quiet,
-                     SVN_ERR_UNVERSIONED_RESOURCE,
-                     SVN_ERR_ENTRY_NOT_FOUND,
-                     SVN_NO_ERROR));
+          SVN_ERR(svn_cl__try
+                  (svn_client_proplist3(truepath, &peg_revision,
+                                        &(opt_state->start_revision),
+                                        opt_state->recursive,
+                                        pl_receiver,
+                                        &pl_baton,
+                                        ctx, subpool),
+                   NULL, opt_state->quiet,
+                   SVN_ERR_UNVERSIONED_RESOURCE,
+                   SVN_ERR_ENTRY_NOT_FOUND,
+                   SVN_NO_ERROR));
         }
 
       if (opt_state->xml)
