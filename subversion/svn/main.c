@@ -601,7 +601,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the --strict option to disable these beautifications (useful,\n"
      "  for example, when redirecting binary property values to a file).\n"),
     {'R', 'r', svn_cl__revprop_opt, svn_cl__strict_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__xml_opt} },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
     ("List all properties on files, dirs, or revisions.\n"
