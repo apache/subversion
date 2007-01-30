@@ -20,9 +20,11 @@
 #define SVN_LIBSVN_SUBR_WIN32_CRASHRPT_H
 
 #ifdef WIN32
+#ifdef SVN_USE_WIN32_CRASHHANDLER
 
 LONG WINAPI svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs);
 
+#endif /* SVN_USE_WIN32_CRASHHANDLER */
 #endif /* WIN32 */
 
 #endif /* SVN_LIBSVN_SUBR_WIN32_CRASHRPT_H */
