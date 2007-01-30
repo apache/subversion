@@ -3,9 +3,9 @@
 
 include "common.rnc"
 
-start = prop-list
+start = properties
 
-prop-list = element prop-list { target* | revprops }
+properties = element properties { target* | revprops }
 
 target = element target { attlist.target, property* }
 attlist.target &=
