@@ -2100,15 +2100,15 @@ def update_wc_on_windows_drive(sbox):
 
     # get the list of used drive letters, use some Windows specific function.
     try:
-  		import win32api
+      import win32api
 
-  		drives=win32api.GetLogicalDriveStrings()
-  		drives=drives.split('\000')
+      drives=win32api.GetLogicalDriveStrings()
+      drives=drives.split('\000')
 
-  		for d in range(ord('G'), ord('Z')+1):
-  		  drive = chr(d)
-  		  if not drive + ':\\' in drives:
-  			return drive
+      for d in range(ord('G'), ord('Z')+1):
+        drive = chr(d)
+        if not drive + ':\\' in drives:
+          return drive
     except ImportError:
       return None
 
@@ -2592,7 +2592,141 @@ This is REPOS file 'epsilon'
                                         None, None, None, None, 0,
                                         wc_dir, '-N', '--force')
 
-########################################################################
+# Test for issue #2022: Update shouldn't touch conflicted files.
+def update_conflicted(sbox):
+  "update conflicted files"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  iota_path = os.path.join(wc_dir, 'iota')
+  lambda_path = os.path.join(wc_dir, 'A', 'B', 'lambda')
+  mu_path = os.path.join(wc_dir, 'A', 'mu')
+  D_path = os.path.join(wc_dir, 'A', 'D')
+  pi_path = os.path.join(wc_dir, 'A', 'D', 'G', 'pi')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Make some modifications to the files and a dir, creating r2.
+  svntest.main.file_append(iota_path, 'Original appended text for iota\n')
+  svntest.main.run_svn(None, 'propset', 'prop', 'val', lambda_path)
+  svntest.main.file_append(mu_path, 'Original appended text for mu\n')
+  svntest.main.run_svn(None, 'propset', 'prop', 'val', mu_path)
+  svntest.main.run_svn(None, 'propset', 'prop', 'val', D_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Sending'),
+    'A/mu': Item(verb='Sending'),
+    'A/B/lambda': Item(verb='Sending'),
+    'A/D': Item(verb='Sending'),
+    })
+
+  expected_status.tweak('iota', 'A/mu', 'A/B/lambda', 'A/D', wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Do another change to each path that we will need later.
+  # Also, change a file below A/D in the path.
+  svntest.main.file_append(iota_path, 'Another line for iota\n')
+  svntest.main.file_append(mu_path, 'Another line for mu\n')
+  svntest.main.file_append(lambda_path, 'Another line for lambda\n')
+  svntest.main.run_svn(None, 'propset', 'prop', 'val2', D_path)
+  svntest.main.file_append(pi_path, 'Another line for pi\n')
+  expected_status.tweak('iota', 'A/mu', 'A/B/lambda', 'A/D', 'A/D/G/pi',
+                        wc_rev=3)
+  expected_output.add({
+    'A/D/G/pi': Item(verb='Sending')})
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+  # Go back to revision 1.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='U '),
+    'A/B/lambda' : Item(status='UU'),
+    'A/mu' : Item(status='UU'),
+    'A/D': Item(status=' U'),
+    'A/D/G/pi': Item(status='U '),
+    })
+  expected_disk = svntest.main.greek_state.copy()
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        None, None,
+                                        None, None, 1,
+                                        '-r1', wc_dir)
+
+  # Create modifications conflicting with rev 2.
+  svntest.main.file_append(iota_path, 'Conflicting appended text for iota\n')
+  svntest.main.run_svn(None, 'propset', 'prop', 'conflictval', lambda_path)
+  svntest.main.file_append(mu_path, 'Conflicting appended text for mu\n')
+  svntest.main.run_svn(None, 'propset', 'prop', 'conflictval', mu_path)
+  svntest.main.run_svn(None, 'propset', 'prop', 'conflictval', D_path)
+
+  # Update to revision 2, expecting conflicts.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota': Item(status='C '),
+    'A/B/lambda': Item(status=' C'),
+    'A/mu': Item(status='CC'),
+    'A/D': Item(status=' C'),
+    })
+  expected_disk.tweak('iota', contents="""This is the file 'iota'.
+<<<<<<< .mine
+Conflicting appended text for iota
+=======
+Original appended text for iota
+>>>>>>> .r2
+""")
+  expected_disk.tweak('A/mu', contents="""This is the file 'mu'.
+<<<<<<< .mine
+Conflicting appended text for mu
+=======
+Original appended text for mu
+>>>>>>> .r2
+""", props={'prop': 'conflictval'})
+  expected_disk.tweak('A/B/lambda', 'A/D', props={'prop': 'conflictval'})
+
+  expected_status.tweak(wc_rev=2)
+  expected_status.tweak('iota', status='C ')
+  expected_status.tweak('A/B/lambda', 'A/D', status=' C')
+  expected_status.tweak('A/mu', status='CC')
+  extra_files = [ [wc_dir, 'iota.*\.(r1|r2|mine)'],
+                  [wc_dir, 'mu.*\.(r1|r2|mine|prej)'],
+                  [wc_dir, 'lambda.*\.prej'],
+                  [wc_dir, 'dir_conflicts.prej']]
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        detect_extra_files, extra_files,
+                                        None, None, 1,
+                                        '-r2', wc_dir)
+
+  # Now, update to HEAD, which should skip all the conflicted files, but
+  # still update the pi file.
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(verb='Skipped'),
+    'A/B/lambda' : Item(verb='Skipped'),
+    'A/mu' : Item(verb='Skipped'),
+    'A/D' : Item(verb='Skipped'),
+    'A/D/G/pi' : Item(status='U '),
+    })
+  expected_status.tweak(wc_rev=3)
+  expected_status.tweak('iota', 'A/B/lambda', 'A/mu', 'A/D', wc_rev=2)
+  expected_disk.tweak('A/D/G/pi', contents="""This is the file 'pi'.
+Another line for pi
+""")
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        detect_extra_files, extra_files,
+                                        None, None, 1)
+
+#######################################################################
 # Run the tests
 
 
@@ -2632,6 +2766,7 @@ test_list = [ None,
               Skip(update_wc_on_windows_drive, os.name != 'nt'),
               update_wc_with_replaced_file,
               update_with_obstructing_additions,
+              update_conflicted,
              ]
 
 if __name__ == '__main__':

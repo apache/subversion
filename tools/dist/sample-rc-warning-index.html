@@ -1,0 +1,76 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html>
+<head>
+<title>Subversion @VERSION@ tarballs</title>
+</head>
+<body style="font-size: 14pt; text-align: justify;
+  background-color: #f0f0f0; padding: 0 5%">
+<h1 style="font-size: 30pt; text-align: center;
+  text-decoration: underline">WARNING</h1>
+
+<p>The code you are about to download is a <i>Release Candidate</i>
+for Subversion @VERSION@.</p>
+
+
+<p>A <i>Release Candidate</i> is exactly what it sounds like: a
+distribution of Subversion that may become an official release later,
+<i>if and only if</i> it passes preliminary testing by those members
+of the community who are interested in testing it.</p>
+
+<!-- , which means it is considered <strong
+ style="text-decoration: underline">UNRELEASED</strong> code.  The
+ term 'release candidate' means the code works to the best knowledge
+ of the Subversion developers, but that it still requires testing by a
+ larger number of people to root out bugs.</p> -->
+
+<p>As such, if you are interested in helping us test this Release
+Candidate, you're very welcome to download and test these packages.
+If you are looking for a copy of Subversion for production use, this
+is <i>not it</i>; you should instead grab the latest stable release
+from the <a
+href="http://subversion.tigris.org/project_packages.html">Download
+area</a>.</p>
+
+<h2 style="font-size: 18pt">Note to operating system distro package
+maintainers</h2>
+
+<p>As stated above, this is <i>not</i> an official, end-user release
+of Subversion.  It is a distribution intended for testing only. Please
+do <i>not</i> package this distribution in any way. It should not be
+made available to users who rely on their operating system distro's
+packages.</p>
+
+<h2 style="font-size: 14pt">Why shouldn't I set up/make available a
+Release Candidate for production use?</h2>
+
+<p style="font-size: 11pt">(Taken from a <a
+  href="http://svn.haxx.se/dev/archive-2005-11/1295.shtml"
+>mail by Karl Fogel</a> on the subject)</p>
+
+<p style="font-size: 11pt">Subversion release candidates are for
+testing only. We might have to withdraw one to fix bugs, and fixing
+those bugs might involve changing APIs, or changing a soft-upgrade
+strategy in the repository or working copy formats. If some production
+users had begun depending on the new API, or had unknowingly
+soft-upgraded their repository or working copy, then they'd be in for
+a very unpleasant suprise when the real release comes out and doesn't
+have the same API anymore, or doesn't use the same formats. Not only
+would Subversion suddenly "stop working" for them, but there wouldn't
+be any convenient path to get it working again, since no blessed
+Subversion release would have the code needed to interpret their
+legacy data.</p>
+
+<p style="font-size: 11pt">We encourage RC testing by users who know
+how to install from a tarball independently of their OS's packaging
+system. Users who install only packaged releases, however, should wait
+for and use only officially released Subversions. Anything else is
+playing with fire. When the inevitable blowup happens, both your
+reputation as a packager and Subversion's reputation will suffer --
+but only one will deserve it.</p>
+
+<p>If you want to help us test this distribution of Subversion, you
+can find the files <a href="@DIRNAME@/">here</a>.</p>
+
+</body>
+</html>

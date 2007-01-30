@@ -58,7 +58,7 @@ svn_config__win_config_path(const char **folder, int system_path,
   if (style == APR_FILEPATH_ENCODING_UTF8)
     {
       WCHAR folder_ucs2[MAX_PATH];
-      int inwords, outbytes, outlength;
+      apr_size_t inwords, outbytes, outlength;
       char *folder_utf8;
 
       if (S_OK != SHGetFolderPathW(NULL, csidl, NULL, SHGFP_TYPE_CURRENT,
@@ -114,7 +114,7 @@ svn_config__win_config_path(const char **folder, int system_path,
 static svn_error_t *
 utf8_to_ucs2(WCHAR **ucs2, const char *utf8, apr_pool_t *pool)
 {
-  int inbytes, outwords, outlength;
+  apr_size_t inbytes, outwords, outlength;
   apr_status_t apr_err;
 
   inbytes = lstrlenA(utf8);

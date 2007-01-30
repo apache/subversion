@@ -364,30 +364,15 @@ EOE
   end
   
   def test_locked
-    log = "sample log"
-
     assert(!Svn::Wc.locked?(@wc_path))
-    ctx = make_context(log)
-
-    gc_disable do
-      assert_raise(Svn::Error::FS_NO_SUCH_REVISION) do
-        ctx.update(@wc_path, youngest_rev + 1)
-      end
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1) do |access|
       assert(Svn::Wc.locked?(@wc_path))
     end
-    gc_enable do
-      GC.start
+    assert(!Svn::Wc.locked?(@wc_path))
+    Svn::Wc::AdmAccess.open(nil, @wc_path, false, -1) do |access|
       assert(!Svn::Wc.locked?(@wc_path))
     end
-    
-    gc_disable do
-      assert_raise(Svn::Error::FS_NO_SUCH_REVISION) do
-        ctx.update(@wc_path, youngest_rev + 1)
-      end
-      assert(Svn::Wc.locked?(@wc_path))
-      ctx.cleanup(@wc_path)
-      assert(!Svn::Wc.locked?(@wc_path))
-    end
+    assert(!Svn::Wc.locked?(@wc_path))
   end
 
   def test_translated_file
@@ -423,19 +408,30 @@ EOE
 
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
       File.open(src_path, "wb") {|f| f.print(source)}
-      translated_file = access.translated_file(src_path, lf_path,
-                                               Svn::Wc::TRANSLATE_TO_NF)
-      File.open(src_path, "wb") {|f| f.print(File.read(translated_file))}
+      translated_file = access.translated_file2(src_path, lf_path,
+                                                Svn::Wc::TRANSLATE_TO_NF)
+      File.open(src_path, "wb") {|f| f.print(translated_file.read)}
 
       translated_file = access.translated_file(src_path, crlf_path,
                                                Svn::Wc::TRANSLATE_FROM_NF)
       assert_equal(crlf_source, File.open(translated_file, "rb") {|f| f.read})
+      translated_file = access.translated_file2(src_path, crlf_path,
+                                                Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(crlf_source, translated_file.read)
+
       translated_file = access.translated_file(src_path, cr_path,
                                                Svn::Wc::TRANSLATE_FROM_NF)
       assert_equal(cr_source, File.open(translated_file, "rb") {|f| f.read})
+      translated_file = access.translated_file2(src_path, cr_path,
+                                                Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(cr_source, translated_file.read)
+
       translated_file = access.translated_file(src_path, lf_path,
                                                Svn::Wc::TRANSLATE_FROM_NF)
       assert_equal(lf_source, File.open(translated_file, "rb") {|f| f.read})
+      translated_file = access.translated_file2(src_path, lf_path,
+                                                Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(lf_source, translated_file.read)
     end
   end
 

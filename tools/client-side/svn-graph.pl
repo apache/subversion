@@ -221,7 +221,7 @@ sub write_graph_descriptor
       next;
     }
 
-    # If this node is the first in it's chain, or the source of
+    # If this node is the first in its chain, or the source of
     # a copy, then we'll print it, and then find the next in
     # the chain that needs to be printed too
     if (!exists($codeline_changes_back{$codeline_change}) or

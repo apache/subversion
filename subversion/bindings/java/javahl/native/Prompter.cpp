@@ -256,7 +256,7 @@ bool Prompter::askYesNo(const char *realm, const char *question,
 
     // execute the callback
     jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jquestion, 
-                                        yesIsDefault ? JNI_TRUE : JNI_FALSE);
+                                          yesIsDefault ? JNI_TRUE : JNI_FALSE);
     if(JNIUtil::isJavaExceptionThrown())
     {
         return false;
@@ -620,11 +620,11 @@ svn_auth_provider_object_t *Prompter::getProviderSimple()
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
     svn_auth_provider_object_t *provider;
-    svn_client_get_simple_prompt_provider (&provider,
-                                           simple_prompt,
-                                           this,
-                                           2, /* retry limit */
-                                           pool);
+    svn_client_get_simple_prompt_provider(&provider,
+                                          simple_prompt,
+                                          this,
+                                          2, /* retry limit */
+                                          pool);
 
     return provider;
 }
@@ -632,11 +632,11 @@ svn_auth_provider_object_t *Prompter::getProviderUsername()
 {
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
     svn_auth_provider_object_t *provider;
-    svn_client_get_username_prompt_provider (&provider,
-                                             username_prompt,
-                                             this,
-                                             2, /* retry limit */
-                                             pool);
+    svn_client_get_username_prompt_provider(&provider,
+                                            username_prompt,
+                                            this,
+                                            2, /* retry limit */
+                                            pool);
 
     return provider;
 }
@@ -725,7 +725,7 @@ svn_error_t *Prompter::ssl_server_trust_prompt(
                               apr_uint32_t failures,
                               const svn_auth_ssl_server_cert_info_t *cert_info,
                               svn_boolean_t may_save,
-                               apr_pool_t *pool)
+                              apr_pool_t *pool)
 {
     Prompter *that = (Prompter*)baton;
     svn_auth_cred_ssl_server_trust_t *ret = 

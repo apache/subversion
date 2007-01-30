@@ -406,7 +406,7 @@ svn_client_lock(const apr_array_header_t *targets,
       if (! svn_xml_is_xml_safe(comment, strlen(comment)))
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-           _("Lock comment has illegal characters"));      
+           _("Lock comment contains illegal characters"));      
     }
 
   SVN_ERR(organize_lock_targets(&common_parent, &adm_access,

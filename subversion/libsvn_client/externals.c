@@ -199,7 +199,8 @@ switch_external(const char *path,
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
                                                   TRUE, FALSE, FALSE,
                                                   timestamp_sleep, ctx,
-                                                  pool));
+                                                  subpool));
+              svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
           else if (entry->repos)
@@ -239,6 +240,7 @@ switch_external(const char *path,
                                                   TRUE, timestamp_sleep,
                                                   FALSE, ctx, subpool));
 
+              svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
         }

@@ -52,7 +52,7 @@ class JNIStackElement
 {
 public:
     JNIStackElement(JNIEnv *env, const char *clazz,
-                        const char *method, jobject jthis);
+                    const char *method, jobject jthis);
     virtual ~JNIStackElement();
 
 private:

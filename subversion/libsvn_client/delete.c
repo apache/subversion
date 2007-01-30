@@ -155,7 +155,10 @@ delete_urls(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
                                       ctx, pool));
       if (! log_msg)
-        return SVN_NO_ERROR;
+        {
+          svn_pool_destroy(subpool);
+          return SVN_NO_ERROR;
+        }
     }
   else
     log_msg = "";

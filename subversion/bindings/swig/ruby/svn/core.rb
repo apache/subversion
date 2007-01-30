@@ -85,6 +85,12 @@ module Svn
         _initialize(parent)
         @parent = parent
       end
+
+      def destroy
+        @parent = nil
+        _destroy
+      end
+      private :_destroy
     end
 
     Stream = SWIG::TYPE_p_svn_stream_t

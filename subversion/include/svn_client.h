@@ -286,6 +286,16 @@ typedef struct svn_client_proplist_item_t
 
 } svn_client_proplist_item_t;
 
+/**
+ * The callback invoked by svn_client_proplist3().  Each invocation
+ * describes the property specified by @a item.  Use @a pool for all
+ * temporary allocation.
+ */
+typedef svn_error_t *(*svn_proplist_receiver_t)
+  (void *baton,
+   const svn_client_proplist_item_t *item,
+   apr_pool_t *pool);
+
 /** 
  * Return a duplicate of @a item, allocated in @a pool. No part of the new
  * structure will be shared with @a item.
@@ -2113,9 +2123,9 @@ typedef struct svn_client_copy_source_t
  * @a sources must be an array of elements of type
  * <tt>svn_client_copy_item_t *</tt>.
  *
- * Each @src in @a sources must be files or directories under version control,
+ * Each @a src in @a sources must be files or directories under version control,
  * or URLs of a versioned item in the repository.  If @a sources has multiple
- * items, the @src members must be all repository URLs or all working copy
+ * items, the @a src members must be all repository URLs or all working copy
  * paths.
  *
  * The parent of @a dst_path must already exist.
@@ -2139,7 +2149,9 @@ typedef struct svn_client_copy_source_t
  * If @a dst_path is a URL, use the authentication baton 
  * in @a ctx and @a ctx->log_msg_func3/@a ctx->log_msg_baton3 to immediately 
  * attempt to commit the copy action in the repository.  If the commit 
- * succeeds, allocate (in @a pool) and populate @a *commit_info_p.
+ * succeeds, allocate (in @a pool) and populate @a *commit_info_p.  If
+ * @a dst_path is not a URL, and the copy succeeds, set @a
+ * *commit_info_p to @c NULL.
  *
  * If @a dst_path is not a URL, then this is just a variant of 
  * svn_client_add(), where the @a sources are scheduled for addition
@@ -2166,7 +2178,8 @@ svn_client_copy4(svn_commit_info_t **commit_info_p,
 
 /**
  * Similar to svn_client_copy4(), with only one @a src_path and
- * @a copy_as_child set to FALSE.
+ * @a copy_as_child set to FALSE.  Also, use @a src_revision as both 
+ * the operational and peg revision.
  *
  * @since New in 1.4.
  *
@@ -2251,6 +2264,8 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
  *   - If one of @a src_paths contains locally modified and/or unversioned
  *     items and @a force is not set, the move will fail. If @a force is set
  *     such items will be removed.
+ *
+ *   - If the move succeeds, set @a *commit_info_p to @c NULL.
  *
  * The parent of @a dst_path must already exist.
  *
@@ -2581,15 +2596,9 @@ svn_client_revprop_get(const char *propname,
                        apr_pool_t *pool);
 
 /**
- * Set @a *props to the regular properties of @a target, a URL or working
- * copy path.
- *
- * Each element of the returned array is (@c svn_client_proplist_item_t *).
- * For each @a item, @a item->node_name contains the name relative to the
- * same base as @a target, and @a item->prop_hash maps (<tt>const char *</tt>)
- * property names to (@c svn_string_t *) values.
- * 
- * Allocate @a *props and its contents in @a pool.
+ * Invoke @a receiver with @a receiver_baton to return the regular properies
+ * of @a target, a URL or working copy path.  @a receiver will be called
+ * for each path encountered.  See @c svn_client_proplist_item_t.
  *
  * If @a revision->kind is @c svn_opt_revision_unspecified, then get
  * properties from the working copy, if @a target is a working copy
@@ -2608,7 +2617,26 @@ svn_client_revprop_get(const char *propname,
  *
  * If @a target is not found, return the error @c SVN_ERR_ENTRY_NOT_FOUND.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_client_proplist3(const char *target,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_proplist_receiver_t receiver,
+                     void *receiver_baton,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool);
+
+/**
+ * Similar to svn_client_proplist3(), except the properties are returned 
+ * as an array of @c svn_client_proplist_item_t * structures, instead of
+ * by invoking the receiver function.
+ *
  * @since New in 1.2.
+ *
+ * @deprecated Provided for backward compatiblility with the 1.2 API.
  */
 svn_error_t *
 svn_client_proplist2(apr_array_header_t **props,

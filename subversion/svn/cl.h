@@ -2,7 +2,7 @@
  * cl.h:  shared stuff in the command line program
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -284,6 +284,14 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
 
+/* Same as svn_cl__print_prop_hash(), only output xml to SB.  If SB is NULL,
+   allocate it first from pool, otherwise append the xml to it. */
+svn_error_t *
+svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
+                            apr_hash_t *prop_hash,
+                            svn_boolean_t names_only,
+                            apr_pool_t *pool);
+
 /* Do the following things that are commonly required before accessing revision
    properties.  Ensure that REVISION is specified explicitly and is not
    relative to a working-copy item.  Ensure that exactly one target is
@@ -418,6 +426,16 @@ void svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
                               apr_pool_t *pool,
                               const char *tagname,
                               const char *string);
+
+/* Print the XML prolog and document root element start-tag to stdout, using
+   TAGNAME as the root element name.  Use pool for temporary allocations. */
+svn_error_t *svn_cl__xml_print_header(const char *tagname,
+                                      apr_pool_t *pool);
+
+/* Print the XML document root element end-tag to stdout, using TAGNAME as the 
+   root element name.  Use pool for temporary allocations. */
+svn_error_t *svn_cl__xml_print_footer(const char *tagname,
+                                      apr_pool_t *pool);
 
 /* Return a (non-localised) string representation of KIND, being "dir" or
    "file" or, in any other case, the empty string. */

@@ -179,7 +179,7 @@ Programs used for the Subversion Windows installer
   ------
   A good installation script for any installation programs are usually very
   complicated and requires good script editing software.
-  The program used for this is ISTool and it's syntax high-lightning makes it
+  The program used for this is ISTool and its syntax high-lighting makes it
   the perfect companion to IS and friends.
 
   The author - Bjørnar Henden are doing a great job by updating his program

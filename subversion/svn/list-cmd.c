@@ -2,7 +2,7 @@
  * list-cmd.c -- list a URL
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -122,21 +122,6 @@ print_dirent(void *baton,
 }
 
 
-static svn_error_t *
-print_header_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-
-  /* <?xml version="1.0" encoding="utf-8"?> */
-  svn_xml_make_header(&sb, pool);
-  
-  /* "<lists>" */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "lists", NULL);
-  
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
-
 /* This implements the svn_client_list_func_t API, printing a single dirent
    in XML format. */
 static svn_error_t *
@@ -213,16 +198,6 @@ print_dirent_xml(void *baton,
 }
 
 
-static svn_error_t *
-print_footer_xml(apr_pool_t *pool)
-{
-  /* "</lists>" */
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-  svn_xml_make_close_tag(&sb, pool, "lists");
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
-
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__list(apr_getopt_t *os,
@@ -255,7 +230,7 @@ svn_cl__list(apr_getopt_t *os,
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        SVN_ERR(print_header_xml(pool));
+        SVN_ERR(svn_cl__xml_print_header("lists", pool));
     }
   else
     {
@@ -315,7 +290,7 @@ svn_cl__list(apr_getopt_t *os,
   svn_pool_destroy(subpool);
   
   if (opt_state->xml && ! opt_state->incremental)
-    SVN_ERR(print_footer_xml(pool));
+    SVN_ERR(svn_cl__xml_print_footer("lists", pool));
 
   return SVN_NO_ERROR;
 }

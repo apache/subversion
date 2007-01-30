@@ -180,7 +180,7 @@ class GeneratorBase:
         for include_file in swig_includes:
           self.graph.add(DT_SWIG_C, source, build_path(include_file))
 
-      # Any non-swig C/C++ object must depend on the headers it's parent
+      # Any non-swig C/C++ object must depend on the headers its parent
       # .c or .cpp includes. Note that 'object' includes gettext .mo files,
       # Java .class files, and .h files generated from Java classes, so
       # we must filter here.

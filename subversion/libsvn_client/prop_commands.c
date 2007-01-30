@@ -1100,13 +1100,13 @@ proplist_walk_cb(const char *path,
 }
 
 
-/* Note: this implementation is very similar to svn_client_propget. */
 svn_error_t *
-svn_client_proplist2(apr_array_header_t **props,
-                     const char *target,
+svn_client_proplist3(const char *target,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
+                     svn_proplist_receiver_t receiver,
+                     void *receiver_baton,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
@@ -1114,9 +1114,12 @@ svn_client_proplist2(apr_array_header_t **props,
   const svn_wc_entry_t *node;
   const char *utarget;  /* target, or the url for target */
   const char *url;
+  int i;
   svn_revnum_t revnum;
+  apr_pool_t *iterpool;
 
-  *props = apr_array_make(pool, 5, sizeof(svn_client_proplist_item_t *));
+  apr_array_header_t *props = apr_array_make(pool, 5,
+                                sizeof(svn_client_proplist_item_t *));
 
   SVN_ERR(maybe_convert_to_url(&utarget, target, revision, pool));
 
@@ -1135,7 +1138,7 @@ svn_client_proplist2(apr_array_header_t **props,
       
       SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
 
-      SVN_ERR(remote_proplist(*props, url, "",
+      SVN_ERR(remote_proplist(props, url, "",
                               kind, revnum, ra_session,
                               recurse, pool, subpool));
       svn_pool_destroy(subpool);
@@ -1176,7 +1179,7 @@ svn_client_proplist2(apr_array_header_t **props,
           struct proplist_walk_baton wb;
 
           wb.base_access = adm_access;
-          wb.props = *props;
+          wb.props = props;
           wb.pristine = pristine;
 
           SVN_ERR(svn_wc_walk_entries2(target, adm_access,
@@ -1185,10 +1188,59 @@ svn_client_proplist2(apr_array_header_t **props,
                                        pool));
         }
       else 
-        SVN_ERR(add_to_proplist(*props, target, adm_access, pristine, pool));
+        SVN_ERR(add_to_proplist(props, target, adm_access, pristine, pool));
       
       SVN_ERR(svn_wc_adm_close(adm_access));
     }
+
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < props->nelts; i++)
+    {
+      svn_client_proplist_item_t *item = APR_ARRAY_IDX(props, i,
+                                           svn_client_proplist_item_t *);
+      svn_pool_clear(iterpool);
+      SVN_ERR(receiver(receiver_baton, item, pool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Receiver baton used by proplist2() */
+struct proplist_receiver_baton {
+  apr_array_header_t *props;
+};
+
+/* Receiver function used by proplist2(). */
+static svn_error_t *
+proplist_receiver_cb(void *baton,
+                     const svn_client_proplist_item_t *item,
+                     apr_pool_t *pool)
+{
+  apr_array_header_t *props = ((struct proplist_receiver_baton *)baton)->props;
+
+  APR_ARRAY_PUSH(props, const svn_client_proplist_item_t *) = item;
+
+  return SVN_NO_ERROR;
+}
+
+/* Note: this implementation is very similar to svn_client_propget. */
+svn_error_t *
+svn_client_proplist2(apr_array_header_t **props,
+                     const char *target,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  struct proplist_receiver_baton pl_baton;
+
+  *props = apr_array_make(pool, 5, sizeof(svn_client_proplist_item_t *));
+  pl_baton.props = *props;
+
+  SVN_ERR(svn_client_proplist3(target, peg_revision, revision, recurse,
+                               proplist_receiver_cb, &pl_baton, ctx, pool));
 
   return SVN_NO_ERROR;
 }

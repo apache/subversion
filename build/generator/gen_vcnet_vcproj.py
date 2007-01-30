@@ -107,7 +107,7 @@ class Generator(gen_win.WinGeneratorBase):
     return guid
   
   def getguid(self, path):
-    "Try to a project's guid from it's project file"
+    "Try to get a project's guid from its project file"
     try:
       proj = open(path)
       line = proj.readline()

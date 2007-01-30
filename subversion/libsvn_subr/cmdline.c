@@ -44,6 +44,8 @@
 
 #include "svn_private_config.h"
 
+#include "win32_crashrpt.h"
+
 /* The stdin encoding. If null, it's the same as the native encoding. */
 static const char *input_encoding = NULL;
 
@@ -102,6 +104,10 @@ svn_cmdline_init(const char *progname, FILE *error_stream)
     output_encoding = output_encoding_buffer;
   }
 #endif /* _MSC_VER < 1400 */
+
+  /* Attach (but don't load) the crash handler */
+  SetUnhandledExceptionFilter(svn__unhandled_exception_filter);
+
 #endif /* WIN32 */
 
   /* C programs default to the "C" locale. But because svn is supposed
@@ -481,4 +487,5 @@ svn_cmdline__getopt_init(apr_getopt_t **os,
                               _("Error initializing command line arguments"));
   return SVN_NO_ERROR;
 }
+
 

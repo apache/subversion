@@ -1,3 +1,5 @@
+require 'tempfile'
+
 unless respond_to?(:funcall)
   module Kernel
     alias funcall __send__
@@ -69,6 +71,16 @@ module Svn
 EOC
         end
       end
+    end
+
+    def filename_to_temp_file(filename)
+      file = Tempfile.new("svn-ruby")
+      file.binmode
+      file.print(File.read(filename))
+      file.close
+      file.open
+      file.binmode
+      file
     end
   end
 end
