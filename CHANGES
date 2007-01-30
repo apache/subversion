@@ -32,7 +32,6 @@ http://svn.collab.net/repos/svn/tags/1.4.3
      - fixed: SVNAdmin's setLog() method always fails (r22387)
      - fixed: target dependency order in generated build scripts (r22209)
  * SWIG/perl bindings:
-     - fixed: ra_do_{update,switch,status} work with Perl delta editor (r22311)
      - fixed: memory leak when calling methods on a Perl commit editor (r22332)
 
 
