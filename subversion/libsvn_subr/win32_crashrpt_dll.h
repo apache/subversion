@@ -20,6 +20,7 @@
 #define SVN_LIBSVN_SUBR_WIN32_CRASHRPT_DLL_H
 
 #ifdef WIN32
+#ifdef SVN_USE_WIN32_CRASHHANDLER
 
 /* public functions in dbghelp.dll */
 typedef BOOL  (WINAPI * MINIDUMPWRITEDUMP)(HANDLE hProcess, DWORD ProcessId,
@@ -92,6 +93,7 @@ STACKWALK               StackWalk_;
 SYMFUNCTIONTABLEACCESS  SymFunctionTableAccess_;
 SYMGETMODULEBASE        SymGetModuleBase_;
 
+#endif /* SVN_USE_WIN32_CRASHHANDLER */
 #endif /* WIN32 */
 
 #endif /* SVN_LIBSVN_SUBR_WIN32_CRASHRPT_DLL_H */
