@@ -130,14 +130,37 @@ svn_cl__proplist(apr_getopt_t *os,
       SVN_ERR(svn_client_revprop_list(&proplist, 
                                       URL, &(opt_state->start_revision),
                                       &rev, ctx, pool));
-      
-      SVN_ERR
-        (svn_cmdline_printf(pool,
-                            _("Unversioned properties on revision %ld:\n"),
-                            rev));
+     
+      if (opt_state->xml)
+        SVN_ERR(svn_cl__xml_print_header("prop-list", pool));
 
-      SVN_ERR(svn_cl__print_prop_hash
-              (proplist, (! opt_state->verbose), pool));
+      if (opt_state->xml)
+        {
+          svn_stringbuf_t *sb = NULL;
+          char *revstr = apr_psprintf(pool, "%ld", rev);
+
+          svn_xml_make_open_tag(&sb, pool, svn_xml_normal,
+                                "revprops",
+                                "rev", revstr, NULL);
+          SVN_ERR(svn_cl__print_xml_prop_hash
+                  (&sb, proplist, (! opt_state->verbose), pool));
+          svn_xml_make_close_tag(&sb, pool, "revprops");
+
+          SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
+        }
+      else
+        {
+          SVN_ERR
+            (svn_cmdline_printf(pool,
+                                _("Unversioned properties on revision %ld:\n"),
+                                rev));
+
+          SVN_ERR(svn_cl__print_prop_hash
+                  (proplist, (! opt_state->verbose), pool));
+        }
+
+      if (opt_state->xml)
+        SVN_ERR(svn_cl__xml_print_footer("prop-list", pool));
     }
   else  /* operate on normal, versioned properties (not revprops) */
     {
