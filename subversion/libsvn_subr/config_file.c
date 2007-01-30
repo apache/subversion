@@ -1206,6 +1206,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "# no-unlock = yes"
         APR_EOL_STR
+        "### Set mime-types-file to a MIME type registry file, used to"
+        APR_EOL_STR
+        "### provide hints to Subversion's MIME type auto-detection algorithm."
+        APR_EOL_STR
+        "# mime-types-file = /path/to/mime.types"
+        APR_EOL_STR
         "### Set enable-auto-props to 'yes' to enable automatic properties"
         APR_EOL_STR
         "### for 'svn add' and 'svn import', it defaults to 'no'."
