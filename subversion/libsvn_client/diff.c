@@ -3468,19 +3468,19 @@ svn_client_diff_summarize_peg(const char *path,
    MERGE_CMD_BATON to do_merge() and do_single_file_merge().  All
    allocation occurs in POOL. */
 static svn_error_t *
-do_child_merges(apr_hash_t *children_with_mergeinfo,
-                const svn_wc_entry_t *parent_entry,
-                const char *parent_wc_url,
-                const char *initial_path1,
-                const svn_opt_revision_t *revision1,
-                const char *initial_path2,
-                const svn_opt_revision_t *revision2,
-                const svn_opt_revision_t *peg_revision,
-                svn_boolean_t recurse,
-                svn_boolean_t ignore_ancestry,
-                svn_wc_adm_access_t *adm_access,
-                struct merge_cmd_baton *merge_cmd_baton,
-                apr_pool_t *pool)
+discover_and_merge_children(apr_hash_t *children_with_mergeinfo,
+                            const svn_wc_entry_t *parent_entry,
+                            const char *parent_wc_url,
+                            const char *initial_path1,
+                            const svn_opt_revision_t *revision1,
+                            const char *initial_path2,
+                            const svn_opt_revision_t *revision2,
+                            const svn_opt_revision_t *peg_revision,
+                            svn_boolean_t recurse,
+                            svn_boolean_t ignore_ancestry,
+                            svn_wc_adm_access_t *adm_access,
+                            struct merge_cmd_baton *merge_cmd_baton,
+                            apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   const svn_wc_entry_t *child_entry;
@@ -3659,19 +3659,19 @@ svn_client_merge3(const char *source1,
       if (strcmp(URL1, URL2) == 0)
         {
           /* Merge children with differing merge info. */
-          SVN_ERR(do_child_merges(children_with_mergeinfo,
-                                  entry,
-                                  URL1,
-                                  path1,
-                                  revision1,
-                                  merge_cmd_baton.path,
-                                  revision2,
-                                  &peg_revision,
-                                  recurse,
-                                  ignore_ancestry,
-                                  adm_access,
-                                  &merge_cmd_baton,
-                                  pool));
+          SVN_ERR(discover_and_merge_children(children_with_mergeinfo,
+                                              entry,
+                                              URL1,
+                                              path1,
+                                              revision1,
+                                              merge_cmd_baton.path,
+                                              revision2,
+                                              &peg_revision,
+                                              recurse,
+                                              ignore_ancestry,
+                                              adm_access,
+                                              &merge_cmd_baton,
+                                              pool));
         }
 
       /* Merge of the actual target.*/
@@ -3827,19 +3827,19 @@ svn_client_merge_peg3(const char *source,
   else if (entry->kind == svn_node_dir)
     {
       /* Merge children with differing merge info. */
-      SVN_ERR(do_child_merges(children_with_mergeinfo,
-                              entry,
-                              URL,
-                              path,
-                              revision1,
-                              path,
-                              revision2,
-                              peg_revision,
-                              recurse,
-                              ignore_ancestry,
-                              adm_access,
-                              &merge_cmd_baton,
-                              pool));
+      SVN_ERR(discover_and_merge_children(children_with_mergeinfo,
+                                          entry,
+                                          URL,
+                                          path,
+                                          revision1,
+                                          path,
+                                          revision2,
+                                          peg_revision,
+                                          recurse,
+                                          ignore_ancestry,
+                                          adm_access,
+                                          &merge_cmd_baton,
+                                          pool));
 
       /* Merge of the actual target.*/
       SVN_ERR(do_merge(URL,
