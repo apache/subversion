@@ -1401,8 +1401,10 @@ test_splitext(const char **msg,
       const char *path_ext;
 
       svn_pool_clear(subpool);
+      
+      /* First, we'll try splitting and fetching both root and
+         extension to see if they match our expected results. */
       svn_path_splitext(&path_root, &path_ext, path, subpool);
-
       if ((strcmp(tests[i].path_root, path_root))
           || (strcmp(tests[i].path_ext, path_ext)))
         return svn_error_createf
@@ -1411,6 +1413,25 @@ test_splitext(const char **msg,
            "instead of ('%s', '%s')",
            tests[i].path, path_root, path_ext, 
            tests[i].path_root, tests[i].path_ext);
+
+      /* Now, let's only fetch the root. */
+      svn_path_splitext(&path_root, NULL, path, subpool);
+      if (strcmp(tests[i].path_root, path_root))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_splitext (%s) with a NULL path_ext returned '%s' "
+           "for the path_root instead of '%s'",
+           tests[i].path, path_root, tests[i].path_root);
+
+      /* Next, let's only fetch the extension. */
+      svn_path_splitext(NULL, &path_ext, path, subpool);
+      if ((strcmp(tests[i].path_root, path_root))
+          || (strcmp(tests[i].path_ext, path_ext)))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_splitext (%s) with a NULL path_root returned '%s' "
+           "for the path_ext instead of '%s'",
+           tests[i].path, path_ext, tests[i].path_ext);
     }
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;

@@ -1403,16 +1403,23 @@ svn_path_splitext(const char **path_root,
 {
   const char *last_period, *last_slash;
 
+  /* Easy out -- why do all the work when there's way to report it? */
+  if (! (path_root || path_ext))
+    return;
+
   /* Do we even have a period in this thing?  And if so, is there
-     anything after it?  */
+     anything after it?  We look for the "rightmost" period in the
+     string. */
   last_period = strrchr(path, '.');
   if (last_period && (last_period + 1 != '\0'))
     {
       /* If we have a period, we need to make sure it occurs in the
-         final path component (otherwise, it doesn't count).  If so,
-         we've found our separator. */
-      last_slash = strrchr(path, '/');
-      if ((! last_slash) || (last_period > last_slash))
+         final path component -- that there's no path separator
+         between the last period and the end of the PATH -- otherwise,
+         it doesn't count.  If we have such a period, we've found our
+         separator. */
+      last_slash = strchr(last_period, '/');
+      if (! last_slash)
         {
           if (path_root)
             *path_root = apr_pstrmemdup(pool, path, 
