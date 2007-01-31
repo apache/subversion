@@ -17,6 +17,7 @@
  */
 
 #ifdef WIN32
+#ifdef SVN_USE_WIN32_CRASHHANDLER
 
 /*** Includes. ***/
 #include <windows.h>
@@ -779,4 +780,5 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
   /* terminate the application */
   return EXCEPTION_EXECUTE_HANDLER;
 }
+#endif /* SVN_USE_WIN32_CRASHHANDLER */
 #endif /* WIN32 */

@@ -738,6 +738,9 @@ class WinGeneratorBase(GeneratorBase):
     if self.sasl_path:
       fakedefines.append("SVN_HAVE_SASL")
 
+    if target.name == 'libsvn_subr':
+      fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
+
     return fakedefines
 
   def get_win_includes(self, target):

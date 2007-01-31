@@ -771,8 +771,13 @@ typedef struct svn_client_ctx_t
    * @since New in 1.3. */
   void *progress_baton;
 
+  /** MIME types map.
+   * @since New in 1.5. */
+  apr_hash_t *mimetypes_map;
+
   /* @since New in 1.5. */
   svn_client_conflict_resolver_func_t conflict_resolver_func;
+
 } svn_client_ctx_t;
 
 

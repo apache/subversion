@@ -3356,9 +3356,10 @@ do_walk(walker_ctx_t *ctx, int depth)
      DAV client.  */
   apr_table_set(ctx->info.r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(params->pool,
-                             "list-dir '%s'",
+                             "list-dir '%s' r%" SVN_REVNUM_T_FMT,
                              svn_path_uri_encode(ctx->info.repos_path,
-                                                 params->pool)));
+                                                 params->pool),
+                             ctx->info.root.rev));
 
   /* fetch this collection's children */
   serr = svn_fs_dir_entries(&children, ctx->info.root.root,

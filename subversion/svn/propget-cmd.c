@@ -2,7 +2,7 @@
  * propget-cmd.c -- Print properties and values of files/dirs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -31,6 +31,7 @@
 #include "svn_subst.h"
 #include "svn_path.h"
 #include "svn_props.h"
+#include "svn_xml.h"
 #include "cl.h"
 
 
@@ -91,7 +92,7 @@ svn_cl__propget(apr_getopt_t *os,
 
       SVN_ERR(svn_cl__revprop_prepare(&opt_state->start_revision, targets,
                                       &URL, pool));
-      
+
       /* Let libsvn_client do the real work. */
       SVN_ERR(svn_client_revprop_get(pname_utf8, &propval,
                                      URL, &(opt_state->start_revision),
@@ -99,19 +100,40 @@ svn_cl__propget(apr_getopt_t *os,
       
       if (propval != NULL)
         {
-          svn_string_t *printable_val = propval;
+          if (opt_state->xml)
+            {
+              svn_stringbuf_t *sb = NULL;
+              char *revstr = apr_psprintf(pool, "%ld", rev);
+
+              SVN_ERR(svn_cl__xml_print_header("properties", pool));
+
+              svn_xml_make_open_tag(&sb, pool, svn_xml_normal,
+                                    "revprops",
+                                    "rev", revstr, NULL);
+
+              svn_cl__print_xml_prop(&sb, pname_utf8, propval, pool);
+
+              svn_xml_make_close_tag(&sb, pool, "revprops");
+
+              SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
+              SVN_ERR(svn_cl__xml_print_footer("properties", pool));
+            }
+          else
+            {
+              svn_string_t *printable_val = propval;
           
-          /* If this is a special Subversion property, it is stored as
-             UTF8 and LF, so convert to the native locale and eol-style. */
-          
-          if (svn_prop_needs_translation(pname_utf8))
-            SVN_ERR(svn_subst_detranslate_string(&printable_val, propval,
-                                                 TRUE, pool));
-          
-          SVN_ERR(stream_write(out, printable_val->data, 
-                               printable_val->len));
-          if (! opt_state->strict)
-            SVN_ERR(stream_write(out, APR_EOL_STR, strlen(APR_EOL_STR)));
+              /* If this is a special Subversion property, it is stored as
+                 UTF8 and LF, so convert to the native locale and eol-style. */
+
+              if (svn_prop_needs_translation(pname_utf8))
+                SVN_ERR(svn_subst_detranslate_string(&printable_val, propval,
+                                                     TRUE, pool));
+         
+              SVN_ERR(stream_write(out, printable_val->data, 
+                                   printable_val->len));
+              if (! opt_state->strict)
+                SVN_ERR(stream_write(out, APR_EOL_STR, strlen(APR_EOL_STR)));
+            }
         }
     }
   else  /* operate on a normal, versioned property (not a revprop) */

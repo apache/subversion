@@ -877,9 +877,6 @@ def run_tests(test_list):
   if windows == 1:
     pristine_url = pristine_url.replace('\\', '/')  
   
-  # Setup the pristine repository (and working copy)
-  actions.setup_pristine_repository()
-
   if not testnums:
     # If no test numbers were listed explicitly, include all of them:
     testnums = range(1, len(test_list))
@@ -893,17 +890,21 @@ def run_tests(test_list):
     # done. just exit with success.
     sys.exit(0)
 
-  else:
-    exit_code = _internal_run_tests(test_list, testnums)
+  # Setup the pristine repository (and working copy)
+  actions.setup_pristine_repository()
 
-    # remove all scratchwork: the 'pristine' repository, greek tree, etc.
-    # This ensures that an 'import' will happen the next time we run.
-    safe_rmtree(temp_dir)
+  # Run the tests.
+  exit_code = _internal_run_tests(test_list, testnums)
 
-    _cleanup_deferred_test_paths()
+  # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
+  # This ensures that an 'import' will happen the next time we run.
+  safe_rmtree(temp_dir)
 
-    # return the appropriate exit code from the tests.
-    sys.exit(exit_code)
+  # Cleanup after ourselves.
+  _cleanup_deferred_test_paths()
+
+  # Return the appropriate exit code from the tests.
+  sys.exit(exit_code)
 
 
 ######################################################################
