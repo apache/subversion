@@ -116,12 +116,12 @@ char *svn_path_basename(const char *path, apr_pool_t *pool);
  */
 char *svn_path_dirname(const char *path, apr_pool_t *pool);
 
-/** Split @c path into a root portion and an extension such that the
+/** Split @a path into a root portion and an extension such that
  * the root + the extension = the original path, and where the
- * extension contains no period (.) characters.  If not @c NULL, set 
- * @a *path_root to the root portion.  If not @c NULL, set @a *path_ext
- * to the extension.  Allocate both @a *path_root and @a *path_ext in
- * @a pool.
+ * extension contains no period (.) characters.  If not @c NULL, set
+ * @a *path_root to the root portion.  If not @c NULL, set
+ * @a *path_ext to the extension (or "" if there is no extension 
+ * found).  Allocate both @a *path_root and @a *path_ext in @a pool.
  *
  * @since New in 1.5.
  */
