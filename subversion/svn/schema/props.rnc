@@ -21,4 +21,5 @@ attlist.revprops &=
 property = element property { attlist.property, text }
 attlist.property &=
   ## The property name
-  attribute name { string }
+  attribute name { string },
+  attribute encoding { string }?
