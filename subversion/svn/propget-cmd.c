@@ -202,7 +202,7 @@ svn_cl__propget(apr_getopt_t *os,
           if (opt_state->xml)
             {
               svn_stringbuf_t *sb = NULL;
-              char *revstr = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, rev);
+              char *revstr = apr_psprintf(pool, "%ld", rev);
 
               SVN_ERR(svn_cl__xml_print_header("properties", pool));
 

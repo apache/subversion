@@ -293,7 +293,7 @@ log_message_receiver_xml(void *baton,
   if (rev == 0 && msg == NULL)
     return SVN_NO_ERROR;
 
-  revstr = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, rev);
+  revstr = apr_psprintf(pool, "%ld", rev);
   /* <logentry revision="xxx"> */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "logentry",
                         "revision", revstr, NULL);
@@ -339,7 +339,7 @@ log_message_receiver_xml(void *baton,
               svn_stringbuf_t *escpath = svn_stringbuf_create("", pool);
               svn_xml_escape_attr_cstring(&escpath,
                                           log_item->copyfrom_path, pool);
-              revstr = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, 
+              revstr = apr_psprintf(pool, "%ld", 
                                     log_item->copyfrom_rev);
               svn_xml_make_open_tag(&sb, pool, svn_xml_protect_pcdata, "path",
                                     "action", action,

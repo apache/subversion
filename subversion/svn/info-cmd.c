@@ -80,7 +80,7 @@ print_info_xml(const char *target,
 
   /* If revision is invalid, assume WC is corrupt. */
   if (SVN_IS_VALID_REVNUM(info->rev))
-    rev_str = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, info->rev);
+    rev_str = apr_psprintf(pool, "%ld", info->rev);
   else
     return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                              _("'%s' has invalid revision"),
