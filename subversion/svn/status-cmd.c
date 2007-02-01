@@ -88,7 +88,7 @@ print_finish_target_xml(svn_revnum_t repos_rev,
   if (SVN_IS_VALID_REVNUM(repos_rev))
     {
       const char *repos_rev_str;
-      repos_rev_str = apr_psprintf(pool, "%" SVN_REVNUM_T_FMT, repos_rev);
+      repos_rev_str = apr_psprintf(pool, "%ld", repos_rev);
       svn_xml_make_open_tag(&sb, pool, svn_xml_self_closing, "against",
                             "revision", repos_rev_str, NULL);
     }
