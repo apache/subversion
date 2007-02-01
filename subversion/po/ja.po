@@ -174,8 +174,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion trunk\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-01-27 00:39+0900\n"
-"PO-Revision-Date: 2007-01-27 00:24+0900\n"
+"POT-Creation-Date: 2007-02-01 21:57+0900\n"
+"PO-Revision-Date: 2007-01-31 18:39+0900\n"
 "Last-Translator: Subversion <dev@subversion.tigris.org>\n"
 "Language-Team: Japanese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -591,7 +591,7 @@ msgstr "リポジトリフックの実行が失敗しました"
 
 #: include/svn_error_codes.h:602
 msgid "Incorrect arguments supplied"
-msgstr "不正な変数が入力されました"
+msgstr "不正な引数が与えられました"
 
 #: include/svn_error_codes.h:606
 msgid "A report cannot be generated because no data was supplied"
@@ -5606,7 +5606,7 @@ msgid ""
 "\n"
 "Available subcommands:\n"
 msgstr ""
-"使用方法: svn <サブコマンド> [<オプション>] [<ARG>]\n"
+"使用方法: svn <サブコマンド> [<オプション>] [<引数>]\n"
 "Subversion コマンドラインクライアント, バージョン %s.\n"
 "特定のサブコマンドに関するヘルプを読みたいときは 'svn help <サブコマンド>' "
 "と\n"
@@ -6924,7 +6924,7 @@ msgid ""
 "  for example, when redirecting binary property values to a file).\n"
 msgstr ""
 "ファイル・ディレクトリ・リビジョンの属性の値を表示します。\n"
-"使用方法: 1. propget <属性名> [<パス>...]\n"
+"使用方法: 1. propget <属性名> [<対象>[@<REV>]...]\n"
 "          2. propget <属性名> --revprop -r <REV> [<対象>]\n"
 "\n"
 "  1. 作業コピー内にあるバージョン管理下の属性を表示します。<REV> を指定する"
@@ -6960,7 +6960,7 @@ msgid ""
 msgstr ""
 "ファイル・ディレクトリ・リビジョンの属性を一覧表示しま\n"
 "す。\n"
-"使用方法: 1. proplist [対象[@<REV>]...]\n"
+"使用方法: 1. proplist [<対象>[@<REV>]...]\n"
 "          2. proplist --revprop -r <REV> [<対象>]\n"
 "\n"
 "  1. 作業コピー内にあるバージョン管理下の属性を一覧表示します。<REV> を指定"
@@ -9610,8 +9610,8 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "Cannot mix repository and working copy sources"
 #~ msgstr "コピー元 (または移動元) にリポジトリと作業コピーは混在できません"
 
-#~ msgid "Repository to working copy moves are not supported"
-#~ msgstr "リポジトリから作業コピーへの移動はサポートされていません"
+#~ msgid "Moves between the working copy and the repository are not supported"
+#~ msgstr "作業コピー・リポジトリ間の移動はサポートされていません"
 
 #~ msgid "URL '%s' non-existent in revision %ld"
 #~ msgstr "URL '%s' は、リビジョン %ld には存在しません"
@@ -9634,6 +9634,9 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 
 #~ msgid "'%s' does not exist in revision %ld"
 #~ msgstr "'%s' がリビジョン %ld に存在しません"
+
+#~ msgid "Path '%s' doesn't exist in revision %ld"
+#~ msgstr "パス '%s' はリビジョン %ld に存在しません"
 
 #~ msgid "Expected a valid revnum and path"
 #~ msgstr "正しいリビジョン番号やパスを期待しました"
@@ -9718,6 +9721,9 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 
 #~ msgid "No error output was produced by the hook."
 #~ msgstr "フックはエラー出力を生成しませんでした。"
+
+#~ msgid " ARG"
+#~ msgstr " <ARG>"
 
 #~ msgid ""
 #~ "Copyright (C) 2000-2007 CollabNet.\n"
@@ -10251,6 +10257,13 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "Exactly one property name and one file argument required"
 #~ msgstr "属性名とファイルの引数が 1 つだけ必要です"
 
+#~ msgid ""
+#~ "Subcommand '%s' doesn't accept option '%s'\n"
+#~ "Type 'svnadmin help %s' for usage.\n"
+#~ msgstr ""
+#~ "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
+#~ "使用方法を知りたいときは 'svnadmin help %s' と打ってください。\n"
+
 #~ msgid "Try 'svnadmin help' for more info"
 #~ msgstr "より詳しく知りたいときは 'svnadmin help' を試してみてください"
 
@@ -10281,6 +10294,13 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgid "Try 'svnlook help' for more info"
 #~ msgstr "より詳しく知りたいときは 'svnlook help' を試してみてください"
 
+# * Description for 'svnserve --pid-file'.
+# * 29 half-size characters are displayed on the left.
+#~ msgid "write server process ID to file ARG"
+#~ msgstr ""
+#~ "サーバのプロセス ID をファイル <ARG> に書き込み\n"
+#~ "                             ます"
+
 # FIXME: Remove a trailing period and a trailing newline.
 #~ msgid "svnserve: Root path '%s' does not exist or is not a directory.\n"
 #~ msgstr ""
@@ -10294,6 +10314,13 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 
 #~ msgid "Couldn't obtain the authenticated username"
 #~ msgstr "認証済みのユーザ名を取得できませんでした"
+
+#~ msgid ""
+#~ "Subcommand '%s' doesn't accept option '%s'\n"
+#~ "Type 'svnsync help %s' for usage.\n"
+#~ msgstr ""
+#~ "サブコマンド '%s' にはオプション '%s' をつけられません。\n"
+#~ "使用方法を知りたいときは 'svnsync help %s' と打ってください。\n"
 
 #~ msgid "Try 'svnsync help' for more info"
 #~ msgstr "より詳しく知りたいときは 'svnsync help' を試してみてください"
@@ -11094,7 +11121,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "ファイル・ディレクトリ・リビジョンの属性を一覧表示しま\n"
 #~ "す。\n"
-#~ "使用方法: 1. proplist [対象[@<REV>]...]\n"
+#~ "使用方法: 1. proplist [<対象>[@<REV>]...]\n"
 #~ "          2. proplist --revprop -r <REV> [<URL>]\n"
 #~ "\n"
 #~ "  1. 作業コピー内にあるバージョン管理下の属性を一覧表示します。<REV> を指"
@@ -11124,7 +11151,7 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "ファイル・ディレクトリ・リビジョンの属性 <属性名> の値を\n"
 #~ "表示します。\n"
-#~ "使用方法: 1. propget <属性名> [<パス>...]\n"
+#~ "使用方法: 1. propget <属性名> [<対象>[@<REV>]...]\n"
 #~ "          2. propget <属性名> --revprop -r <REV> [<URL>]\n"
 #~ "\n"
 #~ "  1. 作業コピー内にあるバージョン管理下の属性を表示します。<REV> を指定す"
@@ -13933,3 +13960,6 @@ msgstr "'%s' はバージョン管理下になく、エクスポートされた�
 #~ msgstr ""
 #~ "コピー元 (または移動元) のリストにリポジトリと作業コピーパスを混ぜることは"
 #~ "できません"
+
+#~ msgid "Repository to working copy moves are not supported"
+#~ msgstr "リポジトリから作業コピーへの移動はサポートされていません"
