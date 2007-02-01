@@ -274,6 +274,8 @@ void svn_client_get_ssl_client_cert_pw_prompt_provider
 
 /** This is a structure which stores a filename and a hash of property
  * names and values.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 typedef struct svn_client_proplist_item_t
 {
@@ -293,7 +295,8 @@ typedef struct svn_client_proplist_item_t
  */
 typedef svn_error_t *(*svn_proplist_receiver_t)
   (void *baton,
-   const svn_client_proplist_item_t *item,
+   svn_stringbuf_t *path,
+   apr_hash_t *prop_hash,
    apr_pool_t *pool);
 
 /** 
@@ -301,6 +304,8 @@ typedef svn_error_t *(*svn_proplist_receiver_t)
  * structure will be shared with @a item.
  *
  * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_client_proplist_item_t *
 svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
@@ -2540,7 +2545,7 @@ svn_client_revprop_get(const char *propname,
 /**
  * Invoke @a receiver with @a receiver_baton to return the regular properies
  * of @a target, a URL or working copy path.  @a receiver will be called
- * for each path encountered.  See @c svn_client_proplist_item_t.
+ * for each path encountered.
  *
  * If @a revision->kind is @c svn_opt_revision_unspecified, then get
  * properties from the working copy, if @a target is a working copy
