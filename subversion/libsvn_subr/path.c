@@ -1403,7 +1403,7 @@ svn_path_splitext(const char **path_root,
 {
   const char *last_period, *last_slash;
 
-  /* Easy out -- why do all the work when there's way to report it? */
+  /* Easy out -- why do all the work when there's no way to report it? */
   if (! (path_root || path_ext))
     return;
 
