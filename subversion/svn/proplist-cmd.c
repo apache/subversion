@@ -91,7 +91,8 @@ proplist_receiver(void *baton,
   else
     name_local = path->data;
 
-  SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"), name_local));
+  if (!opt_state->quiet)
+    SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"), name_local));
   SVN_ERR(svn_cl__print_prop_hash(prop_hash, (! opt_state->verbose),
                                   pool));
 
