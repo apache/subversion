@@ -1387,6 +1387,11 @@ test_splitext(const char **msg,
     { "period.file.ext",           "period.file.",           "ext" },
     { "multi-component/file.txt",  "multi-component/file.",  "txt" },
     { "yep.still/no-ext",          "yep.still/no-ext",       "" },
+    { "folder.with/period.log",    "folder.with/period.",    "log" },
+    { "period.",                   "period.",                "" },
+    { "file.ends-with/period.",    "file.ends-with/period.", "" },
+    { "two-periods..txt",          "two-periods..",          "txt" },
+    { "",                          "",                       "" },
   };
 
   *msg = "test svn_path_splitext";
