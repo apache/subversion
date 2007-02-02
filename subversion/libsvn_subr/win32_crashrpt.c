@@ -398,11 +398,11 @@ static void
 write_function_detail(STACKFRAME stack_frame, void *data)
 {
   ULONG64 symbolBuffer[(sizeof(SYMBOL_INFO) +
-    MAX_PATH*sizeof(TCHAR) +
+    MAX_PATH +
     sizeof(ULONG64) - 1) /
     sizeof(ULONG64)];
   PSYMBOL_INFO pIHS = (PSYMBOL_INFO)symbolBuffer;
-  DWORD64 func_disp=0 ;
+  DWORD64 func_disp=0;
 
   IMAGEHLP_STACK_FRAME ih_stack_frame;
   IMAGEHLP_LINE ih_line;
@@ -481,7 +481,7 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
       /* If no context is supplied, skip 1 frame */
       skip = 1;
 
-  		ctx.ContextFlags = CONTEXT_FULL ;
+  		ctx.ContextFlags = CONTEXT_FULL;
   		if (GetThreadContext(GetCurrentThread(), &ctx))
 		    context = &ctx;
 	  }
@@ -491,19 +491,17 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
 
   /* Write the stack trace */
   ZeroMemory(&stack_frame, sizeof(STACKFRAME));
-  stack_frame.AddrPC.Mode = AddrModeFlat ;
-  stack_frame.AddrStack.Mode   = AddrModeFlat ;
-  stack_frame.AddrFrame.Mode   = AddrModeFlat ;
+  stack_frame.AddrPC.Mode = AddrModeFlat;
+  stack_frame.AddrStack.Mode   = AddrModeFlat;
+  stack_frame.AddrFrame.Mode   = AddrModeFlat;
 #if defined (_M_IX86)
-  machine = IMAGE_FILE_MACHINE_I386 ;
+  machine = IMAGE_FILE_MACHINE_I386;
   stack_frame.AddrPC.Offset    = context->Eip;
   stack_frame.AddrStack.Offset = context->Esp;
   stack_frame.AddrFrame.Offset = context->Ebp;
-#elif defined (_M_AMD64)
-  machine = IMAGE_FILE_MACHINE_AMD64 ;
-  stack_frame.AddrPC.Offset    = context->Rip;
-  stack_frame.AddrStack.Offset = context->Rsp;
-  stack_frame.AddrFrame.Offset = context->Rbp;
+#else
+#error This crash handler only works on Win32, undefine\
+ SVN_USE_WIN32_CRASHHANDLER to remove it from the build.
 #endif
 
   while (1)
@@ -684,10 +682,10 @@ cleanup_debughlp()
 BOOL
 get_temp_filename(char *filename, const char *prefix, const char *ext)
 {
-  char temp_dir[MAX_PATH - 14];
+  char temp_dir[MAX_PATH - 64];
   int i;
 
-  if (! GetTempPathA(MAX_PATH - 14, temp_dir))
+  if (! GetTempPath(MAX_PATH - 64, temp_dir))
     return FALSE;
 
   for (i = 0;i < 3;i++)
