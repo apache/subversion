@@ -1995,12 +1995,12 @@ change_file_prop(void *file_baton,
 }
 
 
-/* Write log commands to merge PROP_CHANGES into the existing properties of
-   FILE_PATH.  PROP_CHANGES can contain regular properties as well as
-   entryprops and wcprops.  Update *PROP_STATE (unless PROP_STATE is NULL)
-   to reflect the result of the regular prop merge.
-   Make *LOCK_STATE reflect the possible removal of a lock token from
-   FILE_PATH's entryprops.
+/* Write log commands to merge PROP_CHANGES into the existing
+   properties of FILE_PATH.  PROP_CHANGES can contain regular
+   properties as well as entryprops and wcprops.  Update *PROP_STATE
+   to reflect the result of the regular prop merge.  Make *LOCK_STATE
+   reflect the possible removal of a lock token from FILE_PATH's
+   entryprops.
 
    ADM_ACCESS is the access baton for FILE_PATH.  Append log commands to
    LOG_ACCUM.  Use POOL for temporary allocations. */
@@ -2025,8 +2025,7 @@ merge_props(svn_stringbuf_t *log_accum,
                                pool));
 
   /* Always initialize to unknown state. */
-  if (prop_state)
-    *prop_state = svn_wc_notify_state_unknown;
+  *prop_state = svn_wc_notify_state_unknown;
 
   /* Merge the 'regular' props into the existing working proplist. */
   if (regular_props)
@@ -2165,17 +2164,10 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
  * props, not just 'regular' ones that the user sees.  (See enum
  * svn_prop_kind).
  *
- * If CONTENT_STATE is non-null, set *CONTENT_STATE to the state of
- * the file contents after the installation; if return error, the
- * value of *CONTENT_STATE is undefined.
- *
- * If PROP_STATE is non-null, set *PROP_STATE to the state of the
- * properties after the installation; if return error, the value of
- * *PROP_STATE is undefined.
- *
- * If LOCK_STATE is non-null, set it to the state of the lock on the
- * file after the operation; if an error is returned, the value of
- * @a LOCK_STATE is undefined.
+ * Set *CONTENT_STATE, *PROP_STATE and *LOCK_STATE to the state of the
+ * contents, properties and repository lock, respectively, after the
+ * installation.  If an error is returned, the value of these three
+ * variables is undefined.
  *
  * If NEW_URL is non-null, then this URL will be attached to the file
  * in the 'entries' file.  Otherwise, the file will simply "inherit"
@@ -2213,16 +2205,11 @@ merge_file(svn_stringbuf_t *log_accum,
   svn_boolean_t is_replaced = FALSE;
   svn_boolean_t magic_props_changed = FALSE;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
-  svn_wc_notify_lock_state_t local_lock_state;
 
   /* The code flow does not depend upon these being set to NULL, but
      it removes a gcc 3.1 `might be used uninitialized in this
      function' warning. */
   const char *txtb = NULL, *tmp_txtb = NULL;
-
-  /* We need the lock state, even if the caller doesn't. */
-  if (! lock_state)
-    lock_state = &local_lock_state;
 
   /* Start by splitting FILE_PATH. */
   svn_path_split(file_path, &parent_dir, &base_name, pool);
@@ -2489,30 +2476,27 @@ merge_file(svn_stringbuf_t *log_accum,
     }
 
 
-  if (content_state)
-    {
-      /* Initialize the state of our returned value. */
-      *content_state = svn_wc_notify_state_unknown;
+  /* Initialize the state of our returned value. */
+  *content_state = svn_wc_notify_state_unknown;
       
-      /* This is kind of interesting.  Even if no new text was
-         installed (i.e., new_text_path was null), we could still
-         report a pre-existing conflict state.  Say a file, already
-         in a state of textual conflict, receives prop mods during an
-         update.  Then we'll notify that it has text conflicts.  This
-         seems okay to me.  I guess.  I dunno.  You? */
+  /* This is kind of interesting.  Even if no new text was
+     installed (i.e., new_text_path was null), we could still
+     report a pre-existing conflict state.  Say a file, already
+     in a state of textual conflict, receives prop mods during an
+     update.  Then we'll notify that it has text conflicts.  This
+     seems okay to me.  I guess.  I dunno.  You? */
 
-      if (merge_outcome == svn_wc_merge_conflict)
-        *content_state = svn_wc_notify_state_conflicted;
-      else if (new_text_path)
-        {
-          if (is_locally_modified)
-            *content_state = svn_wc_notify_state_merged;
-          else
-            *content_state = svn_wc_notify_state_changed;
-        }
-      else
-        *content_state = svn_wc_notify_state_unchanged;
-    }
+  if (merge_outcome == svn_wc_merge_conflict)
+    *content_state = svn_wc_notify_state_conflicted;
+  else if (new_text_path)
+  {
+    if (is_locally_modified)
+      *content_state = svn_wc_notify_state_merged;
+    else
+      *content_state = svn_wc_notify_state_changed;
+  }
+  else
+    *content_state = svn_wc_notify_state_unchanged;
 
   return SVN_NO_ERROR;
 }
