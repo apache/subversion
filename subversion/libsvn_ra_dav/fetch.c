@@ -3105,6 +3105,14 @@ make_reporter(svn_ra_session_t *session,
       SVN_ERR(svn_io_file_write_full(rb->tmpfile, s, strlen(s), NULL, pool));
     }
 
+  /* Old servers know "recursive" but not "depth"; help them DTRT. */
+  if (depth == svn_depth_files)
+  {
+    const char *data = "<S:recursive>no</S:recursive>" DEBUG_CR;
+    SVN_ERR(svn_io_file_write_full(rb->tmpfile, data, strlen(data),
+                                   NULL, pool));
+  }
+
   /* mod_dav_svn defaults to svn_depth_infinity, but we always send anyway. */
   {
     s = apr_psprintf(pool, "<S:depth>%s</S:depth>" DEBUG_CR,

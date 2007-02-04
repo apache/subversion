@@ -2443,6 +2443,14 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                    report->sess->bkt_alloc);
     }
 
+  /* Old servers know "recursive" but not "depth"; help them DTRT. */
+  if (depth == svn_depth_files)
+    {
+      svn_ra_serf__add_tag_buckets(report->buckets,
+                                   "S:recursive", "no",
+                                   report->sess->bkt_alloc);
+    }
+
   svn_ra_serf__add_tag_buckets(report->buckets,
                                "S:depth", apr_itoa(pool, depth),
                                report->sess->bkt_alloc);
