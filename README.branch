@@ -321,15 +321,27 @@ Contents
 
    Work remaining, in no particular order:
 
-      * There is still no compatibility code for new clients dealing
-        with old servers.  This is the "legacy servers will send back
-        a bunch of information the client doesn't want" scenario
-        described in the 'Implementation' section above.  The client
-        doesn't know how to ignore information it doesn't want yet,
-        it'll just do whatever the server tells it.  I'm not sure how
-        useful the compatibility mode is, since it wouldn't really
-        shorten the wall clock time of the operations by much,
-        although it would still save the disk space.
+      * Although the client will transmit the old "recursive=no" flag
+        in both the svn_depth_files and svn_depth_empty case, there is
+        still no code on the client side to deal with the unwanted
+        data the server will send down (some files in the
+        "client wants svn_depth_empty but server only knows recursive=no" 
+        case, and both some files and some empty directories in the
+        "client wants svn_depth_immediates but server only knows recursive=no" 
+        case).  This is the "legacy servers will send back a bunch of
+        information the client doesn't want" scenario described in the
+        'Implementation' section above.  Even though implementing it
+        won't shorten the wall clock time of operations by much, it
+        would still make the client behave "correctly" (if slowly)
+        even against old servers.  Therefore, it's still needed.
+
+      * I haven't done anything with 'svn status' yet, don't know if
+        it would behave correctly w.r.t. depths out of the box or not.
+        Clearly, this needs investigation.
+
+      * I haven't done anything with either 'svn switch --depth' or
+        'svn switch' handling mixed-depth working copies automatically.  
+        Probably some bits work right now, and other bits don't.
 
       * There's no interface for getting rid of stuff once you've
         brought it into your working copy -- no "exclusion" interface,
@@ -377,11 +389,3 @@ Contents
          svn_client_propget2()  # Same question here.
          svn_client_proplist2() # Same question here.
          svn_client_resolved()  # Same question here.
-
-      * I haven't done anything with 'svn status' yet, don't know if
-        it would behave correctly w.r.t. depths out of the box or not.
-        Clearly, this needs investigation.
-
-      * I haven't done anything with either 'svn switch --depth' or
-        'svn switch' handling mixed-depth working copies automatically.  
-        Probably some bits work right now, and other bits don't.
