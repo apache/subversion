@@ -239,15 +239,12 @@ svn_cl__propget(apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
-<<<<<<< .working
-      if (opt_state->depth == svn_depth_unknown)
-        opt_state->depth = svn_depth_empty;
-
-=======
       if (opt_state->xml)
         SVN_ERR(svn_cl__xml_print_header("properties", subpool));
 
->>>>>>> .merge-right.r23331
+      if (opt_state->depth == svn_depth_unknown)
+        opt_state->depth = svn_depth_empty;
+
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);

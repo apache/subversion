@@ -616,13 +616,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     revision the target is first looked up.\n"
      "  2. Lists unversioned remote props on repos revision.\n"
      "     TARGET only determines which repository to access.\n"),
-<<<<<<< .working
     {'v', 'R', svn_cl__depth_opt, 'r', 'q', svn_cl__revprop_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
-=======
-    {'v', 'R', 'r', 'q', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__xml_opt} },
->>>>>>> .merge-right.r23331
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__xml_opt} },
 
   { "propset", svn_cl__propset, {"pset", "ps"}, N_
     ("Set the value of a property on files, dirs, or revisions.\n"

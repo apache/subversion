@@ -194,18 +194,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     *use_sleep = TRUE;
   }      
 
-<<<<<<< .working
-  /* We handle externals after the initial checkout is complete, so
-     that fetching external items (and any errors therefrom) doesn't
-     delay the primary checkout.
-
-     ### TODO: Should we really do externals if depth is
-     ### svn_depth_infinity or svn_depth_one?
-  */
-  SVN_ERR(svn_client__handle_externals(traversal_info, FALSE, use_sleep,
-                                       ctx, pool));
-=======
->>>>>>> .merge-right.r23331
   if (sleep_here)
     svn_sleep_for_timestamps();
 

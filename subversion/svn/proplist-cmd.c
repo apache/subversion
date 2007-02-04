@@ -165,11 +165,6 @@ svn_cl__proplist(apr_getopt_t *os,
       apr_pool_t *subpool = svn_pool_create(pool);
       svn_proplist_receiver_t pl_receiver;
 
-<<<<<<< .working
-      if (opt_state->depth == svn_depth_unknown)
-        opt_state->depth = svn_depth_empty;
-
-=======
       if (opt_state->xml)
         {
           SVN_ERR(svn_cl__xml_print_header("properties", pool));
@@ -180,7 +175,9 @@ svn_cl__proplist(apr_getopt_t *os,
           pl_receiver = proplist_receiver;
         }
 
->>>>>>> .merge-right.r23331
+      if (opt_state->depth == svn_depth_unknown)
+        opt_state->depth = svn_depth_empty;
+
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
@@ -199,20 +196,12 @@ svn_cl__proplist(apr_getopt_t *os,
                                      subpool));
          
           SVN_ERR(svn_cl__try
-<<<<<<< .working
-                  (svn_client_proplist2
-                   (&props, truepath, &peg_revision,
-                    &(opt_state->start_revision),
-                    SVN_DEPTH_TO_RECURSE(opt_state->depth),
-                    ctx, subpool),
-=======
                   (svn_client_proplist3(truepath, &peg_revision,
                                         &(opt_state->start_revision),
-                                        opt_state->recursive,
+                                        SVN_DEPTH_TO_RECURSE(opt_state->depth),
                                         pl_receiver,
                                         &pl_baton,
                                         ctx, subpool),
->>>>>>> .merge-right.r23331
                    NULL, opt_state->quiet,
                    SVN_ERR_UNVERSIONED_RESOURCE,
                    SVN_ERR_ENTRY_NOT_FOUND,
