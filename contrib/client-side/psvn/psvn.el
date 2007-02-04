@@ -1284,6 +1284,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
           (svn-status-show-process-output nil t))))
 
 (defun svn-process-filter (process str)
+  "Track the svn process output and ask user questions in the minibuffer when appropriate."
   (save-window-excursion
     (set-buffer svn-process-buffer-name)
     ;;(message "svn-process-filter: %s" str)
@@ -1298,7 +1299,11 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
           (svn-process-send-string-and-newline passwd t)))
       (when (looking-at "Username: ")
         (let ((user-name (read-string "Username for svn operation: ")))
-          (svn-process-send-string-and-newline user-name))))))
+          (svn-process-send-string-and-newline user-name)))
+      (when (looking-at "(R)eject, accept (t)emporarily or accept (p)ermanently")
+        (svn-status-show-process-buffer)
+        (let ((answer (read-string "(R)eject, accept (t)emporarily or accept (p)ermanently? ")))
+          (svn-process-send-string (substring answer 0 1)))))))
 
 (defun svn-revert-some-buffers (&optional tree)
   "Reverts all buffers visiting a file in TREE that aren't modified.

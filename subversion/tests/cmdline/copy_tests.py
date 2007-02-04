@@ -2427,7 +2427,7 @@ def move_dir_back_and_forth(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'mv',
                                      D_path, D_move_path)
 
-  # Move the moved dir: D_moved back to it's starting
+  # Move the moved dir: D_moved back to its starting
   # location at A/D.
   out, err = svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                                 'mv', D_move_path,

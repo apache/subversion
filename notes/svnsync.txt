@@ -87,10 +87,14 @@ EOF
    Once both the mirror and master repositories have the same UUID you can
    safely check out from the mirror and commit to the master, all you have
    to do is do a 'svn switch --relocate' to point your working copy to the
-   master before a commit.  Note that you should NEVER commit changes to a
-   mirror other than via svnsync, so to avoid accidentally doing so you may
-   want to add a pre-commit hook script that disallows commits from users
-   other than the one you run svnsync as.
+   master before a commit.
+
+   Note that you should NEVER commit changes to a mirror other than
+   via svnsync, so to avoid accidentally doing so you may want to add
+   a start-commit hook script that disallows commits from users other
+   than the one you run svnsync as, and a pre-lock hook script that
+   disallows all filesystem lock requests (svnsync will never create
+   these locks, but its attempt to commit can be blocked by them).
 
 Q: What version of Subversion is required to use svnsync?
 

@@ -449,6 +449,186 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
   return SVN_NO_ERROR;
 }
 
+/* Baton for a SASL encrypted svn_ra_svn__stream_t. */
+typedef struct sasl_baton {
+  svn_ra_svn__stream_t *stream; /* Inherited stream. */
+  sasl_conn_t *ctx;             /* The SASL context for this connection. */
+  unsigned int maxsize;         /* The maximum amount of data we can encode. */
+  const char *read_buf;         /* The buffer returned by sasl_decode. */
+  unsigned int read_len;        /* Its current length. */
+  const char *write_buf;        /* The buffer returned by sasl_encode. */
+  unsigned int write_len;       /* Its length. */
+} sasl_baton_t;
+
+/* Functions to implement a SASL encrypted svn_ra_svn__stream_t. */
+
+/* Implements svn_read_fn_t. */
+static svn_error_t *sasl_read_cb(void *baton, char *buffer, apr_size_t *len)
+{
+  sasl_baton_t *sasl_baton = baton;
+  int result;
+  /* A copy of *len, used by the wrapped stream. */
+  unsigned int len2 = *len;
+
+  /* sasl_decode might need more data than a single read can provide,
+     hence the need to put a loop around the decoding. */
+  while (! sasl_baton->read_buf || sasl_baton->read_len == 0)
+    {
+      SVN_ERR(svn_ra_svn__stream_read(sasl_baton->stream, buffer, &len2));
+      if (len2 == 0)
+        {
+          *len = 0;
+          return SVN_NO_ERROR;
+        }
+      result = sasl_decode(sasl_baton->ctx, buffer, len2, 
+                           &sasl_baton->read_buf, 
+                           &sasl_baton->read_len);
+      if (result != SASL_OK)
+        return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                sasl_errdetail(sasl_baton->ctx));
+    }
+
+  /* The buffer returned by sasl_decode might be larger than what the 
+     caller wants.  If this is the case, we only copy back *len bytes now
+     (the rest will be returned by subsequent calls to this function).
+     If not, we just copy back the whole thing. */
+  if (*len >= sasl_baton->read_len)
+    {
+      memcpy(buffer, sasl_baton->read_buf, sasl_baton->read_len);
+      *len = sasl_baton->read_len;
+      sasl_baton->read_buf = NULL;
+      sasl_baton->read_len = 0;
+    }
+  else
+    {
+      memcpy(buffer, sasl_baton->read_buf, *len);
+      sasl_baton->read_len -= *len;
+      sasl_baton->read_buf += *len;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_write_fn_t. */
+static svn_error_t *
+sasl_write_cb(void *baton, const char *buffer, apr_size_t *len)
+{
+  sasl_baton_t *sasl_baton = baton;
+  int result;
+
+  if (! sasl_baton->write_buf || sasl_baton->write_len == 0)
+    {
+      /* Make sure we don't write too much. */
+      *len = (*len > sasl_baton->maxsize) ? sasl_baton->maxsize : *len;
+      result = sasl_encode(sasl_baton->ctx, buffer, *len, 
+                           &sasl_baton->write_buf, 
+                           &sasl_baton->write_len);
+
+      if (result != SASL_OK)
+        return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                sasl_errdetail(sasl_baton->ctx));
+    }
+
+  do 
+    {
+      unsigned int tmplen = sasl_baton->write_len;
+      SVN_ERR(svn_ra_svn__stream_write(sasl_baton->stream, 
+                                       sasl_baton->write_buf, 
+                                       &tmplen));
+      if (tmplen == 0)
+      {
+        /* The output buffer and its length will be preserved in sasl_baton
+           and will be written out during the next call to this function 
+           (which will have the same arguments). */
+        *len = 0;
+        return SVN_NO_ERROR;
+      }
+      sasl_baton->write_len -= tmplen;
+      sasl_baton->write_buf += tmplen;
+    } 
+  while (sasl_baton->write_len > 0);
+
+  sasl_baton->write_buf = NULL;
+  sasl_baton->write_len = 0;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements ra_svn_timeout_fn_t. */
+static void sasl_timeout_cb(void *baton, apr_interval_time_t interval)
+{
+  sasl_baton_t *sasl_baton = baton;
+  svn_ra_svn__stream_timeout(sasl_baton->stream, interval);
+}
+
+/* Implements ra_svn_pending_fn_t. */
+static svn_boolean_t sasl_pending_cb(void *baton)
+{
+  sasl_baton_t *sasl_baton = baton;
+  return svn_ra_svn__stream_pending(sasl_baton->stream);
+}
+
+svn_error_t *svn_ra_svn__enable_sasl_encryption(svn_ra_svn_conn_t *conn,
+                                                sasl_conn_t *sasl_ctx,
+                                                apr_pool_t *pool)
+{
+  sasl_baton_t *sasl_baton;
+  const sasl_ssf_t *ssfp;
+  int result;
+  const void *maxsize;
+
+  if (! conn->encrypted)
+    {
+      /* Get the strength of the security layer. */
+      result = sasl_getprop(sasl_ctx, SASL_SSF, (void*) &ssfp);
+      if (result != SASL_OK)
+        return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                sasl_errdetail(sasl_ctx));
+
+      if (*ssfp > 0)
+        {
+          /* Flush the connection, as we're about to replace its stream. */
+          SVN_ERR(svn_ra_svn_flush(conn, pool));
+
+          /* Create and initialize the stream baton. */
+          sasl_baton = apr_pcalloc(conn->pool, sizeof(*sasl_baton));
+          sasl_baton->ctx = sasl_ctx;
+
+          /* Find out the maximum input size for sasl_encode. */
+          result = sasl_getprop(sasl_ctx, SASL_MAXOUTBUF, &maxsize);
+          if (result != SASL_OK)
+            return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                    sasl_errdetail(sasl_ctx));
+          sasl_baton->maxsize = *((unsigned int *) maxsize);
+
+          /* If there is any data left in the read buffer at this point,
+             we need to decrypt it. */
+          if (conn->read_end > conn->read_ptr)
+            {
+              result = sasl_decode(sasl_ctx, conn->read_ptr,
+                                   conn->read_end - conn->read_ptr,
+                                   &sasl_baton->read_buf,
+                                   &sasl_baton->read_len);
+              if (result != SASL_OK)
+                return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                                        sasl_errdetail(sasl_ctx));
+              conn->read_end = conn->read_ptr;
+            }
+
+          /* Wrap the existing stream. */
+          sasl_baton->stream = conn->stream;
+
+          conn->stream = svn_ra_svn__stream_create(sasl_baton, sasl_read_cb,
+                                                   sasl_write_cb, 
+                                                   sasl_timeout_cb,
+                                                   sasl_pending_cb, conn->pool);
+          /* Yay, we have a security layer! */
+          conn->encrypted = TRUE;
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *svn_ra_svn__get_addresses(const char **local_addrport, 
                                        const char **remote_addrport,
                                        svn_ra_svn_conn_t *conn,
@@ -562,7 +742,7 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
 
       SVN_ERR(new_sasl_ctx(&sasl_ctx, sess->is_tunneled,
                            hostname, local_addrport, remote_addrport,
-                           pool));
+                           sess->conn->pool));
       SVN_ERR(try_auth(sess,
                        sasl_ctx,
                        creds,
@@ -583,6 +763,8 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
     }
   while (!success);
   svn_pool_destroy(subpool);
+
+  SVN_ERR(svn_ra_svn__enable_sasl_encryption(sess->conn, sasl_ctx, pool));
 
   SVN_ERR(svn_auth_save_credentials(iterstate, pool));
 

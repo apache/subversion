@@ -1394,3 +1394,47 @@ svn_path_check_valid(const char *path, apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+void
+svn_path_splitext(const char **path_root,
+                  const char **path_ext,
+                  const char *path,
+                  apr_pool_t *pool)
+{
+  const char *last_period, *last_slash;
+
+  /* Easy out -- why do all the work when there's no way to report it? */
+  if (! (path_root || path_ext))
+    return;
+
+  /* Do we even have a period in this thing?  And if so, is there
+     anything after it?  We look for the "rightmost" period in the
+     string. */
+  last_period = strrchr(path, '.');
+  if (last_period && (last_period + 1 != '\0'))
+    {
+      /* If we have a period, we need to make sure it occurs in the
+         final path component -- that there's no path separator
+         between the last period and the end of the PATH -- otherwise,
+         it doesn't count.  If we have such a period, we've found our
+         separator. */
+      last_slash = strchr(last_period, '/');
+      if (! last_slash)
+        {
+          if (path_root)
+            *path_root = apr_pstrmemdup(pool, path, 
+                                        (last_period - path + 1) \
+                                           * sizeof(*path));
+          if (path_ext)
+            *path_ext = apr_pstrdup(pool, last_period + 1);
+          return;
+        }
+    }
+  /* If we get here, we never found a suitable separator character, so
+     there's no split. */
+  if (path_root)
+    *path_root = apr_pstrdup(pool, path);
+  if (path_ext)
+    *path_ext = "";
+}
+          

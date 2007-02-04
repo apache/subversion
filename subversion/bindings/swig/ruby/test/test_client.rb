@@ -240,14 +240,10 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.commit(@wc_path)
 
     File.open(path, "w") {|f| f.print(src * 2)}
-    gc_disable do
-      assert_raises(Svn::Error::ClientModified) do
-        ctx.delete(path)
-      end
-      assert_raises(Svn::Error::WcLocked) do
-        ctx.delete(path, true)
-      end
-      ctx.cleanup(@wc_path)
+    assert_raises(Svn::Error::ClientModified) do
+      ctx.delete(path)
+    end
+    assert_nothing_raised do
       ctx.delete(path, true)
       ctx.commit(@wc_path)
     end
@@ -280,14 +276,10 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.commit(@wc_path)
 
     File.open(path, "w") {|f| f.print(src * 2)}
-    gc_disable do
-      assert_raises(Svn::Error::ClientModified) do
-        ctx.rm(path)
-      end
-      assert_raises(Svn::Error::WcLocked) do
-        ctx.rm_f(path)
-      end
-      ctx.cleanup(@wc_path)
+    assert_raises(Svn::Error::ClientModified) do
+      ctx.rm(path)
+    end
+    assert_nothing_raised do
       ctx.rm_f(path)
       ctx.commit(@wc_path)
     end
@@ -932,32 +924,39 @@ class SvnClientTest < Test::Unit::TestCase
 
     ctx.up(@wc_path, rev - 1)
     File.open(path, "w") {|f| f.print(src)}
-    
-    gc_disable do
-      assert_raise(Svn::Error::WC_OBSTRUCTED_UPDATE) do
-        ctx.up(@wc_path, rev)
-      end
+
+    assert_raise(Svn::Error::WC_OBSTRUCTED_UPDATE) do
+      ctx.up(@wc_path, rev)
+    end
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1) do |access|
       assert_raise(Svn::Error::WC_LOCKED) do
         ctx.commit(@wc_path)
       end
+    end
 
-      ctx.set_cancel_func do
-        raise Svn::Error::CANCELLED
-      end
+    ctx.set_cancel_func do
+      raise Svn::Error::CANCELLED
+    end
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1) do |access|
       assert_raise(Svn::Error::CANCELLED) do
         ctx.cleanup(@wc_path)
       end
       assert_raise(Svn::Error::WC_LOCKED) do
         ctx.commit(@wc_path)
       end
+    end
 
-      ctx.set_cancel_func(nil)
-      assert_nothing_raised do
-        ctx.cleanup(@wc_path)
-      end
-      assert_nothing_raised do
-        ctx.commit(@wc_path)
-      end
+    ctx.set_cancel_func(nil)
+    access = Svn::Wc::AdmAccess.open(nil, @wc_path, true, -1)
+    assert_nothing_raised do
+      ctx.cleanup(@wc_path)
+    end
+    assert_nothing_raised do
+      ctx.commit(@wc_path)
+    end
+    assert_raises(Svn::Error::SvnError) do
+      access.close
     end
   end
 

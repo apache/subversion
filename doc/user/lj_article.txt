@@ -236,7 +236,7 @@ For users who simply wish to access Subversion repositories on local
 disk, the client can do this too; no network is required.  The
 "Repository Access" layer (RA) is an abstract API implemented by both
 the DAV and local-access RA libraries.  This is a specific benefit of
-writing a "librarized" version control system; its a big win over
+writing a "librarized" version control system; it's a big win over
 CVS, which has two very different, difficult-to-maintain codepaths for
 local vs. network repository-access.  Feel like writing a new network
 protocol for Subversion?  Just write a new library that implements the

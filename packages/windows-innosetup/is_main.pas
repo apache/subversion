@@ -156,7 +156,7 @@ end;
 
 // ****************************************************************************
 // Name:    ApacheModuleStatus
-// Purpose: Identifying if a module is in a string and returning it's status
+// Purpose: Identifying if a module is in a string and returning its status
 Function ApacheModuleStatus(sLine: String): Integer;
 var
 	iStatus: Integer;

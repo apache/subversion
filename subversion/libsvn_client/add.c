@@ -175,7 +175,8 @@ svn_client__get_auto_props(apr_hash_t **properties,
   /* if mimetype has not been set check the file */
   if (! autoprops.mimetype)
     {
-      SVN_ERR(svn_io_detect_mimetype(&autoprops.mimetype, path, pool));
+      SVN_ERR(svn_io_detect_mimetype2(&autoprops.mimetype, path, 
+                                      ctx->mimetypes_map, pool));
       if (autoprops.mimetype)
         apr_hash_set(autoprops.properties, SVN_PROP_MIME_TYPE,
                      strlen(SVN_PROP_MIME_TYPE), 

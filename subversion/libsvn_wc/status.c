@@ -1021,7 +1021,7 @@ hash_stash(void *baton,
        SVN_INVALID_REVNUM and REPOS_TEXT_STATUS is svn_wc_status_deleted,
        then use DELETED_REV to set PATH's ood_last_cmt_rev field in BATON.
        If DELETED_REV is SVN_INVALID_REVNUM and REPOS_TEXT_STATUS is
-       svn_wc_status_deleted, set PATH's ood_last_cmt_rev to it's parent's
+       svn_wc_status_deleted, set PATH's ood_last_cmt_rev to its parent's
        ood_last_cmt_rev value - see comment below.
 
    If a new struct was added, set the repos_lock to REPOS_LOCK. */

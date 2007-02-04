@@ -2,7 +2,7 @@
  * info-cmd.c -- Display information about a resource
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -46,31 +46,6 @@ svn_cl__info_print_time(apr_time_t atime,
   time_utf8 = svn_time_to_human_cstring(atime, pool);
   SVN_ERR(svn_cmdline_printf(pool, "%s: %s\n", desc, time_utf8));
   return SVN_NO_ERROR;
-}
-
-/* Prints XML header */
-static svn_error_t *
-print_header_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-  /* <?xml version="1.0" encoding="utf-8"?> */
-  svn_xml_make_header(&sb, pool);
-
-  /* "<info>" */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "info", NULL);
-
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
-
-/* Prints XML footer */
-static svn_error_t *
-print_footer_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-  /* "</info>" */
-  svn_xml_make_close_tag(&sb, pool, "info");
-  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 
@@ -533,7 +508,7 @@ svn_cl__info(apr_getopt_t *os,
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        SVN_ERR(print_header_xml(pool));
+        SVN_ERR(svn_cl__xml_print_header("info", pool));
     }
   else
     {
@@ -595,7 +570,7 @@ svn_cl__info(apr_getopt_t *os,
   svn_pool_destroy(subpool);
 
   if (opt_state->xml && (! opt_state->incremental))
-    SVN_ERR(print_footer_xml(pool));
+    SVN_ERR(svn_cl__xml_print_footer("info", pool));
 
   return SVN_NO_ERROR;
 }

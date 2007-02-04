@@ -78,7 +78,7 @@ LOG_SEPARATOR_RE = re.compile('^((%s)+)' % re.escape(LOG_SEPARATOR),
 LOG_LINE_PREFIX = 2 * ' '
 
 # We expect non-localized output from SVN
-os.environ["LC_MESSAGES"] = "C"
+os.environ["LC_ALL"] = "C"
 
 ###############################################################################
 # Support for older Python versions

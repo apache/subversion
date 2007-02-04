@@ -891,6 +891,12 @@ svn_client_export4(svn_revnum_t *result_rev,
             SVN_ERR(svn_client__fetch_externals(eb->externals, TRUE, 
                                                 &use_sleep, ctx, pool));
         }
+      else if (kind == svn_node_none)
+        {
+          return svn_error_createf(SVN_ERR_RA_ILLEGAL_URL, NULL,
+                                   _("URL '%s' doesn't exist"), from);
+        }
+      /* kind == svn_node_unknown not handled */
     }
   else
     {

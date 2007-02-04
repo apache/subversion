@@ -1057,7 +1057,7 @@ svn_wc_transmit_text_deltas2(const char **tempfile,
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
              _("Checksum mismatch for '%s'; "
-               "expected '%s', actual: '%s'"),
+               "expected: '%s', actual: '%s'"),
              svn_path_local_style(svn_wc__text_base_path(path, FALSE, pool),
                                    pool),
              ent->checksum, base_digest_hex);

@@ -350,7 +350,7 @@ another object via a specific property.]
   various states of the props and dirents.  But it's just ONE
   resource.  A configuration, however, is a SET of VCRs.  The VCRs may
   not necessarily be related to each other, either.  A configuration
-  is a flexible thing -- it's VCRs can be tweaked to point to
+  is a flexible thing -- its VCRs can be tweaked to point to
   different VRs, however you want, with no versioning happening in the
   background.  A collection, on the other hand, has a static set of
   dirents; to change them, you have to do a CHECKOUT, CHECKIN, which

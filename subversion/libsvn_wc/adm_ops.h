@@ -65,6 +65,10 @@ extern "C" {
    If REMOVE_MISSING_DIRS is TRUE, then delete the entries for any 
    missing directories.  If NOTIFY_FUNC is non-null, invoke it with 
    NOTIFY_BATON for each missing entry deleted.
+
+   EXCLUDE_PATHS is a hash containing const char * pathnames.  Entries
+   for pathnames contained in EXCLUDE_PATHS are not touched by this
+   function.
 */
 svn_error_t *svn_wc__do_update_cleanup(const char *path,
                                        svn_wc_adm_access_t *adm_access,
@@ -75,6 +79,7 @@ svn_error_t *svn_wc__do_update_cleanup(const char *path,
                                        svn_wc_notify_func2_t notify_func,
                                        void *notify_baton,
                                        svn_boolean_t remove_missing_dirs,
+                                       apr_hash_t *exclude_paths,
                                        apr_pool_t *pool);
 
 

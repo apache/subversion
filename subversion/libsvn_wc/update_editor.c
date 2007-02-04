@@ -113,6 +113,11 @@ struct edit_baton
   svn_cancel_func_t cancel_func;
   void *cancel_baton;
 
+  /* Paths that were skipped during the edit, and therefore shouldn't have
+     their revision/url info updated at the end.
+     The keys are pathnames and the values unspecified. */
+  apr_hash_t *skipped_paths;
+ 
   apr_pool_t *pool;
 };
 
@@ -179,6 +184,10 @@ struct bump_dir_info
 
   /* the path of the directory to bump */
   const char *path;
+
+  /* Set if this directory is skipped due to prop conflicts.
+     This does NOT mean that children are skipped. */
+  svn_boolean_t skipped;
 };
 
 
@@ -339,6 +348,7 @@ make_dir_baton(const char *path,
   bdi->parent = pb ? pb->bump_info : NULL;
   bdi->ref_count = 1;
   bdi->path = apr_pstrdup(eb->pool, d->path);
+  bdi->skipped = FALSE;
 
   /* the parent's bump info has one more referer */
   if (pb)
@@ -494,8 +504,9 @@ maybe_bump_dir_info(struct edit_baton *eb,
 
       /* The refcount is zero, so we remove any 'dead' entries from
          the directory and mark it 'complete'.  */
-      SVN_ERR(complete_directory(eb, bdi->path, 
-                                 bdi->parent ? FALSE : TRUE, pool));
+      if (! bdi->skipped)
+        SVN_ERR(complete_directory(eb, bdi->path, 
+                                   bdi->parent ? FALSE : TRUE, pool));
     }
   /* we exited the for loop because there are no more parents */
 
@@ -526,6 +537,9 @@ struct file_baton
 
   /* Set if this file is new. */
   svn_boolean_t added;
+
+  /* Set if this file is skipped because it was in conflict. */
+  svn_boolean_t skipped;
 
   /* Set if an unversioned file of the same name already existed in
      this directory. */
@@ -1290,6 +1304,7 @@ open_directory(const char *path,
 {
   struct dir_baton *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
+  const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
   apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_REVISION |
     SVN_WC__ENTRY_MODIFY_URL | SVN_WC__ENTRY_MODIFY_INCOMPLETE;
@@ -1302,6 +1317,35 @@ open_directory(const char *path,
 
   struct dir_baton *db = make_dir_baton(path, eb, pb, FALSE, pool);
   *child_baton = db;
+
+  /* Skip this directory if it has property conflicts. */
+  SVN_ERR(svn_wc_entry(&entry, db->path, eb->adm_access, FALSE, pool));
+  if (entry)
+    {
+      /* Text conflicts can't happen for a directory, but we need to supply
+         both flags. */
+      svn_boolean_t text_conflicted;
+      svn_boolean_t prop_conflicted;
+
+      SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,
+                                  db->path, entry, pool));
+      assert(! text_conflicted);
+      if (prop_conflicted)
+        {
+          db->bump_info->skipped = TRUE;
+          apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, db->path),
+                       APR_HASH_KEY_STRING, (void*)1);
+          if (eb->notify_func)
+            {
+              svn_wc_notify_t *notify
+                = svn_wc_create_notify(db->path, svn_wc_notify_skip, pool);
+              notify->kind = svn_node_dir;
+              notify->prop_state = svn_wc_notify_state_conflicted;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
+          return SVN_NO_ERROR;
+        }
+    }
 
   /* Mark directory as being at target_revision and URL, but incomplete. */
   tmp_entry.revision = *(eb->target_revision);
@@ -1336,6 +1380,9 @@ change_dir_prop(void *dir_baton,
 {
   svn_prop_t *propchange;
   struct dir_baton *db = dir_baton;
+
+  if (db->bump_info->skipped)
+    return SVN_NO_ERROR;
 
   propchange = apr_array_push(db->propchanges);
   propchange->name = apr_pstrdup(db->pool, name);
@@ -1468,11 +1515,12 @@ close_directory(void *dir_baton,
   SVN_ERR(maybe_bump_dir_info(db->edit_baton, db->bump_info, db->pool));
 
   /* Notify of any prop changes on this directory -- but do nothing
-     if it's an added directory, because notification has already
+     if it's an added or skipped directory, because notification has already
      happened in that case - unless the add was obstructed by a dir
      scheduled for addition without history, in which case we handle
      notification here). */
-  if ((db->add_existed || (! db->added)) && (db->edit_baton->notify_func))
+  if (! db->bump_info->skipped && (db->add_existed || (! db->added))
+      && (db->edit_baton->notify_func))
     {
       svn_wc_notify_t *notify
         = svn_wc_create_notify(db->path,
@@ -1663,6 +1711,35 @@ add_or_open_file(const char *path,
                              fb->name,
                              svn_path_local_style(pb->path, pool));
   
+  /* If we're not adding and the file is in conflict, don't mess with it. */
+  if (! adding)
+    {
+      svn_boolean_t text_conflicted;
+      svn_boolean_t prop_conflicted;
+
+      SVN_ERR(svn_wc_conflicted_p(&text_conflicted, &prop_conflicted,
+                                  pb->path, entry, pool));
+      if (text_conflicted || prop_conflicted)
+        {
+          fb->skipped = TRUE;
+          apr_hash_set(eb->skipped_paths, apr_pstrdup(eb->pool, fb->path),
+                       APR_HASH_KEY_STRING, (void*)1);
+          if (eb->notify_func)
+            {
+              svn_wc_notify_t *notify
+                = svn_wc_create_notify(fb->path, svn_wc_notify_skip, pool);
+              notify->kind = svn_node_file;
+              notify->content_state = text_conflicted
+                                      ? svn_wc_notify_state_conflicted
+                                      : svn_wc_notify_state_unknown;
+              notify->prop_state = prop_conflicted
+                                   ? svn_wc_notify_state_conflicted
+                                   : svn_wc_notify_state_unknown;
+              (*eb->notify_func)(eb->notify_baton, notify, pool);
+            }
+        }
+    }
+
   /* ### todo:  right now the incoming copyfrom* args are being
      completely ignored!  Someday the editor-driver may expect us to
      support this optimization;  when that happens, this func needs to
@@ -1716,6 +1793,13 @@ apply_textdelta(void *file_baton,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *ent;
   svn_boolean_t replaced;
+
+  if (fb->skipped)
+    {
+      *handler = svn_delta_noop_window_handler;
+      *handler_baton = NULL;
+      return SVN_NO_ERROR;
+    }
 
   /* Open the text base for reading, unless this is a checkout. */
   hb->source = NULL;
@@ -1869,6 +1953,9 @@ change_file_prop(void *file_baton,
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
   svn_prop_t *propchange;
+
+  if (fb->skipped)
+    return SVN_NO_ERROR;
 
   /* Push a new propchange to the file baton's array of propchanges */
   propchange = apr_array_push(fb->propchanges);
@@ -2430,6 +2517,12 @@ close_file(void *file_baton,
   svn_wc_adm_access_t *adm_access;
   svn_stringbuf_t *log_accum;
 
+  if (fb->skipped)
+    {
+      SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
+      return SVN_NO_ERROR;
+    }
+
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
   if (fb->text_changed && text_checksum)
     {
@@ -2560,7 +2653,7 @@ close_edit(void *edit_baton,
                                       *(eb->target_revision),
                                       eb->notify_func,
                                       eb->notify_baton,
-                                      TRUE,
+                                      TRUE, eb->skipped_paths,
                                       eb->pool));
 
   /* The edit is over, free its pool.
@@ -2634,6 +2727,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->cancel_func              = cancel_func;
   eb->cancel_baton             = cancel_baton;
   eb->allow_unver_obstructions = allow_unver_obstructions;
+  eb->skipped_paths            = apr_hash_make(subpool);
 
   /* Construct an editor. */
   tree_editor->set_target_revision = set_target_revision;

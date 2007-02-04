@@ -605,7 +605,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the --strict option to disable these beautifications (useful,\n"
      "  for example, when redirecting binary property values to a file).\n"),
     {'R', svn_cl__depth_opt, 'r', svn_cl__revprop_opt, svn_cl__strict_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__xml_opt} },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
     ("List all properties on files, dirs, or revisions.\n"
@@ -616,8 +616,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     revision the target is first looked up.\n"
      "  2. Lists unversioned remote props on repos revision.\n"
      "     TARGET only determines which repository to access.\n"),
+<<<<<<< .working
     {'v', 'R', svn_cl__depth_opt, 'r', 'q', svn_cl__revprop_opt,
      SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+=======
+    {'v', 'R', 'r', 'q', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
+     svn_cl__config_dir_opt, svn_cl__xml_opt} },
+>>>>>>> .merge-right.r23331
 
   { "propset", svn_cl__propset, {"pset", "ps"}, N_
     ("Set the value of a property on files, dirs, or revisions.\n"
@@ -1524,10 +1529,22 @@ main(int argc, const char *argv[])
     svn_config_set(cfg, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
 
-  /* Update auto-props-enable option for add/import commands */
+  /* Update auto-props-enable option, and populate the MIME types map,
+     for add/import commands */
   if (subcommand->cmd_func == svn_cl__add
       || subcommand->cmd_func == svn_cl__import)
     {
+      const char *mimetypes_file;
+      svn_config_get(cfg, &mimetypes_file,
+                     SVN_CONFIG_SECTION_MISCELLANY,
+                     SVN_CONFIG_OPTION_MIMETYPES_FILE, FALSE);
+      if (mimetypes_file && *mimetypes_file)
+        {
+          if ((err = svn_io_parse_mimetypes_file(&(ctx->mimetypes_map),
+                                                 mimetypes_file, pool)))
+            svn_handle_error2(err, stderr, TRUE, "svn: ");
+        }
+
       if (opt_state.autoprops)
         {
           svn_config_set_bool(cfg, SVN_CONFIG_SECTION_MISCELLANY,

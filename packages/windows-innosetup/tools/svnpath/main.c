@@ -690,7 +690,7 @@ svn_svnpath_exists (char cPath[255])
 
     dwLenPath = GetEnvironmentVariable("PATH", cSysPath, 1024);
 
-    /* Split %PATH% to it's sub paths and compare each of them with cPath. */
+    /* Split %PATH% to its sub paths and compare each of them with cPath. */
     if (dwLenPath)
       {
         pcSubPath = strtok (cSysPath,";");

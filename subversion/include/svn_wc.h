@@ -2252,8 +2252,8 @@ svn_error_t *svn_wc_add(const char *path,
  * represented by the copyfrom args, see below.  The new file will
  * be scheduled for addition with history.
  *
- * Automatically remove @a new_text_path and @a new_text_path upon
- * successful completion.
+ * Automatically remove @a new_text_base_path and @a new_text_path
+ * upon successful completion.
  *
  * @a new_text_path and @a new_props may be null, in which case
  * the working copy text and props are taken from the base files with

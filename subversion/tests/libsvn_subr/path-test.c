@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include "svn_pools.h"
 #include "svn_path.h"
 #include <apr_general.h>
 
@@ -1364,6 +1365,84 @@ test_get_longest_ancestor(const char **msg,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+test_splitext(const char **msg,
+              svn_boolean_t msg_only,
+              svn_test_opts_t *opts,
+              apr_pool_t *pool)
+{
+  apr_size_t i;
+  apr_pool_t *subpool = svn_pool_create(pool);
+
+  /* Paths to test and their expected results. */
+  struct { 
+    const char *path;
+    const char *path_root;
+    const char *path_ext;
+    svn_boolean_t result;
+  } tests[] = {
+    { "no-ext",                    "no-ext",                 "" },
+    { "test-file.py",              "test-file.",             "py" },
+    { "period.file.ext",           "period.file.",           "ext" },
+    { "multi-component/file.txt",  "multi-component/file.",  "txt" },
+    { "yep.still/no-ext",          "yep.still/no-ext",       "" },
+    { "folder.with/period.log",    "folder.with/period.",    "log" },
+    { "period.",                   "period.",                "" },
+    { "file.ends-with/period.",    "file.ends-with/period.", "" },
+    { "two-periods..txt",          "two-periods..",          "txt" },
+    { "",                          "",                       "" },
+  };
+
+  *msg = "test svn_path_splitext";
+
+  if (msg_only)
+    return SVN_NO_ERROR;
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+    {
+      const char *path = tests[i].path;
+      const char *path_root;
+      const char *path_ext;
+
+      svn_pool_clear(subpool);
+      
+      /* First, we'll try splitting and fetching both root and
+         extension to see if they match our expected results. */
+      svn_path_splitext(&path_root, &path_ext, path, subpool);
+      if ((strcmp(tests[i].path_root, path_root))
+          || (strcmp(tests[i].path_ext, path_ext)))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_splitext (%s) returned ('%s', '%s') "
+           "instead of ('%s', '%s')",
+           tests[i].path, path_root, path_ext, 
+           tests[i].path_root, tests[i].path_ext);
+
+      /* Now, let's only fetch the root. */
+      svn_path_splitext(&path_root, NULL, path, subpool);
+      if (strcmp(tests[i].path_root, path_root))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_splitext (%s) with a NULL path_ext returned '%s' "
+           "for the path_root instead of '%s'",
+           tests[i].path, path_root, tests[i].path_root);
+
+      /* Next, let's only fetch the extension. */
+      svn_path_splitext(NULL, &path_ext, path, subpool);
+      if ((strcmp(tests[i].path_root, path_root))
+          || (strcmp(tests[i].path_ext, path_ext)))
+        return svn_error_createf
+          (SVN_ERR_TEST_FAILED, NULL,
+           "svn_path_splitext (%s) with a NULL path_root returned '%s' "
+           "for the path_ext instead of '%s'",
+           tests[i].path, path_ext, tests[i].path_ext);
+    }
+  svn_pool_destroy(subpool);
+  return SVN_NO_ERROR;
+}
+
+
 /* local define to support XFail-ing tests on Windows/Cygwin only */
 #if defined(WIN32) || defined(__CYGWIN__)
 #define WINDOWS_OR_CYGWIN TRUE
@@ -1398,5 +1477,6 @@ struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS(test_is_single_path_component),
     SVN_TEST_PASS(test_compare_paths),
     SVN_TEST_PASS(test_get_longest_ancestor),
+    SVN_TEST_PASS(test_splitext),
     SVN_TEST_NULL
   };

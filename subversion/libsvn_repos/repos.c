@@ -1,7 +1,7 @@
 /* repos.c : repository creation; shared and exclusive repository locking
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1460,6 +1460,20 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       "### library for authentication. Default is false."
       APR_EOL_STR
       "# use-sasl = true"
+      APR_EOL_STR
+      "### These options specify the desired strength of the security layer"
+      APR_EOL_STR
+      "### that you want SASL to provide. 0 means no encryption, 1 means"
+      APR_EOL_STR
+      "### integrity-checking only, values larger than 1 are correlated"
+      APR_EOL_STR
+      "### to the effective key length for encryption (e.g. 128 means 128-bit"
+      APR_EOL_STR
+      "### encryption). The values below are the defaults."
+      APR_EOL_STR
+      "# min-encryption = 0"
+      APR_EOL_STR
+      "# max-encryption = 256"
 #endif
       APR_EOL_STR;
 

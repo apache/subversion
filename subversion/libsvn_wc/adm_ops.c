@@ -68,6 +68,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
               void *notify_baton,
               svn_boolean_t remove_missing_dirs,
               svn_depth_t depth,
+              apr_hash_t *exclude_paths,
               apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -80,15 +81,18 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
   SVN_ERR(svn_wc_entries_read(&entries, dirpath, TRUE, pool));
 
   /* Tweak "this_dir" */
-  SVN_ERR(svn_wc__tweak_entry(entries, SVN_WC_ENTRY_THIS_DIR,
-                              base_url, repos, new_rev, FALSE,
-                              &write_required,
-                              svn_wc_adm_access_pool(dirpath)));
+  if (! apr_hash_get(exclude_paths, svn_wc_adm_access_path(dirpath),
+                     APR_HASH_KEY_STRING))
+    SVN_ERR(svn_wc__tweak_entry(entries, SVN_WC_ENTRY_THIS_DIR,
+                                base_url, repos, new_rev, FALSE,
+                                &write_required,
+                                svn_wc_adm_access_pool(dirpath)));
 
   if (depth == svn_depth_files
       || depth == svn_depth_immediates
       || depth == svn_depth_infinity)
     {
+<<<<<<< .working
       for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
       {
         const void *key;
@@ -106,29 +110,57 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
         /* Ignore the "this dir" entry. */
         if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
           continue;
+=======
+      const void *key;
+      void *val;
+      const char *name;
+      svn_wc_entry_t *current_entry;
+      const char *child_path;
+      const char *child_url = NULL;
+>>>>>>> .merge-right.r23331
+      svn_boolean_t excluded;
 
+<<<<<<< .working
         /* Derive the new URL for the current (child) entry */
         if (base_url)
           child_url = svn_path_url_add_component(base_url, name, subpool);
+=======
+      svn_pool_clear(subpool);
+
+      apr_hash_this(hi, &key, NULL, &val);
+      name = key;
+      current_entry = val;
+
+      /* Ignore the "this dir" entry. */
+      if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
+        continue;
+
+      child_path = svn_path_join(svn_wc_adm_access_path(dirpath), name,
+                                 subpool);
+      excluded = (apr_hash_get(exclude_paths, child_path,
+                               APR_HASH_KEY_STRING) != NULL);
+
+      /* Derive the new URL for the current (child) entry */
+      if (base_url)
+        child_url = svn_path_url_add_component(base_url, name, subpool);
+>>>>>>> .merge-right.r23331
       
         /* If a file, or deleted or absent dir, then tweak the entry
            but don't recurse. */ 
         if ((current_entry->kind == svn_node_file)
             || (current_entry->deleted || current_entry->absent))
         {
-          SVN_ERR(svn_wc__tweak_entry(entries, name,
-                                      child_url, repos, new_rev, TRUE,
-                                      &write_required,
-                                      svn_wc_adm_access_pool(dirpath)));
+          if (! excluded)
+            SVN_ERR(svn_wc__tweak_entry(entries, name,
+                                        child_url, repos, new_rev, TRUE,
+                                        &write_required,
+                                        svn_wc_adm_access_pool(dirpath)));
         }
       
         /* If a directory and recursive... */
         else if ((depth == svn_depth_infinity)
                  && (current_entry->kind == svn_node_dir))
         {
-          const char *child_path
-            = svn_path_join(svn_wc_adm_access_path(dirpath), name, subpool);
-
           /* If the directory is 'missing', remove it.  This is safe as 
              long as this function is only called as a helper to 
              svn_wc__do_update_cleanup, since the update will already have 
@@ -138,6 +170,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
           {
             if (current_entry->schedule != svn_wc_schedule_add) 
             {
+<<<<<<< .working
               svn_wc__entry_remove(entries, name);
               if (notify_func)
               {
@@ -147,12 +180,29 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                 notify->kind = current_entry->kind;
                 (* notify_func)(notify_baton, notify, subpool);
               }
+=======
+              if (current_entry->schedule != svn_wc_schedule_add
+                  && !excluded)
+                {
+                  svn_wc__entry_remove(entries, name);
+                  if (notify_func)
+                    {
+                      notify = svn_wc_create_notify(child_path,
+                                                    svn_wc_notify_delete,
+                                                    subpool);
+                      notify->kind = current_entry->kind;
+                      (* notify_func)(notify_baton, notify, subpool);
+                    }
+                }
+              /* Else if missing item is schedule-add, do nothing. */
+>>>>>>> .merge-right.r23331
             }
             /* Else if missing item is schedule-add, do nothing. */
           }
 
           /* Not missing, deleted, or absent, so recurse. */
           else
+<<<<<<< .working
           {
             svn_wc_adm_access_t *child_access;
             SVN_ERR(svn_wc_adm_retrieve(&child_access, dirpath, child_path,
@@ -161,6 +211,17 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                     (child_access, child_url, repos, new_rev, notify_func, 
                      notify_baton, remove_missing_dirs, depth, subpool));
           }
+=======
+            {
+              svn_wc_adm_access_t *child_access;
+              SVN_ERR(svn_wc_adm_retrieve(&child_access, dirpath, child_path,
+                                          subpool));
+              SVN_ERR(tweak_entries 
+                      (child_access, child_url, repos, new_rev, notify_func, 
+                       notify_baton, remove_missing_dirs, recurse,
+                       exclude_paths, subpool));
+            }
+>>>>>>> .merge-right.r23331
         }
       }
     }
@@ -221,6 +282,7 @@ svn_wc__do_update_cleanup(const char *path,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
                           svn_boolean_t remove_missing_dirs,
+                          apr_hash_t *exclude_paths,
                           apr_pool_t *pool)
 {
   apr_hash_t *entries;
@@ -236,6 +298,8 @@ svn_wc__do_update_cleanup(const char *path,
       const char *parent, *base_name;
       svn_wc_adm_access_t *dir_access;
       svn_boolean_t write_required = FALSE;
+      if (apr_hash_get(exclude_paths, path, APR_HASH_KEY_STRING))
+        return SVN_NO_ERROR;
       svn_path_split(path, &parent, &base_name, pool);
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, parent, pool));
       SVN_ERR(svn_wc_entries_read(&entries, dir_access, TRUE, pool));
@@ -256,7 +320,11 @@ svn_wc__do_update_cleanup(const char *path,
 
       SVN_ERR(tweak_entries(dir_access, base_url, repos, new_revision,
                             notify_func, notify_baton, remove_missing_dirs,
+<<<<<<< .working
                             depth, pool));
+=======
+                            recursive, exclude_paths, pool));
+>>>>>>> .merge-right.r23331
     }
 
   else
@@ -1595,7 +1663,8 @@ svn_wc_add2(const char *path,
                                             svn_depth_infinity, new_url,
                                             parent_entry->repos,
                                             SVN_INVALID_REVNUM, NULL, 
-                                            NULL, FALSE, pool));
+                                            NULL, FALSE, apr_hash_make(pool),
+                                            pool));
 
           /* Recursively add the 'copied' existence flag as well!  */
           SVN_ERR(mark_tree(adm_access, SVN_WC__ENTRY_MODIFY_COPIED,

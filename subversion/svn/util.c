@@ -4,7 +4,7 @@
  * in here.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -797,6 +797,34 @@ svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
       svn_xml_escape_cdata_cstring(sb, string, pool);
       svn_xml_make_close_tag(sb, pool, tagname);
     }
+}
+
+
+svn_error_t *
+svn_cl__xml_print_header(const char *tagname,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+
+  /* <?xml version="1.0"?> */
+  svn_xml_make_header(&sb, pool);
+
+  /* "<TAGNAME>" */
+  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, tagname, NULL);
+
+  return svn_cl__error_checked_fputs(sb->data, stdout);
+}
+
+
+svn_error_t *
+svn_cl__xml_print_footer(const char *tagname,
+                         apr_pool_t *pool)
+{
+  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
+
+  /* "</TAGNAME>" */
+  svn_xml_make_close_tag(&sb, pool, tagname);
+  return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
 

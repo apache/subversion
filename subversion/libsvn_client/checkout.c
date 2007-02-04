@@ -54,7 +54,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
 {
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   svn_error_t *err = NULL;
   svn_revnum_t revnum;
   svn_boolean_t sleep_here = FALSE;
@@ -195,6 +194,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     *use_sleep = TRUE;
   }      
 
+<<<<<<< .working
   /* We handle externals after the initial checkout is complete, so
      that fetching external items (and any errors therefrom) doesn't
      delay the primary checkout.
@@ -204,6 +204,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
   */
   SVN_ERR(svn_client__handle_externals(traversal_info, FALSE, use_sleep,
                                        ctx, pool));
+=======
+>>>>>>> .merge-right.r23331
   if (sleep_here)
     svn_sleep_for_timestamps();
 

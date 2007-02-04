@@ -863,27 +863,22 @@ svn_client_revprop_get(const char *propname,
 }
 
 
-/* Push a new 'svn_client_proplist_item_t *' item onto LIST.
- * Allocate the item itself in POOL; set item->node_name to an
- * 'svn_stringbuf_t *' created from PATH and also allocated in POOL,
- * and set item->prop_hash to PROP_HASH.
+/* Call RECEIVER for the given PATH and PROP_HASH.
  *
  * If PROP_HASH is null or has zero count, do nothing.
  */
-static void
-push_props_on_list(apr_array_header_t *list,
-                   apr_hash_t *prop_hash,
-                   const char *path,
-                   apr_pool_t *pool)
+static svn_error_t*
+call_receiver(const char *path,
+              apr_hash_t *prop_hash,
+              svn_proplist_receiver_t receiver,
+              void *receiver_baton,
+              apr_pool_t *pool)
 {
   if (prop_hash && apr_hash_count(prop_hash))
-    {
-      svn_client_proplist_item_t *item = apr_palloc(pool, sizeof(*item));
-      item->node_name = svn_stringbuf_create(path, pool);
-      item->prop_hash = prop_hash;
-      
-      APR_ARRAY_PUSH(list, svn_client_proplist_item_t *) = item;
-    }
+    SVN_ERR(receiver(receiver_baton, svn_stringbuf_create(path, pool),
+                     prop_hash, pool));
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -904,13 +899,14 @@ push_props_on_list(apr_array_header_t *list,
  * If RECURSE is true and KIND is svn_node_dir, then recurse.
  */
 static svn_error_t *
-remote_proplist(apr_array_header_t *proplist,
-                const char *target_prefix,
+remote_proplist(const char *target_prefix,
                 const char *target_relative,
                 svn_node_kind_t kind,
                 svn_revnum_t revnum,
                 svn_ra_session_t *ra_session,
                 svn_boolean_t recurse,
+                svn_proplist_receiver_t receiver,
+                void *receiver_baton,
                 apr_pool_t *pool,
                 apr_pool_t *scratchpool)
 {
@@ -962,11 +958,11 @@ remote_proplist(apr_array_header_t *proplist,
           apr_hash_set(final_hash, name, klen, value);
         }
     }
-  
-  push_props_on_list(proplist, final_hash,
-                     svn_path_join(target_prefix, target_relative,
-                                   scratchpool),
-                     pool);
+ 
+  call_receiver(svn_path_join(target_prefix, target_relative,
+                              scratchpool),
+                final_hash, receiver, receiver_baton,
+                pool);
   
   if (recurse && (kind == svn_node_dir) && (apr_hash_count(dirents) > 0))
     {
@@ -991,13 +987,14 @@ remote_proplist(apr_array_header_t *proplist,
           new_target_relative = svn_path_join(target_relative,
                                               this_name, subpool);
 
-          SVN_ERR(remote_proplist(proplist,
-                                  target_prefix,
+          SVN_ERR(remote_proplist(target_prefix,
                                   new_target_relative,
                                   this_ent->kind,
                                   revnum,
                                   ra_session,
                                   recurse,
+                                  receiver,
+                                  receiver_baton,
                                   pool,
                                   subpool));
         }
@@ -1009,36 +1006,13 @@ remote_proplist(apr_array_header_t *proplist,
 }
 
 
-/* Push an 'svn_client_proplist_item_t *' item onto PROP_LIST, where
- * item->node_name is an 'svn_stringbuf_t *' created from NODE_NAME,
- * and item->prop_hash is the property hash for NODE_NAME.
- *
- * If PRISTINE is true, get base props, else get working props.
- *
- * Allocate the item and its contents in POOL.
- */
-static svn_error_t *
-add_to_proplist(apr_array_header_t *prop_list,
-                const char *node_name,
-                svn_wc_adm_access_t *adm_access,
-                svn_boolean_t pristine,
-                apr_pool_t *pool)
-{
-  apr_hash_t *hash;
-
-  SVN_ERR(pristine_or_working_props(&hash, node_name, adm_access, pristine,
-                                    pool));
-  push_props_on_list(prop_list, hash, node_name, pool);
-
-  return SVN_NO_ERROR;
-}
-
 /* A baton for proplist_walk_cb. */
 struct proplist_walk_baton
 {
   svn_boolean_t pristine;  /* Select base rather than working props. */
   svn_wc_adm_access_t *base_access;  /* Access for the tree being walked. */
-  apr_array_header_t *props;  /* Out: array of svn_client_proplist_item_t. */
+  svn_proplist_receiver_t receiver;  /* Proplist receiver to call. */
+  void *receiver_baton;    /* Baton for the proplist receiver. */
 };
 
 /* An entries-walk callback for svn_client_proplist.
@@ -1055,6 +1029,7 @@ proplist_walk_cb(const char *path,
                  apr_pool_t *pool)
 {
   struct proplist_walk_baton *wb = walk_baton;
+  apr_hash_t *hash;
 
   /* We're going to receive dirents twice;  we want to ignore the
      first one (where it's a child of a parent dir), and only use
@@ -1068,21 +1043,24 @@ proplist_walk_cb(const char *path,
       == (wb->pristine ? svn_wc_schedule_add : svn_wc_schedule_delete))
     return SVN_NO_ERROR;
 
-  path = apr_pstrdup(wb->props->pool, path);
-  SVN_ERR(add_to_proplist(wb->props, path, wb->base_access,
-                          wb->pristine, wb->props->pool));
+  path = apr_pstrdup(pool, path);
+
+  SVN_ERR(pristine_or_working_props(&hash, path, wb->base_access,
+                                    wb->pristine, pool));
+  SVN_ERR(call_receiver(path, hash, wb->receiver, wb->receiver_baton,
+                        pool));
 
   return SVN_NO_ERROR;
 }
 
 
-/* Note: this implementation is very similar to svn_client_propget. */
 svn_error_t *
-svn_client_proplist2(apr_array_header_t **props,
-                     const char *target,
+svn_client_proplist3(const char *target,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *revision,
                      svn_boolean_t recurse,
+                     svn_proplist_receiver_t receiver,
+                     void *receiver_baton,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
@@ -1091,8 +1069,6 @@ svn_client_proplist2(apr_array_header_t **props,
   const char *utarget;  /* target, or the url for target */
   const char *url;
   svn_revnum_t revnum;
-
-  *props = apr_array_make(pool, 5, sizeof(svn_client_proplist_item_t *));
 
   SVN_ERR(maybe_convert_to_url(&utarget, target, revision, pool));
 
@@ -1111,9 +1087,10 @@ svn_client_proplist2(apr_array_header_t **props,
       
       SVN_ERR(svn_ra_check_path(ra_session, "", revnum, &kind, pool));
 
-      SVN_ERR(remote_proplist(*props, url, "",
+      SVN_ERR(remote_proplist(url, "",
                               kind, revnum, ra_session,
-                              recurse, pool, subpool));
+                              recurse, receiver, receiver_baton,
+                              pool, subpool));
       svn_pool_destroy(subpool);
     }
   else  /* working copy path */
@@ -1152,19 +1129,79 @@ svn_client_proplist2(apr_array_header_t **props,
           struct proplist_walk_baton wb;
 
           wb.base_access = adm_access;
-          wb.props = *props;
           wb.pristine = pristine;
+          wb.receiver = receiver;
+          wb.receiver_baton = receiver_baton;
 
           SVN_ERR(svn_wc_walk_entries2(target, adm_access,
                                        &walk_callbacks, &wb, FALSE,
                                        ctx->cancel_func, ctx->cancel_baton,
                                        pool));
         }
-      else 
-        SVN_ERR(add_to_proplist(*props, target, adm_access, pristine, pool));
+      else
+        {
+          apr_hash_t *hash;
+
+          SVN_ERR(pristine_or_working_props(&hash, target, adm_access,
+                                            pristine, pool));
+          SVN_ERR(call_receiver(target, hash, receiver, receiver_baton, pool));
+        }
       
       SVN_ERR(svn_wc_adm_close(adm_access));
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Receiver baton used by proplist2() */
+struct proplist_receiver_baton {
+  apr_array_header_t *props;
+  apr_pool_t *pool;
+};
+
+/* Receiver function used by proplist2(). */
+static svn_error_t *
+proplist_receiver_cb(void *baton,
+                     svn_stringbuf_t *path,
+                     apr_hash_t *prop_hash,
+                     apr_pool_t *pool)
+{
+  struct proplist_receiver_baton *pl_baton = 
+    (struct proplist_receiver_baton *) baton;
+  svn_client_proplist_item_t *tmp_item = apr_palloc(pool, sizeof(*tmp_item));
+  svn_client_proplist_item_t *item;
+
+  /* Because the pool passed to the receiver function is likely to be a 
+     temporary pool of some kind, we need to make copies of *path and
+     *prop_hash in the pool provided by the baton. */
+  tmp_item->node_name = path;
+  tmp_item->prop_hash = prop_hash;
+
+  item = svn_client_proplist_item_dup(tmp_item, pl_baton->pool);
+
+  APR_ARRAY_PUSH(pl_baton->props, const svn_client_proplist_item_t *) = item;
+
+  return SVN_NO_ERROR;
+}
+
+/* Note: this implementation is very similar to svn_client_propget. */
+svn_error_t *
+svn_client_proplist2(apr_array_header_t **props,
+                     const char *target,
+                     const svn_opt_revision_t *peg_revision,
+                     const svn_opt_revision_t *revision,
+                     svn_boolean_t recurse,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *pool)
+{
+  struct proplist_receiver_baton pl_baton;
+
+  *props = apr_array_make(pool, 5, sizeof(svn_client_proplist_item_t *));
+  pl_baton.props = *props;
+  pl_baton.pool = pool;
+
+  SVN_ERR(svn_client_proplist3(target, peg_revision, revision, recurse,
+                               proplist_receiver_cb, &pl_baton, ctx, pool));
 
   return SVN_NO_ERROR;
 }

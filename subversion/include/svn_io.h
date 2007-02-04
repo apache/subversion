@@ -438,8 +438,8 @@ svn_error_t *svn_io_files_contents_same_p(svn_boolean_t *same,
                                           const char *file2,
                                           apr_pool_t *pool);
 
-/** Create file at @a file with contents @a contents.
- * will be created.  Path @a file is utf8-encoded.
+/** Create file at utf8-encoded @a file with contents @a contents.
+ * @a file must not already exist.
  * Use @a pool for memory allocations.
  */
 svn_error_t *svn_io_file_create(const char *file,
@@ -986,16 +986,46 @@ svn_error_t *svn_io_run_diff3(const char *dir,
                               apr_pool_t *pool);
 
 
+/** Parse utf8-encoded @a mimetypes_file as a MIME types file (such as
+ * is provided with Apache HTTP Server), and set @a *type_map to a
+ * hash mapping <tt>const char *</tt> filename extensions to 
+ * <tt>const char *</tt> MIME types.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_io_parse_mimetypes_file(apr_hash_t **type_map,
+                                         const char *mimetypes_file,
+                                         apr_pool_t *pool);
+
+
 /** Examine utf8-encoded @a file to determine if it can be described by a
  * known (as in, known by this function) Multipurpose Internet Mail
  * Extension (MIME) type.  If so, set @a *mimetype to a character string
- * describing the MIME type, else set it to @c NULL.  Use @a pool for any
- * necessary allocations.
+ * describing the MIME type, else set it to @c NULL.  
+ *
+ * If not @c NULL, @a mimetype_map is a hash mapping <tt>const char *</tt>
+ * filename extensions to <tt>const char *</tt> MIME types, and is the
+ * first source consulted regarding @a file's MIME type.
+ *
+ * Use @a pool for any necessary allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_io_detect_mimetype2(const char **mimetype,
+                                     const char *file,
+                                     apr_hash_t *mimetype_map,
+                                     apr_pool_t *pool);
+                                      
+
+/** Like svn_io_detect_mimetype2, but with @a mimetypes_map set to 
+ * @c NULL.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API
  */
 svn_error_t *svn_io_detect_mimetype(const char **mimetype,
                                     const char *file,
                                     apr_pool_t *pool);
-                                      
+
 
 /** Wrapper for apr_file_open(), which see.  @a fname is utf8-encoded. */
 svn_error_t *

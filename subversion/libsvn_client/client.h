@@ -764,8 +764,8 @@ svn_client__do_commit(const char *base_url,
 /*** Externals (Modules) ***/
 
 /* Handle changes to the svn:externals property in the tree traversed
-   by TRAVERSAL_INFO (obtained from svn_wc_get_checkout_editor,
-   svn_wc_get_update_editor, svn_wc_get_switch_editor, for example).
+   by TRAVERSAL_INFO (obtained from svn_wc_get_update_editor or
+   svn_wc_get_switch_editor, for example).
 
    For each changed value of the property, discover the nature of the
    change and behave appropriately -- either check a new "external"

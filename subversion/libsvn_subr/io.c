@@ -211,7 +211,7 @@ file_open(apr_file_t **f,
   apr_status_t apr_err;
   if (flag & APR_CREATE)
     {
-      /* If we are trying to create a file on OS400 ensure it's CCSID is
+      /* If we are trying to create a file on OS400 ensure its CCSID is
        * 1208. */  
       apr_err = apr_file_open(f, fname, flag & ~APR_BINARY, perm, pool);
 
@@ -2388,10 +2388,84 @@ svn_io_run_diff3(const char *dir,
                             merged, diff3_cmd, NULL, pool);
 }
 
+
 svn_error_t *
-svn_io_detect_mimetype(const char **mimetype,
-                       const char *file,
-                       apr_pool_t *pool)
+svn_io_parse_mimetypes_file(apr_hash_t **type_map,
+                            const char *mimetypes_file,
+                            apr_pool_t *pool)
+{
+  svn_error_t *err = SVN_NO_ERROR;
+  apr_hash_t *types = apr_hash_make(pool);
+  svn_boolean_t eof = FALSE;
+  svn_stringbuf_t *buf;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_file_t *types_file;
+  svn_stream_t *mimetypes_stream;
+
+  SVN_ERR(svn_io_file_open(&types_file, mimetypes_file, 
+                           APR_READ, APR_OS_DEFAULT, pool));
+  mimetypes_stream = svn_stream_from_aprfile2(types_file, FALSE, pool);
+
+  while (1)
+    {
+      apr_array_header_t *tokens;
+      const char *type;
+      int i;
+
+      svn_pool_clear(subpool);
+
+      /* Read a line. */
+      if ((err = svn_stream_readline(mimetypes_stream, &buf,
+                                     APR_EOL_STR, &eof, subpool)))
+        break;
+
+      /* Only pay attention to non-empty, non-comment lines. */
+      if (buf->len)
+        {
+          if (buf->data[0] == '#')
+            continue;
+
+          /* Tokenize (into our return pool). */
+          tokens = svn_cstring_split(buf->data, " \t", TRUE, pool);
+          if (tokens->nelts < 2)
+            continue;
+          
+          /* The first token in a multi-token line is the media type.
+             Subsequent tokens are filename extensions associated with
+             that media type. */
+          type = APR_ARRAY_IDX(tokens, 0, const char *);
+          for (i = 1; i < tokens->nelts; i++)
+            {
+              const char *ext = APR_ARRAY_IDX(tokens, i, const char *);
+              apr_hash_set(types, ext, APR_HASH_KEY_STRING, type);
+            }
+        }
+      if (eof)
+        break;
+    }
+  svn_pool_destroy(subpool);
+
+  /* If there was an error above, close the file (ignoring any error
+     from *that*) and return the originally error. */
+  if (err)
+    {
+      svn_error_clear(svn_stream_close(mimetypes_stream));
+      return err;
+    }
+
+  /* Close the stream (which closes the underlying file, too). */
+  SVN_ERR(svn_stream_close(mimetypes_stream));
+
+  *type_map = types;
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_io_detect_mimetype2(const char **mimetype,
+                        const char *file,
+                        apr_hash_t *mimetype_map,
+                        apr_pool_t *pool)
 {
   static const char * const generic_binary = "application/octet-stream";
 
@@ -2410,6 +2484,21 @@ svn_io_detect_mimetype(const char **mimetype,
     return svn_error_createf(SVN_ERR_BAD_FILENAME, NULL,
                              _("Can't detect MIME type of non-file '%s'"),
                              svn_path_local_style(file, pool));
+
+  /* If there is a mimetype_map provided, we'll first try to look up
+     our file's extension in the map.  Failing that, we'll run the
+     heuristic. */
+  if (mimetype_map)
+    {
+      const char *type_from_map, *path_ext;
+      svn_path_splitext(NULL, &path_ext, file, pool);
+      if ((type_from_map = apr_hash_get(mimetype_map, path_ext, 
+                                        APR_HASH_KEY_STRING)))
+        {
+          *mimetype = type_from_map;
+          return SVN_NO_ERROR;
+        }
+    }
 
   SVN_ERR(svn_io_file_open(&fh, file, APR_READ, 0, pool));
 
@@ -2462,6 +2551,14 @@ svn_io_detect_mimetype(const char **mimetype,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_io_detect_mimetype(const char **mimetype,
+                       const char *file,
+                       apr_pool_t *pool)
+{
+  return svn_io_detect_mimetype2(mimetype, file, NULL, pool);
+}
 
 svn_error_t *
 svn_io_file_open(apr_file_t **new_file, const char *fname,
