@@ -2162,6 +2162,8 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
  * timestamp on the final working file.  The string should be
  * formatted for use by svn_time_from_cstring().
  *
+ * DIGEST is the checksum of the new text-base, if present.
+ *
  * POOL is used for all bookkeeping work during the installation.
  */
 static svn_error_t *
@@ -2179,6 +2181,7 @@ merge_file(svn_stringbuf_t *log_accum,
            const char *new_URL,
            const char *diff3_cmd,
            const char *timestamp_string,
+           const unsigned char *digest,
            apr_pool_t *pool)
 {
   const char *parent_dir, *base_name;
@@ -2428,8 +2431,6 @@ merge_file(svn_stringbuf_t *log_accum,
       if (!is_replaced)
         {
           svn_wc_entry_t tmp_entry;
-          unsigned char digest[APR_MD5_DIGESTSIZE];
-          SVN_ERR(svn_io_file_checksum(digest, new_text_path, pool));
 
           tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
 
@@ -2538,6 +2539,7 @@ close_file(void *file_baton,
                      fb->new_URL,
                      eb->diff3_cmd,
                      fb->last_changed_date,
+                     fb->digest,
                      pool));
 
   /* We have one less referrer to the directory's bump information. */
