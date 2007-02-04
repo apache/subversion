@@ -3106,7 +3106,7 @@ make_reporter(svn_ra_session_t *session,
     }
 
   /* Old servers know "recursive" but not "depth"; help them DTRT. */
-  if (depth == svn_depth_files)
+  if (depth == svn_depth_files || depth == svn_depth_empty)
   {
     const char *data = "<S:recursive>no</S:recursive>" DEBUG_CR;
     SVN_ERR(svn_io_file_write_full(rb->tmpfile, data, strlen(data),

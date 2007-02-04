@@ -2444,7 +2444,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
     }
 
   /* Old servers know "recursive" but not "depth"; help them DTRT. */
-  if (depth == svn_depth_files)
+  if (depth == svn_depth_files || depth == svn_depth_empty)
     {
       svn_ra_serf__add_tag_buckets(report->buckets,
                                    "S:recursive", "no",

@@ -1029,15 +1029,21 @@ dav_svn__update_report(const dav_resource *resource,
           if ((depth == svn_depth_unknown) && (strcmp(cdata, "no") == 0))
             depth = svn_depth_files;
           /* The "yes" case is handled later, by checking if depth is
-             still svn_depth_unknown.  Also, note that even modern,
-             depth-aware clients still transmit "no" for "recursive"
-             (along with "files" for "depth") in the svn_depth_files
-             case.  This is because they don't know if they're talking
-             to a depth-aware server or not, and they don't need to
-             know -- all they have to do is transmit both, and the
-             server will DTRT either way.  When both are sent, we
-             don't check if they're mutually consistent, we just let
-             depth dominate. */
+             still svn_depth_unknown.  
+
+             Also, note that even modern, depth-aware clients still
+             transmit "no" for "recursive" (along with "files" for
+             "depth") in the svn_depth_files case and the
+             svn_depth_empty case.  This is because they don't know if
+             they're talking to a depth-aware server or not, and they
+             don't need to know -- all they have to do is transmit
+             both, and the server will DTRT either way (although in
+             the svn_depth_empty case, the client will still have some
+             work to do in ignoring the files that come down).
+
+             When both "depth" and "recursive" are sent, we don't
+             bother to check if they're mutually consistent, we just
+             let depth dominate. */  
         }
       if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
         {
