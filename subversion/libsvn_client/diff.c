@@ -1818,8 +1818,7 @@ do_merge(const char *initial_URL1,
 
   SVN_ERR(reporter->set_path(report_baton, "",
                              start_revnum,
-                             /* ### TODO: dynamic depth here */
-                             svn_depth_infinity,
+                             depth,
                              FALSE, NULL, pool));
   
   SVN_ERR(reporter->finish_report(report_baton, pool));
