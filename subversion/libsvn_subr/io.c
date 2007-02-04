@@ -650,8 +650,6 @@ copy_contents(apr_file_t *from_file,
               apr_file_t *to_file,
               apr_pool_t *pool)
 {
-  apr_status_t status;
-
   /* Copy bytes till the cows come home. */
   while (1)
     {
