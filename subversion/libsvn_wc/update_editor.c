@@ -2052,24 +2052,6 @@ merge_props(svn_stringbuf_t *log_accum,
   else
     *lock_state = svn_wc_notify_lock_state_unchanged;
 
-  /* Possibly write log commands to tweak prop entry timestamp. */
-  if (regular_props)
-    {
-      svn_boolean_t prop_modified;
-
-      /* Are the working file's props locally modified? */
-      SVN_ERR(svn_wc_props_modified_p(&prop_modified,
-                                      file_path, adm_access,
-                                      pool));
-
-      /* Log entry which sets a new property timestamp, but only if
-         there are no local changes to the props. */
-      if (! prop_modified)
-        SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
-                (&log_accum, adm_access,
-                 base_name, SVN_WC__ENTRY_ATTR_PROP_TIME, pool));
-    }
-
   /* This writes a whole bunch of log commands to install wcprops.  */
   if (wc_props)
     SVN_ERR(accumulate_wcprops(log_accum, adm_access,
