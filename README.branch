@@ -385,7 +385,7 @@ Contents
          svn_client_import()    # Note: takes 'nonrecursive' right now
          svn_client_revert()    # Any point taking depth?
          svn_client_commit4()   # Is manual control of depth needed here?
-         svn_client_propset2()  # Same question here.
-         svn_client_propget2()  # Same question here.
-         svn_client_proplist2() # Same question here.
-         svn_client_resolved()  # Same question here.
+         svn_client_propset2()  # Is manual control of depth needed here?
+         svn_client_propget2()  # Is manual control of depth needed here?
+         svn_client_proplist2() # Is manual control of depth needed here?
+         svn_client_resolved()  # Is manual control of depth needed here?
