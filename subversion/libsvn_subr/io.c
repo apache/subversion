@@ -629,96 +629,59 @@ svn_io_temp_dir(const char **dir,
 
 /*** Creating, copying and appending files. ***/
 
-#ifdef AS400
-/* CCSID insensitive replacement for apr_file_copy() on OS400.
+/* Transfer the contents of FROM_FILE to TO_FILE, using POOL for temporary
+ * allocations.
  * 
+ * NOTE: We don't use apr_copy_file() for this, since it takes filenames
+ * as parameters.  Since we want to copy to a temporary file
+ * and rename for atomicity (see below), this would require an extra
+ * close/open pair, which can be expensive, especially on
+ * remote file systems.
+ * 
+ * 
+ * Also, On OS400 apr_file_copy() attempts to convert the contents of
+ * the source file from its CCSID to the CCSID of the destination
+ * file.  This may corrupt the destination file's contents if the
+ * files' CCSIDs differ from each other and/or the system CCSID.
  * (See comments for file_open() for more info on CCSIDs.)
- * 
- * On OS400 apr_file_copy() attempts to convert the contents of the source
- * file from its CCSID to the CCSID of the destination file.  This may
- * corrupt the destination file's contents if the files' CCSIDs differ from
- * each other and/or the system CCSID.
- * 
- * This new function prevents this by forcing a binary copy.  It is
- * stripped down copy of the private function apr_file_transfer_contents in
- * srclib/apr/file_io/unix/copy.c of version 2.0.54 of the Apache HTTP
- * Server (http://httpd.apache.org/) excepting that APR_LARGEFILE is not
- * used, from_path is always opened with APR_BINARY, and
- * APR_FILE_SOURCE_PERMS is not supported. 
  */ 
 static apr_status_t
-os400_file_copy(const char *from_path,
-                const char *to_path,
-                apr_fileperms_t perms,
-                apr_pool_t *pool)
+copy_contents(apr_file_t *from_file,
+              apr_file_t *to_file,
+              apr_pool_t *pool)
 {
-  apr_file_t *s, *d;
   apr_status_t status;
-
-  /* Open source file. */
-  status = apr_file_open(&s, from_path, APR_READ | APR_BINARY,
-                         APR_OS_DEFAULT, pool);
-  if (status)
-    return status;
-
-  /* Open dest file.
-   * 
-   * apr_file_copy() does not require the destination file to exist and will
-   * overwrite it if it does.  Since this is a replacement for
-   * apr_file_copy() we enforce similar behavior.
-   */
-  status = apr_file_open(&d, to_path,
-                         APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BINARY,
-                         perms,
-                         pool);
-  if (status)
-    {
-      apr_file_close(s);  /* toss any error */
-      return status;
-    }
 
   /* Copy bytes till the cows come home. */
   while (1)
     {
-      char buf[BUFSIZ];
+      char buf[SVN__STREAM_CHUNK_SIZE];
       apr_size_t bytes_this_time = sizeof(buf);
       apr_status_t read_err;
       apr_status_t write_err;
 
       /* Read 'em. */
-      read_err = apr_file_read(s, buf, &bytes_this_time);
+      read_err = apr_file_read(from_file, buf, &bytes_this_time);
       if (read_err && !APR_STATUS_IS_EOF(read_err))
         {
-          apr_file_close(s);  /* toss any error */
-          apr_file_close(d);  /* toss any error */
           return read_err;
         }
 
       /* Write 'em. */
-      write_err = apr_file_write_full(d, buf, bytes_this_time, NULL);
+      write_err = apr_file_write_full(to_file, buf, bytes_this_time, NULL);
       if (write_err)
         {
-          apr_file_close(s);  /* toss any error */
-          apr_file_close(d);  /* toss any error */
           return write_err;
         }
 
       if (read_err && APR_STATUS_IS_EOF(read_err))
         {
-          status = apr_file_close(s);
-          if (status)
-            {
-              apr_file_close(d);  /* toss any error */
-              return status;
-            }
-
-          /* return the results of this close: an error, or success */
-          return apr_file_close(d);
+          /* Return the results of this close: an error, or success. */
+          return APR_SUCCESS;
         }
     }
   /* NOTREACHED */
 }
-#endif /* AS400 */
 
 
 svn_error_t *
@@ -727,32 +690,50 @@ svn_io_copy_file(const char *src,
                  svn_boolean_t copy_perms,
                  apr_pool_t *pool)
 {
+  apr_file_t *from_file, *to_file;
   apr_status_t apr_err;
   const char *src_apr, *dst_tmp_apr;
   const char *dst_tmp;
+  svn_error_t *err, *err2;
 
   SVN_ERR(svn_path_cstring_from_utf8(&src_apr, src, pool));
 
-  /* For atomicity, we translate to a tmp file and then rename the tmp
+  SVN_ERR(svn_io_file_open(&from_file, src, APR_READ | APR_BINARY,
+                         APR_OS_DEFAULT, pool));
+
+  /* For atomicity, we copy to a tmp file and then rename the tmp
      file over the real destination. */
 
-  SVN_ERR(svn_io_open_unique_file2(NULL, &dst_tmp, dst, ".tmp",
+  SVN_ERR(svn_io_open_unique_file2(&to_file, &dst_tmp, dst, ".tmp",
                                    svn_io_file_del_none, pool));
   SVN_ERR(svn_path_cstring_from_utf8(&dst_tmp_apr, dst_tmp, pool));
 
-#ifndef AS400
-  apr_err = apr_file_copy(src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
-#else
-  apr_err = os400_file_copy(src_apr, dst_tmp_apr, APR_OS_DEFAULT, pool);
-#endif
+  apr_err = copy_contents(from_file, to_file, pool);
 
   if (apr_err)
     {
+      err = svn_error_wrap_apr
+            (apr_err, _("Can't copy '%s' to '%s'"),
+             svn_path_local_style(src, pool),
+             svn_path_local_style(dst_tmp, pool));
+    }
+   else
+     err = NULL;
+          
+  err2 = svn_io_file_close(from_file, pool);
+  if (! err)
+    err = err2;
+  else
+    svn_error_clear(err2);
+  err2 = svn_io_file_close(to_file, pool);
+  if (! err)
+    err = err2;
+  else
+    svn_error_clear(err2);
+  if (err)
+    {
       apr_file_remove(dst_tmp_apr, pool);
-      return svn_error_wrap_apr
-        (apr_err, _("Can't copy '%s' to '%s'"),
-         svn_path_local_style(src, pool),
-         svn_path_local_style(dst_tmp, pool));
+      return err;
     }
 
   /* If copying perms, set the perms on dst_tmp now, so they will be
