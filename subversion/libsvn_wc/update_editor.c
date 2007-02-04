@@ -162,6 +162,9 @@ struct dir_baton
   /* The current log file number. */
   int log_number;
 
+  /* The current log buffer. */
+  svn_stringbuf_t *log_accum;
+
   /* The pool in which this baton itself is allocated. */
   apr_pool_t *pool;
 };
@@ -235,6 +238,27 @@ get_entry_url(svn_wc_adm_access_t *associated_access,
   return entry->url;
 }
 
+/* Flush accumulated log entries to a log file on disk for DIR_BATON and
+ * increase the log number of the dir baton.
+ * Use POOL for temporary allocations. */
+static svn_error_t *
+flush_log(struct dir_baton *db, apr_pool_t *pool)
+{
+  if (! svn_stringbuf_isempty(db->log_accum))
+    {
+      svn_wc_adm_access_t *adm_access;
+
+      SVN_ERR(svn_wc_adm_retrieve(&adm_access, db->edit_baton->adm_access,
+                                   db->path, pool));
+      SVN_ERR(svn_wc__write_log(adm_access, db->log_number, db->log_accum,
+                                pool));
+      db->log_number++;
+      svn_stringbuf_setempty(db->log_accum);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* An APR pool cleanup handler.  This runs the log file for a
    directory baton. */
 static apr_status_t
@@ -244,23 +268,27 @@ cleanup_dir_baton(void *dir_baton)
   svn_error_t *err;
   apr_status_t apr_err;
   svn_wc_adm_access_t *adm_access;
+  apr_pool_t *pool = apr_pool_parent_get(db->pool);
 
-  /* If there are no log files to write, return immediately. */
-  if (db->log_number == 0)
-    return APR_SUCCESS;
-
-  err = svn_wc_adm_retrieve(&adm_access, db->edit_baton->adm_access,
-                            db->path, apr_pool_parent_get(db->pool));
-
-  if (! err)
+  err = flush_log(db, pool);
+  if (! err && db->log_number > 0)
     {
-      err = svn_wc__run_log(adm_access, NULL, apr_pool_parent_get(db->pool));
-      
+      err = svn_wc_adm_retrieve(&adm_access, db->edit_baton->adm_access,
+                                db->path, pool);
+
       if (! err)
-        return APR_SUCCESS;
+        {
+          err = svn_wc__run_log(adm_access, NULL, pool);
+      
+          if (! err)
+            return APR_SUCCESS;
+        }
     }
-  
-  apr_err = err->apr_err;
+
+  if (err)
+    apr_err = err->apr_err;
+  else
+    apr_err = APR_SUCCESS;
   svn_error_clear(err);
   return apr_err;
 }
@@ -363,6 +391,7 @@ make_dir_baton(const char *path,
   d->add_existed  = FALSE;
   d->bump_info    = bdi;
   d->log_number   = 0;
+  d->log_accum    = svn_stringbuf_create("", pool);
 
   apr_pool_cleanup_register(d->pool, d, cleanup_dir_baton,
                             cleanup_dir_baton_child);
@@ -512,8 +541,6 @@ maybe_bump_dir_info(struct edit_baton *eb,
 
   return SVN_NO_ERROR;
 }
-
-
 
 struct file_baton
 {
@@ -1100,6 +1127,9 @@ add_directory(const char *path,
   struct dir_baton *db = make_dir_baton(path, eb, pb, TRUE, pool);
   svn_node_kind_t kind;
 
+  /* Flush the log for the parent directory before going into this subtree. */
+  SVN_ERR(flush_log(pb, pool));
+
   /* Semantic check.  Either both "copyfrom" args are valid, or they're
      NULL and SVN_INVALID_REVNUM.  A mixture is illegal semantics. */
   if ((copyfrom_path && (! SVN_IS_VALID_REVNUM(copyfrom_revision)))
@@ -1299,6 +1329,9 @@ open_directory(const char *path,
                                  
   svn_wc_adm_access_t *adm_access;
 
+  /* Flush the log for the parent directory before going into this subtree. */
+  SVN_ERR(flush_log(pb, pool));
+
   /* kff todo: check that the dir exists locally, find it somewhere if
      its not there?  Yes, all this and more...  And ancestor_url and
      ancestor_revision need to get used. */
@@ -1419,9 +1452,6 @@ close_directory(void *dir_baton,
      to deal with them. */
   if (regular_props->nelts || entry_props->nelts || wc_props->nelts)
     {
-      /* to hold log messages: */
-      svn_stringbuf_t *entry_accum = svn_stringbuf_create("", db->pool);
-
       if (regular_props->nelts)
         {
           /* If recording traversal info, then see if the
@@ -1478,25 +1508,23 @@ close_directory(void *dir_baton,
                                         adm_access, NULL,
                                         NULL /* use baseprops */,
                                         regular_props, TRUE, FALSE,
-                                        db->pool, &entry_accum),
+                                        db->pool, &db->log_accum),
                     _("Couldn't do property merge"));
         }
 
-      SVN_ERR(accumulate_entry_props(entry_accum, NULL,
+      SVN_ERR(accumulate_entry_props(db->log_accum, NULL,
                                      adm_access, SVN_WC_ENTRY_THIS_DIR,
                                      entry_props, pool));
 
-      SVN_ERR(accumulate_wcprops(entry_accum, adm_access,
+      SVN_ERR(accumulate_wcprops(db->log_accum, adm_access,
                                  SVN_WC_ENTRY_THIS_DIR, wc_props, pool));
-
-      /* Write our accumulation of log entries into a log file */
-      SVN_ERR(svn_wc__write_log(adm_access, db->log_number, entry_accum, pool));
     }
 
-  /* Run the log. */
+  /* Flush and run the log. */
+  SVN_ERR(flush_log(db, pool));
   SVN_ERR(svn_wc__run_log(adm_access, db->edit_baton->diff3_cmd, db->pool));
   db->log_number = 0;
-  
+
   /* We're done with this directory, so remove one reference from the
      bump information. This may trigger a number of actions. See
      maybe_bump_dir_info() for more information.  */
@@ -2503,7 +2531,6 @@ close_file(void *file_baton,
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
   svn_wc_adm_access_t *adm_access;
-  svn_stringbuf_t *log_accum;
 
   if (fb->skipped)
     {
@@ -2531,11 +2558,7 @@ close_file(void *file_baton,
   SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, 
                               parent_path, pool));
 
-  /* Accumulate log commands in this buffer until we're ready to
-     write the log. */
-  log_accum = svn_stringbuf_create("", pool);
-
-  SVN_ERR(merge_file(log_accum,
+  SVN_ERR(merge_file(fb->dir_baton->log_accum,
                      &content_state,
                      &prop_state,
                      &lock_state,
@@ -2550,12 +2573,6 @@ close_file(void *file_baton,
                      eb->diff3_cmd,
                      fb->last_changed_date,
                      pool));
-
-  /* Write our accumulation of log entries into a log file */
-  SVN_ERR(svn_wc__write_log(adm_access, fb->dir_baton->log_number,
-                            log_accum, pool));
-
-  fb->dir_baton->log_number++;
 
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
