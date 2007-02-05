@@ -404,7 +404,8 @@ int
 main(int argc, const char **argv)
 {
   apr_pool_t *pool = init("mucc");
-  apr_array_header_t *actions = apr_array_make(pool, 1, sizeof(struct action*));
+  apr_array_header_t *actions = apr_array_make(pool, 1, 
+                                               sizeof(struct action *));
   const char *anchor = NULL;
   svn_error_t *err;
   apr_getopt_t *getopt;
@@ -501,8 +502,8 @@ main(int argc, const char **argv)
               char *end;
               action->rev = strtol(getopt->argv[getopt->ind], &end, 0);
               if (*end)
-                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS,
-                                               NULL, "'%s' is not a revision\n",
+                handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, 
+                                               "'%s' is not a revision\n",
                                                getopt->argv[getopt->ind]),
                              pool);
             }
