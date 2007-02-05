@@ -361,6 +361,7 @@ usage(apr_pool_t *pool, int exit_val)
     "  -F, --file ARG      read log message from file ARG\n"
     "  -u, --username ARG  commit the changes as username ARG\n"
     "  -p, --password ARG  use ARG as the password\n"
+    "  -U, --root-url ARG  interpret all action URLs are relative to ARG\n"
     "  -h, --help          display this text\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
@@ -388,11 +389,13 @@ main(int argc, const char **argv)
     {"file", 'F', 1, ""},
     {"username", 'u', 1, ""},
     {"password", 'p', 1, ""},
+    {"root-url", 'U', 1, ""},
     {"help", 'h', 0, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = "committed using mucc";
   const char *username = NULL, *password = NULL;
+  const char *root_url = NULL;
 
   apr_getopt_init(&getopt, pool, argc, argv);
   getopt->interleave = 1;
@@ -430,6 +433,15 @@ main(int argc, const char **argv)
           break;
         case 'p':
           password = apr_pstrdup(pool, arg);
+          break;
+        case 'U':
+          err = svn_utf_cstring_to_utf8(&root_url, arg, pool);
+          if (err)
+            handle_error(err, pool);
+          if (! svn_path_is_url(root_url))
+            handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                           "'%s' is not an URL\n", root_url),
+                         pool);
           break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
@@ -480,7 +492,12 @@ main(int argc, const char **argv)
           err = svn_utf_cstring_to_utf8(&url, url, pool);
           if (err)
             handle_error(err, pool);
-          if (! svn_path_is_url(url))
+
+          /* If there's a root URL, we expect this to be a path
+             relative to that URL.  Otherwise, it should be a full URL. */
+          if (root_url)
+            url = svn_path_join(root_url, url, pool);
+          else if (! svn_path_is_url(url))
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                            "'%s' is not an URL\n",
                                            getopt->argv[getopt->ind]),
