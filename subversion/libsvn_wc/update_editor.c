@@ -1320,7 +1320,7 @@ open_directory(const char *path,
                apr_pool_t *pool,
                void **child_baton)
 {
-  struct dir_baton *pb = parent_baton;
+  struct dir_baton *db, *pb = parent_baton;
   struct edit_baton *eb = pb->edit_baton;
   const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
@@ -1336,7 +1336,7 @@ open_directory(const char *path,
      its not there?  Yes, all this and more...  And ancestor_url and
      ancestor_revision need to get used. */
 
-  struct dir_baton *db = make_dir_baton(path, eb, pb, FALSE, pool);
+  db = make_dir_baton(path, eb, pb, FALSE, pool);
   *child_baton = db;
 
   /* Skip this directory if it has property conflicts. */
