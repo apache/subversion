@@ -378,17 +378,21 @@ usage(apr_pool_t *pool, int exit_val)
 {
   FILE *stream = exit_val == EXIT_SUCCESS ? stdout : stderr;
   const char msg[] =
-    "usage: mucc [OPTION]... "
-    "[ mv URL1 URL2 | cp REV URL1 URL2 | rm URL | mkdir URL ]...\n"
-    "options:\n"
+    "Usage: mucc [OPTION]... [ACTION]...\n"
+    "\nActions:\n"
+    "  cp REV URL1 URL2      copy URL1@REV to URL2\n"
+    "  mkdir URL             create new directory URL\n"
+    "  mv URL1 URL2          move URL1 to URL2\n"
+    "  rm URL                delete URL\n"
+    "\nOptions:\n"
+    "  -h, --help            display this text\n"
     "  -m, --message ARG     use ARG as a log message\n"
     "  -F, --file ARG        read log message from file ARG\n"
     "  -u, --username ARG    commit the changes as username ARG\n"
     "  -p, --password ARG    use ARG as the password\n"
     "  -U, --root-url ARG    interpret all action URLs are relative to ARG\n"
-    "  -X, --extra-args ARG  append arguments from file ARG (one per line,\n"
-    "                        use \"STDIN\" to read from standard input)\n"
-    "  -h, --help            display this text\n";
+    "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
+    "                        use \"STDIN\" to read from standard input)\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
   exit(exit_val);
