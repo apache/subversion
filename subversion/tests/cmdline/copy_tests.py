@@ -340,6 +340,15 @@ def basic_copy_and_move_files(sbox):
                                         None, None,
                                         wc_dir)
 
+  # Assure that attempts at local copy and move fail when a log
+  # message is provided.
+  expected_stderr = \
+    ".*Local, non-commit operations do not take a log message"
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'cp', '-m', 'op fails', rho_path, D_path)
+  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+                                     'mv', '-m', 'op fails', rho_path, D_path)
+
 
 #----------------------------------------------------------------------
 
