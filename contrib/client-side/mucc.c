@@ -381,12 +381,14 @@ usage(apr_pool_t *pool, int exit_val)
     "usage: mucc [OPTION]... "
     "[ mv URL1 URL2 | cp REV URL1 URL2 | rm URL | mkdir URL ]...\n"
     "options:\n"
-    "  -m, --message ARG   use ARG as a log message\n"
-    "  -F, --file ARG      read log message from file ARG\n"
-    "  -u, --username ARG  commit the changes as username ARG\n"
-    "  -p, --password ARG  use ARG as the password\n"
-    "  -U, --root-url ARG  interpret all action URLs are relative to ARG\n"
-    "  -h, --help          display this text\n";
+    "  -m, --message ARG     use ARG as a log message\n"
+    "  -F, --file ARG        read log message from file ARG\n"
+    "  -u, --username ARG    commit the changes as username ARG\n"
+    "  -p, --password ARG    use ARG as the password\n"
+    "  -U, --root-url ARG    interpret all action URLs are relative to ARG\n"
+    "  -X, --extra-args ARG  append arguments from file ARG (one per line,\n"
+    "                        use \"STDIN\" to read from standard input)\n"
+    "  -h, --help            display this text\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
   exit(exit_val);
@@ -407,7 +409,7 @@ main(int argc, const char **argv)
   apr_array_header_t *actions = apr_array_make(pool, 1, 
                                                sizeof(struct action *));
   const char *anchor = NULL;
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   apr_getopt_t *getopt;
   const apr_getopt_option_t options[] = {
     {"message", 'm', 1, ""},
@@ -415,12 +417,15 @@ main(int argc, const char **argv)
     {"username", 'u', 1, ""},
     {"password", 'p', 1, ""},
     {"root-url", 'U', 1, ""},
+    {"extra-args", 'X', 1, ""},
     {"help", 'h', 0, ""},
     {NULL, 0, 0, NULL}
   };
   const char *message = "committed using mucc";
   const char *username = NULL, *password = NULL;
-  const char *root_url = NULL;
+  const char *root_url = NULL, *extra_args_file = NULL;
+  apr_array_header_t *action_args;
+  int i;
 
   apr_getopt_init(&getopt, pool, argc, argv);
   getopt->interleave = 1;
@@ -468,62 +473,117 @@ main(int argc, const char **argv)
                                            "'%s' is not an URL\n", root_url),
                          pool);
           break;
+        case 'X':
+          extra_args_file = apr_pstrdup(pool, arg);
+          break;
         case 'h':
           usage(pool, EXIT_SUCCESS);
         }
     }
+
+  /* Copy the rest of our command-line arguments to an array,
+     UTF-8-ing them along the way. */
+  action_args = apr_array_make(pool, getopt->argc, sizeof(const char *));
   while (getopt->ind < getopt->argc)
     {
+      const char *arg = getopt->argv[getopt->ind++];
+      if ((err = svn_utf_cstring_to_utf8(&(APR_ARRAY_PUSH(action_args, 
+                                                          const char *)), 
+                                         arg, pool)))
+        handle_error(err, pool);
+    }
+
+  /* If there are extra arguments in a supplementary file, tack those
+     on, too (again, in UTF8 form). */
+  if (extra_args_file)
+    {
+      const char *extra_args_file_utf8;
+      svn_stringbuf_t *contents, *contents_utf8;
+
+      if (strcmp(extra_args_file, "STDIN") == 0)
+        {
+          apr_file_t *f;
+          apr_status_t apr_err;
+          if ((apr_err = apr_file_open_stdin(&f, pool)))
+            err = svn_error_wrap_apr(apr_err, "Can't open stdin");
+          if (! err)
+            err = svn_stringbuf_from_aprfile(&contents, f, pool);
+          svn_error_clear(svn_io_file_close(f, pool));
+        }
+      else
+        {
+          err = svn_utf_cstring_to_utf8(&extra_args_file_utf8, 
+                                        extra_args_file, pool);
+          if (! err)
+            err = svn_stringbuf_from_file(&contents, extra_args_file_utf8, 
+                                          pool);
+        }
+      if (! err)
+        err = svn_utf_stringbuf_to_utf8(&contents_utf8, contents, pool);
+      if (err)
+        handle_error(err, pool);
+      svn_cstring_split_append(action_args, contents_utf8->data, "\n\r",
+                               FALSE, pool);
+    }
+
+  /* Now, we iterate over the combined set of arguments -- our actions. */
+  for (i = 0; i < action_args->nelts; )
+    {
       int j, num_url_args;
+      const char *action_string = APR_ARRAY_IDX(action_args, i, const char *);
       struct action *action = apr_palloc(pool, sizeof(*action));
 
-      if (! strcmp(getopt->argv[getopt->ind], "mv"))
+      /* First, parse the action. */
+      if (! strcmp(action_string, "mv"))
         action->action = ACTION_MV;
-      else if (! strcmp(getopt->argv[getopt->ind], "cp"))
+      else if (! strcmp(action_string, "cp"))
         action->action = ACTION_CP;
-      else if (! strcmp(getopt->argv[getopt->ind], "mkdir"))
+      else if (! strcmp(action_string, "mkdir"))
         action->action = ACTION_MKDIR;
-      else if (! strcmp(getopt->argv[getopt->ind], "rm"))
+      else if (! strcmp(action_string, "rm"))
         action->action = ACTION_RM;
       else
         handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                       "'%s' is not an action\n",
-                                       getopt->argv[getopt->ind]),
-                     pool);
-      if (++getopt->ind == getopt->argc)
+                                       "'%s' is not an action\n", 
+                                       action_string), pool);
+      if (++i == action_args->nelts)
         insufficient(pool);
 
+      /* For copies, there should be a revision number next. */
       if (action->action == ACTION_CP)
         {
-          if (! strcmp(getopt->argv[getopt->ind], "head"))
+          const char *rev_str = APR_ARRAY_IDX(action_args, i, const char *);
+          if (strcmp(rev_str, "head") == 0)
+            action->rev = SVN_INVALID_REVNUM;
+          else if (strcmp(rev_str, "HEAD") == 0)
             action->rev = SVN_INVALID_REVNUM;
           else
             {
               char *end;
-              action->rev = strtol(getopt->argv[getopt->ind], &end, 0);
+              action->rev = strtol(rev_str, &end, 0);
               if (*end)
                 handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL, 
-                                               "'%s' is not a revision\n",
-                                               getopt->argv[getopt->ind]),
-                             pool);
+                                               "'%s' is not a revision\n", 
+                                               rev_str), pool);
             }
-          if (++getopt->ind == getopt->argc)
+          if (++i == action_args->nelts)
             insufficient(pool);
         }
       else
-        action->rev = SVN_INVALID_REVNUM;
+        {
+          action->rev = SVN_INVALID_REVNUM;
+        }
 
+      /* How many URLs does this action expect? */
       if (action->action == ACTION_RM || action->action == ACTION_MKDIR)
         num_url_args = 1;
       else
         num_url_args = 2;
 
+      /* Parse the required number of URLs. */
       for (j = 0; j < num_url_args; ++j)
         {
-          const char *url = getopt->argv[getopt->ind];
-          err = svn_utf_cstring_to_utf8(&url, url, pool);
-          if (err)
-            handle_error(err, pool);
+          const char *url = APR_ARRAY_IDX(action_args, i, const char *);
 
           /* If there's a root URL, we expect this to be a path
              relative to that URL.  Otherwise, it should be a full URL. */
@@ -531,9 +591,7 @@ main(int argc, const char **argv)
             url = svn_path_join(root_url, url, pool);
           else if (! svn_path_is_url(url))
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                           "'%s' is not an URL\n",
-                                           getopt->argv[getopt->ind]),
-                         pool);
+                                           "'%s' is not an URL\n", url), pool);
           url = svn_path_uri_from_iri(url, pool);
           url = svn_path_uri_autoescape(url, pool);
           url = svn_path_canonicalize(url, pool);
@@ -548,7 +606,7 @@ main(int argc, const char **argv)
           else
             anchor = svn_path_get_longest_ancestor(anchor, url, pool);
 
-          if (++getopt->ind == getopt->argc && ! (j < num_url_args))
+          if ((++i == action_args->nelts) && (j >= num_url_args))
             insufficient(pool);
         }
       APR_ARRAY_PUSH(actions, struct action *) = action;
