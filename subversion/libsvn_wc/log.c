@@ -285,23 +285,37 @@ file_xfer_under_path(svn_wc_adm_access_t *adm_access,
 
     case svn_wc__xfer_cp_and_translate:
       {
-        const char *tmp_file;
+        svn_subst_eol_style_t style;
+        const char *eol;
+        apr_hash_t *keywords;
+        svn_boolean_t special;
 
-        err = svn_wc_translated_file2
-          (&tmp_file,
-           full_from_path, versioned ? full_versioned_path : full_dest_path,
-           adm_access,
-           SVN_WC_TRANSLATE_FROM_NF
-           | SVN_WC_TRANSLATE_FORCE_COPY,
-           pool);
+        if (! full_versioned_path)
+          full_versioned_path = full_dest_path;
+
+        err = svn_wc__get_eol_style(&style, &eol, full_versioned_path,
+                                    adm_access, pool);
+        if (! err)
+          err = svn_wc__get_keywords(&keywords, full_versioned_path,
+                                     adm_access, NULL, pool);
+        if (! err)
+          err = svn_wc__get_special(&special, full_versioned_path, adm_access,
+                                    pool);
+
+        if (! err)
+          err = svn_subst_copy_and_translate3
+                (full_from_path, full_dest_path,
+                 eol, TRUE,
+                 keywords, TRUE,
+                 special,
+                 pool);
+
         if (err)
           {
             if (! rerun || ! APR_STATUS_IS_ENOENT(err->apr_err))
               return err;
             svn_error_clear(err);
           }
-        else
-          SVN_ERR(svn_io_file_rename(tmp_file, full_dest_path, pool));
 
         SVN_ERR(svn_wc__maybe_set_read_only(NULL, full_dest_path,
                                             adm_access, pool));

@@ -78,7 +78,7 @@ typedef struct {
 /* Verify that URL is inside REPOS_URL and get its fs path. Assume that 
    REPOS_URL and URL are already URI-decoded. */
 static svn_error_t *get_fs_path(const char *repos_url, const char *url,
-                                const char **fs_path, apr_pool_t *pool)
+                                const char **fs_path)
 {
   apr_size_t len;
 
@@ -519,8 +519,8 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   if (!b->err)
-    b->err = get_fs_path(svn_path_uri_decode(b->repos_url, pool), url,
-                         &fs_path, pool);
+    b->err = get_fs_path(svn_path_uri_decode(b->repos_url, pool), 
+                         url, &fs_path);
   if (!b->err)
     b->err = svn_repos_link_path3(b->report_baton, path, fs_path, rev,
                                   depth, start_empty, lock_token, pool);
@@ -728,8 +728,8 @@ static svn_error_t *reparent(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &url));
   url = svn_path_uri_decode(svn_path_canonicalize(url, pool), pool);
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool), url,
-                          &fs_path, pool));
+  SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool), 
+                          url, &fs_path));
   svn_stringbuf_set(b->fs_path, fs_path);
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   return SVN_NO_ERROR;
@@ -1308,7 +1308,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           svn_path_uri_decode(switch_url, pool),
-                          &switch_path, pool));
+                          &switch_path));
 
   MAYBE_UNFOLD_TO_DEPTH(recurse, depth);
   return accept_report(conn, pool, b, rev, target, switch_path, TRUE,
@@ -1378,7 +1378,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     SVN_CMD_ERR(svn_fs_youngest_rev(&rev, b->fs, pool));
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repos_url, pool),
                           svn_path_uri_decode(versus_url, pool),
-                          &versus_path, pool));
+                          &versus_path));
 
   MAYBE_UNFOLD_TO_DEPTH(recurse, depth);
   return accept_report(conn, pool, b, rev, target, versus_path,
