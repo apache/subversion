@@ -64,7 +64,7 @@ $SERVER_CMD -d -r $ABS_BUILDDIR/subversion/tests/cmdline \
             --listen-host 127.0.0.1 \
             --pid-file $SVNSERVE_PID &
 
-time make check 'BASE_URL=svn://127.0.0.1'
+time make check BASE_URL=svn://127.0.0.1
 r=$?
 
 really_cleanup
