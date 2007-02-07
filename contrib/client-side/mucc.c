@@ -458,7 +458,8 @@ usage(apr_pool_t *pool, int exit_val)
 {
   FILE *stream = exit_val == EXIT_SUCCESS ? stdout : stderr;
   const char msg[] =
-    "Usage: mucc [OPTION]... [ACTION]...\n"
+    "Multiple URL Command Client (for Subversion)\n"
+    "\nUsage: mucc [OPTION]... [ACTION]...\n"
     "\nActions:\n"
     "  cp REV URL1 URL2      copy URL1@REV to URL2\n"
     "  mkdir URL             create new directory URL\n"
