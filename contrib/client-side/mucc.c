@@ -103,13 +103,17 @@ struct operation {
     OP_ADD,
     OP_REPLACE
   } operation;
-  svn_node_kind_t kind;  /* to copy, valid for add and replace */
+  svn_node_kind_t kind;  /* to copy, mkdir, or post */
   svn_revnum_t rev;      /* to copy, valid for add and replace */
   const char *url;       /* to copy, valid for add and replace */
-  apr_hash_t *children;  /* key: const char *path, value: struct operation * */
+  const char *src_file;  /* for post or copy, the source file for contents */
+  apr_hash_t *children;  /* const char *path -> struct operation * */
   void *baton;           /* as returned by the commit editor */
 };
 
+
+/* Drive EDITOR to affect the change represented by OPERATION.  HEAD
+   is the last-known youngest revision in the repository. */
 static svn_error_t *
 drive(struct operation *operation,
       svn_revnum_t head,
@@ -149,9 +153,33 @@ drive(struct operation *operation,
           else
             {
               void *file_baton;
-              SVN_ERR(editor->add_file(key, operation->baton,
-                                       child->url, child->rev,
-                                       subpool, &file_baton));
+
+              if (child->operation == OP_ADD)
+                {
+                  SVN_ERR(editor->add_file(key, operation->baton, child->url, 
+                                           child->rev, subpool, &file_baton));
+                }
+              else
+                {
+                  SVN_ERR(editor->open_file(key, operation->baton, child->rev, 
+                                            subpool, &file_baton));
+                }
+              if (child->src_file)
+                {
+                  svn_txdelta_window_handler_t handler;
+                  void *handler_baton;
+                  svn_stream_t *contents;
+                  apr_file_t *f = NULL;
+
+                  SVN_ERR(editor->apply_textdelta(file_baton, NULL, subpool,
+                                                  &handler, &handler_baton));
+                  SVN_ERR(svn_io_file_open(&f, child->src_file, APR_READ, 
+                                           APR_OS_DEFAULT, pool));
+                  contents = svn_stream_from_aprfile(f, pool);
+                  SVN_ERR(svn_txdelta_send_stream(contents, handler, 
+                                                  handler_baton, NULL, pool));
+                  SVN_ERR(svn_io_file_close(f, pool));
+                }
               SVN_ERR(editor->close_file(file_baton, NULL, subpool));
             }
         }
@@ -167,6 +195,11 @@ drive(struct operation *operation,
   return SVN_NO_ERROR;
 }
 
+
+/* Find the operation associated with PATH, which is a single-path
+   component representing a child of the path represented by
+   OPERATION.  If no such child operation exists, create a new one of
+   type OP_OPEN. */
 static struct operation *
 get_operation(const char *path,
               struct operation *operation,
@@ -176,7 +209,7 @@ get_operation(const char *path,
                                          APR_HASH_KEY_STRING);
   if (! child)
     {
-      child = apr_palloc(pool, sizeof(*child));
+      child = apr_pcalloc(pool, sizeof(*child));
       child->children = apr_hash_make(pool);
       child->operation = OP_OPEN;
       apr_hash_set(operation->children, path, APR_HASH_KEY_STRING, child);
@@ -184,6 +217,7 @@ get_operation(const char *path,
   return child;
 }
 
+/* Return the portion of URL that is relative to ANCHOR. */
 static const char *
 subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
 {
@@ -197,11 +231,12 @@ subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
    intermediate nodes that are required.  Here's how the action is
    derived from the inputs:
 
-      URL    REV         ACTION
-      -----  -------  =  ------
-      NULL   valid       delete
-      valid  valid       copy (add-with-history)
-      valid  invalid     add (mkdir)
+      URL    REV      SRC-FILE     ACTION
+      -----  -------  --------  =  ------
+      NULL   valid    NULL         delete
+      valid  valid    NULL         copy (add-with-history)
+      valid  invalid  NULL         mkdir
+      valid  valid    valid        post
 
    Node type information is obtained for any copy source (to determine
    whether to create a file or directory) and for any deleted path (to
@@ -210,6 +245,7 @@ subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
 static svn_error_t *
 build(const char *path,
       const char *url,
+      const char *src_file,
       svn_revnum_t rev,
       svn_revnum_t head,
       const char *anchor,
@@ -223,6 +259,7 @@ build(const char *path,
   svn_revnum_t copy_rev = SVN_INVALID_REVNUM;
   int i;
 
+  /* Look for any previous operations we've recognized for PATH. */
   for (i = 0; i < path_bits->nelts; ++i)
     {
       const char *path_bit = APR_ARRAY_IDX(path_bits, i, const char *);
@@ -241,11 +278,23 @@ build(const char *path,
             copy_src = svn_path_join(copy_src, path_bit, pool);
         }
     }
+  
+  /* We won't fuss about multiple operations on the same path in the
+     following cases:
 
-  if (operation->operation != OP_OPEN && operation->operation != OP_DELETE)
+       - the prior operation was, in fact, a no-op (open)
+       - the prior operation was a deletion
+
+     Note: while the operation structure certainly supports the
+     ability to do a copy of a file followed by a post of new contents
+     for the file, we don't let that happen (yet).
+  */
+  if (! (operation->operation == OP_OPEN || operation->operation == OP_DELETE))
     return svn_error_createf(SVN_ERR_BAD_URL, NULL,
                              "unsupported multiple operations on '%s'", path);
 
+  /* If there's no URL, this is a deletion.  We validate that there's
+     actually something to delete. */
   if (! url)
     {
       operation->operation = OP_DELETE;
@@ -264,10 +313,14 @@ build(const char *path,
                                      path);
         }
     }
+  /* Otherwise, this is one of the other operations (copy, move, post,
+     mkdir). */
   else
     {
-      operation->operation
-        = operation->operation == OP_DELETE ? OP_REPLACE : OP_ADD;
+      /* If the previous operation was a delete or a replace, this new
+         one must be a replace.  Otherwise, it's an add. */
+      operation->operation = 
+        operation->operation == OP_DELETE ? OP_REPLACE : OP_ADD;
       SVN_ERR(svn_ra_check_path(session, subtract_anchor(anchor, url, pool),
                                 rev, &operation->kind, pool));
       if (SVN_IS_VALID_REVNUM(rev))
@@ -281,10 +334,20 @@ build(const char *path,
         }
       else
         {
-          /* Mkdir */
-          operation->kind = svn_node_dir;
           operation->url = NULL;
-          operation->rev = SVN_INVALID_REVNUM;
+          if (src_file)
+            {
+              /* Post */
+              operation->kind = svn_node_file;
+              operation->rev = rev;
+              operation->src_file = src_file;
+            }
+          else
+            {
+              /* MkDir */
+              operation->kind = svn_node_dir;
+              operation->rev = SVN_INVALID_REVNUM;
+            }
         }
     }
 
@@ -296,10 +359,22 @@ struct action {
     ACTION_MV,
     ACTION_MKDIR,
     ACTION_CP,
+    ACTION_POST,
     ACTION_RM
   } action;
-  svn_revnum_t rev;     /* of url[0] for cp */
-  const char *url[2];
+  
+  /* revision (copy-from-rev of path[0] for cp; base-rev for post) */
+  svn_revnum_t rev;     
+
+  /* action  path[0]  path[1]
+   * ------  -------  -------
+   * mv      source   target
+   * mkdir   target   (null)
+   * cp      source   target
+   * post    target   source
+   * rm      target   (null)
+   */
+  const char *path[2];
 };
 
 static svn_error_t *
@@ -332,29 +407,34 @@ execute(const apr_array_header_t *actions,
         {
           const char *path1, *path2;
         case ACTION_MV:
-          path1 = subtract_anchor(anchor, action->url[0], pool);
-          path2 = subtract_anchor(anchor, action->url[1], pool);
-          SVN_ERR(build(path2, action->url[0], head,
+          path1 = subtract_anchor(anchor, action->path[0], pool);
+          path2 = subtract_anchor(anchor, action->path[1], pool);
+          SVN_ERR(build(path2, action->path[0], NULL, head,
                         head, anchor, session, &root, pool));
-          SVN_ERR(build(path1, NULL, SVN_INVALID_REVNUM,
+          SVN_ERR(build(path1, NULL, NULL, SVN_INVALID_REVNUM,
                         head, anchor, session, &root, pool));
           break;
         case ACTION_CP:
-          path1 = subtract_anchor(anchor, action->url[0], pool);
-          path2 = subtract_anchor(anchor, action->url[1], pool);
+          path1 = subtract_anchor(anchor, action->path[0], pool);
+          path2 = subtract_anchor(anchor, action->path[1], pool);
           if (action->rev == SVN_INVALID_REVNUM)
             action->rev = head;
-          SVN_ERR(build(path2, action->url[0], action->rev,
+          SVN_ERR(build(path2, action->path[0], NULL, action->rev,
                         head, anchor, session, &root, pool));
           break;
         case ACTION_RM:
-          path1 = subtract_anchor(anchor, action->url[0], pool);
-          SVN_ERR(build(path1, NULL, SVN_INVALID_REVNUM,
+          path1 = subtract_anchor(anchor, action->path[0], pool);
+          SVN_ERR(build(path1, NULL, NULL, SVN_INVALID_REVNUM,
                         head, anchor, session, &root, pool));
           break;
         case ACTION_MKDIR:
-          path1 = subtract_anchor(anchor, action->url[0], pool);
-          SVN_ERR(build(path1, action->url[0], SVN_INVALID_REVNUM,
+          path1 = subtract_anchor(anchor, action->path[0], pool);
+          SVN_ERR(build(path1, action->path[0], NULL, SVN_INVALID_REVNUM,
+                        head, anchor, session, &root, pool));
+          break;
+        case ACTION_POST:
+          path1 = subtract_anchor(anchor, action->path[0], pool);
+          SVN_ERR(build(path1, action->path[0], action->path[1], action->rev,
                         head, anchor, session, &root, pool));
           break;
         }
@@ -384,6 +464,9 @@ usage(apr_pool_t *pool, int exit_val)
     "  mkdir URL             create new directory URL\n"
     "  mv URL1 URL2          move URL1 to URL2\n"
     "  rm URL                delete URL\n"
+    "  post REV FILE URL     add or replace file URL with contents copied\n"
+    "                        from FILE, and using REV as the base revision\n"
+    "                        (for safety purposes)\n"
     "\nOptions:\n"
     "  -h, --help            display this text\n"
     "  -m, --message ARG     use ARG as a log message\n"
@@ -546,6 +629,8 @@ main(int argc, const char **argv)
         action->action = ACTION_MKDIR;
       else if (! strcmp(action_string, "rm"))
         action->action = ACTION_RM;
+      else if (! strcmp(action_string, "post"))
+        action->action = ACTION_POST;
       else
         handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                        "'%s' is not an action\n", 
@@ -553,8 +638,8 @@ main(int argc, const char **argv)
       if (++i == action_args->nelts)
         insufficient(pool);
 
-      /* For copies, there should be a revision number next. */
-      if (action->action == ACTION_CP)
+      /* For copies and posts, there should be a revision number next. */
+      if ((action->action == ACTION_CP) || (action->action == ACTION_POST))
         {
           const char *rev_str = APR_ARRAY_IDX(action_args, i, const char *);
           if (strcmp(rev_str, "head") == 0)
@@ -578,8 +663,21 @@ main(int argc, const char **argv)
           action->rev = SVN_INVALID_REVNUM;
         }
 
+      /* For posts, there should be a local file next. */
+      if (action->action == ACTION_POST)
+        {
+          action->path[1] = svn_path_canonicalize(APR_ARRAY_IDX(action_args, 
+                                                                i, 
+                                                                const char *),
+                                                  pool);
+          if ((++i == action_args->nelts) && (j >= num_url_args))
+            insufficient(pool);
+        }
+
       /* How many URLs does this action expect? */
-      if (action->action == ACTION_RM || action->action == ACTION_MKDIR)
+      if (action->action == ACTION_RM 
+          || action->action == ACTION_MKDIR
+          || action->action == ACTION_POST)
         num_url_args = 1;
       else
         num_url_args = 2;
@@ -599,7 +697,7 @@ main(int argc, const char **argv)
           url = svn_path_uri_from_iri(url, pool);
           url = svn_path_uri_autoescape(url, pool);
           url = svn_path_canonicalize(url, pool);
-          action->url[j] = url;
+          action->path[j] = url;
 
           /* The cp source could be the anchor, but the other URLs should be
              children of the anchor. */
