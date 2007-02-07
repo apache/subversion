@@ -90,17 +90,7 @@ Client.pm at the appropriate place, and adjusted as necessary.
 
 =head1 BUGS
 
-=over
-
-=item
-
-The generated list of methods is not sorted.
-
-=item
-
-No parameter specifications are created.
-
-=back
+None known.
 
 =head1 AUTHOR
 
@@ -154,19 +144,49 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 __DATA__
 
 __template__
+[%- members = {};
+   member_nodelist = xp.findnodes('//sectiondef[@kind="func"]/memberdef[@kind = "function"]');
+   FOREACH node = member_nodelist;
+     member_name = xp.findvalue('name', node);
+     members.$member_name.node = node;
+   END -%]
 my %method_defs = (
-    [%- FOREACH member = xp.findnodes('//memberdef[@kind="function"]') %]
-    [%- member_name = xp.findvalue('name', member) %]
-    '[% member_name.remove(strip_prefix) %]' => {
+  [%- FOREACH member = members.keys.sort %]
+    [%- member_name = member.remove(strip_prefix) %]
+    [%- params = xp.findnodes('param/declname', members.$member.node) %]
+    [%- final_params = [] %]
+    [%- FOREACH param = params %]
+      [%- NEXT IF param.string_value.match('baton') %]
+      [%- NEXT IF param.string_value.match('ctx') %]
+      [%- NEXT IF param.string_value.match('pool') %]
+      [%- final_params.push(param) %]
+    [%- END %]
+    [%- param_len = 0 %]
+    '[% member_name %]' => {
         type => 'obj',
         args => [
-        [%- FOREACH param = xp.findnodes('param/declname', member) %]
-            [%- NEXT IF param.string_value.match('baton') %]
-            [%- NEXT IF param.string_value.match('ctx') %]
-            [%- NEXT IF param.string_value.match('pool') %]
-            $arg_[% param.string_value %],
+    [%- FOREACH param = final_params %]
+            $arg_[% param.string_value | lower %],
+        [%- IF param.string_value.length > param_len %]
+          [%- param_len = param.string_value.length %]
         [%- END %]
+    [%- END %]
         ],
     },
+
+=head2 [% member_name %]
+
+    [%- IF final_params.size %]
+  $ctx->[% member_name %]({
+      [%- FOREACH param = final_params %]
+      [% param.string_value | lower | format('%-*s', param_len) %] => ...,
+      [%- END %]
+  })
+    [%- ELSE %]
+  $ctx->[% member_name %]()
     [%- END %]
+
+=cut
+
+  [%- END %]
 );
