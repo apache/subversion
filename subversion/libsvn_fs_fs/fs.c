@@ -266,7 +266,7 @@ fs_delete_fs(const char *path,
              apr_pool_t *pool)
 {
   /* Remove everything. */
-  SVN_ERR(svn_io_remove_dir(path, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
 
   return SVN_NO_ERROR;
 }

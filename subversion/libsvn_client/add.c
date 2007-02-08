@@ -664,7 +664,7 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
               /* ### If this returns an error, should we link it onto
                  err instead, so that the user is warned that we just
                  created an unversioned directory? */
-              svn_error_clear(svn_io_remove_dir(path, subpool));
+              svn_error_clear(svn_io_remove_dir2(path, FALSE, subpool));
               return err;
             }
         }

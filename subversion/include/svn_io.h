@@ -761,7 +761,21 @@ svn_error_t *svn_stringbuf_from_aprfile(svn_stringbuf_t **result,
  */
 svn_error_t *svn_io_remove_file(const char *path, apr_pool_t *pool);
 
-/** Recursively remove directory @a path.  @a path is utf8-encoded. */
+/** Recursively remove directory @a path.  @a path is utf8-encoded.
+ * If @a ignore_enoent is @c TRUE, don't fail if the target directory
+ * doesn't exist.  Use @a pool for temporary allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_io_remove_dir2(const char *path,
+                                svn_boolean_t ignore_enoent,
+                                apr_pool_t *pool);
+
+/** Similar to svn_io_remove_dir2(), but with @a ignore_enoent set to
+ * @C FALSE.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API
+ */
 svn_error_t *svn_io_remove_dir(const char *path, apr_pool_t *pool);
 
 /** Read all of the disk entries in directory @a path, a utf8-encoded
@@ -1140,7 +1154,7 @@ svn_io_dir_open(apr_dir_t **new_dir, const char *dirname, apr_pool_t *pool);
 
 /** Wrapper for apr_dir_remove(), which see.  @a dirname is utf8-encoded.
  * @note This function has this name to avoid confusion with
- * svn_io_remove_dir(), which is recursive.
+ * svn_io_remove_dir2(), which is recursive.
  */
 svn_error_t *
 svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool);
