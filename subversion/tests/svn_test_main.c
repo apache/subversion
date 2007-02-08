@@ -88,7 +88,7 @@ cleanup_rmtree(void *data)
       const char *path = data;
 
       /* Ignore errors here. */
-      svn_error_t *err = svn_io_remove_dir(path, pool);
+      svn_error_t *err = svn_io_remove_dir2(path, FALSE, pool);
       if (verbose_mode)
         {
           if (err)

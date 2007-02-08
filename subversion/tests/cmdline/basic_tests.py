@@ -612,6 +612,9 @@ def basic_cleanup(sbox):
   expected_output.tweak('A/B', 'A/D/G', 'A/C', locked='L')
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
+
+  # corrupted/non-existing temporary directory should be restored
+  svntest.actions.remove_admin_tmp_dir(B_path)
   
   # Run cleanup (### todo: cleanup doesn't currently print anything)
   svntest.actions.run_and_verify_svn("Cleanup command", None, [],
