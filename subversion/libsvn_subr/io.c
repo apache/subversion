@@ -1686,6 +1686,12 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
 }
 
 
+svn_error_t *
+svn_io_remove_dir(const char *path, apr_pool_t *pool)
+{
+  return svn_io_remove_dir2(path, FALSE, pool);
+}
+
 /*
  Mac OS X has a bug where if you're readding the contents of a
  directory via readdir in a loop, and you remove one of the entries in
@@ -1711,7 +1717,8 @@ svn_io_remove_file(const char *path, apr_pool_t *pool)
 
    This is a function to perform the equivalent of 'rm -rf'. */
 svn_error_t *
-svn_io_remove_dir(const char *path, apr_pool_t *pool)
+svn_io_remove_dir2(const char *path, svn_boolean_t ignore_enoent,
+                   apr_pool_t *pool)
 {
   apr_status_t status;
   apr_dir_t *this_dir;
@@ -1732,9 +1739,16 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
   SVN_ERR(svn_path_cstring_from_utf8(&path_apr, path, pool));
 
   status = apr_dir_open(&this_dir, path_apr, pool);
-  if (status)
-    return svn_error_wrap_apr(status, _("Can't open directory '%s'"),
-                              svn_path_local_style(path, pool));
+  if (status) 
+    {
+      /* if the directory doesn't exist, our mission is accomplished */
+      if (ignore_enoent && APR_STATUS_IS_ENOENT(status))
+        return SVN_NO_ERROR;
+      else 
+        return svn_error_wrap_apr(status, 
+                                  _("Can't open directory '%s'"),
+                                  svn_path_local_style(path, pool));
+    }
 
   subpool = svn_pool_create(pool);
 
@@ -1768,7 +1782,7 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
 
               if (this_entry.filetype == APR_DIR)
                 {
-                  SVN_ERR(svn_io_remove_dir(fullpath, subpool));
+                  SVN_ERR(svn_io_remove_dir2(fullpath, FALSE, subpool));
                 }
               else if (this_entry.filetype == APR_REG)
                 {

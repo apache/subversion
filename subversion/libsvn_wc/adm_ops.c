@@ -1026,11 +1026,11 @@ erase_unversioned_from_wc(const char *path,
 
     case svn_node_dir:
       /* ### It would be more in the spirit of things to feed the
-         ### cancellation check through to svn_io_remove_dir()... */
+         ### cancellation check through to svn_io_remove_dir2()... */
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      SVN_ERR(svn_io_remove_dir(path, pool));
+      SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
 
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));

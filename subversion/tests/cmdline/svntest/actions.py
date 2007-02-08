@@ -976,6 +976,14 @@ def get_virginal_state(wc_dir, rev):
 
   return state
 
+def remove_admin_tmp_dir(wc_dir):
+  "Remove the tmp-file in an administrative directory"
+
+  tmp_path = os.path.join(wc_dir, main.get_admin_name(), 'tmp')
+  os.rmdir(os.path.join(tmp_path, 'prop-base'))
+  os.rmdir(os.path.join(tmp_path, 'props'))
+  os.rmdir(os.path.join(tmp_path, 'text-base'))
+  os.rmdir(tmp_path)
 
 # Cheap administrative directory locking
 def lock_admin_dir(wc_dir):

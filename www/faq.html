@@ -172,7 +172,7 @@ a <tt>file:</tt> URL?</a></li>
 <li><a href="#windows-xp-server">Under Windows XP, the Subversion
     server sometimes seems to send out corrupted data.  Can this really be
     happening?</a></li>  
-<li><a href="#ethereal">What is the best method of doing a network
+<li><a href="#net-trace">What is the best method of doing a network
     trace of the conversation between a Subversion client and server?</a></li>
 <li><a href="#revert">Why does the <tt>svn revert</tt> require an
     explicit target?  Why is it not recursive by default?  These
@@ -2544,13 +2544,14 @@ sorts of information about that Service Pack here:</p>
 </div>
 
 
-<div class="h3" id="ethereal" title="ethereal">
+<a name="ethereal"></a> <!-- for compatibility with old question -->
+<div class="h3" id="net-trace" title="net-trace">
 <h3>What is the best method of doing a network
     trace of the conversation between a Subversion client and
     server?</h3>
 
-<p>Use <a href="http://www.ethereal.com/">Ethereal</a> to eavesdrop
-on the conversation:</p>
+<p>Use <a href="http://www.wireshark.org/">Wireshark</a> (formerly
+known as "Ethereal") to eavesdrop on the conversation:</p>
 
 <!-- TODO: Make these instructions less specific to ra_dav. -->
 <ol>
@@ -2568,8 +2569,9 @@ on the conversation:</p>
 </ol>
 
 <p>The above instructions are specific to the graphical version of
-Ethereal, and do not apply to the commandline version (whose binary
-is usually named tethereal).</p>
+Wireshark, and don't apply to the command-line version known as
+"tshark" (which corresponds to "tethereal", from back when Wireshark
+was called Ethereal).</p>
 
 <p>Alternatively, you may set the <tt>neon-debug-mask</tt> parameter in your
 <tt>servers</tt> configuration file to cause neon's debugging output

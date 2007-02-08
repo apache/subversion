@@ -72,6 +72,7 @@ swig_pydir = @libdir@/svn-python/libsvn
 swig_pydir_extra = @libdir@/svn-python/svn
 swig_pldir = @libdir@/svn-perl
 swig_rbdir = $(SWIG_RB_SITE_ARCH_DIR)/svn/ext
+contribdir = @bindir@/svn-contrib
 
 javahl_javadir = @libdir@/svn-javahl
 javahl_javahdir = @libdir@/svn-javahl/include
@@ -186,6 +187,7 @@ INSTALL_BDB_LIB = $(INSTALL_LIB)
 INSTALL_DAV_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_CONTRIB = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_INCLUDE = $(INSTALL) -m 644
 INSTALL_MOD_SHARED = @APXS@ -i -S LIBEXECDIR="$(APACHE_LIBEXECDIR)" @MOD_ACTIVATION@
 INSTALL_MOD_STATIC = $(INSTALL) -m 644
@@ -350,9 +352,9 @@ clean-javahl:
 
 check-javahl: javahl
 	@if [ -z "@JAVAHL_TESTS_TARGET@" ]; then \
-        echo "--with-junit flag must be passed to configure"; \
-        exit 1; \
-    fi
+	  echo "--with-junit flag must be passed to configure"; \
+	  exit 1; \
+	fi
 	@FIX_JAVAHL_LIB@
 	$(JAVA) -Dtest.rootdir=$(abs_builddir)/subversion/bindings/java/javahl/test-work -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) org.tigris.subversion.javahl.tests.RunTests
 

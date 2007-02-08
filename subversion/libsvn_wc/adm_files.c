@@ -1220,7 +1220,7 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
      directory, which also removes the lock file */
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                               NULL, FALSE, pool, NULL);
-  SVN_ERR(svn_io_remove_dir(path, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
   SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
@@ -1238,8 +1238,8 @@ svn_wc__adm_cleanup_tmp_area(svn_wc_adm_access_t *adm_access,
   /* Get the path to the tmp area, and blow it away. */
   tmp_path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                                   NULL, 0, pool, SVN_WC__ADM_TMP, NULL);
-  SVN_ERR(svn_io_remove_dir(tmp_path, pool));
 
+  SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, pool));
   /* Now, rebuild the tmp area. */
   SVN_ERR(init_adm_tmp_area(adm_access, pool));
 
