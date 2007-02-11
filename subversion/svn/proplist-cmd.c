@@ -45,7 +45,8 @@ typedef struct
    stdout. */
 static svn_error_t *
 proplist_receiver_xml(void *baton,
-                      const svn_client_proplist_item_t *item,
+                      svn_stringbuf_t *path,
+                      apr_hash_t *prop_hash,
                       apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((proplist_baton_t *)baton)->opt_state;
@@ -54,17 +55,16 @@ proplist_receiver_xml(void *baton,
   const char *name_local;
 
   if (! is_url)
-    name_local = svn_path_local_style(item->node_name->data,
-                                      pool);
+    name_local = svn_path_local_style(path->data, pool);
   else
-    name_local = item->node_name->data;
+    name_local = path->data;
 
   /* "<target ...>" */
   svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "target",
                         "path", name_local, NULL);
 
-  SVN_ERR(svn_cl__print_xml_prop_hash(&sb, item->prop_hash,
-                                      (! opt_state->verbose), pool));
+  SVN_ERR(svn_cl__print_xml_prop_hash(&sb, prop_hash, (! opt_state->verbose),
+                                      pool));
 
   /* "</target>" */
   svn_xml_make_close_tag(&sb, pool, "target");
@@ -78,7 +78,8 @@ proplist_receiver_xml(void *baton,
 /* This implements the svn_proplist_receiver_t interface. */
 static svn_error_t *
 proplist_receiver(void *baton,
-                  const svn_client_proplist_item_t *item,
+                  svn_stringbuf_t *path,
+                  apr_hash_t *prop_hash,
                   apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((proplist_baton_t *)baton)->opt_state;
@@ -86,13 +87,13 @@ proplist_receiver(void *baton,
   const char *name_local;
 
   if (! is_url)
-    name_local = svn_path_local_style(item->node_name->data,
-                                      pool);
+    name_local = svn_path_local_style(path->data, pool);
   else
-    name_local = item->node_name->data;
+    name_local = path->data;
 
-  SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"), name_local));
-  SVN_ERR(svn_cl__print_prop_hash(item->prop_hash, (! opt_state->verbose),
+  if (!opt_state->quiet)
+    SVN_ERR(svn_cmdline_printf(pool, _("Properties on '%s':\n"), name_local));
+  SVN_ERR(svn_cl__print_prop_hash(prop_hash, (! opt_state->verbose),
                                   pool));
 
   return SVN_NO_ERROR;

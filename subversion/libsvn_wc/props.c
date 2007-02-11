@@ -355,8 +355,11 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   const char *access_path = svn_wc_adm_access_path(adm_access);
   int access_len = strlen(access_path);
   apr_array_header_t *prop_diffs;
+  const svn_wc_entry_t *entry;
   svn_wc_entry_t tmp_entry;
   svn_node_kind_t kind;
+  svn_boolean_t has_propcaching =
+    svn_wc__adm_wc_format(adm_access) > SVN_WC__NO_PROPCACHING_VERSION;
 
   /* Non-empty path without trailing slash need an extra slash removed */
   if (access_len != 0 && access_path[access_len - 1] != '/')
@@ -385,6 +388,11 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                                      | SVN_WC__ENTRY_MODIFY_CACHABLE_PROPS
                                      | SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
                                      pool));
+
+  if (has_propcaching)
+    SVN_ERR(svn_wc_entry(&entry, full_path, adm_access, FALSE, pool));
+  else
+    entry = NULL;
 
   /* Write our property hashes into temporary files.  Notice that the
      paths computed are ABSOLUTE pathnames, which is what our disk
@@ -419,7 +427,8 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
   else
     {
       /* No property modifications, remove the file instead. */
-      SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, real_props, pool));
+      if (! has_propcaching || (entry && entry->has_prop_mods))
+        SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, real_props, pool));
     }
 
   /* Repeat the above steps for the base properties if required. */
@@ -450,8 +459,11 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
                                              real_prop_base, pool));
         }
       else
-        SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, real_prop_base,
-                                     pool));
+        {
+          if (! has_propcaching || (entry && ! entry->has_props))
+            SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, real_prop_base,
+                                         pool));
+        }
     }
 
   return SVN_NO_ERROR;

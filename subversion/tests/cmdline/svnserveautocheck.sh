@@ -60,13 +60,17 @@ SERVER_CMD="$ABS_BUILDDIR/subversion/svnserve/svnserve"
 
 rm -f $SVNSERVE_PID
 
+SVNSERVE_PORT=$(($RANDOM+1024))
+while netstat -an | grep $SVNSERVE_PORT | grep 'LISTEN'; do
+  SVNSERVE_PORT=$(($RANDOM+1024))
+done
+
 $SERVER_CMD -d -r $ABS_BUILDDIR/subversion/tests/cmdline \
             --listen-host 127.0.0.1 \
+            --listen-port $SVNSERVE_PORT \
             --pid-file $SVNSERVE_PID &
 
-BASE_URL="svn://localhost"
-
-make svncheck
+time make check BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
 r=$?
 
 really_cleanup

@@ -55,6 +55,105 @@ stream_write(svn_stream_t *out,
 }
 
 
+static svn_error_t *
+print_properties_xml(const char *pname,
+                     apr_hash_t *props,
+                     apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *filename; 
+      svn_string_t *propval;
+      svn_stringbuf_t *sb = NULL;
+
+      svn_pool_clear(iterpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      filename = key;
+      propval = val;
+
+      svn_xml_make_open_tag(&sb, iterpool, svn_xml_normal, "target",
+                        "path", filename, NULL);
+      svn_cl__print_xml_prop(&sb, pname, propval, iterpool);
+      svn_xml_make_close_tag(&sb, iterpool, "target");
+
+      SVN_ERR(svn_cl__error_checked_fputs(sb->data, stdout));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+print_properties(svn_stream_t *out,
+                 svn_boolean_t is_url,
+                 const char *pname_utf8,
+                 apr_hash_t *props,
+                 svn_boolean_t print_filenames,
+                 svn_cl__opt_state_t *opt_state,
+                 apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *filename; 
+      svn_string_t *propval;
+
+      svn_pool_clear(iterpool);
+      apr_hash_this(hi, &key, NULL, &val);
+      filename = key;
+      propval = val;
+              
+      /* If this is a special Subversion property, it is stored as
+         UTF8, so convert to the native format. */
+      if (svn_prop_needs_translation(pname_utf8))
+        {
+          SVN_ERR(svn_subst_detranslate_string(&propval, propval,
+                                               TRUE, iterpool));
+        }
+              
+      if (print_filenames) 
+        {
+          const char *filename_stdout;
+
+          if (! is_url)
+            {
+              SVN_ERR(svn_cmdline_path_local_style_from_utf8
+                      (&filename_stdout, filename, iterpool));
+            }
+          else
+            {
+              SVN_ERR(svn_cmdline_cstring_from_utf8
+                      (&filename_stdout, filename, iterpool));
+            }
+
+          SVN_ERR(stream_write(out, filename_stdout,
+                               strlen(filename_stdout)));
+          SVN_ERR(stream_write(out, " - ", 3));
+        }
+
+      SVN_ERR(stream_write(out, propval->data, propval->len));
+      if (! opt_state->strict)
+        SVN_ERR(stream_write(out, APR_EOL_STR,
+                             strlen(APR_EOL_STR)));
+    }
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__propget(apr_getopt_t *os,
@@ -140,13 +239,14 @@ svn_cl__propget(apr_getopt_t *os,
     {
       apr_pool_t *subpool = svn_pool_create(pool);
 
+      if (opt_state->xml)
+        SVN_ERR(svn_cl__xml_print_header("properties", subpool));
+
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
           apr_hash_t *props;
-          apr_hash_index_t *hi;
           svn_boolean_t print_filenames = FALSE;
-          svn_boolean_t is_url = svn_path_is_url(target);
           const char *truepath;
           svn_opt_revision_t peg_revision;
 
@@ -169,52 +269,17 @@ svn_cl__propget(apr_getopt_t *os,
           print_filenames = ((opt_state->recursive || targets->nelts > 1
                               || apr_hash_count(props) > 1)
                              && (! opt_state->strict));
-            
-          for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
-            {
-              const void *key;
-              void *val;
-              const char *filename; 
-              svn_string_t *propval;
-              
-              apr_hash_this(hi, &key, NULL, &val);
-              filename = key;
-              propval = val;
-              
-              /* If this is a special Subversion property, it is stored as
-                 UTF8, so convert to the native format. */
-              if (svn_prop_needs_translation(pname_utf8))
-                {
-                  SVN_ERR(svn_subst_detranslate_string(&propval, propval,
-                                                       TRUE, subpool));
-                }
-              
-              if (print_filenames) 
-                {
-                  const char *filename_stdout;
-
-                  if (! is_url)
-                    {
-                      SVN_ERR(svn_cmdline_path_local_style_from_utf8
-                              (&filename_stdout, filename, subpool));
-                    }
-                  else
-                    {
-                      SVN_ERR(svn_cmdline_cstring_from_utf8
-                              (&filename_stdout, filename, subpool));
-                    }
-
-                  SVN_ERR(stream_write(out, filename_stdout,
-                                       strlen(filename_stdout)));
-                  SVN_ERR(stream_write(out, " - ", 3));
-                }
-
-              SVN_ERR(stream_write(out, propval->data, propval->len));
-              if (! opt_state->strict)
-                SVN_ERR(stream_write(out, APR_EOL_STR,
-                                     strlen(APR_EOL_STR)));
-            }
+          
+          if (opt_state->xml)
+            print_properties_xml(pname_utf8, props, subpool);
+          else
+            print_properties(out, svn_path_is_url(target), pname_utf8, props,
+                             print_filenames, opt_state, subpool);
         }
+      
+      if (opt_state->xml)
+        SVN_ERR(svn_cl__xml_print_footer("properties", subpool));
+
       svn_pool_destroy(subpool);
     }
 

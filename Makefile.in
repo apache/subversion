@@ -73,6 +73,7 @@ swig_pydir = @libdir@/svn-python/libsvn
 swig_pydir_extra = @libdir@/svn-python/svn
 swig_pldir = @libdir@/svn-perl
 swig_rbdir = $(SWIG_RB_SITE_ARCH_DIR)/svn/ext
+contribdir = @bindir@/svn-contrib
 
 javahl_javadir = @libdir@/svn-javahl
 javahl_javahdir = @libdir@/svn-javahl/include
@@ -187,6 +188,7 @@ INSTALL_BDB_LIB = $(INSTALL_LIB)
 INSTALL_DAV_LIB = $(INSTALL_LIB)
 INSTALL_SERF_LIB = $(INSTALL_LIB)
 INSTALL_BIN = $(LIBTOOL) --mode=install $(INSTALL)
+INSTALL_CONTRIB = $(LIBTOOL) --mode=install $(INSTALL)
 INSTALL_INCLUDE = $(INSTALL) -m 644
 INSTALL_MOD_SHARED = @APXS@ -i -S LIBEXECDIR="$(APACHE_LIBEXECDIR)" @MOD_ACTIVATION@
 INSTALL_MOD_STATIC = $(INSTALL) -m 644
@@ -351,9 +353,9 @@ clean-javahl:
 
 check-javahl: javahl
 	@if [ -z "@JAVAHL_TESTS_TARGET@" ]; then \
-        echo "--with-junit flag must be passed to configure"; \
-        exit 1; \
-    fi
+	  echo "--with-junit flag must be passed to configure"; \
+	  exit 1; \
+	fi
 	@FIX_JAVAHL_LIB@
 	$(JAVA) -Dtest.rootdir=$(abs_builddir)/subversion/bindings/java/javahl/test-work -Djava.library.path=@JAVAHL_OBJDIR@:$(libdir) -classpath $(javahl_tests_PATH):$(javahl_tests_CLASSPATH) org.tigris.subversion.javahl.tests.RunTests
 
@@ -515,15 +517,15 @@ doc-clean:
 # Converting from the .rnc XML shcemas to various other schema formats.
 SCHEMAS_DTD = $(SCHEMA_DIR)/blame.dtd $(SCHEMA_DIR)/info.dtd \
               $(SCHEMA_DIR)/list.dtd $(SCHEMA_DIR)/log.dtd \
-              $(SCHEMA_DIR)/status.dtd
+              $(SCHEMA_DIR)/status.dtd $(SCHEMA_DIR)/props.dtd
 
 SCHEMAS_RNG = $(SCHEMA_DIR)/blame.rng $(SCHEMA_DIR)/info.rng \
               $(SCHEMA_DIR)/list.rng $(SCHEMA_DIR)/log.rng \
-              $(SCHEMA_DIR)/status.rng
+              $(SCHEMA_DIR)/status.rng $(SCHEMA_DIR)/props.rng
 
 SCHEMAS_XSD = $(SCHEMA_DIR)/blame.xsd $(SCHEMA_DIR)/info.xsd \
               $(SCHEMA_DIR)/list.xsd $(SCHEMA_DIR)/log.xsd \
-              $(SCHEMA_DIR)/status.xsd
+              $(SCHEMA_DIR)/status.xsd $(SCHEMA_DIR)/props.xsd
 
 schema: schema-rng schema-dtd schema-xsd
 
