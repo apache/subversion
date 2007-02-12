@@ -388,6 +388,68 @@ patches.</p>
 </div>  <!-- conflict-resolution -->
 
 
+<div class="h2" id="migration-and-interoperability">
+<h2>Migration and Interoperability</h2>
+
+<div class="h3" id="migration">
+<h3>Migration</h2>
+
+<p>TODO: Repository migration from previous versions of Subversion.</p>
+
+<p>TODO: Merge meta data from svnmerge.py.  Dan Berlin has written
+Python code to perform this migration; it needs to be made available
+in the <code>tools/server-side/</code> area of the distribution .</p>
+
+</div>  <!-- migration -->
+
+<div class="h3" id="interoperability">
+<h3>Interoperability</h2>
+
+<p>Executive summary:</p>
+
+<ul>
+  <li>Older Subversion clients may interact with a 1.5.x+ Subversion
+  repository, but will continue to lack Merge Tracking
+  functionality for:
+
+  <ul>
+    <li>Recording meta data about any merges performed.</li>
+    <li>Using merge meta data to avoid <a
+    href="requirements.html#repeated-merge">repeated merging</a>.</li>
+  </ul>
+  </li>
+
+  <li>1.5.x+ Subversion clients may interact with a older Subversion
+  repositories, with Merge Tracking functionality effectively
+  neutralized.</li>
+</ul>
+
+<p>Gory detail:</p>
+
+<ul>
+  <li>A repository 1.4.x- doesn't provide any way to retrieve
+  inherited merge info for a path (regardless of client version).  For
+  a 1.5.x+ client which could theoretically make use of any merge info
+  available to it, this will typically neutralize its Merge Tracking
+  functionality.  The one case where merge info might come into play
+  is when the merge info for a path is available locally (e.g. in the
+  client's WC); in this case, repeated merges may be avoided.</li>
+ 
+  <li>A 1.5.x client will record merge tracking meta data for merges
+  performed, regardless of repository version.  However, a repository
+  1.4.x- won't know to do anything special with this merge info.  When
+  the repository is upgraded to 1.5.x+, we'll retain this merge info
+  in the svn:mergeinfo property, but I'm not yet clear on what'll
+  happen to the sqlite merge info index.  We may need some sort of
+  upgrade path here, but don't have one yet, and aren't promising
+  one.</li>
+</ul>
+
+</div>  <!-- interoperability -->
+
+</div>  <!-- migration-and-interoperability -->
+
+
 <div class="h2" id="related-documents">
 <h2>Related Documents and Discussion</h2>
 
