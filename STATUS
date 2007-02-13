@@ -76,4 +76,13 @@ Candidate changes:
     Votes:
       +1: dlr, hwright
 
+  * r23383
+    Fix potential segfault in the native global initialization code of
+    the JavaHL bindings (launchpad bug #62748).
+    Justification:
+      Fixes a problem with Ubuntu Edgy, and improves diagnostics and
+      maintainability.
+    Votes:
+      +1: dlr
+
 Approved changes:
