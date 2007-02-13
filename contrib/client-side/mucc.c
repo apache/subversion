@@ -65,6 +65,22 @@ init(const char *application)
   return pool;
 }
 
+static svn_error_t *
+open_tmp_file(apr_file_t **fp,
+              void *callback_baton,
+              apr_pool_t *pool)
+{
+  const char *temp_dir;
+
+  /* "Say, Subversion.  Seen any good tempdirs lately?" */
+  SVN_ERR(svn_io_temp_dir(&temp_dir, pool));
+
+  /* Open a unique file;  use APR_DELONCLOSE. */
+  return svn_io_open_unique_file2(fp, NULL, 
+                                  svn_path_join(temp_dir, "mucc", pool), 
+                                  ".tmp", svn_io_file_del_on_close, pool);
+}
+
 static svn_ra_callbacks_t *
 ra_callbacks(const char *username,
              const char *password, 
@@ -74,7 +90,7 @@ ra_callbacks(const char *username,
   svn_cmdline_setup_auth_baton(&callbacks->auth_baton, FALSE,
                                username, password,
                                NULL, FALSE, NULL, NULL, NULL, pool);
-  callbacks->open_tmp_file = NULL;
+  callbacks->open_tmp_file = open_tmp_file;
   callbacks->get_wc_prop = NULL;
   callbacks->set_wc_prop = NULL;
   callbacks->push_wc_prop = NULL;
