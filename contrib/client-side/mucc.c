@@ -103,10 +103,10 @@ struct operation {
     OP_ADD,
     OP_REPLACE
   } operation;
-  svn_node_kind_t kind;  /* to copy, mkdir, or post */
+  svn_node_kind_t kind;  /* to copy, mkdir, or put */
   svn_revnum_t rev;      /* to copy, valid for add and replace */
   const char *url;       /* to copy, valid for add and replace */
-  const char *src_file;  /* for post or copy, the source file for contents */
+  const char *src_file;  /* for put or copy, the source file for contents */
   apr_hash_t *children;  /* const char *path -> struct operation * */
   void *baton;           /* as returned by the commit editor */
 };
@@ -236,7 +236,7 @@ subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
       NULL   valid    NULL         delete
       valid  valid    NULL         copy (add-with-history)
       valid  invalid  NULL         mkdir
-      valid  valid    valid        post
+      valid  valid    valid        put
 
    Node type information is obtained for any copy source (to determine
    whether to create a file or directory) and for any deleted path (to
@@ -286,7 +286,7 @@ build(const char *path,
        - the prior operation was a deletion
 
      Note: while the operation structure certainly supports the
-     ability to do a copy of a file followed by a post of new contents
+     ability to do a copy of a file followed by a put of new contents
      for the file, we don't let that happen (yet).
   */
   if (! (operation->operation == OP_OPEN || operation->operation == OP_DELETE))
@@ -313,7 +313,7 @@ build(const char *path,
                                      path);
         }
     }
-  /* Otherwise, this is one of the other operations (copy, move, post,
+  /* Otherwise, this is one of the other operations (copy, move, put,
      mkdir). */
   else
     {
@@ -337,7 +337,7 @@ build(const char *path,
           operation->url = NULL;
           if (src_file)
             {
-              /* Post */
+              /* Put */
               operation->kind = svn_node_file;
               operation->rev = rev;
               operation->src_file = src_file;
@@ -359,11 +359,11 @@ struct action {
     ACTION_MV,
     ACTION_MKDIR,
     ACTION_CP,
-    ACTION_POST,
+    ACTION_PUT,
     ACTION_RM
   } action;
   
-  /* revision (copy-from-rev of path[0] for cp; base-rev for post) */
+  /* revision (copy-from-rev of path[0] for cp; base-rev for put) */
   svn_revnum_t rev;     
 
   /* action  path[0]  path[1]
@@ -371,7 +371,7 @@ struct action {
    * mv      source   target
    * mkdir   target   (null)
    * cp      source   target
-   * post    target   source
+   * put    target   source
    * rm      target   (null)
    */
   const char *path[2];
@@ -432,7 +432,7 @@ execute(const apr_array_header_t *actions,
           SVN_ERR(build(path1, action->path[0], NULL, SVN_INVALID_REVNUM,
                         head, anchor, session, &root, pool));
           break;
-        case ACTION_POST:
+        case ACTION_PUT:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           SVN_ERR(build(path1, action->path[0], action->path[1], action->rev,
                         head, anchor, session, &root, pool));
@@ -465,7 +465,7 @@ usage(apr_pool_t *pool, int exit_val)
     "  mkdir URL             create new directory URL\n"
     "  mv URL1 URL2          move URL1 to URL2\n"
     "  rm URL                delete URL\n"
-    "  post REV FILE URL     add or replace file URL with contents copied\n"
+    "  put REV FILE URL     add or replace file URL with contents copied\n"
     "                        from FILE, and using REV as the base revision\n"
     "                        (for safety purposes)\n"
     "\nOptions:\n"
@@ -630,8 +630,8 @@ main(int argc, const char **argv)
         action->action = ACTION_MKDIR;
       else if (! strcmp(action_string, "rm"))
         action->action = ACTION_RM;
-      else if (! strcmp(action_string, "post"))
-        action->action = ACTION_POST;
+      else if (! strcmp(action_string, "put"))
+        action->action = ACTION_PUT;
       else
         handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                        "'%s' is not an action\n", 
@@ -639,8 +639,8 @@ main(int argc, const char **argv)
       if (++i == action_args->nelts)
         insufficient(pool);
 
-      /* For copies and posts, there should be a revision number next. */
-      if ((action->action == ACTION_CP) || (action->action == ACTION_POST))
+      /* For copies and puts, there should be a revision number next. */
+      if ((action->action == ACTION_CP) || (action->action == ACTION_PUT))
         {
           const char *rev_str = APR_ARRAY_IDX(action_args, i, const char *);
           if (strcmp(rev_str, "head") == 0)
@@ -664,21 +664,21 @@ main(int argc, const char **argv)
           action->rev = SVN_INVALID_REVNUM;
         }
 
-      /* For posts, there should be a local file next. */
-      if (action->action == ACTION_POST)
+      /* For puts, there should be a local file next. */
+      if (action->action == ACTION_PUT)
         {
           action->path[1] = svn_path_canonicalize(APR_ARRAY_IDX(action_args, 
                                                                 i, 
                                                                 const char *),
                                                   pool);
-          if ((++i == action_args->nelts) && (j >= num_url_args))
+          if (++i == action_args->nelts)
             insufficient(pool);
         }
 
       /* How many URLs does this action expect? */
       if (action->action == ACTION_RM 
           || action->action == ACTION_MKDIR
-          || action->action == ACTION_POST)
+          || action->action == ACTION_PUT)
         num_url_args = 1;
       else
         num_url_args = 2;
