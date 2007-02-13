@@ -371,7 +371,7 @@ struct action {
    * mv      source   target
    * mkdir   target   (null)
    * cp      source   target
-   * put    target   source
+   * put     target   source
    * rm      target   (null)
    */
   const char *path[2];
@@ -465,7 +465,7 @@ usage(apr_pool_t *pool, int exit_val)
     "  mkdir URL             create new directory URL\n"
     "  mv URL1 URL2          move URL1 to URL2\n"
     "  rm URL                delete URL\n"
-    "  put REV FILE URL     add or replace file URL with contents copied\n"
+    "  put REV FILE URL      add or replace file URL with contents copied\n"
     "                        from FILE, and using REV as the base revision\n"
     "                        (for safety purposes)\n"
     "\nOptions:\n"
