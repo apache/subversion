@@ -1052,7 +1052,8 @@ def repos_to_wc(sbox):
   # Validate that the merge info of the copy destination matches the
   # implied merge info from the copy source.
   svntest.actions.run_and_verify_svn(None, ['/A/B:1\n'], [],
-                                     'propget', 'svn:mergeinfo', D_dir)
+                                     'propget', 'svn:mergeinfo',
+                                     os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug
@@ -3386,7 +3387,7 @@ test_list = [ None,
               mv_and_revert_directory,
               Skip(copy_preserve_executable_bit, (os.name != 'posix')),
               XFail(wc_to_repos),
-              XFail(repos_to_wc),
+              repos_to_wc,
               copy_to_root,
               url_copy_parent_into_child,
               wc_copy_parent_into_child,
