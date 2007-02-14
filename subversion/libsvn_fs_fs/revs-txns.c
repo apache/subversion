@@ -51,10 +51,8 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
   SVN_ERR(svn_fs_fs__check_fs(fs));
   SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
 
-  *value_p = NULL;
-  if (table)
-    *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
-  
+  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+
   return SVN_NO_ERROR;
 }
 
