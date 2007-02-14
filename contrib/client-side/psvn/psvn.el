@@ -1223,7 +1223,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                   (run-hooks 'svn-log-edit-done-hook)
                   (setq svn-status-files-to-commit nil
                         svn-status-recursive-commit nil)
-                  (message "svn commit finished"))
+                  (message "svn: committed revision %s" svn-status-commit-rev-number))
                  ((eq svn-process-cmd 'update)
                   (svn-status-show-process-output 'update t)
                   (setq svn-status-update-list (svn-status-parse-update-output))
