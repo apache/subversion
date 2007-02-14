@@ -572,6 +572,7 @@ main(int argc, const char **argv)
           err = svn_utf_cstring_to_utf8(&root_url, arg, pool);
           if (err)
             handle_error(err, pool);
+          root_url = svn_path_canonicalize(root_url, pool);
           if (! svn_path_is_url(root_url))
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                            "'%s' is not an URL\n", root_url),
