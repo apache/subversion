@@ -1,7 +1,7 @@
 /* revs-txns.c : operations on revision and transactions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -60,32 +60,20 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
 
 
 svn_error_t *
-svn_fs_fs__set_rev_prop(svn_fs_t *fs,
-                        svn_revnum_t rev,
-                        const char *name,
-                        const svn_string_t *value,
-                        apr_pool_t *pool)
-{
-  apr_hash_t *table;
-
-  SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
-
-  apr_hash_set(table, name, APR_HASH_KEY_STRING, value);
-
-  SVN_ERR(svn_fs_fs__set_revision_proplist(fs, rev, table, pool));
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_fs_fs__change_rev_prop(svn_fs_t *fs,
                            svn_revnum_t rev,
                            const char *name,
                            const svn_string_t *value,
                            apr_pool_t *pool)
 {
+  apr_hash_t *table;
+
   SVN_ERR(svn_fs_fs__check_fs(fs));
-  SVN_ERR(svn_fs_fs__set_rev_prop(fs, rev, name, value, pool));
+  SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
+
+  apr_hash_set(table, name, APR_HASH_KEY_STRING, value);
+
+  SVN_ERR(svn_fs_fs__set_revision_proplist(fs, rev, table, pool));
 
   return SVN_NO_ERROR;
 }
