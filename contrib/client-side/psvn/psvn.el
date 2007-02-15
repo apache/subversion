@@ -481,6 +481,11 @@ The function `svn-status-remove-control-M' can be useful for that hook")
   "A special coding system is needed for the output of svn.
 svn-status-coding-system is used in svn-run, if it is not nil.")
 
+(defvar svn-status-svn-file-coding-system 'undecided-unix
+  "The coding system that is used to save files that are loaded as
+parameter or data files via the svn command line client.
+It is used in the following functions: `svn-prop-edit-do-it', `svn-log-edit-done'")
+
 (defcustom svn-status-use-ido-completion
   (fboundp 'ido-completing-read)
   "*Use ido completion functionality."
@@ -573,7 +578,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-head-revision nil)
 (defvar svn-status-root-return-info nil)
 (defvar svn-status-property-edit-must-match-flag nil)
-(defvar svn-status-propedit-property-name nil)
+(defvar svn-status-propedit-property-name nil "The property name for the actual svn propset command")
 (defvar svn-status-propedit-file-list nil)
 (defvar svn-status-mode-line-process "")
 (defvar svn-status-mode-line-process-status "")
@@ -4250,13 +4255,15 @@ Commands:
   (svn-prop-edit-do-it t))
 
 (defun svn-prop-edit-do-it (async)
+  "Run svn propset `svn-status-propedit-property-name' with the content of the
+*svn-property-edit* buffer."
   (message "svn propset %s on %s"
            svn-status-propedit-property-name
            (mapcar 'svn-status-line-info->filename svn-status-propedit-file-list))
   (save-excursion
     (set-buffer (get-buffer "*svn-property-edit*"))
     (when (fboundp 'set-buffer-file-coding-system)
-      (set-buffer-file-coding-system 'undecided-unix nil))
+      (set-buffer-file-coding-system svn-status-svn-file-coding-system nil))
     (setq svn-status-temp-file-to-remove
           (concat svn-status-temp-dir "svn-prop-edit.txt" svn-temp-suffix))
     (write-region (point-min) (point-max) svn-status-temp-file-to-remove nil 1))
@@ -4359,6 +4366,7 @@ Commands:
   (set-window-configuration svn-status-pre-commit-window-configuration))
 
 (defun svn-log-edit-done ()
+  "Finish editing the log message and run svn commit."
   (interactive)
   (svn-status-save-some-buffers)
   (save-excursion
@@ -4366,7 +4374,7 @@ Commands:
     (when svn-log-edit-insert-files-to-commit
       (svn-log-edit-remove-comment-lines))
     (when (fboundp 'set-buffer-file-coding-system)
-      (set-buffer-file-coding-system 'undecided-unix nil))
+      (set-buffer-file-coding-system svn-status-svn-file-coding-system nil))
     (when (or svn-log-edit-update-log-entry svn-status-files-to-commit)
       (setq svn-status-temp-file-to-remove
             (concat svn-status-temp-dir "svn-log-edit.txt" svn-temp-suffix))
