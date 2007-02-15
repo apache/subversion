@@ -545,18 +545,18 @@ foreach my $project (@project_settings_list)
       }
 
     my @head;
+    my ($h_date, $h_year, $h_time, $h_day, $h_offset, $h_week_day,
+        $h_short_date, $h_month_day, $h_month_name);
+    $h_date = $date;
+    $h_date =~ s/[(),]//g;
+
+    ($h_short_date, $h_time, $h_offset, $h_week_day, $h_month_day,
+     $h_month_name, $h_year) = split(/ /, $h_date);
     if (defined $stdout)
       {
-        my ( $h_date, $h_year, $h_time, $h_day, $h_offset, $h_week_day, $h_short_date, $h_month_day, $h_month_name );
-
-        $h_date = $date;
-		  $h_date =~ s/[(),]//g;
-
-		  ( $h_short_date, $h_time, $h_offset, $h_week_day, $h_month_day, $h_month_name, $h_year ) = split(/ /, $h_date);
-
-		  push(@head, "From $mail_from $h_week_day $h_month_name $h_month_day $h_time $h_year\n");
-		  push(@head, "Date: $h_week_day, $h_month_name $h_month_day $h_year $h_time $h_offset\n");
+        push(@head, "From $mail_from $h_week_day $h_month_name $h_month_day $h_time $h_year\n");
       }
+    push(@head, "Date: $h_week_day, $h_month_day $h_month_name $h_year $h_time $h_offset\n");
     push(@head, "To: $to\n");
     push(@head, "From: $mail_from\n");
     push(@head, "Subject: $subject\n");

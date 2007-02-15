@@ -1,7 +1,7 @@
 /* revs-txns.h : internal interface to revision and transactions operations
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -28,13 +28,6 @@ extern "C" {
 
 
 /*** Revisions ***/
-
-/* Set property NAME to VALUE on REV in FS, allocation from POOL.  */
-svn_error_t *svn_fs_fs__set_rev_prop(svn_fs_t *fs,
-                                     svn_revnum_t rev,
-                                     const char *name,
-                                     const svn_string_t *value,
-                                     apr_pool_t *pool);
 
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated

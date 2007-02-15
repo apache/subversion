@@ -460,7 +460,7 @@ svn_wc__install_props(svn_stringbuf_t **log_accum,
         }
       else
         {
-          if (! has_propcaching || (entry && ! entry->has_props))
+          if (! has_propcaching || (entry && entry->has_props))
             SVN_ERR(svn_wc__loggy_remove(log_accum, adm_access, real_prop_base,
                                          pool));
         }
