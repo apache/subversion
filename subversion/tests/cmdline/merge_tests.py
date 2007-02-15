@@ -4378,6 +4378,187 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
   finally:
     os.chdir(saved_cwd)
 
+def tweak_src_then_merge_to_dest(sbox, src_path, dst_path,
+                                 canon_src_path, contents, cur_rev):
+  """Edit src and commit it. This results in new_rev.
+   Merge new_rev to dst_path. Return new_rev."""
+
+  wc_dir = sbox.wc_dir
+  new_rev = cur_rev + 1
+  svntest.main.file_write(src_path, contents)
+
+  expected_output = svntest.wc.State(src_path, {
+    '': Item(verb='Sending'),
+    })
+
+  expected_status = wc.State(src_path, 
+                             { '': Item(wc_rev=new_rev, status='  ')})
+
+  svntest.actions.run_and_verify_commit(src_path, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, src_path)
+
+  # Update the WC to new_rev so that it would be easier to expect everyone
+  # to be at new_rev.
+  svntest.actions.run_and_verify_svn(None, None, [], 'update', wc_dir)
+
+  # Merge new_rev of src_path to dst_path.
+
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_dst_path = shorten_path_kludge(dst_path)
+  expected_status = wc.State(dst_path, 
+                             { '': Item(wc_rev=new_rev, status='MM')})
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+
+    svntest.actions.run_and_verify_svn(None,
+                                       ['U    ' + short_dst_path + '\n'],
+                                       [],
+                                       'merge', '-c', str(new_rev),
+                                       sbox.repo_url + '/' + canon_src_path,
+                                       short_dst_path)
+  finally:
+    os.chdir(saved_cwd)
+
+  svntest.actions.run_and_verify_status(dst_path, expected_status)
+
+  return new_rev
+
+def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
+  "drive reporter api in depth first order"
+
+  # Copy /A/D to /A/copy-of-D it results in rONE.
+  # Create children at different hierarchies having some merge-info
+  # to test the set_path calls on a reporter in a depth-first order.
+  # On all 'file' descendants of /A/copy-of-D/ we run merges.
+  # We create /A/D/umlaut directly over URL it results in rev rTWO.
+  # When we merge rONE+1:TWO of /A/D on /A/copy-of-D it should merge smoothly.
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  A_path = os.path.join(wc_dir, 'A')
+  A_D_path = os.path.join(wc_dir, 'A', 'D')
+  copy_of_A_D_path = os.path.join(wc_dir, 'A', 'copy-of-D')
+
+  svntest.main.run_svn(None, "cp", A_D_path, copy_of_A_D_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/copy-of-D' : Item(verb='Adding'),
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'A/copy-of-D'         : Item(status='  ', wc_rev=2),
+    'A/copy-of-D/G'       : Item(status='  ', wc_rev=2),
+    'A/copy-of-D/G/pi'    : Item(status='  ', wc_rev=2),
+    'A/copy-of-D/G/rho'   : Item(status='  ', wc_rev=2),
+    'A/copy-of-D/G/tau'   : Item(status='  ', wc_rev=2),
+    'A/copy-of-D/H'       : Item(status='  ', wc_rev=2),
+    'A/copy-of-D/H/chi'   : Item(status='  ', wc_rev=2),
+    'A/copy-of-D/H/omega' : Item(status='  ', wc_rev=2),
+    'A/copy-of-D/H/psi'   : Item(status='  ', wc_rev=2),
+    'A/copy-of-D/gamma'   : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None,
+                                        None, None, None, None, wc_dir)
+
+
+  cur_rev = 2
+  for path in (["A", "D", "G", "pi"],
+               ["A", "D", "G", "rho"],
+               ["A", "D", "G", "tau"],
+               ["A", "D", "H", "chi"],
+               ["A", "D", "H", "omega"],
+               ["A", "D", "H", "psi"],
+               ["A", "D", "gamma"]):
+    path_name = os.path.join(wc_dir, *path)
+    canon_path_name = os.path.join(*path)
+    path[1] = "copy-of-D"
+    copy_of_path_name = os.path.join(wc_dir, *path)
+    var_name = 'new_content_for_' + path[len(path) - 1]
+    file_contents = "new content to " + path[len(path) - 1] + "\n"
+    globals()[var_name] = file_contents
+    cur_rev = tweak_src_then_merge_to_dest(sbox, path_name,
+                                           copy_of_path_name, canon_path_name,
+                                           file_contents, cur_rev)
+
+  copy_of_A_D_wc_rev = cur_rev
+  svntest.actions.run_and_verify_svn(None,
+                                     ['\n', 
+                                      'Committed revision ' + str(cur_rev+1) + '.\n'],
+                                     [],
+                                     'mkdir', sbox.repo_url + '/A/D/umlaut',
+                                     '-m', "log msg")
+  rev_to_merge_to_copy_of_D = cur_rev + 1
+
+  # Search for the comment entitled "The Merge Kluge" elsewhere in
+  # this file, to understand why we shorten and chdir() below.
+  short_copy_of_A_D_path = shorten_path_kludge(copy_of_A_D_path)
+
+  expected_output = wc.State(short_copy_of_A_D_path, {
+    'umlaut'  : Item(status='A '),
+    })
+
+  expected_status = wc.State(short_copy_of_A_D_path, {
+    ''        : Item(status=' M', wc_rev=copy_of_A_D_wc_rev),
+    'G'       : Item(status='  ', wc_rev=copy_of_A_D_wc_rev),
+    'G/pi'    : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
+    'G/rho'   : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
+    'G/tau'   : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
+    'H'       : Item(status='  ', wc_rev=copy_of_A_D_wc_rev),
+    'H/chi'   : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
+    'H/omega' : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
+    'H/psi'   : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
+    'gamma'   : Item(status='MM', wc_rev=copy_of_A_D_wc_rev),
+    'umlaut'  : Item(status='A ', copied='+', wc_rev='-'),
+    })
+
+  merged_rangelist = "3-%d" % rev_to_merge_to_copy_of_D
+
+
+  expected_disk = wc.State('', {
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:' + merged_rangelist}),
+    'G'       : Item(),
+    'G/pi'    : Item(new_content_for_pi,
+                     props={SVN_PROP_MERGE_INFO : '/A/D/G/pi:' + merged_rangelist}),
+    'G/rho'   : Item(new_content_for_rho,
+                     props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:' + merged_rangelist}),
+    'G/tau'   : Item(new_content_for_tau,
+                     props={SVN_PROP_MERGE_INFO : '/A/D/G/tau:' + merged_rangelist}),
+    'H'       : Item(),
+    'H/chi'   : Item(new_content_for_chi,
+                     props={SVN_PROP_MERGE_INFO : '/A/D/H/chi:' + merged_rangelist}),
+    'H/omega' : Item(new_content_for_omega,
+                     props={SVN_PROP_MERGE_INFO : '/A/D/H/omega:' + merged_rangelist}),
+    'H/psi'   : Item(new_content_for_psi,
+                     props={SVN_PROP_MERGE_INFO : '/A/D/H/psi:' + merged_rangelist}),
+    'gamma'   : Item(new_content_for_gamma,
+                     props={SVN_PROP_MERGE_INFO : '/A/D/gamma:' + merged_rangelist}),
+    'umlaut'  : Item(),
+    })
+  expected_skip = wc.State(short_copy_of_A_D_path, { })
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_copy_of_A_D_path,
+                                         2,
+                                         str(rev_to_merge_to_copy_of_D),
+                                         sbox.repo_url + '/A/D',
+                                         expected_output,
+                                         expected_disk,
+                                         expected_status,
+                                         expected_skip, 
+                                         None,
+                                         None,
+                                         None,
+                                         None,
+                                         None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -4425,6 +4606,7 @@ test_list = [ None,
               XFail(merge_eolstyle_handling),
               avoid_repeated_merge_using_inherited_merge_info,
               avoid_repeated_merge_on_subtree_with_merge_info,
+              obey_reporter_api_semantics_while_doing_subtree_merges,
              ]
 
 if __name__ == '__main__':
