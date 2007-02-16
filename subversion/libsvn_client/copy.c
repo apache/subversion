@@ -401,24 +401,24 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
 
 /* Obtain the implied merge info and the existing merge info of the
    source path, combine them and return the result in
-   *TARGET_MERGEINFO.  SRC_REL_PATH corresponds to SRC_URL, but is
-   relative to RA_SESSION. */
+   *TARGET_MERGEINFO.  SRC_REL_PATH corresponds to SRC_PATH_OR_URL,
+   but is relative to RA_SESSION. */
 static svn_error_t *
 calculate_target_merge_info(svn_ra_session_t *ra_session,
                             apr_hash_t **target_mergeinfo,
-                            const char *src_url,
+                            svn_wc_adm_access_t *adm_access,
+                            const char *src_path_or_url,
                             const char *src_rel_path,
                             svn_revnum_t src_revnum,
                             apr_pool_t *pool)
 {
-  const char *repos_root;
   const char *src_path;
   apr_hash_t *implied_mergeinfo, *src_mergeinfo;
 
   /* Find src path relative to the repository root. */
-  /* ### Why not use svn_client__path_relative_to_root() here? */
-  SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
-  src_path = src_url + strlen(repos_root);
+  SVN_ERR(svn_client__path_relative_to_root(&src_path, src_path_or_url,
+                                            NULL, ra_session, adm_access,
+                                            pool));
 
   /* Obtain any implied and/or existing (explicit) merge info. */
   SVN_ERR(get_implied_merge_info(ra_session, &implied_mergeinfo,
@@ -796,7 +796,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       path_driver_info_t *info = APR_ARRAY_IDX(path_infos, i,
                                                path_driver_info_t *);
       apr_hash_t *mergeinfo;
-      SVN_ERR(calculate_target_merge_info(ra_session, &mergeinfo,
+      SVN_ERR(calculate_target_merge_info(ra_session, &mergeinfo, NULL,
                                           info->src_url, info->src_path,
                                           info->src_revnum, pool));
       SVN_ERR(svn_mergeinfo__to_string(&info->mergeinfo, mergeinfo, pool));
@@ -1168,8 +1168,9 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
              ### svn_wc_add2(), but can't occur before we add the new
              ### source path. */
           SVN_ERR(calculate_target_merge_info(ra_session, &src_mergeinfo,
-                                              pair->src, pair->src_rel,
-                                              src_revnum, pool));
+                                              NULL, pair->src,
+                                              pair->src_rel, src_revnum,
+                                              pool));
           SVN_ERR(extend_wc_merge_info(pair->dst, dst_entry, src_mergeinfo,
                                        dst_access, ctx, pool));
         }
@@ -1223,7 +1224,7 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
 
       SVN_ERR(svn_wc_entry(&dst_entry, pair->dst, adm_access, FALSE, pool));
       SVN_ERR(calculate_target_merge_info(ra_session, &src_mergeinfo,
-                                          pair->src, pair->src_rel,
+                                          NULL, pair->src, pair->src_rel,
                                           src_revnum, pool));
       SVN_ERR(extend_wc_merge_info(pair->dst, dst_entry, src_mergeinfo,
                                    adm_access, ctx, pool));
