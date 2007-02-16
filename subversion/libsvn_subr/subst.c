@@ -552,9 +552,7 @@ translate_keyword_subst(char *buf,
     }
 
   /* Check for unexpanded keyword. */
-  else if ((buf_ptr[0] == '$')          /* "$keyword$" */
-           || ((buf_ptr[0] == ':') 
-               && (buf_ptr[1] == '$'))) /* "$keyword:$" */
+  else if (buf_ptr[0] == '$')          /* "$keyword$" */
     {
       /* unexpanded... */
       if (value)
@@ -589,10 +587,13 @@ translate_keyword_subst(char *buf,
     }
 
   /* Check for expanded keyword. */
-  else if ((*len >= 4 + keyword_len ) /* holds at least "$keyword: $" */
-           && (buf_ptr[0] == ':')     /* first char after keyword is ':' */
-           && (buf_ptr[1] == ' ')     /* second char after keyword is ' ' */
-           && (buf[*len - 2] == ' ')) /* has ' ' for next to last character */
+  else if (((*len >= 4 + keyword_len ) /* holds at least "$keyword: $" */
+           && (buf_ptr[0] == ':')      /* first char after keyword is ':' */
+           && (buf_ptr[1] == ' ')      /* second char after keyword is ' ' */
+           && (buf[*len - 2] == ' '))
+        || ((*len >= 3 + keyword_len ) /* holds at least "$keyword:$" */
+           && (buf_ptr[0] == ':')      /* first char after keyword is ':' */
+           && (buf_ptr[1] == '$')))    /* second char after keyword is '$' */
     {
       /* expanded... */
       if (! value)

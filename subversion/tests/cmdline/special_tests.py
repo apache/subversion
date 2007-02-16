@@ -495,6 +495,43 @@ def checkout_repo_with_symlinks(sbox):
                                           expected_output,
                                           expected_wc)
 
+# Issue 2716: 'svn diff' against a symlink to a directory within the wc
+def diff_symlink_to_dir(sbox):
+  "diff a symlink to a directory"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Create a symlink to A/D/.
+  d_path = os.path.join('A', 'D')
+  link_path = os.path.join(wc_dir, 'link')
+  os.symlink(d_path, link_path)
+
+  # Add the symlink.
+  svntest.main.run_svn(None, 'add', link_path)
+
+  # Now diff the wc itself and check the results.
+  expected_output = [
+    "Index: svn-test-work/working_copies/special_tests-10/link\n",
+    "===================================================================\n",
+    "--- svn-test-work/working_copies/special_tests-10/link\t(revision 0)\n",
+    "+++ svn-test-work/working_copies/special_tests-10/link\t(revision 0)\n",
+    "@@ -0,0 +1 @@\n",
+    "+link " + d_path + "\n",
+    "\ No newline at end of file\n",
+    "\n",
+    "Property changes on: svn-test-work/working_copies/special_tests-10/link\n",
+    "___________________________________________________________________\n",
+    "Name: svn:special\n",
+    "   + *\n",
+    "\n" ]
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     wc_dir)
+  # We should get the same output if we the diff the symlink itself.
+  svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
+                                     link_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -510,6 +547,7 @@ test_list = [ None,
               Skip(merge_symlink_into_file, (os.name != 'posix')),
               XFail(Skip(merge_file_into_symlink, (os.name != 'posix'))),
               checkout_repo_with_symlinks,
+              XFail(Skip(diff_symlink_to_dir, (os.name != 'posix'))),
              ]
 
 if __name__ == '__main__':

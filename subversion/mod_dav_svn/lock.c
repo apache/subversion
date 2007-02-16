@@ -843,14 +843,14 @@ remove_lock(dav_lockdb *lockdb,
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Failed to remove a lock.",
                                     resource->pool);
-    }
 
-  /* Log the unlocking as a 'high-level' action. */
-  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(resource->info->r->pool,
-                             "unlock '%s'",
-                             svn_path_uri_encode(resource->info->repos_path,
-                                                 resource->info->r->pool)));
+      /* Log the unlocking as a 'high-level' action. */
+      apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
+                    apr_psprintf(resource->info->r->pool,
+                                 "unlock '%s'",
+                                 svn_path_uri_encode(resource->info->repos_path,
+                                                     resource->info->r->pool)));
+    }
 
   return 0;
 }

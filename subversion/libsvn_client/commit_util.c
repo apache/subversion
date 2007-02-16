@@ -824,26 +824,17 @@ svn_client__get_copy_committables(apr_hash_t **committables,
                                   apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
-  apr_hash_t *tmp_committables;
-  apr_array_header_t *committables_list;
   int i;
 
-  committables_list = apr_array_make(pool, 0,
-                                     sizeof(svn_client_commit_item2_t *));
+  *committables = apr_hash_make(pool);
 
-  /* For each copy pair, create a temporary hash and harvest the commitables
-     for that pair into that hash.  When done harvesting, fetch the list of 
-     committables from the hash and append it to the list of committables which
-     we have already harvested.
-     ### There's got to be a more efficient way to do this... */
+  /* For each copy pair, harvest the committables for that pair into the 
+     committables hash. */
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_client__copy_pair_t *pair = 
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
-      apr_array_header_t *list;
       svn_wc_adm_access_t *dir_access;
-
-      tmp_committables = apr_hash_make(pool);
 
       /* Read the entry for this SRC. */
       SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
@@ -861,20 +852,11 @@ svn_client__get_copy_committables(apr_hash_t **committables,
                                     svn_path_dirname(pair->src, pool), pool));
 
       /* Handle this SRC. */
-      SVN_ERR(harvest_committables(tmp_committables, NULL, pair->src,
+      SVN_ERR(harvest_committables(*committables, NULL, pair->src,
                                    dir_access, pair->dst, entry->url, entry,
                                    NULL, FALSE, TRUE, FALSE, FALSE,
                                    NULL, ctx, pool));
-
-      list = apr_hash_get(tmp_committables, SVN_CLIENT__SINGLE_REPOS_NAME,
-                          APR_HASH_KEY_STRING);
-      committables_list = apr_array_append(pool, committables_list, list);
     }
-
-  /* Create and fill the COMMITTABLES hash. */
-  *committables = apr_hash_make(pool);
-  apr_hash_set(*committables, SVN_CLIENT__SINGLE_REPOS_NAME,
-               APR_HASH_KEY_STRING, committables_list);
 
   return SVN_NO_ERROR;
 }
