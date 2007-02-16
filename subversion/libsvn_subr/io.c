@@ -487,7 +487,7 @@ svn_io_create_unique_link(const char **unique_name_p,
         continue;
       else if (rv == -1 && apr_err)
         {
-          /* On Win32, CreateFile failswith an "Access Denied" error
+          /* On Win32, CreateFile fails with an "Access Denied" error
              code, rather than "File Already Exists", if the colliding
              name belongs to a directory. */
           if (APR_STATUS_IS_EACCES(apr_err))
@@ -505,7 +505,8 @@ svn_io_create_unique_link(const char **unique_name_p,
             }
 
           *unique_name_p = NULL;
-          return svn_error_wrap_apr(apr_err, _("Can't open '%s'"),
+          return svn_error_wrap_apr(apr_err,
+                                    _("Can't create symbolic link '%s'"),
                                     svn_path_local_style(unique_name, pool));
         }
       else
