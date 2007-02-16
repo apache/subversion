@@ -877,7 +877,11 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
 (put 'svn-global-trac-map 'risky-local-variable t) ;for Emacs 20.7
 (when (not svn-global-trac-map)
   (setq svn-global-trac-map (make-sparse-keymap))
+  (define-key svn-global-trac-map (kbd "w") 'svn-trac-browse-wiki)
   (define-key svn-global-trac-map (kbd "t") 'svn-trac-browse-timeline)
+  (define-key svn-global-trac-map (kbd "m") 'svn-trac-browse-roadmap)
+  (define-key svn-global-trac-map (kbd "s") 'svn-trac-browse-source)
+  (define-key svn-global-trac-map (kbd "r") 'svn-trac-browse-report)
   (define-key svn-global-trac-map (kbd "i") 'svn-trac-browse-ticket)
   (define-key svn-global-trac-map (kbd "c") 'svn-trac-browse-changeset)
   (define-key svn-global-keymap (kbd "t") svn-global-trac-map))
@@ -1723,7 +1727,13 @@ A and B must be line-info's."
   (define-key svn-status-mode-map (kbd "O") svn-status-mode-options-map))
 (when (not svn-status-mode-trac-map)
   (setq svn-status-mode-trac-map (make-sparse-keymap))
+  (define-key svn-status-mode-trac-map (kbd "w") 'svn-trac-browse-wiki)
   (define-key svn-status-mode-trac-map (kbd "t") 'svn-trac-browse-timeline)
+  (define-key svn-status-mode-trac-map (kbd "m") 'svn-trac-browse-roadmap)
+  (define-key svn-status-mode-trac-map (kbd "r") 'svn-trac-browse-report)
+  (define-key svn-status-mode-trac-map (kbd "s") 'svn-trac-browse-source)
+  (define-key svn-status-mode-trac-map (kbd "i") 'svn-trac-browse-ticket)
+  (define-key svn-status-mode-trac-map (kbd "c") 'svn-trac-browse-changeset)
   (define-key svn-status-mode-map (kbd "T") svn-status-mode-trac-map))
 (when (not svn-status-mode-branch-map)
   (setq svn-status-mode-branch-map (make-sparse-keymap))
@@ -1793,7 +1803,13 @@ A and B must be line-info's."
       :style toggle :selected svn-status-display-full-path]
      )
     ("Trac"
+     ["Browse wiki" svn-trac-browse-wiki t]
      ["Browse timeline" svn-trac-browse-timeline t]
+     ["Browse roadmap" svn-trac-browse-roadmap t]
+     ["Browse source" svn-trac-browse-source t]
+     ["Browse report" svn-trac-browse-report t]
+     ["Browse ticket" svn-trac-browse-ticket t]
+     ["Browse changeset" svn-trac-browse-changeset t]
      ["Set Trac project root" svn-status-set-trac-project-root t]
      )
     "---"
@@ -4902,12 +4918,41 @@ removed again, when a faster parsing and display routine for
 ;; --------------------------------------------------------------------------------
 ;; svn status trac integration
 ;; --------------------------------------------------------------------------------
+(defun svn-trac-browse-wiki ()
+  "Open the trac wiki view for the current svn repository."
+  (interactive)
+  (unless svn-trac-project-root
+    (svn-status-set-trac-project-root))
+  (svn-browse-url (concat svn-trac-project-root "wiki")))
+
 (defun svn-trac-browse-timeline ()
   "Open the trac timeline view for the current svn repository."
   (interactive)
   (unless svn-trac-project-root
     (svn-status-set-trac-project-root))
   (svn-browse-url (concat svn-trac-project-root "timeline")))
+
+(defun svn-trac-browse-roadmap ()
+  "Open the trac roadmap view for the current svn repository."
+  (interactive)
+  (unless svn-trac-project-root
+    (svn-status-set-trac-project-root))
+  (svn-browse-url (concat svn-trac-project-root "roadmap")))
+
+(defun svn-trac-browse-source ()
+  "Open the trac source browser for the current svn repository."
+  (interactive)
+  (unless svn-trac-project-root
+    (svn-status-set-trac-project-root))
+  (svn-browse-url (concat svn-trac-project-root "browse")))
+
+(defun svn-trac-browse-report (arg)
+  "Open the trac report view for the current svn repository.
+When called with a prefix argument, display the given report number."
+  (interactive "P")
+  (unless svn-trac-project-root
+    (svn-status-set-trac-project-root))
+  (svn-browse-url (concat svn-trac-project-root "report" (if (numberp arg) (format "/%s" arg) ""))))
 
 (defun svn-trac-browse-changeset (changeset-nr)
   "Show a changeset in the trac issue tracker."
