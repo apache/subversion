@@ -4413,11 +4413,15 @@ def tweak_src_then_merge_to_dest(sbox, src_path, dst_path,
   try:
     os.chdir(svntest.main.work_dir)
 
+    merge_url = sbox.repo_url + '/' + canon_src_path
+    if sys.platform == 'win32':
+      merge_url = merge_url.replace('\\', '/')
+
     svntest.actions.run_and_verify_svn(None,
                                        ['U    ' + short_dst_path + '\n'],
                                        [],
                                        'merge', '-c', str(new_rev),
-                                       sbox.repo_url + '/' + canon_src_path,
+                                       merge_url,
                                        short_dst_path)
   finally:
     os.chdir(saved_cwd)
