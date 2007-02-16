@@ -136,7 +136,7 @@ svn_client__path_relative_to_root(const char **rel_path,
                                   apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  svn_boolean_t need_cleanup = FALSE;
+  svn_boolean_t need_wc_cleanup = FALSE;
   svn_boolean_t is_path = !svn_path_is_url(path_or_url);
 
   /* Old WCs may not provide the repository URL. */
@@ -145,47 +145,42 @@ svn_client__path_relative_to_root(const char **rel_path,
   /* If we have a WC path, transform it into a URL for use in
      calculating its path relative to the repository root.
 
-     If we don't already know the repository root, derive it by first
-     looking in the entries file, then falling back to asking the
-     repository itself. */
-  if (is_path || repos_root == NULL)
+     If we don't already know the repository root, derive it.  If we
+     have a WC path, first look in the entries file.  Fall back to
+     asking the RA session. */
+  if (is_path && repos_root == NULL)
     {
       const svn_wc_entry_t *entry;
 
       if (adm_access == NULL)
         {
-          SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path_or_url, FALSE, 0,
-                                   NULL, NULL, pool));
-          need_cleanup = TRUE;
+          SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path_or_url,
+                                         FALSE, 0, NULL, NULL, pool));
+          need_wc_cleanup = TRUE;
         }
       svn_wc_entry(&entry, path_or_url, adm_access, FALSE, pool);
 
-      if (is_path)
+      if (entry != NULL)
         {
-          if (entry != NULL)
-            path_or_url = entry->url;
-          else
-            {
-              /* We can't transform the local path into a URL. */
-              err = svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                      _("'%s' is not under version control"),
-                                      svn_path_local_style(path_or_url, pool));
-              goto cleanup;
-            }
+          path_or_url = entry->url;
+          repos_root = entry->repos;
         }
-
-      if (repos_root == NULL)
+      else
         {
-          if (entry != NULL)
-            repos_root = entry->repos;
-
-          if (repos_root == NULL)
-            {
-              err = svn_ra_get_repos_root(ra_session, &repos_root, pool);
-              if (err)
-                goto cleanup;
-            }
+          /* We can't transform the local path into a URL. */
+          err = svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                  _("'%s' is not under version control"),
+                                  svn_path_local_style(path_or_url, pool));
+          goto cleanup;
         }
+    }
+  if (repos_root == NULL)
+    {
+      /* We may be operating on a URL, or have been otherwise unable
+         to determine the repository root. */
+      err = svn_ra_get_repos_root(ra_session, &repos_root, pool);
+      if (err)
+        goto cleanup;
     }
 
   /* Calculate the path relative to the repository root. */
@@ -197,7 +192,7 @@ svn_client__path_relative_to_root(const char **rel_path,
   *rel_path = svn_path_uri_decode(*rel_path, pool);
 
  cleanup:
-  if (need_cleanup)
+  if (need_wc_cleanup)
     {
       if (err == SVN_NO_ERROR)
         err = svn_wc_adm_close(adm_access);
