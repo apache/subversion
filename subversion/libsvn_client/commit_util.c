@@ -824,6 +824,7 @@ svn_client__get_copy_committables(apr_hash_t **committables,
                                   apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
+  apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
   *committables = apr_hash_make(pool);
@@ -836,20 +837,24 @@ svn_client__get_copy_committables(apr_hash_t **committables,
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
       svn_wc_adm_access_t *dir_access;
 
+      svn_pool_clear(iterpool);
+
       /* Read the entry for this SRC. */
-      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, iterpool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_ENTRY_NOT_FOUND, NULL,
            _("'%s' is not under version control"),
-           svn_path_local_style(pair->src, pool));
+           svn_path_local_style(pair->src, iterpool));
       
       /* Get the right access baton for this SRC. */
       if (entry->kind == svn_node_dir)
-        SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, pair->src, pool));
+        SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, pair->src,
+                iterpool));
       else
         SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access,
-                                    svn_path_dirname(pair->src, pool), pool));
+                                    svn_path_dirname(pair->src, iterpool),
+                                    iterpool));
 
       /* Handle this SRC. */
       SVN_ERR(harvest_committables(*committables, NULL, pair->src,
@@ -857,6 +862,8 @@ svn_client__get_copy_committables(apr_hash_t **committables,
                                    NULL, FALSE, TRUE, FALSE, FALSE,
                                    NULL, ctx, pool));
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
