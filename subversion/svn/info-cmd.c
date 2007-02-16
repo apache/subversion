@@ -69,9 +69,11 @@ schedule_str(svn_wc_schedule_t schedule)
 }
 
 
-/* prints svn info in xml mode to standard out */
+/* A callback of type svn_info_receiver_t.
+   Prints svn info in xml mode to standard out */
 static svn_error_t *
-print_info_xml(const char *target,
+print_info_xml(void *baton,
+               const char *target,
                const svn_info_t *info,
                apr_pool_t *pool)
 {
@@ -234,8 +236,10 @@ print_info_xml(const char *target,
 }
 
 
+/* A callback of type svn_info_receiver_t. */
 static svn_error_t *
-print_info(const char *target,
+print_info(void *baton,
+           const char *target,
            const svn_info_t *info,
            apr_pool_t *pool)
 {
@@ -407,20 +411,6 @@ print_info(const char *target,
 }
 
 
-/* A callback of type svn_info_receiver_t. */
-static svn_error_t *
-info_receiver(void *baton,
-              const char *path,
-              const svn_info_t *info,
-              apr_pool_t *pool)
-{
-  if (((svn_cl__cmd_baton_t *) baton)->opt_state->xml)
-    return print_info_xml(path, info, pool);
-  else
-    return print_info(path, info, pool);
-}
-
-
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__info(apr_getopt_t *os,
@@ -435,6 +425,7 @@ svn_cl__info(apr_getopt_t *os,
   int i;
   svn_error_t *err;
   svn_opt_revision_t peg_revision;
+  svn_info_receiver_t receiver;
 
   /* Before allowing svn_opt_args_to_target_array() to canonicalize
      all the targets, we need to build a list of targets made of both
@@ -469,6 +460,8 @@ svn_cl__info(apr_getopt_t *os,
 
   if (opt_state->xml)
     {
+      receiver = print_info_xml;
+
       /* If output is not incremental, output the XML header and wrap
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
@@ -477,6 +470,8 @@ svn_cl__info(apr_getopt_t *os,
     }
   else
     {
+      receiver = print_info;
+
       if (opt_state->incremental)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("'incremental' option only valid in XML "
@@ -501,7 +496,7 @@ svn_cl__info(apr_getopt_t *os,
 
       err = svn_client_info(truepath,
                             &peg_revision, &(opt_state->start_revision),
-                            info_receiver, baton,
+                            receiver, NULL,
                             opt_state->recursive, ctx, subpool);
 
       /* If one of the targets is a non-existent URL or wc-entry,
