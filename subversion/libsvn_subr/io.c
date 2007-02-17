@@ -1582,24 +1582,39 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
 /* TODO write test for these two functions, then refactor. */
 
 svn_error_t *
-svn_stringbuf_from_file(svn_stringbuf_t **result,
-                        const char *filename,
-                        apr_pool_t *pool)
+svn_stringbuf_from_file2(svn_stringbuf_t **result,
+                         const char *filename,
+                         apr_pool_t *pool)
 {
   apr_file_t *f = NULL;
 
   if (filename[0] == '-' && filename[1] == '\0')
-    return svn_error_create
-        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-         _("Reading from stdin is currently broken, so disabled"));
-
-  SVN_ERR(svn_io_file_open(&f, filename, APR_READ, APR_OS_DEFAULT, pool));
+    {
+      apr_status_t apr_err;
+      if ((apr_err = apr_file_open_stdin(&f, pool)))
+        return svn_error_wrap_apr(apr_err, "Can't open stdin");
+    }
+  else
+    {
+      SVN_ERR(svn_io_file_open(&f, filename, APR_READ, APR_OS_DEFAULT, pool));
+    }
 
   SVN_ERR(svn_stringbuf_from_aprfile(result, f, pool));
-
   SVN_ERR(svn_io_file_close(f, pool));
-
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_stringbuf_from_file(svn_stringbuf_t **result,
+                        const char *filename,
+                        apr_pool_t *pool)
+{
+  if (filename[0] == '-' && filename[1] == '\0')
+    return svn_error_create
+        (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+         _("Reading from stdin is disallowed"));
+  return svn_stringbuf_from_file2(result, filename, pool);
 }
 
 
