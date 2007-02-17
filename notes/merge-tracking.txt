@@ -2,7 +2,9 @@ Use cases and requirements can be found at
 http://subversion.tigris.org/merge-tracking/requirements.html
 
 
-This design is intended to track changes at a granularity necessary to support the merging cases of "Repeated merge", "Cherry Picking", "Rollback Merge", "Record Manual Merge", "Merge Previews", "Distributability of Merge Resolution".
+This design is intended to track changes at a granularity necessary to support
+the merging cases of "Repeated merge", "Cherry Picking", "Rollback Merge",
+"Record Manual Merge", "Merge Previews", "Distributability of Merge Resolution".
 
 Please remember that this design is *only* for tracking what changes are
 merged where.  I expect this to be the easy part, compared to deciding
@@ -105,7 +107,9 @@ anyway to determine.  It is expected that directory trees are not that
 deep, and the lookup of merge info properties quick enough (due to
 indexing, etc), to make this eliding not affect performance.
 
-Eliding will never affect the semantics of merge information, as it should only be performed in the case when it was exactly the same, and if it was exactly the same, it could not have had an effect on the merge results.  
+Eliding will never affect the semantics of merge information, as it should
+only be performed in the case when it was exactly the same, and if it was
+exactly the same, it could not have had an effect on the merge results.  
 
 Other than eliding, any directory or file may have merge info attached to it.
 
