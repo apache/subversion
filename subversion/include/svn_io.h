@@ -732,17 +732,25 @@ svn_stream_contents_same(svn_boolean_t *same,
 
 /** @} */
 
-/** Sets @a *result to a string containing the contents of @a filename, a
- * utf8-encoded path. 
+/** Sets @a *result to a string containing the contents of @a
+ * filename, which is either "-" (indicating that stdin should be
+ * read) or the utf8-encoded path of a real file.
  *
- * If @a filename is "-", return the error @c SVN_ERR_UNSUPPORTED_FEATURE
- * and don't touch @a *result.
+ * @warning Callers should be aware that if a program tries both to
+ * invoke an external editor and to read from stdin, stdin could be
+ * trashed and the editor might act funky or die outright.
  *
- * ### Someday, "-" will fill @a *result from stdin.  The problem right
- * now is that if the same command invokes the editor, stdin is crap,
- * and the editor acts funny or dies outright.  One solution is to
- * disallow stdin reading and invoking the editor, but how to do that
- * reliably?
+ * @since New in 1.5.
+ */
+svn_error_t *svn_stringbuf_from_file2(svn_stringbuf_t **result, 
+                                      const char *filename, 
+                                      apr_pool_t *pool);
+
+/** Similar to svn_stringbuf_from_file(), except that if @a filename
+ * is "-", return the error @c SVN_ERR_UNSUPPORTED_FEATURE and don't
+ * touch @a *result.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.2 API.
  */
 svn_error_t *svn_stringbuf_from_file(svn_stringbuf_t **result, 
                                      const char *filename, 
