@@ -2661,6 +2661,11 @@ def copy_added_paths_to_URL(sbox):
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-m', '',
                                      upsilon_path, upsilon_copy_URL)
 
+  # Validate that the merge info of the copy destination matches the
+  # implied merge info from the copy source.
+  svntest.actions.run_and_verify_svn(None, ['\n'], [], 'propget',
+                                     'svn:mergeinfo', upsilon_copy_URL)
+
   # Copy added dir A/D/I to URL://A/D/G/I
   I_copy_URL = sbox.repo_url + '/A/D/G/I'
   svntest.actions.run_and_verify_svn(None, None, [], 'cp', '-m', '',
@@ -3386,7 +3391,7 @@ test_list = [ None,
               copy_delete_commit,
               mv_and_revert_directory,
               Skip(copy_preserve_executable_bit, (os.name != 'posix')),
-              XFail(wc_to_repos),
+              wc_to_repos,
               repos_to_wc,
               copy_to_root,
               url_copy_parent_into_child,

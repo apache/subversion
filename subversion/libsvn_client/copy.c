@@ -27,6 +27,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
+#include "svn_error_codes.h"
 #include "svn_path.h"
 #include "svn_opt.h"
 #include "svn_time.h"
@@ -376,27 +377,39 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
                        svn_revnum_t rev,
                        apr_pool_t *pool)
 {
+  svn_error_t *err;
   svn_revnum_t oldest_rev = SVN_INVALID_REVNUM;
   svn_merge_range_t *range;
   apr_array_header_t *rangelist;
   apr_array_header_t *rel_paths = apr_array_make(pool, 1, sizeof(rel_path));
 
+  *implied_mergeinfo = apr_hash_make(pool);
   APR_ARRAY_PUSH(rel_paths, const char *) = rel_path;
 
   /* Trace back in history to find the revision at which this node
      was created (copied or added). */
-  SVN_ERR(svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
-                         revnum_receiver, &oldest_rev, pool));
+  err = svn_ra_get_log(ra_session, rel_paths, 1, rev, 1, FALSE, TRUE,
+                       revnum_receiver, &oldest_rev, pool);
+  /* ### FIXME: ra_dav may fail with SVN_ERR_RA_DAV_PATH_NOT_FOUND.
+     ### This is possibly related to path construction mentioned in
+     ### calculate_target_merge_info()... */
+  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+              err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
+    {
+      /* A locally-added but uncommitted versioned resource won't
+         exist in the repository. */
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
 
   range = apr_palloc(pool, sizeof(*range));
   range->start = oldest_rev;
   range->end = rev;
   rangelist = apr_array_make(pool, 1, sizeof(range));
   APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = range;
-  *implied_mergeinfo = apr_hash_make(pool);
   apr_hash_set(*implied_mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
 
-  return SVN_NO_ERROR;
+  return err;
 }
 
 /* Obtain the implied merge info and the existing merge info of the
@@ -421,6 +434,10 @@ calculate_target_merge_info(svn_ra_session_t *ra_session,
                                             pool));
 
   /* Obtain any implied and/or existing (explicit) merge info. */
+  /* ### FIXME: May fail with SVN_ERR_RA_DAV_PATH_NOT_FOUND over
+     ### ra_dav, because we're providing a path relative to the
+     ### repository root instead of the ra_session (which may've been
+     ### opened to a path somewhere under the root). */
   SVN_ERR(get_implied_merge_info(ra_session, &implied_mergeinfo,
                                  src_rel_path, src_path, src_revnum, pool));
   SVN_ERR(svn_client__get_merge_info_for_path(ra_session, &src_mergeinfo,
@@ -944,6 +961,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   svn_error_t *cmt_err = SVN_NO_ERROR;
   svn_error_t *unlock_err = SVN_NO_ERROR;
   svn_error_t *cleanup_err = SVN_NO_ERROR;
+  const svn_wc_entry_t *entry;
   int i;
 
   /* The commit process uses absolute paths, so we need to open the access
@@ -987,6 +1005,14 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       svn_node_kind_t dst_kind;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
+
+      /* ### FIXME: I want the path relative to the ra_session
+         ### instead. */
+      SVN_ERR(svn_client__path_relative_to_root(&pair->src_rel, pair->src,
+                                                NULL, ra_session, adm_access,
+                                                pool));
+      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
+      pair->src_revnum = entry->revision;
 
       pair->dst_rel = svn_path_is_child(top_dst_url, pair->dst, pool);
       SVN_ERR(svn_ra_check_path(ra_session, 
@@ -1051,6 +1077,42 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                                       SVN_CLIENT__SINGLE_REPOS_NAME, 
                                       APR_HASH_KEY_STRING))))
     goto cleanup;
+
+  /* ### TODO: This extra loop would be unnecessary if this code lived
+     ### in svn_client__get_copy_committables(), which is incidentally
+     ### only used above (so should really be in this source file). */
+  for (i = 0; i < copy_pairs->nelts; i++)
+    {
+      svn_prop_t *mergeinfo_prop;
+      apr_hash_t *mergeinfo, *wc_mergeinfo;
+      svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
+                                                    svn_client__copy_pair_t *);
+      svn_client_commit_item3_t *item =
+        APR_ARRAY_IDX(commit_items, i, svn_client_commit_item3_t *);
+
+      /* Set the merge info for the destination to the combined merge
+         info known to the WC and the repository. */
+      item->outgoing_prop_changes = apr_array_make(pool, 1,
+                                                   sizeof(svn_prop_t *));
+      mergeinfo_prop = apr_palloc(item->outgoing_prop_changes->pool,
+                                  sizeof(svn_prop_t));
+      mergeinfo_prop->name = SVN_PROP_MERGE_INFO;
+      SVN_ERR(calculate_target_merge_info(ra_session, &mergeinfo,
+                                          adm_access, pair->src,
+                                          pair->src_rel, pair->src_revnum,
+                                          pool));
+      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
+      SVN_ERR(svn_client__parse_merge_info(&wc_mergeinfo, entry,
+                                           pair->src, adm_access, ctx,
+                                           pool));
+      SVN_ERR(svn_mergeinfo_merge(&mergeinfo, mergeinfo,
+                                  wc_mergeinfo, pool));
+      SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
+                                       &mergeinfo_prop->value,
+                                       mergeinfo, pool));
+      APR_ARRAY_PUSH(item->outgoing_prop_changes, svn_prop_t *) =
+        mergeinfo_prop;
+    }
 
   /* Sort and condense our COMMIT_ITEMS. */
   if ((cmt_err = svn_client__condense_commit_items(&top_dst_url, 
