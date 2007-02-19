@@ -175,6 +175,10 @@ svn_error_t *svn_fs_fs__get_txn(transaction_t **txn_p,
                                 const char *txn_id,
                                 apr_pool_t *pool);
 
+/* Abort the existing transaction TXN, performing any temporary
+   allocations in POOL. */
+svn_error_t *svn_fs_fs__abort_txn(svn_fs_txn_t *txn, apr_pool_t *pool);
+
 /* Create an entirely new mutable node in the filesystem FS, whose
    node-revision is NODEREV.  Set *ID_P to the new node revision's ID.
    Use POOL for any temporary allocation.  COPY_ID is the copy_id to
