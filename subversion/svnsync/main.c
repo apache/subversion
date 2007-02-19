@@ -40,6 +40,10 @@ enum {
   svnsync_opt_no_auth_cache,
   svnsync_opt_auth_username,
   svnsync_opt_auth_password,
+  svnsync_opt_source_username,
+  svnsync_opt_source_password,
+  svnsync_opt_sync_username,
+  svnsync_opt_sync_password,
   svnsync_opt_config_dir,
   svnsync_opt_version
 };
@@ -48,6 +52,10 @@ enum {
                              svnsync_opt_no_auth_cache, \
                              svnsync_opt_auth_username, \
                              svnsync_opt_auth_password, \
+                             svnsync_opt_source_username, \
+                             svnsync_opt_source_password, \
+                             svnsync_opt_sync_username, \
+                             svnsync_opt_sync_password, \
                              svnsync_opt_config_dir
 
 static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
@@ -93,9 +101,21 @@ static const apr_getopt_option_t svnsync_options[] =
     {"no-auth-cache",  svnsync_opt_no_auth_cache, 0,
                        N_("do not cache authentication tokens") },
     {"username",       svnsync_opt_auth_username, 1,
-                       N_("specify a username ARG") },
+                       N_("specify a username ARG (deprecated;\n"
+                          "                             "
+                          "see --source-username and --sync-username)") },
     {"password",       svnsync_opt_auth_password, 1,
-                       N_("specify a password ARG") },
+                       N_("specify a password ARG (deprecated;\n"
+                          "                             "
+                          "see --source-password and --sync-password)") },
+    {"source-username", svnsync_opt_source_username, 1,
+                       N_("connect to source repository with username ARG") },
+    {"source-password", svnsync_opt_source_password, 1,
+                       N_("connect to source repository with password ARG") },
+    {"sync-username",  svnsync_opt_sync_username, 1,
+                       N_("connect to sync repository with username ARG") },
+    {"sync-password",  svnsync_opt_sync_password, 1,
+                       N_("connect to sync repository with password ARG") },
     {"config-dir",     svnsync_opt_config_dir, 1,
                        N_("read user configuration files from directory ARG")},
     {"version",        svnsync_opt_version, 0,
@@ -108,11 +128,14 @@ static const apr_getopt_option_t svnsync_options[] =
   };
 
 typedef struct {
-  svn_auth_baton_t *auth_baton;
   svn_boolean_t non_interactive;
   svn_boolean_t no_auth_cache;
-  const char *auth_username;
-  const char *auth_password;
+  svn_auth_baton_t *source_auth_baton;
+  svn_auth_baton_t *sync_auth_baton;
+  const char *source_username;
+  const char *source_password;
+  const char *sync_username;
+  const char *sync_password;
   const char *config_dir;
   apr_hash_t *config;
   svn_boolean_t version;
@@ -387,7 +410,8 @@ typedef struct {
   const char *from_url;
   const char *to_url;
   apr_hash_t *config;
-  svn_ra_callbacks2_t *callbacks;
+  svn_ra_callbacks2_t *source_callbacks;
+  svn_ra_callbacks2_t *sync_callbacks;
 } init_baton_t;
 
 
@@ -427,8 +451,8 @@ do_initialize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 
   /* Now fill in our bookkeeping info in the dest repository. */
 
-  SVN_ERR(svn_ra_open2(&from_session, baton->from_url, baton->callbacks,
-                       baton, baton->config, pool));
+  SVN_ERR(svn_ra_open2(&from_session, baton->from_url, 
+                       baton->source_callbacks, baton, baton->config, pool));
 
   SVN_ERR(check_if_session_is_at_repos_root(from_session, baton->from_url,
                                             pool));
@@ -465,7 +489,7 @@ do_initialize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 static svn_error_t *
 initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 {
-  svn_ra_callbacks2_t callbacks = { 0 };
+  svn_ra_callbacks2_t source_callbacks = { 0 }, sync_callbacks = { 0 };
   const char *to_url, *from_url;
   svn_ra_session_t *to_session;
   opt_baton_t *opt_baton = b;
@@ -495,14 +519,17 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   baton.from_url = from_url;
   baton.config = opt_baton->config;
 
-  callbacks.open_tmp_file = open_tmp_file;
-  callbacks.auth_baton = opt_baton->auth_baton;
+  source_callbacks.open_tmp_file = open_tmp_file;
+  source_callbacks.auth_baton = opt_baton->source_auth_baton;
+  baton.source_callbacks = &source_callbacks;
 
-  baton.callbacks = &callbacks;
+  sync_callbacks.open_tmp_file = open_tmp_file;
+  sync_callbacks.auth_baton = opt_baton->sync_auth_baton;
+  baton.sync_callbacks = &sync_callbacks;
 
   SVN_ERR(svn_ra_open2(&to_session,
                        baton.to_url,
-                       &callbacks,
+                       baton.sync_callbacks,
                        &baton,
                        baton.config,
                        pool));
@@ -857,7 +884,8 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
 /* Baton for syncronizing the destination repository while locked. */
 typedef struct {
   apr_hash_t *config;
-  svn_ra_callbacks2_t *callbacks;
+  svn_ra_callbacks2_t *source_callbacks;
+  svn_ra_callbacks2_t *sync_callbacks;
   const char *to_url;
   svn_revnum_t committed_rev;
 } sync_baton_t;
@@ -910,7 +938,8 @@ open_source_session(svn_ra_session_t **from_session,
 
   if (! from_url || ! from_uuid || ! *last_merged_rev)
     return svn_error_create
-      (APR_EINVAL, NULL, _("Destination repository has not been initialized"));
+      (APR_EINVAL, NULL, 
+       _("Destination repository has not been initialized"));
 
   SVN_ERR(svn_ra_open2(from_session, from_url->data, callbacks, baton,
                        config, pool));
@@ -949,7 +978,8 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   svn_revnum_t to_latest, copying, last_merged;
 
   SVN_ERR(open_source_session(&from_session, &last_merged_rev, to_session,
-                              baton->callbacks, baton->config, baton, pool));
+                              baton->source_callbacks, baton->config, 
+                              baton, pool));
 
   /* Check to see if we have revprops that still need to be copied for
      a prior revision we didn't finish copying.  But first, check for
@@ -1136,7 +1166,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 static svn_error_t *
 synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 {
-  svn_ra_callbacks2_t callbacks = { 0 };
+  svn_ra_callbacks2_t source_callbacks = { 0 }, sync_callbacks = { 0 };
   svn_ra_session_t *to_session;
   opt_baton_t *opt_baton = b;
   apr_array_header_t *targets;
@@ -1158,16 +1188,20 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
                              _("Path '%s' is not a URL"), to_url);
 
-  callbacks.open_tmp_file = open_tmp_file;
-  callbacks.auth_baton = opt_baton->auth_baton;
-
-  baton.callbacks = &callbacks;
   baton.config = opt_baton->config;
   baton.to_url = to_url;
 
+  source_callbacks.open_tmp_file = open_tmp_file;
+  source_callbacks.auth_baton = opt_baton->source_auth_baton;
+  baton.source_callbacks = &source_callbacks;
+
+  sync_callbacks.open_tmp_file = open_tmp_file;
+  sync_callbacks.auth_baton = opt_baton->sync_auth_baton;
+  baton.sync_callbacks = &sync_callbacks;
+
   SVN_ERR(svn_ra_open2(&to_session,
                        to_url,
-                       baton.callbacks,
+                       baton.sync_callbacks,
                        &baton,
                        baton.config,
                        pool));
@@ -1189,7 +1223,8 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
  */
 typedef struct {
   apr_hash_t *config;
-  svn_ra_callbacks2_t *callbacks;
+  svn_ra_callbacks2_t *source_callbacks;
+  svn_ra_callbacks2_t *sync_callbacks;
   const char *to_url;
   svn_revnum_t rev;
 } copy_revprops_baton_t;
@@ -1207,7 +1242,8 @@ do_copy_revprops(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   svn_string_t *last_merged_rev;
 
   SVN_ERR(open_source_session(&from_session, &last_merged_rev, to_session,
-                              baton->callbacks, baton->config, baton, pool));
+                              baton->source_callbacks, baton->config, 
+                              baton, pool));
 
   if (baton->rev > SVN_STR_TO_REV(last_merged_rev->data))
     return svn_error_create
@@ -1224,7 +1260,7 @@ do_copy_revprops(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
 static svn_error_t *
 copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 {
-  svn_ra_callbacks2_t callbacks = { 0 };
+  svn_ra_callbacks2_t source_callbacks = { 0 }, sync_callbacks = { 0 };
   svn_ra_session_t *to_session;
   opt_baton_t *opt_baton = b;
   apr_array_header_t *targets;
@@ -1252,17 +1288,21 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("Invalid revision number"));
 
-  callbacks.open_tmp_file = open_tmp_file;
-  callbacks.auth_baton = opt_baton->auth_baton;
-
-  baton.callbacks = &callbacks;
   baton.config = opt_baton->config;
   baton.to_url = to_url;
   baton.rev = revision;
 
+  source_callbacks.open_tmp_file = open_tmp_file;
+  source_callbacks.auth_baton = opt_baton->source_auth_baton;
+  baton.source_callbacks = &source_callbacks;
+
+  sync_callbacks.open_tmp_file = open_tmp_file;
+  sync_callbacks.auth_baton = opt_baton->sync_auth_baton;
+  baton.sync_callbacks = &sync_callbacks;
+
   SVN_ERR(svn_ra_open2(&to_session,
                        to_url,
-                       baton.callbacks,
+                       baton.sync_callbacks,
                        &baton,
                        baton.config,
                        pool));
@@ -1325,6 +1365,8 @@ main(int argc, const char *argv[])
   apr_pool_t *pool;
   svn_error_t *err;
   int opt_id, i;
+  const char *username = NULL, *source_username = NULL, *sync_username = NULL;
+  const char *password = NULL, *source_password = NULL, *sync_password = NULL;
 
   if (svn_cmdline_init("svnsync", stderr) != EXIT_SUCCESS)
     {
@@ -1391,11 +1433,27 @@ main(int argc, const char *argv[])
             break;
 
           case svnsync_opt_auth_username:
-            opt_baton.auth_username = opt_arg;
+            username = opt_arg;
             break;
 
           case svnsync_opt_auth_password:
-            opt_baton.auth_password = opt_arg;
+            password = opt_arg;
+            break;
+
+          case svnsync_opt_source_username:
+            source_username = opt_arg;
+            break;
+
+          case svnsync_opt_source_password:
+            source_password = opt_arg;
+            break;
+
+          case svnsync_opt_sync_username:
+            sync_username = opt_arg;
+            break;
+
+          case svnsync_opt_sync_password:
+            sync_password = opt_arg;
             break;
 
           case svnsync_opt_config_dir:
@@ -1423,13 +1481,46 @@ main(int argc, const char *argv[])
   if (opt_baton.help)
     subcommand = svn_opt_get_canonical_subcommand(svnsync_cmd_table, "help");
 
+  /* Disallow the mixing --username/password with their --source- and
+     --sync- variants.  Treat "--username FOO" as "--source-username
+     FOO --sync-username FOO"; ditto for "--password FOO". */
+  if ((username || password)
+      && (source_username || sync_username 
+          || source_password || sync_password))
+    {
+      err = svn_error_create
+        (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+         _("Cannot use --username or --password with any of "
+           "--source-username, --source-password, --sync-username, "
+           "or --sync-password.\n"));
+      return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+    }
+  if (username)
+    {
+      source_username = username;
+      sync_username = username;
+    }
+  if (password)
+    {
+      source_password = password;
+      sync_password = password;
+    }
+  opt_baton.source_username = source_username;
+  opt_baton.source_password = source_password;
+  opt_baton.sync_username = sync_username;
+  opt_baton.sync_password = sync_password;
+
+  err = svn_config_ensure(opt_baton.config_dir, pool);
+  if (err)
+    return svn_cmdline_handle_exit_error(err, pool, "synsync: ");
+
   if (subcommand == NULL)
     {
       if (os->ind >= os->argc)
         {
           if (opt_baton.version)
             {
-              /* Use the "help" subcommand to handle the "--version" option. */
+              /* Use the "help" subcommand to handle "--version". */
               static const svn_opt_subcommand_desc_t pseudo_cmd =
                 { "--version", help_cmd, {0}, "",
                   {svnsync_opt_version,  /* must accept its own option */
@@ -1472,15 +1563,18 @@ main(int argc, const char *argv[])
             svn_opt_get_option_from_code(opt_id, svnsync_options);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')
-            help_cmd(NULL, NULL, pool);
+            {
+              help_cmd(NULL, NULL, pool);
+            }
           else
-            svn_error_clear
-              (svn_cmdline_fprintf
-               (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
-                                "Type 'svnsync help %s' for usage.\n"),
-                subcommand->name, optstr, subcommand->name));
-          svn_pool_destroy(pool);
-          return EXIT_FAILURE;
+            {
+              err = svn_error_createf
+                (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                 _("Subcommand '%s' doesn't accept option '%s'\n"
+                   "Type 'svnsync help %s' for usage.\n"),
+                 subcommand->name, optstr, subcommand->name);
+              return svn_cmdline_handle_exit_error(err, pool, "svnsync: ");
+            }
         }
     }
 
@@ -1519,17 +1613,27 @@ main(int argc, const char *argv[])
   apr_signal(SIGXFSZ, SIG_IGN);
 #endif
 
-  err = svn_cmdline_setup_auth_baton(&opt_baton.auth_baton,
+  err = svn_cmdline_setup_auth_baton(&opt_baton.source_auth_baton,
                                      opt_baton.non_interactive,
-                                     opt_baton.auth_username,
-                                     opt_baton.auth_password,
+                                     opt_baton.source_username,
+                                     opt_baton.source_password,
                                      opt_baton.config_dir,
                                      opt_baton.no_auth_cache,
                                      config,
                                      check_cancel, NULL,
                                      pool);
-
-  err = (*subcommand->cmd_func)(os, &opt_baton, pool);
+  if (! err)
+    err = svn_cmdline_setup_auth_baton(&opt_baton.sync_auth_baton,
+                                       opt_baton.non_interactive,
+                                       opt_baton.sync_username,
+                                       opt_baton.sync_password,
+                                       opt_baton.config_dir,
+                                       opt_baton.no_auth_cache,
+                                       config,
+                                       check_cancel, NULL,
+                                       pool);
+  if (! err)
+    err = (*subcommand->cmd_func)(os, &opt_baton, pool);
   if (err)
     {
       /* For argument-related problems, suggest using the 'help'
