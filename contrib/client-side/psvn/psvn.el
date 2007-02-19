@@ -610,7 +610,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-status-last-commit-author nil)
 (defvar svn-status-elided-list nil)
 (defvar svn-status-get-specific-revision-file-info)
-(defvar svn-status-last-output-buffer-name)
+(defvar svn-status-last-output-buffer-name nil "The buffer name for the buffer that holds the output from the last executed svn command")
 (defvar svn-status-pre-run-svn-buffer nil)
 (defvar svn-status-update-list nil)
 (defvar svn-transient-buffers)
@@ -618,6 +618,8 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-ediff-result)
 (defvar svn-status-last-diff-options nil)
 (defvar svn-admin-last-repository-dir nil "The last repository url for various operations.")
+(defvar svn-last-cmd-ring (make-ring 30) "Ring that holds the last executed svn commands (for debugging purposes)")
+(defvar svn-status-cached-version-string nil)
 
 (defvar svn-status-partner-buffer nil "The partner buffer for this svn related buffer")
 (make-variable-buffer-local 'svn-status-partner-buffer)
@@ -1118,6 +1120,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
             (setq svn-status-mode-line-process-status (format " running %s" cmdtype))
             (svn-status-update-mode-line)
             (sit-for 0.1)
+            (ring-insert svn-last-cmd-ring (list (current-time-string) arglist default-directory))
             (if run-asynchron
                 (progn
                   ;;(message "running asynchron: %s %S" svn-exe arglist)
@@ -1833,6 +1836,7 @@ A and B must be line-info's."
     ["Hide Unmodified" svn-status-toggle-hide-unmodified
      :style toggle :selected svn-status-hide-unmodified]
     ["Show Client versions" svn-status-version t]
+    ["Prepare bug report" svn-prepare-bug-report t]
     ))
 
 
@@ -3217,16 +3221,20 @@ See `svn-status-marked-files' for what counts as selected."
   (interactive)
   (let ((window-conf (current-window-configuration))
         (version-string))
-    (svn-run nil t 'version "--version")
-    (svn-status-show-process-output 'info t)
-    (with-current-buffer svn-status-last-output-buffer-name
-      (let ((buffer-read-only nil))
-        (goto-char (point-min))
-        (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision)))
-      (setq version-string (buffer-substring-no-properties (point-min) (point-max))))
+    (if (interactive-p)
+        (progn
+          (svn-run nil t 'version "--version")
+          (svn-status-show-process-output 'info t)
+          (with-current-buffer svn-status-last-output-buffer-name
+            (let ((buffer-read-only nil))
+              (goto-char (point-min))
+              (insert (format "psvn.el revision: %s\n\n" svn-psvn-revision)))
+            (setq version-string (buffer-substring-no-properties (point-min) (point-max))))
+          (setq svn-status-cached-version-string version-string))
+      (setq version-string svn-status-cached-version-string)
     (unless (interactive-p)
       (set-window-configuration window-conf)
-      version-string)))
+      version-string))))
 
 (defun svn-status-info ()
   "Run `svn info' on all selected files.
@@ -5164,6 +5172,37 @@ working directory."
   (elp-instrument-package "svn-")
   (message "Run the desired svn command (e.g. M-x svn-status), then use M-x elp-results."))
 
+(defun svn-status-last-commands (&optional string-prefix)
+  "Return a string with the last executed svn commands"
+  (interactive)
+  (unless string-prefix
+    (setq string-prefix ""))
+  (with-output-to-string
+    (dolist (e (ring-elements svn-last-cmd-ring))
+      (princ (format "%s%s: svn %s <%s>\n" string-prefix (nth 0 e) (mapconcat 'concat (nth 1 e) " ") (nth 2 e))))))
+
+(defun svn-insert-indented-lines (text)
+  "Helper function to insert TEXT, indented by two characters."
+  (dolist (line (split-string text "\n"))
+    (insert (format "  %s\n" line))))
+
+(defun svn-prepare-bug-report ()
+  "Create the buffer *psvn-bug-report*. This buffer can be useful to debug problems with psvn.el"
+  (interactive)
+  (let ((last-output-buffer-name svn-status-last-output-buffer-name)
+        (last-svn-cmd-output (with-current-buffer svn-status-last-output-buffer-name
+                               (buffer-substring-no-properties (point-min) (point-max)))))
+    (switch-to-buffer "*psvn-bug-report*")
+    (delete-region (point-min) (point-max))
+    (insert "This buffer holds some debug informations for psvn.el\n")
+    (insert "Please send it to the author to allow easier debugging\n\n")
+    (insert "Revisions:\n")
+    (svn-insert-indented-lines (svn-status-version))
+    (insert "\nLast svn commands:\n")
+    (svn-insert-indented-lines (svn-status-last-commands))
+    (insert (format "\nContent of the <%s> buffer:\n" last-output-buffer-name))
+    (svn-insert-indented-lines last-svn-cmd-output)
+    (goto-char (point-min))))
 
 (provide 'psvn)
 
