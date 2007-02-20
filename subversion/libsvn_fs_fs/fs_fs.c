@@ -2899,6 +2899,7 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
   txn->base_rev = rev;
 
   txn->vtable = &txn_vtable;
+  txn->fsap_data = NULL;
   *txn_p = txn;
   
   /* Create a new root node for this transaction. */
@@ -4691,6 +4692,7 @@ svn_fs_fs__open_txn(svn_fs_txn_t **txn_p,
   txn->base_rev = svn_fs_fs__id_rev(local_txn->base_id);
 
   txn->vtable = &txn_vtable;
+  txn->fsap_data = NULL;
   *txn_p = txn;
 
   return SVN_NO_ERROR;
