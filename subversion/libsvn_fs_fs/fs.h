@@ -122,6 +122,7 @@ typedef struct
   fs_fs_shared_data_t *shared;
 } fs_fs_data_t;
 
+
 /* Return a canonicalized version of a filesystem PATH, allocated in
    POOL.  While the filesystem API is pretty flexible about the
    incoming paths (they must be UTF-8 with '/' as separators, but they

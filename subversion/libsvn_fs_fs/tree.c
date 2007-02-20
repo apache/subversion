@@ -53,7 +53,7 @@
 #include "private/svn_fs_merge_info.h"
 #include "../libsvn_fs/fs-loader.h"
 
-  
+
 /* ### I believe this constant will become internal to reps-strings.c.
    ### see the comment in window_consumer() for more information. */
 
@@ -1117,7 +1117,7 @@ fs_change_node_prop(svn_fs_root_t *root,
   parent_path_t *parent_path;
   apr_hash_t *proplist;
   const char *txn_id;
-  
+
   if (! root->is_txn_root)
     return not_txn(root);
   txn_id = root->txn;
@@ -1171,8 +1171,6 @@ fs_change_node_prop(svn_fs_root_t *root,
   /* Overwrite the node's proplist. */
   SVN_ERR(svn_fs_fs__dag_set_proplist(parent_path->node, proplist, 
                                       txn_id, pool));
-  
-  
 
   /* Make a record of this modification in the changes table. */
   SVN_ERR(add_change(root->fs, txn_id, path,

@@ -593,7 +593,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
     {
       path_driver_info_t *info = apr_pcalloc(pool, sizeof(*info));
       info->resurrection = FALSE;
-      APR_ARRAY_PUSH(path_infos, path_driver_info_t *) =  info;
+      APR_ARRAY_PUSH(path_infos, path_driver_info_t *) = info;
     }
 
   /* We have to open our session to the longest path common to all

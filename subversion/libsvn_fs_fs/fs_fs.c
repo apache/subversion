@@ -3201,7 +3201,7 @@ svn_fs_fs__abort_txn(svn_fs_txn_t *txn,
   ffd = txn->fs->fsap_data;
   memset(&ffd->dir_cache_id, 0, 
          sizeof(apr_hash_t *) * NUM_DIR_CACHE_ENTRIES);
-  
+
   /* Now, purge the transaction. */
   SVN_ERR_W(svn_fs_fs__purge_txn(txn->fs, txn->id, pool),
             _("Transaction cleanup failed"));
@@ -4357,7 +4357,7 @@ commit_body(void *baton, apr_pool_t *pool)
   apr_hash_t *txnprops;
   svn_string_t date;
   svn_boolean_t txn_contains_merge_info = FALSE;
-  
+
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
 
@@ -4545,7 +4545,7 @@ svn_fs_fs__create(svn_fs_t *fs,
                   apr_pool_t *pool)
 {
   int format = SVN_FS_FS__FORMAT_NUMBER;
-
+  
   fs->path = apr_pstrdup(pool, path);
 
   SVN_ERR(svn_io_make_dir_recursively(svn_path_join(path, PATH_REVS_DIR,
@@ -4573,7 +4573,7 @@ svn_fs_fs__create(svn_fs_t *fs,
   SVN_ERR(svn_io_write_version_file
           (path_format(fs, pool), format, pool));
   ((fs_fs_data_t *) fs->fsap_data)->format = format;
- 
+
   SVN_ERR(svn_fs_merge_info__create_index(path, pool)); 
   return SVN_NO_ERROR;
 }

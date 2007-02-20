@@ -125,7 +125,7 @@ svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
                      apr_pool_t *pool)
 {
   svn_string_t date;
-  
+
   SVN_ERR(svn_fs_fs__check_fs(fs));
 
   SVN_ERR(svn_fs_fs__create_txn(txn_p, fs, rev, pool));

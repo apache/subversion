@@ -630,7 +630,6 @@ svn_ra_serf__get_dir(svn_ra_session_t *ra_session,
   return SVN_NO_ERROR;
 }
 
-
 static svn_error_t *
 svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
                             const char **url,

@@ -429,7 +429,6 @@ extern const dav_hooks_vsn dav_svn__hooks_vsn;
 
 extern const dav_liveprop_group dav_svn__liveprop_group;
 
-
 /*
   LIVE PROPERTY HOOKS
 
