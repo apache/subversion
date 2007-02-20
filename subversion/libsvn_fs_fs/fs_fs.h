@@ -412,10 +412,6 @@ svn_error_t *svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p, svn_fs_t *fs,
                                   svn_revnum_t rev, apr_uint32_t flags,
                                   apr_pool_t *pool);
 
-/* Abort the existing transaction TXN, performing any temporary
-   allocations in POOL. */
-svn_error_t *svn_fs_fs__abort_txn(svn_fs_txn_t *txn, apr_pool_t *pool);
-
 /* Find the value of the property named PROPNAME in transaction TXN.
    Return the contents in *VALUE_P.  The contents will be allocated
    from POOL. */
