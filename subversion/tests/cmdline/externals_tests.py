@@ -191,7 +191,7 @@ def probe_paths_exist(paths):
       Failure exception. """
 
   for path in paths:
-    if (not os.path.exists(path)):
+    if not os.path.exists(path):
       raise svntest.Failure("Probing for " + path + " failed.")
 
 
@@ -200,7 +200,7 @@ def probe_paths_missing(paths):
       Failure exception. """
 
   for path in paths:
-    if (os.path.exists(path)):
+    if os.path.exists(path):
       raise svntest.Failure(path + " unexpectedly still exists.")
 
 
