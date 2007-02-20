@@ -31,7 +31,6 @@
 #include "err.h"
 #include "dag.h"
 #include "fs_fs.h"
-#include "revs-txns.h"
 #include "tree.h"
 #include "lock.h"
 #include "svn_private_config.h"

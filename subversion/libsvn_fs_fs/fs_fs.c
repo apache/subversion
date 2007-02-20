@@ -33,6 +33,7 @@
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_md5.h"
+#include "svn_props.h"
 #include "svn_sorts.h"
 #include "svn_time.h"
 
@@ -40,7 +41,6 @@
 #include "err.h"
 #include "tree.h"
 #include "lock.h"
-#include "revs-txns.h"
 #include "key-gen.h"
 #include "fs_fs.h"
 #include "id.h"
@@ -4646,4 +4646,124 @@ svn_fs_fs__delete_node_revision(svn_fs_t *fs,
     SVN_ERR(svn_io_remove_file(path_txn_node_children(fs, id, pool), pool));
 
   return svn_io_remove_file(path_txn_node_rev(fs, id, pool), pool);
+}
+
+
+
+/*** Revisions ***/
+
+svn_error_t *
+svn_fs_fs__revision_prop(svn_string_t **value_p,
+                         svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         const char *propname,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *table;
+
+  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
+
+  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_fs_fs__change_rev_prop(svn_fs_t *fs,
+                           svn_revnum_t rev,
+                           const char *name,
+                           const svn_string_t *value,
+                           apr_pool_t *pool)
+{
+  apr_hash_t *table;
+
+  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
+
+  apr_hash_set(table, name, APR_HASH_KEY_STRING, value);
+
+  SVN_ERR(svn_fs_fs__set_revision_proplist(fs, rev, table, pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+
+/*** Transactions ***/
+
+svn_error_t *
+svn_fs_fs__get_txn_ids(const svn_fs_id_t **root_id_p,
+                       const svn_fs_id_t **base_root_id_p,
+                       svn_fs_t *fs,
+                       const char *txn_name,
+                       apr_pool_t *pool)
+{
+  transaction_t *txn;
+  SVN_ERR(svn_fs_fs__get_txn(&txn, fs, txn_name, pool));
+  *root_id_p = txn->root_id;
+  *base_root_id_p = txn->base_id;
+  return SVN_NO_ERROR;
+}
+
+
+/* Generic transaction operations.  */
+
+svn_error_t *
+svn_fs_fs__txn_prop(svn_string_t **value_p,
+                    svn_fs_txn_t *txn,
+                    const char *propname,
+                    apr_pool_t *pool)
+{
+  apr_hash_t *table;
+  svn_fs_t *fs = txn->fs;
+
+  SVN_ERR(svn_fs_fs__check_fs(fs));
+
+  SVN_ERR(svn_fs_fs__txn_proplist(&table, txn, pool));
+
+  /* And then the prop from that list (if there was a list). */
+  *value_p = NULL;
+  if (table)
+    *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
+                     svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_uint32_t flags,
+                     apr_pool_t *pool)
+{
+  svn_string_t date;
+
+  SVN_ERR(svn_fs_fs__check_fs(fs));
+
+  SVN_ERR(svn_fs_fs__create_txn(txn_p, fs, rev, pool));
+
+  /* Put a datestamp on the newly created txn, so we always know
+     exactly how old it is.  (This will help sysadmins identify
+     long-abandoned txns that may need to be manually removed.)  When
+     a txn is promoted to a revision, this property will be
+     automatically overwritten with a revision datestamp. */
+  date.data = svn_time_to_cstring(apr_time_now(), pool);
+  date.len = strlen(date.data);
+  SVN_ERR(svn_fs_fs__change_txn_prop(*txn_p, SVN_PROP_REVISION_DATE, 
+                                     &date, pool));
+  
+  /* Set temporary txn props that represent the requested 'flags'
+     behaviors. */
+  if (flags & SVN_FS_TXN_CHECK_OOD)
+    SVN_ERR(svn_fs_fs__change_txn_prop 
+            (*txn_p, SVN_FS_PROP_TXN_CHECK_OOD,
+             svn_string_create("true", pool), pool));
+  
+  if (flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR(svn_fs_fs__change_txn_prop 
+            (*txn_p, SVN_FS_PROP_TXN_CHECK_LOCKS,
+             svn_string_create("true", pool), pool));
+             
+  return SVN_NO_ERROR;
 }
