@@ -610,6 +610,33 @@ svn_opt_parse_revision(svn_opt_revision_t *start_revision,
 }
 
 
+void
+svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
+                          svn_opt_revision_t *op_rev,
+                          svn_boolean_t is_url,
+                          svn_boolean_t notice_local_mods)
+{
+  if (peg_rev->kind == svn_opt_revision_unspecified)
+    {
+      if (is_url)
+        {
+          peg_rev->kind = svn_opt_revision_head;
+        }
+      else
+        {
+          if (notice_local_mods)
+            peg_rev->kind = svn_opt_revision_working;
+          else
+            peg_rev->kind = svn_opt_revision_base;
+        }
+    }
+
+  if (op_rev->kind == svn_opt_revision_unspecified)
+    *op_rev = *peg_rev;
+
+  return;
+}
+
 
 /*** Parsing arguments. ***/
 #define DEFAULT_ARRAY_SIZE 5
