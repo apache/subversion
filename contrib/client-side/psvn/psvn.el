@@ -1145,6 +1145,7 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                 ;; `call-process' ignores `process-connection-type' and
                 ;; never opens a pseudoterminal.
                 (apply 'call-process svn-exe nil proc-buf nil arglist))
+              (setq svn-status-last-output-buffer-name svn-process-buffer-name)
               (run-hooks 'svn-post-process-svn-output-hook)
               (setq svn-status-mode-line-process-status "")
               (svn-status-update-mode-line)
@@ -3221,7 +3222,7 @@ See `svn-status-marked-files' for what counts as selected."
   (interactive)
   (let ((window-conf (current-window-configuration))
         (version-string))
-    (if (interactive-p)
+    (if (or (interactive-p) (not svn-status-cached-version-string))
         (progn
           (svn-run nil t 'version "--version")
           (svn-status-show-process-output 'info t)
@@ -5189,13 +5190,14 @@ working directory."
 (defun svn-prepare-bug-report ()
   "Create the buffer *psvn-bug-report*. This buffer can be useful to debug problems with psvn.el"
   (interactive)
-  (let ((last-output-buffer-name svn-status-last-output-buffer-name)
-        (last-svn-cmd-output (with-current-buffer svn-status-last-output-buffer-name
-                               (buffer-substring-no-properties (point-min) (point-max)))))
+  (let* ((last-output-buffer-name (or svn-status-last-output-buffer-name "*svn-process*"))
+         (last-svn-cmd-output (with-current-buffer last-output-buffer-name
+                                (buffer-substring-no-properties (point-min) (point-max)))))
     (switch-to-buffer "*psvn-bug-report*")
     (delete-region (point-min) (point-max))
     (insert "This buffer holds some debug informations for psvn.el\n")
-    (insert "Please send it to the author to allow easier debugging\n\n")
+    (insert "Please enter a description of the observed and the wanted behaviour\n")
+    (insert "and send it to the author (stefan@xsteve.at) to allow easier debugging\n\n")
     (insert "Revisions:\n")
     (svn-insert-indented-lines (svn-status-version))
     (insert "\nLast svn commands:\n")
