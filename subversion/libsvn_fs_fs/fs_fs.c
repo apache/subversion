@@ -4670,6 +4670,33 @@ svn_fs_fs__revision_prop(svn_string_t **value_p,
 }
 
 
+/* Baton used for change_rev_prop_body below. */
+struct change_rev_prop_baton {
+  svn_fs_t *fs;
+  svn_revnum_t rev;
+  const char *name;
+  const svn_string_t *value;
+};
+
+/* The work-horse for svn_fs_fs__change_rev_prop, called with the FS
+   write lock.  This implements the svn_fs_fs__with_write_lock()
+   'body' callback type.  BATON is a 'struct change_rev_prop_baton *'. */
+
+static svn_error_t *
+change_rev_prop_body(void *baton, apr_pool_t *pool)
+{
+  struct change_rev_prop_baton *cb = baton;
+  apr_hash_t *table;
+
+  SVN_ERR(svn_fs_fs__revision_proplist(&table, cb->fs, cb->rev, pool));
+
+  apr_hash_set(table, cb->name, APR_HASH_KEY_STRING, cb->value);
+
+  SVN_ERR(svn_fs_fs__set_revision_proplist(cb->fs, cb->rev, table, pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__change_rev_prop(svn_fs_t *fs,
                            svn_revnum_t rev,
@@ -4677,16 +4704,16 @@ svn_fs_fs__change_rev_prop(svn_fs_t *fs,
                            const svn_string_t *value,
                            apr_pool_t *pool)
 {
-  apr_hash_t *table;
+  struct change_rev_prop_baton cb;
 
   SVN_ERR(svn_fs_fs__check_fs(fs));
-  SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
 
-  apr_hash_set(table, name, APR_HASH_KEY_STRING, value);
+  cb.fs = fs;
+  cb.rev = rev;
+  cb.name = name;
+  cb.value = value;
 
-  SVN_ERR(svn_fs_fs__set_revision_proplist(fs, rev, table, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__with_write_lock(fs, change_rev_prop_body, &cb, pool);
 }
 
 
