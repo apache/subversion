@@ -48,7 +48,8 @@
 
 
 /* Add a new commit candidate (described by all parameters except
-   `COMMITTABLES') to the COMMITABLES hash. */
+   `COMMITTABLES') to the COMMITTABLES hash.  All of the commit item's
+   members are allocated out of the COMMITTABLES hash pool. */
 static void
 add_committable(apr_hash_t *committables,
                 const char *path,
@@ -200,7 +201,10 @@ static svn_wc_entry_callbacks_t add_tokens_callbacks = {
    COMMITTABLES unless it's a member of the changelist.
 
    If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to see 
-   if the user has cancelled the operation.  */
+   if the user has cancelled the operation.
+   
+   Any items added to COMMITTABLES are allocated from the COMITTABLES hash pool,
+   not POOL.  POOL is used for temporary allocations. */
 static svn_error_t *
 harvest_committables(apr_hash_t *committables,
                      apr_hash_t *lock_tokens,
@@ -856,11 +860,12 @@ svn_client__get_copy_committables(apr_hash_t **committables,
                                     svn_path_dirname(pair->src, iterpool),
                                     iterpool));
 
-      /* Handle this SRC. */
+      /* Handle this SRC.  Because add_committable() uses the hash pool to
+         allocate the new commit_item, we can safely use the iterpool here. */
       SVN_ERR(harvest_committables(*committables, NULL, pair->src,
                                    dir_access, pair->dst, entry->url, entry,
                                    NULL, FALSE, TRUE, FALSE, FALSE,
-                                   NULL, ctx, pool));
+                                   NULL, ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);
