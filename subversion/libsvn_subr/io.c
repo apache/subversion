@@ -1592,7 +1592,7 @@ svn_stringbuf_from_file2(svn_stringbuf_t **result,
     {
       apr_status_t apr_err;
       if ((apr_err = apr_file_open_stdin(&f, pool)))
-        return svn_error_wrap_apr(apr_err, "Can't open stdin");
+        return svn_error_wrap_apr(apr_err, _("Can't open stdin"));
     }
   else
     {
