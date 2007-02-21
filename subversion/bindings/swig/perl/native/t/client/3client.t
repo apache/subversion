@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 212;
+use Test::More tests => 209;
 use strict;
 
 # shut up about variables that are only used once.
@@ -48,18 +48,6 @@ ok(SVN::Repos::create("$repospath", undef, undef, undef, undef),
 my ($ctx) = SVN::Client->new;
 isa_ok($ctx,'SVN::Client','Client Object');
 
-my $uuid_from_url = $ctx->uuid_from_url($reposurl);
-ok($uuid_from_url,'Valid return from uuid_from_url method form');
-
-# test non method invocation passing a SVN::Client
-ok(SVN::Client::uuid_from_url($reposurl,$ctx),
-   'Valid return from uuid_from_url function form with SVN::Client object');
-
-# test non method invocation passing a _p_svn_client_ctx_t
-ok(SVN::Client::uuid_from_url($reposurl,$ctx->{'ctx'}),
-   'Valid return from uuid_from_url function form with _p_svn_client_ctx object');
-
-             
 my ($ci_dir1) = $ctx->mkdir(["$reposurl/dir1"]);
 isa_ok($ci_dir1,'_p_svn_client_commit_info_t');
 $current_rev++;
