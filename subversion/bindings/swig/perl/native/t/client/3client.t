@@ -1,6 +1,6 @@
 #!/usr/bin/perl -w
 
-use Test::More tests => 220;
+use Test::More tests => 212;
 use strict;
 
 # shut up about variables that are only used once.
@@ -81,38 +81,6 @@ is($ci_dir1->revision,$current_rev,"commit info revision equals $current_rev");
 # case of testing errors, make it easy to see which test failed.
 
 my $tester;
-
-# revprop_get ------------------------------------------------------------
-
-my($rpgval, $rpgrev);
-
-$tester = sub {		# Tests to carry out on revprop_get results
-    my $name = shift;
-    is($rpgval, $username,
-       "svn:author set to expected username from revprop_get ($name)");
-    is($rpgrev, $current_rev,
-       "Returned revnum of current rev from revprop_get ($name)");
-};
-
-($rpgval,$rpgrev) = $ctx->revprop_get('svn:author',$reposurl,$current_rev);
-$tester->('pos/man');
-
-($rpgval,$rpgrev) = $ctx->revprop_get('svn:author', $reposurl);
-$tester->('pos/opt');
-
-($rpgval, $rpgrev) = $ctx->revprop_get({
-    propname => 'svn:author',
-    url      => $reposurl,
-    revision => $current_rev,
-});
-$tester->('nam/man');
-
-($rpgval, $rpgrev) = $ctx->revprop_get({
-    propname => 'svn:author',
-    url      => $reposurl,
-    revision => $current_rev,
-});
-$tester->('nam/opt');
 
 # ------------------------------------------------------------------------
 
