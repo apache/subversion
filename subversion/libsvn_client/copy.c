@@ -1343,10 +1343,11 @@ setup_copy(svn_commit_info_t **commit_info_p,
           pair->src_op_revision = *source->revision;
           pair->src_peg_revision = *source->peg_revision;
 
-          svn_opt_resolve_revisions(&pair->src_peg_revision,
-                                    &pair->src_op_revision,
-                                    svn_path_is_url(pair->src),
-                                    TRUE);
+          SVN_ERR(svn_opt_resolve_revisions(&pair->src_peg_revision,
+                                            &pair->src_op_revision,
+                                            svn_path_is_url(pair->src),
+                                            TRUE,
+                                            iterpool));
           src_basename = svn_path_basename(pair->src, iterpool);
 
           /* Check to see if all the sources are urls or all working copy 
@@ -1372,10 +1373,11 @@ setup_copy(svn_commit_info_t **commit_info_p,
       pair->src_op_revision = *source->revision;
       pair->src_peg_revision = *source->peg_revision;
 
-      svn_opt_resolve_revisions(&pair->src_peg_revision,
-                                &pair->src_op_revision,
-                                svn_path_is_url(pair->src),
-                                TRUE);
+      SVN_ERR(svn_opt_resolve_revisions(&pair->src_peg_revision,
+                                        &pair->src_op_revision,
+                                        svn_path_is_url(pair->src),
+                                        TRUE,
+                                        pool));
 
       pair->dst = dst_path_in;
       APR_ARRAY_PUSH(copy_pairs, svn_client__copy_pair_t *) = pair;

@@ -392,13 +392,16 @@ int svn_opt_parse_revision(svn_opt_revision_t *start_revision,
  * If @a notice_local_mods is set, @c svn_opt_revision_working is used,
  * instead of @c svn_opt_revision_base.
  *
+ * Use @a pool for allocations.
+ *
  * @since New in 1.5.
  */
-void
+svn_error_t *
 svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
                           svn_opt_revision_t *op_rev,
                           svn_boolean_t is_url,
-                          svn_boolean_t notice_local_mods);
+                          svn_boolean_t notice_local_mods,
+                          apr_pool_t *pool);
 
 
 /* Parsing arguments. */
