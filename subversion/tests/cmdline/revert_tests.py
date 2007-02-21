@@ -451,6 +451,13 @@ def revert_file_merge_replace_with_history(sbox):
   expected_disk.tweak('A/D/G/rho', contents="new rho\n")
   svntest.tree.compare_trees(actual_disk, expected_disk.old_tree())
 
+  # Make sure the revert removed the copy from information.
+  output, err = svntest.actions.run_and_verify_svn(None, None, [], 'info',
+                                                   rho_path)
+  for line in output:
+    if line.find("Copied") != -1:
+      print "Error: Revert didn't get rid of copy from information"
+      raise svntest.Failure
 
 def revert_wc_to_wc_replace_with_props(sbox):
   "revert svn cp PATH PATH replace file with props"
