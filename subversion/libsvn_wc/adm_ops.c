@@ -1780,15 +1780,6 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       *reverted = TRUE;
     }
 
-  /* Clean up the copied state if this is a replacement. */
-  if (entry->schedule == svn_wc_schedule_replace
-      && entry->copied)
-    {
-      flags |= SVN_WC__ENTRY_MODIFY_COPIED;
-      tmp_entry.copied = FALSE;
-      *reverted = TRUE;
-    }
-
   /* Deal with the contents. */
 
   if (entry->kind == svn_node_file)
@@ -1894,6 +1885,19 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
       tmp_entry.prejfile = NULL;
       SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
                                    entry->prejfile, pool));
+    }
+
+  /* Clean up the copied state if this is a replacement. */
+  if (entry->schedule == svn_wc_schedule_replace)
+    {
+      flags |= SVN_WC__ENTRY_MODIFY_COPIED |
+          SVN_WC__ENTRY_MODIFY_COPYFROM_URL |
+          SVN_WC__ENTRY_MODIFY_COPYFROM_REV;
+      tmp_entry.copied = FALSE;
+      /* Set this to the empty string, because NULL values will disappear
+         in the XML log file. */
+      tmp_entry.copyfrom_url = "";
+      tmp_entry.copyfrom_rev = SVN_INVALID_REVNUM;
     }
 
   /* Reset schedule attribute to svn_wc_schedule_normal. */
