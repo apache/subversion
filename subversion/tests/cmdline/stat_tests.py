@@ -1256,6 +1256,62 @@ def status_nonrecursive_update(sbox):
                                      [],
                                      "status", "-uN", A_path)
 
+#----------------------------------------------------------------------
+# Test for issue #2420
+def status_dash_u_deleted_directories(sbox):
+  "run 'status -u' with locally deleted directories"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  A_path = os.path.join(wc_dir, 'A')
+  B_path = os.path.join(A_path, 'B')
+  
+  # delete the B directory
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'rm', B_path)
+
+  # now run status -u on B and its children
+  was_cwd = os.getcwd()
+  try:
+    os.chdir(A_path)
+  
+    # check status -u of B
+    xout = ["D               1   %s\n" % "B",
+            "D               1   %s\n" % os.path.join("B", "lambda"),
+            "D               1   %s\n" % os.path.join("B", "E"),
+            "D               1   %s\n" % os.path.join("B", "E", "alpha"),
+            "D               1   %s\n" % os.path.join("B", "E", "beta"),
+            "D               1   %s\n" % os.path.join("B", "F"),
+            "Status against revision:      1\n" ]
+    output, errput = svntest.actions.run_and_verify_svn(None,
+                                                        SVNAnyOutput,
+                                                        [],
+                                                        "status", "-u", "B")
+    svntest.main.compare_unordered_output(xout, output)
+
+    # again, but now from inside B, should give the same output
+    os.chdir("B")
+    output, errput = svntest.actions.run_and_verify_svn(None,
+                                                        SVNAnyOutput,
+                                                        [],
+                                                        "status", "-u", ".")
+    svntest.main.compare_unordered_output(xout, output)
+
+    # check status -u of B/E
+    xout = ["D               1   %s\n" % os.path.join("B", "E"),
+            "D               1   %s\n" % os.path.join("B", "E", "alpha"),
+            "D               1   %s\n" % os.path.join("B", "E", "beta"),
+            "Status against revision:      1\n" ]
+    os.chdir(A_path)
+    output, errput = svntest.actions.run_and_verify_svn(None,
+                                                        SVNAnyOutput,
+                                                        [],
+                                                        "status", "-u",
+                                                        os.path.join("B", "E"))
+    svntest.main.compare_unordered_output(xout, output)
+  finally:
+    os.chdir(was_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -1288,6 +1344,7 @@ test_list = [ None,
               status_update_with_incoming_props,
               status_update_verbose_with_incoming_props,
               XFail(status_nonrecursive_update),
+              XFail(status_dash_u_deleted_directories),
              ]
 
 if __name__ == '__main__':

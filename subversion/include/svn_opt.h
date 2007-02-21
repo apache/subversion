@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -371,6 +371,34 @@ int svn_opt_parse_revision(svn_opt_revision_t *start_revision,
                            const char *arg,
                            apr_pool_t *pool);
 
+/**
+ * Resolve peg revisions and operational revisions in the following way:
+ *
+ *    - If @a is_url is set and @a peg_rev->kind is
+ *      @c svn_opt_revision_unspecified, @a peg_rev->kind defaults to
+ *      @c svn_opt_revision_head.
+ *
+ *    - If @a is_url is not set, and @a peg_rev->kind is
+ *      @c svn_opt_revision_unspecified, @a peg_rev->kind defaults to
+ *      @c svn_opt_revision_base.
+ *
+ *    - If @a op_rev->kind is @c svn_opt_revision_unspecified, @a op_rev
+ *      defaults to @a peg_rev.
+ *
+ * Both @a peg_rev and @a op_rev may be modified as a result of this
+ * function.  @a is_url should be set if the path the revisions refer to is
+ * a url, and unset otherwise.
+ *
+ * If @a notice_local_mods is set, @c svn_opt_revision_working is used,
+ * instead of @c svn_opt_revision_base.
+ *
+ * @since New in 1.5.
+ */
+void
+svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
+                          svn_opt_revision_t *op_rev,
+                          svn_boolean_t is_url,
+                          svn_boolean_t notice_local_mods);
 
 
 /* Parsing arguments. */

@@ -326,7 +326,7 @@ module Svn
                       base_merge, dry_run)
       end
 
-      def mrege_prop_diffs(path, propchanges, base_merge=true,
+      def merge_prop_diffs(path, propchanges, base_merge=true,
                            dry_run=false)
         Wc.merge_prop_diffs(path, self, propchanges,
                            base_merge, dry_run)

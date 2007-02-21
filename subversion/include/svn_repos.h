@@ -1313,7 +1313,7 @@ svn_error_t *svn_repos_fs_get_locks(apr_hash_t **locks,
 /** @} */
 
 /**
- * Like svn_fs_change_rev_prop2(), but invoke the @a repos's pre- and
+ * Like svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
  * post-revprop-change hooks around the change as specified by @a
  * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
  * (respectively).  Use @a pool for temporary allocations.

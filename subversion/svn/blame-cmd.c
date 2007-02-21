@@ -225,6 +225,7 @@ svn_cl__blame(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
+      svn_client_blame_receiver_t receiver;
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -254,28 +255,22 @@ svn_cl__blame(apr_getopt_t *os,
           svn_xml_make_open_tag(&bl.sbuf, pool, svn_xml_normal, "target",
                                 "path", outpath, NULL);
 
-          err = svn_client_blame3(truepath,
-                                  &peg_revision,
-                                  &opt_state->start_revision,
-                                  &opt_state->end_revision,
-                                  diff_options,
-                                  opt_state->force,
-                                  blame_receiver_xml,
-                                  &bl,
-                                  ctx,
-                                  subpool);
+          receiver = blame_receiver_xml;
         }
       else
-        err = svn_client_blame3(truepath,
-                                &peg_revision,
-                                &opt_state->start_revision,
-                                &opt_state->end_revision,
-                                diff_options,
-                                opt_state->force,
-                                blame_receiver,
-                                &bl,
-                                ctx,
-                                subpool);
+        receiver = blame_receiver;
+
+      err = svn_client_blame3(truepath,
+                              &peg_revision,
+                              &opt_state->start_revision,
+                              &opt_state->end_revision,
+                              diff_options,
+                              opt_state->force,
+                              receiver,
+                              &bl,
+                              ctx,
+                              subpool);
+
       if (err)
         {
           if (err->apr_err == SVN_ERR_CLIENT_IS_BINARY_FILE)
