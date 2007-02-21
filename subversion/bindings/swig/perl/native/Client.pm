@@ -570,14 +570,15 @@ case.
 
 =head2 ls
 
-  my %dirents = $ctx->ls({
+  my $dirents = $ctx->ls({
       path_or_url => $target,
       revision    => $revision,    # optional, default is 'HEAD'
       recurse     => $recursive,   # optional, default is 0
       pool        => $pool,        # optional
   });
 
-Returns a hash of L<svn_dirent_t|SVN::Core/svn_dirent_t> objects for $target at $revision.
+Returns a hashref of L<svn_dirent_t|SVN::Core/svn_dirent_t> objects for
+$target at $revision.
 
 If $target is a directory, returns entries for all of the directories'
 contents.  If $recursive is true, it will recurse subdirectories in $target.
