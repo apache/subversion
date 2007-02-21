@@ -48,7 +48,7 @@ my %config = (
                   (map {$_ = abs_path($_); "-L$_"} @ldpaths),
                   @ldmodules, '-lsvn_swig_perl-1',
                   `$swig -perl -ldflags`)],
-    test => { TESTS => "$swig_srcdir/perl/native/t/*.t" }
+    test => { TESTS => "$swig_srcdir/perl/native/t/*.t $swig_srcdir/perl/native/t/*/*.t" }
 );
 
 sub perlish {
