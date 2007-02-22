@@ -2229,7 +2229,7 @@ def update_wc_on_windows_drive(sbox):
     # cleanup the virtual drive
     os.popen3('subst /D ' + drive +': ', 't')
 
-# Issue #2618: update a working copy with replacedwith-history file.
+# Issue #2618: update a working copy with a replaced file.
 def update_wc_with_replaced_file(sbox):
   "update wc containing a replaced-with-history file"
 
@@ -2247,7 +2247,55 @@ def update_wc_with_replaced_file(sbox):
   svntest.main.file_append(iota_bu_path, "New line in 'iota'\n")
   svntest.main.run_svn(None, 'ci', wc_backup, '-m', 'changed file')
 
+  # First, a replacement without history.
+  svntest.main.run_svn(None, 'rm', iota_path)
+  svntest.main.file_append(iota_path, "")
+  svntest.main.run_svn(None, 'add', iota_path)
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.tweak('iota', status='R ', wc_rev='1')
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+  # Now update the wc
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='C '),
+    })    
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.add({
+    'iota' : Item(status='C ', wc_rev='2'),
+    })
+  expected_disk = svntest.main.greek_state.copy()    
+  expected_disk.tweak('iota', contents = 
+    """<<<<<<< .mine
+=======
+This is the file 'iota'.
+New line in 'iota'
+>>>>>>> .r2
+""")
+  conflict_files = [ 'iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine' ]
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        svntest.tree.detect_conflict_files,
+                                        conflict_files)
+
   # Make us a working copy with a 'replace-with-history' file.
+  svntest.main.run_svn(None, 'revert', iota_path)
+  expected_output = svntest.wc.State(wc_dir, {
+    'iota' : Item(status='U '),
+    })    
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_disk = svntest.main.greek_state.copy()    
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None, 0,
+                                        wc_dir, '-r1')
+
   svntest.main.run_svn(None, 'rm', iota_path)
   svntest.main.run_svn(None, 'cp', mu_path, iota_path)
 
