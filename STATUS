@@ -92,4 +92,16 @@ Candidate changes:
     Votes:
       +1: blair, dlr, kou
 
+  * r21453, r23468
+    Fix regression causing updates of replaced files without history to fail.
+    Justification:
+      Annoying regression.
+    Note:
+      r21453 is a harmless refactoring in the test suite on which r23468
+      depends.
+    Branch:
+      1.4.x-r23468
+    Votes:
+      +1: lundblad
+
 Approved changes:
