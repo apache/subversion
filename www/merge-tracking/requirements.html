@@ -31,7 +31,7 @@ href="../user-classifications.html#program">SCM automation</a>.</p>
 
 <ul>
   <li>
-    Merging
+    <a href="#merging">Merging</a>
     <ul>
       <li><a href="#repeated-merge">Repeated Merge</a></li>
       <li><a href="#cherry-picking">Cherry Picking</a></li>
@@ -50,25 +50,22 @@ href="../user-classifications.html#program">SCM automation</a>.</p>
   <li>
     <a href="#auditing">Auditing</a>
     <ul>
-      <li>Show Change Sets Available for Merge</li>
-      <li>Show Change Sets Already Merged</li>
-      <li>Show Change Sets Blocked from Merging</li>
-      <li><em>Merged From</em> info for Change Set and/or Path</li>
-      <li><em>Merged To</em> info for Change Set and/or Path</li>
-      <li>Find Paths containing Specific Incarnation of Versioned Resource</li>
-      <li>Commutative Author Reporting From Merged Change Set and/or
-      Path (e.g. for <code>log</code> and <code>blame</code>)</li>
+      <li><a href="#change-set-availability">Change Set Merge
+      Availability</a></li>
+      <li><a href="#find-change-set">Find Change Set</a></li>
+      <li><a href="#commutative-author-and-rev">Commutative Author and
+      Revision Reporting for Merged Change Sets</a></li>
       <!-- ### Need to explicitly call out renames? -->
     </ul>
   </li>
 
   <li>
-    Other
+    <a href="#misc">Miscellaneous</a>
     <ul>
-      <li><a href="#dump-load">Consistent UI</a></li>
+      <li>Consistent UI</li>
       <li><a href="#dump-load">Allow Dump/Load</a></li>
       <li><a href="#compatibility">Compatibility with older Subversion
-      clients</a></li>
+	    clients</a></li>
       <li><a href="#versioning">Versioning</a></li>
       <li><a href="#authz">Authorization</a></li>
     </ul>
@@ -260,50 +257,103 @@ the server side.  (From the <a href="summit.html#distributable-resolution"
 <h3>Auditing</h3>
 
 <p>Merge tracking must be audit-friendly, supporting some basic forms
-of reporting which allow for discovery of following types of
-information:</p>
+of reporting which allow for discovery of at least the following types
+of information.</p>
 
-<ul>
-  <li>If you merge rN into some destination (e.g. branch B), it should
-  be possible to query rN itself to ask what destinations it has been
-  merged to, and the answer set should contain B.</li>
+<p>Additionally, merge info should be transitive.  Often we merge a
+bunch of changes to a backport branch, tweak them there, then later
+merge the branch into a release line.  Later queries of the release
+line should show that the original revisions are present, and queries
+of the original revisions should show that they went to the release
+line as well as the backport branch.</p>
 
-  <li>If you merge rN into a branch B, and rN was committed by author A,
-  then <code>svn blame</code> should show the changed lines in B as
-  last touched by A, even if the merge was committed by you and you
-  are not A.  This must also work when merging a range of revisions
-  with different authors.</li>
+<div class="h4" id="change-set-availability">
+<h4>Change Set Merge Availability</h4>
 
-  <li>If you've <a href="#revision-blocking">blocked</a> some set
+<dl>
+  <dt>Show Change Sets Available for Merge</dt>
+  <dd>Support query of any path (file, directory, or symlink) to find
+  out what changes (revisions) for a merge source haven't been merged
+  under it.  For files, "under" just means "into".</dd>
+
+  <dt>Show Change Sets Already Merged</dt>
+  <dd>Support query any path (file, directory, or symlink) to find out
+  what changes (revisions) have been merged under it.  For files,
+  "under" just means "into".</dd>
+
+  <dt>Show Change Sets Blocked from Merging</dt>
+  <dd>If you've <a href="#revision-blocking">blocked</a> some set
   of revisions from being merged from branch B into some destination
   (e.g. trunk), you should be able to discover which revisions have
-  been blocked.</li>
+  been blocked.</dd>
+</dl>
+
+</div>  <!-- change-set-availability -->
+
+<div class="h4" id="find-change-set">
+<h4>Find Change Set</h4>
+
+<dl>
+  <dt><em>Merged From</em> info for Change Set and/or Path</dt>
+  <dd>If you merged rN from branch A into branch B in rM, it should be
+  possible to query rM -- or branch B at or after rM, but before it's
+  been moved or deleted -- to ask what sources it has been merged
+  from, and the answer set should contain A at rN.</dd>
+
+  <dt><em>Merged To</em> info for Change Set and/or Path</dt>
+  <dd>If you merge rN from branch A into branch B in rM, it should be
+  possible to query rN -- or branch A at or after rN, but before it's
+  been moved or deleted -- to ask what destinations it has been merged
+  to, and the answer set should contain B at rM.</dd>
+
+  <dt>Find Paths containing Specific Incarnation of Versioned Resource</dt>
+  <dd>It should be easy to discover all the paths at which a
+  particular node revision (i.e., unique versioned file entity)
+  exists, especially in a given revision.  In other words, this is the
+  "what branches does this exact version of this file exist in"
+  problem, often requested by so-called enterprise-level users.</dd>
+</dl>
+
+<p>Blue sky, we may want to enhance the reporting capabilities to
+allow retrieval of a log of changes to merge tracking information.
+This log should list both when the merges were applied, and when the
+merge meta data was updated.</p>
+
+</div>  <!-- find-change-set -->
+
+<div class="h4" id="commutative-author-and-rev">
+<h4>Commutative Author and Revision Reporting for Merged Change Sets</h4>
+
+<p>The ability to report either/both the actual committer and revision
+number of a change set, and/or the original author and revision
+number.  This applies to any operations which report an author,
+including:</p>
+
+<ul>
+  <li><code>blame</code></li>
+  <li><code>log</code></li>
+  <li><code>status --show-updates</code></li>
+  <li><code>info</code></li>
+</ul>
+
+<p>For example:</p>
+
+<ul>
+  <li>If you merge rN into a branch B, and rN was committed by author
+  A, then <code>svn blame</code> should provide the ability to show
+  the changed lines in B as last touched by A, even if the merge was
+  committed by you and you are not A.  This must also work when
+  merging a range of revisions with different authors.</li>
 
   <li>If you merge rN into a branch B, and rN was committed by author
   A, then <code>svn log -rN</code> should show both the original
   author A, <em>and</em> the author who merged the change.</li>
-
-  <li>It should be possible to query any path (file, directory, or
-  symlink) to find out what changes (revisions) have been merged under
-  it.  For files, "under" just means "into".</li>
-
-  <li>It should be possible to get a 'log' of changes to merge tracking
-  information. This 'log' should list both when the merges were applied,
-  and when the merge-tracking information was updated.</li>
-
-  <li>It should be easy to discover all the paths at which a particular
-  node revision (i.e., unique versioned file entity) exists,
-  especially in a given revision.  In other words, this is the "what
-  branches does this exact version of this file exist in" problem,
-  often requested by so-called enterprise-level users.</li>
-
-  <li>Merge records should be transitive.  Often we merge a bunch of
-  changes to a backport branch, tweak them there, then later merge the
-  branch into a release line.  Later queries of the release line
-  should show that the original revisions are present, and queries
-  of the original revisions should show that they went to the release
-  line as well as the backport branch.</li>
 </ul>
+
+<p>The UI and API for toggling this behavior should be consistent
+across operations.</p>
+
+</div>  <!-- commutative-author-and-rev -->
 
 </div>  <!-- auditing -->
 
