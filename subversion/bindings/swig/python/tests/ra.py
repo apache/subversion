@@ -90,6 +90,33 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     child = editor.add_directory("blah", root, None, 0)
     editor.close_edit(edit_baton)
 
+  def test_do_diff2(self):
+
+    class ChangeReceiver(delta.Editor):
+        def __init__(self):
+            self.textdeltas = []
+        
+        def apply_textdelta(self, file_baton, base_checksum):
+            def textdelta_handler(textdelta):
+                if textdelta is not None:
+                    self.textdeltas.append(textdelta)
+            return textdelta_handler
+
+    editor = ChangeReceiver()
+
+    e_ptr, e_baton = delta.make_editor(editor)
+
+    fs_revnum = fs.youngest_rev(self.fs)
+
+    reporter, reporter_baton = ra.do_diff2(self.ra_ctx, fs_revnum, REPOS_URL + "/trunk/README.txt", 0, 0, 1, REPOS_URL + "/trunk/README.txt", e_ptr, e_baton)
+
+    reporter.set_path(reporter_baton, "", fs_revnum, True, None)
+
+    reporter.finish_report(reporter_baton)
+
+    self.assertEqual("A test.\n", editor.textdeltas[0].new_data)
+    self.assertEqual(1, len(editor.textdeltas))
+
   def test_get_locations(self):
     locations = ra.get_locations(self.ra_ctx, "/trunk/README.txt", 2, range(1,5))
     self.assertEqual(locations, {
