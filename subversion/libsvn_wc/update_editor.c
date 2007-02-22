@@ -2229,9 +2229,10 @@ merge_file(svn_stringbuf_t *log_accum,
                       file_path, prop_changes, pool));
 
   /* Has the user made local mods to the working file?  */
-  SVN_ERR(svn_wc_text_modified_p2(&is_locally_modified, file_path,
-                                  FALSE, use_obstruction, adm_access,
-                                  pool));
+  SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, file_path,
+                                           FALSE, adm_access, FALSE,
+                                           use_obstruction,
+                                           pool));
 
   /* In the case where the user has replaced a file with a copy it may 
    * not show as locally modified.  So if the file isn't listed as

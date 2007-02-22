@@ -2540,8 +2540,8 @@ svn_wc_cleanup2(const char *path,
           SVN_ERR(svn_wc_props_modified_p(&modified, entry_path,
                                           adm_access, subpool));
           if (entry->kind == svn_node_file)
-            SVN_ERR(svn_wc_text_modified_p2(&modified, entry_path, FALSE,
-                                            FALSE, adm_access, subpool));
+            SVN_ERR(svn_wc_text_modified_p(&modified, entry_path, FALSE,
+                                           adm_access, subpool));
         }
     }
   svn_pool_destroy(subpool);
