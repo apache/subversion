@@ -135,9 +135,9 @@ svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
 
 
 
-/*** svn_wc_text_modified_p2 ***/
+/*** svn_wc_text_modified_p ***/
 
-/* svn_wc_text_modified_p2 answers the question:
+/* svn_wc_text_modified_p answers the question:
 
    "Are the contents of F different than the contents of
    .svn/text-base/F.svn-base or .svn/tmp/text-base/F.svn-base?"
@@ -474,28 +474,15 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 
 
 svn_error_t *
-svn_wc_text_modified_p2(svn_boolean_t *modified_p,
+svn_wc_text_modified_p(svn_boolean_t *modified_p,
                         const char *filename,
                         svn_boolean_t force_comparison,
-                        svn_boolean_t use_tmp_base,
                         svn_wc_adm_access_t *adm_access,
                         apr_pool_t *pool)
 {
   return svn_wc__text_modified_internal_p(modified_p, filename,
                                           force_comparison, adm_access,
-                                          TRUE, use_tmp_base, pool);
-}
-
-
-svn_error_t *
-svn_wc_text_modified_p(svn_boolean_t *modified_p,
-                       const char *filename,
-                       svn_boolean_t force_comparison,
-                       svn_wc_adm_access_t *adm_access,
-                       apr_pool_t *pool)
-{
-  return svn_wc_text_modified_p2(modified_p, filename, force_comparison,
-                                 FALSE, adm_access, pool);
+                                          TRUE, FALSE, pool);
 }
 
 

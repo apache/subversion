@@ -1661,7 +1661,7 @@ svn_wc_prop_set2(const char *name,
           svn_wc_entry_t tmp_entry;
 
           /* If we changed the keywords or newlines, void the entry
-             timestamp for this file, so svn_wc_text_modified_p2() does
+             timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
