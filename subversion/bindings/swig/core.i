@@ -467,8 +467,6 @@
 #endif
 
 /* -----------------------------------------------------------------------
-=======
->>>>>>> .merge-right.r20607
    describe how to pass a FILE* as a parameter (svn_stream_from_stdio)
 */
 #ifdef SWIGPYTHON
