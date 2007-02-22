@@ -66,7 +66,8 @@ Subversion.  Remove redundancies.</p>
 <p>Copy/move operations which contact the repository include:</p>
 
 <ul>
-  <li>WC to URL (<i>code in progress, tests complete</i>, see test #11)</li>
+  <li>WC to URL (<i>code in progress, tests complete</i>, copy test
+    #11 still failing over ra_dav)</li>
   <li>URL to WC</li>
   <li>URL to URL</li>
 </ul>
@@ -394,7 +395,9 @@ patches.</p>
 <div class="h3" id="migration">
 <h3>Migration</h2>
 
-<p>TODO: Repository migration from previous versions of Subversion.</p>
+<p>No explicit steps are necessary to migrate the content of a
+pre-Merge Tracking repository.  Only an upgrade to Subversion 1.5.0 is
+necessary.</p>
 
 <p>TODO: Merge meta data from svnmerge.py.  Dan Berlin has written
 Python code to perform this migration; it needs to be made available
@@ -405,12 +408,12 @@ in the <code>tools/server-side/</code> area of the distribution .</p>
 <div class="h3" id="interoperability">
 <h3>Interoperability</h2>
 
-<p>Executive summary:</p>
+<p>Executive summary for client/repository inter-op:</p>
 
 <ul>
-  <li>Older Subversion clients may interact with a 1.5.x+ Subversion
-  repository, but will continue to lack Merge Tracking
-  functionality for:
+  <li>Older Subversion clients may <a href="requirements.html#compatibility"
+  >interact with a 1.5.x+ Subversion repository</a>, but will continue
+  to lack Merge Tracking functionality for:
 
   <ul>
     <li>Recording meta data about any merges performed.</li>
@@ -424,7 +427,7 @@ in the <code>tools/server-side/</code> area of the distribution .</p>
   neutralized.</li>
 </ul>
 
-<p>Gory detail:</p>
+<p>Gory detail for client/repository inter-op:</p>
 
 <ul>
   <li>A repository 1.4.x- doesn't provide any way to retrieve
@@ -444,6 +447,10 @@ in the <code>tools/server-side/</code> area of the distribution .</p>
   upgrade path here, but don't have one yet, and aren't promising
   one.</li>
 </ul>
+
+<p>Subversion <a href="requirements.html#dump-load">dump files
+continue to be fully portable</a> between pre- and post-Merge Tracking
+versions of Subversion.</p>
 
 </div>  <!-- interoperability -->
 
