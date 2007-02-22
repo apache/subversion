@@ -85,13 +85,6 @@ Candidate changes:
     Votes:
       +1: dlr, hwright
 
-  * r23405, r23406
-    Spelling fixes in Ruby bindings method name and documentation.
-    Justification:
-      Having a method name mispelled isn't good.
-    Votes:
-      +1: blair, dlr, kou
-
   * r21453, r23468
     Fix regression causing updates of replaced files without history to fail.
     Justification:
