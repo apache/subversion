@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-02-23 20:35+0800\n"
-"PO-Revision-Date: 2007-02-23 20:38+0800\n"
+"POT-Creation-Date: 2007-02-23 12:19+0800\n"
+"PO-Revision-Date: 2007-02-23 20:40+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3941,9 +3941,9 @@ msgid "Unable to make name for '%s'"
 msgstr "不能为“%s”产生名字"
 
 #: libsvn_subr/io.c:509
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create symbolic link '%s'"
-msgstr "无法创建目录“%s”"
+msgstr "无法创建符号连接“%s”"
 
 #: libsvn_subr/io.c:526
 #: libsvn_subr/io.c:580
@@ -4083,9 +4083,8 @@ msgid "Can't open stdin"
 msgstr "无法打开标准输入"
 
 #: libsvn_subr/io.c:1616
-#, fuzzy
 msgid "Reading from stdin is disallowed"
-msgstr "目前不能从标准输入设备读取，因此禁止"
+msgstr "不接受从标准输入设备读取"
 
 #: libsvn_subr/io.c:1630
 #, c-format
@@ -8711,28 +8710,32 @@ msgid ""
 "specify a username ARG (deprecated;\n"
 "                             see --source-username and --sync-username)"
 msgstr ""
+"指定用户名称 ARG (已经过时;\n"
+"                             参看 --source-username 和 --sync-username)"
 
 #: svnsync/main.c:108
 msgid ""
 "specify a password ARG (deprecated;\n"
 "                             see --source-password and --sync-password)"
 msgstr ""
+"指定密码 ARG (已经过时;\n"
+"                             参看 --source-password 和 --sync-password)"
 
 #: svnsync/main.c:112
 msgid "connect to source repository with username ARG"
-msgstr ""
+msgstr "使用用户名称 ARG 连接源仓库"
 
 #: svnsync/main.c:114
 msgid "connect to source repository with password ARG"
-msgstr ""
+msgstr "使用密码 ARG 连接源仓库"
 
 #: svnsync/main.c:116
 msgid "connect to sync repository with username ARG"
-msgstr ""
+msgstr "使用用户名称 ARG 连接目的仓库"
 
 #: svnsync/main.c:118
 msgid "connect to sync repository with password ARG"
-msgstr ""
+msgstr "使用密码 ARG 连接目的仓库"
 
 #: svnsync/main.c:207
 #, c-format
@@ -8829,7 +8832,7 @@ msgstr ""
 
 #: svnsync/main.c:1493
 msgid "Cannot use --username or --password with any of --source-username, --source-password, --sync-username, or --sync-password.\n"
-msgstr ""
+msgstr "不能将 --username 或 --password 与 --source-username, --source-password, --sync-username, 或 --sync-password 一起使用。\n"
 
 #: svnsync/main.c:1573
 #, c-format
