@@ -156,15 +156,17 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 =cut
 
+__DATA__
+
 =begin no_more_pod
 
 # The =begin directive stops the POD checker from detecting the embedded
 # POD in the template that follows.  Unfortunately that makes this POD
 # fail linting.
 
-__DATA__
-
 __template__
+my %method_defs;
+
 [%- members = {};
    IF method == '';
      member_nodelist = xp.findnodes('//sectiondef[@kind="func"]/memberdef[@kind = "function"]');
@@ -175,7 +177,7 @@ __template__
      member_name = xp.findvalue('name', node);
      members.$member_name.node = node;
    END -%]
-my %method_defs = (
+
   [%- FOREACH member = members.keys.sort %]
     [%- member_name = member.remove(strip_prefix) %]
     [%- params = xp.findnodes('param/declname', members.$member.node) %]
@@ -187,17 +189,17 @@ my %method_defs = (
       [%- final_params.push(param) %]
     [%- END %]
     [%- param_len = 0 %]
-    '[% member_name %]' => {
-        type => 'obj',
-        args => [
+$method_defs{[% member_name %]} = {
+    type => 'obj',
+    args => [
     [%- FOREACH param = final_params %]
-            $arg_[% param.string_value | lower %],
+        $arg_[% param.string_value | lower %],
         [%- IF param.string_value.length > param_len %]
           [%- param_len = param.string_value.length %]
         [%- END %]
     [%- END %]
-        ],
-    },
+    ],
+};
 
 =head2 [% member_name %]
 
@@ -214,4 +216,4 @@ my %method_defs = (
 =cut
 
   [%- END %]
-);
+
