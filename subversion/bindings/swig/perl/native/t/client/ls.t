@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 77;
+use Test::More tests => 79;
 
 use lib 't/lib';
 
@@ -40,6 +40,7 @@ foreach my $args (([$repo_url, 1, 1],
 	isa_ok($dirents->{$dirent}, '_p_svn_dirent_t');
     }
 
+    is($dirents->{'A'}->size(), 0, '/A size is zero');
     is($dirents->{'A'}->kind(), $SVN::Node::dir, '/A is a directory');
     is($dirents->{'A'}->has_props(), 0, '/A has no properties');
     my $iota = $dirents->{'iota'};
