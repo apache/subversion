@@ -1959,9 +1959,8 @@ change_file_prop(void *file_baton,
 
   /* Special case: If use-commit-times config variable is set we
      cache the last-changed-date propval so we can use it to set
-     the working file's timestamp.  We also want it if this file
-     already existed and is obstructing an added file. */
-  if ((eb->use_commit_times || fb->existed)
+     the working file's timestamp. */
+  if (eb->use_commit_times
       && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
       && value)
     fb->last_changed_date = apr_pstrdup(fb->pool, value->data);
@@ -2268,16 +2267,9 @@ merge_file(svn_wc_notify_state_t *content_state,
                                          svn_wc__copy_translate,
                                          tmp_txtb, base_name, FALSE, pool));
             }
-          else if (fb->existed && ! fb->add_existed)
-            {
-              /* A valid obstruction to an added file exists and it's text
-                 differs from the added file. */
-              SVN_ERR(svn_time_from_cstring(&(tmp_entry.text_time),
-                                             fb->last_changed_date, pool));
-              flags |= SVN_WC__ENTRY_MODIFY_TEXT_TIME;
-            }
-          else  /* working file exists and has local mods
-                   or is scheduled for addition. */
+          else if (! fb->existed)
+            /* Working file exists and has local mods
+               or is scheduled for addition but is not an obstruction. */
             {                  
               /* Now we need to let loose svn_wc_merge2() to merge the
                  textual changes into the working file. */
