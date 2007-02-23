@@ -1,35 +1,10 @@
+package SVN::Client;
+
 use strict;
 use warnings;
 
 use SVN::Core;
 use SVN::Wc;
-
-package SVN::Client;
-my @_all_fns;
-my @_fns_with_named_params;
-
-BEGIN {
-    @_fns_with_named_params = qw(
-				 checkout
-				 info
-				 log log2 log3 ls
-				 propset
-				 revprop_get revprop_list
-				 update);
-    @_all_fns = qw(add add3 blame blame3 cat cat2 checkout2 cleanup
-                   commit commit3 commit_item2_dup copy copy3 delete delete2
-                   diff diff3 diff_peg3 diff_summarize diff_summarize_peg
-                   export export3 import import2 info_dup list lock
-                   ls3
-                   merge merge2 merge_peg2 mkdir mkdir2 move move4
-                   propget propget2 proplist proplist2 proplist_item_dup
-                   propset2 relocate resolved revert
-                   revprop_set
-                   status status2 switch unlock update2
-                   url_from_path uuid_from_path uuid_from_url);
-    require SVN::Base;
-    import SVN::Base (qw(Client svn_client_), @_all_fns, @_fns_with_named_params);
-}
 
 use Params::Validate qw(:all);
 
@@ -270,7 +245,518 @@ sub new
     return $self;
 }
 
-=head2 $ctx-E<gt>add($path, $recursive, $pool);
+my $arg_actual_revnum = {
+    name => 'actual_revnum',
+    spec => {
+    },
+};
+my $arg_adm_access = {
+    name => 'adm_access',
+    spec => {
+    },
+};
+my $arg_allow_unver_obstructions = {
+    name => 'allow_unver_obstructions',
+    spec => {
+    },
+};
+my $arg_base_revision_for_url = {
+    name => 'base_revision_for_url',
+    spec => {
+    },
+};
+my $arg_break_lock = {
+    name => 'break_lock',
+    spec => {
+    },
+};
+my $arg_cancel_func = {
+    name => 'cancel_func',
+    spec => {
+    },
+};
+my $arg_changelist = {
+    name => 'changelist',
+    spec => {
+    },
+};
+my $arg_changelist_name = {
+    name => 'changelist_name',
+    spec => {
+    },
+};
+my $arg_comment = {
+    name => 'comment',
+    spec => {
+    },
+};
+my $arg_commit_info_p = {
+    name => 'commit_info_p',
+    spec => {
+    },
+};
+my $arg_copy_as_child = {
+    name => 'copy_as_child',
+    spec => {
+    },
+};
+my $arg_diff = {
+    name => 'diff',
+    spec => {
+    },
+};
+my $arg_diff_options = {
+    name => 'diff_options',
+    spec => {
+    },
+};
+my $arg_dir = {
+    name => 'dir',
+    spec => {
+    },
+};
+my $arg_dirent_fields = {
+    name => 'dirent_fields',
+    spec => {
+    },
+};
+my $arg_dirents = {
+    name => 'dirents',
+    spec => {
+    },
+};
+my $arg_discover_changed_paths = {
+    name => 'discover_changed_paths',
+    spec => {
+	type => BOOLEAN,
+    },
+};
+my $arg_dry_run = {
+    name => 'dry_run',
+    spec => {
+    },
+};
+my $arg_dst_path = {
+    name => 'dst_path',
+    spec => {
+    },
+};
+
+my $arg_end = {
+    name => 'end',
+    spec => {
+	type => SCALAR,
+    },
+};
+my $arg_end_revision = {
+    name => 'end_revision',
+    spec => {
+    },
+};
+my $arg_errfile = {
+    name => 'errfile',
+    spec => {
+    },
+};
+my $arg_fetch_locks = {
+    name => 'fetch_locks',
+    spec => {
+    },
+};
+my $arg_force = {
+    name => 'force',
+    spec => {
+    },
+};
+my $arg_from = {
+    name => 'from',
+    spec => {
+    },
+};
+my $arg_get_all = {
+    name => 'get_all',
+    spec => {
+    },
+};
+my $arg_header_encoding = {
+    name => 'header_encoding',
+    spec => {
+    },
+};
+my $arg_ignore_ancestry = {
+    name => 'ignore_ancestry',
+    spec => {
+    },
+};
+my $arg_ignore_content_type = {
+    name => 'ignore_content_type',
+    spec => {
+    },
+};
+my $arg_ignore_externals = {
+    name => 'ignore_externals',
+    spec => {
+    },
+};
+my $arg_ignore_mime_type = {
+    name => 'ignore_mime_type',
+    spec => {
+    },
+};
+my $arg_info = {
+    name => 'info',
+    spec => {
+    },
+};
+my $arg_item = {
+    name => 'item',
+    spec => {
+    },
+};
+my $arg_keep_changelist = {
+    name => 'keep_changelist',
+    spec => {
+    },
+};
+my $arg_keep_local = {
+    name => 'keep_local',
+    spec => {
+    },
+};
+my $arg_keep_locks = {
+    name => 'keep_locks',
+    spec => {
+    },
+};
+
+my $arg_limit = {
+    name => 'limit',
+    spec => {
+	type => SCALAR,
+    },
+};
+my $arg_list_func = {
+    name => 'list_func',
+    spec => {
+    },
+};
+my $arg_locks = {
+    name => 'locks',
+    spec => {
+    },
+};
+my $arg_merge_options = {
+    name => 'merge_options',
+    spec => {
+    },
+};
+my $arg_move_as_child = {
+    name => 'move_as_child',
+    spec => {
+    },
+};
+my $arg_native_eol = {
+    name => 'native_eol',
+    spec => {
+    },
+};
+my $arg_no_diff_deleted = {
+    name => 'no_diff_deleted',
+    spec => {
+    },
+};
+my $arg_no_ignore = {
+    name => 'no_ignore',
+    spec => {
+    },
+};
+my $arg_nonrecursive = {
+    name => 'nonrecursive',
+    spec => {
+    },
+};
+my $arg_out = {
+    name => 'out',
+    spec => {
+    },
+};
+my $arg_outfile = {
+    name => 'outfile',
+    spec => {
+    },
+};
+my $arg_overwrite = {
+    name => 'overwrite',
+    spec => {
+    },
+};
+my $arg_path = {
+    name => 'path',
+    spec => {
+	type => SCALAR,
+    },
+};
+my $arg_path1 = {
+    name => 'path1',
+    spec => {
+    },
+};
+my $arg_path2 = {
+    name => 'path2',
+    spec => {
+    },
+};
+my $arg_paths = {
+    name => 'paths',
+    spec => {
+    },
+};
+
+my $arg_path_or_url = {
+    name => 'path_or_url',
+    spec => {
+	type => SCALAR, },
+};
+
+my $arg_peg_revision = {
+    name => 'peg_revision',
+    spec => {
+	type => SCALAR | UNDEF 
+    },
+};
+my $arg_prompt_func = {
+    name => 'prompt_func',
+    spec => {
+    },
+};
+
+my $arg_propname = {
+    name => 'propname',
+    spec => {
+	type => SCALAR,
+    },
+};
+my $arg_props = {
+    name => 'props',
+    spec => {
+    },
+};
+
+my $arg_propval = {
+    name => 'propval',
+    spec => {
+	type => SCALAR | UNDEF,
+    },
+};
+my $arg_provider = {
+    name => 'provider',
+    spec => {
+    },
+};
+
+my $arg_receiver = {
+    name => 'receiver',
+    spec => {
+	type => CODEREF
+    },
+};
+
+my $arg_recurse = {
+    name => 'recurse',
+    spec => {
+	type    => BOOLEAN,
+	default => 0,
+    },
+};
+my $arg_recursive = {
+    name => 'recursive',
+    spec => {
+    },
+};
+my $arg_result_rev = {
+    name => 'result_rev',
+    spec => {
+    },
+};
+my $arg_result_revs = {
+    name => 'result_revs',
+    spec => {
+    },
+};
+my $arg_retry_limit = {
+    name => 'retry_limit',
+    spec => {
+    },
+};
+
+my $arg_revision = {
+    name => 'revision',
+    spec => {
+	type => SCALAR,
+	default => 'HEAD',
+    }
+};
+my $arg_revision1 = {
+    name => 'revision1',
+    spec => {
+    },
+};
+my $arg_revision2 = {
+    name => 'revision2',
+    spec => {
+    },
+};
+my $arg_root_path = {
+    name => 'root_path',
+    spec => {
+    },
+};
+my $arg_session = {
+    name => 'session',
+    spec => {
+    },
+};
+my $arg_set_rev = {
+    name => 'set_rev',
+    spec => {
+    },
+};
+my $arg_skip_checks = {
+    name => 'skip_checks',
+    spec => {
+    },
+};
+my $arg_source = {
+    name => 'source',
+    spec => {
+    },
+};
+my $arg_source1 = {
+    name => 'source1',
+    spec => {
+    },
+};
+my $arg_source2 = {
+    name => 'source2',
+    spec => {
+    },
+};
+my $arg_sources = {
+    name => 'sources',
+    spec => {
+    },
+};
+my $arg_src_path = {
+    name => 'src_path',
+    spec => {
+    },
+};
+my $arg_src_paths = {
+    name => 'src_paths',
+    spec => {
+    },
+};
+my $arg_src_revision = {
+    name => 'src_revision',
+    spec => {
+    },
+};
+
+my $arg_start = {
+    name => 'start',
+    spec => {
+	type => SCALAR,
+    },
+};
+my $arg_start_revision = {
+    name => 'start_revision',
+    spec => {
+    },
+};
+my $arg_status_func = {
+    name => 'status_func',
+    spec => {
+    },
+};
+my $arg_steal_lock = {
+    name => 'steal_lock',
+    spec => {
+    },
+};
+
+my $arg_strict_node_history = {
+    name => 'strict_node_history',
+    spec => {
+	type => BOOLEAN,
+    },
+};
+my $arg_summarize_func = {
+    name => 'summarize_func',
+    spec => {
+    },
+};
+
+my $arg_targets = {
+    name => 'targets',
+    spec => {
+	type => ARRAYREF | SCALAR,
+    },
+};
+
+my $arg_target = {
+    name => 'target',
+    spec => {
+	type => SCALAR,
+    },
+};
+my $arg_target_wcpath = {
+    name => 'target_wcpath',
+    spec => {
+    },
+};
+my $arg_to = {
+    name => 'to',
+    spec => {
+    },
+};
+my $arg_update = {
+    name => 'update',
+    spec => {
+    },
+};
+my $arg_uuid = {
+    name => 'uuid',
+    spec => {
+    },
+};
+
+# Create a copy of $arg_revision, and override the spec key
+my $arg_revision_no_default = { %$arg_revision };
+$arg_revision_no_default->{spec} = { type => SCALAR | UNDEF};
+
+my $arg_url = {
+    name => 'url',
+    spec => {
+	type => SCALAR,
+    },
+};
+
+my %method_defs;
+
+$method_defs{add} = {
+    type => 'obj',
+    args => [
+        $arg_path,
+        $arg_recursive,
+    ],
+};
+
+=head2 add
+
+  $ctx->add({
+      path      => ...,
+      recursive => ...,
+  })
 
 Schedule a working copy $path for addition to the repository.
 
@@ -286,7 +772,66 @@ removed with $ctx-E<gt>revert().
 
 No return.
 
-=head2 $ctx-E<gt>blame($target, $start, $end, \&receiver, $pool);
+=cut
+
+$method_defs{add2} = {
+    type => 'obj',
+    args => [
+        $arg_path,
+        $arg_recursive,
+        $arg_force,
+    ],
+};
+
+=head2 add2
+
+  $ctx->add2({
+      path      => ...,
+      recursive => ...,
+      force     => ...,
+  })
+
+=cut
+
+$method_defs{add3} = {
+    type => 'obj',
+    args => [
+        $arg_path,
+        $arg_recursive,
+        $arg_force,
+        $arg_no_ignore,
+    ],
+};
+
+=head2 add3
+
+  $ctx->add3({
+      path      => ...,
+      recursive => ...,
+      force     => ...,
+      no_ignore => ...,
+  })
+
+=cut
+
+$method_defs{blame} = {
+    type => 'obj',
+    args => [
+        $arg_path_or_url,
+        $arg_start,
+        $arg_end,
+        $arg_receiver,
+    ],
+};
+
+=head2 blame
+
+  $ctx->blame({
+      path_or_url => ...,
+      start       => ...,
+      end         => ...,
+      receiver    => ...,
+  })
 
 Invoke \&receiver subroutine on each line-blame item associated with revision
 $end of $target, using $start as the default source of all blame.
@@ -306,7 +851,74 @@ The blame receiver subroutine can return an L<svn_error_t|SVN::Core/svn_error_t>
 to return an error.  All other returns will be ignored.
 You can create an svn_error_t object with SVN::Error::create().
 
-=head2 $ctx-E<gt>cat(\*FILEHANDLE, $target, $revision, $pool);
+=cut
+
+$method_defs{blame2} = {
+    type => 'obj',
+    args => [
+	$arg_path_or_url,
+	$arg_peg_revision,
+	$arg_start,
+	$arg_end,
+	$arg_receiver,
+    ],
+};
+
+=head2 blame2
+
+  $ctx->blame2({
+      path_or_url  => ...,
+      peg_revision => ...,
+      start        => ...,
+      end          => ...,
+      receiver     => ...,
+  })
+
+=cut
+
+$method_defs{blame3} = {
+    type => 'obj',
+    args => [
+	$arg_path_or_url,
+	$arg_peg_revision,
+	$arg_start,
+	$arg_end,
+	$arg_diff_options,
+	$arg_ignore_mime_type,
+	$arg_receiver,
+    ],
+};
+
+=head2 blame3
+
+  $ctx->blame3({
+      path_or_url      => ...,
+      peg_revision     => ...,
+      start            => ...,
+      end              => ...,
+      diff_options     => ...,
+      ignore_mime_type => ...,
+      receiver         => ...,
+  })
+
+=cut
+
+$method_defs{cat} = {
+    type => 'obj',
+    args => [
+	$arg_out,
+	$arg_path_or_url,
+	$arg_revision,
+    ],
+};
+
+=head2 cat
+
+  $ctx->cat({
+      out         => ...,
+      path_or_url => ...,
+      revision    => ...,
+  })
 
 Outputs the content of the file identified by $target and $revision to the
 FILEHANDLE.  FILEHANDLE is a reference to a filehandle. 
@@ -315,29 +927,146 @@ If $target is not a local path and if $revision is 'PREV' (or some
 other kind that requires a local path), then an error will be raised,
 because the desired revision can not be determined.
 
-=head2 $ctx-E<gt>checkout
+=cut
+
+$method_defs{cat2} = {
+    type => 'obj',
+    args => [
+	$arg_out,
+	$arg_path_or_url,
+	$arg_peg_revision,
+	$arg_revision,
+    ],
+};
+
+=head2 cat2
+
+  $ctx->cat2({
+      out          => ...,
+      path_or_url  => ...,
+      peg_revision => ...,
+      revision     => ...,
+  })
+
+=cut
+
+$method_defs{checkout} = {
+    type => 'obj',
+    args => [
+	$arg_url,
+	$arg_path,
+	$arg_revision,
+	$arg_recurse,
+    ],
+};
+
+=head2 checkout
 
   my $revision = $ctx->checkout({
-      url      => '...',
-      path     => '...',
-      revision => $revision,    # optional, default is 'HEAD'
-      recurse  => $recursive,   # optional, default is 0
-  });
+      url      => ...,
+      path     => ...,
+      revision => ...,   # optional, default is 'HEAD'
+      recurse  => ...,   # optional, default is 0
+  })
 
-Checkout a working copy of $url at $revision using $path as the root directory
-of the newly checked out working copy.  
+Checkout a working copy of $url at $revision using $path as the root
+directory of the newly checked out working copy.
 
 $revision must be a number, 'HEAD', or a date.  If $revision does not
 meet these requirements the $SVN::Error::CLIENT_BAD_REVISION is raised.
 
 Returns the value of the revision actually checked out of the repository.
 
-=head2 $ctx-E<gt>cleanup($dir, $pool);
+=cut
+
+$method_defs{checkout2} = {
+    type => 'obj',
+    args => [
+	$arg_result_rev,
+	$arg_url,
+	$arg_path,
+	$arg_peg_revision,
+	$arg_revision,
+	$arg_recurse,
+	$arg_ignore_externals,
+    ],
+};
+
+=head2 checkout2
+
+  $ctx->checkout2({
+      result_rev       => ...,
+      url              => ...,
+      path             => ...,
+      peg_revision     => ...,
+      revision         => ...,
+      recurse          => ...,
+      ignore_externals => ...,
+  })
+
+=cut
+
+$method_defs{checkout3} = {
+    type => 'obj',
+    args => [
+	$arg_result_rev,
+	$arg_url,
+	$arg_path,
+	$arg_peg_revision,
+	$arg_revision,
+	$arg_recurse,
+	$arg_ignore_externals,
+	$arg_allow_unver_obstructions,
+    ],
+};
+
+=head2 checkout3
+
+  $ctx->checkout3({
+      result_rev               => ...,
+      url                      => ...,
+      path                     => ...,
+      peg_revision             => ...,
+      revision                 => ...,
+      recurse                  => ...,
+      ignore_externals         => ...,
+      allow_unver_obstructions => ...,
+  })
+
+=cut
+
+$method_defs{cleanup} = {
+    type => 'obj',
+    args => [
+	$arg_dir,
+    ],
+};
+
+=head2 cleanup
+
+  $ctx->cleanup({
+      dir => ...,
+  })
 
 Recursively cleanup a working copy directory, $dir, finishing any incomplete
 operations, removing lockfiles, etc.
 
-=head2 $ctx-E<gt>commit($targets, $nonrecursive, $pool);
+=cut
+
+$method_defs{commit} = {
+    type => 'obj',
+    args => [
+	$arg_targets,
+	$arg_nonrecursive,
+    ],
+};
+
+=head2 commit
+
+  $ctx->commit({
+      targets       => ...,
+      nonrecursive  => ...,
+  })
 
 Commit files or directories referenced by target.  Will use the log_msg
 callback to obtain the log message for the commit.
@@ -359,7 +1088,138 @@ Returns a L<svn_client_commit_info_t|/svn_client_commit_info_t> object.  If the 
 commit information object is $SVN::Core::INVALID_REVNUM and no error was
 raised, then the commit was a no-op; nothing needed to be committed.
 
-=head2 $ctx-E<gt>copy($src_target, $src_revision, $dst_target, $pool);
+=cut
+
+$method_defs{commit2} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_targets,
+	$arg_recurse,
+	$arg_keep_locks,
+    ],
+};
+
+=head2 commit2
+
+  $ctx->commit2({
+      commit_info_p => ...,
+      targets       => ...,
+      recurse       => ...,
+      keep_locks    => ...,
+  })
+
+=cut
+
+$method_defs{commit3} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_targets,
+	$arg_recurse,
+	$arg_keep_locks,
+    ],
+};
+
+=head2 commit3
+
+  $ctx->commit3({
+      commit_info_p => ...,
+      targets       => ...,
+      recurse       => ...,
+      keep_locks    => ...,
+  })
+
+=cut
+
+$method_defs{commit4} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_targets,
+	$arg_recurse,
+	$arg_keep_locks,
+	$arg_keep_changelist,
+	$arg_changelist_name,
+    ],
+};
+
+=head2 commit4
+
+  $ctx->commit4({
+      commit_info_p   => ...,
+      targets         => ...,
+      recurse         => ...,
+      keep_locks      => ...,
+      keep_changelist => ...,
+      changelist_name => ...,
+  })
+
+=cut
+
+$method_defs{commit_item2_dup} = {
+    type => 'obj',
+    args => [
+	$arg_item,
+    ],
+};
+
+=head2 commit_item2_dup
+
+  $ctx->commit_item2_dup({
+      item => ...,
+  })
+
+=cut
+
+$method_defs{commit_item3_dup} = {
+    type => 'obj',
+    args => [
+	$arg_item,
+    ],
+};
+
+=head2 commit_item3_dup
+
+  $ctx->commit_item3_dup({
+      item => ...,
+  })
+
+=cut
+
+$method_defs{commit_item_create} = {
+    type => 'obj',
+    args => [
+	$arg_item,
+    ],
+};
+
+=head2 commit_item_create
+
+  $ctx->commit_item_create({
+      item => ...,
+  })
+
+=cut
+
+$method_defs{copy} = {
+    type => 'obj',
+    args => [
+	$arg_src_path,
+	$arg_src_revision,
+	$arg_dst_path,
+    ],
+};
+
+=head2 copy
+
+  $ctx->copy({
+      src_path     => ...,
+      src_revision => ...,
+      dst_path     => ...,
+  })
+
+ $ctx-E<gt>copy($src_target, $src_revision, $dst_target, $pool);
 
 Copies $src_target to $dst_target.
 
@@ -382,7 +1242,87 @@ removed with $ctx-E<gt>revert().  undef will be returned in this case.
 Calls the notify callback for each item added at the new location, passing
 the new, relative path of the added item.
 
-=head2 $ctx-E<gt>delete($targets, $force, $pool);
+=cut
+
+$method_defs{copy2} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_src_path,
+	$arg_src_revision,
+	$arg_dst_path,
+    ],
+};
+
+=head2 copy2
+
+  $ctx->copy2({
+      commit_info_p => ...,
+      src_path      => ...,
+      src_revision  => ...,
+      dst_path      => ...,
+  })
+
+=cut
+
+$method_defs{copy3} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_src_path,
+	$arg_src_revision,
+	$arg_dst_path,
+    ],
+};
+
+=head2 copy3
+
+  $ctx->copy3({
+      commit_info_p => ...,
+      src_path      => ...,
+      src_revision  => ...,
+      dst_path      => ...,
+  })
+
+=cut
+
+$method_defs{copy4} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_sources,
+	$arg_dst_path,
+	$arg_copy_as_child,
+    ],
+};
+
+=head2 copy4
+
+  $ctx->copy4({
+      commit_info_p => ...,
+      sources       => ...,
+      dst_path      => ...,
+      copy_as_child => ...,
+  })
+
+=cut
+
+$method_defs{delete} = {
+    type => 'obj',
+    args => [
+	$arg_paths,
+	$arg_force,
+    ],
+};
+
+=head2 delete
+
+  $ctx->delete({
+      paths => ...,
+      force => ...,
+  })
+
+ $ctx-E<gt>delete($targets, $force, $pool);
 
 Delete items from a repository or working copy.
 
@@ -407,12 +1347,83 @@ the deleted item.
 
 Has no return.
 
-=head2 $ctx-E<gt>diff($diff_options, $target1, $revision1, $target2, $revision2, $recursive, $ignore_ancestry, $no_diff_deleted, $outfile, $errfile, $pool);
+=cut
+
+$method_defs{delete2} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_paths,
+	$arg_force,
+    ],
+};
+
+=head2 delete2
+
+  $ctx->delete2({
+      commit_info_p => ...,
+      paths         => ...,
+      force         => ...,
+  })
+
+=cut
+
+$method_defs{delete3} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_paths,
+	$arg_force,
+	$arg_keep_local,
+    ],
+};
+
+=head2 delete3
+
+  $ctx->delete3({
+      commit_info_p => ...,
+      paths         => ...,
+      force         => ...,
+      keep_local    => ...,
+  })
+
+=cut
+
+$method_defs{diff} = {
+    type => 'obj',
+    args => [
+	$arg_diff_options,
+	$arg_path1,
+	$arg_revision1,
+	$arg_path2,
+	$arg_revision2,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_no_diff_deleted,
+	$arg_outfile,
+	$arg_errfile,
+    ],
+};
+
+=head2 diff
+
+  $ctx->diff({
+      diff_options    => ...,
+      path1           => ...,
+      revision1       => ...,
+      path2           => ...,
+      revision2       => ...,
+      recurse         => ...,
+      ignore_ancestry => ...,
+      no_diff_deleted => ...,
+      outfile         => ...,
+      errfile         => ...,
+  })
 
 Produces diff output which describes the delta between $target1 at
 $revision1 and $target2 at $revision2.  They both must represent the same
 node type (i.e. they most both be directories or files).  The revisions
-must not be undef.  
+must not be undef.
 
 Prints the output of the diff to the filename or filehandle passed as
 $outfile, and any errors to the filename or filehandle passed as $errfile.
@@ -431,7 +1442,276 @@ pass an empty array to return a unified context diff (like `diff -u`).
 
 Has no return.
 
-=head2 $ctx-E<gt>export($from, $to, $revision, $force, $pool);
+=cut
+
+$method_defs{diff2} = {
+    type => 'obj',
+    args => [
+	$arg_diff_options,
+	$arg_path1,
+	$arg_revision1,
+	$arg_path2,
+	$arg_revision2,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_no_diff_deleted,
+	$arg_ignore_content_type,
+	$arg_outfile,
+	$arg_errfile,
+    ],
+};
+
+=head2 diff2
+
+  $ctx->diff2({
+      diff_options        => ...,
+      path1               => ...,
+      revision1           => ...,
+      path2               => ...,
+      revision2           => ...,
+      recurse             => ...,
+      ignore_ancestry     => ...,
+      no_diff_deleted     => ...,
+      ignore_content_type => ...,
+      outfile             => ...,
+      errfile             => ...,
+  })
+
+=cut
+
+$method_defs{diff3} = {
+    type => 'obj',
+    args => [
+	$arg_diff_options,
+	$arg_path1,
+	$arg_revision1,
+	$arg_path2,
+	$arg_revision2,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_no_diff_deleted,
+	$arg_ignore_content_type,
+	$arg_header_encoding,
+	$arg_outfile,
+	$arg_errfile,
+    ],
+};
+
+=head2 diff3
+
+  $ctx->diff3({
+      diff_options        => ...,
+      path1               => ...,
+      revision1           => ...,
+      path2               => ...,
+      revision2           => ...,
+      recurse             => ...,
+      ignore_ancestry     => ...,
+      no_diff_deleted     => ...,
+      ignore_content_type => ...,
+      header_encoding     => ...,
+      outfile             => ...,
+      errfile             => ...,
+  })
+
+=cut
+
+$method_defs{diff_peg} = {
+    type => 'obj',
+    args => [
+	$arg_diff_options,
+	$arg_path,
+	$arg_peg_revision,
+	$arg_start_revision,
+	$arg_end_revision,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_no_diff_deleted,
+	$arg_outfile,
+	$arg_errfile,
+    ],
+};
+
+=head2 diff_peg
+
+  $ctx->diff_peg({
+      diff_options    => ...,
+      path            => ...,
+      peg_revision    => ...,
+      start_revision  => ...,
+      end_revision    => ...,
+      recurse         => ...,
+      ignore_ancestry => ...,
+      no_diff_deleted => ...,
+      outfile         => ...,
+      errfile         => ...,
+  })
+
+=cut
+
+$method_defs{diff_peg2} = {
+    type => 'obj',
+    args => [
+	$arg_diff_options,
+	$arg_path,
+	$arg_peg_revision,
+	$arg_start_revision,
+	$arg_end_revision,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_no_diff_deleted,
+	$arg_ignore_content_type,
+	$arg_outfile,
+	$arg_errfile,
+    ],
+};
+
+=head2 diff_peg2
+
+  $ctx->diff_peg2({
+      diff_options        => ...,
+      path                => ...,
+      peg_revision        => ...,
+      start_revision      => ...,
+      end_revision        => ...,
+      recurse             => ...,
+      ignore_ancestry     => ...,
+      no_diff_deleted     => ...,
+      ignore_content_type => ...,
+      outfile             => ...,
+      errfile             => ...,
+  })
+
+=cut
+
+$method_defs{diff_peg3} = {
+    type => 'obj',
+    args => [
+	$arg_diff_options,
+	$arg_path,
+	$arg_peg_revision,
+	$arg_start_revision,
+	$arg_end_revision,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_no_diff_deleted,
+	$arg_ignore_content_type,
+	$arg_header_encoding,
+	$arg_outfile,
+	$arg_errfile,
+    ],
+};
+
+=head2 diff_peg3
+
+  $ctx->diff_peg3({
+      diff_options        => ...,
+      path                => ...,
+      peg_revision        => ...,
+      start_revision      => ...,
+      end_revision        => ...,
+      recurse             => ...,
+      ignore_ancestry     => ...,
+      no_diff_deleted     => ...,
+      ignore_content_type => ...,
+      header_encoding     => ...,
+      outfile             => ...,
+      errfile             => ...,
+  })
+
+=cut
+
+$method_defs{diff_summarize} = {
+    type => 'obj',
+    args => [
+	$arg_path1,
+	$arg_revision1,
+	$arg_path2,
+	$arg_revision2,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_summarize_func,
+    ],
+};
+
+=head2 diff_summarize
+
+  $ctx->diff_summarize({
+      path1           => ...,
+      revision1       => ...,
+      path2           => ...,
+      revision2       => ...,
+      recurse         => ...,
+      ignore_ancestry => ...,
+      summarize_func  => ...,
+  })
+
+=cut
+
+$method_defs{diff_summarize_dup} = {
+    type => 'obj',
+    args => [
+	$arg_diff,
+    ],
+};
+
+=head2 diff_summarize_dup
+
+  $ctx->diff_summarize_dup({
+      diff => ...,
+  })
+
+=cut
+
+$method_defs{diff_summarize_peg} = {
+    type => 'obj',
+    args => [
+	$arg_path,
+	$arg_peg_revision,
+	$arg_start_revision,
+	$arg_end_revision,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_summarize_func,
+    ],
+};
+
+=head2 diff_summarize_peg
+
+  $ctx->diff_summarize_peg({
+      path            => ...,
+      peg_revision    => ...,
+      start_revision  => ...,
+      end_revision    => ...,
+      recurse         => ...,
+      ignore_ancestry => ...,
+      summarize_func  => ...,
+  })
+
+=cut
+
+$method_defs{export} = {
+    type => 'obj',
+    args => [
+	$arg_result_rev,
+	$arg_from,
+	$arg_to,
+	$arg_revision,
+	$arg_force,
+    ],
+};
+
+=head2 export
+
+  $ctx->export({
+      result_rev => ...,
+      from       => ...,
+      to         => ...,
+      revision   => ...,
+      force      => ...,
+  })
+
+ $ctx-E<gt>export($from, $to, $revision, $force, $pool);
 
 Export the contents of either a subversion repository or a subversion
 working copy into a 'clean' directory (meaning a directory with no
@@ -451,7 +1731,97 @@ The notify callback will be called for the items exported.
 Returns the value of the revision actually exported or
 $SVN::Core::INVALID_REVNUM for local exports.
 
-=head2 $ctx-E<gt>import($path, $url, $nonrecursive, $pool);
+=cut
+
+$method_defs{export2} = {
+    type => 'obj',
+    args => [
+	$arg_result_rev,
+	$arg_from,
+	$arg_to,
+	$arg_revision,
+	$arg_force,
+	$arg_native_eol,
+    ],
+};
+
+=head2 export2
+
+  $ctx->export2({
+      result_rev => ...,
+      from       => ...,
+      to         => ...,
+      revision   => ...,
+      force      => ...,
+      native_eol => ...,
+  })
+
+=cut
+
+$method_defs{export3} = {
+    type => 'obj',
+    args => [
+	$arg_result_rev,
+	$arg_from,
+	$arg_to,
+	$arg_peg_revision,
+	$arg_revision,
+	$arg_overwrite,
+	$arg_ignore_externals,
+	$arg_recurse,
+	$arg_native_eol,
+    ],
+};
+
+=head2 export3
+
+  $ctx->export3({
+      result_rev       => ...,
+      from             => ...,
+      to               => ...,
+      peg_revision     => ...,
+      revision         => ...,
+      overwrite        => ...,
+      ignore_externals => ...,
+      recurse          => ...,
+      native_eol       => ...,
+  })
+
+=cut
+
+$method_defs{get_windows_simple_provider} = {
+    type => 'obj',
+    args => [
+	$arg_provider,
+    ],
+};
+
+=head2 get_windows_simple_provider
+
+  $ctx->get_windows_simple_provider({
+      provider => ...,
+  })
+
+=cut
+
+$method_defs{import} = {
+    type => 'obj',
+    args => [
+	$arg_path,
+	$arg_url,
+	$arg_nonrecursive,
+    ],
+};
+
+=head2 import
+
+  my $commit_info = $ctx->import({
+      path          => ...,
+      url           => ...,
+      nonrecursive  => ...,
+  })
+
+ $ctx-E<gt>import($path, $url, $nonrecursive, $pool);
 
 Import file or directory $path into repository directory $url at head.
 
@@ -479,7 +1849,249 @@ one is needed.
 
 Returns a L<svn_client_commit_info_t|/svn_client_commit_info_t> object.
 
+=cut
+
+$method_defs{import2} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_path,
+	$arg_url,
+	$arg_nonrecursive,
+	$arg_no_ignore,
+    ],
+};
+
+=head2 import2
+
+  $ctx->import2({
+      commit_info_p => ...,
+      path          => ...,
+      url           => ...,
+      nonrecursive  => ...,
+      no_ignore     => ...,
+  })
+
+=cut
+
+$method_defs{info} = {
+    type => 'obj',
+    args => [
+	$arg_path_or_url,
+	$arg_peg_revision,
+	$arg_revision,
+	$arg_receiver,
+	$arg_recurse,
+    ],
+};
+
+=head2 info
+
+  $ctx->info({
+      path_or_url  => ...,
+      peg_revision => ...,
+      revision     => ...,
+      receiver     => ...,
+      recurse      => ...,
+  })
+
+Invokes \&receiver passing it information about C<path_or_url> for C<revision>.
+The information returned is system-generated metadata, not the sort of
+"property" metadata created by users.  For methods available on the object
+passed to C<receiver>, see L<svn_info_t|/svn_info_t>.
+
+If both revision arguments are either C<svn_opt_revision_unspecified> or undef,
+then information will be pulled solely from the working copy; no network
+connections will be made.
+
+Otherwise, information will be pulled from a repository.  The actual node
+revision selected is determined by the C<path_or_url> as it exists in
+C<peg_revision>.  If C<peg_revision> is C<undef>, then it defaults to C<HEAD> for URLs
+or C<WORKING> for WC targets.
+
+If C<path_or_url> is not a local path, then if C<revision> is C<PREV> (or some other
+kind that requires a local path), an error will be returned, because the
+desired revision cannot be determined.
+
+Uses the authentication baton cached in ctx to authenticate against the
+repository.
+
+If C<recurse> is true (and C<path_or_url> is a directory) this will be a recursive
+operation, invoking C<receiver> on each child.
+
+  my $receiver = sub {
+      my( $path, $info, $pool ) = @_;
+      print "Current revision of $path is ", $info->rev, "\n";
+  };
+  $ctx->info({
+      path_or_url  => 'foo/bar.c',
+      peg_revision => undef,
+      revision     => 'WORKING',
+      receiver     => $receiver,
+  });
+
+=cut
+
+$method_defs{list} = {
+    type => 'obj',
+    args => [
+	$arg_path_or_url,
+	$arg_peg_revision,
+	$arg_revision,
+	$arg_recurse,
+	$arg_dirent_fields,
+	$arg_fetch_locks,
+	$arg_list_func,
+    ],
+};
+
+=head2 list
+
+  $ctx->list({
+      path_or_url   => ...,
+      peg_revision  => ...,
+      revision      => ...,
+      recurse       => ...,
+      dirent_fields => ...,
+      fetch_locks   => ...,
+      list_func     => ...,
+  })
+
+=cut
+
+$method_defs{lock} = {
+    type => 'obj',
+    args => [
+	$arg_targets,
+	$arg_comment,
+	$arg_steal_lock,
+    ],
+};
+
+=head2 lock
+
+  $ctx->lock({
+      targets    => ...,
+      comment    => ...,
+      steal_lock => ...,
+  })
+
+=cut
+
+$method_defs{log} = {
+    type => 'obj',
+    args => [
+	$arg_targets,
+	$arg_start,
+	$arg_end,
+	$arg_discover_changed_paths,
+	$arg_strict_node_history,
+	$arg_receiver,
+    ],
+};
+
+=head2 log
+
+  $ctx->log({
+      targets                => ...,
+      start                  => ...,
+      end                    => ...,
+      discover_changed_paths => ...,
+      strict_node_history    => ...,
+      receiver               => ...,
+  })
+
+  $ctx->log({
+      targets                => '...', # or [ ... ],
+      start                  => '...',
+      end                    => '...',
+      discover_changed_paths => '...',
+      strict_node_history    => '...',
+      receiver               => sub { ... },
+  });
+
+Identical to calling L<log3()|/log3> with C<peg_revision> set to
+C<undef>, and C<limit> set to 0.  In addition there is the following
+special case for repositories at revision 0:
+
+If C<start> is C<HEAD> and C<end> is C<1>, then handle an empty (no
+revisions) repository specially: instead of erroring because requested
+revision 1 when the highest revision is 0, just invoke C<receiver> on
+revision 0, passing C<undef> to changed paths and empty strings for
+the author and date.  This is because that particular combination of
+C<start> and C<end> usually indicates the common case of log
+invocation; the user wants to see all log messages from youngest to
+oldest, where the oldest commit is revision 1.  That works fine,
+except there are no commits in the repository, hence this special
+case.
+
+=cut
+
+$method_defs{log2} = {
+    type => 'obj',
+    args => [
+	$arg_targets,
+	$arg_start,
+	$arg_end,
+	$arg_limit,
+	$arg_discover_changed_paths,
+	$arg_strict_node_history,
+	$arg_receiver,
+    ],
+};
+
+=head2 log2
+
+  $ctx->log2({
+      targets                => ...,
+      start                  => ...,
+      end                    => ...,
+      limit                  => ...,
+      discover_changed_paths => ...,
+      strict_node_history    => ...,
+      receiver               => ...,
+  })
+
+  $ctx->log2({
+      targets                => '...', # or [ ... ],
+      start                  => '...',
+      end                    => '...',
+      limit                  => '...',
+      discover_changed_paths => '...',
+      strict_node_history    => '...',
+      receiver               => sub { ... },
+  });
+
+Identical to calling L<log3()|/log3> with C<peg_revision> set to C<undef>.
+
+=cut
+
+$method_defs{log3} = {
+    type => 'obj',
+    args => [
+	$arg_targets,
+	$arg_peg_revision,
+	$arg_start,
+	$arg_end,
+	$arg_limit,
+	$arg_discover_changed_paths,
+	$arg_strict_node_history,
+	$arg_receiver,
+    ],
+};
+
 =head2 log3
+
+  $ctx->log3({
+      targets                => ...,
+      peg_revision           => ...,
+      start                  => ...,
+      end                    => ...,
+      limit                  => ...,
+      discover_changed_paths => ...,
+      strict_node_history    => ...,
+      receiver               => ...,
+  })
 
   $ctx->log3({
       targets                => '...', # or [ ... ],
@@ -528,47 +2140,25 @@ If $changed_paths is defined it references a hash with the keys every
 path committed in $revision; the values are
 L<svn_log_changed_path_t|SVN::Core/svn_log_changed_path_t> objects.
 
-=head2 log2
+=cut
 
-  $ctx->log2({
-      targets                => '...', # or [ ... ],
-      start                  => '...',
-      end                    => '...',
-      limit                  => '...',
-      discover_changed_paths => '...',
-      strict_node_history    => '...',
-      receiver               => sub { ... },
-  });
-
-Identical to calling L<log3()|/log3> with C<peg_revision> set to C<undef>.
-
-=head2 log
-
-  $ctx->log({
-      targets                => '...', # or [ ... ],
-      start                  => '...',
-      end                    => '...',
-      discover_changed_paths => '...',
-      strict_node_history    => '...',
-      receiver               => sub { ... },
-  });
-
-Identical to calling L<log3()|/log3> with C<peg_revision> set to
-C<undef>, and C<limit> set to 0.  In addition there is the following
-special case for repositories at revision 0:
-
-If C<start> is C<HEAD> and C<end> is C<1>, then handle an empty (no
-revisions) repository specially: instead of erroring because requested
-revision 1 when the highest revision is 0, just invoke C<receiver> on
-revision 0, passing C<undef> to changed paths and empty strings for
-the author and date.  This is because that particular combination of
-C<start> and C<end> usually indicates the common case of log
-invocation; the user wants to see all log messages from youngest to
-oldest, where the oldest commit is revision 1.  That works fine,
-except there are no commits in the repository, hence this special
-case.
+$method_defs{ls} = {
+    type => 'obj',
+    args => [
+	$arg_path_or_url,
+	$arg_revision,
+	$arg_recurse,
+    ],
+};
 
 =head2 ls
+
+  $ctx->ls({
+      dirents     => ...,
+      path_or_url => ...,
+      revision    => ...,
+      recurse     => ...,
+  })
 
   my $dirents = $ctx->ls({
       path_or_url => $target,
@@ -588,7 +2178,84 @@ If $target is a file only return an entry for the file.
 If $target is non-existent, raises the $SVN::Error::FS_NOT_FOUND
 error.
 
-=head2 $ctx-E<gt>merge($src1, $rev1, $src2, $rev2, $target_wcpath, $recursive, $ignore_ancestry, $force, $dry_run, $pool);
+=cut
+
+$method_defs{ls2} = {
+    type => 'obj',
+    args => [
+	$arg_dirents,
+	$arg_path_or_url,
+	$arg_peg_revision,
+	$arg_revision,
+	$arg_recurse,
+    ],
+};
+
+=head2 ls2
+
+  $ctx->ls2({
+      dirents      => ...,
+      path_or_url  => ...,
+      peg_revision => ...,
+      revision     => ...,
+      recurse      => ...,
+  })
+
+=cut
+
+$method_defs{ls3} = {
+    type => 'obj',
+    args => [
+	$arg_dirents,
+	$arg_locks,
+	$arg_path_or_url,
+	$arg_peg_revision,
+	$arg_revision,
+	$arg_recurse,
+    ],
+};
+
+=head2 ls3
+
+  $ctx->ls3({
+      dirents      => ...,
+      locks        => ...,
+      path_or_url  => ...,
+      peg_revision => ...,
+      revision     => ...,
+      recurse      => ...,
+  })
+
+=cut
+
+$method_defs{merge} = {
+    type => 'obj',
+    args => [
+	$arg_source1,
+	$arg_revision1,
+	$arg_source2,
+	$arg_revision2,
+	$arg_target_wcpath,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_force,
+	$arg_dry_run,
+    ],
+};
+
+=head2 merge
+
+  $ctx->merge({
+      source1         => ...,
+      revision1       => ...,
+      source2         => ...,
+      revision2       => ...,
+      target_wcpath   => ...,
+      recurse         => ...,
+      ignore_ancestry => ...,
+      force           => ...,
+      dry_run         => ...,
+  })
 
 Merge changes from $src1/$rev1 to $src2/$rev2 into the working-copy path
 $target_wcpath.
@@ -625,7 +2292,119 @@ feedback is provided, but the working copy is not modified.
 
 Has no return.
 
-=head2 $ctx-E<gt>mkdir($targets, $pool);
+=cut
+
+$method_defs{merge2} = {
+    type => 'obj',
+    args => [
+	$arg_source1,
+	$arg_revision1,
+	$arg_source2,
+	$arg_revision2,
+	$arg_target_wcpath,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_force,
+	$arg_dry_run,
+	$arg_merge_options,
+    ],
+};
+
+=head2 merge2
+
+  $ctx->merge2({
+      source1         => ...,
+      revision1       => ...,
+      source2         => ...,
+      revision2       => ...,
+      target_wcpath   => ...,
+      recurse         => ...,
+      ignore_ancestry => ...,
+      force           => ...,
+      dry_run         => ...,
+      merge_options   => ...,
+  })
+
+=cut
+
+$method_defs{merge_peg} = {
+    type => 'obj',
+    args => [
+	$arg_source,
+	$arg_revision1,
+	$arg_revision2,
+	$arg_peg_revision,
+	$arg_target_wcpath,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_force,
+	$arg_dry_run,
+    ],
+};
+
+=head2 merge_peg
+
+  $ctx->merge_peg({
+      source          => ...,
+      revision1       => ...,
+      revision2       => ...,
+      peg_revision    => ...,
+      target_wcpath   => ...,
+      recurse         => ...,
+      ignore_ancestry => ...,
+      force           => ...,
+      dry_run         => ...,
+  })
+
+=cut
+
+$method_defs{merge_peg2} = {
+    type => 'obj',
+    args => [
+	$arg_source,
+	$arg_revision1,
+	$arg_revision2,
+	$arg_peg_revision,
+	$arg_target_wcpath,
+	$arg_recurse,
+	$arg_ignore_ancestry,
+	$arg_force,
+	$arg_dry_run,
+	$arg_merge_options,
+    ],
+};
+
+=head2 merge_peg2
+
+  $ctx->merge_peg2({
+      source          => ...,
+      revision1       => ...,
+      revision2       => ...,
+      peg_revision    => ...,
+      target_wcpath   => ...,
+      recurse         => ...,
+      ignore_ancestry => ...,
+      force           => ...,
+      dry_run         => ...,
+      merge_options   => ...,
+  })
+
+=cut
+
+$method_defs{mkdir} = {
+    type => 'obj',
+    args => [
+	$arg_paths,
+    ],
+};
+
+=head2 mkdir
+
+  $ctx->mkdir({
+      paths         => ...,
+  })
+
+ $ctx-E<gt>mkdir($targets, $pool);
 
 Create a directory, either in a repository or a working copy.
 
@@ -640,7 +2419,47 @@ Calls the notify callback when the directory has been created (successfully)
 in the working copy, with the path of the new directory.  Note this is only
 called for items added to the working copy.
 
-=head2 $ctx-E<gt>move($src_path, $src_revision, $dst_path, $force, $pool);
+=cut
+
+$method_defs{mkdir2} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_paths,
+    ],
+};
+
+=head2 mkdir2
+
+  $ctx->mkdir2({
+      commit_info_p => ...,
+      paths         => ...,
+  })
+
+=cut
+
+$method_defs{move} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_src_path,
+	$arg_src_revision,
+	$arg_dst_path,
+	$arg_force,
+    ],
+};
+
+=head2 move
+
+  $ctx->move({
+      commit_info_p => ...,
+      src_path      => ...,
+      src_revision  => ...,
+      dst_path      => ...,
+      force         => ...,
+  })
+
+ $ctx-E<gt>move($src_path, $src_revision, $dst_path, $force, $pool);
 
 Move $src_path to $dst_path.
 
@@ -680,13 +2499,189 @@ The notify callback will be called twice for each item moved, once to
 indicate the deletion of the moved node, and once to indicate the addition
 of the new location of the node.
 
-=head2 $ctx-E<gt>propget($propname, $target, $revision, $recursive, $pool);
+=cut
+
+$method_defs{move2} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_src_path,
+	$arg_dst_path,
+	$arg_force,
+    ],
+};
+
+=head2 move2
+
+  $ctx->move2({
+      commit_info_p => ...,
+      src_path      => ...,
+      dst_path      => ...,
+      force         => ...,
+  })
+
+=cut
+
+$method_defs{move3} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_src_path,
+	$arg_dst_path,
+	$arg_force,
+    ],
+};
+
+=head2 move3
+
+  $ctx->move3({
+      commit_info_p => ...,
+      src_path      => ...,
+      dst_path      => ...,
+      force         => ...,
+  })
+
+=cut
+
+$method_defs{move4} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_src_path,
+	$arg_dst_path,
+	$arg_force,
+    ],
+};
+
+=head2 move4
+
+  $ctx->move4({
+      commit_info_p => ...,
+      src_path      => ...,
+      dst_path      => ...,
+      force         => ...,
+  })
+
+=cut
+
+$method_defs{move5} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_src_paths,
+	$arg_dst_path,
+	$arg_force,
+	$arg_move_as_child,
+    ],
+};
+
+=head2 move5
+
+  $ctx->move5({
+      commit_info_p => ...,
+      src_paths     => ...,
+      dst_path      => ...,
+      force         => ...,
+      move_as_child => ...,
+  })
+
+=cut
+
+$method_defs{propget} = {
+    type => 'obj',
+    args => [
+	$arg_propname,
+	$arg_target,
+	$arg_revision_no_default,
+	$arg_recurse,
+    ],
+};
+
+=head2 propget
+
+  my $prop_hash = $ctx->propget({
+      propname => ...,
+      target   => ...,
+      revision => ...,
+      recurse  => ...,
+  })
 
 Returns a reference to a hash containing paths or URLs, prefixed by $target (a
 working copy or URL), of items for which the property $propname is set, and
 whose values represent the property value for $propname at that path.
 
-=head2 $ctx-E<gt>proplist($target, $revision, $recursive, $pool);
+=cut
+
+$method_defs{propget2} = {
+    type => 'obj',
+    args => [
+	$arg_props,
+	$arg_propname,
+	$arg_target,
+	$arg_peg_revision,
+	$arg_revision,
+	$arg_recurse,
+    ],
+};
+
+=head2 propget2
+
+  $ctx->propget2({
+      props        => ...,
+      propname     => ...,
+      target       => ...,
+      peg_revision => ...,
+      revision     => ...,
+      recurse      => ...,
+  })
+
+=cut
+
+$method_defs{propget3} = {
+    type => 'obj',
+    args => [
+	$arg_props,
+	$arg_propname,
+	$arg_target,
+	$arg_peg_revision,
+	$arg_revision,
+	$arg_actual_revnum,
+	$arg_recurse,
+    ],
+};
+
+=head2 propget3
+
+  $ctx->propget3({
+      props         => ...,
+      propname      => ...,
+      target        => ...,
+      peg_revision  => ...,
+      revision      => ...,
+      actual_revnum => ...,
+      recurse       => ...,
+  })
+
+=cut
+
+$method_defs{proplist} = {
+    type => 'obj',
+    args => [
+	$arg_target,
+	$arg_revision,
+	$arg_recurse,
+    ],
+};
+
+=head2 proplist
+
+   my $proplist = $ctx->proplist({
+      target   => ...,
+      revision => ...,
+      recurse  => ...,
+  })
+
+ $ctx-E<gt>proplist($target, $revision, $recursive, $pool);
 
 Returns a reference to an array of L<svn_client_proplist_item_t|/svn_client_proplist_item_t> objects.
 
@@ -703,14 +2698,64 @@ versioned entry below (and including) $target.
 
 If $target is not found, raises the $SVN::Error::ENTRY_NOT_FOUND error.
 
+=cut
+
+$method_defs{proplist2} = {
+    type => 'obj',
+    args => [
+	$arg_props,
+	$arg_target,
+	$arg_peg_revision,
+	$arg_revision,
+	$arg_recurse,
+    ],
+};
+
+=head2 proplist2
+
+  $ctx->proplist2({
+      props        => ...,
+      target       => ...,
+      peg_revision => ...,
+      revision     => ...,
+      recurse      => ...,
+  })
+
+=cut
+
+$method_defs{proplist_item_dup} = {
+    type => 'obj',
+    args => [
+	$arg_item,
+    ],
+};
+
+=head2 proplist_item_dup
+
+  $ctx->proplist_item_dup({
+      item => ...,
+  })
+
+=cut
+
+$method_defs{propset} = {
+    type => 'obj',
+    args => [
+	$arg_propname,
+	$arg_propval,
+	$arg_target,
+	$arg_recurse,
+    ],
+};
+
 =head2 propset
 
   $ctx->propset({
-      propname => '...',
-      propval  => '...',
-      target   => '...',
-      recurse  => '...',   # optional, default is 0
-  });
+      propname => ...,
+      propval  => ...,
+      target   => ...,
+      recurse  => ...,
+  })
 
 Set C<propname> to C<propval> on C<target> (a working copy or URL path).
 
@@ -724,7 +2769,76 @@ If C<propname> is an svn-controlled property (i.e. prefixed with C<svn:>),
 then the caller is responsible for ensuring that C<propval> is UTF8-encoded
 and uses LF line-endings.
 
-=head2 $ctx-E<gt>relocate($dir, $from, $to, $recursive, $pool);
+=cut
+
+$method_defs{propset2} = {
+    type => 'obj',
+    args => [
+	$arg_propname,
+	$arg_propval,
+	$arg_target,
+	$arg_recurse,
+	$arg_skip_checks,
+    ],
+};
+
+=head2 propset2
+
+  $ctx->propset2({
+      propname    => ...,
+      propval     => ...,
+      target      => ...,
+      recurse     => ...,
+      skip_checks => ...,
+  })
+
+=cut
+
+$method_defs{propset3} = {
+    type => 'obj',
+    args => [
+	$arg_commit_info_p,
+	$arg_propname,
+	$arg_propval,
+	$arg_target,
+	$arg_recurse,
+	$arg_skip_checks,
+	$arg_base_revision_for_url,
+    ],
+};
+
+=head2 propset3
+
+  $ctx->propset3({
+      commit_info_p         => ...,
+      propname              => ...,
+      propval               => ...,
+      target                => ...,
+      recurse               => ...,
+      skip_checks           => ...,
+      base_revision_for_url => ...,
+  })
+
+=cut
+
+$method_defs{relocate} = {
+    type => 'obj',
+    args => [
+	$arg_dir,
+	$arg_from,
+	$arg_to,
+	$arg_recurse,
+    ],
+};
+
+=head2 relocate
+
+  $ctx->relocate({
+      dir     => ...,
+      from    => ...,
+      to      => ...,
+      recurse => ...,
+  })
 
 Modify a working copy directory $dir, changing any repository URLs that
 begin with $from to begin with $to instead, recursing into subdirectories if
@@ -732,7 +2846,22 @@ $recursive is true.
 
 Has no return.
 
-=head2 $ctx-E<gt>resolved($path, $recursive, $pool);
+=cut
+
+$method_defs{resolved} = {
+    type => 'obj',
+    args => [
+	$arg_path,
+	$arg_recursive,
+    ],
+};
+
+=head2 resolved
+
+  $ctx->resolved({
+      path      => ...,
+      recursive => ...,
+  })
 
 Removed the 'conflicted' state on a working copy path.
 
@@ -746,7 +2875,43 @@ If $path is not in a state of conflict to begin with, do nothing.
 If $path's conflict state is removed, call the notify callback with the
 $path.
 
-=head2 $ctx-E<gt>revert($paths, $recursive, $pool); 
+=cut
+
+$method_defs{retrieve_changelist} = {
+    type => 'obj',
+    args => [
+	$arg_paths,
+	$arg_changelist_name,
+	$arg_root_path,
+	$arg_cancel_func,
+    ],
+};
+
+=head2 retrieve_changelist
+
+  $ctx->retrieve_changelist({
+      paths           => ...,
+      changelist_name => ...,
+      root_path       => ...,
+      cancel_func     => ...,
+  })
+
+=cut
+
+$method_defs{revert} = {
+    type => 'obj',
+    args => [
+	$arg_paths,
+	$arg_recursive,
+    ],
+};
+
+=head2 revert
+
+  $ctx->revert({
+      paths     => ...,
+      recursive => ...,
+  })
 
 Restore the pristine version of a working copy $paths, effectively undoing
 any local mods.  
@@ -754,13 +2919,24 @@ any local mods.
 For each path in $paths, if it is a directory and $recursive
 is true, this will be a recursive operation.
 
+=cut
+
+$method_defs{revprop_get} = {
+    type => 'obj',
+    args => [
+	$arg_propname,
+	$arg_url,
+	$arg_revision,
+    ],
+};
+
 =head2 revprop_get
 
-  my($prop_value, $revision) = $ctx->revprop_get({
-      propname => '...',
-      url      => '...',
-      revision => '...',    # optional, default is 'HEAD'
-  });
+  my($prop_val, $prop_rev) = $ctx->revprop_get({
+      propname => ...,
+      url      => ...,
+      revision => ...,    # optional, default is 'HEAD'
+  })
 
 Returns two values, the first of which is the value of $propname on revision
 $revision in the repository represented by $url.  The second value is the
@@ -771,12 +2947,22 @@ working copy at all; it's a pure network operation that queries an
 B<unversioned> property attached to a revision.  This can be used to query
 log messages, dates, authors, and the like.
 
+=cut
+
+$method_defs{revprop_list} = {
+    type => 'obj',
+    args => [
+	$arg_url,
+	$arg_revision,
+    ],
+};
+
 =head2 revprop_list
 
   my($prop_hash, $revision) = $ctx->revprop_list({
-      url      => '...',
-      revision => '...',    # optional, default is 'HEAD'
-  });
+      url      => ...,
+      revision => ...,      # optional, default is 'HEAD'
+  })
 
 Returns two values, the first of which is a reference to a hash containing
 the properties attached to $revision in the repository represented by $url.
@@ -786,7 +2972,30 @@ Note that unlike its cousin $ctx-E<gt>proplist(), this routine doesn't read a
 working copy at all; it's a pure network operation that reads B<unversioned>
 properties attached to a revision.
 
-=head2 $ctx-E<gt>revprop_set($propname, $propval, $url, $revision, $force, $pool);
+=cut
+
+$method_defs{revprop_set} = {
+    type => 'obj',
+    args => [
+	$arg_propname,
+	$arg_propval,
+	$arg_url,
+	$arg_revision,
+	$arg_force,
+    ],
+};
+
+=head2 revprop_set
+
+  my $rev = $ctx->revprop_set({
+      propname => ...,
+      propval  => ...,
+      url      => ...,
+      revision => ...,
+      force    => ...,
+  })
+
+ $ctx-E<gt>revprop_set($propname, $propval, $url, $revision, $force, $pool);
 
 Set $propname to $propval on revision $revision in the repository represented
 by $url.
@@ -810,7 +3019,51 @@ with no way to retrieve the prior value.
 Also note that unless the administrator creates a pre-revprop-change hook
 in the repository, this feature will fail.
 
-=head2 $ctx-E<gt>status($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $pool);
+=cut
+
+$method_defs{set_changelist} = {
+    type => 'obj',
+    args => [
+	$arg_path,
+	$arg_changelist,
+    ],
+};
+
+=head2 set_changelist
+
+  $ctx->set_changelist({
+      path       => ...,
+      changelist => ...,
+  })
+
+=cut
+
+$method_defs{status} = {
+    type => 'obj',
+    args => [
+	$arg_path,
+	$arg_revision_no_default,
+	$arg_status_func,
+	$arg_recurse,
+	$arg_get_all,
+	$arg_update,
+	$arg_no_ignore,
+    ],
+};
+
+=head2 status
+
+  my $revision = $ctx->status({
+      path        => ...,
+      revision    => ...,
+      status_func => ...,
+      recurse     => ...,
+      get_all     => ...,
+      update      => ...,
+      no_ignore   => ...,
+  })
+
+ $ctx-E<gt>status($path, $revision, \&status_func, $recursive, $get_all, $update, $no_ignore, $pool);
 
 Given $path to a working copy directory (or single file), call status_func()
 with a set of L<svn_wc_status_t|SVN::Wc/svn_wc_status_t> objects which describe the status of $path and
@@ -840,52 +3093,61 @@ reported.  $status is a L<svn_wc_status_t|SVN::Wc/svn_wc_status_t> object.
 
 The return of the status_func subroutine is ignored.
 
-=head2 $ctx-E<gt>info
+=cut
 
-  $ctx->info({
-      path_or_url  => '...',
-      peg_revision => '...',
-      revision     => '...',
-      receiver     => sub { ... },
-      recurse      => 0,             # optional, default is 0
-  });
+$method_defs{status2} = {
+    type => 'obj',
+    args => [
+	$arg_result_rev,
+	$arg_path,
+	$arg_revision,
+	$arg_status_func,
+	$arg_recurse,
+	$arg_get_all,
+	$arg_update,
+	$arg_no_ignore,
+	$arg_ignore_externals,
+    ],
+};
 
-Invokes \&receiver passing it information about C<path_or_url> for C<revision>.
-The information returned is system-generated metadata, not the sort of
-"property" metadata created by users.  For methods available on the object
-passed to C<receiver>, see L<svn_info_t|/svn_info_t>.
+=head2 status2
 
-If both revision arguments are either C<svn_opt_revision_unspecified> or undef,
-then information will be pulled solely from the working copy; no network
-connections will be made.
+  $ctx->status2({
+      result_rev       => ...,
+      path             => ...,
+      revision         => ...,
+      status_func      => ...,
+      recurse          => ...,
+      get_all          => ...,
+      update           => ...,
+      no_ignore        => ...,
+      ignore_externals => ...,
+  })
 
-Otherwise, information will be pulled from a repository.  The actual node
-revision selected is determined by the C<path_or_url> as it exists in
-C<peg_revision>.  If C<peg_revision> is C<undef>, then it defaults to C<HEAD> for URLs
-or C<WORKING> for WC targets.
+=cut
 
-If C<path_or_url> is not a local path, then if C<revision> is C<PREV> (or some other
-kind that requires a local path), an error will be returned, because the
-desired revision cannot be determined.
+$method_defs{switch} = {
+    type => 'obj',
+    args => [
+	$arg_result_rev,
+	$arg_path,
+	$arg_url,
+	$arg_revision,
+	$arg_recurse,
+    ],
+};
 
-Uses the authentication baton cached in ctx to authenticate against the
-repository.
+=head2 switch
 
-If C<recurse> is true (and C<path_or_url> is a directory) this will be a recursive
-operation, invoking C<receiver> on each child.
+  $ctx->switch({
+      result_rev => ...,
+      path       => ...,
+      url        => ...,
+      revision   => ...,
+      recurse    => ...,
+  })
 
-  my $receiver = sub {
-      my( $path, $info, $pool ) = @_;
-      print "Current revision of $path is ", $info->rev, "\n";
-  };
-  $ctx->info({
-      path_or_url  => 'foo/bar.c',
-      peg_revision => undef,
-      revision     => 'WORKING',
-      receiver     => $receiver,
-  });
-
-=head2 $ctx-E<gt>switch($path, $url, $revision, $recursive, $pool);
+ $ctx-E<gt>switch($path, $url, $revision, $recursive, $pool);
 
 Switch working tree $path to $url at $revision.
 
@@ -902,15 +3164,68 @@ an existing working directory is more efficient than checking out $url from
 scratch.
 
 Returns the value of the revision to which the working copy was actually
-switched. 
+switched.
+
+=cut
+
+$method_defs{switch2} = {
+    type => 'obj',
+    args => [
+	$arg_result_rev,
+	$arg_path,
+	$arg_url,
+	$arg_revision,
+	$arg_recurse,
+	$arg_allow_unver_obstructions,
+    ],
+};
+
+=head2 switch2
+
+  $ctx->switch2({
+      result_rev               => ...,
+      path                     => ...,
+      url                      => ...,
+      revision                 => ...,
+      recurse                  => ...,
+      allow_unver_obstructions => ...,
+  })
+
+=cut
+
+$method_defs{unlock} = {
+    type => 'obj',
+    args => [
+	$arg_targets,
+	$arg_break_lock,
+    ],
+};
+
+=head2 unlock
+
+  $ctx->unlock({
+      targets    => ...,
+      break_lock => ...,
+  })
+
+=cut
+
+$method_defs{update} = {
+    type => 'obj',
+    args => [
+	$arg_path,
+	$arg_revision,
+	$arg_recurse,
+    ],
+};
 
 =head2 update
 
-  $ctx->update({
-      path     => '...',
-      revision => '...',   # optional, default is 'HEAD',
-      recurse  => '...',   # optional, default is 0
-  });
+  my $revision = $ctx->update({
+      path     => ...,
+      revision => ...,   # optional, default is 'HEAD'
+      recurse  => ...,   # optional, default is 0
+  })
 
 Update a working copy C<path> to C<revision>.
 
@@ -922,7 +3237,70 @@ also for files restored from the text-base.
 
 Returns the revision to which the working copy was actually updated.
 
-=head2 $ctx-E<gt>url_from_path($target, $pool); or SVN::Client::url_from_path($target, $pool);
+=cut
+
+$method_defs{update2} = {
+    type => 'obj',
+    args => [
+	$arg_result_revs,
+	$arg_paths,
+	$arg_revision,
+	$arg_recurse,
+	$arg_ignore_externals,
+    ],
+};
+
+=head2 update2
+
+  $ctx->update2({
+      result_revs      => ...,
+      paths            => ...,
+      revision         => ...,
+      recurse          => ...,
+      ignore_externals => ...,
+  })
+
+=cut
+
+$method_defs{update3} = {
+    type => 'obj',
+    args => [
+	$arg_result_revs,
+	$arg_paths,
+	$arg_revision,
+	$arg_recurse,
+	$arg_ignore_externals,
+	$arg_allow_unver_obstructions,
+    ],
+};
+
+=head2 update3
+
+  $ctx->update3({
+      result_revs              => ...,
+      paths                    => ...,
+      revision                 => ...,
+      recurse                  => ...,
+      ignore_externals         => ...,
+      allow_unver_obstructions => ...,
+  })
+
+=cut
+
+$method_defs{url_from_path} = {
+    type => 'obj',
+    args => [
+	$arg_path_or_url,
+    ],
+};
+
+=head2 url_from_path
+
+  $ctx->url_from_path({
+      path_or_url => ...,
+  })
+
+ $ctx-E<gt>url_from_path($target, $pool); or SVN::Client::url_from_path($target, $pool);
 
 Returns the URL for $target.
 
@@ -932,7 +3310,26 @@ If $target is a versioned item, it returns $target's entry URL.
 
 If $target is unversioned (has no entry), returns undef.
 
-=head2 $ctx-E<gt>uuid_from_path($path, $adm_access, $pool);
+=cut
+
+$method_defs{uuid_from_path} = {
+    type => 'obj',
+    args => [
+	$arg_uuid,
+	$arg_path,
+	$arg_adm_access,
+    ],
+};
+
+=head2 uuid_from_path
+
+  $ctx->uuid_from_path({
+      uuid       => ...,
+      path       => ...,
+      adm_access => ...,
+  })
+
+ $ctx-E<gt>uuid_from_path($path, $adm_access, $pool);
 
 Return the repository uuid for working-copy $path, allocated in $pool.
 
@@ -946,240 +3343,40 @@ files.
 Note: This method probably doesn't work right now without a lot of pain,
 because SVN::Wc is incomplete and it requires an adm_access object from it.
 
-=head2 $ctx-E<gt>uuid_from_url($url, $pool);
+=cut
 
-Return repository uuid for url.
+$method_defs{uuid_from_url} = {
+    type => 'obj',
+    args => [
+	$arg_url,
+    ],
+};
+
+=head2 uuid_from_url
+
+  $ctx->uuid_from_url({
+      url  => ...,
+  })
 
 =cut
 
-my $arg_discover_changed_paths = {
-    name => 'discover_changed_paths',
-    spec => {
-	type => BOOLEAN,
-    },
+$method_defs{svn_info_dup} = {
+    type => 'obj',
+    args => [
+	$arg_info,
+    ],
 };
 
-my $arg_end = {
-    name => 'end',
-    spec => {
-	type => SCALAR,
-    },
-};
+=head2 svn_info_dup
 
-my $arg_limit = {
-    name => 'limit',
-    spec => {
-	type => SCALAR,
-    },
-};
+  $ctx->svn_info_dup({
+      info => ...,
+  })
 
-my $arg_path = {
-    name => 'path',
-    spec => {
-	type => SCALAR,
-    },
-};
+=cut
 
-my $arg_path_or_url = {
-    name => 'path_or_url',
-    spec => {
-	type => SCALAR, },
-};
-
-my $arg_peg_revision = {
-    name => 'peg_revision',
-    spec => {
-	type => SCALAR | UNDEF 
-    },
-};
-
-my $arg_propname = {
-    name => 'propname',
-    spec => {
-	type => SCALAR,
-    },
-};
-
-my $arg_propval = {
-    name => 'propval',
-    spec => {
-	type => SCALAR | UNDEF,
-    },
-};
-
-my $arg_receiver = {
-    name => 'receiver',
-    spec => {
-	type => CODEREF
-    },
-};
-
-my $arg_recurse = {
-    name => 'recurse',
-    spec => {
-	type    => BOOLEAN,
-	default => 0,
-    },
-};
-
-my $arg_revision = {
-    name => 'revision',
-    spec => {
-	type => SCALAR,
-	default => 'HEAD',
-    }
-};
-
-my $arg_start = {
-    name => 'start',
-    spec => {
-	type => SCALAR,
-    },
-};
-
-my $arg_strict_node_history = {
-    name => 'strict_node_history',
-    spec => {
-	type => BOOLEAN,
-    },
-};
-
-my $arg_targets = {
-    name => 'targets',
-    spec => {
-	type => ARRAYREF | SCALAR,
-    },
-};
-
-my $arg_target = {
-    name => 'target',
-    spec => {
-	type => SCALAR,
-    },
-};
-
-# Create a copy of $arg_revision, and override the spec key
-my $arg_revision_no_default = { %$arg_revision };
-$arg_revision_no_default->{spec} = { type => SCALAR | UNDEF};
-
-my $arg_url = {
-    name => 'url',
-    spec => {
-	type => SCALAR,
-    },
-};
-
-my %method_defs = (
-    # Keys are method names
-    # Value is a hash ref.  Keys in the hash mean:
-    #
-    # type -- method type, 'obj' == object method, takes SVN::Client
-    #         as first param.  'class' == class method, does not take
-    #         SVN::Client as first param
-    #
-    # args -- array ref of argument specs.
-    #
-    #         Each entry is a hash ref (in order of the params appearance
-    #         in the positional list).  The hash has two keys.  'name' is
-    #         params name, 'spec' is a hash ref suitable for feeding to
-    #         Params::Validate to validate this parameter.
-    'checkout' => {
-	type => 'obj',
-	args => [
-	    $arg_url,
-	    $arg_path,
-	    $arg_revision,
-	    $arg_recurse,
-	],
-    },
-    'info' => {
-	type => 'obj',
-	args => [
-	    $arg_path_or_url,
-	    $arg_peg_revision,
-	    $arg_revision_no_default,
-	    $arg_receiver,
-	    $arg_recurse,
-	],
-    },
-    'log' => {
-	type => 'obj',
-	args => [
-	    $arg_targets,
-	    $arg_start,
-	    $arg_end,
-	    $arg_discover_changed_paths,
-	    $arg_strict_node_history,
-	    $arg_receiver,
-	],
-    },
-    'log2' => {
-	type => 'obj',
-	args => [
-	    $arg_targets,
-	    $arg_start,
-	    $arg_end,
-	    $arg_limit,
-	    $arg_discover_changed_paths,
-	    $arg_strict_node_history,
-	    $arg_receiver,
-	],
-    },
-    'log3' => {
-	type => 'obj',
-	args => [
-	    $arg_targets,
-	    $arg_peg_revision,
-	    $arg_start,
-	    $arg_end,
-	    $arg_limit,
-	    $arg_discover_changed_paths,
-	    $arg_strict_node_history,
-	    $arg_receiver,
-	],
-    },
-    'ls' => {
-	type => 'obj',
-	args => [
-	    $arg_path_or_url,
-	    $arg_revision,
-	    $arg_recurse,
-	],
-    },
-    'propset' => {
-	type => 'obj',
-	args => [
-	    $arg_propname,
-	    $arg_propval,
-	    $arg_target,
-	    $arg_recurse,
-	],
-    },
-    'update' => {
-	type => 'obj',
-	args => [
-	    $arg_path,
-	    $arg_revision,
-	    $arg_recurse,
-	],
-    },
-    'revprop_get' => {
-	type => 'obj',
-	args => [
-	    { name => 'propname',
-	      spec => { type    => SCALAR }, },
-	    $arg_url,
-	    $arg_revision,
-	],
-    },
-    'revprop_list' => {
-	type => 'obj',
-	args => [
-	    $arg_url,
-	    $arg_revision,
-	],
-    },
-);
+require SVN::Base;
+import SVN::Base (qw(Client svn_client_), keys %method_defs);
 
 # Build object methods
 foreach my $method (keys %method_defs) {
@@ -1188,10 +3385,28 @@ foreach my $method (keys %method_defs) {
 
     if($method_defs{$method}{type} eq 'obj') {
 	*{"SVN::Client::$method"} = sub {
-	    my $self = shift;
-	    my @args = @_;
+	    my($self, $ctx, @args);
 
-	    my $ctx = $self->{ctx};
+	    # Don't shift the first param if it isn't a SVN::Client
+	    # object.  This lets the old style interface still work.
+	    # And is useful for functions like url_from_path which
+	    # don't take a ctx param, but might be called in method
+	    # invocation style or as a normal function.
+	    for (my $index = $[; $index <= $#_; $index++) {
+		if (ref($_[$index]) eq 'SVN::Client') {
+		    ($self) = splice(@_,$index,1);
+		    $ctx = $self->{'ctx'};
+		    last;
+		} elsif (ref($_[$index]) eq '_p_svn_client_ctx_t') {
+		    $self = undef;
+		    ($ctx) = splice(@_,$index,1);
+		    last;
+		}
+	    }
+
+	    return if ! defined $ctx and $method eq 'import';
+
+	    @args = @_;
 
 	    my @call_args = (); # Args to call the real function with
 
@@ -1250,7 +3465,10 @@ foreach my $method (keys %method_defs) {
 		splice(@call_args, $#call_args, 0, $ctx);
 	    } else {
 		# No pool supplied.  Add the $ctx as the next argument
-		push @call_args, $ctx;
+		# except for propset() and url_from_path(), which don't
+		# take a context arg
+		push @call_args, $ctx
+		    unless $method =~ /^(?:propset|url_from_path)$/;
 
 		# If the SVN::Client object has a valid pool then add
 		# that too
@@ -1266,78 +3484,6 @@ foreach my $method (keys %method_defs) {
 	};
     } else {
 	# Code to deal with class methods goes here...
-    }
-}
-
-# import methods into our name space and wrap them in a closure
-# to support method calling style $ctx->log()
-foreach my $function (@_all_fns)
-{
-    no strict 'refs';
-    my $real_function = \&{"SVN::_Client::svn_client_$function"};
-    *{"SVN::Client::$function"} = sub
-    {
-        my ($self, $ctx);
-        my @args;
-    
-        # Don't shift the first param if it isn't a SVN::Client
-        # object.  This lets the old style interface still work.  
-        # And is useful for functions like url_from_path which
-        # don't take a ctx param, but might be called in method
-        # invocation style or as a normal function.
-        for (my $index = $[; $index <= $#_; $index++)
-        {
-            if (ref($_[$index]) eq 'SVN::Client')
-            {
-                ($self) = splice(@_,$index,1);
-                $ctx = $self->{'ctx'};
-                last;
-            } elsif (ref($_[$index]) eq '_p_svn_client_ctx_t') {
-                $self = undef;
-                ($ctx) = splice(@_,$index,1);
-                last;
-            }
-        }
-
-        if (!defined($ctx))
-        {
-            # Allows import to work while not breaking use SVN::Client.
-            if ($function eq 'import')
-            {
-                return;
-            }
-        }
-
-        if (ref($_[$#_]) eq '_p_apr_pool_t' ||
-            ref($_[$#_]) eq 'SVN::Pool')
-        {
-            # if we got a pool passed to us we need to
-            # leave it off until we add the ctx first
-            # so we push only the first arg to the next
-            # to last arg.
-            push @args, @_[$[ .. ($#_ - 1)];
-            unless ($function =~ /^(?:propset|url_from_path)$/)
-            {
-                # propset and url_from_path don't take a ctx argument
-                push @args, $ctx;
-            }
-            push @args, $_[$#_];
-        } else {
-            push @args, @_;
-            unless ($function =~ /^(?:propset|url_from_path)$/)
-            {
-                push @args,$ctx;
-            }
-            if (defined($self->{'pool'}) && 
-                (ref($self->{'pool'}) eq '_p_apr_pool_t' ||
-                 ref($self->{'pool'}) eq 'SVN::Pool'))
-            {
-                # allow the pool entry in the SVN::Client
-                # object to override the default pool.
-                push @args, $self->{'pool'};
-            }
-        }
-        return $real_function->(@args);
     }
 }
 
