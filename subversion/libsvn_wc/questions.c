@@ -383,7 +383,6 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                  svn_boolean_t force_comparison,
                                  svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t compare_textbases,
-                                 svn_boolean_t use_tmp_textbase,
                                  apr_pool_t *pool)
 {
   const char *textbase_filename;
@@ -432,8 +431,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
   /* If there's no text-base file, we have to assume the working file
      is modified.  For example, a file scheduled for addition but not
      yet committed. */
-  textbase_filename = svn_wc__text_base_path(filename, use_tmp_textbase,
-                                             subpool);
+  textbase_filename = svn_wc__text_base_path(filename, FALSE, subpool);
   SVN_ERR(svn_io_check_path(textbase_filename, &kind, subpool));
   if (kind != svn_node_file)
     {
@@ -482,7 +480,7 @@ svn_wc_text_modified_p(svn_boolean_t *modified_p,
 {
   return svn_wc__text_modified_internal_p(modified_p, filename,
                                           force_comparison, adm_access,
-                                          TRUE, FALSE, pool);
+                                          TRUE, pool);
 }
 
 

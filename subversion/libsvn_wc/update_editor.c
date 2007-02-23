@@ -2183,8 +2183,7 @@ merge_file(svn_wc_notify_state_t *content_state,
      new text base. */
   if (! fb->existed)
     SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, fb->path,
-                                             FALSE, adm_access, FALSE, FALSE,
-                                             pool));
+                                             FALSE, adm_access, FALSE, pool));
   else if (fb->new_text_base_path)
     SVN_ERR(svn_wc__versioned_file_modcheck(&is_locally_modified, fb->path,
                                              adm_access,
