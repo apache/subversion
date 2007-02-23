@@ -188,9 +188,6 @@ void svn_wc__compat_call_notify_func(void *baton,
  * detranslated version of *FILENAME and the text base, otherwise, a
  * translated version of the text base and *FILENAME will be compared.
  *
- * If USE_TMP_TEXTBASE is true the temporary text base is used in the
- * comparison.
- *
  * If FILENAME does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
@@ -201,7 +198,6 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                  svn_boolean_t force_comparison,
                                  svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t compare_textbases,
-                                 svn_boolean_t use_tmp_textbase,
                                  apr_pool_t *pool);
 
 
