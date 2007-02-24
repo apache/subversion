@@ -29,6 +29,7 @@ information from the <a href="#merge-history">merge history</a>.</p>
 
 <ul>
   <li><a href="#merge-history">Merge History</a></li>
+  <li><a href="#data-structures">Data Structures</a></li>
   <li>Merge Operations (TODO)</li>
   <li>Audit Operations (TODO)</li>
   <li>Other Operations (TODO)</li>
@@ -425,6 +426,28 @@ it's not because of the above, AFAIK :)</p>
 
 </div>  <!-- merge-history -->
 
+<div class="h2" id="data-structures">
+<h2>Data Structures</h2>
+
+<p>Merge Tracking is implemented using a few simple data
+structures.</p>
+
+<dl>
+  <dt>merge info</dt>
+  <dd>An <code>apr_hash_t</code> mapping merge source paths to a range
+  list.</dd>
+
+  <dt>range list</dt>
+  <dd>An <code>apr_array_header_t</code> containing
+  <code>svn_merge_range_t *</code> elements.</dd>
+
+  <dt><code>svn_merge_range_t</code></dt>
+  <dd>A revision range, modelled using a <code>start</code> and
+  <code>end</code> <code>svn_revnum_t</code>, which are identical if
+  the range consists of only a single revision.</dd>
+</dl>
+
+</div>  <!-- data-structures -->
 
 <p>$Date$</p>
 
