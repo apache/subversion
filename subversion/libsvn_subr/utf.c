@@ -474,8 +474,13 @@ convert_to_stringbuf(xlate_handle_node_t *node,
       /* A 1:2 ratio of input bytes to output bytes (as assigned above)
          should be enough for most translations, and if it turns out not
          to be enough, we'll grow the buffer again, sizing it based on a
-         1:3 ratio of the remainder of the string. */
-      if (destlen == 0)
+         1:3 ratio of the remainder of the string.
+
+         We also want to ensure that the output buffer always has at
+         least 3 bytes spare so that we always have room to convert at
+         least one character (we assume that no encoding uses more than
+         three bytes for a character) */
+      if (destlen < 3)
         buflen += (srclen * 3);
 
       /* Ensure that *DEST has sufficient storage for the translated
@@ -488,6 +493,7 @@ convert_to_stringbuf(xlate_handle_node_t *node,
 
       /* Set up state variables for xlate. */
       destlen = buflen - (*dest)->len;
+      assert(destlen >= 3);
 
       /* Attempt the conversion. */
       apr_err = apr_xlate_conv_buffer(node->handle,
