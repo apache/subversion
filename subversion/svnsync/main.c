@@ -78,13 +78,23 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
     { "synchronize", synchronize_cmd, { "sync" },
       N_("usage: svnsync synchronize DEST_URL\n"
          "\n"
-         "Transfer all pending revisions from source to destination.\n"),
+         "Transfer all pending revisions to the destination from the source\n"
+         "with which it was initialized.\n"),
       { SVNSYNC_OPTS_DEFAULT } },
     { "copy-revprops", copy_revprops_cmd, { 0 },
-      N_("usage: svnsync copy-revprops DEST_URL REV\n"
+      N_("usage: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
          "\n"
-         "Copy all revision properties for revision REV from source to\n"
-         "destination.\n"),
+         "Copy the revision properties in a given range of revisions to the\n"
+         "destination from the source with which it was initialized.\n"
+         "\n"
+         "If REV and REV2 are provided, copy properties for the revisions\n"
+         "specified by that range, inclusively.  If only REV is provided,\n"
+         "copy properties for that revision alone.  If REV is not provided,\n"
+         "copy properties for all revisions previously transferred to the\n"
+         "destination.\n"
+         "\n"
+         "REV and REV2 must be revisions which were previously transferred\n"
+         "to the destination.\n"),
       { SVNSYNC_OPTS_DEFAULT } },
     { "help", help_cmd, { "?", "h" },
       N_("usage: svnsync help [SUBCOMMAND...]\n"
@@ -1228,7 +1238,8 @@ typedef struct {
   svn_ra_callbacks2_t *source_callbacks;
   svn_ra_callbacks2_t *sync_callbacks;
   const char *to_url;
-  svn_revnum_t rev;
+  svn_revnum_t start_rev;
+  svn_revnum_t end_rev;
 } copy_revprops_baton_t;
 
 
@@ -1242,17 +1253,31 @@ do_copy_revprops(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
   copy_revprops_baton_t *baton = b;
   svn_ra_session_t *from_session;
   svn_string_t *last_merged_rev;
+  svn_revnum_t i;
+  svn_revnum_t step = 1;
 
   SVN_ERR(open_source_session(&from_session, &last_merged_rev, to_session,
                               baton->source_callbacks, baton->config, 
                               baton, pool));
 
-  if (baton->rev > SVN_STR_TO_REV(last_merged_rev->data))
-    return svn_error_create
-      (APR_EINVAL, NULL, _("Cannot copy revprops for a revision that has not "
-                           "been synchronized yet"));
+  if (baton->start_rev > SVN_STR_TO_REV(last_merged_rev->data))
+    return svn_error_createf
+      (APR_EINVAL, NULL, _("Cannot copy revprops for a revision (%ld) that has not "
+                           "been synchronized yet"), baton->start_rev);
+  if (baton->end_rev > SVN_STR_TO_REV(last_merged_rev->data))
+    return svn_error_createf
+      (APR_EINVAL, NULL, _("Cannot copy revprops for a revision (%ld) that has not "
+                           "been synchronized yet"), baton->end_rev);
+  
+  if (! SVN_IS_VALID_REVNUM(baton->end_rev))
+    baton->end_rev = SVN_STR_TO_REV(last_merged_rev->data);
 
-  SVN_ERR(copy_revprops(from_session, to_session, baton->rev, FALSE, pool));
+  step = (baton->start_rev > baton->end_rev) ? -1 : 1;
+  for (i = baton->start_rev; i != baton->end_rev + step; i = i + step)
+    {
+      SVN_ERR(check_cancel(NULL));
+      SVN_ERR(copy_revprops(from_session, to_session, i, FALSE, pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1268,31 +1293,65 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   apr_array_header_t *targets;
   copy_revprops_baton_t baton;
   const char *to_url;
-  svn_revnum_t revision = SVN_INVALID_REVNUM;
-  char *digits_end = NULL;
+  svn_opt_revision_t start_revision, end_revision;
+  svn_revnum_t start_rev = 0, end_rev = SVN_INVALID_REVNUM;
 
+  /* There should be either one or two arguments left to parse. */
+  if (os->argc - os->ind > 2)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+  if (os->argc - os->ind < 1)
+    return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
+
+  /* If there are two args, the last one is a revision range.  We'll
+     effectively pop it from the end of the list.  Why?  Because
+     svn_opt_args_to_target_array2() does waaaaay too many useful
+     things for us not to use it.  */
+  if (os->argc - os->ind == 2)
+    {
+      const char *rev_str = os->argv[--(os->argc)];
+
+      start_revision.kind = svn_opt_revision_unspecified;
+      end_revision.kind = svn_opt_revision_unspecified;
+      if ((svn_opt_parse_revision(&start_revision, &end_revision,
+                                  rev_str, pool) != 0)
+          || (start_revision.kind != svn_opt_revision_number)
+          || ((end_revision.kind != svn_opt_revision_number)
+              && (end_revision.kind != svn_opt_revision_unspecified)))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("'%s' is not a valid numeric "
+                                   "revision range"), rev_str);
+
+      start_rev = start_revision.value.number;
+      end_rev = (end_revision.kind == svn_opt_revision_unspecified)
+                  ? start_rev : end_revision.value.number;
+
+      if (! SVN_IS_VALID_REVNUM(start_rev))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Invalid revision number (%ld)"), 
+                                 start_rev);
+      if (! SVN_IS_VALID_REVNUM(end_rev))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("Invalid revision number (%ld)"), 
+                                 end_rev);
+    }
+  
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
-                                        apr_array_make(pool, 0, 
+                                        apr_array_make(pool, 1, 
                                                        sizeof(const char *)), 
                                         pool));
-  if (targets->nelts < 2)
+  if (targets->nelts != 1)
     return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
-  if (targets->nelts > 2)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
 
   to_url = APR_ARRAY_IDX(targets, 0, const char *);
-  revision = strtol(APR_ARRAY_IDX(targets, 1, const char *), &digits_end, 10);
-  
+
   if (! svn_path_is_url(to_url))
     return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL, 
                              _("Path '%s' is not a URL"), to_url);
-  if ((! SVN_IS_VALID_REVNUM(revision)) || (! digits_end) || *digits_end)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("Invalid revision number"));
 
   baton.config = opt_baton->config;
   baton.to_url = to_url;
-  baton.rev = revision;
+  baton.start_rev = start_rev;
+  baton.end_rev = end_rev;
 
   source_callbacks.open_tmp_file = open_tmp_file;
   source_callbacks.auth_baton = opt_baton->source_auth_baton;
