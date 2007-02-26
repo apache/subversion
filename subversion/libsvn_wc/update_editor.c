@@ -1873,7 +1873,7 @@ apply_textdelta(void *file_baton,
         }
     }
 
-  /* Open the text base for reading, unless this is a checkout. */
+  /* Open the text base for reading, unless this is an added file. */
 
   /* 
      kff todo: what we really need to do here is:
@@ -1888,20 +1888,19 @@ apply_textdelta(void *file_baton,
         finished inventing yet.)
   */
 
-  if (use_revert_base)
-    err = svn_wc__open_revert_base(&hb->source, fb->path,
-                                   APR_READ,
-                                   handler_pool);
-  else
-    err = svn_wc__open_text_base(&hb->source, fb->path, APR_READ,
-                                 handler_pool);
-
-  if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
+  if (! fb->added)
     {
-      svn_pool_destroy(handler_pool);
-      return err;
+      if (use_revert_base)
+        SVN_ERR(svn_wc__open_revert_base(&hb->source, fb->path,
+                                         APR_READ,
+                                         handler_pool));
+      else
+        SVN_ERR(svn_wc__open_text_base(&hb->source, fb->path, APR_READ,
+                                       handler_pool));
+
     }
-  svn_error_clear(err);
+  else
+    hb->source = NULL;
 
   /* Open the text base for writing (this will get us a temporary file).  */
 
