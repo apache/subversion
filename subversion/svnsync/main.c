@@ -94,7 +94,8 @@ static const svn_opt_subcommand_desc_t svnsync_cmd_table[] =
          "destination.\n"
          "\n"
          "REV and REV2 must be revisions which were previously transferred\n"
-         "to the destination.\n"),
+         "to the destination.  You may use \"HEAD\" for either revision to\n"
+         "mean \"the last revision transferred\".\n"),
       { SVNSYNC_OPTS_DEFAULT } },
     { "help", help_cmd, { "?", "h" },
       N_("usage: svnsync help [SUBCOMMAND...]\n"
@@ -1260,18 +1261,25 @@ do_copy_revprops(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
                               baton->source_callbacks, baton->config, 
                               baton, pool));
 
-  if (baton->start_rev > SVN_STR_TO_REV(last_merged_rev->data))
-    return svn_error_createf
-      (APR_EINVAL, NULL, _("Cannot copy revprops for a revision (%ld) that has not "
-                           "been synchronized yet"), baton->start_rev);
-  if (baton->end_rev > SVN_STR_TO_REV(last_merged_rev->data))
-    return svn_error_createf
-      (APR_EINVAL, NULL, _("Cannot copy revprops for a revision (%ld) that has not "
-                           "been synchronized yet"), baton->end_rev);
-  
+  /* An invalid revision means "last-synced" */
+  if (! SVN_IS_VALID_REVNUM(baton->start_rev))
+    baton->start_rev = SVN_STR_TO_REV(last_merged_rev->data);
   if (! SVN_IS_VALID_REVNUM(baton->end_rev))
     baton->end_rev = SVN_STR_TO_REV(last_merged_rev->data);
 
+  /* Make sure we have revisions within the valid range. */
+  if (baton->start_rev > SVN_STR_TO_REV(last_merged_rev->data))
+    return svn_error_createf
+      (APR_EINVAL, NULL, 
+       _("Cannot copy revprops for a revision (%ld) that has not "
+         "been synchronized yet"), baton->start_rev);
+  if (baton->end_rev > SVN_STR_TO_REV(last_merged_rev->data))
+    return svn_error_createf
+      (APR_EINVAL, NULL, 
+       _("Cannot copy revprops for a revision (%ld) that has not "
+         "been synchronized yet"), baton->end_rev);
+  
+  /* Now, copy all the requested revisions, in the requested order. */
   step = (baton->start_rev > baton->end_rev) ? -1 : 1;
   for (i = baton->start_rev; i != baton->end_rev + step; i = i + step)
     {
@@ -1314,25 +1322,49 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
       end_revision.kind = svn_opt_revision_unspecified;
       if ((svn_opt_parse_revision(&start_revision, &end_revision,
                                   rev_str, pool) != 0)
-          || (start_revision.kind != svn_opt_revision_number)
+          || ((start_revision.kind != svn_opt_revision_number)
+              && (start_revision.kind != svn_opt_revision_head))
           || ((end_revision.kind != svn_opt_revision_number)
+              && (end_revision.kind != svn_opt_revision_head)
               && (end_revision.kind != svn_opt_revision_unspecified)))
         return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("'%s' is not a valid numeric "
-                                   "revision range"), rev_str);
+                                 _("'%s' is not a valid revision range"), 
+                                 rev_str);
 
-      start_rev = start_revision.value.number;
-      end_rev = (end_revision.kind == svn_opt_revision_unspecified)
-                  ? start_rev : end_revision.value.number;
+      /* Get the start revision, which must be either HEAD or a number
+         (which is required to be a valid one). */
+      if (start_revision.kind == svn_opt_revision_head)
+        {
+          start_rev = SVN_INVALID_REVNUM;
+        }
+      else
+        {
+          start_rev = start_revision.value.number;
+          if (! SVN_IS_VALID_REVNUM(start_rev))
+            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("Invalid revision number (%ld)"), 
+                                     start_rev);
+        }
 
-      if (! SVN_IS_VALID_REVNUM(start_rev))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("Invalid revision number (%ld)"), 
-                                 start_rev);
-      if (! SVN_IS_VALID_REVNUM(end_rev))
-        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                 _("Invalid revision number (%ld)"), 
-                                 end_rev);
+      /* Get the end revision, which must be unspecified (meaning,
+         "same as the start_rev"), HEAD, or a number (which is
+         required to be a valid one). */
+      if (end_revision.kind == svn_opt_revision_unspecified)
+        {
+          end_rev = start_rev;
+        }
+      else if (end_revision.kind == svn_opt_revision_head)
+        {
+          end_rev = SVN_INVALID_REVNUM;
+        }
+      else
+        {
+          end_rev = end_revision.value.number;
+          if (! SVN_IS_VALID_REVNUM(end_rev))
+            return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                     _("Invalid revision number (%ld)"), 
+                                     end_rev);
+        }
     }
   
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
