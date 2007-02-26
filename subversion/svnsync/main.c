@@ -214,6 +214,7 @@ get_lock(svn_ra_session_t *session, apr_pool_t *pool)
   for (i = 0; i < 10; ++i)
     {
       svn_pool_clear(subpool);
+      SVN_ERR(check_cancel(NULL));
 
       SVN_ERR(svn_ra_rev_prop(session, 0, SVNSYNC_PROP_LOCK, &reposlocktoken,
                               subpool));
@@ -1085,6 +1086,7 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
       void *sync_baton;
 
       svn_pool_clear(subpool);
+      SVN_ERR(check_cancel(NULL));
 
       /* We set this property so that if we error out for some reason
          we can later determine where we were in the process of
