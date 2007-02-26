@@ -554,7 +554,7 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
 
 
 
-/*** Syncronization Editor ***/
+/*** Synchronization Editor ***/
 
 /* This editor has a couple of jobs.
  *
@@ -892,7 +892,7 @@ get_sync_editor(const svn_delta_editor_t *wrapped_editor,
 
 /*** `svnsync sync' ***/
 
-/* Baton for syncronizing the destination repository while locked. */
+/* Baton for synchronizing the destination repository while locked. */
 typedef struct {
   apr_hash_t *config;
   svn_ra_callbacks2_t *source_callbacks;
@@ -920,10 +920,10 @@ commit_callback(const svn_commit_info_t *commit_info,
 
 
 /* Set *FROM_SESSION to an RA session associated with the source
- * repository of the syncronization, as determined by reading
+ * repository of the synchronization, as determined by reading
  * svn:sync- properties from the destination repository (associated
  * with TO_SESSION).  Set LAST_MERGED_REV to the value of the property
- * which records the most recently syncronized revision.  
+ * which records the most recently synchronized revision.  
  * 
  * CALLBACKS is a vtable of RA callbacks to provide when creating
  * *FROM_SESSION.  CONFIG is a configuration hash.
@@ -973,7 +973,7 @@ open_source_session(svn_ra_session_t **from_session,
 }
 
 
-/* Syncronize the repository associated with RA session TO_SESSION,
+/* Synchronize the repository associated with RA session TO_SESSION,
  * using information found in baton B, while the repository is
  * locked.  Implements `with_locked_func_t' interface.
  */
@@ -1001,8 +1001,8 @@ do_synchronize(svn_ra_session_t *to_session, void *b, apr_pool_t *pool)
      So, any time that currently-copying is not set, then
      last-merged-rev should be the HEAD revision of the destination
      repository.  That is, if we didn't fall over in the middle of a
-     previous syncronization, then our destination repository should
-     have exactly as many revisions in it as we've syncronized.
+     previous synchronization, then our destination repository should
+     have exactly as many revisions in it as we've synchronized.
 
      Alternately, if currently-copying *is* set, it must
      be either last-merged-rev or last-merged-rev + 1, and the HEAD
