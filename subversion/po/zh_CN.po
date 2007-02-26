@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-02-23 12:19+0800\n"
+"POT-Creation-Date: 2007-02-26 15:26+0800\n"
 "PO-Revision-Date: 2007-02-23 20:40+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
@@ -1042,8 +1042,8 @@ msgstr "提交项目“%s”有复制标记，但是没有源地址(copyfrom URL
 #: libsvn_wc/questions.c:300
 #: libsvn_wc/status.c:729
 #: libsvn_wc/translate.c:269
-#: libsvn_wc/update_editor.c:2392
-#: libsvn_wc/update_editor.c:3235
+#: libsvn_wc/update_editor.c:2155
+#: libsvn_wc/update_editor.c:3113
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "“%s”尚未纳入版本控制"
@@ -1294,8 +1294,8 @@ msgstr "“%s”已存在"
 
 #: libsvn_client/export.c:687
 #: libsvn_wc/adm_crawler.c:908
-#: libsvn_wc/update_editor.c:1873
-#: libsvn_wc/update_editor.c:2522
+#: libsvn_wc/update_editor.c:1860
+#: libsvn_wc/update_editor.c:2423
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "“%s”的校验和不匹配；期望: “%s”，实际: “%s”"
@@ -2977,7 +2977,7 @@ msgstr "对“%2$s”的请求 %1$s 失败"
 
 #: libsvn_ra_local/ra_plugin.c:103
 #: libsvn_ra_local/ra_plugin.c:588
-#: libsvn_wc/update_editor.c:2687
+#: libsvn_wc/update_editor.c:2565
 #, c-format
 msgid ""
 "'%s'\n"
@@ -4546,37 +4546,37 @@ msgstr "不能创建从“%s”到“%s”的字符转换器"
 msgid "Can't create a character converter from '%i' to '%i'"
 msgstr "不能创建从“%i”到“%i”的字符转换器"
 
-#: libsvn_subr/utf.c:515
+#: libsvn_subr/utf.c:522
 #, c-format
 msgid "Can't convert string from native encoding to '%s':"
 msgstr "不能把字符串从本地编码转换为“%s”编码: "
 
-#: libsvn_subr/utf.c:519
+#: libsvn_subr/utf.c:526
 #, c-format
 msgid "Can't convert string from '%s' to native encoding:"
 msgstr "不能把字符串从”%s“编码转换为本地编码。"
 
-#: libsvn_subr/utf.c:523
+#: libsvn_subr/utf.c:530
 #, c-format
 msgid "Can't convert string from '%s' to '%s':"
 msgstr "不能把字符串从“%s”编码转换为“%s”编码。"
 
-#: libsvn_subr/utf.c:529
+#: libsvn_subr/utf.c:536
 #, c-format
 msgid "Can't convert string from CCSID '%i' to CCSID '%i'"
 msgstr "不能把字符串从 CCSID“%i”编码转换为 CCSID“%i”编码。"
 
-#: libsvn_subr/utf.c:574
+#: libsvn_subr/utf.c:581
 #, c-format
 msgid "Safe data '%s' was followed by non-ASCII byte %d: unable to convert to/from UTF-8"
 msgstr "安全数据“%s”后面是非ASCII字节 %d: 不能转换到/自 UTF-8"
 
-#: libsvn_subr/utf.c:582
+#: libsvn_subr/utf.c:589
 #, c-format
 msgid "Non-ASCII character (code %d) detected, and unable to convert to/from UTF-8"
 msgstr "检测到非ASCII字符 (代码 %d)，并且不能转换到/自 UTF-8"
 
-#: libsvn_subr/utf.c:624
+#: libsvn_subr/utf.c:631
 #, c-format
 msgid ""
 "Valid UTF-8 data\n"
@@ -5273,86 +5273,86 @@ msgstr ""
 msgid "Relocate can only change the repository part of an URL"
 msgstr "重新定位只能改变URL中的仓库部分"
 
-#: libsvn_wc/update_editor.c:438
+#: libsvn_wc/update_editor.c:439
 #, c-format
 msgid "No '.' entry in: '%s'"
 msgstr "“%s”不存在“.”"
 
-#: libsvn_wc/update_editor.c:964
+#: libsvn_wc/update_editor.c:960
 #, c-format
 msgid "Won't delete locally modified directory '%s'"
 msgstr "无法删除本地修改的目录“%s”"
 
-#: libsvn_wc/update_editor.c:1038
+#: libsvn_wc/update_editor.c:1034
 #, c-format
 msgid "Error writing log file for '%s'"
 msgstr "写入“%s”的日志文件出错"
 
-#: libsvn_wc/update_editor.c:1145
+#: libsvn_wc/update_editor.c:1141
 #, c-format
 msgid "Failed to add directory '%s': a non-directory object of the same name already exists"
 msgstr "无法新增目录“%s”: 同名非目录对象已存在"
 
-#: libsvn_wc/update_editor.c:1178
+#: libsvn_wc/update_editor.c:1174
 #, c-format
 msgid "Failed to add directory '%s': an unversioned directory of the same name already exists"
 msgstr "无法新增目录“%s”: 同名非版本化目录对象已存在"
 
-#: libsvn_wc/update_editor.c:1200
+#: libsvn_wc/update_editor.c:1196
 #, c-format
 msgid "Failed to add directory '%s': a versioned directory of the same name already exists"
 msgstr "无法新增目录“%s”: 同名版本化目录已存在"
 
-#: libsvn_wc/update_editor.c:1211
+#: libsvn_wc/update_editor.c:1207
 #, c-format
 msgid "Failed to add directory '%s': object of the same name as the administrative directory"
 msgstr "无法增加目录“%s”: 对象与管理目录同名"
 
-#: libsvn_wc/update_editor.c:1225
+#: libsvn_wc/update_editor.c:1221
 #, c-format
 msgid "Failed to add directory '%s': copyfrom arguments not yet supported"
 msgstr "无法增加目录“%s”:尚不支持 copyfrom 参数"
 
-#: libsvn_wc/update_editor.c:1512
+#: libsvn_wc/update_editor.c:1508
 msgid "Couldn't do property merge"
 msgstr "无法进行属性合并"
 
-#: libsvn_wc/update_editor.c:1581
+#: libsvn_wc/update_editor.c:1577
 #, c-format
 msgid "Failed to mark '%s' absent: item of the same name is already scheduled for addition"
 msgstr "无法将“%s”标记为不存在: 同名项目已加入增加调度"
 
-#: libsvn_wc/update_editor.c:1681
+#: libsvn_wc/update_editor.c:1677
 #, c-format
 msgid "Failed to add file '%s': a file of the same name is already scheduled for addition with history"
 msgstr "无法新增文件“%s”: 同名文件已加入新增调度"
 
-#: libsvn_wc/update_editor.c:1693
+#: libsvn_wc/update_editor.c:1689
 #, c-format
 msgid "Failed to add file '%s': a non-file object of the same name already exists"
 msgstr "无法新增文件“%s”: 同名非文件对象已存在"
 
-#: libsvn_wc/update_editor.c:1708
+#: libsvn_wc/update_editor.c:1704
 #, c-format
 msgid "Failed to add file '%s': object of the same name already exists"
 msgstr "无法增加文件“%s”: 同名对象已存在"
 
-#: libsvn_wc/update_editor.c:1725
+#: libsvn_wc/update_editor.c:1721
 #, c-format
 msgid "File '%s' in directory '%s' is not a versioned resource"
 msgstr "目录“%2$s”中的文件“%1$s”不是纳入版本控制的资源"
 
-#: libsvn_wc/update_editor.c:1882
+#: libsvn_wc/update_editor.c:1870
 #, c-format
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "“%s”的校验和不匹配；记录: “%s”，实际: “%s”"
 
-#: libsvn_wc/update_editor.c:3080
+#: libsvn_wc/update_editor.c:2958
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "“%s”没有演进历程信息"
 
-#: libsvn_wc/update_editor.c:3243
+#: libsvn_wc/update_editor.c:3121
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "Copyfrom-url“%s”与“%s”的仓库根目录不相同"
@@ -5451,7 +5451,7 @@ msgstr ""
 "欲取得详细资料，请参见 http://subversion.tigris.org/\n"
 
 #: svn/help-cmd.c:65
-#: svnsync/main.c:1336
+#: svnsync/main.c:1429
 msgid ""
 "The following repository access (RA) modules are available:\n"
 "\n"
@@ -5717,8 +5717,8 @@ msgstr "强制校验日志信息资源"
 #: svndumpfilter/main.c:783
 #: svnlook/main.c:90
 #: svnlook/main.c:93
-#: svnsync/main.c:124
-#: svnsync/main.c:126
+#: svnsync/main.c:135
+#: svnsync/main.c:137
 msgid "show help on a subcommand"
 msgstr "显示子命令帮助信息"
 
@@ -5783,7 +5783,7 @@ msgstr "将ARG的值视为字符编码"
 #: svndumpfilter/main.c:786
 #: svnlook/main.c:96
 #: svnserve/main.c:150
-#: svnsync/main.c:122
+#: svnsync/main.c:133
 #: svnversion/main.c:125
 msgid "show program version information"
 msgstr "显示程序版本信息"
@@ -5854,12 +5854,12 @@ msgid "disregard default and svn:ignore property ignores"
 msgstr "忽略默认值和 svn:ignore 属性"
 
 #: svn/main.c:138
-#: svnsync/main.c:102
+#: svnsync/main.c:113
 msgid "do not cache authentication tokens"
 msgstr "不要缓存用户认证令牌"
 
 #: svn/main.c:140
-#: svnsync/main.c:100
+#: svnsync/main.c:111
 msgid "do no interactive prompting"
 msgstr "不要交互提示"
 
@@ -5914,7 +5914,7 @@ msgstr "通过URL改写重新定位"
 
 #: svn/main.c:168
 #: svnadmin/main.c:272
-#: svnsync/main.c:120
+#: svnsync/main.c:131
 msgid "read user configuration files from directory ARG"
 msgstr "从目录 ARG 读取用户配置文件"
 
@@ -6940,7 +6940,7 @@ msgstr ""
 #: svn/main.c:869
 #: svnadmin/main.c:78
 #: svnlook/main.c:285
-#: svnsync/main.c:169
+#: svnsync/main.c:180
 msgid "Caught signal"
 msgstr "捕捉到信号"
 
@@ -8675,27 +8675,36 @@ msgstr ""
 "仓库应该是源仓库的只读镜像。\n"
 
 #: svnsync/main.c:79
+#, fuzzy
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
-"Transfer all pending revisions from source to destination.\n"
+"Transfer all pending revisions to the destination from the source\n"
+"with which it was initialized.\n"
 msgstr ""
 "用法: svnsync synchronize DEST_URL\n"
 "\n"
 "从源到目标传输所有改变。\n"
 
-#: svnsync/main.c:84
+#: svnsync/main.c:85
 msgid ""
-"usage: svnsync copy-revprops DEST_URL REV\n"
+"usage: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
 "\n"
-"Copy all revision properties for revision REV from source to\n"
+"Copy the revision properties in a given range of revisions to the\n"
+"destination from the source with which it was initialized.\n"
+"\n"
+"If REV and REV2 are provided, copy properties for the revisions\n"
+"specified by that range, inclusively.  If only REV is provided,\n"
+"copy properties for that revision alone.  If REV is not provided,\n"
+"copy properties for all revisions previously transferred to the\n"
 "destination.\n"
-msgstr ""
-"用法: svnsync copy-revprops DEST_URL REV\n"
 "\n"
-"从源到目标复制所有版本REV属性。\n"
+"REV and REV2 must be revisions which were previously transferred\n"
+"to the destination.  You may use \"HEAD\" for either revision to\n"
+"mean \"the last revision transferred\".\n"
+msgstr ""
 
-#: svnsync/main.c:90
+#: svnsync/main.c:101
 msgid ""
 "usage: svnsync help [SUBCOMMAND...]\n"
 "\n"
@@ -8705,7 +8714,7 @@ msgstr ""
 "\n"
 "显示本程序或其子命令的用法。\n"
 
-#: svnsync/main.c:104
+#: svnsync/main.c:115
 msgid ""
 "specify a username ARG (deprecated;\n"
 "                             see --source-username and --sync-username)"
@@ -8713,7 +8722,7 @@ msgstr ""
 "指定用户名称 ARG (已经过时;\n"
 "                             参看 --source-username 和 --sync-username)"
 
-#: svnsync/main.c:108
+#: svnsync/main.c:119
 msgid ""
 "specify a password ARG (deprecated;\n"
 "                             see --source-password and --sync-password)"
@@ -8721,102 +8730,111 @@ msgstr ""
 "指定密码 ARG (已经过时;\n"
 "                             参看 --source-password 和 --sync-password)"
 
-#: svnsync/main.c:112
+#: svnsync/main.c:123
 msgid "connect to source repository with username ARG"
 msgstr "使用用户名称 ARG 连接源仓库"
 
-#: svnsync/main.c:114
+#: svnsync/main.c:125
 msgid "connect to source repository with password ARG"
 msgstr "使用密码 ARG 连接源仓库"
 
-#: svnsync/main.c:116
+#: svnsync/main.c:127
 msgid "connect to sync repository with username ARG"
 msgstr "使用用户名称 ARG 连接目的仓库"
 
-#: svnsync/main.c:118
+#: svnsync/main.c:129
 msgid "connect to sync repository with password ARG"
 msgstr "使用密码 ARG 连接目的仓库"
 
-#: svnsync/main.c:207
+#: svnsync/main.c:218
 #, c-format
 msgid "Can't get local hostname"
 msgstr "无法获取本地主机名"
 
-#: svnsync/main.c:229
+#: svnsync/main.c:241
 #, c-format
 msgid "Failed to get lock on destination repos, currently held by '%s'\n"
 msgstr "从目标仓库获得锁失败，当前被“%s”持有\n"
 
-#: svnsync/main.c:324
+#: svnsync/main.c:336
 #, c-format
 msgid "Session is rooted at '%s' but the repos root is '%s'"
 msgstr "会话根是“%s”，但是仓库根是“%s”"
 
-#: svnsync/main.c:391
+#: svnsync/main.c:403
 #, c-format
 msgid "Copied properties for revision %ld (%s* properties skipped).\n"
 msgstr "从版本 %ld (忽略 %s* 属性)复制属性。\n"
 
-#: svnsync/main.c:396
+#: svnsync/main.c:408
 #, c-format
 msgid "Copied properties for revision %ld.\n"
 msgstr "复制版本 %ld 的属性。\n"
 
-#: svnsync/main.c:438
+#: svnsync/main.c:450
 msgid "Cannot initialize a repository with content in it"
 msgstr "当仓库有内容时不能初始化"
 
-#: svnsync/main.c:449
+#: svnsync/main.c:461
 #, c-format
 msgid "Destination repository is already synchronizing from '%s'"
 msgstr "目标仓库已经与“%s”同步"
 
-#: svnsync/main.c:513
-#: svnsync/main.c:516
-#: svnsync/main.c:1189
-#: svnsync/main.c:1286
+#: svnsync/main.c:525
+#: svnsync/main.c:528
+#: svnsync/main.c:1202
+#: svnsync/main.c:1381
 #, c-format
 msgid "Path '%s' is not a URL"
 msgstr "路径“%s”不是URL"
 
-#: svnsync/main.c:902
+#: svnsync/main.c:914
 #, c-format
 msgid "Committed revision %ld.\n"
 msgstr "已提交版本 %ld。\n"
 
-#: svnsync/main.c:942
+#: svnsync/main.c:954
 msgid "Destination repository has not been initialized"
 msgstr "目标仓库没有初始化"
 
-#: svnsync/main.c:957
+#: svnsync/main.c:969
 #, c-format
 msgid "UUID of source repository (%s) does not match expected UUID (%s)"
 msgstr "源仓库的UUID(%s)与期望的UUID(%s)不匹配"
 
-#: svnsync/main.c:1020
+#: svnsync/main.c:1032
 #, c-format
 msgid "Revision being currently copied (%ld), last merged revision (%ld), and destination HEAD (%ld) are inconsistent; have you committed to the destination without using svnsync?"
 msgstr "当前复制版本(%ld), 最后合并版本(%ld), 和目标 HEAD (%ld) 不一致；你是否使用非svnsync方法提交到目标仓库？"
 
-#: svnsync/main.c:1058
+#: svnsync/main.c:1070
 #, c-format
 msgid "Destination HEAD (%ld) is not the last merged revision (%ld); have you committed to the destination without using svnsync?"
 msgstr "目标 HEAD (%ld)不是最后合并版本(%ld)；你是否使用非svnsync方法提交到目标仓库？"
 
-#: svnsync/main.c:1135
+#: svnsync/main.c:1148
 #, c-format
 msgid "Commit created rev %ld but should have created %ld"
 msgstr "提交创建版本 %ld，应该创建版本 %ld"
 
-#: svnsync/main.c:1250
-msgid "Cannot copy revprops for a revision that has not been synchronized yet"
+#: svnsync/main.c:1274
+#: svnsync/main.c:1279
+#, fuzzy, c-format
+msgid "Cannot copy revprops for a revision (%ld) that has not been synchronized yet"
 msgstr "不能在尚未同步时复制一个版本的revprops"
 
-#: svnsync/main.c:1289
-msgid "Invalid revision number"
+#: svnsync/main.c:1331
+#, fuzzy, c-format
+msgid "'%s' is not a valid revision range"
+msgstr "“%s”的版本无效"
+
+#: svnsync/main.c:1345
+#: svnsync/main.c:1365
+#, fuzzy, c-format
+msgid "Invalid revision number (%ld)"
 msgstr "提供了无效的版本号"
 
-#: svnsync/main.c:1329
+#: svnsync/main.c:1422
 msgid ""
 "general usage: svnsync SUBCOMMAND DEST_URL  [ARGS & OPTIONS ...]\n"
 "Type 'svnsync help <subcommand>' for help on a specific subcommand.\n"
@@ -8830,11 +8848,11 @@ msgstr ""
 "\n"
 "可用的子命令: \n"
 
-#: svnsync/main.c:1493
+#: svnsync/main.c:1586
 msgid "Cannot use --username or --password with any of --source-username, --source-password, --sync-username, or --sync-password.\n"
 msgstr "不能将 --username 或 --password 与 --source-username, --source-password, --sync-username, 或 --sync-password 一起使用。\n"
 
-#: svnsync/main.c:1573
+#: svnsync/main.c:1666
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -8843,7 +8861,7 @@ msgstr ""
 "子命令“%s”不接受选项“%s”\n"
 "使用“svnsync help %s”得到用法。\n"
 
-#: svnsync/main.c:1645
+#: svnsync/main.c:1738
 msgid "Try 'svnsync help' for more info"
 msgstr "请使用“svnsync help”以得到更多信息"
 
