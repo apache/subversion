@@ -7,8 +7,8 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-02-26 15:26+0800\n"
-"PO-Revision-Date: 2007-02-23 20:40+0800\n"
-"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
+"PO-Revision-Date: 2007-02-26 15:50+0800\n"
+"Last-Translator: Dongsheng Song <dongsheng.song@gmail.com>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -8664,18 +8664,17 @@ msgid ""
 "In other words, the destination repository should be a read-only\n"
 "mirror of the source repository.\n"
 msgstr ""
-"用法: svnsync initialize 目标URL 源URL\n"
+"用法: svnsync initialize DEST_URL SOURCE_URL\n"
 "\n"
 "初始化一个目标仓库以从另一个仓库同步。\n"
 "\n"
-"目标URL必须指向一个仓库的根目录，这个仓库必须没有提交版本并且允许\n"
+"DEST_URL 必须指向仓库的根目录，这个仓库必须没有提交版本并且允许\n"
 "修改版本属性。\n"
 "\n"
-"除了svnsync外，你不应该在目标仓库中提交或者修改版本属性。也就是说，目标\n"
-"仓库应该是源仓库的只读镜像。\n"
+"除了 svnsync 外，你不应该在目标仓库中提交或者修改版本属性。也就是说，\n"
+"目标仓库应该是源仓库的只读镜像。\n"
 
 #: svnsync/main.c:79
-#, fuzzy
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
@@ -8684,7 +8683,7 @@ msgid ""
 msgstr ""
 "用法: svnsync synchronize DEST_URL\n"
 "\n"
-"从源到目标传输所有改变。\n"
+"从已经初始化的源仓库传输所有未决的版本到目标仓库。\n"
 
 #: svnsync/main.c:85
 msgid ""
@@ -8703,6 +8702,16 @@ msgid ""
 "to the destination.  You may use \"HEAD\" for either revision to\n"
 "mean \"the last revision transferred\".\n"
 msgstr ""
+"用法: svnsync copy-revprops DEST_URL [REV[:REV2]]\n"
+"\n"
+"从已经初始化的源仓库复制指定版本范围的版本属性到目的仓库。\n"
+"\n"
+"如果给出了 REV 和 REV2，那么复制给定的版本范围，包含边界。\n"
+"如果只给出了 REV，那么单独复制此版本属性。如果没有给出 \n"
+"REV，那么就复制已经传输的所有版本的属性。\n"
+"\n"
+"REV 和 REV2 必须是已经传输到目的仓库的版本。你可以使用 \"HEAD\" \n"
+"来指代最后一个传输的版本。\n"
 
 #: svnsync/main.c:101
 msgid ""
@@ -8819,20 +8828,20 @@ msgstr "提交创建版本 %ld，应该创建版本 %ld"
 
 #: svnsync/main.c:1274
 #: svnsync/main.c:1279
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot copy revprops for a revision (%ld) that has not been synchronized yet"
-msgstr "不能在尚未同步时复制一个版本的revprops"
+msgstr "不能在尚未同步时复制版本(%ld)的 revprops"
 
 #: svnsync/main.c:1331
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid revision range"
-msgstr "“%s”的版本无效"
+msgstr "“%s”不是有效的版本范围"
 
 #: svnsync/main.c:1345
 #: svnsync/main.c:1365
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid revision number (%ld)"
-msgstr "提供了无效的版本号"
+msgstr "无效的版本号 (%ld)"
 
 #: svnsync/main.c:1422
 msgid ""
