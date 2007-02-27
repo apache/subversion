@@ -2195,25 +2195,11 @@ merge_file(svn_wc_notify_state_t *content_state,
 
   if (fb->add_existed)
     {
-      /* Immediately tweak schedule for the file's entry so it is no
-         longer scheduled for addition. */
-      /* ### This corrupts the working copy if we fail below! */
-      svn_wc_entry_t te;
-      te.schedule = svn_wc_schedule_normal;
-      SVN_ERR(svn_wc__entry_modify(adm_access, base_name, &te,
-                                   SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                   | SVN_WC__ENTRY_MODIFY_FORCE,
-                                   TRUE, pool));
-      if (tmp_txtb && ! is_replaced)
-        {
-          /* Files scheduled for addition without history don't have
-             a text-base so create an empty one. */
-          /* ### Why *exactly* do we need this?
-         The three-way merging comes to mind, but then, well...
-         we shouldn't really mess with the actual text-base in this way
-         here! */
-          SVN_ERR(svn_io_file_create(fb->text_base_path, "", pool));
-        }
+      /* Tweak schedule for the file's entry so it is no longer
+         scheduled for addition. */
+      tmp_entry.schedule = svn_wc_schedule_normal;
+      flags |= (SVN_WC__ENTRY_MODIFY_SCHEDULE |
+                SVN_WC__ENTRY_MODIFY_FORCE);
     }
 
   /* Set the new revision and URL in the entry and clean up some other
@@ -2273,6 +2259,7 @@ merge_file(svn_wc_notify_state_t *content_state,
               /* Now we need to let loose svn_wc_merge2() to merge the
                  textual changes into the working file. */
               const char *oldrev_str, *newrev_str;
+              const char *merge_left;
               
               /* Create strings representing the revisions of the
                  old and new text-bases. */
@@ -2281,18 +2268,35 @@ merge_file(svn_wc_notify_state_t *content_state,
               newrev_str = apr_psprintf(pool, ".r%ld",
                                         *eb->target_revision);
 
+              if (fb->add_existed && ! is_replaced)
+                {
+                  SVN_ERR(svn_wc_create_tmp_file2(NULL, &merge_left,
+                                                  svn_wc_adm_access_path(
+                                                      adm_access),
+                                                  svn_io_file_del_none,
+                                                  pool));
+                }
+              else
+                merge_left = fb->text_base_path;
+
               /* Merge the changes from the old textbase to the new
                  textbase into the file we're updating.
                  Remember that this function wants full paths! */
               SVN_ERR(svn_wc__merge_internal
                       (&log_accum, &merge_outcome,
-                       fb->text_base_path,
+                       merge_left,
                        fb->new_text_base_path,
                        fb->path,
                        adm_access,
                        oldrev_str, newrev_str, ".mine",
                        FALSE, eb->diff3_cmd, NULL, fb->propchanges,
                        pool));
+              /* If we created a temporary left merge file, get rid of it. */
+              if (merge_left != fb->text_base_path)
+                SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
+                                             svn_path_is_child(parent_dir,
+                                                               merge_left,
+                                                               pool), pool));
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
     } /* end: "textual" merging process */

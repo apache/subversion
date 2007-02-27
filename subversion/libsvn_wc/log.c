@@ -173,6 +173,8 @@
 #define SVN_WC__LOG_ATTR_ARG_5          "arg5"
 /* For upgrade-format. */
 #define SVN_WC__LOG_ATTR_FORMAT         "format"
+/* For modify-entry */
+#define SVN_WC__LOG_ATTR_FORCE          "force"
 
 
 
@@ -835,6 +837,12 @@ log_do_modify_entry(struct log_runner *loggy,
 
       entry->prop_time = prop_time;
     }
+
+  /* Handle force flag. */
+  valuestr = apr_hash_get(ah, SVN_WC__LOG_ATTR_FORCE,
+                          APR_HASH_KEY_STRING);
+  if (valuestr && strcmp(valuestr, "true") == 0)
+    modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
 
   /* Now write the new entry out */
   err = svn_wc__entry_modify(loggy->adm_access, name,
@@ -2252,6 +2260,10 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_PRESENT_PROPS,
                  SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
                  entry->present_props);
+
+  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_FORCE,
+                 SVN_WC__LOG_ATTR_FORCE,
+                 "true");
 
 #undef ADD_ENTRY_ATTR
 
