@@ -97,7 +97,7 @@ Candidate changes:
       r23492 depends upon -91, or something very like it, even though
       -91 is an unrelated change, strictly speaking.
     Votes:
-      +1: malcolm
+      +1: malcolm, dlr
 
   * r23514, r23516, r23519
     Fix a bug in dumpstream loading where datestamp-less revisions do
