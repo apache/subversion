@@ -1060,7 +1060,7 @@ svn_repos_get_logs(svn_repos_t *repos,
 
 /**
  * Fetch the merge info for @a paths at @rev, and save it to @a
- * mergeinfo.  @a mergeinfo is a mapping of @c char * target paths
+ * mergeoutput.  @a mergeoutput is a mapping of @c char * target paths
  * (from @a paths) to textual (@c char *) representations of merge
  * info (as managed by svn_mergeinfo.h), or @c NULL if there is no
  * merge info visible or available.
