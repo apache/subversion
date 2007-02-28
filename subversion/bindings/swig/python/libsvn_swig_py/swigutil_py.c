@@ -382,6 +382,9 @@ void svn_swig_py_svn_exception(svn_error_t *err)
 
   /* Finished with the exc_ob object. */
   Py_DECREF(exc_ob);
+
+  /* Consume the Subversion error. */
+  svn_error_clear(err);
 }
 
 
