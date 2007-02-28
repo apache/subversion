@@ -225,6 +225,32 @@ def extra_blockcontent(sbox):
   load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
 
 #----------------------------------------------------------------------
+# Test for issue #2729: Datestamp-less revisions in dump streams do
+# not remain so after load
+def empty_date(sbox):
+  "preserve date-less revisions in load (issue #2729)"
+
+  test_create(sbox)
+
+  dumpfile = clean_dumpfile()
+
+  # Replace portions of the revision data to drop the svn:date revprop.
+  dumpfile[7:11] = \
+       [ "Prop-content-length: 52\n",
+         "Content-length: 52\n\n",
+         "K 7\nsvn:log\nV 0\n\nK 10\nsvn:author\nV 4\nerik\nPROPS-END\n\n\n"
+         ]
+
+  load_and_verify_dumpstream(sbox,[],[], dumpfile_revisions, dumpfile)
+
+  # Verify that the revision still lacks the svn:date property.
+  svntest.actions.run_and_verify_svn(None, [], [], "propget",
+                                     "--revprop", "-r1", "svn:date",
+                                     sbox.wc_dir)
+
+
+
+#----------------------------------------------------------------------
 def inconsistent_headers(sbox):
   "load failure on undersized Content-length"
 
@@ -402,6 +428,7 @@ def setrevprop(sbox):
 test_list = [ None,
               extra_headers,
               extra_blockcontent,
+              XFail(empty_date),
               inconsistent_headers,
               dump_copied_dir,
               dump_move_dir_modify_child,
