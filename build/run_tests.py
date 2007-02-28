@@ -1,9 +1,10 @@
+
 #
 # run_tests.py - run the tests in the regression test suite.
 #
 
 '''usage: python run_tests.py [--url=<base-url>] [--fs-type=<fs-type>]
-                    [--verbose] [--cleanup]
+                    [--verbose] [--cleanup] [--enable-sasl]
                     <abs_srcdir> <abs_builddir>
                     <prog ...>
 
@@ -25,7 +26,8 @@ class TestHarness:
   '''
 
   def __init__(self, abs_srcdir, abs_builddir, logfile,
-               base_url=None, fs_type=None, verbose=None, cleanup=None):
+               base_url=None, fs_type=None, verbose=None, cleanup=None,
+               enable_sasl=None):
     '''Construct a TestHarness instance.
 
     ABS_SRCDIR and ABS_BUILDDIR are the source and build directories.
@@ -40,6 +42,7 @@ class TestHarness:
     self.fs_type = fs_type
     self.verbose = verbose
     self.cleanup = cleanup
+    self.enable_sasl = enable_sasl
     self.log = None
 
   def run(self, list):
@@ -98,6 +101,8 @@ class TestHarness:
         cmdline.append(quote('--url=' + self.base_url))
       if self.fs_type is not None:
         cmdline.append(quote('--fs-type=' + self.fs_type))
+      if self.enable_sasl is not None:
+        cmdline.append('--enable-sasl')
     elif os.access(prog, os.X_OK):
       progname = './' + progbase
       cmdline = [quote(progname),
@@ -157,7 +162,8 @@ class TestHarness:
 def main():
   try:
     opts, args = my_getopt(sys.argv[1:], 'u:f:vc',
-                           ['url=', 'fs-type=', 'verbose', 'cleanup'])
+                           ['url=', 'fs-type=', 'verbose', 'cleanup', 
+                            'enable-sasl'])
   except getopt.GetoptError:
     args = []
 
@@ -165,7 +171,8 @@ def main():
     print __doc__
     sys.exit(2)
 
-  base_url, fs_type, verbose, cleanup = None, None, None, None
+  base_url, fs_type, verbose, cleanup, enable_sasl = None, None, None, None, \
+                                                     None
   for opt, val in opts:
     if opt in ('-u', '--url'):
       base_url = val
@@ -175,12 +182,14 @@ def main():
       verbose = 1
     elif opt in ('-c', '--cleanup'):
       cleanup = 1
+    elif opt in ('--enable-sasl'):
+      enable_sasl = 1
     else:
       raise getopt.GetoptError
 
   th = TestHarness(args[0], args[1],
                    os.path.abspath('tests.log'),
-                   base_url, fs_type, verbose, cleanup)
+                   base_url, fs_type, verbose, cleanup, enable_sasl)
 
   failed = th.run(args[2:])
   if failed:
