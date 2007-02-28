@@ -389,7 +389,7 @@ davautocheck:
 #
 # The password is 'rayjandom' for both users.
 svncheck: 
-	@$(MAKE) check BASE_URL=svn://localhost
+	@$(MAKE) check BASE_URL=svn://127.0.0.1
 
 # 'make svnserveautocheck' runs svnserve for you and kills it.
 svnserveautocheck: svnserve
