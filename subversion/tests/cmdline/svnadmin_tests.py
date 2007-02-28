@@ -428,7 +428,7 @@ def setrevprop(sbox):
 test_list = [ None,
               extra_headers,
               extra_blockcontent,
-              XFail(empty_date),
+              empty_date,
               inconsistent_headers,
               dump_copied_dir,
               dump_move_dir_modify_child,
