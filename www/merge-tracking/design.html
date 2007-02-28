@@ -31,7 +31,7 @@ information from the <a href="#merge-history">merge history</a>.</p>
   <li><a href="#merge-history">Merge History</a></li>
   <li><a href="#data-structures">Data Structures</a></li>
   <li>Merge Operations (TODO)</li>
-  <li>Audit Operations (TODO)</li>
+  <li><a href="#audit-operations">Audit Operations</a></li>
   <li>Other Operations (TODO)</li>
 </ul>
 
@@ -448,6 +448,118 @@ structures.</p>
 </dl>
 
 </div>  <!-- data-structures -->
+
+<div class="h2" id="audit-operations">
+<h2>Audit Operations</h2>
+
+<p>As outlined in the 
+<a href="requirements.html#auditing">requirements and use cases</a>, merge
+tracking auditting is the ability to report information about merge
+operations.  It consists of three sections:</p>
+
+<ul>
+  <li>Change Set Merge Availability (TODO)</li>
+
+  <li>Find Change Set (TODO)</li>
+
+  <li><a href="commutative-reporting">Commutative Author and Revision
+  Reporting</a></li>
+</ul>
+
+<div class="h3" id="commutative-reporting">
+<h3>Commutative Author and Revision Reporting</h3>
+
+<div class="h4" id="reporting-scope">
+<h4>Scope</h4>
+
+<p>Each command which shows username and merge information should also
+respect merge information and support Commutative Reporting.  These
+commands, collectively referred to <em>reporting commands</em>, are:</p>
+
+<ul>
+  <li><code>svn log</code></li>
+  <li><code>svn blame</code></li>
+  <li><code>svn info</code></li>
+  <li><code>svn status --show-updates</code></li>
+</ul>
+
+<p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
+single-character shortcut, will be introduced for the reporting commands.
+Using it will enable these commands to show the additional information gleaned
+from parsing and processing the merge info on the targets in question.  This
+switch will also work with <code>--xml</code> to include additional merge 
+information.  The new functionality added by <code>--merge-sensitive</code> is
+as follows.</p>
+
+<p><code>svn log</code>: The original log message, in the current format, with
+the addition of a list of revisions and merge source paths that have been merged
+into the target.  The output for <code>log</code> should be consistent with the
+<code>diff</code> output for the <code>svn:mergeinfo</code> property.</p>
+
+<p>The <code>--verbose</code> switch would output the log information for the
+merged revisions as well.  This output may bein the style of
+<code>svnmerge.py</code>: the primary log message, followed by each of the
+original log messages indented with separators between them.</p>
+
+<p><code>svn blame</code>: Two additional columns for each line, with the
+original revision and author of that line.  Unlike other commands, we do not
+need to worry about multiple source revisions, because each line can have at
+most one author.</p>
+
+<p><code>svn info</code>: Add two more pieces of information: 'Last Original
+Author:' and 'Last Original Revision:'.  Note that these could either be set by
+a merge to a node, or a commit to that node.  In the latter case, they would
+be the same as the 'Last Author' and 'Last Revision'.</p>
+
+<p><code>svn status --show-updates</code>: Add additional columns, reflecting
+the last original authors and revisions.</p>
+
+</div>  <!-- reporting-scope -->
+
+<div class="h4" id="reporting-implementation">
+<h4>Implementation</h4>
+
+<p>Most of the logic for reporting will live in <code>libsvn_repos</code>, with
+appropriate changes to the API and additional parameters exposed to the client
+through the RA layer.  We are looking at an API which takes one or more paths
+and a revision (range?), and returns the merge info which was added or removed
+in that revision.  For the 'blame' case, we may also need to include some type
+of line number parameter, the handling of which is going to get ugly, since our
+FS isn't based on a weave.</p>
+
+<p>Existing functions of interest are <code>svn_repos_fs_get_merge_info()</code>
+and <code>svn_fs_merge_info__get_merge_info()</code>.</p>
+
+</div>
+
+<div class="h4" id="reporting-questions">
+<h4>Pending Questions</h4>
+
+<p>How will <code>--merge-sensitive</code> behave for commits which remove
+merge info (e.g. reverts)?</p>
+
+<p>In the case of <code>svn log</code>, would the user be better served if we
+just included the original revision logs in line with the logs (i.e., no
+special indentation, etc.)?</p>
+
+</div>  <!-- reporting-questions -->
+
+<div class="h4" id="reporting-extra-credit">
+<h4>Additional Features</h4>
+
+<p>Although not part of the initial implementation, the following have been
+suggested as additional features:</p>
+
+<ul>
+  <li>A configuration option to always enable <code>--merge-sensitive</code> by
+  default.</li>
+</ul>
+
+</div>  <!-- reporting-extra-credit -->
+
+</div>  <!-- commutative-reporting -->
+
+</div>  <!-- audit-operations -->
 
 <p>$Date$</p>
 
