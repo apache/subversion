@@ -368,6 +368,43 @@ def changed_copy_info(sbox):
           "    (from A/B/E/alpha:r1)\n"],
           output)
 
+#----------------------------------------------------------------------
+# Issue 2663
+def tree_non_recursive(sbox):
+  "test 'svnlook tree --non-recursive'"
+
+  sbox.build()
+  repo_dir = sbox.repo_dir
+  
+  expected_results_root = ('/', ' iota', ' A/')
+  expected_results_deep = ('B/', ' lambda', ' E/', ' F/')
+
+  # check the output of svnlook --non-recursive on the 
+  # root of the repository
+  treelist = run_svnlook('tree', '--non-recursive', repo_dir)
+  for entry in treelist:
+    if not entry.rstrip() in expected_results_root:
+      print "Unexpected result from tree with --non-recursive:"
+      print "  entry            : %s" % entry.rstrip()
+      raise svntest.Failure
+  if len(treelist) != len(expected_results_root):
+    print "Expected %i output entries, found %i" \
+          % (len(expected_results_root), len(treelist))
+    raise svntest.Failure
+    
+  # check the output of svnlook --non-recursive on a
+  # subdirectory of the repository
+  treelist = run_svnlook('tree', '--non-recursive', repo_dir, '/A/B')
+  for entry in treelist:
+    if not entry.rstrip() in expected_results_deep:
+      print "Unexpected result from tree with --non-recursive:"
+      print "  entry            : %s" % entry.rstrip()
+      raise svntest.Failure
+  if len(treelist) != len(expected_results_deep):
+    print "Expected %i output entries, found %i" \
+          % (len(expected_results_deep), len(treelist))
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -380,6 +417,7 @@ test_list = [ None,
               test_print_property_diffs,
               info_bad_newlines,
               changed_copy_info,
+              tree_non_recursive,
              ]
 
 if __name__ == '__main__':
