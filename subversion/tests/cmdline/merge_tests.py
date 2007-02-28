@@ -4690,10 +4690,6 @@ def mergeinfo_elision(sbox):
   expected_output = wc.State(short_D_COPY_path, {
     'G/rho' : Item(status='U '),
     })
-  expected_output = wc.State(short_D_COPY_path, { })
-  expected_output = wc.State(short_D_COPY_path, {
-    'G/rho' : Item(status='U '),
-    })
   expected_status = wc.State(short_D_COPY_path, {
     ''        : Item(status=' M', wc_rev=2),
     'G'       : Item(status='  ', wc_rev=2),
@@ -4808,9 +4804,6 @@ def mergeinfo_elision(sbox):
   # the merge should not be repeated, nor should any mergeinfo be
   # set on A_COPY/B/E/beta.
   short_beta_COPY_path = shorten_path_kludge(beta_COPY_path)
-  expected_output = wc.State(short_B_COPY_path, {
-    'beta' : Item(status='U '),
-    })
   expected_skip = wc.State(short_beta_COPY_path, { })
   saved_cwd = os.getcwd()
   try:
