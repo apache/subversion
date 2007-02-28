@@ -99,12 +99,12 @@ Candidate changes:
     Votes:
       +1: malcolm
 
-  * r23514, r23516
+  * r23514, r23516, r23519
     Fix a bug in dumpstream loading where datestamp-less revisions do
     not remain so after load (issue #2729).
     Justification:
       Before-and-after repository data parity (yeah, it's a stretch...)
     Votes:
-      +1: cmpilato
+      +1: cmpilato (not r23519), dlr
 
 Approved changes:
