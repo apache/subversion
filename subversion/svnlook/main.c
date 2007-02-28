@@ -86,49 +86,49 @@ enum
  */
 static const apr_getopt_option_t options_table[] =
 {
-  {"help",          'h', 0,
+  {NULL,                '?', 0,
    N_("show help on a subcommand")},
 
-  {NULL,            '?', 0,
-   N_("show help on a subcommand")},
-
-  {"version",       svnlook__version, 0,
-   N_("show program version information")},
-
-  {"revision",      'r', 1,
-   N_("specify revision number ARG")},
-
-  {"transaction",  't', 1,
-   N_("specify transaction name ARG")},
-
-  {"verbose",  'v', 0,
-   N_("be verbose")},
-
-  {"non-recursive", 'N', 0,
-   N_("operate on single directory only")},
-
-  {"show-ids",      svnlook__show_ids, 0,
-   N_("show node revision ids for each path")},
-
-  {"no-diff-deleted", svnlook__no_diff_deleted, 0,
-   N_("do not print differences for deleted files")},
-
-  {"no-diff-added", svnlook__no_diff_added, 0,
-   N_("do not print differences for added files")},
-
-  {"diff-copy-from", svnlook__diff_copy_from, 0,
-   N_("print differences against the copy source")},
-
-  {"revprop", svnlook__revprop_opt, 0,
-   N_("operate on a revision property (use with -r or -t)")},
-
-  {"full-paths", svnlook__full_paths, 0,
-   N_("show full paths instead of indenting them")},
-
-  {"copy-info", svnlook__copy_info, 0,
+  {"copy-info",         svnlook__copy_info, 0,
    N_("show details for copies")},
 
-  {0,               0, 0, 0}
+  {"diff-copy-from",    svnlook__diff_copy_from, 0,
+   N_("print differences against the copy source")},
+
+  {"full-paths",        svnlook__full_paths, 0,
+   N_("show full paths instead of indenting them")},
+
+  {"help",              'h', 0,
+   N_("show help on a subcommand")},
+
+  {"no-diff-added",     svnlook__no_diff_added, 0,
+   N_("do not print differences for added files")},
+
+  {"no-diff-deleted",   svnlook__no_diff_deleted, 0,
+   N_("do not print differences for deleted files")},
+
+  {"non-recursive",     'N', 0,
+   N_("operate on single directory only")},
+
+  {"revision",          'r', 1,
+   N_("specify revision number ARG")},
+
+  {"revprop",           svnlook__revprop_opt, 0,
+   N_("operate on a revision property (use with -r or -t)")},
+
+  {"show-ids",          svnlook__show_ids, 0,
+   N_("show node revision ids for each path")},
+
+  {"transaction",       't', 1,
+   N_("specify transaction name ARG")},
+
+  {"verbose",           'v', 0,
+   N_("be verbose")},
+
+  {"version",           svnlook__version, 0,
+   N_("show program version information")},
+
+  {0,                   0, 0, 0}
 };
 
 
