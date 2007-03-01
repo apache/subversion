@@ -116,8 +116,9 @@ Candidate changes:
       Better testing of 1.4.x changes, no changes in svn core code.
     Notes: includes a small unrelated change in davautocheck.sh (use bash
       instead of sh)
+    Branch: 1.4.x-r21537
     Votes:
-      +1: lgo
+      +1: lgo, dlr
 
 Approved changes:
 
