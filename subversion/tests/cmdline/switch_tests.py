@@ -1405,6 +1405,250 @@ def switch_scheduled_add(sbox):
   svntest.actions.run_and_verify_svn(None, None, [],
                                      'switch', switch_url, file_path)
 
+#----------------------------------------------------------------------
+
+def mergeinfo_switch_elision(sbox):
+  "mergeinfo elides to closest ancestor w/ same info"
+
+  # When a switch would add mergeinfo on a node which is identical to
+  # (or is a superset of) the *local*  mergeinfo on one of the node's
+  # descendents, then the mergeinfo on the descendent node is "elided" in
+  # favor of the ancestor's mergeinfo.
+
+  # Search for the comment entitled "The Merge Kluge" in merge_tests.py
+  # to understand why we shorten, and subsequently chdir() after calling
+  # this function.
+  def shorten_path_kludge(path):
+    shorten_by = len(svntest.main.work_dir) + len(os.sep)
+    return path[shorten_by:]
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # Some paths we'll care about
+  B_COPY_1_path = os.path.join(wc_dir, "A", "B_COPY_1")
+  B_COPY_2_path = os.path.join(wc_dir, "A", "B_COPY_2")
+  E_COPY_2_path = os.path.join(wc_dir, "A", "B_COPY_2", "E")
+  alpha_path    = os.path.join(wc_dir, "A", "B", "E", "alpha")
+  beta_path     = os.path.join(wc_dir, "A", "B", "E", "beta")
+
+  # Make branches A/B_COPY_1 and A/B_COPY_2
+  svntest.actions.run_and_verify_svn(
+    None,
+    ["A    " + os.path.join(wc_dir, "A", "B_COPY_1", "lambda") + "\n",
+     "A    " + os.path.join(wc_dir, "A", "B_COPY_1", "E") + "\n",
+     "A    " + os.path.join(wc_dir, "A", "B_COPY_1", "E", "alpha") + "\n",
+     "A    " + os.path.join(wc_dir, "A", "B_COPY_1", "E", "beta") + "\n",
+     "A    " + os.path.join(wc_dir, "A", "B_COPY_1", "F") + "\n",
+     "Checked out revision 1.\n",
+     "A         " + B_COPY_1_path + "\n"],
+    [],
+    'copy',
+    sbox.repo_url + "/A/B",
+    B_COPY_1_path)
+
+  svntest.actions.run_and_verify_svn(
+    None,
+    ["A    " + os.path.join(wc_dir, "A", "B_COPY_2", "lambda") + "\n",
+     "A    " + os.path.join(wc_dir, "A", "B_COPY_2", "E") + "\n",
+     "A    " + os.path.join(wc_dir, "A", "B_COPY_2", "E", "alpha") + "\n",
+     "A    " + os.path.join(wc_dir, "A", "B_COPY_2", "E", "beta") + "\n",
+     "A    " + os.path.join(wc_dir, "A", "B_COPY_2", "F") + "\n",
+     "Checked out revision 1.\n",
+     "A         " + B_COPY_2_path + "\n"],
+    [],
+    'copy',
+    sbox.repo_url + "/A/B",
+    B_COPY_2_path)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B_COPY_1' : Item(verb='Adding'),
+    'A/B_COPY_2' : Item(verb='Adding')
+    })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    "A/B_COPY_1"         : Item(status='  ', wc_rev=2),
+    "A/B_COPY_1/lambda"  : Item(status='  ', wc_rev=2),
+    "A/B_COPY_1/E"       : Item(status='  ', wc_rev=2),
+    "A/B_COPY_1/E/alpha" : Item(status='  ', wc_rev=2),
+    "A/B_COPY_1/E/beta"  : Item(status='  ', wc_rev=2),
+    "A/B_COPY_1/F"       : Item(status='  ', wc_rev=2),
+    "A/B_COPY_2"         : Item(status='  ', wc_rev=2),
+    "A/B_COPY_2/lambda"  : Item(status='  ', wc_rev=2),
+    "A/B_COPY_2/E"       : Item(status='  ', wc_rev=2),
+    "A/B_COPY_2/E/alpha" : Item(status='  ', wc_rev=2),
+    "A/B_COPY_2/E/beta"  : Item(status='  ', wc_rev=2),
+    "A/B_COPY_2/F"       : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status,
+                                        None,
+                                        None, None, None, None,
+                                        wc_dir)
+
+  # Make some changes under A/B
+
+  # r3 - modify and commit A/B/E/beta
+  svntest.main.file_write(beta_path, "New content")
+  expected_output = svntest.wc.State(wc_dir,
+                                     {'A/B/E/beta' : Item(verb='Sending')})
+  expected_status.tweak('A/B/E/beta', wc_rev=3)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # r4 - modify and commit A/B/E/alpha
+  svntest.main.file_write(alpha_path, "New content")
+  expected_output = svntest.wc.State(wc_dir,
+                                     {'A/B/E/alpha' : Item(verb='Sending')})
+  expected_status.tweak('A/B/E/alpha', wc_rev=4)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Merge r2:4 into A/B_COPY_1
+  # Search for the comment entitled "The Merge Kluge" in merge_tests.py,
+  # to understand why we shorten and chdir() below.
+  short_B_COPY_1_path = shorten_path_kludge(B_COPY_1_path)
+  expected_output = svntest.wc.State(short_B_COPY_1_path, {
+    'E/alpha' : Item(status='U '),
+    'E/beta'  : Item(status='U '),
+    })
+  expected_merge_status = svntest.wc.State(short_B_COPY_1_path, {
+    ''        : Item(status=' M', wc_rev=2),
+    'lambda'  : Item(status='  ', wc_rev=2),
+    'E'       : Item(status='  ', wc_rev=2),
+    'E/alpha' : Item(status='M ', wc_rev=2),
+    'E/beta'  : Item(status='M ', wc_rev=2),
+    'F'       : Item(status='  ', wc_rev=2),
+    })
+  expected_merge_disk = svntest.wc.State('', {
+    ''        : Item(props={"svn:mergeinfo" : '/A/B:1,3-4'}),
+    'lambda'  : Item("This is the file 'lambda'.\n"),
+    'E'       : Item(),
+    'E/alpha' : Item("New content"),
+    'E/beta'  : Item("New content"),
+    'F'       : Item(),
+    })
+  expected_skip = svntest.wc.State(short_B_COPY_1_path, { })
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_B_COPY_1_path, '2', '4',
+                                         sbox.repo_url + \
+                                         '/A/B',
+                                         expected_output,
+                                         expected_merge_disk,
+                                         expected_merge_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
+  # r5 - Commit the merge into A/B_COPY_1/E
+  expected_output = svntest.wc.State(
+    wc_dir,
+    {'A/B_COPY_1'         : Item(verb='Sending'),
+     'A/B_COPY_1/E/alpha' : Item(verb='Sending'),
+     'A/B_COPY_1/E/beta'  : Item(verb='Sending'),
+     })
+  expected_status.tweak('A/B_COPY_1',         wc_rev=5)
+  expected_status.tweak('A/B_COPY_1/E/alpha', wc_rev=5)
+  expected_status.tweak('A/B_COPY_1/E/beta',  wc_rev=5)
+  expected_status.tweak('A/B_COPY_1/lambda',  wc_rev=2)
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status, None, None, None,
+                                        None, None, wc_dir)
+
+  # Merge r3 into A/B_COPY_2/E
+  short_E_COPY_2_path = shorten_path_kludge(E_COPY_2_path)
+  expected_output = svntest.wc.State(short_E_COPY_2_path, {
+    'beta'  : Item(status='U '),
+    })
+  expected_merge_status = svntest.wc.State(short_E_COPY_2_path, {
+    ''      : Item(status=' M', wc_rev=2),
+    'alpha' : Item(status='  ', wc_rev=2),
+    'beta'  : Item(status='M ', wc_rev=2),
+    })
+  expected_merge_disk = svntest.wc.State('', {
+    ''        : Item(props={"svn:mergeinfo" : '/A/B/E:3'}),
+    'alpha' : Item("This is the file 'alpha'.\n"),
+    'beta'  : Item("New content"),
+    })
+  expected_skip = svntest.wc.State(short_E_COPY_2_path, { })
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    svntest.actions.run_and_verify_merge(short_E_COPY_2_path, '2', '3',
+                                         sbox.repo_url + \
+                                         '/A/B/E',
+                                         expected_output,
+                                         expected_merge_disk,
+                                         expected_merge_status,
+                                         expected_skip,
+                                         None, None, None, None,
+                                         None, 1)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Switch A/B_COPY_2 to URL of A/B_COPY_1
+  # The local mergeinfo '/A/B/E:3' on A/B_COPY_2/E is a subset
+  # of the mergeinfo added to A/B_COPY_2 as a result of the switch,
+  # so the former should be elided.
+
+  # Setup expected results of switch.
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    "A/B_COPY_2"         : Item(status=' U'),
+    "A/B_COPY_2/E/alpha" : Item(status='U '),
+    "A/B_COPY_2/E/beta"  : Item(status='G '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak("A/B/E/alpha", contents="New content")
+  expected_disk.tweak("A/B/E/beta", contents="New content")
+  expected_disk.add({
+    "A/B_COPY_1"         : Item(props={'svn:mergeinfo' : '/A/B:1,3-4'}),
+    "A/B_COPY_1/E"       : Item(),
+    "A/B_COPY_1/F"       : Item(),
+    "A/B_COPY_1/lambda"  : Item("This is the file 'lambda'.\n"),
+    "A/B_COPY_1/E/alpha" : Item("New content"),
+    "A/B_COPY_1/E/beta"  : Item("New content"),
+    "A/B_COPY_2"         : Item(props={'svn:mergeinfo' : '/A/B:1,3-4'}),
+    "A/B_COPY_2/E"       : Item(),
+    "A/B_COPY_2/F"       : Item(),
+    "A/B_COPY_2/lambda"  : Item("This is the file 'lambda'.\n"),
+    "A/B_COPY_2/E/alpha" : Item("New content"),
+    "A/B_COPY_2/E/beta"  : Item("New content"),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.tweak("A/B/E/beta", wc_rev=3)
+  expected_status.tweak("A/B/E/alpha", wc_rev=4)
+  expected_status.add({
+    "A/B_COPY_1"         : Item(status='  ', wc_rev=5),
+    "A/B_COPY_1/E"       : Item(status='  ', wc_rev=2),
+    "A/B_COPY_1/F"       : Item(status='  ', wc_rev=2),
+    "A/B_COPY_1/lambda"  : Item(status='  ', wc_rev=2),
+    "A/B_COPY_1/E/alpha" : Item(status='  ', wc_rev=5),
+    "A/B_COPY_1/E/beta"  : Item(status='  ', wc_rev=5),
+    "A/B_COPY_2"         : Item(status='  ', wc_rev=5, switched='S'),
+    "A/B_COPY_2/E"       : Item(status='  ', wc_rev=5),
+    "A/B_COPY_2/F"       : Item(status='  ', wc_rev=5),
+    "A/B_COPY_2/lambda"  : Item(status='  ', wc_rev=5),
+    "A/B_COPY_2/E/alpha" : Item(status='  ', wc_rev=5),
+    "A/B_COPY_2/E/beta"  : Item(status='  ', wc_rev=5),
+    })
+
+  svntest.actions.run_and_verify_switch(sbox.wc_dir,
+                                        B_COPY_2_path,
+                                        sbox.repo_url + "/A/B_COPY_1",
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        None, None, None, None, None, 1)
+
 ########################################################################
 # Run the tests
 
@@ -1432,6 +1676,7 @@ test_list = [ None,
               forced_switch,
               forced_switch_failures,
               switch_scheduled_add,
+              XFail(mergeinfo_switch_elision),
              ]
 
 if __name__ == '__main__':

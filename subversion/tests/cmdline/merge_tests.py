@@ -422,7 +422,8 @@ def add_with_history(sbox):
   ###      ***                                               ***
   ###      ***   Before erasing this comment, please check   ***
   ###      ***      for references to "The Merge Kluge"      ***
-  ###      ***   elsewhere in this file and update_tests.py. ***
+  ###      ***   elsewhere in this file, update_tests.py     ***
+  ###      ***              and switch_tests.py.             ***
   ###      ***                                               ***
   ###      *****************************************************
   ###
