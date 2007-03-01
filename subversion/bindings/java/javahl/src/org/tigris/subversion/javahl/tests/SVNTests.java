@@ -491,6 +491,11 @@ class SVNTests extends TestCase
         protected WC wc;
 
         /**
+         * The name of the test.
+         */
+        String testName;
+
+        /**
          * Build a new test setup with a new repository.  If
          * <code>createWC</code> is <code>true</code>, create a
          * corresponding working copy and expected working copy
@@ -506,14 +511,14 @@ class SVNTests extends TestCase
         protected OneTest(boolean createWC)
             throws SubversionException, IOException
         {
-            String testName = testBaseName + ++testCounter;
+            this.testName = testBaseName + ++testCounter;
             this.wc = greekWC.copy();
-            this.repository = createInitialRepository(testName);
+            this.repository = createInitialRepository();
             this.url = makeReposUrl(repository);
 
             if (createWC)
             {
-                workingCopy = createInitialWorkingCopy(repository, testName);
+                workingCopy = createInitialWorkingCopy(repository);
             }
         }
 
@@ -553,11 +558,11 @@ class SVNTests extends TestCase
         private OneTest(OneTest orig, String append)
             throws SubversionException, IOException
         {
-            String testName = testBaseName + testCounter +append;
+            this.testName = testBaseName + testCounter + append;
             repository = orig.getRepository();
             url = orig.getUrl();
             wc = orig.wc.copy();
-            workingCopy = createInitialWorkingCopy(repository, testName);
+            workingCopy = createInitialWorkingCopy(repository);
         }
 
         /**
@@ -609,19 +614,20 @@ class SVNTests extends TestCase
             return wc;
         }
         /**
-         * Create the repository for the beginning of the test
-         * @param testName      the name of the test
+         * Create the repository for the beginning of the test.
+         * Assumes that {@link #testName} has been set.
+         *
          * @return  the repository directory
          * @exception SubversionException If there is a problem
          * creating or loading the repository.
          * @exception IOException If there is a problem finding the
          * dump file.
          */
-        protected File createInitialRepository(String testName)
+        protected File createInitialRepository()
             throws SubversionException, IOException
         {
             // build a clean repository directory
-            File repos = new File(repositories, testName);
+            File repos = new File(repositories, this.testName);
             removeDirOrFile(repos);
             // create and load the repository from the default repository dump
             admin.create(repos.getAbsolutePath(), true, false,
@@ -630,19 +636,21 @@ class SVNTests extends TestCase
                     new IgnoreOutputer(), false, false, null);
             return repos;
         }
+
         /**
-         * Create the working copy for the beginning of the test
+         * Create the working copy for the beginning of the test.
+         * Assumes that {@link #testName} has been set.
+         *
          * @param repos     the repository directory
-         * @param testName  the name of the test
          * @return the directory of the working copy
          * @throws Exception
          */
-        protected File createInitialWorkingCopy(File repos, String testName)
+        protected File createInitialWorkingCopy(File repos)
             throws SubversionException, IOException
         {
             // build a clean working directory
             String uri = makeReposUrl(repos);
-            workingCopy = new File(workingCopies, testName);
+            workingCopy = new File(workingCopies, this.testName);
             removeDirOrFile(workingCopy);
             // checkout the repository
             client.checkout(uri, workingCopy.getAbsolutePath(), null, true);
@@ -683,6 +691,14 @@ class SVNTests extends TestCase
             Status[] states = client.status(workingCopy.getAbsolutePath(),
                                             true, checkRepos, true, true);
             wc.check(states, workingCopy.getAbsolutePath(), checkRepos);
+        }
+
+        /**
+         * @return The name of this test.
+         */
+        public String toString()
+        {
+            return this.testName;
         }
     }
 
