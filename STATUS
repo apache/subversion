@@ -76,18 +76,6 @@ Candidate changes:
     Votes:
       +1: dlr, hwright
 
-  * r21453, r23468
-    Fix regression causing updates of replaced files without history to fail.
-    Justification:
-      Annoying regression.
-    Note:
-      r21453 is a harmless refactoring in the test suite on which r23468
-      depends.
-    Branch:
-      1.4.x-r23468
-    Votes:
-      +1: lundblad, dlr
-
   * r23491, r23492
     Fix a hang during character translation (r23492).
     Theoretically improve memory usage in an edge case (r23491).
@@ -132,3 +120,15 @@ Approved changes:
       I guess this wouldn't bother folks with non-debug builds?
     Votes:
       +1: cmpilato, dlr
+
+  * r21453, r23468
+    Fix regression causing updates of replaced files without history to fail.
+    Justification:
+      Annoying regression.
+    Note:
+      r21453 is a harmless refactoring in the test suite on which r23468
+      depends.
+    Branch:
+      1.4.x-r23468
+    Votes:
+      +1: lundblad, dlr, lgo
