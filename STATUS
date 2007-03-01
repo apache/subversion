@@ -120,15 +120,3 @@ Approved changes:
       I guess this wouldn't bother folks with non-debug builds?
     Votes:
       +1: cmpilato, dlr
-
-  * r21453, r23468
-    Fix regression causing updates of replaced files without history to fail.
-    Justification:
-      Annoying regression.
-    Note:
-      r21453 is a harmless refactoring in the test suite on which r23468
-      depends.
-    Branch:
-      1.4.x-r23468
-    Votes:
-      +1: lundblad, dlr, lgo

@@ -1552,6 +1552,7 @@ apply_textdelta(void *file_baton,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *ent;
   svn_boolean_t replaced;
+  svn_boolean_t use_revert_base;
 
   /* Open the text base for reading, unless this is a checkout. */
   hb->source = NULL;
@@ -1577,6 +1578,7 @@ apply_textdelta(void *file_baton,
   SVN_ERR(svn_wc_entry(&ent, fb->path, adm_access, FALSE, pool));
 
   replaced = ent && ent->schedule == svn_wc_schedule_replace;
+  use_revert_base = replaced && (ent->copyfrom_url != NULL);
 
   /* Only compare checksums this file has an entry, and the entry has
      a checksum.  If there's no entry, it just means the file is
@@ -1589,7 +1591,7 @@ apply_textdelta(void *file_baton,
       const char *hex_digest;
       const char *tb;
 
-      if (replaced)
+      if (use_revert_base)
         tb = svn_wc__text_revert_path(fb->path, FALSE, pool);
       else
         tb = svn_wc__text_base_path(fb->path, FALSE, pool);
@@ -1608,7 +1610,8 @@ apply_textdelta(void *file_baton,
                svn_path_local_style(tb, pool), base_checksum, hex_digest);
         }
       
-      if (! replaced && strcmp(hex_digest, ent->checksum) != 0)
+      if ((ent && ent->checksum) && ! replaced &&
+          strcmp(hex_digest, ent->checksum) != 0)
         {
           return svn_error_createf
             (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
@@ -1617,7 +1620,7 @@ apply_textdelta(void *file_baton,
         }
     }
 
-  if (replaced)
+  if (use_revert_base)
     err = svn_wc__open_revert_base(&hb->source, fb->path,
                                    APR_READ,
                                    handler_pool);
@@ -1629,7 +1632,7 @@ apply_textdelta(void *file_baton,
     {
       if (hb->source)
         {
-          if (replaced)
+          if (use_revert_base)
             svn_error_clear(svn_wc__close_revert_base(hb->source, fb->path,
                                                       0, handler_pool));
           else
@@ -1648,7 +1651,7 @@ apply_textdelta(void *file_baton,
   /* Open the text base for writing (this will get us a temporary file).  */
   hb->dest = NULL;
 
-  if (replaced)
+  if (use_revert_base)
     err = svn_wc__open_revert_base(&hb->dest, fb->path,
                                    (APR_WRITE | APR_TRUNCATE | APR_CREATE),
                                    handler_pool);
@@ -1934,6 +1937,7 @@ merge_file(svn_stringbuf_t *log_accum,
   svn_boolean_t is_locally_modified;
   svn_boolean_t is_replaced = FALSE;
   svn_boolean_t magic_props_changed = FALSE;
+  svn_boolean_t use_revert_base = FALSE;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_wc_notify_lock_state_t local_lock_state;
 
@@ -1992,11 +1996,13 @@ merge_file(svn_stringbuf_t *log_accum,
       SVN_ERR(svn_wc_entry(&entry, file_path, adm_access, FALSE, pool));
       if (entry && entry->schedule == svn_wc_schedule_replace)
         is_replaced = TRUE;
+      if (is_replaced && entry->copyfrom_url)
+        use_revert_base = TRUE;
     }
 
   if (new_text_path)   /* is there a new text-base to install? */
     {
-      if (!is_replaced)
+      if (!use_revert_base)
         {
           txtb = svn_wc__text_base_path(base_name, FALSE, pool);
           tmp_txtb = svn_wc__text_base_path(base_name, TRUE, pool);
