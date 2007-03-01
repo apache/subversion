@@ -1402,40 +1402,36 @@ void SVNClient::propertyCreate(const char *path, const char *name,
 
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
-                     const char *outfileName,bool recurse, bool ignoreAncestry,
+                     Revision *pegRevision, const char *outfileName,
+                     bool recurse, bool ignoreAncestry,
                      bool noDiffDelete, bool force)
 {
     svn_error_t *err;
     Pool requestPool;
+    apr_pool_t *pool = requestPool.pool();
 
-    if(target1 == NULL)
+    if (target1 == NULL)
     {
-        JNIUtil::throwNullPointerException("target1");
+        JNIUtil::throwNullPointerException("target");
         return;
     }
-    if(target2 == NULL)
+    // target2 is ignored when pegRevision is provided.
+    if (target2 == NULL && pegRevision == NULL)
     {
         JNIUtil::throwNullPointerException("target2");
         return;
     }
-    if(outfileName == NULL)
+    if (outfileName == NULL)
     {
         JNIUtil::throwNullPointerException("outfileName");
         return;
     }
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
         return;
 
-    Path intTarget1(target1);
-    err = intTarget1.error_occured();
-    if (err != NULL)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
-    Path intTarget2(target2);
-    err = intTarget2.error_occured();
+    Path path1(target1);
+    err = path1.error_occured();
     if (err != NULL)
     {
         JNIUtil::handleSVNError(err);
@@ -1443,42 +1439,75 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     }
 
     apr_file_t *outfile = NULL;
-    apr_status_t rv;
-    rv = apr_file_open(&outfile, 
-                       svn_path_internal_style (outfileName, 
-                                                requestPool.pool()),
-                       APR_CREATE|APR_WRITE|APR_TRUNCATE , APR_OS_DEFAULT,
-                       requestPool.pool());
+    apr_status_t rv =
+        apr_file_open(&outfile, 
+                      svn_path_internal_style(outfileName, pool),
+                      APR_CREATE|APR_WRITE|APR_TRUNCATE , APR_OS_DEFAULT,
+                      pool);
     if (rv != APR_SUCCESS)
     {
-        err = svn_error_create(rv, NULL,_("Cannot open file."));
+        err = svn_error_createf(rv, NULL, _("Cannot open file '%s'"),
+                                outfileName);
         JNIUtil::handleSVNError(err);
         return;
     }
 
-    // we don't use any options
-    apr_array_header_t *options = svn_cstring_split("", " \t\n\r", TRUE,
-                                                    requestPool.pool());
+    // We don't use any options to diff.
+    apr_array_header_t *diffOptions = apr_array_make(pool, 0, sizeof(char *));
 
-    err = svn_client_diff2(options,
-                           intTarget1.c_str(),
-                           revision1.revision(),
-                           intTarget2.c_str(),
-                           revision2.revision(),
-                           recurse ? TRUE : FALSE,
-                           ignoreAncestry ? TRUE : FALSE,
-                           noDiffDelete ? TRUE : FALSE,
-                           force  ? TRUE : FALSE,
-                           outfile,
-                           NULL,  
-                           // errFile (not needed when using default diff)
-                           ctx,
-                           requestPool.pool());
+    if (pegRevision)
+    {
+        err = svn_client_diff_peg2(diffOptions,
+                                   path1.c_str(),
+                                   pegRevision->revision(),
+                                   revision1.revision(),
+                                   revision2.revision(),
+                                   recurse ? TRUE : FALSE,
+                                   ignoreAncestry ? TRUE : FALSE,
+                                   noDiffDelete ? TRUE : FALSE,
+                                   force  ? TRUE : FALSE,
+                                   outfile,
+                                   NULL /* error file */,
+                                   ctx,
+                                   pool);
+    }
+    else
+    {
+        // "Regular" diff (without a peg revision).
+        Path path2(target2);
+        err = path2.error_occured();
+        if (err)
+        {
+            if (outfile)
+                goto cleanup;
 
+            JNIUtil::handleSVNError(err);
+            return;
+        }
+
+        err = svn_client_diff2(diffOptions,
+                               path1.c_str(),
+                               revision1.revision(),
+                               path2.c_str(),
+                               revision2.revision(),
+                               recurse ? TRUE : FALSE,
+                               ignoreAncestry ? TRUE : FALSE,
+                               noDiffDelete ? TRUE : FALSE,
+                               force  ? TRUE : FALSE,
+                               outfile,
+                               NULL /* error file */,
+                               ctx,
+                               pool);
+    }
+
+ cleanup:
     rv = apr_file_close(outfile);
     if (rv != APR_SUCCESS)
     {
-        err = svn_error_create(rv, NULL,_("Cannot close file."));
+        svn_error_clear(err);
+
+        err = svn_error_createf(rv, NULL, _("Cannot close file '%s'"),
+                                outfileName);
         JNIUtil::handleSVNError(err);
         return;
     }
@@ -1490,82 +1519,22 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     }
 }
 
+void SVNClient::diff(const char *target1, Revision &revision1,
+                     const char *target2, Revision &revision2,
+                     const char *outfileName, bool recurse,
+                     bool ignoreAncestry, bool noDiffDelete, bool force)
+{
+    diff(target1, revision1, target2, revision2, NULL, outfileName, recurse,
+         ignoreAncestry, noDiffDelete, force);
+}
+
 void SVNClient::diff(const char *target, Revision &pegRevision,
                      Revision &startRevision, Revision &endRevision,
-                     const char *outfileName,bool recurse, bool ignoreAncestry,
-                     bool noDiffDelete, bool force)
+                     const char *outfileName, bool recurse,
+                     bool ignoreAncestry, bool noDiffDelete, bool force)
 {
-    svn_error_t *err;
-    Pool requestPool;
-
-    if(target == NULL)
-    {
-        JNIUtil::throwNullPointerException("target");
-        return;
-    }
-    if(outfileName == NULL)
-    {
-        JNIUtil::throwNullPointerException("outfileName");
-        return;
-    }
-    svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
-        return;
-
-    Path intTarget(target);
-    err = intTarget.error_occured();
-    if (err != NULL)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
-
-    apr_file_t *outfile = NULL;
-    apr_status_t rv;
-    rv = apr_file_open(&outfile, 
-                       svn_path_internal_style (outfileName, 
-                                                requestPool.pool()),
-                       APR_CREATE|APR_WRITE|APR_TRUNCATE , APR_OS_DEFAULT,
-                       requestPool.pool());
-    if (rv != APR_SUCCESS)
-    {
-        err = svn_error_create(rv, NULL,_("Cannot open file."));
-        JNIUtil::handleSVNError(err);
-        return;
-    }
-
-    // we don't use any options
-    apr_array_header_t *options = svn_cstring_split("", " \t\n\r", TRUE,
-                                                    requestPool.pool());
-
-    err = svn_client_diff_peg2(options,
-                               intTarget.c_str(),
-                               pegRevision.revision(),
-                               startRevision.revision(),
-                               endRevision.revision(),
-                               recurse ? TRUE : FALSE,
-                               ignoreAncestry ? TRUE : FALSE,
-                               noDiffDelete ? TRUE : FALSE,
-                               force  ? TRUE : FALSE,
-                               outfile,
-                               NULL,  
-                               // errFile (not needed when using default diff)
-                               ctx,
-                               requestPool.pool());
-
-    rv = apr_file_close(outfile);
-    if (rv != APR_SUCCESS)
-    {
-        err = svn_error_create(rv, NULL,_("Cannot close file."));
-        JNIUtil::handleSVNError(err);
-        return;
-    }
-
-    if (err != NULL)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    diff(target, startRevision, NULL, endRevision, &pegRevision, outfileName,
+         recurse, ignoreAncestry, noDiffDelete, force);
 }
 
 void
