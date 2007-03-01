@@ -36,11 +36,7 @@ def write_restrictive_svnserve_conf(repo_dir):
   
   fp = open(svntest.main.get_svnserve_conf_file_path(repo_dir), 'w')
   fp.write("[general]\nanon-access = none\nauth-access = write\n"
-           "authz-db = authz\n")
-  if svntest.main.enable_sasl == 1:
-    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
-  else:
-    fp.write("password-db = passwd\n")
+           "password-db = passwd\nauthz-db = authz\n")
   fp.close()
 
 def write_authz_file(sbox, rules, sections=None):
