@@ -841,13 +841,13 @@ get_dir_status(struct edit_baton *eb,
 
           /* Now, parse the thing, and copy the parsed results into
              our "global" externals hash. */
-          SVN_ERR(svn_wc_parse_externals_description2(&ext_items, path,
+          SVN_ERR(svn_wc_parse_externals_description3(&ext_items, path,
                                                       prop_val->data, pool));
           for (i = 0; ext_items && i < ext_items->nelts; i++)
             {
-              svn_wc_external_item_t *item;
+              svn_wc_external_item2_t *item;
 
-              item = APR_ARRAY_IDX(ext_items, i, svn_wc_external_item_t *);
+              item = APR_ARRAY_IDX(ext_items, i, svn_wc_external_item2_t *);
               apr_hash_set(eb->externals, svn_path_join(path,
                                                         item->target_dir,
                                                         pool),

@@ -177,6 +177,22 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item, apr_pool_t *pool)
   return new_item;
 }
 
+svn_wc_external_item2_t *
+svn_wc_external_item2_dup(const svn_wc_external_item2_t *item, apr_pool_t *pool)
+{
+  svn_wc_external_item2_t *new_item = apr_palloc(pool, sizeof(*new_item));
+
+  *new_item = *item;
+
+  if (new_item->target_dir)
+    new_item->target_dir = apr_pstrdup(pool, new_item->target_dir);
+
+  if (new_item->url)
+    new_item->url = apr_pstrdup(pool, new_item->url);
+
+  return new_item;
+}
+
 void svn_wc__compat_call_notify_func(void *baton,
                                      const svn_wc_notify_t *n,
                                      apr_pool_t *pool)
