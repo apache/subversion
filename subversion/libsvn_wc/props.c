@@ -2098,7 +2098,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
     parent_directory : svn_path_local_style(parent_directory, pool);
   
   if (externals_p)
-    *externals_p = apr_array_make(pool, 1, sizeof(svn_wc_external_item_t *));
+    *externals_p = apr_array_make(pool, 1, sizeof(svn_wc_external_item2_t *));
 
   for (i = 0; i < lines->nelts; i++)
     {
