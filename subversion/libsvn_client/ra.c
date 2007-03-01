@@ -886,9 +886,10 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
 
   start_rev = *revision;
   peg_revision = *peg_revision_p;
-  svn_client__resolve_revisions(&peg_revision, &start_rev,
-                                svn_path_is_url(path_or_url),
-                                TRUE);
+  SVN_ERR(svn_opt_resolve_revisions(&peg_revision, &start_rev,
+                                    svn_path_is_url(path_or_url),
+                                    TRUE,
+                                    pool));
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, initial_url,
                                                NULL, NULL, NULL,

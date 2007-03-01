@@ -46,7 +46,6 @@
 #include "dag.h"
 #include "lock.h"
 #include "tree.h"
-#include "revs-txns.h"
 #include "fs_fs.h"
 #include "id.h"
 

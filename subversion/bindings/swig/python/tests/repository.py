@@ -1,6 +1,6 @@
 import unittest, os, setup_path, StringIO
 from svn import core, repos, fs, delta
-import _core
+from libsvn.core import SubversionException
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
   REPOS_PATH
@@ -64,7 +64,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertEquals(self.callback_calls, 13)
 
     # Check that the dump can be cancelled
-    self.assertRaises(_core.SubversionException, repos.dump_fs2,
+    self.assertRaises(SubversionException, repos.dump_fs2,
       self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0, lambda: 1)
 
     dumpstream.close()
@@ -140,7 +140,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
     # We expect this to complain because we have no pre-revprop-change
     # hook script for the repository.
-    self.assertRaises(_core.SubversionException, repos.fs_change_rev_prop3,
+    self.assertRaises(SubversionException, repos.fs_change_rev_prop3,
                       self.repos, self.rev, "jrandom", "svn:log",
                       "Youngest revision", True, True, _authz_callback)
 

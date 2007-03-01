@@ -2,7 +2,7 @@
  * version.c: mod_dav_svn versioning provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1355,7 +1355,9 @@ merge(dav_resource *target,
   /* We've detected a 'high level' svn action to log. */
   apr_table_set(target->info->r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(target->info->r->pool,
-                             "commit r%" SVN_REVNUM_T_FMT, new_rev));
+                             "commit '%s' r%" SVN_REVNUM_T_FMT, 
+                             target->info->repos_path,
+                             new_rev));
 
   /* Since the commit was successful, the txn ID is no longer valid.
      Store an empty txn ID in the activity database so that when the

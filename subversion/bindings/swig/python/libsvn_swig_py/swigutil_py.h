@@ -118,7 +118,8 @@ PyObject *svn_swig_py_register_exception(void);
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_exception_type(void);
 
-/* raise a subversion exception, created from a normal subversion error */
+/* raise a subversion exception, created from a normal subversion
+   error.  consume the error.  */
 SVN_SWIG_SWIGUTIL_EXPORT
 void svn_swig_py_svn_exception(svn_error_t *err);
 

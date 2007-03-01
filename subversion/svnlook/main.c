@@ -86,46 +86,49 @@ enum
  */
 static const apr_getopt_option_t options_table[] =
 {
-  {"help",          'h', 0,
+  {NULL,                '?', 0,
    N_("show help on a subcommand")},
 
-  {NULL,            '?', 0,
-   N_("show help on a subcommand")},
-
-  {"version",       svnlook__version, 0,
-   N_("show program version information")},
-
-  {"revision",      'r', 1,
-   N_("specify revision number ARG")},
-
-  {"transaction",  't', 1,
-   N_("specify transaction name ARG")},
-
-  {"verbose",  'v', 0,
-   N_("be verbose")},
-
-  {"show-ids",      svnlook__show_ids, 0,
-   N_("show node revision ids for each path")},
-
-  {"no-diff-deleted", svnlook__no_diff_deleted, 0,
-   N_("do not print differences for deleted files")},
-
-  {"no-diff-added", svnlook__no_diff_added, 0,
-   N_("do not print differences for added files")},
-
-  {"diff-copy-from", svnlook__diff_copy_from, 0,
-   N_("print differences against the copy source")},
-
-  {"revprop", svnlook__revprop_opt, 0,
-   N_("operate on a revision property (use with -r or -t)")},
-
-  {"full-paths", svnlook__full_paths, 0,
-   N_("show full paths instead of indenting them")},
-
-  {"copy-info", svnlook__copy_info, 0,
+  {"copy-info",         svnlook__copy_info, 0,
    N_("show details for copies")},
 
-  {0,               0, 0, 0}
+  {"diff-copy-from",    svnlook__diff_copy_from, 0,
+   N_("print differences against the copy source")},
+
+  {"full-paths",        svnlook__full_paths, 0,
+   N_("show full paths instead of indenting them")},
+
+  {"help",              'h', 0,
+   N_("show help on a subcommand")},
+
+  {"no-diff-added",     svnlook__no_diff_added, 0,
+   N_("do not print differences for added files")},
+
+  {"no-diff-deleted",   svnlook__no_diff_deleted, 0,
+   N_("do not print differences for deleted files")},
+
+  {"non-recursive",     'N', 0,
+   N_("operate on single directory only")},
+
+  {"revision",          'r', 1,
+   N_("specify revision number ARG")},
+
+  {"revprop",           svnlook__revprop_opt, 0,
+   N_("operate on a revision property (use with -r or -t)")},
+
+  {"show-ids",          svnlook__show_ids, 0,
+   N_("show node revision ids for each path")},
+
+  {"transaction",       't', 1,
+   N_("specify transaction name ARG")},
+
+  {"verbose",           'v', 0,
+   N_("be verbose")},
+
+  {"version",           svnlook__version, 0,
+   N_("show program version information")},
+
+  {0,                   0, 0, 0}
 };
 
 
@@ -209,7 +212,7 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
    N_("usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n\n"
       "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
       "of the tree otherwise), optionally showing node revision ids.\n"),
-   {'r', 't', svnlook__show_ids, svnlook__full_paths} },
+   {'r', 't', 'N', svnlook__show_ids, svnlook__full_paths} },
 
   {"uuid", subcommand_uuid, {0},
    N_("usage: svnlook uuid REPOS_PATH\n\n"
@@ -243,6 +246,7 @@ struct svnlook_opt_state
   svn_boolean_t revprop;          /* --revprop */
   svn_boolean_t full_paths;       /* --full-paths */
   svn_boolean_t copy_info;        /* --copy-info */
+  svn_boolean_t non_recursive;    /* --non-recursive */
 };
 
 
@@ -980,13 +984,16 @@ print_diff_tree(svn_fs_root_t *root,
 }
 
 
-/* Recursively print all nodes, and (optionally) their node revision ids.
+/* Print a repository directory, maybe recursively, possibly showing
+   the node revision ids, and optionally using full paths.
 
    ROOT is the revision or transaction root used to build that tree.
    PATH and ID are the current path and node revision id being
    printed, and INDENTATION the number of spaces to prepent to that
    path's printed output.  ID may be NULL if SHOW_IDS is FALSE (in
-   which case, ids won't be printed at all).  
+   which case, ids won't be printed at all).  If RECURSE is TRUE, 
+   then print the tree recursively; otherwise, we'll stop after the
+   first level (and use INDENTATION to keep track of how deep we are).
 
    Use POOL for all allocations.  */
 static svn_error_t *
@@ -997,6 +1004,7 @@ print_tree(svn_fs_root_t *root,
            int indentation,
            svn_boolean_t show_ids,
            svn_boolean_t full_paths,
+           svn_boolean_t recurse,
            apr_pool_t *pool)
 {
   apr_pool_t *subpool;
@@ -1034,21 +1042,25 @@ print_tree(svn_fs_root_t *root,
     return SVN_NO_ERROR;
   
   /* Recursively handle the node's children. */
-  SVN_ERR(svn_fs_dir_entries(&entries, root, path, pool));
-  subpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  if (recurse || (indentation == 0))
     {
-      void *val;
-      svn_fs_dirent_t *entry;
+      SVN_ERR(svn_fs_dir_entries(&entries, root, path, pool));
+      subpool = svn_pool_create(pool);
+      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+        {
+          void *val;
+          svn_fs_dirent_t *entry;
 
-      svn_pool_clear(subpool);
-      apr_hash_this(hi, NULL, NULL, &val);
-      entry = val;
-      SVN_ERR(print_tree(root, svn_path_join(path, entry->name, pool),
-                         entry->id, (entry->kind == svn_node_dir),
-                         indentation + 1, show_ids, full_paths, subpool));
+          svn_pool_clear(subpool);
+          apr_hash_this(hi, NULL, NULL, &val);
+          entry = val;
+          SVN_ERR(print_tree(root, svn_path_join(path, entry->name, pool),
+                             entry->id, (entry->kind == svn_node_dir),
+                             indentation + 1, show_ids, full_paths,
+                             recurse, subpool));
+        }   
+      svn_pool_destroy(subpool);
     }
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }
@@ -1513,12 +1525,12 @@ do_plist(svnlook_ctxt_t *c,
 }
 
 
-/* Print the diff between revision 0 and our root. */
 static svn_error_t *
 do_tree(svnlook_ctxt_t *c, 
         const char *path,
         svn_boolean_t show_ids, 
-        svn_boolean_t full_paths, 
+        svn_boolean_t full_paths,
+        svn_boolean_t recurse,
         apr_pool_t *pool)
 {
   svn_fs_root_t *root;
@@ -1528,7 +1540,8 @@ do_tree(svnlook_ctxt_t *c,
   SVN_ERR(get_root(&root, c, pool));
   SVN_ERR(svn_fs_node_id(&id, root, path, pool));
   SVN_ERR(svn_fs_is_dir(&is_dir, root, path, pool));
-  SVN_ERR(print_tree(root, path, id, is_dir, 0, show_ids, full_paths, pool));
+  SVN_ERR(print_tree(root, path, id, is_dir, 0, show_ids, full_paths, 
+                     recurse, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1832,7 +1845,8 @@ subcommand_tree(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(get_ctxt_baton(&c, opt_state, pool));
   SVN_ERR(do_tree(c, opt_state->arg1 ? opt_state->arg1 : "", 
-                  opt_state->show_ids, opt_state->full_paths, pool));
+                  opt_state->show_ids, opt_state->full_paths,
+                  opt_state->non_recursive ? FALSE : TRUE, pool));
   return SVN_NO_ERROR;
 }
 
@@ -1960,6 +1974,10 @@ main(int argc, const char *argv[])
 
         case 't':
           opt_state.txn = opt_arg;
+          break;
+
+        case 'N':
+          opt_state.non_recursive = TRUE;
           break;
 
         case 'v':

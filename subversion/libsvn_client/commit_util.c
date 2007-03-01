@@ -48,7 +48,8 @@
 
 
 /* Add a new commit candidate (described by all parameters except
-   `COMMITTABLES') to the COMMITABLES hash. */
+   `COMMITTABLES') to the COMMITTABLES hash.  All of the commit item's
+   members are allocated out of the COMMITTABLES hash pool. */
 static void
 add_committable(apr_hash_t *committables,
                 const char *path,
@@ -200,7 +201,10 @@ static svn_wc_entry_callbacks_t add_tokens_callbacks = {
    COMMITTABLES unless it's a member of the changelist.
 
    If CTX->CANCEL_FUNC is non-null, call it with CTX->CANCEL_BATON to see 
-   if the user has cancelled the operation.  */
+   if the user has cancelled the operation.
+   
+   Any items added to COMMITTABLES are allocated from the COMITTABLES hash pool,
+   not POOL.  POOL is used for temporary allocations. */
 static svn_error_t *
 harvest_committables(apr_hash_t *committables,
                      apr_hash_t *lock_tokens,
@@ -438,9 +442,9 @@ harvest_committables(apr_hash_t *committables,
              prop was changed, we might have to send new text to the
              server to match the new newline style.  */
           if (state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
-            SVN_ERR(svn_wc_text_modified_p2(&text_mod, path,
-                                            eol_prop_changed, FALSE,
-                                            adm_access, pool));
+            SVN_ERR(svn_wc_text_modified_p(&text_mod, path,
+                                           eol_prop_changed,
+                                           adm_access, pool));
           else
             text_mod = TRUE;
         }
@@ -464,8 +468,8 @@ harvest_committables(apr_hash_t *committables,
          changed, we might have to send new text to the server to
          match the new newline style.  */
       if (entry->kind == svn_node_file)
-        SVN_ERR(svn_wc_text_modified_p2(&text_mod, path, eol_prop_changed,
-                                        FALSE, adm_access, pool));
+        SVN_ERR(svn_wc_text_modified_p(&text_mod, path, eol_prop_changed,
+                                       adm_access, pool));
     }
 
   /* Set text/prop modification flags accordingly. */
@@ -824,6 +828,7 @@ svn_client__get_copy_committables(apr_hash_t **committables,
                                   apr_pool_t *pool)
 {
   const svn_wc_entry_t *entry;
+  apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
   *committables = apr_hash_make(pool);
@@ -836,27 +841,34 @@ svn_client__get_copy_committables(apr_hash_t **committables,
         APR_ARRAY_IDX(copy_pairs, i, svn_client__copy_pair_t *);
       svn_wc_adm_access_t *dir_access;
 
+      svn_pool_clear(iterpool);
+
       /* Read the entry for this SRC. */
-      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, iterpool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_ENTRY_NOT_FOUND, NULL,
            _("'%s' is not under version control"),
-           svn_path_local_style(pair->src, pool));
+           svn_path_local_style(pair->src, iterpool));
       
       /* Get the right access baton for this SRC. */
       if (entry->kind == svn_node_dir)
-        SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, pair->src, pool));
+        SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, pair->src,
+                iterpool));
       else
         SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access,
-                                    svn_path_dirname(pair->src, pool), pool));
+                                    svn_path_dirname(pair->src, iterpool),
+                                    iterpool));
 
-      /* Handle this SRC. */
+      /* Handle this SRC.  Because add_committable() uses the hash pool to
+         allocate the new commit_item, we can safely use the iterpool here. */
       SVN_ERR(harvest_committables(*committables, NULL, pair->src,
                                    dir_access, pair->dst, entry->url, entry,
                                    NULL, FALSE, TRUE, FALSE, FALSE,
-                                   NULL, ctx, pool));
+                                   NULL, ctx, iterpool));
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }

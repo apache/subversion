@@ -396,7 +396,7 @@ typedef struct svn_client_commit_item3_t
    * part of a commit.
    *
    * When adding to this array, allocate the @c svn_prop_t and its
-   * contents in @c incoming_prop_changes->pool, so that it has the
+   * contents in @c outgoing_prop_changes->pool, so that it has the
    * same lifetime as this data structure.
    */
   apr_array_header_t *outgoing_prop_changes;

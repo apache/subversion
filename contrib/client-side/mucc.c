@@ -492,7 +492,7 @@ usage(apr_pool_t *pool, int exit_val)
     "  -p, --password ARG    use ARG as the password\n"
     "  -U, --root-url ARG    interpret all action URLs are relative to ARG\n"
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
-    "                        use \"STDIN\" to read from standard input)\n";
+    "                        use \"-\" to read from standard input)\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
   apr_pool_destroy(pool);
   exit(exit_val);
@@ -605,24 +605,10 @@ main(int argc, const char **argv)
       const char *extra_args_file_utf8;
       svn_stringbuf_t *contents, *contents_utf8;
 
-      if (strcmp(extra_args_file, "STDIN") == 0)
-        {
-          apr_file_t *f;
-          apr_status_t apr_err;
-          if ((apr_err = apr_file_open_stdin(&f, pool)))
-            err = svn_error_wrap_apr(apr_err, "Can't open stdin");
-          if (! err)
-            err = svn_stringbuf_from_aprfile(&contents, f, pool);
-          svn_error_clear(svn_io_file_close(f, pool));
-        }
-      else
-        {
-          err = svn_utf_cstring_to_utf8(&extra_args_file_utf8, 
-                                        extra_args_file, pool);
-          if (! err)
-            err = svn_stringbuf_from_file(&contents, extra_args_file_utf8, 
-                                          pool);
-        }
+      err = svn_utf_cstring_to_utf8(&extra_args_file_utf8, 
+                                    extra_args_file, pool);
+      if (! err)
+        err = svn_stringbuf_from_file2(&contents, extra_args_file_utf8, pool);
       if (! err)
         err = svn_utf_stringbuf_to_utf8(&contents_utf8, contents, pool);
       if (err)

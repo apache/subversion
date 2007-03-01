@@ -43,6 +43,7 @@
 #include "svn_time.h"
 
 #include "wc.h"
+#include "questions.h"
 #include "log.h"
 #include "adm_files.h"
 #include "adm_ops.h"
@@ -576,13 +577,13 @@ struct file_baton
      scheduled for addition without history. */
   svn_boolean_t add_existed;
 
+  /* The path to the current text base, if any.
+     This gets set if there are file content changes. */
+  const char *text_base_path;
+
   /* This gets set if the file underwent a text change, which guides
      the code that syncs up the adm dir and working copy. */
-  svn_boolean_t text_changed;
-
-  /* This gets set if the file underwent a prop change, which guides
-     the code that syncs up the adm dir and working copy. */
-  svn_boolean_t prop_changed;
+  const char *new_text_base_path;
 
   /* An array of svn_prop_t structures, representing all the property
      changes to be applied to this file. */
@@ -659,45 +660,40 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 {
   struct handler_baton *hb = baton;
   struct file_baton *fb = hb->fb;
-  svn_error_t *err = SVN_NO_ERROR, *err2 = SVN_NO_ERROR;
+  svn_error_t *err, *err2;
 
   /* Apply this window.  We may be done at that point.  */
   err = hb->apply_handler(window, hb->apply_baton);
-  if (window != NULL && err == SVN_NO_ERROR)
+  if (window != NULL && !err)
     return err;
 
   /* Either we're done (window is NULL) or we had an error.  In either
      case, clean up the handler.  */
   if (hb->source)
     {
-      err2 = svn_wc__close_text_base(hb->source, fb->path, 0, fb->pool);
-      if (err2 != SVN_NO_ERROR && err == SVN_NO_ERROR)
+      err2 = svn_wc__close_text_base(hb->source, fb->path, 0, hb->pool);
+      if (err2 && !err)
         err = err2;
       else
         svn_error_clear(err2);
     }
-  err2 = svn_wc__close_text_base(hb->dest, fb->path, 0, fb->pool);
-  if (err2 != SVN_NO_ERROR)
+  err2 = svn_wc__close_text_base(hb->dest, fb->path, 0, hb->pool);
+  if (err2)
     {
-      if (err == SVN_NO_ERROR)
+      if (!err)
         err = err2;
       else
         svn_error_clear(err2);
     }
-  svn_pool_destroy(hb->pool);
 
-  if (err != SVN_NO_ERROR)
+  if (err)
     {
-      /* We failed to apply the patch; clean up the temporary file.  */
-      const char *tmppath = svn_wc__text_base_path(fb->path, TRUE, fb->pool);
-      apr_file_remove(tmppath, fb->pool);
+      /* We failed to apply the delta; clean up the temporary file.  */
+      svn_error_clear(svn_io_remove_file(fb->new_text_base_path, hb->pool));
+      fb->new_text_base_path = NULL;
     }
-  else
-    {
-      /* Leave a note in the baton indicating that there's new text to
-         sync up.  */
-      fb->text_changed = 1;
-    }
+
+  svn_pool_destroy(hb->pool);
 
   return err;
 }
@@ -1809,6 +1805,7 @@ apply_textdelta(void *file_baton,
   svn_wc_adm_access_t *adm_access;
   const svn_wc_entry_t *ent;
   svn_boolean_t replaced;
+  svn_boolean_t use_revert_base;
 
   if (fb->skipped)
     {
@@ -1817,8 +1814,66 @@ apply_textdelta(void *file_baton,
       return SVN_NO_ERROR;
     }
 
-  /* Open the text base for reading, unless this is a checkout. */
-  hb->source = NULL;
+  /* Before applying incoming svndiff data to text base, make sure
+     text base hasn't been corrupted, and that its checksum
+     matches the expected base checksum. */
+  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
+                              svn_path_dirname(fb->path, pool), pool));
+  SVN_ERR(svn_wc_entry(&ent, fb->path, adm_access, FALSE, pool));
+
+  replaced = ent && ent->schedule == svn_wc_schedule_replace;
+  use_revert_base = replaced && (ent->copyfrom_url != NULL);
+  if (use_revert_base)
+    {
+      fb->text_base_path = svn_wc__text_revert_path(fb->path, FALSE, fb->pool);
+      fb->new_text_base_path = svn_wc__text_revert_path(fb->path, TRUE,
+                                                        fb->pool);
+    }
+  else
+    {
+      fb->text_base_path = svn_wc__text_base_path(fb->path, FALSE, fb->pool);
+      fb->new_text_base_path = svn_wc__text_base_path(fb->path, TRUE,
+                                                      fb->pool);
+    }
+
+  /* Only compare checksums if this file has an entry, and the entry has
+     a checksum.  If there's no entry, it just means the file is
+     created in this update, so there won't be any previously recorded
+     checksum to compare against.  If no checksum, well, for backwards
+     compatibility we assume that no checksum always matches. */
+  if (ent && ent->checksum)
+    {
+      unsigned char digest[APR_MD5_DIGESTSIZE];
+      const char *hex_digest;
+
+      SVN_ERR(svn_io_file_checksum(digest, fb->text_base_path, pool));
+      hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
+      
+      /* Compare the base_checksum here, rather than in the window
+         handler, because there's no guarantee that the handler will
+         see every byte of the base file. */
+      if (base_checksum)
+        {
+          if (strcmp(hex_digest, base_checksum) != 0)
+            return svn_error_createf
+              (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+               _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
+               svn_path_local_style(fb->text_base_path, pool), base_checksum,
+               hex_digest);
+        }
+      
+      if ((ent && ent->checksum) && ! replaced &&
+          strcmp(hex_digest, ent->checksum) != 0)
+        {
+          return svn_error_createf
+            (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
+             _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
+             svn_path_local_style(fb->text_base_path, pool), ent->checksum,
+             hex_digest);
+        }
+    }
+
+  /* Open the text base for reading, unless this is an added file. */
 
   /* 
      kff todo: what we really need to do here is:
@@ -1833,86 +1888,23 @@ apply_textdelta(void *file_baton,
         finished inventing yet.)
   */
 
-  /* Before applying incoming svndiff data to text base, make sure
-     text base hasn't been corrupted, and that its checksum
-     matches the expected base checksum. */
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access,
-                              svn_path_dirname(fb->path, pool), pool));
-  SVN_ERR(svn_wc_entry(&ent, fb->path, adm_access, FALSE, pool));
-
-  replaced = ent && ent->schedule == svn_wc_schedule_replace;
-
-  /* Only compare checksums this file has an entry, and the entry has
-     a checksum.  If there's no entry, it just means the file is
-     created in this update, so there won't be any previously recorded
-     checksum to compare against.  If no checksum, well, for backwards
-     compatibility we assume that no checksum always matches. */
-  if (ent && ent->checksum)
+  if (! fb->added)
     {
-      unsigned char digest[APR_MD5_DIGESTSIZE];
-      const char *hex_digest;
-      const char *tb;
-
-      if (replaced)
-        tb = svn_wc__text_revert_path(fb->path, FALSE, pool);
+      if (use_revert_base)
+        SVN_ERR(svn_wc__open_revert_base(&hb->source, fb->path,
+                                         APR_READ,
+                                         handler_pool));
       else
-        tb = svn_wc__text_base_path(fb->path, FALSE, pool);
-      SVN_ERR(svn_io_file_checksum(digest, tb, pool));
-      hex_digest = svn_md5_digest_to_cstring_display(digest, pool);
-      
-      /* Compare the base_checksum here, rather than in the window
-         handler, because there's no guarantee that the handler will
-         see every byte of the base file. */
-      if (base_checksum)
-        {
-          if (strcmp(hex_digest, base_checksum) != 0)
-            return svn_error_createf
-              (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-               _("Checksum mismatch for '%s'; expected: '%s', actual: '%s'"),
-               svn_path_local_style(tb, pool), base_checksum, hex_digest);
-        }
-      
-      if (! replaced && strcmp(hex_digest, ent->checksum) != 0)
-        {
-          return svn_error_createf
-            (SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
-             _("Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"),
-             svn_path_local_style(tb, pool), ent->checksum, hex_digest);
-        }
-    }
+        SVN_ERR(svn_wc__open_text_base(&hb->source, fb->path, APR_READ,
+                                       handler_pool));
 
-  if (replaced)
-    err = svn_wc__open_revert_base(&hb->source, fb->path,
-                                   APR_READ,
-                                   handler_pool);
+    }
   else
-    err = svn_wc__open_text_base(&hb->source, fb->path, APR_READ,
-                                 handler_pool);
-
-  if (err && !APR_STATUS_IS_ENOENT(err->apr_err))
-    {
-      if (hb->source)
-        {
-          if (replaced)
-            svn_error_clear(svn_wc__close_revert_base(hb->source, fb->path,
-                                                      0, handler_pool));
-          else
-            svn_error_clear(svn_wc__close_text_base(hb->source, fb->path,
-                                                    0, handler_pool));
-        }
-      svn_pool_destroy(handler_pool);
-      return err;
-    }
-  else if (err)
-    {
-      svn_error_clear(err);
-      hb->source = NULL;  /* make sure */
-    }
+    hb->source = NULL;
 
   /* Open the text base for writing (this will get us a temporary file).  */
-  hb->dest = NULL;
 
-  if (replaced)
+  if (use_revert_base)
     err = svn_wc__open_revert_base(&hb->dest, fb->path,
                                    (APR_WRITE | APR_TRUNCATE | APR_CREATE),
                                    handler_pool);
@@ -1923,29 +1915,15 @@ apply_textdelta(void *file_baton,
 
   if (err)
     {
-      if (hb->dest)
-        {
-          if (replaced)
-            svn_error_clear(svn_wc__close_revert_base(hb->dest, fb->path, 0,
-                                                      handler_pool));
-          else
-            svn_error_clear(svn_wc__close_text_base(hb->dest, fb->path, 0,
-                                                    handler_pool));
-        }
       svn_pool_destroy(handler_pool);
       return err;
     }
   
   /* Prepare to apply the delta.  */
-  {
-    const char *tmp_path;
-
-    apr_file_name_get(&tmp_path, hb->dest);
-    svn_txdelta_apply(svn_stream_from_aprfile(hb->source, handler_pool),
-                      svn_stream_from_aprfile(hb->dest, handler_pool),
-                      fb->digest, tmp_path, handler_pool,
-                      &hb->apply_handler, &hb->apply_baton);
-  }
+  svn_txdelta_apply(svn_stream_from_aprfile(hb->source, handler_pool),
+                    svn_stream_from_aprfile(hb->dest, handler_pool),
+                    fb->digest, fb->new_text_base_path, handler_pool,
+                    &hb->apply_handler, &hb->apply_baton);
   
   hb->pool = handler_pool;
   hb->fb = fb;
@@ -1978,15 +1956,10 @@ change_file_prop(void *file_baton,
   propchange->name = apr_pstrdup(fb->pool, name);
   propchange->value = value ? svn_string_dup(value, fb->pool) : NULL;
 
-  /* Let close_file() know that propchanges are waiting to be
-     applied. */
-  fb->prop_changed = 1;
-
   /* Special case: If use-commit-times config variable is set we
      cache the last-changed-date propval so we can use it to set
-     the working file's timestamp.  We also want it if this file
-     already existed and is obstructing an added file. */
-  if ((eb->use_commit_times || fb->existed)
+     the working file's timestamp. */
+  if (eb->use_commit_times
       && (strcmp(name, SVN_PROP_ENTRY_COMMITTED_DATE) == 0)
       && value)
     fb->last_changed_date = apr_pstrdup(fb->pool, value->data);
@@ -2105,224 +2078,145 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
 /* This is the small planet.  It has the complex responsibility of
  * "integrating" a new revision of a file into a working copy. 
  *
- * Given a FILE_PATH either already under version control, or
+ * Given a file_baton FB for a file either already under version control, or
  * prepared (see below) to join version control, fully install a
- * NEW_REVISION of the file;  ADM_ACCESS is an access baton with a
- * write lock for the directory containing FILE_PATH.
- *
- * If FILE_PATH is not already under version control (i.e., does not
- * have an entry), then the raw data (for example the new text
- * base and new props) required to put it under version control must
- * be provided by the caller.  See below for details.
+ * new revision of the file.
  *
  * By "install", we mean: create a new text-base and prop-base, merge
  * any textual and property changes into the working file, and finally
  * update all metadata so that the working copy believes it has a new
  * working revision of the file.  All of this work includes being
  * sensitive to eol translation, keyword substitution, and performing
- * all actions accumulated to existing LOG_ACCUM.
+ * all actions accumulated to FB->DIR_BATON->LOG_ACCUM.
  *
- * If HAS_NEW_TEXT_BASE is TRUE, the administrative area must contain the
- * 'new' text base for NEW_REVISION in the temporary text base location.
- * The temporary text base will be removed after a successful run of the
- * generated log commands.  If there is no text base, HAS_NEW_TEXT_BASE
- * must be FALSE.
- *
- * If USE_OBSTRUCTION is TRUE, FILE_PATH exists but is not already under
- * version control, and FILE_PATH differs from temporary text-base then
- * don't merge any textual changes, instead leave FILE_PATH as-is.
- *
- * If ADD_EXISTED is TRUE, FILE_PATH exists and is scheduled for addition
- * without history.
- *
- * The caller also provides the property changes for the file in the
- * PROP_CHANGES array; if there are no prop changes, then the caller must pass 
- * NULL instead.  This argument is an array of svn_prop_t structures, 
- * representing differences against the files existing base properties.
- * (A deletion is represented by setting an svn_prop_t's 'value'
- * field to NULL.)
- *
- * Note that the PROP_CHANGES array is expected to contain all categories of
- * props, not just 'regular' ones that the user sees.  (See enum
- * svn_prop_kind).
+ * If there's a new text base, FB->NEW_TEXT_BASE_PATH must be the full
+ * pathname of the new text base, somewhere in the administrative area
+ * of the working file.  The temporary text base will be removed after
+ * a successful run of the generated log commands.
  *
  * Set *CONTENT_STATE, *PROP_STATE and *LOCK_STATE to the state of the
  * contents, properties and repository lock, respectively, after the
  * installation.  If an error is returned, the value of these three
  * variables is undefined.
  *
- * If NEW_URL is non-null, then this URL will be attached to the file
- * in the 'entries' file.  Otherwise, the file will simply "inherit"
- * its URL from the parent dir.
- *
- * If DIFF3_CMD is non-null, then use it as the diff3 command for
- * any merging; otherwise, use the built-in merge code.
- *
- * If TIMESTAMP_STRING is non-null, then use it to set the
- * timestamp on the final working file.  The string should be
- * formatted for use by svn_time_from_cstring().
- *
- * DIGEST is the checksum of the new text-base, if present.
- *
  * POOL is used for all bookkeeping work during the installation.
  */
 static svn_error_t *
-merge_file(svn_stringbuf_t *log_accum,
-           svn_wc_notify_state_t *content_state,
+merge_file(svn_wc_notify_state_t *content_state,
            svn_wc_notify_state_t *prop_state,
            svn_wc_notify_lock_state_t *lock_state,
-           svn_wc_adm_access_t *adm_access,
-           const char *file_path,
-           svn_revnum_t new_revision,
-           svn_boolean_t has_new_text_base,
-           svn_boolean_t use_obstruction,
-           svn_boolean_t add_existed,
-           const apr_array_header_t *prop_changes,
-           const char *new_URL,
-           const char *diff3_cmd,
-           const char *timestamp_string,
-           const unsigned char *digest,
+           struct file_baton *fb,
            apr_pool_t *pool)
 {
   const char *parent_dir, *base_name;
-  const char *new_text_path = NULL;
+  struct edit_baton *eb = fb->edit_baton;
+  svn_stringbuf_t *log_accum = fb->dir_baton->log_accum;
+  svn_wc_adm_access_t *adm_access;
   svn_boolean_t is_locally_modified;
   svn_boolean_t is_replaced = FALSE;
-  svn_boolean_t magic_props_changed = FALSE;
+  svn_boolean_t magic_props_changed;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
+  const svn_wc_entry_t *entry;
 
-  /* The code flow does not depend upon these being set to NULL, but
-     it removes a gcc 3.1 `might be used uninitialized in this
-     function' warning. */
-  const char *txtb = NULL, *tmp_txtb = NULL;
+  /* Accumulated entry modifications. */
+  svn_wc_entry_t tmp_entry;
+  apr_uint64_t flags = 0;
 
-  /* Start by splitting FILE_PATH. */
-  svn_path_split(file_path, &parent_dir, &base_name, pool);
+  const char *txtb, *tmp_txtb;
 
   /*
      When this function is called on file F, we assume the following
      things are true:
 
          - The new pristine text of F, if any, is present at
-           .svn/tmp/text-base/F.svn-base
+           fb->new_text_base_path
 
          - The .svn/entries file still reflects the old version of F.
 
-         - .svn/text-base/F.svn-base is the old pristine F.
+         - fb->old_text_base_path is the old pristine F.
+           (This is only set if there's a new text base).
 
       The goal is to update the local working copy of F to reflect
       the changes received from the repository, preserving any local
       modifications.
   */
 
-  if (has_new_text_base)
-    new_text_path = svn_wc__text_base_path(file_path, TRUE, pool);
-      
+  /* Start by splitting the file path, getting an access baton for the parent,
+     and an entry for the file if any. */
+  svn_path_split(fb->path, &parent_dir, &base_name, pool);
+  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, 
+                              parent_dir, pool));
+
+  SVN_ERR(svn_wc_entry(&entry, fb->path, adm_access, FALSE, pool));
+  if (! entry && ! fb->added)
+    return svn_error_createf(
+        SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+        _("'%s' is not under version control"),
+        svn_path_local_style(fb->path, pool));
+
+  /* Get versions of the text base paths that are relative to parent_dir. */
+  if (fb->text_base_path)
+    txtb = svn_path_is_child(parent_dir, fb->text_base_path, pool);
+  else
+    txtb = NULL;
+  if (fb->new_text_base_path)
+    tmp_txtb = svn_path_is_child(parent_dir, fb->new_text_base_path, pool);
+  else
+    tmp_txtb = FALSE;
+
   /* Determine if any of the propchanges are the "magic" ones that
      might require changing the working file. */
-  magic_props_changed = svn_wc__has_magic_property(prop_changes);
+  magic_props_changed = svn_wc__has_magic_property(fb->propchanges);
 
   /* Install all kinds of properties.  It is important to do this before
      any file content merging, since that process might expand keywords, in
      which case we want the new entryprops to be in place. */
   SVN_ERR(merge_props(log_accum, prop_state, lock_state, adm_access,
-                      file_path, prop_changes, pool));
+                      fb->path, fb->propchanges, pool));
 
-  /* Has the user made local mods to the working file?  */
-  SVN_ERR(svn_wc_text_modified_p2(&is_locally_modified, file_path,
-                                  FALSE, use_obstruction, adm_access,
-                                  pool));
+  /* Has the user made local mods to the working file?
+     Note that this compares to the current pristine file, which is
+     different from fb->old_text_base_path if we have a replaced-with-history
+     file.  However, in the case we had an obstruction, we check against the
+     new text base. */
+  if (! fb->existed)
+    SVN_ERR(svn_wc__text_modified_internal_p(&is_locally_modified, fb->path,
+                                             FALSE, adm_access, FALSE, pool));
+  else if (fb->new_text_base_path)
+    SVN_ERR(svn_wc__versioned_file_modcheck(&is_locally_modified, fb->path,
+                                             adm_access,
+                                             fb->new_text_base_path,
+                                             FALSE, pool));
+  else
+    is_locally_modified = FALSE;
 
-  /* In the case where the user has replaced a file with a copy it may 
-   * not show as locally modified.  So if the file isn't listed as
-   * locally modified test to see if it has been replaced.  If so,
-   * remember that. */
-  if (!is_locally_modified)
+  if (entry && entry->schedule == svn_wc_schedule_replace)
+    is_replaced = TRUE;
+
+  if (fb->add_existed)
     {
-      const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc_entry(&entry, file_path, adm_access, FALSE, pool));
-      if (entry && entry->schedule == svn_wc_schedule_replace)
-        is_replaced = TRUE;
-    }
-
-  if (add_existed)
-    {
-      /* Immediately tweak schedule for FILE_PATH's entry so it is no
-         longer scheduled for addition.*/
-      svn_wc_entry_t tmp_entry;
+      /* Tweak schedule for the file's entry so it is no longer
+         scheduled for addition. */
       tmp_entry.schedule = svn_wc_schedule_normal;
-      SVN_ERR(svn_wc__entry_modify(adm_access,
-                                   base_name,
-                                   &tmp_entry,
-                                   SVN_WC__ENTRY_MODIFY_SCHEDULE
-                                   | SVN_WC__ENTRY_MODIFY_FORCE,
-                                   TRUE,
-                                   pool));
-    }
-
-  if (new_text_path)   /* is there a new text-base to install? */
-    {
-      if (!is_replaced)
-        {
-          txtb = svn_wc__text_base_path(base_name, FALSE, pool);
-
-          /* Files scheduled for addition without history don't have
-             a text-base so create an empty one. */
-          if (add_existed)
-            {
-              const char *txtb_fullpath = svn_path_join(
-                svn_path_dirname(file_path, pool), txtb, pool);
-              SVN_ERR(svn_io_file_create(txtb_fullpath, "", pool));
-            }
-
-          tmp_txtb = svn_wc__text_base_path(base_name, TRUE, pool);
-        }
-      else
-        {
-          txtb = svn_wc__text_revert_path(base_name, FALSE, pool);
-          tmp_txtb = svn_wc__text_revert_path(base_name, TRUE, pool);
-        }
-    }
-  else if (magic_props_changed) /* no new text base, but... */
-    {
-      /* Special edge-case: it's possible that this file installation
-         only involves propchanges, but that some of those props still
-         require a retranslation of the working file. */
-
-      const char *tmptext;
-
-      /* A log command which copies and DEtranslates the working file
-         to a tmp-text-base. */
-      SVN_ERR(svn_wc_translated_file2(&tmptext, file_path, file_path,
-                                      adm_access,
-                                      SVN_WC_TRANSLATE_TO_NF
-                                      | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
-                                      pool));
-
-      tmptext = svn_path_is_child(parent_dir, tmptext, pool);
-      /* A log command that copies the tmp-text-base and REtranslates
-         the tmp-text-base back to the working file. */
-      SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
-                                 svn_wc__copy_translate,
-                                 tmptext, base_name, FALSE, pool));
-
+      flags |= (SVN_WC__ENTRY_MODIFY_SCHEDULE |
+                SVN_WC__ENTRY_MODIFY_FORCE);
     }
 
   /* Set the new revision and URL in the entry and clean up some other
      fields. */
   SVN_ERR(loggy_tweak_entry(log_accum, adm_access, base_name,
-                            new_revision, new_URL, pool));
+                            *eb->target_revision, fb->new_URL, pool));
 
   /* For 'textual' merging, we implement this matrix.
 
                           Text file                   Binary File
                          -----------------------------------------------
     "Local Mods" &&      | svn_wc_merge uses diff3, | svn_wc_merge     |
-    (!USE_OBSTRUCTION || | possibly makes backups & | makes backups,   |
-     ADD_EXISTED)        | marks file as conflicted.| marks conflicted |
+    (!fb->existed ||     | possibly makes backups & | makes backups,   |
+     fb->add_existed)    | marks file as conflicted.| marks conflicted |
                          -----------------------------------------------
     "Local Mods" &&      |        Just leave obstructing file as-is.   |
-    USE_OBSTRUCTION      |                                             |
+    fb->existed          |                                             |
                          -----------------------------------------------
     No Mods              |        Just overwrite working file.         |
                          |                                             |
@@ -2330,7 +2224,7 @@ merge_file(svn_stringbuf_t *log_accum,
 
    So the first thing we do is figure out where we are in the
    matrix. */
-  if (new_text_path)
+  if (tmp_txtb)
     {
       if (! is_locally_modified && ! is_replaced)
         {
@@ -2338,7 +2232,10 @@ merge_file(svn_stringbuf_t *log_accum,
              or binary file!  Just write a log command to overwrite
              any working file with the new text-base.  If newline
              conversion or keyword substitution is activated, this
-             will happen as well during the copy. */
+             will happen as well during the copy.
+             For replaced files, though, we want to merge in the changes
+             even if the file is not modified compared to the (non-revert)
+             text-base. */
           SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
                                      svn_wc__copy_translate,
                                      tmp_txtb, base_name, FALSE, pool));
@@ -2347,7 +2244,7 @@ merge_file(svn_stringbuf_t *log_accum,
         {
           svn_node_kind_t wfile_kind = svn_node_unknown;
           
-          SVN_ERR(svn_io_check_path(file_path, &wfile_kind, pool));
+          SVN_ERR(svn_io_check_path(fb->path, &wfile_kind, pool));
           if (wfile_kind == svn_node_none) /* working file is missing?! */
             {
               /* Just copy the new text-base to the file. */
@@ -2355,113 +2252,129 @@ merge_file(svn_stringbuf_t *log_accum,
                                          svn_wc__copy_translate,
                                          tmp_txtb, base_name, FALSE, pool));
             }
-          else if (use_obstruction && ! add_existed)
-            {
-              /* A valid obstruction to an added file exists and it's text
-                 differs from the added file. */
-              svn_wc_entry_t tmp_entry;
-
-              SVN_ERR (svn_time_from_cstring(&(tmp_entry.text_time),
-                                             timestamp_string,pool));
-
-              SVN_ERR(svn_wc__loggy_entry_modify(
-                        &log_accum, adm_access, base_name, &tmp_entry,
-                        SVN_WC__ENTRY_MODIFY_TEXT_TIME, pool));
-            }
-          else  /* working file exists and has local mods
-                   or is scheduled for addition.*/
+          else if (! fb->existed)
+            /* Working file exists and has local mods
+               or is scheduled for addition but is not an obstruction. */
             {                  
               /* Now we need to let loose svn_wc_merge2() to merge the
                  textual changes into the working file. */
               const char *oldrev_str, *newrev_str;
-              const svn_wc_entry_t *e;
-              const char *base;
+              const char *merge_left;
               
               /* Create strings representing the revisions of the
                  old and new text-bases. */
-              SVN_ERR(svn_wc_entry(&e, file_path, adm_access, FALSE, pool));
-              if (! e)
-                return svn_error_createf(
-                  SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                  _("'%s' is not under version control"),
-                  svn_path_local_style(file_path, pool));
-
               oldrev_str = apr_psprintf(pool, ".r%ld",
-                                        e->revision);
+                                        entry->revision);
               newrev_str = apr_psprintf(pool, ".r%ld",
-                                        new_revision);
+                                        *eb->target_revision);
 
-              /* Merge the changes from the old-textbase (TXTB) to
-                 new-textbase (TMP_TXTB) into the file we're
-                 updating (BASE_NAME). Append commands to update the
-                 working copy to LOG_ACCUM. */
-              base = svn_wc_adm_access_path(adm_access);
+              if (fb->add_existed && ! is_replaced)
+                {
+                  SVN_ERR(svn_wc_create_tmp_file2(NULL, &merge_left,
+                                                  svn_wc_adm_access_path(
+                                                      adm_access),
+                                                  svn_io_file_del_none,
+                                                  pool));
+                }
+              else
+                merge_left = fb->text_base_path;
+
+              /* Merge the changes from the old textbase to the new
+                 textbase into the file we're updating.
+                 Remember that this function wants full paths! */
               SVN_ERR(svn_wc__merge_internal
                       (&log_accum, &merge_outcome,
-                       svn_path_join(base, txtb, pool),
-                       svn_path_join(base, tmp_txtb, pool),
-                       svn_path_join(base, base_name, pool),
+                       merge_left,
+                       fb->new_text_base_path,
+                       fb->path,
                        adm_access,
                        oldrev_str, newrev_str, ".mine",
-                       FALSE, diff3_cmd, NULL, prop_changes,
+                       FALSE, eb->diff3_cmd, NULL, fb->propchanges,
                        pool));
-
+              /* If we created a temporary left merge file, get rid of it. */
+              if (merge_left != fb->text_base_path)
+                SVN_ERR(svn_wc__loggy_remove(&log_accum, adm_access,
+                                             svn_path_is_child(parent_dir,
+                                                               merge_left,
+                                                               pool), pool));
             } /* end: working file exists and has mods */
         } /* end: working file has mods */
-    }  /* end:  "textual" merging process */
-  else if (*lock_state == svn_wc_notify_lock_state_unlocked)
-    /* If a lock was removed and we didn't update the text contents, we
-       might need to set the file read-only. */
-    SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum, adm_access,
-                                             base_name, pool));
-
-  if (new_text_path)
+    } /* end: "textual" merging process */
+  else
     {
-      /* Write out log commands to set up the new text base and its
-         checksum. */
+      if (magic_props_changed) /* no new text base, but... */
+        {
+          /* Special edge-case: it's possible that this file installation
+             only involves propchanges, but that some of those props still
+             require a retranslation of the working file. */
 
+          const char *tmptext;
+
+          /* Copy and DEtranslate the working file to a temp text-base.
+             Note that detranslation is done according to the old props. */
+          SVN_ERR(svn_wc_translated_file2(&tmptext, fb->path, fb->path,
+                                          adm_access,
+                                          SVN_WC_TRANSLATE_TO_NF
+                                          | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+                                          pool));
+
+          tmptext = svn_path_is_child(parent_dir, tmptext, pool);
+          /* A log command that copies the tmp-text-base and REtranslates
+             it back to the working file.
+             Now, since this is done during the execution of the log file, this
+             retranslation is actually done according to the new props. */
+          SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
+                                     svn_wc__copy_translate,
+                                     tmptext, base_name, FALSE, pool));
+        }
+
+      if (*lock_state == svn_wc_notify_lock_state_unlocked)
+        /* If a lock was removed and we didn't update the text contents, we
+           might need to set the file read-only. */
+        SVN_ERR(svn_wc__loggy_maybe_set_readonly(&log_accum, adm_access,
+                                                 base_name, pool));
+    }
+
+  /* Deal with installation of the new textbase, if appropriate. */
+  if (tmp_txtb)
+    {
       SVN_ERR(svn_wc__loggy_move(&log_accum, NULL,
                                  adm_access, tmp_txtb, txtb, FALSE, pool));
-
       SVN_ERR(svn_wc__loggy_set_readonly(&log_accum, adm_access,
                                          txtb, pool));
 
       /* If the file is replaced don't write the checksum.  Checksum is blank
-       * on replaced files */
+         on replaced files. */
       if (!is_replaced)
         {
-          svn_wc_entry_t tmp_entry;
-
-          tmp_entry.checksum = svn_md5_digest_to_cstring(digest, pool);
-
-          SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
-                                             base_name, &tmp_entry,
-                                             SVN_WC__ENTRY_MODIFY_CHECKSUM,
-                                             pool));
+          tmp_entry.checksum = svn_md5_digest_to_cstring(fb->digest, pool);
+          flags |= SVN_WC__ENTRY_MODIFY_CHECKSUM;
         }
     }
+
+  /* Do the entry modifications we've accumulated. */
+  SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
+                                     base_name, &tmp_entry, flags, pool));
 
   /* Log commands to handle text-timestamp */
   if (!is_locally_modified)
     {
-      if (timestamp_string && !use_obstruction)
-        /* Adjust working copy file unless this file is an allowed
-           obstruction. */
+      /* Adjust working copy file unless this file is an allowed
+         obstruction. */
+      if (fb->last_changed_date && !fb->existed)
         SVN_ERR(svn_wc__loggy_set_timestamp(&log_accum, adm_access,
-                                            base_name, timestamp_string,
+                                            base_name, fb->last_changed_date,
                                             pool));
 
-      if (new_text_path || magic_props_changed)
+      if (tmp_txtb || magic_props_changed)
         /* Adjust entries file to match working file */
         SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
                 (&log_accum, adm_access,
                  base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
     }
 
+  /* Set the returned content state. */
 
-  /* Initialize the state of our returned value. */
-  *content_state = svn_wc_notify_state_unknown;
-      
   /* This is kind of interesting.  Even if no new text was
      installed (i.e., new_text_path was null), we could still
      report a pre-existing conflict state.  Say a file, already
@@ -2471,13 +2384,13 @@ merge_file(svn_stringbuf_t *log_accum,
 
   if (merge_outcome == svn_wc_merge_conflict)
     *content_state = svn_wc_notify_state_conflicted;
-  else if (new_text_path)
-  {
-    if (is_locally_modified)
-      *content_state = svn_wc_notify_state_merged;
-    else
-      *content_state = svn_wc_notify_state_changed;
-  }
+  else if (fb->new_text_base_path)
+    {
+      if (is_locally_modified)
+        *content_state = svn_wc_notify_state_merged;
+      else
+        *content_state = svn_wc_notify_state_changed;
+    }
   else
     *content_state = svn_wc_notify_state_unchanged;
 
@@ -2493,11 +2406,8 @@ close_file(void *file_baton,
 {
   struct file_baton *fb = file_baton;
   struct edit_baton *eb = fb->edit_baton;
-  const char *parent_path;
-  apr_array_header_t *propchanges = NULL;
   svn_wc_notify_state_t content_state, prop_state;
   svn_wc_notify_lock_state_t lock_state;
-  svn_wc_adm_access_t *adm_access;
 
   if (fb->skipped)
     {
@@ -2506,7 +2416,7 @@ close_file(void *file_baton,
     }
 
   /* window-handler assembles new pristine text in .svn/tmp/text-base/  */
-  if (fb->text_changed && text_checksum)
+  if (fb->new_text_base_path && text_checksum)
     {
       const char *real_sum = svn_md5_digest_to_cstring(fb->digest, pool);
           
@@ -2517,30 +2427,7 @@ close_file(void *file_baton,
            svn_path_local_style(fb->path, pool), text_checksum, real_sum);
     }
 
-  if (fb->prop_changed)
-    propchanges = fb->propchanges;
-
-  parent_path = svn_path_dirname(fb->path, pool);
-    
-  SVN_ERR(svn_wc_adm_retrieve(&adm_access, eb->adm_access, 
-                              parent_path, pool));
-
-  SVN_ERR(merge_file(fb->dir_baton->log_accum,
-                     &content_state,
-                     &prop_state,
-                     &lock_state,
-                     adm_access,
-                     fb->path,
-                     (*eb->target_revision),
-                     fb->text_changed,
-                     fb->existed,
-                     fb->add_existed,
-                     propchanges,
-                     fb->new_URL,
-                     eb->diff3_cmd,
-                     fb->last_changed_date,
-                     fb->digest,
-                     pool));
+  SVN_ERR(merge_file(&content_state, &prop_state, &lock_state, fb, pool));
 
   /* We have one less referrer to the directory's bump information. */
   SVN_ERR(maybe_bump_dir_info(eb, fb->bump_info, pool));
