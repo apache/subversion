@@ -21,6 +21,7 @@ import org.tigris.subversion.javahl.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
@@ -1955,6 +1956,78 @@ public class BasicTests extends SVNTests
               client.commit(new String[]{thisTest.getWCPath()}, "log msg",
                       true), 5);
  
+    }
+
+    /**
+     * Test the {@link SVNClientInterface.diff()} APIs.
+     * @since 1.5
+     */
+    public void testDiff()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(true);
+        File diffOutput = new File(super.localTmp, thisTest.testName);
+        final String sepLine =
+            "===================================================================\n";
+        final String expectedDiffBody =
+            "@@ -1 +1 @@\n" +
+            "-This is the file 'iota'.\n" +
+            "\\ No newline at end of file\n" +
+            "+This is the file 'mu'.\n" +
+            "\\ No newline at end of file\n";
+
+        // Two-path diff of URLs.
+        String expectedDiffOutput = "Index: iota\n" + sepLine +
+            "--- iota\t(.../iota)\t(revision 1)\n" +
+            "+++ iota\t(.../A/mu)\t(revision 1)\n" +
+            expectedDiffBody;
+        client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
+                    thisTest.getUrl() + "/A/mu", Revision.HEAD,
+                    diffOutput.getPath(), false, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
+
+        // Two-path diff of WC paths.
+        String iotaPath = thisTest.getWCPath() + "/iota";
+        PrintWriter writer = new PrintWriter(new FileOutputStream(iotaPath));
+        writer.print("This is the file 'mu'.");
+        writer.flush();
+        writer.close();
+        expectedDiffOutput = "Index: " + iotaPath + '\n' + sepLine +
+            "--- " + iotaPath + "\t(revision 1)\n" +
+            "+++ " + iotaPath + "\t(working copy)\n" +
+            expectedDiffBody;
+        client.diff(iotaPath, Revision.BASE,
+                    iotaPath, Revision.WORKING,
+                    diffOutput.getPath(), false, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
+
+        // Peg revision diff of a single file.
+        client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
+                    new Revision.Number(1), Revision.HEAD,
+                    diffOutput.getPath(), false, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 "", diffOutput);
+
+        diffOutput.delete();
+    }
+
+    private void assertFileContentsEquals(String msg, String expected,
+                                          File actual)
+        throws IOException
+    {
+        FileReader reader = new FileReader(actual);
+        StringBuffer buf = new StringBuffer();
+        int ch;
+        while ((ch = reader.read()) != -1)
+        {
+            buf.append((char) ch);
+        }
+        assertEquals(msg, expected, buf.toString());
     }
 
     /**
