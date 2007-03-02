@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-02-26 15:26+0800\n"
-"PO-Revision-Date: 2007-02-26 15:50+0800\n"
+"POT-Creation-Date: 2007-03-02 14:53+0800\n"
+"PO-Revision-Date: 2007-03-02 15:11+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -920,7 +920,7 @@ msgstr "“%s”不存在"
 
 #: libsvn_client/commit.c:606
 #: libsvn_client/copy.c:283
-#: svnlook/main.c:1204
+#: svnlook/main.c:1216
 #, c-format
 msgid "Path '%s' does not exist"
 msgstr "路径“%s”不存在"
@@ -928,8 +928,8 @@ msgstr "路径“%s”不存在"
 #: libsvn_client/commit.c:737
 #: libsvn_client/copy.c:292
 #: libsvn_client/copy.c:617
-#: libsvn_client/copy.c:868
-#: libsvn_client/copy.c:1194
+#: libsvn_client/copy.c:869
+#: libsvn_client/copy.c:1196
 #, c-format
 msgid "Path '%s' already exists"
 msgstr "路径“%s”已经存在"
@@ -940,17 +940,17 @@ msgid "'%s' is a reserved name and cannot be imported"
 msgstr "“%s”是保留名称，无法被导入"
 
 #: libsvn_client/commit.c:868
-#: libsvn_client/copy.c:760
+#: libsvn_client/copy.c:761
 msgid "Commit failed (details follow):"
 msgstr "提交失败(细节如下): "
 
 #: libsvn_client/commit.c:876
-#: libsvn_client/copy.c:768
+#: libsvn_client/copy.c:769
 msgid "Commit succeeded, but other errors follow:"
 msgstr "提交成功，但是发生了其它错误，细节如下: "
 
 #: libsvn_client/commit.c:883
-#: libsvn_client/copy.c:775
+#: libsvn_client/copy.c:776
 msgid "Error unlocking locked dirs (details follow):"
 msgstr "解除锁定目录出错(细节如下): "
 
@@ -959,7 +959,7 @@ msgid "Error bumping revisions post-commit (details follow):"
 msgstr "执行post-commit出错 (细节如下): "
 
 #: libsvn_client/commit.c:905
-#: libsvn_client/copy.c:786
+#: libsvn_client/copy.c:787
 msgid "Error in post-commit clean-up (details follow):"
 msgstr "清理post-commit出错 (细节如下): "
 
@@ -1005,7 +1005,7 @@ msgstr "提交项目“%s”有复制标记，但是没有源地址(copyfrom URL
 
 #: libsvn_client/commit_util.c:709
 #: libsvn_client/commit_util.c:851
-#: libsvn_client/copy.c:1488
+#: libsvn_client/copy.c:1490
 #: libsvn_client/delete.c:67
 #: libsvn_client/diff.c:1468
 #: libsvn_client/diff.c:2198
@@ -1042,8 +1042,8 @@ msgstr "提交项目“%s”有复制标记，但是没有源地址(copyfrom URL
 #: libsvn_wc/questions.c:300
 #: libsvn_wc/status.c:729
 #: libsvn_wc/translate.c:269
-#: libsvn_wc/update_editor.c:2155
-#: libsvn_wc/update_editor.c:3113
+#: libsvn_wc/update_editor.c:2154
+#: libsvn_wc/update_editor.c:3116
 #, c-format
 msgid "'%s' is not under version control"
 msgstr "“%s”尚未纳入版本控制"
@@ -1084,7 +1084,7 @@ msgid "Commit item '%s' has copy flag but an invalid revision"
 msgstr "提交项目“%s”有复制标志，但是版本无效"
 
 #: libsvn_client/copy.c:302
-#: libsvn_client/copy.c:1204
+#: libsvn_client/copy.c:1206
 #: libsvn_client/update.c:78
 #, c-format
 msgid "Path '%s' is not a directory"
@@ -1106,55 +1106,55 @@ msgstr "无法移动URL“%s”到本身"
 msgid "Path '%s' does not exist in revision %ld"
 msgstr "版本 %2$ld 中不存在路径“%1$s”"
 
-#: libsvn_client/copy.c:1043
+#: libsvn_client/copy.c:1045
 #, c-format
 msgid "Source URL '%s' is from foreign repository; leaving it as a disjoint WC"
 msgstr "源URL“%s”来自其它仓库；把它当作脱离的工作副本"
 
-#: libsvn_client/copy.c:1181
+#: libsvn_client/copy.c:1183
 #, c-format
 msgid "Path '%s' not found in revision %ld"
 msgstr "版本 %2$ld 中找不到路径“%1$s”"
 
-#: libsvn_client/copy.c:1186
+#: libsvn_client/copy.c:1188
 #, c-format
 msgid "Path '%s' not found in head revision"
 msgstr "HEAD 版本中找不到路径“%s”"
 
-#: libsvn_client/copy.c:1229
+#: libsvn_client/copy.c:1231
 #, c-format
 msgid "Entry for '%s' exists (though the working file is missing)"
 msgstr "“%s”的入口存在(尽管丢失了工作文件)"
 
-#: libsvn_client/copy.c:1323
+#: libsvn_client/copy.c:1325
 #: libsvn_client/log.c:86
 msgid "Revision type requires a working copy path, not a URL"
 msgstr "版本类型需要工作目录，不是URL"
 
-#: libsvn_client/copy.c:1358
+#: libsvn_client/copy.c:1360
 msgid "Cannot mix repository and working copy sources"
 msgstr "不能在源中混合仓库和工作副本"
 
-#: libsvn_client/copy.c:1400
+#: libsvn_client/copy.c:1402
 #, c-format
 msgid "Cannot copy path '%s' into its own child '%s'"
 msgstr "无法复制路径“%s”到其子目录“%s”中"
 
-#: libsvn_client/copy.c:1420
+#: libsvn_client/copy.c:1422
 #, c-format
 msgid "Cannot move path '%s' into itself"
 msgstr "无法移动路径“%s”到本身"
 
-#: libsvn_client/copy.c:1429
+#: libsvn_client/copy.c:1431
 msgid "Moves between the working copy and the repository are not supported"
 msgstr "不支持在工作副本和仓库之间移动"
 
-#: libsvn_client/copy.c:1494
+#: libsvn_client/copy.c:1496
 #, c-format
 msgid "'%s' does not seem to have a URL associated with it"
 msgstr "“%s”似乎没有关联的URL"
 
-#: libsvn_client/copy.c:1832
+#: libsvn_client/copy.c:1834
 #: svn/move-cmd.c:60
 msgid "Cannot specify revisions (except HEAD) with move operations"
 msgstr "移动操作不能指定版本"
@@ -1295,7 +1295,7 @@ msgstr "“%s”已存在"
 #: libsvn_client/export.c:687
 #: libsvn_wc/adm_crawler.c:908
 #: libsvn_wc/update_editor.c:1860
-#: libsvn_wc/update_editor.c:2423
+#: libsvn_wc/update_editor.c:2426
 #, c-format
 msgid "Checksum mismatch for '%s'; expected: '%s', actual: '%s'"
 msgstr "“%s”的校验和不匹配；期望: “%s”，实际: “%s”"
@@ -2977,7 +2977,7 @@ msgstr "对“%2$s”的请求 %1$s 失败"
 
 #: libsvn_ra_local/ra_plugin.c:103
 #: libsvn_ra_local/ra_plugin.c:588
-#: libsvn_wc/update_editor.c:2565
+#: libsvn_wc/update_editor.c:2568
 #, c-format
 msgid ""
 "'%s'\n"
@@ -3304,8 +3304,8 @@ msgstr "不支持ra_svn RA加载器版本 %d"
 
 #: libsvn_ra_svn/cram.c:194
 #: libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/sasl_auth.c:389
-#: libsvn_ra_svn/sasl_auth.c:444
+#: libsvn_ra_svn/sasl_auth.c:436
+#: libsvn_ra_svn/sasl_auth.c:483
 #: libsvn_ra_svn/simple_auth.c:61
 msgid "Unexpected server response to authentication"
 msgstr "服务器意外响应认证请求"
@@ -3379,34 +3379,30 @@ msgstr "错误列表非法"
 msgid "Unknown status '%s' in command response"
 msgstr "命令响应中的状态“%s”未知"
 
-#: libsvn_ra_svn/sasl_auth.c:179
+#: libsvn_ra_svn/sasl_auth.c:171
 #: svnserve/sasl_auth.c:104
 #: svnserve/sasl_auth.c:114
 #, c-format
 msgid "Could not initialize the SASL library"
 msgstr "不能初始化 SASL 库"
 
-#: libsvn_ra_svn/sasl_auth.c:279
-msgid "Can't get user name"
-msgstr "无法获取用户名"
-
-#: libsvn_ra_svn/sasl_auth.c:286
-#: libsvn_ra_svn/simple_auth.c:97
-#: libsvn_subr/prompt.c:156
-#, c-format
-msgid "Can't get password"
-msgstr "无法取得密码"
-
-#: libsvn_ra_svn/sasl_auth.c:293
-msgid "Unhandled SASL interaction"
-msgstr "未处理的 SASL 交互"
-
-#: libsvn_ra_svn/sasl_auth.c:761
+#: libsvn_ra_svn/sasl_auth.c:822
 #: libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
 #, c-format
 msgid "Authentication error from server: %s"
 msgstr "服务器报告认证错误: %s"
+
+#: libsvn_ra_svn/sasl_auth.c:826
+#, fuzzy
+msgid "Can't get username or password"
+msgstr "无法取得密码"
+
+#: libsvn_ra_svn/simple_auth.c:97
+#: libsvn_subr/prompt.c:156
+#, c-format
+msgid "Can't get password"
+msgstr "无法取得密码"
 
 #: libsvn_ra_svn/simple_auth.c:117
 msgid "Cannot negotiate authentication mechanism"
@@ -3694,7 +3690,7 @@ msgstr "节点“%s”的动作不能识别"
 msgid " done.\n"
 msgstr "完成。\n"
 
-#: libsvn_repos/load.c:1231
+#: libsvn_repos/load.c:1233
 #, c-format
 msgid ""
 "\n"
@@ -3705,7 +3701,7 @@ msgstr ""
 "------- 提交后版本 %ld >>>\n"
 "\n"
 
-#: libsvn_repos/load.c:1237
+#: libsvn_repos/load.c:1239
 #, c-format
 msgid ""
 "\n"
@@ -5015,7 +5011,7 @@ msgstr "“%s”没有写入锁定"
 msgid "Lock file '%s' is not a regular file"
 msgstr "锁定文件“%s”不是普通文件"
 
-#: libsvn_wc/log.c:353
+#: libsvn_wc/log.c:355
 msgid "Can't move source to dest"
 msgstr "无法移动源至目的"
 
@@ -5023,127 +5019,127 @@ msgstr "无法移动源至目的"
 #.
 #. This is implemented as a macro so that the error created has a useful
 #. line number associated with it.
-#: libsvn_wc/log.c:516
+#: libsvn_wc/log.c:518
 #, c-format
 msgid "In directory '%s'"
 msgstr "在目录“%s”中"
 
-#: libsvn_wc/log.c:541
+#: libsvn_wc/log.c:543
 #, c-format
 msgid "Missing 'left' attribute in '%s'"
 msgstr "“%s”丢失了“left”属性"
 
-#: libsvn_wc/log.c:548
+#: libsvn_wc/log.c:550
 #, c-format
 msgid "Missing 'right' attribute in '%s'"
 msgstr "“%s”丢失了“right”属性"
 
-#: libsvn_wc/log.c:616
+#: libsvn_wc/log.c:618
 #, c-format
 msgid "Missing 'dest' attribute in '%s'"
 msgstr "“%s”丢失了“dest”属性"
 
-#: libsvn_wc/log.c:697
+#: libsvn_wc/log.c:699
 #, c-format
 msgid "Missing 'timestamp' attribute in '%s'"
 msgstr "“%s”丢失“timestamp”属性"
 
-#: libsvn_wc/log.c:793
-#: libsvn_wc/log.c:833
+#: libsvn_wc/log.c:795
+#: libsvn_wc/log.c:835
 #, c-format
 msgid "Error getting 'affected time' on '%s'"
 msgstr "取得“%s”的“affected time”出错"
 
-#: libsvn_wc/log.c:844
+#: libsvn_wc/log.c:852
 #, c-format
 msgid "Error modifying entry for '%s'"
 msgstr "修改“%s”的入口出错"
 
-#: libsvn_wc/log.c:870
+#: libsvn_wc/log.c:878
 #, c-format
 msgid "Error removing lock from entry for '%s'"
 msgstr "删除条目“%s”的锁出错"
 
-#: libsvn_wc/log.c:893
+#: libsvn_wc/log.c:901
 #, c-format
 msgid "Error removing changelist from entry '%s'"
 msgstr "从入口“%s”删除修改列表出错"
 
-#: libsvn_wc/log.c:1025
+#: libsvn_wc/log.c:1033
 #, c-format
 msgid "Missing 'revision' attribute for '%s'"
 msgstr "“%s”丢失了“revision”属性"
 
-#: libsvn_wc/log.c:1049
+#: libsvn_wc/log.c:1057
 #, c-format
 msgid "Log command for directory '%s' is mislocated"
 msgstr "目录“%s”的日志命令被错置"
 
-#: libsvn_wc/log.c:1245
+#: libsvn_wc/log.c:1253
 #, c-format
 msgid "Error checking existence of '%s'"
 msgstr "检查“%s”是否存在出错"
 
-#: libsvn_wc/log.c:1302
+#: libsvn_wc/log.c:1310
 #, c-format
 msgid "Error replacing text-base of '%s'"
 msgstr "替换“%s”的文件参考基础出错"
 
-#: libsvn_wc/log.c:1307
+#: libsvn_wc/log.c:1315
 #, c-format
 msgid "Error getting 'affected time' of '%s'"
 msgstr "取得“%s”的“affected time”出错"
 
-#: libsvn_wc/log.c:1348
+#: libsvn_wc/log.c:1356
 #, c-format
 msgid "Error getting 'affected time' for '%s'"
 msgstr "取得“%s”的“affected time”出错"
 
-#: libsvn_wc/log.c:1363
+#: libsvn_wc/log.c:1371
 #, c-format
 msgid "Error comparing '%s' and '%s'"
 msgstr "比较“%s”与“%s”出错"
 
-#: libsvn_wc/log.c:1408
-#: libsvn_wc/log.c:1475
+#: libsvn_wc/log.c:1416
+#: libsvn_wc/log.c:1483
 #, c-format
 msgid "Error modifying entry of '%s'"
 msgstr "修改“%s”的入口出错"
 
-#: libsvn_wc/log.c:1530
+#: libsvn_wc/log.c:1538
 msgid "Invalid 'format' attribute"
 msgstr "无效的format属性"
 
-#: libsvn_wc/log.c:1565
+#: libsvn_wc/log.c:1573
 #, c-format
 msgid "Log entry missing 'name' attribute (entry '%s' for directory '%s')"
 msgstr "日志项丢失“name”属性 (入口“%s”对应目录“%s”)"
 
-#: libsvn_wc/log.c:1636
+#: libsvn_wc/log.c:1644
 #, c-format
 msgid "Unrecognized logfile element '%s' in '%s'"
 msgstr "“%2$s”中有无法识别的日志文件元素“%1$s”"
 
-#: libsvn_wc/log.c:1647
+#: libsvn_wc/log.c:1655
 #, c-format
 msgid "Error processing command '%s' in '%s'"
 msgstr "在“%2$s”中处理命令“%1$s”出错"
 
-#: libsvn_wc/log.c:1829
+#: libsvn_wc/log.c:1837
 msgid "Couldn't open log"
 msgstr "无法打开日志文件"
 
-#: libsvn_wc/log.c:1840
+#: libsvn_wc/log.c:1848
 #, c-format
 msgid "Error reading administrative log file in '%s'"
 msgstr "读取“%s”的管理日志文件出错"
 
-#: libsvn_wc/log.c:2454
+#: libsvn_wc/log.c:2466
 #, c-format
 msgid "Error writing log for '%s'"
 msgstr "为“%s”写入日志出错"
 
-#: libsvn_wc/log.c:2503
+#: libsvn_wc/log.c:2515
 #, c-format
 msgid "'%s' is not a working copy directory"
 msgstr "“%s”不是工作副本目录"
@@ -5347,12 +5343,12 @@ msgstr "目录“%2$s”中的文件“%1$s”不是纳入版本控制的资源"
 msgid "Checksum mismatch for '%s'; recorded: '%s', actual: '%s'"
 msgstr "“%s”的校验和不匹配；记录: “%s”，实际: “%s”"
 
-#: libsvn_wc/update_editor.c:2958
+#: libsvn_wc/update_editor.c:2961
 #, c-format
 msgid "'%s' has no ancestry information"
 msgstr "“%s”没有演进历程信息"
 
-#: libsvn_wc/update_editor.c:3121
+#: libsvn_wc/update_editor.c:3124
 #, c-format
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "Copyfrom-url“%s”与“%s”的仓库根目录不相同"
@@ -5484,7 +5480,7 @@ msgid "Path: %s\n"
 msgstr "路径: %s\n"
 
 #: svn/info-cmd.c:252
-#: svnlook/main.c:734
+#: svnlook/main.c:738
 #, c-format
 msgid "Name: %s\n"
 msgstr "名称: %s\n"
@@ -5716,7 +5712,7 @@ msgstr "强制校验日志信息资源"
 #: svndumpfilter/main.c:780
 #: svndumpfilter/main.c:783
 #: svnlook/main.c:90
-#: svnlook/main.c:93
+#: svnlook/main.c:102
 #: svnsync/main.c:135
 #: svnsync/main.c:137
 msgid "show help on a subcommand"
@@ -5735,6 +5731,7 @@ msgid "descend recursively"
 msgstr "向下递归"
 
 #: svn/main.c:68
+#: svnlook/main.c:111
 msgid "operate on single directory only"
 msgstr "只在单个目录操作"
 
@@ -5781,7 +5778,7 @@ msgstr "将ARG的值视为字符编码"
 #: svn/main.c:92
 #: svnadmin/main.c:236
 #: svndumpfilter/main.c:786
-#: svnlook/main.c:96
+#: svnlook/main.c:129
 #: svnserve/main.c:150
 #: svnsync/main.c:133
 #: svnversion/main.c:125
@@ -5868,7 +5865,7 @@ msgid "try operation but make no changes"
 msgstr "尝试操作但没有修改"
 
 #: svn/main.c:144
-#: svnlook/main.c:111
+#: svnlook/main.c:108
 msgid "do not print differences for deleted files"
 msgstr "不要输出删除文件造成的差异"
 
@@ -6939,7 +6936,7 @@ msgstr ""
 
 #: svn/main.c:869
 #: svnadmin/main.c:78
-#: svnlook/main.c:285
+#: svnlook/main.c:289
 #: svnsync/main.c:180
 msgid "Caught signal"
 msgstr "捕捉到信号"
@@ -6991,7 +6988,7 @@ msgstr "原生换行符号参数“%s”中有语法错误"
 
 #: svn/main.c:1324
 #: svndumpfilter/main.c:1207
-#: svnlook/main.c:2048
+#: svnlook/main.c:2066
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "必须提供子命令参数\n"
@@ -6999,7 +6996,7 @@ msgstr "必须提供子命令参数\n"
 #: svn/main.c:1343
 #: svnadmin/main.c:1443
 #: svndumpfilter/main.c:1226
-#: svnlook/main.c:2067
+#: svnlook/main.c:2085
 #, c-format
 msgid "Unknown command: '%s'\n"
 msgstr "未知命令: “%s”\n"
@@ -7814,7 +7811,7 @@ msgstr ""
 "可用的子命令: \n"
 
 #: svnadmin/main.c:698
-#: svnlook/main.c:1674
+#: svnlook/main.c:1687
 #: svnserve/main.c:204
 msgid ""
 "The following repository back-end (FS) modules are available:\n"
@@ -7887,25 +7884,25 @@ msgid "Exactly one file argument required"
 msgstr "必须恰好提供一个文件参数"
 
 #: svnadmin/main.c:1117
-#: svnlook/main.c:1739
+#: svnlook/main.c:1752
 #, c-format
 msgid "UUID Token: %s\n"
 msgstr "UUID 标识: %s\n"
 
 #: svnadmin/main.c:1118
-#: svnlook/main.c:1740
+#: svnlook/main.c:1753
 #, c-format
 msgid "Owner: %s\n"
 msgstr "所有者: %s\n"
 
 #: svnadmin/main.c:1119
-#: svnlook/main.c:1741
+#: svnlook/main.c:1754
 #, c-format
 msgid "Created: %s\n"
 msgstr "已创建: %s\n"
 
 #: svnadmin/main.c:1120
-#: svnlook/main.c:1742
+#: svnlook/main.c:1755
 #, c-format
 msgid "Expires: %s\n"
 msgstr "过期: %s\n"
@@ -8111,43 +8108,43 @@ msgstr ""
 msgid "Try 'svndumpfilter help' for more info"
 msgstr "请使用“svndumpfilter help”以得到更多信息"
 
-#: svnlook/main.c:99
-msgid "specify revision number ARG"
-msgstr "指定版本编号 ARG"
-
-#: svnlook/main.c:102
-msgid "specify transaction name ARG"
-msgstr "指定事务名称 ARG"
-
-#: svnlook/main.c:105
-msgid "be verbose"
-msgstr "详细"
-
-#: svnlook/main.c:108
-msgid "show node revision ids for each path"
-msgstr "为每个路径显示节点版本编号"
-
-#: svnlook/main.c:114
-msgid "do not print differences for added files"
-msgstr "不要输出增加文件造成的差异"
-
-#: svnlook/main.c:117
-msgid "print differences against the copy source"
-msgstr "显示与原始内容的差异"
-
-#: svnlook/main.c:120
-msgid "operate on a revision property (use with -r or -t)"
-msgstr "操作版本的属性（使用 -r 或 -t）"
-
-#: svnlook/main.c:123
-msgid "show full paths instead of indenting them"
-msgstr "显示完整路径(代替缩进)"
-
-#: svnlook/main.c:126
+#: svnlook/main.c:93
 msgid "show details for copies"
 msgstr "显示每个副本的详细信息"
 
-#: svnlook/main.c:138
+#: svnlook/main.c:96
+msgid "print differences against the copy source"
+msgstr "显示与原始内容的差异"
+
+#: svnlook/main.c:99
+msgid "show full paths instead of indenting them"
+msgstr "显示完整路径(代替缩进)"
+
+#: svnlook/main.c:105
+msgid "do not print differences for added files"
+msgstr "不要输出增加文件造成的差异"
+
+#: svnlook/main.c:114
+msgid "specify revision number ARG"
+msgstr "指定版本编号 ARG"
+
+#: svnlook/main.c:117
+msgid "operate on a revision property (use with -r or -t)"
+msgstr "操作版本的属性（使用 -r 或 -t）"
+
+#: svnlook/main.c:120
+msgid "show node revision ids for each path"
+msgstr "为每个路径显示节点版本编号"
+
+#: svnlook/main.c:123
+msgid "specify transaction name ARG"
+msgstr "指定事务名称 ARG"
+
+#: svnlook/main.c:126
+msgid "be verbose"
+msgstr "详细"
+
+#: svnlook/main.c:141
 msgid ""
 "usage: svnlook author REPOS_PATH\n"
 "\n"
@@ -8157,7 +8154,7 @@ msgstr ""
 "\n"
 "显示作者。\n"
 
-#: svnlook/main.c:143
+#: svnlook/main.c:146
 msgid ""
 "usage: svnlook cat REPOS_PATH FILE_PATH\n"
 "\n"
@@ -8167,7 +8164,7 @@ msgstr ""
 "\n"
 "显示文件的内容。可省略 FILE_PATH 前的“/”。\n"
 
-#: svnlook/main.c:148
+#: svnlook/main.c:151
 msgid ""
 "usage: svnlook changed REPOS_PATH\n"
 "\n"
@@ -8177,7 +8174,7 @@ msgstr ""
 "\n"
 "显示已改变的路径。\n"
 
-#: svnlook/main.c:153
+#: svnlook/main.c:156
 msgid ""
 "usage: svnlook date REPOS_PATH\n"
 "\n"
@@ -8187,7 +8184,7 @@ msgstr ""
 "\n"
 "显示时戳。\n"
 
-#: svnlook/main.c:158
+#: svnlook/main.c:161
 msgid ""
 "usage: svnlook diff REPOS_PATH\n"
 "\n"
@@ -8197,7 +8194,7 @@ msgstr ""
 "\n"
 "以 GNU 样式，显示仓库中改变的文件与属性差异。\n"
 
-#: svnlook/main.c:164
+#: svnlook/main.c:167
 msgid ""
 "usage: svnlook dirs-changed REPOS_PATH\n"
 "\n"
@@ -8208,7 +8205,7 @@ msgstr ""
 "\n"
 "显示本身改变 (编辑属性) 的目录，或是其中的文件修改过的目录。\n"
 
-#: svnlook/main.c:170
+#: svnlook/main.c:173
 msgid ""
 "usage: svnlook help [SUBCOMMAND...]\n"
 "\n"
@@ -8218,7 +8215,7 @@ msgstr ""
 "\n"
 "显示本程序或其子命令的用法。\n"
 
-#: svnlook/main.c:175
+#: svnlook/main.c:178
 msgid ""
 "usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
@@ -8229,7 +8226,7 @@ msgstr ""
 "\n"
 "显示仓库中，某个路径的历史记录信息 (如果没有指定路径，则为根目录)。\n"
 
-#: svnlook/main.c:181
+#: svnlook/main.c:184
 msgid ""
 "usage: svnlook info REPOS_PATH\n"
 "\n"
@@ -8239,7 +8236,7 @@ msgstr ""
 "\n"
 "显示作者，时戳，日志信息大小，以及日志信息。\n"
 
-#: svnlook/main.c:186
+#: svnlook/main.c:189
 msgid ""
 "usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
 "\n"
@@ -8249,7 +8246,7 @@ msgstr ""
 "\n"
 "如果仓库中的路径存在锁，显示其详细信息。\n"
 
-#: svnlook/main.c:191
+#: svnlook/main.c:194
 msgid ""
 "usage: svnlook log REPOS_PATH\n"
 "\n"
@@ -8259,7 +8256,7 @@ msgstr ""
 "\n"
 "显示日志信息。\n"
 
-#: svnlook/main.c:196
+#: svnlook/main.c:199
 msgid ""
 "usage: svnlook propget REPOS_PATH PROPNAME [PATH_IN_REPOS]\n"
 "\n"
@@ -8271,7 +8268,7 @@ msgstr ""
 "显示仓库中某个路径上属性的原始值。\n"
 "用 --revprop 选项显示版本属性的原始值。\n"
 
-#: svnlook/main.c:202
+#: svnlook/main.c:205
 msgid ""
 "usage: svnlook proplist REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
@@ -8285,7 +8282,7 @@ msgstr ""
 "使用 --revprop 选项列出版本属性。\n"
 "使用 -v 选项显示属性的内容。\n"
 
-#: svnlook/main.c:209
+#: svnlook/main.c:212
 msgid ""
 "usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n"
 "\n"
@@ -8297,7 +8294,7 @@ msgstr ""
 "显示目录树，从 PATH_IN_REPOS 开始 (如果省略此参数就从仓库的根目录开始)，\n"
 "可选的显示节点版本 id。\n"
 
-#: svnlook/main.c:215
+#: svnlook/main.c:218
 msgid ""
 "usage: svnlook uuid REPOS_PATH\n"
 "\n"
@@ -8307,7 +8304,7 @@ msgstr ""
 "\n"
 "显示仓库的 UUID。\n"
 
-#: svnlook/main.c:220
+#: svnlook/main.c:223
 msgid ""
 "usage: svnlook youngest REPOS_PATH\n"
 "\n"
@@ -8317,54 +8314,54 @@ msgstr ""
 "\n"
 "显示最新的版本号。\n"
 
-#: svnlook/main.c:815
+#: svnlook/main.c:819
 #, c-format
 msgid "Copied: %s (from rev %ld, %s)\n"
 msgstr "已复制: %s (来自版本 %ld，%s)\n"
 
-#: svnlook/main.c:884
+#: svnlook/main.c:888
 msgid "Added"
 msgstr "已增加"
 
-#: svnlook/main.c:885
+#: svnlook/main.c:889
 msgid "Deleted"
 msgstr "已删除"
 
-#: svnlook/main.c:886
+#: svnlook/main.c:890
 msgid "Modified"
 msgstr "已修改"
 
-#: svnlook/main.c:887
+#: svnlook/main.c:891
 msgid "Index"
 msgstr "索引"
 
-#: svnlook/main.c:899
+#: svnlook/main.c:903
 #, c-format
 msgid "(Binary files differ)\n"
 msgstr "(二进制文件不同)\n"
 
-#: svnlook/main.c:1028
+#: svnlook/main.c:1036
 msgid "unknown"
 msgstr "未知"
 
-#: svnlook/main.c:1171
-#: svnlook/main.c:1264
-#: svnlook/main.c:1293
+#: svnlook/main.c:1183
+#: svnlook/main.c:1276
+#: svnlook/main.c:1305
 #, c-format
 msgid "Transaction '%s' is not based on a revision; how odd"
 msgstr "事务“%s”并非基于某个版本；多神秘啊！"
 
-#: svnlook/main.c:1201
+#: svnlook/main.c:1213
 #, c-format
 msgid "'%s' is a URL, probably should be a path"
 msgstr "“%s”是 URL，也许应该是路径。"
 
-#: svnlook/main.c:1228
+#: svnlook/main.c:1240
 #, c-format
 msgid "Path '%s' is not a file"
 msgstr "路径“%s”不是文件"
 
-#: svnlook/main.c:1367
+#: svnlook/main.c:1379
 #, c-format
 msgid ""
 "REVISION   PATH <ID>\n"
@@ -8373,7 +8370,7 @@ msgstr ""
 "修 订 版   路径 <ID>\n"
 "--------   ---------\n"
 
-#: svnlook/main.c:1372
+#: svnlook/main.c:1384
 #, c-format
 msgid ""
 "REVISION   PATH\n"
@@ -8382,28 +8379,28 @@ msgstr ""
 "修 订 版   路径\n"
 "--------   ----\n"
 
-#: svnlook/main.c:1419
+#: svnlook/main.c:1431
 #, c-format
 msgid "Property '%s' not found on revision %ld"
 msgstr "属性“%s”在版本 %ld 中找不到"
 
-#: svnlook/main.c:1426
+#: svnlook/main.c:1438
 #, c-format
 msgid "Property '%s' not found on path '%s' in revision %ld"
 msgstr "属性“%1$s”在版本 %3$ld 中的路径“%2$s”中找不到"
 
-#: svnlook/main.c:1431
+#: svnlook/main.c:1443
 #, c-format
 msgid "Property '%s' not found on path '%s' in transaction %s"
 msgstr "事务‘%3$s’中的路径‘%2$s’没有属性‘%1$s’"
 
-#: svnlook/main.c:1603
-#: svnlook/main.c:1818
+#: svnlook/main.c:1616
+#: svnlook/main.c:1831
 #, c-format
 msgid "Missing repository path argument"
 msgstr "未提供仓库路径参数"
 
-#: svnlook/main.c:1664
+#: svnlook/main.c:1677
 msgid ""
 "general usage: svnlook SUBCOMMAND REPOS_PATH [ARGS & OPTIONS ...]\n"
 "Note: any subcommand which takes the '--revision' and '--transaction'\n"
@@ -8422,11 +8419,11 @@ msgstr ""
 "\n"
 "可用的子命令: \n"
 
-#: svnlook/main.c:1720
+#: svnlook/main.c:1733
 msgid "Missing path argument"
 msgstr "丢失路径参数"
 
-#: svnlook/main.c:1745
+#: svnlook/main.c:1758
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -8435,7 +8432,7 @@ msgstr ""
 "注释 (%i 行): \n"
 "%s\n"
 
-#: svnlook/main.c:1746
+#: svnlook/main.c:1759
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -8444,39 +8441,39 @@ msgstr ""
 "注释 (%i 行): \n"
 "%s\n"
 
-#: svnlook/main.c:1792
+#: svnlook/main.c:1805
 #, c-format
 msgid "Missing propname argument"
 msgstr "丢失属性名参数"
 
-#: svnlook/main.c:1793
+#: svnlook/main.c:1806
 #, c-format
 msgid "Missing propname and repository path arguments"
 msgstr "未提供属性名称与仓库路径参数"
 
-#: svnlook/main.c:1799
+#: svnlook/main.c:1812
 msgid "Missing propname or repository path argument"
 msgstr "未提供属性名称或仓库路径参数"
 
-#: svnlook/main.c:1957
+#: svnlook/main.c:1971
 msgid "Invalid revision number supplied"
 msgstr "提供了无效的版本号码"
 
-#: svnlook/main.c:2018
+#: svnlook/main.c:2036
 msgid "The '--transaction' (-t) and '--revision' (-r) arguments can not co-exist"
 msgstr "“--transaction” (-t) 与 “--revision” (-r) 参数不能同时存在"
 
-#: svnlook/main.c:2100
+#: svnlook/main.c:2118
 #, c-format
 msgid "Repository argument required\n"
 msgstr "需要仓库参数\n"
 
-#: svnlook/main.c:2109
+#: svnlook/main.c:2127
 #, c-format
 msgid "'%s' is a URL when it should be a path\n"
 msgstr "“%s”应该是路径，却是URL\n"
 
-#: svnlook/main.c:2160
+#: svnlook/main.c:2178
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -8485,7 +8482,7 @@ msgstr ""
 "子命令“%s”并不接受选项“%s”\n"
 "使用“svnlook help %s”得到用法。\n"
 
-#: svnlook/main.c:2203
+#: svnlook/main.c:2221
 msgid "Try 'svnlook help' for more info"
 msgstr "请使用“svnlook help”以得到更多信息"
 
