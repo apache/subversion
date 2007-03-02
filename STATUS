@@ -97,6 +97,17 @@ Candidate changes:
     Votes:
       +1: cmpilato, dlr
 
+  * r23556
+    Allow svn_opt_revision_working as svn_opt_revision_t parameter
+    values to svn_client_cat2().
+    Justification:
+      There's no reason to disallow this value, and the nuts and bolts
+      of the implementation already supported it.
+    Votes:
+      +1: dlr
+
+Approved changes:
+
   * r21537, r21543, r22350, r23360, r23362, r23372
     Add the svnserveautocheck.sh script which allows us to run the ra_svn
     testsuite on the linux buildslave. 
@@ -107,6 +118,3 @@ Candidate changes:
     Branch: 1.4.x-r21537
     Votes:
       +1: lgo, dlr, eh
-
-Approved changes:
-
