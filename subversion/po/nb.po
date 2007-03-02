@@ -1,5 +1,5 @@
 # Norwegian Bokmål translations for the subversion package
-# Copyright (C) 2004–2006 CollabNet.
+# Copyright (C) 2004–2007 CollabNet.
 # This file is distributed under the same license as the subversion package.
 #
 # Dictionary:
@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2006-12-14 19:23+0100\n"
-"PO-Revision-Date: 2006-08-27 23:21+0200\n"
+"PO-Revision-Date: 2007-03-02 12:11+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -464,9 +464,8 @@ msgid "Unsupported FS format"
 msgstr "Filsystemformatet er ikke støttet"
 
 #: include/svn_error_codes.h:593
-#, fuzzy
 msgid "Representation is being written"
-msgstr "Representasjonen er ikke en «delta»-type"
+msgstr "Representasjonen skrives"
 
 #: include/svn_error_codes.h:599
 msgid "The repository is locked, perhaps for db recovery"
@@ -583,9 +582,8 @@ msgid "Unable to extract data from response header"
 msgstr "Klarte ikke å hente data fra responsheader"
 
 #: include/svn_error_codes.h:732
-#, fuzzy
 msgid "Repository has been moved"
-msgstr "Depotet har ingen UUID"
+msgstr "Depotet er flyttet"
 
 #: include/svn_error_codes.h:738 include/svn_error_codes.h:767
 msgid "Couldn't find a repository"
@@ -834,14 +832,12 @@ msgid "Incompatible library version"
 msgstr "Bibliotekversjonen er ikke kompatibel"
 
 #: include/svn_error_codes.h:1021
-#, fuzzy
 msgid "Error parsing arguments"
-msgstr "Klientfeil under analysering av argumenter"
+msgstr "Feil under tolking av argumenter"
 
 #: include/svn_error_codes.h:1025
-#, fuzzy
 msgid "Not enough arguments provided"
-msgstr "Ikke nok argumenter angitt; prøv «svn help» for mer informasjon"
+msgstr "Ikke nok argumenter angitt"
 
 #: include/svn_error_codes.h:1029
 msgid "Mutually exclusive arguments specified"
@@ -1364,9 +1360,9 @@ msgstr ""
 "klienter"
 
 #: libsvn_client/prop_commands.c:213
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' is not a regular property"
-msgstr "Egenskapen «%s» er en oppføringsegenskap"
+msgstr "Egenskapen «%s» er ikke en vanlig egenskap"
 
 #: libsvn_client/prop_commands.c:315
 #, c-format
@@ -1379,14 +1375,14 @@ msgid "Bad property name: '%s'"
 msgstr "Ugyldig navn på egenskap: «%s»"
 
 #: libsvn_client/prop_commands.c:334
-#, fuzzy, c-format
+#, c-format
 msgid "Setting property on non-local target '%s' needs a base revision"
-msgstr "Setting av egenskap på ikke-lokalt mål «%s» er ikke støttet"
+msgstr "Setting av egenskap på ikke-lokalt mål «%s» trenger en baserevisjon"
 
 #: libsvn_client/prop_commands.c:340
-#, fuzzy, c-format
+#, c-format
 msgid "Setting property recursively on non-local target '%s' is not supported"
-msgstr "Setting av egenskap på ikke-lokalt mål «%s» er ikke støttet"
+msgstr "Rekursiv setting av egenskap på ikke-lokalt mål «%s» er ikke støttet"
 
 #: libsvn_client/prop_commands.c:438
 msgid "Value will not be set unless forced"
@@ -2268,24 +2264,24 @@ msgid "Corrupt lockfile for path '%s' in filesystem '%s'"
 msgstr "Ødelagt låsefil for stien «%s» i filsystem «%s»"
 
 #: libsvn_fs_fs/fs.c:89
-#, fuzzy, c-format
+#, c-format
 msgid "Can't fetch FSFS shared data"
-msgstr "Kan ikke hente FSFS-mutex"
+msgstr "Kan ikke hente delte FSFS-data"
 
 #: libsvn_fs_fs/fs.c:105
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create FSFS write-lock mutex"
-msgstr "Kan ikke opprette FSFS-mutex"
+msgstr "Kan ikke opprette skrivelås-mutex for FSFS"
 
 #: libsvn_fs_fs/fs.c:113
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create FSFS txn list mutex"
-msgstr "Kan ikke opprette FSFS-mutex"
+msgstr "Kan ikke opprette transaksjonsliste-mutex for FSFS"
 
 #: libsvn_fs_fs/fs.c:119
-#, fuzzy, c-format
+#, c-format
 msgid "Can't store FSFS shared data"
-msgstr "Kan ikke lagre FSFS-mutex"
+msgstr "Kan ikke lagre delte data i FSFS"
 
 #: libsvn_fs_fs/fs.c:345
 msgid "Module for working with a plain file (FSFS) repository."
@@ -2297,48 +2293,50 @@ msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "Versjonen av filsystemlaster (%d) for fsfs er ikke støttet"
 
 #: libsvn_fs_fs/fs_fs.c:340
-#, fuzzy, c-format
+#, c-format
 msgid "Can't grab FSFS txn list mutex"
-msgstr "Kan ikke overta filsystem-mutex"
+msgstr "Kan ikke overta transaksjonsliste-mutex for FSFS"
 
 #: libsvn_fs_fs/fs_fs.c:348
-#, fuzzy, c-format
+#, c-format
 msgid "Can't ungrab FSFS txn list mutex"
-msgstr "Kan ikke slippe filsystem-mutex"
+msgstr "Kan ikke slippe transaksjonsliste-mutex for FSFS"
 
 #: libsvn_fs_fs/fs_fs.c:374
-#, fuzzy, c-format
+#, c-format
 msgid "Can't unlock unknown transaction '%s'"
-msgstr "Kan ikke låse opp mutex for tegnsettkonvertering"
+msgstr "Kan ikke låse opp ukjent transaksjon «%s»"
 
 #: libsvn_fs_fs/fs_fs.c:378
-#, fuzzy, c-format
+#, c-format
 msgid "Can't unlock nonlocked transaction '%s'"
-msgstr "Kan ikke låse opp mutex for tegnsettkonvertering"
+msgstr "Kan ikke låse opp ulåst transaksjon «%s»"
 
 #: libsvn_fs_fs/fs_fs.c:385
 #, c-format
 msgid "Can't unlock prototype revision lockfile for transaction '%s'"
-msgstr ""
+msgstr "Kan ikke låse opp prototyperevisjon-låsefil for transaksjon «%s»"
 
 #: libsvn_fs_fs/fs_fs.c:391
 #, c-format
 msgid "Can't close prototype revision lockfile for transaction '%s'"
-msgstr ""
+msgstr "Kan ikke lukke prototyperevisjon-låsefil for transaksjon «%s»"
 
 #: libsvn_fs_fs/fs_fs.c:453
 #, c-format
 msgid ""
 "Cannot write to the prototype revision file of transaction '%s' because a "
 "previous representation is currently being written by this process"
-msgstr ""
+msgstr "Kan ikke skrive til prototyperevisjonsfila for transaksjon «%s» fordi en "
+"tidligere representasjon skrives av denne prosessen"
 
 #: libsvn_fs_fs/fs_fs.c:489
 #, c-format
 msgid ""
 "Cannot write to the prototype revision file of transaction '%s' because a "
 "previous representation is currently being written by another process"
-msgstr ""
+msgstr "Kan ikke skrive til prototyperevisjonsfila for transaksjon «%s» fordi en "
+"tidligere representasjon skrives av en annen prosess"
 
 #: libsvn_fs_fs/fs_fs.c:496 libsvn_subr/io.c:1531
 #, c-format
@@ -2661,7 +2659,7 @@ msgstr "Ugyldig tjenersvar på forespørsel for dated-rev"
 
 #: libsvn_ra_dav/fetch.c:1332
 msgid "Expected a valid revnum and path"
-msgstr ""
+msgstr "Forventet et gyldig revisjonsnummer og sti"
 
 #: libsvn_ra_dav/fetch.c:1414
 msgid "'get-locations' REPORT not implemented"
@@ -2673,9 +2671,9 @@ msgid "Incomplete lock data returned"
 msgstr "Ufullstendige låsedata returnert"
 
 #: libsvn_ra_dav/fetch.c:1656
-#, fuzzy, c-format
+#, c-format
 msgid "Got unrecognized encoding '%s'"
-msgstr "Ukjent nodetype: «%s»"
+msgstr "Mottok ukjent koding «%s»"
 
 #: libsvn_ra_dav/fetch.c:1747 libsvn_ra_dav/fetch.c:1751
 #: libsvn_ra_serf/locks.c:523
@@ -2708,9 +2706,8 @@ msgstr ""
 "redigeringsprogrammet"
 
 #: libsvn_ra_dav/file_revs.c:279
-#, fuzzy
 msgid "Failed to write full amount to stream"
-msgstr "Kan ikke skrive til strøm"
+msgstr "Feil under skriving av hele datamengden til strøm"
 
 #: libsvn_ra_dav/file_revs.c:357
 msgid "'get-file-revs' REPORT not implemented"
@@ -2860,9 +2857,9 @@ msgid "Invalid config: illegal character in debug mask value"
 msgstr "Ugyldig innstilling: Ulovlig tegn i avlusningsfilterets verdi"
 
 #: libsvn_ra_dav/session.c:523
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid config: unknown http authtype '%s'"
-msgstr "Ugyldig innstilling: Kan ikke laste inn sertifikatfilen «%s»"
+msgstr "Ugyldig innstilling: Ukjent http-autentiseringstype «%s»"
 
 #: libsvn_ra_dav/session.c:584
 msgid "Module for accessing a repository via WebDAV (DeltaV) protocol."
@@ -2960,12 +2957,12 @@ msgstr "stien «%s» ble ikke funnet"
 #: libsvn_ra_dav/util.c:1060
 #, c-format
 msgid "Repository moved permanently to '%s'; please relocate"
-msgstr ""
+msgstr "Depotet er permanent flyttet til «%s»; relokalisering nødvendig"
 
 #: libsvn_ra_dav/util.c:1062
 #, c-format
 msgid "Repository moved temporarily to '%s'; please relocate"
-msgstr ""
+msgstr "Depotet er midlertidig flyttet til «%s»; relokalisering nødvendig"
 
 #. We either have a neon error, or some other error
 #. that we didn't expect.
@@ -3106,9 +3103,8 @@ msgid "Error retrieving REPORT (%d)"
 msgstr "Feil under henting av REPORT (%d)"
 
 #: libsvn_ra_serf/util.c:736
-#, fuzzy
 msgid "Unspecified error message"
-msgstr "angi loggmelding ARG"
+msgstr "Uspesifisert feilmelding"
 
 #: libsvn_ra_serf/util.c:797
 msgid "Premature EOF seen from server"
@@ -3296,11 +3292,10 @@ msgstr "Ugyldig fil eller katalogsymbol under redigering"
 msgid "Non-string as part of text delta"
 msgstr "Ikke-streng som del av tekst-delta"
 
-# ### FIXME
 #: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
-#, fuzzy, c-format
+#, c-format
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr "Kommandoen «finish-replay» ugyldig utenfor avspilling"
+msgstr "Kommandoen «finish-replay» ugyldig utenfor avspillinger"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -3359,11 +3354,9 @@ msgstr "Ukjent status «%s» i kommandorespons"
 msgid "Could not initialize the SASL library"
 msgstr "Klarte ikke å initialisere SASL-biblioteket"
 
-# ### FIXME
 #: libsvn_ra_svn/sasl_auth.c:287
-#, fuzzy
 msgid "Unhandled SASL interaction"
-msgstr "Uhåndtert SASL-utveksling"
+msgstr "Uhåndtert SASL-interaksjon"
 
 #: libsvn_ra_svn/sasl_auth.c:575 libsvn_ra_svn/simple_auth.c:58
 #: libsvn_ra_svn/simple_auth.c:110
@@ -3391,9 +3384,9 @@ msgid "Can't write to connection"
 msgstr "Kan ikke skrive til forbindelse"
 
 #: libsvn_ra_svn/streams.c:144
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get socket timeout"
-msgstr "Kan ikke opprette sokkel"
+msgstr "Kan ikke motta tidsavbrudd for sokkel"
 
 #: libsvn_repos/commit.c:128
 #, c-format
@@ -3498,37 +3491,37 @@ msgid "Unlock succeeded, but post-unlock hook failed"
 msgstr "Klarte å låse opp, men «post-unlock»-påhakningen feilet"
 
 #: libsvn_repos/hooks.c:87
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' hook succeeded, but error output could not be read"
-msgstr "«%s»-påhakningen feilet; ingen feilmeldinger tilgjengelig"
+msgstr "«%s»-påhakningen lyktes; men feil-utdata kunne ikke leses"
 
 #: libsvn_repos/hooks.c:102
 msgid "[Error output could not be translated from the native locale to UTF-8.]"
-msgstr ""
+msgstr "[Feilmeldingsdata kunne ikke bli oversatt fra lokalt lokale til UTF-8.]"
 
 #: libsvn_repos/hooks.c:107
 msgid "[Error output could not be read.]"
-msgstr ""
+msgstr "[Feilmeldingsdata kunne ikke leses.]"
 
 #: libsvn_repos/hooks.c:116
 #, c-format
 msgid ""
 "'%s' hook failed (did not exit cleanly: apr_exit_why_e was %d, exitcode was %"
 "d).  "
-msgstr ""
+msgstr "«%s»-påhakning feilet (avsluttet ikke skikkelig: apr_exit_why_e var %d, sluttkoden var %d).  "
 
 #: libsvn_repos/hooks.c:123
 #, c-format
 msgid "'%s' hook failed (exited with a non-zero exitcode of %d).  "
-msgstr ""
+msgstr "«%s»-påhakningen feilet (avsluttet med sluttkode %d). "
 
 #: libsvn_repos/hooks.c:130
 msgid "The following error output was produced by the hook:\n"
-msgstr ""
+msgstr "Disse feilmeldingene ble laget av påhakningen:\n"
 
 #: libsvn_repos/hooks.c:137
 msgid "No error output was produced by the hook."
-msgstr ""
+msgstr "Påhakningen genererte ingen feilmeldinger."
 
 #: libsvn_repos/hooks.c:170
 #, c-format
@@ -5311,22 +5304,22 @@ msgstr ""
 "finnes allerede med det samme navnet"
 
 #: libsvn_wc/update_editor.c:1134
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Failed to add directory '%s': an unversioned directory of the same name "
 "already exists"
 msgstr ""
-"Klarte ikke å legge til katalogen «%s» med makt: En versjonert katalog med "
-"samme navn finnes allerede"
+"Klarte ikke å legge til katalogen «%s»: En uversjonert katalog med "
+"det samme navnet finnes allerede"
 
 #: libsvn_wc/update_editor.c:1156
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Failed to add directory '%s': a versioned directory of the same name already "
 "exists"
 msgstr ""
-"Klarte ikke å legge til katalogen «%s» med makt: En versjonert katalog med "
-"samme navn finnes allerede"
+"Klarte ikke å legge til katalogen «%s»: En versjonert katalog med "
+"det samme navnet finnes allerede"
 
 #: libsvn_wc/update_editor.c:1167
 #, c-format
@@ -5358,13 +5351,13 @@ msgstr ""
 "allerede forberedt for tillegging"
 
 #: libsvn_wc/update_editor.c:1605
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Failed to add file '%s': a file of the same name is already scheduled for "
 "addition with history"
 msgstr ""
-"Klarte ikke å legge til filen «%s»: En oppføring med samme navn er allerede "
-"forberedt for tillegging"
+"Klarte ikke å legge til filen «%s»: En fil med det samme navnet er allerede "
+"forberedt for tillegging med historie"
 
 #: libsvn_wc/update_editor.c:1617
 #, c-format
@@ -6578,7 +6571,6 @@ msgstr ""
 "     MÅL angir bare hvilket depot som skal aksesseres.\n"
 
 #: svn/main.c:563
-#, fuzzy
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME TARGET...\n"
@@ -6589,10 +6581,10 @@ msgid ""
 "     TARGET only determines which repository to access.\n"
 msgstr ""
 "Rediger en egenskap med en ekstern tekstbehandler.\n"
-"bruk: 1. propedit EGENSKAPSNAVN STI...\n"
+"bruk: 1. propedit EGENSKAPSNAVN MÅL...\n"
 "      2. propedit EGENSKAPSNAVN --revprop -r REV [MÅL]\n"
 "\n"
-"  1. Redigerer versjonerte egenskaper i arbeidskopien.\n"
+"  1. Redigerer versjonert egenskap i arbeidskopien eller depotet.\n"
 "  2. Redigerer en uversjonert fjerntliggende egenskap i en depotrevisjon.\n"
 "     MÅL angir bare hvilket depot som skal aksesseres.\n"
 
@@ -7164,9 +7156,8 @@ msgstr ""
 "for å overstyre"
 
 #: svn/main.c:1555
-#, fuzzy
 msgid "Try 'svn help' for more info"
-msgstr "Skriv «%s help» for bruk.\n"
+msgstr "Prøv «svn help» for mer informasjon"
 
 #: svn/main.c:1565
 msgid ""
@@ -7683,14 +7674,12 @@ msgid "call post-commit hook after committing revisions"
 msgstr "kall «post-commit»-påhakningen etter revisjoner legges inn"
 
 #: svnadmin/main.c:285
-#, fuzzy
 msgid "call hook before changing revision property"
-msgstr "kall «pre-commit»-påhakningen før revisjoner legges inn"
+msgstr "kall påhakning før forandring av revisjonsegenskap"
 
 #: svnadmin/main.c:288
-#, fuzzy
 msgid "call hook after changing revision property"
-msgstr "kall «post-commit»-påhakningen etter revisjoner legges inn"
+msgstr "kall påhakning etter forandring av revisjonsegenskap"
 
 #: svnadmin/main.c:291
 msgid ""
@@ -7888,7 +7877,6 @@ msgstr ""
 "Slett navngitt(e) transaksjon(er).\n"
 
 #: svnadmin/main.c:399
-#, fuzzy
 msgid ""
 "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n"
 "\n"
@@ -7904,17 +7892,16 @@ msgid ""
 msgstr ""
 "bruk: svnadmin setlog DEPOTSTI -r REVISJON FIL\n"
 "\n"
-"Sett loggmeldingen for revisjonen REVISJON fra innholdet i FIL. Bruk\n"
+"Sett loggmeldingen for revisjonen REVISJON til innholdet i FIL. Bruk\n"
 "--bypass-hooks for at revisjonsegenskapsrelaterte påhakninger ikke skal\n"
 "aktiveres (hvis du f.eks. ikke vil at e-post skal sendes fra ditt skript\n"
 "som kjøres fra påhakningen post-revprop-change, eller fordi endring av\n"
 "revisjonsegenskaper ikke er slått på i pre-revprop-change).\n"
 "\n"
-"MERK: Historikk lagres ikke for revisjonsegenskaper, så denne kommandoen\n"
-"overskriver alltid gjeldende loggmelding.\n"
+"MERK: Revisjonsegenskaper er ikke versjonerte, så denne kommandoen\n"
+"vil overskrive den forrige loggmeldingen.\n"
 
 #: svnadmin/main.c:411
-#, fuzzy
 msgid ""
 "usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
 "\n"
@@ -7926,16 +7913,15 @@ msgid ""
 "NOTE: Revision properties are not versioned, so this command will\n"
 "overwrite the previous value of the property.\n"
 msgstr ""
-"bruk: svnadmin setlog DEPOTSTI -r REVISJON FIL\n"
+"bruk: svnadmin setrevprop DEPOTSTI -r REVISJON NAVN FIL\n"
 "\n"
-"Sett loggmeldingen for revisjonen REVISJON fra innholdet i FIL. Bruk\n"
-"--bypass-hooks for at revisjonsegenskapsrelaterte påhakninger ikke skal\n"
-"aktiveres (hvis du f.eks. ikke vil at e-post skal sendes fra ditt skript\n"
-"som kjøres fra påhakningen post-revprop-change, eller fordi endring av\n"
-"revisjonsegenskaper ikke er slått på i pre-revprop-change).\n"
+"Sett egenskapen NAVN for revisjon REVISJON fra innholdet i FIL. Bruk\n"
+"--use-pre-revprop-change-hook/--use-post-revprop-change-hook for å\n"
+"aktivisere egenskapsrelaterte påhakninger (hvis du for eksempel vil ha\n"
+"e-post sendt fra «post-revprop-change»-påhakningen).\n"
 "\n"
-"MERK: Historikk lagres ikke for revisjonsegenskaper, så denne kommandoen\n"
-"overskriver alltid gjeldende loggmelding.\n"
+"MERK: Revisjonsegenskaper er ikke versjonerte, så denne kommandoen vil\n"
+"overskrive den forrige verdien i egenskapen.\n"
 
 #: svnadmin/main.c:422
 msgid ""
@@ -8045,9 +8031,9 @@ msgid "Only one revision allowed"
 msgstr "Kun én revisjon er tillatt"
 
 #: svnadmin/main.c:1016
-#, fuzzy, c-format
+#, c-format
 msgid "Exactly one property name and one file argument required"
-msgstr "Kun ett filargument behøves"
+msgstr "Nøyaktig ett egenskapsnavn og ett filargument er påkrevd"
 
 #: svnadmin/main.c:1043
 #, c-format
@@ -8127,9 +8113,8 @@ msgstr ""
 "Skriv «svnadmin help %s» for bruk.\n"
 
 #: svnadmin/main.c:1543
-#, fuzzy
 msgid "Try 'svnadmin help' for more info"
-msgstr "Skriv «svnversion --help» for bruksanvisning.\n"
+msgstr "Prøv «svnadmin --help» for mer informasjon"
 
 #: svndumpfilter/main.c:319
 msgid "This is an empty revision for padding."
@@ -8279,7 +8264,7 @@ msgstr ""
 
 #: svndumpfilter/main.c:1307
 msgid "Try 'svndumpfilter help' for more info"
-msgstr ""
+msgstr "Prøv «svndumpfilter help» for mer informasjon"
 
 #: svnlook/main.c:99
 msgid "specify revision number ARG"
@@ -8654,7 +8639,7 @@ msgstr ""
 
 #: svnlook/main.c:2190
 msgid "Try 'svnlook help' for more info"
-msgstr ""
+msgstr "Prøv «svnlook help» for mer informasjon"
 
 #: svnserve/main.c:141
 msgid "daemon mode"
@@ -8728,9 +8713,9 @@ msgstr ""
 "Lovlige valg:\n"
 
 #: svnserve/main.c:450
-#, fuzzy, c-format
+#, c-format
 msgid "svnserve: Root path '%s' does not exist or is not a directory.\n"
-msgstr "Arbeidskopistien «%s» finnes ikke i depotet"
+msgstr "svnserve: Rotstien «%s» finnes ikke eller er ikke en katalog.\n"
 
 #: svnserve/main.c:492
 msgid "You must specify exactly one of -d, -i, -t or -X.\n"
@@ -8787,18 +8772,17 @@ msgid "Can't create thread"
 msgstr "Kan ikke opprette tråd"
 
 #: svnserve/sasl_auth.c:243
-#, fuzzy, c-format
+#, c-format
 msgid "Can't get hostname"
-msgstr "Kan ikke få tak i lokalt tjenernavn"
+msgstr "Kan ikke få tak tjenernavn"
 
 #: svnserve/sasl_auth.c:299
 msgid "Could not obtain the list of SASL mechanisms"
-msgstr ""
+msgstr "Klarte ikke å hente liste over SASL-mekanismer"
 
 #: svnserve/sasl_auth.c:337
-#, fuzzy
 msgid "Couldn't obtain the authenticated username"
-msgstr "Kan ikke låse opp stien «%s», ingen bekreftede brukernavn tilgjengelig"
+msgstr "Klarte ikke å få tak i det autentiserte brukernavnet"
 
 #: svnserve/winservice.c:341
 #, c-format
@@ -8997,9 +8981,8 @@ msgstr ""
 "Skriv «svnsync help %s» for bruksanvisning.\n"
 
 #: svnsync/main.c:1541
-#, fuzzy
 msgid "Try 'svnsync help' for more info"
-msgstr "Ikke nok argumenter angitt; prøv «svnsync help» for mer informasjon"
+msgstr "Prøv «svnsync help» for mer informasjon"
 
 #: svnversion/main.c:39
 #, c-format
