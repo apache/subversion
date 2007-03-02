@@ -407,6 +407,8 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  *
  * @note @a username isn't used and should be removed if this function is
  * revised.
+ *
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_repos_begin_report2(void **report_baton,

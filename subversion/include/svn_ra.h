@@ -772,7 +772,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  *
  * When finished, the client calls @a reporter->finish_report().  The
  * RA layer then does a complete drive of @a update_editor, ending with
- * @update_editor->close_edit(), to update the working copy.
+ * @a update_editor->close_edit(), to update the working copy.
  *
  * @a update_target is an optional single path component to restrict
  * the scope of the update to just that entry (in the directory

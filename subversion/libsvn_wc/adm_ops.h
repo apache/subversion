@@ -48,8 +48,8 @@ extern "C" {
    file entries which don't already have a repository root set.  This prevents
    the entries file from being corrupted by this operation.
 
-   If PATH is a directory, then, then walk entries below PATH
-   according to DEPTH thusly:
+   If PATH is a directory, then, walk entries below PATH according to
+   DEPTH thusly:
 
    If DEPTH is svn_depth_infinity, perform the following actions on
    every entry below PATH; if svn_depth_immediates, svn_depth_files,
