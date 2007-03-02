@@ -475,6 +475,10 @@ void svn_wc_edited_externals(apr_hash_t **externals_old,
  * svn:externals description but with the path and URL
  * canonicalized.
  *
+ * In order to avoid backwards compatibility problems clients should use
+ * svn_wc_external_item_create() to allocate and intialize this structure
+ * instead of doing so themselves.
+ *
  * @since New in 1.5.
  */
 typedef struct svn_wc_external_item2_t
@@ -500,6 +504,24 @@ typedef struct svn_wc_external_item2_t
   svn_opt_revision_t peg_revision;
 
 } svn_wc_external_item2_t;
+
+/**
+ * Initialize an external item.
+ * Set @a *item to an external item object, allocated in @a pool.
+ *
+ * In order to avoid backwards compatibility problems, this function
+ * is used to intialize and allocate the @c svn_wc_external_item2_t
+ * structure rather than doing so explicitly, as the size of this
+ * structure may change in the future.
+ * 
+ * The current implementation never returns error, but callers should
+ * still check for error, for compatibility with future versions.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_external_item_create(const svn_wc_external_item2_t **item,
+                            apr_pool_t *pool);
 
 /**
  * Return a duplicate of @a item, allocated in @a pool.  No part of the new

@@ -160,7 +160,15 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify, apr_pool_t *pool)
 
   return ret;
 }
- 
+
+svn_error_t *
+svn_wc_external_item_create(const svn_wc_external_item2_t **item,
+                            apr_pool_t *pool)
+{
+  *item = apr_pcalloc(pool, sizeof(svn_wc_external_item2_t));
+  return SVN_NO_ERROR;
+}
+
 svn_wc_external_item_t *
 svn_wc_external_item_dup(const svn_wc_external_item_t *item, apr_pool_t *pool)
 {
