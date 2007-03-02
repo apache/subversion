@@ -622,9 +622,10 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
       info->dst_path = dst_rel;
     }
 
-  /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
+      /* Produce a list of new paths to add, and provide it to the
+         mechanism used to acquire a log message. */
       svn_client_commit_item3_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
@@ -869,9 +870,10 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
         }
     }
 
-  /* Create a new commit item and add it to the array. */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
+      /* Produce a list of new paths to add, and provide it to the
+         mechanism used to acquire a log message. */
       svn_client_commit_item3_t *item;
       const char *tmp_file;
       commit_items = apr_array_make(pool, copy_pairs->nelts, sizeof(item));
@@ -916,9 +918,9 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
      canonical repository URLs.  Then, the hacked name can go away and
      be replaced with a entry->repos (or whereever the entry's
      canonical repos URL is stored). */
-  if (! ((commit_items = apr_hash_get(committables, 
-                                      SVN_CLIENT__SINGLE_REPOS_NAME, 
-                                      APR_HASH_KEY_STRING))))
+  if (! (commit_items = apr_hash_get(committables, 
+                                     SVN_CLIENT__SINGLE_REPOS_NAME, 
+                                     APR_HASH_KEY_STRING)))
     goto cleanup;
 
   /* Sort and condense our COMMIT_ITEMS. */
@@ -1344,10 +1346,11 @@ setup_copy(svn_commit_info_t **commit_info_p,
           pair->src_op_revision = *source->revision;
           pair->src_peg_revision = *source->peg_revision;
 
-          svn_opt_resolve_revisions(&pair->src_peg_revision,
-                                    &pair->src_op_revision,
-                                    svn_path_is_url(pair->src),
-                                    TRUE);
+          SVN_ERR(svn_opt_resolve_revisions(&pair->src_peg_revision,
+                                            &pair->src_op_revision,
+                                            svn_path_is_url(pair->src),
+                                            TRUE,
+                                            iterpool));
           src_basename = svn_path_basename(pair->src, iterpool);
 
           /* Check to see if all the sources are urls or all working copy 
@@ -1373,10 +1376,11 @@ setup_copy(svn_commit_info_t **commit_info_p,
       pair->src_op_revision = *source->revision;
       pair->src_peg_revision = *source->peg_revision;
 
-      svn_opt_resolve_revisions(&pair->src_peg_revision,
-                                &pair->src_op_revision,
-                                svn_path_is_url(pair->src),
-                                TRUE);
+      SVN_ERR(svn_opt_resolve_revisions(&pair->src_peg_revision,
+                                        &pair->src_op_revision,
+                                        svn_path_is_url(pair->src),
+                                        TRUE,
+                                        pool));
 
       pair->dst = dst_path_in;
       APR_ARRAY_PUSH(copy_pairs, svn_client__copy_pair_t *) = pair;

@@ -218,7 +218,7 @@ dav_svn__log_report(const dav_resource *resource,
   svn_boolean_t discover_changed_paths = FALSE;  /* off by default */
   svn_boolean_t strict_node_history = FALSE;     /* off by default */
   apr_array_header_t *paths
-    = apr_array_make(resource->pool, 0, sizeof(const char *));
+    = apr_array_make(resource->pool, 1, sizeof(const char *));
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);

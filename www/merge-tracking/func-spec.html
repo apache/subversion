@@ -66,7 +66,8 @@ Subversion.  Remove redundancies.</p>
 <p>Copy/move operations which contact the repository include:</p>
 
 <ul>
-  <li>WC to URL (<i>code in progress, tests complete</i>, see test #11)</li>
+  <li>WC to URL (<i>code in progress, tests complete</i>, copy test
+    #11 still failing over ra_dav)</li>
   <li>URL to WC</li>
   <li>URL to URL</li>
 </ul>
@@ -148,19 +149,98 @@ housekeeping property).</p>
 <div class="h3" id="meta-data-audit">
 <h3>Meta Data Audit and Query</h3>
 
-<p>TODO: Describe how each will work (<i>unimplemented</i>, and not
-currently targeted for 1.5.0)</p>
+<p>These features may or may not be completed for 1.5.0.</p>
 
 <ul>
-      <li>Show Change Sets Available for Merge</li>
-      <li>Show Change Sets Already Merged</li>
-      <li>Show Change Sets Blocked from Merging</li>
-      <li><em>Merged From</em> info for Change Set and/or Path</li>
-      <li><em>Merged To</em> info for Change Set and/or Path</li>
-      <li>Find Paths containing Specific Incarnation of Versioned Resource</li>
-      <li>Commutative Author Reporting From Merged Change Set and/or
-      Path (e.g. for <code>log</code> and <code>blame</code>)</li>
+      <li>Show Change Sets Available for Merge (TODO)</li>
+      <li>Show Change Sets Already Merged (TODO)</li>
+      <li>Show Change Sets Blocked from Merging (TODO)</li>
+      <li><em>Merged From</em> info for Change Set and/or Path (TODO)</li>
+      <li><em>Merged To</em> info for Change Set and/or Path (TODO)</li>
+      <li>Find Paths containing Specific Incarnation of Versioned Resource
+      (TODO)</li>
+      <li><a href="#commutative-reporting">Commutative Author and Revision
+      Reporting</a></li>
 </ul>
+
+<div class="h4" id="commutative-reporting">
+<h4>Commutative Author and Revision Reporting</h4>
+
+<div class="h5" id="reporting-scope">
+<h5>Scope</h5>
+
+<p>Each command which shows username and merge information should also
+respect merge information and support Commutative Reporting.  These
+commands, collectively referred to <em>reporting commands</em>, are:</p>
+
+<ul>
+  <li><code>svn log</code></li>
+  <li><code>svn blame</code></li>
+  <li><code>svn info</code></li>
+  <li><code>svn status --show-updates</code></li>
+</ul>
+
+<p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
+single-character shortcut, will be introduced for the reporting commands.
+Using it will enable these commands to show the additional information gleaned
+from parsing and processing the merge info on the targets in question.  This
+switch will also work with <code>--xml</code> to include additional merge 
+information.  The new functionality added by <code>--merge-sensitive</code> is
+as follows.</p>
+
+<p><code>svn log</code>: The original log message, in the current format, with
+the addition of a list of revisions and merge source paths that have been merged
+into the target.  The output for <code>log</code> should be consistent with the
+<code>diff</code> output for the <code>svn:mergeinfo</code> property.</p>
+
+<p>The <code>--verbose</code> switch will output the log information for the
+merged revisions as well.  This output may bein the style of
+<code>svnmerge.py</code>: the primary log message, followed by each of the
+original log messages indented with separators between them.</p>
+
+<p><code>svn blame</code>: Two additional columns for each line, with the
+original revision and author of that line.  Unlike other commands, we do not
+need to worry about multiple source revisions, because each line can have at
+most one author.</p>
+
+<p><code>svn info</code>: Add two more pieces of information: 'Last Original
+Author:' and 'Last Original Revision:'.  Note that these could either be set by
+a merge to a node, or a commit to that node.  In the latter case, they would
+be the same as the 'Last Author' and 'Last Revision'.</p>
+
+<p><code>svn status --show-updates</code>: Add additional columns, reflecting
+the last original authors and revisions.</p>
+
+</div>  <!-- reporting-scope -->
+
+<div class="h5" id="reporting-questions">
+<h5>Pending Questions</h5>
+
+<ul>
+  <li>How will <code>--merge-sensitive</code> behave for commits which remove
+  merge info (e.g. reverts)?</li>
+
+  <li>In the case of <code>svn log</code>, would the user be better served if we
+  just included the original revision logs in line with the logs (i.e., no
+  special indentation, etc.)?</li>
+</ul>
+
+</div>  <!-- reporting-questions -->
+
+<div class="h5" id="reporting-extra-credit">
+<h5>Additional Features</h5>
+
+<p>Although not part of the initial implementation, additional features have
+been suggested:</p>
+
+<ul>
+  <li>A configuration option to always enable <code>--merge-sensitive</code> by
+  default.</li>
+</ul>
+
+</div>  <!-- reporting-extra-credit -->
+
+</div>  <!-- commutative-reporting -->
 
 </div>  <!-- meta-data-audit -->
 
@@ -392,9 +472,11 @@ patches.</p>
 <h2>Migration and Interoperability</h2>
 
 <div class="h3" id="migration">
-<h3>Migration</h2>
+<h3>Migration</h3>
 
-<p>TODO: Repository migration from previous versions of Subversion.</p>
+<p>No explicit steps are necessary to migrate the content of a
+pre-Merge Tracking repository.  Only an upgrade to Subversion 1.5.0 is
+necessary.</p>
 
 <p>TODO: Merge meta data from svnmerge.py.  Dan Berlin has written
 Python code to perform this migration; it needs to be made available
@@ -403,14 +485,14 @@ in the <code>tools/server-side/</code> area of the distribution .</p>
 </div>  <!-- migration -->
 
 <div class="h3" id="interoperability">
-<h3>Interoperability</h2>
+<h3>Interoperability</h3>
 
-<p>Executive summary:</p>
+<p>Executive summary for client/repository inter-op:</p>
 
 <ul>
-  <li>Older Subversion clients may interact with a 1.5.x+ Subversion
-  repository, but will continue to lack Merge Tracking
-  functionality for:
+  <li>Older Subversion clients may <a href="requirements.html#compatibility"
+  >interact with a 1.5.x+ Subversion repository</a>, but will continue
+  to lack Merge Tracking functionality for:
 
   <ul>
     <li>Recording meta data about any merges performed.</li>
@@ -424,7 +506,7 @@ in the <code>tools/server-side/</code> area of the distribution .</p>
   neutralized.</li>
 </ul>
 
-<p>Gory detail:</p>
+<p>Gory detail for client/repository inter-op:</p>
 
 <ul>
   <li>A repository 1.4.x- doesn't provide any way to retrieve
@@ -444,6 +526,10 @@ in the <code>tools/server-side/</code> area of the distribution .</p>
   upgrade path here, but don't have one yet, and aren't promising
   one.</li>
 </ul>
+
+<p>Subversion <a href="requirements.html#dump-load">dump files
+continue to be fully portable</a> between pre- and post-Merge Tracking
+versions of Subversion.</p>
 
 </div>  <!-- interoperability -->
 
@@ -483,6 +569,8 @@ in the <code>tools/server-side/</code> area of the distribution .</p>
 </ul>
 
 </div>  <!-- related-documents -->
+
+<p>$Date$</p>
 
 </div>  <!-- h1 -->
 </body>

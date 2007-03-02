@@ -610,11 +610,12 @@ svn_opt_parse_revision(svn_opt_revision_t *start_revision,
 }
 
 
-void
+svn_error_t *
 svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
                           svn_opt_revision_t *op_rev,
                           svn_boolean_t is_url,
-                          svn_boolean_t notice_local_mods)
+                          svn_boolean_t notice_local_mods,
+                          apr_pool_t *pool)
 {
   if (peg_rev->kind == svn_opt_revision_unspecified)
     {
@@ -634,7 +635,7 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
   if (op_rev->kind == svn_opt_revision_unspecified)
     *op_rev = *peg_rev;
 
-  return;
+  return SVN_NO_ERROR;
 }
 
 

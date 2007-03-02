@@ -2,7 +2,7 @@
  * props.c :  routines dealing with properties in the working copy
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1661,7 +1661,7 @@ svn_wc_prop_set2(const char *name,
           svn_wc_entry_t tmp_entry;
 
           /* If we changed the keywords or newlines, void the entry
-             timestamp for this file, so svn_wc_text_modified_p2() does
+             timestamp for this file, so svn_wc_text_modified_p() does
              a real (albeit slow) check later on. */
           tmp_entry.kind = svn_node_file;
           tmp_entry.text_time = 0;
@@ -2087,7 +2087,7 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
 /** Externals **/
 
 svn_error_t *
-svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
+svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                     const char *parent_directory,
                                     const char *desc,
                                     apr_pool_t *pool)
@@ -2098,13 +2098,13 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
     parent_directory : svn_path_local_style(parent_directory, pool);
   
   if (externals_p)
-    *externals_p = apr_array_make(pool, 1, sizeof(svn_wc_external_item_t *));
+    *externals_p = apr_array_make(pool, 1, sizeof(svn_wc_external_item2_t *));
 
   for (i = 0; i < lines->nelts; i++)
     {
       const char *line = APR_ARRAY_IDX(lines, i, const char *);
       apr_array_header_t *line_parts;
-      svn_wc_external_item_t *item;
+      svn_wc_external_item2_t *item;
 
       if ((! line) || (line[0] == '#'))
         continue;
@@ -2200,8 +2200,47 @@ svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
       item->url = svn_path_canonicalize(item->url, pool);
 
       if (externals_p)
-        APR_ARRAY_PUSH(*externals_p, svn_wc_external_item_t *) = item;
+        APR_ARRAY_PUSH(*externals_p, svn_wc_external_item2_t *) = item;
     }
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
+                                    const char *parent_directory,
+                                    const char *desc,
+                                    apr_pool_t *pool)
+{
+  apr_array_header_t *list;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  int i;
+
+  SVN_ERR(svn_wc_parse_externals_description3(externals_p ? &list : NULL,
+                                              parent_directory, desc, subpool));
+
+  if (externals_p)
+    {
+      *externals_p = apr_array_make(pool, list->nelts,
+                                    sizeof(svn_wc_external_item_t *));
+      for (i = 0; i < list->nelts; i++)
+        {
+          svn_wc_external_item2_t *item2 = APR_ARRAY_IDX(list, i,
+                                             svn_wc_external_item2_t *);
+          svn_wc_external_item_t *item = apr_palloc(pool, sizeof (*item));
+
+          if (item->target_dir)
+            item->target_dir = apr_pstrdup(pool, item2->target_dir);
+          if (item->url)
+            item->url = apr_pstrdup(pool, item2->url);
+          item->revision = item2->revision;
+
+          APR_ARRAY_PUSH(*externals_p, svn_wc_external_item_t *) = item;
+        }
+    }
+
+  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

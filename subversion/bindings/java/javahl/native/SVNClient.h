@@ -176,6 +176,17 @@ private:
     svn_stream_t * createReadStream(apr_pool_t* pool, const char *path,
                                     Revision &revision, Revision &pegRevision,
                                     size_t& size);
+    /**
+     * Shared implementation for diff() APIs. When pegRevision is
+     * provided, revision1 and revision2 equate to startRevision and
+     * endRevision (respectively), and target2 is ignored.
+     */
+    void diff(const char *target1, Revision &revision1,
+              const char *target2, Revision &revision2,
+              Revision *pegRevision,
+              const char *outfileName, bool recurse, bool ignoreAncestry,
+              bool noDiffDelete, bool force);
+
     Notify *m_notify;
     Notify2 *m_notify2;
     ProgressListener *m_progressListener;

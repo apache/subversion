@@ -2884,7 +2884,6 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
   txn->base_rev = rev;
 
   txn->vtable = &txn_vtable;
-  txn->fsap_data = NULL;
   *txn_p = txn;
   
   /* Create a new root node for this transaction. */
@@ -4609,7 +4608,6 @@ svn_fs_fs__open_txn(svn_fs_txn_t **txn_p,
   txn->base_rev = svn_fs_fs__id_rev(local_txn->base_id);
 
   txn->vtable = &txn_vtable;
-  txn->fsap_data = NULL;
   *txn_p = txn;
 
   return SVN_NO_ERROR;
@@ -4747,13 +4745,10 @@ svn_fs_fs__txn_prop(svn_string_t **value_p,
   svn_fs_t *fs = txn->fs;
 
   SVN_ERR(svn_fs_fs__check_fs(fs));
-
   SVN_ERR(svn_fs_fs__txn_proplist(&table, txn, pool));
 
-  /* And then the prop from that list (if there was a list). */
-  *value_p = NULL;
-  if (table)
-    *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+
   return SVN_NO_ERROR;
 }
 

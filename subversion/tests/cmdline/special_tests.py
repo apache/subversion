@@ -531,6 +531,33 @@ def diff_symlink_to_dir(sbox):
   svntest.actions.run_and_verify_svn(None, expected_output, [], 'diff',
                                      link_path)
 
+# Issue 2692 (part of): Check that the client can check out a repository
+# that contains an unknown special file type.
+def checkout_repo_with_unknown_special_type(sbox):
+  "checkout repository with unknown special file type"
+
+  # Create virgin repos and working copy
+  svntest.main.safe_rmtree(sbox.repo_dir, 1)
+  svntest.main.create_repos(sbox.repo_dir)
+
+  # Load the dumpfile into the repos.
+  data_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                          'special_tests_data')
+  dump_str = file(os.path.join(data_dir,
+                               "bad-special-type.dump"), "rb").read()
+  svntest.actions.run_and_verify_load(sbox.repo_dir, dump_str)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'special': Item(status='A '),
+    })
+  expected_wc = svntest.wc.State('', {
+    'special' : Item(contents='gimble wabe'),
+    })
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc)
+
 
 ########################################################################
 # Run the tests
@@ -545,9 +572,10 @@ test_list = [ None,
               Skip(replace_symlink_with_file, (os.name != 'posix')),
               Skip(remove_symlink, (os.name != 'posix')),
               Skip(merge_symlink_into_file, (os.name != 'posix')),
-              XFail(Skip(merge_file_into_symlink, (os.name != 'posix'))),
+              Skip(merge_file_into_symlink, (os.name != 'posix')),
               checkout_repo_with_symlinks,
               XFail(Skip(diff_symlink_to_dir, (os.name != 'posix'))),
+              checkout_repo_with_unknown_special_type,
              ]
 
 if __name__ == '__main__':

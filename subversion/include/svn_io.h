@@ -732,13 +732,15 @@ svn_stream_contents_same(svn_boolean_t *same,
 
 /** @} */
 
-/** Sets @a *result to a string containing the contents of @a
+/** Set @a *result to a string containing the contents of @a
  * filename, which is either "-" (indicating that stdin should be
  * read) or the utf8-encoded path of a real file.
  *
- * @warning Callers should be aware that if a program tries both to
- * invoke an external editor and to read from stdin, stdin could be
- * trashed and the editor might act funky or die outright.
+ * @warning Callers should be aware of possible unexpected results
+ * when using this function to read from stdin where additional
+ * stdin-reading processes abound.  For example, if a program tries
+ * both to invoke an external editor and to read from stdin, stdin
+ * could be trashed and the editor might act funky or die outright.
  *
  * @since New in 1.5.
  */
@@ -746,11 +748,11 @@ svn_error_t *svn_stringbuf_from_file2(svn_stringbuf_t **result,
                                       const char *filename, 
                                       apr_pool_t *pool);
 
-/** Similar to svn_stringbuf_from_file(), except that if @a filename
+/** Similar to svn_stringbuf_from_file2(), except that if @a filename
  * is "-", return the error @c SVN_ERR_UNSUPPORTED_FEATURE and don't
  * touch @a *result.
  *
- * @deprecated Provided for backwards compatibility with the 1.2 API.
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 svn_error_t *svn_stringbuf_from_file(svn_stringbuf_t **result, 
                                      const char *filename, 

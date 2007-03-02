@@ -447,12 +447,14 @@ if create_dirs:
     os.chdir(abs_objdir)
     baton = copied_execs
     os.path.walk('subversion', copy_execs, baton)
-    create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
   except:
     os.chdir(old_cwd)
     raise
   else:
     os.chdir(old_cwd)
+
+# Create the base directory for Python tests
+create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
 
 # Ensure the tests directory is correctly cased
 abs_builddir = fix_case(abs_builddir)

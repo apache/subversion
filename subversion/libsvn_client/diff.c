@@ -847,8 +847,8 @@ merge_file_changed(svn_wc_adm_access_t *adm_access,
 
   if (older)
     {
-      SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, mine, FALSE,
-                                      FALSE, adm_access, subpool));
+      SVN_ERR(svn_wc_text_modified_p(&has_local_mods, mine, FALSE,
+                                     adm_access, subpool));
 
       /* Special case:  if a binary file isn't locally modified, and is
          exactly identical to the 'left' side of the merge, then don't
