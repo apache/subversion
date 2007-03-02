@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-03-02 14:53+0800\n"
-"PO-Revision-Date: 2007-03-02 15:11+0800\n"
+"PO-Revision-Date: 2007-03-02 15:13+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -3394,9 +3394,8 @@ msgid "Authentication error from server: %s"
 msgstr "服务器报告认证错误: %s"
 
 #: libsvn_ra_svn/sasl_auth.c:826
-#, fuzzy
 msgid "Can't get username or password"
-msgstr "无法取得密码"
+msgstr "无法取得用户名称或密码"
 
 #: libsvn_ra_svn/simple_auth.c:97
 #: libsvn_subr/prompt.c:156
