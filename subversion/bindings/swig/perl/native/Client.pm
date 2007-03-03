@@ -1957,6 +1957,48 @@ $method_defs{list} = {
       list_func     => ...,
   })
 
+Report the directory entry for C<path_or_url> at C<revision>.
+
+If C<path_or_url> is a directory it's immediate children (i.e., other entries in
+the same directory) are also reported.  If C<recurse> is true then all entries
+for all paths below C<path_or_url> are reported.
+
+The actual node revision selected is determined by the path as it
+exists in C<peg_revision>. If C<peg_revision> is
+C<$SVN::Core::IGNORED_REVNUM> then it defaults to C<HEAD> for URLs and
+C<WORKING> for WC targets.
+
+C<list_func> is called once per entry, with the following five arguments.
+
+=over
+
+=item 1
+
+The path being reported.  This is relative to the directory specified by
+C<path_or_url>, and will be the empty string for that directory.
+
+=item 2
+
+An L<svn_dirent_t|SVN::Core/svn_dirent_t> that represents this entry.  The valid
+fields in this object are controlled by the C<dirent_fields> parameter.  Use
+C<$SVN::Core::SVN_DIRENT_ALL> to retrieve all the fields, otherwise bitwise OR
+the L<SVN_DIRENT_* flags|SVN::Core/SVN_DIRENT>.
+
+=item 3
+
+An L<svn_lock_t|SVN::Core/svn_lock_t> that represents the locks for this entry.
+Will be C<undef> if C<fetch_locks> was false.
+
+=item 4
+
+The absolute path to the entry being reported.
+
+=item 5
+
+A pool that should be used for any temporary allocations in C<list_func>.
+
+=back
+
 =cut
 
 $method_defs{lock} = {
@@ -2154,18 +2196,10 @@ $method_defs{ls} = {
 =head2 ls
 
   $ctx->ls({
-      dirents     => ...,
       path_or_url => ...,
-      revision    => ...,
-      recurse     => ...,
+      revision    => ...,   # optional, default is 'HEAD'
+      recurse     => ...,   # optional, default is 0
   })
-
-  my $dirents = $ctx->ls({
-      path_or_url => $target,
-      revision    => $revision,    # optional, default is 'HEAD'
-      recurse     => $recursive,   # optional, default is 0
-      pool        => $pool,        # optional
-  });
 
 Returns a hashref of L<svn_dirent_t|SVN::Core/svn_dirent_t> objects for
 $target at $revision.

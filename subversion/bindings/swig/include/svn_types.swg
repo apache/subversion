@@ -598,6 +598,19 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   Callback: svn_client_list_func_t
+   svn_client_list()
+*/
+
+#ifdef SWIGPERL
+%typemap(in) (svn_client_list_func_t list_func,
+                     void *baton) {
+    $1 = svn_swig_pl_thunk_list_receiver;
+    $2 = (void *)$input;
+}
+#endif
+
+/* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
    svn_client_log()
    svn_ra get_log()

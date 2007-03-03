@@ -1,8 +1,7 @@
-/*
- * swigutil_pl.c: utility functions for the SWIG Perl bindings
- *
+/**
+ * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +13,10 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file swigutil_pl.c
+ * @brief Utility functions and related code for the SWIG perl bindings
  */
 
 #include <EXTERN.h>
@@ -43,6 +46,11 @@ static HV *type_cache = NULL;
 #define _SWIG_TYPE(name) _swig_perl_type_query(name, 0)
 #define POOLINFO         _SWIG_TYPE("apr_pool_t *")
 
+/** Convert the datatype given in @a *typename to the swig_type_info * that
+ * represents the equivalent Perl datatype.  The length of @a *typename is
+ * specified in @a klen.  If @a klen is 0 then the length is automatically
+ * determined.
+ */
 static swig_type_info *_swig_perl_type_query(const char *typename, U32 klen)
 {
     SV **type_info;
@@ -196,6 +204,9 @@ static SV *convert_svn_string_t(svn_string_t *value, void *dummy)
     return obj;
 }
 
+/** Convert @a ptr, which is of type @a *tinfo, to a Perl SV *, and returns
+ * the SV *.
+ */
 static SV *convert_to_swig_type(void *ptr, swig_type_info *tinfo)
 {
     SV *obj = sv_newmortal();
@@ -279,28 +290,6 @@ SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
   return convert_array(array, (element_converter_t)convert_to_swig_type,
                        tinfo);		          
 }
-
-/* put the va_arg in stack and invoke caller_func with func.
-   fmt:
-   * O: perl object
-   * i: apr_int32_t
-   * u: apr_uint32_t
-   * L: apr_int64_t
-   * U: apr_uint64_t
-   * s: string
-   * S: swigtype
-   * r: svn_revnum_t
-   * b: svn_boolean_t
-   * t: svn_string_t
-   * z: apr_size_t
-   
-   Please do not add C types here.  Add a new format code if needed.
-   Using the underlying C types and not the APR or SVN types can break
-   things if these data types change in the future or on platforms which
-   use different types.
-
-   put returned value in result if result is not NULL
-*/
 
 svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
                                         void *func,
@@ -775,6 +764,34 @@ void svn_delta_make_editor(svn_delta_editor_t **editor,
     *editor = thunk_editor;
     *edit_baton = make_baton(pool, perl_editor, NULL);
     svn_swig_pl_hold_ref_in_pool(pool, perl_editor);
+}
+
+svn_error_t *svn_swig_pl_thunk_list_receiver(void *baton,
+					     const char *path,
+					     const svn_dirent_t *dirent,
+					     const svn_lock_t *lock,
+					     const char *abs_path,
+					     apr_pool_t *pool)
+{
+    SV *receiver = baton;
+    swig_type_info *dirent_type = _SWIG_TYPE("svn_dirent_t *");
+    swig_type_info *lock_type   = _SWIG_TYPE("svn_lock_t *");
+
+    if (!SvOK(receiver))
+	return SVN_NO_ERROR;
+
+    svn_swig_pl_callback_thunk(CALL_SV,
+			       receiver, NULL,
+			       "sOOsS", path,
+			       (dirent) ?
+			         convert_to_swig_type(dirent, dirent_type)
+			       : &PL_sv_undef,
+			       (lock) ? 
+			       convert_to_swig_type(lock, lock_type)
+			       : &PL_sv_undef,
+			       abs_path, pool, POOLINFO);
+
+    return SVN_NO_ERROR;
 }
 
 svn_error_t *svn_swig_pl_thunk_log_receiver(void *baton,

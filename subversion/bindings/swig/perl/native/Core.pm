@@ -102,6 +102,14 @@ sub auth_open_helper {
 our $INVALID_REVNUM = $SVN::_Core::SWIG_SVN_INVALID_REVNUM;
 our $IGNORED_REVNUM = $SVN::_Core::SWIG_SVN_IGNORED_REVNUM;
 
+# import the SVN_DIRENT_* constants
+our $SVN_DIRENT_KIND = $SVN::_Core::SVN_DIRENT_KIND;
+our $SVN_DIRENT_SIZE = $SVN::_Core::SVN_DIRENT_SIZE;
+our $SVN_DIRENT_HAS_PROPS = $SVN::_Core::SVN_DIRENT_HAS_PROPS;
+our $SVN_DIRENT_CREATED_REV = $SVN::_Core::SVN_DIRENT_CREATED_REV;
+our $SVN_DIRENT_LAST_AUTHOR = $SVN::_Core::SVN_DIRENT_LAST_AUTHOR;
+our $SVN_DIRENT_ALL = 0xFFFFFFFF;
+
 package _p_svn_stream_t;
 use SVN::Base qw(Core svn_stream_);
 

@@ -1,8 +1,7 @@
-/*
- * swigutil_pl.h :  utility functions and stuff for the SWIG Perl bindings
- *
+/**
+ * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -14,6 +13,10 @@
  * individuals.  For exact contribution history, see the revision
  * history and logs, available at http://subversion.tigris.org/.
  * ====================================================================
+ * @endcopyright
+ *
+ * @file swigutil_pl.h
+ * @brief Utility functions and related code for the SWIG Perl bindings
  */
 
 
@@ -61,10 +64,45 @@ void svn_swig_pl_bind_current_pool_fns(svn_swig_pl_get_current_pool_t get,
 
 apr_pool_t *svn_swig_pl_make_pool(SV *obj);
 
+/** Used by callers of svn_swig_pl_callback_func() to specify whether the
+ * function should be called as a method or as a function.
+ */
 typedef enum perl_func_invoker {
     CALL_METHOD,
     CALL_SV
 } perl_func_invoker_t;
+
+/** Call @a func, placing the result in @a **result (unless @a
+ * **result is NULL, in which case it is ignored).  @a caller_func is
+ * either CALL_SV, in which case @a func is called as a function (with
+ * call_sv()) or CALL_METHOD, in which case @a func is called as a
+ * method (with call_method()).
+ *
+ * The variadic arguments following @a fmt are passed, in order, to @a func.
+ *
+ * @a fmt is a printf()-like format string that specifies the types of
+ * the arguments that follow, and therefore how they should be
+ * converted to Perl data types when calling @a func.  Each character
+ * in the string represents one argument.  The recognised
+ * characters, and their meanings, are:
+ *
+ *  - O: perl object
+ *  - i: apr_int32_t
+ *  - u: apr_uint32_t
+ *  - L: apr_int64_t
+ *  - U: apr_uint64_t
+ *  - s: string
+ *  - S: swigtype
+ *  - r: svn_revnum_t
+ *  - b: svn_boolean_t
+ *  - t: svn_string_t
+ *  - z: apr_size_t
+ *  
+ *  Please do not add C types here.  Add a new format code if needed.
+ *  Using the underlying C types and not the APR or SVN types can
+ *  break things if these data types change in the future or on
+ *  platforms which use different types.
+ */
 
 svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
                                         void *func,
@@ -94,6 +132,19 @@ SV *svn_swig_pl_ints_to_list(const apr_array_header_t *array);
 */
 SV *svn_swig_pl_convert_array(const apr_array_header_t *array,
                               swig_type_info *tinfo);
+
+
+/** Call a Perl callback invoked by the SWIG wrapper for svn_client_list().
+ * @a baton points to the Perl subroutine to call, @a path, @a dirent,
+ * @a lock, @a abs_path, and @a pool are converted to their Perl equivalents
+ * and passed to the callback.
+ */
+svn_error_t *svn_swig_pl_thunk_list_receiver(void *baton,
+					     const char *path,
+					     const svn_dirent_t *dirent,
+					     const svn_lock_t *lock,
+					     const char *abs_path,
+					     apr_pool_t *pool);
 
 /* thunked log receiver function.  */
 svn_error_t * svn_swig_pl_thunk_log_receiver(void *py_receiver,
