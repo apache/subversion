@@ -108,13 +108,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r21537, r21543, r22350, r23360, r23362, r23372
-    Add the svnserveautocheck.sh script which allows us to run the ra_svn
-    testsuite on the linux buildslave. 
-    Justification:
-      Better testing of 1.4.x changes, no changes in svn core code.
-    Notes: includes a small unrelated change in davautocheck.sh (use bash
-      instead of sh)
-    Branch: 1.4.x-r21537
-    Votes:
-      +1: lgo, dlr, eh
