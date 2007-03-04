@@ -278,8 +278,9 @@ except ImportError:
 
 class SvnBackupOutput:
 
-    def __init__( self, absfilename ):
-        self.__filename = absfilename
+    def __init__( self, abspath, filename ):
+        self.__filename = filename
+        self.__absfilename = os.path.join( abspath, filename )
 
     def open( self ):
         pass
@@ -293,14 +294,17 @@ class SvnBackupOutput:
     def get_filename( self ):
         return self.__filename
 
+    def get_absfilename( self ):
+        return self.__absfilename
+
 
 class SvnBackupOutputPlain(SvnBackupOutput):
 
-    def __init__( self, absfilename ):
-        SvnBackupOutput.__init__( self, absfilename )
+    def __init__( self, abspath, filename ):
+        SvnBackupOutput.__init__( self, abspath, filename )
 
     def open( self ):
-        self.__ofd = open( self.get_filename(), "wb" )
+        self.__ofd = open( self.get_absfilename(), "wb" )
 
     def write( self, data ):
         self.__ofd.write( data )
@@ -311,11 +315,11 @@ class SvnBackupOutputPlain(SvnBackupOutput):
 
 class SvnBackupOutputGzip(SvnBackupOutput):
 
-    def __init__( self, absfilename ):
-        SvnBackupOutput.__init__( self, absfilename + ".gz" )
+    def __init__( self, abspath, filename ):
+        SvnBackupOutput.__init__( self, abspath, filename + ".gz" )
 
     def open( self ):
-        self.__compressor = gzip.GzipFile( filename=self.get_filename(),
+        self.__compressor = gzip.GzipFile( filename=self.get_absfilename(),
                 mode="wb" )
 
     def write( self, data ):
@@ -328,12 +332,12 @@ class SvnBackupOutputGzip(SvnBackupOutput):
 
 class SvnBackupOutputBzip2(SvnBackupOutput):
 
-    def __init__( self, absfilename ):
-        SvnBackupOutput.__init__( self, absfilename + ".bz2" )
+    def __init__( self, abspath, filename ):
+        SvnBackupOutput.__init__( self, abspath, filename + ".bz2" )
 
     def open( self ):
         self.__compressor = bz2.BZ2Compressor()
-        self.__ofd = open( self.get_filename(), "wb" )
+        self.__ofd = open( self.get_absfilename(), "wb" )
 
     def write( self, data ):
         self.__ofd.write( self.__compressor.compress( data ) )
@@ -546,26 +550,26 @@ class SvnBackup:
             revparam += ":%d" % torev
             r += "-%06d" % torev
         filename = "%s.%s.svndmp" % ( self.__reposname, r )
-        absfilename = "%s/%s" % ( self.__dumpdir, filename )
         output = None
         if self.__zip:
             if self.__zip == "gzip":
-                output = SvnBackupOutputGzip( absfilename )
+                output = SvnBackupOutputGzip( self.__dumpdir, filename )
             else:
-                output = SvnBackupOutputBzip2( absfilename )
+                output = SvnBackupOutputBzip2( self.__dumpdir, filename )
         else:
-            output = SvnBackupOutputPlain( absfilename )
+            output = SvnBackupOutputPlain( self.__dumpdir, filename )
+        absfilename = output.get_absfilename()
         realfilename = output.get_filename()
         if checkonly:
-            return os.path.exists( realfilename )
-        elif os.path.exists( realfilename ):
+            return os.path.exists( absfilename )
+        elif os.path.exists( absfilename ):
             if overwrite:
-                print "overwriting " + realfilename
+                print "overwriting " + absfilename
             else:
-                print "%s already exists." % realfilename
+                print "%s already exists." % absfilename
                 return True
         else:
-            print "writing " + realfilename
+            print "writing " + absfilename
         cmd = [ "svnadmin", "dump",
                 "--incremental", "-r", revparam, self.__repospath ]
         if self.__quiet:
@@ -577,7 +581,7 @@ class SvnBackup:
         output.close()
         rc = r[0] == 0
         if rc:
-            self.transfer( output.get_filename(), filename )
+            self.transfer( absfilename, realfilename )
         return rc
 
     def export_single_rev( self ):
