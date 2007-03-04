@@ -2195,21 +2195,22 @@ $method_defs{ls} = {
 
 =head2 ls
 
-  $ctx->ls({
+  my %dirents = $ctx->ls({
       path_or_url => ...,
       revision    => ...,   # optional, default is 'HEAD'
       recurse     => ...,   # optional, default is 0
   })
 
 Returns a hashref of L<svn_dirent_t|SVN::Core/svn_dirent_t> objects for
-$target at $revision.
+C<path_or_url> at C<revision>.
 
-If $target is a directory, returns entries for all of the directories'
-contents.  If $recursive is true, it will recurse subdirectories in $target.
+If C<path_or_url> is a directory, returns entries for all of the
+directories' contents.  If C<recurse> is true, it will recurse
+subdirectories in C<path_or_url>.
 
-If $target is a file only return an entry for the file.
+If C<path_or_url> is a file only return an entry for the file.
 
-If $target is non-existent, raises the $SVN::Error::FS_NOT_FOUND
+If C<target> is non-existent, raises the $SVN::Error::FS_NOT_FOUND
 error.
 
 =cut
@@ -2217,7 +2218,6 @@ error.
 $method_defs{ls2} = {
     type => 'obj',
     args => [
-	$arg_dirents,
 	$arg_path_or_url,
 	$arg_peg_revision,
 	$arg_revision,
@@ -2227,13 +2227,15 @@ $method_defs{ls2} = {
 
 =head2 ls2
 
-  $ctx->ls2({
-      dirents      => ...,
+  my %dirents = $ctx->ls2({
       path_or_url  => ...,
       peg_revision => ...,
-      revision     => ...,
-      recurse      => ...,
+      revision     => ...,   # optional, default is 'HEAD'
+      recurse      => ...,   # optional, default is 0
   })
+
+Similar to L<ls()|/ls>.  However, C<path_or_url> is first identified in
+C<peg_revision>, and then tracked to C<revision>.
 
 =cut
 
