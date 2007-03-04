@@ -1959,7 +1959,7 @@ $method_defs{list} = {
 
 Report the directory entry for C<path_or_url> at C<revision>.
 
-If C<path_or_url> is a directory it's immediate children (i.e., other entries in
+If C<path_or_url> is a directory its immediate children (i.e., other entries in
 the same directory) are also reported.  If C<recurse> is true then all entries
 for all paths below C<path_or_url> are reported.
 
@@ -3576,7 +3576,7 @@ you pass.  It always returns the current codereference set.
 
 The subroutine pointed to by this reference will be called when a change
 is made to the working copy.  The return value of this function is ignored.
-It's only purpose is to notify you of the change.
+Its only purpose is to notify you of the change.
 
 The subroutine will receive 6 parameters.  The first parameter will be the path
 of the changed file (absolute or relative to the cwd).  The second is an
