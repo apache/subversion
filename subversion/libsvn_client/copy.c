@@ -463,7 +463,7 @@ extend_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
                      apr_hash_t *mergeinfo, svn_wc_adm_access_t *adm_access,
                      svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
-  apr_hash_t *wc_mergeinfo;
+  apr_hash_t *wc_mergeinfo, *combined_mergeinfo;
 
   /* Get a fresh copy of the pre-existing state of the WC's merge info
      updating it. */
@@ -471,9 +471,10 @@ extend_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
                                        adm_access, ctx, pool));
 
   /* Combine the provided merge info with any merge info from the WC. */
-  SVN_ERR(svn_mergeinfo_merge(&wc_mergeinfo, wc_mergeinfo, mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo, wc_mergeinfo, mergeinfo,
+                              pool));
 
-  return svn_client__record_wc_merge_info(target_wcpath, wc_mergeinfo,
+  return svn_client__record_wc_merge_info(target_wcpath, combined_mergeinfo,
                                           adm_access, pool);
 }
 
@@ -1086,7 +1087,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_prop_t *mergeinfo_prop;
-      apr_hash_t *mergeinfo, *wc_mergeinfo;
+      apr_hash_t *mergeinfo, *wc_mergeinfo, *combined_mergeinfo;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_client_commit_item3_t *item =
@@ -1107,11 +1108,11 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_client__parse_merge_info(&wc_mergeinfo, entry,
                                            pair->src, adm_access, ctx,
                                            pool));
-      SVN_ERR(svn_mergeinfo_merge(&mergeinfo, mergeinfo,
+      SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo, mergeinfo,
                                   wc_mergeinfo, pool));
       SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
                                        &mergeinfo_prop->value,
-                                       mergeinfo, pool));
+                                       combined_mergeinfo, pool));
       APR_ARRAY_PUSH(item->outgoing_prop_changes, svn_prop_t *) =
         mergeinfo_prop;
     }
