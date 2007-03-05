@@ -18,6 +18,8 @@
 
 
 
+#include "svn_private_config.h"
+
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
@@ -42,6 +44,12 @@
 #include "svn_props.h"
 
 #include "ra_svn.h"
+
+#ifdef SVN_HAVE_SASL
+#define DO_AUTH svn_ra_svn__do_sasl_auth
+#else
+#define DO_AUTH svn_ra_svn__do_simple_auth
+#endif
 
 typedef struct {
   svn_ra_svn__session_baton_t *sess_baton;
@@ -245,7 +253,7 @@ static svn_error_t *handle_auth_request(svn_ra_svn__session_baton_t *sess,
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "lc", &mechlist, &realm));
   if (mechlist->nelts == 0)
     return SVN_NO_ERROR;
-  return svn_ra_svn__do_auth(sess, mechlist, realm, pool);
+  return DO_AUTH(sess, mechlist, realm, pool);
 }
 
 /* --- REPORTER IMPLEMENTATION --- */
@@ -550,17 +558,18 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
    * capability list, and the URL, and subsequently there is an auth
    * request.  In version 1, we send back the protocol version, auth
    * mechanism, mechanism initial response, and capability list, and;
-   * then send the URL after authentication.  svn_ra_svn__do_auth
-   * temporarily has support for the mixed-style response. */
+   * then send the URL after authentication.  svn_ra_svn__do_sasl_auth
+   * and svn_ra_svn__do_simple_auth temporarily have support for the
+   * mixed-style response. */
   /* When we punt support for protocol version 1, we should:
    * - Eliminate this conditional and the similar one below
-   * - Remove v1 support from svn_ra_svn__auth_response and inline it 
-   *   into svn_ra_svn__do_auth
-   * - Remove the (realm == NULL) support from svn_ra_svn__do_auth
+   * - Remove v1 support from svn_ra_svn__auth_response
+   * - Remove the (realm == NULL) support from svn_ra_svn__do_sasl_auth
+   *   and svn_ra_svn__do_simple_auth
    * - Remove the protocol version check from handle_auth_request */
   if (sess->protocol_version == 1)
     {
-      SVN_ERR(svn_ra_svn__do_auth(sess, mechlist, NULL, pool));
+      SVN_ERR(DO_AUTH(sess, mechlist, NULL, pool));
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "c", url));
     }
   else

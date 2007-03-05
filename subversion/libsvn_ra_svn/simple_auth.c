@@ -18,7 +18,6 @@
  */
 
 #include "svn_private_config.h"
-#ifndef SVN_HAVE_SASL
 
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
@@ -62,9 +61,9 @@ static svn_error_t *read_success(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
-                                 apr_array_header_t *mechlist,
-                                 const char *realm, apr_pool_t *pool)
+svn_error_t *svn_ra_svn__do_simple_auth(svn_ra_svn__session_baton_t *sess,
+                                        apr_array_header_t *mechlist,
+                                        const char *realm, apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess->conn;
   const char *realmstring, *user, *password, *msg;
@@ -113,8 +112,5 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
       return SVN_NO_ERROR;
     }
   else
-    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            _("Cannot negotiate authentication mechanism"));
+    return svn_error_create(SVN_ERR_RA_SVN_NO_MECHANISMS, NULL, NULL);
 }
-
-#endif /* SVN_HAVE_SASL */
