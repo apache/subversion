@@ -1106,11 +1106,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_client__parse_merge_info(&wc_mergeinfo, entry,
                                            pair->src, adm_access, ctx,
                                            pool));
-SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &mergeinfo_prop->value, mergeinfo, pool));
-SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &mergeinfo_prop->value, wc_mergeinfo, pool));
       SVN_ERR(svn_mergeinfo_merge(&mergeinfo, wc_mergeinfo, pool));
-SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &mergeinfo_prop->value, mergeinfo, pool));
-SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &mergeinfo_prop->value, wc_mergeinfo, pool));
       SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
                                        &mergeinfo_prop->value,
                                        mergeinfo, pool));
