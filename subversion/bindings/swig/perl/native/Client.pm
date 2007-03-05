@@ -2195,7 +2195,7 @@ $method_defs{ls} = {
 
 =head2 ls
 
-  my %dirents = $ctx->ls({
+  my $dirents = $ctx->ls({
       path_or_url => ...,
       revision    => ...,   # optional, default is 'HEAD'
       recurse     => ...,   # optional, default is 0
@@ -2227,7 +2227,7 @@ $method_defs{ls2} = {
 
 =head2 ls2
 
-  my %dirents = $ctx->ls2({
+  my $dirents = $ctx->ls2({
       path_or_url  => ...,
       peg_revision => ...,
       revision     => ...,   # optional, default is 'HEAD'
@@ -2242,8 +2242,6 @@ C<peg_revision>, and then tracked to C<revision>.
 $method_defs{ls3} = {
     type => 'obj',
     args => [
-	$arg_dirents,
-	$arg_locks,
 	$arg_path_or_url,
 	$arg_peg_revision,
 	$arg_revision,
@@ -2253,14 +2251,16 @@ $method_defs{ls3} = {
 
 =head2 ls3
 
-  $ctx->ls3({
-      dirents      => ...,
-      locks        => ...,
+  my($dirents, $locks) = $ctx->ls3({
       path_or_url  => ...,
       peg_revision => ...,
-      revision     => ...,
-      recurse      => ...,
+      revision     => ...,   # optional, default is 'HEAD'
+      recurse      => ...,   # optional, default is 0
   })
+
+Similar to L<ls2()|/ls2>.  However, an aditional hash ref is returned.
+Keys in the hash are paths, values are
+L<_p_svn_lock_t|SVN::Core::_p_svn_lock_t> objects for that path.
 
 =cut
 
