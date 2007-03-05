@@ -382,7 +382,6 @@ Contents
         that all of these should be switched to depth, but the
         question needs some more consideration:
 
-         svn_client_status2()   # Yes, probably should take depth.
          svn_client_list()      # Yes, probably should take depth.
          svn_client_import2()   # Note: takes 'nonrecursive' right now
          svn_client_revert()    # Any point taking depth?

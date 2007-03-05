@@ -1427,13 +1427,8 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
 /**
  * Given @a path to a working copy directory (or single file), call
  * @a status_func/status_baton with a set of @c svn_wc_status_t *
- * structures which describe the status of @a path and its children.
- *
- *    - If @a recurse is non-zero, recurse fully, else do only
- *      immediate children.
- *      ### TODO: This should change to svn_depth_t depth, but that's
- *      ### not strictly needed for sparse-directories support, so
- *      ### leaving it for now.
+ * structures which describe the status of @a path, and its children
+ * (recursing according to @a depth).
  *
  *    - If @a get_all is set, retrieve all entries; otherwise,
  *      retrieve only "interesting" entries (local mods and/or
@@ -1454,6 +1449,28 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  * after each.
  * 
  * @since New in 1.2.
+ */
+svn_error_t *
+svn_client_status3(svn_revnum_t *result_rev,
+                   const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_wc_status_func2_t status_func,
+                   void *status_baton,
+                   svn_depth_t depth,
+                   svn_boolean_t get_all,
+                   svn_boolean_t update,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool);
+
+/**
+ * Like svn_client_status3(), except with @a recurse instead of @a depth.
+ * If @a recurse is true, behave as if for @c svn_depth_infinity; else
+ * if @a recurse is false, behave as if for @c svn_depth_files.
+ *
+ * @since New in 1.2.
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_client_status2(svn_revnum_t *result_rev,

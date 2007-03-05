@@ -664,11 +664,14 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                     iterpool), iterpool);
 
           /* And then do the status. */
-          SVN_ERR(svn_client_status2(NULL, fullpath, 
+          SVN_ERR(svn_client_status3(NULL, fullpath, 
                                      &(external->revision),
-                                     status_func, status_baton, 
-                                     TRUE, get_all, update, no_ignore, FALSE,
-                                     ctx, iterpool));
+                                     status_func, status_baton,
+                                     /* ### TODO: Is it really correct
+                                        ### to unconditionally recurse
+                                        ### here? */
+                                     svn_depth_infinity, get_all, update,
+                                     no_ignore, FALSE, ctx, iterpool));
         }
     } 
   

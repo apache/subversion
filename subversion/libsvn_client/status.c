@@ -200,12 +200,12 @@ static svn_ra_reporter3_t lock_fetch_reporter = {
 
 
 svn_error_t *
-svn_client_status2(svn_revnum_t *result_rev,
+svn_client_status3(svn_revnum_t *result_rev,
                    const char *path,
                    const svn_opt_revision_t *revision,
                    svn_wc_status_func2_t status_func,
                    void *status_baton,
-                   svn_boolean_t recurse,
+                   svn_depth_t depth,
                    svn_boolean_t get_all,
                    svn_boolean_t update,
                    svn_boolean_t no_ignore,
@@ -221,21 +221,22 @@ svn_client_status2(svn_revnum_t *result_rev,
   const svn_wc_entry_t *entry;
   struct status_baton sb;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
-  svn_depth_t depth = SVN_DEPTH_FROM_RECURSE(recurse);
+  /* ### TODO: This is a shim, we should use depth for real. */
+  svn_depth_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   sb.real_status_func = status_func;
   sb.real_status_baton = status_baton;
   sb.deleted_in_repos = FALSE;
 
   SVN_ERR(svn_wc_adm_open_anchor(&anchor_access, &target_access, &target,
-                                 path, FALSE, recurse ? -1 : 1,
+                                 path, FALSE,
+                                 SVN_DEPTH_TO_RECURSE(depth) ? -1 : 1,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
   anchor = svn_wc_adm_access_path(anchor_access);
 
-  /* ### TODO: This function should stop taking recurse and start
-     ### taking depth, and when svn_depth_unknown, we'd get the depth
-     ### from the working copy here. */ 
+  /* ### TODO: If depth is svn_depth_unknown, we should get the depth
+     ### from the working copy here. */
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
@@ -370,6 +371,28 @@ svn_client_status2(svn_revnum_t *result_rev,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_status2(svn_revnum_t *result_rev,
+                   const char *path,
+                   const svn_opt_revision_t *revision,
+                   svn_wc_status_func2_t status_func,
+                   void *status_baton,
+                   svn_boolean_t recurse,
+                   svn_boolean_t get_all,
+                   svn_boolean_t update,
+                   svn_boolean_t no_ignore,
+                   svn_boolean_t ignore_externals,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  return svn_client_status3(result_rev, path, revision,
+                            status_func, status_baton,
+                            SVN_DEPTH_FROM_RECURSE(recurse),
+                            get_all, update,
+                            no_ignore, ignore_externals,
+                            ctx, pool);
+}
+
 
 /* Baton for old_status_func_cb; does what you think it does. */
 struct old_status_func_cb_baton
@@ -410,9 +433,10 @@ svn_client_status(svn_revnum_t *result_rev,
   b->original_func = status_func;
   b->original_baton = status_baton;
 
-  return svn_client_status2(result_rev, path, revision, 
+  return svn_client_status3(result_rev, path, revision, 
                             old_status_func_cb, b,
-                            recurse, get_all, update, no_ignore, FALSE,
+                            SVN_DEPTH_FROM_RECURSE(recurse),
+                            get_all, update, no_ignore, FALSE,
                             ctx, pool);
 }
 

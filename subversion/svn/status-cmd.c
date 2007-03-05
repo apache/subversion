@@ -182,10 +182,9 @@ do_status(svn_cl__opt_state_t *opt_state,
   if (opt_state->xml)
     SVN_ERR(print_start_target_xml(svn_path_local_style(target, pool), pool));
 
-  /* ### TODO: Yup, this needs to be real depth.*/
-  SVN_ERR(svn_client_status2(&repos_rev, target, rev,
+  SVN_ERR(svn_client_status3(&repos_rev, target, rev,
                              print_status, status_baton,
-                             SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                             opt_state->depth,
                              opt_state->verbose,
                              opt_state->update,
                              opt_state->no_ignore,
