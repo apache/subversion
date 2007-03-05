@@ -621,17 +621,15 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
   return SVN_NO_ERROR;
 }
 
-/* Merge two sets of merge info IN1 and IN2 and place the result in
-   OUTPUT */
+/* Merge merge info IN2 into *IN1 */
 svn_error_t *
-svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
+svn_mergeinfo_merge(apr_hash_t **in1, apr_hash_t *in2,
                     apr_pool_t *pool)
 {
   apr_array_header_t *sorted1, *sorted2;
   int i, j;
 
-  *output = apr_hash_make (pool);
-  sorted1 = svn_sort__hash(in1, svn_sort_compare_items_as_paths, pool);
+  sorted1 = svn_sort__hash(*in1, svn_sort_compare_items_as_paths, pool);
   sorted2 = svn_sort__hash(in2, svn_sort_compare_items_as_paths, pool);
 
   i = 0;
@@ -654,37 +652,26 @@ svn_mergeinfo_merge(apr_hash_t **output, apr_hash_t *in1, apr_hash_t *in2,
           rl2 = elt2.value;
 
           SVN_ERR(svn_rangelist_merge(&merged, rl1, rl2, pool));
-          apr_hash_set(*output, elt1.key, elt1.klen, merged);
+          apr_hash_set(*in1, elt1.key, elt1.klen, merged);
           i++;
           j++;
         }
       else if (res < 0)
         {
-          apr_hash_set(*output, elt1.key, elt1.klen, elt1.value);
           i++;
         }
       else
         {
-          apr_hash_set(*output, elt2.key, elt2.klen, elt2.value);
+          apr_hash_set(*in1, elt2.key, elt2.klen, elt2.value);
           j++;
         }
     }
 
-  /* Copy back any remaining elements.
-     Only one of these loops should end up running, if anything. */
-
-  assert (!(i < sorted1->nelts && j < sorted2->nelts));
-
-  for (; i < sorted1->nelts; i++)
-    {
-      svn_sort__item_t elt = APR_ARRAY_IDX(sorted1, i, svn_sort__item_t);
-      apr_hash_set(*output, elt.key, elt.klen, elt.value);
-    }
-
+  /* Copy back any remaining elements from the second hash. */
   for (; j < sorted2->nelts; j++)
     {
       svn_sort__item_t elt = APR_ARRAY_IDX(sorted2, j, svn_sort__item_t);
-      apr_hash_set(*output, elt.key, elt.klen, elt.value);
+      apr_hash_set(*in1, elt.key, elt.klen, elt.value);
     }
 
   return SVN_NO_ERROR;

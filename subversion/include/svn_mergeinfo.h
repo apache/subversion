@@ -59,17 +59,19 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
                    apr_hash_t *mergefrom, apr_hash_t *mergeto,
                    apr_pool_t *pool);
 
-/** Merge two hashes of merge info, @a mergein1 and @a mergein2,
- * and place the result in @a output.
+/** Merge hash of merge info, @a mergein2, into existing hash
+ * @a *mergein1.
  *
- * Note: @a mergein1 and @a mergein2 must have rangelists that are
- * sorted as said by svn_sort_compare_ranges.  @a mergeoutput will
- * have rangelists that are guaranteed to be in sorted order.
+ * Note: @a *mergein1 and @a mergein2 must have rangelists that are
+ * sorted as said by svn_sort_compare_ranges.  After the merge
+ * @a *mergein1 will have rangelists that are guaranteed to be in
+ * sorted order.
+ *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_merge(apr_hash_t **mergeoutput, apr_hash_t *mergein1,
-                    apr_hash_t *mergein2, apr_pool_t *pool);
+svn_mergeinfo_merge(apr_hash_t **mergein1, apr_hash_t *mergein2,
+                    apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
  * minuend), and places the resulting difference in @a output.

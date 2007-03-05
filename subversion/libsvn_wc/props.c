@@ -507,13 +507,13 @@ combine_mergeinfo_props(const svn_string_t **output,
                         const svn_string_t *prop_val2,
                         apr_pool_t *pool)
 {
-  apr_hash_t *mergeinfo1, *mergeinfo2, *combined_mergeinfo;
+  apr_hash_t *mergeinfo1, *mergeinfo2;
   SVN_ERR(svn_mergeinfo_parse(prop_val1->data, &mergeinfo1, pool));
   SVN_ERR(svn_mergeinfo_parse(prop_val2->data, &mergeinfo2, pool));
-  SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo, mergeinfo1, mergeinfo2,
+  SVN_ERR(svn_mergeinfo_merge(&mergeinfo1, mergeinfo2,
                               pool));
   SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) output,
-                                   combined_mergeinfo, pool));
+                                   mergeinfo1, pool));
   return SVN_NO_ERROR;
 }
 
@@ -527,26 +527,26 @@ combine_forked_mergeinfo_props(const svn_string_t **output,
                                const svn_string_t *to_prop_val,
                                apr_pool_t *pool)
 {
-  apr_hash_t *combined_mergeinfo, *from_mergeinfo,
-    *l_deleted, *l_added, *r_deleted, *r_added, *deleted, *added;
+  apr_hash_t *from_mergeinfo,
+    *l_deleted, *l_added, *r_deleted, *r_added;
 
   /* ### OPTIMIZE: Use from_mergeinfo when diff'ing. */
   SVN_ERR(diff_mergeinfo_props(&l_deleted, &l_added, from_prop_val,
                                working_prop_val, pool));
   SVN_ERR(diff_mergeinfo_props(&r_deleted, &r_added, from_prop_val,
                                to_prop_val, pool));
-  SVN_ERR(svn_mergeinfo_merge(&deleted, l_deleted, r_deleted, pool));
-  SVN_ERR(svn_mergeinfo_merge(&added, l_added, r_added, pool));
+  SVN_ERR(svn_mergeinfo_merge(&l_deleted, r_deleted, pool));
+  SVN_ERR(svn_mergeinfo_merge(&l_added, r_added, pool));
 
   /* Apply the combined deltas to the base. */
   SVN_ERR(svn_mergeinfo_parse(from_prop_val->data, &from_mergeinfo, pool));
-  SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo, from_mergeinfo, added,
+  SVN_ERR(svn_mergeinfo_merge(&from_mergeinfo, l_added,
                               pool));
-  SVN_ERR(svn_mergeinfo_remove(&combined_mergeinfo, deleted,
-                               combined_mergeinfo, pool));
+  SVN_ERR(svn_mergeinfo_remove(&from_mergeinfo, l_deleted,
+                               from_mergeinfo, pool));
 
   SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) output,
-                                   combined_mergeinfo, pool));
+                                   from_mergeinfo, pool));
   return SVN_NO_ERROR;
 }
 

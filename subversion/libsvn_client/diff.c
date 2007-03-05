@@ -1860,7 +1860,7 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
          ### libsvn_wc/props.c:svn_wc_props_modified_p() which reports
          ### on a single property value. */
       SVN_ERR(svn_mergeinfo_merge(target_mergeinfo, repos_mergeinfo,
-                                  *target_mergeinfo, pool));
+                                  pool));
     }
   return SVN_NO_ERROR;
 }
@@ -2306,6 +2306,12 @@ do_merge(const char *initial_URL1,
               apr_hash_t *merges;
               SVN_ERR(determine_merges_performed(&merges, target_wcpath,
                                                  &range, &notify_b, pool));
+{
+svn_stringbuf_t *target_mergeinfo_string, *merges_string;
+SVN_ERR(svn_mergeinfo_to_stringbuf(&target_mergeinfo_string, target_mergeinfo, pool));
+SVN_ERR(svn_mergeinfo_to_stringbuf(&merges_string, merges, pool));
+target_mergeinfo_string = NULL;
+}
               return update_wc_merge_info(target_wcpath, entry, rel_path,
                                           merges, is_revert, adm_access, ctx,
                                           pool);

@@ -87,7 +87,7 @@ verify_mergeinfo_parse(const char *input,
 
 /* Some of our own global variables (for simplicity), which map paths
    -> merge ranges. */
-static apr_hash_t *info1, *info2, *info3;
+static apr_hash_t *info1, *info2;
 
 #define NBR_MERGEINFO_VALS 3
 /* Valid merge info values. */
@@ -397,12 +397,12 @@ test_merge_mergeinfo(const char **msg,
   SVN_ERR(svn_mergeinfo_parse(mergeinfo1, &info1, pool));
   SVN_ERR(svn_mergeinfo_parse(mergeinfo2, &info2, pool));
 
-  SVN_ERR(svn_mergeinfo_merge(&info3, info1, info2, pool));
+  SVN_ERR(svn_mergeinfo_merge(&info1, info2, pool));
 
-  if (apr_hash_count(info3) != 2)
+  if (apr_hash_count(info1) != 2)
     return fail(pool, "Wrong number of paths in merged mergeinfo");
 
-  result = apr_hash_get(info3, "/fred", APR_HASH_KEY_STRING);
+  result = apr_hash_get(info1, "/fred", APR_HASH_KEY_STRING);
   if (!result)
     return fail(pool, "Missing path in merged mergeinfo");
 
@@ -415,7 +415,7 @@ test_merge_mergeinfo(const char **msg,
   if (resultrange->start != 8 || resultrange->end != 12)
     return fail(pool, "Range combining produced wrong result");
 
-  result = apr_hash_get(info3, "/trunk", APR_HASH_KEY_STRING);
+  result = apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING);
   if (!result)
     return fail(pool, "Missing path in merged mergeinfo");
 

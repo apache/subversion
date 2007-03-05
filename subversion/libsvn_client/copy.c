@@ -426,7 +426,7 @@ calculate_target_merge_info(svn_ra_session_t *ra_session,
                             apr_pool_t *pool)
 {
   const char *src_path;
-  apr_hash_t *implied_mergeinfo, *src_mergeinfo;
+  apr_hash_t *src_mergeinfo;
 
   /* Find src path relative to the repository root. */
   SVN_ERR(svn_client__path_relative_to_root(&src_path, src_path_or_url,
@@ -438,7 +438,7 @@ calculate_target_merge_info(svn_ra_session_t *ra_session,
      ### ra_dav, because we're providing a path relative to the
      ### repository root instead of the ra_session (which may've been
      ### opened to a path somewhere under the root). */
-  SVN_ERR(get_implied_merge_info(ra_session, &implied_mergeinfo,
+  SVN_ERR(get_implied_merge_info(ra_session, target_mergeinfo,
                                  src_rel_path, src_path, src_revnum, pool));
   SVN_ERR(svn_client__get_merge_info_for_path(ra_session, &src_mergeinfo,
                                               src_path, src_revnum, pool));
@@ -446,12 +446,10 @@ calculate_target_merge_info(svn_ra_session_t *ra_session,
   /* Combine and return all merge info. */
   if (src_mergeinfo)
     {
-      return svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo,
-                                 implied_mergeinfo, pool);
+      return svn_mergeinfo_merge(target_mergeinfo, src_mergeinfo, pool);
     }
   else
     {
-      *target_mergeinfo = implied_mergeinfo;
       return SVN_NO_ERROR;
     }
 }
@@ -463,7 +461,7 @@ extend_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
                      apr_hash_t *mergeinfo, svn_wc_adm_access_t *adm_access,
                      svn_client_ctx_t *ctx, apr_pool_t *pool)
 {
-  apr_hash_t *wc_mergeinfo, *combined_mergeinfo;
+  apr_hash_t *wc_mergeinfo;
 
   /* Get a fresh copy of the pre-existing state of the WC's merge info
      updating it. */
@@ -471,10 +469,10 @@ extend_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
                                        adm_access, ctx, pool));
 
   /* Combine the provided merge info with any merge info from the WC. */
-  SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo, wc_mergeinfo, mergeinfo,
+  SVN_ERR(svn_mergeinfo_merge(&wc_mergeinfo, mergeinfo,
                               pool));
 
-  return svn_client__record_wc_merge_info(target_wcpath, combined_mergeinfo,
+  return svn_client__record_wc_merge_info(target_wcpath, wc_mergeinfo,
                                           adm_access, pool);
 }
 
@@ -1087,7 +1085,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   for (i = 0; i < copy_pairs->nelts; i++)
     {
       svn_prop_t *mergeinfo_prop;
-      apr_hash_t *mergeinfo, *wc_mergeinfo, *combined_mergeinfo;
+      apr_hash_t *mergeinfo, *wc_mergeinfo;
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
       svn_client_commit_item3_t *item =
@@ -1108,11 +1106,14 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
       SVN_ERR(svn_client__parse_merge_info(&wc_mergeinfo, entry,
                                            pair->src, adm_access, ctx,
                                            pool));
-      SVN_ERR(svn_mergeinfo_merge(&combined_mergeinfo, mergeinfo,
-                                  wc_mergeinfo, pool));
+SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &mergeinfo_prop->value, mergeinfo, pool));
+SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &mergeinfo_prop->value, wc_mergeinfo, pool));
+      SVN_ERR(svn_mergeinfo_merge(&mergeinfo, wc_mergeinfo, pool));
+SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &mergeinfo_prop->value, mergeinfo, pool));
+SVN_ERR(svn_mergeinfo__to_string((svn_string_t **) &mergeinfo_prop->value, wc_mergeinfo, pool));
       SVN_ERR(svn_mergeinfo__to_string((svn_string_t **)
                                        &mergeinfo_prop->value,
-                                       combined_mergeinfo, pool));
+                                       mergeinfo, pool));
       APR_ARRAY_PUSH(item->outgoing_prop_changes, svn_prop_t *) =
         mergeinfo_prop;
     }
