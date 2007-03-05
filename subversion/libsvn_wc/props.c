@@ -2113,7 +2113,8 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
       line_parts = svn_cstring_split(line, " \t", TRUE, pool);
 
-      item = apr_palloc(pool, sizeof(*item));
+      SVN_ERR(svn_wc_external_item_create
+              ((const svn_wc_external_item2_t **) &item, pool));
 
       if (line_parts->nelts < 2)
         goto parse_error;
