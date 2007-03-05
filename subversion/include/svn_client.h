@@ -1448,7 +1448,7 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
  * definition, and with @c svn_wc_notify_status_completed
  * after each.
  * 
- * @since New in 1.2.
+ * @since New in 1.5.
  */
 svn_error_t *
 svn_client_status3(svn_revnum_t *result_rev,
