@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-03-05 18:21+0100\n"
-"PO-Revision-Date: 2007-03-02 12:11+0100\n"
+"PO-Revision-Date: 2007-03-06 19:11+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -752,9 +752,8 @@ msgid "Path has no lock token"
 msgstr "Stien har ingen låsnøkkel"
 
 #: include/svn_error_codes.h:937
-#, fuzzy
 msgid "Operation does not support multiple sources"
-msgstr "Operasjonen gjelder ikke for kataloger"
+msgstr "Operasjonen støtter ikke flere kilder"
 
 #: include/svn_error_codes.h:943
 msgid "A problem occurred; see later errors for details"
@@ -1150,9 +1149,8 @@ msgid "Revision type requires a working copy path, not a URL"
 msgstr "Revisjonstype krever en sti i arbeidskopien, ikke en URL"
 
 #: libsvn_client/copy.c:1360
-#, fuzzy
 msgid "Cannot mix repository and working copy sources"
-msgstr "Filstien er ikke til en fil i en arbeidskopi"
+msgstr "Kan ikke blande depot- og arbeidskopikilder"
 
 #: libsvn_client/copy.c:1402
 #, c-format
@@ -1166,7 +1164,7 @@ msgstr "Kan ikke flytte «%s» inn i seg selv"
 
 #: libsvn_client/copy.c:1431
 msgid "Moves between the working copy and the repository are not supported"
-msgstr ""
+msgstr "Flyttinger mellom arbeidskopien og depotet er ikke støttet"
 
 #: libsvn_client/copy.c:1496
 #, c-format
@@ -1347,7 +1345,6 @@ msgstr "«%s» er ikke låst"
 
 #: libsvn_client/locking_commands.c:409 libsvn_fs/fs-loader.c:901
 #: libsvn_ra/ra_loader.c:625
-#, fuzzy
 msgid "Lock comment contains illegal characters"
 msgstr "Låsekommentaren inneholder ulovlige tegn"
 
@@ -1429,7 +1426,7 @@ msgid "Missing changed-path information for '%s' in revision %ld"
 msgstr "Manglende sti-endringsinformasjon for «%s» i revisjon %ld"
 
 #: libsvn_client/ra.c:623
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' doesn't exist in revision %ld"
 msgstr "Filstien «%s» finnes ikke i revisjon %ld"
 
@@ -2703,12 +2700,11 @@ msgstr "«file-revs»-rapporten inneholdt ingen revisjoner"
 
 #: libsvn_ra_dav/lock.c:189
 msgid "Invalid creation date header value in response."
-msgstr ""
+msgstr "Ugyldig headerverdi for opprettingsdato i responsen."
 
 #: libsvn_ra_dav/lock.c:213
-#, fuzzy
 msgid "Invalid timeout value"
-msgstr "Ugyldig innstilling: Negativ tidsgrenseverdi"
+msgstr "Ugyldig tidsavbruddverdi"
 
 #: libsvn_ra_dav/lock.c:377
 msgid "Failed to parse URI"
@@ -2904,11 +2900,11 @@ msgstr "Versjonen av RA-laster (%d) for ra_dav er ikke støttet"
 
 #: libsvn_ra_dav/util.c:166
 msgid "The request response contained at least one error"
-msgstr ""
+msgstr "Forespørselresponsen inneholdt minst en feil"
 
 #: libsvn_ra_dav/util.c:186
 msgid "The response contains a non-conforming HTTP status line"
-msgstr ""
+msgstr "Responsen inneholder en statuslinje som ikke er i henhold til HTTP"
 
 #: libsvn_ra_dav/util.c:451
 #, c-format
@@ -2935,7 +2931,7 @@ msgstr "Depotet er midlertidig flyttet til «%s»; relokalisering nødvendig"
 msgid ""
 "Server sent unexpected return value (%d %s) in response to %s request for '%"
 "s'"
-msgstr ""
+msgstr "Tjeneren sendte uventet returverdi (%d %s) som repons på %s-forespørsel for «%s»"
 
 #: libsvn_ra_dav/util.c:488
 msgid "authorization failed"
@@ -3030,7 +3026,7 @@ msgstr "Feil under skriving av oppdatert fil"
 #: libsvn_ra_serf/commit.c:1216
 #, c-format
 msgid "Adding a directory failed: %s on %s (%d)"
-msgstr ""
+msgstr "Tillegging av katalog feilet: %s på %s (%d)"
 
 #: libsvn_ra_serf/getlocations.c:289
 msgid "File doesn't exist on HEAD"
@@ -3373,9 +3369,8 @@ msgid "Authentication error from server: %s"
 msgstr "Autentiseringsfeil fra tjener: %s"
 
 #: libsvn_ra_svn/sasl_auth.c:826
-#, fuzzy
 msgid "Can't get username or password"
-msgstr "Kan ikke hente passord"
+msgstr "Kan ikke hente brukernavn eller passord"
 
 #: libsvn_ra_svn/simple_auth.c:97 libsvn_subr/prompt.c:156
 #, c-format
@@ -3925,9 +3920,9 @@ msgid "Unable to make name for '%s'"
 msgstr "Klarer ikke lage navn for «%s»"
 
 #: libsvn_subr/io.c:509
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create symbolic link '%s'"
-msgstr "Kan ikke opprette katalogen «%s»"
+msgstr "Kan ikke opprette symbolsk lenke «%s»"
 
 #: libsvn_subr/io.c:526 libsvn_subr/io.c:580 libsvn_subr/io.c:608
 msgid "Symbolic links are not supported on this platform"
@@ -4058,10 +4053,8 @@ msgid "Can't open stdin"
 msgstr "Kan ikke åpne standardinndata"
 
 #: libsvn_subr/io.c:1616
-#, fuzzy
 msgid "Reading from stdin is disallowed"
-msgstr ""
-"Lesing fra standard inn virker ikke for øyeblikket, så det er koblet ut"
+msgstr "Lesing fra standard inn tillates ikke"
 
 #: libsvn_subr/io.c:1630
 #, c-format
@@ -4316,7 +4309,7 @@ msgstr ""
 
 #: libsvn_subr/opt.c:424
 msgid " ARG"
-msgstr ""
+msgstr " ARG"
 
 #: libsvn_subr/opt.c:447 libsvn_subr/opt.c:470
 #, c-format
@@ -4359,7 +4352,6 @@ msgstr ""
 "\n"
 
 #: libsvn_subr/opt.c:1005
-#, fuzzy
 msgid ""
 "Copyright (C) 2000-2007 CollabNet.\n"
 "Subversion is open source software, see http://subversion.tigris.org/\n"
@@ -4367,7 +4359,7 @@ msgid ""
 "Net/).\n"
 "\n"
 msgstr ""
-"Opphavsrettighet (C) 2000-2006 CollabNet.\n"
+"Opphavsrettighet (C) 2000-2007 CollabNet.\n"
 "Programvaren Subversion er åpen kildekode, se http://subversion.tigris.org/\n"
 "Dette produktet inneholder programvare laget av CollabNet (http://www.Collab."
 "Net/).\n"
@@ -4592,7 +4584,7 @@ msgstr "Feil mens rapportering ble avbrutt"
 #: libsvn_wc/adm_crawler.c:919
 #, c-format
 msgid "While preparing '%s' for commit"
-msgstr ""
+msgstr "Under klargjøring av «%s» for innlegging"
 
 #: libsvn_wc/adm_files.c:100
 #, c-format
@@ -6009,9 +6001,8 @@ msgid "don't delete changelist after commit"
 msgstr "ikke slett forandringsliste etter innlegging"
 
 #: svn/main.c:194
-#, fuzzy
 msgid "keep path in working copy"
-msgstr "Filstien er ikke til en fil i en arbeidskopi"
+msgstr "behold sti i arbeidskopien"
 
 #: svn/main.c:233
 msgid ""
@@ -6159,7 +6150,6 @@ msgstr ""
 "  låst opp etter en vellykket innlegging.\n"
 
 #: svn/main.c:320
-#, fuzzy
 msgid ""
 "Duplicate something in working copy or repository, remembering history.\n"
 "usage: copy SRC[@REV]... DST\n"
@@ -6176,7 +6166,10 @@ msgid ""
 msgstr ""
 "Dupliser noe i arbeidskopien eller arkivdatabasen med full\n"
 "historikk.\n"
-"bruk: copy KILDE MÅL\n"
+"bruk: copy KILDE[@REV] MÅL\n"
+"\n"
+"Når flere kilder kopieres, vil de bli lagt inn som underelementer av MÅL,\n"
+"som må være en katalog.\n"
 "\n"
 "  KILDE og MÅL kan hver for seg enten være filsti for arbeidskopi (AK)\n"
 "  eller nettadresse (URL):\n"
@@ -6185,9 +6178,9 @@ msgstr ""
 "    URL -> AK:   hent ut URL til AK og forbered for innsending\n"
 "    URL -> URL:  komplett kopiering på tjenersiden. Brukes til forgrening\n"
 "                 og merking\n"
+"  Alle KILDE-elementer må være av samme type.\n"
 
 #: svn/main.c:336
-#, fuzzy
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -6209,7 +6202,7 @@ msgstr ""
 "\n"
 "  1. Hvert objekt som er angitt av STI, slettes ved neste innsending.\n"
 "     Filer og kataloger som ikke er sendt inn, vil øyeblikkelig slettes\n"
-"     fra arbeidskopien.\n"
+"     fra arbeidskopien hvis ikke --keep-local er angitt.\n"
 "     Filstier som er eller inneholder ikke-versjonerte eller forandrede\n"
 "     objekter, slettes bare hvis valget --force er angitt.\n"
 "  2. Ethvert objekt som er angitt av URL slettes fra depotet med en\n"
@@ -6554,7 +6547,6 @@ msgstr ""
 "\n"
 
 #: svn/main.c:546
-#, fuzzy
 msgid ""
 "Move and/or rename something in working copy or repository.\n"
 "usage: move SRC... DST\n"
@@ -6572,7 +6564,10 @@ msgid ""
 msgstr ""
 "Flytt og/eller bytt navn på noe i arbeidskopien\n"
 "eller depotet.\n"
-"bruk: move KILDE MÅL\n"
+"bruk: move KILDE... MÅL\n"
+"\n"
+"Når flere kilder kopieres, vil de bli lagt inn som underelementer av MÅL,\n"
+"som må være en katalog.\n"
 "\n"
 "  Merk: Dette er det samme som å bruke delkommandoene «copy» etterfulgt\n"
 "  av «delete».\n"
@@ -7378,14 +7373,14 @@ msgid "'%s' unlocked.\n"
 msgstr "«%s» låst opp.\n"
 
 #: svn/notify.c:394
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is now part of changelist '%s'.\n"
-msgstr "Filstien «%s» er ingen fil"
+msgstr "Stien «%s» er nå del av forandringsliste «%s».\n"
 
 #: svn/notify.c:401
 #, c-format
 msgid "Path '%s' is no longer associated with a changelist.\n"
-msgstr ""
+msgstr "Stien «%s» er ikke lengre assosiert med en forandringsliste.\n"
 
 #: svn/propdel-cmd.c:77
 #, c-format
@@ -8145,12 +8140,12 @@ msgid "subcommand argument required\n"
 msgstr "delkommandoen må ha et argument\n"
 
 #: svnadmin/main.c:1510
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnadmin help %s' for usage.\n"
 msgstr ""
-"delkommandoen «%s» tar ikke argumentet «%s»\n"
+"Delkommandoen «%s» tar ikke argumentet «%s»\n"
 "Skriv «svnadmin help %s» for bruk.\n"
 
 #: svnadmin/main.c:1543
@@ -8589,9 +8584,9 @@ msgid "Property '%s' not found on path '%s' in revision %ld"
 msgstr "Egenskapen «%s» ble ikke funnet i filstien «%s» i revisjon %ld"
 
 #: svnlook/main.c:1443
-#, fuzzy, c-format
+#, c-format
 msgid "Property '%s' not found on path '%s' in transaction %s"
-msgstr "Egenskapen «%s» ble ikke funnet i filstien «%s» i revisjon %ld"
+msgstr "Egenskapen «%s» ble ikke funnet i filstien «%s» i transaksjon %s"
 
 #: svnlook/main.c:1616 svnlook/main.c:1831
 #, c-format
@@ -8736,9 +8731,8 @@ msgid "listen once (useful for debugging)"
 msgstr "lytt én gang (nyttig for avlusing)"
 
 #: svnserve/main.c:163
-#, fuzzy
 msgid "write server process ID to file ARG"
-msgstr "skriv tjenerprosess-ID til filargument"
+msgstr "skriv tjenerprosess-ID til fil ARG"
 
 #: svnserve/main.c:166
 msgid "run as a windows service (SCM only)"
@@ -8884,7 +8878,6 @@ msgstr ""
 "skrivebeskyttet speil av kildepotet.\n"
 
 #: svnsync/main.c:79
-#, fuzzy
 msgid ""
 "usage: svnsync synchronize DEST_URL\n"
 "\n"
@@ -8893,7 +8886,8 @@ msgid ""
 msgstr ""
 "bruk: svnsync synchronize MÅLURL\n"
 "\n"
-"Overfør alle utestående revisjoner fra kilde til mål.\n"
+"Overfør alle utestående revisjoner til målet fra kilden som det er "
+"initialisert med.\n"
 
 #: svnsync/main.c:85
 msgid ""
@@ -8912,6 +8906,19 @@ msgid ""
 "to the destination.  You may use \"HEAD\" for either revision to\n"
 "mean \"the last revision transferred\".\n"
 msgstr ""
+"bruk: svnsync copy-revprops MÅLURL [REV[:REV2]]\n"
+"\n"
+"Kopier revisjonsegenskaper i et angitt revisjonsområde til målet fra kilden\n"
+"som det er initialisert med.\n"
+"\n"
+"Hvis REV og REV2 er oppgitt, kopier egenskaper for revisjonene angitt for hele\n"
+"det spesifiserte området. Hvis bare REV er angitt, kopier egenskaper kun for\n"
+"den ene revisjonen. Hvis REV ikke er angitt, kopier egenskaper for alle\n"
+"revisjoner som tidligere er kopiert til målet.\n"
+"\n"
+"REV og REV2 må være revisjoner som tidligere ble overført til målet. Du kan\n"
+"bruke «HEAD» for hvilken som helst revisjon til å bety «den siste revisjonen\n"
+"som er overført».\n"
 
 #: svnsync/main.c:101
 msgid ""
@@ -8928,28 +8935,32 @@ msgid ""
 "specify a username ARG (deprecated;\n"
 "                             see --source-username and --sync-username)"
 msgstr ""
+"spesifiser et brukernavn ARG (avlegs;\n"
+"                             se --source-username og --sync-username)"
 
 #: svnsync/main.c:119
 msgid ""
 "specify a password ARG (deprecated;\n"
 "                             see --source-password and --sync-password)"
 msgstr ""
+"spesifiser et passord ARG (avlegs;\n"
+"                             se --source-password og --sync-password)"
 
 #: svnsync/main.c:123
 msgid "connect to source repository with username ARG"
-msgstr ""
+msgstr "koble til kildedepot med brukernavn ARG"
 
 #: svnsync/main.c:125
 msgid "connect to source repository with password ARG"
-msgstr ""
+msgstr "koble til kildedepot med passord ARG"
 
 #: svnsync/main.c:127
 msgid "connect to sync repository with username ARG"
-msgstr ""
+msgstr "koble til synkroniseringsdepot med brukernavn ARG"
 
 #: svnsync/main.c:129
 msgid "connect to sync repository with password ARG"
-msgstr ""
+msgstr "koble til synkroniseringsdepot med passord ARG"
 
 #: svnsync/main.c:218
 #, c-format
@@ -9031,22 +9042,22 @@ msgid "Commit created rev %ld but should have created %ld"
 msgstr "Innleggingen opprettet revisjon %ld, men skulle laget %ld"
 
 #: svnsync/main.c:1274 svnsync/main.c:1279
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Cannot copy revprops for a revision (%ld) that has not been synchronized yet"
 msgstr ""
-"Kan ikke kopiere revisjonsegenskaper for en revisjon som ikke er\n"
+"Kan ikke kopiere revisjonsegenskaper for en revisjon (%ld) som ikke er "
 "blitt synkronisert enda"
 
 #: svnsync/main.c:1331
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid revision range"
-msgstr "«%s» har ugyldig revisjon"
+msgstr "«%s» er ikke et gyldig revisjonsområde"
 
 #: svnsync/main.c:1345 svnsync/main.c:1365
-#, fuzzy, c-format
+#, c-format
 msgid "Invalid revision number (%ld)"
-msgstr "Ugyldig revisjonsnummer"
+msgstr "Ugyldig revisjonsnummer (%ld)"
 
 #: svnsync/main.c:1422
 msgid ""
@@ -9067,9 +9078,11 @@ msgid ""
 "Cannot use --username or --password with any of --source-username, --source-"
 "password, --sync-username, or --sync-password.\n"
 msgstr ""
+"Kan ikke bruke --username eller --password med noen av valgene --source-username, -source-"
+"password, --sync-username eller --sync-password.\n"
 
 #: svnsync/main.c:1666
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
 "Type 'svnsync help %s' for usage.\n"
