@@ -42,7 +42,7 @@
 
 #include "server.h"
 
-/* Set DEPTH based on boolean RECURSE, but if only DEPTH was unset.
+/* Set DEPTH based on boolean RECURSE, but only if DEPTH was unset.
  * This is for old clients that send only recurse, not depth.
  */
 #define MAYBE_UNFOLD_TO_DEPTH(recurse, depth)                       \

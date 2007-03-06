@@ -888,34 +888,35 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
       || depth == svn_depth_infinity)
     {
       for (hi = apr_hash_first(pool, t_entries); hi; hi = apr_hash_next(hi))
-      {
-        svn_depth_t depth_from_here = depth;
-        svn_pool_clear(subpool);
-        apr_hash_this(hi, NULL, NULL, &val);
-        t_entry = val;
+        {
+          svn_depth_t depth_from_here = depth;
+          svn_pool_clear(subpool);
+          apr_hash_this(hi, NULL, NULL, &val);
+          t_entry = val;
         
-        if (t_entry->kind == svn_node_dir)
-          {
-            if (depth == svn_depth_files)
-              continue;
-            else if (depth == svn_depth_immediates)
-              depth_from_here = svn_depth_empty;
-          }
+          if (t_entry->kind == svn_node_dir)
+            {
+              if (depth == svn_depth_files)
+                continue;
+              else if (depth == svn_depth_immediates)
+                depth_from_here = svn_depth_empty;
+            }
 
-        /* Compose the report, editor, and target paths for this entry. */
-        e_fullpath = svn_path_join(e_path, t_entry->name, subpool);
-        t_fullpath = svn_path_join(t_path, t_entry->name, subpool);
-        
-        /* Look for an entry with the same name in the source dirents. */
-        s_entry = s_entries ?
-          apr_hash_get(s_entries, t_entry->name, APR_HASH_KEY_STRING) : NULL;
-        s_fullpath = s_entry ? svn_path_join(s_path, t_entry->name, subpool)
-          : NULL;
-        
-        SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
-                             t_entry, dir_baton, e_fullpath, NULL,
-                             depth_from_here, subpool));
-      }
+          /* Compose the report, editor, and target paths for this entry. */
+          e_fullpath = svn_path_join(e_path, t_entry->name, subpool);
+          t_fullpath = svn_path_join(t_path, t_entry->name, subpool);
+
+          /* Look for an entry with the same name in the source dirents. */
+          s_entry = s_entries ?
+              apr_hash_get(s_entries, t_entry->name, APR_HASH_KEY_STRING)
+              : NULL;
+          s_fullpath = s_entry ? svn_path_join(s_path, t_entry->name, subpool)
+              : NULL;
+
+          SVN_ERR(update_entry(b, s_rev, s_fullpath, s_entry, t_fullpath,
+                               t_entry, dir_baton, e_fullpath, NULL,
+                               depth_from_here, subpool));
+        }
     }
 
   /* Destroy iteration subpool. */
