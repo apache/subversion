@@ -4564,15 +4564,18 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
   finally:
     os.chdir(saved_cwd)
 
-def mergeinfo_elision(sbox):
-  "mergeinfo elides to closest ancestor w/ same info"
+def local_mergeinfo_elision_and_inheritance(sbox):
+  "local mergeinfo elides, inherits, stops rep merges"
 
-  # When a merge would result in mergeinfo on a node which is identical to
-  # (or is a subset of) the *local*  mergeinfo on one of the node's
-  # ancestors, then the mergeinfo for the node is "elided" in favor of the
-  # ancestor's mergeinfo.  For merges this elision is implicit, because the
-  # merge never actually occurs -- so this test checks for both the implied
-  # elision and the absence of actual merges where applicable.
+  # Test for Issues #2733 and #2734 as well as mergeinfo elision.
+  #
+  # When a merge would result in mergeinfo on a node which is identical
+  # to (or is a subset of) the *local*  mergeinfo on one of the node's
+  # ancestors, then the merge is not repeated (Issue #2734).  The mergeinfo
+  # is set on the node however and should inherit the mergeinfo from it's
+  # nearest ancestor (Issue #2733).  Though if the mergeinfo on node is
+  # a subset of mergeinfo on an ancestor, then the intersecting mergeinfo
+  # elides to that ancestor.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -4586,6 +4589,7 @@ def mergeinfo_elision(sbox):
   A_COPY_path      = os.path.join(wc_dir, "A_COPY")
   B_COPY_path      = os.path.join(wc_dir, "A_COPY", "B")
   beta_COPY_path   = os.path.join(wc_dir, "A_COPY", "B", "E", "beta")
+  omega_COPY_path  = os.path.join(wc_dir, "A_COPY", "D", "H", "omega")
   D_COPY_path      = os.path.join(wc_dir, "A_COPY", "D")
   G_COPY_path      = os.path.join(wc_dir, "A_COPY", "D", "G")
   H_COPY_path      = os.path.join(wc_dir, "A_COPY", "D", "H")
@@ -4653,7 +4657,7 @@ def mergeinfo_elision(sbox):
   # r3 - modify and commit A/D/H/psi
   svntest.main.file_write(psi_path, "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/psi' : Item(verb='Sending')})
-  expected_status.tweak('A/D/H/psi', wc_rev=3)  
+  expected_status.tweak('A/D/H/psi', wc_rev=3)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
@@ -4661,7 +4665,7 @@ def mergeinfo_elision(sbox):
   # r4 - modify and commit A/D/G/rho
   svntest.main.file_write(rho_path, "New content")
   expected_output = wc.State(wc_dir, {'A/D/G/rho' : Item(verb='Sending')})
-  expected_status.tweak('A/D/G/rho', wc_rev=4)  
+  expected_status.tweak('A/D/G/rho', wc_rev=4)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
@@ -4669,7 +4673,7 @@ def mergeinfo_elision(sbox):
   # r5 - modify and commit A/B/E/beta
   svntest.main.file_write(beta_path, "New content")
   expected_output = wc.State(wc_dir, {'A/B/E/beta' : Item(verb='Sending')})
-  expected_status.tweak('A/B/E/beta', wc_rev=5)  
+  expected_status.tweak('A/B/E/beta', wc_rev=5)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
@@ -4677,14 +4681,14 @@ def mergeinfo_elision(sbox):
   # r6 - modify and commit A/D/H/omega
   svntest.main.file_write(omega_path, "New content")
   expected_output = wc.State(wc_dir, {'A/D/H/omega' : Item(verb='Sending')})
-  expected_status.tweak('A/D/H/omega', wc_rev=6)  
+  expected_status.tweak('A/D/H/omega', wc_rev=6)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
                                         expected_status, None, None, None,
                                         None, None, wc_dir)
 
   # Now start merging...
 
-  # Merge r5 into A_COPY/D/
+  # Merge r4 into A_COPY/D/
   # Search for the comment entitled "The Merge Kluge" elsewhere in
   # this file, to understand why we shorten and chdir() below.
   short_D_COPY_path = shorten_path_kludge(D_COPY_path)
@@ -4703,8 +4707,10 @@ def mergeinfo_elision(sbox):
     'H/omega' : Item(status='  ', wc_rev=2),
     'gamma'   : Item(status='  ', wc_rev=2),
     })
+  # We test issue #2733 here - r1 should be
+  # inherited from 'A_COPY'.
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:4'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/D:1,4'}),
     'G'       : Item(),
     'G/pi'    : Item("This is the file 'pi'.\n"),
     'G/rho'   : Item("New content"),
@@ -4733,8 +4739,8 @@ def mergeinfo_elision(sbox):
 
   # Merge r4 again, this time into A_COPY/D/G.  An ancestor directory
   # (A_COPY/D) exists with identical local mergeinfo, so the merge
-  # should not be repeated, nor should any mergeinfo be set on
-  # A_COPY/D/G.
+  # should not be repeated (Issue #2734), and the mergeinfo on
+  # A_COPY/D/G should elide to A_COPY/D.
   short_G_COPY_path = shorten_path_kludge(G_COPY_path)
   expected_output = wc.State(short_G_COPY_path, { })
   expected_status = wc.State(short_G_COPY_path, {
@@ -4765,6 +4771,7 @@ def mergeinfo_elision(sbox):
     os.chdir(saved_cwd)
 
   # Merge r5 into A_COPY/B.
+  # Issue #2733: r1 should be inherited from 'A_COPY'.
   short_B_COPY_path = shorten_path_kludge(B_COPY_path)
   expected_output = wc.State(short_B_COPY_path, {
     'E/beta' : Item(status='U '),
@@ -4778,7 +4785,7 @@ def mergeinfo_elision(sbox):
     'F'       : Item(status='  ', wc_rev=2),
     })
   expected_disk = wc.State('', {
-    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:5'}),
+    ''        : Item(props={SVN_PROP_MERGE_INFO : '/A/B:1,5'}),
     'E'       : Item(),
     'E/alpha' : Item("This is the file 'alpha'.\n"),
     'E/beta'  : Item("New content"),
@@ -4802,8 +4809,8 @@ def mergeinfo_elision(sbox):
 
   # Merge r5 again, this time into A_COPY/B/E/beta.  An ancestor
   # directory (A_COPY/B) exists with identical local mergeinfo, so
-  # the merge should not be repeated, nor should any mergeinfo be
-  # set on A_COPY/B/E/beta.
+  # the merge should not be repeated (Issue #2734), and the mergeinfo
+  # on A_COPY/B/E/beta should elide to A_COPY/B.
   short_beta_COPY_path = shorten_path_kludge(beta_COPY_path)
   expected_skip = wc.State(short_beta_COPY_path, { })
   saved_cwd = os.getcwd()
@@ -4815,8 +4822,10 @@ def mergeinfo_elision(sbox):
                                        sbox.repo_url + '/A/B/E/beta',
                                        short_beta_COPY_path)
   finally:
-    os.chdir(saved_cwd)   
+    os.chdir(saved_cwd)
 
+  # We are implicitly testing elision here without looking at
+  # the prop value itself, just it's modification status.
   expected_status = wc.State(beta_COPY_path, {
     ''        : Item(status='M ', wc_rev=2),
     })
@@ -4829,7 +4838,7 @@ def mergeinfo_elision(sbox):
     })
   expected_status = wc.State(short_A_COPY_path, {
     ''          : Item(status=' M', wc_rev=2),
-    'B'         : Item(status='  ', wc_rev=2),
+    'B'         : Item(status=' M', wc_rev=2),
     'mu'        : Item(status='  ', wc_rev=2),
     'B/E'       : Item(status='  ', wc_rev=2),
     'B/E/alpha' : Item(status='  ', wc_rev=2),
@@ -4837,10 +4846,10 @@ def mergeinfo_elision(sbox):
     'B/lambda'  : Item(status='  ', wc_rev=2),
     'B/F'       : Item(status='  ', wc_rev=2),
     'C'         : Item(status='  ', wc_rev=2),
-    'D'         : Item(status='  ', wc_rev=2),
+    'D'         : Item(status=' M', wc_rev=2),
     'D/G'       : Item(status='  ', wc_rev=2),
     'D/G/pi'    : Item(status='  ', wc_rev=2),
-    'D/G/rho'   : Item(status='  ', wc_rev=2),
+    'D/G/rho'   : Item(status='M ', wc_rev=2),
     'D/G/tau'   : Item(status='  ', wc_rev=2),
     'D/gamma'   : Item(status='  ', wc_rev=2),
     'D/H'       : Item(status='  ', wc_rev=2),
@@ -4850,15 +4859,15 @@ def mergeinfo_elision(sbox):
     })
   expected_disk = wc.State('', {
     ''          : Item(props={SVN_PROP_MERGE_INFO : '/A:1,3'}),
-    'B'         : Item(),
+    'B'         : Item(props={SVN_PROP_MERGE_INFO : '/A:1,5'}),
     'mu'        : Item("This is the file 'mu'.\n"),
     'B/E'       : Item(),
     'B/E/alpha' : Item("This is the file 'alpha'.\n"),
-    'B/E/beta'  : Item("This is the file 'beta'.\n"),
+    'B/E/beta'  : Item("New content"),
     'B/lambda'  : Item("This is the file 'lambda'.\n"),
     'B/F'       : Item(),
     'C'         : Item(),
-    'D'         : Item(),
+    'D'         : Item(props={SVN_PROP_MERGE_INFO : '/A:1,4'}),
     'D/G'       : Item(),
     'D/G/pi'    : Item("This is the file 'pi'.\n"),
     'D/G/rho'   : Item("This is the file 'rho'.\n"),
@@ -4885,15 +4894,40 @@ def mergeinfo_elision(sbox):
   finally:
     os.chdir(saved_cwd)
 
+  # Merge r6 into A_COPY/D/H/omega.
+  short_omega_COPY_path = shorten_path_kludge(omega_COPY_path)
+  expected_skip = wc.State(short_omega_COPY_path, { })
+  saved_cwd = os.getcwd()
+  try:
+    os.chdir(svntest.main.work_dir)
+    # run_and_verify_merge doesn't support merging to a file WCPATH
+    # so use run_and_verify_svn.
+    svntest.actions.run_and_verify_svn(None,
+                                       ['U    ' + short_omega_COPY_path + \
+                                        '\n'], [], 'merge', '-c6',
+                                       sbox.repo_url + '/A/D/H/omega',
+                                       short_omega_COPY_path)
+  finally:
+    os.chdir(saved_cwd)
+
+  # Check that mergeinfo was properly set on A_COPY/D/H/omega
+  svntest.actions.run_and_verify_svn(None,
+                                     ["/A/D/H/omega:6\n"],
+                                     [],
+                                     'propget', 'svn:mergeinfo',
+                                     omega_COPY_path)
+
   # Merge r2:6, into A_COPY/D/H.  An ancestor directory (A_COPY) exists
   # with local mergeinfo for r3 (affecting A_COPY/D/H/psi), so the merge
-  # should not be repeated for psi, and the mergeinfo for A_COPY/D/H
-  # should not include r3.  The mere for 3:6 occurs normally, with
-  # A_COPY/D/H picking up the remainder of the merge range less r3.
+  # should not be repeated for psi (Issue #2734), r6 is already applied to
+  # A_COPY/D/H/omega so that isn't repeated either.  Only r4 is merged, but
+  # since it doesn't effect any paths under A_COPY/D/H there is no output.
+  # Since the mergeinfo on A_COPY is not a superset of r2:6 no mergeinfo
+  # elides from A_COPY/D/H.  The mergeinfo on A_COPY/D/H is a superset of
+  # the mergeinfo set on A_COPY/D/H/omega though, so the latter should
+  # elide to the former, leaving A_COPY/D/H/omega with no prop changes.
   short_H_COPY_path = shorten_path_kludge(H_COPY_path)
-  expected_output = wc.State(short_H_COPY_path, {
-    'omega'   : Item(status='U '),
-    })
+  expected_output = wc.State(short_H_COPY_path, { })
   expected_status = wc.State(short_H_COPY_path, {
     ''      : Item(status=' M', wc_rev=2),
     'chi'   : Item(status='  ', wc_rev=2),
@@ -4901,7 +4935,7 @@ def mergeinfo_elision(sbox):
     'omega' : Item(status='M ', wc_rev=2),
     })
   expected_disk = wc.State('', {
-    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:4-6'}),
+    ''      : Item(props={SVN_PROP_MERGE_INFO : '/A/D/H:3-6'}),
     'chi'   : Item("This is the file 'chi'.\n"),
     'psi'   : Item("New content"),
     'omega' : Item("New content"),
@@ -4970,7 +5004,7 @@ test_list = [ None,
               avoid_repeated_merge_using_inherited_merge_info,
               avoid_repeated_merge_on_subtree_with_merge_info,
               obey_reporter_api_semantics_while_doing_subtree_merges,
-              XFail(mergeinfo_elision),
+              XFail(local_mergeinfo_elision_and_inheritance),
              ]
 
 if __name__ == '__main__':
