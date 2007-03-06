@@ -188,7 +188,7 @@ into the target.  The output for <code>log</code> should be consistent with the
 <code>diff</code> output for the <code>svn:mergeinfo</code> property.</p>
 
 <p>The <code>--verbose</code> switch will output the log information for the
-merged revisions as well.  This output may bein the style of
+merged revisions as well.  This output may be in the style of
 <code>svnmerge.py</code>: the primary log message, followed by each of the
 original log messages indented with separators between them.</p>
 
@@ -212,6 +212,9 @@ the last original authors and revisions.</p>
   <li>In the case of <code>svn log</code>, would the user be better served if we
   just included the original revision logs in line with the logs (i.e., no
   special indentation, etc.)?</li>
+
+  <li>What about <code>svn ls --verbose</code>, which also shows revisions and
+  usernames?</li>
 </ul>
 
 </div>  <!-- reporting-questions -->
