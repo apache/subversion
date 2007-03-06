@@ -2097,8 +2097,8 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
  */
 static svn_boolean_t
 parse_external_parts(apr_array_header_t *line_parts,
-              svn_wc_external_item2_t *item,
-              apr_pool_t *pool)
+                     svn_wc_external_item2_t *item,
+                     apr_pool_t *pool)
 {
 
   if (line_parts->nelts == 2)
