@@ -484,11 +484,12 @@ keep-local:
    and only when the schedule is 'delete'.
 
 depth:
-   The entry depth of this directory.  `0' means updates will not pull
-   in any files or subdirectories not already present. `1' means
+   The entry depth of this directory.  `empty' means updates will not pull
+   in any files or subdirectories not already present.  `files' means that
+   updates will pull in any files not already present.  `immediates' means
    updates will pull in any files or subdirectories not already
    present, and those subdirectories' this_dir entries will have depth
-   `0'. `' means infinite (normal) depth -- the directory has all its
+   `empty'.  `' means infinite (normal) depth -- the directory has all its
    entries and pulls new entries with depth infinity as well.
    Default is infinite (`').
 
