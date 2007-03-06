@@ -8852,7 +8852,7 @@ msgstr "単に番号が飛ばないようにするための空のリビジョン
 #: svndumpfilter/main.c:389
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
-msgstr "リビジョン %ld は %ld としてコミットされました。\n"
+msgstr "リビジョン %ld を %ld としてコミットしました。\n"
 
 #: svndumpfilter/main.c:412
 #, c-format
