@@ -2119,8 +2119,8 @@ If no file is at point, copy everything starting from ':' to the end of line."
     (save-excursion
       (goto-char (line-beginning-position))
       (when (looking-at ".+?: *\\(.+\\)$")
-        (kill-new (match-string-no-properties 1))
-        (message "Copied: %s" (match-string-no-properties 1))))))
+        (kill-new (svn-match-string-no-properties 1))
+        (message "Copied: %s" (svn-match-string-no-properties 1))))))
 
 (defun svn-status-copy-filename-as-kill (arg)
   "Copy the actual file name to the kill-ring.
