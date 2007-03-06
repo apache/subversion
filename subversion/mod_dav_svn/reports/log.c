@@ -23,6 +23,7 @@
 #include <mod_dav.h>
 
 #include "svn_repos.h"
+#include "svn_string.h"
 #include "svn_types.h"
 #include "svn_xml.h"
 #include "svn_path.h"
@@ -219,6 +220,8 @@ dav_svn__log_report(const dav_resource *resource,
   svn_boolean_t strict_node_history = FALSE;     /* off by default */
   apr_array_header_t *paths
     = apr_array_make(resource->pool, 1, sizeof(const char *));
+  svn_stringbuf_t *comma_separated_paths =
+    svn_stringbuf_create("", resource->pool);
 
   /* Sanity check. */
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
@@ -258,6 +261,14 @@ dav_svn__log_report(const dav_resource *resource,
           target = svn_path_join(resource->info->repos_path, rel_path, 
                                  resource->pool);
           APR_ARRAY_PUSH(paths, const char *) = target;
+
+          /* Gather a formatted list of paths to include in our
+             operational logging. */
+          if (comma_separated_paths->len > 0)
+            svn_stringbuf_appendbytes(comma_separated_paths, ", ", 2);
+          svn_stringbuf_appendcstr(comma_separated_paths,
+                                   svn_path_uri_encode(target,
+                                                       resource->pool));
         }
       /* else unknown element; skip it */
     }
@@ -317,19 +328,9 @@ dav_svn__log_report(const dav_resource *resource,
  cleanup:
 
   /* We've detected a 'high level' svn action to log. */
-  if (paths->nelts == 0)
-    action = "log";
-  else if (paths->nelts == 1)
-    action = apr_psprintf(resource->pool, "log-all '%s'",
-                          svn_path_uri_encode(APR_ARRAY_IDX
-                                              (paths, 0, const char *),
-                                              resource->pool));
-  else
-    action = apr_psprintf(resource->pool, "log-partial '%s'",
-                          svn_path_uri_encode(APR_ARRAY_IDX
-                                              (paths, 0, const char *),
-                                              resource->pool));
-
+  action = apr_psprintf(resource->pool,
+                        "log '%s' r%" SVN_REVNUM_T_FMT ":%" SVN_REVNUM_T_FMT,
+                        comma_separated_paths->data, start, end);
   apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION", action);
 
 
