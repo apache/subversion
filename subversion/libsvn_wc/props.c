@@ -2086,6 +2086,78 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
 
 /** Externals **/
 
+/* Parse one of these two forms:
+ * 
+ *    TARGET_DIR  [-rN]  URL
+ *    TARGET_DIR  [-r N]  URL
+ *
+ * Return FALSE if there is an error, TRUE otherwise.
+ * (We avoid actually creating an error in this function, so that a generic
+ *  INVALID_EXTERNALS_DESCRIPTION can be created by the caller.)
+ */
+static svn_boolean_t
+parse_external_parts(apr_array_header_t *line_parts,
+              svn_wc_external_item2_t *item,
+              apr_pool_t *pool)
+{
+
+  if (line_parts->nelts == 2)
+    {
+      /* No "-r REV" given. */
+      item->target_dir = APR_ARRAY_IDX(line_parts, 0, const char *);
+      item->url = APR_ARRAY_IDX(line_parts, 1, const char *);
+      item->revision.kind = svn_opt_revision_head;
+    }
+  else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
+    {
+      /* We're dealing with one of these two forms:
+       *
+       *    TARGET_DIR  -rN  URL
+       *    TARGET_DIR  -r N  URL
+       * 
+       * Handle either way.
+       */
+      const char *r_part_1 = NULL, *r_part_2 = NULL;
+
+      item->target_dir = APR_ARRAY_IDX(line_parts, 0, const char *);
+      item->revision.kind = svn_opt_revision_number;
+
+      if (line_parts->nelts == 3)
+        {
+          r_part_1 = APR_ARRAY_IDX(line_parts, 1, const char *);
+          item->url = APR_ARRAY_IDX(line_parts, 2, const char *);
+        }
+      else
+        {
+          r_part_1 = APR_ARRAY_IDX(line_parts, 1, const char *);
+          r_part_2 = APR_ARRAY_IDX(line_parts, 2, const char *);
+          item->url = APR_ARRAY_IDX(line_parts, 3, const char *);
+        }
+
+      if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
+        return FALSE;
+
+      if (! r_part_2)  /* "-rN" */
+        {
+          if (strlen(r_part_1) < 3)
+            return FALSE;
+          else
+            item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 2);
+        }
+      else             /* "-r N" */
+        {
+          if (strlen(r_part_2) < 1)
+            return FALSE;
+          else
+            item->revision.value.number = SVN_STR_TO_REV(r_part_2);
+        }
+    }
+  else  /* too many items */
+    return FALSE;
+
+  return TRUE;
+}
+
 svn_error_t *
 svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
                                     const char *parent_directory,
@@ -2119,59 +2191,7 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
       if (line_parts->nelts < 2)
         goto parse_error;
 
-      else if (line_parts->nelts == 2)
-        {
-          /* No "-r REV" given. */
-          item->target_dir = APR_ARRAY_IDX(line_parts, 0, const char *);
-          item->url = APR_ARRAY_IDX(line_parts, 1, const char *);
-          item->revision.kind = svn_opt_revision_head;
-        }
-      else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
-        {
-          /* We're dealing with one of these two forms:
-           * 
-           *    TARGET_DIR  -rN  URL
-           *    TARGET_DIR  -r N  URL
-           * 
-           * Handle either way.
-           */
-
-          const char *r_part_1 = NULL, *r_part_2 = NULL;
-
-          item->target_dir = APR_ARRAY_IDX(line_parts, 0, const char *);
-          item->revision.kind = svn_opt_revision_number;
-
-          if (line_parts->nelts == 3)
-            {
-              r_part_1 = APR_ARRAY_IDX(line_parts, 1, const char *);
-              item->url = APR_ARRAY_IDX(line_parts, 2, const char *);
-            }
-          else  /* nelts == 4 */
-            {
-              r_part_1 = APR_ARRAY_IDX(line_parts, 1, const char *);
-              r_part_2 = APR_ARRAY_IDX(line_parts, 2, const char *);
-              item->url = APR_ARRAY_IDX(line_parts, 3, const char *);
-            }
-
-          if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
-            goto parse_error;
-
-          if (! r_part_2)  /* "-rN" */
-            {
-              if (strlen(r_part_1) < 3)
-                goto parse_error;
-              else
-                item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 2);
-            }
-          else             /* "-r N" */
-            {
-              if (strlen(r_part_2) < 1)
-                goto parse_error;
-              else
-                item->revision.value.number = SVN_STR_TO_REV(r_part_2);
-            }
-        }
-      else    /* too many items on line */
+      else if (! parse_external_parts(line_parts, item, pool) )
         goto parse_error;
 
       if (0)
