@@ -241,7 +241,7 @@ svn_client__parse_merge_info(apr_hash_t **mergeinfo,
      ### svn_client__get_prop_from_wc(). */
   SVN_ERR(svn_client__get_prop_from_wc(props, SVN_PROP_MERGE_INFO,
                                        wcpath, FALSE, entry, adm_access,
-                                       TRUE, ctx, pool));
+                                       FALSE, ctx, pool));
   propval = apr_hash_get(props, wcpath, APR_HASH_KEY_STRING);
   if (propval)
     SVN_ERR(svn_mergeinfo_parse(propval->data, mergeinfo, pool));
