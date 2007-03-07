@@ -1916,15 +1916,18 @@ svn_repos_fs(svn_repos_t *repos)
 }
 
 
-/* This code uses repository locking, which is motivated by the
- * need to support DB_RUN_RECOVERY.  Here's how it works:
+/* For historical reasons, for the Berkeley DB backend, this code uses
+ * repository locking, which is motivated by the need to support the
+ * Berkeley DB error DB_RUN_RECOVERY.  (FSFS takes care of locking
+ * itself, inside its implementation of svn_fs_recover.)  Here's how
+ * it works:
  *
  * Every accessor of a repository's database takes out a shared lock
  * on the repository -- both readers and writers get shared locks, and
  * there can be an unlimited number of shared locks simultaneously.
  *
  * Sometimes, a db access returns the error DB_RUN_RECOVERY.  When
- * this happens, we need to run svn_fs_berkeley_recover() on the db
+ * this happens, we need to run svn_fs_recover() on the db
  * with no other accessors present.  So we take out an exclusive lock
  * on the repository.  From the moment we request the exclusive lock,
  * no more shared locks are granted, and when the last shared lock
@@ -1945,9 +1948,11 @@ svn_repos_recover2(const char *path,
   svn_repos_t *repos;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  /* Fetch a repository object initialized with an EXCLUSIVE lock on
-     the database.   This will at least prevent others from trying to
-     read or write to it while we run recovery. */
+  /* Fetch a repository object; for the Berkeley DB backend, it is
+     initialized with an EXCLUSIVE lock on the database.  This will at
+     least prevent others from trying to read or write to it while we
+     run recovery. (Other backends should do their own locking; see
+     lock_repos.) */
   SVN_ERR(get_repos(&repos, path, TRUE, nonblocking,
                     FALSE,    /* don't try to open the db yet. */
                     subpool));
@@ -1956,7 +1961,7 @@ svn_repos_recover2(const char *path,
     SVN_ERR(start_callback(start_callback_baton));
 
   /* Recover the database to a consistent state. */
-  SVN_ERR(svn_fs_berkeley_recover(repos->db_path, subpool));
+  SVN_ERR(svn_fs_recover(repos->db_path, subpool));
 
   /* Close shop and free the subpool, to release the exclusive lock. */
   svn_pool_destroy(subpool);
