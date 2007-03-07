@@ -225,61 +225,49 @@ svn_mergeinfo_parse(const char *input, apr_hash_t **hash,
 }
 
 
-/* Merge two revision lists IN1 and IN2 and place the result in
-   OUTPUT.  We do some trivial attempts to combine ranges as we go.  */
+/* Merge revision list IN2 into *IN1. We do some trivial attempts to
+   combine ranges as we go.  */
 svn_error_t *
-svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
-                    apr_array_header_t *in2, apr_pool_t *pool)
+svn_rangelist_merge(apr_array_header_t **in1, apr_array_header_t *in2,
+                    apr_pool_t *pool)
 {
   int i, j;
   svn_merge_range_t *lastrange = NULL;
 
-  *output = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-
   i = 0;
   j = 0;
-  while (i < in1->nelts && j < in2->nelts)
+  while (i < (*in1)->nelts && j < in2->nelts)
     {
       svn_merge_range_t *elt1, *elt2;
       int res;
 
-      elt1 = APR_ARRAY_IDX(in1, i, svn_merge_range_t *);
+      elt1 = APR_ARRAY_IDX(*in1, i, svn_merge_range_t *);
       elt2 = APR_ARRAY_IDX(in2, j, svn_merge_range_t *);
-
+      if (!lastrange)
+        lastrange = elt1;
       res = svn_sort_compare_ranges(&elt1, &elt2);
       if (res == 0)
         {
-          combine_with_lastrange(&lastrange, elt1, TRUE, *output, pool);
+          combine_with_lastrange(&lastrange, elt1, TRUE, *in1, pool);
           i++;
           j++;
         }
       else if (res < 0)
         {
-          combine_with_lastrange(&lastrange, elt1, TRUE, *output, pool);
+          combine_with_lastrange(&lastrange, elt1, TRUE, *in1, pool);
           i++;
         }
       else
         {
-          combine_with_lastrange(&lastrange, elt2, TRUE, *output, pool);
+          combine_with_lastrange(&lastrange, elt2, TRUE, *in1, pool);
           j++;
         }
     }
-  /* Copy back any remaining elements.
-     Only one of these loops should end up running, if anything. */
-
-  assert (!(i < in1->nelts && j < in2->nelts));
-
-  for (; i < in1->nelts; i++)
-    {
-      svn_merge_range_t *elt = APR_ARRAY_IDX(in1, i, svn_merge_range_t *);
-      combine_with_lastrange(&lastrange, elt, TRUE, *output, pool);
-    }
-
-
+  /* Copy any remaining elements from the second revision list. */
   for (; j < in2->nelts; j++)
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(in2, j, svn_merge_range_t *);
-      combine_with_lastrange(&lastrange, elt, TRUE, *output, pool);
+      combine_with_lastrange(&lastrange, elt, TRUE, *in1, pool);
     }
   return SVN_NO_ERROR;
 }
@@ -645,14 +633,13 @@ svn_mergeinfo_merge(apr_hash_t **in1, apr_hash_t *in2,
 
       if (res == 0)
         {
-          apr_array_header_t *merged;
           apr_array_header_t *rl1, *rl2;
 
           rl1 = elt1.value;
           rl2 = elt2.value;
 
-          SVN_ERR(svn_rangelist_merge(&merged, rl1, rl2, pool));
-          apr_hash_set(*in1, elt1.key, elt1.klen, merged);
+          SVN_ERR(svn_rangelist_merge(&rl1, rl2, pool));
+          apr_hash_set(*in1, elt1.key, elt1.klen, rl1);
           i++;
           j++;
         }

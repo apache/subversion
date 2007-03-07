@@ -2087,7 +2087,7 @@ update_wc_merge_info(const char *target_wcpath, const svn_wc_entry_t *entry,
                                        subpool));
         }
       else
-        SVN_ERR(svn_rangelist_merge(&rangelist, rangelist, ranges, subpool));
+        SVN_ERR(svn_rangelist_merge(&rangelist, ranges, subpool));
 
       /* Update the merge info by adjusting the path's rangelist. */
       if (rangelist->nelts == 0)

@@ -95,16 +95,16 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
                    apr_pool_t *pool);
 
 /** Merge two rangelists consisting of @c svn_merge_range_t *
- * elements, @a in1 and @a in2, and place the result in @a output.
+ * elements, @a *in1 and @a in2, placing the results in @a *in1.
  *
  * Note: @a in1 and @a in2 must be sorted as said by
- * svn_sort_compare_ranges. @a output is guaranteed to be in sorted
- * order.
+ * svn_sort_compare_ranges. @a *in1 is guaranteed to remain in
+ * sorted order.
  * @since New in 1.5.
  */
 svn_error_t *
-svn_rangelist_merge(apr_array_header_t **output, apr_array_header_t *in1,
-                     apr_array_header_t *in2, apr_pool_t *pool);
+svn_rangelist_merge(apr_array_header_t **in1, apr_array_header_t *in2,
+                    apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
  * minuend), and places the resulting difference in @a output.
