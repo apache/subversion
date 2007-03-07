@@ -106,5 +106,15 @@ Candidate changes:
     Votes:
       +1: dlr
 
+  * r23594
+    Fix DAV clients to abort transactions if setup fails, rather than
+    leaving empty transactions lying about.
+    Justification:
+      Messy.  Empty transactions need to be cleaned up by someone.
+    Notes:
+      'svn mkdir http://.../doesnotexist/foo' is one way to exercise this bug.
+    Votes:
+      +1: malcolm, dlr
+
 Approved changes:
 
