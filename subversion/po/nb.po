@@ -2245,24 +2245,24 @@ msgid "Corrupt lockfile for path '%s' in filesystem '%s'"
 msgstr "Ødelagt låsefil for stien «%s» i filsystem «%s»"
 
 #: libsvn_fs_fs/fs.c:89
-#, fuzzy, c-format
+#, c-format
 msgid "Can't fetch FSFS shared data"
-msgstr "Kan ikke hente FSFS-mutex"
+msgstr "Kan ikke hente delte FSFS-data"
 
 #: libsvn_fs_fs/fs.c:105
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create FSFS write-lock mutex"
-msgstr "Kan ikke opprette FSFS-mutex"
+msgstr "Kan ikke opprette skrivelås-mutex for FSFS"
 
 #: libsvn_fs_fs/fs.c:113
-#, fuzzy, c-format
+#, c-format
 msgid "Can't create FSFS txn list mutex"
-msgstr "Kan ikke opprette FSFS-mutex"
+msgstr "Kan ikke opprette transaksjonsliste-mutex for FSFS"
 
 #: libsvn_fs_fs/fs.c:119
-#, fuzzy, c-format
+#, c-format
 msgid "Can't store FSFS shared data"
-msgstr "Kan ikke lagre FSFS-mutex"
+msgstr "Kan ikke lagre delte data i FSFS"
 
 #: libsvn_fs_fs/fs.c:345
 msgid "Module for working with a plain file (FSFS) repository."
@@ -2274,34 +2274,34 @@ msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "Versjonen av filsystemlaster (%d) for fsfs er ikke støttet"
 
 #: libsvn_fs_fs/fs_fs.c:335
-#, fuzzy, c-format
+#, c-format
 msgid "Can't grab FSFS txn list mutex"
-msgstr "Kan ikke overta filsystem-mutex"
+msgstr "Kan ikke overta transaksjonsliste-mutex for FSFS"
 
 #: libsvn_fs_fs/fs_fs.c:343
-#, fuzzy, c-format
+#, c-format
 msgid "Can't ungrab FSFS txn list mutex"
-msgstr "Kan ikke slippe filsystem-mutex"
+msgstr "Kan ikke slippe transaksjonsliste-mutex for FSFS"
 
 #: libsvn_fs_fs/fs_fs.c:369
-#, fuzzy, c-format
+#, c-format
 msgid "Can't unlock unknown transaction '%s'"
-msgstr "Kan ikke låse opp mutex for tegnsettkonvertering"
+msgstr "Kan ikke låse opp ukjent transaksjon «%s»"
 
 #: libsvn_fs_fs/fs_fs.c:373
-#, fuzzy, c-format
+#, c-format
 msgid "Can't unlock nonlocked transaction '%s'"
-msgstr "Kan ikke låse opp mutex for tegnsettkonvertering"
+msgstr "Kan ikke låse opp ulåst transaksjon «%s»"
 
 #: libsvn_fs_fs/fs_fs.c:380
 #, c-format
 msgid "Can't unlock prototype revision lockfile for transaction '%s'"
-msgstr ""
+msgstr "Kan ikke låse opp prototyperevisjon-låsefil for transaksjon «%s»"
 
 #: libsvn_fs_fs/fs_fs.c:386
 #, c-format
 msgid "Can't close prototype revision lockfile for transaction '%s'"
-msgstr ""
+msgstr "Kan ikke lukke prototyperevisjon-låsefil for transaksjon «%s»"
 
 #: libsvn_fs_fs/fs_fs.c:448
 #, c-format
@@ -2309,6 +2309,8 @@ msgid ""
 "Cannot write to the prototype revision file of transaction '%s' because a "
 "previous representation is currently being written by this process"
 msgstr ""
+"Kan ikke skrive til prototyperevisjonsfila for transaksjon «%s» fordi en "
+"tidligere representasjon skrives av denne prosessen"
 
 #: libsvn_fs_fs/fs_fs.c:484
 #, c-format
@@ -2316,6 +2318,8 @@ msgid ""
 "Cannot write to the prototype revision file of transaction '%s' because a "
 "previous representation is currently being written by another process"
 msgstr ""
+"Kan ikke skrive til prototyperevisjonsfila for transaksjon «%s» fordi en "
+"tidligere representasjon skrives av en annen prosess"
 
 #: libsvn_fs_fs/fs_fs.c:491 libsvn_subr/io.c:1532
 #, c-format
@@ -3080,9 +3084,8 @@ msgid "Error retrieving REPORT (%d)"
 msgstr "Feil under henting av REPORT (%d)"
 
 #: libsvn_ra_serf/util.c:751
-#, fuzzy
 msgid "Unspecified error message"
-msgstr "angi loggmelding ARG"
+msgstr "Uspesifisert feilmelding"
 
 #: libsvn_ra_serf/util.c:812
 msgid "Premature EOF seen from server"
@@ -3284,9 +3287,9 @@ msgid "Non-string as part of text delta"
 msgstr "Ikke-streng som del av tekst-delta"
 
 #: libsvn_ra_svn/editor.c:717 libsvn_ra_svn/editorp.c:800
-#, fuzzy, c-format
+#, c-format
 msgid "Command 'finish-replay' invalid outside of replays"
-msgstr "Kommandoen «finish-replay» ugyldig utenfor avspilling"
+msgstr "Kommandoen «finish-replay» ugyldig utenfor avspillinger"
 
 #: libsvn_ra_svn/editorp.c:129
 msgid "Successful edit status returned too soon"
@@ -8774,15 +8777,15 @@ msgstr "eksportert%s"
 msgid "'%s' not versioned, and not exported\n"
 msgstr "«%s» er verken versjonert eller eksportert\n"
 
+#~ msgid "Missing path attr in open-directory element"
+#~ msgstr "Mangler stiattributt i «open-directory»-element"
+
+#~ msgid "Expected format '%d' of repository; found format '%d'"
+#~ msgstr "Forventet format «%d» av depotet, fant versjon «%d»"
+
 #~ msgid ""
 #~ "disallow use of SVNDIFF1 in on-disk storage,\n"
 #~ "                             for backwards compatibility"
 #~ msgstr ""
 #~ "forby bruk av SVNDIFF1 i lagring på disk\n"
 #~ "                             for bakoverkompatibilitet"
-
-#~ msgid "Expected format '%d' of repository; found format '%d'"
-#~ msgstr "Forventet format «%d» av depotet, fant versjon «%d»"
-
-#~ msgid "Missing path attr in open-directory element"
-#~ msgstr "Mangler stiattributt i «open-directory»-element"
