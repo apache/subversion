@@ -2,7 +2,7 @@
  * main.c: Subversion server administration tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -379,9 +379,9 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
   {"recover", subcommand_recover, {0}, N_
    ("usage: svnadmin recover REPOS_PATH\n\n"
-    "Run the Berkeley DB recovery procedure on a repository.  Do\n"
-    "this if you've been getting errors indicating that recovery\n"
-    "ought to be run.  Recovery requires exclusive access and will\n"
+    "Run the recovery procedure on a repository.  Do this if you've\n"
+    "been getting errors indicating that recovery ought to be run.\n"
+    "Berkeley DB recovery requires exclusive access and will\n"
     "exit if the repository is in use by another process.\n"),
    {svnadmin__wait} },
 

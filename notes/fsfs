@@ -237,9 +237,10 @@ populated when it was copied.
 The "svnadmin hotcopy" command avoids this problem by copying the
 "current" file before copying the revision files.  But a backup using
 the hotcopy command isn't as efficient as a straight incremental
-backup.  FSFS may evolve so that "svnadmin recover" (currently a
-no-op) knows how to recover from the inconsistency which might result
-from a naive backup.
+backup.  As of Subversion 1.5.0, "svnadmin recover" is able to recover
+from the inconsistency which might result from a naive backup by
+recreating the "current" file.  However, this does require reading
+every revision file in the repository, and so may take some time.
 
 Naively copying an FSFS repository might also copy in-progress
 transactions, which would become stale and take up extra room until
@@ -252,5 +253,4 @@ repository, configure the software to copy the "current" file before
 the numbered revision files, if possible, and configure it not to copy
 the "transactions" directory.  If you can't do those things, use
 "svnadmin hotcopy", or be prepared to cope with the very occasional
-need for manual repair of the repository upon restoring it from
-backup.
+need for repair of the repository upon restoring it from backup.
