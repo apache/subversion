@@ -221,8 +221,6 @@ test_parse_broken_mergeinfo(const char **msg,
 
 static const char *mergeinfo1 = "/trunk: 5,7-9,10,11,13,14,3\n/fred:8-10";
 static const char *mergeinfo2 = "/trunk: 1-4,6,3\n/fred:9-12";
-static const char *mergeinfo3 = "/trunk: 3-7, 13\n/fred:9";
-static const char *mergeinfo4 = "/trunk: 5-8, 13\n/fred:9";
 static const char *mergeinfo5 = "/trunk: 15-25, 35-45, 55-65";
 static const char *mergeinfo6 = "/trunk: 15-25, 35-45";
 static const char *mergeinfo7 = "/trunk: 10-30, 35-45, 55-65";
