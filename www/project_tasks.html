@@ -47,39 +47,6 @@ mailing list (see <a
 href="http://subversion.tigris.org/servlets/ProjectMailingListList"
 >here</a> for subscription information).</p>
 
-<div class="h3" id="ra_svn_authn" title="ra_svn_authn">
-<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=1144"
->Issue&nbsp;#1144</a>: Add full SASL authentication support to ra_svn
-(svn://)</h3>
-
-<p>Right now ra_svn only supports the ANONYMOUS, CRAM-MD5 and EXTERNAL
-authentication mechanisms.  This is enough to be useful, but
-integrating a full-featured SASL library would give users a multitude
-of other options: passwords at various levels of security, Kerberos,
-one-time passwords, etc..  The protocol is already designed to support
-SASL, so the task requires selecting a SASL library and implementing
-support for it on both the client and server side.</p> </div>
-
-<div class="h3" id="text-bases" title="text-bases">
-<h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=525"
->Issue&nbsp;#525</a>
-and <a href="http://subversion.tigris.org/issues/show_bug.cgi?id=908"
->Issue&nbsp;#908</a>: Optional or compressed text base storage</h3>
-
-<p>Subversion stores locally a pristine copy of the base revision
-(i.e., the unmodified checked-out revision) of each file in the
-working copy.  These pristine copies are known as "text bases".  This
-is great for doing offline diffs, and for transmitting deltas back to
-the server when committing.  But it's a bit of a space penalty on the
-client side, and it would be nice to offer users the option to turn it
-off sometimes, or failing that, to compress the text bases.</p>
-
-<p>This task is somewhat larger than the others (though still
-perfectly feasible), and should ideally be taken on by someone with
-previous experience in Subversion development.</p>
-
-</div>
-
 <div class="h3" id="svnserve-logging" title="svnserve-logging">
 <h3><a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2409"
 >Issue&nbsp;#2409</a>: Operation and error logging for svnserve</h3>
@@ -128,6 +95,47 @@ set of Python classes implementing an interface more friendly to
 python developers.</p>
 
 </div>
+
+
+<div class="h3" id="functional-tests" title="functional-tests">
+<h3>Rewriting Subversion's Functional Test Suite</h3>
+
+<p>Subversion has a number of C language unit-tests for its library
+APIs, but it has a far more extensive set of black-box functional
+tests that simply drive the svn client and examine the results.  This
+functional test suite is written in python, and involves some complex
+parsing of the client's output into trees.</p>
+
+<p>While the test suite started out with an elegant design, it grew
+"organically" as Subversion (and its behaviors and output) evolved,
+and now has a number of problems:</p>
+
+<ul>
+
+<li>It has datastructures with deprecated fields that are now padded,
+and strange quirky parsing algorithms that are more complex than
+necessary.</li>
+
+<li>The API for creating new tests is overly complex, fragile, and not
+intuitive at all for new users.  It should be easy (not intimidating!)
+to create a new test.  (At the moment, people write new tests by
+copying an existing one, tweaking it, and praying it works.)</li>
+
+<li>It should integrate with python's existing <tt>unittest</tt> framework</li>
+
+</ul>
+ 
+<p>In a nutshell, this is an all-summer task that boils down to
+redesigning the existing test framework, and rewriting all existing
+tests.  For more info about the design of our current testing
+framework, read <a
+href="http://svn.collab.net/repos/svn/trunk/subversion/tests/README">this
+README</a> and <a
+href="http://svn.collab.net/repos/svn/trunk/subversion/tests/cmdline/svntest/tree.py">the
+comments in this file</a>.</p>
+
+</div>
+
 
 <div class="h3" id="dav-performance-analysis" title="dav-performance-analysis">
 <h3>Performance analysis tool for mod_dav_svn</h3>
