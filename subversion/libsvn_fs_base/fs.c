@@ -749,6 +749,7 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
 
 static svn_error_t *
 base_bdb_recover(const char *path,
+                 svn_cancel_func_t cancel_func, void *cancel_baton,
                  apr_pool_t *pool)
 {
   return bdb_recover(path, FALSE, pool);
