@@ -59,6 +59,10 @@ error logging, needs to be added to the standalone svnserve daemon.
 This requires some work in the APR library, which would provide the
 actual logging facility.</p>
 
+<p>This has been extensively discussed on the Subversion development
+mailing list in the past.  A good first step would be to review the
+previous proposals.</p>
+
 </div>
 
 <div class="h3" id="nonrecursive-checkouts" title="nonrecursive-checkouts">
@@ -173,27 +177,37 @@ represent structural changes to the directory tree, nor can it
 encompass changes to various metadata, the kind used extremely
 frequently by Subversion.</p>
 
-<p>Propose a solution for augmenting the standard unified diff format
-with extra "garbage" chunks of data, that will be ignored by a unified
-diff parser, but that can carry extra information about whatever we
-want.  Then, implement that solution in 'svn diff', and a new
-subcommand ('svn patch' ?) that would do the opposite of 'svn diff'
-with rich diff data.</p>
+<p>'svn diff' actually has two or three use cases.  The first is to
+produce a human-reviewable description of a change suitable for code
+review.  The second (and maybe third) are to produce a file that can
+be sent by email or stored somewhere for later application, by patch(1)
+(the second use case) or some other more-capable patch tool (the third
+use case).  Of these, 'svn diff' currently only supports the first case.
+For example, copied files are currently shown as differences against the
+original version of the file, which makes review easier, though isn't
+suitable for applying with patch.</p>
+
+<p>This task is: First, to propose a solution for serialising a complete
+representation of a change.  Then, implement that solution with a new
+switch to 'svn diff' and a new subcommand ('svn patch'?) that would
+apply a previously created serialised patch.</p>
+
+<p>Things to consider in your design of the serialisation format:</p>
+<ul>
+<li>Whether it represents content diffs in a human-readable format
+(probably using the unified diff format), Subversion's native binary
+delta format, or some other format.  Considerations include non-precise
+(fuzzy) patching and representing changes to binary files.</li>
+<li>Whether it should be compatible (to some degree) with patch(1)
+(by encoding extra information in a "garbage" chunk of data that patch
+will ignore, similar to the way property changes are reported today).</li>
+<li>How renames (when eventually implemented as a primitive operation)
+should be represented.</li>
+</ul>
 
 <p>Note that <a href="http://svk.elixus.org">SVK</a> posesses such a
 rich unified diff format.  It may or may not be desirable to reuse the
 same kind of representation; that decision is part of the task!</p>
-
-<p>Also, note that recently <a
-href="http://svn.red-bean.com/repos/sussman/software/subversion/svnpatch/trunk/">some
-code from the Dawn of Days</a> of the Subversion project has been
-revived.  It implements an XML (de)serializer for editor drive data,
-which means it can spit out an XML representation of a set of changes,
-and can take that XML representation and use it to "patch" a pristine
-set of files.  The other existing (de)serializer today is the one that
-is commonly known as the "dumpfile" format. These two existing
-implementations need to be taken into account during the analysis and
-design phase.</p>
 
 </div>
 
