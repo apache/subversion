@@ -217,9 +217,7 @@ fs_hotcopy(const char *src_path,
            svn_boolean_t clean_logs, 
            apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_fs__hotcopy(src_path, dest_path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__hotcopy(src_path, dest_path, pool);
 }
 
 
@@ -231,9 +229,7 @@ static svn_error_t *
 fs_recover(const char *path,
            apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_fs__recover(path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__recover(path, pool);
 }
 
 
@@ -265,9 +261,7 @@ fs_delete_fs(const char *path,
              apr_pool_t *pool)
 {
   /* Remove everything. */
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_remove_dir2(path, FALSE, pool);
 }
 
 
