@@ -45,7 +45,7 @@ public class BasicTests extends SVNTests
      */
     public BasicTests()
     {
-        if(!testName.equals(testBaseName))
+        if (!testName.equals(testBaseName))
         {
             testCounter = 0;
             testBaseName = testName;

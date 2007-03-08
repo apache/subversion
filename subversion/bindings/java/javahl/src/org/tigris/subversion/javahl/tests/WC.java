@@ -372,18 +372,18 @@ public class WC
         while (it.hasNext())
         {
             Item item = (Item) it.next();
-            if(!item.touched)
+            if (!item.touched)
             {
-                if(item.myPath.startsWith(basePath) &&
+                if (item.myPath.startsWith(basePath) &&
                         !item.myPath.equals(basePath))
                 {
                     Assert.assertFalse("not found in dir entries", recursive);
                     boolean found = false;
                     for(int i = 0; i < tested.length; i++)
                     {
-                        if(tested[i].getNodeKind() == NodeKind.dir)
+                        if (tested[i].getNodeKind() == NodeKind.dir)
                         {
-                            if(item.myPath.
+                            if (item.myPath.
                                     startsWith(basePath+tested[i].getPath()))
                             {
                                 found = true;

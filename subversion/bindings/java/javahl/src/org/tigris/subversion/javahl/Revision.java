@@ -38,7 +38,7 @@ public class Revision
      */
     public Revision(int kind)
     {
-        if(kind < RevisionKind.unspecified || kind > RevisionKind.head)
+        if (kind < RevisionKind.unspecified || kind > RevisionKind.head)
             throw new IllegalArgumentException(
                     kind+" is not a legal revision kind");
         revKind = kind;
@@ -51,7 +51,7 @@ public class Revision
      */
     protected Revision(int kind, boolean marker)
     {
-        if(kind < RevisionKind.unspecified || kind > RevisionKind.head)
+        if (kind < RevisionKind.unspecified || kind > RevisionKind.head)
             throw new IllegalArgumentException(
                     kind+" is not a legal revision kind");
         revKind = kind;
@@ -182,7 +182,7 @@ public class Revision
         public Number(long number)
         {
             super(Kind.number, true);
-            if(number < 0)
+            if (number < 0)
                 throw new IllegalArgumentException(
                         "negative revision numbers are not allowed");
             revNumber = number;
@@ -235,7 +235,7 @@ public class Revision
         public DateSpec(Date date)
         {
             super(Kind.date, true);
-            if(date == null)
+            if (date == null)
                 throw new IllegalArgumentException("a date must be specified");
             revDate = date;
         }

@@ -227,7 +227,7 @@ public class Info2
      */
     public Date getLastChangedDate()
     {
-        if(lastChangedDate == 0)
+        if (lastChangedDate == 0)
             return null;
         else
             return new Date(lastChangedDate/1000);
@@ -286,7 +286,7 @@ public class Info2
      */
     public Date getTextTime()
     {
-        if(textTime == 0)
+        if (textTime == 0)
             return null;
         else
             return new Date(textTime/1000);
@@ -297,7 +297,7 @@ public class Info2
      */
     public Date getPropTime()
     {
-        if(propTime == 0)
+        if (propTime == 0)
             return null;
         else
             return new Date(propTime/1000);
