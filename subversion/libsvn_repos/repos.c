@@ -1939,10 +1939,11 @@ svn_repos_fs(svn_repos_t *repos)
  */
 
 svn_error_t *
-svn_repos_recover2(const char *path,
+svn_repos_recover3(const char *path,
                    svn_boolean_t nonblocking,
                    svn_error_t *(*start_callback)(void *baton),
                    void *start_callback_baton,
+                   svn_cancel_func_t cancel_func, void *cancel_baton,
                    apr_pool_t *pool)
 {
   svn_repos_t *repos;
@@ -1961,7 +1962,7 @@ svn_repos_recover2(const char *path,
     SVN_ERR(start_callback(start_callback_baton));
 
   /* Recover the database to a consistent state. */
-  SVN_ERR(svn_fs_recover(repos->db_path, subpool));
+  SVN_ERR(svn_fs_recover(repos->db_path, cancel_func, cancel_baton, subpool));
 
   /* Close shop and free the subpool, to release the exclusive lock. */
   svn_pool_destroy(subpool);
@@ -1969,6 +1970,19 @@ svn_repos_recover2(const char *path,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_repos_recover2(const char *path,
+                   svn_boolean_t nonblocking,
+                   svn_error_t *(*start_callback)(void *baton),
+                   void *start_callback_baton,
+                   apr_pool_t *pool)
+{
+  return svn_repos_recover3(path, nonblocking,
+                            start_callback, start_callback_baton,
+                            NULL, NULL,
+                            pool);
+}
 
 svn_error_t *
 svn_repos_recover(const char *path,

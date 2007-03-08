@@ -399,12 +399,14 @@ svn_fs_hotcopy(const char *src_path, const char *dest_path,
 }
 
 svn_error_t *
-svn_fs_recover(const char *path, apr_pool_t *pool)
+svn_fs_recover(const char *path,
+               svn_cancel_func_t cancel_func, void *cancel_baton,
+               apr_pool_t *pool)
 {
   fs_library_vtable_t *vtable;
 
   SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  return vtable->recover(path, pool);
+  return vtable->recover(path, cancel_func, cancel_baton, pool);
 }
 
 
@@ -458,7 +460,7 @@ svn_fs_hotcopy_berkeley(const char *src_path, const char *dest_path,
 svn_error_t *
 svn_fs_berkeley_recover(const char *path, apr_pool_t *pool)
 {
-  return svn_fs_recover(path, pool);
+  return svn_fs_recover(path, NULL, NULL, pool);
 }
 
 svn_error_t *
