@@ -233,7 +233,8 @@ svn_rangelist_merge(apr_array_header_t **in1, apr_array_header_t *in2,
 {
   int i, j;
   svn_merge_range_t *lastrange = NULL;
-
+  apr_array_header_t *output = apr_array_make(pool, 1,
+                                              sizeof(svn_merge_range_t *));
   i = 0;
   j = 0;
   while (i < (*in1)->nelts && j < in2->nelts)
@@ -243,32 +244,44 @@ svn_rangelist_merge(apr_array_header_t **in1, apr_array_header_t *in2,
 
       elt1 = APR_ARRAY_IDX(*in1, i, svn_merge_range_t *);
       elt2 = APR_ARRAY_IDX(in2, j, svn_merge_range_t *);
-      if (!lastrange)
-        lastrange = elt1;
+
       res = svn_sort_compare_ranges(&elt1, &elt2);
       if (res == 0)
         {
-          combine_with_lastrange(&lastrange, elt1, TRUE, *in1, pool);
+          combine_with_lastrange(&lastrange, elt1, TRUE, output, pool);
           i++;
           j++;
         }
       else if (res < 0)
         {
-          combine_with_lastrange(&lastrange, elt1, TRUE, *in1, pool);
+          combine_with_lastrange(&lastrange, elt1, TRUE, output, pool);
           i++;
         }
       else
         {
-          combine_with_lastrange(&lastrange, elt2, TRUE, *in1, pool);
+          combine_with_lastrange(&lastrange, elt2, TRUE, output, pool);
           j++;
         }
     }
-  /* Copy any remaining elements from the second revision list. */
+  /* Copy back any remaining elements.
+     Only one of these loops should end up running, if anything. */
+
+  assert (!(i < (*in1)->nelts && j < in2->nelts));
+
+  for (; i < (*in1)->nelts; i++)
+    {
+      svn_merge_range_t *elt = APR_ARRAY_IDX(*in1, i, svn_merge_range_t *);
+      combine_with_lastrange(&lastrange, elt, TRUE, output, pool);
+    }
+
+
   for (; j < in2->nelts; j++)
     {
       svn_merge_range_t *elt = APR_ARRAY_IDX(in2, j, svn_merge_range_t *);
-      combine_with_lastrange(&lastrange, elt, TRUE, *in1, pool);
+      combine_with_lastrange(&lastrange, elt, TRUE, output, pool);
     }
+
+  *in1 = output;
   return SVN_NO_ERROR;
 }
 
