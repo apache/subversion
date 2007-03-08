@@ -721,9 +721,10 @@ static svn_error_t *get_remote_hostname(char **hostname, apr_socket_t *sock)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn__do_sasl_auth(svn_ra_svn__session_baton_t *sess,
-                                      apr_array_header_t *mechlist,
-                                      const char *realm, apr_pool_t *pool)
+svn_error_t *
+svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
+                          apr_array_header_t *mechlist,
+                          const char *realm, apr_pool_t *pool)
 {
   apr_pool_t *subpool;
   sasl_conn_t *sasl_ctx;
@@ -837,7 +838,8 @@ svn_error_t *svn_ra_svn__do_sasl_auth(svn_ra_svn__session_baton_t *sess,
                  the CRAM-MD5 or ANONYMOUS plugins, in which case we can simply use
                  the built-in implementation. In all other cases this call will be
                  useless, but hey, at least we'll get consistent error messages. */
-              return svn_ra_svn__do_simple_auth(sess, mechlist, realm, pool);
+              return svn_ra_svn__do_internal_auth(sess, mechlist, 
+                                                  realm, pool);
             }
           return err;
         }

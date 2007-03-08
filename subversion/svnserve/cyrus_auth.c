@@ -116,7 +116,7 @@ static svn_error_t *initialize(void)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *sasl_init(void)
+svn_error_t *cyrus_init(void)
 {
   SVN_ERR(svn_atomic__init_once(&svn_ra_svn__sasl_status, initialize));
   return SVN_NO_ERROR;
@@ -219,11 +219,11 @@ static apr_status_t sasl_dispose_cb(void *data)
   return APR_SUCCESS;
 }
 
-svn_error_t *sasl_auth_request(svn_ra_svn_conn_t *conn, 
-                               apr_pool_t *pool,
-                               server_baton_t *b, 
-                               enum access_type required,
-                               svn_boolean_t needs_username)
+svn_error_t *cyrus_auth_request(svn_ra_svn_conn_t *conn, 
+                                apr_pool_t *pool,
+                                server_baton_t *b, 
+                                enum access_type required,
+                                svn_boolean_t needs_username)
 {
   sasl_conn_t *sasl_ctx;
   apr_pool_t *subpool;

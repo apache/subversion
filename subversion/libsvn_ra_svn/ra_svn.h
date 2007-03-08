@@ -179,15 +179,19 @@ svn_boolean_t svn_ra_svn__stream_pending(svn_ra_svn__stream_t *stream);
  * SASL library for mechanism negotiation and for creating authentication
  * tokens.  REALM may be NULL for the initial authentication exchange of
  * protocol version 1. */
-svn_error_t *svn_ra_svn__do_sasl_auth(svn_ra_svn__session_baton_t *sess,
-                                      apr_array_header_t *mechlist,
-                                      const char *realm, apr_pool_t *pool);
+svn_error_t *
+svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
+                          apr_array_header_t *mechlist,
+                          const char *realm, apr_pool_t *pool);
 
 /* Same as svn_ra_svn__do_sasl_auth, but uses the built-in implementation of
- * the CRAM-MD5, ANONYMOUS and EXTERNAL mechanisms. */
-svn_error_t *svn_ra_svn__do_simple_auth(svn_ra_svn__session_baton_t *sess,
-                                        apr_array_header_t *mechlist,
-                                        const char *realm, apr_pool_t *pool);
+ * the CRAM-MD5, ANONYMOUS and EXTERNAL mechanisms.  Return the error
+ * SVN_ERR_RA_SVN_NO_MECHANSIMS if we cannot negotiate an authentication
+ * mechanism with the server. */
+svn_error_t *
+svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
+                             apr_array_header_t *mechlist,
+                             const char *realm, apr_pool_t *pool);
 
 /* Having picked a mechanism, start authentication by writing out an
  * auth response.  If COMPAT is true, also write out a version number
