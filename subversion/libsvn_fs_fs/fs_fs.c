@@ -4793,6 +4793,7 @@ recover_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* This implements the fs_library_vtable_t.recover() API. */
 svn_error_t *
 svn_fs_fs__recover(const char *path,
                    svn_cancel_func_t cancel_func, void *cancel_baton,

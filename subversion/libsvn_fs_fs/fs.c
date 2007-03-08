@@ -222,21 +222,6 @@ fs_hotcopy(const char *src_path,
 
 
 
-/* This implements the fs_library_vtable_t.recover() API.
-   Recover the Subversion filesystem at PATH.
-   Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
-   Perform all temporary allocations in POOL. */
-static svn_error_t *
-fs_recover(const char *path,
-           svn_cancel_func_t cancel_func, void *cancel_baton,
-           apr_pool_t *pool)
-{
-  return svn_fs_fs__recover(path, cancel_func, cancel_baton, pool);
-}
-
-
-
-
 /* This function is included for Subversion 1.0.x compatibility.  It
    has no effect for fsfs backed Subversion filesystems.  It conforms
    to the fs_library_vtable_t.bdb_logfiles() API. */
@@ -351,7 +336,7 @@ static fs_library_vtable_t library_vtable = {
   fs_delete_fs,
   fs_hotcopy,
   fs_get_description,
-  fs_recover,
+  svn_fs_fs__recover,
   fs_logfiles
 };
 
