@@ -401,13 +401,46 @@ perform metadata operations on a whole set of files.
 
 --------------------
 
-TODO list:
+==> Finished items:
 
-* create a streamy version of svn_client_retrieve_changelist(), to be
-  more friendly to 3rd party apps
+    * svn changelist [--clear]
+    * svn commit --changelist
+    * svn revert --changelist
 
-* make --cl the same as --changelist (?)
 
-* 'svn changelist' should take --changelist arg, to make it easy to
-  undefine a whole changelist at once
 
+==> TO-DO:
+
+* Update API based on mail thread consensus: keep the door open to
+  storing changelist data in a central database someday (rather than
+  recursively scanning entries files.)
+
+   - instead of "set foo.txt's changelist to BAR", make two apis:
+       -  "add foo.txt to changelist BAR"
+       -  "remove foo.txt from changelist BAR"
+
+   - create a streamy version of svn_client_retrieve_changelist(), to be
+     more friendly to 3rd party apps
+
+
+* Things that still need to take the --changelist filter argument:
+
+   -  svn status
+   -  svn diff    (wc-wc and wc-url cases, not url-url cases)
+   -  svn log
+   -  svn lock/unlock
+   -  svn proplist/propget/propset/propdel
+
+
+* Need to figure out UI to completely undefine a changelist all at
+  once.  (Instead of manually de-associating each member.)
+
+     Maybe 'svn changelist --clear --changelist mychange'  ?
+     In other words, make 'svn changelist' itself operate on the list.
+
+
+* Add a '--save-changelist' switch to 'svn commit', similar to
+  --no-unlock.
+
+
+* make --cl the same as --changelist, for convenience?
