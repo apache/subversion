@@ -35,19 +35,19 @@
 jint EnumMapper::mapCommitMessageStateFlags(apr_byte_t flags)
 {
     jint jstateFlags = 0;
-    if(flags & SVN_CLIENT_COMMIT_ITEM_ADD)
+    if (flags & SVN_CLIENT_COMMIT_ITEM_ADD)
         jstateFlags |=
             org_tigris_subversion_javahl_CommitItemStateFlags_Add;
-    if(flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
+    if (flags & SVN_CLIENT_COMMIT_ITEM_DELETE)
         jstateFlags |=
             org_tigris_subversion_javahl_CommitItemStateFlags_Delete;
-    if(flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
+    if (flags & SVN_CLIENT_COMMIT_ITEM_TEXT_MODS)
         jstateFlags |=
             org_tigris_subversion_javahl_CommitItemStateFlags_TextMods;
-    if(flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
+    if (flags & SVN_CLIENT_COMMIT_ITEM_PROP_MODS)
         jstateFlags |=
             org_tigris_subversion_javahl_CommitItemStateFlags_PropMods;
-    if(flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
+    if (flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
         jstateFlags |=
             org_tigris_subversion_javahl_CommitItemStateFlags_IsCopy;
     return jstateFlags;
