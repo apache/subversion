@@ -118,12 +118,12 @@ jobjectArray SVNClient::list(const char *url, Revision &revision,
 {
     Pool requestPool;
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
 
-    if(url == NULL)
+    if (url == NULL)
     {
         JNIUtil::throwNullPointerException("path or url");
         return NULL;
@@ -131,7 +131,7 @@ jobjectArray SVNClient::list(const char *url, Revision &revision,
 
     Path urlPath(url);
     svn_error_t *Err = urlPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -151,17 +151,17 @@ jobjectArray SVNClient::list(const char *url, Revision &revision,
         // create the array of DirEntry
         JNIEnv *env = JNIUtil::getEnv();
         jclass clazz = env->FindClass(JAVA_PACKAGE"/DirEntry");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         jobjectArray ret = env->NewObjectArray(array->nelts, clazz, NULL);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
@@ -176,12 +176,12 @@ jobjectArray SVNClient::list(const char *url, Revision &revision,
 
             jobject obj = createJavaDirEntry((const char *)item->key, dirent);
             env->SetObjectArrayElement(ret, i, obj);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             env->DeleteLocalRef(obj);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
@@ -215,7 +215,7 @@ struct status_baton
 void SVNClient::statusReceiver(void *baton, const char *path, 
                                svn_wc_status2_t *status)
 {
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
         return;
 
     // Avoid creating Java Status objects here, as there could be
@@ -236,20 +236,20 @@ jobjectArray SVNClient::status(const char *path, bool descend, bool onServer,
     svn_revnum_t youngest = SVN_INVALID_REVNUM;
     svn_opt_revision_t rev;
 
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
     Path checkedPath(path);
     svn_error_t *Err = checkedPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -270,17 +270,17 @@ jobjectArray SVNClient::status(const char *path, bool descend, bool onServer,
         JNIEnv *env = JNIUtil::getEnv();
         int size = statusBaton.statusVect.size();
         jclass clazz = env->FindClass(JAVA_PACKAGE"/Status");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
@@ -292,12 +292,12 @@ jobjectArray SVNClient::status(const char *path, bool descend, bool onServer,
             jobject jStatus = createJavaStatus(statusEntry.path, 
                                                statusEntry.status);
             env->SetObjectArrayElement(ret, i, jStatus);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             env->DeleteLocalRef(jStatus);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
@@ -318,14 +318,14 @@ jobject SVNClient::singleStatus(const char *path, bool onServer)
     svn_revnum_t youngest = SVN_INVALID_REVNUM;
     svn_opt_revision_t rev;
 
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
@@ -335,7 +335,7 @@ jobject SVNClient::singleStatus(const char *path, bool onServer)
     statusBaton.pool = requestPool.pool();
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -350,7 +350,7 @@ jobject SVNClient::singleStatus(const char *path, bool onServer)
                              FALSE,     // ignore externals
                              ctx,
                              requestPool.pool());
-    if(Err == NULL)
+    if (Err == NULL)
     {
         int size = statusBaton.statusVect.size();
         if (size == 0)
@@ -404,21 +404,21 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart,
     std::vector<jobject> logs;
     Pool requestPool;
 
-    if(path ==NULL)
+    if (path ==NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
     Targets target (path);
     const apr_array_header_t *targets = target.array(requestPool);
     svn_error_t *Err = target.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -430,27 +430,27 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart,
                           discoverPaths,
                           stopOnCopy,
                           messageReceiver, &logs, ctx, requestPool.pool());
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
-    if(Err == NULL)
+    if (Err == NULL)
     {
         int size = logs.size();
 
         JNIEnv *env = JNIUtil::getEnv();
         jclass clazz = env->FindClass(JAVA_PACKAGE"/LogMessage");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
@@ -458,12 +458,12 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart,
         {
             jobject log = logs[i];
             env->SetObjectArrayElement(ret, i, log);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             env->DeleteLocalRef(log);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
@@ -485,12 +485,12 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool();
 
-    if(moduleName == NULL)
+    if (moduleName == NULL)
     {
         JNIUtil::throwNullPointerException("moduleName");
         return -1;
     }
-    if(destPath == NULL)
+    if (destPath == NULL)
     {
         JNIUtil::throwNullPointerException("destPath");
         return -1;
@@ -499,13 +499,13 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
     Path url(moduleName);
     Path path(destPath);
     svn_error_t *Err = url.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return -1;
     }
     Err = path.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return -1;
@@ -513,7 +513,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
     svn_revnum_t retval;
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return -1;
     }
@@ -528,7 +528,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
                                ctx,
                                apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return -1;
@@ -561,20 +561,20 @@ void SVNClient::remove(Targets &targets, const char *message, bool force)
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool();
     svn_client_ctx_t *ctx = getContext(message);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
     const apr_array_header_t *targets2 = targets.array(requestPool);
     svn_error_t *Err = targets.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
 
     Err = svn_client_delete(&commit_info, targets2, force, ctx, apr_pool);
-    if(Err != NULL)
+    if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 
 }
@@ -584,7 +584,7 @@ void SVNClient::revert(const char *path, bool recurse)
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool();
 
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
@@ -594,18 +594,18 @@ void SVNClient::revert(const char *path, bool recurse)
     Targets target (path);
     const apr_array_header_t *targets = target.array(requestPool);
     svn_error_t *Err = target.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
     Err = svn_client_revert(targets, recurse, ctx, apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 
 }
@@ -615,7 +615,7 @@ void SVNClient::add(const char *path, bool recurse, bool force)
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool();
 
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
@@ -623,20 +623,20 @@ void SVNClient::add(const char *path, bool recurse, bool force)
 
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
     Err = svn_client_add3(intPath.c_str (), recurse, force, FALSE,
                           ctx, apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 }
 
@@ -648,13 +648,13 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
 
     svn_client_ctx_t *ctx = getContext(NULL);
     apr_array_header_t *retval;
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
     const apr_array_header_t *array = targets.array(requestPool);
     svn_error_t *Err = targets.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -666,7 +666,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
                              allowUnverObstructions,
                              ctx,
                              apr_pool);
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -674,10 +674,10 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
 
     JNIEnv *env = JNIUtil::getEnv();
     jlongArray ret = env->NewLongArray(retval->nelts);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     jlong *retArray = env->GetLongArrayElements(ret, NULL);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
         return NULL;
     for(int i = 0; i < retval->nelts; i++)
     {
@@ -697,22 +697,22 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     svn_client_commit_info_t *commit_info = NULL;
     const apr_array_header_t *targets2 = targets.array(requestPool);
     svn_error_t *Err = targets.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return -1;
     }
     svn_client_ctx_t *ctx = getContext(message);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return -1;
     }
     Err = svn_client_commit2(&commit_info, targets2, recurse, 
                              noUnlock, ctx, apr_pool);
-    if(Err != NULL)
+    if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 
-    if(commit_info && SVN_IS_VALID_REVNUM (commit_info->revision))
+    if (commit_info && SVN_IS_VALID_REVNUM (commit_info->revision))
       return commit_info->revision;
 
     return -1;
@@ -795,13 +795,13 @@ void SVNClient::mkdir(Targets &targets, const char *message)
     apr_pool_t * apr_pool = requestPool.pool();
     svn_client_commit_info_t *commit_info = NULL;
     svn_client_ctx_t *ctx = getContext(message);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
     const apr_array_header_t *targets2 = targets.array(requestPool);
     svn_error_t *Err = targets.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -809,7 +809,7 @@ void SVNClient::mkdir(Targets &targets, const char *message)
 
     Err = svn_client_mkdir(&commit_info, targets2, ctx, apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 
 }
@@ -818,27 +818,27 @@ void SVNClient::cleanup(const char *path)
 {
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool();
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
     Err = svn_client_cleanup (intPath.c_str (), ctx, apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 
 }
@@ -847,26 +847,26 @@ void SVNClient::resolved(const char *path, bool recurse)
 {
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool();
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
     Err = svn_client_resolved(intPath.c_str(), recurse, ctx, apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 
 }
@@ -878,33 +878,33 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
 {
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool();
-    if(srcPath == NULL)
+    if (srcPath == NULL)
     {
         JNIUtil::throwNullPointerException("srcPath");
         return -1;
     }
-    if(destPath == NULL)
+    if (destPath == NULL)
     {
         JNIUtil::throwNullPointerException("destPath");
         return -1;
     }
     Path sourcePath(srcPath);
     svn_error_t *Err = sourcePath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return -1;
     }
     Path destinationPath(destPath);
     Err = destinationPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return -1;
     }
     svn_revnum_t retval;
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return -1;
     }
@@ -914,7 +914,7 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
                              ignoreExternals, recurse,
                              nativeEOL, ctx,
                              apr_pool);
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return -1;
@@ -930,26 +930,26 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 {
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool();
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return -1;
     }
-    if(url == NULL)
+    if (url == NULL)
     {
         JNIUtil::throwNullPointerException("url");
         return -1;
     }
     Path intUrl(url);
     svn_error_t *Err = intUrl.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return -1;
     }
     Path intPath(path);
     Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return -1;
@@ -957,7 +957,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
 
     svn_revnum_t retval;
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return -1;
     }
@@ -968,7 +968,7 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
                              ctx,
                              apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
     {
          JNIUtil::handleSVNError(Err);
         return -1;
@@ -981,26 +981,26 @@ void SVNClient::doImport(const char *path, const char *url,
 {
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool();
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
-    if(url == NULL)
+    if (url == NULL)
     {
         JNIUtil::throwNullPointerException("url");
         return;
     }
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
     Path intUrl(url);
     Err = intUrl.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -1008,7 +1008,7 @@ void SVNClient::doImport(const char *path, const char *url,
 
     svn_client_commit_info_t *commit_info = NULL;
     svn_client_ctx_t *ctx = getContext(message);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
@@ -1016,7 +1016,7 @@ void SVNClient::doImport(const char *path, const char *url,
     Err = svn_client_import(&commit_info, intPath.c_str(), intUrl.c_str(),
                             !recurse, ctx, apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 
 }
@@ -1027,17 +1027,17 @@ void SVNClient::merge(const char *path1, Revision &revision1,
                       bool ignoreAncestry, bool dryRun)
 {
     Pool requestPool;
-    if(path1 == NULL)
+    if (path1 == NULL)
     {
         JNIUtil::throwNullPointerException("path1");
         return;
     }
-    if(path2 == NULL)
+    if (path2 == NULL)
     {
         JNIUtil::throwNullPointerException("path2");
         return;
     }
-    if(localPath == NULL)
+    if (localPath == NULL)
     {
         JNIUtil::throwNullPointerException("localPath");
         return;
@@ -1045,7 +1045,7 @@ void SVNClient::merge(const char *path1, Revision &revision1,
     apr_pool_t * apr_pool = requestPool.pool();
     Path intLocalPath(localPath);
     svn_error_t *Err = intLocalPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -1053,7 +1053,7 @@ void SVNClient::merge(const char *path1, Revision &revision1,
 
     Path srcPath1(path1);
     Err = srcPath1.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -1061,14 +1061,14 @@ void SVNClient::merge(const char *path1, Revision &revision1,
 
     Path srcPath2 = path2;
     Err = srcPath2.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
@@ -1080,7 +1080,7 @@ void SVNClient::merge(const char *path1, Revision &revision1,
                            dryRun, ctx,
                            apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 
 }
@@ -1090,12 +1090,12 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
                       bool ignoreAncestry, bool dryRun)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
-    if(localPath == NULL)
+    if (localPath == NULL)
     {
         JNIUtil::throwNullPointerException("localPath");
         return;
@@ -1103,7 +1103,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
     apr_pool_t * apr_pool = requestPool.pool();
     Path intLocalPath(localPath);
     svn_error_t *Err = intLocalPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -1111,14 +1111,14 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
 
     Path srcPath(path);
     Err = srcPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
@@ -1130,7 +1130,7 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
                                dryRun, ctx,
                                apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 
 }
@@ -1144,12 +1144,12 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
                                Revision &pegRevision)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
     }
-    if(name == NULL)
+    if (name == NULL)
     {
         JNIUtil::throwNullPointerException("name");
         return NULL;
@@ -1157,14 +1157,14 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     apr_pool_t * apr_pool = requestPool.pool();
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
@@ -1175,7 +1175,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
                               revision.revision(), FALSE,
                               ctx, apr_pool);
 
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -1190,7 +1190,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     svn_string_t *propval;
     apr_hash_this(hi, NULL, NULL, (void**)&propval);
 
-    if(propval == NULL)
+    if (propval == NULL)
         return NULL;
 
     return createJavaProperty(jthis, path, name, propval);
@@ -1201,7 +1201,7 @@ jobjectArray SVNClient::properties(jobject jthis, const char *path,
 {
     apr_array_header_t * props;
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
@@ -1209,14 +1209,14 @@ jobjectArray SVNClient::properties(jobject jthis, const char *path,
     apr_pool_t * apr_pool = requestPool.pool ();
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
@@ -1225,7 +1225,7 @@ jobjectArray SVNClient::properties(jobject jthis, const char *path,
                                pegRevision.revision(), revision.revision(),
                                FALSE, ctx,
                                apr_pool);
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -1243,17 +1243,17 @@ jobjectArray SVNClient::properties(jobject jthis, const char *path,
 
         JNIEnv *env = JNIUtil::getEnv();
         jclass clazz = env->FindClass(JAVA_PACKAGE"/PropertyData");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         jobjectArray ret = env->NewObjectArray(count, clazz, NULL);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
@@ -1271,12 +1271,12 @@ jobjectArray SVNClient::properties(jobject jthis, const char *path,
                                                 key, val);
 
             env->SetObjectArrayElement(ret, i, object);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             env->DeleteLocalRef(object);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
@@ -1290,17 +1290,17 @@ void SVNClient::propertySet(const char *path, const char *name,
                             const char *value, bool recurse, bool force)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
-    if(name == NULL)
+    if (name == NULL)
     {
         JNIUtil::throwNullPointerException("name");
         return;
     }
-    if(value == NULL)
+    if (value == NULL)
     {
         JNIUtil::throwNullPointerException("value");
         return;
@@ -1313,17 +1313,17 @@ void SVNClient::propertySet(const char *path, const char *name,
                             JNIByteArray &value, bool recurse, bool force)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
-    if(name == NULL)
+    if (name == NULL)
     {
         JNIUtil::throwNullPointerException("name");
         return;
     }
-    if(value.isNull())
+    if (value.isNull())
     {
         JNIUtil::throwNullPointerException("value");
         return;
@@ -1338,12 +1338,12 @@ void SVNClient::propertyRemove(const char *path, const char *name,
                                bool recurse)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
-    if(name == NULL)
+    if (name == NULL)
     {
         JNIUtil::throwNullPointerException("name");
         return;
@@ -1355,17 +1355,17 @@ void SVNClient::propertyCreate(const char *path, const char *name,
                                const char *value, bool recurse, bool force)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
-    if(name == NULL)
+    if (name == NULL)
     {
         JNIUtil::throwNullPointerException("name");
         return;
     }
-    if(value == NULL)
+    if (value == NULL)
     {
         JNIUtil::throwNullPointerException("value");
         return;
@@ -1378,17 +1378,17 @@ void SVNClient::propertyCreate(const char *path, const char *name,
                                JNIByteArray &value, bool recurse, bool force)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
-    if(name == NULL)
+    if (name == NULL)
     {
         JNIUtil::throwNullPointerException("name");
         return;
     }
-    if(value.isNull())
+    if (value.isNull())
     {
         JNIUtil::throwNullPointerException("value");
         return;
@@ -1665,7 +1665,7 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     svn_client_get_ssl_client_cert_pw_file_provider (&provider, pool);
     APR_ARRAY_PUSH (providers, svn_auth_provider_object_t *) = provider;
 
-    if(m_prompter != NULL)
+    if (m_prompter != NULL)
     {
          /* Two basic prompt providers: username/password, and just username.*/
         provider = m_prompter->getProviderSimple();
@@ -1711,7 +1711,7 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     m_cancelOperation = false;
     ctx->cancel_baton = this;
     const char *configDir = m_configDir.c_str();
-    if(m_configDir.length() == 0)
+    if (m_configDir.length() == 0)
         configDir = NULL;
     if (( err = 
             svn_config_get_config (&(ctx->config), configDir, pool)))
@@ -1742,7 +1742,7 @@ SVNClient::getCommitMessage(const char **log_msg,
     if (lmb && lmb->messageHandler)
     {
         jstring jmsg = lmb->messageHandler->getCommitMessage(commit_items);
-        if(jmsg != NULL)
+        if (jmsg != NULL)
         {
             JNIStringHolder msg(jmsg);
             *log_msg = apr_pstrdup(pool, msg);
@@ -1759,7 +1759,7 @@ SVNClient::getCommitMessage(const char **log_msg,
 }
 void *SVNClient::getCommitMessageBaton(const char *message)
 {
-    if(message != NULL || m_commitMessage)
+    if (message != NULL || m_commitMessage)
     {
         log_msg_baton *baton = (log_msg_baton *)
             apr_palloc(JNIUtil::getRequestPool()->pool(), sizeof(*baton));
@@ -1776,12 +1776,12 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
 {
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Status");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>",
             "(Ljava/lang/String;Ljava/lang/String;IJJJLjava/lang/String;IIIIZZ"
@@ -1789,13 +1789,13 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
              "Ljava/lang/String;JZLjava/lang/String;Ljava/lang/String;"
              "Ljava/lang/String;JLorg/tigris/subversion/javahl/Lock;"
              "JJILjava/lang/String;)V");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
     }
     jstring jPath = JNIUtil::makeJString(path);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -1830,7 +1830,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
     jlong jOODLastCmtDate = 0;
     jint jOODKind = org_tigris_subversion_javahl_NodeKind_none;
     jstring jOODLastCmtAuthor = NULL;
-    if(status != NULL)
+    if (status != NULL)
     {
         jTextType = EnumMapper::mapStatusKind(status->text_status);
         jPropType = EnumMapper::mapStatusKind(status->prop_status);
@@ -1840,12 +1840,12 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         jIsLocked = (status->locked == 1) ? JNI_TRUE: JNI_FALSE;
         jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
         jLock = createJavaLock(status->repos_lock);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         jUrl = JNIUtil::makeJString(status->url);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
@@ -1853,7 +1853,7 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         jOODLastCmtDate = status->ood_last_cmt_date;
         jOODKind = EnumMapper::mapNodeKind(status->ood_kind);
         jOODLastCmtAuthor = JNIUtil::makeJString(status->ood_last_cmt_author);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
@@ -1866,44 +1866,44 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
             jLastChangedRevision = entry->cmt_rev;
             jLastChangedDate = entry->cmt_date;
             jLastCommitAuthor = JNIUtil::makeJString(entry->cmt_author);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
 
             jConflictNew = JNIUtil::makeJString(entry->conflict_new);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             jConflictOld = JNIUtil::makeJString(entry->conflict_old);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             jConflictWorking= JNIUtil::makeJString(entry->conflict_wrk);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             jURLCopiedFrom = JNIUtil::makeJString(entry->copyfrom_url);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             jRevisionCopiedFrom = entry->copyfrom_rev;
             jLockToken = JNIUtil::makeJString(entry->lock_token);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             jLockComment = JNIUtil::makeJString(entry->lock_comment);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             jLockOwner = JNIUtil::makeJString(entry->lock_owner);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
@@ -1918,72 +1918,72 @@ jobject SVNClient::createJavaStatus(const char *path, svn_wc_status2_t *status)
         jURLCopiedFrom, jRevisionCopiedFrom, jIsSwitched, jLockToken, 
         jLockOwner, jLockComment, jLockCreationDate, jLock,
         jOODLastCmtRevision, jOODLastCmtDate, jOODKind, jOODLastCmtAuthor);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jPath);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jUrl);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jLastCommitAuthor);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jConflictNew);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jConflictOld);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jConflictWorking);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jURLCopiedFrom);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jLockComment);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jLockOwner);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jLockToken);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jLock);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jOODLastCmtAuthor);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -1995,7 +1995,7 @@ svn_error_t *SVNClient::messageReceiver(void *baton, apr_hash_t *changed_paths,
                                         const char *date,
                                         const char *msg, apr_pool_t * pool)
 {
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
@@ -2004,63 +2004,63 @@ svn_error_t *SVNClient::messageReceiver(void *baton, apr_hash_t *changed_paths,
     static jmethodID mid = 0;
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/LogMessage");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
 
-    if(mid == 0)
+    if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>",
             "(Ljava/lang/String;Ljava/util/Date;JLjava/lang/String;"
             "[Lorg/tigris/subversion/javahl/ChangePath;)V");
-        if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
             return SVN_NO_ERROR;
         }
     }
 
     jclass clazzCP = env->FindClass(JAVA_PACKAGE"/ChangePath");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
 
     static jmethodID midCP = 0;
-    if(midCP == 0)
+    if (midCP == 0)
     {
         midCP = env->GetMethodID(clazzCP, "<init>",
             "(Ljava/lang/String;JLjava/lang/String;C)V");
-        if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
             return SVN_NO_ERROR;
         }
 
     }
     jstring jmessage = JNIUtil::makeJString(msg);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
 
     jobject jdate = NULL;
-    if(date != NULL && *date != '\0')
+    if (date != NULL && *date != '\0')
     {
         apr_time_t timeTemp;
         
         svn_error_t * err = svn_time_from_cstring (&timeTemp, date, pool);
-        if(err != SVN_NO_ERROR)
+        if (err != SVN_NO_ERROR)
             return err;
 
         jdate = JNIUtil::createDate(timeTemp);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return SVN_NO_ERROR;
         }
     }
 
     jstring jauthor = JNIUtil::makeJString(author);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
@@ -2088,13 +2088,13 @@ svn_error_t *SVNClient::messageReceiver(void *baton, apr_hash_t *changed_paths,
                     apr_hash_get (changed_paths, item->key, item->klen);
 
             jstring jpath = JNIUtil::makeJString(path);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return SVN_NO_ERROR;
             }
             jstring jcopyFromPath = 
                 JNIUtil::makeJString(log_item->copyfrom_path);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return SVN_NO_ERROR;
             }
@@ -2103,29 +2103,29 @@ svn_error_t *SVNClient::messageReceiver(void *baton, apr_hash_t *changed_paths,
 
             jobject cp = env->NewObject(clazzCP, midCP, jpath, jcopyFromRev,
                 jcopyFromPath, jaction);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return SVN_NO_ERROR;
             }
 
             env->SetObjectArrayElement(jChangedPaths, i, cp);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return SVN_NO_ERROR;
             }
 
             env->DeleteLocalRef(cp);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return SVN_NO_ERROR;
             }
             env->DeleteLocalRef(jpath);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return SVN_NO_ERROR;
             }
             env->DeleteLocalRef(jcopyFromPath);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return SVN_NO_ERROR;
             }
@@ -2135,28 +2135,28 @@ svn_error_t *SVNClient::messageReceiver(void *baton, apr_hash_t *changed_paths,
 
     jobject log = env->NewObject(clazz, mid, jmessage, jdate, (jlong)rev, 
                                  jauthor, jChangedPaths);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
     logs->push_back(log);
     env->DeleteLocalRef(jChangedPaths);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
     env->DeleteLocalRef(jmessage);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
     env->DeleteLocalRef(jdate);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
@@ -2169,70 +2169,70 @@ jobject SVNClient::createJavaProperty(jobject jthis, const char *path,
 {
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/PropertyData");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>", 
                   "(L"JAVA_PACKAGE"/SVNClient;Ljava/lang/String;"
                    "Ljava/lang/String;Ljava/lang/String;[B)V");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
     }
     jstring jPath = JNIUtil::makeJString(path);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jName = JNIUtil::makeJString(name);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jValue = JNIUtil::makeJString(value->data);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jbyteArray jData = JNIUtil::makeJByteArray((const signed char *)value->data, 
                                                value->len);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jobject ret = env->NewObject(clazz, mid, jthis, jPath, jName, jValue, 
                                  jData);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jPath);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jName);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jValue);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jData);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -2244,18 +2244,18 @@ void SVNClient::propertySet(const char *path, const char *name,
 {
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
         return;
     Err = svn_client_propset2(name, value, intPath.c_str(), recurse, 
                               force, ctx, JNIUtil::getRequestPool()->pool());
-    if(Err!= NULL)
+    if (Err!= NULL)
         JNIUtil::handleSVNError(Err);
 }
 
@@ -2263,14 +2263,14 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
                                   Revision &pegRevision)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
     }
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -2405,13 +2405,13 @@ svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
         apr_file_t *file = NULL;
         apr_finfo_t finfo;
         apr_status_t apr_err = apr_stat(&finfo, path, APR_FINFO_MIN, pool);
-        if(apr_err)
+        if (apr_err)
         {
             JNIUtil::handleAPRError(apr_err, _("open file"));
             return NULL;
         }
         apr_err = apr_file_open(&file, path, APR_READ, 0, pool);
-        if(apr_err)
+        if (apr_err)
         {
             JNIUtil::handleAPRError(apr_err, _("open file"));
             return NULL;
@@ -2422,7 +2422,7 @@ svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
     else
     {
         svn_client_ctx_t * ctx = getContext(NULL);
-        if(ctx == NULL)
+        if (ctx == NULL)
         {
             return NULL;
         }
@@ -2430,7 +2430,7 @@ svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
         read_stream = svn_stream_from_stringbuf(buf, pool);
         svn_error_t *err = svn_client_cat2 (read_stream,
                 path, pegRevision.revision(), revision.revision(), ctx, pool);
-        if(err != NULL)
+        if (err != NULL)
         {
             JNIUtil::handleSVNError(err);
             return NULL;
@@ -2448,22 +2448,22 @@ jobject SVNClient::createJavaDirEntry(const char *path, svn_dirent_t *dirent)
 {
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/DirEntry");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>", 
                                "(Ljava/lang/String;IJZJJLjava/lang/String;)V");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
     }
     jstring jPath = JNIUtil::makeJString(path);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -2473,31 +2473,31 @@ jobject SVNClient::createJavaDirEntry(const char *path, svn_dirent_t *dirent)
     jlong jLastChangedRevision = dirent->created_rev;
     jlong jLastChanged = dirent->time;
     jstring jLastAuthor = JNIUtil::makeJString(dirent->last_author);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jobject ret = env->NewObject(clazz, mid, jPath, jNodeKind, jSize, 
                                  jHasProps, jLastChangedRevision, 
                                  jLastChanged, jLastAuthor);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jPath);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
-    if(jLastAuthor != NULL)
+    if (jLastAuthor != NULL)
     {
         env->DeleteLocalRef(jLastAuthor);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
@@ -2509,12 +2509,12 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
                                const char *name, Revision &rev)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
     }
-    if(name == NULL)
+    if (name == NULL)
     {
         JNIUtil::throwNullPointerException("name");
         return NULL;
@@ -2522,14 +2522,14 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
     apr_pool_t * apr_pool = requestPool.pool ();
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
@@ -2538,13 +2538,13 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
     svn_revnum_t set_rev;
     Err = svn_client_url_from_path(&URL, intPath.c_str(), apr_pool);
 
-    if(Err != SVN_NO_ERROR)
+    if (Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
 
-    if(URL == NULL)
+    if (URL == NULL)
     {
         JNIUtil::handleSVNError(svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, 
                                                  NULL,
@@ -2554,12 +2554,12 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
 
     Err = svn_client_revprop_get(name, &propval, URL,
                                  rev.revision(), &set_rev, ctx, apr_pool);
-    if(Err != SVN_NO_ERROR)
+    if (Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
-    if(propval == NULL)
+    if (propval == NULL)
         return NULL;
 
     return createJavaProperty(jthis, path, name, propval);
@@ -2569,24 +2569,24 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
 {
     Pool requestPool;
     apr_pool_t * apr_pool = requestPool.pool ();
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
     }
-    if(from == NULL)
+    if (from == NULL)
     {
         JNIUtil::throwNullPointerException("from");
         return;
     }
-    if(to == NULL)
+    if (to == NULL)
     {
         JNIUtil::throwNullPointerException("to");
         return;
     }
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -2594,7 +2594,7 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
 
     Path intFrom(from);
     Err = intFrom.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -2602,7 +2602,7 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
 
     Path intTo(to);
     Err = intTo.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -2610,7 +2610,7 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
 
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
@@ -2619,7 +2619,7 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
     Err = svn_client_relocate(intPath.c_str(), intFrom.c_str(), intTo.c_str(), 
                               recurse, ctx, apr_pool);
 
-    if(Err != SVN_NO_ERROR)
+    if (Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -2646,7 +2646,7 @@ jbyteArray SVNClient::blame(const char *path, Revision &revisionStart,
                             Revision &revisionEnd)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
@@ -2654,14 +2654,14 @@ jbyteArray SVNClient::blame(const char *path, Revision &revisionStart,
     apr_pool_t * apr_pool = requestPool.pool ();
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
@@ -2671,7 +2671,7 @@ jbyteArray SVNClient::blame(const char *path, Revision &revisionStart,
                            revisionEnd.revision(), blame_receiver,
                            read_stream, ctx,
                            apr_pool);
-    if(Err != SVN_NO_ERROR)
+    if (Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -2680,25 +2680,25 @@ jbyteArray SVNClient::blame(const char *path, Revision &revisionStart,
 
     JNIEnv *env = JNIUtil::getEnv();
     jbyteArray ret = env->NewByteArray(size);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jbyte *retdata = env->GetByteArrayElements(ret, NULL);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     Err = svn_stream_read(read_stream, (char *)retdata, &size);
 
-    if(Err != NULL)
+    if (Err != NULL)
     {
         env->ReleaseByteArrayElements(ret, retdata, 0);
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
     env->ReleaseByteArrayElements(ret, retdata, 0);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -2721,7 +2721,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
                       Revision &revisionEnd, BlameCallback *callback)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return;
@@ -2729,21 +2729,21 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     apr_pool_t * apr_pool = requestPool.pool ();
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return;
     }
     Err = svn_client_blame2 (intPath.c_str(), pegRevision.revision(),
                              revisionStart.revision(), revisionEnd.revision(),
                              blame_receiver2, callback, ctx, apr_pool);
-    if(Err != SVN_NO_ERROR)
+    if (Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -2785,7 +2785,7 @@ void SVNClient::cancelOperation()
 svn_error_t * SVNClient::checkCancel(void *cancelBaton)
 {
     SVNClient *that = (SVNClient*)cancelBaton;
-    if(that->m_cancelOperation)
+    if (that->m_cancelOperation)
         return svn_error_create (SVN_ERR_CANCELLED, NULL,
             _("Operation canceled"));
     else
@@ -2800,7 +2800,7 @@ jobject SVNClient::info(const char *path)
     svn_wc_adm_access_t *adm_access;
     const svn_wc_entry_t *entry;
 
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
@@ -2808,7 +2808,7 @@ jobject SVNClient::info(const char *path)
     apr_pool_t * apr_pool = requestPool.pool();
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -2816,13 +2816,13 @@ jobject SVNClient::info(const char *path)
     
     Err = svn_wc_adm_probe_open2(&adm_access, NULL, intPath.c_str(), 
                                  FALSE, 0, apr_pool);
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
     Err = svn_wc_entry(&entry, intPath.c_str(), adm_access, FALSE, apr_pool);
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -2831,71 +2831,71 @@ jobject SVNClient::info(const char *path)
 }
 jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
 {
-    if(entry == NULL)
+    if (entry == NULL)
         return NULL;
 
     JNIEnv *env = JNIUtil::getEnv();
 
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Info");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>", 
             "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
             "Ljava/lang/String;IILjava/lang/String;JJLjava/util/Date;"
             "Ljava/util/Date;Ljava/util/Date;ZZZZJLjava/lang/String;)V");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
     }
 
     jstring jName = JNIUtil::makeJString(entry->name);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jUrl = JNIUtil::makeJString(entry->url);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jUuid = JNIUtil::makeJString(entry->uuid);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jRepository = JNIUtil::makeJString(entry->repos);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jint jSchedule = EnumMapper::mapScheduleKind(entry->schedule);
     jint jNodeKind = EnumMapper::mapNodeKind(entry->kind);
     jstring jAuthor = JNIUtil::makeJString(entry->cmt_author);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jlong jRevision = entry->revision;
     jlong jLastChangedRevision = entry->cmt_rev;
     jobject jLastChangedDate = JNIUtil::createDate(entry->cmt_date);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jobject jLastDateTextUpdate = JNIUtil::createDate(entry->text_time);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jobject jLastDatePropsUpdate = JNIUtil::createDate(entry->prop_time);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -2905,7 +2905,7 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
     jboolean jIncomplete = entry->incomplete ? JNI_TRUE : JNI_FALSE;
     jlong jCopyRev = entry->copyfrom_rev;
     jstring jCopyUrl = JNIUtil::makeJString(entry->copyfrom_url);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -2914,67 +2914,67 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
         jSchedule, jNodeKind, jAuthor, jRevision, jLastChangedRevision, 
         jLastChangedDate, jLastDateTextUpdate, jLastDatePropsUpdate, jCopied,
         jDeleted, jAbsent, jIncomplete, jCopyRev, jCopyUrl);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jName);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jUrl);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jUuid);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jRepository);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jAuthor);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jLastChangedDate);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jLastDateTextUpdate);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jLastDatePropsUpdate);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jCopyUrl);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -2984,45 +2984,45 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
 
 jobject SVNClient::createJavaLock(const svn_lock_t *lock)
 {
-    if(lock == NULL)
+    if (lock == NULL)
         return NULL;
     JNIEnv *env = JNIUtil::getEnv();
 
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Lock");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>", 
             "(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
             "Ljava/lang/String;JJ)V");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
     }
 
     jstring jOwner = JNIUtil::makeJString(lock->owner);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jPath = JNIUtil::makeJString(lock->path);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jToken = JNIUtil::makeJString(lock->token);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jComment = JNIUtil::makeJString(lock->comment);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -3030,37 +3030,37 @@ jobject SVNClient::createJavaLock(const svn_lock_t *lock)
     jlong jExpirationDate = lock->expiration_date;
     jobject ret = env->NewObject(clazz, mid, jOwner, jPath, jToken, jComment,
         jCreationDate, jExpirationDate);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jOwner);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jPath);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jToken);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
 
     env->DeleteLocalRef(jComment);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -3073,7 +3073,7 @@ void SVNClient::lock(Targets &targets, const char *comment, bool force)
     Pool requestPool;
     const apr_array_header_t *targetsApr = targets.array(requestPool);
     svn_error_t *Err = targets.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -3094,7 +3094,7 @@ void SVNClient::unlock(Targets &targets, bool force)
 
     const apr_array_header_t *targetsApr = targets.array(requestPool);
     svn_error_t *Err = targets.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -3102,7 +3102,7 @@ void SVNClient::unlock(Targets &targets, bool force)
     svn_client_ctx_t *ctx = getContext(NULL);
     Err = svn_client_unlock((apr_array_header_t*)targetsApr, force, 
                             ctx, requestPool.pool());
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
@@ -3113,12 +3113,12 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
                                const char *value, bool force)
 {
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return ;
     }
-    if(name == NULL)
+    if (name == NULL)
     {
         JNIUtil::throwNullPointerException("name");
         return ;
@@ -3126,27 +3126,27 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
     apr_pool_t * apr_pool = requestPool.pool();
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return ;
     }
     const char *URL;
     Err = svn_client_url_from_path(&URL, intPath.c_str(), apr_pool);
 
-    if(Err != SVN_NO_ERROR)
+    if (Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);
         return ;
     }
 
-    if(URL == NULL)
+    if (URL == NULL)
     {
         JNIUtil::handleSVNError(svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, 
                                                  NULL,
@@ -3159,7 +3159,7 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
     svn_revnum_t set_revision;
     Err = svn_client_revprop_set(name, val, URL, rev.revision(),
                                  &set_revision, force, ctx, apr_pool);
-    if(Err != SVN_NO_ERROR)
+    if (Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);
         return ;
@@ -3254,7 +3254,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
 {
     struct version_status_baton sb;
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
@@ -3271,7 +3271,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
 
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -3281,7 +3281,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     int wc_format;
     svn_client_ctx_t ctx = { 0 };
     Err = svn_wc_check_wc (intPath.c_str(), &wc_format, requestPool.pool());
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -3290,7 +3290,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     {
         svn_node_kind_t kind;
         Err = svn_io_check_path (intPath.c_str(), &kind, requestPool.pool());
-        if(Err != NULL)
+        if (Err != NULL)
         {
             JNIUtil::handleSVNError(Err);
             return NULL;
@@ -3325,7 +3325,7 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
                             requestPool.pool());
     if (Err&& (Err->apr_err == SVN_ERR_CANCELLED))
         svn_error_clear (Err);
-    else if(Err != NULL)
+    else if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -3369,7 +3369,7 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
 {
     apr_hash_t * props;
     Pool requestPool;
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
@@ -3377,7 +3377,7 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
     apr_pool_t * apr_pool = requestPool.pool();
     Path intPath(path);
     svn_error_t *Err = intPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -3388,14 +3388,14 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
     Err = svn_client_url_from_path(&URL, intPath.c_str(), apr_pool);
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
 
     Err = svn_client_revprop_list(&props, URL, revision.revision(),
                                   &set_rev, ctx, apr_pool);
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -3407,17 +3407,17 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
 
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/PropertyData");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jobjectArray ret = env->NewObjectArray(count, clazz, NULL);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -3435,12 +3435,12 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
                                             key, val);
 
         env->SetObjectArrayElement(ret, i, object);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         env->DeleteLocalRef(object);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
@@ -3464,20 +3464,20 @@ jobjectArray SVNClient::info2(const char *path, Revision &revision,
     info_baton infoBaton;
     Pool requestPool;
 
-    if(path == NULL)
+    if (path == NULL)
     {
         JNIUtil::throwNullPointerException("path");
         return NULL;
     }
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    if(ctx == NULL)
+    if (ctx == NULL)
     {
         return NULL;
     }
     Path checkedPath(path);
     svn_error_t *Err = checkedPath.error_occured();
-    if(Err != NULL)
+    if (Err != NULL)
     {
         JNIUtil::handleSVNError(Err);
         return NULL;
@@ -3498,17 +3498,17 @@ jobjectArray SVNClient::info2(const char *path, Revision &revision,
         JNIEnv *env = JNIUtil::getEnv();
         int size = infoBaton.infoVect.size();
         jclass clazz = env->FindClass(JAVA_PACKAGE"/Info2");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
@@ -3519,12 +3519,12 @@ jobjectArray SVNClient::info2(const char *path, Revision &revision,
 
             jobject jInfo = createJavaInfo2(infoEntry.path, infoEntry.info);
             env->SetObjectArrayElement(ret, i, jInfo);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
             env->DeleteLocalRef(jInfo);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
@@ -3542,7 +3542,7 @@ svn_error_t *SVNClient::infoReceiver(void *baton,
                                      const svn_info_t *info,
                                      apr_pool_t *pool)
 {
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
         return SVN_NO_ERROR;
 
     // we don't create here java Status object as we don't want too many local 
@@ -3561,7 +3561,7 @@ svn_error_t *SVNClient::infoReceiver(void *baton,
     infoEntry.info->last_changed_date = info->last_changed_date;
     infoEntry.info->last_changed_author = apr_pstrdup(infoBaton->pool, 
         info->last_changed_author);
-    if(info->lock != NULL)
+    if (info->lock != NULL)
         infoEntry.info->lock = svn_lock_dup(info->lock, infoBaton->pool);
     else
         infoEntry.info->lock = NULL;
@@ -3588,12 +3588,12 @@ jobject SVNClient::createJavaInfo2(const char *path, const svn_info_t *info)
 {
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass(JAVA_PACKAGE"/Info2");
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>",
             "(Ljava/lang/String;Ljava/lang/String;JILjava/lang/String;"
@@ -3601,30 +3601,30 @@ jobject SVNClient::createJavaInfo2(const char *path, const svn_info_t *info)
              "Lorg/tigris/subversion/javahl/Lock;ZILjava/lang/String;JJJ"
              "Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;"
              "Ljava/lang/String;Ljava/lang/String;)V");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
     }
     jstring jpath = JNIUtil::makeJString(path);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jurl = JNIUtil::makeJString(info->URL);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jlong jrev = info->rev;
     jint jnodeKind = EnumMapper::mapNodeKind(info->kind);
     jstring jreposRootUrl = JNIUtil::makeJString(info->repos_root_URL);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jreportUUID = JNIUtil::makeJString(info->repos_UUID);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -3632,12 +3632,12 @@ jobject SVNClient::createJavaInfo2(const char *path, const svn_info_t *info)
     jlong jlastChangedDate = info->last_changed_date;
     jstring jlastChangedAuthor = 
         JNIUtil::makeJString(info->last_changed_author);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jobject jlock = createJavaLock(info->lock);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -3648,27 +3648,27 @@ jobject SVNClient::createJavaInfo2(const char *path, const svn_info_t *info)
     jlong jtextTime = info->text_time;
     jlong jpropTime = info->prop_time;
     jstring jchecksum = JNIUtil::makeJString(info->checksum);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jconflictOld = JNIUtil::makeJString(info->conflict_old);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jconflictNew = JNIUtil::makeJString(info->conflict_new);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jconflictWrk = JNIUtil::makeJString(info->conflict_wrk);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     jstring jprejfile = JNIUtil::makeJString(info->prejfile);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -3677,67 +3677,67 @@ jobject SVNClient::createJavaInfo2(const char *path, const svn_info_t *info)
         jlastChangedAuthor, jlock, jhasWcInfo, jschedule, jcopyFromUrl, 
         jcopyFromRev, jtextTime, jpropTime, jchecksum, jconflictOld, 
         jconflictNew, jconflictWrk, jprejfile);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(clazz);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jpath);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jurl);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jreposRootUrl);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jlastChangedAuthor);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jlock);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jcopyFromUrl);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jchecksum);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jconflictOld);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jconflictNew);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jconflictWrk);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(jprejfile);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }

@@ -74,7 +74,7 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 
     // lock the list of finalized objects
     JNICriticalSection cs(*g_finalizedObjectsMutex) ;
-    if(isExceptionThrown())
+    if (isExceptionThrown())
     {
         return false;
     }
@@ -98,7 +98,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     // this method has to be run only once during the run a 
     // programm
     static bool run = false;
-    if(run) // already run
+    if (run) // already run
     {
         return true;
     }
@@ -107,7 +107,7 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
     // this leaves a small time window when two threads create their first
     // SVNClient & SVNAdmin at the same time, but I do not see a better 
     // option without APR already initialized
-    if(g_inInit)
+    if (g_inInit)
     {
         return false;
     }
@@ -243,31 +243,31 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 
     // build all mutexes
     g_finalizedObjectsMutex = new JNIMutex(g_pool);
-    if(isExceptionThrown())
+    if (isExceptionThrown())
     {
         return false;
     }
 
     g_logMutex = new JNIMutex(g_pool);
-    if(isExceptionThrown())
+    if (isExceptionThrown())
     {
         return false;
     }
 
     g_globalPoolMutext = new JNIMutex(g_pool);
-    if(isExceptionThrown())
+    if (isExceptionThrown())
     {
         return false;
     }
 
     // initialized the thread local storage
-    if(!JNIThreadData::initThreadData())
+    if (!JNIThreadData::initThreadData())
     {
         return false;
     }
 
     setEnv(env);
-    if(isExceptionThrown())
+    if (isExceptionThrown())
     {
         return false;
     }
@@ -311,7 +311,7 @@ void JNIUtil::raiseThrowable(const char *name, const char *message)
 }
 jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
 {
-    if(err == NULL)
+    if (err == NULL)
         return NULL;
     std::string buffer;
     assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
@@ -400,7 +400,7 @@ void JNIUtil::enqueueForDeletion(SVNBase *object)
 void JNIUtil::handleAPRError(int error, const char *op)
 {
     char *buffer = getFormatBuffer();
-    if(buffer == NULL)
+    if (buffer == NULL)
     {
         return;
     }
@@ -416,7 +416,7 @@ void JNIUtil::handleAPRError(int error, const char *op)
  */
 bool JNIUtil::isExceptionThrown()
 {
-    if(g_inInit) // during init -> look in the global member
+    if (g_inInit) // during init -> look in the global member
     {
         return g_initException;
     }
@@ -443,7 +443,7 @@ void JNIUtil::setEnv(JNIEnv *env)
 JNIEnv * JNIUtil::getEnv()
 {
     // during init -> look into the global variable
-    if(g_inInit)
+    if (g_inInit)
     {
         return g_initEnv;
     }
@@ -459,7 +459,7 @@ JNIEnv * JNIUtil::getEnv()
 bool JNIUtil::isJavaExceptionThrown()
 {
     JNIEnv *env = getEnv();
-    if(env->ExceptionCheck())
+    if (env->ExceptionCheck())
     {
         // retrieving the exception removes it
         // so we rethrow it here
@@ -480,7 +480,7 @@ bool JNIUtil::isJavaExceptionThrown()
  */ 
 jstring JNIUtil::makeJString(const char *txt)
 {
-    if(txt == NULL) // NULL string can be converted to a null java string
+    if (txt == NULL) // NULL string can be converted to a null java string
     {
         return NULL;
     }
@@ -517,14 +517,14 @@ void JNIUtil::initLogFile(int level, jstring path)
 {
     // lock this operation
     JNICriticalSection cs(*g_logMutex);
-    if(g_logLevel > noLog) // if the log file has been opened
+    if (g_logLevel > noLog) // if the log file has been opened
     {
         g_logStream.close();
     }
     // remember the log level
     g_logLevel = level;
     JNIStringHolder myPath(path);
-    if(g_logLevel > noLog) // if a new log file is needed
+    if (g_logLevel > noLog) // if a new log file is needed
     {
         // open it
         g_logStream.open(myPath, std::ios::app);
@@ -536,13 +536,13 @@ void JNIUtil::initLogFile(int level, jstring path)
  */
 char * JNIUtil::getFormatBuffer()
 {
-    if(g_inInit) // during init -> use the global buffer
+    if (g_inInit) // during init -> use the global buffer
     {
         return g_initFormatBuffer;
     }
     // use the buffer in the thread local storage
     JNIThreadData *data = JNIThreadData::getThreadData();
-    if(data == NULL) // if that does not exists -> use the global buffer
+    if (data == NULL) // if that does not exists -> use the global buffer
     {
         return g_initFormatBuffer;
     }
@@ -577,26 +577,26 @@ jobject JNIUtil::createDate(apr_time_t time)
     jlong javatime = time /1000;
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass("java/util/Date");
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>", "(J)V");
-        if(isJavaExceptionThrown())
+        if (isJavaExceptionThrown())
         {
             return NULL;
         }
     }
     jobject ret = env->NewObject(clazz, mid, javatime);
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(clazz);
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -627,7 +627,7 @@ void JNIUtil::setRequestPool(Pool *pool)
  */
 jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 {
-    if(data == NULL || length == 0) // a NULL or empty will create no
+    if (data == NULL || length == 0) // a NULL or empty will create no
                                     // java array
     {
         return NULL;
@@ -636,14 +636,14 @@ jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 
     // allocate the java array
     jbyteArray ret = env->NewByteArray(length);
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
 
     // access the bytes
     jbyte *retdata = env->GetByteArrayElements(ret, NULL);
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -653,7 +653,7 @@ jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 
     // release the bytes
     env->ReleaseByteArrayElements(ret, retdata, 0);
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -713,7 +713,7 @@ void JNIUtil::throwNullPointerException(const char *message)
     }
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass("java/lang/NullPointerException");
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return;
     }

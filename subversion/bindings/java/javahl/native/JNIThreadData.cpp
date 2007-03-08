@@ -53,7 +53,7 @@ JNIThreadData::~JNIThreadData()
 bool JNIThreadData::initThreadData()
 {
     // if already initialized -> nothing to do
-    if(g_key != NULL)
+    if (g_key != NULL)
     {
         return false;
     }
@@ -62,7 +62,7 @@ bool JNIThreadData::initThreadData()
     // register a callback function called, when the thread is deleted
     apr_status_t apr_err = apr_threadkey_private_create  ( &g_key, del, 
         JNIUtil::getPool());
-    if(apr_err)
+    if (apr_err)
     {
         JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_create");
         return false;
@@ -77,7 +77,7 @@ bool JNIThreadData::initThreadData()
 JNIThreadData * JNIThreadData::getThreadData()
 {
     // we should never be called before initThreadData
-    if(g_key == NULL)
+    if (g_key == NULL)
     {
         return NULL;
     }
@@ -86,19 +86,19 @@ JNIThreadData * JNIThreadData::getThreadData()
     JNIThreadData *data = NULL;
     apr_status_t apr_err = apr_threadkey_private_get 
         (reinterpret_cast<void**>(&data), g_key);
-    if(apr_err)
+    if (apr_err)
     {
         JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_get");
         return NULL;
     }
 
     // not already allocated
-    if(data == NULL)
+    if (data == NULL)
     {
         // allocate and store to apr
         data = new JNIThreadData;
         apr_err = apr_threadkey_private_set (data, g_key);
-        if(apr_err)
+        if (apr_err)
         {
             JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_set");
             return NULL;
@@ -115,7 +115,7 @@ void JNIThreadData::pushNewThreadData()
     JNIThreadData *data = NULL;
     apr_status_t apr_err = apr_threadkey_private_get 
         (reinterpret_cast<void**>(&data), g_key);
-    if(apr_err)
+    if (apr_err)
     {
         JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_get");
         return;
@@ -123,7 +123,7 @@ void JNIThreadData::pushNewThreadData()
     JNIThreadData *newData = new JNIThreadData();
     newData->m_previous =data;
     apr_err = apr_threadkey_private_set (newData, g_key);
-    if(apr_err)
+    if (apr_err)
     {
         JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_set");
         return;
@@ -137,19 +137,19 @@ void JNIThreadData::popThreadData()
     JNIThreadData *data = NULL;
     apr_status_t apr_err = apr_threadkey_private_get 
         (reinterpret_cast<void**>(&data), g_key);
-    if(apr_err)
+    if (apr_err)
     {
         JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_get");
         return;
     }
-    if(data == NULL)
+    if (data == NULL)
     {
         return;
     }
     JNIThreadData *oldData = data->m_previous;
     delete data;
     apr_err = apr_threadkey_private_set (oldData, g_key);
-    if(apr_err)
+    if (apr_err)
     {
         JNIUtil::handleAPRError(apr_err, "apr_threadkey_private_set");
         return;
