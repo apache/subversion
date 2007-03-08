@@ -680,7 +680,7 @@ test_list = [ None,
              ]
 
 if __name__ == '__main__':
-  svntest.main.run_tests(test_list)
+  svntest.main.run_tests(test_list, serial_only = True)
   # NOTREACHED
 
 
