@@ -50,7 +50,6 @@ typedef enum {
   svn_cl__autoprops_opt,
   svn_cl__changelist_opt,
   svn_cl__config_dir_opt,
-  svn_cl__clear_opt,
   svn_cl__diff_cmd_opt,
   svn_cl__dry_run_opt,
   svn_cl__editor_cmd_opt,
@@ -74,6 +73,7 @@ typedef enum {
   svn_cl__notice_ancestry_opt,
   svn_cl__old_cmd_opt,
   svn_cl__relocate_opt,
+  svn_cl__remove_opt,
   svn_cl__revprop_opt,
   svn_cl__stop_on_copy_opt,
   svn_cl__strict_opt,
@@ -147,7 +147,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_autoprops;    /* disable automatic properties */
   const char *native_eol;        /* override system standard eol marker */
   svn_boolean_t summarize;       /* create a summary of a diff */
-  svn_boolean_t clear;           /* deassociate a changelist */
+  svn_boolean_t remove;          /* deassociate a changelist */
   const char *changelist;        /* operate on this changelist */
   svn_boolean_t keep_changelist; /* don't remove changelist after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
