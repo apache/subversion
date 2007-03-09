@@ -598,10 +598,10 @@ get_path_ancestor_length(const char *path1,
      crossed before reaching a non-matching byte.  i is the offset of
      that non-matching byte. 
      
-     If these are folders, return their common root folder '/' or 'H:/'
-     if they have that. */
-  if (! urls && i == 1 && path1[0] == '/')
-    return i;
+     If these are folders, return their common root folder '/' if they 
+     have that. */
+  if (! urls && last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
+    return 1;
 
   if (((i == path1_len) && (path2[i] == '/'))
         || ((i == path2_len) && (path1[i] == '/'))
