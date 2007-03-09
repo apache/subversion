@@ -48,12 +48,12 @@ svn_cl__revert(apr_getopt_t *os,
      ones the user typed, as well as any specified by --changelist.  */
   if (opt_state->changelist)
     {
-      SVN_ERR(svn_client_retrieve_changelist(&changelist_targets,
-                                             opt_state->changelist,
-                                             "", /* ### FIXME */
-                                             ctx->cancel_func,
-                                             ctx->cancel_baton,
-                                             pool));
+      SVN_ERR(svn_client_get_changelist(&changelist_targets,
+                                        opt_state->changelist,
+                                        "", /* ### FIXME */
+                                        ctx->cancel_func,
+                                        ctx->cancel_baton,
+                                        pool));
       if (apr_is_empty_array(changelist_targets))
         return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                  _("no such changelist '%s'"),

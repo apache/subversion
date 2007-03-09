@@ -70,13 +70,37 @@ svn_cl__changelist(apr_getopt_t *os,
   svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                        FALSE, FALSE, pool);
 
-  SVN_ERR(svn_cl__try
-          (svn_client_set_changelist(paths, changelist_name,
-                                     ctx, pool),
-           NULL, opt_state->quiet,
-           SVN_ERR_UNVERSIONED_RESOURCE,
-           SVN_ERR_WC_PATH_NOT_FOUND,
-           SVN_NO_ERROR));
+
+  /* We now have two different APIs to use: */
+
+  if (changelist_name != NULL)
+    {
+      SVN_ERR(svn_cl__try
+              (svn_client_add_to_changelist(paths, changelist_name,
+                                            ctx, pool),
+               NULL, opt_state->quiet,
+               SVN_ERR_UNVERSIONED_RESOURCE,
+               SVN_ERR_WC_PATH_NOT_FOUND,
+               SVN_NO_ERROR));
+    }
+  else
+    {
+      /* Note that some other client might pass a non-NULL value for
+         CHANGELIST_NAME below, should it want to cause
+         strict-checking that certain paths really belong to a certain
+         changelist before removing them.  The commandline client,
+         however, is pretty relaxed.  It just removes files from
+         "whatever" changelist paths are already part of. */
+
+      SVN_ERR(svn_cl__try
+              (svn_client_remove_from_changelist(paths, changelist_name,
+                                                 ctx, pool),
+               NULL, opt_state->quiet,
+               SVN_ERR_UNVERSIONED_RESOURCE,
+               SVN_ERR_WC_PATH_NOT_FOUND,
+               SVN_NO_ERROR));
+    }
+
 
   return SVN_NO_ERROR;
 }

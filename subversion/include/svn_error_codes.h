@@ -391,6 +391,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 25,
              "Invalid switch")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_WC_MISMATCHED_CHANGELIST,
+             SVN_ERR_WC_CATEGORY_START + 26,
+             "Changelist doesn't match")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,

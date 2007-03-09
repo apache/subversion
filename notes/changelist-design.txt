@@ -406,6 +406,8 @@ perform metadata operations on a whole set of files.
     * svn changelist [--clear]
     * svn commit --changelist
     * svn revert --changelist
+    * 'svn status' shows changelists
+    * 'svn info' shows changelists
 
 
 
@@ -425,6 +427,7 @@ perform metadata operations on a whole set of files.
 
 * Things that still need to take the --changelist filter argument:
 
+   -  svn changelist  (for undefining)
    -  svn status
    -  svn diff    (wc-wc and wc-url cases, not url-url cases)
    -  svn log
@@ -444,3 +447,34 @@ perform metadata operations on a whole set of files.
 
 
 * make --cl the same as --changelist, for convenience?
+
+
+* questions about commits:  
+
+    - how does 'svn ci --changelist' interact with nonrecursive commits?
+    - how does it interact with a list of specific targets?
+    - how does it deal with a schedule-delete folder?
+
+
+----------------------------
+
+Commandline UI use-cases:
+
+
+1. add a list of files to a CL
+2. remove a list of files from whatever CLs they each belong to.
+3. move a file from CL1 to CL2.
+4. undefine a CL all at once (by removing all members)
+
+
+1.  svn cl CLNAME foo.c bar.c baz.c
+
+2.  svn cl --remove foo.c bar.c baz.c
+
+3.  svn cl --remove foo.c;  svn cl CL2 foo.c
+
+      (I don't think it's worth creating a new switch just to make
+       these two commands into one command.)
+
+4.  svn cl --remove --changelist CLNAME
+
