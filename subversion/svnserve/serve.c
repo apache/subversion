@@ -476,7 +476,7 @@ static svn_error_t *set_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_depth_t depth = svn_depth_infinity;
   svn_boolean_t start_empty;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "crb?(?c)?(?w)",
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "crb?(?c)?w",
                                  &path, &rev, &start_empty, &lock_token,
                                  &depth_word));
   if (depth_word)
@@ -511,7 +511,7 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Default to infinity, for old clients that don't send depth. */
   svn_depth_t depth = svn_depth_infinity;
 
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrb?(?c)?(?w)",
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "ccrb?(?c)?w",
                                  &path, &url, &rev, &start_empty,
                                  &lock_token, &depth_word));
   path = svn_path_canonicalize(path, pool);
