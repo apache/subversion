@@ -406,9 +406,9 @@ perform metadata operations on a whole set of files.
     * svn changelist [--remove]
     * svn commit --changelist
     * svn revert --changelist
+    * svn log --changelist
     * 'svn status' shows changelists
     * 'svn info' shows changelists
-
 
 
 ==> TO-DO:
@@ -417,7 +417,6 @@ perform metadata operations on a whole set of files.
 
    -  svn status
    -  svn diff    (wc-wc and wc-url cases, not url-url cases)
-   -  svn log
    -  svn lock/unlock
    -  svn proplist/propget/propset/propdel
 
