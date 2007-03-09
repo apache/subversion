@@ -46,7 +46,7 @@ svn_cl__changelist(apr_getopt_t *os,
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
                                         opt_state->targets, pool));
 
-  if (opt_state->clear)
+  if (opt_state->remove)
     {
       if (targets->nelts < 1)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
