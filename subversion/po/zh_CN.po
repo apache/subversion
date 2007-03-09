@@ -6,8 +6,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
-"POT-Creation-Date: 2007-03-02 14:53+0800\n"
-"PO-Revision-Date: 2007-03-02 15:13+0800\n"
+"POT-Creation-Date: 2007-03-09 13:28+0800\n"
+"PO-Revision-Date: 2007-03-09 13:30+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -564,264 +564,268 @@ msgstr "网络读写错误"
 msgid "Client/server version mismatch"
 msgstr "客户端/服务器版本不匹配"
 
-#: include/svn_error_codes.h:779
+#: include/svn_error_codes.h:775
+msgid "Cannot negotiate authentication mechanism"
+msgstr "无法协商认证机制"
+
+#: include/svn_error_codes.h:784
 msgid "Credential data unavailable"
 msgstr "无法取得凭证数据"
 
-#: include/svn_error_codes.h:783
+#: include/svn_error_codes.h:788
 msgid "No authentication provider available"
 msgstr "没有可用的认证提供者"
 
-#: include/svn_error_codes.h:787
-#: include/svn_error_codes.h:791
+#: include/svn_error_codes.h:792
+#: include/svn_error_codes.h:796
 msgid "All authentication providers exhausted"
 msgstr "所有的认证提供者都不可用"
 
-#: include/svn_error_codes.h:797
+#: include/svn_error_codes.h:802
 msgid "Read access denied for root of edit"
 msgstr "编辑根目录时拒绝读取"
 
-#: include/svn_error_codes.h:802
+#: include/svn_error_codes.h:807
 msgid "Item is not readable"
 msgstr "条目不可读"
 
-#: include/svn_error_codes.h:807
+#: include/svn_error_codes.h:812
 msgid "Item is partially readable"
 msgstr "条目部分可读"
 
-#: include/svn_error_codes.h:811
+#: include/svn_error_codes.h:816
 msgid "Invalid authz configuration"
 msgstr "认证配置无效"
 
-#: include/svn_error_codes.h:816
+#: include/svn_error_codes.h:821
 msgid "Item is not writable"
 msgstr "条目不能写"
 
-#: include/svn_error_codes.h:822
+#: include/svn_error_codes.h:827
 msgid "Svndiff data has invalid header"
 msgstr "svndiff数据包含无效头"
 
-#: include/svn_error_codes.h:826
+#: include/svn_error_codes.h:831
 msgid "Svndiff data contains corrupt window"
 msgstr "Svndiff数据包含损坏窗口"
 
-#: include/svn_error_codes.h:830
+#: include/svn_error_codes.h:835
 msgid "Svndiff data contains backward-sliding source view"
 msgstr "Svndiff数据包含向后变化的资源视图"
 
-#: include/svn_error_codes.h:834
+#: include/svn_error_codes.h:839
 msgid "Svndiff data contains invalid instruction"
 msgstr "svndiff数据包含无效指令"
 
-#: include/svn_error_codes.h:838
+#: include/svn_error_codes.h:843
 msgid "Svndiff data ends unexpectedly"
 msgstr "svndiff数据意外结束"
 
-#: include/svn_error_codes.h:842
+#: include/svn_error_codes.h:847
 msgid "Svndiff compressed data is invalid"
 msgstr "非法svndiff压缩数据"
 
-#: include/svn_error_codes.h:848
+#: include/svn_error_codes.h:853
 msgid "Diff data source modified unexpectedly"
 msgstr "svndiff数据被意外修改"
 
-#: include/svn_error_codes.h:854
+#: include/svn_error_codes.h:859
 msgid "Apache has no path to an SVN filesystem"
 msgstr "Apache没有指向SVN文件系统的路径"
 
-#: include/svn_error_codes.h:858
+#: include/svn_error_codes.h:863
 msgid "Apache got a malformed URI"
 msgstr "Apache得到非法URI"
 
-#: include/svn_error_codes.h:862
+#: include/svn_error_codes.h:867
 msgid "Activity not found"
 msgstr "没有找到活动项"
 
-#: include/svn_error_codes.h:866
+#: include/svn_error_codes.h:871
 msgid "Baseline incorrect"
 msgstr "基线错误"
 
-#: include/svn_error_codes.h:870
+#: include/svn_error_codes.h:875
 msgid "Input/output error"
 msgstr "输出/输出错误"
 
-#: include/svn_error_codes.h:876
+#: include/svn_error_codes.h:881
 msgid "A path under version control is needed for this operation"
 msgstr "只能对纳入版本控制的路径执行此操作"
 
-#: include/svn_error_codes.h:880
+#: include/svn_error_codes.h:885
 msgid "Repository access is needed for this operation"
 msgstr "此操作需要存取仓库"
 
-#: include/svn_error_codes.h:884
+#: include/svn_error_codes.h:889
 msgid "Bogus revision information given"
 msgstr "给出的版本信息非法"
 
-#: include/svn_error_codes.h:888
+#: include/svn_error_codes.h:893
 msgid "Attempting to commit to a URL more than once"
 msgstr "试图对URL进行多次提交"
 
-#: include/svn_error_codes.h:892
+#: include/svn_error_codes.h:897
 msgid "Operation does not apply to binary file"
 msgstr "不能对二进制文件执行此操作"
 
-#: include/svn_error_codes.h:898
+#: include/svn_error_codes.h:903
 msgid "Format of an svn:externals property was invalid"
 msgstr "svn:externals属性的格式非法"
 
-#: include/svn_error_codes.h:902
+#: include/svn_error_codes.h:907
 msgid "Attempting restricted operation for modified resource"
 msgstr "试图对已修改的资源进行受限操作"
 
-#: include/svn_error_codes.h:906
+#: include/svn_error_codes.h:911
 msgid "Operation does not apply to directory"
 msgstr "不能对目录执行此操作"
 
-#: include/svn_error_codes.h:910
+#: include/svn_error_codes.h:915
 msgid "Revision range is not allowed"
 msgstr "不允许的版本范围"
 
-#: include/svn_error_codes.h:914
+#: include/svn_error_codes.h:919
 msgid "Inter-repository relocation not allowed"
 msgstr "不支持仓库之间的重新定位"
 
-#: include/svn_error_codes.h:918
+#: include/svn_error_codes.h:923
 msgid "Author name cannot contain a newline"
 msgstr "作者名称不能换行"
 
-#: include/svn_error_codes.h:922
+#: include/svn_error_codes.h:927
 msgid "Bad property name"
 msgstr "属性名称错误"
 
-#: include/svn_error_codes.h:927
+#: include/svn_error_codes.h:932
 msgid "Two versioned resources are unrelated"
 msgstr "两个纳入版本控制的资源不相关"
 
-#: include/svn_error_codes.h:932
+#: include/svn_error_codes.h:937
 msgid "Path has no lock token"
 msgstr "路径没有锁定令牌"
 
-#: include/svn_error_codes.h:937
+#: include/svn_error_codes.h:942
 msgid "Operation does not support multiple sources"
 msgstr "此操作不支持多个源对象"
 
-#: include/svn_error_codes.h:943
+#: include/svn_error_codes.h:948
 msgid "A problem occurred; see later errors for details"
 msgstr "发生问题；请参阅随后的错误信息"
 
-#: include/svn_error_codes.h:947
+#: include/svn_error_codes.h:952
 msgid "Failure loading plugin"
 msgstr "加载插件失败"
 
-#: include/svn_error_codes.h:951
+#: include/svn_error_codes.h:956
 msgid "Malformed file"
 msgstr "文件格式错误"
 
-#: include/svn_error_codes.h:955
+#: include/svn_error_codes.h:960
 msgid "Incomplete data"
 msgstr "数据不完整"
 
-#: include/svn_error_codes.h:959
+#: include/svn_error_codes.h:964
 msgid "Incorrect parameters given"
 msgstr "参数不正确"
 
-#: include/svn_error_codes.h:963
+#: include/svn_error_codes.h:968
 msgid "Tried a versioning operation on an unversioned resource"
 msgstr "试图对未纳入版本控制的资源进行版本操作"
 
-#: include/svn_error_codes.h:967
+#: include/svn_error_codes.h:972
 msgid "Test failed"
 msgstr "测试失败"
 
-#: include/svn_error_codes.h:971
+#: include/svn_error_codes.h:976
 msgid "Trying to use an unsupported feature"
 msgstr "试图使用不支持的特性"
 
-#: include/svn_error_codes.h:975
+#: include/svn_error_codes.h:980
 msgid "Unexpected or unknown property kind"
 msgstr "意外或未知的属性类型"
 
-#: include/svn_error_codes.h:979
+#: include/svn_error_codes.h:984
 msgid "Illegal target for the requested operation"
 msgstr "此请求操作的目标非法"
 
-#: include/svn_error_codes.h:983
+#: include/svn_error_codes.h:988
 msgid "MD5 checksum is missing"
 msgstr "没有MD5校验和"
 
-#: include/svn_error_codes.h:987
+#: include/svn_error_codes.h:992
 msgid "Directory needs to be empty but is not"
 msgstr "必须为空的目录有内容"
 
-#: include/svn_error_codes.h:991
+#: include/svn_error_codes.h:996
 msgid "Error calling external program"
 msgstr "调用外部程序错误"
 
-#: include/svn_error_codes.h:995
+#: include/svn_error_codes.h:1000
 msgid "Python exception has been set with the error"
 msgstr "Python异常被设为错误"
 
-#: include/svn_error_codes.h:999
+#: include/svn_error_codes.h:1004
 msgid "A checksum mismatch occurred"
 msgstr "校验和错误"
 
-#: include/svn_error_codes.h:1003
+#: include/svn_error_codes.h:1008
 msgid "The operation was interrupted"
 msgstr "操作被中断"
 
-#: include/svn_error_codes.h:1007
+#: include/svn_error_codes.h:1012
 msgid "The specified diff option is not supported"
 msgstr "不支持指定的diff选项"
 
-#: include/svn_error_codes.h:1011
+#: include/svn_error_codes.h:1016
 msgid "Property not found"
 msgstr "找不到属性"
 
-#: include/svn_error_codes.h:1015
+#: include/svn_error_codes.h:1020
 msgid "No auth file path available"
 msgstr "未提供auth文件路径"
 
-#: include/svn_error_codes.h:1020
+#: include/svn_error_codes.h:1025
 msgid "Incompatible library version"
 msgstr "不兼容的库版本"
 
-#: include/svn_error_codes.h:1026
+#: include/svn_error_codes.h:1031
 msgid "Error parsing arguments"
 msgstr "解析参数错误"
 
-#: include/svn_error_codes.h:1030
+#: include/svn_error_codes.h:1035
 msgid "Not enough arguments provided"
 msgstr "没有提供足够的参数"
 
-#: include/svn_error_codes.h:1034
+#: include/svn_error_codes.h:1039
 msgid "Mutually exclusive arguments specified"
 msgstr "参数冲突"
 
-#: include/svn_error_codes.h:1038
+#: include/svn_error_codes.h:1043
 msgid "Attempted command in administrative dir"
 msgstr "试图在管理目录中执行命令"
 
-#: include/svn_error_codes.h:1042
+#: include/svn_error_codes.h:1047
 msgid "The log message file is under version control"
 msgstr "日志信息文件被纳入版本控制"
 
-#: include/svn_error_codes.h:1046
+#: include/svn_error_codes.h:1051
 msgid "The log message is a pathname"
 msgstr "日志信息是路径名"
 
-#: include/svn_error_codes.h:1050
+#: include/svn_error_codes.h:1055
 msgid "Committing in directory scheduled for addition"
 msgstr "在调度增加的目录中进行提交"
 
-#: include/svn_error_codes.h:1054
+#: include/svn_error_codes.h:1059
 msgid "No external editor available"
 msgstr "没有外部编辑器可用"
 
-#: include/svn_error_codes.h:1058
+#: include/svn_error_codes.h:1063
 msgid "Something is wrong with the log message's contents"
 msgstr "日志信息内容不妥"
 
-#: include/svn_error_codes.h:1062
+#: include/svn_error_codes.h:1067
 msgid "A log message was given where none was necessary"
 msgstr "在不需要时给出日志信息"
 
@@ -851,7 +855,7 @@ msgid "Start revision must precede end revision"
 msgstr "起始版本必须小于结束版本"
 
 #: libsvn_client/blame.c:725
-#: libsvn_client/cat.c:208
+#: libsvn_client/cat.c:210
 #, c-format
 msgid "URL '%s' refers to a directory"
 msgstr "URL“%s”指向目录"
@@ -1336,7 +1340,7 @@ msgid "'%s' is not locked"
 msgstr "“%s”没有被锁定"
 
 #: libsvn_client/locking_commands.c:409
-#: libsvn_fs/fs-loader.c:901
+#: libsvn_fs/fs-loader.c:909
 #: libsvn_ra/ra_loader.c:625
 msgid "Lock comment contains illegal characters"
 msgstr "锁定注释包含非法字符"
@@ -1589,7 +1593,7 @@ msgstr "无法获取文件系统互斥体"
 msgid "Can't ungrab FS mutex"
 msgstr "不能释放文件系统互斥体"
 
-#: libsvn_fs/fs-loader.c:907
+#: libsvn_fs/fs-loader.c:915
 msgid "Negative expiration date passed to svn_fs_lock"
 msgstr "传递到 svn_fs_lock 的有效期非法"
 
@@ -2016,7 +2020,7 @@ msgstr "打开文件系统“%s”的BDB环境句柄时出错: \n"
 msgid "Expected FS format '%d'; found format '%d'"
 msgstr "期望文件系统格式“%d”；发现格式“%d”"
 
-#: libsvn_fs_base/fs.c:1094
+#: libsvn_fs_base/fs.c:1095
 msgid ""
 "Error copying logfile;  the DB_LOG_AUTOREMOVE feature \n"
 "may be interfering with the hotcopy algorithm.  If \n"
@@ -2026,7 +2030,7 @@ msgstr ""
 "复制日志文件出错；DB_LOG_AUTOREMOVE 特性可能妨碍热复制。\n"
 "如果问题依旧存在，请尝试在 DB_CONFIG 中禁用此特性。"
 
-#: libsvn_fs_base/fs.c:1113
+#: libsvn_fs_base/fs.c:1114
 msgid ""
 "Error running catastrophic recovery on hotcopy;  the \n"
 "DB_LOG_AUTOREMOVE feature may be interfering with the \n"
@@ -2036,11 +2040,11 @@ msgstr ""
 "热复制时执行灾难恢复出错；DB_LOG_AUTOREMOVE 特性可能妨碍热复制。\n"
 "如果问题依旧存在，请尝试在 DB_CONFIG 中禁用此特性。"
 
-#: libsvn_fs_base/fs.c:1222
+#: libsvn_fs_base/fs.c:1223
 msgid "Module for working with a Berkeley DB repository."
 msgstr "模块只能操作BDB版本库。"
 
-#: libsvn_fs_base/fs.c:1255
+#: libsvn_fs_base/fs.c:1256
 #, c-format
 msgid "Unsupported FS loader version (%d) for bdb"
 msgstr "不支持的BDB之FS加载器版本 (%d)"
@@ -2316,11 +2320,11 @@ msgstr "不能创建文件系统事务列表互斥体"
 msgid "Can't store FSFS shared data"
 msgstr "不能存储文件系统共享数据"
 
-#: libsvn_fs_fs/fs.c:344
+#: libsvn_fs_fs/fs.c:325
 msgid "Module for working with a plain file (FSFS) repository."
 msgstr "模块与文本文件(FSFS)仓库一起工作。"
 
-#: libsvn_fs_fs/fs.c:377
+#: libsvn_fs_fs/fs.c:358
 #, c-format
 msgid "Unsupported FS loader version (%d) for fsfs"
 msgstr "不支持的FSFS之FS加载器版本 (%d)"
@@ -2478,6 +2482,9 @@ msgstr ""
 #: libsvn_fs_fs/fs_fs.c:2193
 #: libsvn_fs_fs/fs_fs.c:2206
 #: libsvn_fs_fs/fs_fs.c:2212
+#: libsvn_fs_fs/fs_fs.c:4688
+#: libsvn_fs_fs/fs_fs.c:4697
+#: libsvn_fs_fs/fs_fs.c:4703
 msgid "Directory entry corrupt"
 msgstr "目录条目损坏"
 
@@ -2548,21 +2555,30 @@ msgstr "不能取得“%s”的状态"
 msgid "Can't chmod '%s'"
 msgstr "无法修改“%s”的存取权限"
 
-#: libsvn_fs_fs/fs_fs.c:4166
+#: libsvn_fs_fs/fs_fs.c:4175
 #, c-format
 msgid "Can't grab FSFS repository mutex"
 msgstr "不能获取FSFS版本库互斥体"
 
-#: libsvn_fs_fs/fs_fs.c:4180
+#: libsvn_fs_fs/fs_fs.c:4189
 #, c-format
 msgid "Can't ungrab FSFS repository mutex"
 msgstr "不能释放FSFS版本库互斥体"
 
-#: libsvn_fs_fs/fs_fs.c:4298
+#: libsvn_fs_fs/fs_fs.c:4307
 msgid "Transaction out of date"
 msgstr "事务过时"
 
-#: libsvn_fs_fs/fs_fs.c:4598
+#: libsvn_fs_fs/fs_fs.c:4629
+#, fuzzy
+msgid "Recovery encountered a non-directory node"
+msgstr "试图在非目录节点中设置条目"
+
+#: libsvn_fs_fs/fs_fs.c:4651
+msgid "Recovery encountered a deltified directory representation"
+msgstr ""
+
+#: libsvn_fs_fs/fs_fs.c:4933
 msgid "No such transaction"
 msgstr "无此事务"
 
@@ -2651,7 +2667,7 @@ msgid "Could not save file"
 msgstr "无法保存文件"
 
 #: libsvn_ra_dav/fetch.c:778
-#: libsvn_ra_svn/client.c:909
+#: libsvn_ra_svn/client.c:918
 #, c-format
 msgid ""
 "Checksum mismatch for '%s':\n"
@@ -3132,183 +3148,201 @@ msgstr "未指明的错误信息"
 msgid "Premature EOF seen from server"
 msgstr "从服务器发现EOF太早"
 
-#: libsvn_ra_svn/client.c:115
+#: libsvn_ra_svn/client.c:123
 #, c-format
 msgid "Unknown hostname '%s'"
 msgstr "未知的主机“%s”"
 
-#: libsvn_ra_svn/client.c:127
+#: libsvn_ra_svn/client.c:135
 #, c-format
 msgid "Can't create socket"
 msgstr "无法创建 socket"
 
-#: libsvn_ra_svn/client.c:131
+#: libsvn_ra_svn/client.c:139
 #, c-format
 msgid "Can't connect to host '%s'"
 msgstr "无法连接主机“%s”"
 
-#: libsvn_ra_svn/client.c:152
+#: libsvn_ra_svn/client.c:160
 msgid "Proplist element not a list"
 msgstr "Proplist 元素不是列表"
 
-#: libsvn_ra_svn/client.c:176
+#: libsvn_ra_svn/client.c:184
 msgid "Prop diffs element not a list"
 msgstr "Prop diffs 元素不是一个列表"
 
-#: libsvn_ra_svn/client.c:214
+#: libsvn_ra_svn/client.c:222
 #, c-format
 msgid "Unrecognized node kind '%s' from server"
 msgstr "服务器返回无法识别的节点类型 “%s”"
 
-#: libsvn_ra_svn/client.c:365
+#: libsvn_ra_svn/client.c:373
 #, c-format
 msgid "Undefined tunnel scheme '%s'"
 msgstr "无法识别的隧道方案 “%s”"
 
-#: libsvn_ra_svn/client.c:382
+#: libsvn_ra_svn/client.c:390
 #, c-format
 msgid "Tunnel scheme %s requires environment variable %s to be defined"
 msgstr "隧道方案 %s 需要设定环境变量 %s"
 
-#: libsvn_ra_svn/client.c:393
+#: libsvn_ra_svn/client.c:401
 #, c-format
 msgid "Can't tokenize command '%s'"
 msgstr "不能解析命令“%s”"
 
-#: libsvn_ra_svn/client.c:424
+#: libsvn_ra_svn/client.c:432
 #, c-format
 msgid "Error in child process: %s"
 msgstr "子进程错误: %s"
 
-#: libsvn_ra_svn/client.c:448
+#: libsvn_ra_svn/client.c:456
 #, c-format
 msgid "Can't create tunnel"
 msgstr "无法创建隧道"
 
-#: libsvn_ra_svn/client.c:486
+#: libsvn_ra_svn/client.c:494
 #, c-format
 msgid "Illegal svn repository URL '%s'"
 msgstr "非法的svn仓库URL“%s”"
 
-#: libsvn_ra_svn/client.c:543
+#: libsvn_ra_svn/client.c:551
 #, c-format
 msgid "Server requires minimum version %d"
 msgstr "服务器要求的最低版本是 %d"
 
-#: libsvn_ra_svn/client.c:589
+#: libsvn_ra_svn/client.c:598
 msgid "Impossibly long repository root from server"
 msgstr "服务器返回的仓库根路径太长"
 
-#: libsvn_ra_svn/client.c:600
+#: libsvn_ra_svn/client.c:609
 msgid "Module for accessing a repository using the svn network protocol."
 msgstr "使用svn网络协议访问仓库的模块。"
 
-#: libsvn_ra_svn/client.c:748
+#: libsvn_ra_svn/client.c:757
 msgid "Server did not send repository root"
 msgstr "服务器没有返回仓库根路径"
 
-#: libsvn_ra_svn/client.c:889
+#: libsvn_ra_svn/client.c:898
 msgid "Non-string as part of file contents"
 msgstr "部份文件内容不是字符串"
 
-#: libsvn_ra_svn/client.c:988
+#: libsvn_ra_svn/client.c:997
 msgid "Dirlist element not a list"
 msgstr "目录列表元素不是列表"
 
-#: libsvn_ra_svn/client.c:1145
+#: libsvn_ra_svn/client.c:1154
 msgid "Log entry not a list"
 msgstr "日志条目不是列表"
 
-#: libsvn_ra_svn/client.c:1158
+#: libsvn_ra_svn/client.c:1167
 msgid "Changed-path entry not a list"
 msgstr "已修改路径条目不是列表"
 
-#: libsvn_ra_svn/client.c:1234
+#: libsvn_ra_svn/client.c:1243
 msgid "'stat' not implemented"
 msgstr "未实现“stat”"
 
-#: libsvn_ra_svn/client.c:1291
+#: libsvn_ra_svn/client.c:1300
 msgid "'get-locations' not implemented"
 msgstr "未实现“get-locations”"
 
-#: libsvn_ra_svn/client.c:1303
+#: libsvn_ra_svn/client.c:1312
 msgid "Location entry not a list"
 msgstr "区域条目不是列表"
 
-#: libsvn_ra_svn/client.c:1353
+#: libsvn_ra_svn/client.c:1362
 msgid "'get-file-revs' not implemented"
 msgstr "未实现“get-file-revs”"
 
-#: libsvn_ra_svn/client.c:1366
+#: libsvn_ra_svn/client.c:1375
 msgid "Revision entry not a list"
 msgstr "版本条目不是列表"
 
-#: libsvn_ra_svn/client.c:1379
-#: libsvn_ra_svn/client.c:1404
+#: libsvn_ra_svn/client.c:1388
+#: libsvn_ra_svn/client.c:1413
 msgid "Text delta chunk not a string"
 msgstr "文本差异块不是字符串"
 
-#: libsvn_ra_svn/client.c:1416
+#: libsvn_ra_svn/client.c:1425
 msgid "The get-file-revs command didn't return any revisions"
 msgstr "get-file-revs 命令没有返回任何版本"
 
-#: libsvn_ra_svn/client.c:1464
+#: libsvn_ra_svn/client.c:1473
 msgid "Server doesn't support the lock command"
 msgstr "服务器不支持加锁"
 
-#: libsvn_ra_svn/client.c:1528
+#: libsvn_ra_svn/client.c:1537
 msgid "Server doesn't support the unlock command"
 msgstr "服务器不支持解锁"
 
-#: libsvn_ra_svn/client.c:1625
+#: libsvn_ra_svn/client.c:1634
 msgid "Lock response not a list"
 msgstr "加锁响应不是列表"
 
-#: libsvn_ra_svn/client.c:1639
+#: libsvn_ra_svn/client.c:1648
 msgid "Unknown status for lock command"
 msgstr "加锁命令的状态未知"
 
-#: libsvn_ra_svn/client.c:1661
+#: libsvn_ra_svn/client.c:1670
 msgid "Didn't receive end marker for lock responses"
 msgstr "加锁响应没有结束标记"
 
-#: libsvn_ra_svn/client.c:1748
+#: libsvn_ra_svn/client.c:1757
 msgid "Unlock response not a list"
 msgstr "解锁响应不是列表"
 
-#: libsvn_ra_svn/client.c:1762
+#: libsvn_ra_svn/client.c:1771
 msgid "Unknown status for unlock command"
 msgstr "未知的解锁命令状态"
 
-#: libsvn_ra_svn/client.c:1783
+#: libsvn_ra_svn/client.c:1792
 msgid "Didn't receive end marker for unlock responses"
 msgstr "解锁响应没有结束标记"
 
-#: libsvn_ra_svn/client.c:1807
-#: libsvn_ra_svn/client.c:1835
+#: libsvn_ra_svn/client.c:1816
+#: libsvn_ra_svn/client.c:1844
 msgid "Server doesn't support the get-lock command"
 msgstr "服务器不支持命令 get-lock"
 
-#: libsvn_ra_svn/client.c:1848
+#: libsvn_ra_svn/client.c:1857
 msgid "Lock element not a list"
 msgstr "Lock元素不是列表"
 
-#: libsvn_ra_svn/client.c:1871
+#: libsvn_ra_svn/client.c:1880
 msgid "Server doesn't support the replay command"
 msgstr "服务器不支持重放命令"
 
-#: libsvn_ra_svn/client.c:1935
+#: libsvn_ra_svn/client.c:1944
 #, c-format
 msgid "Unsupported RA loader version (%d) for ra_svn"
 msgstr "不支持ra_svn RA加载器版本 %d"
 
 #: libsvn_ra_svn/cram.c:194
 #: libsvn_ra_svn/cram.c:212
-#: libsvn_ra_svn/sasl_auth.c:436
-#: libsvn_ra_svn/sasl_auth.c:483
-#: libsvn_ra_svn/simple_auth.c:61
+#: libsvn_ra_svn/cyrus_auth.c:437
+#: libsvn_ra_svn/cyrus_auth.c:484
+#: libsvn_ra_svn/internal_auth.c:60
 msgid "Unexpected server response to authentication"
 msgstr "服务器意外响应认证请求"
+
+#: libsvn_ra_svn/cyrus_auth.c:171
+#: svnserve/cyrus_auth.c:104
+#: svnserve/cyrus_auth.c:114
+#, c-format
+msgid "Could not initialize the SASL library"
+msgstr "不能初始化 SASL 库"
+
+#: libsvn_ra_svn/cyrus_auth.c:824
+#: libsvn_ra_svn/internal_auth.c:57
+#: libsvn_ra_svn/internal_auth.c:110
+#, c-format
+msgid "Authentication error from server: %s"
+msgstr "服务器报告认证错误: %s"
+
+#: libsvn_ra_svn/cyrus_auth.c:828
+msgid "Can't get username or password"
+msgstr "无法取得用户名称或密码"
 
 #: libsvn_ra_svn/editor.c:387
 #: libsvn_ra_svn/editorp.c:456
@@ -3344,6 +3378,12 @@ msgstr "没有激活 Apply-textdelta"
 msgid "Unknown command '%s'"
 msgstr "未知命令: “%s”"
 
+#: libsvn_ra_svn/internal_auth.c:97
+#: libsvn_subr/prompt.c:156
+#, c-format
+msgid "Can't get password"
+msgstr "无法取得密码"
+
 #: libsvn_ra_svn/marshal.c:86
 msgid "Capability entry is not a word"
 msgstr "容量类型不是 word "
@@ -3378,34 +3418,6 @@ msgstr "错误列表非法"
 #, c-format
 msgid "Unknown status '%s' in command response"
 msgstr "命令响应中的状态“%s”未知"
-
-#: libsvn_ra_svn/sasl_auth.c:171
-#: svnserve/sasl_auth.c:104
-#: svnserve/sasl_auth.c:114
-#, c-format
-msgid "Could not initialize the SASL library"
-msgstr "不能初始化 SASL 库"
-
-#: libsvn_ra_svn/sasl_auth.c:822
-#: libsvn_ra_svn/simple_auth.c:58
-#: libsvn_ra_svn/simple_auth.c:110
-#, c-format
-msgid "Authentication error from server: %s"
-msgstr "服务器报告认证错误: %s"
-
-#: libsvn_ra_svn/sasl_auth.c:826
-msgid "Can't get username or password"
-msgstr "无法取得用户名称或密码"
-
-#: libsvn_ra_svn/simple_auth.c:97
-#: libsvn_subr/prompt.c:156
-#, c-format
-msgid "Can't get password"
-msgstr "无法取得密码"
-
-#: libsvn_ra_svn/simple_auth.c:117
-msgid "Cannot negotiate authentication mechanism"
-msgstr "无法协商认证机制"
 
 #: libsvn_ra_svn/streams.c:77
 #: libsvn_ra_svn/streams.c:152
@@ -4649,7 +4661,7 @@ msgid "No such thing as 'base' working copy properties!"
 msgstr "没有“base”工作副本属性"
 
 #: libsvn_wc/adm_files.c:973
-#: libsvn_wc/util.c:51
+#: libsvn_wc/util.c:52
 #, c-format
 msgid "'%s' is not a directory"
 msgstr "“%s”不是目录"
@@ -5233,12 +5245,12 @@ msgstr "“%s”不是文件或目录"
 msgid "File '%s' has binary mime type property"
 msgstr "文件“%s”有二进制的 mime 类型属性"
 
-#: libsvn_wc/props.c:2181
+#: libsvn_wc/props.c:2293
 #, c-format
 msgid "Error parsing %s property on '%s': '%s'"
 msgstr "解析 %s 属性于“%s”出错: “%s”"
 
-#: libsvn_wc/props.c:2194
+#: libsvn_wc/props.c:2306
 #, c-format
 msgid "Invalid %s property on '%s': target involves '.' or '..' or is an absolute path"
 msgstr "无效属性 %s 于“%s”: 目标包含“.”或“..”或是绝对路径"
@@ -5352,7 +5364,7 @@ msgstr "“%s”没有演进历程信息"
 msgid "Copyfrom-url '%s' has different repository root than '%s'"
 msgstr "Copyfrom-url“%s”与“%s”的仓库根目录不相同"
 
-#: libsvn_wc/util.c:83
+#: libsvn_wc/util.c:84
 msgid "Unable to make any directories"
 msgstr "无法创建任何目录"
 
@@ -5473,7 +5485,7 @@ msgid "'%s' has invalid revision"
 msgstr "“%s”的版本无效"
 
 #: svn/info-cmd.c:246
-#: svnadmin/main.c:1116
+#: svnadmin/main.c:1118
 #, c-format
 msgid "Path: %s\n"
 msgstr "路径: %s\n"
@@ -6970,7 +6982,7 @@ msgid "Multiple revision arguments encountered; can't specify -r and -c, or try 
 msgstr "遇到了多个版本参数；不能同时指定 -r 和 -c，请使用“-r N:M”代替“-r N -r M"
 
 #: svn/main.c:1068
-#: svnadmin/main.c:1314
+#: svnadmin/main.c:1316
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "版本参数“%s”中有语法错误"
@@ -6993,7 +7005,7 @@ msgid "Subcommand argument required\n"
 msgstr "必须提供子命令参数\n"
 
 #: svn/main.c:1343
-#: svnadmin/main.c:1443
+#: svnadmin/main.c:1445
 #: svndumpfilter/main.c:1226
 #: svnlook/main.c:2085
 #, c-format
@@ -7685,12 +7697,13 @@ msgstr ""
 "显示所有未提交事务的名称。\n"
 
 #: svnadmin/main.c:381
+#, fuzzy
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
-"Run the Berkeley DB recovery procedure on a repository.  Do\n"
-"this if you've been getting errors indicating that recovery\n"
-"ought to be run.  Recovery requires exclusive access and will\n"
+"Run the recovery procedure on a repository.  Do this if you've\n"
+"been getting errors indicating that recovery ought to be run.\n"
+"Berkeley DB recovery requires exclusive access and will\n"
 "exit if the repository is in use by another process.\n"
 msgstr ""
 "用法: svnadmin recover REPOS_PATH\n"
@@ -7828,7 +7841,7 @@ msgstr ""
 "已取得仓库锁定。\n"
 "请稍候；修复仓库可能需要一段时间...\n"
 
-#: svnadmin/main.c:810
+#: svnadmin/main.c:811
 msgid ""
 "Failed to get exclusive repository access; perhaps another process\n"
 "such as httpd, svnserve or svn has it open?"
@@ -7836,12 +7849,12 @@ msgstr ""
 "无法独占访问仓库；可能是其它如 httpd，svnserve 或 svn 等进程已经打开它，\n"
 "尚未关闭？"
 
-#: svnadmin/main.c:815
+#: svnadmin/main.c:816
 #, c-format
 msgid "Waiting on repository lock; perhaps another process has it open?\n"
 msgstr "等待仓库锁定中；也许其它的进程把它打开了？\n"
 
-#: svnadmin/main.c:822
+#: svnadmin/main.c:824
 #, c-format
 msgid ""
 "\n"
@@ -7850,63 +7863,63 @@ msgstr ""
 "\n"
 "完成修复。\n"
 
-#: svnadmin/main.c:829
+#: svnadmin/main.c:831
 #, c-format
 msgid "The latest repos revision is %ld.\n"
 msgstr "最新的仓库版本是 %ld。\n"
 
-#: svnadmin/main.c:939
+#: svnadmin/main.c:941
 #, c-format
 msgid "Transaction '%s' removed.\n"
 msgstr "事务“%s”被删除。\n"
 
-#: svnadmin/main.c:1007
-#: svnadmin/main.c:1034
+#: svnadmin/main.c:1009
+#: svnadmin/main.c:1036
 #, c-format
 msgid "Missing revision"
 msgstr "丢失版本"
 
-#: svnadmin/main.c:1010
-#: svnadmin/main.c:1037
+#: svnadmin/main.c:1012
+#: svnadmin/main.c:1039
 #, c-format
 msgid "Only one revision allowed"
 msgstr "只允许一个版本"
 
-#: svnadmin/main.c:1016
+#: svnadmin/main.c:1018
 #, c-format
 msgid "Exactly one property name and one file argument required"
 msgstr "必须提供恰好一个属性名称和一个文件参数"
 
-#: svnadmin/main.c:1043
+#: svnadmin/main.c:1045
 #, c-format
 msgid "Exactly one file argument required"
 msgstr "必须恰好提供一个文件参数"
 
-#: svnadmin/main.c:1117
+#: svnadmin/main.c:1119
 #: svnlook/main.c:1752
 #, c-format
 msgid "UUID Token: %s\n"
 msgstr "UUID 标识: %s\n"
 
-#: svnadmin/main.c:1118
+#: svnadmin/main.c:1120
 #: svnlook/main.c:1753
 #, c-format
 msgid "Owner: %s\n"
 msgstr "所有者: %s\n"
 
-#: svnadmin/main.c:1119
+#: svnadmin/main.c:1121
 #: svnlook/main.c:1754
 #, c-format
 msgid "Created: %s\n"
 msgstr "已创建: %s\n"
 
-#: svnadmin/main.c:1120
+#: svnadmin/main.c:1122
 #: svnlook/main.c:1755
 #, c-format
 msgid "Expires: %s\n"
 msgstr "过期: %s\n"
 
-#: svnadmin/main.c:1122
+#: svnadmin/main.c:1124
 #, c-format
 msgid ""
 "Comment (%i lines):\n"
@@ -7917,7 +7930,7 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1123
+#: svnadmin/main.c:1125
 #, c-format
 msgid ""
 "Comment (%i line):\n"
@@ -7928,26 +7941,26 @@ msgstr ""
 "%s\n"
 "\n"
 
-#: svnadmin/main.c:1180
+#: svnadmin/main.c:1182
 #, c-format
 msgid "Path '%s' isn't locked.\n"
 msgstr "路径“%s”没有被锁定。\n"
 
-#: svnadmin/main.c:1192
+#: svnadmin/main.c:1194
 #, c-format
 msgid "Removed lock on '%s'.\n"
 msgstr "删除“%s”上的锁。\n"
 
-#: svnadmin/main.c:1300
+#: svnadmin/main.c:1302
 msgid "Multiple revision arguments encountered; try '-r N:M' instead of '-r N -r M'"
 msgstr "遇到了多个版本参数；请使用“-r N:M”代替“-r M -r N”"
 
-#: svnadmin/main.c:1425
+#: svnadmin/main.c:1427
 #, c-format
 msgid "subcommand argument required\n"
 msgstr "必须提供子命令参数\n"
 
-#: svnadmin/main.c:1510
+#: svnadmin/main.c:1512
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -7956,7 +7969,7 @@ msgstr ""
 "子命令“%s”不接受选项“%s”\n"
 "使用“svnadmin help %s”得到用法。\n"
 
-#: svnadmin/main.c:1543
+#: svnadmin/main.c:1545
 msgid "Try 'svnadmin help' for more info"
 msgstr "请使用“svnadmin help”以得到更多信息"
 
@@ -8485,6 +8498,19 @@ msgstr ""
 msgid "Try 'svnlook help' for more info"
 msgstr "请使用“svnlook help”以得到更多信息"
 
+#: svnserve/cyrus_auth.c:243
+#, c-format
+msgid "Can't get hostname"
+msgstr "无法获取主机名称"
+
+#: svnserve/cyrus_auth.c:311
+msgid "Could not obtain the list of SASL mechanisms"
+msgstr "不能获得SASL机制列表"
+
+#: svnserve/cyrus_auth.c:351
+msgid "Couldn't obtain the authenticated username"
+msgstr "不能获得已经认证的用户名称"
+
 #: svnserve/main.c:141
 msgid "daemon mode"
 msgstr "后台模式"
@@ -8610,19 +8636,6 @@ msgstr "不能设置分离的状态"
 #, c-format
 msgid "Can't create thread"
 msgstr "无法创建线程"
-
-#: svnserve/sasl_auth.c:243
-#, c-format
-msgid "Can't get hostname"
-msgstr "无法获取主机名称"
-
-#: svnserve/sasl_auth.c:311
-msgid "Could not obtain the list of SASL mechanisms"
-msgstr "不能获得SASL机制列表"
-
-#: svnserve/sasl_auth.c:351
-msgid "Couldn't obtain the authenticated username"
-msgstr "不能获得已经认证的用户名称"
 
 #: svnserve/winservice.c:341
 #, c-format
