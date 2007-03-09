@@ -403,6 +403,9 @@ Contents
          svn_wc_diff3()              # Maybe should be depth.  Maybe.
          svn_wc_relocate2()          # Why does it even take recurse??
 
-         svn_ra_do_update2()  # Yup, change to depth.
-         svn_ra_do_switch2()  # Yup, change to depth.
-         svn_ra_do_status2()  # Yup, change to depth.
+         svn_ra_do_update2()  # No, just remove recurse parameter.
+         svn_ra_do_switch2()  # Ditto.
+         svn_ra_do_status2()  # Ditto.
+         svn_ra_do_diff3()    # Ditto.
+
+       * Get rid of depth parameter to svn_repos_begin_report2().
