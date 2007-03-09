@@ -2742,6 +2742,7 @@ svn_error_t *svn_wc_remove_lock(const char *path,
 svn_error_t *
 svn_wc_set_changelist(const apr_array_header_t *paths,
                       const char *changelist,
+                      const char *matching_changelist,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
                       svn_wc_notify_func2_t notify_func,
@@ -2758,7 +2759,7 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
       const svn_wc_entry_t *entry;
       svn_wc_entry_t newentry;
       svn_wc_notify_t *notify;
-   
+
       svn_pool_clear(iterpool);
 
       /* Check for cancellation */
@@ -2772,9 +2773,46 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
 
       SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, iterpool));
 
+      /* Is this an unversioned path?  Skip it. */
       if (! entry)
-        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                 _("'%s' is not under version control"), path);
+        {
+          if (notify_func)
+            {
+              svn_error_t *unversioned_err =
+                  svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                                    _("'%s' is not under version control"),
+                                    path);
+              notify = svn_wc_create_notify(path,
+                                            svn_wc_notify_changelist_failed,
+                                            iterpool);
+              notify->err = unversioned_err;
+              notify_func(notify_baton, notify, iterpool);
+            }
+          continue;
+        }
+
+      /* Possibly enforce matching with an existing changelist. */
+      if (matching_changelist != NULL)
+        {
+          if (entry->changelist &&
+              (strcmp(entry->changelist, matching_changelist) == 0))
+            {
+              if (notify_func)
+              {
+                svn_error_t *mismatch_err =
+                  svn_error_createf(SVN_ERR_WC_MISMATCHED_CHANGELIST, NULL,
+                                    _("'%s' is not currently a member of "
+                                      "changelist '%s'."),
+                                    path, matching_changelist);
+                notify = svn_wc_create_notify(path,
+                                              svn_wc_notify_changelist_failed,
+                                              iterpool);
+                notify->err = mismatch_err;
+                notify_func(notify_baton, notify, iterpool);
+              }
+              continue;
+            }
+        }
 
       newentry.changelist = changelist;
 
@@ -2791,7 +2829,6 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
                                         : svn_wc_notify_changelist_clear,
                                         iterpool);
           notify->changelist_name = changelist;
-
           notify_func(notify_baton, notify, iterpool);
         }
     }
