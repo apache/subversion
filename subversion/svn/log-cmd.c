@@ -388,14 +388,40 @@ svn_cl__log(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
+  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   struct log_receiver_baton lb;
   const char *target;
   int i;
   svn_opt_revision_t peg_revision;
   const char *true_path;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
-                                        opt_state->targets, pool));
+  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+     all the targets, we need to build a list of targets made of both
+     ones the user typed, as well as any specified by --changelist.  */
+  if (opt_state->changelist)
+    {
+      SVN_ERR(svn_client_get_changelist(&changelist_targets,
+                                        opt_state->changelist,
+                                        "",
+                                        ctx->cancel_func,
+                                        ctx->cancel_baton,
+                                        pool));
+      if (apr_is_empty_array(changelist_targets))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("no such changelist '%s'"),
+                                 opt_state->changelist);
+    }
+
+  if (opt_state->targets && changelist_targets)
+    combined_targets = apr_array_append(pool, opt_state->targets,
+                                        changelist_targets);
+  else if (opt_state->targets)
+    combined_targets = opt_state->targets;
+  else if (changelist_targets)
+    combined_targets = changelist_targets;
+
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+                                        combined_targets, pool));
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
