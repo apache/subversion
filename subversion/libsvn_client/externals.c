@@ -163,6 +163,7 @@ static svn_error_t *
 switch_external(const char *path,
                 const char *url,
                 const svn_opt_revision_t *revision,
+                const svn_opt_revision_t *peg_revision,
                 svn_boolean_t *timestamp_sleep,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
@@ -271,7 +272,7 @@ switch_external(const char *path,
     }
 
   /* ... Hello, new hotness. */
-  SVN_ERR(svn_client__checkout_internal(NULL, url, path, revision, revision,
+  SVN_ERR(svn_client__checkout_internal(NULL, url, path, peg_revision, revision,
                                         TRUE, FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
@@ -358,13 +359,13 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
            directory above it did, which means the user would have
            already had to force these creations to occur. */
         SVN_ERR(svn_client_export3(NULL, new_item->url, path,
-                                   &(new_item->revision),
+                                   &(new_item->peg_revision),
                                    &(new_item->revision),
                                    TRUE, FALSE, TRUE, NULL,
                                    ib->ctx, ib->pool));
       else
         SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,
-                                              &(new_item->revision),
+                                              &(new_item->peg_revision),
                                               &(new_item->revision),
                                               TRUE, FALSE, FALSE,
                                               ib->timestamp_sleep,
@@ -417,6 +418,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
          the external really is a WC pointing to the correct
          URL/revision. */
       SVN_ERR(switch_external(path, new_item->url, &(new_item->revision),
+                              &(new_item->peg_revision),
                               ib->timestamp_sleep, ib->ctx, ib->pool));
     }
 
