@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-03-09 13:28+0800\n"
-"PO-Revision-Date: 2007-03-09 13:30+0800\n"
+"PO-Revision-Date: 2007-03-09 13:47+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -2570,13 +2570,12 @@ msgid "Transaction out of date"
 msgstr "事务过时"
 
 #: libsvn_fs_fs/fs_fs.c:4629
-#, fuzzy
 msgid "Recovery encountered a non-directory node"
-msgstr "试图在非目录节点中设置条目"
+msgstr "修复时遇到非目录节点"
 
 #: libsvn_fs_fs/fs_fs.c:4651
 msgid "Recovery encountered a deltified directory representation"
-msgstr ""
+msgstr "修复时遇到差异目录表示"
 
 #: libsvn_fs_fs/fs_fs.c:4933
 msgid "No such transaction"
@@ -2601,7 +2600,7 @@ msgstr "HEAD中没有路径“%s”"
 #: libsvn_fs_fs/lock.c:741
 #, c-format
 msgid "Lock failed: newer version of '%s' exists"
-msgstr "锁失败: “%s”的新版本已经存在"
+msgstr "加锁失败: “%s”的新版本已经存在"
 
 #: libsvn_ra/ra_loader.c:213
 #, c-format
@@ -7697,7 +7696,6 @@ msgstr ""
 "显示所有未提交事务的名称。\n"
 
 #: svnadmin/main.c:381
-#, fuzzy
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
@@ -7708,8 +7706,8 @@ msgid ""
 msgstr ""
 "用法: svnadmin recover REPOS_PATH\n"
 "\n"
-"对仓库运行BDB修复程序。如果您遇到要求进行修复的错误信息，请执行\n"
-"本命令。此命令需要独占访问，如果仓库被其它进程使用，它会马上退出。\n"
+"对仓库运行修复程序。当你遇到应当执行修复的错误指示时，请执行此命令。\n"
+"修复 Berkeley DB 需要独占访问，如果仓库被其它进程使用，它会立即退出。\n"
 
 #: svnadmin/main.c:389
 msgid ""
