@@ -2060,7 +2060,12 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
   tmp_entry.kind = svn_node_file;
   tmp_entry.deleted = FALSE;
   tmp_entry.absent = FALSE;
-  tmp_entry.working_size = 0;
+  /* Indicate the file was locally modified and we didn't get to
+     calculate the true value, but we can't set it to zero (0),
+     because that would indicate absense of this value.
+     If it isn't locally modified,
+     we'll overwrite with the actual value later. */
+  tmp_entry.working_size = -1;
 
   /* Possibly install a *non*-inherited URL in the entry. */
   if (new_URL)
@@ -2374,10 +2379,9 @@ merge_file(svn_wc_notify_state_t *content_state,
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
                   (&log_accum, adm_access,
                    base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
-
-          SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
-                  (&log_accum, adm_access, base_name, pool));
         }
+      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
+              (&log_accum, adm_access, base_name, pool));
     }
 
   /* Set the returned content state. */

@@ -1385,7 +1385,10 @@ typedef struct svn_wc_entry_t
   const char *changelist;
 
   /** Size of the file after being translated into local representation,
-   * or 0 if unknown.
+   * or:
+   *  0        if unknown.
+   *  negative if the file is locally modified
+   *            so the working size couldn't be recorded
    * @since New in 1.5.
    */
   apr_off_t working_size;
