@@ -2108,13 +2108,6 @@ parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
       url = APR_ARRAY_IDX(line_parts, 0, const char *);
       item->target_dir = APR_ARRAY_IDX(line_parts, 1, const char *);
       item->revision.kind = svn_opt_revision_unspecified;
-
-      err = svn_opt_parse_path(&item->peg_revision, &item->url, url, pool);
-      if (err)
-        {
-          svn_error_clear(err);
-          return FALSE;
-        }
     }
   else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
     {
@@ -2132,13 +2125,6 @@ parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
           r_part_1 = APR_ARRAY_IDX(line_parts, 0, const char *);
           url = APR_ARRAY_IDX(line_parts, 1, const char *);
           item->target_dir = APR_ARRAY_IDX(line_parts, 2, const char *);
-
-          err = svn_opt_parse_path(&item->peg_revision, &item->url, url, pool);
-          if (err)
-            {
-              svn_error_clear(err);
-              return FALSE;
-            }
         }
       else
         {
@@ -2146,13 +2132,6 @@ parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
           r_part_2 = APR_ARRAY_IDX(line_parts, 1, const char *);
           url = APR_ARRAY_IDX(line_parts, 2, const char *);
           item->target_dir = APR_ARRAY_IDX(line_parts, 3, const char *);
-
-          err = svn_opt_parse_path(&item->peg_revision, &item->url, url, pool);
-          if (err)
-            {
-              svn_error_clear(err);
-              return FALSE;
-            }
         }
 
       if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
@@ -2175,6 +2154,13 @@ parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
     }
   else  /* too many items */
     return FALSE;
+
+  err = svn_opt_parse_path(&item->peg_revision, &item->url, url, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
 
   return TRUE;
 }
