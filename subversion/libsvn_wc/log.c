@@ -838,6 +838,40 @@ log_do_modify_entry(struct log_runner *loggy,
       entry->prop_time = prop_time;
     }
 
+  valuestr = apr_hash_get(ah, SVN_WC__ENTRY_ATTR_WORKING_SIZE,
+                          APR_HASH_KEY_STRING);
+  if ((modify_flags & SVN_WC__ENTRY_MODIFY_WORKING_SIZE)
+      && (! strcmp(valuestr, SVN_WC__WORKING_SIZE_WC)))
+    {
+      apr_finfo_t finfo;
+      const svn_wc_entry_t *tfile_entry;
+
+      err = svn_wc_entry(&tfile_entry, tfile, loggy->adm_access,
+                         FALSE, loggy->pool);
+
+      if (err)
+        SIGNAL_ERROR(loggy, err);
+
+      if (! tfile_entry)
+        return SVN_NO_ERROR;
+
+      err = svn_io_stat(&finfo, tfile, APR_FINFO_MIN | APR_FINFO_LINK,
+                        loggy->pool);
+      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          svn_error_clear(err);
+          finfo.size = 0;
+        }
+      else if (err)
+        return svn_error_createf
+          (pick_error_code(loggy), NULL,
+            _("Error getting file size on '%s'"),
+            svn_path_local_style(tfile, loggy->pool));
+
+      entry->working_size = finfo.size;
+    }
+
+
   /* Handle force flag. */
   valuestr = apr_hash_get(ah, SVN_WC__LOG_ATTR_FORCE,
                           APR_HASH_KEY_STRING);
@@ -1374,6 +1408,8 @@ log_do_committed(struct log_runner *loggy,
             }
         }
     }
+  else
+    finfo.size = 0;
 
   /* Files have been moved, and timestamps have been found.  It is now
      time for The Big Entry Modification. */
@@ -1390,6 +1426,7 @@ log_do_committed(struct log_runner *loggy,
   entry->copyfrom_url = NULL;
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->has_prop_mods = FALSE;
+  entry->working_size = finfo.size;
   if ((err = svn_wc__entry_modify(loggy->adm_access, name, entry,
                                   (SVN_WC__ENTRY_MODIFY_REVISION 
                                    | SVN_WC__ENTRY_MODIFY_SCHEDULE 
@@ -1405,6 +1442,7 @@ log_do_committed(struct log_runner *loggy,
                                       ? SVN_WC__ENTRY_MODIFY_TEXT_TIME
                                       : 0)
                                    | SVN_WC__ENTRY_MODIFY_HAS_PROP_MODS
+                                   | SVN_WC__ENTRY_MODIFY_WORKING_SIZE
                                    | SVN_WC__ENTRY_MODIFY_FORCE),
                                   FALSE, pool)))
     return svn_error_createf
@@ -2257,6 +2295,10 @@ svn_wc__loggy_entry_modify(svn_stringbuf_t **log_accum,
                  SVN_WC__ENTRY_ATTR_PRESENT_PROPS,
                  entry->present_props);
 
+  ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
+                 SVN_WC__ENTRY_ATTR_WORKING_SIZE,
+                 apr_psprintf(pool, "%" APR_OFF_T_FMT,
+                              entry->working_size));
   ADD_ENTRY_ATTR(SVN_WC__ENTRY_MODIFY_FORCE,
                  SVN_WC__LOG_ATTR_FORCE,
                  "true");
@@ -2363,6 +2405,26 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                         SVN_WC__LOG_ATTR_NAME,
                         path,
                         time_prop,
+                        SVN_WC__TIMESTAMP_WC,
+                        NULL);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
+                                                svn_wc_adm_access_t *adm_access,
+                                                const char *path,
+                                                apr_pool_t *pool)
+{
+  svn_xml_make_open_tag(log_accum,
+                        pool,
+                        svn_xml_self_closing,
+                        SVN_WC__LOG_MODIFY_ENTRY,
+                        SVN_WC__LOG_ATTR_NAME,
+                        path,
+                        SVN_WC__ENTRY_ATTR_WORKING_SIZE,
                         SVN_WC__TIMESTAMP_WC,
                         NULL);
 

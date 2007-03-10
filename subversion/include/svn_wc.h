@@ -1384,6 +1384,12 @@ typedef struct svn_wc_entry_t
    */
   const char *changelist;
 
+  /** Size of the file after being translated into local representation,
+   * or 0 if unknown.
+   * @since New in 1.5.
+   */
+  apr_off_t working_size;
+
   /** Whether a local copy of this entry should be kept in the working copy
    * after a deletion has been committed,  Only valid for the this-dir entry
    * when it is scheduled for deletion.
