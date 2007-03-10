@@ -556,7 +556,8 @@ get_path_ancestor_length(const char *path1,
   apr_size_t path1_len, path2_len;
   apr_size_t i = 0;
   apr_size_t last_dirsep = 0;
-  
+  svn_boolean_t unc = FALSE;
+
   path1_len = strlen(path1);
   path2_len = strlen(path2);
 
@@ -580,7 +581,10 @@ get_path_ancestor_length(const char *path1,
 #if defined(WIN32) || defined(__CYGWIN__)
   /* don't count the '//' from UNC paths */
   if (last_dirsep == 1 && path1[0] == '/' && path1[1] == '/')
-    last_dirsep = 0;
+    {
+      last_dirsep = 0;
+      unc = TRUE;
+    }
 
   /* X:/ and X:/foo */
   if (i == 3 && path1[2] == '/' && path1[1] == ':')
@@ -600,15 +604,18 @@ get_path_ancestor_length(const char *path1,
      
      If these are folders, return their common root folder '/' if they 
      have that. */
-  if (! urls && last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
-    return 1;
-
   if (((i == path1_len) && (path2[i] == '/'))
         || ((i == path2_len) && (path1[i] == '/'))
         || ((i == path1_len) && (i == path2_len)))
     return i;
-  else
-    return last_dirsep;
+  else 
+    {
+      if (! urls && ! unc && 
+          last_dirsep == 0 && path1[0] == '/' && path2[0] == '/')
+        return 1;
+      else
+        return last_dirsep;
+    }
 }
 
 
