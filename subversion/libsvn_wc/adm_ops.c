@@ -1847,6 +1847,8 @@ revert_admin_things(svn_wc_adm_access_t *adm_access,
           SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
                   (&log_accum, adm_access, name, SVN_WC__ENTRY_ATTR_TEXT_TIME,
                    pool));
+          SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
+                  (&log_accum, adm_access, name, pool));
 
           *reverted = TRUE;
         }

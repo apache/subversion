@@ -21,6 +21,7 @@
 #include <string.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
+#include <apr_file_info.h>
 #include <apr_time.h>
 #include "svn_pools.h"
 #include "svn_types.h"
@@ -504,11 +505,17 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
   if (! *modified_p && svn_wc_adm_locked(adm_access))
     {
       svn_wc_entry_t tmp;
-      SVN_ERR(svn_io_file_affected_time(&tmp.text_time, filename, pool));
+      apr_finfo_t finfo;
+      SVN_ERR(svn_io_stat(&finfo, filename, APR_FINFO_MIN, pool));
+
+      tmp.working_size = finfo.size;
+      tmp.text_time = finfo.mtime;
       SVN_ERR(svn_wc__entry_modify(adm_access,
                                    svn_path_basename(filename, pool),
-                                   &tmp, SVN_WC__ENTRY_MODIFY_TEXT_TIME, TRUE,
-                                   pool));
+                                   &tmp,
+                                   SVN_WC__ENTRY_MODIFY_TEXT_TIME
+                                   | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
+                                   TRUE, pool));
     }
 
  cleanup:
