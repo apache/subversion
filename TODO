@@ -62,12 +62,19 @@ for repos dump/load, including the merge history index.
       ranges.
 
 * Handle merge info inheritance (and eliding, if any additional work
-  is necessary).  (madanus)
+  is necessary).  (pburba/dlr)
+
+  * Fix inheritance bugs, issues #2733 and #2734.
 
   * Handle inherited merge info for solely the target.
 
   * Handle differences in inherited/WC-local merge info for children
     of the target.
+
+
+* Improve merge algorithm used for target trees with child paths that
+  contain differing merge info, per Peter Lundblad's
+  suggestions. (?)
 
 * When a tree with inherited merge info contains a child with
   differing merge info, lookup of the merge info for this child must
@@ -79,7 +86,7 @@ for repos dump/load, including the merge history index.
 
   * Update design spec.  (dberlin?)
 
-  * Handle all 'copy'/'move' operation types.  (madanus)
+  * Handle all 'copy'/'move' operation types.  (dlr)
     http://subversion.tigris.org/merge-tracking/func-spec.html#copy-move
 
 * Handle three-way merges (e.g. 'svn merge URL1 URL2 WC_TARGET').
