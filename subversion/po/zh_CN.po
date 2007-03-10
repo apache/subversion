@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-03-10 14:25+0800\n"
-"PO-Revision-Date: 2007-03-09 13:47+0800\n"
+"PO-Revision-Date: 2007-03-10 14:43+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -235,9 +235,8 @@ msgid "Invalid switch"
 msgstr "无效的切换"
 
 #: include/svn_error_codes.h:397
-#, fuzzy
 msgid "Changelist doesn't match"
-msgstr "修改列表: %s\n"
+msgstr "修改列表不匹配"
 
 #: include/svn_error_codes.h:403
 msgid "General filesystem error"
@@ -4760,9 +4759,9 @@ msgid "File '%s' has local modifications"
 msgstr "文件“%s”有本地修改"
 
 #: libsvn_wc/adm_ops.c:2804
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not currently a member of changelist '%s'."
-msgstr "路径“%s”不是修改列表“%s”的一部分。\n"
+msgstr "路径“%s”现在不是修改列表“%s”的成员。"
 
 #: libsvn_wc/copy.c:197
 #, c-format
@@ -6024,7 +6023,6 @@ msgstr ""
 "  \n"
 
 #: svn/main.c:259
-#, fuzzy
 msgid ""
 "Associate (or deassociate) local paths with changelist CLNAME.\n"
 "usage: 1. changelist CLNAME TARGET...\n"
@@ -6032,7 +6030,7 @@ msgid ""
 msgstr ""
 "耦合 (或者解耦)本地路径与修改列表 CLNAME。\n"
 "使用: 1. changelist CLNAME TARGET...\n"
-"       2. changelist --clear TARGET...\n"
+"       2. changelist --remove TARGET...\n"
 
 #: svn/main.c:266
 msgid ""
@@ -7238,14 +7236,14 @@ msgid "'%s' unlocked.\n"
 msgstr "“%s”解除锁定。\n"
 
 #: svn/notify.c:394
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is now a member of changelist '%s'.\n"
-msgstr "路径“%s”不是修改列表“%s”的一部分。\n"
+msgstr "路径“%s”现在是修改列表“%s”的成员。\n"
 
 #: svn/notify.c:402
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is no longer a member of a changelist.\n"
-msgstr "路径“%s”不再与修改列表关联。\n"
+msgstr "路径“%s”不再是修改列表的成员。\n"
 
 #: svn/propdel-cmd.c:77
 #, c-format
