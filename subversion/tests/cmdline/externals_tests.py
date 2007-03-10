@@ -722,7 +722,7 @@ def external_with_peg_and_op_revision(sbox):
 
   externals_test_setup(sbox)
   wc_dir         = sbox.wc_dir
-  
+
   repo_dir       = sbox.repo_dir
   repo_url       = sbox.repo_url
   other_repo_url = repo_url + ".other"
@@ -734,10 +734,14 @@ def external_with_peg_and_op_revision(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
+  # remove A/D/H in the other repo
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', other_repo_url + 
+                                     '/A/D/H', '-m', 'remove original A/D/H')
+
   # Set an external property using peg revision syntax.
   new_externals_desc = \
-           " -r 1 " + other_repo_url + "/A/D/H@4  exdir_A/H \n" + \
-           other_repo_url + "/A/D/G   exdir_A/G \n"
+           other_repo_url + "/A/D/H@4  exdir_A/H \n" + \
+           other_repo_url + "/A/D/G    exdir_A/G \n"
 
   # Set and commit the property.
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
