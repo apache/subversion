@@ -130,7 +130,7 @@ struct operation {
   svn_node_kind_t kind;  /* to copy, mkdir, or put */
   svn_revnum_t rev;      /* to copy, valid for add and replace */
   const char *url;       /* to copy, valid for add and replace */
-  const char *src_file;  /* for put or copy, the source file for contents */
+  const char *src_file;  /* for put, the source file for contents */
   apr_hash_t *children;  /* const char *path -> struct operation * */
   void *baton;           /* as returned by the commit editor */
 };
@@ -173,7 +173,7 @@ drive(struct operation *operation,
             }
           else
             {
-              SVN_ERR(editor->open_file(key, operation->baton, child->rev, 
+              SVN_ERR(editor->open_file(key, operation->baton, head,
                                         subpool, &file_baton));
             }
         }
@@ -247,6 +247,7 @@ get_operation(const char *path,
       child = apr_pcalloc(pool, sizeof(*child));
       child->children = apr_hash_make(pool);
       child->operation = OP_OPEN;
+      child->rev = SVN_INVALID_REVNUM;
       apr_hash_set(operation->children, path, APR_HASH_KEY_STRING, child);
     }
   return child;
@@ -270,8 +271,8 @@ subtract_anchor(const char *anchor, const char *url, apr_pool_t *pool)
       ------------   -----  -------  --------
       ACTION_MKDIR   NULL   invalid  NULL
       ACTION_CP      valid  valid    NULL
-      ACTION_PUT     NULL   valid    valid
-      ACTION_RM      NULL   valid    NULL
+      ACTION_PUT     NULL   invalid  valid
+      ACTION_RM      NULL   invalid  NULL
 
    Node type information is obtained for any copy source (to determine
    whether to create a file or directory) and for any deleted path (to
@@ -361,6 +362,10 @@ build(action_code_t action,
   /* Handle copy operations (which can be adds or replacements). */
   else if (action == ACTION_CP)
     {
+      if (rev > head)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                "Copy source revision cannot be younger "
+                                "than base revision");
       operation->operation = 
         operation->operation == OP_DELETE ? OP_REPLACE : OP_ADD;
       SVN_ERR(svn_ra_check_path(session, subtract_anchor(anchor, url, pool),
@@ -376,14 +381,11 @@ build(action_code_t action,
     {
       operation->operation = 
         operation->operation == OP_DELETE ? OP_REPLACE : OP_ADD;
-      operation->url = NULL;
       operation->kind = svn_node_dir;
-      operation->rev = SVN_INVALID_REVNUM;
     }
   /* Handle put operations (which can be adds, replacements, or opens). */
   else if (action == ACTION_PUT)
     {
-      operation->url = NULL;
       if (operation->operation == OP_DELETE)
         {
           operation->operation = OP_REPLACE;
@@ -403,7 +405,6 @@ build(action_code_t action,
                                      "'%s' is not a file", path);
         }
       operation->kind = svn_node_file;
-      operation->rev = rev;
       operation->src_file = src_file;
     }
   else
@@ -438,6 +439,7 @@ execute(const apr_array_header_t *actions,
         const char *message,
         const char *username,
         const char *password,
+        svn_revnum_t base_revision,
         apr_pool_t *pool)
 {
   svn_ra_session_t *session;
@@ -452,6 +454,14 @@ execute(const apr_array_header_t *actions,
                       NULL, NULL, pool));
 
   SVN_ERR(svn_ra_get_latest_revnum(session, &head, pool));
+  if (SVN_IS_VALID_REVNUM(base_revision))
+    {
+      if (base_revision > head)
+        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
+                                 "No such revision %ld (youngest is %ld)",
+                                 base_revision, head);
+      head = base_revision;
+    }
 
   root.children = apr_hash_make(pool);
   root.operation = OP_OPEN;
@@ -495,7 +505,7 @@ execute(const apr_array_header_t *actions,
         case ACTION_PUT:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           SVN_ERR(build(ACTION_PUT, path1, action->path[0], 
-                        action->rev, action->path[1], head, anchor, 
+                        SVN_INVALID_REVNUM, action->path[1], head, anchor, 
                         session, &root, pool));
           break;
         }
@@ -526,9 +536,8 @@ usage(apr_pool_t *pool, int exit_val)
     "  mkdir URL             create new directory URL\n"
     "  mv URL1 URL2          move URL1 to URL2\n"
     "  rm URL                delete URL\n"
-    "  put REV FILE URL      add or replace file URL with contents copied\n"
-    "                        from FILE, and using REV as the base revision\n"
-    "                        (for safety purposes)\n"
+    "  put SRC-FILE URL      add or modify file URL with contents copied\n"
+    "                        from SRC-FILE\n"
     "\nOptions:\n"
     "  -h, --help            display this text\n"
     "  -m, --message ARG     use ARG as a log message\n"
@@ -536,6 +545,7 @@ usage(apr_pool_t *pool, int exit_val)
     "  -u, --username ARG    commit the changes as username ARG\n"
     "  -p, --password ARG    use ARG as the password\n"
     "  -U, --root-url ARG    interpret all action URLs are relative to ARG\n"
+    "  -r, --revision ARG    use revision ARG as baseline for changes\n"
     "  -X, --extra-args ARG  append arguments from file ARG (one per line;\n"
     "                        use \"-\" to read from standard input)\n";
   svn_error_clear(svn_cmdline_fputs(msg, stream, pool));
@@ -566,6 +576,7 @@ main(int argc, const char **argv)
     {"username", 'u', 1, ""},
     {"password", 'p', 1, ""},
     {"root-url", 'U', 1, ""},
+    {"revision", 'r', 1, ""},
     {"extra-args", 'X', 1, ""},
     {"help", 'h', 0, ""},
     {NULL, 0, 0, NULL}
@@ -573,6 +584,7 @@ main(int argc, const char **argv)
   const char *message = "committed using mucc";
   const char *username = NULL, *password = NULL;
   const char *root_url = NULL, *extra_args_file = NULL;
+  svn_revnum_t base_revision = SVN_INVALID_REVNUM;
   apr_array_header_t *action_args;
   int i;
 
@@ -622,6 +634,18 @@ main(int argc, const char **argv)
             handle_error(svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                                            "'%s' is not an URL\n", root_url),
                          pool);
+          break;
+        case 'r':
+          {
+            char *digits_end = NULL;
+            base_revision = strtol(arg, &digits_end, 10);
+            if ((! SVN_IS_VALID_REVNUM(base_revision))
+                || (! digits_end)
+                || *digits_end)
+              handle_error(svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                            "Invalid revision number"),
+                           pool);
+          }
           break;
         case 'X':
           extra_args_file = apr_pstrdup(pool, arg);
@@ -687,8 +711,8 @@ main(int argc, const char **argv)
       if (++i == action_args->nelts)
         insufficient(pool);
 
-      /* For copies and puts, there should be a revision number next. */
-      if ((action->action == ACTION_CP) || (action->action == ACTION_PUT))
+      /* For copies, there should be a revision number next. */
+      if (action->action == ACTION_CP)
         {
           const char *rev_str = APR_ARRAY_IDX(action_args, i, const char *);
           if (strcmp(rev_str, "head") == 0)
@@ -766,8 +790,8 @@ main(int argc, const char **argv)
   if (! actions->nelts)
     usage(pool, EXIT_FAILURE);
 
-  err = execute(actions, anchor, message, username, password, pool);
-  if (err)
+  if ((err = execute(actions, anchor, message, username, password, 
+                     base_revision, pool)))
     handle_error(err, pool);
 
   svn_pool_destroy(pool);
