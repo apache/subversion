@@ -2,7 +2,7 @@
  * update_editor.c :  main editor for checkouts and updates
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2052,13 +2052,15 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
   apr_uint64_t modify_flags = SVN_WC__ENTRY_MODIFY_KIND
     | SVN_WC__ENTRY_MODIFY_REVISION
     | SVN_WC__ENTRY_MODIFY_DELETED
-    | SVN_WC__ENTRY_MODIFY_ABSENT;
+    | SVN_WC__ENTRY_MODIFY_ABSENT
+    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
 
 
   tmp_entry.revision = new_revision;
   tmp_entry.kind = svn_node_file;
   tmp_entry.deleted = FALSE;
   tmp_entry.absent = FALSE;
+  tmp_entry.working_size = 0;
 
   /* Possibly install a *non*-inherited URL in the entry. */
   if (new_URL)
@@ -2356,7 +2358,7 @@ merge_file(svn_wc_notify_state_t *content_state,
   SVN_ERR(svn_wc__loggy_entry_modify(&log_accum, adm_access,
                                      base_name, &tmp_entry, flags, pool));
 
-  /* Log commands to handle text-timestamp */
+  /* Log commands to handle text-timestamp and working-size */
   if (!is_locally_modified)
     {
       /* Adjust working copy file unless this file is an allowed
@@ -2367,10 +2369,15 @@ merge_file(svn_wc_notify_state_t *content_state,
                                             pool));
 
       if (tmp_txtb || magic_props_changed)
-        /* Adjust entries file to match working file */
-        SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
-                (&log_accum, adm_access,
-                 base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+        {
+          /* Adjust entries file to match working file */
+          SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
+                  (&log_accum, adm_access,
+                   base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+
+          SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
+                  (&log_accum, adm_access, base_name, pool));
+        }
     }
 
   /* Set the returned content state. */

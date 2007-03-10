@@ -112,6 +112,17 @@ struct svn_wc_traversal_info_t
 
 
 
+/*** Filesizes. ***/
+
+/* A special filesize value which means "use the filesize from the
+   working copy".  This is sometimes used in a log entry like:
+
+   <modify-entry name="foo.c" revision="5" working-size="working"/>
+ */
+#define SVN_WC__WORKING_SIZE_WC   "working"
+
+
+
 /*** Names and file/dir operations in the administrative area. ***/
 
 /** The files within the administrative subdir. **/
