@@ -2,7 +2,7 @@
  * time.c:  time/date utilities
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -289,9 +289,13 @@ void
 svn_sleep_for_timestamps(void)
 {
   apr_time_t now, then;
+  const char *env_val = getenv("SVN_SLEEP_FOR_TIMESTAMPS");
 
   /* Sleep until the next second tick, plus a tenth of a second for margin. */
-  now = apr_time_now();
-  then = apr_time_make(apr_time_sec(now) + 1, APR_USEC_PER_SEC / 10);
-  apr_sleep(then - now);
+  if (! env_val || apr_strnatcasecmp(env_val, "no") != 0)
+    {
+      now = apr_time_now();
+      then = apr_time_make(apr_time_sec(now) + 1, APR_USEC_PER_SEC / 10);
+      apr_sleep(then - now);
+    }
 }
