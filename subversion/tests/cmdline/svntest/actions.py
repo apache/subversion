@@ -51,6 +51,12 @@ class SVNIncorrectDatatype(SVNUnexpectedOutput):
   pass
 
 
+def no_sleep_for_timestamps():
+  os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'no'
+
+def do_sleep_for_timestamps():
+  os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'yes'
+
 def setup_pristine_repository():
   """Create the pristine repository, 'svn import' the greek tree and 
   checkout the pristine working copy"""

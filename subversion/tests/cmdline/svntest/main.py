@@ -760,6 +760,7 @@ class TestRunner:
     # Tests that want to use an editor should invoke svntest.main.use_editor.
     os.environ['SVN_EDITOR'] = ''
     os.environ['SVNTEST_EDITOR_FUNC'] = ''
+    actions.no_sleep_for_timestamps()
 
     try:
       rc = apply(self.pred.run, (), kw)
