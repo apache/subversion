@@ -155,9 +155,6 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       APR_INT64_C(0x0000000100000000)
 
 
-/* ...or perhaps this to mean all of those above... */
-#define SVN_WC__ENTRY_MODIFY_ALL                APR_INT64_C(0x000000001FFFFFFF)
-
 /* ...ORed together with this to mean "I really mean this, don't be
    trying to protect me from myself on this one." */
 #define SVN_WC__ENTRY_MODIFY_FORCE              APR_INT64_C(0x4000000000000000)
