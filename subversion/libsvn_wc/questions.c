@@ -506,7 +506,8 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
     {
       svn_wc_entry_t tmp;
       apr_finfo_t finfo;
-      SVN_ERR(svn_io_stat(&finfo, filename, APR_FINFO_MIN, pool));
+      SVN_ERR(svn_io_stat(&finfo, filename,
+                          APR_FINFO_MIN | APR_FINFO_LINK, pool));
 
       tmp.working_size = finfo.size;
       tmp.text_time = finfo.mtime;
