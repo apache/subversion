@@ -69,12 +69,26 @@ extern "C" {
  */
 const svn_version_t *svn_client_version(void);
 
+/** Client supporting functions
+ *
+ * @defgroup clnt_support Client supporting subsystem
+ *
+ * @{
+ */
 
 
 /*** Authentication stuff ***/
 
-/*  The new authentication system allows the RA layer to "pull"
-    information as needed from libsvn_client.  See svn_ra.h */
+/**  The new authentication system allows the RA layer to "pull"
+ *   information as needed from libsvn_client.
+ *
+ *   @deprecated Replaced by the svn_auth_* functions.
+ *   @see auth_fns
+ *
+ *   @defgroup auth_fns_depr (deprecated) AuthZ client subsystem
+ *
+ *   @{
+ */
 
 /** Create and return @a *provider, an authentication provider of type
  * svn_auth_cred_simple_t that gets information by prompting the user
@@ -271,6 +285,15 @@ void svn_client_get_ssl_client_cert_pw_prompt_provider
    int retry_limit,
    apr_pool_t *pool);
 
+/** @} */
+
+/**
+ * Commit operations
+ *
+ * @defgroup clnt_commit Client commit subsystem
+ *
+ * @{
+ */
 
 /** This is a structure which stores a filename and a hash of property
  * names and values.
@@ -584,6 +607,16 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)
    void *baton,
    apr_pool_t *pool);
 
+/** @} */
+
+/**
+ * Client blame
+ *
+ * @defgroup clnt_blame Client blame functionality
+ *
+ * @{
+ */
+
 /** Callback type used by svn_client_blame() to notify the caller
  * that line @a line_no of the blamed file was last changed in
  * @a revision by @a author on @a date, and that the contents were
@@ -609,6 +642,15 @@ typedef svn_error_t *(*svn_client_blame_receiver_t)
    apr_pool_t *pool);
 
 
+/** @} */
+
+/**
+ * Client diff
+ *
+ * @defgroup clnt_diff Client diff functionality
+ *
+ * @{
+ */
 /** The difference type in an svn_diff_summarize_t structure.
  *
  * @since New in 1.4.
@@ -678,7 +720,16 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
   (const svn_client_diff_summarize_t *diff,
    void *baton,
    apr_pool_t *pool);
- 
+
+/** @} */
+
+/**
+ * Client context
+ *
+ * @defgroup clnt_ctx Client context management
+ *
+ * @{
+ */
 
 /** A client context structure, which holds client specific callbacks, 
  * batons, serves as a cache for configuration options, and other various 
@@ -765,6 +816,7 @@ typedef struct svn_client_ctx_t
 
 } svn_client_ctx_t;
 
+/** @} end group: Client context management */
 
 /**
  * @name Authentication information file names
@@ -774,13 +826,24 @@ typedef struct svn_client_ctx_t
  * These filenames are decided by libsvn_client, since this library
  * implements all the auth-protocols;  libsvn_wc does nothing but
  * blindly store and retrieve these files from protected areas.
+ *
+ * @defgroup clnt_auth_filenames Client authentication file names
  * @{
  */
 #define SVN_CLIENT_AUTH_USERNAME            "username"
 #define SVN_CLIENT_AUTH_PASSWORD            "password"
-/** @} */
+/** @} group end: Authentication information file names */
 
+/** @} */
 
+/**
+ * Client context
+ *
+ * @defgroup clnt_ctx Client context management
+ *
+ * @{
+ */
+
 /** Initialize a client context.
  * Set @a *ctx to a client context object, allocated in @a pool, that
  * represents a particular instance of an svn client.
@@ -796,6 +859,23 @@ typedef struct svn_client_ctx_t
 svn_error_t *
 svn_client_create_context(svn_client_ctx_t **ctx,
                           apr_pool_t *pool);
+
+/** @} end group: Client context */
+
+/**
+ * Client working copy management functions
+ *
+ * @defgroup clnt_wc Client working copy management
+ *
+ * @{
+ */
+
+/**
+ * @defgroup clnt_wc_checkout Checkout
+ *
+ * @{
+ */
+
 
 /**
  * Checkout a working copy of @a URL at @a revision, looked up at @a
@@ -887,7 +967,14 @@ svn_client_checkout(svn_revnum_t *result_rev,
                     svn_boolean_t recurse,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
+/** @} */
 
+/**
+ * @defgroup Update
+ *
+ * @{
+ *
+ */
 
 /**
  * Update working trees @a paths to @a revision, authenticating with the
@@ -973,7 +1060,13 @@ svn_client_update(svn_revnum_t *result_rev,
                   svn_boolean_t recurse,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
+/** @} */
 
+/**
+ * @defgroup Switch
+ *
+ * @{
+ */
 
 /** Switch working tree @a path to @a url at @a revision,
  * authenticating with the authentication baton cached in @a ctx.  If
@@ -1036,6 +1129,13 @@ svn_client_switch(svn_revnum_t *result_rev,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
+/** @} */
+
+/**
+ * @defgroup Add
+ *
+ * @{
+ */
 
 /**
  * Schedule a working copy @a path for addition to the repository.
@@ -1099,6 +1199,14 @@ svn_client_add(const char *path,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool);
 
+/** @} */
+
+/**
+ * @defgroup Mkdir
+ *
+ * @{
+ */
+
 /** Create a directory, either in a repository or a working copy.
  *
  * If @a paths contains URLs, use the authentication baton in @a ctx
@@ -1139,7 +1247,14 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
                  const apr_array_header_t *paths,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
-                  
+
+/** @} */
+
+/**
+ * @defgroup Delete
+ *
+ * @{
+ */
 
 /** Delete items from a repository or working copy.
  *
@@ -1212,6 +1327,13 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
                   apr_pool_t *pool);
 
 
+/** @} */
+
+/**
+ * @defgroup Import
+ *
+ * @{
+ */
 
 /** Import file or directory @a path into repository directory @a url at
  * head, authenticating with the authentication baton cached in @a ctx, 
@@ -1277,6 +1399,13 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool);
 
+/** @} */
+
+/**
+ * @defgroup Commit
+ *
+ * @{
+ */
 
 /**
  * Commit files or directories into repository, authenticating with
@@ -1373,6 +1502,14 @@ svn_client_commit(svn_client_commit_info_t **commit_info_p,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
+/** @} */
+
+/**
+ * @defgroup Status
+ *
+ * @{
+ */
+
 /**
  * Given @a path to a working copy directory (or single file), call
  * @a status_func/status_baton with a set of @c svn_wc_status_t *
@@ -1437,6 +1574,14 @@ svn_client_status(svn_revnum_t *result_rev,
                   svn_boolean_t no_ignore,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
+
+/** @} */
+
+/**
+ * @defgroup Log
+ *
+ * @{
+ */
 
 /** 
  * Invoke @a receiver with @a receiver_baton on each log message from @a 
@@ -1546,6 +1691,14 @@ svn_client_log(const apr_array_header_t *targets,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool);
 
+/** @} */
+
+/**
+ * @defgroup Blame
+ *
+ * @{
+ */
+
 /**
  * Invoke @a receiver with @a receiver_baton on each line-blame item
  * associated with revision @a end of @a path_or_url, using @a start
@@ -1618,6 +1771,14 @@ svn_client_blame(const char *path_or_url,
                  void *receiver_baton,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool);
+
+/** @} */
+
+/**
+ * @defgroup Diff
+ *
+ * @{
+ */
 
 /**
  * Produce diff output which describes the delta between
@@ -1849,6 +2010,14 @@ svn_client_diff_summarize_peg(const char *path,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
 
+/** @} */
+
+/**
+ * @defgroup Merge
+ *
+ * @{
+ */
+
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into 
  * the working-copy path @a target_wcpath.
  *
@@ -1971,6 +2140,13 @@ svn_client_merge_peg(const char *source,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 
+/** @} */
+
+/**
+ * @defgroup Cleanup
+ *
+ * @{
+ */
 
 /** Recursively cleanup a working copy directory @a dir, finishing any
  * incomplete operations, removing lockfiles, etc.
@@ -1985,6 +2161,14 @@ svn_client_cleanup(const char *dir,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *pool);
 
+
+/** @} */
+
+/**
+ * @defgroup Relocate
+ *
+ * @{
+ */
 
 /**
  * Modify a working copy directory @a dir, changing any
@@ -2007,6 +2191,14 @@ svn_client_relocate(const char *dir,
                     apr_pool_t *pool);
 
 
+/** @} */
+
+/**
+ * @defgroup Revert
+ *
+ * @{
+ */
+
 /** Restore the pristine version of a working copy @a paths,
  * effectively undoing any local mods.  For each path in @a paths, if
  * it is a directory, and @a recursive is true, this will be a
@@ -2027,6 +2219,14 @@ svn_client_revert(const apr_array_header_t *paths,
                   apr_pool_t *pool);
 
 
+/** @} */
+
+/**
+ * @defgroup Resolved
+ *
+ * @{
+ */
+
 /** Remove the 'conflicted' state on a working copy @a path.  This will
  * not semantically resolve conflicts;  it just allows @a path to be
  * committed in the future.  The implementation details are opaque.
@@ -2043,6 +2243,14 @@ svn_client_resolved(const char *path,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *pool);
 
+
+/** @} */
+
+/**
+ * @defgroup Copy
+ *
+ * @{
+ */
 
 /**
  * A structure which describes the source of a copy operation--its path, 
@@ -2176,6 +2384,13 @@ svn_client_copy(svn_client_commit_info_t **commit_info_p,
                 apr_pool_t *pool);
 
 
+/** @} */
+
+/**
+ * @defgroup Move
+ *
+ * @{
+ */
 
 /**
  * Move @a src_paths to @a dst_path.
@@ -2326,6 +2541,7 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
+/** @} */
 
 
 /** Properties
@@ -2338,7 +2554,7 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * svn_prop_needs_translation(), svn_subst_translate_string(),  and
  * svn_subst_detranslate_string().
  *
- * @defgroup svn_client_prop_funcs property functions
+ * @defgroup svn_client_prop_funcs Property functions
  * @{
  */
 
@@ -2631,6 +2847,12 @@ svn_client_revprop_list(apr_hash_t **props,
 
 
 /**
+ * @defgroup Export
+ *
+ * @{
+ */
+
+/**
  * Export the contents of either a subversion repository or a
  * subversion working copy into a 'clean' directory (meaning a
  * directory with no administrative directories).  If @a result_rev
@@ -2728,6 +2950,14 @@ svn_client_export(svn_revnum_t *result_rev,
                   svn_boolean_t force, 
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
+
+/** @} */
+
+/**
+ * @defgroup List List / ls
+ *
+ * @{
+ */
 
 /** Invoked by svn_client_list() for each @a path with its @a dirent and,
  * if @a path is locked, its @a lock.  @a abs_path is the filesystem path
@@ -2843,6 +3073,14 @@ svn_client_ls(apr_hash_t **dirents,
               apr_pool_t *pool);
 
 
+/** @} */
+
+/**
+ * @defgroup Cat
+ *
+ * @{
+ */
+
 /**
  * Output the content of file identified by @a path_or_url and @a
  * revision to the stream @a out.  The actual node revision selected
@@ -2886,6 +3124,9 @@ svn_client_cat(svn_stream_t *out,
                const svn_opt_revision_t *revision,
                svn_client_ctx_t *ctx,
                apr_pool_t *pool);
+
+/** @} end group: cat */
+
 
 
 /** Changelist commands
@@ -3070,6 +3311,12 @@ svn_client_unlock(const apr_array_header_t *targets,
 /** @} */
 
 /**
+ * @defgroup Info
+ *
+ * @{
+ */
+
+/**
  * A structure which describes various system-generated metadata about
  * a working-copy path or URL.
  *
@@ -3201,7 +3448,17 @@ svn_client_info(const char *path_or_url,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
+/** @} */
 
+/** @} end group: Client working copy management */
+
+/**
+ *
+ * @defgroup clnt_sessions Client session related functions
+ *
+ * @{
+ *
+ */
 
 
 /* Converting paths to URLs. */
@@ -3273,6 +3530,9 @@ svn_client_open_ra_session(svn_ra_session_t **session,
                            const char *url,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool);
+
+
+/** @} end group: Client session related functions */
 
 #ifdef __cplusplus
 }
