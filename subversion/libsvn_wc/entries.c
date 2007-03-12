@@ -462,8 +462,19 @@ read_entry(svn_wc_entry_t **new_entry,
 
     SVN_ERR(read_str(&val, buf, end, pool));
 
-    entry->working_size =
-      (apr_off_t)apr_strtoi64(val, NULL, 0);
+    if (val)
+      entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
+    else
+      {
+        if (name)
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("Entry '%s' has invalid or missing working-size"), name);
+        else
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("This directory's entry has invalid or missing working-size"));
+      }
   }
   MAYBE_DONE;
 
