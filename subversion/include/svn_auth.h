@@ -69,7 +69,7 @@ extern "C" {
  * must document the run-time parameters that are made available to
  * its providers.
  *
- * @defgroup auth_fns authentication functions
+ * @defgroup auth_fns Authentication functions
  * @{
  */
 
