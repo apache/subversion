@@ -2,7 +2,7 @@
  * entries.c :  manipulating the administrative `entries' file.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -457,6 +457,17 @@ read_entry(svn_wc_entry_t **new_entry,
                     buf, end));
   MAYBE_DONE;
 
+  /* Translated size */
+  {
+    const char *val;
+
+    SVN_ERR(read_str(&val, buf, end, pool));
+
+    entry->working_size =
+      (apr_off_t)apr_strtoi64(val, NULL, 0);
+  }
+  MAYBE_DONE;
+
   /* Depth. */
   {
     const char *result;
@@ -859,6 +870,27 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       *modify_flags |= SVN_WC__ENTRY_MODIFY_PRESENT_PROPS;
       entry->present_props = apr_pstrdup(pool, entry->present_props);
     }
+
+  /* Translated size */
+  {
+    const char *val
+      = apr_hash_get(atts,
+                     SVN_WC__ENTRY_ATTR_WORKING_SIZE,
+                     APR_HASH_KEY_STRING);
+    if (val)
+      {
+        if (! strcmp(val, SVN_WC__WORKING_SIZE_WC))
+          {
+            /* Special case (same as the timestamps); ignore here
+               these will be handled elsewhere */
+          }
+        else
+          /* Cast to off_t; it's safe: we put in an off_t to start with... */
+          entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
+      }
+  }
 
   *new_entry = entry;
   return SVN_NO_ERROR;
@@ -1567,6 +1599,12 @@ write_entry(svn_stringbuf_t *buf,
   /* Keep in working copy flag. */
   write_bool(buf, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, entry->keep_local);
 
+  /* Translated size */
+  write_str(buf,
+            entry->working_size
+            ? apr_off_t_toa(pool, entry->working_size) : "",
+            pool);
+
   /* Depth. */
   if (is_subdir || entry->depth == svn_depth_infinity)
     {
@@ -2228,6 +2266,9 @@ fold_entry(apr_hash_t *entries,
       cur_entry->copyfrom_rev = SVN_INVALID_REVNUM;
       cur_entry->copyfrom_url = NULL;
     }
+
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_WORKING_SIZE)
+    cur_entry->working_size = entry->working_size;
 
   /* keep_local makes sense only when we are going to delete directory. */
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE

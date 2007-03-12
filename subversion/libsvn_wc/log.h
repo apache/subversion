@@ -2,7 +2,7 @@
  * log.h :  interfaces for running .svn/log files.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -218,6 +218,20 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                                           const char *path,
                                           const char *time_prop,
                                           apr_pool_t *pool);
+
+
+/* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH
+   in the entry field with name TIME_PROP.
+
+   Use SVN_WC__ENTRY_ATTR_* values for TIME_PROP.
+*/
+
+svn_error_t *
+svn_wc__loggy_set_entry_working_size_from_wc(svn_stringbuf_t **log_accum,
+                                             svn_wc_adm_access_t *adm_access,
+                                             const char *path,
+                                             apr_pool_t *pool);
+
 
 /* Extend **LOG_ACCUM with log instructions to set permissions of PATH
    to 'readonly'.

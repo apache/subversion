@@ -386,6 +386,7 @@ static svn_error_t *try_auth(svn_ra_svn__session_baton_t *sess,
             /* Success. */
             break;
           case SASL_NOMECH:
+            return svn_error_create(SVN_ERR_RA_SVN_NO_MECHANISMS, NULL, NULL);
           case SASL_BADPARAM:
           case SASL_NOMEM:
             /* Fatal error.  Fail the authentication. */
@@ -720,9 +721,10 @@ static svn_error_t *get_remote_hostname(char **hostname, apr_socket_t *sock)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
-                                 apr_array_header_t *mechlist,
-                                 const char *realm, apr_pool_t *pool)
+svn_error_t *
+svn_ra_svn__do_cyrus_auth(svn_ra_svn__session_baton_t *sess,
+                          apr_array_header_t *mechlist,
+                          const char *realm, apr_pool_t *pool)
 {
   apr_pool_t *subpool;
   sasl_conn_t *sasl_ctx;
@@ -826,7 +828,21 @@ svn_error_t *svn_ra_svn__do_auth(svn_ra_svn__session_baton_t *sess,
                                   _("Can't get username or password"));
         }
       if (err)
-        return err;
+        {
+          if (err->apr_err == SVN_ERR_RA_SVN_NO_MECHANISMS)
+            {
+              svn_error_clear(err);
+
+              /* We could not find a supported mechanism in the list sent by the
+                 server. In many cases this happens because the client is missing
+                 the CRAM-MD5 or ANONYMOUS plugins, in which case we can simply use
+                 the built-in implementation. In all other cases this call will be
+                 useless, but hey, at least we'll get consistent error messages. */
+              return svn_ra_svn__do_internal_auth(sess, mechlist, 
+                                                  realm, pool);
+            }
+          return err;
+        }
     }
   while (!success);
   svn_pool_destroy(subpool);

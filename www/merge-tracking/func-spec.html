@@ -152,68 +152,71 @@ housekeeping property).</p>
 <p>These features may or may not be completed for 1.5.0.</p>
 
 <ul>
-      <li>Show Change Sets Available for Merge (TODO)</li>
-      <li>Show Change Sets Already Merged (TODO)</li>
-      <li>Show Change Sets Blocked from Merging (TODO)</li>
-      <li><em>Merged From</em> info for Change Set and/or Path (TODO)</li>
-      <li><em>Merged To</em> info for Change Set and/or Path (TODO)</li>
-      <li>Find Paths containing Specific Incarnation of Versioned Resource
-      (TODO)</li>
+      <li>Change Set Merge Availability (TODO)</li>
+      <li>Find Change Set (TODO)</li>
       <li><a href="#commutative-reporting">Commutative Author and Revision
       Reporting</a></li>
 </ul>
 
-<div class="h4" id="commutative-reporting">
-<h4>Commutative Author and Revision Reporting</h4>
+<div class="h4" id="commutative-author-and-rev">
+<h4>Commutative Author and Revision Auditing</h4>
 
-<div class="h5" id="reporting-scope">
+<div class="h5" id="auditing-scope">
 <h5>Scope</h5>
 
-<p>Each command which shows username and merge information should also
-respect merge information and support Commutative Reporting.  These
-commands, collectively referred to <em>reporting commands</em>, are:</p>
+<p>Most commands which show username and merge information should also
+respect merge information and support <a
+href="requirements.html#commutative-author-and-rev">Commutative
+Auditing</a>.  These commands, collectively referred to <em>auditing
+commands</em>, are:</p>
 
 <ul>
   <li><code>svn log</code></li>
   <li><code>svn blame</code></li>
-  <li><code>svn info</code></li>
   <li><code>svn status --show-updates</code></li>
 </ul>
 
+<p><code>svn info</code> is purposely not included in this list, on
+the grounds that one would typically need more information than it can
+reasonably provide.</p>
+
 <p>A new switch, <code>--merge-sensitive</code>, along with a corresponding
-single-character shortcut, will be introduced for the reporting commands.
+single-character shortcut, will be introduced for the auditing commands.
 Using it will enable these commands to show the additional information gleaned
 from parsing and processing the merge info on the targets in question.  This
 switch will also work with <code>--xml</code> to include additional merge 
 information.  The new functionality added by <code>--merge-sensitive</code> is
 as follows.</p>
 
-<p><code>svn log</code>: The original log message, in the current format, with
-the addition of a list of revisions and merge source paths that have been merged
-into the target.  The output for <code>log</code> should be consistent with the
-<code>diff</code> output for the <code>svn:mergeinfo</code> property.</p>
+<dl>
+  <dt><code>svn log</code></dt>
+  <dd><p>The original log message, in the current format, with the
+  addition of a list of revisions and merge source paths that have
+  been merged into the target.  The output for <code>log</code> should
+  be consistent with the <code>diff</code> output for the
+  <code>svn:mergeinfo</code> property.</p>
 
-<p>The <code>--verbose</code> switch will output the log information for the
-merged revisions as well.  This output may bein the style of
-<code>svnmerge.py</code>: the primary log message, followed by each of the
-original log messages indented with separators between them.</p>
+  <p>The <code>--verbose</code> switch will output the log information
+  for the merged revisions as well.  This output may be in the style
+  of <code>svnmerge.py</code>: the primary log message, followed by
+  each of the original log messages indented with separators between
+  them.</p>
+  </dd>
 
-<p><code>svn blame</code>: Two additional columns for each line, with the
-original revision and author of that line.  Unlike other commands, we do not
-need to worry about multiple source revisions, because each line can have at
-most one author.</p>
+  <dt><code>svn blame</code></dt>
+  <dd>Two additional columns for each line, with the original revision
+  and author of that line.  Unlike other commands, we do not need to
+  worry about multiple source revisions, because each line can have at
+  most one author.</dd>
 
-<p><code>svn info</code>: Add two more pieces of information: 'Last Original
-Author:' and 'Last Original Revision:'.  Note that these could either be set by
-a merge to a node, or a commit to that node.  In the latter case, they would
-be the same as the 'Last Author' and 'Last Revision'.</p>
+  <dt><code>svn status --show-updates</code></dt>
+  <dd>Add additional columns, reflecting the last original authors and
+  revisions.</dd>
+</dl>
 
-<p><code>svn status --show-updates</code>: Add additional columns, reflecting
-the last original authors and revisions.</p>
+</div>  <!-- auditing-scope -->
 
-</div>  <!-- reporting-scope -->
-
-<div class="h5" id="reporting-questions">
+<div class="h5" id="auditing-questions">
 <h5>Pending Questions</h5>
 
 <ul>
@@ -223,24 +226,27 @@ the last original authors and revisions.</p>
   <li>In the case of <code>svn log</code>, would the user be better served if we
   just included the original revision logs in line with the logs (i.e., no
   special indentation, etc.)?</li>
+
+  <li>What about <code>svn ls --verbose</code>, which also shows revisions and
+  usernames?</li>
 </ul>
 
-</div>  <!-- reporting-questions -->
+</div>  <!-- auditing-questions -->
 
-<div class="h5" id="reporting-extra-credit">
+<div class="h5" id="auditing-extra-credit">
 <h5>Additional Features</h5>
 
 <p>Although not part of the initial implementation, additional features have
 been suggested:</p>
 
 <ul>
-  <li>A configuration option to always enable <code>--merge-sensitive</code> by
-  default.</li>
+  <li>A configuration option to always enable <code>--merge-sensitive</code>.
+  </li>
 </ul>
 
-</div>  <!-- reporting-extra-credit -->
+</div>  <!-- auditing-extra-credit -->
 
-</div>  <!-- commutative-reporting -->
+</div>  <!-- commutative-author-and-rev -->
 
 </div>  <!-- meta-data-audit -->
 

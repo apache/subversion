@@ -730,7 +730,10 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_changelist_set,
 
   /** Changelist name cleared. @since New in 1.5. */
-  svn_wc_notify_changelist_clear
+  svn_wc_notify_changelist_clear,
+
+  /** Failed to update a path's changelist association. @since New in 1.5. */
+  svn_wc_notify_changelist_failed
 
 } svn_wc_notify_action_t;
 
@@ -1385,6 +1388,15 @@ typedef struct svn_wc_entry_t
    * @since New in 1.5.
    */
   const char *changelist;
+
+  /** Size of the file after being translated into local representation,
+   * or:
+   *  0        if unknown.
+   *  negative if the file is locally modified
+   *            so the working size couldn't be recorded
+   * @since New in 1.5.
+   */
+  apr_off_t working_size;
 
   /** Whether a local copy of this entry should be kept in the working copy
    * after a deletion has been committed,  Only valid for the this-dir entry
@@ -3926,11 +3938,17 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 
 
 /**
- * Associate each item in @a paths with changelist @a changelist by setting the
- * 'changelist' attribute in its entry.  Obviously, this will
- * overwrite any existing value of the attribute.  If @a changelist is
- * NULL, then remove any 'changelist' attribute for the entry for each item in
- * @a paths.
+ * For each path in @a paths, set its entry's 'changelist' attribute
+ * to @a changelist.  (If @a changelist is NULL, then path is no
+ * longer a member of any changelist).
+ *
+ * If @a matching_changelist is not NULL, then enforce that each
+ * path's existing entry->changelist field matches @a
+ * matching_changelist; if the path is part of some other changelist,
+ * skip it path and try to throw @a svn_wc_notify_changelist_failure
+ * notification.  If @a matching_changelist is NULL, then be lax and
+ * don't enforce any matching, just write the new entry->changelist
+ * value unconditionally.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton to determine
  * if the client has cancelled the operation.
@@ -3948,6 +3966,7 @@ svn_wc_revision_status(svn_wc_revision_status_t **result_p,
 svn_error_t *
 svn_wc_set_changelist(const apr_array_header_t *paths,
                       const char *changelist,
+                      const char *matching_changelist,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
                       svn_wc_notify_func2_t notify_func,

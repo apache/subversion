@@ -1519,13 +1519,23 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### (optional) repository specified by the section name."
       APR_EOL_STR
-      "### The authorizations follow. An authorization line can refer to a"
+      "### The authorizations follow. An authorization line can refer to:"
       APR_EOL_STR
-      "### single user, to a group of users defined in a special [groups]"
+      "###  - a single user,"
       APR_EOL_STR
-      "### section, to an alias defined in a special [aliases] section or"
+      "###  - a group of users defined in a special [groups] section,"
       APR_EOL_STR
-      "### to anyone using the '*' wildcard.  Each definition can"
+      "###  - an alias defined in a special [aliases] section,"
+      APR_EOL_STR
+      "###  - all authenticated users, using the '$authenticated' token,"
+      APR_EOL_STR
+      "###  - only anonymous users, using the '$anonymous' token,"
+      APR_EOL_STR
+      "###  - anyone, using the '*' wildcard."
+      APR_EOL_STR
+      "###"
+      APR_EOL_STR
+      "### A match can be inverted by prefixing the rule with '~'. Rules can"
       APR_EOL_STR
       "### grant read ('r') access, read-write ('rw') access, or no access"
       APR_EOL_STR
@@ -1916,15 +1926,18 @@ svn_repos_fs(svn_repos_t *repos)
 }
 
 
-/* This code uses repository locking, which is motivated by the
- * need to support DB_RUN_RECOVERY.  Here's how it works:
+/* For historical reasons, for the Berkeley DB backend, this code uses
+ * repository locking, which is motivated by the need to support the
+ * Berkeley DB error DB_RUN_RECOVERY.  (FSFS takes care of locking
+ * itself, inside its implementation of svn_fs_recover.)  Here's how
+ * it works:
  *
  * Every accessor of a repository's database takes out a shared lock
  * on the repository -- both readers and writers get shared locks, and
  * there can be an unlimited number of shared locks simultaneously.
  *
  * Sometimes, a db access returns the error DB_RUN_RECOVERY.  When
- * this happens, we need to run svn_fs_berkeley_recover() on the db
+ * this happens, we need to run svn_fs_recover() on the db
  * with no other accessors present.  So we take out an exclusive lock
  * on the repository.  From the moment we request the exclusive lock,
  * no more shared locks are granted, and when the last shared lock
@@ -1936,18 +1949,21 @@ svn_repos_fs(svn_repos_t *repos)
  */
 
 svn_error_t *
-svn_repos_recover2(const char *path,
+svn_repos_recover3(const char *path,
                    svn_boolean_t nonblocking,
                    svn_error_t *(*start_callback)(void *baton),
                    void *start_callback_baton,
+                   svn_cancel_func_t cancel_func, void *cancel_baton,
                    apr_pool_t *pool)
 {
   svn_repos_t *repos;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  /* Fetch a repository object initialized with an EXCLUSIVE lock on
-     the database.   This will at least prevent others from trying to
-     read or write to it while we run recovery. */
+  /* Fetch a repository object; for the Berkeley DB backend, it is
+     initialized with an EXCLUSIVE lock on the database.  This will at
+     least prevent others from trying to read or write to it while we
+     run recovery. (Other backends should do their own locking; see
+     lock_repos.) */
   SVN_ERR(get_repos(&repos, path, TRUE, nonblocking,
                     FALSE,    /* don't try to open the db yet. */
                     subpool));
@@ -1956,7 +1972,7 @@ svn_repos_recover2(const char *path,
     SVN_ERR(start_callback(start_callback_baton));
 
   /* Recover the database to a consistent state. */
-  SVN_ERR(svn_fs_berkeley_recover(repos->db_path, subpool));
+  SVN_ERR(svn_fs_recover(repos->db_path, cancel_func, cancel_baton, subpool));
 
   /* Close shop and free the subpool, to release the exclusive lock. */
   svn_pool_destroy(subpool);
@@ -1964,6 +1980,19 @@ svn_repos_recover2(const char *path,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_repos_recover2(const char *path,
+                   svn_boolean_t nonblocking,
+                   svn_error_t *(*start_callback)(void *baton),
+                   void *start_callback_baton,
+                   apr_pool_t *pool)
+{
+  return svn_repos_recover3(path, nonblocking,
+                            start_callback, start_callback_baton,
+                            NULL, NULL,
+                            pool);
+}
 
 svn_error_t *
 svn_repos_recover(const char *path,

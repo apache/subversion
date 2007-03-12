@@ -45,6 +45,7 @@ Valid options:
   --non-interactive        : do no interactive prompting
   --config-dir ARG         : read user configuration files from directory ARG
   --limit ARG              : maximum number of log entries
+  --changelist ARG         : operate only on members of changelist ARG
 
 switch (sw): Update the working copy to a different URL.
 usage: 1. switch URL [PATH]

@@ -1,7 +1,7 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -217,25 +217,8 @@ fs_hotcopy(const char *src_path,
            svn_boolean_t clean_logs, 
            apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_fs__hotcopy(src_path, dest_path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__hotcopy(src_path, dest_path, pool);
 }
-
-
-
-/* This function is included for Subversion 1.0.x compatibility.  It has
-   no effect for fsfs backed Subversion filesystems.  It conforms to
-   the fs_library_vtable_t.bdb_recover() API. */
-static svn_error_t *
-fs_recover(const char *path,
-           apr_pool_t *pool)
-{
-  /* This is a no-op for FSFS. */
-
-  return SVN_NO_ERROR;
-}
-
 
 
 
@@ -265,9 +248,7 @@ fs_delete_fs(const char *path,
              apr_pool_t *pool)
 {
   /* Remove everything. */
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_remove_dir2(path, FALSE, pool);
 }
 
 
@@ -355,7 +336,7 @@ static fs_library_vtable_t library_vtable = {
   fs_delete_fs,
   fs_hotcopy,
   fs_get_description,
-  fs_recover,
+  svn_fs_fs__recover,
   fs_logfiles
 };
 

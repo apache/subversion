@@ -715,6 +715,49 @@ def export_with_externals(sbox):
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_H_omega_path)
 
+#----------------------------------------------------------------------
+
+def external_with_peg_and_op_revision(sbox):
+  "use a peg revision to specify an external module"
+
+  externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+
+  repo_dir       = sbox.repo_dir
+  repo_url       = sbox.repo_url
+  other_repo_url = repo_url + ".other"
+
+  # Checkout a working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     repo_url, wc_dir)
+
+  # remove A/D/H in the other repo
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', other_repo_url + 
+                                     '/A/D/H', '-m', 'remove original A/D/H')
+
+  # Set an external property using peg revision syntax.
+  new_externals_desc = \
+           other_repo_url + "/A/D/H@4  exdir_A/H \n" + \
+           other_repo_url + "/A/D/G    exdir_A/G \n"
+
+  # Set and commit the property.
+  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
+
+  # Update other working copy, see if we get the right change.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  external_chi_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'H', 'chi')
+  fp = open(external_chi_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (lines[0] == "This is the file 'chi'.\n")):
+    raise svntest.Failure("Unexpected contents for externally modified " +
+                          external_chi_path)
+  fp.close()
+
 
 
 ########################################################################
@@ -732,6 +775,7 @@ test_list = [ None,
               modify_and_update_receive_new_external,
               disallow_dot_or_dotdot_directory_reference,
               export_with_externals,
+              external_with_peg_and_op_revision,
              ]
 
 if __name__ == '__main__':

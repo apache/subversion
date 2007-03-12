@@ -54,7 +54,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_dispose
 {
     JNIEntry(SVNAdmin, dispose);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
@@ -72,7 +72,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_finalize
 {
     JNIEntry(SVNAdmin, finalize);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl != NULL)
+    if (cl != NULL)
     {
         cl->finalize();
     }
@@ -89,26 +89,26 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_create
 {
     JNIEntry(SVNAdmin, create);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     JNIStringHolder configpath(jconfigpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     JNIStringHolder fstype(jfstype);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -129,26 +129,26 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_deltify
 {
     JNIEntry(SVNAdmin, deltify);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Revision revisionStart(jrevisionStart);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Revision revisionEnd(jrevisionStop);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -170,37 +170,37 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_dump
 {
     JNIEntry(SVNAdmin, dump);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
     Outputer dataOut(jdataout);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Outputer messageOut(jmessageout);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Revision revisionStart(jrevisionStart);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Revision revisionEnd(jrevisionEnd);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -219,20 +219,20 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_hotcopy
 {
     JNIEntry(SVNAdmin, hotcopy);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     JNIStringHolder targetPath(jtargetPath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -250,20 +250,20 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_listDBLogs
 {
     JNIEntry(SVNAdmin, listDBLogs);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     MessageReceiver mr(jreceiver);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -282,20 +282,20 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_listUnusedDBLo
 {
     JNIEntry(SVNAdmin, listUnusedDBLogs);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     MessageReceiver mr(jreceiver);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -317,32 +317,32 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_load
 {
     JNIEntry(SVNAdmin, load);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Inputer inputData(jinputData);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Outputer outputMsg(joutputMsg);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     JNIStringHolder relativePath(jrelativePath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -362,20 +362,20 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_lstxns
 {
     JNIEntry(SVNAdmin, lstxns);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     MessageReceiver mr(jmessageReceiver);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -392,14 +392,14 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_recover
 {
     JNIEntry(SVNAdmin, recover);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return -1;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return -1;
     }
@@ -417,20 +417,20 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_rmtxns
 {
     JNIEntry(SVNAdmin, rmtxns);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Targets transactions(jtransactions);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -531,32 +531,32 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_verify
 {
     JNIEntry(SVNAdmin, dump);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Outputer messageOut(jmessageout);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Revision revisionStart(jrevisionStart);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Revision revisionEnd(jrevisionEnd);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -573,14 +573,14 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_lslock
 {
     JNIEntry(SVNAdmin, lstxns);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return NULL;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return NULL;
     }
@@ -596,20 +596,20 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNAdmin_rmlocks
 {
     JNIEntry(SVNAdmin, rmlocks);
     SVNAdmin *cl = SVNAdmin::getCppObject(jthis);
-    if(cl == NULL)
+    if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
         return;
     }
 
     JNIStringHolder path(jpath);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
 
     Targets locks(jlocks);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }

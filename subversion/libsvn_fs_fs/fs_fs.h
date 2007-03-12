@@ -1,7 +1,7 @@
 /* fs_fs.h : interface to the native filesystem layer
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -30,6 +30,14 @@ svn_error_t *svn_fs_fs__open(svn_fs_t *fs,
    Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__hotcopy(const char *src_path,
                                 const char *dst_path,
+                                apr_pool_t *pool);
+
+/* Recover the fsfs filesystem at PATH.
+   Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
+   Use POOL for temporary allocations. */
+svn_error_t *svn_fs_fs__recover(const char *path,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
                                 apr_pool_t *pool);
 
 /* Set *NODEREV_P to the node-revision for the node ID in FS.  Do any

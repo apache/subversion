@@ -21,6 +21,7 @@
 #include <string.h>
 #include <apr_pools.h>
 #include <apr_file_io.h>
+#include <apr_file_info.h>
 #include <apr_time.h>
 #include "svn_pools.h"
 #include "svn_types.h"
@@ -162,6 +163,41 @@ svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
    out of text-base?  Should it ask whether one meant to officially
    mark it for removal?
 */
+
+
+/*
+ */
+static svn_error_t *
+localfile_size_changed_p(svn_boolean_t *changed_p,
+                         const char *path,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_pool_t *pool)
+{
+  apr_finfo_t finfo;
+  const svn_wc_entry_t *entry;
+
+  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+
+  if (! entry)
+    return svn_error_createf
+      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
+       _("'%s' is not under version control"),
+       svn_path_local_style(path, pool));
+
+  if (entry->working_size)
+    {
+      SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE | APR_FINFO_LINK, pool));
+
+      if (finfo.size != entry->working_size)
+        *changed_p = TRUE;
+      else
+        *changed_p = FALSE;
+    }
+  else
+    *changed_p = FALSE;
+
+  return SVN_NO_ERROR;
+}
 
 /* Is PATH's timestamp the same as the one recorded in our
    `entries' file?  Return the answer in EQUAL_P.  TIMESTAMP_KIND
@@ -393,18 +429,30 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
 
   if (! force_comparison)
     {
+      /* See if the local file's size is different from when we created it */
+
+      /*### The number of stat() calls can be reduced by integrating
+        localfile_size_changed_p() and svn_wc__timestamps_equal_p() here. */
+
+      svn_boolean_t size_change;
+      svn_error_t *err2;
+
+      err = localfile_size_changed_p(&size_change, filename,
+                                     adm_access, subpool);
+      svn_error_clear(err);
+
       /* See if the local file's timestamp is the same as the one
          recorded in the administrative directory.  This could,
          theoretically, be wrong in certain rare cases, but with the
          addition of a forced delay after commits (see revision 419
          and issue #542) it's highly unlikely to be a problem. */
-      err = svn_wc__timestamps_equal_p(&equal_timestamps,
-                                       filename, adm_access,
-                                       svn_wc__text_time, subpool);
+      err2 = svn_wc__timestamps_equal_p(&equal_timestamps,
+                                        filename, adm_access,
+                                        svn_wc__text_time, subpool);
 
       /* We only care whether there was an error or not, so make sure it
          is cleared. */
-      svn_error_clear(err);
+      svn_error_clear(err2);
 
       /* If we have an error, we fall back on the slower code path below.
          It might be tempting to optimize this further, for example by
@@ -412,7 +460,7 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
          with what error codes we return.  If the file doesn't exist,
          we should return no error.  But, *if* it exists, but it is
          unversioned, we have to return SVN_ERR_ENTRY_NOT_FOUND. */
-      if (! err && equal_timestamps)
+      if (! err && ! err2 && equal_timestamps && ! size_change)
         {
           *modified_p = FALSE;
           goto cleanup;
@@ -457,11 +505,18 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
   if (! *modified_p && svn_wc_adm_locked(adm_access))
     {
       svn_wc_entry_t tmp;
-      SVN_ERR(svn_io_file_affected_time(&tmp.text_time, filename, pool));
+      apr_finfo_t finfo;
+      SVN_ERR(svn_io_stat(&finfo, filename,
+                          APR_FINFO_MIN | APR_FINFO_LINK, pool));
+
+      tmp.working_size = finfo.size;
+      tmp.text_time = finfo.mtime;
       SVN_ERR(svn_wc__entry_modify(adm_access,
                                    svn_path_basename(filename, pool),
-                                   &tmp, SVN_WC__ENTRY_MODIFY_TEXT_TIME, TRUE,
-                                   pool));
+                                   &tmp,
+                                   SVN_WC__ENTRY_MODIFY_TEXT_TIME
+                                   | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
+                                   TRUE, pool));
     }
 
  cleanup:

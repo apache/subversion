@@ -621,6 +621,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-admin-last-repository-dir nil "The last repository url for various operations.")
 (defvar svn-last-cmd-ring (make-ring 30) "Ring that holds the last executed svn commands (for debugging purposes)")
 (defvar svn-status-cached-version-string nil)
+(defvar svn-status-get-line-information-for-file nil)
 
 (defvar svn-status-partner-buffer nil "The partner buffer for this svn related buffer")
 (make-variable-buffer-local 'svn-status-partner-buffer)
@@ -858,6 +859,8 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
   (define-key svn-global-keymap (kbd "f =") 'svn-file-show-svn-diff)
+  (define-key svn-global-keymap (kbd "f e") 'svn-file-show-svn-ediff)
+  (define-key svn-global-keymap (kbd "f l") 'svn-file-show-svn-log)
   (define-key svn-global-keymap (kbd "f b") 'svn-status-blame)
   (define-key svn-global-keymap (kbd "f a") 'svn-file-add-to-changelog)
   (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
@@ -2118,8 +2121,8 @@ If no file is at point, copy everything starting from ':' to the end of line."
     (save-excursion
       (goto-char (line-beginning-position))
       (when (looking-at ".+?: *\\(.+\\)$")
-        (kill-new (match-string-no-properties 1))
-        (message "Copied: %s" (match-string-no-properties 1))))))
+        (kill-new (svn-match-string-no-properties 1))
+        (message "Copied: %s" (svn-match-string-no-properties 1))))))
 
 (defun svn-status-copy-filename-as-kill (arg)
   "Copy the actual file name to the kill-ring.
@@ -2813,7 +2816,9 @@ The result may be parsed with the various `svn-status-line-info->...' functions.
                              (overlay-get overlay 'svn-info))))
         svn-info)
     ;; different mode, means called not from the *svn-status* buffer
-    (svn-status-make-line-info ".")))
+    (if svn-status-get-line-information-for-file
+        (svn-status-make-line-info (file-relative-name (buffer-file-name) (svn-status-base-dir)))
+      (svn-status-make-line-info "."))))
 
 
 (defun svn-status-get-file-list (use-marked-files)
@@ -3224,6 +3229,15 @@ See `svn-status-marked-files' for what counts as selected."
     (save-excursion
       (set-buffer svn-process-buffer-name)
       (svn-log-view-mode))))
+
+(defun svn-file-show-svn-log ()
+  "Run `svn log' on the current file."
+  (interactive)
+  (svn-status-create-arg-file svn-status-temp-arg-file "" (list (svn-status-make-line-info buffer-file-name)) "")
+  (svn-run t t 'log "log" "--targets" svn-status-temp-arg-file)
+  (save-excursion
+    (set-buffer svn-process-buffer-name)
+    (svn-log-view-mode)))
 
 (defun svn-status-version ()
   "Show the version numbers for psvn.el and the svn command line client"
@@ -3953,6 +3967,13 @@ If ARG then prompt for revision to diff against."
   "Prompt the user for a svn revision number."
   (interactive)
   (read-string prompt default-value))
+
+(defun svn-file-show-svn-ediff (arg)
+  "Run ediff on the current file with a previous revision.
+If ARG then prompt for revision to diff against."
+  (interactive "P")
+  (let ((svn-status-get-line-information-for-file t))
+    (svn-status-ediff-with-revision arg)))
 
 ;; --------------------------------------------------------------------------------
 ;; SVN process handling
