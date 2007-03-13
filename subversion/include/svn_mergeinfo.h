@@ -59,18 +59,18 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
                    apr_hash_t *mergefrom, apr_hash_t *mergeto,
                    apr_pool_t *pool);
 
-/** Merge hash of merge info, @a mergein2, into existing hash
- * @a *mergein1.
+/** Merge hash of merge info, @a changes, into existing hash @a
+ * *mergeinfo.
  *
- * Note: @a *mergein1 and @a mergein2 must have rangelists that are
- * sorted as said by svn_sort_compare_ranges.  After the merge
- * @a *mergein1 will have rangelists that are guaranteed to be in
- * sorted order.
+ * Note: @a *mergeinfo and @a changes must have rangelists that are
+ * sorted as said by @c svn_sort_compare_ranges().  After the merge @a
+ * *mergeinfo will have rangelists that are guaranteed to be in sorted
+ * order.
  *
  * @since New in 1.5.
  */
 svn_error_t *
-svn_mergeinfo_merge(apr_hash_t **mergein1, apr_hash_t *mergein2,
+svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
                     apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
@@ -97,20 +97,21 @@ svn_rangelist_diff(apr_array_header_t **deleted, apr_array_header_t **added,
 /** Merge two rangelists consisting of @c svn_merge_range_t *
  * elements, @a *in1 and @a in2, placing the results in @a *in1.
  *
- * Note: @a in1 and @a in2 must be sorted as said by
- * svn_sort_compare_ranges. @a *in1 is guaranteed to remain in
+ * Note: @a *rangelist and @a changes must be sorted as said by @c
+ * svn_sort_compare_ranges(). @a *in1 is guaranteed to remain in
  * sorted order.
  * @since New in 1.5.
  */
 svn_error_t *
-svn_rangelist_merge(apr_array_header_t **in1, apr_array_header_t *in2,
+svn_rangelist_merge(apr_array_header_t **rangelist,
+                    apr_array_header_t *changes,
                     apr_pool_t *pool);
 
 /** Removes @a eraser (the subtrahend) from @a whiteboard (the
  * minuend), and places the resulting difference in @a output.
  *
- * Note: @a eraser and @a whiteboard must be sorted as said by
- * svn_sort_compare_ranges.  @a output is guaranteed to be in sorted
+ * Note: @a eraser and @a whiteboard must be sorted as said by @c
+ * svn_sort_compare_ranges().  @a output is guaranteed to be in sorted
  * order.
  * @since New in 1.5.
  */
@@ -122,8 +123,8 @@ svn_rangelist_remove(apr_array_header_t **output, apr_array_header_t *eraser,
  * svn_merge_range_t * elements, @a rangelist1 and @a rangelist2, and
  * place the result in @a output.
  *
- * Note: @a rangelist1 and @a rangelist2 must be sorted as said by
- * svn_sort_compare_ranges. @a output is guaranteed to be in sorted
+ * Note: @a rangelist1 and @a rangelist2 must be sorted as said by @c
+ * svn_sort_compare_ranges(). @a output is guaranteed to be in sorted
  * order.
  * @since New in 1.5.
  */

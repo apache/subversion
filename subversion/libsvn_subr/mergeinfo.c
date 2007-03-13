@@ -225,10 +225,11 @@ svn_mergeinfo_parse(const char *input, apr_hash_t **hash,
 }
 
 
-/* Merge revision list IN2 into *IN1. We do some trivial attempts to
-   combine ranges as we go.  */
+/* Merge revision list RANGELIST into *MERGEINFO, doing some trivial
+   attempts to combine ranges as we go. */
 svn_error_t *
-svn_rangelist_merge(apr_array_header_t **in1, apr_array_header_t *in2,
+svn_rangelist_merge(apr_array_header_t **rangelist,
+                    apr_array_header_t *changes,
                     apr_pool_t *pool)
 {
   int i, j;
@@ -237,13 +238,13 @@ svn_rangelist_merge(apr_array_header_t **in1, apr_array_header_t *in2,
                                               sizeof(svn_merge_range_t *));
   i = 0;
   j = 0;
-  while (i < (*in1)->nelts && j < in2->nelts)
+  while (i < (*rangelist)->nelts && j < changes->nelts)
     {
       svn_merge_range_t *elt1, *elt2;
       int res;
 
-      elt1 = APR_ARRAY_IDX(*in1, i, svn_merge_range_t *);
-      elt2 = APR_ARRAY_IDX(in2, j, svn_merge_range_t *);
+      elt1 = APR_ARRAY_IDX(*rangelist, i, svn_merge_range_t *);
+      elt2 = APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
 
       res = svn_sort_compare_ranges(&elt1, &elt2);
       if (res == 0)
@@ -266,22 +267,23 @@ svn_rangelist_merge(apr_array_header_t **in1, apr_array_header_t *in2,
   /* Copy back any remaining elements.
      Only one of these loops should end up running, if anything. */
 
-  assert (!(i < (*in1)->nelts && j < in2->nelts));
+  assert (!(i < (*rangelist)->nelts && j < changes->nelts));
 
-  for (; i < (*in1)->nelts; i++)
+  for (; i < (*rangelist)->nelts; i++)
     {
-      svn_merge_range_t *elt = APR_ARRAY_IDX(*in1, i, svn_merge_range_t *);
+      svn_merge_range_t *elt = APR_ARRAY_IDX(*rangelist, i,
+                                             svn_merge_range_t *);
       combine_with_lastrange(&lastrange, elt, TRUE, output, pool);
     }
 
 
-  for (; j < in2->nelts; j++)
+  for (; j < changes->nelts; j++)
     {
-      svn_merge_range_t *elt = APR_ARRAY_IDX(in2, j, svn_merge_range_t *);
+      svn_merge_range_t *elt = APR_ARRAY_IDX(changes, j, svn_merge_range_t *);
       combine_with_lastrange(&lastrange, elt, TRUE, output, pool);
     }
 
-  *in1 = output;
+  *rangelist = output;
   return SVN_NO_ERROR;
 }
 
@@ -622,16 +624,15 @@ svn_mergeinfo_diff(apr_hash_t **deleted, apr_hash_t **added,
   return SVN_NO_ERROR;
 }
 
-/* Merge merge info IN2 into *IN1 */
 svn_error_t *
-svn_mergeinfo_merge(apr_hash_t **in1, apr_hash_t *in2,
+svn_mergeinfo_merge(apr_hash_t **mergeinfo, apr_hash_t *changes,
                     apr_pool_t *pool)
 {
   apr_array_header_t *sorted1, *sorted2;
   int i, j;
 
-  sorted1 = svn_sort__hash(*in1, svn_sort_compare_items_as_paths, pool);
-  sorted2 = svn_sort__hash(in2, svn_sort_compare_items_as_paths, pool);
+  sorted1 = svn_sort__hash(*mergeinfo, svn_sort_compare_items_as_paths, pool);
+  sorted2 = svn_sort__hash(changes, svn_sort_compare_items_as_paths, pool);
 
   i = 0;
   j = 0;
@@ -652,7 +653,7 @@ svn_mergeinfo_merge(apr_hash_t **in1, apr_hash_t *in2,
           rl2 = elt2.value;
 
           SVN_ERR(svn_rangelist_merge(&rl1, rl2, pool));
-          apr_hash_set(*in1, elt1.key, elt1.klen, rl1);
+          apr_hash_set(*mergeinfo, elt1.key, elt1.klen, rl1);
           i++;
           j++;
         }
@@ -662,7 +663,7 @@ svn_mergeinfo_merge(apr_hash_t **in1, apr_hash_t *in2,
         }
       else
         {
-          apr_hash_set(*in1, elt2.key, elt2.klen, elt2.value);
+          apr_hash_set(*mergeinfo, elt2.key, elt2.klen, elt2.value);
           j++;
         }
     }
@@ -671,7 +672,7 @@ svn_mergeinfo_merge(apr_hash_t **in1, apr_hash_t *in2,
   for (; j < sorted2->nelts; j++)
     {
       svn_sort__item_t elt = APR_ARRAY_IDX(sorted2, j, svn_sort__item_t);
-      apr_hash_set(*in1, elt.key, elt.klen, elt.value);
+      apr_hash_set(*mergeinfo, elt.key, elt.klen, elt.value);
     }
 
   return SVN_NO_ERROR;
