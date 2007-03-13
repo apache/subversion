@@ -8,6 +8,16 @@ Record and use merge history to avoid the repeated merge problem and
 allow for cherry-picking.  Expose merge info via properties.  Allow
 for repos dump/load, including the merge history index.
 
+* Make parameters to the 'svn merge -cN URL' command optional.  This
+  should be supported by the API itself (not just in the command-line
+  client).
+
+  * Default revision range to "all unmerged revisions" (for -r/-c),
+    "oldest revision at merge source's path" thru HEAD.
+
+  * Default merge source to that the any single source in any merge
+    info already present on the target of the merge.
+
 * Allow for merge info which contains empty range lists, necessary for
   override of merge info by child paths which would otherwise inherit
   merge info from their parents which they don't reflect.
@@ -66,19 +76,14 @@ for repos dump/load, including the merge history index.
 
   * Fix inheritance bugs, issues #2733 and #2734.
 
-  * Handle inherited merge info for solely the target.
+  * Improve merge algorithm used for target trees with child paths
+    that contain differing merge info, per Peter Lundblad's
+    suggestions. (?)
 
-  * Handle differences in inherited/WC-local merge info for children
-    of the target.
-
-
-* Improve merge algorithm used for target trees with child paths that
-  contain differing merge info, per Peter Lundblad's
-  suggestions. (?)
-
-* When a tree with inherited merge info contains a child with
-  differing merge info, lookup of the merge info for this child must
-  reflect that of the parent (except for where they differ).  (dberlin)
+  * When a tree with inherited merge info contains a child with
+    differing merge info, lookup of the merge info for this child must
+    reflect that of the parent (except for where they differ).
+    (pburba/dlr)
 
 * Treat all revisions from a 'copy' source as merge info for the
   destination.  This equates to turning all those revs into actual
