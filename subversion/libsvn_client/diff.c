@@ -1785,8 +1785,8 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
 }
 
 /* Find explicit or inherited WC merge info for WCPATH, and return it
-   in *MERGEINFO. If the merge info was inherited set *INHERITED to
-   TRUE, set it to FALSE otherwise. */
+   in *MERGEINFO.  Set *INHERITED to whether the merge info was
+   inherited (TRUE or FALSE). */
 static svn_error_t *
 find_wc_merge_info(apr_hash_t **mergeinfo,
                    svn_boolean_t *inherited,
@@ -1797,27 +1797,20 @@ find_wc_merge_info(apr_hash_t **mergeinfo,
                    apr_pool_t *pool)
 {
   const char *walk_path = "";
-  apr_hash_t *tmp_mergeinfo = apr_hash_make(pool);
-  apr_hash_index_t *hi;
-  const char *path;
-  void *val, *key;
-  apr_array_header_t *ranges;
+  apr_hash_t *wc_mergeinfo;
 
-  *inherited = FALSE;
-  *mergeinfo = apr_hash_make(pool);
   SVN_ERR(svn_path_get_absolute(&wcpath, wcpath, pool));
 
-  /* ### What about copied paths? */
   while (TRUE)
     {
-      /* Look for merge info on WC_FULLPATH.  If there isn't any, walk
+      /* Look for merge info on WCPATH.  If there isn't any, walk
          towards the root of the WC until we encounter either (a) an
          unversioned directory, or (b) merge info.  If we encounter (b),
          use that inherited merge info as our baseline. */
-      SVN_ERR(svn_client__parse_merge_info(&tmp_mergeinfo, entry, wcpath,
+      SVN_ERR(svn_client__parse_merge_info(&wc_mergeinfo, entry, wcpath,
                                            adm_access, ctx, pool));
 
-      if (apr_hash_count(tmp_mergeinfo) == 0 &&
+      if (apr_hash_count(wc_mergeinfo) == 0 &&
           !svn_path_is_root(wcpath, strlen(wcpath)))
         {
           svn_error_t *err;
@@ -1828,23 +1821,21 @@ find_wc_merge_info(apr_hash_t **mergeinfo,
                                     walk_path, pool);
           wcpath = svn_path_dirname(wcpath, pool);
 
-          /* The previous entry didn't lock the parent directory. */
-          err = svn_wc_adm_open3(&adm_access, NULL,
-                                 wcpath,//svn_path_dirname(wcpath, pool),
+          err = svn_wc_adm_open3(&adm_access, NULL, wcpath,
                                  FALSE, 0, NULL, NULL, pool);
-
           if (err)
             {
               if (err->apr_err == SVN_ERR_WC_NOT_DIRECTORY)
                 {
                   svn_error_clear(err);
-                  return SVN_NO_ERROR;
+                  err = SVN_NO_ERROR;
+                  *inherited = FALSE;
+                  *mergeinfo = wc_mergeinfo;
                 }
               return err;
             }
 
-          SVN_ERR(svn_wc_entry(&entry, wcpath,
-                  adm_access, FALSE, pool));
+          SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
 
           if (entry)
             /* We haven't yet risen above the root of the WC. */
@@ -1853,23 +1844,31 @@ find_wc_merge_info(apr_hash_t **mergeinfo,
       break;
     }
 
-  /* Create inherited merge info. */
   if (svn_path_is_empty(walk_path))
     {
-      *mergeinfo = tmp_mergeinfo;
+      /* Merge info is explicit. */
+      *inherited = FALSE;
+      *mergeinfo = wc_mergeinfo;
     }
   else
     {
-      for (hi = apr_hash_first(pool, tmp_mergeinfo); hi; hi = apr_hash_next(hi))
+      /* Merge info may be inherited. */
+      apr_hash_index_t *hi;
+      void *val, *key;
+      const char *path;
+      apr_array_header_t *ranges;
+
+      *inherited = apr_hash_count(wc_mergeinfo) > 0;
+      *mergeinfo = apr_hash_make(pool);
+
+      /* ### What about copied paths? */
+      for (hi = apr_hash_first(pool, wc_mergeinfo); hi; hi = apr_hash_next(hi))
         {
-          *inherited = TRUE;
           apr_hash_this(hi, &key, NULL, &val);
           ranges = val;
-          path = key;
-          apr_hash_set(*mergeinfo,
-                       svn_path_is_empty(walk_path) ? path
-                       : svn_path_join(path, walk_path, pool),
-                       APR_HASH_KEY_STRING, ranges);
+          path = svn_path_is_empty(walk_path) ?
+                 key : svn_path_join((const char *) key, walk_path, pool);
+          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, ranges);
         }
     }
 
