@@ -1424,6 +1424,9 @@ typedef struct svn_wc_entry_t
  * can still be an access baton for the parent of @a path so long as the 
  * access baton for @a path itself is in the same access baton set.
  *
+ * @a path can be relative or absolute but must share the same base used
+ * to open @a adm_access.
+ *
  * Note that it is possible for @a path to be absent from disk but still
  * under revision control; and conversely, it is possible for @a path to
  * be present, but not under revision control.
