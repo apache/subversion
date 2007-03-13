@@ -1754,6 +1754,20 @@ def delete_keep_local(sbox):
                                         expected_disk,
                                         expected_status)
 
+def windows_paths_in_repos(sbox):
+  "use folders with names like 'c:hi'"
+
+  sbox.build(create_wc = False)
+  repo_url       = sbox.repo_url
+
+  chi_url = sbox.repo_url + '/c:hi'
+
+  # do some manipulations on a folder containing a windows drive name.
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'log_msg', 
+                                    chi_url)
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', 'log_msg', 
+                                    chi_url)
 
 ########################################################################
 # Run the tests
@@ -1792,6 +1806,7 @@ test_list = [ None,
               cat_added_PREV,
               ls_space_in_repo_name,
               delete_keep_local,
+              XFail(windows_paths_in_repos, svntest.main.is_os_windows)
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
