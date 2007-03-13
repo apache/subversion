@@ -714,11 +714,11 @@ static svn_error_t * commit_delete_entry(const char *path,
      against the HEAD revision on-the-fly.  In such a universe, a
      failed deletion (because it's already missing) is OK;  deletion
      is an idempotent merge operation. */
-  serr =  svn_ra_dav__simple_request(&code, parent->cc->ras,
-                                     "DELETE", child,
-                                     extra_headers, NULL,
-                                     204 /* Created */,
-                                     404 /* Not Found */, pool);
+  serr = svn_ra_dav__simple_request(&code, parent->cc->ras,
+                                    "DELETE", child,
+                                    extra_headers, NULL,
+                                    204 /* Created */,
+                                    404 /* Not Found */, pool);
 
   /* A locking-related error most likely means we were deleting a
      directory rather than a file, and didn't send all of the
