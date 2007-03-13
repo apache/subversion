@@ -248,6 +248,7 @@ get_operation(const char *path,
       child->children = apr_hash_make(pool);
       child->operation = OP_OPEN;
       child->rev = SVN_INVALID_REVNUM;
+      child->kind = svn_node_dir;
       apr_hash_set(operation->children, path, APR_HASH_KEY_STRING, child);
     }
   return child;
@@ -477,11 +478,11 @@ execute(const apr_array_header_t *actions,
         case ACTION_MV:
           path1 = subtract_anchor(anchor, action->path[0], pool);
           path2 = subtract_anchor(anchor, action->path[1], pool);
-          SVN_ERR(build(ACTION_RM, path2, action->path[0], head,
-                        NULL, head, anchor, 
+          SVN_ERR(build(ACTION_RM, path1, NULL, 
+                        SVN_INVALID_REVNUM, NULL, head, anchor, 
                         session, &root, pool));
-          SVN_ERR(build(ACTION_CP, path1, NULL, 
-                        SVN_INVALID_REVNUM, NULL, head, anchor,
+          SVN_ERR(build(ACTION_CP, path2, action->path[0], 
+                        head, NULL, head, anchor,
                         session, &root, pool));
           break;
         case ACTION_CP:
