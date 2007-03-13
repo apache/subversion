@@ -417,6 +417,21 @@ def setrevprop(sbox):
                                      "--revprop", "-r0", "svn:author",
                                      sbox.wc_dir)
 
+def verify_windows_paths_in_repos(sbox):
+  "verify a repository containing paths like 'c:hi'"
+
+  # setup a repo with a directory 'c:hi'
+  sbox.build(create_wc = False)
+  repo_url       = sbox.repo_url
+  chi_url = sbox.repo_url + '/c:hi'
+
+  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', '-m', 'log_msg', 
+                                     chi_url)
+
+  output, errput = svntest.main.run_svnadmin("verify", sbox.repo_dir)
+  if errput:
+    print "Error: 'verify' failed"
+    raise svntest.Failure
 
 ########################################################################
 # Run the tests
@@ -434,6 +449,7 @@ test_list = [ None,
               hotcopy_dot,
               hotcopy_format,
               setrevprop,
+              XFail(verify_windows_paths_in_repos, svntest.main.is_os_windows),
              ]
 
 if __name__ == '__main__':
