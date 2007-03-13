@@ -306,13 +306,16 @@ build(action_code_t action,
       path_so_far = svn_path_join(path_so_far, path_bit, pool);
       operation = get_operation(path_so_far, operation, pool);
       
-      /* If we cross a replace or add, they must have come via copy
-      operations, so remember the source of those things in case we
-      need to lookup the node kind of one of their children.  And if
-      this isn't a replace or add, but we've already seen one in of
-      our parent paths, we just need to extend that copy source path
-      by our current path component. */
-      if (operation->operation == OP_REPLACE || operation->operation == OP_ADD)
+      /* If we cross a replace- or add-with-history, remember the
+      source of those things in case we need to lookup the node kind
+      of one of their children.  And if this isn't such a copy,
+      but we've already seen one in of our parent paths, we just need
+      to extend that copy source path by our current path
+      component. */
+      if (operation->url 
+          && SVN_IS_VALID_REVNUM(operation->rev)
+          && (operation->operation == OP_REPLACE 
+              || operation->operation == OP_ADD))
         {
           copy_src = subtract_anchor(anchor, operation->url, pool);
           copy_rev = operation->rev;
