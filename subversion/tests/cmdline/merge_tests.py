@@ -1216,6 +1216,11 @@ def merge_one_file_using_c(sbox):
 # This is a regression for the enhancement added in issue #785.
 
 def merge_with_implicit_target_helper(sbox, arg_flav):
+  "ARG_FLAV is one of 'r' (revision range) or 'c' (single change)."
+
+  if arg_flav not in ('r', 'c'):
+    raise svntest.Failure
+
   sbox.build()
   wc_dir = sbox.wc_dir
   
@@ -1263,8 +1268,6 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
     elif arg_flav == 'c':
       svntest.actions.run_and_verify_svn(None, ['U    mu\n'], [],
                                          'merge', '-c', '-2', mu_url)
-    else:
-      raise svntest.Failure
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text):
@@ -1278,8 +1281,6 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
     elif arg_flav == 'c':
       svntest.actions.run_and_verify_svn(None, ['G    mu\n'], [],
                                          'merge', '-c', '2', 'mu')
-    else:
-      raise svntest.Failure
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
