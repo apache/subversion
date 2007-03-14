@@ -268,25 +268,18 @@ def textual_merges_galore(sbox):
                                        None,
                                        merge_singleton_handler)
 
-  # Now bring A/D/G/rho to revision 2, give it non-conflicting local
+  # Now reverse merge r3 into A/D/G/rho, give it non-conflicting local
   # mods, then merge in the 2:3 change.  ### Not bothering to do the
   # whole expected_foo routine for these intermediate operations;
   # they're not what we're here to test, after all, so it's enough to
   # know that they worked.  Is this a bad practice? ###
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'revert', other_rho_path)
-  if (err):
-    for line in err:
-      print "Error reverting: ", line,
-    raise svntest.Failure
-
-  out, err = svntest.actions.run_and_verify_svn(None, None, [],
-                                                'up', '-r', '2',
-                                                other_rho_path)
-  if (err):
-    for line in err:
-      print "Error updating: ", line,
-    raise svntest.Failure
+  #
+  # run_and_verify_merge doesn't support merging to a file WCPATH
+  # so use run_and_verify_svn.
+  svntest.actions.run_and_verify_svn(None, ['G    ' + other_rho_path + '\n'],
+                                     [], 'merge', '-c-3',
+                                     sbox.repo_url + '/A/D/G/rho',
+                                     other_rho_path)
 
   # Now *prepend* ten or so lines to A/D/G/rho.  Since rho had ten
   # lines appended in revision 2, and then another ten in revision 3,
@@ -302,21 +295,19 @@ def textual_merges_galore(sbox):
   svntest.main.file_write(other_rho_path,
                           other_rho_text + current_other_rho_text)
 
-  # We expect pi and tau to merge and conflict respectively, but
-  # those are just side effects of the method we're using to test the
-  # merge on rho, which is all we really care about.
+  # We expect no merge attempt for pi and tau because they inherit
+  # mergeinfo from the WC root.  There is explicit mergeinfo on rho
+  # ('/A/D/G/rho:2') so expect it to be merged (cleanly).
   expected_output = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
-                             { 'rho'  : Item(status='G '),
-                               'pi'   : Item(status='G '),
-                               'tau'  : Item(status='C '),
-                               })
-  
+                             {'rho' : Item(status='G ')})
   expected_disk = wc.State("", {
     'pi'    : wc.StateItem("This is the file 'pi'.\n"),
     'rho'   : wc.StateItem("This is the file 'rho'.\n"),
     'tau'   : wc.StateItem("This is the file 'tau'.\n"),
     })
-  expected_disk.tweak('rho', contents=other_rho_text
+  expected_disk.tweak('rho',
+                      props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:2-3'},
+                      contents=other_rho_text
                       + expected_disk.desc['rho'].contents
                       + rho_text
                       + additional_rho_text)
@@ -324,14 +315,9 @@ def textual_merges_galore(sbox):
                       contents=expected_disk.desc['pi'].contents
                       + pi_text)
   expected_disk.tweak('tau',
-                      # Ouch, mom, I've got conflicts on my conflicts!
                       contents=expected_disk.desc['tau'].contents
                       + "<<<<<<< .working\n"
-                      + "<<<<<<< .working\n"
                       + other_tau_text
-                      + "=======\n"
-                      + tau_text
-                      + ">>>>>>> .merge-right.r3\n"
                       + "=======\n"
                       + tau_text
                       + ">>>>>>> .merge-right.r3\n"
@@ -339,12 +325,12 @@ def textual_merges_galore(sbox):
 
   expected_status = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
                              { ''     : Item(wc_rev=1, status=' M'),
-                               'rho'  : Item(wc_rev=2, status='G '),
+                               'rho'  : Item(wc_rev=1, status='G '),
                                'pi'   : Item(wc_rev=1, status='G '),
                                'tau'  : Item(wc_rev=1, status='C '),
                                })
   expected_status.tweak('pi', status='M ')
-  expected_status.tweak('rho', status='M ')
+  expected_status.tweak('rho', status='MM')
   expected_status.tweak('tau', status='C ')
 
   svntest.actions.run_and_verify_merge(
@@ -4962,7 +4948,7 @@ def local_mergeinfo_elision_and_inheritance(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              textual_merges_galore,
+              XFail(textual_merges_galore),
               add_with_history,
               delete_file_and_dir,
               simple_property_merges,
