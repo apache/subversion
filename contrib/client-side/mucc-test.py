@@ -178,7 +178,32 @@ def main():
            'rm',             'foo/foo/bar',
            'rm',             'foo/foo/foo/bar', 
            'cp', '3', 'foo', 'foo/foo/foo/bar')
-  
+
+  # revision 13
+  run_mucc(['A /boozle (from /foo:3)',
+            'A /boozle/buz',
+            'A /boozle/buz/nuz',
+            ], #---------
+           'cp',    '3', 'foo', 'boozle',
+           'mkdir',             'boozle/buz',  
+           'mkdir',             'boozle/buz/nuz')
+
+  # revision 14
+  run_mucc(['A /boozle/buz/mucc-test.py',
+            'A /boozle/guz (from /boozle/buz:13)',
+            'A /boozle/guz/mucc-test.py',
+            ], #---------
+           'put',      '/dev/null',  'boozle/buz/mucc-test.py',
+           'cp', '13', 'boozle/buz', 'boozle/guz',
+           'put',      '/dev/null',  'boozle/guz/mucc-test.py')
+
+  # revision 15
+  run_mucc(['M /boozle/buz/mucc-test.py',
+            'R /boozle/guz/mucc-test.py',
+            ], #---------
+           'put', sys.argv[0], 'boozle/buz/mucc-test.py',
+           'rm',               'boozle/guz/mucc-test.py',
+           'put', sys.argv[0], 'boozle/guz/mucc-test.py')
 
 if __name__ == "__main__":
   try:
