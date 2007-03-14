@@ -841,7 +841,10 @@ svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
 
    BODY is a null terminated string containing an in-memory request
    body.  Use svn_ra_dav__set_neon_body_provider() if you want the
-   request body to be read from a file.
+   request body to be read from a file.  For requests which have no
+   body at all, consider passing the empty string ("") instead of
+   NULL, as this will cause Neon to generate a "Content-Length: 0"
+   header (which is important to some proxies).
 
    OKAY_1 and OKAY_2 are the "acceptable" result codes. Anything other
    than one of these will generate an error. OKAY_1 should always be

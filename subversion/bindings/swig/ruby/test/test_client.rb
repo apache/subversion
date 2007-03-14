@@ -820,7 +820,7 @@ class SvnClientTest < Test::Unit::TestCase
   def test_merge
     log = "sample log"
     file = "sample.txt"
-    src = normalize_line_break("sample\n")
+    src = "sample\n"
     trunk = File.join(@wc_path, "trunk")
     branch = File.join(@wc_path, "branch")
     trunk_path = File.join(trunk, file)
@@ -840,7 +840,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge(branch, rev1, branch, rev2, trunk)
     rev3 = ctx.commit(@wc_path).revision
 
-    assert_equal(src, ctx.cat(trunk_path, rev3))
+    assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
     
     ctx.rm(branch_path)
     rev4 = ctx.commit(@wc_path).revision
@@ -867,7 +867,7 @@ class SvnClientTest < Test::Unit::TestCase
   def test_merge_peg
     log = "sample log"
     file = "sample.txt"
-    src = normalize_line_break("sample\n")
+    src = "sample\n"
     trunk = File.join(@wc_path, "trunk")
     branch = File.join(@wc_path, "branch")
     trunk_path = File.join(trunk, file)
@@ -887,7 +887,7 @@ class SvnClientTest < Test::Unit::TestCase
     ctx.merge_peg(branch, rev1, rev2, trunk)
     rev3 = ctx.commit(@wc_path).revision
 
-    assert_equal(src, ctx.cat(trunk_path, rev3))
+    assert_equal(normalize_line_break(src), ctx.cat(trunk_path, rev3))
     
     ctx.rm(branch_path)
     rev4 = ctx.commit(@wc_path).revision
@@ -1273,8 +1273,8 @@ class SvnClientTest < Test::Unit::TestCase
   
   def test_cat
     log = "sample log"
-    src1 = normalize_line_break("source1\n")
-    src2 = normalize_line_break("source2\n")
+    src1 = "source1\n"
+    src2 = "source2\n"
     file = "sample.txt"
     path = File.join(@wc_path, file)
 
@@ -1285,17 +1285,17 @@ class SvnClientTest < Test::Unit::TestCase
     commit_info = ctx.commit(@wc_path)
     rev1 = commit_info.revision
 
-    assert_equal(src1, ctx.cat(path, rev1))
-    assert_equal(src1, ctx.cat(path))
+    assert_equal(normalize_line_break(src1), ctx.cat(path, rev1))
+    assert_equal(normalize_line_break(src1), ctx.cat(path))
     
     File.open(path, "w") {|f| f.print(src2)}
 
     commit_info = ctx.commit(@wc_path)
     rev2 = commit_info.revision
 
-    assert_equal(src1, ctx.cat(path, rev1))
-    assert_equal(src2, ctx.cat(path, rev2))
-    assert_equal(src2, ctx.cat(path))
+    assert_equal(normalize_line_break(src1), ctx.cat(path, rev1))
+    assert_equal(normalize_line_break(src2), ctx.cat(path, rev2))
+    assert_equal(normalize_line_break(src2), ctx.cat(path))
   end
 
   def test_lock
@@ -1552,8 +1552,8 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_switch
     log = "sample log"
-    trunk_src = normalize_line_break("trunk source\n")
-    tag_src = normalize_line_break("tag source\n")
+    trunk_src = "trunk source\n"
+    tag_src = "tag source\n"
     file = "sample.txt"
     file = "sample.txt"
     trunk_dir = "trunk"
@@ -1581,10 +1581,10 @@ class SvnClientTest < Test::Unit::TestCase
     tag_rev = ctx.commit(@wc_path).revision
 
     assert_equal(youngest_rev, ctx.switch(@wc_path, trunk_repos_uri))
-    assert_equal(trunk_src, ctx.cat(path))
+    assert_equal(normalize_line_break(trunk_src), ctx.cat(path))
 
     assert_equal(youngest_rev, ctx.switch(@wc_path, tag_repos_uri))
-    assert_equal(tag_src, ctx.cat(path))
+    assert_equal(normalize_line_break(tag_src), ctx.cat(path))
 
 
     notify_info = []
@@ -1593,7 +1593,7 @@ class SvnClientTest < Test::Unit::TestCase
     end
     
     assert_equal(trunk_rev, ctx.switch(@wc_path, trunk_repos_uri, trunk_rev))
-    assert_equal(trunk_src, ctx.cat(path))
+    assert_equal(normalize_line_break(trunk_src), ctx.cat(path))
     assert_equal([
                    [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                    [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
@@ -1603,7 +1603,7 @@ class SvnClientTest < Test::Unit::TestCase
 
     notify_info.clear
     assert_equal(tag_rev, ctx.switch(@wc_path, tag_repos_uri, tag_rev))
-    assert_equal(tag_src, ctx.cat(path))
+    assert_equal(normalize_line_break(tag_src), ctx.cat(path))
     assert_equal([
                    [path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
                    [@wc_path, Svn::Wc::NOTIFY_UPDATE_UPDATE],
@@ -1614,7 +1614,7 @@ class SvnClientTest < Test::Unit::TestCase
 
   def test_authentication
     log = "sample log"
-    src = normalize_line_break("source\n")
+    src = "source\n"
     file = "sample.txt"
     path = File.join(@wc_path, file)
     svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
@@ -1654,12 +1654,12 @@ class SvnClientTest < Test::Unit::TestCase
       cred.password = @password
       cred.may_save = false
     end
-    assert_equal(src, ctx.cat(svnserve_uri))
+    assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
   end
 
   def test_simple_provider
     log = "sample log"
-    src = normalize_line_break("source\n")
+    src = "source\n"
     file = "sample.txt"
     path = File.join(@wc_path, file)
     svnserve_uri = "#{@repos_svnserve_uri}/#{file}"
@@ -1686,12 +1686,12 @@ class SvnClientTest < Test::Unit::TestCase
       cred.password = @password
       cred.may_save = true
     end
-    assert_equal(src, ctx.cat(svnserve_uri))
+    assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
 
     ctx = Svn::Client::Context.new
     setup_auth_baton(ctx.auth_baton)
     ctx.add_simple_provider
-    assert_equal(src, ctx.cat(svnserve_uri))
+    assert_equal(normalize_line_break(src), ctx.cat(svnserve_uri))
   end
 
   def test_windows_simple_provider
