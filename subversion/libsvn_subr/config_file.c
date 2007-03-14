@@ -882,6 +882,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "###   neon-debug-mask            Debug mask for Neon HTTP library"
         APR_EOL_STR
+#ifdef SVN_NEON_0_26
+        "###   http-auth-types            Auth types to use for HTTP library"
+        APR_EOL_STR
+#endif
         "###   ssl-authority-files        List of files, each of a trusted CAs"
         APR_EOL_STR
         "###   ssl-trust-default-ca       Trust the system 'default' CAs" 
@@ -928,7 +932,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "# [group1]"
         APR_EOL_STR
-"# http-proxy-host = proxy1.some-domain-name.com"
+        "# http-proxy-host = proxy1.some-domain-name.com"
         APR_EOL_STR
         "# http-proxy-port = 80"
         APR_EOL_STR
@@ -938,6 +942,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "# http-timeout = 60"
         APR_EOL_STR
+#ifdef SVN_NEON_0_26
+        "# http-auth-types = basic;digest;negotiate"
+        APR_EOL_STR
+#endif
         "# neon-debug-mask = 130"
         APR_EOL_STR
         ""
@@ -1000,6 +1008,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         APR_EOL_STR
         "# http-compression = no"
         APR_EOL_STR
+#ifdef SVN_NEON_0_26
+        "# http-auth-types = basic;digest;negotiate"
+        APR_EOL_STR
+#endif
         "# No http-timeout, so just use the builtin default."
         APR_EOL_STR
         "# No neon-debug-mask, so neon debugging is disabled."
@@ -1193,6 +1205,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### releasing locks on files."
         APR_EOL_STR
         "# no-unlock = yes"
+        APR_EOL_STR
+        "### Set mime-types-file to a MIME type registry file, used to"
+        APR_EOL_STR
+        "### provide hints to Subversion's MIME type auto-detection algorithm."
+        APR_EOL_STR
+        "# mime-types-file = /path/to/mime.types"
         APR_EOL_STR
         "### Set enable-auto-props to 'yes' to enable automatic properties"
         APR_EOL_STR

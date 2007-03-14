@@ -35,6 +35,7 @@
 #include "svn_version.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
+#include "private/svn_compat.h"
 
 #include "ra_serf.h"
 
@@ -293,8 +294,6 @@ checkout_dir(dir_context_t *dir)
 
   if (dir->parent_dir)
     {
-      SVN_ERR(checkout_dir(dir->parent_dir));
-      
       /* Is our parent a copy?  If so, we're already implicitly checked out. */
       if (apr_hash_get(dir->commit->copied_entries,
                        dir->parent_dir->name, APR_HASH_KEY_STRING))
@@ -366,7 +365,7 @@ checkout_dir(dir_context_t *dir)
                                   return_response_err(handler,
                                                       &checkout_ctx->progress),
                                   _("Path '%s' not present"),
-                                  svn_path_local_style(dir->name, dir->pool));
+                                  dir->name);
         }
 
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
@@ -427,7 +426,7 @@ checkout_file(file_context_t *file)
                               return_response_err(handler,
                                                   &file->checkout->progress),
                               _("Path '%s' not present"),
-                              svn_path_local_style(file->name, file->pool));
+                              file->name);
         }
 
       return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
@@ -733,9 +732,16 @@ create_put_body(void *baton,
   /* We need to flush the file, make it unbuffered (so that it can be
    * zero-copied via mmap), and reset the position before attempting to
    * deliver the file.
+   *
+   * N.B. If we have APR 1.3+, we can unbuffer the file to let us use mmap
+   * and zero-copy the PUT body.  However, on older APR versions, we can't
+   * check the buffer status; but serf will fall through and create a file
+   * bucket for us on the buffered svndiff handle.
    */
   apr_file_flush(ctx->svndiff);
+#if APR_VERSION_AT_LEAST(1, 3, 0)
   apr_file_buffer_set(ctx->svndiff, NULL, 0);
+#endif
   offset = 0;
   apr_file_seek(ctx->svndiff, APR_SET, &offset);
 
@@ -846,7 +852,6 @@ setup_delete_headers(serf_bucket_t *headers,
                      apr_pool_t *pool)
 {
   delete_context_t *ctx = baton;
-  const char *lock_tokens;
 
   serf_bucket_headers_set(headers, SVN_DAV_VERSION_NAME_HEADER,
                           apr_ltoa(pool, ctx->revision));
@@ -1043,7 +1048,6 @@ delete_entry(const char *path,
   dir_context_t *dir = parent_baton;
   delete_context_t *delete_ctx;
   svn_ra_serf__handler_t *handler;
-  const char *lock_token;
   svn_error_t *err;
 
   /* Ensure our directory has been checked out */
@@ -1096,7 +1100,7 @@ delete_entry(const char *path,
       SVN_ERR(svn_ra_serf__context_run_wait(&delete_ctx->progress.done,
                                             dir->commit->session, pool));
     }
-  else
+  else if (err)
     {
       return err;
     }
@@ -1207,7 +1211,11 @@ add_directory(const char *path,
       
   if (add_dir_ctx->status != 201)
     {
-      abort();
+      SVN_ERR(add_dir_ctx->server_error.error);
+      return svn_error_createf(SVN_ERR_RA_DAV_REQUEST_FAILED, NULL,
+                               _("Adding a directory failed: %s on %s (%d)"),
+                               handler->method, handler->path,
+                               add_dir_ctx->status);
     }
 
   *child_baton = dir;
@@ -1755,7 +1763,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   svn_delta_editor_t *editor;
   commit_context_t *ctx;
 
-  ctx = apr_pcalloc(pool, sizeof(commit_context_t));
+  ctx = apr_pcalloc(pool, sizeof(*ctx));
 
   ctx->pool = pool;
 

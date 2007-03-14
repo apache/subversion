@@ -2,7 +2,7 @@
  * props.c: Utility functions for property handling
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -29,6 +29,8 @@
 #include "svn_subst.h"
 #include "svn_props.h"
 #include "svn_opt.h"
+#include "svn_xml.h"
+#include "svn_base64.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
@@ -59,7 +61,7 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
 
   /* (The docs say the target must be either a URL or implicit '.', but
      explicit WC targets are also accepted.) */
-  target = ((const char **) (targets->elts))[0];
+  target = APR_ARRAY_IDX(targets, 0, const char *);
   SVN_ERR(svn_client_url_from_path(URL, target, pool));  
   if (*URL == NULL)
     return svn_error_create
@@ -105,4 +107,88 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
     }
 
   return SVN_NO_ERROR;
+}
+
+void
+svn_cl__print_xml_prop(svn_stringbuf_t **outstr,
+                       const char* propname,
+                       svn_string_t *propval,
+                       apr_pool_t *pool)
+{
+  const char *xml_safe;
+  const char *encoding = NULL;
+
+  if (*outstr == NULL)
+    *outstr = svn_stringbuf_create("", pool);
+
+  if (svn_xml_is_xml_safe(propval->data, propval->len))
+    {
+      svn_stringbuf_t *xml_esc = NULL;
+      svn_xml_escape_cdata_string(&xml_esc, propval, pool);
+      xml_safe = xml_esc->data;
+    }
+  else
+    {
+      const svn_string_t *base64ed = svn_base64_encode_string(propval, pool);
+      encoding = "base64";
+      xml_safe = base64ed->data;
+    }
+          
+  if (encoding)
+    svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
+                          "property", "name", propname,
+                          "encoding", encoding, NULL);
+  else
+    svn_xml_make_open_tag(outstr, pool, svn_xml_protect_pcdata,
+                          "property", "name", propname, NULL);
+
+  svn_stringbuf_appendcstr(*outstr, xml_safe);
+
+  svn_xml_make_close_tag(outstr, pool, "property");
+
+  return;
+}
+
+svn_error_t *
+svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
+                            apr_hash_t *prop_hash,
+                            svn_boolean_t names_only,
+                            apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+
+  if (*outstr == NULL)
+    *outstr = svn_stringbuf_create("", pool);
+
+  for (hi = apr_hash_first(pool, prop_hash); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *pname;
+      svn_string_t *propval;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      pname = key;
+      propval = val;
+
+      if (names_only)
+        {
+          svn_xml_make_open_tag(outstr, pool, svn_xml_self_closing, "property",
+                                "name", pname, NULL);
+        }
+      else
+        {
+          const char *pname_out;
+
+          if (svn_prop_needs_translation(pname))
+            SVN_ERR(svn_subst_detranslate_string(&propval, propval,
+                                                 TRUE, pool));
+
+          SVN_ERR(svn_cmdline_cstring_from_utf8(&pname_out, pname, pool));
+
+          svn_cl__print_xml_prop(outstr, pname_out, propval, pool);
+        }
+    }
+
+    return SVN_NO_ERROR;
 }

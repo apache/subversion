@@ -3,12 +3,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
-  @import "tigris-branding/css/tigris.css";
-  @import "tigris-branding/css/inst.css";
+  @import "../branding/css/tigris.css";
+  @import "../branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="tigris-branding/css/print.css"/>
-<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+  href="../branding/css/print.css"/>
+<script type="text/javascript" src="../branding/scripts/tigris.js"></script>
 <title>Merge Tracking Design</title>
 
 <style type="text/css">
@@ -29,8 +29,9 @@ information from the <a href="#merge-history">merge history</a>.</p>
 
 <ul>
   <li><a href="#merge-history">Merge History</a></li>
+  <li><a href="#data-structures">Data Structures</a></li>
   <li>Merge Operations (TODO)</li>
-  <li>Audit Operations (TODO)</li>
+  <li><a href="#audit-operations">Audit Operations</a></li>
   <li>Other Operations (TODO)</li>
 </ul>
 
@@ -42,8 +43,8 @@ provides the information used by Subversion's merge tracking-related
 capabilities (history sensitive merging, etc.).  The design is based
 on Dan Berlin's <a
 href="http://svn.haxx.se/dev/archive-2006-04/0916.shtml">proposal</a>
-(Message-Id:
-&lt;1146242044.23718.1.camel@dberlin0-corp.corp.google.com&gt;).</p>
+<small>(Message-Id:
+&lt;1146242044.23718.1.camel@dberlin0-corp.corp.google.com&gt;)</small>.</p>
 
 <p style="color: red">The following content has been temporarily
 superseded by <a
@@ -108,7 +109,7 @@ href="#merge-history-prereqs">prerequisites</a>.</p>
 <p>The first question that many people ask is "where should we store
 the merge information?" (what we store will be covered next).  A merge
 history property, named <code>SVN_MERGE_PROPERTY</code>
-(e.g. <code>svn:merged-revs</code>) stored in the revision properties,
+(e.g. <code>svn:mergeinfo</code>) stored in the revision properties,
 directory properties, and file properties.  Each will store the
 <em>full</em>, <em>complete</em> list of current merged in changes, as
 far as it knows.  This ensures that the merge algorithm and other
@@ -145,7 +146,7 @@ represented as a path, a colon, and then a comma separated revision
 list, containing one or more revision or revision ranges.  Revision
 range end and beginning points are separated by "-".</p>
 
-<div class="h4" id="merged-revs-grammar">
+<div class="h4" id="merge-info-grammar">
 <h4>Grammar</h4>
 <table>
 <tr>
@@ -173,7 +174,7 @@ range end and beginning points are separated by "-".</p>
   <td>revisionline (NEWLINE revisionline)*</td>
 </tr>
 </table>
-</div>  <!-- merged-revs-grammar -->
+</div>  <!-- merge-info-grammar -->
 
 <p>This list will <em>not</em> be stored in a canonicalized minimal
 form for a path (e.g. it may contain single revision numbers that
@@ -425,6 +426,65 @@ it's not because of the above, AFAIK :)</p>
 
 </div>  <!-- merge-history -->
 
+<div class="h2" id="data-structures">
+<h2>Data Structures</h2>
+
+<p>Merge Tracking is implemented using a few simple data
+structures.</p>
+
+<dl>
+  <dt>merge info</dt>
+  <dd>An <code>apr_hash_t</code> mapping merge source paths to a range
+  list.</dd>
+
+  <dt>range list</dt>
+  <dd>An <code>apr_array_header_t</code> containing
+  <code>svn_merge_range_t *</code> elements.</dd>
+
+  <dt><code>svn_merge_range_t</code></dt>
+  <dd>A revision range, modelled using a <code>start</code> and
+  <code>end</code> <code>svn_revnum_t</code>, which are identical if
+  the range consists of only a single revision.</dd>
+</dl>
+
+</div>  <!-- data-structures -->
+
+<div class="h2" id="audit-operations">
+<h2>Audit Operations</h2>
+
+<p>As outlined in the 
+<a href="requirements.html#auditing">requirements and use cases</a>, merge
+tracking auditting is the ability to report information about merge
+operations.  It consists of three sections:</p>
+
+<ul>
+  <li>Change Set Merge Availability (TODO)</li>
+
+  <li>Find Change Set (TODO)</li>
+
+  <li><a href="commutative-reporting">Commutative Author and Revision
+  Reporting</a></li>
+</ul>
+
+<div class="h3" id="commutative-reporting">
+<h3>Commutative Author and Revision Reporting</h3>
+
+<p>Most of the logic for reporting will live in <code>libsvn_repos</code>, with
+appropriate changes to the API and additional parameters exposed to the client
+through the RA layer.  We are looking at an API which takes one or more paths
+and a revision (range?), and returns the merge info which was added or removed
+in that revision.  For the 'blame' case, we may also need to include some type
+of line number parameter, the handling of which is going to get ugly, since our
+FS isn't based on a weave.</p>
+
+<p>Existing functions of interest are <code>svn_repos_fs_get_merge_info()</code>
+and <code>svn_fs_merge_info__get_merge_info()</code>.</p>
+
+</div>  <!-- commutative-reporting -->
+
+</div>  <!-- audit-operations -->
+
+<p>$Date$</p>
 
 </div>  <!-- h1 -->
 </body>

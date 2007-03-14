@@ -57,7 +57,7 @@ module Svn
         undef new
         def new
           obj = Client.create_context
-          obj.__send__("initialize")
+          obj.funcall("initialize")
           obj
         end
       end
@@ -377,7 +377,7 @@ module Svn
       
       # Returns a value of a revision property named +name+ for +uri+
       # at +rev+, as a String.
-      # Both URLs and paths are avaiable as +uri+.
+      # Both URLs and paths are available as +uri+.
       def revprop(name, uri, rev)
         value, = revprop_get(name, uri, rev)
         value
@@ -386,7 +386,7 @@ module Svn
       
       # Returns a value of a revision property named +name+ for +uri+
       # at +rev+, as an Array such as <tt>[value, rev]</tt>.
-      # Both URLs and paths are avaiable as +uri+.
+      # Both URLs and paths are available as +uri+.
       def revprop_get(name, uri, rev)
         result = Client.revprop_get(name, uri, rev, self)
         if result.is_a?(Array)
@@ -399,7 +399,7 @@ module Svn
       alias rpg revprop_get
       
       # Sets +value+ as a revision property named +name+ for +uri+ at +rev+.
-      # Both URLs and paths are avaiable as +uri+.
+      # Both URLs and paths are available as +uri+.
       def revprop_set(name, value, uri, rev, force=false)
         Client.revprop_set(name, value, uri, rev, force, self)
       end
@@ -407,7 +407,7 @@ module Svn
       alias rps revprop_set
       
       # Deletes a revision property, named +name+, for +uri+ at +rev+.
-      # Both URLs and paths are avaiable as +uri+.
+      # Both URLs and paths are available as +uri+.
       def revprop_del(name, uri, rev, force=false)
         Client.revprop_set(name, nil, uri, rev, force, self)
       end
@@ -417,7 +417,7 @@ module Svn
       # Returns a list of revision properties set for +uri+ at +rev+,
       # as an Array such as
       # <tt>[{revprop1 => value1, revprop2 => value2, ...}, rev]</tt>.
-      # Both URLs and paths are avaiable as +uri+.
+      # Both URLs and paths are available as +uri+.
       def revprop_list(uri, rev)
         props, rev = Client.revprop_list(uri, rev, self)
         if props.has_key?(Svn::Core::PROP_REVISION_DATE)
@@ -522,7 +522,7 @@ module Svn
       end
 
       def set_log_msg_func(callback=Proc.new)
-        @log_msg_baton = Client.set_log_msg_func2(self, callback)
+        @log_msg_baton = Client.set_log_msg_func3(self, callback)
       end
       
       def set_notify_func(callback=Proc.new)

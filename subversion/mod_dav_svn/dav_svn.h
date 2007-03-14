@@ -255,9 +255,6 @@ svn_boolean_t dav_svn__get_pathauthz_flag(request_rec *r);
    SVNParentPath allowed? */
 svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
 
-/* for the repository referred to by this request, where is the access
-   file for native authz */
-const char *dav_svn__get_native_authz_file(request_rec *r);
 
 /* SPECIAL URI
 
@@ -295,6 +292,11 @@ const char *dav_svn__get_repo_name(request_rec *r);
 /* Return the URI of an XSL transform stylesheet */
 const char *dav_svn__get_xslt_uri(request_rec *r);
 
+/* Return the master URI (for mirroring) */
+const char * dav_svn__get_master_uri(request_rec *r);
+
+/* Return the root directory */
+const char * dav_svn__get_root_dir(request_rec *r);
 
 /*** activity.c ***/
 
@@ -535,22 +537,6 @@ dav_svn__allow_read(const dav_resource *resource,
 svn_repos_authz_func_t
 dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
 
-/* Native path-based authorization */
-dav_error *
-dav_svn__check_access(const char *repos_name,
-                      const char *repos_path,
-                      request_rec *r,
-                      svn_repos_authz_access_t required_access);
-
-/* Helpers for path-based authorization */
-dav_error *
-dav_svn__check_resource_access(const dav_resource *resource,
-                               const svn_repos_authz_access_t required_access);
-
-dav_error *
-dav_svn__check_global_access(const dav_resource *resource,
-                             const svn_repos_authz_access_t required_access);
-
 
 /*** util.c ***/
 
@@ -704,6 +690,30 @@ svn_stream_t *
 dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
                                    ap_filter_t *output,
                                    apr_pool_t *pool);
+
+/*** mirror.c ***/
+
+/* Perform the fixup hook for the R request.  */
+int dav_svn__proxy_merge_fixup(request_rec *r);
+
+/* An Apache input filter which rewrites the locations in headers and
+   request body.  It reads from filter F using BB data, MODE mode, BLOCK
+   blocking strategy, and READBYTES. */
+apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
+                                         apr_bucket_brigade *bb,
+                                         ap_input_mode_t mode,
+                                         apr_read_type_e block,
+                                         apr_off_t readbytes);
+
+/* An Apache output filter F which rewrites the response headers for
+ * location headers.  It will modify the stream in BB. */
+apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
+                                             apr_bucket_brigade *bb);
+
+/* An Apache output filter F which rewrites the response body for
+ * location headers.  It will modify the stream in BB. */
+apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
+                                           apr_bucket_brigade *bb);
 
 
 #ifdef __cplusplus

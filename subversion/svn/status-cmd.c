@@ -2,7 +2,7 @@
  * status-cmd.c -- Display status information in current directory
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -75,30 +75,6 @@ print_start_target_xml(const char *target, apr_pool_t *pool)
   return svn_cl__error_checked_fputs(sb->data, stdout);
 }
 
-
-/* Prints XML header using POOL for temporary allocations. */
-static svn_error_t *
-print_header_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-
-  svn_xml_make_header(&sb, pool);
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "status", NULL);
-
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
-
-/* Prints XML footer using POOL for temporary allocations. */
-static svn_error_t *
-print_footer_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-
-  svn_xml_make_close_tag(&sb, pool, "status");
-
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
 
 /* Finish a target element by optionally printing an against element if
  * REPOS_REV is a valid revision number, and then printing an target end tag.
@@ -185,7 +161,7 @@ print_status(void *baton,
                        APR_HASH_KEY_STRING, path_array);
         }
 
-      (*((struct status_cache **) apr_array_push(path_array))) = scache;
+      APR_ARRAY_PUSH(path_array, struct status_cache *) = scache;
       return;
     }
 
@@ -259,7 +235,7 @@ svn_cl__status(apr_getopt_t *os,
          everything in a top-level element. This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        SVN_ERR(print_header_xml(pool));
+        SVN_ERR(svn_cl__xml_print_header("status", pool));
     }
   else
     {
@@ -271,7 +247,7 @@ svn_cl__status(apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; i++)
     {
-      const char *target = ((const char **) (targets->elts))[i];
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       svn_pool_clear(subpool);
 
@@ -320,7 +296,7 @@ svn_cl__status(apr_getopt_t *os,
               for (j = 0; j < path_array->nelts; j++)
                 {
                   struct status_cache *scache =
-                    ((struct status_cache **) (path_array->elts))[j];
+                    APR_ARRAY_IDX(path_array, j, struct status_cache *);
                   print_status_normal_or_xml(&sb, scache->path, scache->status);
                 }
             }
@@ -329,7 +305,7 @@ svn_cl__status(apr_getopt_t *os,
 
   svn_pool_destroy(subpool);
   if (opt_state->xml && (! opt_state->incremental))
-    SVN_ERR(print_footer_xml(pool));
+    SVN_ERR(svn_cl__xml_print_footer("status", pool));
 
   return SVN_NO_ERROR;
 }

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -371,6 +371,37 @@ int svn_opt_parse_revision(svn_opt_revision_t *start_revision,
                            const char *arg,
                            apr_pool_t *pool);
 
+/**
+ * Resolve peg revisions and operational revisions in the following way:
+ *
+ *    - If @a is_url is set and @a peg_rev->kind is
+ *      @c svn_opt_revision_unspecified, @a peg_rev->kind defaults to
+ *      @c svn_opt_revision_head.
+ *
+ *    - If @a is_url is not set, and @a peg_rev->kind is
+ *      @c svn_opt_revision_unspecified, @a peg_rev->kind defaults to
+ *      @c svn_opt_revision_base.
+ *
+ *    - If @a op_rev->kind is @c svn_opt_revision_unspecified, @a op_rev
+ *      defaults to @a peg_rev.
+ *
+ * Both @a peg_rev and @a op_rev may be modified as a result of this
+ * function.  @a is_url should be set if the path the revisions refer to is
+ * a url, and unset otherwise.
+ *
+ * If @a notice_local_mods is set, @c svn_opt_revision_working is used,
+ * instead of @c svn_opt_revision_base.
+ *
+ * Use @a pool for allocations.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
+                          svn_opt_revision_t *op_rev,
+                          svn_boolean_t is_url,
+                          svn_boolean_t notice_local_mods,
+                          apr_pool_t *pool);
 
 
 /* Parsing arguments. */
@@ -461,20 +492,22 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  *
  * Some examples would be:
  *
- *   - "foo/bar"              -> "foo/bar",       (unspecified)
- *   - "foo/bar@13"           -> "foo/bar",       (number, 13)
- *   - "foo/bar@HEAD"         -> "foo/bar",       (head)
- *   - "foo/bar@{1999-12-31}" -> "foo/bar",       (date, 1999-12-31)
- *   - "http://a/b@27"        -> "http://a/b",    (number, 27)
- *   - "http://a/b@COMMITTED" -> "http://a/b",    (committed) [*]
- *   - "foo/bar@1:2"          -> error
- *   - "foo/bar@baz"          -> error
- *   - "foo/bar@"             -> error
- *   - "foo/bar/@13"          -> "foo/bar",       (number, 13)
- *   - "foo/bar@@13"          -> "foo/bar@",      (number, 13)
- *   - "foo/@bar@HEAD"        -> "foo/@bar",      (head)
- *   - "foo@/bar"             -> "foo@/bar",      (unspecified)
- *   - "foo@HEAD/bar"         -> "foo@HEAD/bar",  (unspecified)
+ *    "foo/bar"                      -> "foo/bar",       (unspecified)
+ *    "foo/bar@13"                   -> "foo/bar",       (number, 13)
+ *    "foo/bar@HEAD"                 -> "foo/bar",       (head)
+ *    "foo/bar@{1999-12-31}"         -> "foo/bar",       (date, 1999-12-31)
+ *    "http://a/b@27"                -> "http://a/b",    (number, 27)
+ *    "http://a/b@COMMITTED"         -> "http://a/b",    (committed) [*]
+ *    "http://a/b@{1999-12-31}       -> "http://a/b",    (date, 1999-12-31)
+ *    "http://a/b@%7B1999-12-31%7D   -> "http://a/b",    (date, 1999-12-31)
+ *    "foo/bar@1:2"                  -> error
+ *    "foo/bar@baz"                  -> error
+ *    "foo/bar@"                     -> error
+ *    "foo/bar/@13"                  -> "foo/bar",       (number, 13)
+ *    "foo/bar@@13"                  -> "foo/bar@",      (number, 13)
+ *    "foo/@bar@HEAD"                -> "foo/@bar",      (head)
+ *    "foo@/bar"                     -> "foo@/bar",      (unspecified)
+ *    "foo@HEAD/bar"                 -> "foo@HEAD/bar",  (unspecified)
  *
  *   [*] Syntactically valid but probably not semantically useful.
  *

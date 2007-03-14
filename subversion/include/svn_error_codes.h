@@ -391,6 +391,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 25,
              "Invalid switch")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_WC_MISMATCHED_CHANGELIST,
+             SVN_ERR_WC_CATEGORY_START + 26,
+             "Changelist doesn't match")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -587,6 +592,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 43,
              "Unsupported FS format")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_FS_REP_BEING_WRITTEN,
+             SVN_ERR_FS_CATEGORY_START + 44,
+             "Representation is being written")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -721,6 +731,11 @@ SVN_ERROR_START
              SVN_ERR_RA_DAV_CATEGORY_START + 10,
              "Unable to extract data from response header")
 
+  /** @since New in 1.5 */
+  SVN_ERRDEF(SVN_ERR_RA_DAV_RELOCATED,
+             SVN_ERR_RA_DAV_CATEGORY_START + 11,
+             "Repository has been moved")
+
   /* ra_local errors */
 
   SVN_ERRDEF(SVN_ERR_RA_LOCAL_REPOS_NOT_FOUND,
@@ -759,6 +774,12 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_SVN_BAD_VERSION,
              SVN_ERR_RA_SVN_CATEGORY_START + 6,
              "Client/server version mismatch")
+
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_RA_SVN_NO_MECHANISMS,
+             SVN_ERR_RA_SVN_CATEGORY_START + 7,
+             "Cannot negotiate authentication mechanism")
+
 
   /* libsvn_auth errors */
 
@@ -921,6 +942,11 @@ SVN_ERROR_START
              SVN_ERR_CLIENT_CATEGORY_START + 13,
              "Path has no lock token")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_CLIENT_MULTIPLE_SOURCES_DISALLOWED,
+             SVN_ERR_CLIENT_CATEGORY_START + 14,
+             "Operation does not support multiple sources")
+
   /* misc errors */
 
   SVN_ERRDEF(SVN_ERR_BASE,
@@ -1008,11 +1034,11 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
              SVN_ERR_CL_CATEGORY_START + 0,
-             "Client error in parsing arguments")
+             "Error parsing arguments")
 
   SVN_ERRDEF(SVN_ERR_CL_INSUFFICIENT_ARGS,
              SVN_ERR_CL_CATEGORY_START + 1,
-             "Not enough arguments provided; try 'svn help' for more info")
+             "Not enough arguments provided")
 
   SVN_ERRDEF(SVN_ERR_CL_MUTUALLY_EXCLUSIVE_ARGS,
              SVN_ERR_CL_CATEGORY_START + 2,

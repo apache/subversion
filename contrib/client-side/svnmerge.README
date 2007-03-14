@@ -6,7 +6,7 @@ svnmerge has been set up at:
 The Python version is newer and undergoing active development.  A wiki
 has been been setup at:
 
-    http://www.orcaware.com/svn/wiki/index.php/Svnmerge.py
+    http://www.orcaware.com/svn/wiki/Svnmerge.py
 
 The Python version supports significantly more features than the
 Bourne shell version, including, but not limited to:

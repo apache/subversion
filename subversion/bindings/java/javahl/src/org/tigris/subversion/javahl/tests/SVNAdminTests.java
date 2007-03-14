@@ -17,82 +17,37 @@
  */
 package org.tigris.subversion.javahl.tests;
 
+import java.io.IOException;
 import junit.framework.TestCase;
+
+import org.tigris.subversion.javahl.Revision;
+import org.tigris.subversion.javahl.SubversionException;
 import org.tigris.subversion.javahl.SVNAdmin;
-import java.io.File;
 
 /**
  * This class is used for testing the SVNAdmin class
  *
  * More methodes for testing are still needed
  */
-public class SVNAdminTests extends TestCase
+public class SVNAdminTests extends SVNTests
 {
     /**
-     * the objects, which is going to be tested
-     */
-    SVNAdmin testee;
-    /**
-     * setup the test
-     * @throws Exception
-     */
-    protected void setUp() throws Exception
-    {
-        super.setUp();
-        testee = new SVNAdmin();
-    }
-
-    /**
-     * cleanp after the test
-     * @throws Exception
-     */
-    protected void tearDown() throws Exception
-    {
-        testee.dispose();
-        super.tearDown();
-    }
-
-    /**
      * Test the basic SVNAdmin.create functionality
-     * @throws Throwable
+     * @exception SubversionException
      */
-    public void testCreate() throws Throwable
+    public void testCreate()
+        throws SubversionException, IOException
     {
-        testee.create("testrep", false, false, null, SVNAdmin.BDB);
-        assertTrue("repository exists", new File("testrep").exists());
-        removeRepository("testrep");
-        assertFalse("repository deleted", new File("testrep").exists());
+        OneTest thisTest = new OneTest(false);
+        assertTrue("repository exists", thisTest.getRepository().exists());
     }
 
-    /**
-     * remove a rempositryl
-     * @param pathName      path name of the repository
-     * @throws Exception
-     */
-    protected void removeRepository(String pathName) throws Exception
+    public void testSetRevProp()
+        throws SubversionException, IOException
     {
-        File masterDir = new File(pathName);
-        removeDirOrFile(masterDir);
-    }
-
-    /**
-     * remove a file or a directory with its content
-     * @param file  the file or directory to be removed
-     */
-    private void removeDirOrFile(File file)
-    {
-        if(!file.exists())
-        {
-            return;
-        }
-        if(file.isDirectory())
-        {
-            File[] content = file.listFiles();
-            for(int i = 0; i < content.length; i++)
-                removeDirOrFile(content[i]);
-            file.delete();
-        }
-        else
-            file.delete();
+        OneTest thisTest = new OneTest(false);
+        admin.setRevProp(thisTest.getRepositoryPath(), Revision.getInstance(0),
+                         "svn:log", "Initial repository creation", false,
+                         false);
     }
 }

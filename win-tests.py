@@ -1,19 +1,7 @@
-"""Driver for running the tests on Windows.
+"""
+Driver for running the tests on Windows.
 
-Usage: python win-tests.py [option] [test-path]
-    -r, --release      test the Release configuration
-    -d, --debug        test the Debug configuration (default)
-    -u URL, --url=URL  run ra_dav or ra_svn tests against URL; will start
-                       svnserve for ra_svn tests
-    -v, --verbose      talk more
-    -f, --fs-type=type filesystem type to use (bdb is default)
-
-    --svnserve-args=list   comma-separated list of arguments for svnserve;
-                           default is '-d,-r,<test-path-root>'
-    --asp.net-hack     use '_svn' instead of '.svn' for the admin dir name
-    --httpd-dir        location where Apache HTTPD installed
-    --httpd-port       port for Apache HTTPD; random port number will be
-                       used, if not specified
+For a list of options, run this script with the --help option.
 """
 
 import os, sys
@@ -30,6 +18,31 @@ try:
 except AttributeError:
     my_getopt = getopt.getopt
 
+def _usage_exit():
+  "print usage, exit the script"
+  
+  print "Driver for running the tests on Windows."
+  print "Usage: python win-tests.py [option] [test-path]"
+  print
+  print "Valid options:"
+  print "  -r, --release        : test the Release configuration"
+  print "  -d, --debug          : test the Debug configuration (default)"
+  print "  -u URL, --url=URL    : run ra_dav or ra_svn tests against URL; will"
+  print "                         start svnserve for ra_svn tests"
+  print "  -v, --verbose        : talk more"
+  print "  -f, --fs-type=type   : filesystem type to use (fsfs is default)"
+  print "  -c, --cleanup        : cleanup after running a test"
+
+  print "  --svnserve-args=list : comma-separated list of arguments for"
+  print "                         svnserve"
+  print "                         default is '-d,-r,<test-path-root>'"
+  print "  --asp.net-hack       : use '_svn' instead of '.svn' for the admin"
+  print "                         dir name"
+  print "  --httpd-dir          : location where Apache HTTPD is installed"
+  print "  --httpd-port         : port for Apache HTTPD; random port number"
+  print "                         will be used, if not specified"
+  sys.exit(0)
+
 CMDLINE_TEST_SCRIPT_PATH = 'subversion/tests/cmdline/'
 CMDLINE_TEST_SCRIPT_NATIVE_PATH = CMDLINE_TEST_SCRIPT_PATH.replace('/', os.sep)
 
@@ -44,10 +57,16 @@ all_tests = gen_obj.test_progs + gen_obj.bdb_test_progs \
 client_tests = filter(lambda x: x.startswith(CMDLINE_TEST_SCRIPT_PATH),
                       all_tests)
 
-opts, args = my_getopt(sys.argv[1:], 'rdvcu:f:',
+svn_dlls = []
+for section in gen_obj.sections.values():
+  if section.options.get("msvc-export"):
+    dll_basename = section.name + "-" + str(gen_obj.version) + ".dll"
+    svn_dlls.append(os.path.join("subversion", section.name, dll_basename))
+
+opts, args = my_getopt(sys.argv[1:], 'hrdvcu:f:',
                        ['release', 'debug', 'verbose', 'cleanup', 'url=',
                         'svnserve-args=', 'fs-type=', 'asp.net-hack',
-                        'httpd-dir=', 'httpd-port='])
+                        'httpd-dir=', 'httpd-port=', 'help'])
 if len(args) > 1:
   print 'Warning: non-option arguments after the first one will be ignored'
 
@@ -62,7 +81,9 @@ run_httpd = None
 httpd_port = None
 
 for opt, val in opts:
-  if opt in ('-u', '--url'):
+  if opt in ('-h', '--help'):
+    _usage_exit()
+  elif opt in ('-u', '--url'):
     base_url = val
   elif opt in ('-f', '--fs-type'):
     fs_type = val
@@ -94,7 +115,11 @@ if len(args) == 0:
 else:
   abs_builddir = os.path.abspath(args[0])
   create_dirs = 1
-  
+
+# Default to fsfs explicitly
+if not fs_type:
+  fs_type = 'fsfs'
+
 # Don't run bdb tests if they want to test fsfs
 if fs_type == 'fsfs':
   all_tests = gen_obj.test_progs + gen_obj.scripts
@@ -122,12 +147,11 @@ if base_url:
 copied_execs = []   # Store copied exec files to avoid the final dir scan
 
 def create_target_dir(dirname):
-  if create_dirs:
-    tgt_dir = os.path.join(abs_builddir, dirname)
-    if not os.path.exists(tgt_dir):
-      if verbose:
-        print "mkdir:", tgt_dir
-      os.makedirs(tgt_dir)
+  tgt_dir = os.path.join(abs_builddir, dirname)
+  if not os.path.exists(tgt_dir):
+    if verbose:
+      print "mkdir:", tgt_dir
+    os.makedirs(tgt_dir)
 
 def copy_changed_file(src, tgt):
   assert os.path.isfile(src)
@@ -150,7 +174,7 @@ def copy_execs(baton, dirname, names):
   copied_execs = baton
   for name in names:
     ext = os.path.splitext(name)[1]
-    if ext != ".exe" and ext != ".so":
+    if ext != ".exe":
       continue
     src = os.path.join(dirname, name)
     tgt = os.path.join(abs_builddir, dirname, name)
@@ -191,6 +215,20 @@ def locate_libs():
   if libintl_path is not None:
     libintl_dll_path = os.path.join(libintl_path, 'bin', 'intl3_svn.dll')
     copy_changed_file(libintl_dll_path, abs_objdir)
+
+  # Copy the Subversion library DLLs
+  if not cp.has_option('options', '--disable-shared'):
+    for svn_dll in svn_dlls:
+      copy_changed_file(os.path.join(abs_objdir, svn_dll), abs_objdir)
+
+  # Copy the Apache modules
+  if run_httpd and cp.has_option('options', '--with-httpd'):
+    mod_dav_svn_path = os.path.join(abs_objdir, 'subversion',
+                                    'mod_dav_svn', 'mod_dav_svn.so')
+    mod_authz_svn_path = os.path.join(abs_objdir, 'subversion',
+                                      'mod_authz_svn', 'mod_authz_svn.so')
+    copy_changed_file(mod_dav_svn_path, abs_objdir)
+    copy_changed_file(mod_authz_svn_path, abs_objdir)
 
   os.environ['APR_ICONV_PATH'] = os.path.abspath(apriconv_so_path)
   os.environ['PATH'] = abs_objdir + os.pathsep + os.environ['PATH']
@@ -261,13 +299,20 @@ class Svnserve:
 
 class Httpd:
   "Run httpd for ra_dav tests"
-  def __init__(self, abs_httpd_dir, abs_builddir, httpd_port):
+  def __init__(self, abs_httpd_dir, abs_objdir, abs_builddir, httpd_port):
     self.name = 'apache.exe'
     self.httpd_port = httpd_port
     self.httpd_dir = abs_httpd_dir 
     self.path = os.path.join(self.httpd_dir, 'bin', self.name)
-    self.root = os.path.join(abs_builddir, CMDLINE_TEST_SCRIPT_NATIVE_PATH,
-                             'httpd')
+
+    if not os.path.exists(self.path):
+      self.name = 'httpd.exe'
+      self.path = os.path.join(self.httpd_dir, 'bin', self.name)
+      if not os.path.exists(self.path):
+        raise RuntimeError, "Could not find a valid httpd binary!"
+
+    self.root_dir = os.path.join(CMDLINE_TEST_SCRIPT_NATIVE_PATH, 'httpd')
+    self.root = os.path.join(abs_builddir, self.root_dir)
     self.authz_file = os.path.join(abs_builddir,
                                    CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                                    'svn-test-work', 'authz')
@@ -275,15 +320,26 @@ class Httpd:
     self.httpd_users = os.path.join(self.root, 'users')
     self.httpd_mime_types = os.path.join(self.root, 'mime.types')
     self.abs_builddir = abs_builddir
+    self.abs_objdir = abs_objdir
     self.service_name = 'svn-test-httpd-' + str(httpd_port)
     self.httpd_args = [self.name, '-n', self._quote(self.service_name),
                        '-f', self._quote(self.httpd_config)]
-    
-    create_target_dir(self.root)
+   
+    create_target_dir(self.root_dir)
     
     self._create_users_file()
     self._create_mime_types_file()
-        
+       
+    # Determine version.
+    if os.path.exists(os.path.join(self.httpd_dir,
+                                   'modules', 'mod_access_compat.so')):
+      self.httpd_ver = 2.3
+    elif os.path.exists(os.path.join(self.httpd_dir,
+                                     'modules', 'mod_auth_basic.so')):
+      self.httpd_ver = 2.2
+    else:
+      self.httpd_ver = 2.0
+
     # Create httpd config file    
     fp = open(self.httpd_config, 'w')
 
@@ -297,15 +353,22 @@ class Httpd:
 
     # Write LoadModule for minimal system module
     fp.write(self._sys_module('dav_module', 'mod_dav.so'))
-    fp.write(self._sys_module('auth_module', 'mod_auth.so'))
+    if self.httpd_ver >= 2.3:
+      fp.write(self._sys_module('access_compat_module', 'mod_access_compat.so'))
+      fp.write(self._sys_module('authz_core_module', 'mod_authz_core.so'))
+      fp.write(self._sys_module('authz_user_module', 'mod_authz_user.so'))
+    if self.httpd_ver >= 2.2:
+      fp.write(self._sys_module('auth_basic_module', 'mod_auth_basic.so'))
+      fp.write(self._sys_module('authn_core_module', 'mod_authn_core.so'))
+      fp.write(self._sys_module('authn_file_module', 'mod_authn_file.so'))
+    else:
+      fp.write(self._sys_module('auth_module', 'mod_auth.so'))
     fp.write(self._sys_module('mime_module', 'mod_mime.so'))
     fp.write(self._sys_module('log_config_module', 'mod_log_config.so'))
     
     # Write LoadModule for Subversion modules
-    fp.write(self._svn_module('dav_svn_module', os.path.join('mod_dav_svn',
-             'mod_dav_svn.so')))
-    fp.write(self._svn_module('authz_svn_module', os.path.join(
-             'mod_authz_svn', 'mod_authz_svn.so')))
+    fp.write(self._svn_module('dav_svn_module', 'mod_dav_svn.so'))
+    fp.write(self._svn_module('authz_svn_module', 'mod_authz_svn.so'))
 
     # Define two locations for repositories
     fp.write(self._svn_repo('repositories'))
@@ -345,7 +408,7 @@ class Httpd:
     return 'LoadModule ' + name + " " + self._quote(full_path) + '\n'
 
   def _svn_module(self, name, path):
-    full_path = os.path.join(self.abs_builddir, 'subversion', path)
+    full_path = os.path.join(self.abs_objdir, path)
     return 'LoadModule ' + name + ' ' + self._quote(full_path) + '\n' 
 
   def _svn_repo(self, name):
@@ -384,12 +447,14 @@ if create_dirs:
     os.chdir(abs_objdir)
     baton = copied_execs
     os.path.walk('subversion', copy_execs, baton)
-    create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
   except:
     os.chdir(old_cwd)
     raise
   else:
     os.chdir(old_cwd)
+
+# Create the base directory for Python tests
+create_target_dir(CMDLINE_TEST_SCRIPT_NATIVE_PATH)
 
 # Ensure the tests directory is correctly cased
 abs_builddir = fix_case(abs_builddir)
@@ -400,7 +465,7 @@ if run_svnserve:
   daemon = Svnserve(svnserve_args, objdir, abs_objdir, abs_builddir)
 
 if run_httpd:
-  daemon = Httpd(abs_httpd_dir, abs_builddir, httpd_port)
+  daemon = Httpd(abs_httpd_dir, abs_objdir, abs_builddir, httpd_port)
 
 # Start service daemon, if any
 if daemon:

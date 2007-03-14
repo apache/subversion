@@ -85,10 +85,10 @@ const char *svn_err_best_message(svn_error_t *err,
  *
  * Returns:  a new error structure (containing the old one).
  *
- * Notes: Errors are always allocated in a subpool of the global pool,
+ * @note Errors are always allocated in a subpool of the global pool,
  *        since an error's lifetime is generally not related to the
  *        lifetime of any convenient pool.  Errors must be freed
- *        with svn_error_clear().  The specific message should be NULL
+ *        with svn_error_clear().  The specific message should be @c NULL
  *        if there is nothing to add to the general message associated
  *        with the error code.
  *
@@ -117,7 +117,7 @@ svn_error_t *svn_error_createf(apr_status_t apr_err,
 #define svn_error_createf \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_createf))
 
-/** Wrap a status from an APR function.  If @a fmt is NULL, this is
+/** Wrap a @a status from an APR function.  If @a fmt is NULL, this is
  * equivalent to svn_error_create(status,NULL,NULL).  Otherwise,
  * the error message is constructed by formatting @a fmt and the
  * following arguments according to apr_psprintf(), and then
@@ -132,9 +132,9 @@ svn_error_t *svn_error_wrap_apr(apr_status_t status, const char *fmt, ...)
 #define svn_error_wrap_apr \
   (svn_error__locate(__FILE__,__LINE__), (svn_error_wrap_apr))
 
-/** A quick n' easy way to create a wrappered exception with your own
+/** A quick n' easy way to create a wrapped exception with your own
  * message, before throwing it up the stack.  (It uses all of the
- * child's fields.)
+ * @a child's fields.)
  */
 svn_error_t *svn_error_quick_wrap(svn_error_t *child, const char *new_msg);
 
@@ -148,7 +148,15 @@ svn_error_t *svn_error_quick_wrap(svn_error_t *child, const char *new_msg);
  */
 void svn_error_compose(svn_error_t *chain, svn_error_t *new_err);
 
-/** Create a new error that is a deep copy of err and return it.
+/** Return whether @a apr_err exists as the root cause of @a err by
+ * finding the last error in its chain (e.g. it or its children), and
+ * comparing its @c apr_error field.
+ *
+ * @since New in 1.5.
+ */
+svn_boolean_t svn_error_root_cause_is(svn_error_t *err, apr_status_t apr_err);
+
+/** Create a new error that is a deep copy of @a err and return it.
  *
  * @since New in 1.2.
  */
@@ -169,7 +177,7 @@ void svn_error_clear(svn_error_t *error);
 /**
  * Very basic default error handler: print out error stack @a error to the
  * stdio stream @a stream, with each error prefixed by @a prefix, and quit
- * iff the @a fatal flag is set.  Allocations are performed in the error's
+ * iff the @a fatal flag is set.  Allocations are performed in the @a error's
  * pool.
  *
  * If you're not sure what prefix to pass, just pass "svn: ".  That's
@@ -214,12 +222,12 @@ void svn_handle_warning(FILE *stream, svn_error_t *error);
  * but it makes this macro syntactically equivalent to the expression
  * statement it resembles.  Without it, statements like
  *
- * <tt>
+ * @code
  *   if (a)
  *     SVN_ERR (some operation);
  *   else
  *     foo;
- * </tt>
+ * @endcode
  *
  * would not mean what they appear to.
  */

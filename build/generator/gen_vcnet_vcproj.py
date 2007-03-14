@@ -21,6 +21,18 @@ class Generator(gen_win.WinGeneratorBase):
   def quote(self, str):
     return '&quot;%s&quot;' % str
 
+  def get_external_project(self, target, proj_ext):
+    "Link project files: prefer vcproj's, but if don't exist, try dsp's."
+    vcproj = gen_win.WinGeneratorBase.get_external_project(self, target,
+                                                           proj_ext)
+    if vcproj and not os.path.exists(vcproj):
+      dspproj = gen_win.WinGeneratorBase.get_external_project(self, target,
+                                                              'dsp')
+      if os.path.exists(dspproj):
+        return dspproj
+
+    return vcproj
+
   def write_project(self, target, fname):
     "Write a Project (.vcproj)"
 
@@ -93,6 +105,22 @@ class Generator(gen_win.WinGeneratorBase):
                                               myhash[12:16], myhash[16:20],
                                               myhash[20:32]))
     return guid
+  
+  def getguid(self, path):
+    "Try to get a project's guid from its project file"
+    try:
+      proj = open(path)
+      line = proj.readline()
+      while len(line) > 0:
+        l = string.lower(line)
+        pos = string.find(l, 'projectguid="{')
+        if pos >= 0:
+          guid = line[pos+13:pos+13+38]
+          return guid
+        line = proj.readline()
+      proj.close()
+    except IOError:
+      return None
 
   def write(self):
     "Write a Solution (.sln)"
@@ -111,14 +139,23 @@ class Generator(gen_win.WinGeneratorBase):
 
     guids = { }
 
-    # VC.NET uses GUIDs to refer to projects. generate them up front
+    # VC.NET uses GUIDs to refer to projects. Get them up front
     # because we need them already assigned on the dependencies for
     # each target we work with.
     for target in install_targets:
       # These aren't working yet
       if isinstance(target, gen_base.TargetProject) and target.cmd:
         continue
-      guids[target.name] = self.makeguid(target.name)
+      # If there is a GUID in an external project, then use it
+      # rather than generating our own that won't match and will
+      # cause dependency failures.
+      guid = None
+      proj_path = self.get_external_project(target, 'vcproj')
+      if proj_path is not None:
+        guid = self.getguid(proj_path)
+      if guid is None:
+        guid = self.makeguid(target.name)
+      guids[target.name] = guid
 
     self.gen_proj_names(install_targets)
 

@@ -61,42 +61,6 @@
  * that was allocated out of a pool that was cleared, rather than crashing
  * like we used to do.
  *
- * Tracking owned references
- * -------------------------
- *
- * The pool._add_owned_ref and pool._remove_owned_ref functions keep track
- * of the Python objects which are needed by this pool. We use memory pools
- * to keep track of callback functions and batons.
- *
- * Here's an example of why it's necessary to keep track of Python callback
- * functions and batons from within Python.
- *
- * When you type "client_ctx.log_msg_baton2 = some_object", the PY_AS_VOID
- * typemap converts "some_object" into a simple pointer, and stores it inside
- * the client context as the log message baton. OK, that's great -- but how do
- * we ensure that the memory allocated by Python is still around when the log
- * message callback dereferences that pointer? That's where "_add_owned_ref"
- * comes in.
- *
- * The PY_AS_VOID typemap marks "some_object" as owned by the same pool as the
- * client_ctx object. In other words, it uses _add_owned_ref to add a reference
- * to "some_object" from the pool. Therefore, as long as the pool that owns
- * "client_ctx" is around, "some_object" will be there too. Therefore, we can
- * be sure that some_object will be there when we need it.
- *
- * Some folks might ask: Why not just increment the reference count of
- * "some_object" in the PY_AS_VOID typemap?
- *
- * Well sure, incrementing the reference count of "some_object" would make
- * sure that we keep it around, but then, unless we have a corresponding call
- * to decrement the reference count when the object is no longer needed, we'll
- * have a memory leak.
- *
- * By simply adding a reference to "some_object" into the Python pool object,
- * we let Python keep track of the references. When Python kills the pool,
- * it'll kill the reference to "some_object" as well, therefore freeing up the
- * memory.
- *
  */
 
 %pythoncode %{
@@ -199,28 +163,6 @@ struct apr_pool_t {
           del self._parent_pool
         if hasattr(self, "_is_valid"):
           del self._is_valid
-
-        # Clear out any pool-owned references inserted by typemaps
-        if hasattr(self, "_owned_refs"):
-          del self._owned_refs
-
-      def _add_owned_ref(self, ref):
-        """Add a new 'owned' reference -- i.e. a Python object contained in a C
-           structure allocated in this pool.  Used by the typemaps to manage
-           reference counting semantics."""
-        if not hasattr(self, "_owned_refs"):
-          self._owned_refs = {}
-        if self._owned_refs.has_key(ref):
-          self._owned_refs[ref] += 1
-        else:
-          self._owned_refs[ref] = 1
-
-      def _remove_owned_ref(self, ref):
-        """Remove an existing 'owned' reference.  Also used by typemaps."""
-        if hasattr(self, "_owned_refs") and self._owned_refs.has_key(ref):
-          self._owned_refs[ref] -= 1
-          if self._owned_refs[ref] == 0:
-            del self._owned_refs[ref]
 
       def __del__(self):
         """Automatically destroy memory pools, if necessary"""

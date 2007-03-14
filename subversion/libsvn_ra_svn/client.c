@@ -2,7 +2,7 @@
  * client.c :  Functions for repository access via the Subversion protocol
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -18,6 +18,8 @@
 
 
 
+#include "svn_private_config.h"
+
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 #include <apr_general.h>
@@ -42,6 +44,12 @@
 #include "svn_props.h"
 
 #include "ra_svn.h"
+
+#ifdef SVN_HAVE_SASL
+#define DO_AUTH svn_ra_svn__do_cyrus_auth
+#else
+#define DO_AUTH svn_ra_svn__do_internal_auth
+#endif
 
 typedef struct {
   svn_ra_svn__session_baton_t *sess_baton;
@@ -146,7 +154,7 @@ static svn_error_t *parse_proplist(apr_array_header_t *list, apr_pool_t *pool,
   *props = apr_hash_make(pool);
   for (i = 0; i < list->nelts; i++)
     {
-      elt = &((svn_ra_svn_item_t *) list->elts)[i];
+      elt = &APR_ARRAY_IDX(list, i, svn_ra_svn_item_t);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Proplist element not a list"));
@@ -245,7 +253,7 @@ static svn_error_t *handle_auth_request(svn_ra_svn__session_baton_t *sess,
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "lc", &mechlist, &realm));
   if (mechlist->nelts == 0)
     return SVN_NO_ERROR;
-  return svn_ra_svn__do_auth(sess, mechlist, realm, pool);
+  return DO_AUTH(sess, mechlist, realm, pool);
 }
 
 /* --- REPORTER IMPLEMENTATION --- */
@@ -492,14 +500,16 @@ static svn_error_t *parse_url(const char *url, apr_uri_t *uri,
 }
 
 /* Open a session to URL, returning it in *SESS_P, allocating it in POOL.
-   URI is a parsed version of URL.  AUTH_BATON is provided by the caller of
-   ra_svn_open.  If tunnel_argv is non-null, it points to a program
-   argument list to use when invoking the tunnel agent. */
+   URI is a parsed version of URL.  CALLBACKS and CALLBACKS_BATON
+   are provided by the caller of ra_svn_open. If tunnel_argv is non-null,
+   it points to a program argument list to use when invoking the tunnel agent.
+*/
 static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                                  const char *url,
                                  const apr_uri_t *uri,
-                                 svn_auth_baton_t *auth_baton,
                                  const char **tunnel_argv,
+                                 const svn_ra_callbacks2_t *callbacks,
+                                 void *callbacks_baton,
                                  apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess;
@@ -507,7 +517,18 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
   apr_socket_t *sock;
   apr_uint64_t minver, maxver;
   apr_array_header_t *mechlist, *caplist;
-  
+
+  sess = apr_palloc(pool, sizeof(*sess));
+  sess->pool = pool;
+  sess->is_tunneled = (tunnel_argv != NULL);
+  sess->user = uri->user;
+  sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
+                                    uri->port);
+  sess->tunnel_argv = tunnel_argv;
+  sess->callbacks = callbacks;
+  sess->callbacks_baton = callbacks_baton;
+  sess->bytes_read = sess->bytes_written = 0;
+
   if (tunnel_argv)
     SVN_ERR(make_tunnel(tunnel_argv, &conn, pool));
   else
@@ -515,6 +536,11 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
       SVN_ERR(make_connection(uri->hostname, uri->port, &sock, pool));
       conn = svn_ra_svn_create_conn(sock, NULL, NULL, pool);
     }
+
+  /* Make sure we set conn->session before reading from it,
+   * because the reader and writer functions expect a non-NULL value. */
+  sess->conn = conn;
+  conn->session = sess;
 
   /* Read server's greeting. */
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "nnll", &minver, &maxver,
@@ -526,32 +552,24 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
                              (int) minver);
   SVN_ERR(svn_ra_svn_set_capabilities(conn, caplist));
 
-  sess = apr_palloc(pool, sizeof(*sess));
-  sess->pool = pool;
-  sess->conn = conn;
   sess->protocol_version = (maxver > 2) ? 2 : maxver;
-  sess->is_tunneled = (tunnel_argv != NULL);
-  sess->auth_baton = auth_baton;
-  sess->user = uri->user;
-  sess->realm_prefix = apr_psprintf(pool, "<svn://%s:%d>", uri->hostname,
-                                    uri->port);
-  sess->tunnel_argv = tunnel_argv;
 
   /* In protocol version 2, we send back our protocol version, our
    * capability list, and the URL, and subsequently there is an auth
    * request.  In version 1, we send back the protocol version, auth
    * mechanism, mechanism initial response, and capability list, and;
-   * then send the URL after authentication.  svn_ra_svn__do_auth
-   * temporarily has support for the mixed-style response. */
+   * then send the URL after authentication.  svn_ra_svn__do_cyrus_auth
+   * and svn_ra_svn__do_internal_auth temporarily have support for the
+   * mixed-style response. */
   /* When we punt support for protocol version 1, we should:
    * - Eliminate this conditional and the similar one below
-   * - Remove v1 support from svn_ra_svn__auth_response and inline it 
-   *   into svn_ra_svn__do_auth
-   * - Remove the (realm == NULL) support from svn_ra_svn__do_auth
+   * - Remove v1 support from svn_ra_svn__auth_response
+   * - Remove the (realm == NULL) support from svn_ra_svn__do_cyrus_auth
+   *   and svn_ra_svn__do_internal_auth
    * - Remove the protocol version check from handle_auth_request */
   if (sess->protocol_version == 1)
     {
-      SVN_ERR(svn_ra_svn__do_auth(sess, mechlist, NULL, pool));
+      SVN_ERR(DO_AUTH(sess, mechlist, NULL, pool));
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "c", url));
     }
   else
@@ -615,7 +633,7 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
   svn_ra_svn__session_baton_t *sess;
   const char *tunnel, **tunnel_argv;
   apr_uri_t uri;
-  
+
   SVN_ERR(parse_url(url, &uri, sess_pool));
 
   parse_tunnel(url, &tunnel, pool);
@@ -628,8 +646,8 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session, const char *url,
 
   /* We open the session in a subpool so we can get rid of it if we
      reparent with a server that doesn't support reparenting. */
-  SVN_ERR(open_session(&sess, url, &uri, callbacks->auth_baton, tunnel_argv,
-                       sess_pool));
+  SVN_ERR(open_session(&sess, url, &uri, tunnel_argv,
+                       callbacks, callback_baton, sess_pool));
   session->priv = sess;
 
   return SVN_NO_ERROR;
@@ -660,8 +678,8 @@ static svn_error_t *ra_svn_reparent(svn_ra_session_t *ra_session,
   sess_pool = svn_pool_create(ra_session->pool);
   err = parse_url(url, &uri, sess_pool);
   if (! err)
-    err = open_session(&new_sess, url, &uri, sess->auth_baton,
-                       sess->tunnel_argv, sess_pool);
+    err = open_session(&new_sess, url, &uri, sess->tunnel_argv,
+                       sess->callbacks, sess->callbacks_baton, sess_pool);
   /* We destroy the new session pool on error, since it is allocated in
      the main session pool. */
   if (err)
@@ -973,7 +991,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
   *dirents = apr_hash_make(pool);
   for (i = 0; i < dirlist->nelts; i++)
     {
-      elt = &((svn_ra_svn_item_t *) dirlist->elts)[i];
+      elt = &APR_ARRAY_IDX(dirlist, i, svn_ra_svn_item_t);
       if (elt->kind != SVN_RA_SVN_LIST)
         return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                 _("Dirlist element not a list"));
@@ -1115,7 +1133,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
     {
       for (i = 0; i < paths->nelts; i++)
         {
-          path = ((const char **) paths->elts)[i];
+          path = APR_ARRAY_IDX(paths, i, const char *);
           SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
         }
     }
@@ -1143,7 +1161,7 @@ static svn_error_t *ra_svn_log(svn_ra_session_t *session,
           cphash = apr_hash_make(subpool);
           for (i = 0; i < cplist->nelts; i++)
             {
-              elt = &((svn_ra_svn_item_t *) cplist->elts)[i];
+              elt = &APR_ARRAY_IDX(cplist, i, svn_ra_svn_item_t);
               if (elt->kind != SVN_RA_SVN_LIST)
                 return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
                                         _("Changed-path entry not a list"));
@@ -1271,7 +1289,7 @@ static svn_error_t *ra_svn_get_locations(svn_ra_session_t *session,
                                  "get-locations", path, peg_revision));
   for (i = 0; i < location_revisions->nelts; i++)
     {
-      revision = ((svn_revnum_t *)location_revisions->elts)[i];
+      revision = APR_ARRAY_IDX(location_revisions, i, svn_revnum_t);
       SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!r!", revision));
     }
 

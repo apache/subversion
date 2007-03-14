@@ -2,7 +2,7 @@
  * update.c: handle the update-report request and response
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -412,7 +412,7 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
       for (i = 0; i < baton->removed_props->nelts; i++)
         {
           /* We already XML-escaped the property name in change_xxx_prop. */
-          qname = ((const char **)(baton->removed_props->elts))[i];
+          qname = APR_ARRAY_IDX(baton->removed_props, i, const char *);
           SVN_ERR(dav_svn__send_xml(baton->uc->bb, baton->uc->output,
                                     "<S:remove-prop name=\"%s\"/>" 
                                     DEBUG_CR, qname));
@@ -706,14 +706,14 @@ upd_change_xxx_prop(void *baton,
           if (! b->changed_props)
             b->changed_props = apr_array_make(b->pool, 1, sizeof(name));
           
-          (*((const char **)(apr_array_push(b->changed_props)))) = qname;
+          APR_ARRAY_PUSH(b->changed_props, const char *) = qname;
         }
       else
         {
           if (! b->removed_props)
             b->removed_props = apr_array_make(b->pool, 1, sizeof(name));
           
-          (*((const char **)(apr_array_push(b->removed_props)))) = qname;
+          APR_ARRAY_PUSH(b->removed_props, const char *) = qname;
         }
     }
 
@@ -902,6 +902,7 @@ dav_svn__update_report(const dav_resource *resource,
   void *rbaton = NULL;
   update_ctx_t uc = { 0 };
   svn_revnum_t revnum = SVN_INVALID_REVNUM;
+  svn_revnum_t from_revnum = SVN_INVALID_REVNUM;
   int ns;
   int entry_counter = 0;
   svn_boolean_t entry_is_empty = FALSE;
@@ -1202,7 +1203,11 @@ dav_svn__update_report(const dav_resource *resource,
 
             /* get cdata, stripping whitespace */
             path = dav_xml_get_cdata(child, subpool, 0);
-            
+
+            /* determine the "from rev" for revision range ops */
+            if (strcmp(path, "") == 0)
+              from_revnum = rev;
+
             if (! linkpath)
               serr = svn_repos_set_path2(rbaton, path, rev,
                                          start_empty, locktoken, subpool);
@@ -1263,37 +1268,46 @@ dav_svn__update_report(const dav_resource *resource,
     if (dst_path)
       {
         /* diff/merge don't ask for inline text-deltas. */
-        if (uc.send_all)
+        if (!uc.send_all && strcmp(spath, dst_path) == 0)
           action = apr_psprintf(resource->pool,
-                                "switch '%s' '%s'",
-                                spath, dst_path);
+                                "diff-or-merge '%s' r%" SVN_REVNUM_T_FMT \
+                                 ":%" SVN_REVNUM_T_FMT,
+                                svn_path_uri_encode(spath, resource->pool),
+                                from_revnum,
+                                revnum);
         else
           action = apr_psprintf(resource->pool,
-                                "diff-or-merge '%s' '%s'",
-                                spath, dst_path);          
+                                "%s '%s@%" SVN_REVNUM_T_FMT "'" \
+                                 " '%s@%" SVN_REVNUM_T_FMT "'",
+                                (uc.send_all ? "switch" : "diff-or-merge"),
+                                svn_path_uri_encode(spath, resource->pool),
+                                from_revnum,
+                                svn_path_uri_encode(dst_path, resource->pool),
+                                revnum);
       }
 
-    /* Otherwise, it must be checkout, export, or update. */
+    /* Otherwise, it must be checkout, export, update, or status -u. */
     else
       {
         /* svn_client_checkout() creates a single root directory, then
            reports it (and it alone) to the server as being empty. */
         if (entry_counter == 1 && entry_is_empty)
           action = apr_psprintf(resource->pool,
-                                "checkout-or-export '%s'",
-                                svn_path_uri_encode(spath, resource->pool));
+                                "checkout-or-export '%s' r%" SVN_REVNUM_T_FMT,
+                                svn_path_uri_encode(spath, resource->pool),
+                                revnum);
         else
           {
             if (text_deltas)
               action = apr_psprintf(resource->pool,
-                                    "update '%s'",
-                                    svn_path_uri_encode(spath,
-                                                        resource->pool));
+                                    "update '%s' r%" SVN_REVNUM_T_FMT,
+                                    svn_path_uri_encode(spath, resource->pool),
+                                    revnum);
             else
               action = apr_psprintf(resource->pool,
-                                    "remote-status '%s'",
-                                    svn_path_uri_encode(spath,
-                                                        resource->pool));
+                                    "remote-status '%s' r%" SVN_REVNUM_T_FMT,
+                                    svn_path_uri_encode(spath, resource->pool),
+                                    revnum);
           }
       }
 

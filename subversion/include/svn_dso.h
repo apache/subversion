@@ -49,6 +49,7 @@ extern "C" {
  */
 void svn_dso_initialize(void);
 
+#if APR_HAS_DSO
 /**
  * Attempt to load @a libname, returning it in @a dso.
  *
@@ -63,6 +64,7 @@ void svn_dso_initialize(void);
  * @since New in 1.4.0.
  */
 svn_error_t *svn_dso_load(apr_dso_handle_t **dso, const char *libname);
+#endif /* APR_HAS_DSO */
 
 #ifdef __cplusplus
 }

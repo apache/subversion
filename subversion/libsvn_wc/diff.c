@@ -577,12 +577,12 @@ file_diff(struct dir_baton *dir_baton,
       break;
 
     default:
-      SVN_ERR(svn_wc_text_modified_p2(&modified, path, FALSE,
-                                      FALSE, adm_access, pool));
+      SVN_ERR(svn_wc_text_modified_p(&modified, path, FALSE,
+                                     adm_access, pool));
       if (modified)
         {
           /* Note that this might be the _second_ time we translate
-             the file, as svn_wc_text_modified_p2() might have used a
+             the file, as svn_wc_text_modified_p() might have used a
              tmp translated copy too.  But what the heck, diff is
              already expensive, translating twice for the sake of code
              modularity is liveable. */
@@ -1423,8 +1423,8 @@ close_file(void *file_baton,
      (BASE:WORKING) modifications. */
   modified = (b->temp_file_path != NULL);
   if (!modified && !eb->use_text_base)
-    SVN_ERR(svn_wc_text_modified_p2(&modified, b->path, FALSE,
-                                    FALSE, adm_access, pool));
+    SVN_ERR(svn_wc_text_modified_p(&modified, b->path, FALSE,
+                                   adm_access, pool));
 
   if (modified)
     {
@@ -1655,7 +1655,7 @@ dir_props_changed(svn_wc_adm_access_t *adm_access,
                                      originalprops, b->baton);
 }
 
-/* Used to wrap svn_diff_callbacks_t as an svn_wc_diff_callbacks_2t. */
+/* Used to wrap svn_diff_callbacks_t as an svn_wc_diff_callbacks2_t. */
 static struct svn_wc_diff_callbacks2_t callbacks_wrapper = {
   file_changed,
   file_added,

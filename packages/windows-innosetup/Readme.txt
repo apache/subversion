@@ -141,6 +141,7 @@ Dynamic build data
   path_setup_in       Contains misc. files to include in the setup
   path_is             Path to the Inno Setup executable's directory
   path_svnclient      svn.exe
+  path_svnsync        svnsync.exe
   path_svnadmin       svnadmin.exe
   path_svnlook        svnlook.exe
   path_svnserve       svnserve.exe
@@ -178,7 +179,7 @@ Programs used for the Subversion Windows installer
   ------
   A good installation script for any installation programs are usually very
   complicated and requires good script editing software.
-  The program used for this is ISTool and it's syntax high-lightning makes it
+  The program used for this is ISTool and its syntax high-lighting makes it
   the perfect companion to IS and friends.
 
   The author - Bjørnar Henden are doing a great job by updating his program
@@ -222,7 +223,7 @@ Programs used for the Subversion Windows installer
   This package is needed for making documentation.
   
   Unzip the files inside docbook-xsl-*.**.*.zip to a folder named xsl which
-  resides under doc\book\tools in your working copy of the svnbook repository.
+  resides under src\tools in your working copy of the svnbook repository.
   Rename the unpacked top level folder from "docbook-xsl-x.xx.x" to "xsl", the
   result should be like this:
     src\tools\xsl

@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -143,9 +143,11 @@ void svn_fs_set_warning_func(svn_fs_t *fs,
  *   SVN_FS_TYPE_BDB   Berkeley-DB implementation
  *   SVN_FS_TYPE_FSFS  Native-filesystem implementation
  *
- * Otherwise, the BDB filesystem type is assumed.  Once the filesystem
- * is created, its type will be recorded so that other functions will
- * know how to operate on it.
+ * If @a fs_config is @c NULL or does not contain a value for
+ * @c SVN_FS_CONFIG_FS_TYPE then the default filesystem type will be used.
+ * This will typically be BDB for version 1.1 and FSFS for later versions,
+ * though the caller should not rely upon any particular default if they
+ * wish to ensure that a filesystem of a specific type is created.
  *
  * @since New in 1.1.
  */
@@ -222,6 +224,47 @@ svn_error_t *svn_fs_delete_fs(const char *path, apr_pool_t *pool);
 svn_error_t *svn_fs_hotcopy(const char *src_path, const char *dest_path,
                             svn_boolean_t clean, apr_pool_t *pool);
 
+/** Perform any necessary non-catastrophic recovery on the Subversion
+ * filesystem located at @a path.
+ *
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * recovery.  BDB filesystems do not currently support cancellation.
+ *
+ * Do any necessary allocation within @a pool.
+ *
+ * For FSFS filesystems, recovery is currently limited to recreating
+ * the db/current file, and does not require exclusive access.
+ *
+ * For BDB filesystems, recovery requires exclusive access, and is
+ * described in detail below.
+ *
+ * After an unexpected server exit, due to a server crash or a system
+ * crash, a Subversion filesystem based on Berkeley DB needs to run
+ * recovery procedures to bring the database back into a consistent
+ * state and release any locks that were held by the deceased process.
+ * The recovery procedures require exclusive access to the database
+ * --- while they execute, no other process or thread may access the
+ * database.
+ *
+ * In a server with multiple worker processes, like Apache, if a
+ * worker process accessing the filesystem dies, you must stop the
+ * other worker processes, and run recovery.  Then, the other worker
+ * processes can re-open the database and resume work.
+ *
+ * If the server exited cleanly, there is no need to run recovery, but
+ * there is no harm in it, either, and it take very little time.  So
+ * it's a fine idea to run recovery when the server process starts,
+ * before it begins handling any requests.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_fs_recover(const char *path,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool);
+
+
 /** Subversion filesystems based on Berkeley DB.
  *
  * The following functions are specific to Berkeley DB filesystems.
@@ -260,32 +303,6 @@ svn_error_t *svn_fs_set_berkeley_errcall(svn_fs_t *fs,
                                          void (*handler)(const char *errpfx,
                                                          char *msg));
 
-/** Perform any necessary non-catastrophic recovery on a Berkeley
- * DB-based Subversion filesystem, stored in the environment @a path.
- * Do any necessary allocation within @a pool.
- *
- * After an unexpected server exit, due to a server crash or a system
- * crash, a Subversion filesystem based on Berkeley DB needs to run
- * recovery procedures to bring the database back into a consistent
- * state and release any locks that were held by the deceased process.
- * The recovery procedures require exclusive access to the database
- * --- while they execute, no other process or thread may access the
- * database.
- *
- * In a server with multiple worker processes, like Apache, if a
- * worker process accessing the filesystem dies, you must stop the
- * other worker processes, and run recovery.  Then, the other worker
- * processes can re-open the database and resume work.
- *
- * If the server exited cleanly, there is no need to run recovery, but
- * there is no harm in it, either, and it take very little time.  So
- * it's a fine idea to run recovery when the server process starts,
- * before it begins handling any requests.
- */
-svn_error_t *svn_fs_berkeley_recover(const char *path,
-                                     apr_pool_t *pool);
-
-
 /** Set @a *logfiles to an array of <tt>const char *</tt> log file names
  * of Berkeley DB-based Subversion filesystem.
  *
@@ -310,7 +327,8 @@ svn_error_t *svn_fs_berkeley_logfiles(apr_array_header_t **logfiles,
  *
  * In Subversion 1.2 and earlier, they only work on Berkeley DB filesystems.
  * In Subversion 1.3 and later, they perform largely as aliases for their
- * generic counterparts.
+ * generic counterparts (with the exception of recover, which only gained
+ * a generic counterpart in 1.5).
  *
  * @defgroup svn_fs_bdb_deprecated berkeley db filesystem compatibility
  * @{
@@ -335,6 +353,10 @@ svn_error_t *svn_fs_delete_berkeley(const char *path, apr_pool_t *pool);
 svn_error_t *svn_fs_hotcopy_berkeley(const char *src_path, 
                                      const char *dest_path, 
                                      svn_boolean_t clean_logs,
+                                     apr_pool_t *pool);
+
+/** @deprecated Provided for backward compatibility with the 1.4 API. */
+svn_error_t *svn_fs_berkeley_recover(const char *path,
                                      apr_pool_t *pool);
 /** @} */
 
@@ -804,6 +826,13 @@ svn_boolean_t svn_fs_is_revision_root(svn_fs_root_t *root);
 const char *svn_fs_txn_root_name(svn_fs_root_t *root,
                                  apr_pool_t *pool);
 
+/** If @a root is the root of a transaction, return the number of the
+ * revision on which is was based when created.  Otherwise, return @c
+ * SVN_INVALID_REVNUM.
+ *
+ * @since New in 1.5.
+ */
+svn_revnum_t svn_fs_txn_root_base_revision(svn_fs_root_t *root);
 
 /** If @a root is the root of a revision, return the revision number.
  * Otherwise, return @c SVN_INVALID_REVNUM.
@@ -996,7 +1025,9 @@ svn_error_t *svn_fs_node_id(const svn_fs_id_t **id_p,
 /** Set @a *revision to the revision in which @a path under @a root was 
  * created.  Use @a pool for any temporary allocations.  @a *revision will 
  * be set to @c SVN_INVALID_REVNUM for uncommitted nodes (i.e. modified nodes 
- * under a transaction root).
+ * under a transaction root).  Note that the root of an unmodified transaction
+ * is not itself considered to be modified; in that case, return the revision
+ * upon which the transaction was based.
  */
 svn_error_t *svn_fs_node_created_rev(svn_revnum_t *revision,
                                      svn_fs_root_t *root,
@@ -1411,7 +1442,8 @@ svn_error_t *svn_fs_apply_textdelta(svn_txdelta_window_handler_t *contents_p,
  *
  * Set @a *contents_p to a stream ready to receive full textual data.
  * When the caller closes this stream, the data replaces the previous
- * contents of the file.
+ * contents of the file.  The caller must write all file data and close
+ * the stream before making further changes to the transaction.
  *
  * If @a path does not exist in @a root, return an error.  (You cannot use
  * this routine to create new files;  use svn_fs_make_file() to create

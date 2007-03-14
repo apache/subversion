@@ -2,7 +2,7 @@
  * locking_commands.c:  Implementation of lock and unlock.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -206,7 +206,7 @@ organize_lock_targets(const char **common_parent,
 
       for (i = 0; i < rel_targets->nelts; i++)
         {
-          const char *target = ((const char **) (rel_targets->elts))[i];
+          const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
           apr_hash_set(rel_targets_ret, svn_path_uri_decode(target, pool),
                        APR_HASH_KEY_STRING,
                        do_lock ? (const void *) invalid_revnum
@@ -227,7 +227,7 @@ organize_lock_targets(const char **common_parent,
          is the depth to which we need to lock the WC. */
       for (i = 0; i < rel_targets->nelts; ++i)
         {
-          const char *target = ((const char **) (rel_targets->elts))[i];
+          const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
           int n = svn_path_component_count(target);
 
           if (n > max_depth)
@@ -243,7 +243,7 @@ organize_lock_targets(const char **common_parent,
       for (i = 0; i < rel_targets->nelts; i++)
         {
           const svn_wc_entry_t *entry;
-          const char *target = ((const char **) (rel_targets->elts))[i];
+          const char *target = APR_ARRAY_IDX(rel_targets, i, const char *);
           const char *abs_path;
 
           svn_pool_clear(subpool);
@@ -263,8 +263,8 @@ organize_lock_targets(const char **common_parent,
                                      _("'%s' has no URL"),
                                      svn_path_local_style(target, pool));
 
-          (*((const char **)(apr_array_push(urls)))) = apr_pstrdup 
-            (pool, entry->url);
+          APR_ARRAY_PUSH(urls, const char *) = apr_pstrdup(pool,
+                                                           entry->url);
         }
 
       /* Condense our absolute urls and get the relative urls. */
@@ -406,7 +406,7 @@ svn_client_lock(const apr_array_header_t *targets,
       if (! svn_xml_is_xml_safe(comment, strlen(comment)))
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-           _("Lock comment has illegal characters"));      
+           _("Lock comment contains illegal characters"));      
     }
 
   SVN_ERR(organize_lock_targets(&common_parent, &adm_access,

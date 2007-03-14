@@ -1,7 +1,7 @@
 /* repos.c : repository creation; shared and exclusive repository locking
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1419,6 +1419,10 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### the file's location is relative to the conf directory."
       APR_EOL_STR
+#ifdef SVN_HAVE_SASL
+      "### If use-sasl is set to \"true\" below, this file will NOT be used."
+      APR_EOL_STR
+#endif
       "### Uncomment the line below to use the default password file."
       APR_EOL_STR
       "# password-db = passwd"
@@ -1446,6 +1450,31 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       "### is repository's uuid."
       APR_EOL_STR
       "# realm = My First Repository"
+#ifdef SVN_HAVE_SASL
+      APR_EOL_STR
+      APR_EOL_STR
+      "[sasl]"
+      APR_EOL_STR
+      "### This option specifies whether you want to use the Cyrus SASL"
+      APR_EOL_STR
+      "### library for authentication. Default is false."
+      APR_EOL_STR
+      "# use-sasl = true"
+      APR_EOL_STR
+      "### These options specify the desired strength of the security layer"
+      APR_EOL_STR
+      "### that you want SASL to provide. 0 means no encryption, 1 means"
+      APR_EOL_STR
+      "### integrity-checking only, values larger than 1 are correlated"
+      APR_EOL_STR
+      "### to the effective key length for encryption (e.g. 128 means 128-bit"
+      APR_EOL_STR
+      "### encryption). The values below are the defaults."
+      APR_EOL_STR
+      "# min-encryption = 0"
+      APR_EOL_STR
+      "# max-encryption = 256"
+#endif
       APR_EOL_STR;
 
     SVN_ERR_W(svn_io_file_create(svn_repos_svnserve_conf(repos, pool),
@@ -1490,25 +1519,46 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### (optional) repository specified by the section name."
       APR_EOL_STR
-      "### The authorizations follow. An authorization line can refer to a"
+      "### The authorizations follow. An authorization line can refer to:"
       APR_EOL_STR
-      "### single user, to a group of users defined in a special [groups]"
+      "###  - a single user,"
       APR_EOL_STR
-      "### section, or to anyone using the '*' wildcard.  Each definition can"
+      "###  - a group of users defined in a special [groups] section,"
+      APR_EOL_STR
+      "###  - an alias defined in a special [aliases] section,"
+      APR_EOL_STR
+      "###  - all authenticated users, using the '$authenticated' token,"
+      APR_EOL_STR
+      "###  - only anonymous users, using the '$anonymous' token,"
+      APR_EOL_STR
+      "###  - anyone, using the '*' wildcard."
+      APR_EOL_STR
+      "###"
+      APR_EOL_STR
+      "### A match can be inverted by prefixing the rule with '~'. Rules can"
       APR_EOL_STR
       "### grant read ('r') access, read-write ('rw') access, or no access"
       APR_EOL_STR
       "### ('')."
       APR_EOL_STR
       APR_EOL_STR
+      "[aliases]"
+      APR_EOL_STR
+      "# joe = /C=XZ/ST=Dessert/L=Snake City/O=Snake Oil, Ltd./OU=Research Institute/CN=Joe Average"
+      APR_EOL_STR
+      APR_EOL_STR
       "[groups]"
       APR_EOL_STR
       "# harry_and_sally = harry,sally"
+      APR_EOL_STR
+      "# harry_sally_and_joe = harry,sally,&joe"
       APR_EOL_STR
       APR_EOL_STR
       "# [/foo/bar]"
       APR_EOL_STR
       "# harry = rw"
+      APR_EOL_STR
+      "# &joe = r"
       APR_EOL_STR
       "# * ="
       APR_EOL_STR
@@ -1691,7 +1741,7 @@ svn_repos_create(svn_repos_t **repos_p,
        * filesystem type.  Clean up after ourselves.  Yes this is safe because
        * create_repos_structure will fail if the path existed before we started
        * so we can't accidentally remove a directory that previously existed. */
-      svn_error_clear(svn_io_remove_dir(path, pool));
+      svn_error_clear(svn_io_remove_dir2(path, FALSE, pool));
       return err;
     }
 
@@ -1825,8 +1875,11 @@ svn_repos_find_root_path(const char *path,
       if (!err && check_repos_path(candidate, pool))
         break;
       svn_error_clear(err);
-      if (candidate[0] == '\0' || strcmp(candidate, "/") == 0)
+
+      if (candidate[0] == '\0' ||
+          svn_path_is_root(candidate, strlen(candidate)))
         return NULL;
+
       candidate = svn_path_dirname(candidate, pool);
     }
 
@@ -1858,7 +1911,7 @@ svn_repos_delete(const char *path,
   SVN_ERR(svn_fs_delete_fs(db_path, pool));
 
   /* ...then blow away everything else.  */
-  SVN_ERR(svn_io_remove_dir(path, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -1873,15 +1926,18 @@ svn_repos_fs(svn_repos_t *repos)
 }
 
 
-/* This code uses repository locking, which is motivated by the
- * need to support DB_RUN_RECOVERY.  Here's how it works:
+/* For historical reasons, for the Berkeley DB backend, this code uses
+ * repository locking, which is motivated by the need to support the
+ * Berkeley DB error DB_RUN_RECOVERY.  (FSFS takes care of locking
+ * itself, inside its implementation of svn_fs_recover.)  Here's how
+ * it works:
  *
  * Every accessor of a repository's database takes out a shared lock
  * on the repository -- both readers and writers get shared locks, and
  * there can be an unlimited number of shared locks simultaneously.
  *
  * Sometimes, a db access returns the error DB_RUN_RECOVERY.  When
- * this happens, we need to run svn_fs_berkeley_recover() on the db
+ * this happens, we need to run svn_fs_recover() on the db
  * with no other accessors present.  So we take out an exclusive lock
  * on the repository.  From the moment we request the exclusive lock,
  * no more shared locks are granted, and when the last shared lock
@@ -1893,18 +1949,21 @@ svn_repos_fs(svn_repos_t *repos)
  */
 
 svn_error_t *
-svn_repos_recover2(const char *path,
+svn_repos_recover3(const char *path,
                    svn_boolean_t nonblocking,
                    svn_error_t *(*start_callback)(void *baton),
                    void *start_callback_baton,
+                   svn_cancel_func_t cancel_func, void *cancel_baton,
                    apr_pool_t *pool)
 {
   svn_repos_t *repos;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  /* Fetch a repository object initialized with an EXCLUSIVE lock on
-     the database.   This will at least prevent others from trying to
-     read or write to it while we run recovery. */
+  /* Fetch a repository object; for the Berkeley DB backend, it is
+     initialized with an EXCLUSIVE lock on the database.  This will at
+     least prevent others from trying to read or write to it while we
+     run recovery. (Other backends should do their own locking; see
+     lock_repos.) */
   SVN_ERR(get_repos(&repos, path, TRUE, nonblocking,
                     FALSE,    /* don't try to open the db yet. */
                     subpool));
@@ -1913,7 +1972,7 @@ svn_repos_recover2(const char *path,
     SVN_ERR(start_callback(start_callback_baton));
 
   /* Recover the database to a consistent state. */
-  SVN_ERR(svn_fs_berkeley_recover(repos->db_path, subpool));
+  SVN_ERR(svn_fs_recover(repos->db_path, cancel_func, cancel_baton, subpool));
 
   /* Close shop and free the subpool, to release the exclusive lock. */
   svn_pool_destroy(subpool);
@@ -1921,6 +1980,19 @@ svn_repos_recover2(const char *path,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_repos_recover2(const char *path,
+                   svn_boolean_t nonblocking,
+                   svn_error_t *(*start_callback)(void *baton),
+                   void *start_callback_baton,
+                   apr_pool_t *pool)
+{
+  return svn_repos_recover3(path, nonblocking,
+                            start_callback, start_callback_baton,
+                            NULL, NULL,
+                            pool);
+}
 
 svn_error_t *
 svn_repos_recover(const char *path,

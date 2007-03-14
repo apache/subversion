@@ -88,7 +88,7 @@ public class SVNOutputStream extends PipedOutputStream
          */
         public int read(byte[] data) throws IOException
         {
-            if(closed)
+            if (closed)
                 throw new IOException("stream has been closed");
             return myStream.read();
         }

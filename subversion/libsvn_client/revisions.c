@@ -2,7 +2,7 @@
  * revisions.c:  discovering revisions
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -140,3 +140,4 @@ svn_client__revision_is_local(const svn_opt_revision_t *revision)
   else
     return TRUE;
 }
+

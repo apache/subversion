@@ -3,12 +3,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
-  @import "tigris-branding/css/tigris.css";
-  @import "tigris-branding/css/inst.css";
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="tigris-branding/css/print.css"/>
-<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
 <title>Subversion 1.4 Release Notes</title>
 </head>
 
@@ -17,23 +17,11 @@
 
 <h1 style="text-align: center">Subversion 1.4 Release Notes</h1>
 
-<div style="color: red; background-color: yellow; width: 98%">
-<p style="font-style: italic; font-weight: bold">WARNING:</p>
-
-<p style="font-style: italic">Subversion 1.4.0 has NOT yet been
-released!  This document is a draft &nbsp;&mdash;we're using it as a
-checklist for the tasks that remain.  When this warning disappears,
-that will mean 1.4.0 is released.</p>
-
-<p>$LastChangedDate$</p>
-
-</div>
-
 <div class="h2" id="news" title="news">
 <h2>What's New in Subversion 1.4</h2>
 
 <ul>
-  <li><strong>svnsync</strong>, a new repository mirroring tool</li>
+  <li><tt>svnsync</tt>, a new repository mirroring tool</li>
   <li>Huge working-copy performance improvements</li>
   <li>Support for BerkeleyDB 4.4 and its "auto recovery" feature</li>
   <li>Size improvements to the binary delta algorithm</li>
@@ -77,7 +65,7 @@ against older libraries.</p>
 <p>Due to certain improvements and bugfixes made to the working copy
 library, the version number of the working copy format has been
 incremented. This means that Subversion clients earlier than 1.4 will
-<i>not</i> be able to work with working copies produced by Subversion
+<em>not</em> be able to work with working copies produced by Subversion
 1.4.  Similarly, the repository format has changed as well, meaning
 that pre-1.4 Subversion tools that normally access a repository
 directly
@@ -85,8 +73,8 @@ directly
 won't be able to read a repository originally created by Subversion
 1.4. </p>
 
-<p><b>WARNING:</b> if a Subversion 1.4 client encounters a pre-1.4
-working copy, it will <i>automatically</i> upgrade the working copy
+<p><strong>WARNING:</strong> if a Subversion 1.4 client encounters a pre-1.4
+working copy, it will <em>automatically</em> upgrade the working copy
 format as soon as it touches it, making it unreadable by older
 Subversion clients.  If you are using several versions of Subversion
 on your machine, you need to be careful about which version you use in
@@ -107,7 +95,7 @@ made to the output:</p>
 
 <ul>
 
-<li><p>TODO</p></li>
+<li><p>Conflict markers in files now match the file's defined eol-style.</p></li>
 
 </ul>
 
@@ -121,13 +109,15 @@ made to the output:</p>
 <div class="h3" id="svnsync" title="svnsync">
 <h3>svnsync (<em>some features require a 1.4 server</em>)</h3>
 
-<p>A new tool &mdash; <strong>svnsync</strong> &mdash; is now
-installed as part of the standard distribution.  This tool provides
-the ability to replicate history from one repository to another.  The
-replication can happen all at once, or can be done incrementally
-through repeated 'sync' operations.  Because the tool uses the
-abstract network (RA) API, the source and destination repositories can
-be either local, remote, or any combination thereof.</p>
+<p>A new tool &mdash; <a
+href="http://svn.collab.net/repos/svn/trunk/notes/svnsync.txt"
+><tt>svnsync</tt></a> &mdash; is now installed as part of the standard
+distribution.  This tool provides the ability to replicate history
+from one repository to another.  The replication can happen all at
+once, or can be done incrementally through repeated 'sync' operations.
+Because the tool uses the abstract network (RA) API, the source and
+destination repositories can be either local, remote, or any
+combination thereof.</p>
 
 <p><em>Compatibility note</em>: in order to "push" information into a
 destination repository, any version of the server will suffice.  The
@@ -157,10 +147,10 @@ deal with large files.  The overall disk footprint is smaller as well,
 with fewer inodes being used.  Additionally, a number of long standing
 bugs related to merging and copying have been fixed.</p>
 
-<p><b>WARNING:</b> A Subversion 1.4 client will silently upgrade older
-working copies to the new format, rendering them unreadable by older
-Subersion clients.  See the section above, titled 'Working Copy Format
-Changes'.</p>
+<p><strong>WARNING:</strong> A Subversion 1.4 client will upgrade
+older working copies to the new format WITHOUT WARNING, rendering them
+unreadable by older Subersion clients.  See the section above, titled
+'Working Copy Format Changes'.</p>
 
 </div> <!-- wc-improvements -->
 
@@ -168,7 +158,7 @@ Changes'.</p>
 <h3>BerkeleyDB 4.4 and auto-recovery (<em>server</em>)</h3>
 
 <p>A common problem with previous versions of Subversion is that
-crashed server proceses could leave BerkeleyDB-based repositories in
+crashed server processes could leave BerkeleyDB-based repositories in
 an unusable "wedged" state, requiring administrators to manually
 intervene and bring back online.  (Note: this is not due to bugs in
 BerkeleyDB, but due to the unorthodox way in which Subversion uses
@@ -182,6 +172,16 @@ problem, grab exclusive control of the repository, and automatically
 recover it.  In theory (and in our testing), this new feature makes
 BerkeleyDB-based repositories just as wedge-proof as FSFS
 repositories.</p>
+
+<p><strong>WARNING:</strong> While upgrading to a new version of Berkeley DB
+will not require you to dump and reload your repository, you
+<em>will</em> still need to follow the Berkeley DB upgrade regimen to
+ensure that your repository is accessible by the new version of those
+libraries.  Please see the <a
+href="http://www.oracle.com/technology/documentation/berkeley-db/db/ref/upgrade/process.html"
+>Upgrading Berkeley DB installations</a> chapter of the Berkeley DB
+Reference Guide for instructions on upgrading Berkeley DB
+environments.</p>
 
 </div>  <!-- bdb-4.4 -->
 
@@ -203,7 +203,7 @@ to <tt>svnadmin create</tt> the new repository using svnadmin 1.4.)
 Additionally, if a client and server are both version 1.4 , then
 network traffic becomes smaller and faster.</p>
 
-<p><b>WARNING:</b> A repository created by svnadmin 1.4 will not be
+<p><strong>WARNING:</strong> A repository created by svnadmin 1.4 will not be
 readable by earlier Subversion libraries or tools.  However, in order
 to experience the smaller data format, you'll have to dump and reload
 your data.  If you <em>don't</em> recreate your repository with
@@ -216,14 +216,31 @@ format, and will still be readable by older Subversion tools.</p>
 <div class="h3" id="new-switches" title="new-switches">
 <h3>New subcommand switches</h3>
 
-TODO:  EXPLAIN THESE:
+This release of Subversion adds a few new switches and options to the
+command line client. These are:
 
    <dl>
       <dt><tt>svn blame --force</tt></dt>
+      <dd>Displays the output of blame, even if the file is binary.</dd>
+
       <dt><tt>svn merge/blame -x</tt></dt>
+      <dd>Merge and blame commands can now pass options to an external
+      diff3 program.</dd>
+
       <dt><tt>svn diff/merge -c/--change</tt></dt>
+      <dd>You can now simply write -c N to view or merge a single
+      revision, instead of the cumbersome -r N-1:N.</dd>
+
       <dt><tt>svn diff --summarize</tt></dt>
+      <dd>Prints only the list of changed files, in the output format
+      of 'svn status'. This lets you retrieve summaries of changes
+      directly from a repository, whereas 'svn status' operates only
+      on the local changes of your working copy.</dd>
+
       <dt><tt>svn diff -x [-u | -b | -w | --ignore-eol-style]</tt></dt>
+      <dd>The diff engine internal to Subversion can now ignore
+      whitespace and eol-style when computing the diff.</dd>
+
    </dl>
 
 </div>  <!-- new-switches -->
@@ -236,7 +253,12 @@ TODO:  EXPLAIN THESE:
 <div class="h3" id="svnserve" title="svnserve">
 <h3>svnserve as native Windows service (<em>server</em>)</h3>
 
-blah blah
+The <tt>svnserve</tt> server can now be run as a Windows service. This
+allows svnserve to start automatically, at system boot time, without
+having a user logged in and without the need for an external service
+'wrapper' program. See <a
+href="http://svn.collab.net/repos/svn/tags/1.4.0/notes/windows-service.txt"><tt>notes/windows-service.txt</tt></a>
+for information on setting up <tt>svnserve</tt> as a Windows service.
 
 </div>  <!-- svnserve -->
 
@@ -255,7 +277,10 @@ rather than in <tt>~/.subversion/auth/</tt>.
   APIs, you may want to take notice of some new APIs:</p>
 
 <ul>
-  <li>TODO</li>
+  <li>The RA replay API, used by <tt>svnsync</tt>, lets you retrieve
+  all the data associated with a set of revisions in a single
+  operation.</li>
+
   <li>Many APIs have been revised to newer versions.</li>
 </ul>
 

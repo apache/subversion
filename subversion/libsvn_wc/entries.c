@@ -2,7 +2,7 @@
  * entries.c :  manipulating the administrative `entries' file.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -72,7 +72,7 @@ alloc_entry(apr_pool_t *pool)
  * false.  ENTRY_NAME is the name of the WC-entry. */
 static svn_error_t *
 do_bool_attr(svn_boolean_t *entry_flag,
-             apr_uint32_t *modify_flags, apr_uint32_t modify_flag,
+             apr_uint64_t *modify_flags, apr_uint64_t modify_flag,
              apr_hash_t *atts, const char *attr_name,
              const char *entry_name)
 {
@@ -449,6 +449,34 @@ read_entry(svn_wc_entry_t **new_entry,
 
   /* Changelist. */
   SVN_ERR(read_str(&entry->changelist, buf, end, pool));
+  MAYBE_DONE;
+
+  /* Keep entry in working copy after deletion? */
+  SVN_ERR(read_bool(&entry->keep_local, SVN_WC__ENTRY_ATTR_KEEP_LOCAL,
+                    buf, end));
+  MAYBE_DONE;
+
+  /* Translated size */
+  {
+    const char *val;
+
+    SVN_ERR(read_str(&val, buf, end, pool));
+
+    if (val)
+      entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
+    else
+      {
+        if (name)
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("Entry '%s' has invalid or missing working-size"), name);
+        else
+          return svn_error_createf 
+            (SVN_ERR_ENTRY_ATTRIBUTE_INVALID, NULL,
+             _("This directory's entry has invalid or missing working-size"));
+      }
+  }
+  MAYBE_DONE;
 
  done:
   *new_entry = entry;
@@ -458,7 +486,7 @@ read_entry(svn_wc_entry_t **new_entry,
 
 svn_error_t *
 svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
-                      apr_uint32_t *modify_flags,
+                      apr_uint64_t *modify_flags,
                       apr_hash_t *atts,
                       apr_pool_t *pool)
 {
@@ -469,12 +497,6 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 
   /* Find the name and set up the entry under that name. */
   name = apr_hash_get(atts, SVN_WC__ENTRY_ATTR_NAME, APR_HASH_KEY_STRING);
-  /* XXX Replace the obsolete "svn:this_dir".
-     XXX This code should go away by 1.0 */
-  {
-    if (name && strcmp(name, "svn:this_dir") == 0)
-      name = SVN_WC_ENTRY_THIS_DIR;
-  }
   entry->name = name ? apr_pstrdup(pool, name) : SVN_WC_ENTRY_THIS_DIR;
 
   /* Attempt to set revision (resolve_to_defaults may do it later, too) */
@@ -652,6 +674,10 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
                        modify_flags, SVN_WC__ENTRY_MODIFY_INCOMPLETE,
                        atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, name));
 
+  /* Should this item be kept in the working copy after deletion? */
+  SVN_ERR(do_bool_attr(&entry->keep_local,
+                       modify_flags, SVN_WC__ENTRY_MODIFY_KEEP_LOCAL,
+                       atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, name));
 
   /* Attempt to set up timestamps. */
   {
@@ -844,6 +870,27 @@ svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
       entry->present_props = apr_pstrdup(pool, entry->present_props);
     }
 
+  /* Translated size */
+  {
+    const char *val
+      = apr_hash_get(atts,
+                     SVN_WC__ENTRY_ATTR_WORKING_SIZE,
+                     APR_HASH_KEY_STRING);
+    if (val)
+      {
+        if (! strcmp(val, SVN_WC__WORKING_SIZE_WC))
+          {
+            /* Special case (same as the timestamps); ignore here
+               these will be handled elsewhere */
+          }
+        else
+          /* Cast to off_t; it's safe: we put in an off_t to start with... */
+          entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
+
+        *modify_flags |= SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
+      }
+  }
+
   *new_entry = entry;
   return SVN_NO_ERROR;
 }
@@ -876,7 +923,7 @@ handle_start_tag(void *userData, const char *tagname, const char **atts)
   apr_hash_t *attributes;
   svn_wc_entry_t *entry;
   svn_error_t *err;
-  apr_uint32_t modify_flags = 0;
+  apr_uint64_t modify_flags = 0;
 
   /* We only care about the `entry' tag; all other tags, such as `xml'
      and `wc-entries', are ignored. */
@@ -1548,6 +1595,15 @@ write_entry(svn_stringbuf_t *buf,
   /* Changelist. */
   write_str(buf, entry->changelist, pool);
 
+  /* Keep in working copy flag. */
+  write_bool(buf, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, entry->keep_local);
+
+  /* Translated size */
+  write_str(buf,
+            entry->working_size
+            ? apr_off_t_toa(pool, entry->working_size) : "",
+            pool);
+
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')
     buf->len--;
@@ -1674,6 +1730,10 @@ write_entry_xml(svn_stringbuf_t **output,
   /* Incomplete state */
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_INCOMPLETE, APR_HASH_KEY_STRING,
                (entry->incomplete ? "true" : NULL));
+
+  /* Keep in wc flag  */
+  apr_hash_set(atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, APR_HASH_KEY_STRING,
+               (entry->keep_local ? "true" : NULL));
 
   /* Timestamps */
   if (entry->text_time)
@@ -1994,7 +2054,7 @@ svn_wc__entries_write(apr_hash_t *entries,
 static void
 fold_entry(apr_hash_t *entries,
            const char *name,
-           apr_uint32_t modify_flags,
+           apr_uint64_t modify_flags,
            svn_wc_entry_t *entry,
            apr_pool_t *pool)
 {
@@ -2153,6 +2213,9 @@ fold_entry(apr_hash_t *entries,
                                 ? apr_pstrdup(pool, entry->present_props)
                                 : NULL);
 
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_KEEP_LOCAL)
+    cur_entry->keep_local = entry->keep_local;
+
   /* Absorb defaults from the parent dir, if any, unless this is a
      subdir entry. */
   if (cur_entry->kind != svn_node_dir)
@@ -2184,6 +2247,16 @@ fold_entry(apr_hash_t *entries,
       cur_entry->copyfrom_url = NULL;
     }
 
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_WORKING_SIZE)
+    cur_entry->working_size = entry->working_size;
+
+  /* keep_local makes sense only when we are going to delete directory. */
+  if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE
+      && entry->schedule != svn_wc_schedule_delete)
+    {
+      cur_entry->keep_local = FALSE;
+    }
+
   /* Make sure the entry exists in the entries hash.  Possibly it
      already did, in which case this could have been skipped, but what
      the heck. */
@@ -2212,7 +2285,7 @@ svn_wc__entry_remove(apr_hash_t *entries, const char *name)
 static svn_error_t *
 fold_scheduling(apr_hash_t *entries,
                 const char *name,
-                apr_uint32_t *modify_flags,
+                apr_uint64_t *modify_flags,
                 svn_wc_schedule_t *schedule,
                 apr_pool_t *pool)
 {
@@ -2432,14 +2505,14 @@ svn_error_t *
 svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
                      const char *name,
                      svn_wc_entry_t *entry,
-                     apr_uint32_t modify_flags,
+                     apr_uint64_t modify_flags,
                      svn_boolean_t do_sync,
                      apr_pool_t *pool)
 {
   apr_hash_t *entries, *entries_nohidden;
   svn_boolean_t entry_was_deleted_p = FALSE;
 
-  /* ENTRY is rather necessary, and ENTRY->kind is required to be valid! */
+  /* ENTRY is rather necessary! */
   assert(entry);
 
   /* Load ADM_ACCESS's whole entries file. */
@@ -2453,7 +2526,7 @@ svn_wc__entry_modify(svn_wc_adm_access_t *adm_access,
   if (modify_flags & SVN_WC__ENTRY_MODIFY_SCHEDULE)
     {
       svn_wc_entry_t *entry_before, *entry_after;
-      apr_uint32_t orig_modify_flags = modify_flags;
+      apr_uint64_t orig_modify_flags = modify_flags;
       svn_wc_schedule_t orig_schedule = entry->schedule;
 
       /* Keep a copy of the unmodified entry on hand. */
@@ -2714,7 +2787,7 @@ svn_wc__entries_init(const char *path,
 static svn_error_t *
 walker_helper(const char *dirpath,
               svn_wc_adm_access_t *adm_access,
-              const svn_wc_entry_callbacks_t *walk_callbacks,
+              const svn_wc_entry_callbacks2_t *walk_callbacks,
               void *walk_baton,
               svn_boolean_t show_hidden,
               svn_cancel_func_t cancel_func,
@@ -2726,23 +2799,29 @@ walker_helper(const char *dirpath,
   apr_hash_index_t *hi;
   svn_wc_entry_t *dot_entry;
 
-  SVN_ERR(svn_wc_entries_read(&entries, adm_access, show_hidden, pool));
+  SVN_ERR(walk_callbacks->handle_error
+          (dirpath, svn_wc_entries_read(&entries, adm_access, show_hidden,
+                                        pool), walk_baton, pool));
   
   /* As promised, always return the '.' entry first. */
   dot_entry = apr_hash_get(entries, SVN_WC_ENTRY_THIS_DIR, 
                            APR_HASH_KEY_STRING);
   if (! dot_entry)
-    return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                             _("Directory '%s' has no THIS_DIR entry"),
-                             svn_path_local_style(dirpath, pool));
+    return walk_callbacks->handle_error
+      (dirpath, svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
+                                  _("Directory '%s' has no THIS_DIR entry"),
+                                  svn_path_local_style(dirpath, pool)),
+       walk_baton, pool);
 
-  SVN_ERR(walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool));
+  SVN_ERR(walk_callbacks->handle_error
+          (dirpath,
+           walk_callbacks->found_entry(dirpath, dot_entry, walk_baton, pool),
+           walk_baton, pool));
 
   /* Loop over each of the other entries. */
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
       const void *key;
-      apr_ssize_t klen;
       void *val;
       const svn_wc_entry_t *current_entry; 
       const char *entrypath;
@@ -2751,25 +2830,32 @@ walker_helper(const char *dirpath,
       if (cancel_func)
         SVN_ERR(cancel_func(cancel_baton));
 
-      apr_hash_this(hi, &key, &klen, &val);
+      apr_hash_this(hi, &key, NULL, &val);
       current_entry = val;
 
       if (strcmp(current_entry->name, SVN_WC_ENTRY_THIS_DIR) == 0)
         continue;
 
       entrypath = svn_path_join(dirpath, key, subpool);
-      SVN_ERR(walk_callbacks->found_entry(entrypath, current_entry,
-                                          walk_baton, subpool));
+      SVN_ERR(walk_callbacks->handle_error
+              (entrypath, walk_callbacks->found_entry(entrypath, current_entry,
+                                                      walk_baton, subpool),
+               walk_baton, pool));
 
       if (current_entry->kind == svn_node_dir)
         {
           svn_wc_adm_access_t *entry_access;
-          SVN_ERR(svn_wc_adm_retrieve(&entry_access, adm_access, entrypath,
-                                      subpool));
-          SVN_ERR(walker_helper(entrypath, entry_access,
-                                walk_callbacks, walk_baton,
-                                show_hidden, cancel_func, cancel_baton,
-                                subpool));
+          SVN_ERR(walk_callbacks->handle_error
+                  (entrypath,
+                   svn_wc_adm_retrieve(&entry_access, adm_access, entrypath,
+                                       subpool),
+                   walk_baton, pool));
+
+          if (entry_access)
+            SVN_ERR(walker_helper(entrypath, entry_access,
+                                  walk_callbacks, walk_baton,
+                                  show_hidden, cancel_func, cancel_baton,
+                                  subpool));
         }
 
       svn_pool_clear(subpool);
@@ -2780,7 +2866,6 @@ walker_helper(const char *dirpath,
 }
 
 
-/* The public function */
 svn_error_t *
 svn_wc_walk_entries(const char *path,
                     svn_wc_adm_access_t *adm_access,
@@ -2794,10 +2879,36 @@ svn_wc_walk_entries(const char *path,
                               pool);
 }
 
+static svn_error_t *
+walker_default_error_handler(const char *path,
+                             svn_error_t *err,
+                             void *walk_baton,
+                             apr_pool_t *pool)
+{
+  return err;
+}
+
 svn_error_t *
 svn_wc_walk_entries2(const char *path,
                      svn_wc_adm_access_t *adm_access,
                      const svn_wc_entry_callbacks_t *walk_callbacks,
+                     void *walk_baton,
+                     svn_boolean_t show_hidden,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *pool)
+{
+  svn_wc_entry_callbacks2_t walk_cb2 = { walk_callbacks->found_entry,
+                                         walker_default_error_handler };
+  return svn_wc_walk_entries3(path, adm_access, &walk_cb2, walk_baton,
+                              show_hidden, cancel_func, cancel_baton, pool);
+}
+
+/* The public API. */
+svn_error_t *
+svn_wc_walk_entries3(const char *path,
+                     svn_wc_adm_access_t *adm_access,
+                     const svn_wc_entry_callbacks2_t *walk_callbacks,
                      void *walk_baton,
                      svn_boolean_t show_hidden,
                      svn_cancel_func_t cancel_func,
@@ -2809,21 +2920,27 @@ svn_wc_walk_entries2(const char *path,
   SVN_ERR(svn_wc_entry(&entry, path, adm_access, show_hidden, pool));
 
   if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+    return walk_callbacks->handle_error
+      (path, svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                               _("'%s' is not under version control"),
+                               svn_path_local_style(path, pool)),
+       walk_baton, pool);
 
   if (entry->kind == svn_node_file)
-    return walk_callbacks->found_entry(path, entry, walk_baton, pool);
+    return walk_callbacks->handle_error
+      (path, walk_callbacks->found_entry(path, entry, walk_baton, pool),
+       walk_baton, pool);
 
   else if (entry->kind == svn_node_dir)
     return walker_helper(path, adm_access, walk_callbacks, walk_baton,
                          show_hidden, cancel_func, cancel_baton, pool);
 
   else
-    return svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
-                             _("'%s' has an unrecognized node kind"),
-                             svn_path_local_style(path, pool));
+    return walk_callbacks->handle_error
+      (path, svn_error_createf(SVN_ERR_NODE_UNKNOWN_KIND, NULL,
+                               _("'%s' has an unrecognized node kind"),
+                               svn_path_local_style(path, pool)),
+       walk_baton, pool);
 }
 
 

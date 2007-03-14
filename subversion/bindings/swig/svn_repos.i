@@ -40,11 +40,19 @@
     const char *user,
     const char *log_msg,
     const char *lock_token,
-    const char *tgt_path
+    const char *tgt_path,
+    const char *parent_dir
 };
 
 #ifdef SWIGPYTHON
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
+#endif
+
+#ifdef SWIGRUBY
+%apply svn_stream_t *MAY_BE_NULL {
+    svn_stream_t *dumpstream_may_be_null,
+    svn_stream_t *feedback_stream
+};
 #endif
 
 %callback_typemap(svn_repos_history_func_t history_func, void *history_baton,
@@ -109,4 +117,22 @@ svn_repos_fs_wrapper(svn_repos_t *fs, apr_pool_t *pool)
 
 /* ----------------------------------------------------------------------- */
 
+#ifdef SWIGRUBY
+svn_error_t *svn_repos_dump_fs2(svn_repos_t *repos,
+                                svn_stream_t *dumpstream_may_be_null,
+                                svn_stream_t *feedback_stream,
+                                svn_revnum_t start_rev,
+                                svn_revnum_t end_rev,
+                                svn_boolean_t incremental,
+                                svn_boolean_t use_deltas,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
+                                apr_pool_t *pool);
+%ignore svn_repos_dump_fs2;
+#endif
+
 %include svn_repos_h.swg
+
+#ifdef SWIGRUBY
+%define_close_related_methods(repos)
+#endif

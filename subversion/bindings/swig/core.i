@@ -145,8 +145,12 @@
 // svn_stringbuf_from_file
 // svn_stringbuf_from_aprfile
 
+#ifndef SWIGPYTHON
+/* These functions are useful in Python, because they allow you to
+ * easily delete files which are marked as read-only on Windows. */
 %ignore svn_io_remove_file;
 %ignore svn_io_remove_dir;
+#endif
 %ignore svn_io_get_dir_filenames;
 %ignore svn_io_get_dirents2;
 %ignore svn_io_get_dirents;
@@ -445,7 +449,13 @@ apr_status_t apr_file_open_stderr (apr_file_t **out, apr_pool_t *pool);
 /* Not wrapped, use svn_strerror instead. */
 %ignore apr_strerror;
 /* Wrap the APR status and error codes. */
+/* Sigh, or not. This would mean actually having access to apr_errno.h at
+   wrapper generation time, which, when rolling tarballs, the include paths
+   are not currently set up to give us. FIXME. So, instead, we replicate
+   one important typedef here instead.
 %include apr_errno.h
+*/
+typedef int apr_status_t;
 
 /* -----------------------------------------------------------------------
    pool functions renaming since swig doesn't take care of the #define's
@@ -691,7 +701,11 @@ struct apr_pool_wrapper_t
 
   ~apr_pool_wrapper_t() {
     apr_pool_wrapper_destroy(self);
-    free(self);
+    xfree(self);
+  }
+
+  void _destroy(void) {
+    apr_pool_wrapper_destroy(self);
   }
 };
 

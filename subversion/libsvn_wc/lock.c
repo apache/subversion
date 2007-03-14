@@ -269,9 +269,9 @@ maybe_upgrade_format(svn_wc_adm_access_t *adm_access, apr_pool_t *pool)
              We just silently ignore errors, because keeping these files is
              not catastrophic. */
 
-          svn_error_clear(svn_io_remove_dir
+          svn_error_clear(svn_io_remove_dir2
             (svn_wc__adm_path(access_path, FALSE, pool, SVN_WC__ADM_WCPROPS,
-                              NULL), pool));
+                              NULL), FALSE, pool));
           svn_error_clear(svn_io_remove_file
             (svn_wc__adm_path(access_path, FALSE, pool,
                               SVN_WC__ADM_DIR_WCPROPS, NULL), pool));
@@ -649,6 +649,7 @@ do_open(svn_wc_adm_access_t **adm_access,
                   /* This closes all the children in temporary hash as well */
                   svn_error_clear(svn_wc_adm_close(lock));
                   svn_pool_destroy(subpool);
+                  lock->set = NULL;
                   return err;
                 }
             }
@@ -670,6 +671,7 @@ do_open(svn_wc_adm_access_t **adm_access,
                   /* This closes all the children in temporary hash as well */
                   svn_error_clear(svn_wc_adm_close(lock));
                   svn_pool_destroy(subpool);
+                  lock->set = NULL;
                   return err;
                 }
 
@@ -933,16 +935,25 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
           if (subdir_entry->kind == svn_node_dir
               && kind == svn_node_file)
             {
-              return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                       _("Expected '%s' to be a directory but found a file"), 
-                                       svn_path_local_style(path, pool));
+              const char *err_msg = apr_psprintf
+                (pool, _("Expected '%s' to be a directory but found a file"),
+                 svn_path_local_style(path, pool));
+              return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
+                                      svn_error_create
+                                        (SVN_ERR_WC_NOT_DIRECTORY, NULL,
+                                         err_msg),
+                                      err_msg);
             }
           else if (subdir_entry->kind == svn_node_file
                    && kind == svn_node_dir)
             {
-              return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                       _("Expected '%s' to be a file but found a directory"), 
-                                       svn_path_local_style(path, pool));
+              const char *err_msg = apr_psprintf
+                (pool, _("Expected '%s' to be a file but found a directory"),
+                 svn_path_local_style(path, pool));
+              return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
+                                      svn_error_create(SVN_ERR_WC_NOT_FILE,
+                                                       NULL, err_msg),
+                                      err_msg);
             }
         }
       
@@ -959,9 +970,15 @@ svn_wc_adm_retrieve(svn_wc_adm_access_t **adm_access,
         }
 
       if (kind == svn_node_none)
-        return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
-                                 _("Directory '%s' is missing"),
-                                 svn_path_local_style(path, pool));
+        {
+          const char *err_msg = apr_psprintf(pool,
+                                             _("Directory '%s' is missing"),
+                                             svn_path_local_style(path, pool));
+          return svn_error_create(SVN_ERR_WC_NOT_LOCKED,
+                                  svn_error_create(SVN_ERR_WC_PATH_NOT_FOUND,
+                                                   NULL, err_msg),
+                                  err_msg);
+        }
       
       else if (kind == svn_node_dir && wckind == svn_node_none)
         return svn_error_createf(SVN_ERR_WC_NOT_LOCKED, NULL,
@@ -1114,7 +1131,8 @@ svn_wc_adm_open_anchor(svn_wc_adm_access_t **anchor_access,
   const char *base_name = svn_path_basename(path, pool);
 
   if (svn_path_is_empty(path)
-      || ! strcmp(path, "/") || ! strcmp(base_name, ".."))
+      || svn_path_is_root(path, strlen(path)) 
+      || ! strcmp(base_name, ".."))
     {
       SVN_ERR(do_open(anchor_access, NULL, path, write_lock, depth, FALSE,
                       cancel_func, cancel_baton, pool));
@@ -1320,9 +1338,10 @@ do_close(svn_wc_adm_access_t *adm_access,
           SVN_ERR(remove_lock(adm_access->path, adm_access->pool));
           adm_access->lock_exists = FALSE;
         }
-      /* Reset to prevent further use of the write lock. */
-      adm_access->type = svn_wc__adm_access_closed;
     }
+
+  /* Reset to prevent further use of the lock. */
+  adm_access->type = svn_wc__adm_access_closed;
 
   /* Detach from set */
   if (adm_access->set)
@@ -1566,4 +1585,3 @@ svn_wc__adm_missing(svn_wc_adm_access_t *adm_access,
 
   return FALSE;
 }
-

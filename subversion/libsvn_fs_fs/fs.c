@@ -1,7 +1,7 @@
 /* fs.c --- creating, opening and closing filesystems
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -31,7 +31,6 @@
 #include "err.h"
 #include "dag.h"
 #include "fs_fs.h"
-#include "revs-txns.h"
 #include "tree.h"
 #include "lock.h"
 #include "svn_private_config.h"
@@ -39,10 +38,8 @@
 #include "../libsvn_fs/fs-loader.h"
 
 /* A prefix for the pool userdata variables used to hold
-   per-repository mutexes.  See fs_serialized_init. */
-#if APR_HAS_THREADS
-#define SVN_FSFS_LOCK_USERDATA_PREFIX "svn-fsfs-lock-"
-#endif
+   per-filesystem shared data.  See fs_serialized_init. */
+#define SVN_FSFS_SHARED_USERDATA_PREFIX "svn-fsfs-shared-"
 
 
 
@@ -63,52 +60,65 @@ check_already_open(svn_fs_t *fs)
 static svn_error_t *
 fs_serialized_init(svn_fs_t *fs, apr_pool_t *common_pool, apr_pool_t *pool)
 {
-#if APR_HAS_THREADS
   fs_fs_data_t *ffd = fs->fsap_data;
   const char *key;
   void *val;
-  apr_thread_mutex_t *lock;
+  fs_fs_shared_data_t *ffsd;
   apr_status_t status;
 
-  /* POSIX fcntl locks are per-process, so we need a mutex for
-     intra-process synchronization when grabbing the repository write
-     lock.  Fetch a repository-specific lock from the pool user data.
-
-     Note that we are allocating a small amount of long-lived data for
+  /* Note that we are allocating a small amount of long-lived data for
      each separate repository opened during the lifetime of the
      svn_fs_initialize pool.  It's unlikely that anyone will notice
-     this modest expenditure; the alternative is to put each lock into
-     a reference-counted structure allocated in a subpool, and add a
-     serialized deconstructor to the FS vtable.  That's more machinery
-     than it's worth.
+     the modest expenditure; the alternative is to allocate each structure
+     in a subpool, add a reference-count, and add a serialized deconstructor
+     to the FS vtable.  That's more machinery than it's worth.
 
      Using the uuid to obtain the lock creates a corner case if a
      caller uses svn_fs_set_uuid on the repository in a process where
      other threads might be using the same repository through another
      FS object.  The only real-world consumer of svn_fs_set_uuid is
      "svnadmin load", so this is a low-priority problem, and we don't
-     know of a better way of associating a mutex with the
+     know of a better way of associating such data with the
      repository. */
 
-  key = apr_pstrcat(pool, SVN_FSFS_LOCK_USERDATA_PREFIX, ffd->uuid,
+  key = apr_pstrcat(pool, SVN_FSFS_SHARED_USERDATA_PREFIX, ffd->uuid,
                     (char *) NULL);
   status = apr_pool_userdata_get(&val, key, common_pool);
   if (status)
-    return svn_error_wrap_apr(status, _("Can't fetch FSFS mutex"));
-  lock = val;
-  if (!lock)
+    return svn_error_wrap_apr(status, _("Can't fetch FSFS shared data"));
+  ffsd = val;
+
+  if (!ffsd)
     {
-      status = apr_thread_mutex_create(&lock, APR_THREAD_MUTEX_DEFAULT,
-                                       common_pool);
+      ffsd = apr_pcalloc(common_pool, sizeof(*ffsd));
+      ffsd->common_pool = common_pool;
+
+#if APR_HAS_THREADS
+      /* POSIX fcntl locks are per-process, so we need a mutex for
+         intra-process synchronization when grabbing the repository write
+         lock. */
+      status = apr_thread_mutex_create(&ffsd->fs_write_lock,
+                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
       if (status)
-        return svn_error_wrap_apr(status, _("Can't create FSFS mutex"));
-      key = apr_pstrdup(common_pool, key);
-      status = apr_pool_userdata_set(lock, key, NULL, common_pool);
+        return svn_error_wrap_apr(status,
+                                  _("Can't create FSFS write-lock mutex"));
+
+      /* We also need a mutex for synchronising access to the active
+         transaction list and free transaction pointer. */
+      status = apr_thread_mutex_create(&ffsd->txn_list_lock,
+                                       APR_THREAD_MUTEX_DEFAULT, common_pool);
       if (status)
-        return svn_error_wrap_apr(status, _("Can't store FSFS mutex"));
-    }
-  ffd->lock = lock;
+        return svn_error_wrap_apr(status,
+                                  _("Can't create FSFS txn list mutex"));
 #endif
+
+      key = apr_pstrdup(common_pool, key);
+      status = apr_pool_userdata_set(ffsd, key, NULL, common_pool);
+      if (status)
+        return svn_error_wrap_apr(status, _("Can't store FSFS shared data"));
+    }
+
+  ffd->shared = ffsd;
 
   return SVN_NO_ERROR;
 }
@@ -207,25 +217,8 @@ fs_hotcopy(const char *src_path,
            svn_boolean_t clean_logs, 
            apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_fs__hotcopy(src_path, dest_path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__hotcopy(src_path, dest_path, pool);
 }
-
-
-
-/* This function is included for Subversion 1.0.x compatibility.  It has
-   no effect for fsfs backed Subversion filesystems.  It conforms to
-   the fs_library_vtable_t.bdb_recover() API. */
-static svn_error_t *
-fs_recover(const char *path,
-           apr_pool_t *pool)
-{
-  /* This is a no-op for FSFS. */
-
-  return SVN_NO_ERROR;
-}
-
 
 
 
@@ -255,9 +248,7 @@ fs_delete_fs(const char *path,
              apr_pool_t *pool)
 {
   /* Remove everything. */
-  SVN_ERR(svn_io_remove_dir(path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_remove_dir2(path, FALSE, pool);
 }
 
 
@@ -345,7 +336,7 @@ static fs_library_vtable_t library_vtable = {
   fs_delete_fs,
   fs_hotcopy,
   fs_get_description,
-  fs_recover,
+  svn_fs_fs__recover,
   fs_logfiles
 };
 

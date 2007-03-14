@@ -326,7 +326,7 @@ module Svn
                       base_merge, dry_run)
       end
 
-      def mrege_prop_diffs(path, propchanges, base_merge=true,
+      def merge_prop_diffs(path, propchanges, base_merge=true,
                            dry_run=false)
         Wc.merge_prop_diffs(path, self, propchanges,
                            base_merge, dry_run)
@@ -343,6 +343,14 @@ module Svn
       end
 
       def translated_file(src, versioned_file, flags)
+        temp = Wc.translated_file2(src, versioned_file, self, flags)
+        temp.close
+        path = temp.path
+        path.instance_variable_set("@__temp__", temp)
+        path
+      end
+
+      def translated_file2(src, versioned_file, flags)
         Wc.translated_file2(src, versioned_file, self, flags)
       end
 

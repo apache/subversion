@@ -2,7 +2,7 @@
  * fs_loader.c:  Front-end to the various FS back ends
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -398,6 +398,17 @@ svn_fs_hotcopy(const char *src_path, const char *dest_path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_recover(const char *path,
+               svn_cancel_func_t cancel_func, void *cancel_baton,
+               apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR(fs_library_vtable(&vtable, path, pool));
+  return vtable->recover(path, cancel_func, cancel_baton, pool);
+}
+
 
 /* --- Berkeley-specific functions --- */
 
@@ -449,10 +460,7 @@ svn_fs_hotcopy_berkeley(const char *src_path, const char *dest_path,
 svn_error_t *
 svn_fs_berkeley_recover(const char *path, apr_pool_t *pool)
 {
-  fs_library_vtable_t *vtable;
-
-  SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  return vtable->bdb_recover(path, pool);
+  return svn_fs_recover(path, NULL, NULL, pool);
 }
 
 svn_error_t *
@@ -602,6 +610,12 @@ const char *
 svn_fs_txn_root_name(svn_fs_root_t *root, apr_pool_t *pool)
 {
   return root->is_txn_root ? apr_pstrdup(pool, root->txn) : NULL;
+}
+
+svn_revnum_t
+svn_fs_txn_root_base_revision(svn_fs_root_t *root)
+{
+  return root->is_txn_root ? root->rev : SVN_INVALID_REVNUM;
 }
 
 svn_revnum_t
@@ -892,7 +906,7 @@ svn_fs_lock(svn_lock_t **lock, svn_fs_t *fs, const char *path,
       if (! svn_xml_is_xml_safe(comment, strlen(comment)))
         return svn_error_create
           (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-           _("Lock comment has illegal characters"));      
+           _("Lock comment contains illegal characters"));      
     }
 
   if (expiration_date < 0)

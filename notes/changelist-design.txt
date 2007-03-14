@@ -401,13 +401,55 @@ perform metadata operations on a whole set of files.
 
 --------------------
 
-TODO list:
+==> Finished items:
 
-* create a streamy version of svn_client_retrieve_changelist(), to be
-  more friendly to 3rd party apps
+    * svn changelist [--remove]
+    * svn commit --changelist
+    * svn revert --changelist
+    * svn log --changelist
+    * 'svn status' shows changelists
+    * 'svn info' shows changelists
 
-* make --cl the same as --changelist (?)
 
-* 'svn changelist' should take --changelist arg, to make it easy to
-  undefine a whole changelist at once
+==> TO-DO:
 
+* Things that still need to take the --changelist filter argument:
+
+   -  svn status
+   -  svn diff    (wc-wc and wc-url cases, not url-url cases)
+   -  svn lock/unlock
+   -  svn proplist/propget/propset/propdel
+
+* make --cl the same as --changelist, for convenience?
+
+* questions about commits:  
+
+    - how does 'svn ci --changelist' interact with nonrecursive commits?
+    - how does it interact with a list of specific targets?
+    - how does it deal with a schedule-delete folder?
+
+
+----------------------------
+
+Commandline UI use-cases:
+
+
+1. add path(s) to a CL:
+
+     svn cl CLNAME foo.c bar.c baz.c
+
+2. remove path(s) from whatever CLs they each belong to.
+
+     svn cl --remove foo.c bar.c baz.c
+
+3. move path(s) from CL1 to CL2.
+
+     svn cl CL2 foo.c
+
+4. undefine a CL all at once (by removing all members)
+
+     svn cl --remove --changelist CLNAME
+
+5. rename a CL
+
+     svn cl NEWNAME --changelist OLDNAME

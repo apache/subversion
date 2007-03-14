@@ -46,6 +46,8 @@ module Svn
     Util.set_constants(Ext::Core, self)
     Util.set_methods(Ext::Core, self)
 
+    nls_init
+
     # for backward compatibility
     SWIG_INVALID_REVNUM = INVALID_REVNUM
     SWIG_IGNORED_REVNUM = IGNORED_REVNUM
@@ -83,6 +85,12 @@ module Svn
         _initialize(parent)
         @parent = parent
       end
+
+      def destroy
+        @parent = nil
+        _destroy
+      end
+      private :_destroy
     end
 
     Stream = SWIG::TYPE_p_svn_stream_t
@@ -140,7 +148,7 @@ module Svn
       class << self
         def new(providers=[], *rest)
           baton = Core.auth_open(providers)
-          baton.__send__("initialize", providers, *rest)
+          baton.funcall("initialize", providers, *rest)
           baton
         end
       end
@@ -264,7 +272,7 @@ module Svn
         undef new
         def new(*args)
           options = Svn::Core.diff_file_options_create(*args)
-          options.__send__("initialize", *args)
+          options.funcall("initialize", *args)
           options
         end
 
@@ -507,7 +515,7 @@ module Svn
         undef new
         def new
           info = Core.create_commit_info
-          info.__send__("initialize")
+          info.funcall("initialize")
           info
         end
       end

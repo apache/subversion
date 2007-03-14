@@ -2,7 +2,7 @@
  * options.c :  routines for performing OPTIONS server requests
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,9 +19,6 @@
 
 
 #include <apr_pools.h>
-
-#include <ne_socket.h>
-#include <ne_request.h>
 
 #include "svn_error.h"
 
@@ -40,33 +37,37 @@ static const svn_ra_dav__xml_elm_t options_elements[] =
 };
 
 typedef struct {
-  const svn_string_t *activity_coll;
+  /*WARNING: WANT_CDATA should stay the first element in the baton:
+    svn_ra_dav__xml_collect_cdata() assumes the baton starts with a stringbuf.
+  */
+  svn_stringbuf_t *want_cdata;
+  svn_stringbuf_t *cdata;
   apr_pool_t *pool;
-
+  svn_string_t *activity_coll;
 } options_ctx_t;
 
 
 
-static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
-                            svn_ra_dav__xml_elmid child)
+static int
+validate_element(svn_ra_dav__xml_elmid parent, svn_ra_dav__xml_elmid child)
 {
   switch (parent)
     {
     case ELEM_root:
       if (child == ELEM_options_response)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_INVALID;
 
     case ELEM_options_response:
       if (child == ELEM_activity_coll_set)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* not concerned with other response */
 
     case ELEM_activity_coll_set:
       if (child == ELEM_href)
-        return SVN_RA_DAV__XML_VALID;
+        return child;
       else
         return SVN_RA_DAV__XML_DECLINE; /* not concerned with unknown crud */
 
@@ -77,31 +78,43 @@ static int validate_element(void *userdata, svn_ra_dav__xml_elmid parent,
   /* NOTREACHED */
 }
 
-static int start_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                         const char **atts)
+static svn_error_t *
+start_element(int *elem, void *baton, int parent,
+              const char *nspace, const char *name, const char **atts)
 {
-  /* nothing to do here */
-  return SVN_RA_DAV__XML_VALID;
-}
+  options_ctx_t *oc = baton;
+  const svn_ra_dav__xml_elm_t *elm
+    = svn_ra_dav__lookup_xml_elem(options_elements, nspace, name);
 
-static int end_element(void *userdata, const svn_ra_dav__xml_elm_t *elm,
-                       const char *cdata)
-{
-  options_ctx_t *oc = userdata;
+  *elem = elm ? validate_element(parent, elm->id) : SVN_RA_DAV__XML_DECLINE;
+  if (*elem < 1) /* Not a valid element */
+    return SVN_NO_ERROR;
 
   if (elm->id == ELEM_href)
-    {
-      oc->activity_coll = svn_string_create(cdata, oc->pool);
-    }
+    oc->want_cdata = oc->cdata;
+  else
+    oc->want_cdata = NULL;
 
-  return SVN_RA_DAV__XML_VALID;
+  return SVN_NO_ERROR;
 }
 
-svn_error_t * svn_ra_dav__get_activity_collection(
-  const svn_string_t **activity_coll,
-  svn_ra_dav__session_t *ras,
-  const char *url,
-  apr_pool_t *pool)
+static svn_error_t *
+end_element(void *baton, int state,
+            const char *nspace, const char *name)
+{
+  options_ctx_t *oc = baton;
+
+  if (state == ELEM_href)
+    oc->activity_coll = svn_string_create_from_buf(oc->cdata, oc->pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_dav__get_activity_collection(const svn_string_t **activity_coll,
+                                    svn_ra_dav__session_t *ras,
+                                    const char *url,
+                                    apr_pool_t *pool)
 {
   options_ctx_t oc = { 0 };
 
@@ -111,17 +124,18 @@ svn_error_t * svn_ra_dav__get_activity_collection(
 #endif
 
   oc.pool = pool;
+  oc.cdata = svn_stringbuf_create("", pool);
 
-  SVN_ERR(svn_ra_dav__parsed_request_compat(ras->sess, "OPTIONS", url,
-                                            "<?xml version=\"1.0\" "
-                                            "encoding=\"utf-8\"?>"
-                                            "<D:options xmlns:D=\"DAV:\">"
-                                            "<D:activity-collection-set/>"
-                                            "</D:options>", 0, NULL,
-                                            options_elements,
-                                            validate_element, start_element,
-                                            end_element, &oc,
-                                            NULL, NULL, FALSE, pool));
+  SVN_ERR(svn_ra_dav__parsed_request(ras, "OPTIONS", url,
+                                     "<?xml version=\"1.0\" "
+                                     "encoding=\"utf-8\"?>"
+                                     "<D:options xmlns:D=\"DAV:\">"
+                                     "<D:activity-collection-set/>"
+                                     "</D:options>", 0, NULL,
+                                     start_element,
+                                     svn_ra_dav__xml_collect_cdata,
+                                     end_element, &oc,
+                                     NULL, NULL, FALSE, pool));
 
   if (oc.activity_coll == NULL)
     {

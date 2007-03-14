@@ -2,7 +2,7 @@
  * log.c:  return log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -98,7 +98,7 @@ svn_client_log3(const apr_array_header_t *targets,
 
           /* We have some paths, let's use them. Start after the URL.  */
           for (i = 1; i < targets->nelts; i++)
-            (*((const char **)apr_array_push(condensed_targets))) =
+            APR_ARRAY_PUSH(condensed_targets, const char *) =
                 APR_ARRAY_IDX(targets, i, const char *);
         }
       else
@@ -106,7 +106,7 @@ svn_client_log3(const apr_array_header_t *targets,
           /* If we have a single URL, then the session will be rooted at
              it, so just send an empty string for the paths we are
              interested in. */
-          (*((const char **)apr_array_push(condensed_targets))) = "";
+          APR_ARRAY_PUSH(condensed_targets, const char *) = "";
         }
     }
   else
@@ -141,8 +141,8 @@ svn_client_log3(const apr_array_header_t *targets,
 
           URL = apr_pstrdup(pool, entry->url);
           SVN_ERR(svn_wc_adm_close(adm_access));
-          (*((const char **)apr_array_push(target_urls))) = URL;
-          (*((const char **)apr_array_push(real_targets))) = target;
+          APR_ARRAY_PUSH(target_urls, const char *) = URL;
+          APR_ARRAY_PUSH(real_targets, const char *) = target;
         }
 
       /* if we have no valid target_urls, just exit. */
@@ -154,7 +154,7 @@ svn_client_log3(const apr_array_header_t *targets,
                                         target_urls, TRUE, pool));
 
       if (condensed_targets->nelts == 0)
-        (*((const char **)apr_array_push(condensed_targets))) = "";
+        APR_ARRAY_PUSH(condensed_targets, const char *) = "";
 
       /* 'targets' now becomes 'real_targets', which has bogus,
          unversioned things removed from it. */
@@ -257,7 +257,7 @@ svn_client_log3(const apr_array_header_t *targets,
 
         for (i = 0; i < targets->nelts; i++)
           {
-            const char *target = ((const char **)targets->elts)[i];
+            const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
             if (start_is_local)
               SVN_ERR(svn_client__get_revision_number

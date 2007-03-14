@@ -2,7 +2,7 @@
  * main.c: Subversion server administration tool.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -195,6 +195,7 @@ static svn_opt_subcommand_t
   subcommand_rmlocks,
   subcommand_rmtxns,
   subcommand_setlog,
+  subcommand_setrevprop,
   subcommand_verify;
 
 enum 
@@ -212,6 +213,8 @@ enum
     svnadmin__bypass_hooks,
     svnadmin__use_pre_commit_hook,
     svnadmin__use_post_commit_hook,
+    svnadmin__use_pre_revprop_change_hook,
+    svnadmin__use_post_revprop_change_hook,
     svnadmin__clean_logs,
     svnadmin__wait,
     svnadmin__pre_1_4_compatible
@@ -277,6 +280,12 @@ static const apr_getopt_option_t options_table[] =
 
     {"use-post-commit-hook", svnadmin__use_post_commit_hook, 0,
      N_("call post-commit hook after committing revisions")},
+
+    {"use-pre-revprop-change-hook", svnadmin__use_pre_revprop_change_hook, 0,
+     N_("call hook before changing revision property")},
+
+    {"use-post-revprop-change-hook", svnadmin__use_post_revprop_change_hook, 0,
+     N_("call hook after changing revision property")},
 
     {"wait",          svnadmin__wait, 0,
      N_("wait instead of exit if the repository is in\n"
@@ -370,9 +379,9 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
 
   {"recover", subcommand_recover, {0}, N_
    ("usage: svnadmin recover REPOS_PATH\n\n"
-    "Run the Berkeley DB recovery procedure on a repository.  Do\n"
-    "this if you've been getting errors indicating that recovery\n"
-    "ought to be run.  Recovery requires exclusive access and will\n"
+    "Run the recovery procedure on a repository.  Do this if you've\n"
+    "been getting errors indicating that recovery ought to be run.\n"
+    "Berkeley DB recovery requires exclusive access and will\n"
     "exit if the repository is in use by another process.\n"),
    {svnadmin__wait} },
 
@@ -394,14 +403,25 @@ static const svn_opt_subcommand_desc_t cmd_table[] =
     "from your post-revprop-change hook, or because the modification of\n"
     "revision properties has not been enabled in the pre-revprop-change\n"
     "hook).\n\n"
-    "NOTE: revision properties are not historied, so this command\n"
-    "will permanently overwrite the previous log message.\n"),
+    "NOTE: Revision properties are not versioned, so this command will\n"
+    "overwrite the previous log message.\n"),
    {'r', svnadmin__bypass_hooks} },
+
+  {"setrevprop", subcommand_setrevprop, {0}, N_
+   ("usage: svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n\n"
+    "Set the property NAME on revision REVISION to the contents of FILE. Use\n"
+    "--use-pre-revprop-change-hook/--use-post-revprop-change-hook to trigger\n"
+    "the revision property-related hooks (for example, if you want an email\n"
+    "notification sent from your post-revprop-change hook).\n\n"
+    "NOTE: Revision properties are not versioned, so this command will\n"
+    "overwrite the previous value of the property.\n"),
+   {'r', svnadmin__use_pre_revprop_change_hook,
+    svnadmin__use_post_revprop_change_hook} },
 
   {"verify", subcommand_verify, {0}, N_
    ("usage: svnadmin verify REPOS_PATH\n\n"
     "Verifies the data stored in the repository.\n"),
-   {0} },
+   {'r', 'q'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
@@ -421,6 +441,8 @@ struct svnadmin_opt_state
   svn_boolean_t use_deltas;                         /* --deltas */
   svn_boolean_t use_pre_commit_hook;                /* --use-pre-commit-hook */
   svn_boolean_t use_post_commit_hook;               /* --use-post-commit-hook */
+  svn_boolean_t use_pre_revprop_change_hook;        /* --use-pre-revprop-change-hook */
+  svn_boolean_t use_post_revprop_change_hook;       /* --use-post-revprop-change-hook */
   svn_boolean_t quiet;                              /* --quiet */
   svn_boolean_t bdb_txn_nosync;                     /* --bdb-txn-nosync */
   svn_boolean_t bdb_log_keep;                       /* --bdb-log-keep */
@@ -591,9 +613,13 @@ recode_stream_create(FILE *std_stream, apr_pool_t *pool)
   return rw_stream;
 }
 
-/* This implements `svn_opt_subcommand_t'. */
+
+/* Common implementation for dump and verify.  First three parameters mirror
+   the 'svn_opt_subcommand_t' type.  The DUMP_CONTENTS parameter determines
+   whether to send the dump to stdout or an empty stream. */
 static svn_error_t *
-subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+dump_repo(apr_getopt_t *os, void *baton,
+          apr_pool_t *pool, svn_boolean_t dump_contents)
 {
   struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
@@ -630,7 +656,10 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   /* Run the dump to STDOUT.  Let the user redirect output into
      a file if they want.  :-)  */
-  SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
+  if (dump_contents)
+    SVN_ERR(create_stdio_stream(&stdout_stream, apr_file_open_stdout, pool));
+  else
+    stdout_stream = NULL;
 
   /* Progress feedback goes to STDERR, unless they asked to suppress it. */
   if (! opt_state->quiet)
@@ -642,6 +671,14 @@ subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                              pool));
 
   return SVN_NO_ERROR;
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_dump(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  return dump_repo(os, baton, pool, TRUE);
 }
 
 
@@ -761,8 +798,9 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
    * touch the repository. */
   setup_cancellation_signals(SIG_DFL);
 
-  err = svn_repos_recover2(opt_state->repository_path, TRUE,
-                           recovery_started, pool, pool);
+  err = svn_repos_recover3(opt_state->repository_path, TRUE,
+                           recovery_started, pool,
+                           check_cancel, NULL, pool);
   if (err)
     {
       if (! APR_STATUS_IS_EAGAIN(err->apr_err))
@@ -778,8 +816,9 @@ subcommand_recover(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                  _("Waiting on repository lock; perhaps"
                                    " another process has it open?\n")));
       SVN_ERR(svn_cmdline_fflush(stdout));
-      SVN_ERR(svn_repos_recover2(opt_state->repository_path, FALSE,
-                                 recovery_started, pool, pool));
+      SVN_ERR(svn_repos_recover3(opt_state->repository_path, FALSE,
+                                 recovery_started, pool,
+                                 check_cancel, NULL, pool));
     }
 
   SVN_ERR(svn_cmdline_printf(pool, _("\nRecovery completed.\n")));
@@ -910,59 +949,48 @@ subcommand_rmtxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 }
 
 
-/* This implements `svn_opt_subcommand_t'. */
+/* A helper for the 'setrevprop' and 'setlog' commands.  Expects
+   OPT_STATE->use_pre_revprop_change_hook and
+   OPT_STATE->use_post_revprop_change_hook to be set appropriately. */
 static svn_error_t *
-subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+set_revprop(const char *prop_name, const char *filename,
+            struct svnadmin_opt_state *opt_state, apr_pool_t *pool)
 {
-  struct svnadmin_opt_state *opt_state = baton;
   svn_repos_t *repos;
+  svn_string_t *prop_value = svn_string_create("", pool);
   svn_stringbuf_t *file_contents;
   const char *filename_utf8;
-  apr_array_header_t *args;
-  svn_string_t *log_contents = svn_string_create("", pool);
 
-  if (opt_state->start_revision.kind != svn_opt_revision_number)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("Missing revision"));
-  else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("Only one revision allowed"));
-    
-  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
-
-  if (args->nelts != 1)
-    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                             _("Exactly one file argument required"));
-  
-  SVN_ERR(svn_utf_cstring_to_utf8(&filename_utf8,
-                                  APR_ARRAY_IDX(args, 0, const char *),
-                                  pool));
+  SVN_ERR(svn_utf_cstring_to_utf8(&filename_utf8, filename, pool));
   filename_utf8 = svn_path_internal_style(filename_utf8, pool);
+
   SVN_ERR(svn_stringbuf_from_file(&file_contents, filename_utf8, pool)); 
 
-  log_contents->data = file_contents->data;
-  log_contents->len = file_contents->len;
+  prop_value->data = file_contents->data;
+  prop_value->len = file_contents->len;
 
-  SVN_ERR(svn_subst_translate_string(&log_contents, log_contents,
-                                     NULL, pool));
+  SVN_ERR(svn_subst_translate_string(&prop_value, prop_value, NULL, pool));
 
   /* Open the filesystem  */
   SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
 
   /* If we are bypassing the hooks system, we just hit the filesystem
      directly. */
-  if (opt_state->bypass_hooks)
+  if (opt_state->use_pre_revprop_change_hook ||
+      opt_state->use_post_revprop_change_hook)
     {
-      svn_fs_t *fs = svn_repos_fs(repos);
-      SVN_ERR(svn_fs_change_rev_prop 
-              (fs, opt_state->start_revision.value.number, 
-               SVN_PROP_REVISION_LOG, log_contents, pool));
+      SVN_ERR(svn_repos_fs_change_rev_prop3
+              (repos, opt_state->start_revision.value.number,
+               NULL, prop_name, prop_value,
+               opt_state->use_pre_revprop_change_hook,
+               opt_state->use_post_revprop_change_hook, NULL, NULL, pool));
     }
   else
     {
-      SVN_ERR(svn_repos_fs_change_rev_prop2
-              (repos, opt_state->start_revision.value.number,
-               NULL, SVN_PROP_REVISION_LOG, log_contents, NULL, NULL, pool));
+      svn_fs_t *fs = svn_repos_fs(repos);
+      SVN_ERR(svn_fs_change_rev_prop 
+              (fs, opt_state->start_revision.value.number,
+               prop_name, prop_value, pool));
     }
 
   return SVN_NO_ERROR;
@@ -971,25 +999,69 @@ subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
 /* This implements `svn_opt_subcommand_t'. */
 static svn_error_t *
-subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+subcommand_setrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 {
   struct svnadmin_opt_state *opt_state = baton;
-  svn_repos_t *repos;
-  svn_stream_t *stderr_stream = NULL;
-  svn_revnum_t youngest;
+  apr_array_header_t *args;
 
-  /* This whole process is basically just a dump of the repository
-     with no interest in the output. */
-  SVN_ERR(open_repos(&repos, opt_state->repository_path, pool));
-  SVN_ERR(svn_fs_youngest_rev(&youngest, svn_repos_fs(repos), pool));
+  if (opt_state->start_revision.kind != svn_opt_revision_number)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Missing revision"));
+  else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Only one revision allowed"));
 
-  /* Progress feedback goes to STDERR. */
-  stderr_stream = recode_stream_create(stderr, pool);
-        
-  SVN_ERR(svn_repos_dump_fs2(repos, NULL, stderr_stream, 
-                             0, youngest, FALSE, FALSE, check_cancel, NULL,
-                             pool));
-  return SVN_NO_ERROR;
+  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
+
+  if (args->nelts != 2)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Exactly one property name and one file "
+                               "argument required"));
+
+  return set_revprop(APR_ARRAY_IDX(args, 0, const char *),
+                     APR_ARRAY_IDX(args, 1, const char *),
+                     opt_state, pool);
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_setlog(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  apr_array_header_t *args;
+
+  if (opt_state->start_revision.kind != svn_opt_revision_number)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Missing revision"));
+  else if (opt_state->end_revision.kind != svn_opt_revision_unspecified)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Only one revision allowed"));
+
+  SVN_ERR(svn_opt_parse_all_args(&args, os, pool));
+
+  if (args->nelts != 1)
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("Exactly one file argument required"));
+
+  /* set_revprop() responds only to pre-/post-revprop-change opts. */
+  if (!opt_state->bypass_hooks)
+    {
+      opt_state->use_pre_revprop_change_hook = TRUE;
+      opt_state->use_post_revprop_change_hook = TRUE;
+    }
+
+  return set_revprop(SVN_PROP_REVISION_LOG,
+                     APR_ARRAY_IDX(args, 0, const char *),
+                     opt_state, pool);
+}
+
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  return dump_repo(os, baton, pool, FALSE);
 }
 
 
@@ -1291,6 +1363,12 @@ main(int argc, const char *argv[])
       case svnadmin__use_post_commit_hook:
         opt_state.use_post_commit_hook = TRUE;
         break;
+      case svnadmin__use_pre_revprop_change_hook:
+        opt_state.use_pre_revprop_change_hook = TRUE;
+        break;
+      case svnadmin__use_post_revprop_change_hook:
+        opt_state.use_post_revprop_change_hook = TRUE;
+        break;
       case svnadmin__bdb_txn_nosync:
         opt_state.bdb_txn_nosync = TRUE;
         break;
@@ -1431,7 +1509,7 @@ main(int argc, const char *argv[])
           else
             svn_error_clear
               (svn_cmdline_fprintf
-               (stderr, pool, _("subcommand '%s' doesn't accept option '%s'\n"
+               (stderr, pool, _("Subcommand '%s' doesn't accept option '%s'\n"
                                 "Type 'svnadmin help %s' for usage.\n"),
                 subcommand->name, optstr, subcommand->name));
           svn_pool_destroy(pool);
@@ -1458,6 +1536,14 @@ main(int argc, const char *argv[])
   err = (*subcommand->cmd_func)(os, &opt_state, pool);
   if (err)
     {
+      /* For argument-related problems, suggest using the 'help'
+         subcommand. */
+      if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
+          || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
+        {
+          err = svn_error_quick_wrap(err, 
+                                     _("Try 'svnadmin help' for more info"));
+        }
       svn_handle_error2(err, stderr, FALSE, "svnadmin: ");
       svn_error_clear(err);
       svn_pool_destroy(pool);

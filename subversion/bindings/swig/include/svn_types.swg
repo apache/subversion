@@ -67,7 +67,7 @@
 #ifdef SWIGPYTHON
 %typemap(argout) SWIGTYPE **OUTPARAM {
   %append_output(svn_swig_NewPointerObj(*$1, $*1_descriptor,
-                                        _global_svn_swig_py_pool));
+                                        _global_py_pool, args));
 }
 #else
 %typemap(argout) SWIGTYPE **OUTPARAM {
@@ -87,11 +87,17 @@
   void **callback2_baton,
   /* core */
   svn_auth_baton_t **,
+  svn_auth_cred_simple_t **cred,
+  svn_auth_cred_username_t **cred,
+  svn_auth_cred_ssl_client_cert_pw_t **cred,
+  svn_auth_cred_ssl_client_cert_t **cred,
+  svn_auth_cred_ssl_server_trust_t **cred,
   svn_auth_iterstate_t **,
   svn_auth_provider_object_t **,
   svn_config_t **,
   svn_diff_t **,
   void **credentials,
+  void **iter_baton,
   void **token,
   /* svn_client */
   svn_client_commit_info_t **,
@@ -100,12 +106,16 @@
   const svn_delta_editor_t **,
   svn_txdelta_stream_t **,
   svn_txdelta_window_t **,
+#ifndef SWIGPYTHON
+  /* Python wraps this as a CALLABLE_CALLBACK instead */
   svn_txdelta_window_handler_t *,
+#endif
   void **handler_baton,
   void **root_baton,
   void **child_baton,
   void **file_baton,
   void **edit_baton,
+  void **dir_baton,
   /* svn_fs */
   svn_fs_t **,
   svn_fs_access_t **,
@@ -120,6 +130,7 @@
   const svn_ra_reporter_t **,
   const svn_ra_reporter2_t **,
   svn_ra_session_t **,
+  void **delta_baton,
   void **report_baton,
   void **ra_baton,
   void **session_baton,
@@ -139,6 +150,88 @@
   svn_wc_status2_t **,
   void **set_locks_baton
 };
+
+#ifdef SWIGRUBY
+%typemap(argout) SWIGTYPE **OUTPARAM_WITH_BLOCK {
+  VALUE tmp;
+  tmp = SWIG_NewPointerObj(*$1, $*1_descriptor, 0);
+  if (rb_block_given_p()) {
+    rb_yield(tmp);
+    svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
+    DATA_PTR(tmp) = NULL;
+  } else {
+    %append_output(tmp);
+  }
+}
+
+%apply SWIGTYPE **OUTPARAM_WITH_BLOCK {
+  /* svn_fs */
+  svn_fs_t **,
+  /* svn_repos */
+  svn_repos_t **
+};
+#endif
+
+
+/* -----------------------------------------------------------------------
+   Check whether fs/repos was closed or not.
+*/
+#ifdef SWIGRUBY
+%define %raise_if_null(TYPE)
+%typemap(check) svn_ ## TYPE ## _t *
+{
+  if (!$1) {
+    svn_swig_rb_raise_svn_ ## TYPE ## _already_close();
+  }
+}
+%enddef
+
+%raise_if_null(fs);
+%raise_if_null(repos);
+
+%define %define_close_related_methods(TYPE)
+%ignore svn_ ## TYPE ## _swig_rb_close;
+%ignore svn_ ## TYPE ## _swig_rb_closed;
+
+%inline %{
+static VALUE
+svn_ ## TYPE ## _swig_rb_close(VALUE self)
+{
+  VALUE argv[1];
+  VALUE rb_pool;
+  apr_pool_t *pool;
+
+  if (!DATA_PTR(self)) {
+    svn_swig_rb_raise_svn_ ## TYPE ## _already_close();
+  }
+
+  argv[0] = self;
+  svn_swig_rb_get_pool(1, argv, self, &rb_pool, &pool);
+  svn_swig_rb_destroy_pool(rb_pool);
+  DATA_PTR(self) = NULL;
+
+  return Qnil;
+}
+
+static VALUE
+svn_ ## TYPE ## _swig_rb_closed(VALUE self)
+{
+  return DATA_PTR(self) ? Qfalse : Qtrue;
+}
+%}
+
+%init %{
+  {
+    VALUE cSvn ## TYPE;
+    cSvn ## TYPE = rb_const_get(_mSWIG, rb_intern("TYPE_p_svn_" #TYPE "_t"));
+    rb_define_method(cSvn ## TYPE, "close",
+                     svn_ ## TYPE ## _swig_rb_close, 0);
+    rb_define_method(cSvn ## TYPE, "closed?",
+                     svn_ ## TYPE ## _swig_rb_closed, 0);
+  }
+%}
+%enddef
+#endif
 
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps
@@ -330,6 +423,7 @@
 %typemap(out) svn_error_t *
 {
   if ($1) {
+    svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_handle_svn_error($1);
   }
@@ -397,34 +491,10 @@
 */
 
 #ifdef SWIGPYTHON
-%define svn_swig_py_pool_check(pool)
-  if (pool != NULL && !PyObject_HasAttrString(pool, (char *)"_mark_valid"))
-  {
-    int argnum = PyTuple_GET_SIZE(args);
-    SWIG_Python_TypeError(SWIG_TypePrettyName($descriptor), pool);
-    SWIG_arg_fail(argnum);
-    SWIG_fail;
-  }
-%enddef
-%define svn_swig_py_pool_create_subpool(py_pool, pool)
-  if (py_pool != NULL) {
-    pool = svn_pool_create(pool);
-    py_pool = svn_swig_NewPointerObj(pool, $descriptor, py_pool);
-  }
-%enddef
-
-%typemap(arginit) POINTER_TYPES (PyObject *_global_svn_swig_py_pool,
-                                 apr_pool_t *_global_pool,
-                                 int _global_pool_is_application_pool)
-{
-  _global_pool_is_application_pool = 1;
-  svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool);
-}
 
 %typemap(in) POINTER_TYPES
 {
-  $1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $svn_argnum,
-    _global_pool_is_application_pool ? &_global_svn_swig_py_pool : NULL);
+  $1 = ($1_ltype)svn_swig_MustGetPtr($input, $descriptor, $svn_argnum);
   if (PyErr_Occurred()) {
     SWIG_fail;
   }
@@ -432,47 +502,30 @@
 
 %typemap(out) POINTER_TYPES
     "$result = svn_swig_NewPointerObj((void*)($1), $descriptor,
-                                      _global_svn_swig_py_pool);";
+                                      _global_py_pool, args);";
 
 %apply POINTER_TYPES { void *, SWIGTYPE *, SWIGTYPE [] };
 
-%typemap(default) apr_pool_t *(apr_pool_t *_global_pool,
-  PyObject *_global_svn_swig_py_pool)
+%typemap(default, noblock=1) apr_pool_t
+  *(apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
 {
-  int argnum = PyTuple_GET_SIZE(args) - 1;
-  _global_pool_is_application_pool = 0;
-  if (argnum >= 0) {
-    PyObject *input = PyTuple_GET_ITEM(args, argnum);
-    if (input != Py_None &&
-        PyObject_HasAttrString(input, (char *)"_mark_valid")) {
-      _global_pool = svn_swig_MustGetPtr(input, $1_descriptor, argnum+1, NULL);
-      if (PyErr_Occurred()) {
-        _global_svn_swig_py_pool = NULL;
-        SWIG_fail;
-      }
-      _global_svn_swig_py_pool = input;
-      Py_XINCREF(_global_svn_swig_py_pool);
-    } else {
-      svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool);
-      svn_swig_py_pool_create_subpool(_global_svn_swig_py_pool, _global_pool);
-    }
-  } else {
-    svn_swig_get_application_pool(&_global_svn_swig_py_pool, &_global_pool);
-    svn_swig_py_pool_create_subpool(_global_svn_swig_py_pool, _global_pool);
-  }
+  if (svn_swig_py_get_pool_arg(args, $descriptor,
+      &_global_py_pool, &_global_pool))
+    SWIG_fail;
   $1 = _global_pool;
-  svn_swig_py_pool_check(_global_svn_swig_py_pool)
 }
 
-%typemap(in) apr_pool_t * {
+%typemap(in, noblock=1) apr_pool_t * {
   /* Verify that the user supplied a valid pool */
-  if ($input != Py_None) {
-    svn_swig_py_pool_check($input);
+  if ($input != Py_None && $input != _global_py_pool) {
+    SWIG_Python_TypeError(SWIG_TypePrettyName($descriptor), $input);
+    SWIG_arg_fail($svn_argnum);
+    SWIG_fail;
   }
 }
 
 %typemap(freearg) apr_pool_t * {
-  Py_XDECREF(_global_svn_swig_py_pool);
+  Py_XDECREF(_global_py_pool);
 }
 #endif
 
@@ -508,7 +561,8 @@
 
 %typemap(argout) apr_pool_t *pool
 {
-  svn_swig_rb_set_pool($result, _global_svn_swig_rb_pool);
+  if (!svn_swig_rb_set_pool($result, _global_svn_swig_rb_pool))
+    svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
   svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
 }
 #endif
@@ -529,6 +583,103 @@
 };
 #endif
 
+/* -----------------------------------------------------------------------
+ * The CALLABLE_CALLBACK typemap wraps callback types as objects which
+ * can be called directly from Python. header_wrappers.py automatically
+ * tags all callback types (in Python) with this callback.
+ *
+ * header_wrappers.py also generates a '__call__' function for the
+ * callback objects, using the funcptr_proxy macro. See proxy.swg
+ */
+
+#ifdef SWIGPYTHON
+
+/* Allocate memory for a pointer to the function pointer. */
+%typemap(in, numinputs=0) CALLABLE_CALLBACK *
+  (apr_pool_t *_global_pool = NULL, PyObject *_global_py_pool = NULL)
+{
+  if (_global_pool == NULL)
+  {
+    if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                    &_global_py_pool, &_global_pool))
+      SWIG_fail;
+  }
+  $1 = ($ltype) apr_pcalloc(_global_pool, sizeof($*ltype));
+  if ($1 == NULL) SWIG_fail;
+}
+
+
+/* Return a pointer to the function pointer.
+ * This level of indirection makes it easier for SWIG to treat
+ * this callback like an object (which can be extended using SWIG).
+ */
+
+%typemap(argout) CALLABLE_CALLBACK * {
+  %append_output(svn_swig_NewPointerObj($1, $descriptor,
+                                        _global_py_pool, args));
+}
+
+/* Convert the pointer to a function pointer back into a regular
+ * function pointer
+ */
+
+%typemap(in) CALLABLE_CALLBACK {
+  $&ltype tmp =
+    svn_swig_MustGetPtr($input, $&descriptor, $svn_argnum);
+  if (tmp == NULL || PyErr_Occurred()) {
+    SWIG_fail;
+  }
+  $1 = *tmp;
+}
+
+/* Ensure that return values use a level of indirection.
+ *
+ * Allocate space on the heap for a pointer to the callback.
+ * The memory gets freed when the return value itself is
+ * freed.
+ */
+
+%typemap(out) CALLABLE_CALLBACK {
+  PyObject *py_pool = NULL;
+  apr_pool_t *pool = NULL;
+
+  if (svn_swig_py_get_parent_pool(args, $descriptor(apr_pool_t *),
+                                  &py_pool, &pool))
+    SWIG_fail;
+  if ($1 == NULL) {
+    $result = Py_None;
+    Py_INCREF($result);
+  } else {
+    $&ltype tmp = apr_palloc(pool, sizeof($ltype));
+    if (tmp == NULL) {
+      SWIG_fail;
+    }
+    *tmp = ($ltype) $1;
+    $result = svn_swig_NewPointerObj(tmp, $&1_descriptor,
+                                     py_pool, args);
+  }
+}
+
+
+/* Ensure that constant callbacks use a level of indirection.
+ *
+ * Allocate space on the heap for a pointer to the callback.
+ * Since this constant is always in scope, we don't need to
+ * worry about ever freeing the memory.
+ */
+
+%typemap(constcode) CALLABLE_CALLBACK {
+
+  $&ltype tmp = malloc(sizeof($ltype));
+  *tmp = ($ltype) $value;
+
+  %set_constant("$symname",
+    svn_swig_NewPointerObj(tmp, $&descriptor, NULL, NULL)
+  );
+
+}
+
+#endif
 
 /* -----------------------------------------------------------------------
    Callback: svn_log_message_receiver_t
@@ -710,6 +861,14 @@
 %typemap(in) svn_stream_t * {
   $1 = svn_swig_rb_make_stream($input);
 }
+
+%typemap(in) svn_stream_t *MAY_BE_NULL {
+  if (NIL_P($input)) {
+    $1 = NULL;
+  } else {
+    $1 = svn_swig_rb_make_stream($input);
+  }
+}
 #endif
 
 /* -----------------------------------------------------------------------
@@ -718,35 +877,40 @@
 
 #ifdef SWIGPYTHON
 
-%typemap(in) void *PY_AS_VOID (PyObject *newRef) {
-  newRef = $input;
+%typemap(in) void *PY_AS_VOID {
   if ($input == Py_None) {
-    $1 = newRef = NULL;
-  } else {
-    newRef = $input;
-    $1 = (void *)$input;
+    $1 = NULL;
+  } else if (SWIG_ConvertPtr($input, (void **) &$1, 0, 0) == -1) {
+    $1 = (void *) $input;
+    PyErr_Clear();
   }
 }
 
 
-%typemap(memberin) void *PY_AS_VOID {
+%typemap(out) void *PY_AS_VOID {
+  PyObject *ownerObj = obj0;
+  PyObject *members = PyObject_GetAttrString(ownerObj, "_members");
 
-  PyObject *ownerObj = obj0,
-           *prevRef = (PyObject *) $1,
-           *newRef = $input;
-
-  /*
-   * Mark the new input value as owned by the current pool, and mark
-   * any previous values as unowned. We look in 'ownerObj' for the
-   * current pool to work around a bug in our automatic memory management
-   * implementation where _global_svn_swig_py_pool is not set correctly.
-   */
-  if (svn_swig_py_pool_set_owned_ref(ownerObj, prevRef, newRef)) {
-    SWIG_fail;
+  $result = NULL;
+  if (members != NULL) {
+    $result = PyDict_GetItemString(members, "$1_name");
+    Py_XINCREF($result);
+    Py_DECREF(members);
   }
 
-  /* Copy the new input value into the struct */
-  $1 = ($1_ltype) $input;
+  if ($result == NULL) {
+    if ($1 == NULL) {
+      $result = Py_None;
+      Py_INCREF($result);
+    } else {
+      /* We don't know the type of this reference, so we'll have to
+       * treat it as an opaque void pointer.
+       */
+      $result = svn_swig_NewPointerObj($1, $descriptor,
+        _global_py_pool, args);
+    }
+  }
+
 }
 
 #endif
@@ -762,7 +926,9 @@
 
    Function Parameters (Category 1):
 
-   'unsigned char digest[]':
+   'unsigned char digest[]'
+   'unsigned char *digest':
+
      Output parameter in: svn_fs_file_md5_checksum(), svn_io_file_checksum(),
                           svn_wc_transmit_text_deltas2()
      
@@ -770,12 +936,6 @@
      practically, this means that svn_base64_from_md5 is in error, and
      should be using 'const unsigned char digest[]', but fortunately, we
      do not wrap the svn_base64_* APIs, so do not have to care here.
-
-   'unsigned char *digest' (also, 'result_digest'):
-     Output parameter in: svn_txdelta_send_stream(), svn_txdelta_apply()
-     essentially the same as 'unsigned char digest[]' - the difference
-     between [] and * is gratuitous inconsistency, as the types are
-     equivalent and can share the same typemaps.
 
 
    (Category 2):
@@ -790,20 +950,24 @@
      Would be quite complex to wrap, so this function is %ignore-d in the
      svn_io.h cherrypicking section.
      
+   'unsigned char *result_digest'
+     This parameter serves as a buffer for the digest results of
+     svn_txdelta_apply. As you supply data to this function via
+     the handler callback, this digest gets filled. Since
+     filling of this buffer is delayed, it is quite difficult
+     to wrap.
+
+    FIXME: Both Ruby and Perl have broken typemaps for result_digest.
+    The Python bindings ignore this parameter altogether.
    
    Function Parameters (Category 3):
 
    'const unsigned char digest[]' (also, 'd1', 'd2'):
+   'const unsigned char *digest':
      Input parameters in:
      svn_md5_digest_to_cstring_display()
      svn_md5_digest_to_cstring()
      svn_md5_digests_match()
-
-   'const unsigned char *digest':
-     Input paramater in: svn_wc_process_committed3() {and later revs}
-     Again, the difference between [] and * is gratuitous inconsistency,
-     and typemaps can be shared.
-
 
    Function return values (Category 4):
 
@@ -822,6 +986,7 @@
                                                                _global_pool)));
 }
 #endif
+
 #ifdef SWIGPERL
 %typemap(argout) unsigned char digest[ANY] {
   %append_output(sv_2mortal(newSVpv(svn_md5_digest_to_cstring($1,
@@ -838,11 +1003,24 @@
 
 %apply unsigned char digest[ANY] { unsigned char *digest };
 
-/* FIXME: It would be nice for it to be documented why Perl is doing
-   something different and bizarre here. */
-#ifndef SWIGPERL
+#ifdef SWIGRUBY
+/* FIXME: This typemap doesn't work, because svn_txdelta_apply saves
+ *        away this local pointer to be used later. When the pointer
+ *        is finally used, we get memory corruption / segfaults.
+ */
 %apply unsigned char digest[ANY] { unsigned char *result_digest };
-#else
+#endif
+
+#ifdef SWIGPYTHON
+/*
+ * Skip the md5sum
+ * FIXME: Wrap the md5sum
+ */
+%typemap(in, numinputs=0) unsigned char *result_digest
+  ($*1_type temp[APR_MD5_DIGESTSIZE]) "$1 = NULL;";
+#endif
+
+#ifdef SWIGPERL
 %typemap(in, numinputs=0) unsigned char *result_digest {
     $1 = (unsigned char *)apr_palloc(_global_pool, APR_MD5_DIGESTSIZE);
 }
@@ -961,6 +1139,17 @@
 %typemap(in, numinputs=0) svn_boolean_t * (svn_boolean_t temp) "$1 = &temp;";
 %typemap(argout) svn_boolean_t * {
   %append_output(*$1 ? Qtrue : Qfalse);
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   Filename to temporary file mapping for ruby.
+*/
+
+#ifdef SWIGRUBY
+%typemap(argout) const char **TO_TEMP_FILE
+{
+  %append_output(svn_swig_rb_filename_to_temp_file(*$1));
 }
 #endif
 

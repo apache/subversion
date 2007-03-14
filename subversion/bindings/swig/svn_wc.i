@@ -67,9 +67,8 @@
 }
 
 
-%hash_argout_typemap(entries, svn_wc_entry_t *, _global_svn_swig_py_pool)
-%hash_argout_typemap(externals_p, svn_wc_external_item_t *,
-                     _global_svn_swig_py_pool)
+%hash_argout_typemap(entries, svn_wc_entry_t *)
+%hash_argout_typemap(externals_p, svn_wc_external_item_t *)
 
 #ifdef SWIGPYTHON
 %callback_typemap(svn_wc_notify_func_t notify_func, void *notify_baton,
@@ -119,6 +118,13 @@
                   svn_swig_rb_wc_relocation_validator2)
 #endif
 
+
+/* svn_wc_translated2() */
+#ifdef SWIGRUBY
+%apply const char **TO_TEMP_FILE {
+    const char **xlated_path
+};
+#endif
 /* ----------------------------------------------------------------------- */
 
 %{

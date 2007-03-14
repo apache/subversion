@@ -2,7 +2,7 @@
  * ra_plugin.c : the main RA module for local repository access
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -352,8 +352,9 @@ svn_ra_local__change_rev_prop(svn_ra_session_t *session,
 
   SVN_ERR(get_username(session, pool));
 
-  SVN_ERR(svn_repos_fs_change_rev_prop2(baton->repos, rev, baton->username,
-                                        name, value, NULL, NULL, pool));
+  SVN_ERR(svn_repos_fs_change_rev_prop3(baton->repos, rev, baton->username,
+                                        name, value, TRUE, TRUE, NULL, NULL,
+                                        pool));
 
   return SVN_NO_ERROR;
 }
@@ -595,24 +596,33 @@ make_reporter(svn_ra_session_t *session,
   *reporter = &ra_local_reporter;
 
   SVN_ERR(get_username(session, pool));
-  
+
+  if (sbaton->callbacks)
+    SVN_ERR(svn_delta_get_cancellation_editor(sbaton->callbacks->cancel_func,
+                                              sbaton->callback_baton,
+                                              editor,
+                                              edit_baton,
+                                              &editor,
+                                              &edit_baton,
+                                              pool));
+
   /* Build a reporter baton. */
   SVN_ERR(svn_repos_begin_report(&rbaton,
                                  revision,
                                  sbaton->username,
-                                 sbaton->repos, 
+                                 sbaton->repos,
                                  sbaton->fs_path->data,
-                                 target, 
+                                 target,
                                  other_fs_path,
                                  text_deltas,
                                  recurse,
                                  ignore_ancestry,
-                                 editor, 
+                                 editor,
                                  edit_baton,
                                  NULL,
                                  NULL,
                                  pool));
-  
+
   /* Wrap the report baton given us by the repos layer with our own
      reporter baton. */
   *report_baton = make_reporter_baton(sbaton, rbaton, pool);
@@ -729,6 +739,32 @@ svn_ra_local__do_diff(svn_ra_session_t *session,
 }
 
 
+struct log_baton
+{
+  svn_ra_local__session_baton_t *session;
+  svn_log_message_receiver_t real_cb;
+  void *real_baton;
+};
+
+static svn_error_t *
+cancellation_log_receiver(void *baton,
+                          apr_hash_t *changed_paths,
+                          svn_revnum_t revision,
+                          const char *author,
+                          const char *date,
+                          const char *message,
+                          apr_pool_t *pool)
+{
+  struct log_baton *b = baton;
+  svn_ra_local__session_baton_t *session = b->session;
+
+  SVN_ERR((session->callbacks->cancel_func)(session->callback_baton));
+
+  return b->real_cb(b->real_baton, changed_paths, revision, author,
+                    date, message, pool);
+}
+
+
 static svn_error_t *
 svn_ra_local__get_log(svn_ra_session_t *session,
                       const apr_array_header_t *paths,
@@ -743,6 +779,7 @@ svn_ra_local__get_log(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sbaton = session->priv;
   int i;
+  struct log_baton lb;
   apr_array_header_t *abs_paths =
     apr_array_make(pool, 0, sizeof(const char *));
 
@@ -751,14 +788,25 @@ svn_ra_local__get_log(svn_ra_session_t *session,
       for (i = 0; i < paths->nelts; i++)
         {
           const char *abs_path = "";
-          const char *relative_path = (((const char **)(paths)->elts)[i]);
+          const char *relative_path = APR_ARRAY_IDX(paths, i, const char *);
           
           /* Append the relative paths to the base FS path to get an
              absolute repository path. */
           abs_path = svn_path_join(sbaton->fs_path->data, relative_path,
                                    pool);
-          (*((const char **)(apr_array_push(abs_paths)))) = abs_path;
+          APR_ARRAY_PUSH(abs_paths, const char *) = abs_path;
         }
+    }
+
+  if (sbaton->callbacks &&
+      sbaton->callbacks->cancel_func)
+    {
+      lb.real_cb = receiver;
+      lb.real_baton = receiver_baton;
+      lb.session = sbaton;
+
+      receiver = cancellation_log_receiver;
+      receiver_baton = &lb;
     }
 
   return svn_repos_get_logs3(sbaton->repos,
@@ -932,7 +980,11 @@ svn_ra_local__get_file(svn_ra_session_t *session,
          stored checksum, and all we're doing here is writing bytes in
          a loop.  Truly, Nothing Can Go Wrong :-).  But RA layers that
          go over a network should confirm the checksum. */
-      SVN_ERR(svn_stream_copy(contents, stream, pool));
+      SVN_ERR(svn_stream_copy2(contents, stream,
+                               sbaton->callbacks
+                               ? sbaton->callbacks->cancel_func : NULL,
+                               sbaton->callback_baton,
+                               pool));
       SVN_ERR(svn_stream_close(contents));
     }
 

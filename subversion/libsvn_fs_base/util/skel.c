@@ -247,7 +247,7 @@ explicit_atom(const char *data,
     return 0;
 
   /* Allocate the skel representing this string.  */
-  s = apr_pcalloc(pool, sizeof(skel_t));
+  s = apr_pcalloc(pool, sizeof(*s));
   s->is_atom = TRUE;
   s->data = data;
   s->len = size;

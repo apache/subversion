@@ -92,7 +92,7 @@ const char *lines[] =
     "Line 43: fairly boring subst test data... blah blah.",
     "Line 44: fairly boring subst test data... blah blah.",
     "Line 45: Invalid $LastChangedRevisionWithSuffix$, started unexpanded.",
-    "Line 46: Valid $Rev:$ is missing a space.",
+    "Line 46: Empty $Author:$, started expanded.",
     "Line 47: fairly boring subst test data... blah blah.",
     "Line 48: Two keywords back to back: $Author$$Rev$.",
     "Line 49: One keyword, one not, back to back: $Author$Rev$.",
@@ -516,6 +516,10 @@ substitute_and_verify(const char *test_name,
             apr_pstrcat(pool, "Line 38: ",
                         "Valid $Author: ", author, " $, started expanded.",
                         NULL);
+          expect[46 - 1] =
+            apr_pstrcat(pool, "Line 46: ",
+                        "Empty $Author: ", author, " $, started expanded.",
+                        NULL);
           expect[71 - 1] =
             apr_pstrcat(pool, ".$veR$Author: ", author, " $", NULL);
 
@@ -547,6 +551,8 @@ substitute_and_verify(const char *test_name,
             "Line 37: Valid $LastChangedBy$, started expanded.";
           expect[38 - 1] =
             "Line 38: Valid $Author$, started expanded.";
+          expect[46 - 1] =
+            "Line 46: Empty $Author$, started expanded.";          
           expect[74 - 1] =
             "Line 74: Valid $Author$, started expanded.";
           expect[79 - 1] =
@@ -595,17 +601,6 @@ substitute_and_verify(const char *test_name,
           expect[75 - 1] =
             "Line 75: Valid $URL$, started expanded.";
         }
-    }
-
-  if (rev)
-    {
-      if (expand)
-        {
-          expect[46 - 1] =
-            apr_pstrcat(pool, "Line 46: ", "Valid $Rev: ", rev,
-                        " $ is missing a space.", NULL);
-        }
-      /* Else Line 46 remains unchanged. */
     }
 
   /* Handle lines 48, 49, and 70 specially, as they contains two valid

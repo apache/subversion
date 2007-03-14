@@ -3,12 +3,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
-  @import "tigris-branding/css/tigris.css";
-  @import "tigris-branding/css/inst.css";
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="tigris-branding/css/print.css"/>
-<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
 <title>Subversion Tools and Contrib</title>
 </head>
 
@@ -83,6 +83,7 @@
   <li><strong>commandline tools</strong><ul>
     <li><a href="#asvn">asvn</a></li>
     <li><a href="#mucc_c">mucc.c</a></li>
+    <li><a href="#server_version_py">server-version.py</a></li>
     <li><a href="#server_vsn_py">server-vsn.py</a></li>
     <li><a href="#svn_update_pl">svn_update.pl</a></li>
   </ul></li>
@@ -175,7 +176,7 @@
   <li><strong>xslt</strong><ul>
     <li><a href="#svnindex_xsl">svnindex.xsl</a></li>
   </ul></li>
-  <li><strong>subversion development tools</strong><ul>
+  <li><strong>Subversion development tools</strong><ul>
     <li><a href="#check_license_py">check-license.py</a></li>
     <li><a href="#contribulyze_py">contribulyze.py</a></li>
     <li><a href="#datecheck_py">datecheck.py</a></li>
@@ -233,7 +234,7 @@
   <h3><a name="svn_bdb_view_py"
     href="http://svn.collab.net/repos/svn/trunk/tools/bdb/svn-bdb-view.py">svn-bdb-view.py</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/tools/bdb">tools/bdb</a>)</h3>
-  <p>A pretty-printer for subversion BDB repository databases.</p>
+  <p>A pretty-printer for Subversion BDB repository databases.</p>
   <p>Related files:
     <a href="http://svn.collab.net/repos/svn/trunk/tools/bdb/skel.py">skel.py</a>
     <a href="http://svn.collab.net/repos/svn/trunk/tools/bdb/svnfs.py">svnfs.py</a>
@@ -346,11 +347,12 @@
   <p>Show log messages matching a certain pattern.</p>
 
 
-  <h3><a name="server_vsn_py"
-    href="http://svn.collab.net/repos/svn/trunk/tools/client-side/server-vsn.py">server-vsn.py</a>
+  <h3><a name="server_version_py"
+    href="http://svn.collab.net/repos/svn/trunk/tools/client-side/server-version.py">server-version.py</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/tools/client-side">tools/client-side</a>)</h3>
   <p>Print a Subversion server's version number.</p>
 
+  <p><a name="server_vsn_py">server-version.py was formerly known as server-vsn.py</a></p>
 
   <h3><a name="showchange_pl"
     href="http://svn.collab.net/repos/svn/trunk/tools/client-side/showchange.pl">showchange.pl</a>
@@ -524,7 +526,7 @@
   <h3><a name="wcgrep"
     href="http://svn.collab.net/repos/svn/trunk/contrib/client-side/wcgrep">wcgrep</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/contrib/client-side">contrib/client-side</a>)</h3>
-  <p>Useful for greping in a subversion working copy.
+  <p>Useful for greping in a Subversion working copy.
      Essentially it behaves the same way your grep command does.
   </p>
 </div>
@@ -618,7 +620,7 @@
   <h3><a name="mlpatch_py"
     href="http://svn.collab.net/repos/svn/trunk/tools/dev/mlpatch.py">mlpatch.py</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/tools/dev">tools/dev</a>)</h3>
-  <p>Very annoyingly, the http://svn.haxx.se/ subversion mailing list archives
+  <p>Very annoyingly, the http://svn.haxx.se/ Subversion mailing list archives
      mangle inline patches, and provide no raw message download facility
      (other than for an entire month's email as an mbox).
      So, I wrote this script, to demangle them. It's not perfect, as it has to
@@ -900,8 +902,8 @@
 
 
   <h3><a name="svn2feed_py"
-    href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts/svn2feed.py">svn2feed.py</a>
-    (<a href="http://svn.collab.net/repos/svn/trunk/contrib/hook-scripts">contrib/hook-scripts</a>)</h3>
+    href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts/svn2feed.py">svn2feed.py</a>
+    (<a href="http://svn.collab.net/repos/svn/trunk/tools/hook-scripts">tools/hook-scripts</a>)</h3>
 
   <p>Generates an RSS 2.0 or Atom 1.0 file containing commit information.</p>
   <p><a name="svn2rss_py">svn2feed.py was formerly known as svn2rss.py</a></p>
@@ -976,7 +978,7 @@
     href="http://svn.collab.net/repos/svn/trunk/tools/server-side/svn-backup-dumps.py">svn-backup-dumps.py</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/tools/server-side">tools/server-side</a>)</h3>
   <p>This script creates (incremental) dump files from a subversion
-     repository on *IX. It is intended for use in cron jobs and
+     repository on *IX and Windows. It is intended for use in cron jobs and
      post-commit hooks.
   </p>
 
@@ -1002,7 +1004,7 @@
   <h3><a name="svnmirror_sh"
     href="http://svn.collab.net/repos/svn/trunk/contrib/server-side/svnmirror.sh">svnmirror.sh</a>
     (<a href="http://svn.collab.net/repos/svn/trunk/contrib/server-side">contrib/server-side</a>)</h3>
-  <p>Mirror subversion repositories. This script supports pushing or
+  <p>Mirror Subversion repositories. This script supports pushing or
      pulling the changes via ssh and svn tools.
   </p>
 </div>

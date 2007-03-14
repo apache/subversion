@@ -26,20 +26,30 @@ del _unprefix_names
 # Names that are not to be exported
 import svn.core as _svncore, svn.fs as _svnfs, svn.delta as _svndelta
 
+# Available change actions
+CHANGE_ACTION_MODIFY  = 0
+CHANGE_ACTION_ADD     = 1
+CHANGE_ACTION_DELETE  = 2
+CHANGE_ACTION_REPLACE = 3
+
 
 class ChangedPath:
   __slots__ = [ 'item_kind', 'prop_changes', 'text_changed',
-                'base_path', 'base_rev', 'path', 'added',
+                'base_path', 'base_rev', 'path', 'added', 'action',
                 ]
   def __init__(self,
                item_kind, prop_changes, text_changed, base_path, base_rev,
-               path, added):
+               path, added, action=None):
     self.item_kind = item_kind
     self.prop_changes = prop_changes
     self.text_changed = text_changed
     self.base_path = base_path
     self.base_rev = base_rev
     self.path = path
+    if action not in [None, CHANGE_ACTION_MODIFY, CHANGE_ACTION_ADD,
+                      CHANGE_ACTION_DELETE, CHANGE_ACTION_REPLACE]:
+      raise Exception, "unsupported change type"
+    self.action = action
 
     ### it would be nice to avoid this flag. however, without it, it would
     ### be quite difficult to distinguish between a change to the previous
@@ -49,6 +59,8 @@ class ChangedPath:
     ### of an older version. when it is "change to previous", I'm not sure
     ### if the rev is always repos.rev - 1, or whether it represents the
     ### created or time-of-checkout rev. so... we use a flag (for now)
+    ### Note: This flag is also set for replaced paths unlike self.action
+    ### which is either set to CHANGE_ACTION_ADD or CHANGE_ACTION_REPLACE
     self.added = added
 
 
@@ -121,11 +133,14 @@ class ChangeCollector(_svndelta.Editor):
                                      parent_baton[2], # base_rev
                                      None,            # (new) path
                                      False,           # added
+                                     CHANGE_ACTION_DELETE,
                                      )
     self._send_change(path)
 
   def add_directory(self, path, parent_baton,
                     copyfrom_path, copyfrom_revision, dir_pool=None):
+    action = self.changes.has_key(path) and CHANGE_ACTION_REPLACE \
+             or CHANGE_ACTION_ADD
     self.changes[path] = ChangedPath(_svncore.svn_node_dir,
                                      False,
                                      False,
@@ -133,6 +148,7 @@ class ChangeCollector(_svndelta.Editor):
                                      copyfrom_revision, # base_rev
                                      path,              # path
                                      True,              # added
+                                     action,
                                      )
     if copyfrom_path and (copyfrom_revision != -1):
       base_path = copyfrom_path
@@ -158,10 +174,13 @@ class ChangeCollector(_svndelta.Editor):
                                            dir_baton[2], # base_rev
                                            dir_path,     # path
                                            False,        # added
+                                           CHANGE_ACTION_MODIFY,
                                            )
 
   def add_file(self, path, parent_baton,
                copyfrom_path, copyfrom_revision, file_pool=None):
+    action = self.changes.has_key(path) and CHANGE_ACTION_REPLACE \
+             or CHANGE_ACTION_ADD
     self.changes[path] = ChangedPath(_svncore.svn_node_file,
                                      False,
                                      False,
@@ -169,6 +188,7 @@ class ChangeCollector(_svndelta.Editor):
                                      copyfrom_revision, # base_rev
                                      path,              # path
                                      True,              # added
+                                     action,
                                      )
     if copyfrom_path and (copyfrom_revision != -1):
       base_path = copyfrom_path
@@ -195,6 +215,7 @@ class ChangeCollector(_svndelta.Editor):
                                             file_baton[2], # base_rev
                                             file_path,     # path
                                             False,         # added
+                                            CHANGE_ACTION_MODIFY,
                                             )
 
     # no handler
@@ -214,6 +235,7 @@ class ChangeCollector(_svndelta.Editor):
                                             file_baton[2], # base_rev
                                             file_path,     # path
                                             False,         # added
+                                            CHANGE_ACTION_MODIFY,
                                             )
   def close_directory(self, dir_baton):
     self._send_change(dir_baton[0])

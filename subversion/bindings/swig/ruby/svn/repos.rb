@@ -12,8 +12,7 @@ module Svn
     Util.set_methods(Ext::Repos, self)
 
 
-    @@alias_targets = %w(create open hotcopy recover
-                         db_logfiles)
+    @@alias_targets = %w(create hotcopy recover db_logfiles)
     class << self
       @@alias_targets.each do |target|
         alias_method "_#{target}", target
@@ -25,17 +24,8 @@ module Svn
     @@alias_targets = nil
     
     module_function
-    def open(path)
-      repos = _open(path)
-      if block_given?
-        yield repos
-      else
-        repos
-      end
-    end
-
-    def create(path, config={}, fs_config={})
-      _create(path, nil, nil, config, fs_config)
+    def create(path, config={}, fs_config={}, &block)
+      _create(path, nil, nil, config, fs_config, &block)
     end
 
     def hotcopy(src, dest, clean_logs=true)
@@ -56,7 +46,7 @@ module Svn
     def read_authz(file, must_exist=true)
       Repos.authz_read(file, must_exist)
     end
-      
+
     ReposCore = SWIG::TYPE_p_svn_repos_t
     class ReposCore
       class << self
@@ -264,9 +254,10 @@ module Svn
                        use_deltas, cancel_func)
       end
 
-      def load_fs(dumpstream, feedback_stream, uuid_action,
-                  parent_dir, use_pre_commit_hook=true,
+      def load_fs(dumpstream, feedback_stream=nil, uuid_action=nil,
+                  parent_dir=nil, use_pre_commit_hook=true,
                   use_post_commit_hook=true, &cancel_func)
+        uuid_action ||= Svn::Repos::LOAD_UUID_DEFAULT
         Repos.load_fs2(self, dumpstream, feedback_stream,
                        uuid_action, parent_dir,
                        use_pre_commit_hook, use_post_commit_hook,

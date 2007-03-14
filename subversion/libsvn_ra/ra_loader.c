@@ -622,7 +622,7 @@ svn_error_t *svn_ra_lock(svn_ra_session_t *session,
   if (comment && ! svn_xml_is_xml_safe(comment, strlen(comment)))
     return svn_error_create
       (SVN_ERR_XML_UNESCAPABLE_DATA, NULL,
-       _("Lock comment has illegal characters"));
+       _("Lock comment contains illegal characters"));
   
   return session->vtable->lock(session, path_revs, comment, steal_lock,
                                lock_func, lock_baton, pool);
@@ -793,3 +793,46 @@ svn_ra_get_ra_library(svn_ra_plugin_t **library,
                            _("Unrecognized URL scheme '%s'"), url);
 }
 
+/* For each libsvn_ra_foo library that is not linked in, provide a default
+   implementation for svn_ra_foo_init which returns a "not implemented"
+   error. */
+
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_DAV
+svn_error_t *
+svn_ra_dav_init(int abi_version,
+                apr_pool_t *pool,
+                apr_hash_t *hash)
+{
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+#endif /* ! SVN_LIBSVN_CLIENT_LINKS_RA_DAV */
+
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_SVN
+svn_error_t *
+svn_ra_svn_init(int abi_version,
+                apr_pool_t *pool,
+                apr_hash_t *hash)
+{
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+#endif /* ! SVN_LIBSVN_CLIENT_LINKS_RA_SVN */
+
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL
+svn_error_t *
+svn_ra_local_init(int abi_version,
+                  apr_pool_t *pool,
+                  apr_hash_t *hash)
+{
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+#endif /* ! SVN_LIBSVN_CLIENT_LINKS_RA_LOCAL */
+
+#ifndef SVN_LIBSVN_CLIENT_LINKS_RA_SERF
+svn_error_t *
+svn_ra_serf_init(int abi_version,
+                 apr_pool_t *pool,
+                 apr_hash_t *hash)
+{
+  return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
+}
+#endif /* ! SVN_LIBSVN_CLIENT_LINKS_RA_SERF */

@@ -175,7 +175,8 @@ svn_client__get_auto_props(apr_hash_t **properties,
   /* if mimetype has not been set check the file */
   if (! autoprops.mimetype)
     {
-      SVN_ERR(svn_io_detect_mimetype(&autoprops.mimetype, path, pool));
+      SVN_ERR(svn_io_detect_mimetype2(&autoprops.mimetype, path, 
+                                      ctx->mimetypes_map, pool));
       if (autoprops.mimetype)
         apr_hash_set(autoprops.properties, SVN_PROP_MIME_TYPE,
                      strlen(SVN_PROP_MIME_TYPE), 
@@ -316,18 +317,16 @@ add_dir_recursive(const char *dirname,
   if (!no_ignore)
     SVN_ERR(svn_wc_get_ignores(&ignores, ctx->config, dir_access, pool));
 
-  /* Create a subpool for iterative memory control. */
   subpool = svn_pool_create(pool);
 
-  /* Read the directory entries one by one and add those things to
-     revision control. */
   SVN_ERR(svn_io_dir_open(&dir, dirname, pool));
 
+  /* Read the directory entries one by one and add those things to
+     version control. */
   while (1)
     {
       const char *fullpath;
 
-      /* Clean out the per-iteration pool. */
       svn_pool_clear(subpool);
 
       err = svn_io_dir_read(&this_entry, flags, dir, subpool);
@@ -337,7 +336,6 @@ add_dir_recursive(const char *dirname,
           /* Check if we're done reading the dir's entries. */
           if (APR_STATUS_IS_ENOENT(err->apr_err))
             {
-              /* No more entries, close the dir and exit the loop. */
               apr_status_t apr_err;
 
               svn_error_clear(err);
@@ -350,7 +348,6 @@ add_dir_recursive(const char *dirname,
             }
           else
             {
-              /* Some unexpected error reading the dir's entries. */
               return svn_error_createf
                 (err->apr_err, err,
                  _("Error during recursive add of '%s'"),
@@ -561,9 +558,9 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
     }
 
   /* Create new commit items and add them to the array. */
-  if (ctx->log_msg_func || ctx->log_msg_func2)
+  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
-      svn_client_commit_item2_t *item;
+      svn_client_commit_item3_t *item;
       const char *tmp_file;
       apr_array_header_t *commit_items 
         = apr_array_make(pool, targets->nelts, sizeof(item));
@@ -571,10 +568,11 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *path = APR_ARRAY_IDX(targets, i, const char *);
-          item = apr_pcalloc(pool, sizeof(*item));
+          SVN_ERR(svn_client_commit_item_create
+                  ((const svn_client_commit_item3_t **) &item, pool));
           item->url = svn_path_join(common, path, pool);
           item->state_flags = SVN_CLIENT_COMMIT_ITEM_ADD;
-          APR_ARRAY_PUSH(commit_items, svn_client_commit_item2_t *) = item;
+          APR_ARRAY_PUSH(commit_items, svn_client_commit_item3_t *) = item;
         }
 
       SVN_ERR(svn_client__get_log_msg(&log_msg, &tmp_file, commit_items,
@@ -666,7 +664,7 @@ svn_client_mkdir2(svn_commit_info_t **commit_info_p,
               /* ### If this returns an error, should we link it onto
                  err instead, so that the user is warned that we just
                  created an unversioned directory? */
-              svn_error_clear(svn_io_remove_dir(path, subpool));
+              svn_error_clear(svn_io_remove_dir2(path, FALSE, subpool));
               return err;
             }
         }

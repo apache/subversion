@@ -46,42 +46,42 @@ void MessageReceiver::receiveMessage(const char *message)
     static jmethodID mid = 0; // the method id will not change during
                               // the time this library is loaded, so
                               // it can be cached. 
-    if(mid == 0)
+    if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/SVNAdmin$MessageReceiver");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return;
         }
-        mid = env->GetMethodID(clazz, "receiveMessageLine", 
-            "(Ljava/lang/String;)V");
-        if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+        mid = env->GetMethodID(clazz, "receiveMessageLine",
+                               "(Ljava/lang/String;)V");
+        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
             return;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return;
         }
     }
     // convert the message to a java string
     jstring jmsg = JNIUtil::makeJString(message);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
     
     // call the java method
     env->CallVoidMethod(m_jthis, mid);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }
 
     // delete the java string
     env->DeleteLocalRef(jmsg);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return;
     }

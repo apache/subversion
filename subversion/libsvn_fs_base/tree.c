@@ -125,7 +125,8 @@ static svn_fs_root_t *make_revision_root(svn_fs_t *fs, svn_revnum_t rev,
                                          apr_pool_t *pool);
 
 static svn_fs_root_t *make_txn_root(svn_fs_t *fs, const char *txn,
-                                    apr_uint32_t flags, apr_pool_t *pool);
+                                    svn_revnum_t base_rev, apr_uint32_t flags,
+                                    apr_pool_t *pool);
 
 
 /*** Node Caching in the Roots. ***/
@@ -308,7 +309,7 @@ txn_body_txn_root(void *baton,
         flags |= SVN_FS_TXN_CHECK_LOCKS;
     }
 
-  root = make_txn_root(fs, svn_txn_id, flags, trail->pool);
+  root = make_txn_root(fs, svn_txn_id, txn->base_rev, flags, trail->pool);
 
   *root_p = root;
   return SVN_NO_ERROR;
@@ -1465,8 +1466,7 @@ base_dir_entries(apr_hash_t **table_p,
   if (table)
     {
       apr_hash_index_t *hi;
-      apr_pool_t *subpool = svn_pool_create(pool);
-      for (hi = apr_hash_first(subpool, table); hi; hi = apr_hash_next(hi))
+      for (hi = apr_hash_first(pool, table); hi; hi = apr_hash_next(hi))
         {
           svn_fs_dirent_t *entry;
           struct node_kind_args nk_args;
@@ -2032,12 +2032,12 @@ merge(svn_stringbuf_t *conflict_p,
           if (s_entry)
             {
               SVN_ERR(svn_fs_base__dag_set_entry(target, key, s_entry->id,
-                                                 txn_id, trail, pool));
+                                                 txn_id, trail, iterpool));
             }
           else
             {
               SVN_ERR(svn_fs_base__dag_delete(target, key, txn_id, 
-                                              trail, pool));
+                                              trail, iterpool));
             }
         }
 
@@ -4420,11 +4420,12 @@ make_revision_root(svn_fs_t *fs,
 
 
 /* Construct a root object referring to the root of the transaction
-   named TXN in FS.  FLAGS represents the behavior of the transaction.
-   Create the new root in POOL.  */
+   named TXN and based on revision BASE_REV in FS.  FLAGS represents
+   the behavior of the transaction.  Create the new root in POOL.  */
 static svn_fs_root_t *
 make_txn_root(svn_fs_t *fs,
               const char *txn,
+              svn_revnum_t base_rev,
               apr_uint32_t flags,
               apr_pool_t *pool)
 {
@@ -4432,6 +4433,7 @@ make_txn_root(svn_fs_t *fs,
   root->is_txn_root = TRUE;
   root->txn = apr_pstrdup(root->pool, txn);
   root->txn_flags = flags;
+  root->rev = base_rev;
 
   return root;
 }

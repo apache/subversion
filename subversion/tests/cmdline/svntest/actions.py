@@ -15,7 +15,7 @@
 #
 ######################################################################
 
-import os, shutil, string, re, sys, errno
+import os, shutil, re, sys, errno
 
 import main, tree, wc  # general svntest routines in this module.
 from svntest import Failure, SVNAnyOutput
@@ -51,24 +51,31 @@ class SVNIncorrectDatatype(SVNUnexpectedOutput):
   pass
 
 
-######################################################################
-# Used by every test, so that they can run independently of
-# one another.  The first time it's run, it executes 'svnadmin' to
-# create a repository and then 'svn imports' the greek tree.
-# Thereafter, every time this routine is called, it recursively copies
-# the `pristine repos' to a new location.
+def no_sleep_for_timestamps():
+  os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'no'
 
-def guarantee_greek_repository(path):
-  """Guarantee that a local svn repository exists at PATH, containing
-  nothing but the greek-tree at revision 1."""
+def do_sleep_for_timestamps():
+  os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'yes'
 
-  if path == main.pristine_dir:
-    print "ERROR:  attempt to overwrite the pristine repos!  Aborting."
-    sys.exit(1)
+def setup_pristine_repository():
+  """Create the pristine repository, 'svn import' the greek tree and 
+  checkout the pristine working copy"""
+
+  # these directories don't exist out of the box, so we may have to create them
+  if not os.path.exists(main.general_wc_dir):
+    os.makedirs(main.general_wc_dir)
+
+  if not os.path.exists(main.general_repo_dir):
+    os.makedirs(main.general_repo_dir) # this also creates all the intermediate dirs
 
   # If there's no pristine repos, create one.
   if not os.path.exists(main.pristine_dir):
     main.create_repos(main.pristine_dir)
+
+    # if this is dav, gives us access rights to import the greek tree.
+    if main.is_ra_type_dav():
+      authz_file = os.path.join(main.work_dir, "authz")
+      main.file_write(authz_file, "[/]\n* = rw\n")
 
     # dump the greek tree to disk.
     main.greek_state.write_to_disk(main.greek_dump_dir)
@@ -89,7 +96,7 @@ def guarantee_greek_repository(path):
       sys.exit(1)
 
     # verify the printed output of 'svn import'.
-    lastline = string.strip(output.pop())
+    lastline = output.pop().strip()
     cm = re.compile ("(Committed|Imported) revision [0-9]+.")
     match = cm.search (lastline)
     if not match:
@@ -115,7 +122,23 @@ def guarantee_greek_repository(path):
                     'OUTPUT TREE', expected_output_tree, output_tree)
       sys.exit(1)
 
-  # Now that the pristine repos exists, copy it to PATH.
+
+######################################################################
+# Used by every test, so that they can run independently of  one 
+# another. Every time this routine is called, it recursively copies
+# the `pristine repos' to a new location.
+# Note: make sure setup_pristine_repository was called once before
+# using this function.
+
+def guarantee_greek_repository(path):
+  """Guarantee that a local svn repository exists at PATH, containing
+  nothing but the greek-tree at revision 1."""
+
+  if path == main.pristine_dir:
+    print "ERROR:  attempt to overwrite the pristine repos!  Aborting."
+    sys.exit(1)
+
+  # copy the pristine repository to PATH.
   main.safe_rmtree(path)
   if main.copy_repos(main.pristine_dir, path, 1):
     print "ERROR:  copying repository failed."
@@ -124,22 +147,7 @@ def guarantee_greek_repository(path):
   # make the repos world-writeable, for mod_dav_svn's sake.
   main.chmod_tree(path, 0666, 0666)
 
-  # If there's no pristine wc, create one.
-  if not os.path.exists(main.pristine_wc_dir):
-    # Generate the expected output tree.
-    expected_output = main.greek_state.copy()
-    expected_output.wc_dir = main.pristine_wc_dir
-    expected_output.tweak(status='A ', contents=None)
-  
-    # Generate an expected wc tree.
-    expected_wc = main.greek_state
-  
-    # Do a checkout, and verify the resulting output and disk contents.
-    run_and_verify_checkout(main.pristine_url, 
-                            main.pristine_wc_dir,
-                            expected_output,
-                            expected_wc)
-  
+
 def run_and_verify_svnversion(message, wc_dir, repo_url,
                               expected_stdout, expected_stderr):
   "Run svnversion command and check its output"
@@ -200,7 +208,8 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
       match_or_fail(message, output_type.upper(), expected, actual)
     elif expected == SVNAnyOutput:
       if len(actual) == 0:
-        if message is not None: print message
+        if message is not None:
+          print message
         raise raisable
     elif expected is not None:
       raise SVNIncorrectDatatype("Unexpected type for %s data" % output_type)
@@ -212,9 +221,9 @@ def run_and_verify_load(repo_dir, dump_file_content):
   "Runs 'svnadmin load' and reports any errors."
   expected_stderr = []
   output, errput = \
-          main.run_command_stdin(
-    "%s load --force-uuid --quiet %s" % (main.svnadmin_binary, repo_dir),
-    expected_stderr, 1, dump_file_content)
+          main.run_command_stdin(main.svnadmin_binary,
+    expected_stderr, 1, dump_file_content,
+    'load', '--force-uuid', '--quiet', repo_dir)
   if expected_stderr:
     actions.compare_and_display_lines(
       "Standard error output", "STDERR", expected_stderr, errput)
@@ -563,7 +572,7 @@ def run_and_verify_merge2(dir, rev1, rev2, url1, url2,
   tree.compare_trees(myskiptree, skip_tree,
                      extra_skip, None, missing_skip, None)
 
-  mytree = tree.build_tree_from_checkout(out)
+  mytree = tree.build_tree_from_checkout(out, 0)
   verify_update (mytree, dir,
                  output_tree, disk_tree, status_tree,
                  singleton_handler_a, a_baton,
@@ -677,7 +686,7 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_output_tree,
   # Remove the final output line, and verify that the commit succeeded.
   lastline = ""
   if len(output):
-    lastline = string.strip(output.pop())
+    lastline = output.pop().strip()
 
     cm = re.compile("(Committed|Imported) revision [0-9]+.")
     match = cm.search(lastline)
@@ -888,7 +897,8 @@ def display_lines(message, label, expected, actual, expected_is_regexp=None):
     map(sys.stdout.write, actual)
 
 def compare_and_display_lines(message, label, expected, actual):
-  'Compare two sets of output lines, and print them if they differ.'
+  """Compare two sets of output lines, and print them if they differ.
+  MESSAGE is ignored if None."""
   # This catches the None vs. [] cases
   if expected is None: exp = []
   else: exp = expected
@@ -923,25 +933,23 @@ def make_repo_and_wc(sbox, create_wc = True):
   'general_wc_dir' (variables defined at the top of this test
   suite.)  Returns on success, raises on failure."""
 
-  # Store the path of the current repository.
-  main.set_repos_paths(sbox.repo_dir)
-
   # Create (or copy afresh) a new repos with a greek tree in it.
   guarantee_greek_repository(sbox.repo_dir)
 
   if create_wc:
-    # this dir doesn't exist out of the box, so we may have to make it
-    if not os.path.exists(main.general_wc_dir):
-      os.makedirs(main.general_wc_dir)
-        
-    # copy the pristine wc and relocate it to our new repository.
-    duplicate_dir(main.pristine_wc_dir, sbox.wc_dir)
+    # Generate the expected output tree.
+    expected_output = main.greek_state.copy()
+    expected_output.wc_dir = sbox.wc_dir
+    expected_output.tweak(status='A ', contents=None)
 
-    output, errput = main.run_svn (None, 'switch', '--relocate',
-                               '--username', main.wc_author,
-                               '--password', main.wc_passwd,
-                               main.pristine_url,
-                               main.current_repo_url, sbox.wc_dir)
+    # Generate an expected wc tree.
+    expected_wc = main.greek_state
+
+    # Do a checkout, and verify the resulting output and disk contents.
+    run_and_verify_checkout(sbox.repo_url,
+                            sbox.wc_dir,
+                            expected_output,
+                            expected_wc)
   else:
     # just make sure the parent folder of our working copy is created
     try:
@@ -974,6 +982,15 @@ def get_virginal_state(wc_dir, rev):
 
   return state
 
+def remove_admin_tmp_dir(wc_dir):
+  "Remove the tmp directory within the administrative directory."
+
+  tmp_path = os.path.join(wc_dir, main.get_admin_name(), 'tmp')
+  ### Any reason not to use main.safe_rmtree()?
+  os.rmdir(os.path.join(tmp_path, 'prop-base'))
+  os.rmdir(os.path.join(tmp_path, 'props'))
+  os.rmdir(os.path.join(tmp_path, 'text-base'))
+  os.rmdir(tmp_path)
 
 # Cheap administrative directory locking
 def lock_admin_dir(wc_dir):

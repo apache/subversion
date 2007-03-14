@@ -36,10 +36,10 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
 {
     JNIUtil::JNIInit(env);
     // generating a log message is expensive
-    if(JNIUtil::getLogLevel() >= JNIUtil::entryLog)
+    if (JNIUtil::getLogLevel() >= JNIUtil::entryLog)
     {
         jclass jlo = env->FindClass("java/lang/Object");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return;
         }
@@ -47,10 +47,10 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
         // the time this library is loaded, so
         // it can be cached.
         static jmethodID mid = 0;
-        if(mid == 0)
+        if (mid == 0)
         {
             mid = env->GetMethodID(jlo, "toString", "()Ljava/lang/String;");
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return;
             }
@@ -58,7 +58,7 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
 
         // this will call java.lang.Object.toString, even when it is overriden.
         jobject oStr = env->CallNonvirtualObjectMethod(jthis, jlo, mid);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return;
         }
@@ -70,13 +70,13 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
 
         // release the java string
         env->DeleteLocalRef(jlo);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return;
         }
 
         env->DeleteLocalRef(jlo);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return;
         }
@@ -106,12 +106,14 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
  */
 JNIStackElement::~JNIStackElement()
 {
-    if(m_clazz != NULL)
+    if (m_clazz != NULL)
     {
         // generate a log message
         char *buffer = JNIUtil::getFormatBuffer();
-        apr_snprintf(buffer, JNIUtil::formatBufferSize, "exit class %s method %s object %s", m_clazz, m_method, m_objectID);
+        apr_snprintf(buffer, JNIUtil::formatBufferSize, 
+                     "exit class %s method %s object %s", m_clazz, 
+                     m_method, m_objectID);
         JNIUtil::logMessage(buffer);
     }
-	JNIThreadData::popThreadData();
+    JNIThreadData::popThreadData();
 }

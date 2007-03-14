@@ -25,6 +25,7 @@
 #include "svn_types.h"
 #include "svn_delta.h"
 #include "svn_fs.h"
+#include "svn_md5.h"
 #include "svn_repos.h"
 #include "svn_props.h"
 #include "svn_pools.h"
@@ -81,7 +82,7 @@
    with each change item, and whose values are arrays of changes made
    to that path, again preserving the chronological ordering.
 
-   Once our hash it built, we then sort all the keys of the hash (the
+   Once our hash is built, we then sort all the keys of the hash (the
    paths) using a depth-first directory sort routine.
 
    Finally, we drive an editor, moving down our list of sorted paths,
@@ -89,8 +90,8 @@
    and closures) needed to navigate between each successive path.  For
    each path, we replay the sorted actions that occurred at that path.
 
-   We we've finished the editor drive, we should have fully replayed
-   the filesystem events that occurred in that revision or transactions
+   When we've finished the editor drive, we should have fully replayed
+   the filesystem events that occurred in that revision or transaction
    (though not necessarily in the same order in which they
    occurred). */
    
@@ -156,6 +157,7 @@ add_subdir(svn_fs_root_t *source_root,
            const char *source_path,
            svn_repos_authz_func_t authz_read_func,
            void *authz_read_baton,
+           apr_hash_t *changed_paths,
            apr_pool_t *pool,
            void **dir_baton)
 {
@@ -167,7 +169,7 @@ add_subdir(svn_fs_root_t *source_root,
   SVN_ERR(editor->add_directory(path, parent_baton, NULL,
                                 SVN_INVALID_REVNUM, pool, dir_baton));
 
-  SVN_ERR(svn_fs_node_proplist(&props, source_root, source_path, pool));
+  SVN_ERR(svn_fs_node_proplist(&props, target_root, path, pool));
 
   for (phi = apr_hash_first(pool, props); phi; phi = apr_hash_next(phi))
     {
@@ -184,10 +186,14 @@ add_subdir(svn_fs_root_t *source_root,
                                       subpool));
     }
 
+  /* We have to get the dirents from the source path, not the target, 
+     because we want nested copies from *readable* paths to be handled by
+     path_driver_cb_func, not add_subdir (in order to preserve history). */
   SVN_ERR(svn_fs_dir_entries(&dirents, source_root, source_path, pool));
 
   for (hi = apr_hash_first(pool, dirents); hi; hi = apr_hash_next(hi))
     {
+      svn_fs_path_change_t *change;
       svn_boolean_t readable = TRUE;
       svn_fs_dirent_t *dent;
       const char *new_path;
@@ -200,6 +206,19 @@ add_subdir(svn_fs_root_t *source_root,
       dent = val;
 
       new_path = svn_path_join(path, dent->name, subpool);
+
+      /* If a file or subdirectory of the copied directory is listed as a
+         changed path (because it was modified after the copy but before the
+         commit), we remove it from the changed_paths hash so that future
+         calls to path_driver_cb_func will ignore it. */
+      change = apr_hash_get(changed_paths, new_path, APR_HASH_KEY_STRING);
+      if (change)
+        {
+          apr_hash_set(changed_paths, new_path, APR_HASH_KEY_STRING, NULL);
+          /* If it's a delete, skip this entry. */
+          if (change->change_kind == svn_fs_path_change_delete)
+            continue;
+        }
 
       if (authz_read_func)
         SVN_ERR(authz_read_func(&readable, target_root, new_path,
@@ -217,7 +236,7 @@ add_subdir(svn_fs_root_t *source_root,
                              svn_path_join(source_path, dent->name,
                                            subpool),
                              authz_read_func, authz_read_baton,
-                             subpool, &new_dir_baton));
+                             changed_paths, subpool, &new_dir_baton));
 
           SVN_ERR(editor->close_directory(new_dir_baton, subpool));
         }
@@ -226,16 +245,12 @@ add_subdir(svn_fs_root_t *source_root,
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton, *file_baton;
           svn_txdelta_stream_t *delta_stream;
-          const char *new_src_path;
+          unsigned char digest[APR_MD5_DIGESTSIZE];
 
-          SVN_ERR(editor->add_file(svn_path_join(path, dent->name, subpool),
-                                   *dir_baton, NULL, SVN_INVALID_REVNUM,
-                                   pool, &file_baton));
+          SVN_ERR(editor->add_file(new_path, *dir_baton, NULL,
+                                   SVN_INVALID_REVNUM, pool, &file_baton));
 
-          new_src_path = svn_path_join(source_path, dent->name, subpool);
-
-          SVN_ERR(svn_fs_node_proplist(&props, source_root, new_src_path,
-                                       subpool));
+          SVN_ERR(svn_fs_node_proplist(&props, target_root, new_path, subpool));
 
           for (phi = apr_hash_first(pool, props);
                phi;
@@ -256,7 +271,7 @@ add_subdir(svn_fs_root_t *source_root,
                                           &delta_handler_baton));
 
           SVN_ERR(svn_fs_get_file_delta_stream
-                  (&delta_stream, NULL, NULL, source_root, new_src_path,
+                  (&delta_stream, NULL, NULL, target_root, new_path,
                    pool));
 
           SVN_ERR(svn_txdelta_send_txstream(delta_stream,
@@ -264,7 +279,13 @@ add_subdir(svn_fs_root_t *source_root,
                                             delta_handler_baton,
                                             pool));
 
-          SVN_ERR(editor->close_file(file_baton, NULL, pool));
+          SVN_ERR(svn_fs_file_md5_checksum(digest, 
+                                           target_root, 
+                                           new_path, 
+                                           pool));
+          SVN_ERR(editor->close_file(file_baton,
+                                     svn_md5_digest_to_cstring(digest, pool),
+                                     pool));
         }
       else
         abort();
@@ -323,6 +344,13 @@ path_driver_cb_func(void **dir_baton,
     cb->copies->nelts--;
 
   change = apr_hash_get(cb->changed_paths, path, APR_HASH_KEY_STRING);
+  if (! change)
+    {
+      /* This can only happen if the path was removed from cb->changed_paths
+         by an earlier call to add_subdir, which means the path was already
+         handled and we should simply ignore it. */
+      return SVN_NO_ERROR;
+    }
   switch (change->change_kind)
     {
     case svn_fs_path_change_add:
@@ -408,7 +436,7 @@ path_driver_cb_func(void **dir_baton,
               SVN_ERR(add_subdir(copyfrom_root, root, editor, edit_baton,
                                  path, parent_baton, real_copyfrom_path,
                                  cb->authz_read_func, cb->authz_read_baton,
-                                 pool, dir_baton));
+                                 cb->changed_paths, pool, dir_baton));
             }
           else
             {
@@ -568,8 +596,19 @@ path_driver_cb_func(void **dir_baton,
         {
           svn_txdelta_window_handler_t delta_handler;
           void *delta_handler_baton;
-          /* ### Provide checksum if sending deltas. */
-          SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool, 
+          const char *checksum = NULL;
+
+          if (cb->compare_root && source_root && source_path)
+            {
+              unsigned char digest[APR_MD5_DIGESTSIZE];
+              SVN_ERR(svn_fs_file_md5_checksum(digest,
+                                               source_root,
+                                               source_path,
+                                               pool));
+              checksum = svn_md5_digest_to_cstring(digest, pool);
+            }
+
+          SVN_ERR(editor->apply_textdelta(file_baton, checksum, pool, 
                                           &delta_handler, 
                                           &delta_handler_baton));
           if (cb->compare_root)
@@ -592,8 +631,13 @@ path_driver_cb_func(void **dir_baton,
 
   /* Close the file baton if we opened it. */
   if (file_baton)
-    /* ### Provide checksum if we sent a text delta. */
-    SVN_ERR(editor->close_file(file_baton, NULL, pool));
+    {
+      unsigned char digest[APR_MD5_DIGESTSIZE];
+      SVN_ERR(svn_fs_file_md5_checksum(digest, root, path, pool));
+      SVN_ERR(editor->close_file(file_baton, 
+                                 svn_md5_digest_to_cstring(digest, pool),
+                                 pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -684,14 +728,17 @@ svn_repos_replay2(svn_fs_root_t *root,
   cb_baton.base_path = base_path;
   cb_baton.base_path_len = base_path_len;
   cb_baton.low_water_mark = low_water_mark;
+  cb_baton.compare_root = NULL;
 
   if (send_deltas)
-    SVN_ERR(svn_fs_revision_root(&cb_baton.compare_root,
-                                 svn_fs_root_fs(root),
-                                 svn_fs_revision_root_revision(root) - 1,
-                                 pool));
-  else
-    cb_baton.compare_root = NULL;
+    {
+      SVN_ERR(svn_fs_revision_root(&cb_baton.compare_root, 
+                                   svn_fs_root_fs(root), 
+                                   svn_fs_is_revision_root(root) 
+                                     ? svn_fs_revision_root_revision(root) - 1
+                                     : svn_fs_txn_root_base_revision(root),
+                                   pool));
+    }
 
   cb_baton.copies = apr_array_make(pool, 4, sizeof(struct copy_info));
   cb_baton.pool = pool;

@@ -106,7 +106,7 @@ def output_trail_length_frequencies(trails, outfile):
 
 
 def output_trail(outfile, trail, column = 0):
-  ### Output the trail itself, in it's own column
+  ### Output the trail itself, in its own column
 
   if len(trail) == 0:
     outfile.write('<empty>\n')

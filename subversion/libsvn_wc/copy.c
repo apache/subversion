@@ -145,7 +145,7 @@ copy_added_dir_administratively(const char *src_path,
         SVN_ERR(cancel_func(cancel_baton));
 
       /* "Copy" the dir dst_path and schedule it, and possibly
-         it's children, for addition. */
+         its children, for addition. */
       SVN_ERR(svn_io_dir_make(dst_path, APR_OS_DEFAULT, pool));
 
       /* Add the directory, adding locking access for dst_path
@@ -161,17 +161,15 @@ copy_added_dir_administratively(const char *src_path,
       SVN_ERR(svn_wc_adm_retrieve(&src_child_dir_access, src_access,
                                   src_path, pool));
 
-      /* Read src_path's entries one by one. */
       SVN_ERR(svn_io_dir_open(&dir, src_path, pool));
 
-      /* Create a subpool for iterative memory control. */
       subpool = svn_pool_create(pool);
 
+      /* Read src_path's entries one by one. */
       while (1)
         {
           const char *src_fullpath;
 
-          /* Clean out the per-iteration pool. */
           svn_pool_clear(subpool);
 
           err = svn_io_dir_read(&this_entry, flags, dir, subpool);
@@ -181,7 +179,6 @@ copy_added_dir_administratively(const char *src_path,
               /* Check if we're done reading the dir's entries. */
               if (APR_STATUS_IS_ENOENT(err->apr_err))
                 {
-                  /* No more entries, close the dir and exit the loop. */
                   apr_status_t apr_err;
 
                   svn_error_clear(err);
@@ -196,7 +193,6 @@ copy_added_dir_administratively(const char *src_path,
                 }
               else
                 {
-                  /* Some unexpected error reading the dir's entries. */
                   return svn_error_createf(err->apr_err, err,
                                            _("Error during recursive copy "
                                              "of '%s'"),
@@ -534,7 +530,7 @@ post_copy_cleanup(svn_wc_adm_access_t *adm_access,
       void *val;
       svn_node_kind_t kind;
       svn_boolean_t deleted = FALSE;
-      apr_uint32_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
+      apr_uint64_t flags = SVN_WC__ENTRY_MODIFY_FORCE;
 
       svn_pool_clear(subpool);
 

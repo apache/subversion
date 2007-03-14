@@ -3,12 +3,12 @@
 <html xmlns="http://www.w3.org/1999/xhtml">
 <head>
 <style type="text/css"> /* <![CDATA[ */
-  @import "tigris-branding/css/tigris.css";
-  @import "tigris-branding/css/inst.css";
+  @import "branding/css/tigris.css";
+  @import "branding/css/inst.css";
   /* ]]> */</style>
 <link rel="stylesheet" type="text/css" media="print"
-  href="tigris-branding/css/print.css"/>
-<script type="text/javascript" src="tigris-branding/scripts/tigris.js"></script>
+  href="branding/css/print.css"/>
+<script type="text/javascript" src="branding/scripts/tigris.js"></script>
 <title>Subversion Packages</title>
 </head>
 
@@ -18,7 +18,7 @@
 <h1 style="text-align: center;">Subversion Packages</h1>
 
 <p>The best available version of Subversion is:&nbsp;<a
-href="svn_1.3_releasenotes.html">1.3.2</a></p>
+href="svn_1.4_releasenotes.html">1.4.3</a></p>
 
 <p>You can install Subversion by compiling its <a
 href="#source-release">source code release</a> directly, or you can
@@ -94,7 +94,7 @@ fast as they can to make binaries available.</b></p>
     />Red Hat Linux and Fedora Core</h3>
 
 <ul>
-<li><p><b>Red Hat 7.x, 8.0, 9, Red Hat Enterprise Linux 3, 4</b></p>
+<li><p><b>Red Hat 8.0, 9, Red Hat Enterprise Linux 3, 4</b></p>
 <p><em>Maintainer:
 <a href="mailto:david@summersoft.fay.ar.us">David Summers</a></em></p>
 
@@ -109,12 +109,22 @@ href="http://summersoft.fay.ar.us/pub/subversion/latest/"
 The Red Hat Enterprise Linux 3 Subversion 1.2 and later RPMs above
 (from David Summers) are <em>not</em> compiled with Berkeley DB
 support (All other versions are compiled with Berkeley BDB support).
-If you need to access Berkeley DB repositories, these RPMs will not
+If you need to access Berkeley DB repositories, these RHEL3 RPMs will not
 work for you.  (See <a
 href="http://subversion.tigris.org/servlets/BrowseList?listName=dev&amp;from=317936&amp;to=317936&amp;count=21&amp;by=thread&amp;first=1&amp;windowSize=20&amp;selectedPage=1"
 >this thread</a> for details.)  You may want to try different RPMs
 instead.</p></div>
 
+</li>
+
+<li><p><b>Red Hat Enterprise Linux 4</b></p>
+<p><em>Maintainer:
+<a href="http://www.collab.net">CollabNet, Inc.</a></em></p>
+<p><a
+href="http://downloads.open.collab.net/collabnet-subversion.html">CollabNet
+Subversion</a> is open-source Subversion compiled and tested by
+CollabNet, and deployed with CollabNet's recommended configuration for
+the enterprise.</p>
 </li>
 
 <li><p><b>Fedora Core 3 and later</b></p> <p>Binary RPM packages of
@@ -215,6 +225,21 @@ href="http://www.sunfreeware.com">http://www.sunfreeware.com/</a>
 <h3><img alt="" src="images/osx.gif" width="40" height="40"/>Mac OS X</h3>
 
 <ul>
+<li><p><b>Installation using Fink</b></p>
+<p><em>Maintainer:
+<a href="mailto:chris01@users.sourceforge.net">Christian Schaffner</a></em></p>
+
+<p>Information about the latest <a
+href="http://fink.sourceforge.net/">Fink</a> packages can be found
+here: <a
+href="http://pdb.finkproject.org/pdb/package.php/svn"
+     >http://pdb.finkproject.org/pdb/package.php/svn</a>
+.</p>
+
+<p>Be sure to read the documentation of the different packages.</p>
+
+</li>
+
 <li><p><b>Installation from a <tt>.dmg</tt></b></p>
 <p><em>Maintainer:
 <a href="mailto:matthew.porter@metissian.com">Matthew E. Porter</a></em></p>
@@ -254,14 +279,7 @@ package was compiled against Apache HTTP Server 2.0, and thus will
 </div>
 
 <div style="background-color: yellow; color: red;">
-<p>Please do not ask about <strong>Python 2.4</strong> bindings for
-Windows.  <a
-href="http://subversion.tigris.org/servlets/ReadMsg?list=dev&amp;msgNo=101731"
->This message</a> explains why.</p>
-</div>
-
-<div style="background-color: yellow; color: red;">
-<p><strong>WARNING:</strong> subversion 1.2 (and later) win32 binaries
+<p><strong>WARNING:</strong> Subversion 1.2 (and later) win32 binaries
 use BerkeleyDB 4.3.  If you already have BDB 4.2 repositories running
 on Windows, then installing these particular binaries will force you
 to upgrade your repositories to BDB 4.3.  It's not difficult, just be
@@ -288,6 +306,14 @@ separate project.  Please post questions and problems to the <a
 href="http://tortoisesvn.tigris.org/servlets/ProjectMailingListList"
 >TortoiseSVN project's own mailing lists.</a>, not Subversion's
 mailing lists.</p>
+
+<p><em>Maintainer:
+<a href="http://www.collab.net">CollabNet, Inc.</a></em></p>
+<p><a
+href="http://downloads.open.collab.net/collabnet-subversion.html">CollabNet
+Subversion</a> is open-source Subversion compiled and tested by
+CollabNet, and deployed with CollabNet's recommended configuration for
+the enterprise.</p>
 
 </div>
 

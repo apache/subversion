@@ -76,13 +76,21 @@ class SvnReposTest < Test::Unit::TestCase
 
   def test_create
     tmp_repos_path = File.join(@tmp_path, "repos")
-    fs_config = {Svn::Fs::CONFIG_FS_TYPE => Svn::Fs::TYPE_BDB}
-    repos = Svn::Repos.create(tmp_repos_path, {}, fs_config)
-    assert(File.exist?(tmp_repos_path))
-    fs_type_path = File.join(repos.fs.path, Svn::Fs::CONFIG_FS_TYPE)
-    assert_equal(Svn::Fs::TYPE_BDB,
-                 File.open(fs_type_path) {|f| f.read.chop})
-    repos.fs.set_warning_func(&warning_func)
+    fs_type = Svn::Fs::TYPE_FSFS
+    fs_config = {Svn::Fs::CONFIG_FS_TYPE => fs_type}
+    repos = nil
+    Svn::Repos.create(tmp_repos_path, {}, fs_config) do |repos|
+      assert(File.exist?(tmp_repos_path))
+      fs_type_path = File.join(repos.fs.path, Svn::Fs::CONFIG_FS_TYPE)
+      assert_equal(fs_type, File.open(fs_type_path) {|f| f.read.chop})
+      repos.fs.set_warning_func(&warning_func)
+    end
+
+    assert(repos.closed?)
+    assert_raises(Svn::Error::ReposAlreadyClose) do
+      repos.fs
+    end
+
     Svn::Repos.delete(tmp_repos_path)
     assert(!File.exist?(tmp_repos_path))
   end
@@ -364,7 +372,37 @@ class SvnReposTest < Test::Unit::TestCase
                  ].sort,
                  @repos.proplist.keys.sort)
   end
-  
+
+  def test_dump
+    file = "file"
+    path = File.join(@wc_path, file)
+    source = "sample source"
+    log = "sample log"
+    ctx = make_context(log)
+
+    File.open(path, "w") {|f| f.print(source)}
+    ctx.add(path)
+    rev1 = ctx.ci(@wc_path).revision
+
+    File.open(path, "a") {|f| f.print(source)}
+    rev2 = ctx.ci(@wc_path).revision
+
+    assert_nothing_raised do
+      @repos.dump_fs(nil, nil, rev1, rev2)
+    end
+
+    dump = StringIO.new("")
+    feedback = StringIO.new("")
+    @repos.dump_fs(dump, feedback, rev1, rev2)
+
+    dump_unless_feedback = StringIO.new("")
+    @repos.dump_fs(dump_unless_feedback, nil, rev1, rev2)
+
+    dump.rewind
+    dump_unless_feedback.rewind
+    assert_equal(dump.read, dump_unless_feedback.read)
+  end
+
   def test_load
     file = "file"
     path = File.join(@wc_path, file)
@@ -379,25 +417,29 @@ class SvnReposTest < Test::Unit::TestCase
     File.open(path, "a") {|f| f.print(source)}
     rev2 = ctx.ci(@wc_path).revision
 
+    dump = StringIO.new("")
+    @repos.dump_fs(dump, nil, rev1, rev2)
+
     dest_path = File.join(@tmp_path, "dest")
     repos = Svn::Repos.create(dest_path)
+    assert_raises(NoMethodError) do
+      repos.load_fs(nil)
+    end
 
-    assert_not_equal(@repos.fs.root.committed_info("/"),
-                     repos.fs.root.committed_info("/"))
-
-    dump = Tempfile.new("dump")
-    feedback = Tempfile.new("feedback")
-    dump.open
-    feedback.open
-    @repos.dump_fs(dump, feedback, rev1, rev2)
-    dump.close
-    feedback.close
-    dump.open
-    feedback.open
-    repos.load_fs(dump, feedback, Svn::Repos::LOAD_UUID_DEFAULT, "/")
-
-    assert_equal(@repos.fs.root.committed_info("/"),
-                 repos.fs.root.committed_info("/"))
+    [
+     [StringIO.new(""), Svn::Repos::LOAD_UUID_DEFAULT, "/"],
+     [StringIO.new("")],
+     [],
+    ].each_with_index do |args, i|
+      dest_path = File.join(@tmp_path, "dest#{i}")
+      repos = Svn::Repos.create(dest_path)
+      assert_not_equal(@repos.fs.root.committed_info("/"),
+                       repos.fs.root.committed_info("/"))
+      dump.rewind
+      repos.load_fs(dump, *args)
+      assert_equal(@repos.fs.root.committed_info("/"),
+                   repos.fs.root.committed_info("/"))
+    end
   end
 
   def test_node_editor

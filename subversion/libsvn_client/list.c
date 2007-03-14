@@ -31,7 +31,7 @@
 
 /* Get the directory entries of DIR at REV (relative to the root of
    RA_SESSION), getting at least the fields specified by DIRENT_FIELDS.
-   Use the cancelation function/baton of CTX to check for cancellation.
+   Use the cancellation function/baton of CTX to check for cancellation.
    If RECURSE is TRUE, recurse into child directories.
    LOCKS, if non-NULL, is a hash mapping const char * paths to svn_lock_t
    objects and FS_PATH is the absolute filesystem path of the RA session.
@@ -51,7 +51,7 @@ get_dir_contents(apr_uint32_t dirent_fields,
                  apr_pool_t *pool)
 {
   apr_hash_t *tmpdirents;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   apr_array_header_t *array;
   int i;
 
@@ -71,26 +71,27 @@ get_dir_contents(apr_uint32_t dirent_fields,
       svn_dirent_t *the_ent = apr_hash_get(tmpdirents, item->key, item->klen);
       svn_lock_t *lock;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
 
-      path = svn_path_join(dir, item->key, subpool);
+      path = svn_path_join(dir, item->key, iterpool);
 
       if (locks)
         {
-          const char *abs_path = svn_path_join(fs_path, path, subpool);
+          const char *abs_path = svn_path_join(fs_path, path, iterpool);
           lock = apr_hash_get(locks, abs_path, APR_HASH_KEY_STRING);
         }
       else
         lock = NULL;
 
-      SVN_ERR(list_func(baton, path, the_ent, lock, fs_path, subpool));
+      SVN_ERR(list_func(baton, path, the_ent, lock, fs_path, iterpool));
 
       if (recurse && the_ent->kind == svn_node_dir)
         SVN_ERR(get_dir_contents(dirent_fields, path, rev,
                                  ra_session, locks, fs_path, recurse, ctx,
-                                 list_func, baton, subpool));
+                                 list_func, baton, iterpool));
     }
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 

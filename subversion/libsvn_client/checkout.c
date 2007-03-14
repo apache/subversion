@@ -54,7 +54,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool)
 {
-  svn_wc_traversal_info_t *traversal_info = svn_wc_init_traversal_info(pool);
   svn_error_t *err = NULL;
   svn_revnum_t revnum;
   svn_boolean_t sleep_here = FALSE;
@@ -96,8 +95,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
          _("URL '%s' refers to a file, not a directory"), session_url);
     
     /* Get the repos UUID and root URL. */
-    SVN_ERR(svn_ra_get_uuid(ra_session, &uuid, pool));
-    SVN_ERR(svn_ra_get_repos_root(ra_session, &repos, pool));
+    SVN_ERR(svn_ra_get_uuid(ra_session, &uuid, session_pool));
+    SVN_ERR(svn_ra_get_repos_root(ra_session, &repos, session_pool));
     
     SVN_ERR(svn_io_check_path(path, &kind, pool));
     
@@ -193,14 +192,6 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     *use_sleep = TRUE;
   }      
 
-  /* We handle externals after the initial checkout is complete, so
-     that fetching external items (and any errors therefrom) doesn't
-     delay the primary checkout.
-
-     ### Should we really do externals if recurse is false?
-  */
-  SVN_ERR(svn_client__handle_externals(traversal_info, FALSE, use_sleep,
-                                       ctx, pool));
   if (sleep_here)
     svn_sleep_for_timestamps();
 

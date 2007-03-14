@@ -68,13 +68,15 @@ struct handle_external_item_change_baton
    we could get away with an "update -r" on the external, instead of
    a re-checkout. */
 static svn_boolean_t
-compare_external_items(svn_wc_external_item_t *new_item,
-                       svn_wc_external_item_t *old_item)
+compare_external_items(svn_wc_external_item2_t *new_item,
+                       svn_wc_external_item2_t *old_item)
 {
   if ((strcmp(new_item->target_dir, old_item->target_dir) != 0)
       || (strcmp(new_item->url, old_item->url) != 0)
       || (! svn_client__compare_revisions(&(new_item->revision),
-                                          &(old_item->revision))))
+                                          &(old_item->revision)))
+      || (! svn_client__compare_revisions(&(new_item->peg_revision),
+                                          &(old_item->peg_revision))))
     return FALSE;
     
   /* Else. */
@@ -143,9 +145,8 @@ relegate_external(const char *path,
          no big deal.
       */
       err = svn_io_remove_file(new_path, pool);
-      if (err)
-        svn_error_clear(err);  /* It's not clear why this is ignored, is
-                                   it because the rename will catch it? */
+      svn_error_clear(err);  /* It's not clear why this is ignored, is
+                                 it because the rename will catch it? */
 
       /* Rename. */
       SVN_ERR(svn_io_file_rename(path, new_path, pool));
@@ -162,6 +163,7 @@ static svn_error_t *
 switch_external(const char *path,
                 const char *url,
                 const svn_opt_revision_t *revision,
+                const svn_opt_revision_t *peg_revision,
                 svn_boolean_t *timestamp_sleep,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
@@ -200,7 +202,8 @@ switch_external(const char *path,
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
                                                   TRUE, FALSE, FALSE,
                                                   timestamp_sleep, ctx,
-                                                  pool));
+                                                  subpool));
+              svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
           else if (entry->repos)
@@ -240,6 +243,7 @@ switch_external(const char *path,
                                                   TRUE, timestamp_sleep,
                                                   FALSE, ctx, subpool));
 
+              svn_pool_destroy(subpool);
               return SVN_NO_ERROR;
             }
         }
@@ -268,7 +272,7 @@ switch_external(const char *path,
     }
 
   /* ... Hello, new hotness. */
-  SVN_ERR(svn_client__checkout_internal(NULL, url, path, revision, revision,
+  SVN_ERR(svn_client__checkout_internal(NULL, url, path, peg_revision, revision,
                                         TRUE, FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
@@ -283,7 +287,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
                             void *baton)
 {
   struct handle_external_item_change_baton *ib = baton;
-  svn_wc_external_item_t *old_item, *new_item;
+  svn_wc_external_item2_t *old_item, *new_item;
   const char *parent;
   const char *path = svn_path_join(ib->parent_dir,
                                    (const char *) key, ib->pool);
@@ -355,13 +359,13 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
            directory above it did, which means the user would have
            already had to force these creations to occur. */
         SVN_ERR(svn_client_export3(NULL, new_item->url, path,
-                                   &(new_item->revision),
+                                   &(new_item->peg_revision),
                                    &(new_item->revision),
                                    TRUE, FALSE, TRUE, NULL,
                                    ib->ctx, ib->pool));
       else
         SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,
-                                              &(new_item->revision),
+                                              &(new_item->peg_revision),
                                               &(new_item->revision),
                                               TRUE, FALSE, FALSE,
                                               ib->timestamp_sleep,
@@ -414,6 +418,7 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
          the external really is a WC pointing to the correct
          URL/revision. */
       SVN_ERR(switch_external(path, new_item->url, &(new_item->revision),
+                              &(new_item->peg_revision),
                               ib->timestamp_sleep, ib->ctx, ib->pool));
     }
 
@@ -456,16 +461,16 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   apr_array_header_t *old_desc, *new_desc;
   apr_hash_t *old_desc_hash, *new_desc_hash;
   int i;
-  svn_wc_external_item_t *item;
+  svn_wc_external_item2_t *item;
 
   if ((old_desc_text = apr_hash_get(cb->externals_old, key, klen)))
-    SVN_ERR(svn_wc_parse_externals_description2(&old_desc, key,
+    SVN_ERR(svn_wc_parse_externals_description3(&old_desc, key,
                                                 old_desc_text, cb->pool));
   else
     old_desc = NULL;
 
   if ((new_desc_text = apr_hash_get(cb->externals_new, key, klen)))
-    SVN_ERR(svn_wc_parse_externals_description2(&new_desc, key,
+    SVN_ERR(svn_wc_parse_externals_description3(&new_desc, key,
                                                 new_desc_text, cb->pool));
   else
     new_desc = NULL;
@@ -477,7 +482,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
      efficiently generate a diff for them. */
   for (i = 0; old_desc && (i < old_desc->nelts); i++)
     {
-      item = APR_ARRAY_IDX(old_desc, i, svn_wc_external_item_t *);
+      item = APR_ARRAY_IDX(old_desc, i, svn_wc_external_item2_t *);
 
       apr_hash_set(old_desc_hash, item->target_dir,
                    APR_HASH_KEY_STRING, item);
@@ -485,7 +490,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
   
   for (i = 0; new_desc && (i < new_desc->nelts); i++)
     {
-      item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item_t *);
+      item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item2_t *);
 
       apr_hash_set(new_desc_hash, item->target_dir,
                    APR_HASH_KEY_STRING, item);
@@ -506,7 +511,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
 
   for (i = 0; old_desc && (i < old_desc->nelts); i++)
     {
-      item = APR_ARRAY_IDX(old_desc, i, svn_wc_external_item_t *);
+      item = APR_ARRAY_IDX(old_desc, i, svn_wc_external_item2_t *);
 
       if (apr_hash_get(new_desc_hash, item->target_dir, APR_HASH_KEY_STRING))
         SVN_ERR(handle_external_item_change(item->target_dir,
@@ -519,7 +524,7 @@ handle_externals_desc_change(const void *key, apr_ssize_t klen,
     }
   for (i = 0; new_desc && (i < new_desc->nelts); i++)
     {
-      item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item_t *);
+      item = APR_ARRAY_IDX(new_desc, i, svn_wc_external_item2_t *);
       if (! apr_hash_get(old_desc_hash, item->target_dir, APR_HASH_KEY_STRING))
         SVN_ERR(handle_external_item_change(item->target_dir,
                                             APR_HASH_KEY_STRING,
@@ -626,7 +631,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
 
       /* Parse the svn:externals property value.  This results in a
          hash mapping subdirectories to externals structures. */
-      SVN_ERR(svn_wc_parse_externals_description2(&exts, path, 
+      SVN_ERR(svn_wc_parse_externals_description3(&exts, path, 
                                                   propval, subpool));
 
       /* Make a sub-pool of SUBPOOL. */
@@ -636,12 +641,12 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
       for (i = 0; exts && (i < exts->nelts); i++)
         {
           const char *fullpath;
-          svn_wc_external_item_t *external;
+          svn_wc_external_item2_t *external;
           svn_node_kind_t kind;
 
           svn_pool_clear(iterpool);
 
-          external = APR_ARRAY_IDX(exts, i, svn_wc_external_item_t *);
+          external = APR_ARRAY_IDX(exts, i, svn_wc_external_item2_t *);
           fullpath = svn_path_join(path, external->target_dir, iterpool);
 
           /* If the external target directory doesn't exist on disk,

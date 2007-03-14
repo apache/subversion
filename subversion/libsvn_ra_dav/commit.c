@@ -2,7 +2,7 @@
  * commit.c :  routines for committing changes to the server
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,13 +26,7 @@
 #define APR_WANT_STRFUNC
 #include <apr_want.h>
 
-#include <stdlib.h>     /* for free() */
 #include <assert.h>
-
-#include <ne_socket.h>
-#include <ne_request.h>
-#include <ne_props.h>
-#include <ne_basic.h>
 
 #include "svn_pools.h"
 #include "svn_error.h"
@@ -78,28 +72,6 @@ typedef struct
 } version_rsrc_t;
 
 
-/* Context for parsing <D:error> bodies, used when we call ne_copy(). */
-struct copy_baton
-{
-  /* An indication of whether we're currently processing a COPY request
-   * or not.
-   */
-  svn_boolean_t making_a_copy;
-  
-  /* A parser for handling <D:error> responses from mod_dav_svn.  This
-   * will be NULL if we haven't processed a COPY request yet.
-   */
-  ne_xml_parser *error_parser;
-
-  /* If <D:error> is returned, here's where the parsed result goes, or
-   * NULL otherwise.
-   */
-  svn_error_t *err;
-
-  /* A place for allocating fields in this structure. */
-  apr_pool_t *pool;
-};
-
 typedef struct
 {
   svn_ra_dav__session_t *ras;
@@ -128,9 +100,6 @@ typedef struct
 
   /* Whether or not to keep the locks after commit is done. */
   svn_boolean_t keep_locks;
-
-  /* A context for neon COPY request callbacks. */
-  struct copy_baton *cb;
 
 } commit_ctx_t;
 
@@ -180,56 +149,14 @@ static version_rsrc_t * dup_resource(version_rsrc_t *base, apr_pool_t *pool)
   return rsrc;
 }
 
-static svn_error_t * simple_request(svn_ra_dav__session_t *ras, 
-                                    const char *method,
-                                    const char *url, 
-                                    int *code,
-                                    apr_hash_t *extra_headers,
-                                    int okay_1, 
-                                    int okay_2, 
-                                    apr_pool_t *pool)
-{
-  ne_request *req;
-
-  /* create/prep the request */
-  req = ne_request_create(ras->sess, method, url);
-  if (req == NULL)
-    {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               _("Could not create a request (%s '%s')"),
-                               method, url);
-    }
-
-  /* add any extra headers passed in by caller. */
-  if (extra_headers != NULL)
-    {
-      apr_hash_index_t *hi;
-      for (hi = apr_hash_first(pool, extra_headers);
-           hi; hi = apr_hash_next(hi))
-        {
-          const void *key;
-          void *val;
-          apr_hash_this(hi, &key, NULL, &val);
-          ne_add_request_header(req, (const char *) key, (const char *) val); 
-        }
-    }
-
-  /* run the request and get the resulting status code (and svn_error_t) */
-  return svn_ra_dav__request_dispatch(code, req, ras->sess,
-                                      method, url, okay_1, okay_2,
-#ifdef SVN_NEON_0_25
-                                      NULL, NULL,
-#endif /* SVN_NEON_0_25 */
-                                      pool);
-}
-
-
 static svn_error_t * delete_activity(void *edit_baton,
                                      apr_pool_t *pool)
 {
   commit_ctx_t *cc = edit_baton;
-  return simple_request(cc->ras, "DELETE", cc->activity_url, NULL,
-                        NULL, 204 /* No Content */, 404 /* Not Found */, pool);
+  return svn_ra_dav__simple_request(NULL, cc->ras, "DELETE",
+                                    cc->activity_url, NULL, NULL,
+                                    204 /* No Content */,
+                                    404 /* Not Found */, pool);
 }
 
 
@@ -240,7 +167,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
                                      svn_boolean_t force,
                                      apr_pool_t *pool)
 {
-  svn_ra_dav_resource_t *propres;
+  svn_ra_dav__resource_t *propres;
   const char *url;
   const svn_string_t *url_str;
 
@@ -276,7 +203,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
       /* The version URL comes from a resource in the Baseline Collection. */
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL,
                                             &bc_url, &bc_relative, NULL,
-                                            cc->ras->sess,
+                                            cc->ras,
                                             rsrc->url,
                                             rsrc->revision,
                                             pool));
@@ -286,7 +213,7 @@ static svn_error_t * get_version_url(commit_ctx_t *cc,
 
   /* Get the DAV:checked-in property, which contains the URL of the
      Version Resource */
-  SVN_ERR(svn_ra_dav__get_props_resource(&propres, cc->ras->sess, url,
+  SVN_ERR(svn_ra_dav__get_props_resource(&propres, cc->ras, url,
                                          NULL, fetch_props, pool));
   url_str = apr_hash_get(propres->propset,
                          SVN_RA_DAV__PROP_CHECKED_IN,
@@ -378,8 +305,10 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
   SVN_ERR(get_activity_collection(cc, &activity_collection, FALSE, pool));
   url = svn_path_url_add_component(activity_collection->data, 
                                    uuid_buf, pool);
-  SVN_ERR(simple_request(cc->ras, "MKACTIVITY", url, &code, NULL,
-                         201 /* Created */, 404 /* Not Found */, pool));
+  SVN_ERR(svn_ra_dav__simple_request(&code, cc->ras,
+                                     "MKACTIVITY", url, NULL, NULL,
+                                     201 /* Created */,
+                                     404 /* Not Found */, pool));
 
   /* if we get a 404, then it generally means that the cached activity
      collection no longer exists. Retry the sequence, but force a query
@@ -389,8 +318,9 @@ static svn_error_t * create_activity(commit_ctx_t *cc,
       SVN_ERR(get_activity_collection(cc, &activity_collection, TRUE, pool));
       url = svn_path_url_add_component(activity_collection->data, 
                                        uuid_buf, pool);
-      SVN_ERR(simple_request(cc->ras, "MKACTIVITY", url, &code,
-                             NULL, 201, 0, pool));
+      SVN_ERR(svn_ra_dav__simple_request(&code, cc->ras,
+                                         "MKACTIVITY", url, NULL, NULL,
+                                         201, 0, pool));
     }
 
   cc->activity_url = url;
@@ -441,38 +371,18 @@ static svn_error_t * add_child(version_rsrc_t **child,
   return SVN_NO_ERROR;
 }
 
-#ifdef SVN_NEON_0_25
-/* This implements the svn_ra_dav__request_interrogator() interface.
-   USERDATA is 'char **'. */
-static svn_error_t *interrogate_for_location(ne_request *request,
-                                             int dispatch_return_val,
-                                             void *userdata)
-{
-  char **location = userdata;
-
-  if (location)
-    {
-      const char *val = ne_get_response_header(request, "location");
-      if (val)
-        *location = strdup(val);
-    }
-
-  return SVN_NO_ERROR;
-}
-#endif /* SVN_NEON_0_25 */
-
 
 static svn_error_t * do_checkout(commit_ctx_t *cc,
                                  const char *vsn_url,
                                  svn_boolean_t allow_404,
                                  const char *token,
                                  int *code,
-                                 char **locn,
+                                 const char **locn,
                                  apr_pool_t *pool)
 {
-  ne_request *req;
+  svn_ra_dav__request_t *request;
   const char *body;
-  svn_error_t *err;
+  apr_hash_t *extra_headers = NULL;
 
   /* assert: vsn_url != NULL */
 
@@ -480,50 +390,34 @@ static svn_error_t * do_checkout(commit_ctx_t *cc,
      ### place result into res->wr_url and return it */
 
   /* create/prep the request */
-  req = ne_request_create(cc->ras->sess, "CHECKOUT", vsn_url);
-  if (req == NULL)
-    {
-      return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                               _("Could not create a CHECKOUT request (%s)"),
-                               vsn_url);
-    }
+  request =
+    svn_ra_dav__request_create(cc->ras, "CHECKOUT", vsn_url, pool);
 
   /* ### store this into cc to avoid pool growth */
-  body = apr_psprintf(pool,
+  body = apr_psprintf(request->pool,
                       "<?xml version=\"1.0\" encoding=\"utf-8\"?>"
                       "<D:checkout xmlns:D=\"DAV:\">"
                       "<D:activity-set>"
                       "<D:href>%s</D:href>"
                       "</D:activity-set></D:checkout>", cc->activity_url);
-  ne_set_request_body_buffer(req, body, strlen(body));
-
-#ifndef SVN_NEON_0_25
-  /* 
-   * We have different const qualifiers here. locn is const char **,
-   * but the prototype is void * (as opposed to const void *).
-   */
-  ne_add_response_header_handler(req, "location",
-                                 ne_duplicate_header, (void *)locn);
-#endif /* ! SVN_NEON_0_25 */
 
   if (token)
     {
-      const char *token_header_val;
-      token_header_val = apr_psprintf(pool, "(<%s>)", token);
-      ne_add_request_header(req, "If", token_header_val);
+      extra_headers = apr_hash_make(request->pool);
+      svn_ra_dav__set_header(extra_headers, "If",
+                             apr_psprintf(request->pool, "(<%s>)", token));
     }
 
   /* run the request and get the resulting status code (and svn_error_t) */
-  err = svn_ra_dav__request_dispatch(code, req, cc->ras->sess,
-                                     "CHECKOUT", vsn_url,
-                                     201 /* Created */,
-                                     allow_404 ? 404 /* Not Found */ : 0,
-#ifdef SVN_NEON_0_25
-                                     interrogate_for_location, locn,
-#endif /* SVN_NEON_0_25 */
-                                     pool);
+  SVN_ERR(svn_ra_dav__request_dispatch(code, request, extra_headers, body,
+                                       201 /* Created */,
+                                       allow_404 ? 404 /* Not Found */ : 0,
+                                       pool));
 
-  return err;
+  *locn = svn_ra_dav__request_get_location(request, pool);
+  svn_ra_dav__request_destroy(request);
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -534,7 +428,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
                                        apr_pool_t *pool)
 {
   int code;
-  char *locn = NULL;
+  const char *locn = NULL;
   ne_uri parse;
   svn_error_t *err;
 
@@ -550,9 +444,7 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* possibly run the request again, with a re-fetched Version Resource */
   if (err == NULL && allow_404 && code == 404)
     {
-      /* free the LOCN if it got assigned. */
-      if (locn)
-        free(locn);
+      locn = NULL;
 
       /* re-fetch, forcing a query to the server */
       SVN_ERR(get_version_url(cc, rsrc, TRUE, pool));
@@ -564,10 +456,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   /* special-case when conflicts occur */
   if (err)
     {
-      /* free the LOCN if it got assigned. */
-      if (locn)
-        free(locn);
-      
       if (err->apr_err == SVN_ERR_FS_CONFLICT)
         return svn_error_createf
           (err->apr_err, err,
@@ -588,7 +476,6 @@ static svn_error_t * checkout_resource(commit_ctx_t *cc,
   ne_uri_parse(locn, &parse);
   rsrc->wr_url = apr_pstrdup(rsrc->pool, parse.path);
   ne_uri_free(&parse);
-  free(locn);
 
   return SVN_NO_ERROR;
 }
@@ -615,7 +502,7 @@ static void record_prop_change(apr_pool_t *pool,
       /* deleted property. */
       if (r->prop_deletes == NULL)
         r->prop_deletes = apr_array_make(pool, 5, sizeof(char *));
-      *(const char **)apr_array_push(r->prop_deletes) = name;
+      APR_ARRAY_PUSH(r->prop_deletes, const char *) = name;
     }
 }
 
@@ -827,9 +714,11 @@ static svn_error_t * commit_delete_entry(const char *path,
      against the HEAD revision on-the-fly.  In such a universe, a
      failed deletion (because it's already missing) is OK;  deletion
      is an idempotent merge operation. */
-  serr =  simple_request(parent->cc->ras, "DELETE", child, &code,
-                         extra_headers,
-                         204 /* Created */, 404 /* Not Found */, pool);
+  serr = svn_ra_dav__simple_request(&code, parent->cc->ras,
+                                    "DELETE", child,
+                                    extra_headers, NULL,
+                                    204 /* Created */,
+                                    404 /* Not Found */, pool);
 
   /* A locking-related error most likely means we were deleting a
      directory rather than a file, and didn't send all of the
@@ -850,7 +739,7 @@ static svn_error_t * commit_delete_entry(const char *path,
        limits on the amount of data it's willing to receive in headers. */
       
       apr_hash_t *child_tokens = NULL;
-      ne_request *req;
+      svn_ra_dav__request_t *request;
       const char *body;
       const char *token;
       svn_stringbuf_t *locks_list;
@@ -871,32 +760,23 @@ static svn_error_t * commit_delete_entry(const char *path,
       if ((token = apr_hash_get(parent->cc->tokens, path, 
                                 APR_HASH_KEY_STRING)))
         apr_hash_set(child_tokens, path, APR_HASH_KEY_STRING, token);
-      
+
+
+      request =
+        svn_ra_dav__request_create(parent->cc->ras, "DELETE", child, pool);
+
       SVN_ERR(svn_ra_dav__assemble_locktoken_body(&locks_list,
-                                                  child_tokens, pool));
-      
-      req = ne_request_create(parent->cc->ras->sess, "DELETE", child);
-      if (req == NULL)
-        return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                                 _("Could not create a DELETE request (%s)"),
-                                 child);
-      
-      body = apr_psprintf(pool, 
+                                                  child_tokens, request->pool));
+
+      body = apr_psprintf(request->pool,
                           "<?xml version=\"1.0\" encoding=\"utf-8\"?> %s",
                           locks_list->data);
-      ne_set_request_body_buffer(req, body, strlen(body));
-      
-      /* Don't use SVN_ERR() here because some preprocessors can't
-         handle a compile-time conditional inside a macro call. */
-      serr = svn_ra_dav__request_dispatch(&code, req, parent->cc->ras->sess,
-                                          "DELETE", child,
-                                          204 /* Created */,
-                                          404 /* Not Found */,
-#ifdef SVN_NEON_0_25
-                                          NULL, NULL,
-#endif /* SVN_NEON_0_25 */
-                                          pool);
-      SVN_ERR(serr);
+
+      SVN_ERR(svn_ra_dav__request_dispatch(&code, request, NULL, body,
+                                           204 /* Created */,
+                                           404 /* Not Found */,
+                                           pool));
+      svn_ra_dav__request_destroy(request);
     }
   else if (serr)
     return serr;
@@ -907,39 +787,6 @@ static svn_error_t * commit_delete_entry(const char *path,
   return SVN_NO_ERROR;
 }
 
-
-
-/* A callback of type ne_create_request_fn;  called whenever neon
-   creates a request. */
-static void 
-create_request_hook(ne_request *req,
-                    void *userdata,
-                    const char *method,
-                    const char *requri)
-{
-  struct copy_baton *cb = userdata;
-
-  if (strcmp(method, "COPY") == 0)
-    cb->making_a_copy = TRUE;
-}
-
-
-/* A callback of type ne_pre_send_fn;  called whenever neon is just
-   about to send a COPY request. */
-static void
-pre_send_hook(ne_request *req,
-              void *userdata,
-              ne_buffer *header)
-{
-  struct copy_baton *cb = userdata;
-
-  if (cb->making_a_copy)
-    {
-      cb->error_parser = ne_xml_create();
-      svn_ra_dav__add_error_handler(req, cb->error_parser,
-                                    &(cb->err), cb->pool);
-    }
-}
 
 
 static svn_error_t * commit_add_dir(const char *path,
@@ -973,14 +820,14 @@ static svn_error_t * commit_add_dir(const char *path,
     {
       /* This a new directory with no history, so just create a new,
          empty collection */
-      SVN_ERR(simple_request(parent->cc->ras, "MKCOL", child->rsrc->wr_url,
-                             &code, NULL, 201 /* Created */, 0, workpool));
+      SVN_ERR(svn_ra_dav__simple_request(&code, parent->cc->ras, "MKCOL",
+                                         child->rsrc->wr_url, NULL, NULL,
+                                         201 /* Created */, 0, workpool));
     }
   else
     {
       svn_string_t bc_url, bc_relative;
       const char *copy_src;
-      int status;
 
       /* This add has history, so we need to do a COPY. */
       
@@ -989,7 +836,7 @@ static svn_error_t * commit_add_dir(const char *path,
          relative path under that BC.  */
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL,
                                             &bc_url, &bc_relative, NULL,
-                                            parent->cc->ras->sess,
+                                            parent->cc->ras,
                                             copyfrom_path,
                                             copyfrom_revision,
                                             workpool));
@@ -1004,32 +851,13 @@ static svn_error_t * commit_add_dir(const char *path,
                                             workpool);
 
       /* Have neon do the COPY. */
-      status = ne_copy(parent->cc->ras->sess,
-                       1,                   /* overwrite */
-                       NE_DEPTH_INFINITE,   /* always copy dirs deeply */
-                       copy_src,            /* source URI */
-                       child->rsrc->wr_url); /* dest URI */
-
-      /* Did we get a <D:error> response? */
-      if (parent->cc->cb->err)
-        {
-          if (parent->cc->cb->error_parser)
-            ne_xml_destroy(parent->cc->cb->error_parser);
-          return parent->cc->cb->err;
-        }
-
-      /* Did we get some error from neon? */
-      if (status != NE_OK)
-        {
-          const char *msg = apr_psprintf(dir_pool, "COPY of %s", path);
-          if (parent->cc->cb->error_parser)
-            ne_xml_destroy(parent->cc->cb->error_parser);
-          return svn_ra_dav__convert_error(parent->cc->ras->sess,
-                                           msg, status, workpool);
-        }
-
-      if (parent->cc->cb->error_parser)
-        ne_xml_destroy(parent->cc->cb->error_parser);
+      SVN_ERR(svn_ra_dav__copy(parent->cc->ras,
+                               1,                  /* overwrite */
+                               SVN_RA_DAV__DEPTH_INFINITE,
+                                                   /* always copy dirs deeply */
+                               copy_src,           /* source URI */
+                               child->rsrc->wr_url,/* dest URI */
+                               workpool));
     }
 
   /* Add this path to the valid targets hash. */
@@ -1157,9 +985,9 @@ static svn_error_t * commit_add_file(const char *path,
   if ((! parent->created) 
       && (! apr_hash_get(file->cc->valid_targets, path, APR_HASH_KEY_STRING)))
     {
-      svn_ra_dav_resource_t *res;
+      svn_ra_dav__resource_t *res;
       svn_error_t *err = svn_ra_dav__get_starting_props(&res,
-                                                        file->cc->ras->sess,
+                                                        file->cc->ras,
                                                         file->rsrc->url, NULL,
                                                         workpool);
       if (!err)
@@ -1194,7 +1022,6 @@ static svn_error_t * commit_add_file(const char *path,
     {
       svn_string_t bc_url, bc_relative;
       const char *copy_src;
-      int status;
 
       /* This add has history, so we need to do a COPY. */
       
@@ -1203,7 +1030,7 @@ static svn_error_t * commit_add_file(const char *path,
          relative path under that BC.  */
       SVN_ERR(svn_ra_dav__get_baseline_info(NULL,
                                             &bc_url, &bc_relative, NULL,
-                                            parent->cc->ras->sess,
+                                            parent->cc->ras,
                                             copyfrom_path,
                                             copyfrom_revision,
                                             workpool));
@@ -1218,32 +1045,13 @@ static svn_error_t * commit_add_file(const char *path,
                                             workpool);
 
       /* Have neon do the COPY. */
-      status = ne_copy(parent->cc->ras->sess,
-                       1,                   /* overwrite */
-                       NE_DEPTH_ZERO,       /* for a file, does it care? */
-                       copy_src,            /* source URI */
-                       file->rsrc->wr_url); /* dest URI */
-
-      /* Did we get a <D:error> response? */
-      if (parent->cc->cb->err)
-        {
-          if (parent->cc->cb->error_parser)
-            ne_xml_destroy(parent->cc->cb->error_parser);
-          return parent->cc->cb->err;
-        }
-
-      /* Did we get some error from neon? */
-      if (status != NE_OK)
-        {
-          const char *msg = apr_psprintf(file_pool, "COPY of %s", path);
-          if (parent->cc->cb->error_parser)
-            ne_xml_destroy(parent->cc->cb->error_parser);
-          return svn_ra_dav__convert_error(parent->cc->ras->sess,
-                                           msg, status, workpool);
-        }
-      
-      if (parent->cc->cb->error_parser)
-        ne_xml_destroy(parent->cc->cb->error_parser);
+      SVN_ERR(svn_ra_dav__copy(parent->cc->ras,
+                               1,               /* overwrite */
+                               SVN_RA_DAV__DEPTH_ZERO,
+                                                /* file: this doesn't matter */
+                               copy_src,        /* source URI */
+                               file->rsrc->wr_url,/* dest URI */
+                               workpool));
     }
 
   /* Add this path to the valid targets hash. */
@@ -1382,67 +1190,47 @@ static svn_error_t * commit_close_file(void *file_baton,
 
   if (file->put_baton)
     {
-      ne_session *sess = cc->ras->sess;
       put_baton_t *pb = file->put_baton;
       const char *url = file->rsrc->wr_url;
-      ne_request *req;
-      int code;
-      svn_error_t *err;
+      apr_hash_t *extra_headers;
+      svn_ra_dav__request_t *request;
 
       /* create/prep the request */
-      req = ne_request_create(sess, "PUT", url);
-      if (req == NULL)
-        {
-          return svn_error_createf(SVN_ERR_RA_DAV_CREATING_REQUEST, NULL,
-                                   _("Could not create a PUT request (%s)"),
-                                   url);
-        }
-      
-      ne_add_request_header(req, "Content-Type", SVN_SVNDIFF_MIME_TYPE);
-      
-      if (file->token)
-        {
-          const char *token_header_val;
-          const char *token_uri;
+      request = svn_ra_dav__request_create(cc->ras, "PUT", url, pool);
 
-          token_uri = svn_path_url_add_component(cc->ras->url->data,
-                                                 file->rsrc->url, pool);
-          token_header_val = apr_psprintf(pool, "<%s> (<%s>)",
-                                          token_uri, file->token);
-          ne_add_request_header(req, "If", token_header_val);
-        }
+      extra_headers = apr_hash_make(request->pool);
+      svn_ra_dav__set_header(extra_headers, "Content-Type",
+                             SVN_SVNDIFF_MIME_TYPE);
+
+      if (file->token)
+        svn_ra_dav__set_header
+          (extra_headers, "If",
+           apr_psprintf(pool, "<%s> (<%s>)",
+                        svn_path_url_add_component(cc->ras->url->data,
+                                                   file->rsrc->url,
+                                                   request->pool),
+                        file->token));
 
       if (pb->base_checksum)
-        ne_add_request_header
-          (req, SVN_DAV_BASE_FULLTEXT_MD5_HEADER, pb->base_checksum);
-      
+        svn_ra_dav__set_header(extra_headers, SVN_DAV_BASE_FULLTEXT_MD5_HEADER,
+                               pb->base_checksum);
+
       if (text_checksum)
-        ne_add_request_header
-          (req, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
-      
+        svn_ra_dav__set_header
+          (extra_headers, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER, text_checksum);
+
       /* Give the file to neon. The provider will rewind the file. */
-      err = svn_ra_dav__set_neon_body_provider(req, pb->tmpfile);
-      if (err)
-        {
-          apr_file_close(pb->tmpfile);
-          ne_request_destroy(req);
-          return err;
-        }
-      
+      SVN_ERR(svn_ra_dav__set_neon_body_provider(request, pb->tmpfile));
+
       /* run the request and get the resulting status code (and svn_error_t) */
-      err = svn_ra_dav__request_dispatch(&code, req, sess, "PUT", url,
-                                         201 /* Created */,
-                                         204 /* No Content */,
-#ifdef SVN_NEON_0_25
-                                         NULL, NULL,
-#endif /* SVN_NEON_0_25 */
-                                         pool);
+      SVN_ERR(svn_ra_dav__request_dispatch(NULL, request, extra_headers, NULL,
+                                           201 /* Created */,
+                                           204 /* No Content */,
+                                           pool));
+      svn_ra_dav__request_destroy(request);
       
       /* we're done with the file.  this should delete it. */
       (void) apr_file_close(pb->tmpfile);
-      
-      if (err)
-        return err;
     }
 
   /* Perform all of the property changes on the file. Note that we
@@ -1495,17 +1283,14 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   const svn_string_t *vcc;
   const svn_string_t *baseline_url;
   version_rsrc_t baseline_rsrc = { SVN_INVALID_REVNUM };
-  ne_proppatch_operation po[2] = { { 0 } };
-  int rv;
-  svn_stringbuf_t *xml_data;
   svn_error_t *err = NULL;
   int retry_count = 5;
-  
+
   /* ### this whole sequence can/should be replaced with an expand-property
      ### REPORT when that is available on the server. */
 
   /* fetch the DAV:version-controlled-configuration from the session's URL */
-  SVN_ERR(svn_ra_dav__get_one_prop(&vcc, cc->ras->sess, cc->ras->root.path, 
+  SVN_ERR(svn_ra_dav__get_one_prop(&vcc, cc->ras, cc->ras->root.path, 
                                    NULL, &svn_ra_dav__vcc_prop, pool));
 
   /* ### we should use DAV:apply-to-version on the CHECKOUT so we can skip
@@ -1517,7 +1302,7 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
 
     /* Get the latest baseline from VCC's DAV:checked-in property.
        This should give us the HEAD revision of the moment. */
-    SVN_ERR(svn_ra_dav__get_one_prop(&baseline_url, cc->ras->sess,
+    SVN_ERR(svn_ra_dav__get_one_prop(&baseline_url, cc->ras,
                                      vcc->data, NULL,
                                      &svn_ra_dav__checked_in_prop, pool));
     baseline_rsrc.pool = pool;
@@ -1545,21 +1330,15 @@ static svn_error_t * apply_log_message(commit_ctx_t *cc,
   if (err)
     return err;
 
-  /* XML-Escape the log message. */
-  xml_data = NULL;           /* Required by svn_xml_escape_*. */
-  svn_xml_escape_cdata_cstring(&xml_data, log_msg, pool);
+  {
+    apr_hash_t *prop_changes = apr_hash_make(pool);
+    svn_string_t *log_str = svn_string_create(log_msg, pool);
 
-  po[0].name = &log_message_prop;
-  po[0].type = ne_propset;
-  po[0].value = xml_data->data;
-
-  rv = ne_proppatch(cc->ras->sess, baseline_rsrc.wr_url, po);
-  if (rv != NE_OK)
-    {
-      const char *msg = apr_psprintf(pool, _("applying log message to %s"),
-                                     baseline_rsrc.wr_url);
-      return svn_ra_dav__convert_error(cc->ras->sess, msg, rv, pool);
-    }
+    apr_hash_set(prop_changes, SVN_PROP_PREFIX "log",
+                 APR_HASH_KEY_STRING, log_str);
+    SVN_ERR(svn_ra_dav__do_proppatch(cc->ras, baseline_rsrc.wr_url,
+                                     prop_changes, NULL, NULL, pool));
+  }
 
   return SVN_NO_ERROR;
 }
@@ -1577,22 +1356,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
-
-  /* Only initialize the baton the first time through. */
-  if (! ras->cb)
-    {
-      /* Build a copy_baton for COPY requests. */
-      ras->cb = apr_pcalloc(ras->pool, sizeof(*ras->cb));
-
-      /* Register request hooks in the neon session.  They specifically
-         allow any COPY requests (ne_copy()) to parse <D:error>
-         responses.  They're no-ops for other requests. */
-      ne_hook_create_request(ras->sess, create_request_hook, ras->cb);
-      ne_hook_pre_send(ras->sess, pre_send_hook, ras->cb);
-    }
-
-  /* Make sure the baton uses our current pool, so we don't leak. */
-  ras->cb->pool = pool;
+  svn_error_t *err;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
@@ -1606,7 +1370,6 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   cc->callback_baton = callback_baton;
   cc->tokens = lock_tokens;
   cc->keep_locks = keep_locks;
-  cc->cb = ras->cb;
 
   /* If the caller didn't give us any way of storing wcprops, then
      there's no point in getting back a MERGE response full of VR's. */
@@ -1627,7 +1390,15 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   ** Find the latest baseline resource, check it out, and then apply the
   ** log message onto the thing.
   */
-  SVN_ERR(apply_log_message(cc, log_msg, pool));
+  err = apply_log_message(cc, log_msg, pool);
+  /* If the caller gets an error during the editor drive, we rely on them
+     to call abort_edit() so that we can clear up the activity.  But if we
+     got an error here, we need to clear up the activity ourselves. */
+  if (err)
+    {
+      svn_error_clear(commit_abort_edit(cc, pool));
+      return err;
+    }
 
   /*
   ** Set up the editor.

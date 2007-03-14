@@ -2,7 +2,7 @@
  * version.c: mod_dav_svn versioning provider functions for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -260,13 +260,6 @@ dav_svn__checkout(dav_resource *resource,
   apr_status_t apr_err;
   dav_error *derr;
   dav_svn__uri_info parse;
-
-  /* Path-based authorization: CHECKOUT requires write access
-   * to the resource.
-   */
-  derr = dav_svn__check_resource_access(resource, svn_authz_write);
-  if (derr)
-    return derr;
 
   /* Auto-Versioning Stuff */
   if (auto_checkout)
@@ -965,15 +958,7 @@ deliver_report(request_rec *r,
                const apr_xml_doc *doc,
                ap_filter_t *output)
 {
-  int ns;
-  dav_error *err;
-
-  /* Path-based authorization: REPORT requires read access to the resource */
-  err = dav_svn__check_resource_access(resource, svn_authz_read);
-  if (err)
-    return err;
-
-  ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
+  int ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
 
   if (doc->root->ns == ns)
     {
@@ -1052,14 +1037,7 @@ make_activity(dav_resource *resource)
                                   "DAV:activity-collection-set property.",
                                   SVN_DAV_ERROR_NAMESPACE,
                                   SVN_DAV_ERROR_TAG);
-
-  /* Path-based authorization: MKACTIVITY needs global write access
-   * to the repository.
-   */
-  err = dav_svn__check_global_access(resource, svn_authz_write);
-  if (err)
-    return err;
-
+   
   err = dav_svn__create_activity(resource->info->repos, &txn_name,
                                  resource->pool);
   if (err != NULL)
@@ -1372,7 +1350,9 @@ merge(dav_resource *target,
   /* We've detected a 'high level' svn action to log. */
   apr_table_set(target->info->r->subprocess_env, "SVN-ACTION",
                 apr_psprintf(target->info->r->pool,
-                             "commit r%" SVN_REVNUM_T_FMT, new_rev));
+                             "commit '%s' r%" SVN_REVNUM_T_FMT, 
+                             target->info->repos_path,
+                             new_rev));
 
   /* Since the commit was successful, the txn ID is no longer valid.
      Store an empty txn ID in the activity database so that when the

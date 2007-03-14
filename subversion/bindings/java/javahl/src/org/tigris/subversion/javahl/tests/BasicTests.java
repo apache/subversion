@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -17,15 +17,16 @@
  */
 package org.tigris.subversion.javahl.tests;
 
-import junit.framework.TestSuite;
-import junit.framework.TestResult;
 import org.tigris.subversion.javahl.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
+import java.util.HashMap;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
@@ -44,33 +45,11 @@ public class BasicTests extends SVNTests
      */
     public BasicTests()
     {
-        if(!testName.equals(testBaseName))
+        if (!testName.equals(testBaseName))
         {
             testCounter = 0;
             testBaseName = testName;
         }
-    }
-
-    /**
-     * Build a test suite of all tests of this class
-     * @return the new test suite
-     */
-    public static TestSuite suite() {
-        return new TestSuite(BasicTests.class);
-    }
-
-    /**
-     * Main method to run tests standalone
-     * @param args command line arguments to specify root directory and root
-     * url
-     */
-    public static void main(String[] args) {
-        processArgs(args);
-        TestResult tr = junit.textui.TestRunner.run(suite());
-        if (tr.errorCount() != 0 || tr.failureCount() != 0) {
-            System.exit(1);
-        }
-        System.exit(0);
     }
 
     /**
@@ -113,6 +92,388 @@ public class BasicTests extends SVNTests
         assertFalse("Validation check of invalid path '" + path +
                     "' (which contains control characters) should fail",
                     Path.isValid(path));
+    }
+
+    /**
+     * test the basic SVNClient.status functionality
+     * @throws Throwable
+     */
+    public void testBasicStatus() throws Throwable
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+
+        // check the status of the working copy
+        thisTest.checkStatus();
+    }
+
+    /**
+     * Test the "out of date" info from {@link
+     * org.tigris.subversion.javahl.SVNClient#status()}.
+     *
+     * @exception SubversionException
+     * @exception IOException
+     */
+    public void testOODStatus() throws SubversionException, IOException
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+
+        // Make a whole slew of changes to a WC:
+        // 
+        //  (root)               r7 - prop change
+        //  iota
+        //  A
+        //  |__mu
+        //  |
+        //  |__B
+        //  |   |__lambda
+        //  |   |
+        //  |   |__E             r12 - deleted
+        //  |   |  |__alpha
+        //  |   |  |__beta
+        //  |   |
+        //  |   |__F             r9 - prop change
+        //  |   |__I             r6 - added dir
+        //  |
+        //  |__C                 r5 - deleted
+        //  |
+        //  |__D
+        //     |__gamma
+        //     |
+        //     |__G
+        //     |  |__pi          r3 - deleted
+        //     |  |__rho         r2 - modify text
+        //     |  |__tau         r4 - modify text
+        //     |
+        //     |__H
+        //        |__chi         r10-11 replaced with file
+        //        |__psi         r13-14 replaced with dir
+        //        |__omega
+        //        |__nu          r8 - added file
+        File file, dir;
+        PrintWriter pw;
+        Status status;
+        long rev;             // Resulting rev from co or update
+        long expectedRev = 2;  // Keeps track of the latest rev committed
+
+        // ----- r2: modify file A/D/G/rho --------------------------
+        file = new File(thisTest.getWorkingCopy(), "A/D/G/rho");
+        pw = new PrintWriter(new FileOutputStream(file, true));
+        pw.print("modification to rho");
+        pw.close();
+        addExpectedCommitItem(thisTest.getWCPath(),
+                              thisTest.getUrl(), "A/D/G/rho", NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[]{thisTest.getWCPath()},
+                                         "log msg", true), expectedRev++);
+        thisTest.getWc().setItemWorkingCopyRevision("A/D/G/rho", rev);
+        thisTest.getWc().setItemContent("A/D/G/rho",
+            thisTest.getWc().getItemContent("A/D/G/rho")
+            + "modification to rho");
+
+        status = client.singleStatus(thisTest.getWCPath() + "/A/D/G/rho",
+                                     false);
+        long rhoCommitDate = status.getLastChangedDate().getTime();
+        long rhoCommitRev = rev;
+        String rhoAuthor = status.getLastCommitAuthor();
+
+        // ----- r3: delete file A/D/G/pi ---------------------------
+        client.remove(new String[] {thisTest.getWCPath() + "/A/D/G/pi"}, null,
+                      false);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/G/pi", NodeKind.file,
+                              CommitItemStateFlags.Delete);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        thisTest.getWc().removeItem("A/D/G/pi");
+
+        thisTest.getWc().setItemWorkingCopyRevision("A/D/G", rev);
+        assertEquals("wrong revision from update",
+                     client.update(thisTest.getWCPath() + "/A/D/G",
+                                   null, true),
+                     rev);
+        long GCommitRev = rev;
+
+        // ----- r4: modify file A/D/G/tau --------------------------
+        file = new File(thisTest.getWorkingCopy(), "A/D/G/tau");
+        pw = new PrintWriter(new FileOutputStream(file, true));
+        pw.print("modification to tau");
+        pw.close();
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/G/tau",NodeKind.file,
+                              CommitItemStateFlags.TextMods);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        thisTest.getWc().setItemWorkingCopyRevision("A/D/G/tau", rev);
+        thisTest.getWc().setItemContent("A/D/G/tau",
+                thisTest.getWc().getItemContent("A/D/G/tau")
+                + "modification to tau");
+        status = client.singleStatus(thisTest.getWCPath() + "/A/D/G/tau",
+                                     false);
+        long tauCommitDate = status.getLastChangedDate().getTime();
+        long tauCommitRev = rev;
+        String tauAuthor = status.getLastCommitAuthor();
+
+        // ----- r5: delete dir with no children  A/C ---------------
+        client.remove(new String[] {thisTest.getWCPath() + "/A/C"}, null,
+                      false);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/C", NodeKind.dir,
+                              CommitItemStateFlags.Delete);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        thisTest.getWc().removeItem("A/C");
+        long CCommitRev = rev;
+
+        // ----- r6: Add dir A/B/I ----------------------------------
+        dir = new File(thisTest.getWorkingCopy(), "A/B/I");
+        dir.mkdir();
+
+        client.add(dir.getAbsolutePath(), true);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/B/I", NodeKind.dir, CommitItemStateFlags.Add);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg",  true),
+                     expectedRev++);
+        thisTest.getWc().addItem("A/B/I", null);
+        status = client.singleStatus(thisTest.getWCPath() + "/A/B/I", false);
+        long ICommitDate = status.getLastChangedDate().getTime();
+        long ICommitRev = rev;
+        String IAuthor = status.getLastCommitAuthor();
+
+        // ----- r7: Update then commit prop change on root dir -----
+        thisTest.getWc().setRevision(rev);
+        assertEquals("wrong revision from update",
+                     client.update(thisTest.getWCPath(), null, true), rev);
+        thisTest.checkStatus();
+        client.propertySet(thisTest.getWCPath(), "propname", "propval", false);
+        thisTest.getWc().setItemPropStatus("", Status.Kind.modified);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(), null,
+                              NodeKind.dir, CommitItemStateFlags.PropMods);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        thisTest.getWc().setItemWorkingCopyRevision("", rev);
+        thisTest.getWc().setItemPropStatus("", Status.Kind.normal);
+
+        // ----- r8: Add a file A/D/H/nu ----------------------------
+        file = new File(thisTest.getWorkingCopy(), "A/D/H/nu");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is the file 'nu'.");
+        pw.close();
+        client.add(file.getAbsolutePath(), false);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/H/nu", NodeKind.file,
+                              CommitItemStateFlags.TextMods +
+                              CommitItemStateFlags.Add);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        thisTest.getWc().addItem("A/D/H/nu", "This is the file 'nu'.");
+        status = client.singleStatus(thisTest.getWCPath() + "/A/D/H/nu",
+                                     false);
+        long nuCommitDate = status.getLastChangedDate().getTime();
+        long nuCommitRev = rev;
+        String nuAuthor = status.getLastCommitAuthor();
+
+        // ----- r9: Prop change on A/B/F ---------------------------
+        client.propertySet(thisTest.getWCPath() + "/A/B/F", "propname",
+                           "propval", false);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/B/F", NodeKind.dir,
+                              CommitItemStateFlags.PropMods);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        thisTest.getWc().setItemPropStatus("A/B/F", Status.Kind.normal);
+        thisTest.getWc().setItemWorkingCopyRevision("A/B/F", rev);
+        status = client.singleStatus(thisTest.getWCPath() + "/A/B/F", false);
+        long FCommitDate = status.getLastChangedDate().getTime();
+        long FCommitRev = rev;
+        String FAuthor = status.getLastCommitAuthor();
+
+        // ----- r10-11: Replace file A/D/H/chi with file -----------
+        client.remove(new String[] {thisTest.getWCPath() + "/A/D/H/chi"},
+                      null, false);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/H/chi", NodeKind.file,
+                              CommitItemStateFlags.Delete);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        thisTest.getWc().removeItem("A/D/G/pi");
+
+        file = new File(thisTest.getWorkingCopy(), "A/D/H/chi");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is the replacement file 'chi'.");
+        pw.close();
+        client.add(file.getAbsolutePath(), false);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/H/chi", NodeKind.file,
+                              CommitItemStateFlags.TextMods +
+                              CommitItemStateFlags.Add);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        thisTest.getWc().addItem("A/D/H/chi",
+                                 "This is the replacement file 'chi'.");
+        status = client.singleStatus(thisTest.getWCPath() + "/A/D/H/chi",
+                                     false);
+        long chiCommitDate = status.getLastChangedDate().getTime();
+        long chiCommitRev = rev;
+        String chiAuthor = status.getLastCommitAuthor();
+
+        // ----- r12: Delete dir A/B/E with children ----------------
+        client.remove(new String[] {thisTest.getWCPath() + "/A/B/E"}, null,
+                      false);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/B/E", NodeKind.dir,
+                              CommitItemStateFlags.Delete);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        thisTest.getWc().removeItem("A/B/E/alpha");
+        thisTest.getWc().removeItem("A/B/E/beta");
+        thisTest.getWc().removeItem("A/B/E");
+
+        thisTest.getWc().setItemWorkingCopyRevision("A/B", rev);
+        assertEquals("wrong revision from update",
+                     client.update(thisTest.getWCPath() + "/A/B", null, true),
+                     rev);
+        Info Binfo = client.info(thisTest.getWCPath() + "/A/B");
+        long BCommitDate = Binfo.getLastChangedDate().getTime();
+        long BCommitRev = rev;
+        long ECommitRev = BCommitRev;
+        String BAuthor = Binfo.getAuthor();
+
+        // ----- r13-14: Replace file A/D/H/psi with dir ------------
+        client.remove(new String[]{thisTest.getWCPath() + "/A/D/H/psi"}, null,
+                      false);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/H/psi", NodeKind.file,
+                              CommitItemStateFlags.Delete);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        thisTest.getWc().removeItem("A/D/H/psi");
+        thisTest.getWc().setRevision(rev);
+        assertEquals("wrong revision from update",
+                     client.update(thisTest.getWCPath(), null, true), rev);
+        thisTest.getWc().addItem("A/D/H/psi", null);
+        dir = new File(thisTest.getWorkingCopy(), "A/D/H/psi");
+        dir.mkdir();
+        client.add(dir.getAbsolutePath(), true);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/H/psi", NodeKind.dir,
+                              CommitItemStateFlags.Add);
+        assertEquals("wrong revision number from commit",
+                     rev = client.commit(new String[] {thisTest.getWCPath()},
+                                         "log msg", true),
+                     expectedRev++);
+        status = client.singleStatus(thisTest.getWCPath() + "/A/D/H/psi",
+                                     false);
+        long psiCommitDate = status.getLastChangedDate().getTime();
+        long psiCommitRev = rev;
+        String psiAuthor = status.getLastCommitAuthor();
+
+        // ----- Check status of modfied WC then update it back
+        // -----  to rev 1 so it's out of date
+        thisTest.checkStatus();
+
+        assertEquals("wrong revision from update", 
+                     client.update(thisTest.getWCPath(),
+                                   Revision.getInstance(1), true),
+                     1);
+        thisTest.getWc().setRevision(1);
+
+        thisTest.getWc().setItemOODInfo("A", psiCommitRev, psiAuthor,
+                                        psiCommitDate, NodeKind.dir);
+
+        thisTest.getWc().setItemOODInfo("A/B", BCommitRev, BAuthor,
+                                        BCommitDate, NodeKind.dir);
+
+        thisTest.getWc().addItem("A/B/I", null);
+        thisTest.getWc().setItemOODInfo("A/B/I", ICommitRev, IAuthor,
+                                        ICommitDate, NodeKind.dir);
+        thisTest.getWc().setItemTextStatus("A/B/I", Status.Kind.none);
+        thisTest.getWc().setItemNodeKind("A/B/I", NodeKind.unknown);
+
+        thisTest.getWc().addItem("A/C", null);
+        thisTest.getWc().setItemReposLastCmtRevision("A/C", CCommitRev);
+        thisTest.getWc().setItemReposKind("A/C", NodeKind.dir);
+
+        thisTest.getWc().addItem("A/B/E", null);
+        thisTest.getWc().setItemReposLastCmtRevision("A/B/E", ECommitRev);
+        thisTest.getWc().setItemReposKind("A/B/E", NodeKind.dir);
+        thisTest.getWc().addItem("A/B/E/alpha", "This is the file 'alpha'.");
+        thisTest.getWc().addItem("A/B/E/beta", "This is the file 'beta'.");
+
+        thisTest.getWc().setItemPropStatus("A/B/F", Status.Kind.none);
+        thisTest.getWc().setItemOODInfo("A/B/F", FCommitRev, FAuthor,
+                                        FCommitDate, NodeKind.dir);
+
+        thisTest.getWc().setItemOODInfo("A/D", psiCommitRev, psiAuthor,
+                                        psiCommitDate, NodeKind.dir);
+
+        thisTest.getWc().setItemOODInfo("A/D/G", tauCommitRev, tauAuthor,
+                                        tauCommitDate, NodeKind.dir);
+
+        thisTest.getWc().addItem("A/D/G/pi", "This is the file 'pi'.");
+        thisTest.getWc().setItemReposLastCmtRevision("A/D/G/pi", GCommitRev);
+        thisTest.getWc().setItemReposKind("A/D/G/pi", NodeKind.file);
+
+        thisTest.getWc().setItemContent("A/D/G/rho",
+                                        "This is the file 'rho'.");
+        thisTest.getWc().setItemOODInfo("A/D/G/rho", rhoCommitRev, rhoAuthor,
+                                        rhoCommitDate, NodeKind.file);
+
+        thisTest.getWc().setItemContent("A/D/G/tau",
+                                        "This is the file 'tau'.");
+        thisTest.getWc().setItemOODInfo("A/D/G/tau", tauCommitRev, tauAuthor,
+                                        tauCommitDate, NodeKind.file);
+
+        thisTest.getWc().setItemOODInfo("A/D/H", psiCommitRev, psiAuthor,
+                                        psiCommitDate, NodeKind.dir);
+
+        thisTest.getWc().setItemWorkingCopyRevision("A/D/H/nu",
+            Revision.SVN_INVALID_REVNUM);
+        thisTest.getWc().setItemTextStatus("A/D/H/nu", Status.Kind.none);
+        thisTest.getWc().setItemNodeKind("A/D/H/nu", NodeKind.unknown);
+        thisTest.getWc().setItemOODInfo("A/D/H/nu", nuCommitRev, nuAuthor,
+                                        nuCommitDate, NodeKind.file);
+
+        thisTest.getWc().setItemContent("A/D/H/chi",
+                                        "This is the file 'chi'.");
+        thisTest.getWc().setItemOODInfo("A/D/H/chi", chiCommitRev, chiAuthor,
+                                        chiCommitDate, NodeKind.file);
+
+        thisTest.getWc().removeItem("A/D/H/psi");
+        thisTest.getWc().addItem("A/D/H/psi", "This is the file 'psi'.");
+        // psi was replaced with a directory
+        thisTest.getWc().setItemOODInfo("A/D/H/psi", psiCommitRev, psiAuthor,
+                                        psiCommitDate, NodeKind.dir);
+
+        thisTest.getWc().setItemPropStatus("", Status.Kind.none);
+        thisTest.getWc().setItemOODInfo("", psiCommitRev, psiAuthor,
+                                        psiCommitDate, NodeKind.dir);
+
+        thisTest.checkStatus(true);
     }
 
     /**
@@ -161,19 +522,6 @@ public class BasicTests extends SVNTests
 
         // deleted file should reapear
         thisTest.getWc().setItemTextStatus("A/B/lambda", Status.Kind.normal);
-
-        // check the status of the working copy
-        thisTest.checkStatus();
-    }
-
-    /**
-     * test the basic SVNClient.status functionality
-     * @throws Throwable
-     */
-    public void testBasicStatus() throws Throwable
-    {
-        // build the test setup
-        OneTest thisTest = new OneTest();
 
         // check the status of the working copy
         thisTest.checkStatus();
@@ -312,6 +660,89 @@ public class BasicTests extends SVNTests
                 client.update(thisTest.getWCPath(), null, true), 2);
 
         // check the status of the working copy
+        thisTest.checkStatus();
+    }
+
+    /**
+     * Test the {@link SVNClientInterface.copy()} API.
+     * @since 1.5
+     */
+    public void testCopy()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+        final Revision firstRevision = Revision.getInstance(1);
+        final Revision pegRevision = null;  // Defaults to Revision.HEAD.
+
+        // Copy files from A/B/E to A/B/F.
+        String[] srcPaths = { "alpha", "beta" };
+        CopySource[] sources = new CopySource[srcPaths.length];
+        for (int i = 0; i < srcPaths.length; i++)
+        {
+            String fileName = srcPaths[i];
+            sources[i] =
+                new CopySource(new File(thisTest.getWorkingCopy(),
+                                        "A/B/E/" + fileName).getPath(),
+                               firstRevision, pegRevision);
+            wc.addItem("A/B/F/" + fileName,
+                       wc.getItemContent("A/B/E/" + fileName));
+            wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/F/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Add |
+                                  CommitItemStateFlags.IsCopy);
+        }
+        client.copy(sources,
+                    new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
+                    null, true);
+
+        // Commit the changes, and check the state of the WC.
+        assertEquals("Unexpected WC revision number after commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "Copy files", true), 2);
+        thisTest.checkStatus();
+    }
+
+    /**
+     * Test the {@link SVNClientInterface.move()} API.
+     * @since 1.5
+     */
+    public void testMove()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest();
+        WC wc = thisTest.getWc();
+
+        // Move files from A/B/E to A/B/F.
+        String[] srcPaths = { "alpha", "beta" };
+        for (int i = 0; i < srcPaths.length; i++)
+        {
+            String fileName = srcPaths[i];
+            srcPaths[i] = new File(thisTest.getWorkingCopy(),
+                                   "A/B/E/" + fileName).getPath();
+
+            wc.addItem("A/B/F/" + fileName,
+                       wc.getItemContent("A/B/E/" + fileName));
+            wc.setItemWorkingCopyRevision("A/B/F/" + fileName, 2);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/F/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Add |
+                                  CommitItemStateFlags.IsCopy);
+
+            wc.removeItem("A/B/E/" + fileName);
+            addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                                  "A/B/E/" + fileName, NodeKind.file,
+                                  CommitItemStateFlags.Delete);
+        }
+        client.move(srcPaths,
+                    new File(thisTest.getWorkingCopy(), "A/B/F").getPath(),
+                    null, false, true);
+
+        // Commit the changes, and check the state of the WC.
+        assertEquals("Unexpected WC revision number after commit",
+                     client.commit(new String[] { thisTest.getWCPath() },
+                                   "Move files", true), 2);
         thisTest.checkStatus();
     }
 
@@ -687,7 +1118,7 @@ public class BasicTests extends SVNTests
         thisTest.checkStatus();
 
         // remove & revert X
-        removeDirectoryWithContent(new File(thisTest.getWorkingCopy(), "X"));
+        removeDirOrFile(new File(thisTest.getWorkingCopy(), "X"));
         client.revert(thisTest.getWCPath()+"/X", false);
         thisTest.getWc().removeItem("X");
 
@@ -696,7 +1127,7 @@ public class BasicTests extends SVNTests
 
         // delete the directory A/B/E
         client.remove(new String[] {thisTest.getWCPath()+"/A/B/E"}, null, true);
-        removeDirectoryWithContent(new File(thisTest.getWorkingCopy(), "A/B/E"));
+        removeDirOrFile(new File(thisTest.getWorkingCopy(), "A/B/E"));
         thisTest.getWc().setItemTextStatus("A/B/E", Status.Kind.deleted);
         thisTest.getWc().removeItem("A/B/E/alpha");
         thisTest.getWc().removeItem("A/B/E/beta");
@@ -1316,7 +1747,7 @@ public class BasicTests extends SVNTests
                 "log message for import", true);
 
         // remove dir
-        removeDirectoryWithContent(dir);
+        removeDirOrFile(dir);
 
         // udpate the working copy
         assertEquals("wrong revision from update", 2,
@@ -1526,6 +1957,122 @@ public class BasicTests extends SVNTests
                       true), 5);
  
     }
+
+    /**
+     * Test the {@link SVNClientInterface.diff()} APIs.
+     * @since 1.5
+     */
+    public void testDiff()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(true);
+        File diffOutput = new File(super.localTmp, thisTest.testName);
+        final String sepLine =
+            "===================================================================\n";
+        final String expectedDiffBody =
+            "@@ -1 +1 @@\n" +
+            "-This is the file 'iota'.\n" +
+            "\\ No newline at end of file\n" +
+            "+This is the file 'mu'.\n" +
+            "\\ No newline at end of file\n";
+
+        // Two-path diff of URLs.
+        String expectedDiffOutput = "Index: iota\n" + sepLine +
+            "--- iota\t(.../iota)\t(revision 1)\n" +
+            "+++ iota\t(.../A/mu)\t(revision 1)\n" +
+            expectedDiffBody;
+        client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
+                    thisTest.getUrl() + "/A/mu", Revision.HEAD,
+                    diffOutput.getPath(), false, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
+
+        // Two-path diff of WC paths.
+        String iotaPath = thisTest.getWCPath() + "/iota";
+        PrintWriter writer = new PrintWriter(new FileOutputStream(iotaPath));
+        writer.print("This is the file 'mu'.");
+        writer.flush();
+        writer.close();
+        expectedDiffOutput = "Index: " + iotaPath + '\n' + sepLine +
+            "--- " + iotaPath + "\t(revision 1)\n" +
+            "+++ " + iotaPath + "\t(working copy)\n" +
+            expectedDiffBody;
+        client.diff(iotaPath, Revision.BASE,
+                    iotaPath, Revision.WORKING,
+                    diffOutput.getPath(), false, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 expectedDiffOutput, diffOutput);
+
+        // Peg revision diff of a single file.
+        client.diff(thisTest.getUrl() + "/iota", Revision.HEAD,
+                    new Revision.Number(1), Revision.HEAD,
+                    diffOutput.getPath(), false, true, true, false);
+        assertFileContentsEquals("Unexpected diff output in file '" +
+                                 diffOutput.getPath() + '\'',
+                                 "", diffOutput);
+
+        diffOutput.delete();
+    }
+
+    private void assertFileContentsEquals(String msg, String expected,
+                                          File actual)
+        throws IOException
+    {
+        FileReader reader = new FileReader(actual);
+        StringBuffer buf = new StringBuffer();
+        int ch;
+        while ((ch = reader.read()) != -1)
+        {
+            buf.append((char) ch);
+        }
+        assertEquals(msg, expected, buf.toString());
+    }
+
+    /**
+     * Test the {@link SVNClientInterface.diffSummarize()} API.
+     * @since 1.5
+     */
+    public void testDiffSummarize()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(false);
+        DiffSummaries summaries = new DiffSummaries();
+        // Perform a recursive diff summary, ignoring ancestry.
+        client.diffSummarize(thisTest.getUrl(), new Revision.Number(0),
+                             thisTest.getUrl(), Revision.HEAD, true, false,
+                             summaries);
+        assertExpectedDiffSummaries(summaries);
+
+        summaries.clear();
+        // Perform a recursive diff summary with a peg revision,
+        // ignoring ancestry.
+        client.diffSummarize(thisTest.getUrl(), Revision.HEAD,
+                             new Revision.Number(0), Revision.HEAD,
+                             true, false, summaries);
+        assertExpectedDiffSummaries(summaries);
+    }
+
+    private void assertExpectedDiffSummaries(DiffSummaries summaries)
+    {
+        assertEquals("Wrong number of diff summary descriptors", 20,
+                     summaries.size());
+
+        // Rigorously inspect one of our DiffSummary notifications.
+        final String BETA_PATH = "A/B/E/beta";
+        DiffSummary betaDiff = (DiffSummary) summaries.get(BETA_PATH);
+        assertNotNull("No diff summary for " + BETA_PATH, betaDiff);
+        assertEquals("Incorrect path for " + BETA_PATH, BETA_PATH,
+                     betaDiff.getPath());
+        assertTrue("Incorrect diff kind for " + BETA_PATH,
+                   DiffSummary.DiffKind.ADDED.equals(betaDiff.getDiffKind()));
+        assertEquals("Incorrect props changed notice for " + BETA_PATH,
+                     false, betaDiff.propsChanged());
+        assertEquals("Incorrect node kind for " + BETA_PATH, 1,
+                     betaDiff.getNodeKind());
+    }
+
     /**
      * test the basic SVNClient.isAdminDirectory functionality
      * @throws Throwable
@@ -1546,6 +2093,7 @@ public class BasicTests extends SVNTests
         assertEquals("wrong revision number from update",
                 client.update(thisTest.getWCPath(), null, true), 1);
     }
+
     public void testBasicCancelOperation() throws Throwable
     {
         // build the test setup
@@ -1573,6 +2121,204 @@ public class BasicTests extends SVNTests
         catch (ClientException e)
         {
             // this is expected
+        }
+    }
+
+    public void testDataTransferProgressReport() throws Throwable
+    {
+        // ### FIXME: This isn't working over ra_local, because
+        // ### ra_local is not invoking the progress callback.
+        if (SVNTests.rootUrl.startsWith("file://"))
+            return;
+
+        // build the test setup
+        OneTest thisTest = new OneTest();
+        ProgressListener listener = new ProgressListener()
+        {
+            public void onProgress(ProgressEvent event)
+            {
+                // TODO: Examine the byte counts from "event".
+                throw new RuntimeException("Progress reported as expected");
+            }
+        };
+        client.setProgressListener(listener);
+
+        // Perform an update to exercise the progress notification.
+        try
+        {
+            client.update(thisTest.getWCPath(), null, true);
+            fail("No progress reported");
+        }
+        catch (RuntimeException progressReported)
+        {
+        }
+    }
+
+    /**
+     * Test tolerance of unversioned obstructions when adding paths with
+     * {@link org.tigris.subversion.javahl.SVNClient#checkout()},
+     * {@link org.tigris.subversion.javahl.SVNClient#update()}, and
+     * {@link org.tigris.subversion.javahl.SVNClient#doSwitch()}
+     * @throws IOException
+     * @throws SubversionException
+     */
+    public void testObstructionTolerance()
+            throws SubversionException, IOException
+    {
+        // build the test setup
+        OneTest thisTest = new OneTest();
+
+        File file;
+        PrintWriter pw;
+
+        // ----- TEST CHECKOUT -----
+        // Use export to make unversioned obstructions for a second
+        // WC checkout (deleting export target from previous tests
+        // first if it exists).
+        String secondWC = thisTest.getWCPath() + ".backup1";
+        removeDirOrFile(new File(secondWC));
+        client.doExport(thisTest.getUrl(), secondWC, null, false);
+
+        // Make an obstructing file that conflicts with add coming from repos
+        file = new File(secondWC, "A/B/lambda");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is the conflicting obstructiong file 'lambda'.");
+        pw.close();
+
+        // Attempt to checkout backup WC without "--force"...
+        try
+        {
+            // ...should fail
+            client.checkout(thisTest.getUrl(), secondWC, null, null, true,
+                            false, false);
+            fail("obstructed checkout should fail by default");
+        }
+        catch (ClientException expected)
+        {
+        }
+
+        // Attempt to checkout backup WC with "--force"
+        // so obstructions are tolerated
+        client.checkout(thisTest.getUrl(), secondWC, null, null, true,
+                        false, true);
+
+        // Check the WC status, the only status should be a text
+        // mod to lambda.  All the other obstructing files were identical
+        Status[] secondWCStatus = client.status(secondWC, true, false,
+                                                false, false, false);
+        if (!(secondWCStatus.length == 1 &&
+            secondWCStatus[0].getPath().endsWith("A/B/lambda") &&
+            secondWCStatus[0].getTextStatus() == StatusKind.modified &&
+            secondWCStatus[0].getPropStatus() == StatusKind.none))
+        {
+            fail("Unexpected WC status after co with unversioned obstructions");
+        }
+
+        // Make a third WC to test obstruction tolerance of sw and up.
+        OneTest backupTest = thisTest.copy(".backup2");
+
+        // ----- TEST UPDATE -----
+        // r2: Add a file A/D/H/nu
+        file = new File(thisTest.getWorkingCopy(), "A/D/H/nu");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is the file 'nu'.");
+        pw.close();
+        client.add(file.getAbsolutePath(), false);
+        addExpectedCommitItem(thisTest.getWCPath(), thisTest.getUrl(),
+                              "A/D/H/nu", NodeKind.file,
+                              CommitItemStateFlags.TextMods +
+                              CommitItemStateFlags.Add);
+        assertEquals("wrong revision number from commit",
+                     client.commit(new String[] {thisTest.getWCPath()},
+                     "log msg", true), 2);
+        thisTest.getWc().addItem("A/D/H/nu", "This is the file 'nu'.");
+        Status status = client.singleStatus(thisTest.getWCPath() +
+                                            "/A/D/H/nu",
+                                            false);
+
+        // Add an unversioned file A/D/H/nu to the backup WC
+        file = new File(backupTest.getWorkingCopy(), "A/D/H/nu");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is the file 'nu'.");
+        pw.close();
+
+        // Attempt to update backup WC without "--force"
+        try
+        {
+            // obstructed update should fail
+            client.update(backupTest.getWCPath(), null, true);
+            fail("obstructed update should fail by default");
+        }
+        catch (ClientException expected)
+        {
+        }
+
+        // Attempt to update backup WC with "--force"
+        assertEquals("wrong revision from update", 
+                     client.update(backupTest.getWCPath(),
+                                   null, true, false, true), 2);
+
+        // ----- TEST SWITCH -----
+        // Add an unversioned file A/B/E/nu to the backup WC
+        // The file differs from A/D/H/nu
+        file = new File(backupTest.getWorkingCopy(), "A/B/E/nu");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is yet another file 'nu'.");
+        pw.close();
+
+        // Add an unversioned file A/B/E/chi to the backup WC
+        // The file is identical to A/D/H/chi.
+        file = new File(backupTest.getWorkingCopy(), "A/B/E/chi");
+        pw = new PrintWriter(new FileOutputStream(file));
+        pw.print("This is the file 'chi'.");
+        pw.close();
+
+        // Attempt to switch A/B/E to A/D/H without "--force"
+        try
+        {
+            // obstructed switch should fail
+            client.doSwitch(backupTest.getWCPath() + "/A/B/E",
+                                backupTest.getUrl() + "/A/D/H",
+                            null, true);
+            fail("obstructed switch should fail by default");
+        }
+        catch (ClientException expected)
+        {
+        }
+
+        // Complete the switch using "--force" and check the status
+        client.doSwitch(backupTest.getWCPath() + "/A/B/E",
+                backupTest.getUrl() + "/A/D/H",
+                null, true, true);
+
+        backupTest.getWc().setItemIsSwitched("A/B/E",true);
+        backupTest.getWc().removeItem("A/B/E/alpha");
+        backupTest.getWc().removeItem("A/B/E/beta");
+        backupTest.getWc().addItem("A/B/E/nu",
+                                   "This is yet another file 'nu'.");
+        backupTest.getWc().setItemTextStatus("A/B/E/nu", Status.Kind.modified);
+        backupTest.getWc().addItem("A/D/H/nu",
+                                   "This is the file 'nu'.");
+        backupTest.getWc().addItem("A/B/E/chi",
+                                   backupTest.getWc().getItemContent("A/D/H/chi"));
+        backupTest.getWc().addItem("A/B/E/psi",
+                                   backupTest.getWc().getItemContent("A/D/H/psi"));
+        backupTest.getWc().addItem("A/B/E/omega",
+                                   backupTest.getWc().getItemContent("A/D/H/omega"));
+
+        backupTest.checkStatus();
+    }
+
+    /**
+     * A DiffSummaryReceiver implementation which collects all
+     * DiffSummary notifications.
+     */
+    private static class DiffSummaries extends HashMap
+        implements DiffSummaryReceiver
+    {
+        public void onSummary(DiffSummary descriptor)
+        {
+            super.put(descriptor.getPath(), descriptor);
         }
     }
 }

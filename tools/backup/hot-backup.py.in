@@ -135,6 +135,22 @@ def comparator(a, b):
     else:
       return 1
 
+def get_youngest_revision():
+  """Examine the repository REPO_DIR using the svnlook binary
+  specified by SVNLOOK, and return the youngest revision."""
+  infile, outfile, errfile = os.popen3(svnlook + " youngest " + repo_dir)
+  stdout_lines = outfile.readlines()
+  stderr_lines = errfile.readlines()
+  outfile.close()
+  infile.close()
+  errfile.close()
+
+  if stderr_lines:
+    raise Exception("Unable to find the youngest revision for repository '%s'"
+                    ": %s" % (repo_dir, string.rstrip(stderr_lines[0])))
+
+  return string.strip(stdout_lines[0])
+
 ######################################################################
 # Main
 
@@ -143,14 +159,12 @@ print "Beginning hot backup of '"+ repo_dir + "'."
 
 ### Step 1: get the youngest revision.
 
-infile, outfile, errfile = os.popen3(svnlook + " youngest " + repo_dir)
-stdout_lines = outfile.readlines()
-stderr_lines = errfile.readlines()
-outfile.close()
-infile.close()
-errfile.close()
+try:
+  youngest = get_youngest_revision()
+except Exception, e:
+  print >> sys.stderr, str(e)
+  sys.exit(1)
 
-youngest = string.strip(stdout_lines[0])
 print "Youngest revision is", youngest
 
 

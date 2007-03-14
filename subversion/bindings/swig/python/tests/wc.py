@@ -1,13 +1,9 @@
-import unittest, os, tempfile
-import shutil
-
+import unittest, os, tempfile, shutil, types, setup_path
 from svn import core, repos, wc, client
 from libsvn.core import SubversionException
-import types
 
 from trac.versioncontrol.tests.svn_fs import SubversionRepositoryTestSetup, \
-  REPOS_PATH
-from urllib import pathname2url
+  REPOS_PATH, REPOS_URL
 
 class SubversionWorkingCopyTestCase(unittest.TestCase):
   """Test cases for the Subversion working copy layer"""
@@ -15,20 +11,18 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def setUp(self):
     """Load a Subversion repository"""
 
-    self.repos_url = "file://" + pathname2url(REPOS_PATH)
-    
     # Open repository directly for cross-checking
     self.repos = repos.open(REPOS_PATH)
     self.fs = repos.fs(self.repos)
 
-    self.path = tempfile.mktemp()
+    self.path = core.svn_path_canonicalize(tempfile.mktemp())
 
     client_ctx = client.create_context()
     
     rev = core.svn_opt_revision_t()
     rev.kind = core.svn_opt_revision_head
 
-    client.checkout2(self.repos_url, self.path, rev, rev, True, True, 
+    client.checkout2(REPOS_URL, self.path, rev, rev, True, True, 
             client_ctx)
 
     self.wc = wc.adm_open3(None, self.path, True, -1, None)
@@ -98,7 +92,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
               pass
 
       # Remove trunk/README.txt
-      readme_path = os.path.join(self.path, "trunk", "README.txt")
+      readme_path = '%s/trunk/README.txt' % self.path
       self.assert_(os.path.exists(readme_path))
       os.remove(readme_path)
 
@@ -126,7 +120,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.assert_(wc.check_wc(self.path) > 0)
 
   def test_get_ancestry(self):
-      self.assertEqual([self.repos_url, 12], 
+      self.assertEqual([REPOS_URL, 12], 
                        wc.get_ancestry(self.path, self.wc))
 
   def test_status(self):
@@ -151,9 +145,10 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.failIf(wc.is_entry_prop('foreign:foo:bar'))
 
   def test_get_pristine_copy_path(self):
-      self.assertEqual(
-        wc.get_pristine_copy_path(os.path.join(self.path, 'foo')),
-        os.path.join(self.path, wc.get_adm_dir(), 'text-base', 'foo.svn-base'))
+      path_to_file = '%s/%s' % (self.path, 'foo')
+      path_to_text_base = '%s/%s/text-base/foo.svn-base' % (self.path,
+        wc.get_adm_dir())
+      self.assertEqual(path_to_text_base, wc.get_pristine_copy_path(path_to_file))
 
   def test_entries_read(self):
       entries = wc.entries_read(self.wc, True)
@@ -165,7 +160,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
   def tearDown(self):
       wc.adm_close(self.wc)
-      shutil.rmtree(self.path)
+      core.svn_io_remove_dir(self.path)
 
 def suite():
     return unittest.makeSuite(SubversionWorkingCopyTestCase, 'test',

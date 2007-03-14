@@ -54,9 +54,8 @@
 %apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
 #endif
 
-%hash_argout_typemap(entries_p, svn_fs_dirent_t *, _global_svn_swig_py_pool)
-%hash_argout_typemap(changed_paths_p, svn_fs_path_change_t *,
-                     _global_svn_swig_py_pool)
+%hash_argout_typemap(entries_p, svn_fs_dirent_t *)
+%hash_argout_typemap(changed_paths_p, svn_fs_path_change_t *)
 
 #ifndef SWIGPERL
 %callback_typemap(svn_fs_get_locks_callback_t get_locks_func,
@@ -116,3 +115,7 @@ svn_fs_root_fs_wrapper(svn_fs_root_t *root, apr_pool_t *pool)
 %}
 
 %include svn_fs_h.swg
+
+#ifdef SWIGRUBY
+%define_close_related_methods(fs);
+#endif

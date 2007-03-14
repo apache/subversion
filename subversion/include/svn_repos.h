@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -242,19 +242,6 @@ svn_error_t * svn_repos_hotcopy(const char *src_path,
  * database, and releases the lock.  If an exclusive lock can't be
  * acquired, returns error.
  *
- * @deprecated Provided for backward compatibility with the 1.0 API.
- */
-svn_error_t *svn_repos_recover(const char *path, apr_pool_t *pool);
-
-/**
- * Run database recovery procedures on the repository at @a path,
- * returning the database to a consistent state.  Use @a pool for all
- * allocation.
- *
- * Acquires an exclusive lock on the repository, recovers the
- * database, and releases the lock.  If an exclusive lock can't be
- * acquired, returns error.
- *
  * If @a nonblocking is TRUE, an error of type EWOULDBLOCK is
  * returned if the lock is not immediately available.
  *
@@ -262,13 +249,43 @@ svn_error_t *svn_repos_recover(const char *path, apr_pool_t *pool);
  * start_callback_baton as argument before the recovery starts, but
  * after the exclusive lock has been acquired.
  *
- * @since New in 1.1.
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * the recovery.
+ *
+ * @note On some platforms the exclusive lock does not exclude other
+ * threads in the same process so this function should only be called
+ * by a single threaded process, or by a multi-threaded process when
+ * no other threads are accessing the repository.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_recover3(const char *path,
+                                svn_boolean_t nonblocking,
+                                svn_error_t *(*start_callback)(void *baton),
+                                void *start_callback_baton,
+                                svn_cancel_func_t cancel_func,
+                                void * cancel_baton,
+                                apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_recover3(), but without cancellation support.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_repos_recover2(const char *path,
                                 svn_boolean_t nonblocking,
                                 svn_error_t *(*start_callback)(void *baton),
                                 void *start_callback_baton,
                                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_recover2(), but with nonblocking set to FALSE, and
+ * with no callbacks provided.
+ *
+ * @deprecated Provided for backward compatibility with the 1.0 API.
+ */
+svn_error_t *svn_repos_recover(const char *path, apr_pool_t *pool);
 
 /** This function is a wrapper around svn_fs_berkeley_logfiles(),
  * returning log file paths relative to the root of the repository.
@@ -830,6 +847,25 @@ svn_repos_stat(svn_dirent_t **dirent,
                apr_pool_t *pool);
 
 
+/**
+ * Given @a path which exists at revision @a start in @a fs, set
+ * @a *deleted to the revision @a path was first deleted, within the
+ * inclusive revision range set by @a start and @a end.  If @a path
+ * does not exist at revision @a start or was not deleted within the
+ * specified range, then set @a *deleted to SVN_INVALID_REVNUM.
+ * Use @a pool for memory allocation.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_deleted_rev(svn_fs_t *fs,
+                      const char *path,
+                      svn_revnum_t start,
+                      svn_revnum_t end,
+                      svn_revnum_t *deleted,
+                      apr_pool_t *pool);
+
+
 /** Callback type for use with svn_repos_history().  @a path and @a
  * revision represent interesting history locations in the lifetime
  * of the path passed to svn_repos_history().  @a baton is the same
@@ -1197,8 +1233,9 @@ svn_error_t *svn_repos_fs_get_locks(apr_hash_t **locks,
 
 /**
  * Like svn_fs_change_rev_prop(), but invoke the @a repos's pre- and
- * post-revprop-change hooks around the change.  Use @a pool for
- * temporary allocations.
+ * post-revprop-change hooks around the change as specified by @a
+ * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
+ * (respectively).  Use @a pool for temporary allocations.
  *
  * @a rev is the revision whose property to change, @a name is the
  * name of the property, and @a new_value is the new value of the
@@ -1210,7 +1247,28 @@ svn_error_t *svn_repos_fs_get_locks(apr_hash_t **locks,
  * rev.  If the revision contains any unreadable changed paths, then
  * return SVN_ERR_AUTHZ_UNREADABLE.
  * 
- * @since New in 1.1.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
+                                           svn_revnum_t rev,
+                                           const char *author,
+                                           const char *name,
+                                           const svn_string_t *new_value,
+                                           svn_boolean_t
+                                           use_pre_revprop_change_hook,
+                                           svn_boolean_t
+                                           use_post_revprop_change_hook,
+                                           svn_repos_authz_func_t
+                                           authz_read_func,
+                                           void *authz_read_baton,
+                                           apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_fs_change_rev_prop3(), but with the @a
+ * use_pre_revprop_change_hook and @a use_post_revprop_change_hook
+ * always set to @c TRUE.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
                                            svn_revnum_t rev,

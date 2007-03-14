@@ -1,7 +1,7 @@
 /* log.c --- retrieving log messages
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -613,7 +613,7 @@ svn_repos_get_logs3(svn_repos_t *repos,
                           strict_node_history,
                           authz_read_func, authz_read_baton,
                           hist_start, pool));
-      *((struct path_info **) apr_array_push(histories)) = info;
+      APR_ARRAY_PUSH(histories, struct path_info *) = info;
     }
 
   /* Loop through all the revisions in the range and add any
@@ -663,7 +663,7 @@ svn_repos_get_logs3(svn_repos_t *repos,
                  a list of revs and process it later. */
               if (! revs)
                 revs = apr_array_make(pool, 64, sizeof(svn_revnum_t));
-              *(svn_revnum_t*) apr_array_push(revs) = current;
+              APR_ARRAY_PUSH(revs, svn_revnum_t) = current;
             }
         }
     }

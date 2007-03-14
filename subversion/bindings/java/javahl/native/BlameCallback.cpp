@@ -51,29 +51,29 @@ BlameCallback::~BlameCallback()
  * @param pool      memory pool for the use of this function
  */
 svn_error_t* BlameCallback::callback(svn_revnum_t revision, const char *author, 
-                             const char *date, const char *line, 
-                             apr_pool_t *pool)
+                                     const char *date, const char *line, 
+                                     apr_pool_t *pool)
 {
     JNIEnv *env = JNIUtil::getEnv();
 
     static jmethodID mid = 0; // the method id will not change during
                               // the time this library is loaded, so
                               // it can be cached. 
-    if(mid == 0)
+    if (mid == 0)
     {
         jclass clazz = env->FindClass(JAVA_PACKAGE"/BlameCallback");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return SVN_NO_ERROR;
         }
         mid = env->GetMethodID(clazz, "singleLine", 
             "(Ljava/util/Date;JLjava/lang/String;Ljava/lang/String;)V");
-        if(JNIUtil::isJavaExceptionThrown() || mid == 0)
+        if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         {
             return SVN_NO_ERROR;
         }
         env->DeleteLocalRef(clazz);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return SVN_NO_ERROR;
         }
@@ -81,51 +81,51 @@ svn_error_t* BlameCallback::callback(svn_revnum_t revision, const char *author,
 
     // convert the parameters to their java relatives
     jstring jauthor = JNIUtil::makeJString(author);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
     jobject jdate = NULL;
-    if(date != NULL && *date != '\0')
+    if (date != NULL && *date != '\0')
     {
         apr_time_t timeTemp;
-        svn_error_t *err = svn_time_from_cstring (&timeTemp, date, pool);
-        if(err != SVN_NO_ERROR)
+        svn_error_t *err = svn_time_from_cstring(&timeTemp, date, pool);
+        if (err != SVN_NO_ERROR)
             return err;
 
         jdate = JNIUtil::createDate(timeTemp);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return SVN_NO_ERROR;
         }
     }
     jstring jline = JNIUtil::makeJString(line);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
 
     // call the java method
-    env->CallVoidMethod(m_callback, mid, jdate, (jlong)revision, jauthor, 
-        jline);
-    if(JNIUtil::isJavaExceptionThrown())
+    env->CallVoidMethod(m_callback, mid, jdate, 
+                        (jlong)revision, jauthor, jline);
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
 
     // cleanup the temporary java objects
     env->DeleteLocalRef(jline);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
     env->DeleteLocalRef(jauthor);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }
     env->DeleteLocalRef(jdate);
-    if(JNIUtil::isJavaExceptionThrown())
+    if (JNIUtil::isJavaExceptionThrown())
     {
         return SVN_NO_ERROR;
     }

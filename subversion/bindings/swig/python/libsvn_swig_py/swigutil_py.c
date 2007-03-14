@@ -102,12 +102,11 @@ void svn_swig_py_acquire_py_lock(void)
 /*** Automatic Pool Management Functions ***/
 
 /* The application pool */
-static apr_pool_t *_global_pool = NULL;
-static PyObject *_global_svn_swig_py_pool = NULL;
+static apr_pool_t *application_pool = NULL;
+static PyObject *application_py_pool = NULL;
 static char assertValid[] = "assert_valid";
+static char markValid[] = "_mark_valid";
 static char parentPool[] = "_parent_pool";
-static char addOwnedRef[] = "_add_owned_ref";
-static char removeOwnedRef[] = "_remove_owned_ref";
 static char wrap[] = "_wrap";
 static char unwrap[] = "_unwrap";
 static char setParentPool[] = "set_parent_pool";
@@ -126,25 +125,74 @@ apr_status_t svn_swig_py_initialize(void)
   return APR_SUCCESS;
 }
 
+int svn_swig_py_get_pool_arg(PyObject *args, swig_type_info *type,
+    PyObject **py_pool, apr_pool_t **pool)
+{
+  int argnum = PyTuple_GET_SIZE(args) - 1;
+
+  if (argnum >= 0)
+    {
+      PyObject *input = PyTuple_GET_ITEM(args, argnum);
+      if (input != Py_None && PyObject_HasAttrString(input, markValid))
+        {
+          *pool = svn_swig_MustGetPtr(input, type, argnum+1);
+          if (*pool == NULL)
+            return 1;
+          *py_pool = input;
+          Py_INCREF(input);
+          return 0;
+        }
+    }
+
+  /* We couldn't find a pool argument, so we'll create a subpool */
+  *pool = svn_pool_create(application_pool);
+  *py_pool = svn_swig_NewPointerObj(*pool, type, application_py_pool,
+                                    NULL);
+  if (*py_pool == NULL)
+    return 1;
+
+  return 0;
+}
+
+int svn_swig_py_get_parent_pool(PyObject *args, swig_type_info *type,
+    PyObject **py_pool, apr_pool_t **pool)
+{
+  PyObject *proxy = PyTuple_GetItem(args, 0);
+
+  if (proxy == NULL)
+    return 1;
+  
+  *py_pool = PyObject_GetAttrString(proxy, parentPool);
+
+  if (*py_pool == NULL)
+    {
+      PyErr_SetString(PyExc_TypeError,
+             "Unexpected NULL parent pool on proxy object");
+      return 1;
+    }
+
+  Py_DECREF(*py_pool);
+
+  *pool = svn_swig_MustGetPtr(*py_pool, type, 1);
+
+  if (*pool == NULL)
+    return 1;
+
+  return 0;
+}
+
 /* Set the application pool */
 void svn_swig_py_set_application_pool(PyObject *py_pool, apr_pool_t *pool)
 {
-  _global_pool = pool;
-  _global_svn_swig_py_pool = py_pool;
+  application_pool = pool;
+  application_py_pool = py_pool;
 }
 
 /* Clear the application pool */
 void svn_swig_py_clear_application_pool()
 {
-  _global_pool = NULL;
-  _global_svn_swig_py_pool = NULL;
-}
-
-/* Get the application pool */
-void svn_swig_get_application_pool(PyObject **py_pool, apr_pool_t **pool)
-{
-  *pool = _global_pool;
-  *py_pool = _global_svn_swig_py_pool;
+  application_pool = NULL;
+  application_py_pool = NULL;
 }
 
 /* Set the parent pool of a proxy object */
@@ -175,63 +223,27 @@ static int proxy_set_pool(PyObject **proxy, PyObject *pool)
   return 0;
 }
 
-/* Get the parent pool of a proxy object, or return the global application
- * pool if one is not set.  Returns a BORROWED reference! */
-static PyObject *proxy_get_pool(PyObject *proxy)
-{
-  PyObject *result;
-  if (PyObject_HasAttrString(proxy, parentPool))
-    {
-      result = PyObject_GetAttrString(proxy, parentPool);
-      Py_DECREF(result);
-    }
-  else
-    {
-      result = _global_svn_swig_py_pool;
-    }
-  return result;
-}
-
-/* Change an 'owned reference' allocated in a pool from oldRef to newRef.
- * If oldRef is non-NULL and present in the parent pool of proxy, it is removed.
- */
-int svn_swig_py_pool_set_owned_ref(PyObject *proxy, PyObject *oldRef,
-                                   PyObject *newRef)
-{
-  PyObject *temp;
-  PyObject *py_pool = proxy_get_pool(proxy);
-
-  if (oldRef != NULL)
-    {
-      temp = PyObject_CallMethod(py_pool, removeOwnedRef, objectTuple, oldRef);
-      if (temp == NULL)
-        return 1;
-      else
-        Py_DECREF(temp);
-    }
-  if (newRef != NULL)
-    {
-      temp = PyObject_CallMethod(py_pool, addOwnedRef, objectTuple, newRef);
-      if (temp == NULL)
-        return 1;
-      else
-        Py_DECREF(temp);
-    }
-  return 0;
-}
 
 /* Wrapper for SWIG_TypeQuery */
 #define svn_swig_TypeQuery(x) SWIG_TypeQuery(x)
 
 /** Wrapper for SWIG_NewPointerObj */
 PyObject *svn_swig_NewPointerObj(void *obj, swig_type_info *type,
-                                 PyObject *pool)
+                                 PyObject *pool, PyObject *args)
 {
   PyObject *proxy = SWIG_NewPointerObj(obj, type, 0);
 
   if (proxy == NULL)
     return NULL;
 
+  if (pool == NULL && args != NULL)
+    {
+      apr_pool_t *tmp;
+      if (svn_swig_py_get_parent_pool(args,
+            svn_swig_TypeQuery("apr_pool_t *"), &pool, &tmp))
+        PyErr_Clear();
+    }
+  
   if (proxy_set_pool(&proxy, pool))
     {
       Py_DECREF(proxy);
@@ -253,7 +265,7 @@ static PyObject *svn_swig_NewPointerObjString(void *ptr, const char *type,
     }
 
   /* ### cache the swig_type_info at some point? */
-  return svn_swig_NewPointerObj(ptr, typeinfo, py_pool);
+  return svn_swig_NewPointerObj(ptr, typeinfo, py_pool, NULL);
 }
 
 /** Wrapper for SWIG_ConvertPtr */
@@ -285,8 +297,7 @@ static int svn_swig_ConvertPtrString(PyObject *input,
 }
 
 /** Wrapper for SWIG_MustGetPtr */
-void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
-                          PyObject **py_pool)
+void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum)
 {
   if (PyObject_HasAttrString(input, assertValid))
     {
@@ -295,9 +306,6 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
         return NULL;
       Py_DECREF(result);
     }
-
-  if (py_pool != NULL)
-    *py_pool = proxy_get_pool((PyObject *) input);
 
   if (PyObject_HasAttrString(input, unwrap))
     {
@@ -309,6 +317,7 @@ void *svn_swig_MustGetPtr(void *input, swig_type_info *type, int argnum,
 
   return SWIG_MustGetPtr(input, type, argnum, SWIG_POINTER_EXCEPTION | 0);
 }
+
 
 
 /*** Custom SubversionException stuffs. ***/
@@ -373,6 +382,9 @@ void svn_swig_py_svn_exception(svn_error_t *err)
 
   /* Finished with the exc_ob object. */
   Py_DECREF(exc_ob);
+
+  /* Consume the Subversion error. */
+  svn_error_clear(err);
 }
 
 
@@ -385,9 +397,9 @@ static PyObject *make_ob_pool(void *pool)
   /* Return a brand new default pool to Python. This pool isn't
    * normally used for anything. It's just here for compatibility
    * with Subversion 1.2. */
-  apr_pool_t *new_pool = svn_pool_create(_global_pool);
+  apr_pool_t *new_pool = svn_pool_create(application_pool);
   PyObject *new_py_pool = svn_swig_NewPointerObj(new_pool,
-    svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool);
+    svn_swig_TypeQuery("apr_pool_t *"), application_py_pool, NULL);
   (void) pool; /* Silence compiler warnings about unused parameter. */
   return new_py_pool;
 }
@@ -466,7 +478,7 @@ static PyObject *convert_hash(apr_hash_t *hash,
 static PyObject *convert_to_swigtype(void *value, void *ctx, PyObject *py_pool)
 {
   /* ctx is a 'swig_type_info *' */
-  return svn_swig_NewPointerObj(value, ctx, py_pool);
+  return svn_swig_NewPointerObj(value, ctx, py_pool, NULL);
 }
 
 static PyObject *convert_svn_string_t(void *value, void *ctx,
@@ -480,15 +492,16 @@ static PyObject *convert_svn_string_t(void *value, void *ctx,
   return PyString_FromStringAndSize((void *)s->data, s->len);
 }
 
-static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
+static PyObject *convert_svn_client_commit_item3_t(void *value, void *ctx)
 {
   PyObject *list;
-  PyObject *path, *kind, *url, *rev, *cf_url, *state;
-  svn_client_commit_item_t *item = value;
+  PyObject *path, *kind, *url, *rev, *cf_url, *cf_rev, *state,
+      *incoming_prop_changes, *outgoing_prop_changes;
+  svn_client_commit_item3_t *item = value;
 
   /* ctx is unused */
 
-  list = PyList_New(6);
+  list = PyList_New(9);
 
   if (item->path)
     path = PyString_FromString(item->path);
@@ -516,9 +529,29 @@ static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
 
   kind = PyInt_FromLong(item->kind);
   rev = PyInt_FromLong(item->revision);
+  cf_rev = PyInt_FromLong(item->copyfrom_rev);
   state = PyInt_FromLong(item->state_flags);
 
-  if (! (list && path && kind && url && rev && cf_url && state))
+  if (item->incoming_prop_changes)
+    incoming_prop_changes =
+      svn_swig_py_array_to_list(item->incoming_prop_changes);
+  else
+    {
+      incoming_prop_changes = Py_None;
+      Py_INCREF(Py_None);
+    }
+
+  if (item->outgoing_prop_changes)
+    outgoing_prop_changes =
+      svn_swig_py_array_to_list(item->outgoing_prop_changes);
+  else
+    {
+      outgoing_prop_changes = Py_None;
+      Py_INCREF(Py_None);
+    }
+
+  if (! (list && path && kind && url && rev && cf_url && cf_rev && state &&
+         incoming_prop_changes && outgoing_prop_changes))
     {
       Py_XDECREF(list);
       Py_XDECREF(path);
@@ -526,7 +559,10 @@ static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
       Py_XDECREF(url);
       Py_XDECREF(rev);
       Py_XDECREF(cf_url);
+      Py_XDECREF(cf_rev);
       Py_XDECREF(state);
+      Py_XDECREF(incoming_prop_changes);
+      Py_XDECREF(outgoing_prop_changes);
       return NULL;
     }
 
@@ -535,7 +571,10 @@ static PyObject *convert_svn_client_commit_item_t(void *value, void *ctx)
   PyList_SET_ITEM(list, 2, url);
   PyList_SET_ITEM(list, 3, rev);
   PyList_SET_ITEM(list, 4, cf_url);
-  PyList_SET_ITEM(list, 5, state);
+  PyList_SET_ITEM(list, 5, cf_rev);
+  PyList_SET_ITEM(list, 6, state);
+  PyList_SET_ITEM(list, 7, incoming_prop_changes);
+  PyList_SET_ITEM(list, 8, outgoing_prop_changes);
   return list;
 }
 
@@ -642,9 +681,9 @@ PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type,
 #define DECLARE_SWIG_CONSTRUCTOR(type, dup) \
 static PyObject *make_ob_##type(void *value) \
 { \
-  apr_pool_t *new_pool = svn_pool_create(_global_pool); \
+  apr_pool_t *new_pool = svn_pool_create(application_pool); \
   PyObject *new_py_pool = svn_swig_NewPointerObj(new_pool, \
-    svn_swig_TypeQuery("apr_pool_t *"), _global_svn_swig_py_pool); \
+    svn_swig_TypeQuery("apr_pool_t *"), application_py_pool, NULL); \
   svn_##type##_t *new_value = dup(value, new_pool); \
   return svn_swig_NewPointerObjString(new_value, "svn_" #type "_t *", \
       new_py_pool); \
@@ -713,8 +752,6 @@ apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
       PyObject *value = PyDict_GetItem(dict, key);
       const char *propname = make_string_from_ob(key, pool);
       const char *propval = make_string_from_ob(value, pool);
-      Py_DECREF(key);
-      Py_DECREF(value);
       if (! (propname && propval))
         {
           PyErr_SetString(PyExc_TypeError,
@@ -754,8 +791,6 @@ apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
       PyObject *value = PyDict_GetItem(dict, key);
       const char *propname = make_string_from_ob(key, pool);
       svn_string_t *propval = make_svn_string_from_ob(value, pool);
-      Py_DECREF(key);
-      Py_DECREF(value);
       if (! (propname && propval))
         {
           PyErr_SetString(PyExc_TypeError,
@@ -902,8 +937,8 @@ commit_item_array_to_list(const apr_array_header_t *array)
 
     for (i = 0; i < array->nelts; ++i)
       {
-        PyObject *ob = convert_svn_client_commit_item_t
-          (APR_ARRAY_IDX(array, i, svn_client_commit_item_t *), NULL);
+        PyObject *ob = convert_svn_client_commit_item3_t
+          (APR_ARRAY_IDX(array, i, svn_client_commit_item3_t *), NULL);
         if (ob == NULL)
           goto error;
         PyList_SET_ITEM(list, i, ob);
@@ -1517,6 +1552,14 @@ read_handler_pyio(void *baton, char *buffer, apr_size_t *len)
   apr_size_t bytes;
   svn_error_t *err = SVN_NO_ERROR;
 
+  if (py_io == Py_None)
+    {
+      /* Return the empty string to indicate a short read */
+      *buffer = '\0';
+      *len = 0;
+      return SVN_NO_ERROR;
+    }
+
   svn_swig_py_acquire_py_lock();
   if ((result = PyObject_CallMethod(py_io, (char *)"read",
                                     (char *)"i", *len)) == NULL)
@@ -1554,7 +1597,7 @@ write_handler_pyio(void *baton, const char *data, apr_size_t *len)
   PyObject *py_io = baton;
   svn_error_t *err = SVN_NO_ERROR;
 
-  if (data != NULL)
+  if (data != NULL && py_io != Py_None)
     {
       svn_swig_py_acquire_py_lock();
       if ((result = PyObject_CallMethod(py_io, (char *)"write",
@@ -1569,19 +1612,26 @@ write_handler_pyio(void *baton, const char *data, apr_size_t *len)
   return err;
 }
 
+static svn_error_t *
+close_handler_pyio(void *baton)
+{
+  PyObject *py_io = baton;
+  svn_swig_py_acquire_py_lock();
+  Py_DECREF(py_io);
+  svn_swig_py_release_py_lock();
+  return SVN_NO_ERROR;
+}
+
 svn_stream_t *
 svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
 {
   svn_stream_t *stream;
 
-  /* Borrow the caller's reference to py_io - this is safe only because the
-   * caller must have a reference in order to pass the object into the
-   * bindings, and we will be finished with the py_io object before we return
-   * to python. I.e. DO NOT STORE AWAY THE RESULTING svn_stream_t * for use
-   * over multiple calls into the bindings. */
   stream = svn_stream_create(py_io, pool);
   svn_stream_set_read(stream, read_handler_pyio);
   svn_stream_set_write(stream, write_handler_pyio);
+  svn_stream_set_close(stream, close_handler_pyio);
+  Py_INCREF(py_io);
 
   return stream;
 }
@@ -1622,8 +1672,7 @@ void svn_swig_py_notify_func(void *baton,
     }
 
   /* Our error has no place to go. :-( */
-  if (err)
-    svn_error_clear(err);
+  svn_error_clear(err);
 
   svn_swig_py_release_py_lock();
 }
@@ -1658,8 +1707,7 @@ void svn_swig_py_notify_func2(void *baton,
     }
 
   /* Our error has no place to go. :-( */
-  if (err)
-    svn_error_clear(err);
+  svn_error_clear(err);
 
   svn_swig_py_release_py_lock();
 }
@@ -1690,8 +1738,7 @@ void svn_swig_py_status_func(void *baton,
     }
 
   /* Our error has no place to go. :-( */
-  if (err)
-    svn_error_clear(err);
+  svn_error_clear(err);
 
   svn_swig_py_release_py_lock();
 }
@@ -1766,7 +1813,8 @@ svn_error_t *svn_swig_py_fs_get_locks_func(void *baton,
 
 svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
                                              const char **tmp_file,
-                                             apr_array_header_t *commit_items,
+                                             const apr_array_header_t *
+                                             commit_items,
                                              void *baton,
                                              apr_pool_t *pool)
 {

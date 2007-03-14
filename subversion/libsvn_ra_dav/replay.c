@@ -2,7 +2,7 @@
  * replay.c :  routines for replaying revisions
  *
  * ====================================================================
- * Copyright (c) 2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2005-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -28,10 +28,6 @@ typedef struct {
   /* The underlying editor and baton we're replaying into. */
   const svn_delta_editor_t *editor;
   void *edit_baton;
-
-  /* Any error that occurs during the replay is stored here, so it can be
-   * returned after we bail out of the XML parsing. */
-  svn_error_t *err;
 
   /* Parent pool for the whole reply. */
   apr_pool_t *pool;
@@ -60,7 +56,8 @@ typedef struct {
   svn_stringbuf_t *prop_accum;
 } replay_baton_t;
 
-#define TOP_DIR(rb) (((dir_item_t *)(rb)->dirs->elts)[(rb)->dirs->nelts - 1])
+#define TOP_DIR(rb) (APR_ARRAY_IDX((rb)->dirs, (rb)->dirs->nelts - 1, \
+                                   dir_item_t))
 
 /* Info about a given directory we've seen. */
 typedef struct {
@@ -99,8 +96,8 @@ static const svn_ra_dav__xml_elm_t editor_report_elements[] =
   { NULL }
 };
 
-static int
-start_element(void *baton, int parent_state, const char *nspace,
+static svn_error_t * 
+start_element(int *elem, void *baton, int parent_state, const char *nspace,
               const char *elt_name, const char **atts)
 {
   replay_baton_t *rb = baton;
@@ -109,20 +106,23 @@ start_element(void *baton, int parent_state, const char *nspace,
     = svn_ra_dav__lookup_xml_elem(editor_report_elements, nspace, elt_name);
 
   if (! elm)
-    return NE_XML_DECLINE;
+    {
+      *elem = NE_XML_DECLINE;
+      return SVN_NO_ERROR;
+    }
 
   if (parent_state == ELEM_root)
     {
       /* If we're at the root of the tree, the element has to be the editor
        * report itself. */
       if (elm->id != ELEM_editor_report)
-        return SVN_RA_DAV__XML_INVALID;
+        return UNEXPECTED_ELEMENT(nspace, elt_name);
     }
   else if (parent_state != ELEM_editor_report)
     {
       /* If we're not at the root, our parent has to be the editor report,
        * since we don't actually nest any elements. */
-      return SVN_RA_DAV__XML_INVALID;
+      return UNEXPECTED_ELEMENT(nspace, elt_name);
     }
 
   switch (elm->id)
@@ -131,13 +131,11 @@ start_element(void *baton, int parent_state, const char *nspace,
       {
         const char *crev = svn_xml_get_attr_value("rev", atts);
         if (! crev)
-          rb->err = svn_error_create
-                     (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                      _("Missing revision attr in target-revision element"));
+          return MISSING_ATTR(nspace, elt_name, "rev");
         else
-          rb->err = rb->editor->set_target_revision(rb->edit_baton,
-                                                    SVN_STR_TO_REV(crev),
-                                                    rb->pool);
+          return rb->editor->set_target_revision(rb->edit_baton,
+                                                 SVN_STR_TO_REV(crev),
+                                                 rb->pool);
       }
       break;
 
@@ -146,16 +144,14 @@ start_element(void *baton, int parent_state, const char *nspace,
         const char *crev = svn_xml_get_attr_value("rev", atts);
 
         if (! crev)
-          rb->err = svn_error_create
-                     (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                      _("Missing revision attr in open-root element"));
+          return MISSING_ATTR(nspace, elt_name, "rev");
         else
           {
             apr_pool_t *subpool = svn_pool_create(rb->pool);
             void *dir_baton;
-            rb->err = rb->editor->open_root(rb->edit_baton,
-                                            SVN_STR_TO_REV(crev), subpool,
-                                            &dir_baton);
+            SVN_ERR(rb->editor->open_root(rb->edit_baton,
+                                          SVN_STR_TO_REV(crev), subpool,
+                                          &dir_baton));
             push_dir(rb, dir_baton, "", subpool);
           }
       }
@@ -167,19 +163,15 @@ start_element(void *baton, int parent_state, const char *nspace,
         const char *crev = svn_xml_get_attr_value("rev", atts);
 
         if (! path)
-          rb->err = svn_error_create
-                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                       _("Missing name attr in delete-entry element"));
+          return MISSING_ATTR(nspace, elt_name, "name");
         else if (! crev)
-          rb->err = svn_error_create
-                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                       _("Missing rev attr in delete-entry element"));
+          return MISSING_ATTR(nspace, elt_name, "rev");
         else
           {
             dir_item_t *di = &TOP_DIR(rb);
 
-            rb->err = rb->editor->delete_entry(path, SVN_STR_TO_REV(crev),
-                                               di->baton, di->pool);
+            SVN_ERR(rb->editor->delete_entry(path, SVN_STR_TO_REV(crev),
+                                             di->baton, di->pool));
           }
       }
       break;
@@ -191,9 +183,7 @@ start_element(void *baton, int parent_state, const char *nspace,
         const char *name = svn_xml_get_attr_value("name", atts);
 
         if (! name)
-          rb->err = svn_error_create
-                     (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                      _("Missing name attr in open-directory element"));
+          return MISSING_ATTR(nspace, elt_name, "name");
         else
           {
             dir_item_t *parent = &TOP_DIR(rb);
@@ -207,8 +197,8 @@ start_element(void *baton, int parent_state, const char *nspace,
               rev = SVN_INVALID_REVNUM;
 
             if (elm->id == ELEM_open_directory)
-              rb->err = rb->editor->open_directory(name, parent->baton,
-                                                   rev, subpool, &dir_baton);
+              SVN_ERR(rb->editor->open_directory(name, parent->baton,
+                                                 rev, subpool, &dir_baton));
             else if (elm->id == ELEM_add_directory)
               {
                 const char *cpath = svn_xml_get_attr_value("copyfrom-path",
@@ -221,9 +211,9 @@ start_element(void *baton, int parent_state, const char *nspace,
                 else
                   rev = SVN_INVALID_REVNUM;
 
-                rb->err = rb->editor->add_directory(name, parent->baton,
-                                                    cpath, rev, subpool,
-                                                    &dir_baton);
+                SVN_ERR(rb->editor->add_directory(name, parent->baton,
+                                                  cpath, rev, subpool,
+                                                  &dir_baton));
               }
             else
               abort();
@@ -242,13 +232,7 @@ start_element(void *baton, int parent_state, const char *nspace,
         dir_item_t *parent = &TOP_DIR(rb);
 
         if (! path)
-          {
-            rb->err = svn_error_createf
-                        (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                         _("Missing name attr in %s element"),
-                         elm->id == ELEM_open_file ? "open-file" : "add-file");
-            break;
-          }
+          return MISSING_ATTR(nspace, elt_name, "name");
 
         svn_pool_clear(parent->file_pool);
 
@@ -262,8 +246,8 @@ start_element(void *baton, int parent_state, const char *nspace,
             else
               rev = SVN_INVALID_REVNUM;
 
-            rb->err = rb->editor->add_file(path, parent->baton, cpath, rev,
-                                           parent->file_pool, &rb->file_baton);
+            SVN_ERR(rb->editor->add_file(path, parent->baton, cpath, rev,
+                                         parent->file_pool, &rb->file_baton));
           }
         else
           {
@@ -274,65 +258,65 @@ start_element(void *baton, int parent_state, const char *nspace,
             else
               rev = SVN_INVALID_REVNUM;
 
-            rb->err = rb->editor->open_file(path, parent->baton, rev,
-                                            parent->file_pool,
-                                            &rb->file_baton);
+            SVN_ERR(rb->editor->open_file(path, parent->baton, rev,
+                                          parent->file_pool,
+                                          &rb->file_baton));
           }
       }
       break;
 
     case ELEM_apply_textdelta:
       if (! rb->file_baton)
-        rb->err = svn_error_create
-                    (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                     _("Got apply-textdelta element without preceding "
-                       "add-file or open-file"));
+        return svn_error_create
+                 (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                  _("Got apply-textdelta element without preceding "
+                    "add-file or open-file"));
       else
         {
           const char *checksum = svn_xml_get_attr_value("checksum", atts);
 
-          rb->err = rb->editor->apply_textdelta(rb->file_baton,
-                                                checksum,
-                                                TOP_DIR(rb).file_pool,
-                                                &rb->whandler,
-                                                &rb->whandler_baton);
-          if (! rb->err)
-            {
-              rb->svndiff_decoder = svn_txdelta_parse_svndiff
-                                      (rb->whandler, rb->whandler_baton,
-                                       TRUE, TOP_DIR(rb).file_pool);
-              rb->base64_decoder = svn_base64_decode(rb->svndiff_decoder,
-                                                     TOP_DIR(rb).file_pool);
-            }
+          SVN_ERR(rb->editor->apply_textdelta(rb->file_baton,
+                                              checksum,
+                                              TOP_DIR(rb).file_pool,
+                                              &rb->whandler,
+                                              &rb->whandler_baton));
+
+          rb->svndiff_decoder = svn_txdelta_parse_svndiff
+                                  (rb->whandler, rb->whandler_baton,
+                                   TRUE, TOP_DIR(rb).file_pool);
+          rb->base64_decoder = svn_base64_decode(rb->svndiff_decoder,
+                                                 TOP_DIR(rb).file_pool);
         }
       break;
 
     case ELEM_close_file:
       if (! rb->file_baton)
-        rb->err = svn_error_create
-                    (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                     _("Got close-file element without preceding "
-                       "add-file or open-file"));
+        return svn_error_create
+                  (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                   _("Got close-file element without preceding "
+                     "add-file or open-file"));
       else
         {
-          rb->err = rb->editor->close_file(rb->file_baton,
-                                           NULL, /* XXX text checksum */
-                                           TOP_DIR(rb).file_pool);
+          const char *checksum = svn_xml_get_attr_value("checksum", atts);
+
+          SVN_ERR(rb->editor->close_file(rb->file_baton,
+                                         checksum,
+                                         TOP_DIR(rb).file_pool));
           rb->file_baton = NULL;
         }
       break;
 
     case ELEM_close_directory:
       if (rb->dirs->nelts == 0)
-        rb->err = svn_error_create
-                    (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                     _("Got close-directory element without ever opening "
-                       "a directory"));
+        return svn_error_create
+                 (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                  _("Got close-directory element without ever opening "
+                    "a directory"));
       else
         {
           dir_item_t *di = &TOP_DIR(rb);
 
-          rb->err = rb->editor->close_directory(di->baton, di->pool);
+          SVN_ERR(rb->editor->close_directory(di->baton, di->pool));
 
           svn_pool_destroy(di->pool);
 
@@ -346,11 +330,7 @@ start_element(void *baton, int parent_state, const char *nspace,
         const char *name = svn_xml_get_attr_value("name", atts);
 
         if (! name)
-          rb->err = svn_error_createf
-                      (SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                       _("Missing name attr in %s element"),
-                       elm->id == ELEM_change_file_prop ? "change-file-prop"
-                                                        : "change-dir-prop");
+          return MISSING_ATTR(nspace, elt_name, "name");
         else
           {
             svn_pool_clear(rb->prop_pool);
@@ -366,13 +346,12 @@ start_element(void *baton, int parent_state, const char *nspace,
       break;
     }
 
-  if (rb->err)
-    return NE_XML_ABORT;
+  *elem = elm->id;
 
-  return elm->id;
+  return SVN_NO_ERROR;
 }
 
-static int
+static svn_error_t *
 end_element(void *baton, int state, const char *nspace, const char *elt_name)
 {
   replay_baton_t *rb = baton;
@@ -381,7 +360,7 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
     = svn_ra_dav__lookup_xml_elem(editor_report_elements, nspace, elt_name);
 
   if (! elm)
-    return NE_XML_DECLINE;
+    return SVN_NO_ERROR;
 
   switch (elm->id)
     {
@@ -389,11 +368,11 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
       if (rb->dirs->nelts)
         svn_pool_destroy(APR_ARRAY_IDX(rb->dirs, 0, dir_item_t).pool);
 
-      rb->err = SVN_NO_ERROR;
+      return SVN_NO_ERROR;
       break;
 
     case ELEM_apply_textdelta:
-      rb->err = svn_stream_close(rb->base64_decoder);
+      SVN_ERR(svn_stream_close(rb->base64_decoder));
 
       rb->whandler = NULL;
       rb->whandler_baton = NULL;
@@ -418,15 +397,15 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
           decoded_value = NULL; /* It's a delete */
 
         if (elm->id == ELEM_change_dir_prop)
-          rb->err = rb->editor->change_dir_prop(TOP_DIR(rb).baton,
-                                                rb->prop_name,
-                                                decoded_value,
-                                                TOP_DIR(rb).pool);
+          SVN_ERR(rb->editor->change_dir_prop(TOP_DIR(rb).baton,
+                                              rb->prop_name,
+                                              decoded_value,
+                                              TOP_DIR(rb).pool));
         else
-          rb->err = rb->editor->change_file_prop(rb->file_baton,
-                                                 rb->prop_name,
-                                                 decoded_value,
-                                                 TOP_DIR(rb).file_pool);
+          SVN_ERR(rb->editor->change_file_prop(rb->file_baton,
+                                               rb->prop_name,
+                                               decoded_value,
+                                               TOP_DIR(rb).file_pool));
       }
       break;
 
@@ -434,13 +413,10 @@ end_element(void *baton, int state, const char *nspace, const char *elt_name)
       break;
     }
 
-  if (rb->err)
-    return NE_XML_ABORT;
-
-  return SVN_RA_DAV__XML_VALID;
+  return SVN_NO_ERROR;
 }
 
-static int
+static svn_error_t *
 cdata_handler(void *baton, int state, const char *cdata, size_t len)
 {
   replay_baton_t *rb = baton;
@@ -449,27 +425,24 @@ cdata_handler(void *baton, int state, const char *cdata, size_t len)
   switch (state)
     {
     case ELEM_apply_textdelta:
-      rb->err = svn_stream_write(rb->base64_decoder, cdata, &nlen);
-      if (! rb->err && nlen != len)
-        rb->err = svn_error_createf
-                    (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
-                     _("Error writing stream: unexpected EOF"));
+      SVN_ERR(svn_stream_write(rb->base64_decoder, cdata, &nlen));
+      if (nlen != len)
+        return svn_error_createf
+                  (SVN_ERR_STREAM_UNEXPECTED_EOF, NULL,
+                   _("Error writing stream: unexpected EOF"));
       break;
 
     case ELEM_change_dir_prop:
     case ELEM_change_file_prop:
       if (! rb->prop_accum)
-        rb->err = svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
-                                    _("Got cdata content for a prop delete"));
+        return svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, NULL,
+                                 _("Got cdata content for a prop delete"));
       else
         svn_stringbuf_appendbytes(rb->prop_accum, cdata, len);
       break;
     }
 
-  if (rb->err)
-    return NE_XML_ABORT;
-
-  return 0; /* no error */
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -497,22 +470,19 @@ svn_ra_dav__replay(svn_ra_session_t *session,
 
   rb.editor = editor;
   rb.edit_baton = edit_baton;
-  rb.err = SVN_NO_ERROR;
   rb.pool = pool;
   rb.dirs = apr_array_make(pool, 5, sizeof(dir_item_t));
   rb.prop_pool = svn_pool_create(pool);
   rb.prop_accum = svn_stringbuf_create("", rb.prop_pool);
 
-  SVN_ERR(svn_ra_dav__parsed_request(ras->sess, "REPORT", ras->url->data, body,
-                                     NULL, NULL,
-                                     start_element,
-                                     cdata_handler,
-                                     end_element,
-                                     &rb,
-                                     NULL, /* extra headers */
-                                     NULL, /* status code */
-                                     FALSE, /* spool response */
-                                     pool));
-
-  return rb.err;
+  return svn_ra_dav__parsed_request(ras, "REPORT", ras->url->data, body,
+                                    NULL, NULL,
+                                    start_element,
+                                    cdata_handler,
+                                    end_element,
+                                    &rb,
+                                    NULL, /* extra headers */
+                                    NULL, /* status code */
+                                    FALSE, /* spool response */
+                                    pool);
 }

@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2007 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import shutil, sys, re, os
+import os
 import warnings
 
 # Our testing module
@@ -90,7 +90,7 @@ def externals_test_setup(sbox):
   D_path = os.path.join(wc_init_dir, "A/D")
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -100,27 +100,27 @@ def externals_test_setup(sbox):
   # post-commit status checks.
 
   svntest.main.file_append(mu_path, "Added to mu in revision 2.\n")
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   svntest.main.file_append(pi_path, "Added to pi in revision 3.\n")
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   svntest.main.file_append(lambda_path, "Added to lambda in revision 4.\n")
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   svntest.main.file_append(omega_path, "Added to omega in revision 5.\n")
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'ci', '-m', 'log msg',
                                      '--quiet', wc_init_dir)
 
   # Get the whole working copy to revision 5.
-  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_init_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_init_dir)
 
   # Now copy the initial repository to create the "other" repository,
   # the one to which the first repository's `svn:externals' properties
@@ -135,7 +135,7 @@ def externals_test_setup(sbox):
 
   tmp_f = os.tempnam(wc_init_dir, 'tmp')
   svntest.main.file_append(tmp_f, externals_desc)
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset',
                                      '-F', tmp_f, 'svn:externals', C_path)
    
@@ -152,7 +152,7 @@ def externals_test_setup(sbox):
            "\n"
 
   svntest.main.file_append(tmp_f, externals_desc)
-  svntest.actions.run_and_verify_svn("", None, [], 'pset',
+  svntest.actions.run_and_verify_svn(None, None, [], 'pset',
                                      '-F', tmp_f, 'svn:externals', D_path)
 
   os.remove(tmp_f)
@@ -179,11 +179,29 @@ def change_external(path, new_val):
   and commit the change."""
   tmp_f = os.tempnam(svntest.main.temp_dir, 'tmp')
   svntest.main.file_append(tmp_f, new_val)
-  svntest.actions.run_and_verify_svn("", None, [], 'pset',
+  svntest.actions.run_and_verify_svn(None, None, [], 'pset',
                                      '-F', tmp_f, 'svn:externals', path)
-  svntest.actions.run_and_verify_svn("", None, [], 'ci',
+  svntest.actions.run_and_verify_svn(None, None, [], 'ci',
                                      '-m', 'log msg', '--quiet', path)
   os.remove(tmp_f)
+
+
+def probe_paths_exist(paths):
+  """ Probe each one of PATHS to see if it exists, otherwise throw a 
+      Failure exception. """
+
+  for path in paths:
+    if not os.path.exists(path):
+      raise svntest.Failure("Probing for " + path + " failed.")
+
+
+def probe_paths_missing(paths):
+  """ Probe each one of PATHS to see if does not exist, otherwise throw a 
+      Failure exception. """
+
+  for path in paths:
+    if os.path.exists(path):
+      raise svntest.Failure(path + " unexpectedly still exists.")
 
 
 #----------------------------------------------------------------------
@@ -210,46 +228,29 @@ def checkout_with_externals(sbox):
   repo_url       = sbox.repo_url
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
   # Probe the working copy a bit, see if it's as expected.
-  exdir_G_path    = os.path.join(wc_dir, "A", "C", "exdir_G")
-  exdir_G_pi_path = os.path.join(exdir_G_path, "pi")
-  exdir_H_path       = os.path.join(wc_dir, "A", "C", "exdir_H")
-  exdir_H_omega_path = os.path.join(exdir_H_path, "omega")
-  x_path     = os.path.join(wc_dir, "A", "D", "x")
-  y_path     = os.path.join(x_path, "y")
-  z_path     = os.path.join(y_path, "z")
-  blah_path  = os.path.join(z_path, "blah")
-  alpha_path = os.path.join(blah_path, "E", "alpha")
-  beta_path  = os.path.join(blah_path, "E", "beta")
-
-  if (not os.path.exists(exdir_G_path)):
-    raise svntest.Failure("Probing for " + exdir_G_path + " failed.")
-  if (not os.path.exists(exdir_G_pi_path)):
-    raise svntest.Failure("Probing for " + exdir_G_pi_path + " failed.")
-  if (not os.path.exists(exdir_H_path)):
-    raise svntest.Failure("Probing for " + exdir_H_path + " failed.")
-  if (not os.path.exists(exdir_H_omega_path)):
-    raise svntest.Failure("Probing for " + exdir_H_omega_path + " failed.")
-  if (not os.path.exists(x_path)):
-    raise svntest.Failure("Probing for " + x_path + " failed.")
-  if (not os.path.exists(y_path)):
-    raise svntest.Failure("Probing for " + y_path + " failed.")
-  if (not os.path.exists(z_path)):
-    raise svntest.Failure("Probing for " + z_path + " failed.")
-  if (not os.path.exists(z_path)):
-    raise svntest.Failure("Probing for " + z_path + " failed.")
-  if (not os.path.exists(alpha_path)):
-    raise svntest.Failure("Probing for " + alpha_path + " failed.")
-  if (not os.path.exists(beta_path)):
-    raise svntest.Failure("Probing for " + beta_path + " failed.")
+  expected_existing_paths = [
+    os.path.join(wc_dir, "A", "C", "exdir_G"),
+    os.path.join(wc_dir, "A", "C", "exdir_G", "pi"),
+    os.path.join(wc_dir, "A", "C", "exdir_H"),
+    os.path.join(wc_dir, "A", "C", "exdir_H", "omega"),
+    os.path.join(wc_dir, "A", "D", "x"),
+    os.path.join(wc_dir, "A", "D", "x", "y"),
+    os.path.join(wc_dir, "A", "D", "x", "y", "z"),
+    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah"),
+    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah", "E", "alpha"),
+    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah", "E", "beta"),
+    ]
+  probe_paths_exist(expected_existing_paths)
 
   # Pick a file at random, make sure it has the expected contents.
+  exdir_H_omega_path = os.path.join(wc_dir, "A", "C", "exdir_H", "omega")
   fp = open(exdir_H_omega_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
@@ -270,13 +271,13 @@ def update_receive_new_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -300,11 +301,9 @@ def update_receive_new_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update the other working copy, see if we get the new item.
-  svntest.actions.run_and_verify_svn("", None, [], 'up', other_wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
 
-  exdir_E_path = os.path.join(other_wc_dir, "A", "D", "exdir_E")
-  if (not os.path.exists(exdir_E_path)):
-    raise svntest.Failure("Probing for " + exdir_E_path + " failed.")
+  probe_paths_exist([os.path.join(other_wc_dir, "A", "D", "exdir_E")])
 
 #----------------------------------------------------------------------
 
@@ -320,13 +319,13 @@ def update_lose_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -360,35 +359,22 @@ def update_lose_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update other working copy, see if lose & preserve things appropriately
-  svntest.actions.run_and_verify_svn("", None, [], 'up', other_wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
 
-  exdir_A_path = os.path.join(other_wc_dir, "A", "D", "exdir_A")
-  if (not os.path.exists(exdir_A_path)):
-    raise svntest.Failure("Probing for " + exdir_A_path + " failed.")
+  expected_existing_paths = [
+    os.path.join(other_wc_dir, "A", "D", "exdir_A"),
+    os.path.join(other_wc_dir, "A", "D", "exdir_A", "G"),
+    os.path.join(other_wc_dir, "A", "D", "exdir_A", "H"),
+    ]
+  probe_paths_exist(expected_existing_paths)
 
-  mu_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "mu")
-  if (os.path.exists(mu_path)):
-    raise svntest.Failure(mu_path + " unexpectedly still exists.")
-
-  B_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "B")
-  if (os.path.exists(B_path)):
-    raise svntest.Failure(B_path + " unexpectedly still exists.")
-
-  C_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "C")
-  if (os.path.exists(C_path)):
-    raise svntest.Failure(C_path + " unexpectedly still exists.")
-
-  D_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "D")
-  if (os.path.exists(D_path)):
-    raise svntest.Failure(D_path + " unexpectedly still exists.")
-
-  G_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "G")
-  if (not os.path.exists(G_path)):
-    raise svntest.Failure("Probing for " + G_path + " failed.")
-
-  H_path = os.path.join(other_wc_dir, "A", "D", "exdir_A", "H")
-  if (not os.path.exists(H_path)):
-    raise svntest.Failure("Probing for " + H_path + " failed.")
+  expected_missing_paths = [
+    os.path.join(other_wc_dir, "A", "D", "exdir_A", "mu"),
+    os.path.join(other_wc_dir, "A", "D", "exdir_A", "B"),
+    os.path.join(other_wc_dir, "A", "D", "exdir_A", "C"),
+    os.path.join(other_wc_dir, "A", "D", "exdir_A", "D"),
+    ]
+  probe_paths_missing(expected_missing_paths)
 
 #----------------------------------------------------------------------
 
@@ -404,13 +390,13 @@ def update_change_pristine_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -433,17 +419,15 @@ def update_change_pristine_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update other working copy, see if get the right change.
-  svntest.actions.run_and_verify_svn("", None, [], 'up', other_wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
 
   xyzb_path = os.path.join(other_wc_dir, "x", "y", "z", "blah")
 
-  alpha_path = os.path.join(xyzb_path, "alpha")
-  if (os.path.exists(alpha_path)):
-    raise svntest.Failure(alpha_path + " unexpectedly still exists.")
-
-  beta_path = os.path.join(xyzb_path, "beta")
-  if (os.path.exists(beta_path)):
-    raise svntest.Failure(beta_path + " unexpectedly still exists.")
+  expected_missing_paths = [
+    os.path.join(xyzb_path, "alpha"),
+    os.path.join(xyzb_path, "beta"),
+    ]
+  probe_paths_missing(expected_missing_paths)
 
 def update_change_modified_external(sbox):
   "update changes to a modified external module"
@@ -457,13 +441,13 @@ def update_change_modified_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -494,17 +478,15 @@ def update_change_modified_external(sbox):
   change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
 
   # Update other working copy, see if get the right change.
-  svntest.actions.run_and_verify_svn("", None, [], 'up', other_wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', other_wc_dir)
 
   xyzb_path = os.path.join(other_wc_dir, "x", "y", "z", "blah")
 
-  alpha_path = os.path.join(xyzb_path, "alpha")
-  if (os.path.exists(alpha_path)):
-    raise svntest.Failure(alpha_path + " unexpectedly still exists.")
-
-  beta_path = os.path.join(xyzb_path, "beta")
-  if (os.path.exists(beta_path)):
-    raise svntest.Failure(beta_path + " unexpectedly still exists.")
+  expected_missing_paths = [
+    os.path.join(xyzb_path, "alpha"),
+    os.path.join(xyzb_path, "beta"),
+    ]
+  probe_paths_missing(expected_missing_paths)
 
 def update_receive_change_under_external(sbox):
   "update changes under an external module"
@@ -518,13 +500,13 @@ def update_receive_change_under_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout two working copies.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -553,7 +535,7 @@ def update_receive_change_under_external(sbox):
   # The output's going to be all screwy because of the module
   # notifications, so don't bother parsing it, just run update
   # directly.
-  svntest.actions.run_and_verify_svn("", None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
 
   external_gamma_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'D', 'gamma')
   fp = open(external_gamma_path, 'r')
@@ -581,7 +563,7 @@ def update_receive_change_under_external(sbox):
                                         None, None, None, None, None,
                                         other_wc_dir)
 
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'up', os.path.join(wc_dir, "A", "C"))
 
   external_rho_path = os.path.join(wc_dir, 'A', 'C', 'exdir_G', 'rho')
@@ -607,7 +589,7 @@ def modify_and_update_receive_new_external(sbox):
   other_repo_url = repo_url + ".other"
 
   # Checkout a working copy
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'checkout',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -622,7 +604,7 @@ def modify_and_update_receive_new_external(sbox):
 
   tmp_f = os.tempnam()
   svntest.main.file_append(tmp_f, externals_desc)
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'pset', '-F', tmp_f,
                                      'svn:externals', B_path)
   os.remove(tmp_f)
@@ -639,9 +621,7 @@ def modify_and_update_receive_new_external(sbox):
   finally:
     os.chdir(was_cwd)
 
-  exdir_Z_path = os.path.join(B_path, "exdir_Z")
-  if not os.path.exists(exdir_Z_path):
-    raise svntest.Failure("Probing for " + exdir_Z_path + " failed.")
+  probe_paths_exist([os.path.join(B_path, "exdir_Z")])
 
 #----------------------------------------------------------------------
 
@@ -655,7 +635,7 @@ def disallow_dot_or_dotdot_directory_reference(sbox):
   def set_externals_for_path_expect_error(path, val, dir):
     tmp_f = os.tempnam(dir, 'tmp')
     svntest.main.file_append(tmp_f, val)
-    svntest.actions.run_and_verify_svn("", None, SVNAnyOutput,
+    svntest.actions.run_and_verify_svn(None, None, SVNAnyOutput,
                                        'pset', '-F', tmp_f,
                                        'svn:externals', path)
     os.remove(tmp_f)
@@ -697,46 +677,29 @@ def export_with_externals(sbox):
   repo_url       = sbox.repo_url
 
   # Create a working copy.
-  svntest.actions.run_and_verify_svn("", None, [],
+  svntest.actions.run_and_verify_svn(None, None, [],
                                      'export',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      repo_url, wc_dir)
 
   # Probe the working copy a bit, see if it's as expected.
-  exdir_G_path    = os.path.join(wc_dir, "A", "C", "exdir_G")
-  exdir_G_pi_path = os.path.join(exdir_G_path, "pi")
-  exdir_H_path       = os.path.join(wc_dir, "A", "C", "exdir_H")
-  exdir_H_omega_path = os.path.join(exdir_H_path, "omega")
-  x_path     = os.path.join(wc_dir, "A", "D", "x")
-  y_path     = os.path.join(x_path, "y")
-  z_path     = os.path.join(y_path, "z")
-  blah_path  = os.path.join(z_path, "blah")
-  alpha_path = os.path.join(blah_path, "E", "alpha")
-  beta_path  = os.path.join(blah_path, "E", "beta")
-
-  if (not os.path.exists(exdir_G_path)):
-    raise svntest.Failure("Probing for " + exdir_G_path + " failed.")
-  if (not os.path.exists(exdir_G_pi_path)):
-    raise svntest.Failure("Probing for " + exdir_G_pi_path + " failed.")
-  if (not os.path.exists(exdir_H_path)):
-    raise svntest.Failure("Probing for " + exdir_H_path + " failed.")
-  if (not os.path.exists(exdir_H_omega_path)):
-    raise svntest.Failure("Probing for " + exdir_H_omega_path + " failed.")
-  if (not os.path.exists(x_path)):
-    raise svntest.Failure("Probing for " + x_path + " failed.")
-  if (not os.path.exists(y_path)):
-    raise svntest.Failure("Probing for " + y_path + " failed.")
-  if (not os.path.exists(z_path)):
-    raise svntest.Failure("Probing for " + z_path + " failed.")
-  if (not os.path.exists(z_path)):
-    raise svntest.Failure("Probing for " + z_path + " failed.")
-  if (not os.path.exists(alpha_path)):
-    raise svntest.Failure("Probing for " + alpha_path + " failed.")
-  if (not os.path.exists(beta_path)):
-    raise svntest.Failure("Probing for " + beta_path + " failed.")
+  expected_existing_paths = [
+    os.path.join(wc_dir, "A", "C", "exdir_G"),
+    os.path.join(wc_dir, "A", "C", "exdir_G", "pi"),
+    os.path.join(wc_dir, "A", "C", "exdir_H"),
+    os.path.join(wc_dir, "A", "C", "exdir_H", "omega"),
+    os.path.join(wc_dir, "A", "D", "x"),
+    os.path.join(wc_dir, "A", "D", "x", "y"),
+    os.path.join(wc_dir, "A", "D", "x", "y", "z"),
+    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah"),
+    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah", "E", "alpha"),
+    os.path.join(wc_dir, "A", "D", "x", "y", "z", "blah", "E", "beta"),
+    ]
+  probe_paths_exist(expected_existing_paths)
 
   # Pick some files, make sure their contents are as expected.
+  exdir_G_pi_path = os.path.join(wc_dir, "A", "C", "exdir_G", "pi")
   fp = open(exdir_G_pi_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 2) \
@@ -744,11 +707,56 @@ def export_with_externals(sbox):
           and (lines[1] == "Added to pi in revision 3.\n")):
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_G_pi_path)
+
+  exdir_H_omega_path = os.path.join(wc_dir, "A", "C", "exdir_H", "omega")
   fp = open(exdir_H_omega_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1) and (lines[0] == "This is the file 'omega'.\n")):
     raise svntest.Failure("Unexpected contents for rev 1 of " +
                           exdir_H_omega_path)
+
+#----------------------------------------------------------------------
+
+def external_with_peg_and_op_revision(sbox):
+  "use a peg revision to specify an external module"
+
+  externals_test_setup(sbox)
+  wc_dir         = sbox.wc_dir
+
+  repo_dir       = sbox.repo_dir
+  repo_url       = sbox.repo_url
+  other_repo_url = repo_url + ".other"
+
+  # Checkout a working copy.
+  svntest.actions.run_and_verify_svn(None, None, [],
+                                     'checkout',
+                                     '--username', svntest.main.wc_author,
+                                     '--password', svntest.main.wc_passwd,
+                                     repo_url, wc_dir)
+
+  # remove A/D/H in the other repo
+  svntest.actions.run_and_verify_svn(None, None, [], 'rm', other_repo_url + 
+                                     '/A/D/H', '-m', 'remove original A/D/H')
+
+  # Set an external property using peg revision syntax.
+  new_externals_desc = \
+           other_repo_url + "/A/D/H@4  exdir_A/H \n" + \
+           other_repo_url + "/A/D/G    exdir_A/G \n"
+
+  # Set and commit the property.
+  change_external(os.path.join(wc_dir, "A/D"), new_externals_desc)
+
+  # Update other working copy, see if we get the right change.
+  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+
+  external_chi_path = os.path.join(wc_dir, 'A', 'D', 'exdir_A', 'H', 'chi')
+  fp = open(external_chi_path, 'r')
+  lines = fp.readlines()
+  if not ((len(lines) == 1)
+          and (lines[0] == "This is the file 'chi'.\n")):
+    raise svntest.Failure("Unexpected contents for externally modified " +
+                          external_chi_path)
+  fp.close()
 
 
 
@@ -767,6 +775,7 @@ test_list = [ None,
               modify_and_update_receive_new_external,
               disallow_dot_or_dotdot_directory_reference,
               export_with_externals,
+              external_with_peg_and_op_revision,
              ]
 
 if __name__ == '__main__':

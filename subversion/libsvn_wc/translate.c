@@ -41,6 +41,76 @@
 
 #include "svn_private_config.h"
 
+
+
+static svn_error_t *
+read_handler_unsupported (void *baton, char *buffer, apr_size_t *len)
+{
+  abort();
+}
+
+static svn_error_t *
+write_handler_unsupported (void *baton, const char *buffer, apr_size_t *len)
+{
+  abort();
+}
+
+svn_error_t *
+svn_wc_translated_stream(svn_stream_t **stream,
+                         const char *path,
+                         const char *versioned_file,
+                         svn_wc_adm_access_t *adm_access,
+                         apr_uint32_t flags,
+                         apr_pool_t *pool)
+{
+  svn_subst_eol_style_t style;
+  const char *eol;
+  apr_hash_t *keywords;
+  svn_boolean_t special;
+  svn_boolean_t to_nf = flags & SVN_WC_TRANSLATE_TO_NF;
+
+  SVN_ERR(svn_wc__get_eol_style(&style, &eol, versioned_file,
+                                adm_access, pool));
+  SVN_ERR(svn_wc__get_keywords(&keywords, versioned_file,
+                               adm_access, NULL, pool));
+  SVN_ERR(svn_wc__get_special(&special, versioned_file, adm_access, pool));
+
+  if (special)
+    SVN_ERR(svn_subst_stream_from_specialfile(stream, path, pool));
+  else
+    {
+      apr_file_t *file;
+      svn_boolean_t repair_forced = flags & SVN_WC_TRANSLATE_FORCE_EOL_REPAIR;
+
+      SVN_ERR(svn_io_file_open(&file, path,
+                               to_nf ? (APR_READ | APR_BUFFERED)
+                               : (APR_CREATE | APR_WRITE | APR_BUFFERED),
+                               APR_OS_DEFAULT, pool));
+
+      *stream = svn_stream_from_aprfile2(file, FALSE, pool);
+
+      if (svn_subst_translation_required(style, eol, keywords, special, TRUE))
+        {
+          if (to_nf)
+            SVN_ERR(svn_subst_stream_translated_to_normal_form
+                    (stream, *stream, style, eol, repair_forced,
+                     keywords, pool));
+          else
+            *stream = svn_subst_stream_translated
+              (*stream, eol, TRUE, keywords, TRUE, pool);
+        }
+    }
+
+  /* Enfore our contract, because a specialfile stream won't */
+  if (to_nf)
+    svn_stream_set_write(*stream, write_handler_unsupported);
+  else
+    svn_stream_set_read(*stream, read_handler_unsupported);
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc_translated_file2(const char **xlated_path,
                         const char *src,

@@ -74,7 +74,7 @@ bool JNIUtil::JNIInit(JNIEnv *env)
 
     // lock the list of finalized objects
     JNICriticalSection cs(*g_finalizedObjectsMutex) ;
-    if(isExceptionThrown())
+    if (isExceptionThrown())
     {
         return false;
     }
@@ -95,19 +95,19 @@ bool JNIUtil::JNIInit(JNIEnv *env)
  */
 bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 {
-	// this method has to be run only once during the run a 
+    // this method has to be run only once during the run a 
     // programm
     static bool run = false;
-    if(run) // already run
+    if (run) // already run
     {
-		return true;
+        return true;
     }
     run = true;
     // do not run this part more than one time. 
     // this leaves a small time window when two threads create their first
     // SVNClient & SVNAdmin at the same time, but I do not see a better 
     // option without APR already initialized
-    if(g_inInit)
+    if (g_inInit)
     {
         return false;
     }
@@ -243,31 +243,31 @@ bool JNIUtil::JNIGlobalInit(JNIEnv *env)
 
     // build all mutexes
     g_finalizedObjectsMutex = new JNIMutex(g_pool);
-    if(isExceptionThrown())
+    if (isExceptionThrown())
     {
         return false;
     }
 
     g_logMutex = new JNIMutex(g_pool);
-    if(isExceptionThrown())
+    if (isExceptionThrown())
     {
         return false;
     }
 
     g_globalPoolMutext = new JNIMutex(g_pool);
-    if(isExceptionThrown())
+    if (isExceptionThrown())
     {
         return false;
     }
 
     // initialized the thread local storage
-    if(!JNIThreadData::initThreadData())
+    if (!JNIThreadData::initThreadData())
     {
         return false;
     }
 
     setEnv(env);
-    if(isExceptionThrown())
+    if (isExceptionThrown())
     {
         return false;
     }
@@ -311,84 +311,71 @@ void JNIUtil::raiseThrowable(const char *name, const char *message)
 }
 jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
 {
-    if(err == NULL)
+    if (err == NULL)
         return NULL;
     std::string buffer;
     assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
     jstring jmessage = makeJString(buffer.c_str());
     return jmessage;
 }
-/**
- * process a svn error by wraping in into a ClientExpection
- * and throwing that
- * @param err   the error to by handled
- */
-void JNIUtil::handleSVNError(svn_error_t *err)
+
+void
+JNIUtil::throwNativeException(const char *className, const char *msg,
+			      const char *fileName, int aprErr)
 {
     JNIEnv *env = getEnv();
-    jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientException");
-    if(getLogLevel() >= exceptionLog)
+    jclass clazz = env->FindClass(className);
+
+    if (getLogLevel() >= exceptionLog)
     {
         JNICriticalSection cs(*g_logMutex);
-        g_logStream << "Error SVN exception thrown message:<";
-        g_logStream << err->message << "> file:<" << err->file <<"> apr-err:<";
-        g_logStream << err->apr_err << ">" << std::endl;
+        g_logStream << "Subversion JavaHL exception thrown, message:<";
+        g_logStream << msg << ">";
+	if (fileName)
+	    g_logStream << " file:<" << fileName << ">";
+	if (aprErr != -1)
+	    g_logStream << " apr-err:<" << aprErr << ">";
+	g_logStream << std::endl;
     }
-    if(isJavaExceptionThrown())
-    {
-        svn_error_clear(err);
+    if (isJavaExceptionThrown())
         return;
-    }
 
-    std::string buffer;
-    assembleErrorMessage(err, 0, APR_SUCCESS, buffer);
-    jstring jmessage = makeJString(buffer.c_str());
-    if(isJavaExceptionThrown())
-    {
-        svn_error_clear(err);
+    jstring jmessage = makeJString(msg);
+    if (isJavaExceptionThrown())
         return;
-    }
-    if(isJavaExceptionThrown())
-    {
-        svn_error_clear(err);
+    jstring jfile = makeJString(fileName);
+    if (isJavaExceptionThrown())
         return;
-    }
-    jstring jfile = makeJString(err->file);
-    if(isJavaExceptionThrown())
-    {
-        svn_error_clear(err);
-        return;
-    }
+
     jmethodID mid = env->GetMethodID(clazz, "<init>", 
         "(Ljava/lang/String;Ljava/lang/String;I)V");
-    if(isJavaExceptionThrown())
-    {
-        svn_error_clear(err);
+    if (isJavaExceptionThrown())
         return;
-    }
-    jobject error = env->NewObject(clazz, mid, jmessage, jfile, 
-        static_cast<jint>(err->apr_err));
-    svn_error_clear(err);
-    if(isJavaExceptionThrown())
-    {
+    jobject nativeException = env->NewObject(clazz, mid, jmessage, jfile,
+					     static_cast<jint>(aprErr));
+    if (isJavaExceptionThrown())
         return;
-    }
+
     env->DeleteLocalRef(clazz);
-    if(isJavaExceptionThrown())
-    {
+    if (isJavaExceptionThrown())
         return;
-    }
     env->DeleteLocalRef(jmessage);
-    if(isJavaExceptionThrown())
-    {
+    if (isJavaExceptionThrown())
         return;
-    }
     env->DeleteLocalRef(jfile);
-    if(isJavaExceptionThrown())
-    {
+    if (isJavaExceptionThrown())
         return;
-    }
-    env->Throw(static_cast<jthrowable>(error));
+
+    env->Throw(static_cast<jthrowable>(nativeException));
+}
+
+void JNIUtil::handleSVNError(svn_error_t *err)
+{
+    std::string msg;
+    assembleErrorMessage(err, 0, APR_SUCCESS, msg);
+    throwNativeException(JAVA_PACKAGE "/ClientException", msg.c_str(),
+			 err->file, err->apr_err);
+    svn_error_clear(err);
 }
 
 void JNIUtil::putFinalizedClient(SVNBase *object)
@@ -413,7 +400,7 @@ void JNIUtil::enqueueForDeletion(SVNBase *object)
 void JNIUtil::handleAPRError(int error, const char *op)
 {
     char *buffer = getFormatBuffer();
-    if(buffer == NULL)
+    if (buffer == NULL)
     {
         return;
     }
@@ -429,7 +416,7 @@ void JNIUtil::handleAPRError(int error, const char *op)
  */
 bool JNIUtil::isExceptionThrown()
 {
-    if(g_inInit) // during init -> look in the global member
+    if (g_inInit) // during init -> look in the global member
     {
         return g_initException;
     }
@@ -444,7 +431,7 @@ bool JNIUtil::isExceptionThrown()
  */
 void JNIUtil::setEnv(JNIEnv *env)
 {
-	JNIThreadData::pushNewThreadData();
+    JNIThreadData::pushNewThreadData();
     JNIThreadData *data = JNIThreadData::getThreadData();
     data->m_env = env;
     data->m_exceptionThrown = false;
@@ -456,7 +443,7 @@ void JNIUtil::setEnv(JNIEnv *env)
 JNIEnv * JNIUtil::getEnv()
 {
     // during init -> look into the global variable
-    if(g_inInit)
+    if (g_inInit)
     {
         return g_initEnv;
     }
@@ -472,7 +459,7 @@ JNIEnv * JNIUtil::getEnv()
 bool JNIUtil::isJavaExceptionThrown()
 {
     JNIEnv *env = getEnv();
-    if(env->ExceptionCheck())
+    if (env->ExceptionCheck())
     {
         // retrieving the exception removes it
         // so we rethrow it here
@@ -493,7 +480,7 @@ bool JNIUtil::isJavaExceptionThrown()
  */ 
 jstring JNIUtil::makeJString(const char *txt)
 {
-    if(txt == NULL) // NULL string can be converted to a null java string
+    if (txt == NULL) // NULL string can be converted to a null java string
     {
         return NULL;
     }
@@ -506,14 +493,20 @@ jstring JNIUtil::makeJString(const char *txt)
  */
 void JNIUtil::setExceptionThrown()
 {
-    // during init -> store in global variable
-    if(g_inInit)
+    if (g_inInit)
     {
+        // During global initialization, store any errors that occur
+        // in in a global variable (since thread-local storage may not
+        // yet be available).
         g_initException = true;
     }
-    // store in thread local storage
-    JNIThreadData *data = JNIThreadData::getThreadData();
-    data->m_exceptionThrown = true;
+    else
+    {
+        // When global initialization is complete, thread-local
+        // storage should be available, so store the error there.
+        JNIThreadData *data = JNIThreadData::getThreadData();
+        data->m_exceptionThrown = true;
+    }
 }
 /** 
  * initialite the log file
@@ -524,14 +517,14 @@ void JNIUtil::initLogFile(int level, jstring path)
 {
     // lock this operation
     JNICriticalSection cs(*g_logMutex);
-    if(g_logLevel > noLog) // if the log file has been opened
+    if (g_logLevel > noLog) // if the log file has been opened
     {
         g_logStream.close();
     }
     // remember the log level
     g_logLevel = level;
     JNIStringHolder myPath(path);
-    if(g_logLevel > noLog) // if a new log file is needed
+    if (g_logLevel > noLog) // if a new log file is needed
     {
         // open it
         g_logStream.open(myPath, std::ios::app);
@@ -543,13 +536,13 @@ void JNIUtil::initLogFile(int level, jstring path)
  */
 char * JNIUtil::getFormatBuffer()
 {
-    if(g_inInit) // during init -> use the global buffer
+    if (g_inInit) // during init -> use the global buffer
     {
         return g_initFormatBuffer;
     }
     // use the buffer in the thread local storage
     JNIThreadData *data = JNIThreadData::getThreadData();
-    if(data == NULL) // if that does not exists -> use the global buffer
+    if (data == NULL) // if that does not exists -> use the global buffer
     {
         return g_initFormatBuffer;
     }
@@ -584,26 +577,26 @@ jobject JNIUtil::createDate(apr_time_t time)
     jlong javatime = time /1000;
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass("java/util/Date");
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
     static jmethodID mid = 0;
-    if(mid == 0)
+    if (mid == 0)
     {
         mid = env->GetMethodID(clazz, "<init>", "(J)V");
-        if(isJavaExceptionThrown())
+        if (isJavaExceptionThrown())
         {
             return NULL;
         }
     }
     jobject ret = env->NewObject(clazz, mid, javatime);
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
     env->DeleteLocalRef(clazz);
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -634,7 +627,7 @@ void JNIUtil::setRequestPool(Pool *pool)
  */
 jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 {
-    if(data == NULL || length == 0) // a NULL or empty will create no
+    if (data == NULL || length == 0) // a NULL or empty will create no
                                     // java array
     {
         return NULL;
@@ -643,14 +636,14 @@ jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 
     // allocate the java array
     jbyteArray ret = env->NewByteArray(length);
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
 
     // access the bytes
     jbyte *retdata = env->GetByteArrayElements(ret, NULL);
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -660,7 +653,7 @@ jbyteArray JNIUtil::makeJByteArray(const signed char *data, int length)
 
     // release the bytes
     env->ReleaseByteArrayElements(ret, retdata, 0);
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return NULL;
     }
@@ -720,7 +713,7 @@ void JNIUtil::throwNullPointerException(const char *message)
     }
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass("java/lang/NullPointerException");
-    if(isJavaExceptionThrown())
+    if (isJavaExceptionThrown())
     {
         return;
     }
@@ -742,13 +735,13 @@ svn_error_t *JNIUtil::preprocessPath(const char *&path, apr_pool_t * pool)
 
       /* The above doesn't guarantee a valid URI. */
       if (! svn_path_is_uri_safe (path))
-        return svn_error_createf (SVN_ERR_BAD_URL, 0,
+        return svn_error_createf (SVN_ERR_BAD_URL, NULL,
                                   _("URL '%s' is not properly URI-encoded"),
                                   path);
 
       /* Verify that no backpaths are present in the URL. */
       if (svn_path_is_backpath_present (path))
-        return svn_error_createf (SVN_ERR_BAD_URL, 0,
+        return svn_error_createf (SVN_ERR_BAD_URL, NULL,
                                   _("URL '%s' contains a '..' element"),
                                   path);
       

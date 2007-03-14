@@ -2,7 +2,7 @@
  * log.c :  routines for requesting and parsing log reports
  *
  * ====================================================================
- * Copyright (c) 2000-2005 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -26,8 +26,6 @@
 #include <apr_strings.h>
 #include <apr_xml.h>
 
-#include <ne_socket.h>
-
 #include "svn_error.h"
 #include "svn_pools.h"
 #include "svn_path.h"
@@ -43,6 +41,11 @@
 /* Userdata for the Neon XML element callbacks. */
 struct log_baton
 {
+  /*WARNING: WANT_CDATA should stay the first element in the baton:
+    svn_ra_dav__xml_collect_cdata() assumes the baton starts with a stringbuf.
+  */
+  svn_stringbuf_t *want_cdata;
+  svn_stringbuf_t *cdata;
   /* Allocate log message information.
    * NOTE: this pool may be cleared multiple times as log messages are
    * received.
@@ -80,9 +83,6 @@ struct log_baton
      problem, so if this is TRUE it means we can safely ignore that
      error and return success. */
   svn_boolean_t limit_compat_bailout;
-
-  /* If `receiver' returns error, it is stored here. */
-  svn_error_t *err;
 };
 
 
@@ -104,27 +104,59 @@ reset_log_item(struct log_baton *lb)
 
 
 /*
- * This implements the `svn_ra_dav__xml_validate_cb' prototype.
- */
-static int
-log_validate(void *userdata, svn_ra_dav__xml_elmid parent,
-             svn_ra_dav__xml_elmid child)
-{
-  /* ### todo */
-  return SVN_RA_DAV__XML_VALID;
-}
-
-/*
  * This implements the `svn_ra_dav__xml_startelm_cb' prototype.
  */
-static int
-log_start_element(void *userdata,
-                  const svn_ra_dav__xml_elm_t *elm,
-                  const char **atts)
+static svn_error_t *
+log_start_element(int *elem, void *baton, int parent,
+                  const char *nspace, const char *name, const char **atts)
 {
-  struct log_baton *lb = userdata;
   const char *copyfrom_path, *copyfrom_revstr;
   svn_revnum_t copyfrom_rev;
+  struct log_baton *lb = baton;
+  static const svn_ra_dav__xml_elm_t log_report_elements[] =
+    {
+      { SVN_XML_NAMESPACE, "log-report", ELEM_log_report, 0 },
+      { SVN_XML_NAMESPACE, "log-item", ELEM_log_item, 0 },
+      { SVN_XML_NAMESPACE, "date", ELEM_log_date, SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "added-path", ELEM_added_path,
+        SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "deleted-path", ELEM_deleted_path,
+        SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "modified-path", ELEM_modified_path,
+        SVN_RA_DAV__XML_CDATA },
+      { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path,
+        SVN_RA_DAV__XML_CDATA },
+      { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
+      { "DAV:", "creator-displayname", ELEM_creator_displayname,
+        SVN_RA_DAV__XML_CDATA },
+      { "DAV:", "comment", ELEM_comment, SVN_RA_DAV__XML_CDATA },
+      { NULL }
+    };
+  const svn_ra_dav__xml_elm_t *elm
+    = svn_ra_dav__lookup_xml_elem(log_report_elements, nspace, name);
+
+  *elem = elm ? elm->id : SVN_RA_DAV__XML_DECLINE;
+  if (!elm)
+    return SVN_NO_ERROR;
+
+  switch (elm->id)
+    {
+    case ELEM_creator_displayname:
+    case ELEM_log_date:
+    case ELEM_version_name:
+    case ELEM_added_path:
+    case ELEM_replaced_path:
+    case ELEM_deleted_path:
+    case ELEM_modified_path:
+    case ELEM_comment:
+      lb->want_cdata = lb->cdata;
+      svn_stringbuf_setempty(lb->cdata);
+      break;
+
+    default:
+      lb->want_cdata = NULL;
+      break;
+    }
 
   switch (elm->id)
     {
@@ -168,37 +200,36 @@ log_start_element(void *userdata,
       lb->this_path_item = NULL;
       break;
     }
-  return SVN_RA_DAV__XML_VALID;
+  return SVN_NO_ERROR;
 }
 
 
 /*
  * This implements the `svn_ra_dav__xml_endelm_cb' prototype.
  */
-static int
-log_end_element(void *userdata,
-                const svn_ra_dav__xml_elm_t *elm,
-                const char *cdata)
+static svn_error_t *
+log_end_element(void *baton, int state,
+                const char *nspace, const char *name)
 {
-  struct log_baton *lb = userdata;
+  struct log_baton *lb = baton;
 
-  switch (elm->id)
+  switch (state)
     {
     case ELEM_version_name:
-      lb->revision = SVN_STR_TO_REV(cdata);
+      lb->revision = SVN_STR_TO_REV(lb->cdata->data);
       break;
     case ELEM_creator_displayname:
-      lb->author = apr_pstrdup(lb->subpool, cdata);
+      lb->author = apr_pstrdup(lb->subpool, lb->cdata->data);
       break;
     case ELEM_log_date:
-      lb->date = apr_pstrdup(lb->subpool, cdata);
+      lb->date = apr_pstrdup(lb->subpool, lb->cdata->data);
       break;
     case ELEM_added_path:
     case ELEM_replaced_path:
     case ELEM_deleted_path:
     case ELEM_modified_path:
       {
-        char *path = apr_pstrdup(lb->subpool, cdata);
+        char *path = apr_pstrdup(lb->subpool, lb->cdata->data);
         if (! lb->changed_paths)
           lb->changed_paths = apr_hash_make(lb->subpool);
         apr_hash_set(lb->changed_paths, path, APR_HASH_KEY_STRING, 
@@ -206,11 +237,10 @@ log_end_element(void *userdata,
         break;
       }
     case ELEM_comment:
-      lb->msg = apr_pstrdup(lb->subpool, cdata);
+      lb->msg = apr_pstrdup(lb->subpool, lb->cdata->data);
       break;
     case ELEM_log_item:
       {
-        svn_error_t *err;
         /* Compatability cruft so that we can provide limit functionality 
            even if the server doesn't support it.
 
@@ -220,32 +250,18 @@ log_end_element(void *userdata,
            end up being shown to the user. */
         if (lb->limit && (++lb->count > lb->limit))
           {
-            lb->err = SVN_NO_ERROR;
             lb->limit_compat_bailout = TRUE;
-            return SVN_RA_DAV__XML_INVALID;
+            return svn_error_create(APR_EGENERAL, NULL, NULL);
           }
  
-        err = (*(lb->receiver))(lb->receiver_baton,
-                                             lb->changed_paths,
-                                             lb->revision,
-                                             lb->author,
-                                             lb->date,
-                                             lb->msg,
-                                             lb->subpool);
-
+        SVN_ERR((*(lb->receiver))(lb->receiver_baton,
+                                  lb->changed_paths,
+                                  lb->revision,
+                                  lb->author,
+                                  lb->date,
+                                  lb->msg,
+                                  lb->subpool));
         reset_log_item(lb);
-        
-        if (err)
-          {
-            /* Only remember the first error. */
-            if (lb->err == NULL)
-              lb->err = err;
-            else
-              svn_error_clear(err);
-              
-            return SVN_RA_DAV__XML_INVALID; /* ### Any other way to express
-                                                   an err? */
-          }
       }
       break;
     case ELEM_log_report:
@@ -298,7 +314,9 @@ log_end_element(void *userdata,
       break;
     }
 
-  return SVN_RA_DAV__XML_VALID;
+  /* Stop collecting cdata */
+  lb->want_cdata = NULL;
+  return SVN_NO_ERROR;
 }
 
 
@@ -343,27 +361,6 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
     = "<S:log-report xmlns:S=\"" SVN_XML_NAMESPACE "\">" DEBUG_CR;
 
   static const char log_request_tail[] = "</S:log-report>" DEBUG_CR;
-  
-  static const svn_ra_dav__xml_elm_t log_report_elements[] =
-    {
-      { SVN_XML_NAMESPACE, "log-report", ELEM_log_report, 0 },
-      { SVN_XML_NAMESPACE, "log-item", ELEM_log_item, 0 },
-      { SVN_XML_NAMESPACE, "date", ELEM_log_date, SVN_RA_DAV__XML_CDATA },
-      { SVN_XML_NAMESPACE, "added-path", ELEM_added_path,
-        SVN_RA_DAV__XML_CDATA },
-      { SVN_XML_NAMESPACE, "deleted-path", ELEM_deleted_path,
-        SVN_RA_DAV__XML_CDATA },
-      { SVN_XML_NAMESPACE, "modified-path", ELEM_modified_path,
-        SVN_RA_DAV__XML_CDATA },
-      { SVN_XML_NAMESPACE, "replaced-path", ELEM_replaced_path,
-        SVN_RA_DAV__XML_CDATA },
-      { "DAV:", "version-name", ELEM_version_name, SVN_RA_DAV__XML_CDATA },
-      { "DAV:", "creator-displayname", ELEM_creator_displayname,
-        SVN_RA_DAV__XML_CDATA },
-      { "DAV:", "comment", ELEM_comment, SVN_RA_DAV__XML_CDATA },
-      { NULL }
-    };
-  
 
   /* Construct the request body. */
   svn_stringbuf_appendcstr(request_body, log_request_head);
@@ -402,7 +399,7 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
         {
           const char *this_path =
             apr_xml_quote_string(pool,
-                                 ((const char **)paths->elts)[i],
+                                 APR_ARRAY_IDX(paths, i, const char *),
                                  0);
           svn_stringbuf_appendcstr(request_body, "<S:path>");
           svn_stringbuf_appendcstr(request_body, this_path);
@@ -415,10 +412,11 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
   lb.receiver = receiver;
   lb.receiver_baton = receiver_baton;
   lb.subpool = svn_pool_create(pool);
-  lb.err = NULL;
   lb.limit = limit;
   lb.count = 0;
   lb.limit_compat_bailout = FALSE;
+  lb.cdata = svn_stringbuf_create("", pool);
+  lb.want_cdata = NULL;
   reset_log_item(&lb);
 
   /* ras's URL may not exist in HEAD, and thus it's not safe to send
@@ -428,40 +426,33 @@ svn_error_t * svn_ra_dav__get_log(svn_ra_session_t *session,
      START and END revisions. */
   use_rev = (start > end) ? start : end;
   SVN_ERR(svn_ra_dav__get_baseline_info(NULL, &bc_url, &bc_relative, NULL,
-                                        ras->sess, ras->url->data, use_rev,
+                                        ras, ras->url->data, use_rev,
                                         pool));
   final_bc_url = svn_path_url_add_component(bc_url.data, bc_relative.data,
                                             pool);
 
 
-  err = svn_ra_dav__parsed_request_compat(ras->sess,
-                                          "REPORT",
-                                          final_bc_url,
-                                          request_body->data,
-                                          0,  /* ignored */
-                                          NULL,
-                                          log_report_elements, 
-                                          log_validate,
-                                          log_start_element,
-                                          log_end_element,
-                                          &lb,
-                                          NULL, 
-                                          NULL,
-                                          FALSE,
-                                          pool);
-  
-  if (lb.err)
-    {
-      if (err)
-        svn_error_clear(err);
-
-      return lb.err;
-    }
-
+  err = svn_ra_dav__parsed_request(ras,
+                                   "REPORT",
+                                   final_bc_url,
+                                   request_body->data,
+                                   0,  /* ignored */
+                                   NULL,
+                                   log_start_element,
+                                   svn_ra_dav__xml_collect_cdata,
+                                   log_end_element,
+                                   &lb,
+                                   NULL,
+                                   NULL,
+                                   FALSE,
+                                   pool);
   svn_pool_destroy(lb.subpool);
 
   if (err && lb.limit_compat_bailout)
-    return SVN_NO_ERROR;
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
 
   return err;
 }

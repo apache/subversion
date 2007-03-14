@@ -630,30 +630,12 @@ append_locks(dav_lockdb *lockdb,
   svn_error_t *serr;
   dav_error *derr;
 
-  /* This whole if statement is a hack until we get rid of mod_authz_svn
-   * completely.  During the times of mod_dav_svn, there was no
-   * equivalent of dav_svn__allow_read() for writing.
-   *
-   * LOCK command needs write access to resource. If native authz
-   * is turned off, we resort to the old way of requiring read access
-   * on the resource.
-   */
-  if (dav_svn__get_native_authz_file(resource->info->r))
-    {
-      /* Path-based authorization: LOCK needs write access to resource */
-      derr = dav_svn__check_resource_access(resource, svn_authz_write);
-      if (derr)
-        return derr;
-    }
-  else
-    {
-      /* If the resource's fs path is unreadable, we don't allow a lock to
-         be created on it. */
-      if (! dav_svn__allow_read(resource, SVN_INVALID_REVNUM, resource->pool))
-        return dav_new_error(resource->pool, HTTP_FORBIDDEN,
-                             DAV_ERR_LOCK_SAVE_LOCK,
-                             "Path is not accessible.");
-    }
+  /* If the resource's fs path is unreadable, we don't allow a lock to
+     be created on it. */
+  if (! dav_svn__allow_read(resource, SVN_INVALID_REVNUM, resource->pool))
+    return dav_new_error(resource->pool, HTTP_FORBIDDEN,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Path is not accessible.");
 
   if (lock->next)
     return dav_new_error(resource->pool, HTTP_BAD_REQUEST,
@@ -813,24 +795,12 @@ remove_lock(dav_lockdb *lockdb,
   if (info->keep_locks)
     return 0;
 
-  if (dav_svn__get_native_authz_file(resource->info->r))
-    {
-      /* Path-based authorization: UNLOCK needs write access to resource */
-      dav_error *derr;
-
-      derr = dav_svn__check_resource_access(resource, svn_authz_write);
-      if (derr)
-        return derr;
-    }
-  else
-    {
-      /* If the resource's fs path is unreadable, we don't allow a lock to
-         be removed from it. */
-      if (! dav_svn__allow_read(resource, SVN_INVALID_REVNUM, resource->pool))
-        return dav_new_error(resource->pool, HTTP_FORBIDDEN,
-                             DAV_ERR_LOCK_SAVE_LOCK,
-                             "Path is not accessible.");
-    }
+  /* If the resource's fs path is unreadable, we don't allow a lock to
+     be removed from it. */
+  if (! dav_svn__allow_read(resource, SVN_INVALID_REVNUM, resource->pool))
+    return dav_new_error(resource->pool, HTTP_FORBIDDEN,
+                         DAV_ERR_LOCK_SAVE_LOCK,
+                         "Path is not accessible.");
 
   if (locktoken == NULL)
     {
@@ -873,14 +843,14 @@ remove_lock(dav_lockdb *lockdb,
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Failed to remove a lock.",
                                     resource->pool);
-    }
 
-  /* Log the unlocking as a 'high-level' action. */
-  apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
-                apr_psprintf(resource->info->r->pool,
-                             "unlock '%s'",
-                             svn_path_uri_encode(resource->info->repos_path,
-                                                 resource->info->r->pool)));
+      /* Log the unlocking as a 'high-level' action. */
+      apr_table_set(resource->info->r->subprocess_env, "SVN-ACTION",
+                    apr_psprintf(resource->info->r->pool,
+                                 "unlock '%s'",
+                                 svn_path_uri_encode(resource->info->repos_path,
+                                                     resource->info->r->pool)));
+    }
 
   return 0;
 }

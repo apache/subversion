@@ -374,8 +374,8 @@ assemble_status(svn_wc_status2_t **status,
           && (wc_special == path_special)
 #endif /* HAVE_SYMLINK */          
           )
-        SVN_ERR(svn_wc_text_modified_p2(&text_modified_p, path, FALSE,
-                                        FALSE, adm_access, pool));
+        SVN_ERR(svn_wc_text_modified_p(&text_modified_p, path, FALSE,
+                                       adm_access, pool));
 
       if (text_modified_p)
         final_text_status = svn_wc_status_modified;
@@ -841,13 +841,13 @@ get_dir_status(struct edit_baton *eb,
 
           /* Now, parse the thing, and copy the parsed results into
              our "global" externals hash. */
-          SVN_ERR(svn_wc_parse_externals_description2(&ext_items, path,
+          SVN_ERR(svn_wc_parse_externals_description3(&ext_items, path,
                                                       prop_val->data, pool));
           for (i = 0; ext_items && i < ext_items->nelts; i++)
             {
-              svn_wc_external_item_t *item;
+              svn_wc_external_item2_t *item;
 
-              item = APR_ARRAY_IDX(ext_items, i, svn_wc_external_item_t *);
+              item = APR_ARRAY_IDX(ext_items, i, svn_wc_external_item2_t *);
               apr_hash_set(eb->externals, svn_path_join(path,
                                                         item->target_dir,
                                                         pool),
@@ -999,18 +999,42 @@ hash_stash(void *baton,
 /* Look up the key PATH in BATON->STATII.  IS_DIR_BATON indicates whether
    baton is a struct *dir_baton or struct *file_baton.  If the value doesn't
    yet exist, and the REPOS_TEXT_STATUS indicates that this is an
-   addition, create a new status struct using the hash's pool.  Merge
-   REPOS_TEXT_STATUS and REPOS_PROP_STATUS into the status structure's
+   addition, create a new status struct using the hash's pool.
+
+   If IS_DIR_BATON is true, THIS_DIR_BATON is a *dir_baton cotaining the out
+   of date (ood) information we want to set in BATON.  This is necessary
+   because this function tweaks the status of out of date directories
+   (BATON == THIS_DIR_BATON) and out of date directories' parents
+   (BATON == THIS_DIR_BATON->parent_baton).  In the latter case THIS_DIR_BATON
+   contains the ood info we want to bubble up to ancestor directories so these
+   accurately reflect the fact they have an ood descendent.
+
+   Merge REPOS_TEXT_STATUS and REPOS_PROP_STATUS into the status structure's
    "network" fields.
+
+   Iff IS_DIR_BATON is true, DELETED_REV is used as follows, otherwise it
+   is ignored:
+   
+       If REPOS_TEXT_STATUS is svn_wc_status_deleted then DELETED_REV is
+       optionally the revision path was deleted, in all other cases it must
+       be set to SVN_INVALID_REVNUM.  If DELETED_REV is not
+       SVN_INVALID_REVNUM and REPOS_TEXT_STATUS is svn_wc_status_deleted,
+       then use DELETED_REV to set PATH's ood_last_cmt_rev field in BATON.
+       If DELETED_REV is SVN_INVALID_REVNUM and REPOS_TEXT_STATUS is
+       svn_wc_status_deleted, set PATH's ood_last_cmt_rev to its parent's
+       ood_last_cmt_rev value - see comment below.
+
    If a new struct was added, set the repos_lock to REPOS_LOCK. */
 static svn_error_t *
 tweak_statushash(void *baton,
+                 void *this_dir_baton,
                  svn_boolean_t is_dir_baton,
                  svn_wc_adm_access_t *adm_access,
                  const char *path,
                  svn_boolean_t is_dir,
                  enum svn_wc_status_kind repos_text_status,
                  enum svn_wc_status_kind repos_prop_status,
+                 svn_revnum_t deleted_rev,
                  svn_lock_t *repos_lock)
 {
   svn_wc_status2_t *statstruct;
@@ -1044,7 +1068,7 @@ tweak_statushash(void *baton,
         return SVN_NO_ERROR;
 
       /* Use the public API to get a statstruct, and put it into the hash. */
-      SVN_ERR(svn_wc_status2(&statstruct, path, NULL, pool));
+      SVN_ERR(svn_wc_status2(&statstruct, path, adm_access, pool));
       statstruct->repos_lock = repos_lock;
       apr_hash_set(statushash, apr_pstrdup(pool, path), 
                    APR_HASH_KEY_STRING, statstruct);
@@ -1064,20 +1088,50 @@ tweak_statushash(void *baton,
   /* Copy out of date info. */
   if (is_dir_baton)
     {
-      struct dir_baton *b = baton;
+      struct dir_baton *b = this_dir_baton;
+
       if (b->url)
-        statstruct->url = apr_pstrdup(pool, b->url);
-      statstruct->ood_kind = b->ood_kind;
-      /* The last committed rev, date, and author for deleted items
-         isn't available. */
-      if (statstruct->repos_text_status != svn_wc_status_deleted)
         {
+          if (statstruct->repos_text_status == svn_wc_status_deleted)
+            {
+              /* When deleting PATH, BATON is for PATH's parent,
+                 so we must construct PATH's real statstruct->url. */
+              statstruct->url =
+                svn_path_url_add_component(b->url,
+                                           svn_path_basename(path, pool),
+                                           pool);
+            }
+          else
+            statstruct->url = apr_pstrdup(pool, b->url);
+        }
+
+      /* The last committed date, and author for deleted items
+         isn't available. */
+      if (statstruct->repos_text_status == svn_wc_status_deleted)
+        {
+          statstruct->ood_kind = is_dir ? svn_node_dir : svn_node_file;
+          
+          /* Pre 1.5 servers don't provide the revision a path was deleted.
+             So we punt and use the last committed revision of the path's
+             parent, which has some chance of being correct.  At worse it
+             is a higher revision than the path was deleted, but this is
+             better than nothing... */
+          if (deleted_rev == SVN_INVALID_REVNUM)
+            statstruct->ood_last_cmt_rev =
+              ((struct dir_baton *) baton)->ood_last_cmt_rev;
+          else
+            statstruct->ood_last_cmt_rev = deleted_rev;
+        }
+      else
+        {
+          statstruct->ood_kind = b->ood_kind;
           statstruct->ood_last_cmt_rev = b->ood_last_cmt_rev;
           statstruct->ood_last_cmt_date = b->ood_last_cmt_date;
           if (b->ood_last_cmt_author)
             statstruct->ood_last_cmt_author =
               apr_pstrdup(pool, b->ood_last_cmt_author);
         }
+
     }
   else
     {
@@ -1135,7 +1189,7 @@ make_dir_baton(void **dir_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d = apr_pcalloc(pool, sizeof(*d));
   const char *full_path; 
-  svn_wc_status2_t *parent_status;
+  svn_wc_status2_t *status_in_parent;
 
   /* Don't do this.  Just do NOT do this to me. */
   if (pb && (! path))
@@ -1163,29 +1217,29 @@ make_dir_baton(void **dir_baton,
   /* Get the status for this path's children.  Of course, we only want
      to do this if the path is versioned as a directory. */
   if (pb)
-    parent_status = apr_hash_get(pb->statii, d->path, APR_HASH_KEY_STRING);
+    status_in_parent = apr_hash_get(pb->statii, d->path, APR_HASH_KEY_STRING);
   else
-    parent_status = eb->anchor_status;
+    status_in_parent = eb->anchor_status;
 
-  /* Order is important here.  We can't depend on parent_status->entry
+  /* Order is important here.  We can't depend on status_in_parent->entry
      being non-NULL until after we've checked all the conditions that
      might indicate that the parent is unversioned ("unversioned" for
      our purposes includes being an external or ignored item). */
-  if (parent_status
-      && (parent_status->text_status != svn_wc_status_unversioned)
-      && (parent_status->text_status != svn_wc_status_deleted)
-      && (parent_status->text_status != svn_wc_status_missing)
-      && (parent_status->text_status != svn_wc_status_obstructed)
-      && (parent_status->text_status != svn_wc_status_external)
-      && (parent_status->text_status != svn_wc_status_ignored)
-      && (parent_status->entry->kind == svn_node_dir)
+  if (status_in_parent
+      && (status_in_parent->text_status != svn_wc_status_unversioned)
+      && (status_in_parent->text_status != svn_wc_status_deleted)
+      && (status_in_parent->text_status != svn_wc_status_missing)
+      && (status_in_parent->text_status != svn_wc_status_obstructed)
+      && (status_in_parent->text_status != svn_wc_status_external)
+      && (status_in_parent->text_status != svn_wc_status_ignored)
+      && (status_in_parent->entry->kind == svn_node_dir)
       && (eb->descend || (! pb)))
     {
       svn_wc_adm_access_t *dir_access;
       apr_array_header_t *ignores = eb->ignores;
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access, 
                                   d->path, pool));
-      SVN_ERR(get_dir_status(eb, parent_status->entry, dir_access, NULL, 
+      SVN_ERR(get_dir_status(eb, status_in_parent->entry, dir_access, NULL, 
                              ignores, FALSE, TRUE, TRUE, TRUE, hash_stash, 
                              d->statii, NULL, NULL, pool));
     }
@@ -1468,17 +1522,18 @@ delete_entry(const char *path,
 
   SVN_ERR(svn_wc_entries_read(&entries, adm_access, FALSE, pool));
   if (apr_hash_get(entries, hash_key, APR_HASH_KEY_STRING))
-    SVN_ERR(tweak_statushash(db, TRUE, eb->adm_access,
+    SVN_ERR(tweak_statushash(db, db, TRUE, eb->adm_access,
                              full_path, kind == svn_node_dir,
-                             svn_wc_status_deleted, 0, NULL));
+                             svn_wc_status_deleted, 0, revision, NULL));
 
   /* Mark the parent dir -- it lost an entry (unless that parent dir
      is the root node and we're not supposed to report on the root
      node).  */
   if (db->parent_baton && (! *eb->target))
-    SVN_ERR(tweak_statushash(db->parent_baton, TRUE, eb->adm_access,
+    SVN_ERR(tweak_statushash(db->parent_baton, db, TRUE, eb->adm_access,
                              db->path, kind == svn_node_dir,
-                             svn_wc_status_modified, 0, NULL));
+                             svn_wc_status_modified, 0, SVN_INVALID_REVNUM,
+                             NULL));
 
   return SVN_NO_ERROR;
 }
@@ -1560,8 +1615,10 @@ close_directory(void *dir_baton,
   struct edit_baton *eb = db->edit_baton;
   svn_wc_status2_t *dir_status = NULL;
   
-  /* If nothing has changed, return. */
-  if (db->added || db->prop_changed || db->text_changed)
+  /* If nothing has changed and directory has no out of
+     date descendents, return. */
+  if (db->added || db->prop_changed || db->text_changed
+      || db->ood_last_cmt_rev != SVN_INVALID_REVNUM)
     {
       enum svn_wc_status_kind repos_text_status;
       enum svn_wc_status_kind repos_prop_status;
@@ -1570,25 +1627,49 @@ close_directory(void *dir_baton,
       if (db->added)
         {
           repos_text_status = svn_wc_status_added;
-          repos_prop_status = db->prop_changed ? svn_wc_status_added : 0;
+          repos_prop_status = db->prop_changed ? svn_wc_status_added
+                              : svn_wc_status_none;
         }
       else
         {
-          repos_text_status = db->text_changed ? svn_wc_status_modified : 0;
-          repos_prop_status = db->prop_changed ? svn_wc_status_modified : 0;
+          repos_text_status = db->text_changed ? svn_wc_status_modified
+                              : svn_wc_status_none;
+          repos_prop_status = db->prop_changed ? svn_wc_status_modified
+                              : svn_wc_status_none;
         }
 
       /* Maybe add this directory to its parent's status hash.  Note
          that tweak_statushash won't do anything if repos_text_status
          is not svn_wc_status_added. */
       if (pb)
-        /* NOTE: When we add directory locking, we need to find a directory
-           lock here. */
-        SVN_ERR(tweak_statushash(pb, TRUE,
-                                 eb->adm_access,
-                                 db->path, TRUE,
-                                 repos_text_status,
-                                 repos_prop_status, NULL));
+        {
+          /* ### When we add directory locking, we need to find a
+             ### directory lock here. */
+          SVN_ERR(tweak_statushash(pb, db, TRUE,
+                                   eb->adm_access,
+                                   db->path, TRUE,
+                                   repos_text_status,
+                                   repos_prop_status, SVN_INVALID_REVNUM,
+                                   NULL));
+        }
+      else
+        {
+          /* We're editing the root dir of the WC.  As its repos
+             status info isn't otherwise set, set it directly to
+             trigger invocation of the status callback below. */
+          eb->anchor_status->repos_prop_status = repos_prop_status;
+          eb->anchor_status->repos_text_status = repos_text_status;
+
+          /* If the root dir is out of date set the ood info directly too. */
+          if (db->ood_last_cmt_rev != eb->anchor_status->entry->revision)
+            {
+              eb->anchor_status->ood_last_cmt_rev = db->ood_last_cmt_rev;
+              eb->anchor_status->ood_last_cmt_date = db->ood_last_cmt_date;
+              eb->anchor_status->ood_kind = db->ood_kind;
+              eb->anchor_status->ood_last_cmt_author =
+                apr_pstrdup(pool, db->ood_last_cmt_author);
+            }
+        }
     }
 
   /* Handle this directory's statuses, and then note in the parent
@@ -1786,11 +1867,11 @@ close_file(void *file_baton,
       repos_prop_status = fb->prop_changed ? svn_wc_status_modified : 0;
     }
 
-  SVN_ERR(tweak_statushash(fb, FALSE,
+  SVN_ERR(tweak_statushash(fb, NULL, FALSE,
                            fb->edit_baton->adm_access,
                            fb->path, FALSE,
                            repos_text_status,
-                           repos_prop_status,
+                           repos_prop_status, SVN_INVALID_REVNUM,
                            repos_lock));
 
   return SVN_NO_ERROR;

@@ -1,7 +1,7 @@
 /* fs_fs.c --- filesystem operations specific to fs_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -33,6 +33,7 @@
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_md5.h"
+#include "svn_props.h"
 #include "svn_sorts.h"
 #include "svn_time.h"
 
@@ -40,7 +41,6 @@
 #include "err.h"
 #include "tree.h"
 #include "lock.h"
-#include "revs-txns.h"
 #include "key-gen.h"
 #include "fs_fs.h"
 #include "id.h"
@@ -71,6 +71,7 @@
 #define PATH_TXN_PROPS     "props"         /* Transaction properties */
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
 #define PATH_REV           "rev"           /* Proto rev file */
+#define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
 #define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
@@ -86,6 +87,7 @@
 #define HEADER_PRED        "pred"
 #define HEADER_COPYFROM    "copyfrom"
 #define HEADER_COPYROOT    "copyroot"
+#define HEADER_FRESHTXNRT  "is-fresh-txn-root"
 
 /* Kinds that a change can be. */
 #define ACTION_MODIFY      "modify"
@@ -201,6 +203,12 @@ path_txn_proto_rev(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 }
 
 static const char *
+path_txn_proto_rev_lock(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
+{
+  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_REV_LOCK, pool);
+}
+
+static const char *
 path_txn_node_rev(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
 {
   const char *txn_id = svn_fs_fs__id_txn_id(id);
@@ -225,6 +233,348 @@ path_txn_node_children(svn_fs_t *fs, const svn_fs_id_t *id, apr_pool_t *pool)
   return apr_pstrcat(pool, path_txn_node_rev(fs, id, pool),
                      PATH_EXT_CHILDREN, NULL);
 }
+
+
+
+/* Functions for working with shared transaction data. */
+
+/* Return the transaction object for transaction TXN_ID from the
+   transaction list of filesystem FS (which must already be locked via the
+   txn_list_lock mutex).  If the transaction does not exist in the list,
+   then create a new transaction object and return it (if CREATE_NEW is
+   true) or return NULL (otherwise). */
+static fs_fs_shared_txn_data_t *
+get_shared_txn(svn_fs_t *fs, const char *txn_id, svn_boolean_t create_new)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+  fs_fs_shared_txn_data_t *txn;
+
+  for (txn = ffsd->txns; txn; txn = txn->next)
+    if (strcmp(txn->txn_id, txn_id) == 0)
+      break;
+
+  if (txn || !create_new)
+    return txn;
+
+  /* Use the transaction object from the (single-object) freelist,
+     if one is available, or otherwise create a new object. */
+  if (ffsd->free_txn)
+    {
+      txn = ffsd->free_txn;
+      ffsd->free_txn = NULL;
+    }
+  else
+    {
+      apr_pool_t *subpool = svn_pool_create(ffsd->common_pool);
+      txn = apr_palloc(subpool, sizeof(*txn));
+      txn->pool = subpool;
+    }
+
+  assert(strlen(txn_id) < sizeof(txn->txn_id));
+  strcpy(txn->txn_id, txn_id);
+  txn->being_written = FALSE;
+
+  /* Link this transaction into the head of the list.  We will typically
+     be dealing with only one active transaction at a time, so it makes
+     sense for searches through the transaction list to look at the
+     newest transactions first.  */
+  txn->next = ffsd->txns;
+  ffsd->txns = txn;
+
+  return txn;
+}
+
+/* Free the transaction object for transaction TXN_ID, and remove it
+   from the transaction list of filesystem FS (which must already be
+   locked via the txn_list_lock mutex).  Do nothing if the transaction
+   does not exist. */
+static void
+free_shared_txn(svn_fs_t *fs, const char *txn_id)
+{
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+  fs_fs_shared_txn_data_t *txn, *prev = NULL;
+
+  for (txn = ffsd->txns; txn; prev = txn, txn = txn->next)
+    if (strcmp(txn->txn_id, txn_id) == 0)
+      break;
+
+  if (!txn)
+    return;
+
+  if (prev)
+    prev->next = txn->next;
+  else
+    ffsd->txns = txn->next;
+
+  /* As we typically will be dealing with one transaction after another,
+     we will maintain a single-object free list so that we can hopefully
+     keep reusing the same transaction object. */
+  if (!ffsd->free_txn)
+    ffsd->free_txn = txn;
+  else
+    svn_pool_destroy(txn->pool);
+}
+
+
+/* Obtain a lock on the transaction list of filesystem FS, call BODY
+   with FS, BATON, and POOL, and then unlock the transaction list.
+   Return what BODY returned. */
+static svn_error_t *
+with_txnlist_lock(svn_fs_t *fs,
+                  svn_error_t *(*body)(svn_fs_t *fs,
+                                       void *baton,
+                                       apr_pool_t *pool),
+                  void *baton,
+                  apr_pool_t *pool)
+{
+  svn_error_t *err;
+#if APR_HAS_THREADS
+  fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
+  apr_status_t apr_err;
+
+  apr_err = apr_thread_mutex_lock(ffsd->txn_list_lock);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, _("Can't grab FSFS txn list mutex"));
+#endif
+
+  err = body(fs, baton, pool);
+
+#if APR_HAS_THREADS
+  apr_err = apr_thread_mutex_unlock(ffsd->txn_list_lock);
+  if (apr_err && !err)
+    return svn_error_wrap_apr(apr_err, _("Can't ungrab FSFS txn list mutex"));
+#endif
+
+  return err;
+}
+
+/* A structure used by unlock_proto_rev() and unlock_proto_rev_body(),
+   which see. */
+struct unlock_proto_rev_baton
+{
+  const char *txn_id;
+  void *lockcookie;
+};
+
+/* Callback used in the implementation of unlock_proto_rev(). */
+static svn_error_t *
+unlock_proto_rev_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
+{
+  struct unlock_proto_rev_baton *b = baton;
+  const char *txn_id = b->txn_id;
+  apr_file_t *lockfile = b->lockcookie;
+  fs_fs_shared_txn_data_t *txn = get_shared_txn(fs, txn_id, FALSE);
+  apr_status_t apr_err;
+
+  if (!txn)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Can't unlock unknown transaction '%s'"),
+                             txn_id);
+  if (!txn->being_written)
+    return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                             _("Can't unlock nonlocked transaction '%s'"),
+                             txn_id);
+
+  apr_err = apr_file_unlock(lockfile);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err,
+       _("Can't unlock prototype revision lockfile for transaction '%s'"),
+       txn_id);
+  apr_err = apr_file_close(lockfile);
+  if (apr_err)
+    return svn_error_wrap_apr
+      (apr_err,
+       _("Can't close prototype revision lockfile for transaction '%s'"),
+       txn_id);
+
+  txn->being_written = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+/* Unlock the prototype revision file for transaction TXN_ID in filesystem
+   FS using cookie LOCKCOOKIE.  The original prototype revision file must
+   have been closed _before_ calling this function.
+
+   Perform temporary allocations in POOL. */
+static svn_error_t *
+unlock_proto_rev(svn_fs_t *fs, const char *txn_id, void *lockcookie,
+                 apr_pool_t *pool)
+{
+  struct unlock_proto_rev_baton b;
+
+  b.txn_id = txn_id;
+  b.lockcookie = lockcookie;
+  return with_txnlist_lock(fs, unlock_proto_rev_body, &b, pool);
+}
+
+/* Same as unlock_proto_rev(), but requires that the transaction list
+   lock is already held. */
+static svn_error_t *
+unlock_proto_rev_list_locked(svn_fs_t *fs, const char *txn_id,
+                             void *lockcookie,
+                             apr_pool_t *pool)
+{
+  struct unlock_proto_rev_baton b;
+
+  b.txn_id = txn_id;
+  b.lockcookie = lockcookie;
+  return unlock_proto_rev_body(fs, &b, pool);
+}
+
+/* A structure used by get_writable_proto_rev() and
+   get_writable_proto_rev_body(), which see. */
+struct get_writable_proto_rev_baton
+{
+  apr_file_t **file;
+  void **lockcookie;
+  const char *txn_id;
+};
+
+/* Callback used in the implementation of get_writable_proto_rev(). */
+static svn_error_t *
+get_writable_proto_rev_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
+{
+  struct get_writable_proto_rev_baton *b = baton;
+  apr_file_t **file = b->file;
+  void **lockcookie = b->lockcookie;
+  const char *txn_id = b->txn_id;
+  svn_error_t *err;
+  fs_fs_shared_txn_data_t *txn = get_shared_txn(fs, txn_id, TRUE);
+
+  /* First, ensure that no thread in this process (including this one)
+     is currently writing to this transaction's proto-rev file. */
+  if (txn->being_written)
+    return svn_error_createf(SVN_ERR_FS_REP_BEING_WRITTEN, NULL,
+                             _("Cannot write to the prototype revision file "
+                               "of transaction '%s' because a previous "
+                               "representation is currently being written by "
+                               "this process"),
+                             txn_id);
+
+
+  /* We know that no thread in this process is writing to the proto-rev
+     file, and by extension, that no thread in this process is holding a
+     lock on the prototype revision lock file.  It is therefore safe
+     for us to attempt to lock this file, to see if any other process
+     is holding a lock. */
+
+  {
+    apr_file_t *lockfile;
+    apr_status_t apr_err;
+    const char *lockfile_path = path_txn_proto_rev_lock(fs, txn_id, pool);
+
+    /* Open the proto-rev lockfile, creating it if necessary, as it may
+       not exist if the transaction dates from before the lockfiles were
+       introduced.
+
+       ### We'd also like to use something like svn_io_file_lock2(), but
+           that forces us to create a subpool just to be able to unlock
+           the file, which seems a waste. */
+    SVN_ERR(svn_io_file_open(&lockfile, lockfile_path,
+                             APR_WRITE | APR_CREATE, APR_OS_DEFAULT, pool));
+
+    apr_err = apr_file_lock(lockfile,
+                            APR_FLOCK_EXCLUSIVE | APR_FLOCK_NONBLOCK);
+    if (apr_err)
+      {
+        svn_error_clear(svn_io_file_close(lockfile, pool));
+
+        if (APR_STATUS_IS_EAGAIN(apr_err))
+          return svn_error_createf(SVN_ERR_FS_REP_BEING_WRITTEN, NULL,
+                                   _("Cannot write to the prototype revision "
+                                     "file of transaction '%s' because a "
+                                     "previous representation is currently "
+                                     "being written by another process"),
+                                   txn_id);
+
+        return svn_error_wrap_apr(apr_err,
+                                  _("Can't get exclusive lock on file '%s'"),
+                                  svn_path_local_style(lockfile_path, pool));
+      }
+
+    *lockcookie = lockfile;
+  }
+
+  /* We've successfully locked the transaction; mark it as such. */
+  txn->being_written = TRUE;
+
+
+  /* Now open the prototype revision file and seek to the end. */
+  err = svn_io_file_open(file, path_txn_proto_rev(fs, txn_id, pool),
+                         APR_WRITE | APR_BUFFERED, APR_OS_DEFAULT, pool);
+
+  /* You might expect that we could dispense with the following seek
+     and achieve the same thing by opening the file using APR_APPEND.
+     Unfortunately, APR's buffered file implementation unconditionally
+     places its initial file pointer at the start of the file (even for
+     files opened with APR_APPEND), so we need this seek to reconcile
+     the APR file pointer to the OS file pointer (since we need to be
+     able to read the current file position later). */
+  if (!err)
+    {
+      apr_off_t offset = 0;
+      err = svn_io_file_seek(*file, APR_END, &offset, 0);
+    }
+
+  if (err)
+    {
+      svn_error_clear(unlock_proto_rev_list_locked(fs, txn_id, *lockcookie,
+                                                   pool));
+      *lockcookie = NULL;
+    }
+
+  return err;
+}
+
+/* Get a handle to the prototype revision file for transaction TXN_ID in
+   filesystem FS, and lock it for writing.  Return FILE, a file handle
+   positioned at the end of the file, and LOCKCOOKIE, a cookie that
+   should be passed to unlock_proto_rev() to unlock the file once FILE
+   has been closed.
+
+   If the prototype revision file is already locked, return error
+   SVN_ERR_FS_REP_BEING_WRITTEN.
+
+   Perform all allocations in POOL. */
+static svn_error_t *
+get_writable_proto_rev(apr_file_t **file,
+                       void **lockcookie,
+                       svn_fs_t *fs, const char *txn_id,
+                       apr_pool_t *pool)
+{
+  struct get_writable_proto_rev_baton b;
+
+  b.file = file;
+  b.lockcookie = lockcookie;
+  b.txn_id = txn_id;
+
+  return with_txnlist_lock(fs, get_writable_proto_rev_body, &b, pool);
+}
+
+/* Callback used in the implementation of purge_shared_txn(). */
+static svn_error_t *
+purge_shared_txn_body(svn_fs_t *fs, void *baton, apr_pool_t *pool)
+{
+  const char *txn_id = *(const char **)baton;
+
+  free_shared_txn(fs, txn_id);
+  return SVN_NO_ERROR;
+}
+
+/* Purge the shared data for transaction TXN_ID in filesystem FS.
+   Perform all allocations in POOL. */
+static svn_error_t *
+purge_shared_txn(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
+{
+  return with_txnlist_lock(fs, purge_shared_txn_body, &txn_id, pool);
+}
+
+
 
 /* Fetch the current offset of FILE into *OFFSET_P. */
 static svn_error_t *
@@ -793,6 +1143,10 @@ svn_fs_fs__get_node_revision(node_revision_t **noderev_p,
       noderev->copyfrom_path = apr_pstrdup(pool, last_str);
     }
 
+  /* Get whether this is a fresh txn root. */
+  value = apr_hash_get(headers, HEADER_FRESHTXNRT, APR_HASH_KEY_STRING);
+  noderev->is_fresh_txn_root = (value != NULL);
+
   *noderev_p = noderev;
   
   return SVN_NO_ERROR;
@@ -872,6 +1226,9 @@ write_noderev_txn(apr_file_t *file,
                               noderev->copyroot_rev,
                               noderev->copyroot_path));
 
+  if (noderev->is_fresh_txn_root)
+    SVN_ERR(svn_stream_printf(outfile, pool, HEADER_FRESHTXNRT ": y\n"));
+
   SVN_ERR(svn_stream_printf(outfile, pool, "\n"));
 
   return SVN_NO_ERROR;
@@ -881,10 +1238,13 @@ svn_error_t *
 svn_fs_fs__put_node_revision(svn_fs_t *fs,
                              const svn_fs_id_t *id,
                              node_revision_t *noderev,
+                             svn_boolean_t fresh_txn_root,
                              apr_pool_t *pool)
 {
   apr_file_t *noderev_file;
   const char *txn_id = svn_fs_fs__id_txn_id(id);
+
+  noderev->is_fresh_txn_root = fresh_txn_root;
 
   if (! txn_id)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -2430,7 +2790,8 @@ svn_fs_fs__paths_changed(apr_hash_t **changed_paths_p,
 }
 
 /* Copy a revision node-rev SRC into the current transaction TXN_ID in
-   the filesystem FS.  Allocations are from POOL.  */
+   the filesystem FS.  This is only used to create the root of a transaction.
+   Allocations are from POOL.  */
 static svn_error_t *
 create_new_txn_noderev_from_rev(svn_fs_t *fs,
                                 const char *txn_id,
@@ -2457,7 +2818,7 @@ create_new_txn_noderev_from_rev(svn_fs_t *fs,
   copy_id = svn_fs_fs__id_copy_id(noderev->id);
   noderev->id = svn_fs_fs__id_txn_create(node_id, copy_id, txn_id, pool);
 
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, pool));
+  SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, TRUE, pool));
 
   return SVN_NO_ERROR;
 }
@@ -2523,7 +2884,6 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
   txn->base_rev = rev;
 
   txn->vtable = &txn_vtable;
-  txn->fsap_data = NULL;
   *txn_p = txn;
   
   /* Create a new root node for this transaction. */
@@ -2532,6 +2892,10 @@ svn_fs_fs__create_txn(svn_fs_txn_t **txn_p,
 
   /* Create an empty rev file. */
   SVN_ERR(svn_io_file_create(path_txn_proto_rev(fs, txn->id, pool), "",
+                             pool));
+
+  /* Create an empty rev-lock file. */
+  SVN_ERR(svn_io_file_create(path_txn_proto_rev_lock(fs, txn->id, pool), "",
                              pool));
 
   /* Create an empty changes file. */
@@ -2737,7 +3101,7 @@ svn_fs_fs__create_node(const svn_fs_id_t **id_p,
 
   noderev->id = id;
 
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, pool));
+  SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, FALSE, pool));
 
   *id_p = id;
 
@@ -2749,8 +3113,10 @@ svn_fs_fs__purge_txn(svn_fs_t *fs,
                      const char *txn_id,
                      apr_pool_t *pool)
 {
+  /* Remove the shared transaction object associated with this transaction. */
+  SVN_ERR(purge_shared_txn(fs, txn_id, pool));
   /* Remove the directory associated with this transaction. */
-  return svn_io_remove_dir(path_txn_dir(fs, txn_id, pool), pool);
+  return svn_io_remove_dir2(path_txn_dir(fs, txn_id, pool), FALSE, pool);
 }
 
 
@@ -2854,7 +3220,7 @@ svn_fs_fs__set_entry(svn_fs_t *fs,
       rep->txn_id = txn_id;
       parent_noderev->data_rep = rep;
       SVN_ERR(svn_fs_fs__put_node_revision(fs, parent_noderev->id,
-                                           parent_noderev, pool));
+                                           parent_noderev, FALSE, pool));
     }
   else
     {
@@ -3030,6 +3396,9 @@ struct rep_write_baton
 
   /* Actual output file. */
   apr_file_t *file;
+  /* Lock 'cookie' used to unlock the output file once we've finished
+     writing to it. */
+  void *lockcookie;
 
   struct apr_md5_ctx_t md5_context;
 
@@ -3117,10 +3486,9 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 {
   struct rep_write_baton *b;
   apr_file_t *file;
-  apr_off_t offset;
   representation_t *base_rep;
   svn_stream_t *source;
-  const char *txn_id, *header;
+  const char *header;
   svn_txdelta_window_handler_t wh;
   void *whb;
   fs_fs_data_t *ffd = fs->fsap_data;
@@ -3136,19 +3504,9 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
   b->noderev = noderev;
 
   /* Open the prototype rev file and seek to its end. */
-  txn_id = svn_fs_fs__id_txn_id(noderev->id);
-  SVN_ERR(svn_io_file_open(&file, path_txn_proto_rev(fs, txn_id, b->pool),
-                           APR_WRITE | APR_BUFFERED,
-                           APR_OS_DEFAULT, b->pool));
-  /* You might expect that we could dispense with this seek and achieve
-     the same thing by opening the file using APR_APPEND.  Unfortunately,
-     APR's buffered file implementation unconditionally places its initial
-     file pointer at the start of the file (even for files opened with
-     APR_APPEND), so we'd always need this seek to reconcile the APR
-     file pointer to the OS file pointer (since we need to be able to
-     read the current file position later). */
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(file, APR_END, &offset, 0));
+  SVN_ERR(get_writable_proto_rev(&file, &b->lockcookie,
+                                 fs, svn_fs_fs__id_txn_id(noderev->id),
+                                 b->pool));
 
   b->file = file;
   b->rep_stream = svn_stream_from_aprfile(file, b->pool);
@@ -3226,9 +3584,11 @@ rep_write_contents_close(void *baton)
   b->noderev->data_rep = rep;
 
   /* Write out the new node-rev information. */
-  SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev,
+  SVN_ERR(svn_fs_fs__put_node_revision(b->fs, b->noderev->id, b->noderev, FALSE,
                                        b->pool));
 
+  SVN_ERR(svn_io_file_close(b->file, b->pool));
+  SVN_ERR(unlock_proto_rev(b->fs, rep->txn_id, b->lockcookie, b->pool));
   svn_pool_destroy(b->pool);
 
   return SVN_NO_ERROR;
@@ -3298,7 +3658,7 @@ svn_fs_fs__create_successor(const svn_fs_id_t **new_id_p,
       new_noderev->copyroot_rev = svn_fs_fs__id_rev(new_noderev->id);
     }
 
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, new_noderev->id, new_noderev,
+  SVN_ERR(svn_fs_fs__put_node_revision(fs, new_noderev->id, new_noderev, FALSE,
                                        pool));
 
   *new_id_p = id;
@@ -3329,7 +3689,7 @@ svn_fs_fs__set_proplist(svn_fs_t *fs,
     {
       noderev->prop_rep = apr_pcalloc(pool, sizeof(*noderev->prop_rep));
       noderev->prop_rep->txn_id = svn_fs_fs__id_txn_id(noderev->id);
-      SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, pool));
+      SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, FALSE, pool));
     }
   
   return SVN_NO_ERROR;
@@ -3568,7 +3928,7 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   /* Write out our new node-revision. */
   SVN_ERR(write_noderev_txn(file, noderev, pool));
 
-  SVN_ERR(svn_fs_fs__put_node_revision(fs, id, noderev, pool));
+  SVN_ERR(svn_fs_fs__put_node_revision(fs, id, noderev, FALSE, pool));
 
   /* Return our ID that references the revision file. */
   *new_id_p = noderev->id;
@@ -3607,11 +3967,10 @@ write_final_changed_path_info(apr_off_t *offset_p,
       svn_fs_path_change_t *change;
       const void *key;
       void *val;
-      apr_ssize_t keylen;
 
       svn_pool_clear(iterpool);
 
-      apr_hash_this(hi, &key, &keylen, &val);
+      apr_hash_this(hi, &key, NULL, &val);
       change = val;
       
       id = change->node_rev_id;
@@ -3719,34 +4078,18 @@ svn_fs_fs__move_into_place(const char *old_filename,
   return err;
 }
 
-/* Update the current file to hold the correct next node and copy_ids
-   from transaction TXN_ID in filesystem FS.  The current revision is
-   set to REV.  Perform temporary allocations in POOL. */
+/* Atomically update the current file to hold the specifed REV, NEXT_NODE_ID,
+   and NEXT_COPY_ID.  Perform temporary allocations in POOL. */
 static svn_error_t *
-write_final_current(svn_fs_t *fs,
-                    const char *txn_id,
-                    svn_revnum_t rev,
-                    const char *start_node_id,
-                    const char *start_copy_id,
-                    apr_pool_t *pool)
+write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
+              const char *next_copy_id, apr_pool_t *pool)
 {
-  const char *txn_node_id, *txn_copy_id;
-  char new_node_id[MAX_KEY_SIZE + 2];
-  char new_copy_id[MAX_KEY_SIZE + 2];
   char *buf;
   const char *tmp_name, *name;
   apr_file_t *file;
-  
-  /* To find the next available ids, we add the id that used to be in
-     the current file, to the next ids from the transaction file. */
-  SVN_ERR(read_next_ids(&txn_node_id, &txn_copy_id, fs, txn_id, pool));
-
-  svn_fs_fs__add_keys(start_node_id, txn_node_id, new_node_id);
-  svn_fs_fs__add_keys(start_copy_id, txn_copy_id, new_copy_id);
 
   /* Now we can just write out this line. */
-  buf = apr_psprintf(pool, "%ld %s %s\n", rev, new_node_id,
-                     new_copy_id);
+  buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
   name = path_current(fs, pool);
   SVN_ERR(svn_io_open_unique_file2(&file, &tmp_name, name, ".tmp",
@@ -3761,6 +4104,31 @@ write_final_current(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__move_into_place(tmp_name, name, name, pool));
 
   return SVN_NO_ERROR;
+}
+
+/* Update the current file to hold the correct next node and copy_ids
+   from transaction TXN_ID in filesystem FS.  The current revision is
+   set to REV.  Perform temporary allocations in POOL. */
+static svn_error_t *
+write_final_current(svn_fs_t *fs,
+                    const char *txn_id,
+                    svn_revnum_t rev,
+                    const char *start_node_id,
+                    const char *start_copy_id,
+                    apr_pool_t *pool)
+{
+  const char *txn_node_id, *txn_copy_id;
+  char new_node_id[MAX_KEY_SIZE + 2];
+  char new_copy_id[MAX_KEY_SIZE + 2];
+  
+  /* To find the next available ids, we add the id that used to be in
+     the current file, to the next ids from the transaction file. */
+  SVN_ERR(read_next_ids(&txn_node_id, &txn_copy_id, fs, txn_id, pool));
+
+  svn_fs_fs__add_keys(start_node_id, txn_node_id, new_node_id);
+  svn_fs_fs__add_keys(start_copy_id, txn_copy_id, new_copy_id);
+
+  return write_current(fs, rev, new_node_id, new_copy_id, pool);
 }
 
 /* Get a write lock in FS, creating it in POOL. */
@@ -3797,11 +4165,12 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
 
 #if APR_HAS_THREADS
   fs_fs_data_t *ffd = fs->fsap_data;
+  fs_fs_shared_data_t *ffsd = ffd->shared;
   apr_status_t status;
 
   /* POSIX fcntl locks are per-process, so we need to serialize locks
      within the process. */
-  status = apr_thread_mutex_lock(ffd->lock);
+  status = apr_thread_mutex_lock(ffsd->fs_write_lock);
   if (status)
     return svn_error_wrap_apr(status, _("Can't grab FSFS repository mutex"));
 #endif
@@ -3814,7 +4183,7 @@ svn_fs_fs__with_write_lock(svn_fs_t *fs,
   svn_pool_destroy(subpool);
 
 #if APR_HAS_THREADS
-  status = apr_thread_mutex_unlock(ffd->lock);
+  status = apr_thread_mutex_unlock(ffsd->fs_write_lock);
   if (status && !err)
     return svn_error_wrap_apr(status,
                               _("Can't ungrab FSFS repository mutex"));
@@ -3922,7 +4291,8 @@ commit_body(void *baton, apr_pool_t *pool)
   const char *start_node_id, *start_copy_id;
   svn_revnum_t old_rev, new_rev;
   apr_file_t *proto_file;
-  apr_off_t changed_path_offset, offset;
+  void *proto_file_lockcookie;
+  apr_off_t changed_path_offset;
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
@@ -3950,15 +4320,8 @@ commit_body(void *baton, apr_pool_t *pool)
   new_rev = old_rev + 1;
 
   /* Get a write handle on the proto revision file. */
-  proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
-  SVN_ERR(svn_io_file_open(&proto_file, proto_filename,
-                           APR_WRITE | APR_BUFFERED,
-                           APR_OS_DEFAULT, pool));
-  /* Seek to the end of the proto revision file (we can't use
-     APR_APPEND to achieve the same thing; see the detailed comment
-     in rep_write_get_baton() above). */
-  offset = 0;
-  SVN_ERR(svn_io_file_seek(proto_file, APR_END, &offset, pool));
+  SVN_ERR(get_writable_proto_rev(&proto_file, &proto_file_lockcookie,
+                                 cb->fs, cb->txn->id, pool));
 
   /* Write out all the node-revisions and directory contents. */
   root_id = svn_fs_fs__id_txn_create("0", "0", cb->txn->id, pool);
@@ -3979,6 +4342,9 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_io_file_flush_to_disk(proto_file, pool));
   
   SVN_ERR(svn_io_file_close(proto_file, pool));
+  /* We don't unlock the prototype revision file immediately to avoid a
+     race with another caller writing to the prototype revision file
+     before we commit it. */
 
   /* Remove any temporary txn props representing 'flags'. */
   SVN_ERR(svn_fs_fs__txn_proplist(&txnprops, cb->txn, pool));
@@ -4000,8 +4366,15 @@ commit_body(void *baton, apr_pool_t *pool)
   /* Move the finished rev file into place. */
   old_rev_filename = svn_fs_fs__path_rev(cb->fs, old_rev, pool);
   rev_filename = svn_fs_fs__path_rev(cb->fs, new_rev, pool);
+  proto_filename = path_txn_proto_rev(cb->fs, cb->txn->id, pool);
   SVN_ERR(svn_fs_fs__move_into_place(proto_filename, rev_filename, 
                                      old_rev_filename, pool));
+
+  /* Now that we've moved the prototype revision file out of the way,
+     we can unlock it (since further attempts to write to the file
+     will fail as it no longer exists).  We must do this so that we can
+     remove the transaction directory later. */
+  SVN_ERR(unlock_proto_rev(cb->fs, cb->txn->id, proto_file_lockcookie, pool));
 
   /* Update commit time to ensure that svn:date revprops remain ordered. */
   date.data = svn_time_to_cstring(apr_time_now(), pool);
@@ -4131,6 +4504,332 @@ svn_fs_fs__create(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Part of the recovery procedure.  Return the largest revision *REV in
+   filesystem FS.  Use POOL for temporary allocation. */
+static svn_error_t *
+recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
+{
+  /* Discovering the largest revision in the filesystem would be an
+     expensive operation if we did a readdir() or searched linearly,
+     so we'll do a form of binary search.  left is a revision that we
+     know exists, right a revision that we know does not exist. */
+  apr_pool_t *iterpool;
+  svn_revnum_t left, right = 1;
+
+  iterpool = svn_pool_create(pool);
+  /* Keep doubling right, until we find a revision that doesn't exist. */
+  while (1)
+    {
+      svn_node_kind_t kind;
+      SVN_ERR(svn_io_check_path(svn_fs_fs__path_rev(fs, right, iterpool),
+                                &kind, iterpool));
+      svn_pool_clear(iterpool);
+
+      if (kind == svn_node_none)
+        break;
+
+      right <<= 1;
+    }
+
+  left = right >> 1;
+
+  /* We know that left exists and right doesn't.  Do a normal bsearch to find
+     the last revision. */
+  while (left + 1 < right)
+    {
+      svn_revnum_t probe = left + ((right - left) / 2);
+      svn_node_kind_t kind;
+
+      SVN_ERR(svn_io_check_path(svn_fs_fs__path_rev(fs, probe, iterpool),
+                                &kind, iterpool));
+      svn_pool_clear(iterpool);
+
+      if (kind == svn_node_none)
+        right = probe;
+      else
+        left = probe;
+    }
+
+  svn_pool_destroy(iterpool);
+
+  /* left is now the largest revision that exists. */
+  *rev = left;
+  return SVN_NO_ERROR;
+}
+
+/* A baton for reading a fixed amount from an open file.  For
+   recover_find_max_ids() below. */
+struct recover_read_from_file_baton
+{
+  apr_file_t *file;
+  apr_pool_t *pool;
+  apr_size_t remaining;
+};
+
+/* A stream read handler used by recover_find_max_ids() below.
+   Read and return at most BATON->REMAINING bytes from the stream,
+   returning nothing after that to indicate EOF. */
+static svn_error_t *
+read_handler_recover(void *baton, char *buffer, apr_size_t *len)
+{
+  struct recover_read_from_file_baton *b = baton;
+  apr_size_t bytes_to_read = *len;
+
+  if (b->remaining == 0)
+    {
+      /* Return a successful read of zero bytes to signal EOF. */
+      *len = 0;
+      return SVN_NO_ERROR;
+    }
+
+  if (bytes_to_read > b->remaining)
+    bytes_to_read = b->remaining;
+  b->remaining -= bytes_to_read;
+
+  return svn_io_file_read_full(b->file, buffer, bytes_to_read, len, b->pool);
+}
+
+/* Part of the recovery procedure.  Read the directory noderev at offset
+   OFFSET of file REV_FILE (the revision file of revision REV of
+   filesystem FS), and set MAX_NODE_ID and MAX_COPY_ID to be the node-id
+   and copy-id of that node, if greater than the current value stored
+   in either.  Recurse into any child directories that were modified in
+   this revision.
+
+   MAX_NODE_ID and MAX_COPY_ID must be arrays of at least MAX_KEY_SIZE.
+
+   Perform temporary allocation in POOL. */
+static svn_error_t *
+recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
+                     apr_file_t *rev_file, apr_off_t offset,
+                     char *max_node_id, char *max_copy_id,
+                     apr_pool_t *pool)
+{
+  apr_hash_t *headers;
+  char *value;
+  node_revision_t noderev;
+  struct rep_args *ra;
+  struct recover_read_from_file_baton baton;
+  svn_stream_t *stream;
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(read_header_block(&headers, rev_file, pool));
+
+  /* We're going to populate a skeletal noderev - just the id and data_rep. */
+  value = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
+  noderev.id = svn_fs_fs__id_parse(value, strlen(value), pool);
+
+  /* Check that this is a directory.  It should be. */
+  value = apr_hash_get(headers, HEADER_TYPE, APR_HASH_KEY_STRING);
+  if (value == NULL || strcmp(value, KIND_DIR) != 0)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Recovery encountered a non-directory node"));
+
+  /* Get the data location.  No data location indicates an empty directory. */
+  value = apr_hash_get(headers, HEADER_TEXT, APR_HASH_KEY_STRING);
+  if (!value)
+    return SVN_NO_ERROR;
+  SVN_ERR(read_rep_offsets(&noderev.data_rep, value, NULL, FALSE, pool));
+
+  /* If the directory's data representation wasn't changed in this revision,
+     we've already scanned the directory's contents for noderevs, so we don't
+     need to again.  This will occur if a property is changed on a directory
+     without changing the directory's contents. */
+  if (noderev.data_rep->revision != rev)
+    return SVN_NO_ERROR;
+
+  /* We could use get_dir_contents(), but this is much cheaper.  It does
+     rely on directory entries being stored as PLAIN reps, though. */
+  offset = noderev.data_rep->offset;
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(read_rep_line(&ra, rev_file, pool));
+  if (ra->is_delta)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Recovery encountered a deltified directory "
+                              "representation"));
+
+  /* Now create a stream that's allowed to read only as much data as is
+     stored in the representation. */
+  baton.file = rev_file;
+  baton.pool = pool;
+  baton.remaining = noderev.data_rep->expanded_size;
+  stream = svn_stream_create(&baton, pool);
+  svn_stream_set_read(stream, read_handler_recover);
+
+  /* Now read the entries from that stream. */
+  entries = apr_hash_make(pool);
+  SVN_ERR(svn_hash_read2(entries, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Now check each of the entries in our directory to find new node and
+     copy ids, and recurse into new subdirectories. */
+  iterpool = svn_pool_create(pool);
+  for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      char *str_val;
+      char *str, *last_str;
+      svn_node_kind_t kind;
+      svn_fs_id_t *id;
+      const char *node_id, *copy_id;
+      apr_off_t child_dir_offset;
+
+      svn_pool_clear(iterpool);
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      str_val = apr_pstrdup(iterpool, *((char **)val));
+
+      str = apr_strtok(str_val, " ", &last_str);
+      if (str == NULL)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Directory entry corrupt"));
+
+      if (strcmp(str, KIND_FILE) == 0)
+        kind = svn_node_file;
+      else if (strcmp(str, KIND_DIR) == 0)
+        kind = svn_node_dir;
+      else
+        {
+          return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                  _("Directory entry corrupt"));
+        }
+
+      str = apr_strtok(NULL, " ", &last_str);
+      if (str == NULL)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Directory entry corrupt"));
+
+      id = svn_fs_fs__id_parse(str, strlen(str), iterpool);
+
+      if (svn_fs_fs__id_rev(id) != rev)
+        {
+          /* If the node wasn't modified in this revision, we've already
+             checked the node and copy id. */
+          continue;
+        }
+
+      node_id = svn_fs_fs__id_node_id(id);
+      copy_id = svn_fs_fs__id_copy_id(id);
+
+      if (svn_fs_fs__key_compare(node_id, max_node_id) > 0)
+        strcpy(max_node_id, node_id);
+      if (svn_fs_fs__key_compare(copy_id, max_copy_id) > 0)
+        strcpy(max_copy_id, copy_id);
+
+      if (kind == svn_node_file)
+        continue;
+
+      child_dir_offset = svn_fs_fs__id_offset(id);
+      SVN_ERR(recover_find_max_ids(fs, rev, rev_file, child_dir_offset,
+                                   max_node_id, max_copy_id, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Baton used for recover_body below. */
+struct recover_baton {
+  svn_fs_t *fs;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+};
+
+/* The work-horse for svn_fs_fs__recover, called with the FS
+   write lock.  This implements the svn_fs_fs__with_write_lock()
+   'body' callback type.  BATON is a 'struct recover_baton *'. */
+static svn_error_t *
+recover_body(void *baton, apr_pool_t *pool)
+{
+  struct recover_baton *b = baton;
+  svn_fs_t *fs = b->fs;
+  svn_revnum_t rev, max_rev;
+  apr_pool_t *iterpool;
+  char max_node_id[MAX_KEY_SIZE] = "0", max_copy_id[MAX_KEY_SIZE] = "0";
+  char next_node_id[MAX_KEY_SIZE], next_copy_id[MAX_KEY_SIZE];
+  apr_size_t len;
+
+  /* First, we need to know the largest revision in the filesystem. */
+  SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
+
+  /* Next we need to find the maximum node id and copy id in use across the
+     filesystem.  Unfortunately, the only way we can get this information
+     is to scan all the noderevs of all the revisions and keep track as
+     we go along. */
+  iterpool = svn_pool_create(pool);
+  for (rev = 0; rev <= max_rev; rev++)
+    {
+      apr_file_t *rev_file;
+      apr_off_t root_offset;
+
+      svn_pool_clear(iterpool);
+
+      if (b->cancel_func)
+        SVN_ERR(b->cancel_func(b->cancel_baton));
+
+      SVN_ERR(svn_io_file_open(&rev_file,
+                               svn_fs_fs__path_rev(fs, rev, iterpool),
+                               APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                               iterpool));
+      SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file, iterpool));
+      SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
+                                   max_node_id, max_copy_id, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  /* Now that we finally have the maximum revision, node-id and copy-id, we
+     can bump the two ids to get the next of each, and store them all in a
+     new current file. */
+  len = strlen(max_node_id);
+  svn_fs_fs__next_key(max_node_id, &len, next_node_id);
+  len = strlen(max_copy_id);
+  svn_fs_fs__next_key(max_copy_id, &len, next_copy_id);
+
+  SVN_ERR(write_current(fs, max_rev, next_node_id, next_copy_id, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* This implements the fs_library_vtable_t.recover() API. */
+svn_error_t *
+svn_fs_fs__recover(const char *path,
+                   svn_cancel_func_t cancel_func, void *cancel_baton,
+                   apr_pool_t *pool)
+{
+  struct recover_baton b;
+  svn_fs_t *fs;
+  /* Recovery for FSFS is currently limited to recreating the current
+     file from the latest revision. */
+
+  /* Things are much easier if we can just use a regular fs pointer.
+     The only thing we have to watch out for is that the current file
+     might not exist.  So we'll try to create it here unconditionally,
+     and just ignore any errors that might indicate that it's already
+     present. (We'll need it to exist later anyway as a source for the
+     new file's permissions). */
+
+  /* Create a dummy fs pointer first to create current.  This will fail
+     if it already exists, but we don't care about that. */
+  fs = svn_fs_new(NULL, pool);
+  fs->path = (char *)path;
+  svn_error_clear(svn_io_file_create(path_current(fs, pool), "0 1 1\n", pool));
+
+  /* We should now be able to reopen the filesystem properly. */
+  SVN_ERR(svn_fs_open(&fs, path, NULL, pool));
+
+  /* We have no way to take out an exclusive lock in FSFS, so we're
+     restricted as to the types of recovery we can do.  Luckily,
+     we just want to recreate the current file, and we can do that just
+     by blocking other writers. */
+  b.fs = fs;
+  b.cancel_func = cancel_func;
+  b.cancel_baton = cancel_baton;
+  return svn_fs_fs__with_write_lock(fs, recover_body, &b, pool);
+}
+
 svn_error_t *
 svn_fs_fs__get_uuid(svn_fs_t *fs,
                     const char **uuid_p,
@@ -4244,7 +4943,6 @@ svn_fs_fs__open_txn(svn_fs_txn_t **txn_p,
   txn->base_rev = svn_fs_fs__id_rev(local_txn->base_id);
 
   txn->vtable = &txn_vtable;
-  txn->fsap_data = NULL;
   *txn_p = txn;
 
   return SVN_NO_ERROR;
@@ -4281,4 +4979,148 @@ svn_fs_fs__delete_node_revision(svn_fs_t *fs,
     SVN_ERR(svn_io_remove_file(path_txn_node_children(fs, id, pool), pool));
 
   return svn_io_remove_file(path_txn_node_rev(fs, id, pool), pool);
+}
+
+
+
+/*** Revisions ***/
+
+svn_error_t *
+svn_fs_fs__revision_prop(svn_string_t **value_p,
+                         svn_fs_t *fs,
+                         svn_revnum_t rev,
+                         const char *propname,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *table;
+
+  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs_fs__revision_proplist(&table, fs, rev, pool));
+
+  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Baton used for change_rev_prop_body below. */
+struct change_rev_prop_baton {
+  svn_fs_t *fs;
+  svn_revnum_t rev;
+  const char *name;
+  const svn_string_t *value;
+};
+
+/* The work-horse for svn_fs_fs__change_rev_prop, called with the FS
+   write lock.  This implements the svn_fs_fs__with_write_lock()
+   'body' callback type.  BATON is a 'struct change_rev_prop_baton *'. */
+
+static svn_error_t *
+change_rev_prop_body(void *baton, apr_pool_t *pool)
+{
+  struct change_rev_prop_baton *cb = baton;
+  apr_hash_t *table;
+
+  SVN_ERR(svn_fs_fs__revision_proplist(&table, cb->fs, cb->rev, pool));
+
+  apr_hash_set(table, cb->name, APR_HASH_KEY_STRING, cb->value);
+
+  SVN_ERR(svn_fs_fs__set_revision_proplist(cb->fs, cb->rev, table, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__change_rev_prop(svn_fs_t *fs,
+                           svn_revnum_t rev,
+                           const char *name,
+                           const svn_string_t *value,
+                           apr_pool_t *pool)
+{
+  struct change_rev_prop_baton cb;
+
+  SVN_ERR(svn_fs_fs__check_fs(fs));
+
+  cb.fs = fs;
+  cb.rev = rev;
+  cb.name = name;
+  cb.value = value;
+
+  return svn_fs_fs__with_write_lock(fs, change_rev_prop_body, &cb, pool);
+}
+
+
+
+/*** Transactions ***/
+
+svn_error_t *
+svn_fs_fs__get_txn_ids(const svn_fs_id_t **root_id_p,
+                       const svn_fs_id_t **base_root_id_p,
+                       svn_fs_t *fs,
+                       const char *txn_name,
+                       apr_pool_t *pool)
+{
+  transaction_t *txn;
+  SVN_ERR(svn_fs_fs__get_txn(&txn, fs, txn_name, pool));
+  *root_id_p = txn->root_id;
+  *base_root_id_p = txn->base_id;
+  return SVN_NO_ERROR;
+}
+
+
+/* Generic transaction operations.  */
+
+svn_error_t *
+svn_fs_fs__txn_prop(svn_string_t **value_p,
+                    svn_fs_txn_t *txn,
+                    const char *propname,
+                    apr_pool_t *pool)
+{
+  apr_hash_t *table;
+  svn_fs_t *fs = txn->fs;
+
+  SVN_ERR(svn_fs_fs__check_fs(fs));
+  SVN_ERR(svn_fs_fs__txn_proplist(&table, txn, pool));
+
+  *value_p = apr_hash_get(table, propname, APR_HASH_KEY_STRING);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__begin_txn(svn_fs_txn_t **txn_p,
+                     svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     apr_uint32_t flags,
+                     apr_pool_t *pool)
+{
+  svn_string_t date;
+
+  SVN_ERR(svn_fs_fs__check_fs(fs));
+
+  SVN_ERR(svn_fs_fs__create_txn(txn_p, fs, rev, pool));
+
+  /* Put a datestamp on the newly created txn, so we always know
+     exactly how old it is.  (This will help sysadmins identify
+     long-abandoned txns that may need to be manually removed.)  When
+     a txn is promoted to a revision, this property will be
+     automatically overwritten with a revision datestamp. */
+  date.data = svn_time_to_cstring(apr_time_now(), pool);
+  date.len = strlen(date.data);
+  SVN_ERR(svn_fs_fs__change_txn_prop(*txn_p, SVN_PROP_REVISION_DATE, 
+                                     &date, pool));
+  
+  /* Set temporary txn props that represent the requested 'flags'
+     behaviors. */
+  if (flags & SVN_FS_TXN_CHECK_OOD)
+    SVN_ERR(svn_fs_fs__change_txn_prop 
+            (*txn_p, SVN_FS_PROP_TXN_CHECK_OOD,
+             svn_string_create("true", pool), pool));
+  
+  if (flags & SVN_FS_TXN_CHECK_LOCKS)
+    SVN_ERR(svn_fs_fs__change_txn_prop 
+            (*txn_p, SVN_FS_PROP_TXN_CHECK_LOCKS,
+             svn_string_create("true", pool), pool));
+             
+  return SVN_NO_ERROR;
 }

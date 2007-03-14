@@ -257,11 +257,13 @@ get_readability(int *can_read,
 
 
 svn_error_t *
-svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
+svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
                               svn_revnum_t rev,
                               const char *author,
                               const char *name,
                               const svn_string_t *new_value,
+                              svn_boolean_t use_pre_revprop_change_hook,
+                              svn_boolean_t use_post_revprop_change_hook,
                               svn_repos_authz_func_t authz_read_func,
                               void *authz_read_baton,
                               apr_pool_t *pool)
@@ -283,11 +285,16 @@ svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
         action = 'A';
       else
         action = 'M';
-      SVN_ERR(svn_repos__hooks_pre_revprop_change(repos, rev, author, name, 
-                                                  new_value, action, pool));
+
+      if (use_pre_revprop_change_hook)
+        SVN_ERR(svn_repos__hooks_pre_revprop_change(repos, rev, author, name, 
+                                                    new_value, action, pool));
+
       SVN_ERR(svn_fs_change_rev_prop(repos->fs, rev, name, new_value, pool));
-      SVN_ERR(svn_repos__hooks_post_revprop_change(repos, rev, author,  name,
-                                                   old_value, action, pool));
+
+      if (use_post_revprop_change_hook)
+        SVN_ERR(svn_repos__hooks_post_revprop_change(repos, rev, author,  name,
+                                                     old_value, action, pool));
     }
   else  /* rev is either unreadable or only partially readable */
     {
@@ -297,6 +304,22 @@ svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
     }
 
   return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_repos_fs_change_rev_prop2(svn_repos_t *repos,
+                              svn_revnum_t rev,
+                              const char *author,
+                              const char *name,
+                              const svn_string_t *new_value,
+                              svn_repos_authz_func_t authz_read_func,
+                              void *authz_read_baton,
+                              apr_pool_t *pool)
+{
+  return svn_repos_fs_change_rev_prop3(repos, rev, author, name, new_value,
+                                       TRUE, TRUE, authz_read_func,
+                                       authz_read_baton, pool);
 }
 
 

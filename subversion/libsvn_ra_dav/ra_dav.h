@@ -2,7 +2,7 @@
  * ra_dav.h :  private declarations for the RA/DAV module
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -44,9 +44,8 @@ extern "C" {
 
 /* Rename these types and constants to abstract from Neon */
 
-#define SVN_RA_DAV__XML_VALID   (0)
-#define SVN_RA_DAV__XML_INVALID (-1)
-#define SVN_RA_DAV__XML_DECLINE (-2)
+#define SVN_RA_DAV__XML_DECLINE NE_XML_DECLINE
+#define SVN_RA_DAV__XML_INVALID NE_XML_ABORT
 
 #define SVN_RA_DAV__XML_CDATA   (1<<1)
 #define SVN_RA_DAV__XML_COLLECT ((1<<2) | SVN_RA_DAV__XML_CDATA)
@@ -75,91 +74,18 @@ typedef struct {
 } svn_ra_dav__xml_elm_t;
 
 
-/** (Neon 0.23) Callback to validate a new child element.
- *
- * @a parent and @a child are element ids found in the array of
- * elements, @a userdata is a user baton. Returns:
- *
- * SVN_RA_DAV__XML_VALID   - this is a valid element processed by this
- *                           handler;
- * SVN_RA_DAV__XML_INVALID - this is not a valid element, parsing should
- *                           stop;
- * SVN_RA_DAV__XML_DECLINE - this handler doesn't know about this element,
- *                           someone else may handle it.
- * 
- * (See @a shim_xml_push_handler in util.c for more information.) */
-typedef int svn_ra_dav__xml_validate_cb(void *userdata,
-                                        svn_ra_dav__xml_elmid parent,
-                                        svn_ra_dav__xml_elmid child);
-
-/** (Neon 0.23) Callback to start parsing a new child element.
- *
- * @a userdata is a user baton. @elm is a member of elements array,
- * and @a atts is an array of name-value XML attributes.
- * See @c svn_ra_dav__xml_validate_cb for return values. 
- *
- * (See @a shim_xml_push_handler in util.c for more information.) */
-typedef int svn_ra_dav__xml_startelm_cb(void *userdata,
-                                        const svn_ra_dav__xml_elm_t *elm,
-                                        const char **atts);
-
-/** (Neon 0.23) Callback to finish parsing a child element.
- *
- * Callback for @c svn_ra_dav__xml_push_handler. @a userdata is a user
- * baton. @elm is a member of elements array, and @a cdata is the contents
- * of the element.
- * See @c svn_ra_dav__xml_validate_cb for return values.
- *
- * (See @a shim_xml_push_handler in util.c for more information.) */
-typedef int svn_ra_dav__xml_endelm_cb(void *userdata,
-                                      const svn_ra_dav__xml_elm_t *elm,
-                                      const char *cdata);
-
-
 
-
-
-/* Context for neon request hooks; shared by the neon callbacks in
-   session.c.  */
-struct lock_request_baton
-{
-  /* The method neon is about to execute. */
-  const char *method;
-
-  /* The current working revision of item being locked. */
-  svn_revnum_t current_rev;
-
-  /* Whether client is "forcing" a lock or unlock. */
-  svn_boolean_t force;
-
-  /* The creation-date returned for newly created lock. */
-  apr_time_t creation_date;
-
-  /* The person who created the lock. */
-  const char *lock_owner;
-
-  /* A parser for handling <D:error> responses from mod_dav_svn. */
-  ne_xml_parser *error_parser;
-
-  /* If <D:error> is returned, here's where the parsed result goes. */
-  svn_error_t *err;
-
-  /* The neon request being executed */
-  ne_request *request;
-
-  /* A place for allocating fields in this structure. */
-  apr_pool_t *pool;
-};
-
-
 typedef struct {
   apr_pool_t *pool;
   svn_stringbuf_t *url;                 /* original, unparsed session url */
   ne_uri root;                          /* parsed version of above */
   const char *repos_root;               /* URL for repository root */
 
-  ne_session *sess;                     /* HTTP session to server */
-  ne_session *sess2;
+  ne_session *ne_sess;                  /* HTTP session to server */
+  ne_session *ne_sess2;
+  svn_boolean_t main_session_busy;      /* TRUE when requests should be created
+                                           and issued on sess2; currently
+                                           only used by fetch.c */
 
   const svn_ra_callbacks2_t *callbacks; /* callbacks to get auth data */
   void *callback_baton;
@@ -169,19 +95,86 @@ typedef struct {
 
   svn_boolean_t compression;            /* should we use http compression? */
   const char *uuid;                     /* repository UUID */
-
-  
-  struct lock_request_baton *lrb;       /* used by lock/unlock */
-
-  struct copy_baton *cb;                /* used by COPY */
-
 } svn_ra_dav__session_t;
 
 
-/* Id used with ne_set_session_private() and ne_get_session_private()
-   to retrieve the userdata (which is currently the RA session baton!) */
-#define SVN_RA_NE_SESSION_ID   "SVN"
+typedef struct {
+  ne_request *ne_req;                   /* neon request structure */
+  ne_session *ne_sess;                  /* neon session structure */
+  svn_ra_dav__session_t *sess;          /* DAV session structure */
+  const char *method;
+  const char *url;
+  int rv;                               /* Return value from
+                                           ne_request_dispatch() or -1 if
+                                           not dispatched yet. */
+  int code;                             /* HTTP return code, or 0 if none */
+  const char *code_desc;                /* Textual description of CODE */
+  svn_error_t *err;                     /* error encountered while executing
+                                           the request */
+  svn_boolean_t marshalled_error;       /* TRUE if the error was server-side */
+  apr_pool_t *pool;                     /* where this struct is allocated */
+  apr_pool_t *iterpool;                 /* iteration pool
+                                           for use within callbacks */
+} svn_ra_dav__request_t;
 
+
+/* Statement macro to set the request error,
+ * making sure we don't leak any in case we encounter more than one error.
+ *
+ * Sets the 'err' field of REQ to the value obtained by evaluating NEW_ERR.
+ */
+#define SVN_RA_DAV__REQ_ERR(req, new_err)        \
+   do {                                          \
+     svn_error_t *svn_err__tmp = (new_err);      \
+     if ((req)->err && !(req)->marshalled_error) \
+       svn_error_clear(svn_err__tmp);            \
+     else if (svn_err__tmp)                      \
+       {                                         \
+         svn_error_clear((req)->err);            \
+         (req)->err = svn_err__tmp;              \
+         (req)->marshalled_error = FALSE;        \
+       }                                         \
+   } while (0)
+
+
+/* Allocate an internal request structure allocated in a newly created
+ * subpool of POOL.  Create an associated neon request with the parameters
+ * given.
+ *
+ * When a request is being dispatched on the primary Neon session,
+ * the request is allocated to the secondary neon session of SESS.
+ *
+ * Register a pool cleanup for any allocated Neon resources.
+ */
+svn_ra_dav__request_t *
+svn_ra_dav__request_create(svn_ra_dav__session_t *sess,
+                           const char *method, const char *url,
+                           apr_pool_t *pool);
+
+
+/* Our version of ne_block_reader, which returns an
+ * svn_error_t * instead of an int. */
+typedef svn_error_t *(*svn_ra_dav__block_reader)(void *baton,
+                                                 const char *data,
+                                                 size_t len);
+
+/* Add a response body reader function to REQ.
+ *
+ * Use the associated session parameters to determine the use of
+ * compression.
+ *
+ * Register a pool cleanup on the pool of REQ to clean up any allocated
+ * Neon resources.
+ */
+void
+svn_ra_dav__add_response_body_reader(svn_ra_dav__request_t *req,
+                                     ne_accept_response accpt,
+                                     svn_ra_dav__block_reader reader,
+                                     void *userdata);
+
+
+/* Destroy request REQ and any associated resources */
+#define svn_ra_dav__request_destroy(req) svn_pool_destroy((req)->pool)
 
 #ifdef SVN_DEBUG
 #define DEBUG_CR "\n"
@@ -380,14 +373,14 @@ typedef struct {
 
   apr_pool_t *pool;
 
-} svn_ra_dav_resource_t;
+} svn_ra_dav__resource_t;
 
 /* ### WARNING: which_props can only identify properties which props.c
    ### knows about. see the elem_definitions[] array. */
 
 /* fetch a bunch of properties from the server. */
 svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
-                                    ne_session *sess,
+                                    svn_ra_dav__session_t *sess,
                                     const char *url,
                                     int depth,
                                     const char *label,
@@ -395,16 +388,16 @@ svn_error_t * svn_ra_dav__get_props(apr_hash_t **results,
                                     apr_pool_t *pool);
 
 /* fetch a single resource's props from the server. */
-svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav_resource_t **rsrc,
-                                             ne_session *sess,
+svn_error_t * svn_ra_dav__get_props_resource(svn_ra_dav__resource_t **rsrc,
+                                             svn_ra_dav__session_t *sess,
                                              const char *url,
                                              const char *label,
                                              const ne_propname *which_props,
                                              apr_pool_t *pool);
 
 /* fetch a single resource's starting props from the server. */
-svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
-                                             ne_session *sess,
+svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav__resource_t **rsrc,
+                                             svn_ra_dav__session_t *sess,
                                              const char *url,
                                              const char *label,
                                              apr_pool_t *pool);
@@ -418,15 +411,15 @@ svn_error_t * svn_ra_dav__get_starting_props(svn_ra_dav_resource_t **rsrc,
    trailing portion of the URL that did not exist.  If an error
    occurs, *MISSING_PATH isn't changed. */
 svn_error_t * 
-svn_ra_dav__search_for_starting_props(svn_ra_dav_resource_t **rsrc,
+svn_ra_dav__search_for_starting_props(svn_ra_dav__resource_t **rsrc,
                                       const char **missing_path,
-                                      ne_session *sess,
+                                      svn_ra_dav__session_t *sess,
                                       const char *url,
                                       apr_pool_t *pool);
 
 /* fetch a single property from a single resource */
 svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
-                                       ne_session *sess,
+                                       svn_ra_dav__session_t *sess,
                                        const char *url,
                                        const char *label,
                                        const ne_propname *propname,
@@ -434,7 +427,7 @@ svn_error_t * svn_ra_dav__get_one_prop(const svn_string_t **propval,
 
 /* Get various Baseline-related information for a given "public" URL.
 
-   Given a Neon session SESS and a URL, return whether the URL is a
+   Given a session SESS and a URL, return whether the URL is a
    directory in *IS_DIR.  IS_DIR may be NULL if this flag is unneeded.
 
    REVISION may be SVN_INVALID_REVNUM to indicate that the operation
@@ -464,14 +457,14 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
                                            svn_string_t *bc_url,
                                            svn_string_t *bc_relative,
                                            svn_revnum_t *latest_rev,
-                                           ne_session *sess,
+                                           svn_ra_dav__session_t *sess,
                                            const char *url,
                                            svn_revnum_t revision,
                                            apr_pool_t *pool);
 
 /* Fetch a baseline resource populated with specific properties.
-   
-   Given a Neon session SESS and a URL, set *BLN_RSRC to a baseline of
+
+   Given a session SESS and a URL, set *BLN_RSRC to a baseline of
    REVISION, populated with whatever properties are specified by
    WHICH_PROPS.  To fetch all properties, pass NULL for WHICH_PROPS.
 
@@ -480,8 +473,8 @@ svn_error_t *svn_ra_dav__get_baseline_info(svn_boolean_t *is_dir,
    revision of the resource specified by URL.
 */
 svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
-                                            svn_ra_dav_resource_t **bln_rsrc,
-                                            ne_session *sess,
+                                            svn_ra_dav__resource_t **bln_rsrc,
+                                            svn_ra_dav__session_t *sess,
                                             const char *url,
                                             svn_revnum_t revision,
                                             const ne_propname *which_props,
@@ -489,11 +482,11 @@ svn_error_t *svn_ra_dav__get_baseline_props(svn_string_t *bc_relative,
 
 /* Fetch the repository's unique Version-Controlled-Configuration url.
    
-   Given a Neon session SESS and a URL, set *VCC to the url of the
+   Given a session SESS and a URL, set *VCC to the url of the
    repository's version-controlled-configuration resource.
  */
 svn_error_t *svn_ra_dav__get_vcc(const char **vcc,
-                                 ne_session *sess,
+                                 svn_ra_dav__session_t *sess,
                                  const char *url,
                                  apr_pool_t *pool);
 
@@ -526,9 +519,19 @@ svn_error_t * svn_ra_dav__get_activity_collection
 /* Call ne_set_request_body_pdovider on REQ with a provider function
  * that pulls data from BODY_FILE.
  */
-svn_error_t *svn_ra_dav__set_neon_body_provider(ne_request *req,
+svn_error_t *svn_ra_dav__set_neon_body_provider(svn_ra_dav__request_t *req,
                                                 apr_file_t *body_file);
 
+
+#define SVN_RA_DAV__DEPTH_ZERO      0
+#define SVN_RA_DAV__DEPTH_ONE       1
+#define SVN_RA_DAV__DEPTH_INFINITE -1
+/* Add a 'Depth' header to a hash of headers.
+ *
+ * DEPTH is one of the above defined SVN_RA_DAV__DEPTH_* values.
+ */
+void
+svn_ra_dav__add_depth_header(apr_hash_t *extra_headers, int depth);
 
 /** Find a given element in the table of elements.
  *
@@ -542,14 +545,76 @@ svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
                             const char *name);
 
 
+
+/* Collect CDATA into a stringbuf.
+ *
+ * BATON points to a struct of which the first element is
+ * assumed to be an svn_stringbuf_t *.
+ */
+svn_error_t *
+svn_ra_dav__xml_collect_cdata(void *baton, int state,
+                              const char *cdata, size_t len);
+
+
+/* Our equivalent of ne_xml_startelm_cb, the difference being that it
+ * returns errors in a svn_error_t, and returns the element type via
+ * ELEM.  To ignore the element *ELEM should be set to
+ * SVN_RA_DAV__XML_DECLINE and SVN_NO_ERROR should be returned.
+ * *ELEM can be set to SVN_RA_DAV__XML_INVALID to indicate invalid XML
+ * (and abort the parse).
+ */
+typedef svn_error_t * (*svn_ra_dav__startelm_cb_t)(int *elem,
+                                                   void *baton,
+                                                   int parent,
+                                                   const char *nspace,
+                                                   const char *name,
+                                                   const char **atts);
+
+/* Our equivalent of ne_xml_cdata_cb, the difference being that it returns
+ * errors in a svn_error_t.
+ */
+typedef svn_error_t * (*svn_ra_dav__cdata_cb_t)(void *baton,
+                                                int state,
+                                                const char *cdata,
+                                                size_t len);
+
+/* Our equivalent of ne_xml_endelm_cb, the difference being that it returns
+ * errors in a svn_error_t.
+ */
+typedef svn_error_t * (*svn_ra_dav__endelm_cb_t)(void *baton,
+                                                 int state,
+                                                 const char *nspace,
+                                                 const char *name);
+
+
+/* Create a Neon xml parser with callbacks STARTELM_CB, ENDELM_CB and
+ * CDATA_CB.  The created parser wraps the Neon callbacks and marshals any
+ * errors returned by the callbacks through the Neon layer.  Any errors
+ * raised will be returned by svn_ra_dav__request_dispatch() unless
+ * an earlier error occurred.
+ *
+ * Register a pool cleanup on the pool of REQ to clean up any allocated
+ * Neon resources.
+ *
+ * ACCPT indicates whether the parser wants read the response body
+ * or not.  Pass NULL for ACCPT when you don't want the returned parser
+ * to be attached to REQ.
+ */
+ne_xml_parser *
+svn_ra_dav__xml_parser_create(svn_ra_dav__request_t *req,
+                              ne_accept_response accpt,
+                              svn_ra_dav__startelm_cb_t startelm_cb,
+                              svn_ra_dav__cdata_cb_t cdata_cb,
+                              svn_ra_dav__endelm_cb_t endelm_cb,
+                              void *baton);
+
 /* Send a METHOD request (e.g., "MERGE", "REPORT", "PROPFIND") to URL
  * in session SESS, and parse the response.  If BODY is non-null, it is
  * the body of the request, else use the contents of file BODY_FILE
  * as the body.
  *
- * VALIDATE_CB, STARTELM_CB, and ENDELM_CB are Neon validation, start
- * element, and end element handlers, respectively, from Neon > 0.24.
- * BATON is passed to each as userdata.
+ * STARTELM_CB, CDATA_CB and ENDELM_CB are start element, cdata and end
+ * element handlers, respectively.  BATON is passed to each as userdata.
  *
  * SET_PARSER is a callback function which, if non-NULL, is called
  * with the XML parser and BATON.  This is useful for providers of
@@ -571,47 +636,21 @@ svn_ra_dav__lookup_xml_elem(const svn_ra_dav__xml_elm_t *table,
  * Use POOL for any temporary allocation.
  */
 svn_error_t *
-svn_ra_dav__parsed_request(ne_session *sess,
+svn_ra_dav__parsed_request(svn_ra_dav__session_t *sess,
                            const char *method,
                            const char *url,
                            const char *body,
                            apr_file_t *body_file,
                            void set_parser(ne_xml_parser *parser,
                                            void *baton),
-                           ne_xml_startelm_cb *startelm_cb,
-                           ne_xml_cdata_cb *cdata_cb,
-                           ne_xml_endelm_cb *endelm_cb,
+                           svn_ra_dav__startelm_cb_t startelm_cb,
+                           svn_ra_dav__cdata_cb_t cdata_cb,
+                           svn_ra_dav__endelm_cb_t endelm_cb,
                            void *baton,
                            apr_hash_t *extra_headers,
                            int *status_code,
                            svn_boolean_t spool_response,
                            apr_pool_t *pool);
-  
-
-/* Same as svn_ra_dav__parsed_request, except:
- *
- * ELEMENTS is the set of xml elements to recognize in the response.
- *
- * The callbacks VALIDATE_CB, STARTELM_CB, and ENDELM_CB, are written
- * for the Neon <= 0.23 API.
- */
-svn_error_t *
-svn_ra_dav__parsed_request_compat(ne_session *sess,
-                                  const char *method,
-                                  const char *url,
-                                  const char *body,
-                                  apr_file_t *body_file,
-                                  void set_parser(ne_xml_parser *parser,
-                                                  void *baton),
-                                  const svn_ra_dav__xml_elm_t *elements, 
-                                  svn_ra_dav__xml_validate_cb validate_cb,
-                                  svn_ra_dav__xml_startelm_cb startelm_cb, 
-                                  svn_ra_dav__xml_endelm_cb endelm_cb,
-                                  void *baton,
-                                  apr_hash_t *extra_headers,
-                                  int *status_code,
-                                  svn_boolean_t spool_response,
-                                  apr_pool_t *pool);
 
 
 /* ### add SVN_RA_DAV_ to these to prefix conflicts with (sys) headers? */
@@ -704,6 +743,12 @@ enum {
   ELEM_lock_comment,
   ELEM_lock_creationdate,
   ELEM_lock_expirationdate,
+  ELEM_lock_discovery,
+  ELEM_lock_activelock,
+  ELEM_lock_type,
+  ELEM_lock_scope,
+  ELEM_lock_depth,
+  ELEM_lock_timeout,
   ELEM_editor_report,
   ELEM_open_root,
   ELEM_apply_textdelta,
@@ -758,80 +803,104 @@ svn_ra_dav__maybe_store_auth_info_after_result(svn_error_t *err,
                                                apr_pool_t *pool);
 
 
-/* Create an error object for an error from neon in the given session,
-   where the return code from neon was RETCODE, and CONTEXT describes
-   what was being attempted.  Do temporary allocations in POOL. */
-svn_error_t *svn_ra_dav__convert_error(ne_session *sess,
-                                       const char *context,
-                                       int retcode,
-                                       apr_pool_t *pool);
+/* Create an error of type SVN_ERR_RA_DAV_MALFORMED_DATA for cases where
+   we recieve an element we didn't expect to see. */
+#define UNEXPECTED_ELEMENT(ns, elem)                               \
+        (ns ? svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,     \
+                                NULL,                              \
+                                _("Got unexpected element %s:%s"), \
+                                ns,                                \
+                                elem)                              \
+            : svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA,     \
+                                NULL,                              \
+                                _("Got unexpected element %s"),    \
+                                elem))
 
+/* Create an error of type SVN_ERR_RA_DAV_MALFORMED_DATA for cases where
+   we don't receive a necessary attribute. */
+#define MISSING_ATTR(ns, elem, attr) \
+        (ns ? svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, \
+                                NULL, \
+                                _("Missing attribute '%s' on element %s:%s"), \
+                                attr, \
+                                ns, \
+                                elem) \
+           : svn_error_createf(SVN_ERR_RA_DAV_MALFORMED_DATA, \
+                               NULL, \
+                               _("Missing attribute '%s' on element %s"), \
+                               attr, \
+                               elem))
 
-/* Callback to get data from a Neon request after it has been sent.
-
-   REQUEST is the request, DISPATCH_RETURN_VAL is the value that
-   ne_request_dispatch(REQUEST) returned to the caller.
-
-   USERDATA is a closure baton. */
-typedef svn_error_t *
-svn_ra_dav__request_interrogator(ne_request *request,
-                                 int dispatch_return_val,
-                                 void *userdata);
-
-/* Given a neon REQUEST and SESSION, run the request; if CODE_P is
+/* Given a REQUEST, run it; if CODE_P is
    non-null, return the http status code in *CODE_P.  Return any
-   resulting error (from neon, a <D:error> body response, or any
-   non-2XX status code) as an svn_error_t, otherwise return NULL.  
-   The request will be freed either way.
+   resulting error (from Neon, a <D:error> body response, or any
+   non-2XX status code) as an svn_error_t, otherwise return SVN_NO_ERROR.
 
-   SESSION, METHOD, and URL are required as well, as they are used to
-   describe the possible error.  The error will be allocated in POOL.
+   EXTRA_HEADERS is a hash with (key -> value) of
+   (const char * -> const char *) where the key is the HTTP header name.
+
+   BODY is a null terminated string containing an in-memory request
+   body.  Use svn_ra_dav__set_neon_body_provider() if you want the
+   request body to be read from a file.  For requests which have no
+   body at all, consider passing the empty string ("") instead of
+   NULL, as this will cause Neon to generate a "Content-Length: 0"
+   header (which is important to some proxies).
 
    OKAY_1 and OKAY_2 are the "acceptable" result codes. Anything other
    than one of these will generate an error. OKAY_1 should always be
    specified (e.g. as 200); use 0 for OKAY_2 if a second result code is
    not allowed.
 
-   #ifdef SVN_NEON_0_25
-
-      If INTERROGATOR is non-NULL, invoke it with the Neon request,
-      the dispatch result, and INTERROGATOR_BATON.  This is done
-      regardless of whether the request appears successful or not.  If
-      the interrogator has an error result, return that error
-      immediately, after freeing the request.
-
-   #endif // SVN_NEON_0_25
-
-   ### not super sure on this "okay" stuff, but it means that the request
-   ### dispatching code can generate much better errors than the callers
-   ### when something goes wrong. if we need more than two, then we could
-   ### add another param, switch to an array, or do something entirely
-   ### different...
  */
 svn_error_t *
 svn_ra_dav__request_dispatch(int *code_p,
-                             ne_request *request,
-                             ne_session *session,
-                             const char *method,
-                             const char *url,
+                             svn_ra_dav__request_t *request,
+                             apr_hash_t *extra_headers,
+                             const char *body,
                              int okay_1,
                              int okay_2,
-#ifdef SVN_NEON_0_25
-                             svn_ra_dav__request_interrogator interrogator,
-                             void *interrogator_baton,
-#endif /* SVN_NEON_0_25 */
                              apr_pool_t *pool);
 
+/* A layer over SVN_RA_DAV__REQUEST_DISPATCH() adding a
+   207 response parser to extract relevant (error) information.
 
-/* Give PARSER the ability to parse a mod_dav_svn <D:error> response
-   body in the case of a non-2XX response to REQUEST.  If a <D:error>
-   response is detected, then set *ERR to the parsed error.
-*/
-void
-svn_ra_dav__add_error_handler(ne_request *request,
-                              ne_xml_parser *parser,
-                              svn_error_t **err,
-                              apr_pool_t *pool);
+   Don't use this function if you're expecting 207 as a valid response.
+
+   BODY may be NULL if the request doesn't have a body. */
+svn_error_t *
+svn_ra_dav__simple_request(int *code,
+                           svn_ra_dav__session_t *ras,
+                           const char *method,
+                           const char *url,
+                           apr_hash_t *extra_headers,
+                           const char *body,
+                           int okay_1, int okay_2, apr_pool_t *pool);
+
+
+/* Convenience statement macro for setting headers in a hash */
+#define svn_ra_dav__set_header(hash, hdr, val) \
+  apr_hash_set((hash), (hdr), APR_HASH_KEY_STRING, (val))
+
+
+/* Helper function layered over SVN_RA_DAV__SIMPLE_REQUEST() to issue
+   a HTTP COPY request.
+
+   DEPTH is one of the SVN_RA_DAV__DEPTH_* constants. */
+svn_error_t *
+svn_ra_dav__copy(svn_ra_dav__session_t *ras,
+                 svn_boolean_t overwrite,
+                 int depth,
+                 const char *src,
+                 const char *dst,
+                 apr_pool_t *pool);
+
+/* Return the Location HTTP header or NULL if none was sent.
+ *
+ * Do allocations in POOL.
+ */
+const char *
+svn_ra_dav__request_get_location(svn_ra_dav__request_t *request,
+                                 apr_pool_t *pool);
 
 
 /*
@@ -852,6 +921,27 @@ svn_ra_dav__get_locks(svn_ra_session_t *session,
                       apr_hash_t **locks,
                       const char *path,
                       apr_pool_t *pool);
+
+/*
+ * Implements the lock RA layer function. */
+svn_error_t *
+svn_ra_dav__lock(svn_ra_session_t *session,
+                 apr_hash_t *path_revs,
+                 const char *comment,
+                 svn_boolean_t force,
+                 svn_ra_lock_callback_t lock_func,
+                 void *lock_baton,
+                 apr_pool_t *pool);
+
+/*
+ * Implements the unlock RA layer function. */
+svn_error_t *
+svn_ra_dav__unlock(svn_ra_session_t *session,
+                   apr_hash_t *path_tokens,
+                   svn_boolean_t force,
+                   svn_ra_lock_callback_t lock_func,
+                   void *lock_baton,
+                   apr_pool_t *pool);
 
 /*
  * Implements the get_lock RA layer function. */

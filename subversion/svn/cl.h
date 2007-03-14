@@ -2,7 +2,7 @@
  * cl.h:  shared stuff in the command line program
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -50,7 +50,6 @@ typedef enum {
   svn_cl__autoprops_opt,
   svn_cl__changelist_opt,
   svn_cl__config_dir_opt,
-  svn_cl__clear_opt,
   svn_cl__diff_cmd_opt,
   svn_cl__dry_run_opt,
   svn_cl__editor_cmd_opt,
@@ -74,13 +73,15 @@ typedef enum {
   svn_cl__notice_ancestry_opt,
   svn_cl__old_cmd_opt,
   svn_cl__relocate_opt,
+  svn_cl__remove_opt,
   svn_cl__revprop_opt,
   svn_cl__stop_on_copy_opt,
   svn_cl__strict_opt,
   svn_cl__summarize,
   svn_cl__targets_opt,
   svn_cl__version_opt,
-  svn_cl__xml_opt
+  svn_cl__xml_opt,
+  svn_cl__keep_local_opt
 } svn_cl__longopt_t;
 
 
@@ -146,9 +147,10 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t no_autoprops;    /* disable automatic properties */
   const char *native_eol;        /* override system standard eol marker */
   svn_boolean_t summarize;       /* create a summary of a diff */
-  svn_boolean_t clear;           /* deassociate a changelist */
+  svn_boolean_t remove;          /* deassociate a changelist */
   const char *changelist;        /* operate on this changelist */
   svn_boolean_t keep_changelist; /* don't remove changelist after commit */
+  svn_boolean_t keep_local;      /* delete path only from repository */
 
 } svn_cl__opt_state_t;
 
@@ -280,6 +282,24 @@ svn_cl__print_prop_hash(apr_hash_t *prop_hash,
                         svn_boolean_t names_only,
                         apr_pool_t *pool);
 
+/* Print a single xml property name-value pair to OUTSTR.  If OUTSTR is NULL,
+   allocate it first from pool, otherwise append the xml to it.  Escape
+   property values which are not xml safe, as determined by
+   svn_xml_is_xml_safe(). */
+void
+svn_cl__print_xml_prop(svn_stringbuf_t **outstr,
+                       const char* propname,
+                       svn_string_t *propval,
+                       apr_pool_t *pool);
+
+/* Same as svn_cl__print_prop_hash(), only output xml to OUTSTR.  If OUTSTR is
+   NULL, allocate it first from pool, otherwise append the xml to it. */
+svn_error_t *
+svn_cl__print_xml_prop_hash(svn_stringbuf_t **outstr,
+                            apr_hash_t *prop_hash,
+                            svn_boolean_t names_only,
+                            apr_pool_t *pool);
+
 /* Do the following things that are commonly required before accessing revision
    properties.  Ensure that REVISION is specified explicitly and is not
    relative to a working-copy item.  Ensure that exactly one target is
@@ -382,7 +402,7 @@ svn_error_t *svn_cl__make_log_msg_baton(void **baton,
                                         apr_hash_t *config,
                                         apr_pool_t *pool);
 
-/* A function of type svn_client_get_commit_log2_t. */
+/* A function of type svn_client_get_commit_log3_t. */
 svn_error_t *svn_cl__get_log_message(const char **log_msg,
                                      const char **tmp_file,
                                      const apr_array_header_t *commit_items,
@@ -414,6 +434,16 @@ void svn_cl__xml_tagged_cdata(svn_stringbuf_t **sb,
                               apr_pool_t *pool,
                               const char *tagname,
                               const char *string);
+
+/* Print the XML prolog and document root element start-tag to stdout, using
+   TAGNAME as the root element name.  Use pool for temporary allocations. */
+svn_error_t *svn_cl__xml_print_header(const char *tagname,
+                                      apr_pool_t *pool);
+
+/* Print the XML document root element end-tag to stdout, using TAGNAME as the 
+   root element name.  Use pool for temporary allocations. */
+svn_error_t *svn_cl__xml_print_footer(const char *tagname,
+                                      apr_pool_t *pool);
 
 /* Return a (non-localised) string representation of KIND, being "dir" or
    "file" or, in any other case, the empty string. */

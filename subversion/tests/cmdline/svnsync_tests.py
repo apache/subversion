@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, sys, re, os.path
+import sys, os
 
 # Our testing module
 import svntest
@@ -43,7 +43,6 @@ def build_repos(sbox):
 
   # Create an empty repository.
   svntest.main.create_repos(sbox.repo_dir)
-  svntest.main.set_repos_paths(sbox.repo_dir)
 
 
 def run_sync(url, expected_error=None):
@@ -69,10 +68,10 @@ def run_init(dst_url, src_url):
     "initialize", dst_url, src_url,
     "--username", svntest.main.wc_author,
     "--password", svntest.main.wc_passwd)
-  if output != ['Copied properties for revision 0.\n']:
-    raise svntest.actions.SVNUnexpectedStdout(output)
   if errput:
     raise svntest.actions.SVNUnexpectedStderr(errput)
+  if output != ['Copied properties for revision 0.\n']:
+    raise svntest.actions.SVNUnexpectedStdout(output)
 
 
 def run_test(sbox, dump_file_name):
@@ -101,7 +100,7 @@ def run_test(sbox, dump_file_name):
   svntest.actions.run_and_verify_load(dest_sbox.repo_dir, mirror_cfg)
 
   # Create the revprop-change hook for this test
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
@@ -221,7 +220,7 @@ def detect_meddling(sbox):
                                      dest_sbox.repo_url,
                                      dest_sbox.wc_dir)
 
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
   run_sync(dest_sbox.repo_url)
@@ -262,25 +261,24 @@ def basic_authz(sbox):
 
   sbox.build("svnsync-basic-authz")
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
   build_repos(dest_sbox)
 
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
-  fp = open(sbox.authz_file, 'w')
-  fp.write("[svnsync-basic-authz:/]\n" +
-           "* = r\n" +
-           "\n" +
-           "[svnsync-basic-authz:/A/B]\n" +
-           "* = \n" +
-           "\n" +
-           "[svnsync-basic-authz-1:/]\n" +
-           "* = rw\n")
-  fp.close()
+  svntest.main.file_write(sbox.authz_file,
+                          "[svnsync-basic-authz:/]\n"
+                          "* = r\n"
+                          "\n"
+                          "[svnsync-basic-authz:/A/B]\n"
+                          "* = \n"
+                          "\n"
+                          "[svnsync-basic-authz-1:/]\n"
+                          "* = rw\n")
 
   run_sync(dest_sbox.repo_url)
 
@@ -343,12 +341,12 @@ def copy_from_unreadable_dir(sbox):
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'Copy B to P')
 
-  write_restrictive_svnserve_conf(svntest.main.current_repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
 
   dest_sbox = sbox.clone_dependent()
   build_repos(dest_sbox)
 
-  svntest.actions.enable_revprop_changes(svntest.main.current_repo_dir)
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
 
   fp = open(sbox.authz_file, 'w')
 
@@ -377,8 +375,6 @@ def copy_from_unreadable_dir(sbox):
   run_init(dest_sbox.repo_url, sbox.repo_url)
 
   run_sync(dest_sbox.repo_url)
-
-  lambda_url = dest_sbox.repo_url + '/A/B/lambda'
 
   expected_out = [
     'Changed paths:\n',
@@ -422,6 +418,238 @@ def copy_from_unreadable_dir(sbox):
                                      'baz',
                                      dest_sbox.repo_url + '/A/P')
 
+# Issue 2705.
+def copy_with_mod_from_unreadable_dir(sbox):
+  "verify copies with mods from unreadable dirs"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build("svnsync-copy-with-mod-from-unreadable-dir")
+
+  # Make a copy of the B directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'cp',
+                                     sbox.wc_dir + '/A/B',
+                                     sbox.wc_dir + '/A/P')
+
+  # Set a property inside the copied directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'pset',
+                                     'foo',
+                                     'bar',
+                                     sbox.wc_dir + '/A/P/lambda')
+
+  # Add a new directory and file inside the copied directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'mkdir',
+                                     sbox.wc_dir + '/A/P/NEW-DIR')
+
+  svntest.main.file_append(sbox.wc_dir + '/A/P/E/new-file', "bla bla")
+  svntest.main.run_svn(None, 'add', sbox.wc_dir + '/A/P/E/new-file')
+
+  # Delete a file inside the copied directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'rm',
+                                     sbox.wc_dir + '/A/P/E/beta')
+
+  # Commit the copy-with-modification.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'ci',
+                                     sbox.wc_dir,
+                                     '-m', 'log_msg')
+
+  # Lock down the source repository.
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+
+  fp = open(sbox.authz_file, 'w')
+
+  # For mod_dav_svn's parent path setup we need per-repos permissions in
+  # the authz file...
+  if sbox.repo_url.startswith('http'):
+    fp.write("[svnsync-copy-with-mod-from-unreadable-dir:/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[svnsync-copy-with-mod-from-unreadable-dir:/A/B]\n" +
+             "* = \n" +
+             "\n" +
+             "[svnsync-copy-with-mod-from-unreadable-dir-1:/]\n" +
+             "* = rw")
+
+  # Otherwise we can just go with the permissions needed for the source
+  # repository.
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[/A/B]\n" +
+             "* =\n")
+  fp.close()
+
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+
+  run_sync(dest_sbox.repo_url)
+
+  expected_out = [
+    'Changed paths:\n',
+    '   A /A/P\n',
+    '   A /A/P/E\n',
+    '   A /A/P/E/alpha\n',
+    '   A /A/P/E/new-file\n',
+    '   A /A/P/F\n',
+    '   A /A/P/NEW-DIR\n',
+    '   A /A/P/lambda\n',
+    '\n',
+    'log_msg\n',
+  ]
+
+  out, err = svntest.main.run_svn(None,
+                                  'log',
+                                  '--username', svntest.main.wc_author,
+                                  '--password', svntest.main.wc_passwd,
+                                  '-r', '2',
+                                  '-v',
+                                  dest_sbox.repo_url)
+
+  if err:
+    raise svntest.actions.SVNUnexpectedStderr(err)
+
+  svntest.actions.compare_and_display_lines(None,
+                                            'LOG',
+                                            expected_out,
+                                            out[2:12])
+
+  svntest.actions.run_and_verify_svn(None,
+                                     ['bar\n'],
+                                     [],
+                                     'pget',
+                                     'foo',
+                                     dest_sbox.repo_url + '/A/P/lambda')
+
+# Issue 2705.
+def copy_with_mod_from_unreadable_dir_and_copy(sbox):
+  "verify copies with mods from unreadable dirs +copy"
+
+  skip_test_when_no_authz_available()
+
+  sbox.build("svnsync-copy-with-mod-from-unreadable-dir-and-copy")
+
+  # Make a copy of the B directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'cp',
+                                     sbox.wc_dir + '/A/B',
+                                     sbox.wc_dir + '/A/P')
+
+
+  # Copy a (readable) file into the copied directory.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'cp',
+                                     sbox.wc_dir + '/A/D/gamma',
+                                     sbox.wc_dir + '/A/P/E')
+
+
+  # Commit the copy-with-modification.
+  svntest.actions.run_and_verify_svn(None,
+                                     None,
+                                     [],
+                                     'ci',
+                                     sbox.wc_dir,
+                                     '-m', 'log_msg')
+
+  # Lock down the source repository.
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  dest_sbox = sbox.clone_dependent()
+  build_repos(dest_sbox)
+
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+
+  fp = open(sbox.authz_file, 'w')
+
+  # For mod_dav_svn's parent path setup we need per-repos permissions in
+  # the authz file...
+  if sbox.repo_url.startswith('http'):
+    fp.write("[svnsync-copy-with-mod-from-unreadable-dir-and-copy:/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[svnsync-copy-with-mod-from-unreadable-dir-and-copy:/A/B]\n" +
+             "* = \n" +
+             "\n" +
+             "[svnsync-copy-with-mod-from-unreadable-dir-and-copy-1:/]\n" +
+             "* = rw")
+
+  # Otherwise we can just go with the permissions needed for the source
+  # repository.
+  else:
+    fp.write("[/]\n" +
+             "* = r\n" +
+             "\n" +
+             "[/A/B]\n" +
+             "* =\n")
+  fp.close()
+
+  run_init(dest_sbox.repo_url, sbox.repo_url)
+
+  run_sync(dest_sbox.repo_url)
+
+  expected_out = [
+    'Changed paths:\n',
+    '   A /A/P\n',
+    '   A /A/P/E\n',
+    '   A /A/P/E/alpha\n',
+    '   A /A/P/E/beta\n',
+    '   A /A/P/E/gamma (from /A/D/gamma:1)\n',
+    '   A /A/P/F\n',
+    '   A /A/P/lambda\n',
+    '\n',
+    'log_msg\n',
+  ]
+
+  out, err = svntest.main.run_svn(None,
+                                  'log',
+                                  '--username', svntest.main.wc_author,
+                                  '--password', svntest.main.wc_passwd,
+                                  '-r', '2',
+                                  '-v',
+                                  dest_sbox.repo_url)
+
+  if err:
+    raise svntest.actions.SVNUnexpectedStderr(err)
+
+  svntest.actions.compare_and_display_lines(None,
+                                            'LOG',
+                                            expected_out,
+                                            out[2:12])
+
+def url_encoding(sbox):
+  "test url encoding issues"
+  run_test(sbox, "url-encoding-bug.dump")
+
+
+# A test for copying revisions that lack a property that already exists
+# on the destination rev as part of the commit (i.e. svn:author in this
+# case, but svn:date would also work).
+def no_author(sbox):
+  "test copying revs with no svn:author revprops"
+  run_test(sbox, "no-author.dump")
 
 
 ########################################################################
@@ -445,10 +673,14 @@ test_list = [ None,
               detect_meddling,
               basic_authz,
               copy_from_unreadable_dir,
+              copy_with_mod_from_unreadable_dir,
+              copy_with_mod_from_unreadable_dir_and_copy,
+              url_encoding,
+              no_author,
              ]
 
 if __name__ == '__main__':
-  svntest.main.run_tests(test_list)
+  svntest.main.run_tests(test_list, serial_only = True)
   # NOTREACHED
 
 

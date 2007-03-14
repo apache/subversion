@@ -38,6 +38,7 @@ BEGIN {
 
 use strict;
 use Carp;
+use POSIX qw(strftime);
 my ($sendmail, $smtp_server);
 
 ######################################################################
@@ -47,6 +48,7 @@ my ($sendmail, $smtp_server);
 # You should define exactly one of these two configuration variables,
 # leaving the other commented out, to select which method of sending
 # email should be used.
+# Using --stdout on the command line overrides both.
 #$sendmail = "/usr/sbin/sendmail";
 $smtp_server = "127.0.0.1";
 
@@ -123,6 +125,7 @@ my $author;
 my $propname;
 
 my $mode = 'commit';
+my $date;
 my $diff_file;
 
 # Use the reference to the first project to populate.
@@ -139,7 +142,8 @@ my %opt_to_hash_key = ('--from' => 'from_address',
                        '-m'     => '',
                        '-r'     => 'reply_to',
                        '-s'     => 'subject_prefix',
-                       '--diff' => '');
+                       '--diff' => '',
+                       '--stdout' => '');
 
 while (@ARGV)
   {
@@ -153,7 +157,7 @@ while (@ARGV)
           }
 
         my $value;
-        if ($arg ne '--revprop-change')
+        if ($arg ne '--revprop-change' and $arg ne '--stdout')
           {
             unless (@ARGV)
               {
@@ -200,6 +204,10 @@ while (@ARGV)
             elsif ($arg eq '--diff')
               {
                 $current_project->{show_diff} = parse_boolean($value);
+              }
+            elsif ($arg eq '--stdout')
+              {
+                $current_project->{stdout} = 1;
               }
             else
               {
@@ -355,7 +363,7 @@ if ($mode eq 'commit')
     # Get the author, date, and log from svnlook.
     my @infolines = &read_from_process($svnlook, 'info', $repos, '-r', $rev);
     $author = shift @infolines;
-    my $date = shift @infolines;
+    $date = shift @infolines;
     shift @infolines;
     my @log = map { "$_\n" } @infolines;
 
@@ -515,6 +523,7 @@ foreach my $project (@project_settings_list)
     my $subject_prefix  = $project->{subject_prefix};
     my $subject         = $subject_base;
     my $diff_wanted     = ($project->{show_diff} and $mode eq 'commit');
+    my $stdout          = $project->{stdout};
 
     if ($subject_prefix =~ /\w/)
       {
@@ -530,13 +539,21 @@ foreach my $project (@project_settings_list)
       {
         $mail_from = "$mail_from\@$hostname";
       }
-    elsif (defined $smtp_server)
+    elsif (defined $smtp_server and ! $stdout)
       {
         die "$0: use of either `-h' or `--from' is mandatory when ",
             "sending email using direct SMTP.\n";
       }
 
     my @head;
+    my $formatted_date;
+    if (defined $stdout)
+      {
+        $formatted_date = strftime('%a %b %e %X %Y', localtime());
+        push(@head, "From $mail_from $formatted_date\n");
+      }
+    $formatted_date = strftime('%a, %e %b %Y %X %z', localtime());
+    push(@head, "Date: $formatted_date\n");
     push(@head, "To: $to\n");
     push(@head, "From: $mail_from\n");
     push(@head, "Subject: $subject\n");
@@ -583,7 +600,12 @@ foreach my $project (@project_settings_list)
         @difflines = map { /[\r\n]+$/ ? $_ : "$_\n" } @difflines;
       }
 
-    if (defined $sendmail and @email_addresses)
+    if ($stdout)
+      {
+        print @head, @body;
+        print @difflines if $diff_wanted;
+      }
+    elsif (defined $sendmail and @email_addresses)
       {
         # Open a pipe to sendmail.
         my $command = "$sendmail -f'$mail_from' $userlist";
@@ -659,6 +681,7 @@ sub usage
       "  -s subject_prefix     Subject line prefix\n",
       "  --diff y|n            Include diff in message (default: y)\n",
       "                        (applies to commit mode only)\n",
+      "  --stdout              Spit the message in mbox format to stdout.\n",
       "\n",
       "This script supports a single repository with multiple projects,\n",
       "where each project receives email only for actions that affect that\n",
@@ -698,7 +721,8 @@ sub new_project
           match_regex     => '.',
           reply_to        => '',
           subject_prefix  => '',
-          show_diff       => 1};
+          show_diff       => 1,
+          stdout          => 0};
 }
 
 sub parse_boolean

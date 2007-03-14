@@ -11,11 +11,9 @@
 # Script will die if any gpg process returns an error.
 
 my $version = $ARGV[0];
-my @extensions = qw(tar.bz2 tar.gz zip);
 my %good_sigs;
 
-foreach my $extension (@extensions) {
-  $filename = "subversion-$version.$extension.asc";
+foreach my $filename (glob("subversion-*.asc")) {
 	my $gpg_output = `gpg --logger-fd 1 --verify $filename`;
   if ($? >> 8 ) {
 	  # gpg exited with a non zero exit value, die with an error 

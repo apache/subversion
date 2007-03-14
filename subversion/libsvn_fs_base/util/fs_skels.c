@@ -1,7 +1,7 @@
 /* fs_skels.c --- conversion between fs native types and skeletons
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -477,7 +477,7 @@ svn_fs_base__parse_transaction_skel(transaction_t **transaction_p,
       while (cpy)
         {
           copy_id = apr_pstrmemdup(pool, cpy->data, cpy->len);
-          (*((const char **)(apr_array_push(txncopies)))) = copy_id;
+          APR_ARRAY_PUSH(txncopies, const char *) = copy_id;
           cpy = cpy->next;
         }
       transaction->copies = txncopies;
@@ -581,7 +581,7 @@ svn_fs_base__parse_representation_skel(representation_t **rep_p,
                                         chunk_skel->children->len));
 
           /* Add this chunk to the array. */
-          (*((rep_delta_chunk_t **)(apr_array_push(chunks)))) = chunk;
+          APR_ARRAY_PUSH(chunks, rep_delta_chunk_t *) = chunk;
 
           /* Next... */
           chunk_skel = chunk_skel->next;
@@ -1082,8 +1082,8 @@ svn_fs_base__unparse_representation_skel(skel_t **skel_p,
           skel_t *chunk_skel = svn_fs_base__make_empty_list(pool);
           skel_t *diff_skel = svn_fs_base__make_empty_list(pool);
           const char *size_str, *offset_str, *version_str;
-          rep_delta_chunk_t *chunk =
-            (((rep_delta_chunk_t **) chunks->elts)[i - 1]);
+          rep_delta_chunk_t *chunk = APR_ARRAY_IDX(chunks, i - 1,
+                                                   rep_delta_chunk_t *);
 
           /* OFFSET */
           offset_str = apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT,

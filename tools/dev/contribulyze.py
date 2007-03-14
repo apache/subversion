@@ -433,6 +433,8 @@ class LogMessage:
   # Maps revision strings (e.g., "r12345") onto LogMessage instances,
   # holding all the LogMessage instances ever created.
   all_logs = { }
+  # Keep track of youngest rev.
+  max_revnum = 0
   def __init__(self, revision, committer, date):
     """Instantiate a log message.  All arguments are strings,
     including REVISION, which should retain its leading 'r'."""
@@ -446,6 +448,9 @@ class LogMessage:
     if LogMessage.all_logs.has_key(revision):
       complain("Revision '%s' seen more than once" % revision, True)
     LogMessage.all_logs[revision] = self
+    rev_as_number = int(revision[1:])
+    if rev_as_number > LogMessage.max_revnum:
+       LogMessage.max_revnum = rev_as_number
   def add_field(self, field):
     self.fields[field.name] = field
   def accum(self, line):
@@ -615,7 +620,7 @@ def drop(revision_url_pattern):
     os.mkdir(detail_subdir)
 
   index = open('index.html', 'w')
-  index.write(html_header('Contributors'))
+  index.write(html_header('Contributors as of r%d' % LogMessage.max_revnum))
   index.write(index_introduction)
   index.write('<ol>\n')
   # The same contributor appears under multiple keys, so uniquify.

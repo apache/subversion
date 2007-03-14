@@ -87,7 +87,7 @@ I. Introduction
        client produce normal conflicts when 'svn up' is run on a
        hijacked file;  but that for a GUI such as TortoiseSVN, a more
        friendly (or interactive) procedure is followed -- perhaps one
-       that allows the user to choose between versions of flies.
+       that allows the user to choose between versions of files.
 
 
 II. New Client Behaviors

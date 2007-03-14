@@ -23,12 +23,10 @@
 #include "svn_props.h"
 #include "svn_client.h"
 
-/**
- * Duplicate a HASH containing (char * -> svn_string_t *) key/value
- * pairs using POOL.
- */
+/* Duplicate a HASH containing (char * -> svn_string_t *) key/value
+   pairs using POOL. */
 static apr_hash_t *
-svn_client__string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
+string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
   const void *key;
@@ -43,6 +41,42 @@ svn_client__string_hash_dup(apr_hash_t *hash, apr_pool_t *pool)
       apr_hash_set(new_hash, key, klen, val);
     }
   return new_hash;
+}
+
+svn_error_t *
+svn_client_commit_item_create(const svn_client_commit_item3_t **item,
+                              apr_pool_t *pool)
+{
+  *item = apr_pcalloc(pool, sizeof(svn_client_commit_item3_t));
+  return SVN_NO_ERROR;
+}
+
+svn_client_commit_item3_t *
+svn_client_commit_item3_dup(const svn_client_commit_item3_t *item,
+                            apr_pool_t *pool)
+{
+  svn_client_commit_item3_t *new_item = apr_palloc(pool, sizeof(*new_item));
+
+  *new_item = *item;
+
+  if (new_item->path)
+    new_item->path = apr_pstrdup(pool, new_item->path);
+
+  if (new_item->url)
+    new_item->url = apr_pstrdup(pool, new_item->url);
+
+  if (new_item->copyfrom_url)
+    new_item->copyfrom_url = apr_pstrdup(pool, new_item->copyfrom_url);
+
+  if (new_item->incoming_prop_changes)
+    new_item->incoming_prop_changes =
+      svn_prop_array_dup(new_item->incoming_prop_changes, pool);
+
+  if (new_item->outgoing_prop_changes)
+    new_item->outgoing_prop_changes =
+      svn_prop_array_dup(new_item->outgoing_prop_changes, pool);
+
+  return new_item;
 }
 
 svn_client_commit_item2_t *
@@ -80,7 +114,7 @@ svn_client_proplist_item_dup(const svn_client_proplist_item_t *item,
     new_item->node_name = svn_stringbuf_dup(item->node_name, pool);
 
   if (item->prop_hash)
-    new_item->prop_hash = svn_client__string_hash_dup(item->prop_hash, pool);
+    new_item->prop_hash = string_hash_dup(item->prop_hash, pool);
 
   return new_item;
 }

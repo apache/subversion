@@ -2,7 +2,7 @@
  * blame-cmd.c -- Display blame information
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -136,34 +136,6 @@ blame_receiver(void *baton,
 }
  
 
-/* Prints XML header to standard out. */
-static svn_error_t *
-print_header_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-
-  /* <?xml version="1.0" encoding="utf-8"?> */
-  svn_xml_make_header(&sb, pool);
-
-  /* "<blame>" */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "blame", NULL);
-
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
-
-/* Prints XML footer to standard out. */
-static svn_error_t *
-print_footer_xml(apr_pool_t *pool)
-{
-  svn_stringbuf_t *sb = svn_stringbuf_create("", pool);
-
-  /* "</blame>" */
-  svn_xml_make_close_tag(&sb, pool, "blame");
-  return svn_cl__error_checked_fputs(sb->data, stdout);
-}
-
-
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__blame(apr_getopt_t *os,
@@ -237,7 +209,7 @@ svn_cl__blame(apr_getopt_t *os,
          everything in a top-level element.  This makes the output in
          its entirety a well-formed XML document. */
       if (! opt_state->incremental)
-        SVN_ERR(print_header_xml(pool));
+        SVN_ERR(svn_cl__xml_print_header("blame", pool));
     }
   else
     {
@@ -250,9 +222,10 @@ svn_cl__blame(apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       svn_error_t *err;
-      const char *target = ((const char **) (targets->elts))[i];
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
+      svn_client_blame_receiver_t receiver;
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -282,28 +255,22 @@ svn_cl__blame(apr_getopt_t *os,
           svn_xml_make_open_tag(&bl.sbuf, pool, svn_xml_normal, "target",
                                 "path", outpath, NULL);
 
-          err = svn_client_blame3(truepath,
-                                  &peg_revision,
-                                  &opt_state->start_revision,
-                                  &opt_state->end_revision,
-                                  diff_options,
-                                  opt_state->force,
-                                  blame_receiver_xml,
-                                  &bl,
-                                  ctx,
-                                  subpool);
+          receiver = blame_receiver_xml;
         }
       else
-        err = svn_client_blame3(truepath,
-                                &peg_revision,
-                                &opt_state->start_revision,
-                                &opt_state->end_revision,
-                                diff_options,
-                                opt_state->force,
-                                blame_receiver,
-                                &bl,
-                                ctx,
-                                subpool);
+        receiver = blame_receiver;
+
+      err = svn_client_blame3(truepath,
+                              &peg_revision,
+                              &opt_state->start_revision,
+                              &opt_state->end_revision,
+                              diff_options,
+                              opt_state->force,
+                              receiver,
+                              &bl,
+                              ctx,
+                              subpool);
+
       if (err)
         {
           if (err->apr_err == SVN_ERR_CLIENT_IS_BINARY_FILE)
@@ -330,7 +297,7 @@ svn_cl__blame(apr_getopt_t *os,
     }
   svn_pool_destroy(subpool);
   if (opt_state->xml && ! opt_state->incremental)
-    SVN_ERR(print_footer_xml(pool));
+    SVN_ERR(svn_cl__xml_print_footer("blame", pool));
 
   return SVN_NO_ERROR;
 }

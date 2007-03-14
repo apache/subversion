@@ -26,7 +26,16 @@
 import sys
 import os.path
 import re
-from svn import core
+
+try:
+  from svn import core
+except ImportError, e:
+  print >> sys.stderr, \
+        "ERROR: Unable to import Subversion's Python bindings: '%s'\n" \
+        "Hint: Set your PYTHONPATH environment variable, or adjust your " \
+        "PYTHONSTARTUP\nfile to point to your Subversion install " \
+        "location's svn-python directory." % e
+  sys.exit(1)
 
 
 def usage_and_exit():

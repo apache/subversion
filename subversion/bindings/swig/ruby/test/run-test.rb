@@ -3,25 +3,27 @@
 require "test/unit"
 require "fileutils"
 
-ENV["PATH"] = File.join(Dir.pwd, "..", "..", "..", "svnserve") + ":" + ENV["PATH"]
-ext_dir = File.join(Dir.pwd, ".ext")
+test_dir = File.expand_path(File.join(File.dirname(__FILE__)))
+base_dir = File.expand_path(File.join(File.dirname(__FILE__), ".."))
+top_dir = File.expand_path(File.join(base_dir, "..", "..", "..", ".."))
+
+ext_dir = File.join(base_dir, ".ext")
 ext_svn_dir = File.join(ext_dir, "svn")
+ext_svn_ext_dir = File.join(ext_svn_dir, "ext")
 FileUtils.mkdir_p(ext_svn_dir)
-FileUtils.ln_sf(File.join(Dir.pwd, ".libs"), File.join(ext_svn_dir, "ext"))
 at_exit {FileUtils.rm_rf(ext_dir)}
 
-$LOAD_PATH.unshift(ext_dir)
-$LOAD_PATH.unshift(Dir.pwd)
+$LOAD_PATH.unshift(test_dir)
+require 'util'
 
-begin
-  require "gettext"
-  if Locale.respond_to?(:set)
-    Locale.set(nil)
-  else
-    Locale.setlocale(Locale::ALL, nil)
-  end
-rescue LoadError
-end
+SvnTestUtil.setup_test_environment(top_dir, base_dir, ext_svn_ext_dir)
+
+$LOAD_PATH.unshift(ext_dir)
+$LOAD_PATH.unshift(base_dir)
+$LOAD_PATH.unshift(test_dir)
+
+require 'svn/core'
+Svn::Locale.set
 
 if Test::Unit::AutoRunner.respond_to?(:standalone?)
   exit Test::Unit::AutoRunner.run($0, File.dirname($0))

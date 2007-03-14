@@ -34,7 +34,7 @@ JNICriticalSection::JNICriticalSection(JNIMutex &mutex)
 {
     m_mutex = &mutex;
     apr_status_t apr_err = apr_thread_mutex_lock (mutex.m_mutex);
-    if(apr_err)
+    if (apr_err)
     {
         JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_lock");
         return;
@@ -48,7 +48,7 @@ JNICriticalSection::JNICriticalSection(JNIMutex &mutex)
 JNICriticalSection::~JNICriticalSection()
 {
     apr_status_t apr_err = apr_thread_mutex_unlock (m_mutex->m_mutex);
-    if(apr_err)
+    if (apr_err)
     {
         JNIUtil::handleAPRError(apr_err, "apr_thread_mutex_unlock");
         return;

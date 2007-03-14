@@ -112,6 +112,17 @@ struct svn_wc_traversal_info_t
 
 
 
+/*** Filesizes. ***/
+
+/* A special filesize value which means "use the filesize from the
+   working copy".  This is sometimes used in a log entry like:
+
+   <modify-entry name="foo.c" revision="5" working-size="working"/>
+ */
+#define SVN_WC__WORKING_SIZE_WC   "working"
+
+
+
 /*** Names and file/dir operations in the administrative area. ***/
 
 /** The files within the administrative subdir. **/
@@ -138,6 +149,9 @@ struct svn_wc_traversal_info_t
    directory.  */
 #define SVN_WC__THIS_DIR_PREJ           "dir_conflicts"
 
+/* Possible contents of the killme file.  If present, signals that the
+   administrative area only should be deleted. */
+#define SVN_WC__KILL_ADM_ONLY           "adm-only"
 
 
 /* A space separated list of properties that we cache presence/absence of.
@@ -185,9 +199,6 @@ void svn_wc__compat_call_notify_func(void *baton,
  * detranslated version of *FILENAME and the text base, otherwise, a
  * translated version of the text base and *FILENAME will be compared.
  *
- * If USE_TMP_TEXTBASE is true the temporary text base is used in the
- * comparison.
- *
  * If FILENAME does not exist, consider it unmodified.  If it exists
  * but is not under revision control (not even scheduled for
  * addition), return the error SVN_ERR_ENTRY_NOT_FOUND.
@@ -198,7 +209,6 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                  svn_boolean_t force_comparison,
                                  svn_wc_adm_access_t *adm_access,
                                  svn_boolean_t compare_textbases,
-                                 svn_boolean_t use_tmp_textbase,
                                  apr_pool_t *pool);
 
 

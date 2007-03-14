@@ -264,6 +264,59 @@ svn_wc__make_adm_thing(svn_wc_adm_access_t *adm_access,
 }
 
 
+svn_error_t *
+svn_wc__make_killme(svn_wc_adm_access_t *adm_access,
+                    svn_boolean_t adm_only,
+                    apr_pool_t *pool)
+{
+  const char *path;
+
+  SVN_ERR(svn_wc__adm_write_check(adm_access));
+
+  path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
+                              NULL, FALSE, pool, SVN_WC__ADM_KILLME, NULL);
+
+  return svn_io_file_create(path, adm_only ? SVN_WC__KILL_ADM_ONLY : "", pool);
+}
+
+svn_error_t *
+svn_wc__check_killme(svn_wc_adm_access_t *adm_access,
+                     svn_boolean_t *exists,
+                     svn_boolean_t *kill_adm_only,
+                     apr_pool_t *pool)
+{
+  const char *path;
+  svn_error_t *err;
+  svn_stringbuf_t *contents;
+
+  path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
+                              NULL, FALSE, pool, SVN_WC__ADM_KILLME, NULL);
+  
+  err = svn_stringbuf_from_file(&contents, path, pool);
+
+  if (err)
+    {
+      if (APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          /* Killme file doesn't exist. */
+          *exists = FALSE;
+          svn_error_clear(err);
+          err = SVN_NO_ERROR;
+        }
+
+      return err;
+    }
+
+  *exists = TRUE;
+
+  /* If the killme file contains the string 'adm-only' then only the
+     administrative area should be removed. */
+  *kill_adm_only = svn_string_compare_stringbuf
+    (svn_string_create(SVN_WC__KILL_ADM_ONLY, pool), contents);
+
+  return SVN_NO_ERROR;
+}
+
 
 /*** Syncing files in the adm area. ***/
 
@@ -648,6 +701,20 @@ svn_wc__open_text_base(apr_file_t **handle,
 
 
 svn_error_t *
+svn_wc__open_revert_base(apr_file_t **handle,
+                         const char *path,
+                         apr_int32_t flags,
+                         apr_pool_t *pool)
+{
+  const char *parent_path, *base_name;
+  svn_path_split(path, &parent_path, &base_name, pool);
+  return open_adm_file(handle, parent_path, SVN_WC__REVERT_EXT, APR_OS_DEFAULT,
+                       flags, pool, SVN_WC__ADM_TEXT_BASE, base_name, NULL);
+}
+
+
+
+svn_error_t *
 svn_wc__close_text_base(apr_file_t *fp,
                         const char *path,
                         int write,
@@ -658,6 +725,19 @@ svn_wc__close_text_base(apr_file_t *fp,
   return close_adm_file(fp, parent_path, SVN_WC__BASE_EXT, write, pool,
                         SVN_WC__ADM_TEXT_BASE, base_name, NULL);
 }
+
+svn_error_t *
+svn_wc__close_revert_base(apr_file_t *fp,
+                          const char *path,
+                          int write,
+                          apr_pool_t *pool)
+{
+  const char *parent_path, *base_name;
+  svn_path_split(path, &parent_path, &base_name, pool);
+  return close_adm_file(fp, parent_path, SVN_WC__REVERT_EXT, write, pool,
+                        SVN_WC__ADM_TEXT_BASE, base_name, NULL);
+}
+
 
 
 svn_error_t *
@@ -975,7 +1055,7 @@ check_adm_exists(svn_boolean_t *exists,
               (SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                _("URL '%s' doesn't match existing URL '%s' in '%s'"),
                url, entry->url, path);
-	}
+        }
     }
 
   *exists = wc_exists;
@@ -1124,7 +1204,7 @@ svn_wc__adm_destroy(svn_wc_adm_access_t *adm_access,
      directory, which also removes the lock file */
   path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                               NULL, FALSE, pool, NULL);
-  SVN_ERR(svn_io_remove_dir(path, pool));
+  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
   SVN_ERR(svn_wc_adm_close(adm_access));
 
   return SVN_NO_ERROR;
@@ -1142,8 +1222,8 @@ svn_wc__adm_cleanup_tmp_area(svn_wc_adm_access_t *adm_access,
   /* Get the path to the tmp area, and blow it away. */
   tmp_path = extend_with_adm_name(svn_wc_adm_access_path(adm_access),
                                   NULL, 0, pool, SVN_WC__ADM_TMP, NULL);
-  SVN_ERR(svn_io_remove_dir(tmp_path, pool));
 
+  SVN_ERR(svn_io_remove_dir2(tmp_path, TRUE, pool));
   /* Now, rebuild the tmp area. */
   SVN_ERR(init_adm_tmp_area(adm_access, pool));
 

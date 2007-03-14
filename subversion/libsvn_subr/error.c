@@ -1,7 +1,7 @@
 /* error.c:  common exception handling for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -61,7 +61,7 @@ svn_error__locate(const char *file, long line)
 
 /* Cleanup function for errors.  svn_error_clear () removes this so
    errors that are properly handled *don't* hit this code. */
-#if defined(SVN_DEBUG_ERROR)
+#if defined(SVN_DEBUG)
 static apr_status_t err_abort(void *data)
 {
   svn_error_t *err = data;  /* For easy viewing in a debugger */
@@ -98,9 +98,11 @@ make_error_internal(apr_status_t apr_err,
   new_error->line    = error_line;
   /* XXX TODO: Unlock mutex here */
 
-#if defined(SVN_DEBUG_ERROR)
+#if defined(SVN_DEBUG)
   if (! child)
-      apr_pool_cleanup_register(pool, new_error, err_abort, NULL);
+      apr_pool_cleanup_register(pool, new_error,
+                                err_abort,
+                                apr_pool_cleanup_null);
 #endif
 
   return new_error;
@@ -197,7 +199,7 @@ svn_error_compose(svn_error_t *chain, svn_error_t *new_err)
   while (chain->child)
     chain = chain->child;
 
-#if defined(SVN_DEBUG_ERROR)
+#if defined(SVN_DEBUG)
   /* Kill existing handler since the end of the chain is going to change */
   apr_pool_cleanup_kill(pool, chain, err_abort);
 #endif
@@ -211,19 +213,36 @@ svn_error_compose(svn_error_t *chain, svn_error_t *new_err)
       if (chain->message)
         chain->message = apr_pstrdup(pool, new_err->message);
       chain->pool = pool;
-#if defined(SVN_DEBUG_ERROR)
+#if defined(SVN_DEBUG)
       if (! new_err->child)
         apr_pool_cleanup_kill(oldpool, new_err, err_abort);
 #endif
       new_err = new_err->child;
     }
 
-#if defined(SVN_DEBUG_ERROR)
-  apr_pool_cleanup_register(pool, chain, err_abort, NULL);
+#if defined(SVN_DEBUG)
+  apr_pool_cleanup_register(pool, chain,
+                            err_abort,
+                            apr_pool_cleanup_null);
 #endif
 
   /* Destroy the new error chain. */
   apr_pool_destroy(oldpool);
+}
+
+svn_boolean_t
+svn_error_root_cause_is(svn_error_t *err, apr_status_t apr_err)
+{
+  while (err)
+    {
+      if (err->child)
+        err = err->child;
+      else
+        /* We've reached the end of the line. */
+        return (err->apr_err == apr_err);
+    }
+
+  return FALSE;
 }
 
 svn_error_t *
@@ -253,8 +272,10 @@ svn_error_dup(svn_error_t *err)
         tmp_err->message = apr_pstrdup(pool, tmp_err->message);
     }
 
-#if defined(SVN_DEBUG_ERROR)
-  apr_pool_cleanup_register(pool, tmp_err, err_abort, NULL);
+#if defined(SVN_DEBUG)
+  apr_pool_cleanup_register(pool, tmp_err,
+                            err_abort,
+                            apr_pool_cleanup_null);
 #endif
 
   return new_err;
@@ -265,7 +286,7 @@ svn_error_clear(svn_error_t *err)
 {
   if (err)
     {
-#if defined(SVN_DEBUG_ERROR)
+#if defined(SVN_DEBUG)
       while (err->child)
         err = err->child;
       apr_pool_cleanup_kill(err->pool, err, err_abort);
@@ -371,7 +392,7 @@ svn_handle_error2(svn_error_t *err,
         {
           for (i = 0; i < empties->nelts; i++)
             {
-              if (err->apr_err == ((apr_status_t *)empties->elts)[i])
+              if (err->apr_err == APR_ARRAY_IDX(empties, i, apr_status_t) )
                 {
                   printed_already = TRUE;
                   break;
@@ -384,7 +405,7 @@ svn_handle_error2(svn_error_t *err,
           print_error(err, stream, prefix);
           if (! err->message)
             {
-              (*((apr_status_t *) apr_array_push(empties))) = err->apr_err;
+              APR_ARRAY_PUSH(empties, apr_status_t) = err->apr_err;
             }
         }
 

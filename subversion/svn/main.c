@@ -2,7 +2,7 @@
  * main.c:  Subversion command line client.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -184,12 +184,14 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("don't unlock the targets")},
   {"summarize",     svn_cl__summarize, 0,
                     N_("show a summary of the results")},
-  {"clear",         svn_cl__clear_opt, 0,
+  {"remove",         svn_cl__remove_opt, 0,
                     N_("remove changelist association")},
   {"changelist",    svn_cl__changelist_opt, 1,
                     N_("operate only on members of changelist ARG")},
   {"keep-changelist", svn_cl__keep_changelist_opt, 0,
                     N_("don't delete changelist after commit")},
+  {"keep-local",    svn_cl__keep_local_opt, 0,
+                    N_("keep path in working copy")},   
   {0,               0, 0, 0}
 };
 
@@ -256,8 +258,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "changelist", svn_cl__changelist, {"cl"}, N_
     ("Associate (or deassociate) local paths with changelist CLNAME.\n"
      "usage: 1. changelist CLNAME TARGET...\n"
-     "       2. changelist --clear TARGET...\n"),
-    { svn_cl__clear_opt, svn_cl__targets_opt } },
+     "       2. changelist --remove TARGET...\n"),
+    { svn_cl__remove_opt, svn_cl__targets_opt, svn_cl__config_dir_opt,
+      svn_cl__changelist_opt} },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
     ("Check out a working copy from a repository.\n"
@@ -316,13 +319,17 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "copy", svn_cl__copy, {"cp"}, N_
     ("Duplicate something in working copy or repository, remembering history.\n"
-     "usage: copy SRC DST\n"
+     "usage: copy SRC[@REV]... DST\n"
+     "\n"
+     "When copying multiple sources, they will be added as children of DST, \n"
+     "which must be a directory.\n"
      "\n"
      "  SRC and DST can each be either a working copy (WC) path or URL:\n"
      "    WC  -> WC:   copy and schedule for addition (with history)\n"
      "    WC  -> URL:  immediately commit a copy of WC to URL\n"
      "    URL -> WC:   check out URL into WC, schedule for addition\n"
-     "    URL -> URL:  complete server-side copy;  used to branch & tag\n"),
+     "    URL -> URL:  complete server-side copy;  used to branch & tag\n"
+     "  All the SRCs must be of the same type.\n"),
     {'r', 'q',
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
@@ -333,14 +340,16 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  1. Each item specified by a PATH is scheduled for deletion upon\n"
      "    the next commit.  Files, and directories that have not been\n"
-     "    committed, are immediately removed from the working copy.\n"
+     "    committed, are immediately removed from the working copy\n"
+     "    unless --keep-local option is given.\n"
      "    PATHs that are, or contain, unversioned or modified items will\n"
      "    not be removed unless the --force option is given.\n"
      "\n"
      "  2. Each item specified by a URL is deleted from the repository\n"
      "    via an immediate commit.\n"),
     {svn_cl__force_opt, 'q', svn_cl__targets_opt,
-     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt,
+     svn_cl__keep_local_opt} },
 
   { "diff", svn_cl__diff, {"di"}, N_
     ("Display the differences between two revisions or paths.\n"
@@ -486,7 +495,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__stop_on_copy_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__limit_opt} },
+     svn_cl__config_dir_opt, svn_cl__limit_opt, svn_cl__changelist_opt} },
 
   { "merge", svn_cl__merge, {0}, N_
     ("Apply the differences between two sources to a working copy path.\n"
@@ -536,14 +545,18 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "move", svn_cl__move, {"mv", "rename", "ren"}, N_
     ("Move and/or rename something in working copy or repository.\n"
-     "usage: move SRC DST\n"
+     "usage: move SRC... DST\n"
+     "\n"
+     "When moving multiple sources, they will be added as children of DST, \n"
+     "which must be a directory.\n"
      "\n"
      "  Note:  this subcommand is equivalent to a 'copy' and 'delete'.\n"
      "  Note:  the --revision option has no use and is deprecated.\n"
      "\n"
      "  SRC and DST can both be working copy (WC) paths or URLs:\n"
      "    WC  -> WC:   move and schedule for addition (with history)\n"
-     "    URL -> URL:  complete server-side rename.\n"),
+     "    URL -> URL:  complete server-side rename.\n"
+     "  All the SRCs must be of the same type.\n"),
     {'r', 'q', svn_cl__force_opt,
      SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
 
@@ -561,13 +574,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 #ifndef AS400
   { "propedit", svn_cl__propedit, {"pedit", "pe"}, N_
     ("Edit a property with an external editor.\n"
-     "usage: 1. propedit PROPNAME PATH...\n"
+     "usage: 1. propedit PROPNAME TARGET...\n"
      "       2. propedit PROPNAME --revprop -r REV [TARGET]\n"
      "\n"
-     "  1. Edits versioned props in working copy.\n"
+     "  1. Edits versioned prop in working copy or repository.\n"
      "  2. Edits unversioned remote prop on repos revision.\n"
      "     TARGET only determines which repository to access.\n"),
-    {'r', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
+    {'r', svn_cl__revprop_opt, SVN_CL__LOG_MSG_OPTIONS, SVN_CL__AUTH_OPTIONS,
      svn_cl__encoding_opt, svn_cl__editor_cmd_opt, svn_cl__force_opt,
      svn_cl__config_dir_opt} },
 #endif
@@ -589,7 +602,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the --strict option to disable these beautifications (useful,\n"
      "  for example, when redirecting binary property values to a file).\n"),
     {'R', 'r', svn_cl__revprop_opt, svn_cl__strict_opt,
-     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt} },
+     SVN_CL__AUTH_OPTIONS, svn_cl__config_dir_opt, svn_cl__xml_opt} },
 
   { "proplist", svn_cl__proplist, {"plist", "pl"}, N_
     ("List all properties on files, dirs, or revisions.\n"
@@ -601,7 +614,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  2. Lists unversioned remote props on repos revision.\n"
      "     TARGET only determines which repository to access.\n"),
     {'v', 'R', 'r', 'q', svn_cl__revprop_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt} },
+     svn_cl__config_dir_opt, svn_cl__xml_opt} },
 
   { "propset", svn_cl__propset, {"pset", "ps"}, N_
     ("Set the value of a property on files, dirs, or revisions.\n"
@@ -1247,14 +1260,17 @@ main(int argc, const char *argv[])
       case svn_cl__summarize:
         opt_state.summarize = TRUE;
         break;
-      case svn_cl__clear_opt:
-        opt_state.clear = TRUE;
+      case svn_cl__remove_opt:
+        opt_state.remove = TRUE;
         break;
       case svn_cl__changelist_opt:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);
         break;
       case svn_cl__keep_changelist_opt:
         opt_state.keep_changelist = TRUE;
+        break;
+      case svn_cl__keep_local_opt:
+        opt_state.keep_local = TRUE;
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
@@ -1407,8 +1423,7 @@ main(int argc, const char *argv[])
                 }
               return svn_cmdline_handle_exit_error(err, pool, "svn: ");
             }
-          if (err)
-            svn_error_clear(err);
+          svn_error_clear(err);
         }
 
       /* If the -m argument is a file at all, that's probably not what
@@ -1475,10 +1490,22 @@ main(int argc, const char *argv[])
     svn_config_set(cfg, SVN_CONFIG_SECTION_HELPERS,
                    SVN_CONFIG_OPTION_DIFF3_CMD, opt_state.merge_cmd);
 
-  /* Update auto-props-enable option for add/import commands */
+  /* Update auto-props-enable option, and populate the MIME types map,
+     for add/import commands */
   if (subcommand->cmd_func == svn_cl__add
       || subcommand->cmd_func == svn_cl__import)
     {
+      const char *mimetypes_file;
+      svn_config_get(cfg, &mimetypes_file,
+                     SVN_CONFIG_SECTION_MISCELLANY,
+                     SVN_CONFIG_OPTION_MIMETYPES_FILE, FALSE);
+      if (mimetypes_file && *mimetypes_file)
+        {
+          if ((err = svn_io_parse_mimetypes_file(&(ctx->mimetypes_map),
+                                                 mimetypes_file, pool)))
+            svn_handle_error2(err, stderr, TRUE, "svn: ");
+        }
+
       if (opt_state.autoprops)
         {
           svn_config_set_bool(cfg, SVN_CONFIG_SECTION_MISCELLANY,
@@ -1497,8 +1524,8 @@ main(int argc, const char *argv[])
                         SVN_CONFIG_OPTION_NO_UNLOCK, TRUE);
 
   /* Set the log message callback function.  Note that individual
-     subcommands will populate the ctx->log_msg_baton2 */
-  ctx->log_msg_func2 = svn_cl__get_log_message;
+     subcommands will populate the ctx->log_msg_baton3. */
+  ctx->log_msg_func3 = svn_cl__get_log_message;
 
   /* Set up our cancellation support. */
   ctx->cancel_func = svn_cl__check_cancel;
@@ -1547,6 +1574,14 @@ main(int argc, const char *argv[])
     {
       svn_error_t *tmp_err;
 
+      /* For argument-related problems, suggest using the 'help'
+         subcommand. */
+      if (err->apr_err == SVN_ERR_CL_INSUFFICIENT_ARGS
+          || err->apr_err == SVN_ERR_CL_ARG_PARSING_ERROR)
+        {
+          err = svn_error_quick_wrap(err, 
+                                     _("Try 'svn help' for more info"));
+        }
       svn_handle_error2(err, stderr, FALSE, "svn: ");
 
       /* Tell the user about 'svn cleanup' if any error on the stack

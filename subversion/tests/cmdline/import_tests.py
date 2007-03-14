@@ -6,7 +6,7 @@
 #  See http://subversion.tigris.org for more information.
 #    
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2006 CollabNet.  All rights reserved.
 #
 # This software is licensed as described in the file COPYING, which
 # you should have received as part of this distribution.  The terms
@@ -17,7 +17,7 @@
 ######################################################################
 
 # General modules
-import string, re, os.path
+import re, os.path
 
 # Our testing module
 import svntest
@@ -61,14 +61,14 @@ def import_executable(sbox):
   os.chmod(other_path, 0667)
 
   # import new files into repository
-  url = svntest.main.current_repo_url
+  url = sbox.repo_url
   output, errput =   svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
     '--username', svntest.main.wc_author,
     '--password', svntest.main.wc_passwd,
     '-m', 'Log message for new import', xt_path, url)
 
-  lastline = string.strip(output.pop())
+  lastline = output.pop().strip()
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")
   match = cm.search (lastline)
   if not match:
@@ -141,7 +141,7 @@ def import_ignores(sbox):
   open(foo_o_path, 'w')
 
   # import new dir into repository
-  url = svntest.main.current_repo_url + '/dir'
+  url = sbox.repo_url + '/dir'
 
   output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
@@ -150,7 +150,7 @@ def import_ignores(sbox):
     '-m', 'Log message for new import',
     dir_path, url)
 
-  lastline = string.strip(output.pop())
+  lastline = output.pop().strip()
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")
   match = cm.search (lastline)
   if not match:
@@ -210,7 +210,7 @@ def import_no_ignores(sbox):
   open(foo_rej_path, 'w')
 
   # import new dir into repository
-  url = svntest.main.current_repo_url + '/dir'
+  url = sbox.repo_url + '/dir'
 
   output, errput = svntest.actions.run_and_verify_svn(
     None, None, [], 'import',
@@ -219,7 +219,7 @@ def import_no_ignores(sbox):
     '-m', 'Log message for new import', '--no-ignore', 
     dir_path, url)
 
-  lastline = string.strip(output.pop())
+  lastline = output.pop().strip()
   cm = re.compile ("(Committed|Imported) revision [0-9]+.")
   match = cm.search (lastline)
   if not match:
@@ -275,7 +275,7 @@ def import_avoid_empty_revision(sbox):
   empty_dir = os.path.join(wc_dir, "empty_dir")
   os.makedirs(empty_dir)
 
-  url = svntest.main.current_repo_url  
+  url = sbox.repo_url  
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
@@ -307,7 +307,9 @@ enable-auto-props = yes
 [auto-props]
 *.dsp = svn:eol-style=CRLF
 '''
-  svntest.main.create_config_dir(svntest.main.config_dir, config_contents)
+  tmp_dir = os.path.abspath(svntest.main.temp_dir)
+  config_dir = os.path.join(tmp_dir, 'autoprops_config')
+  svntest.main.create_config_dir(config_dir, config_contents)
 
   # create a new file and import it
   file_name = "test.dsp"
@@ -316,16 +318,17 @@ enable-auto-props = yes
   imp_file_path = os.path.join(imp_dir_path, file_name)
 
   os.mkdir(imp_dir_path, 0755)
-  open(imp_file_path, 'w').write("This is file test.dsp.\n")
+  svntest.main.file_write(imp_file_path, "This is file test.dsp.\n")
 
   svntest.actions.run_and_verify_svn(None, None, [], 'import',
                                      '--username', svntest.main.wc_author,
                                      '--password', svntest.main.wc_passwd,
                                      '-m', 'Log message for new import', 
                                      imp_dir_path, 
-                                     svntest.main.current_repo_url)
+                                     sbox.repo_url, 
+                                     '--config-dir', config_dir)
 
-  svntest.main.run_svn(None, 'update', wc_dir)
+  svntest.main.run_svn(None, 'update', wc_dir, '--config-dir', config_dir)
 
   # change part of the file
   svntest.main.file_append(file_path, "Extra line\n")
@@ -356,7 +359,8 @@ enable-auto-props = yes
 
   svntest.actions.run_and_verify_svn(None, expected_output, [],
                                      'diff', 
-                                     file_path)
+                                     file_path,
+                                     '--config-dir', config_dir)
 
 #----------------------------------------------------------------------
 ########################################################################
