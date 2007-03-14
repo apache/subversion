@@ -3123,15 +3123,16 @@ copy_resource(const dav_resource *src,
                          "autoversioning is not active.");
 
   /* Path-based authorization: COPY requires recursive read access
-   * to the source resource and write access to the destination resource.
-   * XXX: recursive write access?
+   * to the source resource and recursive write access to the
+   * destination resource.
    */
   err = dav_svn__check_resource_access(src,
                                        svn_authz_read | svn_authz_recursive);
   if (err)
     return err;
 
-  err = dav_svn__check_resource_access(dst, svn_authz_write);
+  err = dav_svn__check_resource_access(dst,
+                                       svn_authz_write | svn_authz_recursive);
   if (err)
     return err;
 
@@ -3349,15 +3350,16 @@ move_resource(dav_resource *src,
                          "autoversioning must be active.");
 
   /* Path-based authorization: MOVE requires recursive write access
-   * to source resource and write access to destinaton resource.
-   * XXX: recursive write access?
+   * to the source resource and recursive write access to the
+   * destinaton resource.
    */
   err = dav_svn__check_resource_access(src,
                                        svn_authz_write | svn_authz_recursive);
   if (err)
     return err;
 
-  err = dav_svn__check_resource_access(dst, svn_authz_write);
+  err = dav_svn__check_resource_access(dst,
+                                       svn_authz_write | svn_authz_recursive);
   if (err)
     return err;
 
