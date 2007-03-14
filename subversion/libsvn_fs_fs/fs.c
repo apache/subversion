@@ -217,25 +217,8 @@ fs_hotcopy(const char *src_path,
            svn_boolean_t clean_logs, 
            apr_pool_t *pool)
 {
-  SVN_ERR(svn_fs_fs__hotcopy(src_path, dest_path, pool));
-
-  return SVN_NO_ERROR;
+  return svn_fs_fs__hotcopy(src_path, dest_path, pool);
 }
-
-
-
-/* This implements the fs_library_vtable_t.recover() API.
-   Recover the Subversion filesystem at PATH.
-   Perform all temporary allocations in POOL. */
-static svn_error_t *
-fs_recover(const char *path,
-           apr_pool_t *pool)
-{
-  SVN_ERR(svn_fs_fs__recover(path, pool));
-
-  return SVN_NO_ERROR;
-}
-
 
 
 
@@ -265,9 +248,7 @@ fs_delete_fs(const char *path,
              apr_pool_t *pool)
 {
   /* Remove everything. */
-  SVN_ERR(svn_io_remove_dir2(path, FALSE, pool));
-
-  return SVN_NO_ERROR;
+  return svn_io_remove_dir2(path, FALSE, pool);
 }
 
 
@@ -355,7 +336,7 @@ static fs_library_vtable_t library_vtable = {
   fs_delete_fs,
   fs_hotcopy,
   fs_get_description,
-  fs_recover,
+  svn_fs_fs__recover,
   fs_logfiles
 };
 

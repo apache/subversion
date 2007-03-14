@@ -33,8 +33,11 @@ svn_error_t *svn_fs_fs__hotcopy(const char *src_path,
                                 apr_pool_t *pool);
 
 /* Recover the fsfs filesystem at PATH.
+   Use optional CANCEL_FUNC/CANCEL_BATON for cancellation support.
    Use POOL for temporary allocations. */
 svn_error_t *svn_fs_fs__recover(const char *path,
+                                svn_cancel_func_t cancel_func,
+                                void *cancel_baton,
                                 apr_pool_t *pool);
 
 /* Set *NODEREV_P to the node-revision for the node ID in FS.  Do any

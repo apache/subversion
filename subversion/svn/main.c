@@ -186,7 +186,7 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("don't unlock the targets")},
   {"summarize",     svn_cl__summarize, 0,
                     N_("show a summary of the results")},
-  {"clear",         svn_cl__clear_opt, 0,
+  {"remove",         svn_cl__remove_opt, 0,
                     N_("remove changelist association")},
   {"changelist",    svn_cl__changelist_opt, 1,
                     N_("operate only on members of changelist ARG")},
@@ -260,8 +260,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
   { "changelist", svn_cl__changelist, {"cl"}, N_
     ("Associate (or deassociate) local paths with changelist CLNAME.\n"
      "usage: 1. changelist CLNAME TARGET...\n"
-     "       2. changelist --clear TARGET...\n"),
-    { svn_cl__clear_opt, svn_cl__targets_opt, svn_cl__config_dir_opt } },
+     "       2. changelist --remove TARGET...\n"),
+    { svn_cl__remove_opt, svn_cl__targets_opt, svn_cl__config_dir_opt,
+      svn_cl__changelist_opt} },
 
   { "checkout", svn_cl__checkout, {"co"}, N_
     ("Check out a working copy from a repository.\n"
@@ -496,7 +497,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    svn log http://www.example.com/repo/project foo.c bar.c\n"),
     {'r', 'q', 'v', svn_cl__targets_opt, svn_cl__stop_on_copy_opt,
      svn_cl__incremental_opt, svn_cl__xml_opt, SVN_CL__AUTH_OPTIONS,
-     svn_cl__config_dir_opt, svn_cl__limit_opt} },
+     svn_cl__config_dir_opt, svn_cl__limit_opt, svn_cl__changelist_opt} },
 
   { "merge", svn_cl__merge, {0}, N_
     ("Apply the differences between two sources to a working copy path.\n"
@@ -1265,8 +1266,8 @@ main(int argc, const char *argv[])
       case svn_cl__summarize:
         opt_state.summarize = TRUE;
         break;
-      case svn_cl__clear_opt:
-        opt_state.clear = TRUE;
+      case svn_cl__remove_opt:
+        opt_state.remove = TRUE;
         break;
       case svn_cl__changelist_opt:
         opt_state.changelist = apr_pstrdup(pool, opt_arg);

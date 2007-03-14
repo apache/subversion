@@ -33,7 +33,6 @@ extern "C" {
 
 
 #define SVN_WC__TMP_EXT       ".tmp"
-#define SVN_WC__TEXT_REJ_EXT  ".rej"
 #define SVN_WC__PROP_REJ_EXT  ".prej"
 #define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
 #define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
@@ -109,6 +108,17 @@ struct svn_wc_traversal_info_t
    <modify-entry name="foo.c" revision="5" timestamp="working"/>
  */
 #define SVN_WC__TIMESTAMP_WC   "working"
+
+
+
+/*** Filesizes. ***/
+
+/* A special filesize value which means "use the filesize from the
+   working copy".  This is sometimes used in a log entry like:
+
+   <modify-entry name="foo.c" revision="5" working-size="working"/>
+ */
+#define SVN_WC__WORKING_SIZE_WC   "working"
 
 
 

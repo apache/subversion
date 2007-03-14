@@ -1126,6 +1126,11 @@ def merge_similar_unrelated_trees(sbox):
 
 #----------------------------------------------------------------------
 def merge_one_file_helper(sbox, arg_flav, record_only = 0):
+  "ARG_FLAV is one of 'r' (revision range) or 'c' (single change)."
+
+  if arg_flav not in ('r', 'c'):
+    raise svntest.Failure
+
   sbox.build()
   wc_dir = sbox.wc_dir
   
@@ -1165,8 +1170,6 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
                                        ['U    ' + rho_path + '\n'], [],
                                        'merge', '-c', '2',
                                        rho_url, rho_path)
-  else:
-    raise svntest.Failure
 
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/D/G/rho', status='MM')
@@ -1195,8 +1198,6 @@ def merge_one_file_helper(sbox, arg_flav, record_only = 0):
       merge_cmd += ['-r', '1:2']
     elif arg_flav == 'c':
       merge_cmd += ['-c', '2']
-    else:
-      raise svntest.Failure
 
     if record_only:
       expected_output = []
@@ -1240,6 +1241,11 @@ def merge_record_only(sbox):
 # This is a regression for the enhancement added in issue #785.
 
 def merge_with_implicit_target_helper(sbox, arg_flav):
+  "ARG_FLAV is one of 'r' (revision range) or 'c' (single change)."
+
+  if arg_flav not in ('r', 'c'):
+    raise svntest.Failure
+
   sbox.build()
   wc_dir = sbox.wc_dir
   
@@ -1287,8 +1293,6 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
     elif arg_flav == 'c':
       svntest.actions.run_and_verify_svn(None, ['U    mu\n'], [],
                                          'merge', '-c', '-2', mu_url)
-    else:
-      raise svntest.Failure
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text):
@@ -1302,8 +1306,6 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
     elif arg_flav == 'c':
       svntest.actions.run_and_verify_svn(None, ['G    mu\n'], [],
                                          'merge', '-c', '2', 'mu')
-    else:
-      raise svntest.Failure
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):

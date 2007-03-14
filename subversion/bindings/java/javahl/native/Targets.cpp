@@ -33,7 +33,7 @@
 
 Targets::~Targets()
 {
-    if(m_targetArray != NULL)
+    if (m_targetArray != NULL)
     {
         JNIUtil::getEnv()->DeleteLocalRef(m_targetArray);
     }
@@ -52,38 +52,38 @@ void Targets::add(const char *path)
 
 const apr_array_header_t *Targets::array(const Pool & pool)
 {
-    if(m_targetArray != NULL)
+    if (m_targetArray != NULL)
     {
         JNIEnv *env = JNIUtil::getEnv();
         jint arraySize = env->GetArrayLength(m_targetArray);
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         jclass clazz = env->FindClass("java/lang/String");
-        if(JNIUtil::isJavaExceptionThrown())
+        if (JNIUtil::isJavaExceptionThrown())
         {
             return NULL;
         }
         for( int i = 0; i < arraySize; i++)
         {
             jobject elem = env->GetObjectArrayElement(m_targetArray, i);
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }
-            if(env->IsInstanceOf(elem, clazz))
+            if (env->IsInstanceOf(elem, clazz))
             {
                 JNIStringHolder text((jstring)elem);
-                if(JNIUtil::isJavaExceptionThrown())
+                if (JNIUtil::isJavaExceptionThrown())
                 {
                     return NULL;
                 }
                 const char *tt = (const char *)text;
-                if(!m_doesNotContainsPath)
+                if (!m_doesNotContainsPath)
                 {
                     svn_error_t *err = JNIUtil::preprocessPath(tt, pool.pool());
-                    if(err != NULL)
+                    if (err != NULL)
                     {
                         m_error_occured = err;
                         break;
@@ -91,7 +91,7 @@ const apr_array_header_t *Targets::array(const Pool & pool)
                 }
                 m_targets.push_back(tt);
             }
-            if(JNIUtil::isJavaExceptionThrown())
+            if (JNIUtil::isJavaExceptionThrown())
             {
                 return NULL;
             }

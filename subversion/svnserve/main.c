@@ -332,7 +332,7 @@ int main(int argc, const char *argv[])
     return EXIT_FAILURE;
 
 #ifdef SVN_HAVE_SASL
-  SVN_INT_ERR(sasl_init());
+  SVN_INT_ERR(cyrus_init());
 #endif
 
   /* Create our top-level pool. */

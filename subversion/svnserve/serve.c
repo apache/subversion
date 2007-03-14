@@ -295,9 +295,9 @@ static svn_error_t *auth(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* Perform an authentication request using the built-in SASL implementation. */
 static svn_error_t *
-simple_auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                    server_baton_t *b, enum access_type required,
-                    svn_boolean_t needs_username)
+internal_auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
+                      server_baton_t *b, enum access_type required,
+                      svn_boolean_t needs_username)
 {
   svn_boolean_t success;
   const char *mech, *mecharg;
@@ -327,10 +327,10 @@ static svn_error_t *auth_request(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 {
 #ifdef SVN_HAVE_SASL
   if (b->use_sasl)
-    SVN_ERR(sasl_auth_request(conn, pool, b, required, needs_username));
+    SVN_ERR(cyrus_auth_request(conn, pool, b, required, needs_username));
   else
 #endif
-  SVN_ERR(simple_auth_request(conn, pool, b, required, needs_username));
+  SVN_ERR(internal_auth_request(conn, pool, b, required, needs_username));
   return SVN_NO_ERROR;
 }
 

@@ -2215,6 +2215,85 @@ svn_wc_get_prop_diffs(apr_array_header_t **propchanges,
 
 /** Externals **/
 
+/* Parse external definitions of the forms:
+ *   [rN]   URL  TARGET_DIR
+ *   [r N]  URL  TARGET_DIR
+ *
+ * Return FALSE if there is an error, TRUE otherwise.
+ * (We avoid actually creating an error in this function, so that a generic
+ *  INVALID_EXTERNALS_DESCRIPTION can be created by the caller.)
+ */
+static svn_boolean_t
+parse_external_parts_with_peg_rev(apr_array_header_t *line_parts,
+                                  svn_wc_external_item2_t *item,
+                                  apr_pool_t *pool)
+{
+  svn_error_t *err;
+  const char *url;
+
+  if (line_parts->nelts == 2)
+    {
+      /* No "r REV" given. */
+      url = APR_ARRAY_IDX(line_parts, 0, const char *);
+      item->target_dir = APR_ARRAY_IDX(line_parts, 1, const char *);
+      item->revision.kind = svn_opt_revision_unspecified;
+    }
+  else if ((line_parts->nelts == 3) || (line_parts->nelts == 4))
+    {
+      /* We're dealing with one of these two forms:
+       *
+       *    rN   TARGET_DIR  URL
+       *    r N  TARGET_DIR  URL
+       * 
+       * Handle either way.
+       */
+      const char *r_part_1 = NULL, *r_part_2 = NULL;
+
+      if (line_parts->nelts == 3)
+        {
+          r_part_1 = APR_ARRAY_IDX(line_parts, 0, const char *);
+          url = APR_ARRAY_IDX(line_parts, 1, const char *);
+          item->target_dir = APR_ARRAY_IDX(line_parts, 2, const char *);
+        }
+      else
+        {
+          r_part_1 = APR_ARRAY_IDX(line_parts, 0, const char *);
+          r_part_2 = APR_ARRAY_IDX(line_parts, 1, const char *);
+          url = APR_ARRAY_IDX(line_parts, 2, const char *);
+          item->target_dir = APR_ARRAY_IDX(line_parts, 3, const char *);
+        }
+
+      if ((! r_part_1) || (r_part_1[0] != '-') || (r_part_1[1] != 'r'))
+        return FALSE;
+
+      if (! r_part_2)  /* "rN" */
+        {
+          if (strlen(r_part_1) < 2)
+            return FALSE;
+          else
+            item->revision.value.number = SVN_STR_TO_REV(r_part_1 + 1);
+        }
+      else             /* "r N" */
+        {
+          if (strlen(r_part_2) < 1)
+            return FALSE;
+          else
+            item->revision.value.number = SVN_STR_TO_REV(r_part_2);
+        }
+    }
+  else  /* too many items */
+    return FALSE;
+
+  err = svn_opt_parse_path(&item->peg_revision, &item->url, url, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
+
+  return TRUE;
+}
+
 /* Parse one of these two forms:
  * 
  *    TARGET_DIR  [-rN]  URL
@@ -2284,6 +2363,8 @@ parse_external_parts(apr_array_header_t *line_parts,
   else  /* too many items */
     return FALSE;
 
+  item->peg_revision = item->revision;
+
   return TRUE;
 }
 
@@ -2316,12 +2397,30 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
       SVN_ERR(svn_wc_external_item_create
               ((const svn_wc_external_item2_t **) &item, pool));
+      item->revision.kind = svn_opt_revision_unspecified;
 
       if (line_parts->nelts < 2)
         goto parse_error;
 
-      else if (! parse_external_parts(line_parts, item, pool) )
-        goto parse_error;
+      else 
+        {
+          const char *token = APR_ARRAY_IDX(line_parts, 0, const char *);
+
+          if ( (token[0] == '-' && token[1] == 'r') || svn_path_is_url(token) )
+            {
+              if (! parse_external_parts_with_peg_rev(line_parts, item, pool) )
+                goto parse_error;
+
+              SVN_ERR(svn_opt_resolve_revisions(&item->peg_revision,
+                                                &item->revision, TRUE, FALSE,
+                                                pool));
+            }
+          else
+            {
+              if (! parse_external_parts(line_parts, item, pool) )
+                goto parse_error;
+            }
+        }
 
       if (0)
         {
@@ -2347,6 +2446,9 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
              parent_directory_display);
       }
 
+      SVN_ERR(svn_opt_parse_path(&item->peg_revision, &item->url, item->url,
+                                 pool));
+    
       item->url = svn_path_canonicalize(item->url, pool);
 
       if (externals_p)
@@ -2355,7 +2457,6 @@ svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
 
   return SVN_NO_ERROR;
 }
-
 
 svn_error_t *
 svn_wc_parse_externals_description2(apr_array_header_t **externals_p,

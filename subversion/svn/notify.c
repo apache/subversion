@@ -391,17 +391,23 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
       break;
 
     case svn_wc_notify_changelist_set:
-      if ((err = svn_cmdline_printf(pool, _("Path '%s' is now part of "
+      if ((err = svn_cmdline_printf(pool, _("Path '%s' is now a member of "
                                             "changelist '%s'.\n"),
                                     path_local, n->changelist_name)))
         goto print_error;
       break;
 
     case svn_wc_notify_changelist_clear:
-      if ((err = svn_cmdline_printf(pool, _("Path '%s' is no longer associated "
-                                            "with a changelist.\n"),
+      if ((err = svn_cmdline_printf(pool,
+                                    _("Path '%s' is no longer a member of "
+                                      "a changelist.\n"),
                                     path_local)))
         goto print_error;
+      break;
+
+    case svn_wc_notify_changelist_failed:
+      svn_handle_warning(stderr, n->err);
+      svn_error_clear(n->err);
       break;
 
     default:

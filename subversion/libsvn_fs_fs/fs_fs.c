@@ -4814,13 +4814,21 @@ recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
   return SVN_NO_ERROR;
 }
 
+/* Baton used for recover_body below. */
+struct recover_baton {
+  svn_fs_t *fs;
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
+};
+
 /* The work-horse for svn_fs_fs__recover, called with the FS
    write lock.  This implements the svn_fs_fs__with_write_lock()
-   'body' callback type.  BATON is a 'svn_fs_t *' filesystem. */
+   'body' callback type.  BATON is a 'struct recover_baton *'. */
 static svn_error_t *
 recover_body(void *baton, apr_pool_t *pool)
 {
-  svn_fs_t *fs = baton;
+  struct recover_baton *b = baton;
+  svn_fs_t *fs = b->fs;
   svn_revnum_t rev, max_rev;
   apr_pool_t *iterpool;
   char max_node_id[MAX_KEY_SIZE] = "0", max_copy_id[MAX_KEY_SIZE] = "0";
@@ -4841,6 +4849,9 @@ recover_body(void *baton, apr_pool_t *pool)
       apr_off_t root_offset;
 
       svn_pool_clear(iterpool);
+
+      if (b->cancel_func)
+        SVN_ERR(b->cancel_func(b->cancel_baton));
 
       SVN_ERR(svn_io_file_open(&rev_file,
                                svn_fs_fs__path_rev(fs, rev, iterpool),
@@ -4865,10 +4876,13 @@ recover_body(void *baton, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* This implements the fs_library_vtable_t.recover() API. */
 svn_error_t *
 svn_fs_fs__recover(const char *path,
+                   svn_cancel_func_t cancel_func, void *cancel_baton,
                    apr_pool_t *pool)
 {
+  struct recover_baton b;
   svn_fs_t *fs;
   /* Recovery for FSFS is currently limited to recreating the current
      file from the latest revision. */
@@ -4893,7 +4907,10 @@ svn_fs_fs__recover(const char *path,
      restricted as to the types of recovery we can do.  Luckily,
      we just want to recreate the current file, and we can do that just
      by blocking other writers. */
-  return svn_fs_fs__with_write_lock(fs, recover_body, fs, pool);
+  b.fs = fs;
+  b.cancel_func = cancel_func;
+  b.cancel_baton = cancel_baton;
+  return svn_fs_fs__with_write_lock(fs, recover_body, &b, pool);
 }
 
 svn_error_t *

@@ -191,6 +191,58 @@ authz_group_contains_user(svn_config_t *cfg,
 }
 
 
+/* Determines whether an authz rule applies to the current
+ * user, given the name part of the rule's name-value pair
+ * in RULE_MATCH_STRING and the authz_lookup_baton object
+ * B with the username in question.
+ */
+static svn_boolean_t
+authz_line_applies_to_user(const char *rule_match_string,
+                           struct authz_lookup_baton *b,
+                           apr_pool_t *pool)
+{
+  /* If the rule has an inversion, recurse and invert the result. */
+  if (rule_match_string[0] == '~')
+    return !authz_line_applies_to_user(&rule_match_string[1], b, pool);
+
+  /* Check for special tokens. */
+  if (strcmp(rule_match_string, "$anonymous") == 0)
+    return (b->user == NULL);
+  if (strcmp(rule_match_string, "$authenticated") == 0)
+    return (b->user != NULL);
+
+  /* Check for a wildcard rule. */
+  if (strcmp(rule_match_string, "*") == 0)
+    return TRUE;
+
+  /* If we get here, then the rule is:
+   *  - Not an inversion rule.
+   *  - Not an authz token rule.
+   *  - Not a wildcard rule.
+   *
+   * All that's left over is regular user or group specifications.
+   */
+
+  /* If the session is anonymous, then a user/group
+   * rule definitely won't match.
+   */
+  if (b->user == NULL)
+    return FALSE;
+
+  /* Process the rule depending on whether it is
+   * a user, alias or group rule.
+   */
+  if (rule_match_string[0] == '@')
+    return authz_group_contains_user(
+      b->config, &rule_match_string[1], b->user, pool);
+  else if (rule_match_string[0] == '&')
+    return authz_alias_is_user(
+      b->config, &rule_match_string[1], b->user, pool);
+  else
+    return (strcmp(b->user, rule_match_string) == 0);
+}
+
+
 /* Callback to parse one line of an authz file and update the
  * authz_baton accordingly.
  */
@@ -200,33 +252,9 @@ authz_parse_line(const char *name, const char *value,
 {
   struct authz_lookup_baton *b = baton;
 
-  /* Work out whether this ACL line applies to the user. */
-  if (strcmp(name, "*") != 0)
-    {
-      /* Non-anon rule, anon user.  Stop. */
-      if (!b->user)
-        return TRUE;
-
-      /* Group rule and user not in group.  Stop. */
-      if (*name == '@')
-        {
-          if (!authz_group_contains_user(b->config, &name[1],
-                                         b->user, pool))
-            return TRUE;
-        }
-
-      /* Alias rule and user not alias.  Stop. */
-      else if (*name == '&')
-        {
-          if (!authz_alias_is_user(b->config, &name[1],
-                                   b->user, pool))
-            return TRUE;
-        }
-
-      /* User rule for wrong user.  Stop. */
-      else if (strcmp(name, b->user) != 0)
-        return TRUE;
-    }
+  /* Stop if the rule doesn't apply to this user. */
+  if (!authz_line_applies_to_user(name, b, pool))
+    return TRUE;
 
   /* Set the access grants for the rule. */
   if (strchr(value, 'r'))
@@ -376,8 +404,10 @@ authz_global_parse_section(const char *section_name, void *baton,
       b->access = authz_access_is_granted(b->allow, b->deny,
                                           b->required_access);
 
-      /* Continue as long as we don't find a granted access. */
-      return !b->access;
+      /* Continue as long as we don't find a determined, granted access. */
+      return !(b->access
+               && authz_access_is_determined(b->allow, b->deny,
+                                             b->required_access));
     }
 
   return TRUE;
@@ -403,6 +433,11 @@ authz_get_global_access(svn_config_t *cfg, const char *repos_name,
 
   svn_config_enumerate_sections2(cfg, authz_global_parse_section,
                                  &baton, pool);
+
+  /* If walking the configuration was inconclusive, deny access. */
+  if (!authz_access_is_determined(baton.allow,
+                                  baton.deny, baton.required_access))
+    return FALSE;
 
   return baton.access;
 }
@@ -490,21 +525,65 @@ authz_group_walk(svn_config_t *cfg,
 }
 
 
-/* Callback to check whether NAME is a group or alias name, and if so,
-   whether the group or alias definition exists.  Return TRUE if the rule
-   has no errors.  Use BATON for context and error reporting. */
-static svn_boolean_t authz_validate_rule(const char *name,
+/* Callback to perform some simple sanity checks on an authz rule.
+ *
+ * - If RULE_MATCH_STRING references a group or an alias, verify that
+ *   the group or alias definition exists.
+ * - If RULE_MATCH_STRING specifies a token (starts with $), verify
+ *   that the token name is valid.
+ * - If RULE_MATCH_STRING is using inversion, verify that it isn't
+ *   doing it more than once within the one rule, and that it isn't
+ *   "~*", as that would never match.
+ * - Check that VALUE part of the rule specifies only allowed rule
+ *   flag characters ('r' and 'w').
+ *
+ * Return TRUE if the rule has no errors. Use BATON for context and
+ * error reporting.
+ */
+static svn_boolean_t authz_validate_rule(const char *rule_match_string,
                                          const char *value,
                                          void *baton,
                                          apr_pool_t *pool)
 {
   const char *val;
+  const char *match = rule_match_string;
   struct authz_validate_baton *b = baton;
 
-  /* If the rule applies to a group, check its existence. */
-  if (*name == '@')
+  /* Make sure the user isn't using double-negatives. */
+  if (match[0] == '~')
     {
-      svn_config_get(b->config, &val, "groups", &name[1], NULL);
+      /* Bump the pointer past the inversion for the other checks. */
+      match++;
+
+      /* Another inversion is a double negative; we can't not stop. */
+      if (match[0] == '~')
+        {
+          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                     "Rule '%s' has more than one "
+                                     "inversion; double negatives are "
+                                     "not permitted.",
+                                     rule_match_string);
+          return FALSE;
+        }
+
+      /* Make sure that the rule isn't "~*", which won't ever match. */
+      if (strcmp(match, "*") == 0)
+        {
+          b->err = svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                    "Authz rules with match string '~*' "
+                                    "are not allowed, because they never "
+                                    "match anyone.");
+          return FALSE;
+        }
+    }
+
+  /* If the rule applies to a group, check its existence. */
+  if (match[0] == '@')
+    {
+      const char *group = &match[1];
+
+      svn_config_get(b->config, &val, "groups", group, NULL);
+
       /* Having a non-existent group in the ACL configuration might be
          the sign of a typo.  Refuse to perform authz on uncertain
          rules. */
@@ -513,21 +592,39 @@ static svn_boolean_t authz_validate_rule(const char *name,
           b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
                                      "An authz rule refers to group "
                                      "'%s', which is undefined",
-                                     name);
+                                     rule_match_string);
           return FALSE;
         }
     }
 
   /* If the rule applies to an alias, check its existence. */
-  if (*name == '&')
+  if (match[0] == '&')
     {
-      svn_config_get (b->config, &val, "aliases", &name[1], NULL);
+      const char *alias = &match[1];
+
+      svn_config_get (b->config, &val, "aliases", alias, NULL);
+
       if (!val)
         {
           b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
                                      "An authz rule refers to alias "
                                      "'%s', which is undefined",
-                                     name);
+                                     rule_match_string);
+          return FALSE;
+        }
+     }
+
+  /* If the rule specifies a token, check its validity. */
+  if (match[0] == '$')
+    {
+      const char *token_name = &match[1];
+
+      if ((strcmp(token_name, "anonymous") != 0)
+       && (strcmp(token_name, "authenticated") != 0))
+        {
+          b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                                     "Unrecognized authz token '%s'.",
+                                     rule_match_string);
           return FALSE;
         }
     }
@@ -540,7 +637,8 @@ static svn_boolean_t authz_validate_rule(const char *name,
         {
           b->err = svn_error_createf(SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
                                      "The character '%c' in rule '%s' is not "
-                                     "allowed in authz rules", *val, name);
+                                     "allowed in authz rules", *val,
+                                     rule_match_string);
           return FALSE;
         }
 

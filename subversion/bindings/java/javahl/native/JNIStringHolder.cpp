@@ -27,7 +27,7 @@
 
 JNIStringHolder::JNIStringHolder(jstring jtext)
 {
-    if(jtext == NULL)
+    if (jtext == NULL)
     {
         m_str = NULL;
         m_jtext = NULL;
@@ -40,6 +40,6 @@ JNIStringHolder::JNIStringHolder(jstring jtext)
 
 JNIStringHolder::~JNIStringHolder()
 {
-    if(m_jtext && m_str)
+    if (m_jtext && m_str)
         m_env->ReleaseStringUTFChars(m_jtext, m_str);
 }

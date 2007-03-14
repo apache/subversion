@@ -61,9 +61,10 @@ static svn_error_t *read_success(svn_ra_svn_conn_t *conn, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *svn_ra_svn__do_simple_auth(svn_ra_svn__session_baton_t *sess,
-                                        apr_array_header_t *mechlist,
-                                        const char *realm, apr_pool_t *pool)
+svn_error_t *
+svn_ra_svn__do_internal_auth(svn_ra_svn__session_baton_t *sess,
+                             apr_array_header_t *mechlist,
+                             const char *realm, apr_pool_t *pool)
 {
   svn_ra_svn_conn_t *conn = sess->conn;
   const char *realmstring, *user, *password, *msg;

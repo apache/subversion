@@ -227,6 +227,10 @@ svn_error_t *svn_fs_hotcopy(const char *src_path, const char *dest_path,
 /** Perform any necessary non-catastrophic recovery on the Subversion
  * filesystem located at @a path.
  *
+ * If @a cancel_func is not @c NULL, it is called periodically with
+ * @a cancel_baton as argument to see if the client wishes to cancel
+ * recovery.  BDB filesystems do not currently support cancellation.
+ *
  * Do any necessary allocation within @a pool.
  *
  * For FSFS filesystems, recovery is currently limited to recreating
@@ -255,7 +259,10 @@ svn_error_t *svn_fs_hotcopy(const char *src_path, const char *dest_path,
  *
  * @since New in 1.5.
  */
-svn_error_t *svn_fs_recover(const char *path, apr_pool_t *pool);
+svn_error_t *svn_fs_recover(const char *path,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *pool);
 
 
 /** Subversion filesystems based on Berkeley DB.

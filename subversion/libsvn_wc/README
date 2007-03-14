@@ -335,8 +335,8 @@ allowed.
 
 A field may be boolean, in which case it can have either a value equal
 to the field name, meaning true, or no value, meaning false.  Timestamps
-are stored in the format produced by svn_time_to_cstring().  Revision
-numbers are stored as decimal numbers.
+are stored in the format produced by svn_time_to_cstring().  Numbers
+are stored in decimal.
 
 The first entry has an empty name field and is the entry for this directory,
 that is, the directory containing this administrative area.  This is
@@ -482,6 +482,11 @@ keep-local:
    A boolean: true iff this entry should be kept after a scheduled
    deletion is committed.  This is only allowed on the this_dir entry,
    and only when the schedule is 'delete'.
+
+working-size:
+   The number of bytes in the working file.  This can differ from the
+   number of bytes in the text base; for example, the working file may
+   have undergone keyword substitution or eol translation.
 
 The only fields allowed in an entry for a directory (other than the
 this_dir entry) are name, absent, deleted, schedule, copied,

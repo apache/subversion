@@ -391,6 +391,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 25,
              "Invalid switch")
 
+  /** @since New in 1.5. */
+  SVN_ERRDEF(SVN_ERR_WC_MISMATCHED_CHANGELIST,
+             SVN_ERR_WC_CATEGORY_START + 26,
+             "Changelist doesn't match")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -775,6 +780,7 @@ SVN_ERROR_START
              SVN_ERR_RA_SVN_CATEGORY_START + 6,
              "Client/server version mismatch")
 
+  /** @since New in 1.5. */
   SVN_ERRDEF(SVN_ERR_RA_SVN_NO_MECHANISMS,
              SVN_ERR_RA_SVN_CATEGORY_START + 7,
              "Cannot negotiate authentication mechanism")

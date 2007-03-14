@@ -926,6 +926,7 @@ def status_dash_u_missing_dir(sbox):
 def status_add_plus_conflict(sbox):
   "status on conflicted added file"
   sbox.build()
+  svntest.actions.do_sleep_for_timestamps()
 
   wc_dir = sbox.wc_dir
 

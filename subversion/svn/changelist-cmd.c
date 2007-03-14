@@ -26,6 +26,8 @@
 #include "svn_error.h"
 #include "cl.h"
 
+#include "svn_private_config.h"
+
 
 /*** Code. ***/
 
@@ -40,13 +42,38 @@ svn_cl__changelist(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
+  apr_array_header_t *changelist_targets = NULL, *combined_targets = NULL;
   apr_array_header_t *paths;
   int i;
 
-  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
-                                        opt_state->targets, pool));
+  /* Before allowing svn_opt_args_to_target_array() to canonicalize
+     all the targets, we need to build a list of targets made of both
+     ones the user typed, as well as any specified by --changelist.  */
+  if (opt_state->changelist)
+    {
+      SVN_ERR(svn_client_get_changelist(&changelist_targets,
+                                        opt_state->changelist,
+                                        "",
+                                        ctx,
+                                        pool));
+      if (apr_is_empty_array(changelist_targets))
+        return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                 _("no such changelist '%s'"),
+                                 opt_state->changelist);
+    }
 
-  if (opt_state->clear)
+  if (opt_state->targets && changelist_targets)
+    combined_targets = apr_array_append(pool, opt_state->targets,
+                                        changelist_targets);
+  else if (opt_state->targets)
+    combined_targets = opt_state->targets;
+  else if (changelist_targets)
+    combined_targets = changelist_targets;
+
+  SVN_ERR(svn_opt_args_to_target_array2(&targets, os,
+                                        combined_targets, pool));
+
+  if (opt_state->remove)
     {
       if (targets->nelts < 1)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0, NULL);
@@ -70,13 +97,37 @@ svn_cl__changelist(apr_getopt_t *os,
   svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                        FALSE, FALSE, pool);
 
-  SVN_ERR(svn_cl__try
-          (svn_client_set_changelist(paths, changelist_name,
-                                     ctx, pool),
-           NULL, opt_state->quiet,
-           SVN_ERR_UNVERSIONED_RESOURCE,
-           SVN_ERR_WC_PATH_NOT_FOUND,
-           SVN_NO_ERROR));
+
+  /* We now have two different APIs to use: */
+
+  if (changelist_name != NULL)
+    {
+      SVN_ERR(svn_cl__try
+              (svn_client_add_to_changelist(paths, changelist_name,
+                                            ctx, pool),
+               NULL, opt_state->quiet,
+               SVN_ERR_UNVERSIONED_RESOURCE,
+               SVN_ERR_WC_PATH_NOT_FOUND,
+               SVN_NO_ERROR));
+    }
+  else
+    {
+      /* Note that some other client might pass a non-NULL value for
+         CHANGELIST_NAME below, should it want to cause
+         strict-checking that certain paths really belong to a certain
+         changelist before removing them.  The commandline client,
+         however, is pretty relaxed.  It just removes files from
+         "whatever" changelist paths are already part of. */
+
+      SVN_ERR(svn_cl__try
+              (svn_client_remove_from_changelist(paths, changelist_name,
+                                                 ctx, pool),
+               NULL, opt_state->quiet,
+               SVN_ERR_UNVERSIONED_RESOURCE,
+               SVN_ERR_WC_PATH_NOT_FOUND,
+               SVN_NO_ERROR));
+    }
+
 
   return SVN_NO_ERROR;
 }

@@ -621,6 +621,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-admin-last-repository-dir nil "The last repository url for various operations.")
 (defvar svn-last-cmd-ring (make-ring 30) "Ring that holds the last executed svn commands (for debugging purposes)")
 (defvar svn-status-cached-version-string nil)
+(defvar svn-status-get-line-information-for-file nil)
 
 (defvar svn-status-partner-buffer nil "The partner buffer for this svn related buffer")
 (make-variable-buffer-local 'svn-status-partner-buffer)
@@ -858,6 +859,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
   (define-key svn-global-keymap (kbd "f =") 'svn-file-show-svn-diff)
+  (define-key svn-global-keymap (kbd "f e") 'svn-file-show-svn-ediff)
   (define-key svn-global-keymap (kbd "f l") 'svn-file-show-svn-log)
   (define-key svn-global-keymap (kbd "f b") 'svn-status-blame)
   (define-key svn-global-keymap (kbd "f a") 'svn-file-add-to-changelog)
@@ -2814,7 +2816,9 @@ The result may be parsed with the various `svn-status-line-info->...' functions.
                              (overlay-get overlay 'svn-info))))
         svn-info)
     ;; different mode, means called not from the *svn-status* buffer
-    (svn-status-make-line-info ".")))
+    (if svn-status-get-line-information-for-file
+        (svn-status-make-line-info (file-relative-name (buffer-file-name) (svn-status-base-dir)))
+      (svn-status-make-line-info "."))))
 
 
 (defun svn-status-get-file-list (use-marked-files)
@@ -3964,6 +3968,14 @@ If ARG then prompt for revision to diff against."
   (interactive)
   (read-string prompt default-value))
 
+(defun svn-file-show-svn-ediff (arg)
+  "Run ediff on the current file with a previous revision.
+If ARG then prompt for revision to diff against."
+  (interactive "P")
+  (let ((svn-status-get-line-information-for-file t)
+        (default-directory (svn-status-base-dir)))
+    (svn-status-ediff-with-revision arg)))
+
 ;; --------------------------------------------------------------------------------
 ;; SVN process handling
 ;; --------------------------------------------------------------------------------
@@ -4815,20 +4827,34 @@ You can send raw data to the process via \\[svn-process-send-string]."
 ;; svn status persistent options
 ;; --------------------------------------------------------------------------------
 
+(defun svn-status-repo-for-path (directory)
+  "Find the repository root for DIRECTORY."
+  (let ((default-directory directory))
+    (svn-run nil t 'parse-info "info" (expand-file-name "."))
+    (with-current-buffer svn-process-buffer-name
+      (goto-char (point-min))
+      (let ((case-fold-search t))
+        (when (search-forward "repository root: " nil t)
+          (buffer-substring-no-properties (point) (svn-point-at-eol)))))))
+
 (defun svn-status-base-dir (&optional start-directory)
   "Find the svn root directory for the current working copy.
 Return nil, if not in a svn working copy."
   (let* ((base-dir (expand-file-name (or start-directory default-directory)))
+         (repository-root (svn-status-repo-for-path base-dir))
          (dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
-         (in-tree (file-exists-p dot-svn-dir))
-         (dir-below (expand-file-name default-directory)))
+         (in-tree (and repository-root (file-exists-p dot-svn-dir)))
+         (dir-below (expand-file-name base-dir)))
     (while (when (and dir-below (file-exists-p dot-svn-dir))
              (setq base-dir (file-name-directory dot-svn-dir))
              (string-match "\\(.+/\\).+/" dir-below)
              (setq dir-below
                    (and (string-match "\\(.*/\\)[^/]+/" dir-below)
                         (match-string 1 dir-below)))
-             (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))))
+             (when dir-below
+               (if (string= (svn-status-repo-for-path dir-below) repository-root)
+                   (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))
+                 (setq dir-below nil)))))
     (and in-tree base-dir)))
 
 (defun svn-status-save-state ()

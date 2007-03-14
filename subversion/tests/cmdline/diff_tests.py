@@ -1420,6 +1420,7 @@ def check_for_omitted_prefix_in_path_component(sbox):
   "check for omitted prefix in path component"
 
   sbox.build()
+  svntest.actions.do_sleep_for_timestamps()
 
   prefix_path = os.path.join(sbox.wc_dir, 'prefix_mydir')
   svntest.actions.run_and_verify_svn(None, None, [],

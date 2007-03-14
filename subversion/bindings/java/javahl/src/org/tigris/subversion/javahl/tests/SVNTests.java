@@ -119,27 +119,27 @@ class SVNTests extends TestCase
     protected SVNTests()
     {
         // if not already set, get a usefull value for rootDir
-        if(rootDirectoryName == null)
+        if (rootDirectoryName == null)
             rootDirectoryName = System.getProperty("test.rootdir");
-        if(rootDirectoryName == null)
+        if (rootDirectoryName == null)
             rootDirectoryName = System.getProperty("user.dir");
         rootDir = new File(rootDirectoryName);
 
         // if not alread set, get a usefull value for root url
-        if(rootUrl == null)
+        if (rootUrl == null)
             rootUrl = System.getProperty("test.rooturl");
-        if(rootUrl == null)
+        if (rootUrl == null)
         {
             // if no root url, set build a file url
             rootUrl = rootDir.toURI().toString();
             // The JRE may have a different view about the number of
             // '/' characters to follow "file:" in a URL than
             // Subversion.  We convert to the Subversion view.
-            if(rootUrl.startsWith("file:///"))
+            if (rootUrl.startsWith("file:///"))
                 ; // this is the form subversion needs
-            else if(rootUrl.startsWith("file://"))
+            else if (rootUrl.startsWith("file://"))
                 rootUrl = rootUrl.replaceFirst("file://", "file:///");
-            else if(rootUrl.startsWith("file:/"))
+            else if (rootUrl.startsWith("file:/"))
                 rootUrl = rootUrl.replaceFirst("file:/", "file:///");
         }
 
@@ -317,22 +317,22 @@ class SVNTests extends TestCase
     {
         //determine the full working copy path and the full url of the item.
         String path = null;
-        if(workingCopyPath != null)
-            if(itemPath != null)
+        if (workingCopyPath != null)
+            if (itemPath != null)
                 path = workingCopyPath.replace(File.separatorChar, '/') +
                         '/' + itemPath;
             else
                 path = workingCopyPath.replace(File.separatorChar, '/');
         String url = null;
-        if(baseUrl != null)
-            if(itemPath != null)
+        if (baseUrl != null)
+            if (itemPath != null)
                 url = baseUrl + '/' + itemPath;
             else
                 url = baseUrl;
 
         // the key of the item is either the url or the path (if no url)
         String key;
-        if(url != null)
+        if (url != null)
             key = url;
         else
             key = path;
@@ -722,7 +722,7 @@ class SVNTests extends TestCase
                 // since imports do not provide a url, the key is either url or
                 // path
                 String key;
-                if(commitItem.getUrl() != null)
+                if (commitItem.getUrl() != null)
                     key = commitItem.getUrl();
                 else
                     key = commitItem.getPath();

@@ -47,9 +47,9 @@
 #include "ra_svn.h"
 
 #ifdef SVN_HAVE_SASL
-#define DO_AUTH svn_ra_svn__do_sasl_auth
+#define DO_AUTH svn_ra_svn__do_cyrus_auth
 #else
-#define DO_AUTH svn_ra_svn__do_simple_auth
+#define DO_AUTH svn_ra_svn__do_internal_auth
 #endif
 
 typedef struct {
@@ -560,14 +560,14 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
    * capability list, and the URL, and subsequently there is an auth
    * request.  In version 1, we send back the protocol version, auth
    * mechanism, mechanism initial response, and capability list, and;
-   * then send the URL after authentication.  svn_ra_svn__do_sasl_auth
-   * and svn_ra_svn__do_simple_auth temporarily have support for the
+   * then send the URL after authentication.  svn_ra_svn__do_cyrus_auth
+   * and svn_ra_svn__do_internal_auth temporarily have support for the
    * mixed-style response. */
   /* When we punt support for protocol version 1, we should:
    * - Eliminate this conditional and the similar one below
    * - Remove v1 support from svn_ra_svn__auth_response
-   * - Remove the (realm == NULL) support from svn_ra_svn__do_sasl_auth
-   *   and svn_ra_svn__do_simple_auth
+   * - Remove the (realm == NULL) support from svn_ra_svn__do_cyrus_auth
+   *   and svn_ra_svn__do_internal_auth
    * - Remove the protocol version check from handle_auth_request */
   if (sess->protocol_version == 1)
     {

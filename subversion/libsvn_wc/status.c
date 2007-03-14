@@ -1189,7 +1189,7 @@ make_dir_baton(void **dir_baton,
   struct edit_baton *eb = edit_baton;
   struct dir_baton *d = apr_pcalloc(pool, sizeof(*d));
   const char *full_path; 
-  svn_wc_status2_t *parent_status;
+  svn_wc_status2_t *status_in_parent;
 
   /* Don't do this.  Just do NOT do this to me. */
   if (pb && (! path))
@@ -1217,29 +1217,29 @@ make_dir_baton(void **dir_baton,
   /* Get the status for this path's children.  Of course, we only want
      to do this if the path is versioned as a directory. */
   if (pb)
-    parent_status = apr_hash_get(pb->statii, d->path, APR_HASH_KEY_STRING);
+    status_in_parent = apr_hash_get(pb->statii, d->path, APR_HASH_KEY_STRING);
   else
-    parent_status = eb->anchor_status;
+    status_in_parent = eb->anchor_status;
 
-  /* Order is important here.  We can't depend on parent_status->entry
+  /* Order is important here.  We can't depend on status_in_parent->entry
      being non-NULL until after we've checked all the conditions that
      might indicate that the parent is unversioned ("unversioned" for
      our purposes includes being an external or ignored item). */
-  if (parent_status
-      && (parent_status->text_status != svn_wc_status_unversioned)
-      && (parent_status->text_status != svn_wc_status_deleted)
-      && (parent_status->text_status != svn_wc_status_missing)
-      && (parent_status->text_status != svn_wc_status_obstructed)
-      && (parent_status->text_status != svn_wc_status_external)
-      && (parent_status->text_status != svn_wc_status_ignored)
-      && (parent_status->entry->kind == svn_node_dir)
+  if (status_in_parent
+      && (status_in_parent->text_status != svn_wc_status_unversioned)
+      && (status_in_parent->text_status != svn_wc_status_deleted)
+      && (status_in_parent->text_status != svn_wc_status_missing)
+      && (status_in_parent->text_status != svn_wc_status_obstructed)
+      && (status_in_parent->text_status != svn_wc_status_external)
+      && (status_in_parent->text_status != svn_wc_status_ignored)
+      && (status_in_parent->entry->kind == svn_node_dir)
       && (eb->descend || (! pb)))
     {
       svn_wc_adm_access_t *dir_access;
       apr_array_header_t *ignores = eb->ignores;
       SVN_ERR(svn_wc_adm_retrieve(&dir_access, eb->adm_access, 
                                   d->path, pool));
-      SVN_ERR(get_dir_status(eb, parent_status->entry, dir_access, NULL, 
+      SVN_ERR(get_dir_status(eb, status_in_parent->entry, dir_access, NULL, 
                              ignores, FALSE, TRUE, TRUE, TRUE, hash_stash, 
                              d->statii, NULL, NULL, pool));
     }
