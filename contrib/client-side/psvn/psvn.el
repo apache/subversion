@@ -3972,7 +3972,8 @@ If ARG then prompt for revision to diff against."
   "Run ediff on the current file with a previous revision.
 If ARG then prompt for revision to diff against."
   (interactive "P")
-  (let ((svn-status-get-line-information-for-file t))
+  (let ((svn-status-get-line-information-for-file t)
+        (default-directory (svn-status-base-dir)))
     (svn-status-ediff-with-revision arg)))
 
 ;; --------------------------------------------------------------------------------
