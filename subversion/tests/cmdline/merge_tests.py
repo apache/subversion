@@ -1118,6 +1118,11 @@ def merge_similar_unrelated_trees(sbox):
 
 #----------------------------------------------------------------------
 def merge_one_file_helper(sbox, arg_flav):
+  "ARG_FLAV is one of 'r' (revision range) or 'c' (single change)."
+
+  if arg_flav not in ('r', 'c'):
+    raise svntest.Failure
+
   sbox.build()
   wc_dir = sbox.wc_dir
   
@@ -1157,8 +1162,6 @@ def merge_one_file_helper(sbox, arg_flav):
                                        ['U    ' + rho_path + '\n'], [],
                                        'merge', '-c', '2',
                                        rho_url, rho_path)
-  else:
-    raise svntest.Failure
 
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/D/G/rho', status='M ')
@@ -1189,8 +1192,6 @@ def merge_one_file_helper(sbox, arg_flav):
       svntest.actions.run_and_verify_svn(None,
                                          ['U    rho\n'], [],
                                          'merge', '-c', '2', rho_url)
-    else:
-      raise svntest.Failure
 
     # Inspect rho, make sure it's right.
     rho_text = svntest.tree.get_text('rho')
