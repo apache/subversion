@@ -67,7 +67,6 @@ typedef struct {
   enum conf_flag list_parentpath; /* whether to allow GET of parentpath */
   const char *root_dir;              /* our top-level directory */
   const char *master_uri;            /* URI to the master SVN repos */
-  const char *native_authz_file;     /* rule file for native authz */
 } dir_conf_t;
 
 
@@ -165,7 +164,6 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   newconf->list_parentpath = INHERIT_VALUE(parent, child, list_parentpath);
   /* Prefer our parent's value over our new one - hence the swap. */
   newconf->root_dir = INHERIT_VALUE(child, parent, root_dir);
-  newconf->native_authz_file = INHERIT_VALUE(parent, child, native_authz_file);
 
   return newconf;
 }
@@ -303,17 +301,6 @@ SVNSpecialURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
   conf = ap_get_module_config(cmd->server->module_config,
                               &dav_svn_module);
   conf->special_uri = uri;
-
-  return NULL;
-}
-
-static const char *
-SVNNativeAuthzFile_cmd(cmd_parms *cmd, void *config, const char *arg1)
-{
-  dir_conf_t *conf = config;
-
-  conf->native_authz_file
-      = svn_path_canonicalize(apr_pstrdup(cmd->pool, arg1), cmd->pool);
 
   return NULL;
 }
@@ -464,16 +451,6 @@ dav_svn__get_list_parentpath_flag(request_rec *r)
 
   conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
   return conf->list_parentpath == CONF_FLAG_ON;
-}
-
-
-const char *
-dav_svn__get_native_authz_file(request_rec *r)
-{
-    dir_conf_t *conf;
-
-    conf = ap_get_module_config(r->per_dir_config, &dav_svn_module);
-    return conf->native_authz_file;
 }
 
 
@@ -641,12 +618,6 @@ static const command_rec cmds[] =
   /* per directory/location */
   AP_INIT_TAKE1("SVNMasterURI", SVNMasterURI_cmd, NULL, ACCESS_CONF,
                 "specifies a URI to access a master Subversion repository"),
-
-  /* per directory/location */
-  AP_INIT_TAKE1("SVNNativeAuthzFile", SVNNativeAuthzFile_cmd, NULL,
-                ACCESS_CONF|RSRC_CONF,
-                "Text file containing permissions of repository paths "
-                "for mod_dav_svn native path-based authorization"),
 
   { NULL }
 };

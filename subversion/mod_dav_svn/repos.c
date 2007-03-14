@@ -1485,45 +1485,6 @@ get_resource(request_rec *r,
   if (err)
     return err;
 
-#ifdef SVN_DEBUG
-  ap_log_rerror(APLOG_MARK, APLOG_INFO, 0, r,
-                "dav_svn_get_resource(): %s %s %s (%s)",
-                (r->user ? r->user : "-"), r->method, repos_path, r->uri);
-#endif
-
-  /* A special case of path-based authorization for methods
-   * that don't have any saner place to insert authorization to.
-   * XXX: Think of how to do it differently!
-   *
-   * OPTIONS:
-   *   A general check, if access is allowed to this resouce,
-   *   then OPTIONS will return a valid response. Otherwise
-   *   an "Insufficient rights ..." will be returned.
-   *
-   * PROPFIND, PROPPATCH:
-   *   An initial check. If the user is not allowed to access
-   *   the resouce, no information about it should be revealed
-   *   (even "resource does not exist"). Depending on the "Depth"
-   *   header, there will be separate authz checks for every
-   *   child of this resource.
-   */
-  if (r->method_number == M_OPTIONS
-      || r->method_number == M_PROPFIND
-      || r->method_number == M_PROPPATCH)
-    {
-      /* NOTE: We cannot use "repos_path" or "relative" straight away,
-       * need to add a slash at the beginning...
-       */ 
-      char *path = NULL;
-
-      if (repos_path)
-        path = svn_path_join("/", repos_path, r->pool);
-
-      err = dav_svn__check_access(repos_name, path, r, svn_authz_read);
-      if (err)
-        return err;
-    }
-
   /* The path that we will eventually try to open as an svn
      repository.  Normally defined by the SVNPath directive. */
   fs_path = dav_svn__get_fs_path(r);
@@ -1817,11 +1778,10 @@ get_parent_resource(const dav_resource *resource,
 {
   dav_resource *parent;
   dav_resource_private *parentinfo;
-
-  svn_stringbuf_t *uri_path = resource->info->uri_path;
+  svn_stringbuf_t *path = resource->info->uri_path;
 
   /* the root of the repository has no parent */
-  if (uri_path->len == 1 && *uri_path->data == '/')
+  if (path->len == 1 && *path->data == '/')
     {
       *parent_resource = NULL;
       return NULL;
@@ -2106,11 +2066,6 @@ open_stream(const dav_resource *resource,
                                "Resource body changes may only be made to "
                                "working resources [at this time].");
         }
-
-      /* Path-based authorization: PUT requires write access to resource. */
-      derr = dav_svn__check_resource_access(resource, svn_authz_write);
-      if (derr)
-        return derr;
     }
 
 #if 1
@@ -2416,23 +2371,12 @@ static dav_error *
 set_headers(request_rec *r, const dav_resource *resource)
 {
   svn_error_t *serr;
-  dav_error *derr;
   svn_filesize_t length;
   const char *mimetype = NULL;
   apr_time_t last_modified;
   
   if (!resource->exists)
     return NULL;
-  
-  /* Path-based authorization: if the user doesn't have access
-   * to this resource, no information about it should be revealed. 
-   *
-   * Here we check for read access, as dav_svn_set_headers() is a
-   * first step of processing a GET request.
-   */
-  derr = dav_svn__check_resource_access(resource, svn_authz_read);
-  if (derr)
-    return derr;
 
   last_modified = get_last_modified(resource);
   if (last_modified != -1)
@@ -2778,35 +2722,6 @@ deliver(const dav_resource *resource, ap_filter_t *output)
           const char *href = name;
           svn_boolean_t is_dir = (entry->kind == svn_node_dir);
 
-          /* Path-based authorization: check if the user has read access
-           * on the entry - if not, hide it.
-           */
-            {
-              dav_error *derr;
-              const char *path;
-              const char *repos_path = resource->info->repos_path;
-
-              svn_pool_clear(entry_pool);
-
-              /* Make a repos_path for an entry we are checking -
-               * If repos_path is "/", we only need to add an entry name.
-               * If repos_path is "/...", we need to add a slash and
-               * then the entry name.
-               */
-              path = apr_psprintf(entry_pool, "%s%s%s",
-                                  repos_path,
-                                  (repos_path[0] == '/'
-                                   && repos_path[1] == 0 ? "" : "/"), 
-                                  name);
-
-              derr = dav_svn__check_access(resource->info->repos->repo_name,
-                                           path,
-                                           resource->info->r,
-                                           svn_authz_read);
-              if (derr)
-                continue;
-            }
-
           svn_pool_clear(entry_pool);
 
           /* append a trailing slash onto the name for directories. we NEED
@@ -3040,11 +2955,6 @@ create_collection(dav_resource *resource)
                          "MKCOL called on regular resource, but "
                          "autoversioning is not active.");
 
-  /* Path-based authorization: MKCOL requires write access to the resource */
-  err = dav_svn__check_resource_access(resource, svn_authz_write);
-  if (err)
-    return err;
-
   /* ### note that the parent was checked out at some point, and this
      ### is being preformed relative to the working rsrc for that parent */
 
@@ -3121,20 +3031,6 @@ copy_resource(const dav_resource *src,
     return dav_new_error(dst->pool, HTTP_METHOD_NOT_ALLOWED, 0,
                          "COPY called on regular resource, but "
                          "autoversioning is not active.");
-
-  /* Path-based authorization: COPY requires recursive read access
-   * to the source resource and recursive write access to the
-   * destination resource.
-   */
-  err = dav_svn__check_resource_access(src,
-                                       svn_authz_read | svn_authz_recursive);
-  if (err)
-    return err;
-
-  err = dav_svn__check_resource_access(dst,
-                                       svn_authz_write | svn_authz_recursive);
-  if (err)
-    return err;
 
   /* Auto-versioning copy of regular resource: */
   if (dst->type == DAV_RESOURCE_TYPE_REGULAR)
@@ -3213,24 +3109,9 @@ remove_resource(dav_resource *resource, dav_response **response)
   /* Handle activity deletions (early exit). */
   if (resource->type == DAV_RESOURCE_TYPE_ACTIVITY)
     {
-      /* Path-based authorization: DELETE of an activity requires
-       * global write access to the repository.
-       */
-      err = dav_svn__check_global_access(resource, svn_authz_write);
-      if (err)
-        return err;
-
       return dav_svn__delete_activity(resource->info->repos,
                                       resource->info->root.activity_id);
     }
-
-  /* Path-based authorization: DELETE requires recursive write access
-   * to the resource.
-   */
-  err = dav_svn__check_resource_access(resource,
-                                       svn_authz_write | svn_authz_recursive);
-  if (err)
-    return err;
 
   /* ### note that the parent was checked out at some point, and this
      ### is being preformed relative to the working rsrc for that parent */
@@ -3349,20 +3230,6 @@ move_resource(dav_resource *src,
                          "MOVE only allowed on two public URIs, and "
                          "autoversioning must be active.");
 
-  /* Path-based authorization: MOVE requires recursive write access
-   * to the source resource and recursive write access to the
-   * destinaton resource.
-   */
-  err = dav_svn__check_resource_access(src,
-                                       svn_authz_write | svn_authz_recursive);
-  if (err)
-    return err;
-
-  err = dav_svn__check_resource_access(dst,
-                                       svn_authz_write | svn_authz_recursive);
-  if (err)
-    return err;
-
   /* Change the dst VCR into a WR, in place.  This creates a txn and
      changes dst->info->root from a rev-root into a txn-root. */
   err = dav_svn__checkout(dst,
@@ -3430,23 +3297,6 @@ do_walk(walker_ctx_t *ctx, int depth)
 
   /* Clear the temporary pool. */
   svn_pool_clear(ctx->info.pool);
-
-  /* Path-based authorization: initial file resource or
-   * collection resource. Require read access. */
-  if (params->walk_type & DAV_WALKTYPE_AUTH)
-    {
-      err = dav_svn__check_resource_access(&ctx->res, svn_authz_read);
-      if (err)
-        {
-          /* Apache's mod_dav doesn't have any mechanism to handle
-           * access rights violation and returning "403 Forbidden"
-           * status. For now, we just silently skip the entries
-           * that are not accessible.
-           * XXX: better way?
-           */
-          return NULL;
-        }
-    }
 
   /* The current resource is a collection (possibly here thru recursion)
      and this is the invocation for the collection. Alternatively, this is
@@ -3531,6 +3381,12 @@ do_walk(walker_ctx_t *ctx, int depth)
       apr_hash_this(hi, &key, &klen, &val);
       dirent = val;
 
+      /* authorize access to this resource, if applicable */
+      if (params->walk_type & DAV_WALKTYPE_AUTH)
+        {
+          /* ### how/what to do? */
+        }
+
       /* append this child to our buffers */
       svn_stringbuf_appendbytes(ctx->info.uri_path, key, klen);
       svn_stringbuf_appendbytes(ctx->uri, key, klen);
@@ -3542,22 +3398,6 @@ do_walk(walker_ctx_t *ctx, int depth)
 
       if (dirent->kind == svn_node_file)
         {
-          /* Path-based authorization: file resource. Require read access. */
-          if (params->walk_type & DAV_WALKTYPE_AUTH)
-            {
-              err = dav_svn__check_resource_access(&ctx->res, svn_authz_read);
-              if (err)
-                {
-                  /* Apache's mod_dav doesn't have any mechanism to handle
-                   * access rights violation and returning "403 Forbidden"
-                   * status. For now, we just silently skip the entries
-                   * that are not accessible.
-                   * XXX: better way?
-                   */
-                  return NULL;
-                }
-            }
-
           err = (*params->func)(&ctx->wres, DAV_CALLTYPE_MEMBER);
           if (err != NULL)
             return err;
