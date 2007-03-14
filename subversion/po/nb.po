@@ -60,7 +60,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.1.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-03-13 19:37+0100\n"
-"PO-Revision-Date: 2007-03-06 19:11+0100\n"
+"PO-Revision-Date: 2007-03-14 17:28+0100\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Norwegian <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -288,9 +288,8 @@ msgid "Invalid switch"
 msgstr "Ugyldig valg"
 
 #: include/svn_error_codes.h:397
-#, fuzzy
 msgid "Changelist doesn't match"
-msgstr "Forandringsliste: %s\n"
+msgstr "Forandringslisten samsvarer ikke"
 
 #: include/svn_error_codes.h:403
 msgid "General filesystem error"
@@ -2537,13 +2536,12 @@ msgid "Transaction out of date"
 msgstr "Transaksjonen er foreldet"
 
 #: libsvn_fs_fs/fs_fs.c:4629
-#, fuzzy
 msgid "Recovery encountered a non-directory node"
-msgstr "Forsøkte å sette post i node som ikke er en katalog"
+msgstr "Fant en node under gjenoppretting som ikke er en katalog"
 
 #: libsvn_fs_fs/fs_fs.c:4651
 msgid "Recovery encountered a deltified directory representation"
-msgstr ""
+msgstr "Gjenopprettingen kom over en deltifisert katalogrepresentasjon"
 
 #: libsvn_fs_fs/fs_fs.c:4933
 msgid "No such transaction"
@@ -4738,9 +4736,9 @@ msgid "File '%s' has local modifications"
 msgstr "Filen «%s» har lokale endringer"
 
 #: libsvn_wc/adm_ops.c:2806
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not currently a member of changelist '%s'."
-msgstr "Stien «%s» er nå del av forandringsliste «%s».\n"
+msgstr "«%s» er ikke medlem av forandringsliste «%s» for øyeblikket."
 
 #: libsvn_wc/copy.c:197
 #, c-format
@@ -4827,14 +4825,14 @@ msgid "Entry for '%s' has invalid repository root"
 msgstr "Posten «%s» har ugyldig depotrot"
 
 #: libsvn_wc/entries.c:472
-#, fuzzy, c-format
+#, c-format
 msgid "Entry '%s' has invalid or missing working-size"
-msgstr "Posten «%s» har ugyldig nodetype"
+msgstr "Oppføringen «%s» har ugyldig eller manglende arbeidsstørrelse"
 
 #: libsvn_wc/entries.c:476
 #, c-format
 msgid "This directory's entry has invalid or missing working-size"
-msgstr ""
+msgstr "Oppføringen for denne katalogen har en ugyldig eller manglende arbeidsstørrelse"
 
 #: libsvn_wc/entries.c:991
 #, c-format
@@ -5087,9 +5085,9 @@ msgid "Error getting 'affected time' on '%s'"
 msgstr "Feil under henting av endringstid på «%s»"
 
 #: libsvn_wc/log.c:868
-#, fuzzy, c-format
+#, c-format
 msgid "Error getting file size on '%s'"
-msgstr "Feil under henting av endringstid på «%s»"
+msgstr "Feil under henting av filstørrelse for «%s»"
 
 #: libsvn_wc/log.c:886
 #, c-format
@@ -6083,16 +6081,14 @@ msgstr ""
 "  blir lett opp.\n"
 
 #: svn/main.c:259
-#, fuzzy
 msgid ""
 "Associate (or deassociate) local paths with changelist CLNAME.\n"
 "usage: 1. changelist CLNAME TARGET...\n"
 "       2. changelist --remove TARGET...\n"
 msgstr ""
-"Assosier (eller deassosier) lokale stier med\n"
-"forandringsliste FLNAVN.\n"
+"Assosier (eller deassosier) lokale stier med forandringsliste FLNAVN.\n"
 "bruk: 1. changelist FLNAVN MÅL...\n"
-"      2. changelist --clear MÅL...\n"
+"      2. changelist --remove MÅL...\n"
 
 #: svn/main.c:266
 msgid ""
@@ -7412,14 +7408,14 @@ msgid "'%s' unlocked.\n"
 msgstr "«%s» låst opp.\n"
 
 #: svn/notify.c:394
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is now a member of changelist '%s'.\n"
-msgstr "Stien «%s» er nå del av forandringsliste «%s».\n"
+msgstr "Stien «%s» er nå et medlem av forandringsliste «%s».\n"
 
 #: svn/notify.c:402
-#, fuzzy, c-format
+#, c-format
 msgid "Path '%s' is no longer a member of a changelist.\n"
-msgstr "Stien «%s» er ikke lengre assosiert med en forandringsliste.\n"
+msgstr "Stien «%s» er ikke lengre medlem av en forandringsliste.\n"
 
 #: svn/propdel-cmd.c:77
 #, c-format
@@ -7916,7 +7912,6 @@ msgstr ""
 "Skriver ut navnene på alle transaksjoner som ikke er sendt inn.\n"
 
 #: svnadmin/main.c:381
-#, fuzzy
 msgid ""
 "usage: svnadmin recover REPOS_PATH\n"
 "\n"
@@ -7927,10 +7922,9 @@ msgid ""
 msgstr ""
 "bruk: svnadmin recover DEPOTSTI\n"
 "\n"
-"Kjør Berkeley DBs reparasjonsprosedyre på et depot.\n"
-"Gjør dette hvis du får feilmeldinger som indikerer at depotet må\n"
-"repareres. Gjenoppretting krever eksklusiv tilgang og vil avslutte\n"
-"hvis depotet er i bruk av en annen prosess.\n"
+"Kjør reparasjonsprosedyren på et depot. Gjør dette hvis du får feilmeldinger\n"
+"som tyder på at depotet må repareres. Gjenoppretting for Berkely DB krever\n"
+"eksklusiv tilgang og vil avbrytes hvis depotet er i bruk av en annen prosess.\n"
 
 #: svnadmin/main.c:389
 msgid ""
