@@ -33,7 +33,6 @@ extern "C" {
 
 
 #define SVN_WC__TMP_EXT       ".tmp"
-#define SVN_WC__TEXT_REJ_EXT  ".rej"
 #define SVN_WC__PROP_REJ_EXT  ".prej"
 #define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
 #define SVN_WC__WORK_EXT      ".svn-work" /* for working propfiles */
