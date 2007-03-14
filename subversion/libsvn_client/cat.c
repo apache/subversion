@@ -176,9 +176,11 @@ svn_client_cat2(svn_stream_t *out,
 
   if (! svn_path_is_url(path_or_url)
       && (peg_revision->kind == svn_opt_revision_base
+          || peg_revision->kind == svn_opt_revision_working
           || peg_revision->kind == svn_opt_revision_committed
           || peg_revision->kind == svn_opt_revision_unspecified)
       && (revision->kind == svn_opt_revision_base
+          || revision->kind == svn_opt_revision_working
           || revision->kind == svn_opt_revision_committed
           || revision->kind == svn_opt_revision_unspecified))
     {

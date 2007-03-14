@@ -1,7 +1,7 @@
 /* fs_fs.c --- filesystem operations specific to fs_fs
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -4147,34 +4147,18 @@ svn_fs_fs__move_into_place(const char *old_filename,
   return err;
 }
 
-/* Update the current file to hold the correct next node and copy_ids
-   from transaction TXN_ID in filesystem FS.  The current revision is
-   set to REV.  Perform temporary allocations in POOL. */
+/* Atomically update the current file to hold the specifed REV, NEXT_NODE_ID,
+   and NEXT_COPY_ID.  Perform temporary allocations in POOL. */
 static svn_error_t *
-write_final_current(svn_fs_t *fs,
-                    const char *txn_id,
-                    svn_revnum_t rev,
-                    const char *start_node_id,
-                    const char *start_copy_id,
-                    apr_pool_t *pool)
+write_current(svn_fs_t *fs, svn_revnum_t rev, const char *next_node_id,
+              const char *next_copy_id, apr_pool_t *pool)
 {
-  const char *txn_node_id, *txn_copy_id;
-  char new_node_id[MAX_KEY_SIZE + 2];
-  char new_copy_id[MAX_KEY_SIZE + 2];
   char *buf;
   const char *tmp_name, *name;
   apr_file_t *file;
-  
-  /* To find the next available ids, we add the id that used to be in
-     the current file, to the next ids from the transaction file. */
-  SVN_ERR(read_next_ids(&txn_node_id, &txn_copy_id, fs, txn_id, pool));
-
-  svn_fs_fs__add_keys(start_node_id, txn_node_id, new_node_id);
-  svn_fs_fs__add_keys(start_copy_id, txn_copy_id, new_copy_id);
 
   /* Now we can just write out this line. */
-  buf = apr_psprintf(pool, "%ld %s %s\n", rev, new_node_id,
-                     new_copy_id);
+  buf = apr_psprintf(pool, "%ld %s %s\n", rev, next_node_id, next_copy_id);
 
   name = path_current(fs, pool);
   SVN_ERR(svn_io_open_unique_file2(&file, &tmp_name, name, ".tmp",
@@ -4189,6 +4173,31 @@ write_final_current(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__move_into_place(tmp_name, name, name, pool));
 
   return SVN_NO_ERROR;
+}
+
+/* Update the current file to hold the correct next node and copy_ids
+   from transaction TXN_ID in filesystem FS.  The current revision is
+   set to REV.  Perform temporary allocations in POOL. */
+static svn_error_t *
+write_final_current(svn_fs_t *fs,
+                    const char *txn_id,
+                    svn_revnum_t rev,
+                    const char *start_node_id,
+                    const char *start_copy_id,
+                    apr_pool_t *pool)
+{
+  const char *txn_node_id, *txn_copy_id;
+  char new_node_id[MAX_KEY_SIZE + 2];
+  char new_copy_id[MAX_KEY_SIZE + 2];
+  
+  /* To find the next available ids, we add the id that used to be in
+     the current file, to the next ids from the transaction file. */
+  SVN_ERR(read_next_ids(&txn_node_id, &txn_copy_id, fs, txn_id, pool));
+
+  svn_fs_fs__add_keys(start_node_id, txn_node_id, new_node_id);
+  svn_fs_fs__add_keys(start_copy_id, txn_copy_id, new_copy_id);
+
+  return write_current(fs, rev, new_node_id, new_copy_id, pool);
 }
 
 /* Get a write lock in FS, creating it in POOL. */
@@ -4576,6 +4585,315 @@ svn_fs_fs__create(svn_fs_t *fs,
 
   SVN_ERR(svn_fs_merge_info__create_index(path, pool)); 
   return SVN_NO_ERROR;
+}
+
+/* Part of the recovery procedure.  Return the largest revision *REV in
+   filesystem FS.  Use POOL for temporary allocation. */
+static svn_error_t *
+recover_get_largest_revision(svn_fs_t *fs, svn_revnum_t *rev, apr_pool_t *pool)
+{
+  /* Discovering the largest revision in the filesystem would be an
+     expensive operation if we did a readdir() or searched linearly,
+     so we'll do a form of binary search.  left is a revision that we
+     know exists, right a revision that we know does not exist. */
+  apr_pool_t *iterpool;
+  svn_revnum_t left, right = 1;
+
+  iterpool = svn_pool_create(pool);
+  /* Keep doubling right, until we find a revision that doesn't exist. */
+  while (1)
+    {
+      svn_node_kind_t kind;
+      SVN_ERR(svn_io_check_path(svn_fs_fs__path_rev(fs, right, iterpool),
+                                &kind, iterpool));
+      svn_pool_clear(iterpool);
+
+      if (kind == svn_node_none)
+        break;
+
+      right <<= 1;
+    }
+
+  left = right >> 1;
+
+  /* We know that left exists and right doesn't.  Do a normal bsearch to find
+     the last revision. */
+  while (left + 1 < right)
+    {
+      svn_revnum_t probe = left + ((right - left) / 2);
+      svn_node_kind_t kind;
+
+      SVN_ERR(svn_io_check_path(svn_fs_fs__path_rev(fs, probe, iterpool),
+                                &kind, iterpool));
+      svn_pool_clear(iterpool);
+
+      if (kind == svn_node_none)
+        right = probe;
+      else
+        left = probe;
+    }
+
+  svn_pool_destroy(iterpool);
+
+  /* left is now the largest revision that exists. */
+  *rev = left;
+  return SVN_NO_ERROR;
+}
+
+/* A baton for reading a fixed amount from an open file.  For
+   recover_find_max_ids() below. */
+struct recover_read_from_file_baton
+{
+  apr_file_t *file;
+  apr_pool_t *pool;
+  apr_size_t remaining;
+};
+
+/* A stream read handler used by recover_find_max_ids() below.
+   Read and return at most BATON->REMAINING bytes from the stream,
+   returning nothing after that to indicate EOF. */
+static svn_error_t *
+read_handler_recover(void *baton, char *buffer, apr_size_t *len)
+{
+  struct recover_read_from_file_baton *b = baton;
+  apr_size_t bytes_to_read = *len;
+
+  if (b->remaining == 0)
+    {
+      /* Return a successful read of zero bytes to signal EOF. */
+      *len = 0;
+      return SVN_NO_ERROR;
+    }
+
+  if (bytes_to_read > b->remaining)
+    bytes_to_read = b->remaining;
+  b->remaining -= bytes_to_read;
+
+  return svn_io_file_read_full(b->file, buffer, bytes_to_read, len, b->pool);
+}
+
+/* Part of the recovery procedure.  Read the directory noderev at offset
+   OFFSET of file REV_FILE (the revision file of revision REV of
+   filesystem FS), and set MAX_NODE_ID and MAX_COPY_ID to be the node-id
+   and copy-id of that node, if greater than the current value stored
+   in either.  Recurse into any child directories that were modified in
+   this revision.
+
+   MAX_NODE_ID and MAX_COPY_ID must be arrays of at least MAX_KEY_SIZE.
+
+   Perform temporary allocation in POOL. */
+static svn_error_t *
+recover_find_max_ids(svn_fs_t *fs, svn_revnum_t rev,
+                     apr_file_t *rev_file, apr_off_t offset,
+                     char *max_node_id, char *max_copy_id,
+                     apr_pool_t *pool)
+{
+  apr_hash_t *headers;
+  char *value;
+  node_revision_t noderev;
+  struct rep_args *ra;
+  struct recover_read_from_file_baton baton;
+  svn_stream_t *stream;
+  apr_hash_t *entries;
+  apr_hash_index_t *hi;
+  apr_pool_t *iterpool;
+
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(read_header_block(&headers, rev_file, pool));
+
+  /* We're going to populate a skeletal noderev - just the id and data_rep. */
+  value = apr_hash_get(headers, HEADER_ID, APR_HASH_KEY_STRING);
+  noderev.id = svn_fs_fs__id_parse(value, strlen(value), pool);
+
+  /* Check that this is a directory.  It should be. */
+  value = apr_hash_get(headers, HEADER_TYPE, APR_HASH_KEY_STRING);
+  if (value == NULL || strcmp(value, KIND_DIR) != 0)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Recovery encountered a non-directory node"));
+
+  /* Get the data location.  No data location indicates an empty directory. */
+  value = apr_hash_get(headers, HEADER_TEXT, APR_HASH_KEY_STRING);
+  if (!value)
+    return SVN_NO_ERROR;
+  SVN_ERR(read_rep_offsets(&noderev.data_rep, value, NULL, FALSE, pool));
+
+  /* If the directory's data representation wasn't changed in this revision,
+     we've already scanned the directory's contents for noderevs, so we don't
+     need to again.  This will occur if a property is changed on a directory
+     without changing the directory's contents. */
+  if (noderev.data_rep->revision != rev)
+    return SVN_NO_ERROR;
+
+  /* We could use get_dir_contents(), but this is much cheaper.  It does
+     rely on directory entries being stored as PLAIN reps, though. */
+  offset = noderev.data_rep->offset;
+  SVN_ERR(svn_io_file_seek(rev_file, APR_SET, &offset, pool));
+  SVN_ERR(read_rep_line(&ra, rev_file, pool));
+  if (ra->is_delta)
+    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Recovery encountered a deltified directory "
+                              "representation"));
+
+  /* Now create a stream that's allowed to read only as much data as is
+     stored in the representation. */
+  baton.file = rev_file;
+  baton.pool = pool;
+  baton.remaining = noderev.data_rep->expanded_size;
+  stream = svn_stream_create(&baton, pool);
+  svn_stream_set_read(stream, read_handler_recover);
+
+  /* Now read the entries from that stream. */
+  entries = apr_hash_make(pool);
+  SVN_ERR(svn_hash_read2(entries, stream, SVN_HASH_TERMINATOR, pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Now check each of the entries in our directory to find new node and
+     copy ids, and recurse into new subdirectories. */
+  iterpool = svn_pool_create(pool);
+  for (hi = apr_hash_first(NULL, entries); hi; hi = apr_hash_next(hi))
+    {
+      void *val;
+      char *str_val;
+      char *str, *last_str;
+      svn_node_kind_t kind;
+      svn_fs_id_t *id;
+      const char *node_id, *copy_id;
+      apr_off_t child_dir_offset;
+
+      svn_pool_clear(iterpool);
+
+      apr_hash_this(hi, NULL, NULL, &val);
+      str_val = apr_pstrdup(iterpool, *((char **)val));
+
+      str = apr_strtok(str_val, " ", &last_str);
+      if (str == NULL)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Directory entry corrupt"));
+
+      if (strcmp(str, KIND_FILE) == 0)
+        kind = svn_node_file;
+      else if (strcmp(str, KIND_DIR) == 0)
+        kind = svn_node_dir;
+      else
+        {
+          return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                  _("Directory entry corrupt"));
+        }
+
+      str = apr_strtok(NULL, " ", &last_str);
+      if (str == NULL)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Directory entry corrupt"));
+
+      id = svn_fs_fs__id_parse(str, strlen(str), iterpool);
+
+      if (svn_fs_fs__id_rev(id) != rev)
+        {
+          /* If the node wasn't modified in this revision, we've already
+             checked the node and copy id. */
+          continue;
+        }
+
+      node_id = svn_fs_fs__id_node_id(id);
+      copy_id = svn_fs_fs__id_copy_id(id);
+
+      if (svn_fs_fs__key_compare(node_id, max_node_id) > 0)
+        strcpy(max_node_id, node_id);
+      if (svn_fs_fs__key_compare(copy_id, max_copy_id) > 0)
+        strcpy(max_copy_id, copy_id);
+
+      if (kind == svn_node_file)
+        continue;
+
+      child_dir_offset = svn_fs_fs__id_offset(id);
+      SVN_ERR(recover_find_max_ids(fs, rev, rev_file, child_dir_offset,
+                                   max_node_id, max_copy_id, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+/* The work-horse for svn_fs_fs__recover, called with the FS
+   write lock.  This implements the svn_fs_fs__with_write_lock()
+   'body' callback type.  BATON is a 'svn_fs_t *' filesystem. */
+static svn_error_t *
+recover_body(void *baton, apr_pool_t *pool)
+{
+  svn_fs_t *fs = baton;
+  svn_revnum_t rev, max_rev;
+  apr_pool_t *iterpool;
+  char max_node_id[MAX_KEY_SIZE] = "0", max_copy_id[MAX_KEY_SIZE] = "0";
+  char next_node_id[MAX_KEY_SIZE], next_copy_id[MAX_KEY_SIZE];
+  apr_size_t len;
+
+  /* First, we need to know the largest revision in the filesystem. */
+  SVN_ERR(recover_get_largest_revision(fs, &max_rev, pool));
+
+  /* Next we need to find the maximum node id and copy id in use across the
+     filesystem.  Unfortunately, the only way we can get this information
+     is to scan all the noderevs of all the revisions and keep track as
+     we go along. */
+  iterpool = svn_pool_create(pool);
+  for (rev = 0; rev <= max_rev; rev++)
+    {
+      apr_file_t *rev_file;
+      apr_off_t root_offset;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_io_file_open(&rev_file,
+                               svn_fs_fs__path_rev(fs, rev, iterpool),
+                               APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
+                               iterpool));
+      SVN_ERR(get_root_changes_offset(&root_offset, NULL, rev_file, iterpool));
+      SVN_ERR(recover_find_max_ids(fs, rev, rev_file, root_offset,
+                                   max_node_id, max_copy_id, iterpool));
+    }
+  svn_pool_destroy(iterpool);
+
+  /* Now that we finally have the maximum revision, node-id and copy-id, we
+     can bump the two ids to get the next of each, and store them all in a
+     new current file. */
+  len = strlen(max_node_id);
+  svn_fs_fs__next_key(max_node_id, &len, next_node_id);
+  len = strlen(max_copy_id);
+  svn_fs_fs__next_key(max_copy_id, &len, next_copy_id);
+
+  SVN_ERR(write_current(fs, max_rev, next_node_id, next_copy_id, pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__recover(const char *path,
+                   apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  /* Recovery for FSFS is currently limited to recreating the current
+     file from the latest revision. */
+
+  /* Things are much easier if we can just use a regular fs pointer.
+     The only thing we have to watch out for is that the current file
+     might not exist.  So we'll try to create it here unconditionally,
+     and just ignore any errors that might indicate that it's already
+     present. (We'll need it to exist later anyway as a source for the
+     new file's permissions). */
+
+  /* Create a dummy fs pointer first to create current.  This will fail
+     if it already exists, but we don't care about that. */
+  fs = svn_fs_new(NULL, pool);
+  fs->path = (char *)path;
+  svn_error_clear(svn_io_file_create(path_current(fs, pool), "0 1 1\n", pool));
+
+  /* We should now be able to reopen the filesystem properly. */
+  SVN_ERR(svn_fs_open(&fs, path, NULL, pool));
+
+  /* We have no way to take out an exclusive lock in FSFS, so we're
+     restricted as to the types of recovery we can do.  Luckily,
+     we just want to recreate the current file, and we can do that just
+     by blocking other writers. */
+  return svn_fs_fs__with_write_lock(fs, recover_body, fs, pool);
 }
 
 svn_error_t *

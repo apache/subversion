@@ -1356,6 +1356,7 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   svn_ra_dav__session_t *ras = session->priv;
   svn_delta_editor_t *commit_editor;
   commit_ctx_t *cc;
+  svn_error_t *err;
 
   /* Build the main commit editor's baton. */
   cc = apr_pcalloc(pool, sizeof(*cc));
@@ -1389,7 +1390,15 @@ svn_error_t * svn_ra_dav__get_commit_editor(svn_ra_session_t *session,
   ** Find the latest baseline resource, check it out, and then apply the
   ** log message onto the thing.
   */
-  SVN_ERR(apply_log_message(cc, log_msg, pool));
+  err = apply_log_message(cc, log_msg, pool);
+  /* If the caller gets an error during the editor drive, we rely on them
+     to call abort_edit() so that we can clear up the activity.  But if we
+     got an error here, we need to clear up the activity ourselves. */
+  if (err)
+    {
+      svn_error_clear(commit_abort_edit(cc, pool));
+      return err;
+    }
 
   /*
   ** Set up the editor.

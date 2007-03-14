@@ -2,7 +2,7 @@
  * fs_loader.h:  Declarations for the FS loader library
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -72,10 +72,10 @@ typedef struct fs_library_vtable_t
   svn_error_t *(*hotcopy)(const char *src_path, const char *dest_path,
                           svn_boolean_t clean, apr_pool_t *pool);
   const char *(*get_description)(void);
+  svn_error_t *(*recover)(const char *path, apr_pool_t *pool);
 
   /* Provider-specific functions should go here, even if they could go
      in an object vtable, so that they are all kept together. */
-  svn_error_t *(*bdb_recover)(const char *path, apr_pool_t *pool);
   svn_error_t *(*bdb_logfiles)(apr_array_header_t **logfiles,
                                const char *path, svn_boolean_t only_unused,
                                apr_pool_t *pool);

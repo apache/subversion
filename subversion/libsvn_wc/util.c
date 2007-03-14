@@ -34,7 +34,8 @@
 
 
 svn_error_t *
-svn_wc__ensure_directory(const char *path, apr_pool_t *pool)
+svn_wc__ensure_directory(const char *path,
+                         apr_pool_t *pool)
 {
   svn_node_kind_t kind;
   svn_error_t *err = svn_io_check_path(path, &kind, pool);
@@ -110,7 +111,8 @@ svn_wc_version(void)
 }
 
 svn_wc_notify_t *
-svn_wc_create_notify(const char *path, svn_wc_notify_action_t action,
+svn_wc_create_notify(const char *path,
+                     svn_wc_notify_action_t action,
                      apr_pool_t *pool)
 {
   svn_wc_notify_t *ret = apr_palloc(pool, sizeof(*ret));
@@ -137,7 +139,8 @@ static apr_status_t err_cleanup(void *data)
 }
 
 svn_wc_notify_t *
-svn_wc_dup_notify(const svn_wc_notify_t *notify, apr_pool_t *pool)
+svn_wc_dup_notify(const svn_wc_notify_t *notify,
+                  apr_pool_t *pool)
 {
   svn_wc_notify_t *ret = apr_palloc(pool, sizeof(*ret));
 
@@ -160,11 +163,37 @@ svn_wc_dup_notify(const svn_wc_notify_t *notify, apr_pool_t *pool)
 
   return ret;
 }
- 
+
+svn_error_t *
+svn_wc_external_item_create(const svn_wc_external_item2_t **item,
+                            apr_pool_t *pool)
+{
+  *item = apr_pcalloc(pool, sizeof(svn_wc_external_item2_t));
+  return SVN_NO_ERROR;
+}
+
 svn_wc_external_item_t *
-svn_wc_external_item_dup(const svn_wc_external_item_t *item, apr_pool_t *pool)
+svn_wc_external_item_dup(const svn_wc_external_item_t *item,
+                         apr_pool_t *pool)
 {
   svn_wc_external_item_t *new_item = apr_palloc(pool, sizeof(*new_item));
+
+  *new_item = *item;
+
+  if (new_item->target_dir)
+    new_item->target_dir = apr_pstrdup(pool, new_item->target_dir);
+
+  if (new_item->url)
+    new_item->url = apr_pstrdup(pool, new_item->url);
+
+  return new_item;
+}
+
+svn_wc_external_item2_t *
+svn_wc_external_item2_dup(const svn_wc_external_item2_t *item,
+                          apr_pool_t *pool)
+{
+  svn_wc_external_item2_t *new_item = apr_palloc(pool, sizeof(*new_item));
 
   *new_item = *item;
 

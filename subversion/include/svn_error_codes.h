@@ -775,6 +775,11 @@ SVN_ERROR_START
              SVN_ERR_RA_SVN_CATEGORY_START + 6,
              "Client/server version mismatch")
 
+  SVN_ERRDEF(SVN_ERR_RA_SVN_NO_MECHANISMS,
+             SVN_ERR_RA_SVN_CATEGORY_START + 7,
+             "Cannot negotiate authentication mechanism")
+
+
   /* libsvn_auth errors */
 
        /* this error can be used when an auth provider doesn't have

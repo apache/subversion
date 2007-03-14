@@ -5,6 +5,10 @@
 # '=======' or '<<<<<<<' are found, the commit is aborted with a nice
 # error message.
 #
+# $HeadURL$
+# $LastChangedDate$
+# $LastChangedBy$
+# $LastChangedRevision$
 
 REPOS=$1
 TXN=$2

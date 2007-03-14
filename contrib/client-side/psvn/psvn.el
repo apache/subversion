@@ -858,6 +858,7 @@ To bind this to a different key, customize `svn-status-prefix-key'.")
   (define-key svn-global-keymap (kbd "l") 'svn-status-show-svn-log)
   (define-key svn-global-keymap (kbd "=") 'svn-status-show-svn-diff)
   (define-key svn-global-keymap (kbd "f =") 'svn-file-show-svn-diff)
+  (define-key svn-global-keymap (kbd "f l") 'svn-file-show-svn-log)
   (define-key svn-global-keymap (kbd "f b") 'svn-status-blame)
   (define-key svn-global-keymap (kbd "f a") 'svn-file-add-to-changelog)
   (define-key svn-global-keymap (kbd "c") 'svn-status-commit)
@@ -2118,8 +2119,8 @@ If no file is at point, copy everything starting from ':' to the end of line."
     (save-excursion
       (goto-char (line-beginning-position))
       (when (looking-at ".+?: *\\(.+\\)$")
-        (kill-new (match-string-no-properties 1))
-        (message "Copied: %s" (match-string-no-properties 1))))))
+        (kill-new (svn-match-string-no-properties 1))
+        (message "Copied: %s" (svn-match-string-no-properties 1))))))
 
 (defun svn-status-copy-filename-as-kill (arg)
   "Copy the actual file name to the kill-ring.
@@ -3224,6 +3225,15 @@ See `svn-status-marked-files' for what counts as selected."
     (save-excursion
       (set-buffer svn-process-buffer-name)
       (svn-log-view-mode))))
+
+(defun svn-file-show-svn-log ()
+  "Run `svn log' on the current file."
+  (interactive)
+  (svn-status-create-arg-file svn-status-temp-arg-file "" (list (svn-status-make-line-info buffer-file-name)) "")
+  (svn-run t t 'log "log" "--targets" svn-status-temp-arg-file)
+  (save-excursion
+    (set-buffer svn-process-buffer-name)
+    (svn-log-view-mode)))
 
 (defun svn-status-version ()
   "Show the version numbers for psvn.el and the svn command line client"

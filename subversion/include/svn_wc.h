@@ -474,8 +474,14 @@ void svn_wc_edited_externals(apr_hash_t **externals_old,
 /** One external item.  This usually represents one line from an
  * svn:externals description but with the path and URL
  * canonicalized.
+ *
+ * In order to avoid backwards compatibility problems clients should use
+ * svn_wc_external_item_create() to allocate and intialize this structure
+ * instead of doing so themselves.
+ *
+ * @since New in 1.5.
  */
-typedef struct svn_wc_external_item_t
+typedef struct svn_wc_external_item2_t
 {
   /** The name of the subdirectory into which this external should be
       checked out.  This is relative to the parent directory that
@@ -492,23 +498,73 @@ typedef struct svn_wc_external_item_t
       svn_opt_revision_head. */
   svn_opt_revision_t revision;
 
-} svn_wc_external_item_t;
+  /** The peg revision to use when checking out.  THe only valid kinds are
+      svn_opt_revision_number, svn_opt_revision_date, and
+      svn_opt_revision_head. */
+  svn_opt_revision_t peg_revision;
 
+} svn_wc_external_item2_t;
+
+/**
+ * Initialize an external item.
+ * Set @a *item to an external item object, allocated in @a pool.
+ *
+ * In order to avoid backwards compatibility problems, this function
+ * is used to intialize and allocate the @c svn_wc_external_item2_t
+ * structure rather than doing so explicitly, as the size of this
+ * structure may change in the future.
+ * 
+ * The current implementation never returns error, but callers should
+ * still check for error, for compatibility with future versions.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_external_item_create(const svn_wc_external_item2_t **item,
+                            apr_pool_t *pool);
+
+/**
+ * Return a duplicate of @a item, allocated in @a pool.  No part of the new
+ * item will be shared with @a item.
+ *
+ * @since New in 1.5.
+ */
+svn_wc_external_item2_t *
+svn_wc_external_item2_dup(const svn_wc_external_item2_t *item,
+                          apr_pool_t *pool);
+
+/**
+ * One external item.  Similar to svn_wc_external_item2_t, except 
+ * @a revision is interpreted as both the operational revision and the
+ * peg revision.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+typedef struct svn_wc_external_item_t
+{
+  const char *target_dir;
+
+  const char *url;
+
+  svn_opt_revision_t revision;
+
+} svn_wc_external_item_t;
 
 /**
  * Return a duplicate of @a item, allocated in @a pool.  No part of the new
  * item will be shared with @a item.
  *
  * @since New in 1.3.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_wc_external_item_t *
 svn_wc_external_item_dup(const svn_wc_external_item_t *item,
                          apr_pool_t *pool);
 
-
 /**
  * If @a externals_p is non-null, set @a *externals_p to an array of
- * @c svn_wc_external_item_t * objects based on @a desc.
+ * @c svn_wc_external_item2_t * objects based on @a desc.
  *
  * If the format of @a desc is invalid, don't touch @a *externals_p and
  * return @c SVN_ERR_CLIENT_INVALID_EXTERNALS_DESCRIPTION.  Thus, if
@@ -522,14 +578,28 @@ svn_wc_external_item_dup(const svn_wc_external_item_t *item,
  *
  * Use @a parent_directory only in constructing error strings.
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_wc_parse_externals_description3(apr_array_header_t **externals_p,
+                                    const char *parent_directory,
+                                    const char *desc,
+                                    apr_pool_t *pool);
+
+/**
+ * Similar to svn_wc_parse_externals_description3(), but returns an
+ * array of @c svn_wc_external_item2_t * objects instead of 
+ * @c svn_wc_external_item_t * objects.
+ *
  * @since New in 1.1.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_wc_parse_externals_description2(apr_array_header_t **externals_p,
                                     const char *parent_directory,
                                     const char *desc,
                                     apr_pool_t *pool);
-
 
 /**
  * Similar to svn_wc_parse_externals_description2(), but returns the

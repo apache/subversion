@@ -2,7 +2,7 @@
  * fs_loader.c:  Front-end to the various FS back ends
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -398,6 +398,15 @@ svn_fs_hotcopy(const char *src_path, const char *dest_path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_fs_recover(const char *path, apr_pool_t *pool)
+{
+  fs_library_vtable_t *vtable;
+
+  SVN_ERR(fs_library_vtable(&vtable, path, pool));
+  return vtable->recover(path, pool);
+}
+
 
 /* --- Berkeley-specific functions --- */
 
@@ -449,10 +458,7 @@ svn_fs_hotcopy_berkeley(const char *src_path, const char *dest_path,
 svn_error_t *
 svn_fs_berkeley_recover(const char *path, apr_pool_t *pool)
 {
-  fs_library_vtable_t *vtable;
-
-  SVN_ERR(fs_library_vtable(&vtable, path, pool));
-  return vtable->bdb_recover(path, pool);
+  return svn_fs_recover(path, pool);
 }
 
 svn_error_t *

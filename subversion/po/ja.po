@@ -3920,9 +3920,8 @@ msgid ""
 "\n"
 msgstr ""
 "\n"
-"------- 新しいリビジョン %ld (オリジナルのリビジョン %ld からロードされたも"
-"の)\n"
-"        をコミットしました >>>\n"
+"------- 新しいリビジョン %ld を (オリジナルのリビジョン %ld からロードして) "
+"コミットしました >>>\n"
 "\n"
 
 #: libsvn_repos/node_tree.c:238
@@ -8853,7 +8852,7 @@ msgstr "単に番号が飛ばないようにするための空のリビジョン
 #: svndumpfilter/main.c:389
 #, c-format
 msgid "Revision %ld committed as %ld.\n"
-msgstr "リビジョン %ld は %ld としてコミットされました。\n"
+msgstr "リビジョン %ld を %ld としてコミットしました。\n"
 
 #: svndumpfilter/main.c:412
 #, c-format
