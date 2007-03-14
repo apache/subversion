@@ -1854,7 +1854,8 @@ find_wc_merge_info(apr_hash_t **mergeinfo,
     {
       /* Merge info may be inherited. */
       apr_hash_index_t *hi;
-      void *val, *key;
+      void *val;
+      const void *key;
       const char *path;
       apr_array_header_t *ranges;
 
