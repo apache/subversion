@@ -1857,7 +1857,7 @@ find_wc_merge_info(apr_hash_t **mergeinfo,
       void *val;
       const void *key;
       const char *path;
-      apr_array_header_t *ranges;
+      apr_array_header_t *rangelist;
 
       *inherited = apr_hash_count(wc_mergeinfo) > 0;
       *mergeinfo = apr_hash_make(pool);
@@ -1865,11 +1865,13 @@ find_wc_merge_info(apr_hash_t **mergeinfo,
       /* ### What about copied paths? */
       for (hi = apr_hash_first(pool, wc_mergeinfo); hi; hi = apr_hash_next(hi))
         {
+          /* Copy inherited merge info into our output hash, adjusting
+             the merge source as appropriate. */
           apr_hash_this(hi, &key, NULL, &val);
-          ranges = val;
-          path = svn_path_is_empty(walk_path) ?
-                 key : svn_path_join((const char *) key, walk_path, pool);
-          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, ranges);
+          path = svn_path_join((const char *) key, walk_path, pool);
+          rangelist = val;
+
+          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, rangelist);
         }
     }
 
