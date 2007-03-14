@@ -114,8 +114,7 @@ svn_error_t *
 svn_client_get_changelist(apr_array_header_t **paths,
                           const char *changelist_name,
                           const char *root_path,
-                          svn_cancel_func_t cancel_func,
-                          void *cancel_baton,
+                          svn_client_ctx_t *ctx,
                           apr_pool_t *pool)
 {
   svn_wc_entry_callbacks_t entry_callbacks;
@@ -131,12 +130,12 @@ svn_client_get_changelist(apr_array_header_t **paths,
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, root_path,
                                  FALSE, /* no write lock */
                                  -1, /* infinite depth */
-                                 cancel_func, cancel_baton, pool));
+                                 ctx->cancel_func, ctx->cancel_baton, pool));
 
   SVN_ERR(svn_wc_walk_entries2(root_path, adm_access,
                                &entry_callbacks, &feb,
                                FALSE, /* don't show hidden entries */
-                               cancel_func, cancel_baton,
+                               ctx->cancel_func, ctx->cancel_baton,
                                pool));
 
   SVN_ERR(svn_wc_adm_close(adm_access));
@@ -151,8 +150,7 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
                                   void *callback_baton,
                                   const char *changelist_name,
                                   const char *root_path,
-                                  svn_cancel_func_t cancel_func,
-                                  void *cancel_baton,
+                                  svn_client_ctx_t *ctx,
                                   apr_pool_t *pool)
 {
   svn_wc_entry_callbacks_t entry_callbacks;
@@ -170,12 +168,12 @@ svn_client_get_changelist_streamy(svn_changelist_receiver_t callback_func,
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, root_path,
                                  FALSE, /* no write lock */
                                  -1, /* infinite depth */
-                                 cancel_func, cancel_baton, pool));
+                                 ctx->cancel_func, ctx->cancel_baton, pool));
 
   SVN_ERR(svn_wc_walk_entries2(root_path, adm_access,
                                &entry_callbacks, &feb,
                                FALSE, /* don't show hidden entries */
-                               cancel_func, cancel_baton,
+                               ctx->cancel_func, ctx->cancel_baton,
                                pool));
 
   SVN_ERR(svn_wc_adm_close(adm_access));
