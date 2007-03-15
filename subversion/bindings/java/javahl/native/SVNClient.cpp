@@ -2982,6 +2982,85 @@ jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
     return ret;
 }
 
+void SVNClient::addToChangelist(Targets &srcPaths, const char *changelist)
+{
+    Pool requestPool;
+    svn_client_ctx_t *ctx = getContext(NULL);
+
+    const apr_array_header_t *srcs = srcPaths.array(requestPool);
+    svn_error_t *err = srcPaths.error_occured();
+    if (err)
+    {
+        JNIUtil::handleSVNError(err);
+        return;
+    }
+
+    err = svn_client_add_to_changelist(srcs, changelist, ctx,
+                                       requestPool.pool());
+    if (err)
+    {
+        JNIUtil::handleSVNError(err);
+    }
+}
+
+void SVNClient::removeFromChangelist(Targets &srcPaths, const char *changelist)
+{
+    Pool requestPool;
+    svn_client_ctx_t *ctx = getContext(NULL);
+
+    const apr_array_header_t *srcs = srcPaths.array(requestPool);
+    svn_error_t *err = srcPaths.error_occured();
+    if (err)
+    {
+        JNIUtil::handleSVNError(err);
+        return;
+    }
+    
+    err = svn_client_remove_from_changelist(srcs, changelist, ctx,
+                                            requestPool.pool());
+    if (err)
+        JNIUtil::handleSVNError(err);
+}
+
+jobjectArray SVNClient::getChangelist(const char *changelist,
+                                      const char *rootPath)
+{
+    Pool requestPool;
+    svn_client_ctx_t *ctx = getContext(NULL);
+    apr_array_header_t *paths;
+
+    svn_error_t *err = svn_client_get_changelist(&paths, changelist, rootPath,
+                                                 ctx, requestPool.pool());
+    if (err)
+    {
+        JNIUtil::handleSVNError(err);
+        return NULL;
+    }
+
+    JNIEnv *env = JNIUtil::getEnv();
+    jclass clazz = env->FindClass("java/lang/String");
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    jobjectArray ret = env->NewObjectArray(paths->nelts, clazz, NULL);
+
+    for (int i = 0; i < paths->nelts; i++)
+    {
+        const char *path = APR_ARRAY_IDX(paths, i, const char *);
+        jstring jpath = JNIUtil::makeJString(path);
+
+        env->SetObjectArrayElement(ret, i, jpath);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }        
+    }
+
+    return ret;
+}
+
 jobject SVNClient::createJavaLock(const svn_lock_t *lock)
 {
     if (lock == NULL)

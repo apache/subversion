@@ -289,13 +289,18 @@ void
 svn_sleep_for_timestamps(void)
 {
   apr_time_t now, then;
+
+#ifdef SVN_DEBUG
   const char *env_val = getenv("SVN_SLEEP_FOR_TIMESTAMPS");
 
   /* Sleep until the next second tick, plus a tenth of a second for margin. */
   if (! env_val || apr_strnatcasecmp(env_val, "no") != 0)
     {
+#endif
       now = apr_time_now();
       then = apr_time_make(apr_time_sec(now) + 1, APR_USEC_PER_SEC / 10);
       apr_sleep(then - now);
+#ifdef SVN_DEBUG
     }
+#endif
 }

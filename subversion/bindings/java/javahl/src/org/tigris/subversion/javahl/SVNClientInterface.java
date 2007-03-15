@@ -1078,6 +1078,30 @@ public interface SVNClientInterface
     Info info(String path) throws ClientException;
 
     /**
+     * Add paths to a changelist
+     * @param paths      paths to add to the changelist
+     * @param changelist changelist name
+     */
+    void addToChangelist(String[] paths, String changelist)
+            throws ClientException;
+
+    /**
+     * Remove paths from a changelist
+     * @param paths      paths to remove from the changelist
+     * @param changelist changelist name
+     */
+    void removeFromChangelist(String[] paths, String changelist)
+            throws ClientException;
+
+    /**
+     * Recursively get the paths which belong to a changelist
+     * @param changelist  changelist name
+     * @param rootPath    the wc path under which to check
+     */
+    String[] getChangelist(String changelist, String rootPath)
+            throws ClientException;
+
+    /**
      * Lock a working copy item
      * @param path  path of the item
      * @param comment

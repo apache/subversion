@@ -63,6 +63,7 @@ alloc_entry(apr_pool_t *pool)
   entry->copyfrom_rev = SVN_INVALID_REVNUM;
   entry->cmt_rev = SVN_INVALID_REVNUM;
   entry->kind = svn_node_none;
+  entry->working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
   return entry;
 }
 
@@ -460,7 +461,7 @@ read_entry(svn_wc_entry_t **new_entry,
   {
     const char *val;
 
-    SVN_ERR(read_str(&val, buf, end, pool));
+    SVN_ERR(read_val(&val, buf, end));
 
     if (val)
       entry->working_size = (apr_off_t)apr_strtoi64(val, NULL, 0);
@@ -1599,10 +1600,12 @@ write_entry(svn_stringbuf_t *buf,
   write_bool(buf, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, entry->keep_local);
 
   /* Translated size */
-  write_str(buf,
-            entry->working_size
-            ? apr_off_t_toa(pool, entry->working_size) : "",
-            pool);
+  {
+    const char *val
+      = (entry->working_size != SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN)
+      ? apr_off_t_toa(pool, entry->working_size) : "";
+    write_val(buf, val, strlen(val));
+  }
 
   /* Remove redundant separators at the end of the entry. */
   while (buf->len > 1 && buf->data[buf->len - 2] == '\n')

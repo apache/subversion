@@ -268,7 +268,9 @@ module Svn
     end
 
     def format_date(date)
-      date.strftime("%Y-%m-%d %H:%M:%S %Z")
+      formatted = date.strftime("%Y-%m-%d %H:%M:%S")
+      formatted << (" %+03d:00" % (date.hour - date.getutc.hour))
+      formatted
     end
     
     class DiffEntry
