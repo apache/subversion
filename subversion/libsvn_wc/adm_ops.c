@@ -2797,7 +2797,7 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
       if (matching_changelist != NULL)
         {
           if (entry->changelist &&
-              (strcmp(entry->changelist, matching_changelist) == 0))
+              (strcmp(entry->changelist, matching_changelist) != 0))
             {
               if (notify_func)
                 {
