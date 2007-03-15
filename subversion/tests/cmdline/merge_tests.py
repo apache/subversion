@@ -306,7 +306,6 @@ def textual_merges_galore(sbox):
     'tau'   : wc.StateItem("This is the file 'tau'.\n"),
     })
   expected_disk.tweak('rho',
-                      props={SVN_PROP_MERGE_INFO : '/A/D/G/rho:2-3'},
                       contents=other_rho_text
                       + expected_disk.desc['rho'].contents
                       + rho_text
@@ -324,15 +323,15 @@ def textual_merges_galore(sbox):
                       )
 
   expected_status = wc.State(os.path.join(other_wc, 'A', 'D', 'G'),
-                             { ''     : Item(wc_rev=1, status=' M'),
-                               'rho'  : Item(wc_rev=1, status='G '),
-                               'pi'   : Item(wc_rev=1, status='G '),
+                             { ''     : Item(wc_rev=1, status='  '),
+                               'rho'  : Item(wc_rev=1, status='MM'),
+                               'pi'   : Item(wc_rev=1, status='M '),
                                'tau'  : Item(wc_rev=1, status='C '),
                                })
-  expected_status.tweak('pi', status='M ')
-  expected_status.tweak('rho', status='MM')
-  expected_status.tweak('tau', status='C ')
 
+  # Do the merge, but check svn:mergeinfo props separately since
+  # run_and_verify_merge would attempt to proplist tau's conflict
+  # files if we asked it to check props.
   svntest.actions.run_and_verify_merge(
     os.path.join(other_wc, 'A', 'D', 'G'),
     '2', '3',
@@ -343,6 +342,10 @@ def textual_merges_galore(sbox):
     expected_skip,
     None, merge_singleton_handler)
     
+  svntest.actions.run_and_verify_svn(None, ["/A/D/G/rho:2-3\n"], [],
+                                     'propget', SVN_PROP_MERGE_INFO,
+                                     os.path.join(other_wc,
+                                                  "A", "D", "G", "rho"))
 
 
 #----------------------------------------------------------------------
@@ -4491,7 +4494,25 @@ def obey_reporter_api_semantics_while_doing_subtree_merges(sbox):
   # this file, to understand why we shorten and chdir() below.
   short_copy_of_A_D_path = shorten_path_kludge(copy_of_A_D_path)
 
+  # We still need to determine how we will handle notification
+  # callbacks for multiple merges into a single versioned resource.
+  # Currently every merge range applied to a target is reported
+  # separately...but eventually we'll probably change the expected
+  # output.
   expected_output = wc.State(short_copy_of_A_D_path, {
+    'G/pi'    : Item(status='G '),
+    'G/rho'   : Item(status='G '),
+    'G/rho'   : Item(status='G '),
+    'G/tau'   : Item(status='G '),
+    'G/tau'   : Item(status='G '),
+    'H/chi'   : Item(status='G '),
+    'H/chi'   : Item(status='G '),
+    'H/omega' : Item(status='G '),
+    'H/omega' : Item(status='G '),
+    'H/psi'   : Item(status='G '),
+    'H/psi'   : Item(status='G '),
+    'gamma'   : Item(status='G '),
+    'gamma'   : Item(status='G '),
     'umlaut'  : Item(status='A '),
     })
 
@@ -5089,7 +5110,7 @@ def mergeinfo_inheritence_and_discontinuous_ranges(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              XFail(textual_merges_galore),
+              textual_merges_galore,
               add_with_history,
               delete_file_and_dir,
               simple_property_merges,

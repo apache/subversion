@@ -1799,8 +1799,6 @@ find_wc_merge_info(apr_hash_t **mergeinfo,
   const char *walk_path = "";
   apr_hash_t *wc_mergeinfo;
 
-  SVN_ERR(svn_path_get_absolute(&wcpath, wcpath, pool));
-
   while (TRUE)
     {
       /* Look for merge info on WCPATH.  If there isn't any, walk
@@ -1809,6 +1807,12 @@ find_wc_merge_info(apr_hash_t **mergeinfo,
          use that inherited merge info as our baseline. */
       SVN_ERR(svn_client__parse_merge_info(&wc_mergeinfo, entry, wcpath,
                                            adm_access, ctx, pool));
+
+      /* Subsequent svn_wc_adm_access_t need to be opened with
+         an absolute path so we can walk up and out of the WC
+         if necessary. */
+      if (!svn_path_is_absolute(wcpath, strlen(wcpath)))
+        SVN_ERR(svn_path_get_absolute(&wcpath, wcpath, pool));
 
       if (apr_hash_count(wc_mergeinfo) == 0 &&
           !svn_path_is_root(wcpath, strlen(wcpath)))
@@ -2573,14 +2577,14 @@ single_file_merge_get_file(const char **filename,
                            apr_hash_t **props,
                            svn_revnum_t rev,
                            const char *url,
-                           struct merge_cmd_baton *merge_b,
+                           const char *wc_target,
                            apr_pool_t *pool)
 {
   apr_file_t *fp;
   svn_stream_t *stream;
 
   SVN_ERR(svn_io_open_unique_file2(&fp, filename,
-                                   merge_b->target, ".tmp",
+                                   wc_target, ".tmp",
                                    svn_io_file_del_none, pool));
   stream = svn_stream_from_aprfile2(fp, FALSE, pool);
   SVN_ERR(svn_ra_get_file(ra_session, "", rev,
@@ -2739,11 +2743,11 @@ do_single_file_merge(const char *initial_URL1,
          fetching two fulltexts from two different repositories here. */
       SVN_ERR(single_file_merge_get_file(&tmpfile1, ra_session1, &props1, 
                                          is_revert ? r->start : r->start - 1, 
-                                         URL1, merge_b, pool));
+                                         URL1, target_wcpath, pool));
 
       SVN_ERR(single_file_merge_get_file(&tmpfile2, ra_session2, &props2, 
                                          is_revert ? r->end - 1 : r->end, 
-                                         URL2, merge_b, pool));
+                                         URL2, target_wcpath, pool));
 
       /* Discover any svn:mime-type values in the proplists */
       pval = apr_hash_get(props1, SVN_PROP_MIME_TYPE,
@@ -2759,7 +2763,7 @@ do_single_file_merge(const char *initial_URL1,
 
       SVN_ERR(merge_file_changed(adm_access,
                                  &text_state, &prop_state,
-                                 merge_b->target,
+                                 target_wcpath,
                                  tmpfile1,
                                  tmpfile2,
                                  is_revert ? r->start : r->start - 1, 
@@ -2780,7 +2784,7 @@ do_single_file_merge(const char *initial_URL1,
   
         {
           svn_wc_notify_t *notify
-          = svn_wc_create_notify(merge_b->target, svn_wc_notify_update_update,
+          = svn_wc_create_notify(target_wcpath, svn_wc_notify_update_update,
                                  pool);
           notify->kind = svn_node_file;
           notify->content_state = text_state;
