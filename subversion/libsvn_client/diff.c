@@ -1788,13 +1788,13 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
    in *MERGEINFO.  Set *INHERITED to whether the merge info was
    inherited (TRUE or FALSE). */
 static svn_error_t *
-find_wc_merge_info(apr_hash_t **mergeinfo,
-                   svn_boolean_t *inherited,
-                   const svn_wc_entry_t *entry,
-                   const char *wcpath,
-                   svn_wc_adm_access_t *adm_access,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *pool)
+get_wc_merge_info(apr_hash_t **mergeinfo,
+                  svn_boolean_t *inherited,
+                  const svn_wc_entry_t *entry,
+                  const char *wcpath,
+                  svn_wc_adm_access_t *adm_access,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
 {
   const char *walk_path = "";
   apr_hash_t *wc_mergeinfo;
@@ -1890,14 +1890,14 @@ find_wc_merge_info(apr_hash_t **mergeinfo,
    If the target inherited any merge info from a WC ancestor set
    *INHERITED to TRUE, set it to FALSE otherwise. */
 static svn_error_t *
-get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
-                         const svn_wc_entry_t **entry,
-                         svn_boolean_t *inherited,
-                         svn_ra_session_t *ra_session,
-                         const char *target_wcpath,
-                         svn_wc_adm_access_t *adm_access,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *pool)
+get_wc_and_repos_merge_info(apr_hash_t **target_mergeinfo,
+                            const svn_wc_entry_t **entry,
+                            svn_boolean_t *inherited,
+                            svn_ra_session_t *ra_session,
+                            const char *target_wcpath,
+                            svn_wc_adm_access_t *adm_access,
+                            svn_client_ctx_t *ctx,
+                            apr_pool_t *pool)
 {
   const char *repos_rel_path;
   apr_hash_t *repos_mergeinfo;
@@ -1942,8 +1942,8 @@ get_wc_target_merge_info(apr_hash_t **target_mergeinfo,
                                               repos_rel_path, target_rev,
                                               pool));
 
-  SVN_ERR(find_wc_merge_info(target_mergeinfo, inherited, *entry,
-                             target_wcpath, adm_access, ctx, pool));
+  SVN_ERR(get_wc_merge_info(target_mergeinfo, inherited, *entry,
+                            target_wcpath, adm_access, ctx, pool));
 
   if (repos_mergeinfo != NULL)
     {
@@ -2398,9 +2398,10 @@ do_merge(const char *initial_URL1,
 
   if (notify_b.same_urls)
     {
-      SVN_ERR(get_wc_target_merge_info(&target_mergeinfo, &entry, &inherited,
-                                       ra_session, target_wcpath, adm_access,
-                                       ctx, pool));
+      SVN_ERR(get_wc_and_repos_merge_info(&target_mergeinfo, &entry,
+                                          &inherited, ra_session,
+                                          target_wcpath, adm_access,
+                                          ctx, pool));
 
       is_revert = (merge_type == merge_type_revert);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
@@ -2688,9 +2689,10 @@ do_single_file_merge(const char *initial_URL1,
       if (merge_type == merge_type_no_op)
         return SVN_NO_ERROR;
 
-      SVN_ERR(get_wc_target_merge_info(&target_mergeinfo, &entry, &inherited,
-                                       ra_session1, target_wcpath, adm_access,
-                                       ctx, pool));
+      SVN_ERR(get_wc_and_repos_merge_info(&target_mergeinfo, &entry,
+                                          &inherited, ra_session1,
+                                          target_wcpath, adm_access,
+                                          ctx, pool));
 
       is_revert = (merge_type == merge_type_revert);
       SVN_ERR(svn_client__path_relative_to_root(&rel_path, URL1, NULL,
