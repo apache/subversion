@@ -71,48 +71,33 @@ exit 1
 
         FileUtils.mkdir_p(ext_dir)
 
-        svn_version_h = File.join(top_dir, "subversion", "include",
-                                  "svn_version.h")
-        version = nil
-        File.open(svn_version_h) do |f|
-          f.each do |line|
-            if /^\s*#\s*define\s+SVN_VER_MAJOR\s+(\d+)/ =~ line
-              version = $1
-              break
-            end
-          end
-        end
-
-        # First we copy the ruby swig implementation library into the ext
-        # directory. So we can make it available to the bindings themselves.
-        # We assume that the libraries that libsvn_swig_ruby depends on will
-        # be available on the path.
         relative_base_dir =
           base_dir.sub(/^#{Regexp.escape(top_dir + File::SEPARATOR)}/, '')
         build_base_dir = File.join(top_dir, build_type, relative_base_dir)
-        libsvn_swig_ruby_name = 'libsvn_swig_ruby'
-        dll = File.join(build_base_dir, libsvn_swig_ruby_name,
-                        "#{libsvn_swig_ruby_name}-#{version}.dll")
-        FileUtils.cp(dll, ext_dir)
+        dll_dir = File.expand_path(build_base_dir)
+        dll_dir_win = dll_dir.tr(File::SEPARATOR, "\\")
+        libsvn_swig_ruby_dll_dir_win = "#{dll_dir_win}\\libsvn_swig_ruby"
 
-        # Now we copy the actual swig dlls into the ext directory.  Since they
-        # depend on libsvn_swig_ruby we have to provide a way for them to find
-        # libsvn_swig_ruby.  Since a require will try to load a .rb before a
-        # .dll or .so, we generate an .rb that adds the ext directory to the
-        # path, before requiring the .dll (including the extension).
         build_conf = File.join(top_dir, "build.conf")
         File.open(build_conf) do |f|
           f.each do |line|
             if /^\[swig_(.+)\]\s*$/ =~ line
               lib_name = $1
-              FileUtils.cp(File.join(build_base_dir, "#{lib_name}.dll"), ext_dir)
               File.open(File.join(ext_dir, "#{lib_name}.rb" ), 'w') do |rb|
-                rb.puts(<<-'EOC')
-ext_dir = File.expand_path(File.dirname(__FILE__)).tr('/','\\')
-unless ENV["PATH"].split(';').include?(ext_dir)
-  ENV["PATH"] = "#{ext_dir};#{ENV['PATH']}"
+                rb.puts(<<-EOC)
+dll_dir = #{dll_dir.dump}
+dll_dir_win = #{dll_dir_win.dump}
+libsvn_swig_ruby_dll_dir_win = #{libsvn_swig_ruby_dll_dir_win.dump}
+
+paths = ENV["PATH"].split(';')
+unless paths.include?(libsvn_swig_ruby_dll_dir_win)
+  ENV["PATH"] = "\#{libsvn_swig_ruby_dll_dir_win};\#{ENV['PATH']}"
 end
-require File.join(ext_dir, File.basename(__FILE__, '.rb')) + '.dll'
+unless paths.include?(dll_dir_win)
+  ENV["PATH"] = "\#{dll_dir_win};\#{ENV['PATH']}"
+end
+
+require File.join(dll_dir, File.basename(__FILE__, '.rb')) + '.so'
 EOC
               end
             end
