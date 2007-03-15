@@ -81,7 +81,7 @@ util_sqlite_exec(sqlite3 *db, const char *sql,
 static svn_error_t *
 check_format(sqlite3 *db)
 {
-  svn_error_t *err;
+  svn_error_t *err = SVN_NO_ERROR;
   sqlite3_stmt *stmt;
 
   SQLITE_ERR(sqlite3_prepare(db, "pragma user_version;", -1, &stmt, NULL), db);
