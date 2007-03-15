@@ -212,6 +212,11 @@ jint EnumMapper::mapNotifyAction(svn_wc_notify_action_t action)
         /* Changelist name cleared. */
         jAction = org_tigris_subversion_javahl_NotifyAction_changelist_clear;
         break;
+
+    case svn_wc_notify_changelist_failed:
+        /* Changelist operation failed. */
+        jAction = org_tigris_subversion_javahl_NotifyAction_changelist_failed;
+        break;
     }
     return jAction;
 }
