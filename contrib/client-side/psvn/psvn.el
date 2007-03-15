@@ -622,6 +622,7 @@ This is nil if the log entry is for a new commit.")
 (defvar svn-last-cmd-ring (make-ring 30) "Ring that holds the last executed svn commands (for debugging purposes)")
 (defvar svn-status-cached-version-string nil)
 (defvar svn-status-get-line-information-for-file nil)
+(defvar svn-status-base-dir-cache (make-hash-table :test 'equal :weakness nil))
 
 (defvar svn-status-partner-buffer nil "The partner buffer for this svn related buffer")
 (make-variable-buffer-local 'svn-status-partner-buffer)
@@ -1244,8 +1245,8 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
                  ((eq svn-process-cmd 'update)
                   (svn-status-show-process-output 'update t)
                   (setq svn-status-update-list (svn-status-parse-update-output))
-                  (svn-status-update)
                   (svn-revert-some-buffers)
+                  (svn-status-update)
                   (if (car svn-status-update-rev-number)
                       (message "svn: Updated to revision %s." (cadr svn-status-update-rev-number))
                     (message "svn: At revision %s." (cadr svn-status-update-rev-number))))
@@ -1340,8 +1341,9 @@ To be run after a commit, an update or a merge."
                            (string= root tree)
                            ;; buffer is modified and in the tree TREE.
                            svn-status-auto-revert-buffers)
+                  ;; (message "svn-revert-some-buffers: %s %s" (buffer-file-name) (verify-visited-file-modtime (current-buffer)))
                   ;; Keep the buffer if the file doesn't exist
-                  (when (file-exists-p file)
+                  (when (and (file-exists-p file) (not (verify-visited-file-modtime (current-buffer))))
                     (revert-buffer t t)
                     (goto-char point-pos)))))))))))
 
@@ -4840,22 +4842,30 @@ You can send raw data to the process via \\[svn-process-send-string]."
 (defun svn-status-base-dir (&optional start-directory)
   "Find the svn root directory for the current working copy.
 Return nil, if not in a svn working copy."
-  (let* ((base-dir (expand-file-name (or start-directory default-directory)))
-         (repository-root (svn-status-repo-for-path base-dir))
-         (dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
-         (in-tree (and repository-root (file-exists-p dot-svn-dir)))
-         (dir-below (expand-file-name base-dir)))
-    (while (when (and dir-below (file-exists-p dot-svn-dir))
-             (setq base-dir (file-name-directory dot-svn-dir))
-             (string-match "\\(.+/\\).+/" dir-below)
-             (setq dir-below
-                   (and (string-match "\\(.*/\\)[^/]+/" dir-below)
-                        (match-string 1 dir-below)))
-             (when dir-below
-               (if (string= (svn-status-repo-for-path dir-below) repository-root)
-                   (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))
-                 (setq dir-below nil)))))
-    (and in-tree base-dir)))
+  (let* ((start-dir (expand-file-name (or start-directory default-directory)))
+         (base-dir (gethash start-dir svn-status-base-dir-cache 'not-found)))
+    ;;(message "svn-status-base-dir: %S %S" start-dir base-dir)
+    (if (not (eq base-dir 'not-found))
+        base-dir
+      ;; (message "calculating base-dir for %s" start-dir)
+      (let* ((base-dir start-dir)
+             (repository-root (svn-status-repo-for-path base-dir))
+             (dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
+             (in-tree (and repository-root (file-exists-p dot-svn-dir)))
+             (dir-below (expand-file-name base-dir)))
+        (while (when (and dir-below (file-exists-p dot-svn-dir))
+                 (setq base-dir (file-name-directory dot-svn-dir))
+                 (string-match "\\(.+/\\).+/" dir-below)
+                 (setq dir-below
+                       (and (string-match "\\(.*/\\)[^/]+/" dir-below)
+                            (match-string 1 dir-below)))
+                 (when dir-below
+                   (if (string= (svn-status-repo-for-path dir-below) repository-root)
+                       (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))
+                     (setq dir-below nil)))))
+        (svn-puthash start-dir (and in-tree base-dir) svn-status-base-dir-cache)
+        (svn-status-message 7 "svn-status-base-dir %s => %s" start-dir (and in-tree base-dir))
+        (and in-tree base-dir)))))
 
 (defun svn-status-save-state ()
   "Save psvn persistent options for this working copy to a file."
