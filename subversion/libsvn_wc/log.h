@@ -220,10 +220,9 @@ svn_wc__loggy_set_entry_timestamp_from_wc(svn_stringbuf_t **log_accum,
                                           apr_pool_t *pool);
 
 
-/* Extend **LOG_ACCUM with log instructions to set the timestamp of PATH
-   in the entry field with name TIME_PROP.
+/* Extend **LOG_ACCUM with log instructions to set the file size of PATH
+   in the entries' WORKING_SIZE field.
 
-   Use SVN_WC__ENTRY_ATTR_* values for TIME_PROP.
 */
 
 svn_error_t *

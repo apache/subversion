@@ -1243,6 +1243,32 @@ typedef enum svn_wc_schedule_t
 } svn_wc_schedule_t;
 
 
+/**
+ * Values for the working_size field in svn_wc_entry_t
+ * when it isn't set to the actual size value of the unchanged
+ * working file.
+ *
+ * @defgroup svn_wc_entry_working_size_constants Working size constants
+ *
+ * @{
+ */
+
+/** The value of the working size is unknown (hasn't been
+ *  calculated and stored in the past for whatever reason).
+ *
+ * @since New in 1.5
+ */
+#define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN -1
+/** The value of the working size is unknown, but when
+ *  we last checked (for example by full comparison), the
+ *  working file was different from the text base.
+ *
+ * @since New in 1.5
+ */
+#define SVN_WC_ENTRY_WORKING_SIZE_CHANGED -2
+
+/** @} */
+
 /** A working copy entry -- that is, revision control information about
  * one versioned entity.
  */
@@ -1386,9 +1412,10 @@ typedef struct svn_wc_entry_t
 
   /** Size of the file after being translated into local representation,
    * or:
-   *  0        if unknown.
-   *  negative if the file is locally modified
-   *            so the working size couldn't be recorded
+   *  @c SVN_WC_ENTRY_WORKING_SIZE_UNKOWN     if unknown.
+   *  @c SVN_WC_ENTRY_WORKING_SIZE_CHANGED    if the file is locally
+   *            modified so the working size couldn't be calculated
+   *           (without a lot of extra effort)
    * @since New in 1.5.
    */
   apr_off_t working_size;
