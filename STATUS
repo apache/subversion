@@ -105,13 +105,3 @@ Candidate changes:
 
 Approved changes:
 
-  * r23514, r23516, r23519
-    Fix a bug in dumpstream loading where datestamp-less revisions do
-    not remain so after load (issue #2729).
-    Justification:
-      Before-and-after repository data parity (yeah, it's a stretch...)
-    Notes:
-      r23519 isn't necessary, but an extremely low-risk cleanup.
-    Votes:
-      +1: cmpilato, dlr, jerenkrantz
-
