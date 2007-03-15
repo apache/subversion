@@ -2,7 +2,7 @@
  * revert-cmd.c -- Subversion revert command
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -51,8 +51,7 @@ svn_cl__revert(apr_getopt_t *os,
       SVN_ERR(svn_client_get_changelist(&changelist_targets,
                                         opt_state->changelist,
                                         "", /* ### FIXME */
-                                        ctx->cancel_func,
-                                        ctx->cancel_baton,
+                                        ctx,
                                         pool));
       if (apr_is_empty_array(changelist_targets))
         return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,

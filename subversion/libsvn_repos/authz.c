@@ -404,8 +404,10 @@ authz_global_parse_section(const char *section_name, void *baton,
       b->access = authz_access_is_granted(b->allow, b->deny,
                                           b->required_access);
 
-      /* Continue as long as we don't find a granted access. */
-      return !b->access;
+      /* Continue as long as we don't find a determined, granted access. */
+      return !(b->access
+               && authz_access_is_determined(b->allow, b->deny,
+                                             b->required_access));
     }
 
   return TRUE;
@@ -431,6 +433,11 @@ authz_get_global_access(svn_config_t *cfg, const char *repos_name,
 
   svn_config_enumerate_sections2(cfg, authz_global_parse_section,
                                  &baton, pool);
+
+  /* If walking the configuration was inconclusive, deny access. */
+  if (!authz_access_is_determined(baton.allow,
+                                  baton.deny, baton.required_access))
+    return FALSE;
 
   return baton.access;
 }

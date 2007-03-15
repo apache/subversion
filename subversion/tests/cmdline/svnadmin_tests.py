@@ -429,9 +429,11 @@ def verify_windows_paths_in_repos(sbox):
                                      chi_url)
 
   output, errput = svntest.main.run_svnadmin("verify", sbox.repo_dir)
-  if errput:
-    print "Error: 'verify' failed"
-    raise svntest.Failure
+  svntest.actions.compare_and_display_lines(
+    "Error while running 'svnadmin verify'.",
+    'STDERR', ["* Verified revision 0.\n",
+               "* Verified revision 1.\n",
+               "* Verified revision 2.\n"], errput)
 
 ########################################################################
 # Run the tests

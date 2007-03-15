@@ -3972,7 +3972,8 @@ If ARG then prompt for revision to diff against."
   "Run ediff on the current file with a previous revision.
 If ARG then prompt for revision to diff against."
   (interactive "P")
-  (let ((svn-status-get-line-information-for-file t))
+  (let ((svn-status-get-line-information-for-file t)
+        (default-directory (svn-status-base-dir)))
     (svn-status-ediff-with-revision arg)))
 
 ;; --------------------------------------------------------------------------------
@@ -4826,20 +4827,34 @@ You can send raw data to the process via \\[svn-process-send-string]."
 ;; svn status persistent options
 ;; --------------------------------------------------------------------------------
 
+(defun svn-status-repo-for-path (directory)
+  "Find the repository root for DIRECTORY."
+  (let ((default-directory directory))
+    (svn-run nil t 'parse-info "info" (expand-file-name "."))
+    (with-current-buffer svn-process-buffer-name
+      (goto-char (point-min))
+      (let ((case-fold-search t))
+        (when (search-forward "repository root: " nil t)
+          (buffer-substring-no-properties (point) (svn-point-at-eol)))))))
+
 (defun svn-status-base-dir (&optional start-directory)
   "Find the svn root directory for the current working copy.
 Return nil, if not in a svn working copy."
   (let* ((base-dir (expand-file-name (or start-directory default-directory)))
+         (repository-root (svn-status-repo-for-path base-dir))
          (dot-svn-dir (concat base-dir (svn-wc-adm-dir-name)))
-         (in-tree (file-exists-p dot-svn-dir))
-         (dir-below (expand-file-name default-directory)))
+         (in-tree (and repository-root (file-exists-p dot-svn-dir)))
+         (dir-below (expand-file-name base-dir)))
     (while (when (and dir-below (file-exists-p dot-svn-dir))
              (setq base-dir (file-name-directory dot-svn-dir))
              (string-match "\\(.+/\\).+/" dir-below)
              (setq dir-below
                    (and (string-match "\\(.*/\\)[^/]+/" dir-below)
                         (match-string 1 dir-below)))
-             (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))))
+             (when dir-below
+               (if (string= (svn-status-repo-for-path dir-below) repository-root)
+                   (setq dot-svn-dir (concat dir-below (svn-wc-adm-dir-name)))
+                 (setq dir-below nil)))))
     (and in-tree base-dir)))
 
 (defun svn-status-save-state ()

@@ -837,7 +837,7 @@ def simple_property_merges(sbox):
       saw_bar = 1
 
   if not saw_foo or not saw_bar:
-    raise svntest.Failure
+    raise svntest.Failure("Expected properties not found")
  
 
 #----------------------------------------------------------------------
@@ -1118,6 +1118,11 @@ def merge_similar_unrelated_trees(sbox):
 
 #----------------------------------------------------------------------
 def merge_one_file_helper(sbox, arg_flav):
+  "ARG_FLAV is one of 'r' (revision range) or 'c' (single change)."
+
+  if arg_flav not in ('r', 'c'):
+    raise svntest.Failure("Unrecognized flavor of merge argument")
+
   sbox.build()
   wc_dir = sbox.wc_dir
   
@@ -1157,8 +1162,6 @@ def merge_one_file_helper(sbox, arg_flav):
                                        ['U    ' + rho_path + '\n'], [],
                                        'merge', '-c', '2',
                                        rho_url, rho_path)
-  else:
-    raise svntest.Failure
 
   expected_status.tweak(wc_rev=1)
   expected_status.tweak('A/D/G/rho', status='M ')
@@ -1167,8 +1170,7 @@ def merge_one_file_helper(sbox, arg_flav):
   # Inspect rho, make sure it's right.
   rho_text = svntest.tree.get_text(rho_path)
   if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
-    print "Unexpected text in merged '" + rho_path + "'"
-    raise svntest.Failure
+    raise svntest.Failure("Unexpected text in merged '" + rho_path + "'")
 
   # Restore rho to pristine revision 1, for another merge.
   svntest.actions.run_and_verify_svn(None, None, [], 'revert', rho_path)
@@ -1189,14 +1191,12 @@ def merge_one_file_helper(sbox, arg_flav):
       svntest.actions.run_and_verify_svn(None,
                                          ['U    rho\n'], [],
                                          'merge', '-c', '2', rho_url)
-    else:
-      raise svntest.Failure
 
     # Inspect rho, make sure it's right.
     rho_text = svntest.tree.get_text('rho')
     if rho_text != "This is the file 'rho'.\nA new line in rho.\n":
-      print "Unexpected text merging to 'rho' in '" + G_path + "'"
-      raise svntest.Failure
+      raise svntest.Failure("Unexpected text merging to 'rho' in '" +
+                            G_path + "'")
   finally:
     os.chdir(saved_cwd)
 
@@ -1215,6 +1215,11 @@ def merge_one_file_using_c(sbox):
 # This is a regression for the enhancement added in issue #785.
 
 def merge_with_implicit_target_helper(sbox, arg_flav):
+  "ARG_FLAV is one of 'r' (revision range) or 'c' (single change)."
+
+  if arg_flav not in ('r', 'c'):
+    raise svntest.Failure("Unrecognized flavor of merge argument")
+
   sbox.build()
   wc_dir = sbox.wc_dir
   
@@ -1262,12 +1267,10 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
     elif arg_flav == 'c':
       svntest.actions.run_and_verify_svn(None, ['U    mu\n'], [],
                                          'merge', '-c', '-2', mu_url)
-    else:
-      raise svntest.Failure
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text):
-      raise svntest.Failure
+      raise svntest.Failure("Unexpected text in 'mu'")
 
     # merge using filename for sourcepath
     # Cannot use run_and_verify_merge with a file target
@@ -1277,12 +1280,10 @@ def merge_with_implicit_target_helper(sbox, arg_flav):
     elif arg_flav == 'c':
       svntest.actions.run_and_verify_svn(None, ['G    mu\n'], [],
                                          'merge', '-c', '2', 'mu')
-    else:
-      raise svntest.Failure
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text + added_mu_text):
-      raise svntest.Failure
+      raise svntest.Failure("Unexpected text in 'mu'")
 
   finally:
     os.chdir(was_cwd)
@@ -1355,7 +1356,7 @@ def merge_with_prev (sbox):
 
     # sanity-check resulting file
     if (svntest.tree.get_text('mu') != orig_mu_text):
-      raise svntest.Failure
+      raise svntest.Failure("Unexpected text in 'mu'")
 
   finally:
     os.chdir(was_cwd)
@@ -1379,7 +1380,7 @@ def merge_with_prev (sbox):
                                        'A', 'A')
 
     if (svntest.tree.get_text('A/zot') != None):
-      raise svntest.Failure
+      raise svntest.Failure("Unexpected text in 'A/zot'")
     
   finally:
     os.chdir(was_cwd)
