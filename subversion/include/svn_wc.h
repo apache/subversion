@@ -137,7 +137,7 @@ typedef struct svn_wc_adm_access_t svn_wc_adm_access_t;
  * to the set containing @a associated.  @a associated can be @c NULL, in 
  * which case @a adm_access is the start of a new set.
  *
- * ### TODO: We should change the name of the @a depth parameter here,
+ * ### TODO(sd): We should change the name of the @a depth parameter here,
  * ### so as not to confuse it with all the @c svn_depth_t depths
  * ### elsewhere in the code.  Maybe @a levels_to_lock or something.
  *
@@ -2639,7 +2639,7 @@ svn_error_t *svn_wc_process_committed(const char *path,
  * to @a reporter/@a report_baton.  Obviously, if @a path is a file
  * instead of a directory, this depth-first crawl will be a short one.
  *
- * ### TODO: document @a depth parameter.
+ * ### TODO(sd): document @a depth parameter.
  *
  * No locks are or logs are created, nor are any animals harmed in the
  * process.  No cleanup is necessary.  @a adm_access must be an access 
@@ -2798,7 +2798,7 @@ svn_error_t *svn_wc_get_actual_target(const char *path,
  * svn_depth_empty, update exactly the uppermost target, and don't
  * touch its entries.
  *
- * ### TODO: Are those extravagent claims of sophisticated depth
+ * ### TODO(sd): Are those extravagent claims of sophisticated depth
  * ### behavior above really true?
  *
  * @note @a depth overrides whatever depth is already set in @a anchor
@@ -3142,9 +3142,9 @@ svn_error_t *svn_wc_canonicalize_svn_prop(const svn_string_t **propval_p,
  * entries as well (if any).  If @c svn_depth_infinity, then diff
  * fully recursively.  In the latter case, @a anchor should be part of
  * an access baton set for the @a target hierarchy. 
- * ### TODO: I'm not sure what the last part of that last sentence means.
+ * ### TODO(sd): I'm not sure what the last part of that last sentence means.
  *
- * ### TODO: Also, is same behavior for svn_depth_files and
+ * ### TODO(sd): Also, is same behavior for svn_depth_files and
  * ### svn_depth_immediates the correct thing here?
  *
  * @a ignore_ancestry determines whether paths that have discontinuous node

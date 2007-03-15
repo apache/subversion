@@ -51,7 +51,7 @@ struct edit_baton {
   void *diff_cmd_baton;
 
   /* Depth to which this diff or merge should descend. */
-  /* ### TODO: This field appears to be completely unused!  */
+  /* ### TODO(sd): This field appears to be completely unused!  */
   svn_depth_t depth;
 
   /* DRY_RUN is TRUE if this is a dry-run diff, false otherwise. */

@@ -339,7 +339,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
       else if (current_entry->kind == svn_node_dir
                && depth == svn_depth_infinity)
         {
-          /* ### TODO: I think it's correct to check whether
+          /* ### TODO(sd): I think it's correct to check whether
              ### 'depth == svn_depth_infinity' above.  If the
              ### specified depth is not infinity, then we don't want
              ### to recurse at all.  If it is, then we want recursion
@@ -411,7 +411,7 @@ report_revisions_and_depths(svn_wc_adm_access_t *adm_access,
                                        subdir_entry->lock_token,
                                        iterpool));
 
-          /* ### TODO: See TODO comment in svn_wc_crawl_revisions3()
+          /* ### TODO(sd): See TODO comment in svn_wc_crawl_revisions3()
              ### about depth treatment here. */ 
           if (depth == svn_depth_infinity)
             SVN_ERR(report_revisions_and_depths(adm_access, this_path,
@@ -539,7 +539,7 @@ svn_wc_crawl_revisions3(const char *path,
         }
       else
         {
-          /* ### TODO: Just passing depth here is not enough.  There
+          /* ### TODO(sd): Just passing depth here is not enough.  There
              ### can be circumstances where the root is depth 0 or 1,
              ### but some child directories are present at depth
              ### infinity.  We need to detect them and recurse into
@@ -844,7 +844,7 @@ svn_wc_crawl_revisions(const char *path,
   nb.func = notify_func;
   nb.baton = notify_baton;
 
-  /* ### TODO: Ideally, this would call svn_wc_crawl_revisions3() (or
+  /* ### TODO(sd): Ideally, this would call svn_wc_crawl_revisions3() (or
      ### whatever the latest interface is) directly.  However, I'm
      ### too distracted to untangle the layers of compat wrappers
      ### going on here right now, so I'm just going to leave it. */

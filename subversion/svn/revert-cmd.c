@@ -81,7 +81,7 @@ svn_cl__revert(apr_getopt_t *os,
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = SVN_DEPTH_FROM_RECURSE(FALSE);
 
-  /* ### TODO: Wouldn't it be good to take real depth here? */
+  /* ### TODO(sd): Wouldn't it be good to take real depth here? */
   err = svn_client_revert(targets, SVN_DEPTH_TO_RECURSE(opt_state->depth),
                           ctx, pool);
 

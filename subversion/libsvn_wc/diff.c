@@ -237,7 +237,7 @@ struct callbacks_wrapper_baton {
  * defines whether to compare against working files or text-bases.
  * REVERSE_ORDER defines which direction to perform the diff.
  *
- * ### TODO: document depth's behavior more precisely.
+ * ### TODO(sd): document depth's behavior more precisely.
  */
 static struct edit_baton *
 make_editor_baton(svn_wc_adm_access_t *anchor,
@@ -1796,7 +1796,7 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
 
 
 /* Compare working copy against the text-base.
-   ### TODO: I'm not sure we need to change RECURSE to DEPTH here,
+   ### TODO(sd): I'm not sure we need to change RECURSE to DEPTH here,
    ### since this only descends within the working copy anyway. */
 svn_error_t *
 svn_wc_diff3(svn_wc_adm_access_t *anchor,

@@ -1702,7 +1702,7 @@ diff_prepare_repos_repos(const struct diff_parameters *params,
    copy history from this peg path to INITIAL_REVISION2 and
    INITIAL_REVISION1.
 
-   ### TODO: document DEPTH (as RECURSE should have been documented!)
+   ### TODO(sd): document DEPTH (as RECURSE should have been documented!)
 */
 static svn_error_t *
 do_merge(const char *initial_URL1,
@@ -2029,7 +2029,7 @@ unsupported_diff_error(svn_error_t *child_err)
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
 
-   ### TODO: I think RECURSE instead of DEPTH is okay here, because
+   ### TODO(sd): I think RECURSE instead of DEPTH is okay here, because
    ### this is strictly within a wc anyway.
 
    All other options are the same as those passed to svn_client_diff4(). */
@@ -2143,7 +2143,7 @@ diff_repos_repos(const struct diff_parameters *diff_param,
 
   /* Drive the reporter; do the diff. */
   SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
-                             /* ### TODO: dynamic depth here */
+                             /* ### TODO(sd): dynamic depth here */
                              svn_depth_infinity,
                              FALSE, NULL,
                              pool));
@@ -2391,7 +2391,7 @@ diff_summarize_repos_repos(const struct diff_parameters *diff_param,
 
   /* Drive the reporter; do the diff. */
   SVN_ERR(reporter->set_path(report_baton, "", drr.rev1,
-                             /* ### TODO: dynamic depth here */
+                             /* ### TODO(sd): dynamic depth here */
                              svn_depth_infinity,
                              FALSE, NULL, pool));
   SVN_ERR(reporter->finish_report(report_baton, pool));

@@ -1527,7 +1527,7 @@ svn_wc_add2(const char *path,
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
-      /* ### TODO: Both the calls to svn_wc_ensure_adm3() below pass
+      /* ### TODO(sd): Both the calls to svn_wc_ensure_adm3() below pass
          ### svn_depth_infinity.  I think this is reasonable, because
          ### we don't have any other source of depth information in
          ### the current context, and if svn_wc_ensure_adm3() *does*

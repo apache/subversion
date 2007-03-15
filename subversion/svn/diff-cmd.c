@@ -230,7 +230,7 @@ svn_cl__diff(apr_getopt_t *os,
 
     }
 
-  /* ### TODO: Will this behave correctly in working copies with
+  /* ### TODO(sd): Will this behave correctly in working copies with
    * ### complex depth mixtures?  It should, because they'll just
    * ### report their state as for an update, and the editor drive
    * ### that results will take depth into account.  But this needs

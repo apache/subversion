@@ -1871,7 +1871,7 @@ set_path(void *report_baton,
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
-  /* ### TODO: Or should this be 'if (depth != report->depth) ...' ? */
+  /* ### TODO(sd): Or should this be 'if (depth != report->depth) ...' ? */
   if (depth != svn_depth_infinity)
     {
       /* ### It's a bit distressing to hand-code the depth words here,
@@ -2010,7 +2010,7 @@ link_path(void *report_baton,
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
-  /* ### TODO: Or should this be 'if (depth != report->depth) ...' ? */
+  /* ### TODO(sd): Or should this be 'if (depth != report->depth) ...' ? */
   if (depth != svn_depth_infinity)
     {
       /* ### It's a bit distressing to hand-code the depth words here,

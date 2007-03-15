@@ -2977,7 +2977,7 @@ static const svn_ra_reporter3_t ra_dav_reporter = {
    in the directory represented by the SESSION's URL, or empty if the
    entire directory is meant to be the target.
 
-   ### TODO: document DEPTH behavior
+   ### TODO(sd): document DEPTH behavior
 
    If IGNORE_ANCESTRY is set, the server will transmit real diffs
    between the working copy and the target even if those objects are

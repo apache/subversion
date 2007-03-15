@@ -60,7 +60,7 @@ extern "C" {
    or replacement.)  Likewise, if BASE_URL is non-null, then rewrite
    all urls to be "telescoping" children of the base_url.
 
-   ### TODO: See README.branch about depth behavior above!
+   ### TODO(sd): See README.branch about depth behavior above!
 
    If REMOVE_MISSING_DIRS is TRUE, then delete the entries for any 
    missing directories.  If NOTIFY_FUNC is non-null, invoke it with 

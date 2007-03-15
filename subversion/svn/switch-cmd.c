@@ -99,7 +99,7 @@ svn_cl__switch(apr_getopt_t *os,
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
                                         opt_state->targets, pool));
 
-  /* ### TODO: I'm not completely sure we should allow explicit depth
+  /* ### TODO(sd): I'm not completely sure we should allow explicit depth
      ### on this command.  It took -N but not -R.  Why was -N
      ### useful?  Does it make sense in a depthy universe? */
   if (opt_state->depth == svn_depth_unknown)

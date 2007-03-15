@@ -1020,7 +1020,7 @@ svn_client_checkout(svn_revnum_t *result_rev,
  * If @a depth is @c svn_depth_unknown, take the working depth from
  * @a paths and then behave as described above.
  *
- * ### TODO: In the @c svn_depth_immediates case, shouldn't we update
+ * ### TODO(sd): In the @c svn_depth_immediates case, shouldn't we update
  * ### the presence/absence of subdirs, even though we don't update
  * ### inside the subdirs themselves?
  *
@@ -1116,7 +1116,7 @@ svn_client_update(svn_revnum_t *result_rev,
  * ignoring subdirectories completely.  Else if @c svn_depth_empty,
  * switch just @a path and touch nothing underneath it.
  *
- * ### TODO: But, I think the svn_depth_immediates behavior is not
+ * ### TODO(sd): But, I think the svn_depth_immediates behavior is not
  * ### actually implemented yet.
  *
  * If @a allow_unver_obstructions is true then the switch tolerates
@@ -1175,7 +1175,7 @@ svn_client_switch(svn_revnum_t *result_rev,
 /**
  * Schedule a working copy @a path for addition to the repository.
  *
- * ### TODO: For consistency, this should take svn_depth_t depth
+ * ### TODO(sd): For consistency, this should take svn_depth_t depth
  * ### instead of svn_boolean_t recursive.  However, it is not
  * ### important for the sparse-directories work, so leaving it
  * ### for now.
@@ -1402,7 +1402,7 @@ svn_client_delete(svn_client_commit_info_t **commit_info_p,
  * combo that this function can use to query for a commit log message
  * when one is needed.
  *
- * ### TODO: For consistency, this should probably take svn_depth_t
+ * ### TODO(sd): For consistency, this should probably take svn_depth_t
  * ### depth instead of svn_boolean_t nonrecursive.  But it's not
  * ### needed for the sparse-directories work right now, so leaving it
  * ### alone.
@@ -1469,7 +1469,7 @@ svn_error_t *svn_client_import(svn_client_commit_info_t **commit_info_p,
  * @c svn_wc_notify_commit_deleted, @c svn_wc_notify_commit_replaced,
  * @c svn_wc_notify_commit_postfix_txdelta.
  *
- * ### TODO: For consistency, this should probably take svn_depth_t
+ * ### TODO(sd): For consistency, this should probably take svn_depth_t
  * ### depth instead of svn_boolean_t recurse.  But it's not needed
  * ### for the sparse-directories work right now, so leaving it alone
  * ### for now, although note that this is a 1.5 API so revving it
@@ -1870,7 +1870,7 @@ svn_client_blame(const char *path_or_url,
  * subdirectories.  Else if @c svn_depth_empty, diff just the named
  * paths but nothing underneath them.
  * 
- * ### TODO: If svn_depth_immediates, would it perhaps be more correct
+ * ### TODO(sd): If svn_depth_immediates, would it perhaps be more correct
  * ### to diff file children and subdirs' properties?
  *
  * Use @a ignore_ancestry to control whether or not items being
@@ -2227,7 +2227,7 @@ svn_client_diff_summarize_peg(const char *path,
  * @c svn_depth_empty, apply changes only to @a target_wcpath (i.e.,
  * property changes only)
  *
- * ### TODO: Improve above wording when figure out exactly what all
+ * ### TODO(sd): Improve above wording when figure out exactly what all
  * ### that means.
  *
  * If @a depth is @c svn_depth_unknown, use the depth of @a target_wcpath.
@@ -2432,7 +2432,7 @@ svn_client_cleanup(const char *dir,
  * @param ctx svn_client_ctx_t
  * @param pool The pool from which to perform memory allocations
  *
- * ### TODO: I don't see any reason to change this recurse parameter
+ * ### TODO(sd): I don't see any reason to change this recurse parameter
  * ### to a depth, but making a note to re-check this logic later.
  */
 svn_error_t *
@@ -2457,7 +2457,7 @@ svn_client_relocate(const char *dir,
  * it is a directory, and @a recursive is true, this will be a
  * recursive operation.
  *
- * ### TODO: I don't see any reason to change this recurse parameter
+ * ### TODO(sd): I don't see any reason to change this recurse parameter
  * ### to a depth, but making a note to re-check this logic later.
  *
  * If @a ctx->notify_func2 is non-null, then for each item reverted,
@@ -2489,7 +2489,7 @@ svn_client_revert(const apr_array_header_t *paths,
  * If @a recursive is set, recurse below @a path, looking for conflicts 
  * to resolve.
  *
- * ### TODO: I don't see any reason to change this recurse parameter
+ * ### TODO(sd): I don't see any reason to change this recurse parameter
  * ### to a depth, but making a note to re-check this logic later.
  *
  * If @a path is not in a state of conflict to begin with, do nothing.
@@ -2824,7 +2824,7 @@ svn_client_move(svn_client_commit_info_t **commit_info_p,
  * children.  If @a recurse is false, and @a target is a directory, @a 
  * propname will be set on _only_ @a target.
  *
- * ### TODO: I don't see any reason to change this recurse parameter
+ * ### TODO(sd): I don't see any reason to change this recurse parameter
  * ### to a depth right now; it's not exactly part of the
  * ### sparse-directories feature, although it's related.
  * 
@@ -2954,7 +2954,7 @@ svn_client_revprop_set(const char *propname,
  * If @a target is a file or @a recurse is false, @a *props will have
  * at most one element.
  *
- * ### TODO: I don't see any reason to change this recurse parameter
+ * ### TODO(sd): I don't see any reason to change this recurse parameter
  * ### to a depth right now; it's not exactly part of the
  * ### sparse-directories feature, although it's related.  Usually
  * ### you would just name the target carefully... Is there a
@@ -3047,7 +3047,7 @@ svn_client_revprop_get(const char *propname,
  * only a single element.  Otherwise, it will contain one element for each
  * versioned entry below (and including) @a target.
  *
- * ### TODO: I don't see any reason to change this recurse parameter
+ * ### TODO(sd): I don't see any reason to change this recurse parameter
  * ### to a depth right now; it's not exactly part of the
  * ### sparse-directories feature, although it's related.  Usually
  * ### you would just name the target carefully... Is there a
@@ -3303,7 +3303,7 @@ typedef svn_error_t *(*svn_client_list_func_t)(void *baton,
  * If @a recurse is true (and @a path_or_url is a directory) this will
  * be a recursive operation.
  *
- * ### TODO: This really should take depth instead of recurse, but
+ * ### TODO(sd): This really should take depth instead of recurse, but
  * ### one thing at a time, one thing at a time...
  *
  * @a dirent_fields controls which fields in the @c svn_dirent_t's are
@@ -3744,7 +3744,7 @@ svn_info_dup(const svn_info_t *info, apr_pool_t *pool);
  * If @a recurse is true (and @a path_or_url is a directory) this will
  * be a recursive operation, invoking @a receiver on each child.
  *
- * ### TODO: I don't see any compelling reason to switch to
+ * ### TODO(sd): I don't see any compelling reason to switch to
  * ### depth-style instead of recurse-style control here
  *
  * @since New in 1.2.

@@ -91,7 +91,7 @@ svn_client__can_delete(const char *path,
   sb.pool = pool;
   SVN_ERR(svn_client_status3
           (NULL, path, &revision, find_undeletables, &sb,
-           /* ### TODO: It's not urgent, but it would be nice to
+           /* ### TODO(sd): It's not urgent, but it would be nice to
               ### understand why the code was originally passing a
               ### hardcoded TRUE for recurse when this call was to
               ### svn_client_status2 (hence the hardcoded

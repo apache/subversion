@@ -1011,7 +1011,7 @@ delta_dirs(struct context *c,
           s_fullpath = svn_path_join(source_path, t_entry->name, subpool);
           src_kind = s_entry->kind;
 
-          /* ### TODO: for now, the simplest kind of depth logic.
+          /* ### TODO(sd): for now, the simplest kind of depth logic.
              ### Eventually we may want a trinary conditional. */
           if ((c->depth == svn_depth_infinity) || (src_kind != svn_node_dir))
             {
@@ -1048,7 +1048,7 @@ delta_dirs(struct context *c,
         }            
       else
         {
-          /* ### TODO: for now, the simplest kind of depth logic.
+          /* ### TODO(sd): for now, the simplest kind of depth logic.
              ### Eventually we may want a trinary conditional. */
           if ((c->depth == svn_depth_infinity) || (tgt_kind != svn_node_dir))
             {
@@ -1079,7 +1079,7 @@ delta_dirs(struct context *c,
           e_fullpath = svn_path_join(edit_path, s_entry->name, subpool);
 
           /* Do we actually want to delete the dir if we're non-recursive?
-             ### TODO: for now, the simplest kind of depth logic.
+             ### TODO(sd): for now, the simplest kind of depth logic.
              ### Eventually we may want a trinary conditional. */
           if ((c->depth == svn_depth_infinity) || (src_kind != svn_node_dir))
             SVN_ERR(delete(c, dir_baton, e_fullpath, subpool));

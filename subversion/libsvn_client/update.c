@@ -73,7 +73,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                                                  SVN_CONFIG_CATEGORY_CONFIG,
                                                  APR_HASH_KEY_STRING) : NULL;
 
-  /* ### TODO: Ah, the irony.  We'd like to base our adm_open depth on
+  /* ### TODO(sd): Ah, the irony.  We'd like to base our adm_open depth on
      ### the depth we're going to use for the update.  But that
      ### may depend on the depth in the working copy, which we can't
      ### discover without calling adm_open.  We could expend an extra

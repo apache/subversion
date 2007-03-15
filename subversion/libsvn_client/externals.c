@@ -669,7 +669,7 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
           SVN_ERR(svn_client_status3(NULL, fullpath, 
                                      &(external->revision),
                                      status_func, status_baton,
-                                     /* ### TODO: Is it really correct
+                                     /* ### TODO(sd): Is it really correct
                                         ### to unconditionally recurse
                                         ### here? */
                                      svn_depth_infinity, get_all, update,

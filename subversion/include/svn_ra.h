@@ -779,7 +779,7 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * represented by the @a session's URL).  If @a update_target is the
  * empty string, the entire directory is updated.
  *
- * ### TODO: The recurse parameter should probably become a depth:
+ * ### TODO(sd): The recurse parameter should probably become a depth:
  *
  * If @a recurse is true and the target is a directory, update
  * recursively; otherwise, update just the target and its immediate
@@ -813,7 +813,7 @@ svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
  * Similar to @c svn_ra_do_update2, but taking @c svn_ra_reporter2_t
  * instead of @c svn_ra_reporter3_t.
  *
- * ### TODO: (see svn_ra_do_update2 about possible change of recurse
+ * ### TODO(sd): (see svn_ra_do_update2 about possible change of recurse
  * ### to depth as well)
  *
  * @deprecated Provided for compatibility with the 1.4 API.
@@ -997,7 +997,7 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  * and the addition of another, but if this flag is @c TRUE,
  * unrelated items will be diffed as if they were related.
  *
- * ### TODO: document @a depth, when figure out how it should work!
+ * ### TODO(sd): document @a depth, when figure out how it should work!
  *
  * The caller may not perform any RA operations using @a session before
  * finishing the report, and may not perform any RA operations using

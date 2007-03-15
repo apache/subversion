@@ -864,7 +864,7 @@ svn_client_export4(svn_revnum_t *result_rev,
                                     export_editor, edit_baton, pool));
 
           SVN_ERR(reporter->set_path(report_baton, "", revnum,
-                                     /* ### TODO: dynamic depth here */
+                                     /* ### TODO(sd): dynamic depth here */
                                      svn_depth_infinity,
                                      TRUE, /* "help, my dir is empty!" */
                                      NULL, pool));

@@ -1148,7 +1148,7 @@ main(int argc, const char *argv[])
             (svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                _("Error converting depth "
                                  "from locale to UTF8")), pool, "svn: ");
-        /* ### TODO: Use svn_depth_from_word() here?  That could work
+        /* ### TODO(sd): Use svn_depth_from_word() here?  That could work
            ### as long as that function continues to return
            ### svn_depth_unknown for unrecognized words, but there's
            ### a movement afoot (in my head, anyway) to make it

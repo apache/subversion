@@ -650,13 +650,13 @@ update_entry(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                              _("Working copy path '%s' does not exist in "
                                "repository"), e_path);
 
-  /* ### TODO: the "0" used to be "recurse".  I'm not sure that any
+  /* ### TODO(sd): the "0" used to be "recurse".  I'm not sure that any
      ### of this conditional block is appropriate in our new era of
      ### depthy-ness, but I'm keeping it around until I'm sure. */
   if (0
       && ((s_entry && s_entry->kind == svn_node_dir)
           || (t_entry && t_entry->kind == svn_node_dir)))
-    /* ### TODO: The problem is that we can't just stop recursing if
+    /* ### TODO(sd): The problem is that we can't just stop recursing if
      * ### we hit a non-infinity depth, because there might still be
      * ### some subpaths beneath here explicitly reported by the
      * ### client.  The non-infinity depth just tells us that the
@@ -857,7 +857,7 @@ delta_dirs(report_baton_t *b, svn_revnum_t s_rev, const char *s_path,
                                             s_rev, b->t_rev,
                                             &deleted_rev, subpool));
 
-              /* ### TODO: There's a big outstanding question here:
+              /* ### TODO(sd): There's a big outstanding question here:
                * ### what if depth==svn_depth_immediates &&
                * ### s_entry->kind==svn_node_dir ? Should we delete
                * ### the subdirectory or not?  I think the answer

@@ -221,7 +221,7 @@ svn_client_status3(svn_revnum_t *result_rev,
   const svn_wc_entry_t *entry;
   struct status_baton sb;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
-  /* ### TODO: This is a shim, we should use depth for real. */
+  /* ### TODO(sd): This is a shim, we should use depth for real. */
   svn_depth_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   sb.real_status_func = status_func;
@@ -235,12 +235,12 @@ svn_client_status3(svn_revnum_t *result_rev,
                                  pool));
   anchor = svn_wc_adm_access_path(anchor_access);
 
-  /* ### TODO: If depth is svn_depth_unknown, we should get the depth
+  /* ### TODO(sd): If depth is svn_depth_unknown, we should get the depth
      ### from the working copy here. */
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
-  /* ### TODO: ...and this would take depth, not recurse... */
+  /* ### TODO(sd): ...and this would take depth, not recurse... */
   SVN_ERR(svn_wc_get_status_editor2(&editor, &edit_baton, &set_locks_baton,
                                     &edit_revision, anchor_access, target,
                                     ctx->config, recurse, get_all, no_ignore,
