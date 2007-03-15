@@ -44,27 +44,27 @@ svn_cl__merge(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
   const char *sourcepath1, *sourcepath2, *targetpath;
-  svn_boolean_t using_alternate_syntax = FALSE;
+  svn_boolean_t using_rev_range_syntax = FALSE;
   svn_error_t *err;
   svn_opt_revision_t peg_revision;
   apr_array_header_t *options;
 
   /* If the first opt_state revision is filled in at this point, then
-     we know the user must have used the '-r' switch. */
+     we know the user must have used the '-r' or '-c' switch. */
   if (opt_state->start_revision.kind != svn_opt_revision_unspecified)
     {
-      /* sanity check:  they better have given supplied a *range*.  */
+      /* A revision *range* is required. */
       if (opt_state->end_revision.kind == svn_opt_revision_unspecified)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, 0,
                                 _("Second revision required"));
 
-      using_alternate_syntax = TRUE;
+      using_rev_range_syntax = TRUE;
     }
 
   SVN_ERR(svn_opt_args_to_target_array2(&targets, os, 
                                         opt_state->targets, pool));
 
-  if (using_alternate_syntax)
+  if (using_rev_range_syntax)
     {
       if (targets->nelts < 1)
         return svn_error_create(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL, NULL);
@@ -158,7 +158,7 @@ svn_cl__merge(apr_getopt_t *os,
   else
     options = NULL;
 
-  if (using_alternate_syntax)
+  if (using_rev_range_syntax)
     {
       err = svn_client_merge_peg3(sourcepath1,
                                   &(opt_state->start_revision),
