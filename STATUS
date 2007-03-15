@@ -87,16 +87,6 @@ Candidate changes:
     Votes:
       +1: malcolm, dlr
 
-  * r23514, r23516, r23519
-    Fix a bug in dumpstream loading where datestamp-less revisions do
-    not remain so after load (issue #2729).
-    Justification:
-      Before-and-after repository data parity (yeah, it's a stretch...)
-    Notes:
-      r23519 isn't necessary, but an extremely low-risk cleanup.
-    Votes:
-      +1: cmpilato, dlr
-
   * r23556
     Allow svn_opt_revision_working as svn_opt_revision_t parameter
     values to svn_client_cat2().
@@ -104,7 +94,16 @@ Candidate changes:
       There's no reason to disallow this value, and the nuts and bolts
       of the implementation already supported it.
     Votes:
-      +1: dlr
+      +1: dlr, jerenkrantz
+
+  * r23846
+    ra_serf: Allow clients to checkout repositories when the root is forbidden.
+    Justification:
+      Low-impact fix and regression against ra_dav.
+    Votes:
+      +1: jerenkrantz
+
+Approved changes:
 
   * r23594
     Fix DAV clients to abort transactions if setup fails, rather than
@@ -114,7 +113,15 @@ Candidate changes:
     Notes:
       'svn mkdir http://.../doesnotexist/foo' is one way to exercise this bug.
     Votes:
-      +1: malcolm, dlr
+      +1: malcolm, dlr, jerenkrantz
 
-Approved changes:
+  * r23514, r23516, r23519
+    Fix a bug in dumpstream loading where datestamp-less revisions do
+    not remain so after load (issue #2729).
+    Justification:
+      Before-and-after repository data parity (yeah, it's a stretch...)
+    Notes:
+      r23519 isn't necessary, but an extremely low-risk cleanup.
+    Votes:
+      +1: cmpilato, dlr, jerenkrantz
 
