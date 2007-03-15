@@ -3449,7 +3449,18 @@ svn_wc_cleanup(const char *path,
  * is the repository root.  Else, it can be an URL inside the repository.
  * @a pool may be used for temporary allocations.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+typedef svn_error_t *(*svn_wc_relocation_validator3_t)(void *baton,
+                                                       const char *uuid,
+                                                       const char *url,
+                                                       const char *root_url,
+                                                       apr_pool_t *pool);
+
+/** Similar to @c svn_wc_relocation_validator3_t, but without
+ * the @a root_url arguments.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 typedef svn_error_t *(*svn_wc_relocation_validator2_t)(void *baton,
                                                        const char *uuid,
@@ -3475,6 +3486,19 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
  * @a adm_access is an access baton for the directory containing
  * @a path.
  */
+svn_error_t *
+svn_wc_relocate3(const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator3_t validator,
+                 void *validator_baton,
+                 apr_pool_t *pool);
+
+/** Similar to svn_wc_relocate3(), but uses @c svn_wc_relocation_validator2_t.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API. */
 svn_error_t *
 svn_wc_relocate2(const char *path,
                  svn_wc_adm_access_t *adm_access,
