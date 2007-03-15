@@ -98,8 +98,8 @@ module SvnTestUtil
   end
 
   def teardown_repository(path=@repos_path)
-    @fs.close
-    @repos.close
+    @fs.close unless @fs.nil?
+    @repos.close unless @repos.nil?
     Svn::Repos.delete(path)
     @repos = nil
     @fs = nil
