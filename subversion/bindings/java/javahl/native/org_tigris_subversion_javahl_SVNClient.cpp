@@ -1843,6 +1843,87 @@ JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_info
 }
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    addToChangelist
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;Z)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_addToChangelist
+  (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jchangelist)
+{
+    JNIEntry(SVNClient, addToChangelist);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError("bad c++ this");
+        return;
+    }
+    Targets targets(jtargets);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    JNIStringHolder changelist_name(jchangelist);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    cl->addToChangelist(targets, changelist_name);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    removeFromChangelist
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;Z)V
+ */
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_removeFromChangelist
+  (JNIEnv *env, jobject jthis, jobjectArray jtargets, jstring jchangelist)
+{
+    JNIEntry(SVNClient, removeFromChangelist);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError("bad c++ this");
+        return;
+    }
+    Targets targets(jtargets);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    JNIStringHolder changelist_name(jchangelist);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return;
+    }
+    cl->removeFromChangelist(targets, changelist_name);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
+ * Method:    getChangelist
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Z)[Ljava/lang/String;
+ */
+JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_getChangelist
+  (JNIEnv *env, jobject jthis, jstring jchangelist, jstring jroot_path)
+{
+    JNIEntry(SVNClient, getChangelist);
+    SVNClient *cl = SVNClient::getCppObject(jthis);
+    if (cl == NULL)
+    {
+        JNIUtil::throwError("bad c++ this");
+        return NULL;
+    }
+    JNIStringHolder changelist_name(jchangelist);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return NULL;
+    }
+    JNIStringHolder root_path(jroot_path);
+    if(JNIUtil::isExceptionThrown())
+    {
+        return NULL;
+    }
+    return cl->getChangelist(changelist_name, root_path);
+}
+/*
+ * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    lock
  * Signature: ([Ljava/lang/String;Ljava/lang/String;Z)V
  */

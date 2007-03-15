@@ -128,6 +128,9 @@ public:
     jstring getAdminDirectoryName();
     jboolean isAdminDirectory(const char *name);
     jobject info(const char *path);
+    void addToChangelist(Targets &srcPaths, const char *changelist);
+    void removeFromChangelist(Targets &srcPaths, const char *changelist);
+    jobjectArray getChangelist(const char *changelist, const char *rootPath);
     jobject singleStatus(const char *path, bool onServer);
     jobjectArray status(const char *path, bool descend, bool onServer,
                             bool getAll, bool noIgnore, bool ignoreExternals);

@@ -1310,6 +1310,30 @@ public class SVNClient implements SVNClientInterface
     public native Info info(String path) throws ClientException;
 
     /**
+     * Add paths to a changelist
+     * @param paths      paths to add to the changelist
+     * @param changelist changelist name
+     */
+    public native void addToChangelist(String[] paths, String changelist)
+            throws ClientException;
+
+    /**
+     * Remove paths from a changelist
+     * @param paths      paths to remove from the changelist
+     * @param changelist changelist name
+     */
+    public native void removeFromChangelist(String[] paths, String changelist)
+            throws ClientException;
+
+    /**
+     * Recursively get the paths which belong to a changelist
+     * @param changelist  changelist name
+     * @param rootPath    the wc path under which to check
+     */
+    public native String[] getChangelist(String changelist, String rootPath)
+            throws ClientException;
+
+    /**
      *  Produce a compact "version number" for a working copy
      * @param path          path of the working copy
      * @param trailUrl      to detect switches of the whole working copy
