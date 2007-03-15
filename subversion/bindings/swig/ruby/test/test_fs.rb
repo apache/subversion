@@ -308,9 +308,9 @@ class SvnFsTest < Test::Unit::TestCase
 
     File.open(path, "w") {|f| f.print(modified)}
     @fs.transaction do |txn|
-      checksum = MD5.new(result).hexdigest
+      checksum = MD5.new(normalize_line_break(result)).hexdigest
       stream = txn.root.apply_text(path_in_repos, checksum)
-      stream.write(result)
+      stream.write(normalize_line_break(result))
       stream.close
     end
     ctx.up(@wc_path)
@@ -322,15 +322,15 @@ class SvnFsTest < Test::Unit::TestCase
                                               path_in_repos)
     data = ''
     stream.each{|w| data << w.new_data}
-    assert_equal(expected, data)
+    assert_equal(normalize_line_break(expected), data)
 
     File.open(path, "w") {|f| f.print(src)}
     rev3 = ctx.ci(@wc_path).revision
     
     File.open(path, "w") {|f| f.print(modified)}
     @fs.transaction do |txn|
-      base_checksum = MD5.new(src).hexdigest
-      checksum = MD5.new(result).hexdigest
+      base_checksum = MD5.new(normalize_line_break(src)).hexdigest
+      checksum = MD5.new(normalize_line_break(result)).hexdigest
       handler = txn.root.apply_textdelta(path_in_repos,
                                          base_checksum, checksum)
       assert_raises(Svn::Error::ChecksumMismatch) do
