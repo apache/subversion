@@ -2800,18 +2800,18 @@ svn_wc_set_changelist(const apr_array_header_t *paths,
               (strcmp(entry->changelist, matching_changelist) == 0))
             {
               if (notify_func)
-              {
-                svn_error_t *mismatch_err =
-                  svn_error_createf(SVN_ERR_WC_MISMATCHED_CHANGELIST, NULL,
-                                    _("'%s' is not currently a member of "
-                                      "changelist '%s'."),
-                                    path, matching_changelist);
-                notify = svn_wc_create_notify(path,
-                                              svn_wc_notify_changelist_failed,
-                                              iterpool);
-                notify->err = mismatch_err;
-                notify_func(notify_baton, notify, iterpool);
-              }
+                {
+                  svn_error_t *mismatch_err =
+                    svn_error_createf(SVN_ERR_WC_MISMATCHED_CHANGELIST, NULL,
+                                      _("'%s' is not currently a member of "
+                                        "changelist '%s'."),
+                                      path, matching_changelist);
+                  notify = svn_wc_create_notify(path,
+                                                svn_wc_notify_changelist_failed,
+                                                iterpool);
+                  notify->err = mismatch_err;
+                  notify_func(notify_baton, notify, iterpool);
+                }
               continue;
             }
         }
