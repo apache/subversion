@@ -2999,7 +2999,7 @@ void SVNClient::addToChangelist(Targets &srcPaths, const char *changelist)
                                        requestPool.pool());
     if (err)
     {
-      JNIUtil::handleSVNError(err);
+        JNIUtil::handleSVNError(err);
     }
 }
 
@@ -3019,7 +3019,7 @@ void SVNClient::removeFromChangelist(Targets &srcPaths, const char *changelist)
     err = svn_client_remove_from_changelist(srcs, changelist, ctx,
                                             requestPool.pool());
     if (err)
-      JNIUtil::handleSVNError(err);
+        JNIUtil::handleSVNError(err);
 }
 
 jobjectArray SVNClient::getChangelist(const char *changelist,

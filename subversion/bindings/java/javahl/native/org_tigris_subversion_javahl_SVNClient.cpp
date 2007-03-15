@@ -1857,12 +1857,12 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_addToChangeli
         return;
     }
     Targets targets(jtargets);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
     JNIStringHolder changelist_name(jchangelist);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -1884,12 +1884,12 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_removeFromCha
         return;
     }
     Targets targets(jtargets);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
     JNIStringHolder changelist_name(jchangelist);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return;
     }
@@ -1911,12 +1911,12 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_getCh
         return NULL;
     }
     JNIStringHolder changelist_name(jchangelist);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return NULL;
     }
     JNIStringHolder root_path(jroot_path);
-    if(JNIUtil::isExceptionThrown())
+    if (JNIUtil::isExceptionThrown())
     {
         return NULL;
     }
