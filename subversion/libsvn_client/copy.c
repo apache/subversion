@@ -393,13 +393,20 @@ get_implied_merge_info(svn_ra_session_t *ra_session,
   /* ### FIXME: ra_dav may fail with SVN_ERR_RA_DAV_PATH_NOT_FOUND.
      ### This is possibly related to path construction mentioned in
      ### calculate_target_merge_info()... */
-  if (err && (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
-              err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED))
+  if (err)
     {
-      /* A locally-added but uncommitted versioned resource won't
-         exist in the repository. */
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
+      if (err->apr_err == SVN_ERR_FS_NOT_FOUND ||
+          err->apr_err == SVN_ERR_RA_DAV_REQUEST_FAILED)
+        {
+          /* A locally-added but uncommitted versioned resource won't
+             exist in the repository. */
+          svn_error_clear(err);
+          return SVN_NO_ERROR;
+        }
+      else
+        {
+          return err;
+        }
     }
 
   range = apr_palloc(pool, sizeof(*range));
