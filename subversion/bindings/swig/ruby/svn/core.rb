@@ -1,8 +1,8 @@
 require "English"
 require "time"
 require "stringio"
-require "svn/error"
 require "svn/util"
+require "svn/error"
 require "svn/ext/core"
 
 class Time
