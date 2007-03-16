@@ -720,23 +720,6 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
   (const svn_client_diff_summarize_t *diff,
    void *baton,
    apr_pool_t *pool);
-
-
-/** A callback used in svn_client_merge3() for resolving merge
- * conflicts to content or properties during the application of a tree
- * delta.
- *
- * All allocations should be performed in @a pool.
- *
- * @a baton is a closure object; it should be provided by the implementation,
- * and passed by the caller.
- *
- * @since New in 1.5.
- */
-typedef svn_error_t *(*svn_client_conflict_resolver_func_t)
-  (const char *path,
-   void *baton,
-   apr_pool_t *pool);
  
 
 /** @} */
@@ -2038,6 +2021,22 @@ svn_client_diff_summarize_peg(const char *path,
  *
  * @{
  */
+
+/** A callback used in svn_client_merge3() for resolving merge
+ * conflicts to content or properties during the application of a tree
+ * delta.
+ *
+ * All allocations should be performed in @a pool.
+ *
+ * @a baton is a closure object; it should be provided by the implementation,
+ * and passed by the caller.
+ *
+ * @since New in 1.5.
+ */
+typedef svn_error_t *(*svn_client_conflict_resolver_func_t)
+  (const char *path,
+   void *baton,
+   apr_pool_t *pool);
 
 /** Merge changes from @a source1/@a revision1 to @a source2/@a revision2 into 
  * the working-copy path @a target_wcpath.
