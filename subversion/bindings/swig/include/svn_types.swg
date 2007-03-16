@@ -197,17 +197,11 @@
 static VALUE
 svn_ ## TYPE ## _swig_rb_close(VALUE self)
 {
-  VALUE argv[1];
-  VALUE rb_pool;
-  apr_pool_t *pool;
-
   if (!DATA_PTR(self)) {
     svn_swig_rb_raise_svn_ ## TYPE ## _already_close();
   }
 
-  argv[0] = self;
-  svn_swig_rb_get_pool(1, argv, self, &rb_pool, &pool);
-  svn_swig_rb_destroy_pool(rb_pool);
+  svn_swig_rb_destroy_internal_pool(self);
   DATA_PTR(self) = NULL;
 
   return Qnil;
