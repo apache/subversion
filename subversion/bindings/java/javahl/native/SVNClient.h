@@ -112,7 +112,8 @@ public:
                       bool ignoreExternals, bool allowUnverObstructions);
     void add(const char *path, bool recurse, bool force);
     void revert(const char *path, bool recurse);
-    void remove(Targets &targets, const char *message,bool force);
+    void remove(Targets &targets, const char *message, bool force, 
+                bool keep_local);
     void notification(Notify *notify);
     void notification2(Notify2 *notify2);
     void setProgressListener(ProgressListener *progressListener);

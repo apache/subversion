@@ -489,11 +489,11 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_commitMessage
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    remove
- * Signature: (Ljava/lang/String;Ljava/lang/String;Z)V
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Z;Z)V
  */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_remove
   (JNIEnv* env, jobject jthis, jobjectArray jtargets, jstring jmessage, 
-   jboolean jforce)
+   jboolean jforce, jboolean keepLocal)
 {
     JNIEntry(SVNClient, remove);
     SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -508,7 +508,8 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_remove
     {
         return;
     }
-    cl->remove(targets, message, jforce ? true : false);
+    cl->remove(targets, message, jforce ? true : false,
+               keepLocal ? true : false);
 }
 
 /*
