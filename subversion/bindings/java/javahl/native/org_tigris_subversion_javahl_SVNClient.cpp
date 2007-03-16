@@ -489,11 +489,11 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_commitMessage
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    remove
- * Signature: (Ljava/lang/String;Ljava/lang/String;Z)V
+ * Signature: (Ljava/lang/String;Ljava/lang/String;Z;Z)V
  */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_remove
   (JNIEnv* env, jobject jthis, jobjectArray jtargets, jstring jmessage, 
-   jboolean jforce)
+   jboolean jforce, jboolean keepLocal)
 {
     JNIEntry(SVNClient, remove);
     SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -508,7 +508,8 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_remove
     {
         return;
     }
-    cl->remove(targets, message, jforce ? true : false);
+    cl->remove(targets, message, jforce ? true : false,
+               keepLocal ? true : false);
 }
 
 /*
@@ -593,11 +594,12 @@ JNIEXPORT jlongArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_update
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    commit
- * Signature: ([Ljava/lang/String;Ljava/lang/String;ZZ)J
+ * Signature: ([Ljava/lang/String;Ljava/lang/String;ZZZLjava/lang/String;)J
  */
 JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_commit
   (JNIEnv* env, jobject jthis, jobjectArray jtargets, jstring jmessage, 
-   jboolean jrecurse, jboolean jnoUnlock)
+   jboolean jrecurse, jboolean jnoUnlock, jboolean jkeepChangelist,
+   jstring jchangelistName)
 {
     JNIEntry(SVNClient, commit);
     SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -612,8 +614,14 @@ JNIEXPORT jlong JNICALL Java_org_tigris_subversion_javahl_SVNClient_commit
     {
         return -1;
     }
+    JNIStringHolder changelistName(jchangelistName);
+    if (JNIUtil::isExceptionThrown())
+    {
+        return -1;
+    }
     return cl->commit(targets, message, jrecurse ? true : false, 
-        jnoUnlock ? true : false);
+        jnoUnlock ? true : false, jkeepChangelist ? true : false,
+        changelistName);
 }
 
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_copy

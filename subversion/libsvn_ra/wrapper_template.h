@@ -131,12 +131,15 @@ static svn_error_t *compat_get_commit_editor(void *session_baton,
 {
   svn_commit_callback2_t callback2;
   void *callback2_baton;
+  apr_hash_t *revprop_table = apr_hash_make(pool);
 
   svn_compat_wrap_commit_callback(&callback2, &callback2_baton,
                                   callback, callback_baton,
                                   pool);
-  return VTBL.get_commit_editor(session_baton, editor, edit_baton, log_msg,
-                                callback2, callback2_baton,
+  apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+               svn_string_create(log_msg, pool));
+  return VTBL.get_commit_editor(session_baton, editor, edit_baton,
+                                revprop_table, callback2, callback2_baton,
                                 NULL, TRUE, pool);
 }
 

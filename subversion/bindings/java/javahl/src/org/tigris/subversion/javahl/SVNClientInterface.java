@@ -305,6 +305,19 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
+     * Sets a file for deletion.
+     * @param path      path or url to be deleted
+     * @param message   if path is a url, this will be the commit message.
+     * @param force     delete even when there are local modifications.
+     * @param keepLocal only remove the paths from the repository.
+     * @exception ClientException
+     * @since 1.5
+     */
+    void remove(String[] path, String message, boolean force,
+                boolean keepLocal)
+            throws ClientException;
+
+    /**
      * Reverts a file to a pristine state.
      * @param path      path of the file.
      * @param recurse   recurse into subdirectories
@@ -414,6 +427,23 @@ public interface SVNClientInterface
      */
     long commit(String[] path, String message, boolean recurse,
                 boolean noUnlock) throws ClientException;
+
+    /**
+     * Commits changes to the repository.
+     * @param path            files to commit.
+     * @param message         log message.
+     * @param recurse         whether the operation should be done recursively.
+     * @param noUnlock        do remove any locks
+     * @param keepChangelist  keep changelist associations after the commit.
+     * @param changelistName  if non-null, filter paths using changelist
+     * @return Returns a long representing the revision. It returns a
+     *         -1 if the revision number is invalid.
+     * @exception ClientException
+     * @since 1.5
+     */
+    long commit(String[] path, String message, boolean recurse,
+                boolean noUnlock, boolean keepChangelist, String changelistName)
+            throws ClientException;
 
     /**
      * Copy versioned paths with the history preserved.

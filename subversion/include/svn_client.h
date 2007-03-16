@@ -813,6 +813,11 @@ typedef struct svn_client_ctx_t
   /** MIME types map.
    * @since New in 1.5. */
   apr_hash_t *mimetypes_map;
+  
+  /** Table holding the extra revision properties to be set.  This table
+   * cannot contain any standard Subversion properties.
+   * @since New in 1.5. */
+  apr_hash_t *revprop_table;
 
 } svn_client_ctx_t;
 

@@ -109,6 +109,9 @@ svn_cl__import(apr_getopt_t *os,
 
   SVN_ERR(svn_cl__make_log_msg_baton(&(ctx->log_msg_baton3), opt_state,
                                      NULL, ctx->config, pool));
+
+  ctx->revprop_table = opt_state->revprop_table;
+
   SVN_ERR(svn_cl__cleanup_log_msg 
           (ctx->log_msg_baton3,
            /* ### TODO(sd): take a real depth?  But I'm not sure how

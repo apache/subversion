@@ -491,7 +491,7 @@ static svn_error_t *
 svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                                 const svn_delta_editor_t **editor,
                                 void **edit_baton,
-                                const char *log_msg,
+                                apr_hash_t *revprop_table,
                                 svn_commit_callback2_t callback,
                                 void *callback_baton,
                                 apr_hash_t *lock_tokens,
@@ -538,13 +538,17 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
         }
     }
               
+  /* Copy the revprops table so we can add the username. */
+  revprop_table = apr_hash_copy(pool, revprop_table);
+  apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
+               svn_string_create(sess_baton->username, pool));
+
   /* Get the repos commit-editor */     
-  SVN_ERR(svn_repos_get_commit_editor4
+  SVN_ERR(svn_repos_get_commit_editor5
           (editor, edit_baton, sess_baton->repos, NULL,
            svn_path_uri_decode(sess_baton->repos_url, pool),
            sess_baton->fs_path->data,
-           sess_baton->username, log_msg,
-           deltify_etc, db, NULL, NULL, pool));
+           revprop_table, deltify_etc, db, NULL, NULL, pool));
 
   return SVN_NO_ERROR;
 }

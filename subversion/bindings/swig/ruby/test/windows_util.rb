@@ -100,8 +100,8 @@ exit 1
 paths = ENV["PATH"].split(';')
 add_path = Proc.new do |path|
   win_path = path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
-  unless paths.include?(path)
-    ENV["PATH"] = "\#{path};\#{ENV['PATH']}"
+  unless paths.include?(win_path)
+    ENV["PATH"] = "\#{win_path};\#{ENV['PATH']}"
   end
 end
 

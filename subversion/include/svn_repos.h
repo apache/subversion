@@ -781,9 +781,9 @@ svn_repos_replay(svn_fs_root_t *root,
 /* Making commits. */
 
 /**
- * Return an @a editor and @a edit_baton to commit changes to @a session->fs,
- * beginning at location 'rev:@a base_path', where "rev" is the argument
- * given to open_root().
+ * Return an @a editor and @a edit_baton to commit changes to the
+ * filesystem of @a repos, beginning at location 'rev:@a base_path',
+ * where "rev" is the argument given to open_root().
  *
  * @a repos is a previously opened repository.  @a repos_url is the
  * decoded URL to the base of the repository, and is used to check
@@ -791,11 +791,13 @@ svn_repos_replay(svn_fs_root_t *root,
  * during the commit, or @c NULL to indicate that this function should
  * create (and fully manage) a new transaction.
  *
- * Iff @a user is not @c NULL, store it as the author of the commit
- * transaction.
+ * Store the contents of @a revprop_table, a hash mapping <tt>const
+ * char *</tt> property names to @c svn_string_t values, as properties
+ * of the commit transaction, including author and log message if
+ * present.
  *
- * Iff @a log_msg is not @c NULL, store it as the log message
- * associated with the commit transaction.
+ * @note @c SVN_PROP_REVISION_DATE may be present in @a revprop_table, but
+ * it will be overwritten when the transaction is committed.
  *
  * Iff @a authz_callback is provided, check read/write authorizations
  * on paths accessed by editor operations.  An operation which fails
@@ -816,7 +818,31 @@ svn_repos_replay(svn_fs_root_t *root,
  * NULL).  Callers who supply their own transactions are responsible
  * for cleaning them up (either by committing them, or aborting them).
  *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_repos_t *repos,
+                             svn_fs_txn_t *txn,
+                             const char *repos_url,
+                             const char *base_path,
+                             apr_hash_t *revprop_table,
+                             svn_commit_callback2_t callback,
+                             void *callback_baton,
+                             svn_repos_authz_callback_t authz_callback,
+                             void *authz_baton,
+                             apr_pool_t *pool);
+
+/*
+ * Similar to svn_repos_get_commit_editor5(), but with @a revprop_table
+ * set to a hash containing @a user and @a log_msg as the
+ * @c SVN_PROP_REVISION_AUTHOR and @c SVN_PROP_REVISION_LOG properties,
+ * respectively.  @a user and @a log_msg may both be @c NULL.
+ *
  * @since New in 1.4.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
@@ -1231,17 +1257,36 @@ svn_error_t *svn_repos_fs_commit_txn(const char **conflict_p,
                                      svn_fs_txn_t *txn,
                                      apr_pool_t *pool);
 
-/** Like svn_fs_begin_txn(), but use @a author and @a log_msg to set the
- * corresponding properties on transaction @a *txn_p.  @a repos is the
- * repository object which contains the filesystem.  @a rev, @a *txn_p, and
- * @a pool are as in svn_fs_begin_txn().
+/** Like svn_fs_begin_txn(), but use @a revprop_table, a hash mapping
+ * <tt>const char *</tt> property names to @c svn_string_t values, to
+ * set the properties on transaction @a *txn_p.  @a repos is the
+ * repository object which contains the filesystem.  @a rev, @a
+ * *txn_p, and @a pool are as in svn_fs_begin_txn().
  *
  * Before a txn is created, the repository's start-commit hooks are
  * run; if any of them fail, no txn is created, @a *txn_p is unaffected, 
  * and @c SVN_ERR_REPOS_HOOK_FAILURE is returned.
  *
- * @a log_msg may be @c NULL to indicate the message is not (yet) available.
- * The caller will need to attach it to the transaction at a later time.
+ * @note @a revprop_table may contain an @c SVN_PROP_REVISION_DATE property,
+ * which will be set on the transaction, but that will be overwritten
+ * when the transaction is committed.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
+                                                svn_repos_t *repos,
+                                                svn_revnum_t rev,
+                                                apr_hash_t *revprop_table,
+                                                apr_pool_t *pool);
+
+
+/**
+ * Same as svn_repos_fs_begin_txn_for_commit2(), but with @a revprop_table
+ * set to a hash containing @a author and @a log_msg as the
+ * @c SVN_PROP_REVISION_AUTHOR and @c SVN_PROP_REVISION_LOG properties,
+ * respectively.  @a author and @a log_msg may both be @c NULL.
+ * 
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_repos_fs_begin_txn_for_commit(svn_fs_txn_t **txn_p,
                                                svn_repos_t *repos,

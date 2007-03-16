@@ -165,46 +165,6 @@ svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
 */
 
 
-/* Determine whether PATH has changed in size with respect to the
-   WORKING_SIZE value cached in the entries file.
-
-   Set CHANGED_P to FALSE if a working size hasn't been recorded, or
-   its recorded value differs from the filesize returned by svn_io_stat().
-   Set it to TRUE otherwise.
-
- */
-static svn_error_t *
-localfile_size_changed_p(svn_boolean_t *changed_p,
-                         const char *path,
-                         svn_wc_adm_access_t *adm_access,
-                         apr_pool_t *pool)
-{
-  apr_finfo_t finfo;
-  const svn_wc_entry_t *entry;
-
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-
-  if (! entry)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       _("'%s' is not under version control"),
-       svn_path_local_style(path, pool));
-
-  if (entry->working_size != SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN)
-    {
-      SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE | APR_FINFO_LINK, pool));
-
-      if (finfo.size != entry->working_size)
-        *changed_p = TRUE;
-      else
-        *changed_p = FALSE;
-    }
-  else
-    *changed_p = FALSE;
-
-  return SVN_NO_ERROR;
-}
-
 /* Is PATH's timestamp the same as the one recorded in our
    `entries' file?  Return the answer in EQUAL_P.  TIMESTAMP_KIND
    should be one of the enumerated type above. */
@@ -428,92 +388,127 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                  apr_pool_t *pool)
 {
   const char *textbase_filename;
-  svn_boolean_t equal_timestamps;
-  apr_pool_t *subpool = svn_pool_create(pool);
   svn_node_kind_t kind;
   svn_error_t *err;
+  apr_finfo_t finfo;
+
+
+  /* No matter which way you look at it, the file needs to exist. */
+  err = svn_io_stat(&finfo, filename,
+                    APR_FINFO_SIZE | APR_FINFO_MTIME | APR_FINFO_TYPE
+                    | APR_FINFO_LINK, pool);
+  if ((err && APR_STATUS_IS_ENOENT(err->apr_err))
+      || !(finfo.filetype & (APR_REG | APR_LNK)))
+    {
+      /* There is no entity, or, the entity is not a regular file or link */
+      /* So, it can't be modified. */
+      svn_error_clear(err);
+      *modified_p = FALSE;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return err;
 
   if (! force_comparison)
     {
-      /* See if the local file's size is different from when we created it */
+      const svn_wc_entry_t *entry;
 
-      /*### The number of stat() calls can be reduced by integrating
-        localfile_size_changed_p() and svn_wc__timestamps_equal_p() here. */
+      /* We're allowed to use a heuristic to determine whether files may
+         have changed.  The heuristic has these steps:
 
-      svn_boolean_t size_change;
-      svn_error_t *err2;
 
-      err = localfile_size_changed_p(&size_change, filename,
-                                     adm_access, subpool);
-      svn_error_clear(err);
+         1. Compare the working file's size
+            with the size cached in the entries file
+         2. If they differ, do a full file compare
+         3. Compare the working file's timestamp
+            with the timestamp cached in the entries file
+         4. If they differ, do a full file compare
+         5. Otherwise, return indicating an unchanged file.
 
-      /* See if the local file's timestamp is the same as the one
-         recorded in the administrative directory.  This could,
-         theoretically, be wrong in certain rare cases, but with the
-         addition of a forced delay after commits (see revision 419
-         and issue #542) it's highly unlikely to be a problem. */
-      err2 = svn_wc__timestamps_equal_p(&equal_timestamps,
-                                        filename, adm_access,
-                                        svn_wc__text_time, subpool);
+         There are 2 problematic situations which may occur:
 
-      /* We only care whether there was an error or not, so make sure it
-         is cleared. */
-      svn_error_clear(err2);
+         1. The cached working size is missing
+         --> In this case, we forget we ever tried to compare
+             and skip to the timestamp comparison.  This is
+             because old working copies do not contain cached sizes
 
-      /* If we have an error, we fall back on the slower code path below.
-         It might be tempting to optimize this further, for example by
-         detecting when the file didn't exists.  But we have to be careful
-         with what error codes we return.  If the file doesn't exist,
-         we should return no error.  But, *if* it exists, but it is
-         unversioned, we have to return SVN_ERR_ENTRY_NOT_FOUND. */
-      if (! err && ! err2 && equal_timestamps && ! size_change)
+         2. The cached timestamp is missing
+         --> In this case, we forget we ever tried to compare
+             and skip to full file comparison.  This is because
+             the timestamp will be removed when the library
+             updates a locally changed file.  (ie, this only happens
+             when the file was locally modified.)
+
+      */
+
+
+      /* Get the entry */
+      err = svn_wc_entry(&entry, filename, adm_access, FALSE, pool);
+      if (err)
         {
-          *modified_p = FALSE;
-          goto cleanup;
+          svn_error_clear(err);
+          goto compare_them;
         }
-    }
 
-  /* Make sure the file exists before proceeding. */
-  SVN_ERR(svn_io_check_path(filename, &kind, pool));
-  if (kind != svn_node_file)
-    {
-      /* If the file doesn't exist, consider it non-modified. */
+      if (! entry)
+        goto compare_them;
+
+      /* Compare the sizes, if applicable */
+      if (entry->working_size != SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN
+          && finfo.size != entry->working_size)
+        goto compare_them;
+
+
+      /* Compare the timestamps
+
+         Note: text_time == 0 means absent from entries,
+               which also means the timestamps won't be equal,
+               so there's no need to explicitly check the 'absent' value. */
+      if (entry->text_time != finfo.mtime)
+        goto compare_them;
+
+
       *modified_p = FALSE;
-      goto cleanup;
+      return SVN_NO_ERROR;
     }
 
-  /* If there's no text-base file, we have to assume the working file
+ compare_them:
+ /* If there's no text-base file, we have to assume the working file
      is modified.  For example, a file scheduled for addition but not
      yet committed. */
-  textbase_filename = svn_wc__text_base_path(filename, FALSE, subpool);
-  SVN_ERR(svn_io_check_path(textbase_filename, &kind, subpool));
+  textbase_filename = svn_wc__text_base_path(filename, FALSE, pool);
+  SVN_ERR(svn_io_check_path(textbase_filename, &kind, pool));
   if (kind != svn_node_file)
     {
       *modified_p = TRUE;
-      goto cleanup;
+      return SVN_NO_ERROR;
     }
 
 
   /* Check all bytes, and verify checksum if requested. */
-  SVN_ERR(compare_and_verify(modified_p,
-                             filename,
-                             adm_access,
-                             textbase_filename,
-                             compare_textbases,
-                             force_comparison,
-                             subpool));
+  {
+    apr_pool_t *subpool = svn_pool_create(pool);
+
+    SVN_ERR(compare_and_verify(modified_p,
+                               filename,
+                               adm_access,
+                               textbase_filename,
+                               compare_textbases,
+                               force_comparison,
+                               subpool));
+    svn_pool_destroy(subpool);
+  }
 
   /* It is quite legitimate for modifications to the working copy to
      produce a timestamp variation with no text variation. If it turns out
      that there are no differences then we might be able to "repair" the
      text-time in the entries file and so avoid the expensive file contents
-     comparison in the future. */
+     comparison in the future.
+     Though less likely, the same may be true for the size
+     of the working file. */
   if (! *modified_p && svn_wc_adm_locked(adm_access))
     {
       svn_wc_entry_t tmp;
-      apr_finfo_t finfo;
-      SVN_ERR(svn_io_stat(&finfo, filename,
-                          APR_FINFO_MIN | APR_FINFO_LINK, pool));
 
       tmp.working_size = finfo.size;
       tmp.text_time = finfo.mtime;
@@ -524,9 +519,6 @@ svn_wc__text_modified_internal_p(svn_boolean_t *modified_p,
                                    | SVN_WC__ENTRY_MODIFY_WORKING_SIZE,
                                    TRUE, pool));
     }
-
- cleanup:
-  svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;
 }

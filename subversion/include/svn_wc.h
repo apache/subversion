@@ -1263,13 +1263,6 @@ typedef enum svn_wc_schedule_t
  * @since New in 1.5
  */
 #define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN -1
-/** The value of the working size is unknown, but when
- *  we last checked (for example by full comparison), the
- *  working file was different from the text base.
- *
- * @since New in 1.5
- */
-#define SVN_WC_ENTRY_WORKING_SIZE_CHANGED -2
 
 /** @} */
 
@@ -1418,9 +1411,7 @@ typedef struct svn_wc_entry_t
   /** Size of the file after being translated into local representation,
    * or:
    *  @c SVN_WC_ENTRY_WORKING_SIZE_UNKOWN     if unknown.
-   *  @c SVN_WC_ENTRY_WORKING_SIZE_CHANGED    if the file is locally
-   *            modified so the working size couldn't be calculated
-   *           (without a lot of extra effort)
+   *
    * @since New in 1.5.
    */
   apr_off_t working_size;

@@ -614,11 +614,18 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
                              apr_pool_t *pool);
 
 /**
- * Set @a *editor and @a *edit_baton to an editor for committing changes
- * to the repository of @a session, using @a log_msg as the log message.  The
- * revisions being committed against are passed to the editor
- * functions, starting with the rev argument to @c open_root.  The path
- * root of the commit is in the @a session's URL.
+ * Set @a *editor and @a *edit_baton to an editor for committing
+ * changes to the repository of @a session, setting the revision
+ * properties from @a revprop_table.  The revisions being committed
+ * against are passed to the editor functions, starting with the rev
+ * argument to @c open_root.  The path root of the commit is the @a
+ * session's URL.
+ *
+ * @a revprop_table is a hash mapping <tt>const char *</tt> property
+ * names to @c svn_string_t property values.  The commit log message
+ * is expected to be in the @c SVN_PROP_REVISION_LOG element.  @a
+ * revprop_table can not contain either of @c SVN_PROP_REVISION_DATE
+ * or @c SVN_PROP_REVISION_AUTHOR.
  *
  * Before @c close_edit returns, but after the commit has succeeded,
  * it will invoke @a callback with the new revision number, the
@@ -645,8 +652,27 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
  * 
  * Use @a pool for memory allocation.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
  */
+svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       apr_hash_t *revprop_table,
+                                       svn_commit_callback2_t callback,
+                                       void *callback_baton,
+                                       apr_hash_t *lock_tokens,
+                                       svn_boolean_t keep_locks,
+                                       apr_pool_t *pool);
+
+/**
+ * Same as svn_ra_get_commit_editor3(), but with @c revprop_table set
+ * to a hash containing the @c SVN_PROP_REVISION_LOG property set
+ * to the value of @a log_msg.
+ *
+ * @since New in 1.4.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */ 
 svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,

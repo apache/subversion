@@ -607,31 +607,6 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
 /* --- MAIN COMMAND SET --- */
 
-/* Write out a property list.  PROPS is allowed to be NULL, in which case
- * an empty list will be written out; this happens if the client could
- * have asked for props but didn't. */
-static svn_error_t *write_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
-                                   apr_hash_t *props)
-{
-  apr_hash_index_t *hi;
-  const void *namevar;
-  void *valuevar;
-  const char *name;
-  svn_string_t *value;
-
-  if (props)
-    {
-      for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
-        {
-          apr_hash_this(hi, &namevar, NULL, &valuevar);
-          name = namevar;
-          value = valuevar;
-          SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "cs", name, value));
-        }
-    }
-  return SVN_NO_ERROR;
-}
-
 /* Write out a list of property diffs.  PROPDIFFS is an array of svn_prop_t
  * values. */
 static svn_error_t *write_prop_diffs(svn_ra_svn_conn_t *conn,
@@ -796,7 +771,7 @@ static svn_error_t *rev_proplist(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                              authz_check_access_cb_func(b), b,
                                              pool));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "success"));
-  SVN_ERR(write_proplist(conn, pool, props));
+  SVN_ERR(svn_ra_svn_write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
   return SVN_NO_ERROR;
 }
@@ -944,6 +919,8 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
              *post_commit_err = NULL;
   apr_array_header_t *lock_tokens;
   svn_boolean_t keep_locks;
+  apr_array_header_t *revprop_list = NULL;
+  apr_hash_t *revprop_table;
   const svn_delta_editor_t *editor;
   void *edit_baton;
   svn_boolean_t aborted;
@@ -952,14 +929,20 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   if (params->nelts == 1)
     {
-      /* Clients before 1.2 don't send lock-tokens and keep-locks fields. */
+      /* Clients before 1.2 don't send lock-tokens, keep-locks,
+         and rev-props fields. */
       SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "c", &log_msg));
       lock_tokens = NULL;
       keep_locks = TRUE;
+      revprop_list = NULL;
     }
   else
-    SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "clb", &log_msg,
-                                   &lock_tokens, &keep_locks));
+    {
+      /* Clients before 1.5 don't send the rev-props field. */
+      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "clb?l", &log_msg,
+                                     &lock_tokens, &keep_locks,
+                                     &revprop_list));
+    }
 
   /* The handling for locks is a little problematic, because the
      protocol won't let us send several auth requests once one has
@@ -975,17 +958,31 @@ static svn_error_t *commit(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   if (lock_tokens && lock_tokens->nelts)
     SVN_CMD_ERR(add_lock_tokens(conn, lock_tokens, b, pool));
 
+  if (revprop_list)
+    SVN_ERR(svn_ra_svn_parse_proplist(revprop_list, pool, &revprop_table));
+  else
+    {
+      revprop_table = apr_hash_make(pool);
+      apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+                   svn_string_create(log_msg, pool));
+    }
+
+  /* Get author from the baton, making sure clients can't circumvent
+     the authentication via the revision props. */
+  apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR, APR_HASH_KEY_STRING,
+               b->user ? svn_string_create(b->user, pool) : NULL);
+
   ccb.pool = pool;
   ccb.new_rev = &new_rev;
   ccb.date = &date;
   ccb.author = &author;
   ccb.post_commit_err = &post_commit_err;
-  /* ### Note that svn_repos_get_commit_editor actually wants a decoded URL. */
-  SVN_CMD_ERR(svn_repos_get_commit_editor4
+  /* ### Note that svn_repos_get_commit_editor5 actually wants a decoded URL. */
+  SVN_CMD_ERR(svn_repos_get_commit_editor5
               (&editor, &edit_baton, b->repos, NULL,
                svn_path_uri_decode(b->repos_url, pool),
-               b->fs_path->data, b->user,
-               log_msg, commit_done, &ccb,
+               b->fs_path->data, revprop_table,
+               commit_done, &ccb,
                authz_commit_cb, baton, pool));
   SVN_ERR(svn_ra_svn_write_cmd_response(conn, pool, ""));
   SVN_ERR(svn_ra_svn_drive_editor(conn, pool, editor, edit_baton, &aborted));
@@ -1056,7 +1053,7 @@ static svn_error_t *get_file(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Send successful command response with revision and props. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((?c)r(!", "success",
                                  hex_digest, rev));
-  SVN_ERR(write_proplist(conn, pool, props));
+  SVN_ERR(svn_ra_svn_write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
 
   /* Now send the file's contents. */
@@ -1236,7 +1233,7 @@ static svn_error_t *get_dir(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
 
   /* Write out response. */
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(r(!", "success", rev));
-  SVN_ERR(write_proplist(conn, pool, props));
+  SVN_ERR(svn_ra_svn_write_proplist(conn, pool, props));
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(!"));
   if (want_contents)
     {
@@ -1665,7 +1662,7 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
 
   SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "cr(!",
                                  path, rev));
-  SVN_ERR(write_proplist(frb->conn, pool, rev_props));
+  SVN_ERR(svn_ra_svn_write_proplist(frb->conn, pool, rev_props));
   SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)(!"));
   SVN_ERR(write_prop_diffs(frb->conn, pool, prop_diffs));
   SVN_ERR(svn_ra_svn_write_tuple(frb->conn, pool, "!)"));
@@ -2280,10 +2277,11 @@ svn_error_t *serve(svn_ra_svn_conn_t *conn, serve_params_t *params,
   SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(nn(!", "success",
                                  (apr_uint64_t) 1, (apr_uint64_t) 2));
   SVN_ERR(send_mechs(conn, pool, &b, READ_ACCESS, FALSE));
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(www))",
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(wwww))",
                                  SVN_RA_SVN_CAP_EDIT_PIPELINE, 
                                  SVN_RA_SVN_CAP_SVNDIFF1,
-                                 SVN_RA_SVN_CAP_ABSENT_ENTRIES));
+                                 SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                 SVN_RA_SVN_CAP_COMMIT_REVPROPS));
 
   /* Read client response.  Because the client response form changed
    * between version 1 and version 2, we have to do some of this by

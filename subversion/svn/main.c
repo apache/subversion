@@ -193,7 +193,11 @@ const apr_getopt_option_t svn_cl__options[] =
   {"keep-changelist", svn_cl__keep_changelist_opt, 0,
                     N_("don't delete changelist after commit")},
   {"keep-local",    svn_cl__keep_local_opt, 0,
-                    N_("keep path in working copy")},   
+                    N_("keep path in working copy")},
+  {"with-revprop",  svn_cl__with_revprop_opt, 1,
+                    N_("set revision property ARG in new revision\n"
+                       "                             "
+                       "using the name=value format")},
   {0,               0, 0, 0}
 };
 
@@ -227,7 +231,8 @@ const apr_getopt_option_t svn_cl__options[] =
 #define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
                                 svn_cl__force_log_opt, \
                                 svn_cl__editor_cmd_opt, \
-                                svn_cl__encoding_opt
+                                svn_cl__encoding_opt, \
+                                svn_cl__with_revprop_opt
 
 const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 {
@@ -879,6 +884,42 @@ svn_cl__check_cancel(void *baton)
 }
 
 
+/* Parse REVPROP_PAIR as name[=value], adding it to *revprop_table_p, using
+ * POOL for all allocations.  *REVPROP_TABLE_P may be NULL, in which case
+ * it is created.. */
+static svn_error_t *
+parse_revprop(apr_hash_t **revprop_table_p,
+              const char *revprop_pair,
+              apr_pool_t *pool) 
+{
+  const char *sep, *propname;
+  svn_string_t *propval;
+
+  if (! *revprop_pair)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Revision property pair is empty"));
+
+  if (! *revprop_table_p)
+    *revprop_table_p = apr_hash_make(pool);
+
+  sep = strchr(revprop_pair, '=');
+  if (sep)
+    {
+      propname = apr_pstrndup(pool, revprop_pair, sep - revprop_pair);
+      propval = svn_string_create(sep + 1, pool);
+    }
+  else
+    {
+      propname = apr_pstrdup(pool, revprop_pair);
+      propval = svn_string_create("", pool);
+    }
+
+  apr_hash_set(*revprop_table_p, propname, APR_HASH_KEY_STRING, propval);  
+
+  return SVN_NO_ERROR;
+}
+
+
 
 /*** Main. ***/
 
@@ -1306,6 +1347,11 @@ main(int argc, const char *argv[])
         break;
       case svn_cl__keep_local_opt:
         opt_state.keep_local = TRUE;
+        break;
+      case svn_cl__with_revprop_opt:
+        err = parse_revprop(&opt_state.revprop_table, opt_arg, pool);
+        if (err != SVN_NO_ERROR)
+          return svn_cmdline_handle_exit_error(err, pool, "svn: ");
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

@@ -93,6 +93,8 @@ svn_cl__commit(apr_getopt_t *os,
                                      opt_state, base_dir, 
                                      ctx->config, pool));
 
+  ctx->revprop_table = opt_state->revprop_table;
+
   /* Commit. */
   SVN_ERR(svn_cl__cleanup_log_msg
           (ctx->log_msg_baton3,

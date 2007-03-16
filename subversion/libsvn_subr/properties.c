@@ -38,6 +38,26 @@ svn_prop_is_svn_prop(const char *prop_name)
 }
 
 
+svn_boolean_t
+svn_prop_has_svn_prop(apr_hash_t *props, apr_pool_t *pool)
+{
+  apr_hash_index_t *hi;
+  const void *prop_name;
+
+  if (! props)
+    return FALSE;
+
+  for (hi = apr_hash_first(pool, props); hi; hi = apr_hash_next(hi))
+    {
+      apr_hash_this(hi, &prop_name, NULL, NULL);
+      if (svn_prop_is_svn_prop((const char *) prop_name))
+        return TRUE;
+    }
+
+  return FALSE;
+}
+
+
 svn_prop_kind_t
 svn_property_kind(int *prefix_len,
                   const char *prop_name)

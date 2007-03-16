@@ -142,28 +142,6 @@ static svn_error_t *make_connection(const char *hostname, unsigned short port,
   return SVN_NO_ERROR;
 }
 
-/* Convert a property list received from the server into a hash table. */
-static svn_error_t *parse_proplist(apr_array_header_t *list, apr_pool_t *pool,
-                                   apr_hash_t **props)
-{
-  char *name;
-  svn_string_t *value;
-  svn_ra_svn_item_t *elt;
-  int i;
-
-  *props = apr_hash_make(pool);
-  for (i = 0; i < list->nelts; i++)
-    {
-      elt = &APR_ARRAY_IDX(list, i, svn_ra_svn_item_t);
-      if (elt->kind != SVN_RA_SVN_LIST)
-        return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
-                                _("Proplist element not a list"));
-      SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cs", &name, &value));
-      apr_hash_set(*props, name, APR_HASH_KEY_STRING, value);
-    }
-  return SVN_NO_ERROR;
-}
-
 /* Set *DIFFS to an array of svn_prop_t, allocated in POOL, based on the
    property diffs in LIST, received from the server. */
 static svn_error_t *parse_prop_diffs(apr_array_header_t *list,
@@ -773,7 +751,7 @@ static svn_error_t *ra_svn_rev_proplist(svn_ra_session_t *session, svn_revnum_t 
   SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "rev-proplist", "r", rev));
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "l", &proplist));
-  SVN_ERR(parse_proplist(proplist, pool, props));
+  SVN_ERR(svn_ra_svn_parse_proplist(proplist, pool, props));
   return SVN_NO_ERROR;
 }
 
@@ -810,7 +788,7 @@ static svn_error_t *ra_svn_end_commit(void *baton)
 static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
                                   const svn_delta_editor_t **editor,
                                   void **edit_baton,
-                                   const char *log_msg,
+                                  apr_hash_t *revprop_table,
                                   svn_commit_callback2_t callback,
                                   void *callback_baton,
                                   apr_hash_t *lock_tokens,
@@ -822,9 +800,23 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
   ra_svn_commit_callback_baton_t *ccb;
   apr_hash_index_t *hi;
   apr_pool_t *iterpool;
+  const svn_string_t *log_msg = apr_hash_get(revprop_table,
+                                             SVN_PROP_REVISION_LOG,
+                                             APR_HASH_KEY_STRING);
 
-  /* Tell the server we're starting the commit. */
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(!", "commit", log_msg));
+  /* If we're sending revprops other than svn:log, make sure the server won't
+     silently ignore them. */
+  if (apr_hash_count(revprop_table) > 1 &&
+      ! svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_COMMIT_REVPROPS))
+    return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL,
+                            _("Server doesn't support setting arbitrary "
+                              "revision properties during commit"));
+
+  /* Tell the server we're starting the commit.
+     Send log message here for backwards compatibility with servers
+     before 1.5. */
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w(c(!", "commit",
+                                 log_msg->data));
   if (lock_tokens)
     {
       iterpool = svn_pool_create(pool);
@@ -841,7 +833,9 @@ static svn_error_t *ra_svn_commit(svn_ra_session_t *session,
         }
       svn_pool_destroy(iterpool);
     }
-  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b)", keep_locks));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)b(!", keep_locks));
+  SVN_ERR(svn_ra_svn_write_proplist(conn, pool, revprop_table));
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!))"));
   SVN_ERR(handle_auth_request(sess_baton, pool));
   SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, ""));
 
@@ -884,7 +878,7 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
   if (fetched_rev)
     *fetched_rev = rev;
   if (props)
-    SVN_ERR(parse_proplist(proplist, pool, props));
+    SVN_ERR(svn_ra_svn_parse_proplist(proplist, pool, props));
 
   /* We're done if the contents weren't wanted. */
   if (!stream)
@@ -985,7 +979,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
   if (fetched_rev)
     *fetched_rev = rev;
   if (props)
-    SVN_ERR(parse_proplist(proplist, pool, props));
+    SVN_ERR(svn_ra_svn_parse_proplist(proplist, pool, props));
 
   /* We're done if dirents aren't wanted. */
   if (!dirents)
@@ -1389,7 +1383,7 @@ static svn_error_t *ra_svn_get_file_revs(svn_ra_session_t *session,
                                      "crll", &p, &rev, &rev_proplist,
                                      &proplist));
       p = svn_path_canonicalize(p, rev_pool);
-      SVN_ERR(parse_proplist(rev_proplist, rev_pool, &rev_props));
+      SVN_ERR(svn_ra_svn_parse_proplist(rev_proplist, rev_pool, &rev_props));
       SVN_ERR(parse_prop_diffs(proplist, rev_pool, &props));
 
       /* Get the first delta chunk so we know if there is a delta. */

@@ -1,5 +1,5 @@
-require "svn/ext/core"
 require "svn/util"
+require "svn/ext/core"
 
 module Svn
   class Error < StandardError

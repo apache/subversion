@@ -2078,7 +2078,7 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
      because that would indicate absense of this value.
      If it isn't locally modified,
      we'll overwrite with the actual value later. */
-  tmp_entry.working_size = SVN_WC_ENTRY_WORKING_SIZE_CHANGED;
+  tmp_entry.working_size = SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN;
   /* The same is true for the TEXT_TIME field, except that that doesn't
      have an explicid 'changed' value, so we set the value to 'undefined'. */
   tmp_entry.text_time = 0;
@@ -3302,6 +3302,8 @@ svn_wc_add_repos_file2(const char *dst_path,
       SVN_ERR(svn_wc__loggy_set_entry_timestamp_from_wc
               (&log_accum, adm_access,
                base_name, SVN_WC__ENTRY_ATTR_TEXT_TIME, pool));
+      SVN_ERR(svn_wc__loggy_set_entry_working_size_from_wc
+              (&log_accum, adm_access, base_name, pool));
     }
 
   /* Install new text base. */

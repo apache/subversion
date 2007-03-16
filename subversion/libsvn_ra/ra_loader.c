@@ -492,6 +492,22 @@ svn_error_t *svn_ra_rev_prop(svn_ra_session_t *session,
   return session->vtable->rev_prop(session, rev, name, value, pool);
 }
 
+svn_error_t *svn_ra_get_commit_editor3(svn_ra_session_t *session,
+                                       const svn_delta_editor_t **editor,
+                                       void **edit_baton,
+                                       apr_hash_t *revprop_table,
+                                       svn_commit_callback2_t callback,
+                                       void *callback_baton,
+                                       apr_hash_t *lock_tokens,
+                                       svn_boolean_t keep_locks,
+                                       apr_pool_t *pool)
+{
+  return session->vtable->get_commit_editor(session, editor, edit_baton,
+                                            revprop_table, callback,
+                                            callback_baton, lock_tokens,
+                                            keep_locks, pool);
+}
+
 svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
                                        const svn_delta_editor_t **editor,
                                        void **edit_baton,
@@ -502,9 +518,12 @@ svn_error_t *svn_ra_get_commit_editor2(svn_ra_session_t *session,
                                        svn_boolean_t keep_locks,
                                        apr_pool_t *pool)
 {
-  return session->vtable->get_commit_editor(session, editor, edit_baton,
-                                            log_msg, callback, callback_baton,
-                                            lock_tokens, keep_locks, pool);
+  apr_hash_t *revprop_table = apr_hash_make(pool);
+  apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+               svn_string_create(log_msg, pool));
+  return svn_ra_get_commit_editor3(session, editor, edit_baton, revprop_table,
+                                   callback, callback_baton,
+                                   lock_tokens, keep_locks, pool);
 }
 
 svn_error_t *svn_ra_get_commit_editor(svn_ra_session_t *session,
