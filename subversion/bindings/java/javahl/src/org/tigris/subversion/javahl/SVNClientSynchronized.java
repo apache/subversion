@@ -476,7 +476,7 @@ public class SVNClientSynchronized implements SVNClientInterface
      * @since 1.5
      */
     public void remove(String[] path, String message, boolean force,
-                boolean keepLocal)
+                       boolean keepLocal)
             throws ClientException
     {
         synchronized (clazz)
