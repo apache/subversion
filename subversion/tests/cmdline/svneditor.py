@@ -45,6 +45,9 @@ def main():
 def foo_to_bar(m):
     return m.replace('foo', 'bar')
 
+def append_foo(m):
+    return m + 'foo\n'
+
 def identity(m):
     return m
 

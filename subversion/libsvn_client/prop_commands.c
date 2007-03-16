@@ -203,6 +203,7 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   svn_ra_session_t *ra_session;
   svn_node_kind_t node_kind;
   const char *message;
+  apr_hash_t *revprop_table;
   const svn_delta_editor_t *editor;
   void *commit_baton, *edit_baton;
   svn_error_t *err;
@@ -265,10 +266,12 @@ propset_on_url(svn_commit_info_t **commit_info_p,
   else
     message = "";
 
+  SVN_ERR(svn_client__get_revprop_table(&revprop_table, message, ctx, pool));
+
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
-  SVN_ERR(svn_ra_get_commit_editor2(ra_session, &editor, &edit_baton,
-                                    message,
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    revprop_table,
                                     svn_client__commit_callback,
                                     commit_baton, 
                                     NULL, TRUE, /* No lock tokens */
