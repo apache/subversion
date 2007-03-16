@@ -491,7 +491,7 @@ working-size:
    the actual value couldn't be calculated because the working copy
    file was locally modified.
    The purpose of this field is to serve as a reference for the
-   change-detection heuristic used by the 'status' command.
+   change-detection heuristic.
 
 The only fields allowed in an entry for a directory (other than the
 this_dir entry) are name, absent, deleted, schedule, copied,
