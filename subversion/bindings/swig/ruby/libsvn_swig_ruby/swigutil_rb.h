@@ -133,6 +133,8 @@ SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_pop_pool(VALUE pool);
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_destroy_pool(VALUE pool);
+SVN_RB_SWIG_SWIGUTIL_EXPORT
+void svn_swig_rb_destroy_internal_pool(VALUE pool);
 
 SVN_RB_SWIG_SWIGUTIL_EXPORT
 void svn_swig_rb_make_delta_editor(svn_delta_editor_t **editor,

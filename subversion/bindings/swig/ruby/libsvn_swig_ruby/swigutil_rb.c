@@ -472,8 +472,6 @@ void
 svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
                      VALUE *rb_pool, apr_pool_t **pool)
 {
-  VALUE target;
-  
   *rb_pool = Qnil;
   
   if (argc > 0) {
@@ -483,9 +481,7 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
     }
   }
 
-  target = find_swig_type_object(argc, argv);
-  
-  if (!NIL_P(self)) {
+  if (NIL_P(*rb_pool) && !NIL_P(self)) {
     *rb_pool = rb_get_pool(self);
     if (POOL_P(*rb_pool)) {
       *rb_pool = rb_pool_new(*rb_pool);
@@ -495,6 +491,8 @@ svn_swig_rb_get_pool(int argc, VALUE *argv, VALUE self,
   }
 
   if (NIL_P(*rb_pool)) {
+    VALUE target;
+    target = find_swig_type_object(argc, argv);
     *rb_pool = rb_pool_new(rb_get_pool(target));
   }
 
@@ -598,6 +596,12 @@ svn_swig_rb_destroy_pool(VALUE pool)
   if (!NIL_P(pool)) {
     rb_funcall(pool, rb_id_destroy(), 0);
   }
+}
+
+void
+svn_swig_rb_destroy_internal_pool(VALUE object)
+{
+  svn_swig_rb_destroy_pool(rb_get_pool(object));
 }
 
 
