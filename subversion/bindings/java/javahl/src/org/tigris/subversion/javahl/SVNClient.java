@@ -599,7 +599,8 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native long commit(String[] path, String message, boolean recurse,
-                boolean noUnlock, boolean keepChangelist, String changelistName)
+                              boolean noUnlock, boolean keepChangelist,
+                              String changelistName)
             throws ClientException;
 
     /**
