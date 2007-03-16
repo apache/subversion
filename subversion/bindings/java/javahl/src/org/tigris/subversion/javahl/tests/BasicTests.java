@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2003-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2003-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -1882,6 +1882,33 @@ public class BasicTests extends SVNTests
         infos = client.info2(thisTest.getWCPath(), new Revision.Number(1),
                              new Revision.Number(1), true);
         assertEquals("this should return 21 info objects", 21, infos.length);
+    }
+
+    /**
+     * test basic changelist functionality
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testBasicChangelist() throws Throwable
+    {
+        // build the working copy
+        OneTest thisTest = new OneTest();
+        String changelistName = "changelist1";
+
+        String[] paths = new String[]
+            {thisTest.getWCPath() + "/iota"};
+
+        // Add a path to a changelist, and check to see if it got added
+        client.addToChangelist(paths, changelistName);
+        String[] cl = client.getChangelist(changelistName,
+                                           thisTest.getWCPath());
+        assertTrue(java.util.Arrays.equals(cl, paths));
+
+        // Remove the path from the changelist, and check to see if the path is
+        // actually removed.
+        client.removeFromChangelist(paths, changelistName);
+        cl = client.getChangelist(changelistName, thisTest.getWCPath());
+        assertTrue(cl.length == 0);
     }
 
     /**

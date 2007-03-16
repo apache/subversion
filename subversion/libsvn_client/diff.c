@@ -2859,7 +2859,7 @@ svn_client_merge3(const char *source1,
   /* This is not a pegged merge. */
   peg_revision.kind = svn_opt_revision_unspecified;
 
-  /* if source1 or source2 are paths, we need to get the underlying url
+  /* If source1 or source2 are paths, we need to get the underlying URL
    * from the wc and save the initial path we were passed so we can use it as 
    * a path parameter (either in the baton or not).  otherwise, the path 
    * will just be NULL, which means we won't be able to figure out some kind 
@@ -3023,7 +3023,7 @@ svn_client_merge_peg3(const char *source,
   const char *URL;
   const char *path;
 
-  /* if source1 or source2 are paths, we need to get the underlying url
+  /* If source is a path, we need to get the underlying URL
    * from the wc and save the initial path we were passed so we can use it as 
    * a path parameter (either in the baton or not).  otherwise, the path 
    * will just be NULL, which means we won't be able to figure out some kind 

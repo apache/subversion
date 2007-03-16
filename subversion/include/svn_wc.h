@@ -1247,6 +1247,32 @@ typedef enum svn_wc_schedule_t
 } svn_wc_schedule_t;
 
 
+/**
+ * Values for the working_size field in svn_wc_entry_t
+ * when it isn't set to the actual size value of the unchanged
+ * working file.
+ *
+ * @defgroup svn_wc_entry_working_size_constants Working size constants
+ *
+ * @{
+ */
+
+/** The value of the working size is unknown (hasn't been
+ *  calculated and stored in the past for whatever reason).
+ *
+ * @since New in 1.5
+ */
+#define SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN -1
+/** The value of the working size is unknown, but when
+ *  we last checked (for example by full comparison), the
+ *  working file was different from the text base.
+ *
+ * @since New in 1.5
+ */
+#define SVN_WC_ENTRY_WORKING_SIZE_CHANGED -2
+
+/** @} */
+
 /** A working copy entry -- that is, revision control information about
  * one versioned entity.
  */
@@ -1391,9 +1417,10 @@ typedef struct svn_wc_entry_t
 
   /** Size of the file after being translated into local representation,
    * or:
-   *  0        if unknown.
-   *  negative if the file is locally modified
-   *            so the working size couldn't be recorded
+   *  @c SVN_WC_ENTRY_WORKING_SIZE_UNKOWN     if unknown.
+   *  @c SVN_WC_ENTRY_WORKING_SIZE_CHANGED    if the file is locally
+   *            modified so the working size couldn't be calculated
+   *           (without a lot of extra effort)
    * @since New in 1.5.
    */
   apr_off_t working_size;
@@ -3549,7 +3576,18 @@ svn_wc_cleanup(const char *path,
  * is the repository root.  Else, it can be an URL inside the repository.
  * @a pool may be used for temporary allocations.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+typedef svn_error_t *(*svn_wc_relocation_validator3_t)(void *baton,
+                                                       const char *uuid,
+                                                       const char *url,
+                                                       const char *root_url,
+                                                       apr_pool_t *pool);
+
+/** Similar to @c svn_wc_relocation_validator3_t, but without
+ * the @a root_url arguments.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API.
  */
 typedef svn_error_t *(*svn_wc_relocation_validator2_t)(void *baton,
                                                        const char *uuid,
@@ -3575,6 +3613,19 @@ typedef svn_error_t *(*svn_wc_relocation_validator_t)(void *baton,
  * @a adm_access is an access baton for the directory containing
  * @a path.
  */
+svn_error_t *
+svn_wc_relocate3(const char *path,
+                 svn_wc_adm_access_t *adm_access,
+                 const char *from,
+                 const char *to,
+                 svn_boolean_t recurse,
+                 svn_wc_relocation_validator3_t validator,
+                 void *validator_baton,
+                 apr_pool_t *pool);
+
+/** Similar to svn_wc_relocate3(), but uses @c svn_wc_relocation_validator2_t.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.4 API. */
 svn_error_t *
 svn_wc_relocate2(const char *path,
                  svn_wc_adm_access_t *adm_access,

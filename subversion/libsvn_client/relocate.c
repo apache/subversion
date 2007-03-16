@@ -55,7 +55,7 @@ static svn_error_t *
 validator_func(void *baton, 
                const char *uuid, 
                const char *url,
-               svn_boolean_t root,
+               const char *root_url,
                apr_pool_t *pool)
 {
   struct validator_baton_t *b = baton;
@@ -95,8 +95,8 @@ validator_func(void *baton,
     }
 
   /* Make sure the url is a repository root if desired. */
-  if (root
-      && strcmp(url, url_uuid->root) != 0)
+  if (root_url
+      && strcmp(root_url, url_uuid->root) != 0)
     return svn_error_createf(SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
                              _("'%s' is not the root of the repository"),
                              url);
@@ -133,7 +133,7 @@ svn_client_relocate(const char *path,
   vb.path = path;
   vb.url_uuids = apr_array_make(pool, 1, sizeof(struct url_uuid_t));
   vb.pool = pool;
-  SVN_ERR(svn_wc_relocate2(path, adm_access, from, to,
+  SVN_ERR(svn_wc_relocate3(path, adm_access, from, to,
                            recurse, validator_func, &vb, pool));
 
   /* All done.  Clean up, and move on out. */

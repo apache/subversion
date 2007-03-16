@@ -424,9 +424,18 @@ module Svn
         Fs.contents_changed(self, path1, root2, path2)
       end
 
-      def file_delta_stream(source_root, source_path, target_path)
+      def file_delta_stream(arg1, arg2, target_path)
+        if arg1.is_a?(self.class)
+          source_root = arg1
+          source_path = arg2
+          target_root = self
+        else
+          source_root = self
+          source_path = arg1
+          target_root = arg2
+        end
         Fs.get_file_delta_stream(source_root, source_path,
-                                 self, target_path)
+                                 target_root, target_path)
       end
 
       def stat(path)

@@ -2065,6 +2065,7 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
     | SVN_WC__ENTRY_MODIFY_REVISION
     | SVN_WC__ENTRY_MODIFY_DELETED
     | SVN_WC__ENTRY_MODIFY_ABSENT
+    | SVN_WC__ENTRY_MODIFY_TEXT_TIME
     | SVN_WC__ENTRY_MODIFY_WORKING_SIZE;
 
 
@@ -2073,11 +2074,14 @@ loggy_tweak_entry(svn_stringbuf_t *log_accum,
   tmp_entry.deleted = FALSE;
   tmp_entry.absent = FALSE;
   /* Indicate the file was locally modified and we didn't get to
-     calculate the true value, but we can't set it to zero (0),
+     calculate the true value, but we can't set it to UNKNOWN (-1),
      because that would indicate absense of this value.
      If it isn't locally modified,
      we'll overwrite with the actual value later. */
-  tmp_entry.working_size = -1;
+  tmp_entry.working_size = SVN_WC_ENTRY_WORKING_SIZE_CHANGED;
+  /* The same is true for the TEXT_TIME field, except that that doesn't
+     have an explicid 'changed' value, so we set the value to 'undefined'. */
+  tmp_entry.text_time = 0;
 
   /* Possibly install a *non*-inherited URL in the entry. */
   if (new_URL)

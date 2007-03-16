@@ -165,7 +165,13 @@ svn_wc__check_format(int wc_format, const char *path, apr_pool_t *pool)
 */
 
 
-/*
+/* Determine whether PATH has changed in size with respect to the
+   WORKING_SIZE value cached in the entries file.
+
+   Set CHANGED_P to FALSE if a working size hasn't been recorded, or
+   its recorded value differs from the filesize returned by svn_io_stat().
+   Set it to TRUE otherwise.
+
  */
 static svn_error_t *
 localfile_size_changed_p(svn_boolean_t *changed_p,
@@ -184,7 +190,7 @@ localfile_size_changed_p(svn_boolean_t *changed_p,
        _("'%s' is not under version control"),
        svn_path_local_style(path, pool));
 
-  if (entry->working_size)
+  if (entry->working_size != SVN_WC_ENTRY_WORKING_SIZE_UNKNOWN)
     {
       SVN_ERR(svn_io_stat(&finfo, path, APR_FINFO_SIZE | APR_FINFO_LINK, pool));
 

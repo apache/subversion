@@ -71,50 +71,87 @@ exit 1
 
         FileUtils.mkdir_p(ext_dir)
 
-        svn_version_h = File.join(top_dir, "subversion", "include",
-                                  "svn_version.h")
-        version = nil
-        File.open(svn_version_h) do |f|
-          f.each do |line|
-            if /^\s*#\s*define\s+SVN_VER_MAJOR\s+(\d+)/ =~ line
-              version = $1
-              break
-            end
-          end
-        end
-
-        # First we copy the ruby swig implementation library into the ext
-        # directory. So we can make it available to the bindings themselves.
-        # We assume that the libraries that libsvn_swig_ruby depends on will
-        # be available on the path.
         relative_base_dir =
           base_dir.sub(/^#{Regexp.escape(top_dir + File::SEPARATOR)}/, '')
         build_base_dir = File.join(top_dir, build_type, relative_base_dir)
-        libsvn_swig_ruby_name = 'libsvn_swig_ruby'
-        dll = File.join(build_base_dir, libsvn_swig_ruby_name,
-                        "#{libsvn_swig_ruby_name}-#{version}.dll")
-        FileUtils.cp(dll, ext_dir)
 
-        # Now we copy the actual swig dlls into the ext directory.  Since they
-        # depend on libsvn_swig_ruby we have to provide a way for them to find
-        # libsvn_swig_ruby.  Since a require will try to load a .rb before a
-        # .dll or .so, we generate an .rb that adds the ext directory to the
-        # path, before requiring the .dll (including the extension).
+        dll_dir = File.expand_path(build_base_dir)
+        subversion_dir = File.join(build_base_dir, "..", "..", "..")
+        subversion_dir = File.expand_path(subversion_dir)
+
+        util_name = "util"
         build_conf = File.join(top_dir, "build.conf")
+        File.open(File.join(ext_dir, "#{util_name}.rb" ), 'w') do |util|
+          setup_dll_wrapper_util(dll_dir, util)
+          add_apr_dll_path_to_dll_wrapper_util(top_dir, build_type, util)
+          add_svn_dll_path_to_dll_wrapper_util(build_conf, subversion_dir, util)
+          setup_dll_wrappers(build_conf, ext_dir, dll_dir, util_name) do |lib|
+            svn_lib_dir = File.join(subversion_dir, "libsvn_#{lib}")
+            util.puts("add_path.call(#{svn_lib_dir.dump})")
+          end
+        end
+      end
+
+      private
+      def setup_dll_wrapper_util(dll_dir, util)
+        libsvn_swig_ruby_dll_dir = File.join(dll_dir, "libsvn_swig_ruby")
+
+        util.puts(<<-EOC)
+paths = ENV["PATH"].split(';')
+add_path = Proc.new do |path|
+  win_path = path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
+  unless paths.include?(path)
+    ENV["PATH"] = "\#{path};\#{ENV['PATH']}"
+  end
+end
+
+add_path.call(#{dll_dir.dump})
+add_path.call(#{libsvn_swig_ruby_dll_dir.dump})
+EOC
+      end
+
+      def add_apr_dll_path_to_dll_wrapper_util(top_dir, build_type, util)
+        lines = []
+        gen_make_opts = File.join(top_dir, "gen-make.opts")
+        lines = File.read(gen_make_opts).to_a if File.exists?(gen_make_opts)
+        config = {}
+        lines.each do |line|
+          name, value = line.split(/\s*=\s*/, 2)
+          config[name] = value if value
+        end
+
+        ["apr", "apr-util", "apr-iconv"].each do |lib|
+          lib_dir = config["--with-#{lib}"] || lib
+          dll_dir = File.expand_path(File.join(top_dir, lib_dir, build_type))
+          util.puts("add_path.call(#{dll_dir.dump})")
+        end
+      end
+
+      def add_svn_dll_path_to_dll_wrapper_util(build_conf, subversion_dir, util)
+        File.open(build_conf) do |f|
+          f.each do |line|
+            if /^\[(libsvn_.+)\]\s*$/ =~ line
+              lib_name = $1
+              lib_dir = File.join(subversion_dir, lib_name)
+              util.puts("add_path.call(#{lib_dir.dump})")
+            end
+          end
+        end
+      end
+
+      def setup_dll_wrappers(build_conf, ext_dir, dll_dir, util_name)
         File.open(build_conf) do |f|
           f.each do |line|
             if /^\[swig_(.+)\]\s*$/ =~ line
               lib_name = $1
-              FileUtils.cp(File.join(build_base_dir, "#{lib_name}.dll"), ext_dir)
               File.open(File.join(ext_dir, "#{lib_name}.rb" ), 'w') do |rb|
-                rb.puts(<<-'EOC')
-ext_dir = File.expand_path(File.dirname(__FILE__)).tr('/','\\')
-unless ENV["PATH"].split(';').include?(ext_dir)
-  ENV["PATH"] = "#{ext_dir};#{ENV['PATH']}"
-end
-require File.join(ext_dir, File.basename(__FILE__, '.rb')) + '.dll'
+                rb.puts(<<-EOC)
+require File.join(File.dirname(__FILE__), #{util_name.dump})
+require File.join(#{dll_dir.dump}, File.basename(__FILE__, '.rb')) + '.so'
 EOC
               end
+
+              yield(lib_name)
             end
           end
         end

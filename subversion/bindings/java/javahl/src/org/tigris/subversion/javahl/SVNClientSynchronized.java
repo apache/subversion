@@ -1592,6 +1592,48 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Add paths to a changelist
+     * @param paths      paths to add to the changelist
+     * @param changelist changelist name
+     */
+    public void addToChangelist(String[] paths, String changelist)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.addToChangelist(paths, changelist);
+        }
+    }
+
+    /**
+     * Remove paths from a changelist
+     * @param paths      paths to remove from the changelist
+     * @param changelist changelist name
+     */
+    public void removeFromChangelist(String[] paths, String changelist)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            worker.removeFromChangelist(paths, changelist);
+        }
+    }
+
+    /**
+     * Recursively get the paths which belong to a changelist
+     * @param changelist  changelist name
+     * @param rootPath    the wc path under which to check
+     */
+    public String[] getChangelist(String changelist, String rootPath)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            return worker.getChangelist(changelist, rootPath);
+        }
+    }
+
+    /**
      * Commits changes to the repository.
      *
      * @param path     files to commit.
