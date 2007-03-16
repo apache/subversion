@@ -555,11 +555,11 @@ void SVNClient::setProgressListener(ProgressListener *listener)
     m_progressListener = listener;
 }
 
-void SVNClient::remove(Targets &targets, const char *message, bool force)
+void SVNClient::remove(Targets &targets, const char *message, bool force,
+                       bool keep_local)
 {
-    svn_client_commit_info_t *commit_info = NULL;
+    svn_commit_info_t *commit_info = NULL;
     Pool requestPool;
-    apr_pool_t * apr_pool = requestPool.pool();
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
     {
@@ -573,7 +573,8 @@ void SVNClient::remove(Targets &targets, const char *message, bool force)
         return;
     }
 
-    Err = svn_client_delete(&commit_info, targets2, force, ctx, apr_pool);
+    Err = svn_client_delete3(&commit_info, targets2, force, keep_local, ctx,
+                             requestPool.pool());
     if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 

@@ -451,7 +451,22 @@ public class SVNClient implements SVNClientInterface
      * @param force     delete even when there are local modifications.
      * @exception ClientException
      */
-    public native void remove(String[] path, String message, boolean force)
+    public void remove(String[] path, String message, boolean force)
+            throws ClientException
+    {
+        remove(path, message, force, false);
+    }
+    /**
+     * Sets a file for deletion.
+     * @param path      path or url to be deleted
+     * @param message   if path is a url, this will be the commit message.
+     * @param force     delete even when there are local modifications.
+     * @param keepLocal only remove the paths from the repository.
+     * @exception ClientException
+     * @since 1.5
+     */
+    public native void remove(String[] path, String message, boolean force,
+                boolean keepLocal)
             throws ClientException;
     /**
      * Reverts a file to a pristine state.

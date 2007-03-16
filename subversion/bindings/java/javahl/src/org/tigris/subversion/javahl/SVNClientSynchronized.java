@@ -464,9 +464,24 @@ public class SVNClientSynchronized implements SVNClientInterface
     public void remove(String[] path, String message, boolean force)
             throws ClientException
     {
-        synchronized(clazz)
+        remove(path, message, force, false);
+    }
+    /**
+     * Sets a file for deletion.
+     * @param path      path or url to be deleted
+     * @param message   if path is a url, this will be the commit message.
+     * @param force     delete even when there are local modifications.
+     * @param keepLocal only remove the paths from the repository.
+     * @exception ClientException
+     * @since 1.5
+     */
+    public void remove(String[] path, String message, boolean force,
+                boolean keepLocal)
+            throws ClientException
+    {
+        synchronized (clazz)
         {
-            worker.remove(path, message, force);
+            worker.remove(path, message, force, keepLocal);
         }
     }
     /**

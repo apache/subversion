@@ -305,6 +305,19 @@ public interface SVNClientInterface
             throws ClientException;
 
     /**
+     * Sets a file for deletion.
+     * @param path      path or url to be deleted
+     * @param message   if path is a url, this will be the commit message.
+     * @param force     delete even when there are local modifications.
+     * @param keepLocal only remove the paths from the repository.
+     * @exception ClientException
+     * @since 1.5
+     */
+    void remove(String[] path, String message, boolean force,
+                boolean keepLocal)
+            throws ClientException;
+
+    /**
      * Reverts a file to a pristine state.
      * @param path      path of the file.
      * @param recurse   recurse into subdirectories
