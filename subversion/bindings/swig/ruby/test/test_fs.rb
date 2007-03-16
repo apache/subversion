@@ -290,7 +290,7 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal(path2_in_repos, closet_path)
   end
 
-  def test_delta
+  def test_delta(use_deprecated_api=false)
     log = "sample log"
     file = "source.txt"
     src = "a\nb\nc\nd\ne\n"
@@ -317,9 +317,16 @@ class SvnFsTest < Test::Unit::TestCase
     assert_equal(expected, File.open(path){|f| f.read})
 
     rev2 = ctx.ci(@wc_path).revision
-    stream = @fs.root(rev2).file_delta_stream(@fs.root(rev1),
-                                              path_in_repos,
-                                              path_in_repos)
+    if use_deprecated_api
+      stream = @fs.root(rev2).file_delta_stream(@fs.root(rev1),
+                                                path_in_repos,
+                                                path_in_repos)
+    else
+      stream = @fs.root(rev1).file_delta_stream(path_in_repos,
+                                                @fs.root(rev2),
+                                                path_in_repos)
+    end
+
     data = ''
     stream.each{|w| data << w.new_data}
     assert_equal(normalize_line_break(expected), data)
@@ -337,6 +344,10 @@ class SvnFsTest < Test::Unit::TestCase
         handler.call(nil)
       end
     end
+  end
+
+  def test_delta_with_deprecated_api
+    test_delta(true)
   end
 
   def test_prop
