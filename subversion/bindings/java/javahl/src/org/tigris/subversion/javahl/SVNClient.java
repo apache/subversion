@@ -466,7 +466,7 @@ public class SVNClient implements SVNClientInterface
      * @since 1.5
      */
     public native void remove(String[] path, String message, boolean force,
-                boolean keepLocal)
+                              boolean keepLocal)
             throws ClientException;
     /**
      * Reverts a file to a pristine state.
