@@ -691,11 +691,11 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
 }
 
 jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
-                        bool noUnlock)
+                        bool noUnlock, bool keepChangelist,
+                        const char *changelistName)
 {
     Pool requestPool;
-    apr_pool_t * apr_pool = requestPool.pool ();
-    svn_client_commit_info_t *commit_info = NULL;
+    svn_commit_info_t *commit_info = NULL;
     const apr_array_header_t *targets2 = targets.array(requestPool);
     svn_error_t *Err = targets.error_occured();
     if (Err != NULL)
@@ -708,8 +708,9 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     {
         return -1;
     }
-    Err = svn_client_commit2(&commit_info, targets2, recurse, 
-                             noUnlock, ctx, apr_pool);
+    Err = svn_client_commit4(&commit_info, targets2, recurse, 
+                             noUnlock, keepChangelist, changelistName, ctx,
+                             requestPool.pool());
     if (Err != NULL)
          JNIUtil::handleSVNError(Err);
 

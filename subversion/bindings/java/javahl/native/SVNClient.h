@@ -106,8 +106,9 @@ public:
               const char *message, bool force, bool moveAsChild);
     void copy(CopySources &copySources, const char *destPath,
               const char *message, bool copyAsChild);
-    jlong commit(Targets &targets, const char *message, bool recurse, 
-                  bool noUnlock);
+    jlong commit(Targets &targets, const char *message, bool recurse,
+                 bool noUnlock, bool keepChangelist,
+                 const char *changelistName);
     jlongArray update(Targets &targets, Revision &revision, bool recurse,
                       bool ignoreExternals, bool allowUnverObstructions);
     void add(const char *path, bool recurse, bool force);

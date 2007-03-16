@@ -632,6 +632,30 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Commits changes to the repository.
+     * @param path            files to commit.
+     * @param message         log message.
+     * @param recurse         whether the operation should be done recursively.
+     * @param noUnlock        do remove any locks
+     * @param keepChangelist  keep changelist associations after the commit.
+     * @param changelistName  if non-null, filter paths using changelist
+     * @return Returns a long representing the revision. It returns a
+     *         -1 if the revision number is invalid.
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long commit(String[] path, String message, boolean recurse,
+                boolean noUnlock, boolean keepChangelist, String changelistName)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            return worker.commit(path, message, recurse, noUnlock,
+                                 keepChangelist, changelistName);
+        }
+    }
+
+    /**
      * Copy versioned paths with the history preserved.
      *
      * @param sources A list of <code>CopySource</code> objects.
