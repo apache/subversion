@@ -172,7 +172,8 @@ public:
 private:
     static svn_error_t * checkCancel(void *cancelBaton);
     void propertySet(const char *path, const char *name,
-                         svn_string_t *value, bool recurse, bool force);
+                     svn_string_t *value, bool recurse, bool force,
+                     svn_revnum_t baseRevisionForURL);
     jobject createJavaProperty(jobject jthis, const char *path,
                                    const char *name, svn_string_t *value);
     jobject createJavaDirEntry(const char *path, svn_dirent_t *dirent);
