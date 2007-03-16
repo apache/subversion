@@ -1796,3 +1796,22 @@ svn_client__get_log_msg(const char **log_msg,
       return SVN_NO_ERROR;
     }
 }
+
+svn_error_t *svn_client__get_revprop_table(apr_hash_t **revprop_table,
+                                           const char *log_msg,
+                                           svn_client_ctx_t *ctx,
+                                           apr_pool_t *pool)
+{
+  if (ctx->revprop_table && svn_prop_has_svn_prop(ctx->revprop_table, pool))
+    return svn_error_create(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
+                            _("Standard properties can't be set "
+                              "explicitly as revision properties"));
+  if (ctx->revprop_table)
+    *revprop_table = apr_hash_copy(pool, ctx->revprop_table);
+  else
+    *revprop_table = apr_hash_make(pool);
+  apr_hash_set(*revprop_table, SVN_PROP_REVISION_LOG, APR_HASH_KEY_STRING,
+               svn_string_create(log_msg, pool));
+
+  return SVN_NO_ERROR;
+}

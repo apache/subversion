@@ -64,7 +64,7 @@ typedef struct {
   svn_ra_serf__session_t *session;
   svn_ra_serf__connection_t *conn;
 
-  svn_string_t *log_msg;
+  apr_hash_t *revprop_table;
 
   svn_commit_callback2_t callback;
   void *callback_baton;
@@ -937,6 +937,7 @@ open_root(void *edit_baton,
   const char *activity_str;
   const char *vcc_url;
   apr_hash_t *props;
+  apr_hash_index_t *hi;
 
   /* Create a UUID for this commit. */
   ctx->uuid = svn_uuid_generate(ctx->pool);
@@ -1020,7 +1021,7 @@ open_root(void *edit_baton,
   /* Checkout our root dir */
   SVN_ERR(checkout_dir(dir));
 
-  /* PROPPATCH our log message and pass it along.  */
+  /* PROPPATCH our revprops and pass them along.  */
   proppatch_ctx = apr_pcalloc(ctx->pool, sizeof(*proppatch_ctx));
   proppatch_ctx->pool = dir_pool;
   proppatch_ctx->commit = ctx;
@@ -1028,9 +1029,32 @@ open_root(void *edit_baton,
   proppatch_ctx->changed_props = apr_hash_make(proppatch_ctx->pool);
   proppatch_ctx->removed_props = apr_hash_make(proppatch_ctx->pool);
 
-  svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
-                        SVN_DAV_PROP_NS_SVN, "log",
-                        dir->commit->log_msg, proppatch_ctx->pool);
+  for (hi = apr_hash_first(ctx->pool, ctx->revprop_table); hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *key;
+      void *val;
+      const char *name;
+      svn_string_t *value;
+      const char *ns;
+
+      apr_hash_this(hi, &key, NULL, &val);
+      name = key;
+      value = val;
+
+      if (strncmp(name, SVN_PROP_PREFIX, sizeof(SVN_PROP_PREFIX) - 1) == 0)
+        {
+          ns = SVN_DAV_PROP_NS_SVN;
+          name += sizeof(SVN_PROP_PREFIX) - 1;
+        }
+      else
+        {
+          ns = SVN_DAV_PROP_NS_CUSTOM;
+        }
+
+      svn_ra_serf__set_prop(proppatch_ctx->changed_props, proppatch_ctx->path,
+                            ns, name, value, proppatch_ctx->pool);
+    }
 
   SVN_ERR(proppatch_resource(proppatch_ctx, dir->commit, ctx->pool));
 
@@ -1752,7 +1776,7 @@ svn_error_t *
 svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
                                const svn_delta_editor_t **ret_editor,
                                void **edit_baton,
-                               const char *log_msg,
+                               apr_hash_t *revprop_table,
                                svn_commit_callback2_t callback,
                                void *callback_baton,
                                apr_hash_t *lock_tokens,
@@ -1762,6 +1786,7 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
   svn_ra_serf__session_t *session = ra_session->priv;
   svn_delta_editor_t *editor;
   commit_context_t *ctx;
+  apr_hash_index_t *hi;
 
   ctx = apr_pcalloc(pool, sizeof(*ctx));
 
@@ -1769,7 +1794,18 @@ svn_ra_serf__get_commit_editor(svn_ra_session_t *ra_session,
 
   ctx->session = session;
   ctx->conn = session->conns[0];
-  ctx->log_msg = svn_string_create(log_msg, pool);
+
+  ctx->revprop_table = apr_hash_make(pool);
+  for (hi = apr_hash_first(pool, revprop_table); hi; hi = apr_hash_next(hi))
+    {
+      const void *key;
+      apr_ssize_t klen;
+      void *val;
+
+      apr_hash_this(hi, &key, &klen, &val);
+      apr_hash_set(ctx->revprop_table, apr_pstrdup(pool, key), klen,
+                   svn_string_dup(val, pool));
+    }
 
   ctx->callback = callback;
   ctx->callback_baton = callback_baton;

@@ -43,6 +43,7 @@ extern "C" {
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
 #define SVN_RA_SVN_CAP_SVNDIFF1 "svndiff1"
 #define SVN_RA_SVN_CAP_ABSENT_ENTRIES "absent-entries"
+#define SVN_RA_SVN_CAP_COMMIT_REVPROPS "commit-revprops"
 
 /** ra_svn passes @c svn_dirent_t fields over the wire as a list of
  * words, these are the values used to represent each field.
@@ -185,6 +186,15 @@ svn_error_t *svn_ra_svn_write_cstring(svn_ra_svn_conn_t *conn,
 svn_error_t *svn_ra_svn_write_word(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    const char *word);
 
+/** Write a list of properties over the net.  @a props is allowed to be NULL,
+ * in which case an empty list will be written out.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_svn_write_proplist(svn_ra_svn_conn_t *conn,
+                                       apr_pool_t *pool,
+                                       apr_hash_t *props);
+
 /** Begin a list.  Writes will be buffered until the next read or flush. */
 svn_error_t *svn_ra_svn_start_list(svn_ra_svn_conn_t *conn, apr_pool_t *pool);
 
@@ -290,6 +300,15 @@ svn_error_t *svn_ra_svn_parse_tuple(apr_array_header_t *list,
  */
 svn_error_t *svn_ra_svn_read_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                                    const char *fmt, ...);
+
+/** Parse an array of @c svn_ra_svn_item_t structures as a list of
+ * properties, storing the properties in a hash table.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_svn_parse_proplist(apr_array_header_t *list,
+                                       apr_pool_t *pool,
+                                       apr_hash_t **props);
 
 /** Read a command response from the network and parse it as a tuple, using 
  * the format string notation from svn_ra_svn_parse_tuple().
