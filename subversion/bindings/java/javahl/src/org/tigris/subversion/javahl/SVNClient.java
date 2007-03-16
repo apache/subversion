@@ -586,6 +586,23 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
+     * Commits changes to the repository.
+     * @param path            files to commit.
+     * @param message         log message.
+     * @param recurse         whether the operation should be done recursively.
+     * @param noUnlock        do remove any locks
+     * @param keepChangelist  keep changelist associations after the commit.
+     * @param changelistName  if non-null, filter paths using changelist
+     * @return Returns a long representing the revision. It returns a
+     *         -1 if the revision number is invalid.
+     * @exception ClientException
+     * @since 1.5
+     */
+    public native long commit(String[] path, String message, boolean recurse,
+                boolean noUnlock, boolean keepChangelist, String changelistName)
+            throws ClientException;
+
+    /**
      * Copy versioned paths with the history preserved.
      *
      * @param sources A list of <code>CopySource</code> objects.
@@ -1412,8 +1429,11 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    public native long commit(String[] path, String message, boolean recurse,
-                              boolean noUnlock) throws ClientException;
+    public long commit(String[] path, String message, boolean recurse,
+                              boolean noUnlock) throws ClientException
+    {
+        return commit(path, message, recurse, noUnlock, false, null);
+    }
 
     /**
      * Lock a working copy item
