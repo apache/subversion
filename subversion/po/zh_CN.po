@@ -7,7 +7,7 @@ msgstr ""
 "Project-Id-Version: subversion 1.5.0\n"
 "Report-Msgid-Bugs-To: dev@subversion.tigris.org\n"
 "POT-Creation-Date: 2007-03-15 22:43+0800\n"
-"PO-Revision-Date: 2007-03-17 20:22+0800\n"
+"PO-Revision-Date: 2007-03-17 20:52+0800\n"
 "Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
 "Language-Team: Simplified Chinese <dev@subversion.tigris.org>\n"
 "MIME-Version: 1.0\n"
@@ -1093,7 +1093,7 @@ msgstr "提交项目“%s”有复制标志，但是版本无效"
 
 #: libsvn_client/commit_util.c:1807
 msgid "Standard properties can't be set explicitly as revision properties"
-msgstr ""
+msgstr "标准属性不能设置为版本属性"
 
 #: libsvn_client/copy.c:302
 #: libsvn_client/copy.c:1211
@@ -3228,7 +3228,7 @@ msgstr "服务器没有返回仓库根路径"
 
 #: libsvn_ra_svn/client.c:808
 msgid "Server doesn't support setting arbitrary revision properties during commit"
-msgstr ""
+msgstr "在提交时，服务器不支持设置任意版本属性"
 
 #: libsvn_ra_svn/client.c:892
 msgid "Non-string as part of file contents"
@@ -5434,9 +5434,8 @@ msgstr "“%s”不像是URL"
 #: svn/delete-cmd.c:64
 #: svn/mkdir-cmd.c:66
 #: svn/propedit-cmd.c:201
-#, fuzzy
 msgid "Local, non-commit operations do not take a log message or revision properties"
-msgstr "本地操作，非提交操作无须日志信息"
+msgstr "本地操作，非提交操作无须日志信息或版本属性"
 
 #: svn/diff-cmd.c:117
 #: svnserve/main.c:523
@@ -6011,6 +6010,8 @@ msgid ""
 "set revision property ARG in new revision\n"
 "                             using the name=value format"
 msgstr ""
+"在新版本设置版本属性 ARG\n"
+"                使用格式 name=value"
 
 #: svn/main.c:238
 msgid ""
@@ -6992,9 +6993,8 @@ msgid "Caught signal"
 msgstr "捕捉到信号"
 
 #: svn/main.c:894
-#, fuzzy
 msgid "Revision property pair is empty"
-msgstr "版本条目不是列表"
+msgstr "版本属性对为空"
 
 #: svn/main.c:1023
 msgid "Non-numeric limit argument given"
@@ -7105,11 +7105,6 @@ msgstr "工作副本的合并来源需要指定版本"
 #: svn/mkdir-cmd.c:87
 msgid "Try 'svn add' or 'svn add --non-recursive' instead?"
 msgstr "尝试用 “svn add”或 “svn add --non-recursive”代替？"
-
-#: svn/move-cmd.c:76
-#, fuzzy
-msgid "Local, non-commit operations do not take a log messageor revision properties"
-msgstr "本地操作，非提交操作无须日志信息"
 
 #: svn/notify.c:72
 #, c-format
