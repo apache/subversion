@@ -1,7 +1,7 @@
 /**
  * @copyright
  * ====================================================================
- * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -46,6 +46,10 @@ extern "C" {
 /* The actual error codes are kept in a separate file; see comments
    there for the reasons why. */
 #include "svn_error_codes.h"
+
+/** Set the error location for debug mode. */
+void svn_error__locate(const char *file, long line);
+
 
 /** Put an English description of @a statcode into @a buf and return @a buf,
  * null-terminated. @a statcode is either an svn error or apr error.
@@ -295,7 +299,5 @@ void svn_handle_warning(FILE *stream, svn_error_t *error);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
-#include "private/svn_error_private.h" /* For svn_error__locate */
 
 #endif /* SVN_ERROR_H */
