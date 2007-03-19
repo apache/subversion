@@ -375,7 +375,7 @@ EOE
     assert(!Svn::Wc.locked?(@wc_path))
   end
 
-  def test_translated_file
+  def test_translated_file_eol
     src_file = "src"
     crlf_file = "crlf"
     cr_file = "cr"
@@ -407,10 +407,7 @@ EOE
     ctx.ci(lf_path)
 
     Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
-      File.open(src_path, "wb") {|f| f.print(source)}
-      translated_file = access.translated_file2(src_path, lf_path,
-                                                Svn::Wc::TRANSLATE_TO_NF)
-      File.open(src_path, "wb") {|f| f.print(translated_file.read)}
+      File.open(src_path, "w") {|f| f.print(source)}
 
       translated_file = access.translated_file(src_path, crlf_path,
                                                Svn::Wc::TRANSLATE_FROM_NF)
@@ -432,6 +429,44 @@ EOE
       translated_file = access.translated_file2(src_path, lf_path,
                                                 Svn::Wc::TRANSLATE_FROM_NF)
       assert_equal(lf_source, translated_file.read)
+    end
+  end
+
+  def test_translated_file_keyword
+    src_file = "$Revision$"
+    revision_file = "revision_file"
+    src_path = File.join(@wc_path, src_file)
+    revision_path = File.join(@wc_path, revision_file)
+
+    source = "$Revision$\n"
+    revision_source = source.gsub(/\$Revision\$/, "$Revision: 1 $")
+
+    File.open(revision_path, "w") {}
+
+    log = "log"
+    ctx = make_context(log)
+    ctx.add(revision_path)
+    ctx.prop_set("svn:keywords", "Revision", revision_path)
+    ctx.ci(revision_path)
+
+    Svn::Wc::AdmAccess.open(nil, @wc_path, true, 5) do |access|
+      File.open(src_path, "w") {|f| f.print(source)}
+
+      translated_file = access.translated_file(src_path, revision_path,
+                                               Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(revision_source,
+                   File.open(translated_file, "r") {|f| f.read})
+      translated_file = access.translated_file2(src_path, revision_path,
+                                                Svn::Wc::TRANSLATE_FROM_NF)
+      assert_equal(revision_source, translated_file.read)
+
+
+      translated_file = access.translated_file(src_path, revision_path,
+                                               Svn::Wc::TRANSLATE_TO_NF)
+      assert_equal(source, File.open(translated_file, "r") {|f| f.read})
+      translated_file = access.translated_file2(src_path, revision_path,
+                                                Svn::Wc::TRANSLATE_TO_NF)
+      assert_equal(source, translated_file.read)
     end
   end
 
