@@ -9,7 +9,7 @@ import shutil
 this_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
 # add the Subversion Python test suite libraries to the path, and import
-sys.path.insert(0, '%s/../../subversion/tests/cmdline' % (this_dir))
+sys.path.insert(0, '%s/../../../subversion/tests/cmdline' % (this_dir))
 import svntest
 
 # where lives mucc?
@@ -17,11 +17,11 @@ mucc_binary = os.path.abspath('%s/mucc' % (this_dir))
 
 # override some svntest binary locations
 svntest.main.svn_binary = \
-   os.path.abspath('%s/../../subversion/svn/svn' % (this_dir))
+   os.path.abspath('%s/../../../subversion/svn/svn' % (this_dir))
 svntest.main.svnlook_binary = \
-   os.path.abspath('%s/../../subversion/svnlook/svnlook' % (this_dir))
+   os.path.abspath('%s/../../../subversion/svnlook/svnlook' % (this_dir))
 svntest.main.svnadmin_binary = \
-   os.path.abspath('%s/../../subversion/svnadmin/svnadmin' % (this_dir))
+   os.path.abspath('%s/../../../subversion/svnadmin/svnadmin' % (this_dir))
 
 # where lives the test repository?
 repos_path = os.path.abspath(('%s/mucc-test-repos' % (this_dir)))
