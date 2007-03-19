@@ -1277,7 +1277,6 @@ static svn_error_t * apply_revprops(commit_ctx_t *cc,
                                     apr_hash_t *revprop_table,
                                     apr_pool_t *pool)
 {
-  svn_string_t *log_str;
   const svn_string_t *vcc;
   const svn_string_t *baseline_url;
   version_rsrc_t baseline_rsrc = { SVN_INVALID_REVNUM };

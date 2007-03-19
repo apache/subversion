@@ -126,7 +126,7 @@
 ;; The latest version of psvn.el can be found at:
 ;;   http://www.xsteve.at/prg/emacs/psvn.el
 ;; Or you can check it out from the subversion repository:
-;;   svn co http://svn.collab.net/repos/svn/trunk/contrib/client-side/psvn psvn
+;;   svn co http://svn.collab.net/repos/svn/trunk/contrib/client-side/emacs emacs-svn
 
 ;; TODO:
 ;; * shortcut for svn propset svn:keywords "Date" psvn.el
@@ -1184,9 +1184,8 @@ The hook svn-pre-run-hook allows to monitor/modify the ARGLIST."
            (cond ((eq svn-process-cmd 'status)
                   ;;(message "svn status finished")
                   (svn-process-sentinel-fixup-path-seperators)
-                  (svn-status-apply-elide-list)
                   (svn-parse-status-result)
-                  (svn-status-update-buffer)
+                  (svn-status-apply-elide-list)
                   (when svn-status-update-previous-process-output
                     (set-buffer (process-buffer process))
                     (delete-region (point-min) (point-max))
