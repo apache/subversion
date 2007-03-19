@@ -451,7 +451,7 @@ test_list = [ None,
               hotcopy_dot,
               hotcopy_format,
               setrevprop,
-              XFail(verify_windows_paths_in_repos, svntest.main.is_os_windows),
+              verify_windows_paths_in_repos,
              ]
 
 if __name__ == '__main__':

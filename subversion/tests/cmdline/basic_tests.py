@@ -1806,7 +1806,7 @@ test_list = [ None,
               cat_added_PREV,
               ls_space_in_repo_name,
               delete_keep_local,
-              XFail(windows_paths_in_repos, svntest.main.is_os_windows)
+              windows_paths_in_repos
               ### todo: more tests needed:
               ### test "svn rm http://some_url"
               ### not sure this file is the right place, though.
