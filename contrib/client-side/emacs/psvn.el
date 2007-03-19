@@ -5235,6 +5235,9 @@ working directory."
     (dolist (e (ring-elements svn-last-cmd-ring))
       (princ (format "%s%s: svn %s <%s>\n" string-prefix (nth 0 e) (mapconcat 'concat (nth 1 e) " ") (nth 2 e))))))
 
+;; --------------------------------------------------------------------------------
+;; reporting bugs
+;; --------------------------------------------------------------------------------
 (defun svn-insert-indented-lines (text)
   "Helper function to insert TEXT, indented by two characters."
   (dolist (line (split-string text "\n"))
@@ -5258,6 +5261,41 @@ working directory."
     (insert (format "\nContent of the <%s> buffer:\n" last-output-buffer-name))
     (svn-insert-indented-lines last-svn-cmd-output)
     (goto-char (point-min))))
+
+;; --------------------------------------------------------------------------------
+;; Make it easier to reload psvn, if a distribution has an older version
+;; Just add the following to your .emacs:
+;; (svn-prepare-for-reload)
+;; (load "/path/to/psvn.el")
+
+;; Note the above will only work, if the loaded psvn.el has already the
+;; function svn-prepare-for-reload
+;; If this is not the case, do the following:
+;; (load "/path/to/psvn.el");;make svn-prepare-for-reload available
+;; (svn-prepare-for-reload)
+;; (load "/path/to/psvn.el");; update the keybindings
+;; --------------------------------------------------------------------------------
+
+(defvar svn-prepare-for-reload-dont-touch-list '() "A list of variables that should not be touched by `svn-prepare-for-reload'")
+(defvar svn-prepare-for-reload-variables-list '(svn-global-keymap svn-status-diff-mode-map svn-global-trac-map svn-status-mode-map
+                                                svn-status-mode-property-map svn-status-mode-extension-map
+                                                svn-status-mode-options-map svn-status-mode-trac-map svn-status-mode-branch-map
+                                                svn-log-edit-mode-map svn-log-view-mode-map
+                                                svn-log-view-popup-menu-map svn-info-mode-map svn-process-mode-map)
+  "A list of variables that should be set to nil via M-x `svn-prepare-for-reload'")
+(defun svn-prepare-for-reload ()
+  "This function resets some psvn.el variables to nil.
+It makes reloading a newer version of psvn.el easier, if for example the used
+GNU/Linux distribution uses an older version.
+
+The variables specified in `svn-prepare-for-reload-variables-list' will be reseted by this function.
+
+A variable will keep its value, if it is specified in `svn-prepare-for-reload-dont-touch-list'."
+  (interactive)
+  (dolist (var svn-prepare-for-reload-variables-list)
+    (unless (member var svn-prepare-for-reload-dont-touch-list)
+      (message (format "Resetting value of %s to nil" var)))
+      (set var nil)))
 
 (provide 'psvn)
 
