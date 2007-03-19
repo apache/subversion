@@ -40,8 +40,9 @@ items using a syntax like:
   example: ( literal ( data:string ... ) )
 
 A simple word such as "literal", with no colon, denotes a literal
-word.  A choice of words may be given in braces with "|" separating
-the choices.  "name:type" specifies a parameter with the given type.
+word.  A choice of words may be given with "|" separating the choices.
+"name:type" specifies a parameter with the given type.
+
 A type is "word", "number", "string", "list", or the name of another
 prototype.  Parentheses denote a tuple, unless the parentheses contain
 ellipses, in which case the parentheses denote an array containing
@@ -203,7 +204,7 @@ responds.
 Here are some miscellaneous prototypes used by the command sets:
 
   proplist:  ( ( name:string value:string ) ... )
-  propdelta: ( ( name: string [ value:string ] ) ... )
+  propdelta: ( ( name:string [ value:string ] ) ... )
   node-kind: none|file|dir|unknown
   bool:      true|false
   lockdesc:  ( path:string token:string owner:string [ comment:string ]
@@ -362,7 +363,7 @@ second place for auth-request point as noted below.
     response:  ( lock:lockdesc )
 
   lock-many
-    params:    ( [ comment:string ] steal-lock:bool ( (path:string
+    params:    ( [ comment:string ] steal-lock:bool ( ( path:string
                  [ current-rev:number ] ) ... ) )
     Before sending response, server sends lock cmd status and descriptions,
     ending with "done".
@@ -520,8 +521,23 @@ desirability:
 
 Extending an existing command is normally done by indicating that its
 tuple is allowed to end where it currently ends, for backwards
-compatibility, and then tacking on a new, possibly optional, tuple.
-For example, set-path was extended to include lock-tokens like this:
+compatibility, and then tacking on a new, possibly optional, item.
+
+For example, diff was extended to include a new mandatory text-deltas
+parameter like this:
+
+  /* OLD */ diff:
+    params:   ( [ rev:number ] target:string recurse:bool ignore-ancestry:bool
+                url:string )
+  /* NEW */ diff:
+    params:   ( [ rev:number ] target:string recurse:bool ignore-ancestry:bool
+                url:string ? text-deltas:bool )
+
+The "?" says that the tuple is allowed to end here, because an old
+client or server wouldn't know to send the new item.
+
+For optional parameters, a slightly different approach must be used.
+set-path was extended to include lock-tokens like this:
 
   /* OLD */ set-path:
     params: ( path:string rev:number start-empty:bool )
@@ -529,11 +545,7 @@ For example, set-path was extended to include lock-tokens like this:
   /* NEW */ set-path:
     params: ( path:string rev:number start-empty:bool ? [ lock-token:string ] )
 
-The "?" says that the outer tuple is allowed to end here, because an
-old client or server wouldn't know to send the new subtuple.  The new
-subtuple appears in square braces because, even in the new protocol,
-the lock-token is still optional (but if there's no lock-token to
-send, then an empty tuple must still be transmitted, so that future
-extensions to this command remain possible).  And if lock-token were
-mandatory in the new protocol, then the braces would be parentheses
-instead.
+The new item appears in brackets because, even in the new protocol,
+the lock-token is still optional.  However, if there's no lock-token
+to send, an empty tuple must still be transmitted so that future
+extensions to this command remain possible.
