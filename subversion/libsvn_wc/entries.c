@@ -1751,11 +1751,6 @@ write_entry_xml(svn_stringbuf_t **output,
   apr_hash_set(atts, SVN_WC__ENTRY_ATTR_KEEP_LOCAL, APR_HASH_KEY_STRING,
                (entry->keep_local ? "true" : NULL));
 
-  /* Depth, but only if it's not the default depth. */
-  if (entry->depth != svn_depth_infinity)
-    apr_hash_set(atts, SVN_WC__ENTRY_ATTR_DEPTH, APR_HASH_KEY_STRING,
-                 (svn_depth_to_word(entry->depth)));
-
   /* Timestamps */
   if (entry->text_time)
     {

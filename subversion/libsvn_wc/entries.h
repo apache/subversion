@@ -74,7 +74,6 @@ extern "C" {
 #define SVN_WC__ENTRY_ATTR_CHANGELIST         "changelist"
 #define SVN_WC__ENTRY_ATTR_KEEP_LOCAL         "keep-local"
 #define SVN_WC__ENTRY_ATTR_WORKING_SIZE       "working-size"
-#define SVN_WC__ENTRY_ATTR_DEPTH              "depth"
 
 /* Attribute values for 'schedule' */
 #define SVN_WC__ENTRY_VALUE_ADD        "add"
