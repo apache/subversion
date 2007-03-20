@@ -20,6 +20,7 @@ package org.tigris.subversion.javahl;
 
 import java.io.File;
 import java.io.OutputStream;
+import java.util.Date;
 
 /**
  * This is the main interface class. All subversion commandline client svn &
@@ -1280,8 +1281,14 @@ public class SVNClient implements SVNClientInterface
      * @return  the content together with author and revision of last change
      * @throws ClientException
      */
-    public native byte[] blame(String path, Revision revisionStart,
-                               Revision revisionEnd) throws ClientException;
+    public byte[] blame(String path, Revision revisionStart,
+                        Revision revisionEnd) throws ClientException
+    {
+        BlameReceiver callback = new BlameReceiver();
+        blame(path, revisionEnd, revisionStart, revisionEnd, callback);
+
+        return callback.getResult().getBytes();
+    }
     /**
      * Retrieve the content together with the author, the revision and the date
      * of the last change of each line
@@ -1477,4 +1484,73 @@ public class SVNClient implements SVNClientInterface
      * NativeResources.loadNativeLibrary
      */
     static native void initNative();
+
+    /**
+     * A class to receive the output of a call to blame(), so that is can be
+     * collected into a byte array.
+     */
+    private class BlameReceiver
+        implements BlameCallback
+    {
+        private StringBuilder sb = new StringBuilder();
+
+        /**
+         * Left pad the input string to a given length, to simulate printf()-
+         * style output.  This method appends the output to the class sb
+         * member.
+         * @param val       the input string
+         * @param len       the minimum length to pad to
+         */
+        private void pad(String val, int len)
+        {
+            int padding = len - val.length();
+
+            for (int i = 0; i < padding; i++)
+            {
+                sb.append(" ");
+            }
+
+            sb.append(val);
+        }
+
+        /**
+         * Called once for each line.  Append the line information to the
+         * string builder.
+         */
+        public void singleLine(Date changed, long revision, String author,
+               String line)
+        {
+            if (revision > 0)
+            {
+                pad(Long.toString(revision), 6);
+                sb.append(" ");
+            }
+            else
+            {
+                sb.append("     - ");
+            }
+
+            if (author != null)
+            {
+                pad(author, 10);
+                sb.append(" ");
+            }
+            else
+            {
+                sb.append("         - ");
+            }
+
+            sb.append(line);
+            sb.append("\n");
+        }
+
+        /**
+         * Return the result string up to this point.
+         * @return  the string out blame output
+         */
+        public String getResult()
+        {
+            return sb.toString();
+        }
+    }
 }

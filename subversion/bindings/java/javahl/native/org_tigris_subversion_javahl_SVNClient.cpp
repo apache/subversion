@@ -1696,45 +1696,11 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_relocate
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    blame
  * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;
- *             Lorg/tigris/subversion/javahl/Revision;)[B
- */
-JNIEXPORT jbyteArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2
-  (JNIEnv *env, jobject jthis, jstring jpath, jobject jrevisionStart, 
-   jobject jrevisionEnd)
-{
-    JNIEntry(SVNClient, blame);
-    SVNClient *cl = SVNClient::getCppObject(jthis);
-    if (cl == NULL)
-    {
-        JNIUtil::throwError(_("bad c++ this"));
-        return NULL;
-    }
-    JNIStringHolder path(jpath);
-    if (JNIUtil::isExceptionThrown())
-    {
-        return NULL;
-    }
-    Revision revisionStart(jrevisionStart, false, true);
-    if (JNIUtil::isExceptionThrown())
-    {
-        return NULL;
-    }
-    Revision revisionEnd(jrevisionEnd, true);
-    if (JNIUtil::isExceptionThrown())
-    {
-        return NULL;
-    }
-    return cl->blame(path, revisionStart, revisionEnd);
-}
-/*
- * Class:     org_tigris_subversion_javahl_SVNClient
- * Method:    blame
- * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;
  *             Lorg/tigris/subversion/javahl/Revision;
  *             Lorg/tigris/subversion/javahl/Revision;
  *             Lorg/tigris/subversion/javahl/BlameCallback;)V
  */
-JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame__Ljava_lang_String_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_Revision_2Lorg_tigris_subversion_javahl_BlameCallback_2
+JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame
   (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision, 
    jobject jrevisionStart, jobject jrevisionEnd, jobject jblameCallback)
 {
