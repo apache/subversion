@@ -5153,7 +5153,7 @@ test_list = [ None,
               avoid_repeated_merge_on_subtree_with_merge_info,
               obey_reporter_api_semantics_while_doing_subtree_merges,
               XFail(local_mergeinfo_elision_and_inheritance),
-              XFail(mergeinfo_inheritance_and_discontinuous_ranges),
+              mergeinfo_inheritance_and_discontinuous_ranges,
              ]
 
 if __name__ == '__main__':
