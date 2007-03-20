@@ -42,11 +42,11 @@ module SvnTestUtil
         grant_everyone_full_access(@full_repos_path)
 
         unless service_exists?
-          @svnserve_dir = File.expand_path(File.join(@base_dir, "svnserve"))
-          FileUtils.mkdir_p(@svnserve_dir)
+          svnserve_dir = File.expand_path(File.join("test", "svnserve"))
+          FileUtils.mkdir_p(svnserve_dir)
           at_exit do
             service_control('delete') if service_exists?
-            FileUtils.rm_rf(@svnserve_dir)
+            FileUtils.rm_rf(svnserve_dir)
           end
           targets = %w(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
                        libsvn_fs-1.dll libsvn_delta-1.dll
@@ -57,7 +57,7 @@ module SvnTestUtil
               target_path = "#{path}\\#{target}"
               if File.exists?(target_path)
                 found_targets << target
-                FileUtils.cp(target_path, @svnserve_dir)
+                FileUtils.cp(target_path, svnserve_dir)
               end
             end
             targets -= found_targets
@@ -67,10 +67,12 @@ module SvnTestUtil
             raise "can't find libraries to work svnserve: #{targets.join(' ')}"
           end
 
-          svnserve_path = File.join(@svnserve_dir, "svnserve.exe")
-          svnserve_path = svnserve_path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
+          grant_everyone_full_access(svnserve_dir)
+
+          svnserve_path = File.join(svnserve_dir, "svnserve.exe")
+          svnserve_path = svnserve_path.tr(File::SEPARATOR,
+                                           File::ALT_SEPARATOR)
           svnserve_path = Svnserve.escape_value(svnserve_path)
-          grant_everyone_full_access(@svnserve_dir)
 
           root = @full_repos_path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
 
@@ -78,7 +80,6 @@ module SvnTestUtil
                   "--listen-host", @svnserve_host,
                   "--listen-port", @svnserve_port]
           user = ENV["USERNAME"] || Etc.getlogin
-          puts "#{svnserve_path} #{args.join(' ')}"
           service_control('create',
                           [["binPath", "#{svnserve_path} #{args.join(' ')}"],
                            ["DisplayName", SERVICE_NAME],
