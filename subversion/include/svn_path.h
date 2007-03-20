@@ -198,14 +198,6 @@ int svn_path_is_empty(const char *path);
 svn_boolean_t svn_path_is_root(const char *path, apr_size_t len);
 
 
-/** Return TRUE if @a path is considered absolute on the platform at 
- * hand, amongst which '/foo' on all platforms or 'X:/foo', '\\\\?\\X:/foo',
- * '\\\\server\\share\\foo' on Windows.
- *
- * @since New in 1.5.
- */
-svn_boolean_t svn_path_is_absolute(const char *path, apr_size_t len);
-
 /** Return a new path (or URL) like @a path, but transformed such that
  * some types of path specification redundancies are removed.
  *

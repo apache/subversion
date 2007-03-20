@@ -529,7 +529,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, recurse, false, false);
+        return update(path, revision, recurse, ignoreExternals, false);
     }
 
     /**
