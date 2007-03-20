@@ -1,54 +1,94 @@
+require 'etc'
 require 'fileutils'
 
 module SvnTestUtil
   module Windows
     module Svnserve
-      begin
-        require 'win32/service'
+      SERVICE_NAME = 'test-svn-server'
 
-        SERVICE_NAME = 'test-svn-server'
+      class << self
+        def escape_value(value)
+          escaped_value = value.gsub(/"/, '\\"') # "
+          "\"#{escaped_value}\""
+        end
+      end
 
-        def setup_svnserve
-          @svnserve_port = @svnserve_ports.first
-          @repos_svnserve_uri = "svn://#{@svnserve_host}:#{@svnserve_port}"
+      def service_control(command, args={})
+        args = args.collect do |key, value|
+          "#{key}= #{Svnserve.escape_value(value)}"
+        end.join(" ")
+        if `sc #{command} #{SERVICE_NAME} #{args}`.match(/FAILED/)
+          raise "Failed to #{command} #{SERVICE_NAME}: #{args}"
+        end
+      end
 
-          unless Win32::Service.exists?(SERVICE_NAME)
-            # Here we assume that svnserve is going available on the path when
-            # the service starts.  So use "svnserve" unqualified.  This isn't
-            # normally how I'd recommend installing a windows service, but for
-            # running these tests it is a significantly simplifying assumption.
-            # We can't even test for svnserve being on the path here because
-            # when the service starts, it'll be running as LocalSystem and the
-            # new process may actually have a different path than we have here.
+      def grant_everyone_full_access(dir)
+        dir = dir.tr(File::SEPARATOR, File::ALT_SEPARATOR)
+        `cacls #{Svnserve.escape_value(dir)} /T /E /P Everyone:F`
+      end
 
-            Win32::Service.new.create_service do |s|
-              s.service_name = SERVICE_NAME
-              root = @full_repos_path.tr('/','\\')
-              s.binary_path_name = "svnserve"
-              s.binary_path_name << " --service"
-              s.binary_path_name << " --root \"#{root}\""
-              s.binary_path_name << " --listen-host #{@svnserve_host}"
-              s.binary_path_name << " --listen-port #{@svnserve_port}"
-            end.close
-            at_exit{Win32::Service.delete(SERVICE_NAME)}
+      def service_exists?
+        begin
+          service_control("query")
+          true
+        rescue
+          false
+        end
+      end
+
+      def setup_svnserve
+        @svnserve_port = @svnserve_ports.first
+        @repos_svnserve_uri = "svn://#{@svnserve_host}:#{@svnserve_port}"
+        grant_everyone_full_access(@full_repos_path)
+
+        unless service_exists?
+          @svnserve_dir = File.expand_path(File.join(@base_dir, "svnserve"))
+          FileUtils.mkdir_p(@svnserve_dir)
+          at_exit do
+            service_control('delete') if service_exists?
+            FileUtils.rm_rf(@svnserve_dir)
+          end
+          targets = %w(svnserve.exe libsvn_subr-1.dll libsvn_repos-1.dll
+                       libsvn_fs-1.dll libsvn_delta-1.dll
+                       libaprutil.dll libapr.dll)
+          ENV["PATH"].split(";").each do |path|
+            found_targets = []
+            targets.each do |target|
+              target_path = "#{path}\\#{target}"
+              if File.exists?(target_path)
+                found_targets << target
+                FileUtils.cp(target_path, @svnserve_dir)
+              end
+            end
+            targets -= found_targets
+            break if targets.empty?
+          end
+          unless targets.empty?
+            raise "can't find libraries to work svnserve: #{targets.join(' ')}"
           end
 
-          Win32::Service.start(SERVICE_NAME)
-        end
+          svnserve_path = File.join(@svnserve_dir, "svnserve.exe")
+          svnserve_path = svnserve_path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
+          svnserve_path = Svnserve.escape_value(svnserve_path)
+          grant_everyone_full_access(@svnserve_dir)
 
-        def teardown_svnserve
-          Win32::Service.stop(SERVICE_NAME) rescue Win32::ServiceError
-        end
-      rescue LoadError
-        puts "Testing with file:// instead of svn://."
-        puts "Install win32-service to enable testing with svnserve."
+          root = @full_repos_path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
 
-        def setup_svnserve
-          @repos_svnserve_uri = @repos_uri
+          args = ["--service", "--root", Svnserve.escape_value(root),
+                  "--listen-host", @svnserve_host,
+                  "--listen-port", @svnserve_port]
+          user = ENV["USERNAME"] || Etc.getlogin
+          puts "#{svnserve_path} #{args.join(' ')}"
+          service_control('create',
+                          [["binPath", "#{svnserve_path} #{args.join(' ')}"],
+                           ["DisplayName", SERVICE_NAME],
+                           ["type", "own"]])
         end
+        service_control('start')
+      end
 
-        def teardown_svnserve
-        end
+      def teardown_svnserve
+        service_control('stop') if service_exists?
       end
 
       def add_pre_revprop_change_hook
@@ -89,6 +129,9 @@ exit 1
             svn_lib_dir = File.join(subversion_dir, "libsvn_#{lib}")
             util.puts("add_path.call(#{svn_lib_dir.dump})")
           end
+
+          svnserve_dir = File.join(subversion_dir, "svnserve")
+          util.puts("add_path.call(#{svnserve_dir.dump})")
         end
       end
 
