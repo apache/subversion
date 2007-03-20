@@ -81,7 +81,8 @@ Valid options:
                                 'COMMITTED'  last commit at or before BASE
                                 'PREV'       revision just before COMMITTED
   -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
-  --depth ARG              : pass depth ('empty', 'files', 'immediates') as arg
+  --depth ARG              : pass depth ('empty', 'files', 'immediates', or
+                            'infinity') as arg
   -q [--quiet]             : print as little as possible
   --diff3-cmd ARG          : use ARG as merge command
   --relocate               : relocate via URL-rewriting
