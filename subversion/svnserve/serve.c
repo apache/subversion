@@ -1352,12 +1352,11 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Parse the arguments. */
   if (params->nelts == 5)
     {
-      /* Clients before 1.4 don't send the text_deltas boolean. */
-      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbc?(?w)",
-                                     &rev, &target, &recurse,
-                                     &ignore_ancestry, &versus_url,
-                                     &depth_word));
+      /* Clients before 1.4 don't send the text_deltas boolean or depth. */
+      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbc", &rev, &target,
+                                     &recurse, &ignore_ancestry, &versus_url));
       text_deltas = TRUE;
+      depth_word = NULL;
     }
   else
     {
