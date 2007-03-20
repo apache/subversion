@@ -218,7 +218,7 @@ svn_client_status3(svn_revnum_t *result_rev,
   const char *anchor, *target;
   const svn_delta_editor_t *editor;
   void *edit_baton, *set_locks_baton;
-  const svn_wc_entry_t *entry;
+  const svn_wc_entry_t *entry = NULL;
   struct status_baton sb;
   svn_revnum_t edit_revision = SVN_INVALID_REVNUM;
   /* ### TODO(sd): This is a shim, we should use depth for real. */
@@ -235,11 +235,12 @@ svn_client_status3(svn_revnum_t *result_rev,
                                  pool));
   anchor = svn_wc_adm_access_path(anchor_access);
 
-  /* ### TODO(sd): If depth is svn_depth_unknown, we should get the depth
-     ### from the working copy here.  Until we get it from the WC,
-     ### default to a depth of infinity. */
   if (depth == svn_depth_unknown)
-    depth = svn_depth_infinity;
+    {
+      SVN_ERR(svn_wc_entry(&entry, anchor, anchor_access, FALSE, pool));
+      if (entry)
+        depth = entry->depth;
+    }
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
@@ -261,7 +262,8 @@ svn_client_status3(svn_revnum_t *result_rev,
       svn_node_kind_t kind;
 
       /* Get full URL from the ANCHOR. */
-      SVN_ERR(svn_wc_entry(&entry, anchor, anchor_access, FALSE, pool));
+      if (! entry)
+        SVN_ERR(svn_wc_entry(&entry, anchor, anchor_access, FALSE, pool));
       if (! entry)
         return svn_error_createf
           (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
