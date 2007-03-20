@@ -1517,7 +1517,7 @@ public class SVNClient implements SVNClientInterface
     private class BlameReceiver
         implements BlameCallback
     {
-        private StringBuilder sb = new StringBuilder();
+        private StringBuffer sb = new StringBuffer();
 
         /**
          * Left pad the input string to a given length, to simulate printf()-

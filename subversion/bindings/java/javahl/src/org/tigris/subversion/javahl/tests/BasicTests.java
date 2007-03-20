@@ -56,7 +56,7 @@ public class BasicTests extends SVNTests
     private class BlameReceiver
         implements BlameCallback
     {
-        private StringBuilder sb = new StringBuilder();
+        private StringBuffer sb = new StringBuffer();
 
         private void pad(String val, int len)
         {
