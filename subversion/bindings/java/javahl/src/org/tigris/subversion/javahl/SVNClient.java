@@ -20,6 +20,7 @@ package org.tigris.subversion.javahl;
 
 import java.io.File;
 import java.io.OutputStream;
+import java.util.Date;
 
 /**
  * This is the main interface class. All subversion commandline client svn &
@@ -451,7 +452,22 @@ public class SVNClient implements SVNClientInterface
      * @param force     delete even when there are local modifications.
      * @exception ClientException
      */
-    public native void remove(String[] path, String message, boolean force)
+    public void remove(String[] path, String message, boolean force)
+            throws ClientException
+    {
+        remove(path, message, force, false);
+    }
+    /**
+     * Sets a file for deletion.
+     * @param path      path or url to be deleted
+     * @param message   if path is a url, this will be the commit message.
+     * @param force     delete even when there are local modifications.
+     * @param keepLocal only remove the paths from the repository.
+     * @exception ClientException
+     * @since 1.5
+     */
+    public native void remove(String[] path, String message, boolean force,
+                              boolean keepLocal)
             throws ClientException;
     /**
      * Reverts a file to a pristine state.
@@ -514,7 +530,7 @@ public class SVNClient implements SVNClientInterface
                          boolean recurse, boolean ignoreExternals)
             throws ClientException
     {
-        return update(path, revision, recurse, false, false);
+        return update(path, revision, recurse, ignoreExternals, false);
     }
 
     /**
@@ -569,6 +585,24 @@ public class SVNClient implements SVNClientInterface
     {
         return commit(path, message, recurse, false);
     }
+
+    /**
+     * Commits changes to the repository.
+     * @param path            files to commit.
+     * @param message         log message.
+     * @param recurse         whether the operation should be done recursively.
+     * @param noUnlock        do remove any locks
+     * @param keepChangelist  keep changelist associations after the commit.
+     * @param changelistName  if non-null, filter paths using changelist
+     * @return Returns a long representing the revision. It returns a
+     *         -1 if the revision number is invalid.
+     * @exception ClientException
+     * @since 1.5
+     */
+    public native long commit(String[] path, String message, boolean recurse,
+                              boolean noUnlock, boolean keepChangelist,
+                              String changelistName)
+            throws ClientException;
 
     /**
      * Copy versioned paths with the history preserved.
@@ -1247,8 +1281,14 @@ public class SVNClient implements SVNClientInterface
      * @return  the content together with author and revision of last change
      * @throws ClientException
      */
-    public native byte[] blame(String path, Revision revisionStart,
-                               Revision revisionEnd) throws ClientException;
+    public byte[] blame(String path, Revision revisionStart,
+                        Revision revisionEnd) throws ClientException
+    {
+        BlameReceiver callback = new BlameReceiver();
+        blame(path, revisionEnd, revisionStart, revisionEnd, callback);
+
+        return callback.getResult().getBytes();
+    }
     /**
      * Retrieve the content together with the author, the revision and the date
      * of the last change of each line
@@ -1278,9 +1318,31 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    public native void blame(String path, Revision pegRevision,
+    public void blame(String path, Revision pegRevision,
                              Revision revisionStart, Revision revisionEnd,
-                             BlameCallback callback) throws ClientException;
+                             BlameCallback callback) throws ClientException
+    {
+        blame(path, pegRevision, revisionStart, revisionEnd, false, callback);
+    }
+
+    /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * @param path          the path
+     * @param pegRevision   the revision to interpret the path
+     * @param revisionStart the first revision to show
+     * @param revisionEnd   the last revision to show
+     * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param callback      callback to receive the file content and the other
+     *                      information
+     * @throws ClientException
+     * @since 1.5
+     */
+
+    public native void blame(String path, Revision pegRevision,
+                               Revision revisionStart,
+                               Revision revisionEnd, boolean ignoreMimeType,
+                               BlameCallback callback) throws ClientException;
 
     /**
      * Set directory for the configuration information
@@ -1397,8 +1459,11 @@ public class SVNClient implements SVNClientInterface
      * @throws ClientException
      * @since 1.2
      */
-    public native long commit(String[] path, String message, boolean recurse,
-                              boolean noUnlock) throws ClientException;
+    public long commit(String[] path, String message, boolean recurse,
+                              boolean noUnlock) throws ClientException
+    {
+        return commit(path, message, recurse, noUnlock, false, null);
+    }
 
     /**
      * Lock a working copy item
@@ -1441,4 +1506,73 @@ public class SVNClient implements SVNClientInterface
      * NativeResources.loadNativeLibrary
      */
     static native void initNative();
+
+    /**
+     * A class to receive the output of a call to blame(), so that is can be
+     * collected into a byte array.
+     */
+    private class BlameReceiver
+        implements BlameCallback
+    {
+        private StringBuilder sb = new StringBuilder();
+
+        /**
+         * Left pad the input string to a given length, to simulate printf()-
+         * style output.  This method appends the output to the class sb
+         * member.
+         * @param val       the input string
+         * @param len       the minimum length to pad to
+         */
+        private void pad(String val, int len)
+        {
+            int padding = len - val.length();
+
+            for (int i = 0; i < padding; i++)
+            {
+                sb.append(" ");
+            }
+
+            sb.append(val);
+        }
+
+        /**
+         * Called once for each line.  Append the line information to the
+         * string builder.
+         */
+        public void singleLine(Date changed, long revision, String author,
+               String line)
+        {
+            if (revision > 0)
+            {
+                pad(Long.toString(revision), 6);
+                sb.append(" ");
+            }
+            else
+            {
+                sb.append("     - ");
+            }
+
+            if (author != null)
+            {
+                pad(author, 10);
+                sb.append(" ");
+            }
+            else
+            {
+                sb.append("         - ");
+            }
+
+            sb.append(line);
+            sb.append("\n");
+        }
+
+        /**
+         * Return the result string up to this point.
+         * @return  the string out blame output
+         */
+        public String getResult()
+        {
+            return sb.toString();
+        }
+    }
 }

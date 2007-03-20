@@ -515,6 +515,7 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   void *edit_baton;
   void *commit_baton;
   const char *log_msg;
+  apr_hash_t *revprop_table;
   apr_array_header_t *targets;
   svn_error_t *err;
   const char *common;
@@ -584,6 +585,8 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
   else
     log_msg = "";
 
+  SVN_ERR(svn_client__get_revprop_table(&revprop_table, log_msg, ctx, pool));
+
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session, common, NULL,
@@ -600,8 +603,9 @@ mkdir_urls(svn_commit_info_t **commit_info_p,
 
   /* Fetch RA commit editor */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
-  SVN_ERR(svn_ra_get_commit_editor2(ra_session, &editor, &edit_baton,
-                                    log_msg, svn_client__commit_callback,
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    revprop_table,
+                                    svn_client__commit_callback,
                                     commit_baton, 
                                     NULL, TRUE, /* No lock tokens */
                                     pool));

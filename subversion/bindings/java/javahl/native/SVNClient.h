@@ -62,11 +62,9 @@ public:
      */
     void setConfigDirectory(const char *configDir);
 
-    jbyteArray blame(const char *path, Revision& revisionStart,
-                         Revision &revisionEnd);
     void blame(const char *path, Revision &pegRevision, 
-                   Revision &revisionStart,
-                   Revision &revisionEnd, BlameCallback *callback);
+                   Revision &revisionStart, Revision &revisionEnd,
+                   bool ignoreMimeType, BlameCallback *callback);
     void relocate(const char *from, const char *to, const char *path,
                       bool recurse);
     jbyteArray fileContent(const char *path, Revision &revision,  
@@ -75,12 +73,8 @@ public:
                            Revision &pegRevision, jobject outputStream,
                            size_t bufSize);
     void propertyCreate(const char *path, const char *name,
-                            JNIByteArray &value, bool recurse, bool force);
-    void propertyCreate(const char *path, const char *name,
                             const char *value, bool recurse, bool force);
     void propertyRemove(const char *path, const char *name, bool recurse);
-    void propertySet(const char *path, const char *name,
-                         JNIByteArray &value, bool recurse, bool force);
     void propertySet(const char *path, const char *name, const char *value,
                          bool recurse, bool force);
     jobjectArray properties(jobject jthis, const char *path,
@@ -106,13 +100,15 @@ public:
               const char *message, bool force, bool moveAsChild);
     void copy(CopySources &copySources, const char *destPath,
               const char *message, bool copyAsChild);
-    jlong commit(Targets &targets, const char *message, bool recurse, 
-                  bool noUnlock);
+    jlong commit(Targets &targets, const char *message, bool recurse,
+                 bool noUnlock, bool keepChangelist,
+                 const char *changelistName);
     jlongArray update(Targets &targets, Revision &revision, bool recurse,
                       bool ignoreExternals, bool allowUnverObstructions);
     void add(const char *path, bool recurse, bool force);
     void revert(const char *path, bool recurse);
-    void remove(Targets &targets, const char *message,bool force);
+    void remove(Targets &targets, const char *message, bool force, 
+                bool keep_local);
     void notification(Notify *notify);
     void notification2(Notify2 *notify2);
     void setProgressListener(ProgressListener *progressListener);
@@ -170,7 +166,8 @@ public:
 private:
     static svn_error_t * checkCancel(void *cancelBaton);
     void propertySet(const char *path, const char *name,
-                         svn_string_t *value, bool recurse, bool force);
+                     svn_string_t *value, bool recurse, bool force,
+                     svn_revnum_t baseRevisionForURL);
     jobject createJavaProperty(jobject jthis, const char *path,
                                    const char *name, svn_string_t *value);
     jobject createJavaDirEntry(const char *path, svn_dirent_t *dirent);

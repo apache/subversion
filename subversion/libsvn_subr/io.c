@@ -2,7 +2,7 @@
  * io.c:   shared file reading, writing, and probing code.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2700,8 +2700,29 @@ svn_io_file_write_full(apr_file_t *file, const void *buf,
                        apr_size_t nbytes, apr_size_t *bytes_written,
                        apr_pool_t *pool)
 {
+  apr_status_t rv = apr_file_write_full(file, buf, nbytes, bytes_written);
+
+#ifdef WIN32
+#define MAXBUFSIZE 30*1024
+  if (rv == APR_FROM_OS_ERROR(ERROR_NOT_ENOUGH_MEMORY)
+      && nbytes > MAXBUFSIZE)
+    {
+      apr_size_t bw = 0;
+      *bytes_written = 0;
+
+      do {
+        rv = apr_file_write_full(file, buf,
+                                 nbytes > MAXBUFSIZE ? MAXBUFSIZE : nbytes, &bw);
+        *bytes_written += bw;
+        buf = (char *)buf + bw;
+        nbytes -= bw;
+      } while (rv == APR_SUCCESS && nbytes > 0);
+    }
+#undef MAXBUFSIZE
+#endif
+
   return do_io_file_wrapper_cleanup
-    (file, apr_file_write_full(file, buf, nbytes, bytes_written),
+    (file, rv,
      N_("Can't write to file '%s'"),
      N_("Can't write to stream"),
      pool);

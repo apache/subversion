@@ -1811,8 +1811,21 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
       /* Subsequent svn_wc_adm_access_t need to be opened with
          an absolute path so we can walk up and out of the WC
          if necessary. */
-      if (!svn_path_is_absolute(wcpath, strlen(wcpath)))
-        SVN_ERR(svn_path_get_absolute(&wcpath, wcpath, pool));
+#if defined(WIN32) || defined(__CYGWIN__)
+      /* On Windows a path is also absolute when it starts with
+         'H:/' where 'H' is any upper or lower case letter. */
+      if ((strlen(wcpath) > 0 && wcpath[0] != '/')
+          || !(strlen(wcpath) > 2
+               && (wcpath[1] == ':')
+               && (wcpath[2] == '/')
+               && ((wcpath[0] >= 'A' && wcpath[0] <= 'Z')
+                   || (wcpath[0] >= 'a' && wcpath[0] <= 'z'))))
+#elif
+      if (!(strlen(wcpath) > 0 && wcpath[0] == '/'))
+#endif /* WIN32 or Cygwin */
+        {
+          SVN_ERR(svn_path_get_absolute(&wcpath, wcpath, pool));
+        }
 
       if (apr_hash_count(wc_mergeinfo) == 0 &&
           !svn_path_is_root(wcpath, strlen(wcpath)))

@@ -50,6 +50,12 @@ class SVNIncorrectDatatype(SVNUnexpectedOutput):
   run_and_verify_* API"""
   pass
 
+class UnorderedOutput:
+  """Simple class to mark unorder output"""
+
+  def __init__(self, output):
+    self.output = output
+
 
 def no_sleep_for_timestamps():
   os.environ['SVN_SLEEP_FOR_TIMESTAMPS'] = 'no'
@@ -184,6 +190,10 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
      - If it is a single string, invoke match_or_fail() on MESSAGE,
        the expected output, and the actual output.
 
+     - If it is an instance of UnorderedOutput, invoke
+       compare_unordered_and_display_lines() on MESSAGE, the expected
+       output, and the actual output.
+
   If EXPECTED_STDOUT is None, do not check stdout.
   EXPECTED_STDERR may not be None.
 
@@ -206,6 +216,9 @@ def run_and_verify_svn(message, expected_stdout, expected_stderr, *varargs):
       compare_and_display_lines(message, output_type.upper(), expected, actual)
     elif type(expected) is type(''):
       match_or_fail(message, output_type.upper(), expected, actual)
+    elif isinstance(expected, UnorderedOutput):
+      compare_unordered_and_display_lines(message, output_type.upper(),
+                                          expected.output, actual)
     elif expected == SVNAnyOutput:
       if len(actual) == 0:
         if message is not None:
@@ -878,17 +891,21 @@ def display_trees(message, label, expected, actual):
     tree.dump_tree(actual)
 
 
-def display_lines(message, label, expected, actual, expected_is_regexp=None):
+def display_lines(message, label, expected, actual, expected_is_regexp=None,
+                  expected_is_unordered=None):
   """Print MESSAGE, unless it is None, then print EXPECTED (labeled
   with LABEL) followed by ACTUAL (also labeled with LABEL).
   Both EXPECTED and ACTUAL may be strings or lists of strings."""
   if message is not None:
     print message
   if expected is not None:
+    output = 'EXPECTED %s' % label
     if expected_is_regexp:
-      print 'EXPECTED', label + ' (regexp):'
-    else:
-      print 'EXPECTED', label + ':'
+      output += ' (regexp)'
+    if expected_is_unordered:
+      output += ' (unordered)'
+    output += ':'
+    print output
     map(sys.stdout.write, expected)
     if expected_is_regexp:
       map(sys.stdout.write, '\n')
@@ -907,6 +924,15 @@ def compare_and_display_lines(message, label, expected, actual):
 
   if exp != act:
     display_lines(message, label, expected, actual)
+    raise main.SVNLineUnequal
+
+def compare_unordered_and_display_lines(message, label, expected, actual):
+  """Compare two sets of output lines, and print them if they differ,
+  but disregard the order of the lines. MESSAGE is ignored if None."""
+  try:
+    main.compare_unordered_output(expected, actual)
+  except Failure:
+    display_lines(message, label, expected, actual, expected_is_unordered=True)
     raise main.SVNLineUnequal
 
 def match_or_fail(message, label, expected, actual):

@@ -82,7 +82,8 @@ typedef enum {
   svn_cl__targets_opt,
   svn_cl__version_opt,
   svn_cl__xml_opt,
-  svn_cl__keep_local_opt
+  svn_cl__keep_local_opt,
+  svn_cl__with_revprop_opt
 } svn_cl__longopt_t;
 
 
@@ -153,6 +154,7 @@ typedef struct svn_cl__opt_state_t
   const char *changelist;        /* operate on this changelist */
   svn_boolean_t keep_changelist; /* don't remove changelist after commit */
   svn_boolean_t keep_local;      /* delete path only from repository */
+  apr_hash_t *revprop_table;     /* table with revision properties to set */
 
 } svn_cl__opt_state_t;
 

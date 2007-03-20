@@ -486,12 +486,9 @@ keep-local:
 working-size:
    The number of bytes in the working file.  This can differ from the
    number of bytes in the text base; for example, the working file may
-   have undergone keyword substitution or eol translation.  -1 means
-   the value isn't present in the working copy entries file.  -2 means
-   the actual value couldn't be calculated because the working copy
-   file was locally modified.
+   have undergone keyword substitution or eol translation.
    The purpose of this field is to serve as a reference for the
-   change-detection heuristic used by the 'status' command.
+   change-detection heuristic.
 
 The only fields allowed in an entry for a directory (other than the
 this_dir entry) are name, absent, deleted, schedule, copied,

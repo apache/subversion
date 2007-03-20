@@ -464,9 +464,24 @@ public class SVNClientSynchronized implements SVNClientInterface
     public void remove(String[] path, String message, boolean force)
             throws ClientException
     {
-        synchronized(clazz)
+        remove(path, message, force, false);
+    }
+    /**
+     * Sets a file for deletion.
+     * @param path      path or url to be deleted
+     * @param message   if path is a url, this will be the commit message.
+     * @param force     delete even when there are local modifications.
+     * @param keepLocal only remove the paths from the repository.
+     * @exception ClientException
+     * @since 1.5
+     */
+    public void remove(String[] path, String message, boolean force,
+                       boolean keepLocal)
+            throws ClientException
+    {
+        synchronized (clazz)
         {
-            worker.remove(path, message, force);
+            worker.remove(path, message, force, keepLocal);
         }
     }
     /**
@@ -613,6 +628,31 @@ public class SVNClientSynchronized implements SVNClientInterface
         synchronized(clazz)
         {
             return worker.commit(path, message, recurse, false);
+        }
+    }
+
+    /**
+     * Commits changes to the repository.
+     * @param path            files to commit.
+     * @param message         log message.
+     * @param recurse         whether the operation should be done recursively.
+     * @param noUnlock        do remove any locks
+     * @param keepChangelist  keep changelist associations after the commit.
+     * @param changelistName  if non-null, filter paths using changelist
+     * @return Returns a long representing the revision. It returns a
+     *         -1 if the revision number is invalid.
+     * @exception ClientException
+     * @since 1.5
+     */
+    public long commit(String[] path, String message, boolean recurse,
+                       boolean noUnlock, boolean keepChangelist,
+                       String changelistName)
+            throws ClientException
+    {
+        synchronized (clazz)
+        {
+            return worker.commit(path, message, recurse, noUnlock,
+                                 keepChangelist, changelistName);
         }
     }
 
@@ -1539,6 +1579,32 @@ public class SVNClientSynchronized implements SVNClientInterface
         {
             worker.blame(path, pegRevision, revisionStart, revisionEnd,
                     callback);
+        }
+    }
+
+    /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * @param path          the path
+     * @param pegRevision   the revision to interpret the path
+     * @param revisionStart the first revision to show
+     * @param revisionEnd   the last revision to show
+     * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param callback      callback to receive the file content and the other
+     *                      information
+     * @throws ClientException
+     * @since 1.5
+     */
+
+    public void blame(String path, Revision pegRevision, Revision revisionStart,
+                      Revision revisionEnd, boolean ignoreMimeType,
+                      BlameCallback callback)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.blame(path, pegRevision, revisionStart, revisionEnd,
+                    ignoreMimeType, callback);
         }
     }
 

@@ -253,6 +253,12 @@ svn_repos__compare_files(svn_boolean_t *changed_p,
                          const char *path2,
                          apr_pool_t *pool);
 
+/* Change the transaction property values in transaction TXN using the
+   (key,value)-pairs in TXNPROP_TABLE. */
+svn_error_t *
+svn_repos__change_txn_props(svn_fs_txn_t *txn,
+                            apr_hash_t *txnprop_table,
+                            apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

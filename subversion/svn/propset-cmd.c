@@ -2,7 +2,7 @@
  * propset-cmd.c -- Set property values on files/dirs
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -162,14 +162,17 @@ svn_cl__propset(apr_getopt_t *os,
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
+          svn_commit_info_t *commit_info;
           svn_boolean_t success;
 
           svn_pool_clear(subpool);
           SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-          SVN_ERR(svn_cl__try(svn_client_propset2(pname_utf8,
+          SVN_ERR(svn_cl__try(svn_client_propset3(&commit_info,
+                                                  pname_utf8,
                                                   propval, target,
                                                   opt_state->recursive,
                                                   opt_state->force,
+                                                  SVN_INVALID_REVNUM,
                                                   ctx, subpool),
                               &success, opt_state->quiet,
                               SVN_ERR_UNVERSIONED_RESOURCE,

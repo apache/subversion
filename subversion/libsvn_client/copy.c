@@ -583,6 +583,7 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
   apr_hash_t *action_hash = apr_hash_make(pool);
   apr_array_header_t *path_infos;
   const char *top_url, *message, *repos_root;
+  apr_hash_t *revprop_table;
   svn_revnum_t youngest;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
@@ -830,10 +831,12 @@ repos_to_repos_copy(svn_commit_info_t **commit_info_p,
         APR_ARRAY_PUSH(paths, const char *) = info->src_path;
     }
 
+  SVN_ERR(svn_client__get_revprop_table(&revprop_table, message, ctx, pool));
+
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
-  SVN_ERR(svn_ra_get_commit_editor2(ra_session, &editor, &edit_baton,
-                                    message,
+  SVN_ERR(svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton,
+                                    revprop_table,
                                     svn_client__commit_callback,
                                     commit_baton, 
                                     NULL, TRUE, /* No lock tokens */
@@ -956,6 +959,7 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
                  apr_pool_t *pool)
 {
   const char *message;
+  apr_hash_t *revprop_table;
   const char *top_src_path, *top_dst_url;
   svn_ra_session_t *ra_session;
   const svn_delta_editor_t *editor;
@@ -1062,6 +1066,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
   else
     message = "";
 
+  SVN_ERR(svn_client__get_revprop_table(&revprop_table, message, ctx, pool));
+
   /* Crawl the working copy for commit items. */
   SVN_ERR(svn_io_check_path(top_src_path, &base_kind, pool));
   if (base_kind == svn_node_dir)
@@ -1137,8 +1143,8 @@ wc_to_repos_copy(svn_commit_info_t **commit_info_p,
 
   /* Fetch RA commit editor. */
   SVN_ERR(svn_client__commit_get_baton(&commit_baton, commit_info_p, pool));
-  if ((cmt_err = svn_ra_get_commit_editor2(ra_session, &editor, &edit_baton, 
-                                           message,
+  if ((cmt_err = svn_ra_get_commit_editor3(ra_session, &editor, &edit_baton, 
+                                           revprop_table,
                                            svn_client__commit_callback,
                                            commit_baton, 
                                            NULL, TRUE, /* No lock tokens */

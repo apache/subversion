@@ -38,10 +38,13 @@ repository) is:
   transactions        Subdirectory containing transactions
     <txnid>.txn       Directory containing transaction <txnid>
   locks               Subdirectory containing locks
-    partial-digest    Subdirectory named for first 3 letters of an MD5 digest
+    <partial-digest>  Subdirectory named for first 3 letters of an MD5 digest
       <digest>        File containing locks/children for path with <digest>
-  current             File specifying current revision
-  write-lock          Lockfile for commits
+  current             File specifying current revision and next node/copy id
+  fs-type             File identifying this filesystem as an FSFS filesystem
+  write-lock          Empty file, locked to serialise writers
+  uuid                File containing the UUID of the repository
+  format              File containing the format number of this filesystem
 
 Files in the revprops directory are in the hash dump format used by
 svn_hash_write.
@@ -53,7 +56,34 @@ copy-ID for the repository.
 
 The "write-lock" file is an empty file which is locked before the
 final stage of a commit and unlocked after the new "current" file has
-been moved into place to indicate that a new revision is present.
+been moved into place to indicate that a new revision is present.  It
+is also locked during a revprop propchange while the revprop file is
+read in, mutated, and written out again.  Note that readers are never
+blocked by any operation - writers must ensure that the filesystem is
+always in a consistent state.
+
+Filesystem formats
+------------------
+
+The "format" file defines what features are permitted within the
+filesystem, and indicates changes that are not backward-compatible.
+It serves the same purpose as the repository file of the same name.
+
+The filesystem format file was introduced in Subversion 1.2, and so
+will not be present if the repository was created with an older
+version of Subversion.  An absent format file should be interpreted as
+indicating a format 1 filesystem.
+
+The format file is a single line of the form "<format number>\n",
+where the format number has the following meanings:
+
+Format 1: (understood by Subversion 1.1+)
+  Delta representations in revision files must contain only svndiff0
+  data.
+
+Format 2: (understood by Subversion 1.4+)
+  Delta representations in revision files may contain either svndiff0
+  or svndiff1 data.
 
 Node-revision IDs
 -----------------
@@ -134,7 +164,7 @@ A revision file contains a concatenation of various kinds of data:
 
   * Text and property representations
   * Node-revisions
-  * At the end, the changed-path data
+  * The changed-path data
   * Two offsets at the very end
 
 A representation begins with a line containing either "PLAIN\n" or
