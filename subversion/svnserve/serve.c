@@ -1268,7 +1268,7 @@ static svn_error_t *update(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?(?w)", &rev, &target,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cb?w", &rev, &target,
                                  &recurse, &depth_word));
   target = svn_path_canonicalize(target, pool);
   if (depth_word)
@@ -1294,7 +1294,7 @@ static svn_error_t *switch_cmd(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc?(?w)", &rev, &target,
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbc?w", &rev, &target,
                                  &recurse, &switch_url, &depth_word));
   target = svn_path_canonicalize(target, pool);
   switch_url = svn_path_canonicalize(switch_url, pool);
@@ -1324,7 +1324,7 @@ static svn_error_t *status(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   svn_depth_t depth = svn_depth_unknown;
 
   /* Parse the arguments. */
-  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb?(?r)?(?w)",
+  SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "cb?(?r)?w",
                                  &target, &recurse, &rev, &depth_word));
   target = svn_path_canonicalize(target, pool);
   if (depth_word)
@@ -1360,7 +1360,7 @@ static svn_error_t *diff(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
     }
   else
     {
-      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbcb?(?w)",
+      SVN_ERR(svn_ra_svn_parse_tuple(params, pool, "(?r)cbbcb?w",
                                      &rev, &target, &recurse,
                                      &ignore_ancestry, &versus_url,
                                      &text_deltas, &depth_word));
