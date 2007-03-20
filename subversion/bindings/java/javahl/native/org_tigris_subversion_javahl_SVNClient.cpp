@@ -1063,7 +1063,8 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertySet__
     {
         return;
     }
-    cl->propertySet(path, name, value, jrecurse ? true:false,
+    cl->propertySet(path, name, (const char *)value.getBytes(),
+        jrecurse ? true:false,
         jforce ? true:false);
 }
 
@@ -1162,7 +1163,8 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_propertyCreat
     {
         return;
     }
-    cl->propertyCreate(path, name, value, jrecurse ? true:false, 
+    cl->propertyCreate(path, name, (const char *)value.getBytes(),
+        jrecurse ? true:false, 
         jforce ? true:false);
 }
 /*

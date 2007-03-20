@@ -75,12 +75,8 @@ public:
                            Revision &pegRevision, jobject outputStream,
                            size_t bufSize);
     void propertyCreate(const char *path, const char *name,
-                            JNIByteArray &value, bool recurse, bool force);
-    void propertyCreate(const char *path, const char *name,
                             const char *value, bool recurse, bool force);
     void propertyRemove(const char *path, const char *name, bool recurse);
-    void propertySet(const char *path, const char *name,
-                         JNIByteArray &value, bool recurse, bool force);
     void propertySet(const char *path, const char *name, const char *value,
                          bool recurse, bool force);
     jobjectArray properties(jobject jthis, const char *path,

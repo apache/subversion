@@ -1311,31 +1311,6 @@ void SVNClient::propertySet(const char *path, const char *name,
     propertySet(path, name, val, recurse, force, SVN_INVALID_REVNUM);
 }
 
-void SVNClient::propertySet(const char *path, const char *name, 
-                            JNIByteArray &value, bool recurse, bool force)
-{
-    Pool requestPool;
-    if (path == NULL)
-    {
-        JNIUtil::throwNullPointerException("path");
-        return;
-    }
-    if (name == NULL)
-    {
-        JNIUtil::throwNullPointerException("name");
-        return;
-    }
-    if (value.isNull())
-    {
-        JNIUtil::throwNullPointerException("value");
-        return;
-    }
-    svn_string_t *val = svn_string_ncreate((const char *)value.getBytes(), 
-                                           value.getLength(), 
-                                           requestPool.pool());
-    propertySet(path, name, val, recurse, force, SVN_INVALID_REVNUM);
-}
-
 void SVNClient::propertyRemove(const char *path, const char *name, 
                                bool recurse)
 {
@@ -1374,32 +1349,6 @@ void SVNClient::propertyCreate(const char *path, const char *name,
         return;
     }
     svn_string_t *val = svn_string_create(value, requestPool.pool());
-    propertySet(path, name, val, recurse, force, SVN_INVALID_REVNUM);
-}
-
-void SVNClient::propertyCreate(const char *path, const char *name, 
-                               JNIByteArray &value, bool recurse, bool force)
-{
-    Pool requestPool;
-    if (path == NULL)
-    {
-        JNIUtil::throwNullPointerException("path");
-        return;
-    }
-    if (name == NULL)
-    {
-        JNIUtil::throwNullPointerException("name");
-        return;
-    }
-    if (value.isNull())
-    {
-        JNIUtil::throwNullPointerException("value");
-        return;
-    }
-
-    svn_string_t *val = svn_string_ncreate((const char *)value.getBytes(), 
-                                            value.getLength(), 
-                                            requestPool.pool());
     propertySet(path, name, val, recurse, force, SVN_INVALID_REVNUM);
 }
 
