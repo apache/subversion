@@ -2590,86 +2590,6 @@ blame_receiver (void *baton,
                 const char *line,
                 apr_pool_t *pool)
 {
-  svn_stream_t *out = (svn_stream_t*)baton;
-  const char *rev_str = SVN_IS_VALID_REVNUM (revision)
-                        ? apr_psprintf (pool, _("%6" SVN_REVNUM_T_FMT), 
-                                        revision)
-                        : _("     -");
-  return svn_stream_printf (out, pool, _("%s %10s %s\n"), rev_str,
-                            author ? author : _("         -"), line);
-}
-jbyteArray SVNClient::blame(const char *path, Revision &revisionStart, 
-                            Revision &revisionEnd)
-{
-    Pool requestPool;
-    if (path == NULL)
-    {
-        JNIUtil::throwNullPointerException("path");
-        return NULL;
-    }
-    apr_pool_t * apr_pool = requestPool.pool ();
-    Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
-
-    svn_client_ctx_t *ctx = getContext(NULL);
-    if (ctx == NULL)
-    {
-        return NULL;
-    }
-    svn_stringbuf_t *buf = svn_stringbuf_create("", apr_pool);
-    svn_stream_t *read_stream = svn_stream_from_stringbuf(buf, apr_pool);
-    Err = svn_client_blame(intPath.c_str(), revisionStart.revision(),
-                           revisionEnd.revision(), blame_receiver,
-                           read_stream, ctx,
-                           apr_pool);
-    if (Err != SVN_NO_ERROR)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
-    size_t size = buf->len;
-
-    JNIEnv *env = JNIUtil::getEnv();
-    jbyteArray ret = env->NewByteArray(size);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    jbyte *retdata = env->GetByteArrayElements(ret, NULL);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-    Err = svn_stream_read(read_stream, (char *)retdata, &size);
-
-    if (Err != NULL)
-    {
-        env->ReleaseByteArrayElements(ret, retdata, 0);
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
-    env->ReleaseByteArrayElements(ret, retdata, 0);
-    if (JNIUtil::isJavaExceptionThrown())
-    {
-        return NULL;
-    }
-
-    return ret;
-}
-static svn_error_t *
-blame_receiver2(void *baton,
-                apr_int64_t line_no,
-                svn_revnum_t revision,
-                const char *author,
-                const char *date,
-                const char *line,
-                apr_pool_t *pool)
-{
     return ((BlameCallback *)baton)->callback(revision, author, date, line, pool);
 }
 void SVNClient::blame(const char *path, Revision &pegRevision, 
@@ -2698,7 +2618,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     }
     Err = svn_client_blame2 (intPath.c_str(), pegRevision.revision(),
                              revisionStart.revision(), revisionEnd.revision(),
-                             blame_receiver2, callback, ctx, apr_pool);
+                             blame_receiver, callback, ctx, apr_pool);
     if (Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);

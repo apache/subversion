@@ -62,8 +62,6 @@ public:
      */
     void setConfigDirectory(const char *configDir);
 
-    jbyteArray blame(const char *path, Revision& revisionStart,
-                         Revision &revisionEnd);
     void blame(const char *path, Revision &pegRevision, 
                    Revision &revisionStart,
                    Revision &revisionEnd, BlameCallback *callback);
