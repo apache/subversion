@@ -2593,8 +2593,8 @@ blame_receiver (void *baton,
     return ((BlameCallback *)baton)->callback(revision, author, date, line, pool);
 }
 void SVNClient::blame(const char *path, Revision &pegRevision, 
-                      Revision &revisionStart,
-                      Revision &revisionEnd, BlameCallback *callback)
+                      Revision &revisionStart, Revision &revisionEnd, 
+                      bool ignoreMimeType, BlameCallback *callback)
 {
     Pool requestPool;
     if (path == NULL)
@@ -2616,9 +2616,10 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     {
         return;
     }
-    Err = svn_client_blame2 (intPath.c_str(), pegRevision.revision(),
-                             revisionStart.revision(), revisionEnd.revision(),
-                             blame_receiver, callback, ctx, apr_pool);
+    Err = svn_client_blame3(intPath.c_str(), pegRevision.revision(),
+                            revisionStart.revision(), revisionEnd.revision(),
+                            svn_diff_file_options_create(apr_pool), false,
+                            blame_receiver, callback, ctx, apr_pool);
     if (Err != SVN_NO_ERROR)
     {
         JNIUtil::handleSVNError(Err);
