@@ -1511,10 +1511,10 @@ public class SVNClient implements SVNClientInterface
     static native void initNative();
 
     /**
-     * A class to receive the output of a call to blame(), so that is can be
-     * collected into a byte array.
+     * A {@link #blame()} callback which receives and collects line
+     * information, formatting it for textual output.
      */
-    private class BlameReceiver
+    private static class BlameReceiver
         implements BlameCallback
     {
         private StringBuffer sb = new StringBuffer();
@@ -1532,23 +1532,23 @@ public class SVNClient implements SVNClientInterface
 
             for (int i = 0; i < padding; i++)
             {
-                sb.append(" ");
+                sb.append(' ');
             }
 
             sb.append(val);
         }
 
         /**
-         * Called once for each line.  Append the line information to the
-         * string builder.
+         * Append the line information to the current text.  Called
+         * once for each line.
          */
         public void singleLine(Date changed, long revision, String author,
-               String line)
+                               String line)
         {
             if (revision > 0)
             {
                 pad(Long.toString(revision), 6);
-                sb.append(" ");
+                sb.append(' ');
             }
             else
             {
@@ -1570,8 +1570,8 @@ public class SVNClient implements SVNClientInterface
         }
 
         /**
-         * Return the result string up to this point.
-         * @return  the string out blame output
+         * Return the current blame output as formatted text.
+         * @return The blame output.
          */
         public String getResult()
         {
