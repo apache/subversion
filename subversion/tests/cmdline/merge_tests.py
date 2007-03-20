@@ -4973,7 +4973,7 @@ def local_mergeinfo_elision_and_inheritance(sbox):
   finally:
     os.chdir(saved_cwd)
 
-def mergeinfo_inheritence_and_discontinuous_ranges(sbox):
+def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   "discontinuous merges produce correct mergeinfo"
 
   # When a merge target has no explicit mergeinfo and is subject
@@ -5153,7 +5153,7 @@ test_list = [ None,
               avoid_repeated_merge_on_subtree_with_merge_info,
               obey_reporter_api_semantics_while_doing_subtree_merges,
               XFail(local_mergeinfo_elision_and_inheritance),
-              XFail(mergeinfo_inheritence_and_discontinuous_ranges),
+              XFail(mergeinfo_inheritance_and_discontinuous_ranges),
              ]
 
 if __name__ == '__main__':
