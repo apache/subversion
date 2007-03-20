@@ -1583,6 +1583,32 @@ public class SVNClientSynchronized implements SVNClientInterface
     }
 
     /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * @param path          the path
+     * @param pegRevision   the revision to interpret the path
+     * @param revisionStart the first revision to show
+     * @param revisionEnd   the last revision to show
+     * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param callback      callback to receive the file content and the other
+     *                      information
+     * @throws ClientException
+     * @since 1.5
+     */
+
+    public void blame(String path, Revision pegRevision, Revision revisionStart,
+                      Revision revisionEnd, boolean ignoreMimeType,
+                      BlameCallback callback)
+            throws ClientException
+    {
+        synchronized(clazz)
+        {
+            worker.blame(path, pegRevision, revisionStart, revisionEnd,
+                    ignoreMimeType, callback);
+        }
+    }
+
+    /**
      * Set directory for the configuration information
      * @param configDir     path of the directory
      * @throws ClientException

@@ -1077,6 +1077,24 @@ public interface SVNClientInterface
                BlameCallback callback) throws ClientException;
 
     /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * @param path          the path
+     * @param pegRevision   the revision to interpret the path
+     * @param revisionStart the first revision to show
+     * @param revisionEnd   the last revision to show
+     * @param ignoreMimeType whether or not to ignore the mime-type
+     * @param callback      callback to receive the file content and the other
+     *                      information
+     * @throws ClientException
+     * @since 1.5
+     */
+
+    void blame(String path, Revision pegRevision, Revision revisionStart,
+               Revision revisionEnd, boolean ignoreMimeType,
+               BlameCallback callback) throws ClientException;
+
+    /**
      * Set directory for the configuration information, taking the
      * usual steps to ensure that Subversion's config file templates
      * exist in the specified location.
