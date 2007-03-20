@@ -209,28 +209,6 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_statu
 
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
- * Method:    singleStatus
- * Signature: (Ljava/lang/String;ZZ)Lorg/tigris/subversion/javahl/Status;
- */
-JNIEXPORT jobject JNICALL Java_org_tigris_subversion_javahl_SVNClient_singleStatus
-  (JNIEnv* env, jobject jthis, jstring jpath, jboolean jonServer)
-{
-    JNIEntry(SVNClient, singleStatus);
-    SVNClient *cl = SVNClient::getCppObject(jthis);
-    if (cl == NULL)
-    {
-        return NULL;
-    }
-    JNIStringHolder path(jpath);
-    if (JNIUtil::isExceptionThrown())
-    {
-        return NULL;
-    }
-    return cl->singleStatus(path, jonServer ? true:false);
-}
-
-/*
- * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    username
  * Signature: (Ljava/lang/String;)V
  */
