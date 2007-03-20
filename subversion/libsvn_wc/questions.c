@@ -29,7 +29,6 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_time.h"
-#include "svn_wc.h"
 #include "svn_io.h"
 #include "svn_props.h"
 
@@ -43,6 +42,7 @@
 #include <apr_md5.h>
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /* ### todo: make this compare repository too?  Or do so in parallel
@@ -179,14 +179,7 @@ svn_wc__timestamps_equal_p(svn_boolean_t *equal_p,
   const svn_wc_entry_t *entry;
 
   /* Get the timestamp from the entries file */
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-
-  /* Can't compare timestamps for an unversioned file. */
-  if (entry == NULL)
-    return svn_error_createf
-      (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-       _("'%s' is not under version control"),
-       svn_path_local_style(path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   /* Get the timestamp from the working file and the entry */
   if (timestamp_kind == svn_wc__text_time)
@@ -294,13 +287,8 @@ compare_and_verify(svn_boolean_t *modified_p,
         {
           /* Need checksum verification, so read checksum from entries file
            * and setup checksummed stream for base file. */
-          SVN_ERR(svn_wc_entry(&entry, versioned_file, adm_access, TRUE,
-                               pool));
-          if (! entry)
-            return svn_error_createf
-              (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                _("'%s' is not under version control"),
-                svn_path_local_style(versioned_file, pool));
+          SVN_ERR(svn_wc__entry_versioned(&entry, versioned_file, adm_access,
+                                         TRUE, pool));
 
           if (entry->checksum)
             b_stream = svn_stream_checksummed(b_stream, &digest, NULL, TRUE,

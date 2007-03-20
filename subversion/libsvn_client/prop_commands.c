@@ -32,6 +32,7 @@
 #include "svn_props.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -351,11 +352,7 @@ svn_client_propset3(svn_commit_info_t **commit_info_p,
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, target, TRUE,
                                  recurse ? -1 : 0, ctx->cancel_func,
                                  ctx->cancel_baton, pool));
-  SVN_ERR(svn_wc_entry(&node, target, adm_access, FALSE, pool));
-  if (!node)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), 
-                             svn_path_local_style(target, pool));
+  SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
 
   if (recurse && node->kind == svn_node_dir)
     {
@@ -605,11 +602,8 @@ maybe_convert_to_url(const char **new_target,
       
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, pdir, FALSE,
                                0, NULL, NULL, pool));
-      SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, pool));
-      if (! entry)
-        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                 _("'%s' is not under version control"), 
-                                 svn_path_local_style(target, pool));
+      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE, pool));
+
       *new_target = entry->url;
     }
   else
@@ -768,13 +762,8 @@ svn_client_propget3(apr_hash_t **props,
                                      FALSE, recurse ? -1 : 0,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
-      SVN_ERR(svn_wc_entry(&node, target, adm_access, FALSE, pool));
-      if (! node)
-        return svn_error_createf 
-          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-           _("'%s' is not under version control"),
-           svn_path_local_style(target, pool));
-      
+      SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
+
       SVN_ERR(svn_client__get_revision_number
               (&revnum, NULL, revision, target, pool));
 
@@ -1104,13 +1093,8 @@ svn_client_proplist3(const char *target,
                                      FALSE, recurse ? -1 : 0,
                                      ctx->cancel_func, ctx->cancel_baton,
                                      pool));
-      SVN_ERR(svn_wc_entry(&node, target, adm_access, FALSE, pool));
-      if (! node)
-        return svn_error_createf 
-          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-           _("'%s' is not under version control"),
-           svn_path_local_style(target, pool));
-      
+      SVN_ERR(svn_wc__entry_versioned(&node, target, adm_access, FALSE, pool));
+
       SVN_ERR(svn_client__get_revision_number
               (&revnum, NULL, revision, target, pool));
 

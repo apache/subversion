@@ -25,7 +25,6 @@
 #include <apr_strings.h>
 #include <apr_pools.h>
 #include <apr_hash.h>
-#include "svn_wc.h"
 #include "svn_delta.h"
 #include "svn_diff.h"
 #include "svn_client.h"
@@ -42,6 +41,7 @@
 #include <assert.h>
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 /*
  * Constant separator strings
@@ -2787,11 +2787,8 @@ svn_client_merge2(const char *source1,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  SVN_ERR(svn_wc_entry(&entry, target_wcpath, adm_access, FALSE, pool));
-  if (entry == NULL)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), 
-                             svn_path_local_style(target_wcpath, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
+                                 pool));
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.dry_run = dry_run;
@@ -2915,11 +2912,8 @@ svn_client_merge_peg2(const char *source,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  SVN_ERR(svn_wc_entry(&entry, target_wcpath, adm_access, FALSE, pool));
-  if (entry == NULL)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), 
-                             svn_path_local_style(target_wcpath, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
+                                 pool));
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.dry_run = dry_run;

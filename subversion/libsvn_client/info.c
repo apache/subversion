@@ -2,7 +2,7 @@
  * info.c:  return system-generated metadata about paths or URLs.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -22,11 +22,11 @@
 
 #include "client.h"
 #include "svn_client.h"
-#include "svn_wc.h"
 #include "svn_pools.h"
 #include "svn_path.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /* Helper: build an svn_info_t *INFO struct from svn_dirent_t DIRENT
@@ -237,12 +237,7 @@ crawl_entries(const char *wcpath,
                                  recurse ? -1 : 0,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
-  SVN_ERR(svn_wc_entry(&entry, wcpath, adm_access, FALSE, pool));
-  if (! entry)
-    {
-      return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                               _("Cannot read entry for '%s'"), wcpath);
-    }
+  SVN_ERR(svn_wc__entry_versioned(&entry, wcpath, adm_access, FALSE, pool));
 
   SVN_ERR(build_info_from_entry(&info, entry, pool));
   fe_baton.receiver = receiver;
