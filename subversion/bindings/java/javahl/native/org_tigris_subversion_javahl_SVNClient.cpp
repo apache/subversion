@@ -1697,12 +1697,13 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_relocate
  * Method:    blame
  * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;
  *             Lorg/tigris/subversion/javahl/Revision;
- *             Lorg/tigris/subversion/javahl/Revision;
+ *             Lorg/tigris/subversion/javahl/Revision;Z
  *             Lorg/tigris/subversion/javahl/BlameCallback;)V
  */
 JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame
   (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision, 
-   jobject jrevisionStart, jobject jrevisionEnd, jobject jblameCallback)
+   jobject jrevisionStart, jobject jrevisionEnd, jboolean jignoreMimeType,
+   jobject jblameCallback)
 {
     JNIEntry(SVNClient, blame);
     SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -1732,7 +1733,8 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_blame
         return;
     }
     BlameCallback callback(jblameCallback);
-    cl->blame(path, pegRevision, revisionStart, revisionEnd, &callback);
+    cl->blame(path, pegRevision, revisionStart, revisionEnd, 
+        jignoreMimeType ? true : false, &callback);
 }
 /*
  * Class:     org_tigris_subversion_javahl_SVNClient
