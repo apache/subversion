@@ -236,7 +236,10 @@ svn_client_status3(svn_revnum_t *result_rev,
   anchor = svn_wc_adm_access_path(anchor_access);
 
   /* ### TODO(sd): If depth is svn_depth_unknown, we should get the depth
-     ### from the working copy here. */
+     ### from the working copy here.  Until we get it from the WC,
+     ### default to a depth of infinity. */
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
 
   /* Get the status edit, and use our wrapping status function/baton
      as the callback pair. */
