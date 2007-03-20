@@ -270,8 +270,11 @@ public class SVNClient implements SVNClientInterface
      * @param onServer  Request status information from the server.
      * @return  the subversion status of the file.
      */
-    public native Status singleStatus(String path, boolean onServer)
-            throws ClientException;
+    public Status singleStatus(String path, boolean onServer)
+            throws ClientException
+    {
+        return status(path, false, onServer, true, false, false)[0];
+    }
     /**
      * Sets the user name used for authentification.
      * @param username The user name.
