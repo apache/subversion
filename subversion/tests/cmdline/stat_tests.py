@@ -1292,10 +1292,18 @@ def status_dash_u_deleted_directories(sbox):
 
     # again, but now from inside B, should give the same output
     os.chdir("B")
+    xout = ["D               1   %s\n" % ".",
+            "D               1   %s\n" % "lambda",
+            "D               1   %s\n" % "E",
+            "D               1   %s\n" % os.path.join("E", "alpha"),
+            "D               1   %s\n" % os.path.join("E", "beta"),
+            "D               1   %s\n" % "F",
+            "Status against revision:      1\n" ]
     output, errput = svntest.actions.run_and_verify_svn(None,
                                                         SVNAnyOutput,
                                                         [],
                                                         "status", "-u", ".")
+    
     svntest.main.compare_unordered_output(xout, output)
 
     # check status -u of B/E
@@ -1303,12 +1311,15 @@ def status_dash_u_deleted_directories(sbox):
             "D               1   %s\n" % os.path.join("B", "E", "alpha"),
             "D               1   %s\n" % os.path.join("B", "E", "beta"),
             "Status against revision:      1\n" ]
+    
+    os.chdir(was_cwd)
     os.chdir(A_path)
     output, errput = svntest.actions.run_and_verify_svn(None,
                                                         SVNAnyOutput,
                                                         [],
                                                         "status", "-u",
                                                         os.path.join("B", "E"))
+
     svntest.main.compare_unordered_output(xout, output)
   finally:
     os.chdir(was_cwd)

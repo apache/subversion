@@ -53,6 +53,7 @@
 #include "translate.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Finishing updates and commits. ***/
@@ -1362,11 +1363,7 @@ svn_wc_get_ancestry(char **url,
 {
   const svn_wc_entry_t *ent;
 
-  SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
-  if (! ent)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
 
   if (url)
     *url = apr_pstrdup(pool, ent->url);
@@ -1962,12 +1959,8 @@ svn_wc_revert2(const char *path,
   SVN_ERR(svn_wc_adm_probe_retrieve(&dir_access, parent_access, path, pool));
 
   /* Safeguard 1:  is this a versioned resource? */
-  SVN_ERR(svn_wc_entry(&entry, path, dir_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf 
-      (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-       _("Cannot revert: '%s' is not under version control"),
-       svn_path_local_style(path, pool));
+  SVN_ERR_W(svn_wc__entry_versioned(&entry, path, dir_access, FALSE, pool),
+            "Cannot revert.");
 
   /* Safeguard 1.5: is this a missing versioned directory? */
   if (entry->kind == svn_node_dir)
@@ -2666,11 +2659,7 @@ svn_wc_resolved_conflict2(const char *path,
   if (! recurse)
     {
       const svn_wc_entry_t *entry;
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-      if (! entry)
-        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                 _("'%s' is not under version control"),
-                                 svn_path_local_style(path, pool));
+      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
       SVN_ERR(resolve_found_entry_callback(path, entry, baton, pool));
     }
@@ -2691,11 +2680,8 @@ svn_error_t *svn_wc_add_lock(const char *path, const svn_lock_t *lock,
   const svn_wc_entry_t *entry;
   svn_wc_entry_t newentry;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), path);
 
   newentry.lock_token = lock->token;
   newentry.lock_owner = lock->owner;
@@ -2727,11 +2713,7 @@ svn_error_t *svn_wc_remove_lock(const char *path,
   const svn_wc_entry_t *entry;
   svn_wc_entry_t newentry;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), path);
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   newentry.lock_token = newentry.lock_owner = newentry.lock_comment = NULL;
   newentry.lock_creation_date = 0;

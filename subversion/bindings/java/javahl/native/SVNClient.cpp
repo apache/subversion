@@ -37,6 +37,7 @@
 #include "svn_client.h"
 #include "svn_sorts.h"
 #include "svn_time.h"
+#include "svn_diff.h"
 #include "svn_config.h"
 #include "svn_io.h"
 #include "svn_path.h"
@@ -311,76 +312,6 @@ jobjectArray SVNClient::status(const char *path, bool descend, bool onServer,
     }
 }
 
-jobject SVNClient::singleStatus(const char *path, bool onServer)
-{
-    status_baton statusBaton;
-    Pool requestPool;
-    svn_revnum_t youngest = SVN_INVALID_REVNUM;
-    svn_opt_revision_t rev;
-
-    if (path == NULL)
-    {
-        JNIUtil::throwNullPointerException("path");
-        return NULL;
-    }
-
-    svn_client_ctx_t *ctx = getContext(NULL);
-    if (ctx == NULL)
-    {
-        return NULL;
-    }
-
-
-    rev.kind = svn_opt_revision_unspecified;
-    statusBaton.pool = requestPool.pool();
-    Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
-
-    Err = svn_client_status2(&youngest, intPath.c_str(), &rev, 
-                             statusReceiver, &statusBaton,
-                             FALSE, // DESCEND
-                             TRUE,  // get_All
-                             onServer ? TRUE : FALSE,     //update
-                             FALSE,     //no_ignore,
-                             FALSE,     // ignore externals
-                             ctx,
-                             requestPool.pool());
-    if (Err == NULL)
-    {
-        int size = statusBaton.statusVect.size();
-        if (size == 0)
-            return NULL;
-
-        // when svn_client_status is used with a directory, the status of the 
-        // directory itself and the status of all its direct children are 
-        // returned
-        // we just want the status of the directory (ie the status of the 
-        // element with the shortest path)
-        int j = 0;
-        for (int i = 0; i < size; i++)
-        {
-            if (strlen(statusBaton.statusVect[i].path) < 
-                   strlen(statusBaton.statusVect[j].path))
-                j = i;
-        }
-
-        jobject jStatus = createJavaStatus(statusBaton.statusVect[j].path, 
-                                           statusBaton.statusVect[j].status);
-
-        return jStatus;
-    }
-    else
-    {
-         JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
-}
-
 void SVNClient::username(const char *pi_username)
 {
     m_userName = (pi_username == NULL ? "" : pi_username);
@@ -397,7 +328,8 @@ void SVNClient::setPrompt(Prompter *prompter)
     m_prompter = prompter;
 }
 
-jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart,
+jobjectArray SVNClient::logMessages(const char *path, Revision &pegRevision,
+                                    Revision &revisionStart,
                                     Revision &revisionEnd, bool stopOnCopy,
                                     bool discoverPaths, long limit)
 {
@@ -423,7 +355,8 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart,
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
-    Err = svn_client_log2(targets,
+    Err = svn_client_log3(targets,
+                          pegRevision.revision(),
                           revisionStart.revision (),
                           revisionEnd.revision (),
                           limit,

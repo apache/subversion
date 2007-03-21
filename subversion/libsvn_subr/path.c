@@ -591,7 +591,8 @@ svn_path_get_longest_ancestor(const char *path1,
       path_ancestor_len = get_path_ancestor_length(path1 + i, path2 + i, 
                                                    pool);
 
-      if (path_ancestor_len == 0)
+      if (path_ancestor_len == 0 ||
+          (path_ancestor_len == 1 && (path1 + i)[0] == '/'))
         return apr_pmemdup(pool, SVN_EMPTY_PATH, sizeof(SVN_EMPTY_PATH));
       else
         return apr_pstrndup(pool, path1, path_ancestor_len + i); 

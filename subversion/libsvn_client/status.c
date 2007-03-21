@@ -2,7 +2,7 @@
  * status.c:  return the status of a working copy dirent
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -28,13 +28,13 @@
 #include "svn_pools.h"
 #include "client.h"
 
-#include "svn_wc.h"
 #include "svn_path.h"
 #include "svn_delta.h"
 #include "svn_client.h"
 #include "svn_error.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Getting update information ***/
@@ -263,12 +263,8 @@ svn_client_status3(svn_revnum_t *result_rev,
 
       /* Get full URL from the ANCHOR. */
       if (! entry)
-        SVN_ERR(svn_wc_entry(&entry, anchor, anchor_access, FALSE, pool));
-      if (! entry)
-        return svn_error_createf
-          (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-           _("'%s' is not under version control"),
-           svn_path_local_style(anchor, pool));
+        SVN_ERR(svn_wc__entry_versioned(&entry, anchor, anchor_access, FALSE,
+                                        pool));
       if (! entry->url)
         return svn_error_createf
           (SVN_ERR_ENTRY_MISSING_URL, NULL,

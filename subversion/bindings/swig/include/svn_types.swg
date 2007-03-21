@@ -102,6 +102,7 @@
   /* svn_client */
   svn_client_commit_info_t **,
   svn_client_ctx_t **,
+  const svn_client_commit_item3_t **,
   /* svn_delta */
   const svn_delta_editor_t **,
   svn_txdelta_stream_t **,

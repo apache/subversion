@@ -24,6 +24,18 @@ module Svn
       end
     end
 
+    class CommitItem3
+      class << self
+        undef new
+        def new
+          item = Client.commit_item_create
+          item.__send!("initialize")
+          item
+        end
+      end
+     end
+    end
+
     class Info
       alias url URL
       alias repos_root_url repos_root_URL
@@ -57,7 +69,7 @@ module Svn
         undef new
         def new
           obj = Client.create_context
-          obj.funcall("initialize")
+          obj.__send!("initialize")
           obj
         end
       end
@@ -489,6 +501,12 @@ module Svn
 
       def add_ssl_server_trust_file_provider
         add_provider(Core.auth_get_ssl_server_trust_file_provider)
+      end
+
+      if Core.respond_to?(:get_windows_ssl_server_trust_provider)
+        def add_windows_ssl_server_trust_provider
+          add_provider(Core.auth_get_windows_ssl_server_trust_provider)
+        end
       end
 
       def add_simple_prompt_provider(retry_limit, prompt=Proc.new)

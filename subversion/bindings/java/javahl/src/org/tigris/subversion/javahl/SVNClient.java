@@ -20,7 +20,6 @@ package org.tigris.subversion.javahl;
 
 import java.io.File;
 import java.io.OutputStream;
-import java.util.Date;
 
 /**
  * This is the main interface class. All subversion commandline client svn &
@@ -270,8 +269,11 @@ public class SVNClient implements SVNClientInterface
      * @param onServer  Request status information from the server.
      * @return  the subversion status of the file.
      */
-    public native Status singleStatus(String path, boolean onServer)
-            throws ClientException;
+    public Status singleStatus(String path, boolean onServer)
+            throws ClientException
+    {
+        return status(path, false, onServer, true, false, false)[0];
+    }
     /**
      * Sets the user name used for authentification.
      * @param username The user name.
@@ -352,7 +354,32 @@ public class SVNClient implements SVNClientInterface
      * @return array of LogMessages
      * @since 1.2
      */
-    public native LogMessage[] logMessages(String path, Revision revisionStart,
+    public LogMessage[] logMessages(String path, Revision revisionStart,
+                                           Revision revisionEnd,
+                                           boolean stopOnCopy,
+                                           boolean discoverPath,
+                                           long limit) throws ClientException
+    {
+        return logMessages(path, revisionEnd, revisionStart, revisionEnd,
+                stopOnCopy, discoverPath, limit);
+    }
+
+    /**
+     * Retrieve the log messages for an item
+     * @param path          path or url to get the log message for.
+     * @param pegRevision   the revision to interpret path
+     * @param revisionStart first revision to show
+     * @param revisionEnd   last revision to show
+     * @param stopOnCopy    do not continue on copy operations
+     * @param discoverPath  returns the paths of the changed items in the
+     *                      returned objects
+     * @param limit         limit the number of log messages (if 0 or less no
+     *                      limit)
+     * @return array of LogMessages
+     * @since 1.5
+     */
+    public native LogMessage[] logMessages(String path, Revision pegRevision,
+                                           Revision revisionStart,
                                            Revision revisionEnd,
                                            boolean stopOnCopy,
                                            boolean discoverPath,
@@ -1284,10 +1311,20 @@ public class SVNClient implements SVNClientInterface
     public byte[] blame(String path, Revision revisionStart,
                         Revision revisionEnd) throws ClientException
     {
-        BlameReceiver callback = new BlameReceiver();
-        blame(path, revisionEnd, revisionStart, revisionEnd, callback);
+        BlameCallbackImpl callback = new BlameCallbackImpl();
+        blame(path, revisionEnd, revisionStart, revisionEnd, false, callback);
 
-        return callback.getResult().getBytes();
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < callback.numberOfLines(); i++)
+        {
+            BlameCallbackImpl.BlameLine line = callback.getBlameLine(i);
+            if (line != null)
+            {
+                sb.append(line.toString());
+                sb.append("\n");
+            }
+        }
+        return sb.toString().getBytes();
     }
     /**
      * Retrieve the content together with the author, the revision and the date
@@ -1303,7 +1340,7 @@ public class SVNClient implements SVNClientInterface
                              Revision revisionEnd, BlameCallback callback)
             throws ClientException
     {
-        blame(path, revisionEnd, revisionStart, revisionEnd, callback);
+        blame(path, revisionEnd, revisionStart, revisionEnd, false, callback);
     }
 
     /**
@@ -1506,73 +1543,4 @@ public class SVNClient implements SVNClientInterface
      * NativeResources.loadNativeLibrary
      */
     static native void initNative();
-
-    /**
-     * A class to receive the output of a call to blame(), so that is can be
-     * collected into a byte array.
-     */
-    private class BlameReceiver
-        implements BlameCallback
-    {
-        private StringBuilder sb = new StringBuilder();
-
-        /**
-         * Left pad the input string to a given length, to simulate printf()-
-         * style output.  This method appends the output to the class sb
-         * member.
-         * @param val       the input string
-         * @param len       the minimum length to pad to
-         */
-        private void pad(String val, int len)
-        {
-            int padding = len - val.length();
-
-            for (int i = 0; i < padding; i++)
-            {
-                sb.append(" ");
-            }
-
-            sb.append(val);
-        }
-
-        /**
-         * Called once for each line.  Append the line information to the
-         * string builder.
-         */
-        public void singleLine(Date changed, long revision, String author,
-               String line)
-        {
-            if (revision > 0)
-            {
-                pad(Long.toString(revision), 6);
-                sb.append(" ");
-            }
-            else
-            {
-                sb.append("     - ");
-            }
-
-            if (author != null)
-            {
-                pad(author, 10);
-                sb.append(" ");
-            }
-            else
-            {
-                sb.append("         - ");
-            }
-
-            sb.append(line);
-            sb.append("\n");
-        }
-
-        /**
-         * Return the result string up to this point.
-         * @return  the string out blame output
-         */
-        public String getResult()
-        {
-            return sb.toString();
-        }
-    }
 }

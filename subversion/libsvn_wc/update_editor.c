@@ -38,7 +38,6 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_md5.h"
-#include "svn_wc.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
 
@@ -51,6 +50,8 @@
 #include "lock.h"
 #include "props.h"
 #include "translate.h"
+
+#include "private/svn_wc_private.h"
 
 
 /*** batons ***/
@@ -2325,11 +2326,20 @@ merge_file(svn_wc_notify_state_t *content_state,
     } /* end: "textual" merging process */
   else
     {
-      if (magic_props_changed) /* no new text base, but... */
+      apr_hash_t *keywords;
+
+      SVN_ERR(svn_wc__get_keywords(&keywords, fb->path,
+                                   adm_access, NULL, pool));
+      if (magic_props_changed || keywords)
+        /* no new text base, but... */
         {
           /* Special edge-case: it's possible that this file installation
              only involves propchanges, but that some of those props still
-             require a retranslation of the working file. */
+             require a retranslation of the working file.
+
+             OR that the file doesn't involve propchanges which by themselves
+             require retranslation, but receiving a change bumps the revision
+             number which requires re-expansion of keywords... */
 
           const char *tmptext;
 
@@ -3142,11 +3152,7 @@ svn_wc_add_repos_file2(const char *dst_path,
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
   {
-    SVN_ERR(svn_wc_entry(&ent, dir_name, adm_access, FALSE, pool));
-    if (! ent)
-      return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                               _("'%s' is not under version control"),
-                               svn_path_local_style(dir_name, pool));
+    SVN_ERR(svn_wc__entry_versioned(&ent, dir_name, adm_access, FALSE, pool));
 
     new_URL = svn_path_url_add_component(ent->url, base_name, pool);
 

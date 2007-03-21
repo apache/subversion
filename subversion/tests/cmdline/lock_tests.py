@@ -739,7 +739,7 @@ def lock_non_existent_file(sbox):
                                        '--password', svntest.main.wc_passwd,
                                        '-m', '', file_path)
 
-  error_msg = "'foo' is not under version control"
+  error_msg = "foo' is not under version control"
   for line in error:
     if line.find(error_msg) != -1:
       break

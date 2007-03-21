@@ -2,7 +2,7 @@
  * switch.c:  implement 'switch' feature via WC & RA interfaces.
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -24,7 +24,6 @@
 
 #include <assert.h>
 
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_time.h"
@@ -33,6 +32,7 @@
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -101,11 +101,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
                                  ctx->cancel_baton, pool));
   anchor = svn_wc_adm_access_path(adm_access);
 
-  SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL, 
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(anchor, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, anchor, adm_access, FALSE, pool));
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
