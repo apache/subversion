@@ -1695,7 +1695,7 @@ class SvnClientTest < Test::Unit::TestCase
   end
 
   def test_windows_simple_provider
-    return unless Svn::Core.respond_to?(:add_windows_simple_provider)
+    return unless Svn::Core.respond_to?(:auth_get_windows_simple_provider)
 
     log = "sample log"
     src = normalize_line_break("source\n")
@@ -1793,6 +1793,9 @@ class SvnClientTest < Test::Unit::TestCase
       ctx.add_ssl_client_cert_file_provider
       ctx.add_ssl_client_cert_pw_file_provider
       ctx.add_ssl_server_trust_file_provider
+      if Svn::Core.respond_to?(:auth_get_windows_ssl_server_trust_provider)
+        ctx.add_windows_ssl_server_trust_provider
+      end
     end
   end
 
