@@ -1169,8 +1169,8 @@ svn_repos_abort_report(void *baton, apr_pool_t *pool)
 
 
 /* Behaves as per the docs for svn_repos_begin_report2(), with the
-   additional parameter DEFAULT_DEPTH for compatibility with
-   svn_repos_begin_report() and set_path(). */
+   additional parameter DEFAULT_DEPTH for compatibility with the
+   original svn_repos_begin_report() API. */
 static svn_error_t *
 begin_report(void **report_baton,
              svn_revnum_t revnum,
