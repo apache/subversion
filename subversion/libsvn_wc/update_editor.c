@@ -2314,11 +2314,20 @@ merge_file(svn_wc_notify_state_t *content_state,
     } /* end: "textual" merging process */
   else
     {
-      if (magic_props_changed) /* no new text base, but... */
+      apr_hash_t *keywords;
+
+      SVN_ERR(svn_wc__get_keywords(&keywords, fb->path,
+                                   adm_access, NULL, pool));
+      if (magic_props_changed || keywords)
+        /* no new text base, but... */
         {
           /* Special edge-case: it's possible that this file installation
              only involves propchanges, but that some of those props still
-             require a retranslation of the working file. */
+             require a retranslation of the working file.
+
+             OR that the file doesn't involve propchanges which by themselves
+             require retranslation, but receiving a change bumps the revision
+             number which requires re-expansion of keywords... */
 
           const char *tmptext;
 
