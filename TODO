@@ -10,7 +10,7 @@ for repos dump/load, including the merge history index.
 
 * Make parameters to the 'svn merge -cN URL' command optional.  This
   should be supported by the API itself (not just in the command-line
-  client).
+  client).  (kamesh/dlr)
 
   * Default revision range to "all unmerged revisions" (for -r/-c),
     "oldest revision at merge source's path" thru HEAD.
