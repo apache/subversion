@@ -70,8 +70,18 @@ $SERVER_CMD -d -r $ABS_BUILDDIR/subversion/tests/cmdline \
             --listen-port $SVNSERVE_PORT \
             --pid-file $SVNSERVE_PID &
 
-time make check BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
-r=$?
+BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
+if [ $# == 0 ]; then
+  time make check "BASE_URL=$BASE_URL"
+  r=$?
+else
+  pushd "$ABS_BUILDDIR/subversion/tests/cmdline/" >/dev/null
+  TEST="$1"
+  shift
+  time "$SCRIPTDIR/${TEST}_tests.py" "--url=$BASE_URL" $*
+  r=$?
+  popd >/dev/null
+fi
 
 really_cleanup
 exit $r
