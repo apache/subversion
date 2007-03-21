@@ -122,5 +122,13 @@ Candidate changes:
     Votes:
       +1: blair
 
+ * r23959
+   Fix issue #1745: Inconsistent expansion of keyword
+   Justification:
+     Inconsistencies are never good. Small change.
+   Branch: 1.4.x-r23959
+   Votes:
+     +1: dionisos, dlr
+
 Approved changes:
 
