@@ -2,7 +2,7 @@
  * update_editor.c :  main editor for checkouts and updates
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -2013,29 +2013,41 @@ merge_file(svn_stringbuf_t *log_accum,
           tmp_txtb = svn_wc__text_revert_path(base_name, TRUE, pool);
         }
     }
-  else if (magic_props_changed) /* no new text base, but... */
+  else
     {
-      /* Special edge-case: it's possible that this file installation
-         only involves propchanges, but that some of those props still
-         require a retranslation of the working file. */
+      apr_hash_t *keywords;
 
-      const char *tmptext;
+      SVN_ERR(svn_wc__get_keywords(&keywords, file_path,
+                                   adm_access, NULL, pool));
+      if (magic_props_changed || keywords)
+        /* no new text base, but... */
+        {
+          /* Special edge-case: it's possible that this file installation
+             only involves propchanges, but that some of those props still
+             require a retranslation of the working file.
 
-      /* A log command which copies and DEtranslates the working file
-         to a tmp-text-base. */
-      SVN_ERR(svn_wc_translated_file2(&tmptext, file_path, file_path,
-                                      adm_access,
-                                      SVN_WC_TRANSLATE_TO_NF
-                                      | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
-                                      pool));
+             OR that the file doesn't involve propchanges which by themselves
+             require retranslation, but receiving a change bumps the revision
+             number which requires re-expansion of keywords... */
 
-      tmptext = svn_path_is_child(parent_dir, tmptext, pool);
-      /* A log command that copies the tmp-text-base and REtranslates
-         the tmp-text-base back to the working file. */
-      SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
+          const char *tmptext;
+
+          /* A log command which copies and DEtranslates the working file
+             to a tmp-text-base. */
+          SVN_ERR(svn_wc_translated_file2(&tmptext, file_path, file_path,
+                                          adm_access,
+                                          SVN_WC_TRANSLATE_TO_NF
+                                          | SVN_WC_TRANSLATE_NO_OUTPUT_CLEANUP,
+                                          pool));
+
+          tmptext = svn_path_is_child(parent_dir, tmptext, pool);
+          /* A log command that copies the tmp-text-base and REtranslates
+             the tmp-text-base back to the working file. */
+          SVN_ERR(svn_wc__loggy_copy(&log_accum, NULL, adm_access,
                                  svn_wc__copy_translate,
-                                 tmptext, base_name, FALSE, pool));
+                                     tmptext, base_name, FALSE, pool));
 
+        }
     }
 
   /* Set the new revision and URL in the entry and clean up some other
