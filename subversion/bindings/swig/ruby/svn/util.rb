@@ -13,9 +13,9 @@ end
 
 require 'tempfile'
 
-unless respond_to?(:funcall)
+unless respond_to?(:__send!)
   module Kernel
-    alias funcall __send__
+    alias __send! __send__
   end
 end
 
