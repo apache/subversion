@@ -24,6 +24,18 @@ module Svn
       end
     end
 
+    class CommitItem3
+      class << self
+        undef new
+        def new
+          item = Client.commit_item_create
+          item.__send!("initialize")
+          item
+        end
+      end
+     end
+    end
+
     class Info
       alias url URL
       alias repos_root_url repos_root_URL
