@@ -496,7 +496,7 @@ void JNIUtil::setExceptionThrown()
     if (g_inInit)
     {
         // During global initialization, store any errors that occur
-        // in in a global variable (since thread-local storage may not
+        // in a global variable (since thread-local storage may not
         // yet be available).
         g_initException = true;
     }
