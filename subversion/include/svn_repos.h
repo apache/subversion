@@ -398,16 +398,6 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  * @a text_deltas instructs the driver of the @a editor to enable
  * the generation of text deltas.
  *
- * @a depth tells the driver of the @a editor whether and how deeply
- * to recurse by default.  This depth can be overridden for subpaths
- * by explicitly telling the reporter that they are at different
- * depths.  For example, if the reported tree is the @c A subdir of
- * the Greek Tree, at depth @c svn_depth_empty, but the @c A/B subdir
- * is reported at depth @c svn_depth_infinity, then repository-side
- * changes to @c A/mu, or underneath @c A/C and @c A/D, would not be
- * reflected in the editor drive, but changes underneath @c A/B would
- * be.
- *
  * @a ignore_ancestry instructs the driver to ignore node ancestry
  * when determining how to transmit differences.
  *
@@ -417,21 +407,27 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  * All allocation for the context and collected state will occur in
  * @a pool.
  *
- * @note @a username isn't used and should be removed if this function is
- * revised.
+ * Drives of @a editor are recursive by default.  However, this depth
+ * can be overridden for subpaths by explicitly telling the reporter
+ * that they are at different depths using the @c
+ * svn_repos_set_path3() or @c svn_repos_link_path3() APIs.  For
+ * example, if the reported tree is the @c A subdir of the Greek Tree
+ * (see Subversion's test suite), at depth @c svn_depth_empty, but the
+ * @c A/B subdir is reported at depth @c svn_depth_infinity, then
+ * repository-side changes to @c A/mu, or underneath @c A/C and @c
+ * A/D, would not be reflected in the editor drive, but changes
+ * underneath @c A/B would be.
  *
  * @since New in 1.5.
  */
 svn_error_t *
 svn_repos_begin_report2(void **report_baton,
                         svn_revnum_t revnum,
-                        const char *username,
                         svn_repos_t *repos,
                         const char *fs_base,
                         const char *target,
                         const char *tgt_path,
                         svn_boolean_t text_deltas,
-                        svn_depth_t depth,
                         svn_boolean_t ignore_ancestry,
                         const svn_delta_editor_t *editor,
                         void *edit_baton,
@@ -446,6 +442,9 @@ svn_repos_begin_report2(void **report_baton,
  * If @a recurse is true, the editor drive will behave as it would for
  * a depth of @c svn_depth_infinity; if @a recurse is false, then as
  * for @c svn_depth_files.
+ *
+ * @note @a username is ignored, and has been removed in a revised
+ * version of this API.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  */

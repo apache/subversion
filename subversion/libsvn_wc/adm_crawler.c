@@ -476,8 +476,9 @@ svn_wc_crawl_revisions3(const char *path,
                              svn_path_local_style(path, pool));
 
       base_rev = parent_entry->revision;
-      SVN_ERR(reporter->set_path(report_baton, "", base_rev,
-                                 parent_entry->depth,
+      if (depth == svn_depth_unknown)
+        depth = parent_entry->depth;
+      SVN_ERR(reporter->set_path(report_baton, "", base_rev, depth,
                                  entry ? entry->incomplete : TRUE, 
                                  NULL, pool));
       SVN_ERR(reporter->delete_path(report_baton, "", pool)); 
@@ -503,10 +504,13 @@ svn_wc_crawl_revisions3(const char *path,
       base_rev = parent_entry->revision;
     }
 
+  if (depth == svn_depth_unknown)
+    depth = entry->depth;
+
   /* The first call to the reporter merely informs it that the
      top-level directory being updated is at BASE_REV.  Its PATH
      argument is ignored. */
-  SVN_ERR(reporter->set_path(report_baton, "", base_rev, entry->depth,
+  SVN_ERR(reporter->set_path(report_baton, "", base_rev, depth,
                              entry->incomplete , /* start_empty ? */
                              NULL, pool));
 
@@ -522,10 +526,6 @@ svn_wc_crawl_revisions3(const char *path,
           err = NULL;
         }
     }
-
-  /* The found depth controls if no specific depth was requested. */
-  if (depth == svn_depth_unknown)
-    depth = entry->depth;
 
   if (entry->kind == svn_node_dir)
     {

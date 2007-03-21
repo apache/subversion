@@ -1079,9 +1079,9 @@ rmlocks(const char **msg,
     SVN_ERR(create_rmlocks_editor(&editor, &edit_baton, &removed, subpool));
 
     /* Report what we have. */
-    SVN_ERR(svn_repos_begin_report2(&report_baton, 1, "user1", repos, "/", "",
-                                    NULL, FALSE, svn_depth_infinity, FALSE,
-                                    editor, edit_baton, NULL, NULL, subpool));
+    SVN_ERR(svn_repos_begin_report2(&report_baton, 1, repos, "/", "", NULL,
+                                    FALSE, FALSE, editor, edit_baton,
+                                    NULL, NULL, subpool));
     SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
                                 svn_depth_infinity,
                                 FALSE, NULL, subpool));

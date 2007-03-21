@@ -577,9 +577,9 @@ static svn_error_t *accept_report(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* Make an svn_repos report baton.  Tell it to drive the network editor
    * when the report is complete. */
   svn_ra_svn_get_editor(&editor, &edit_baton, conn, pool, NULL, NULL);
-  SVN_CMD_ERR(svn_repos_begin_report2(&report_baton, rev, b->user, b->repos,
+  SVN_CMD_ERR(svn_repos_begin_report2(&report_baton, rev, b->repos,
                                       b->fs_path->data, target, tgt_path,
-                                      text_deltas, depth, ignore_ancestry,
+                                      text_deltas, ignore_ancestry,
                                       editor, edit_baton,
                                       authz_check_access_cb_func(b),
                                       b, pool));
