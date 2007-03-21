@@ -2526,18 +2526,16 @@ do_merge(const char *initial_URL1,
                                                       j,
                                                       svn_sort__item_t);
               child_wcpath = item->key;
-              if (item->klen < target_wcpath_len ||
-                  strcmp(child_wcpath, target_wcpath) == 0 ||
-                  strncmp(child_wcpath, target_wcpath, target_wcpath_len) != 0)
+              /* svn_path_is_ancestor returns true if paths are same,
+                 so make sure paths are not same. */
+              if (svn_path_is_ancestor(target_wcpath, child_wcpath) &&
+                  strcmp(child_wcpath, target_wcpath) != 0)
                 {
-                  /* Path is not a child of the WC's merge target. */
-                  continue;
+                  child_repos_path = child_wcpath + target_wcpath_len + 1;
+                  SVN_ERR(reporter->set_path(report_baton, child_repos_path,
+                                             is_revert ? r->end - 1 : r->end,
+                                             FALSE, NULL, pool));
                 }
-
-              child_repos_path = child_wcpath + target_wcpath_len + 1;
-              SVN_ERR(reporter->set_path(report_baton, child_repos_path,
-                                         is_revert ? r->end - 1 : r->end,
-                                         FALSE, NULL, pool));
             }
         }
 
