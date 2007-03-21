@@ -37,6 +37,8 @@
 #include "svn_delta.h"
 #include "svn_path.h"
 
+#include "private/svn_wc_private.h"
+
 #include "wc.h"
 #include "adm_files.h"
 #include "props.h"
@@ -445,15 +447,9 @@ svn_wc_crawl_revisions2(const char *path,
     {
       /* There aren't any versioned paths to crawl which are known to
          the repository. */
-      SVN_ERR(svn_wc_entry(&parent_entry,
-                           svn_path_dirname(path, pool),
-                           adm_access,
-                           FALSE, pool));
-
-      if (! parent_entry) 
-        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+      SVN_ERR(svn_wc__entry_versioned(&parent_entry,
+                                      svn_path_dirname(path, pool),
+                                      adm_access, FALSE, pool));
 
       base_rev = parent_entry->revision;
       SVN_ERR(reporter->set_path(report_baton, "", base_rev,
@@ -472,13 +468,8 @@ svn_wc_crawl_revisions2(const char *path,
   if (base_rev == SVN_INVALID_REVNUM)
     {
       const char *dirname = svn_path_dirname(path, pool);
-
-      SVN_ERR(svn_wc_entry(&parent_entry, dirname, adm_access, FALSE, pool));
-      if (! parent_entry)
-        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                 _("'%s' is not under version control"),
-                                 svn_path_local_style(dirname, pool));
-
+      SVN_ERR(svn_wc__entry_versioned(&parent_entry, dirname, adm_access,
+                                      FALSE, pool));
       base_rev = parent_entry->revision;
     }
 
