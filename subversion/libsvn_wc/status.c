@@ -1222,7 +1222,6 @@ make_dir_baton(void **dir_baton,
      our purposes includes being an external or ignored item). */
   if (status_in_parent
       && (status_in_parent->text_status != svn_wc_status_unversioned)
-      && (status_in_parent->text_status != svn_wc_status_deleted)
       && (status_in_parent->text_status != svn_wc_status_missing)
       && (status_in_parent->text_status != svn_wc_status_obstructed)
       && (status_in_parent->text_status != svn_wc_status_external)

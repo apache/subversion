@@ -550,7 +550,7 @@ typedef struct
     /* The source path or url. */
     const char *src;
 
-    /* The source path relative to the wc root */
+    /* The source path relative to the repository root */
     const char *src_rel;
 
     /* The absolute path of the source. */

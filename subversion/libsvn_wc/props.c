@@ -40,6 +40,8 @@
 #include "svn_wc.h"
 #include "svn_utf.h"
 
+#include "private/svn_wc_private.h"
+
 #include "wc.h"
 #include "log.h"
 #include "adm_files.h"
@@ -568,11 +570,7 @@ svn_wc_merge_props(svn_wc_notify_state_t *state,
   /* IMPORTANT: svn_wc_merge_prop_diffs relies on the fact that baseprops
      may be NULL. */
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-  if (entry == NULL)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   /* Notice that we're not using svn_path_split_if_file(), because
      that looks at the actual working file.  Its existence shouldn't
@@ -1227,11 +1225,7 @@ svn_wc__wcprop_set(const char *name,
   apr_pool_t *cache_pool = svn_wc_adm_access_pool(adm_access);
   const svn_wc_entry_t *entry;
 
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   if (entry->kind == svn_node_dir)
     SVN_ERR(svn_wc_adm_retrieve(&adm_access, adm_access, path, pool));
@@ -1678,11 +1672,7 @@ svn_wc_prop_set2(const char *name,
   /* Else, handle a regular property: */
 
   /* Get the entry and name for this path. */
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
 
   base_name = entry->name;
 

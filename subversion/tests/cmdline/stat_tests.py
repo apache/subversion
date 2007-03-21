@@ -1357,7 +1357,7 @@ test_list = [ None,
               status_update_with_incoming_props,
               status_update_verbose_with_incoming_props,
               XFail(status_nonrecursive_update),
-              XFail(status_dash_u_deleted_directories),
+              status_dash_u_deleted_directories,
              ]
 
 if __name__ == '__main__':

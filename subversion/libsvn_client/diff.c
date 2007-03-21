@@ -1558,12 +1558,8 @@ convert_to_url(const char **url,
   /* ### This may not be a good idea, see issue 880 */
   SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
                                  0, NULL, NULL, pool));
-  SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
   SVN_ERR(svn_wc_adm_close(adm_access));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(path, pool));
 
   if (entry->url)  
     *url = apr_pstrdup(pool, entry->url);
@@ -3078,11 +3074,7 @@ diff_repos_wc(const apr_array_header_t *options,
   anchor = svn_wc_adm_access_path(adm_access);
 
   /* Fetch the URL of the anchor directory. */
-  SVN_ERR(svn_wc_entry(&entry, anchor, adm_access, FALSE, pool));
-  if (! entry)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"),
-                             svn_path_local_style(anchor, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, anchor, adm_access, FALSE, pool));
   if (! entry->url)
     return svn_error_createf(SVN_ERR_ENTRY_MISSING_URL, NULL,
                              _("Directory '%s' has no URL"),
