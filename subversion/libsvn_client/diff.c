@@ -1820,7 +1820,7 @@ get_wc_merge_info(apr_hash_t **mergeinfo,
                && (wcpath[2] == '/')
                && ((wcpath[0] >= 'A' && wcpath[0] <= 'Z')
                    || (wcpath[0] >= 'a' && wcpath[0] <= 'z'))))
-#elif
+#else
       if (!(strlen(wcpath) > 0 && wcpath[0] == '/'))
 #endif /* WIN32 or Cygwin */
         {
