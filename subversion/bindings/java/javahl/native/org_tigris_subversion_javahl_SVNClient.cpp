@@ -292,19 +292,25 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_setPrompt
  * Class:     org_tigris_subversion_javahl_SVNClient
  * Method:    logMessages
  * Signature: (Ljava/lang/String;Lorg/tigris/subversion/javahl/Revision;
+ *             Lorg/tigris/subversion/javahl/Revision;
  *             Lorg/tigris/subversion/javahl/Revision;ZZJ)
  *             [Lorg/tigris/subversion/javahl/LogMessage;
  */
 JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_logMessages
-  (JNIEnv* env, jobject jthis, jstring jpath, jobject jrevisionStart,
-   jobject jrevisionEnd, jboolean jstopOnCopy, jboolean jdisoverPaths,
-   jlong jlimit)
+  (JNIEnv* env, jobject jthis, jstring jpath, jobject jpegRevision,
+   jobject jrevisionStart, jobject jrevisionEnd, jboolean jstopOnCopy,
+   jboolean jdisoverPaths, jlong jlimit)
 {
     JNIEntry(SVNClient, logMessages);
     SVNClient *cl = SVNClient::getCppObject(jthis);
     if (cl == NULL)
     {
         JNIUtil::throwError(_("bad c++ this"));
+        return NULL;
+    }
+    Revision pegRevision(jpegRevision, true);
+    if (JNIUtil::isExceptionThrown())
+    {
         return NULL;
     }
     Revision revisionStart(jrevisionStart, false, true);
@@ -322,7 +328,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_tigris_subversion_javahl_SVNClient_logMe
     {
         return NULL;
     }
-    return cl->logMessages(path, revisionStart, revisionEnd,
+    return cl->logMessages(path, pegRevision, revisionStart, revisionEnd,
         jstopOnCopy ? true: false, jdisoverPaths ? true : false, jlimit);
 }
 
