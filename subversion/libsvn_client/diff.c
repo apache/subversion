@@ -98,7 +98,7 @@ file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
 }
 
 
-/* A helper function for display_prop_diffs.  Output the differences betwween
+/* A helper function for display_prop_diffs.  Output the differences between
    the mergeinfo stored in ORIG_MERGEINFO_VAL and NEW_MERGEINFO_VAL in a
    human-readable form to FILE, using ENCODING.  Use POOL for temporary
    allocations. */
