@@ -18,7 +18,7 @@
 package org.tigris.subversion.javahl;
 
 /**
- * A description of a a copy source.
+ * A description of a copy source.
  */
 public class CopySource
 {
