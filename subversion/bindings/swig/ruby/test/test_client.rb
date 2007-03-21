@@ -1803,6 +1803,14 @@ class SvnClientTest < Test::Unit::TestCase
     assert_raise(NoMethodError) do
       Svn::Client::CommitItem.new
     end
+
+    assert_raise(NoMethodError) do
+      Svn::Client::CommitItem2.new
+    end
+  end
+
+  def test_new_commit_item
+    assert_kind_of(Svn::Client::CommitItem3, Svn::Client::CommitItem3.new)
   end
 
   def test_log_msg_func_cancel
