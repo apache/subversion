@@ -20,7 +20,6 @@ package org.tigris.subversion.javahl;
 
 import java.io.File;
 import java.io.OutputStream;
-import java.util.Date;
 
 /**
  * This is the main interface class. All subversion commandline client svn &
@@ -1312,10 +1311,20 @@ public class SVNClient implements SVNClientInterface
     public byte[] blame(String path, Revision revisionStart,
                         Revision revisionEnd) throws ClientException
     {
-        BlameReceiver callback = new BlameReceiver();
+        BlameCallbackImpl callback = new BlameCallbackImpl();
         blame(path, revisionEnd, revisionStart, revisionEnd, false, callback);
 
-        return callback.getResult().getBytes();
+        StringBuffer sb = new StringBuffer();
+        for (int i = 0; i < callback.numberOfLines(); i++)
+        {
+            BlameCallbackImpl.BlameLine line = callback.getBlameLine(i);
+            if (line != null)
+            {
+                sb.append(line.toString());
+                sb.append("\n");
+            }
+        }
+        return sb.toString().getBytes();
     }
     /**
      * Retrieve the content together with the author, the revision and the date
@@ -1534,73 +1543,4 @@ public class SVNClient implements SVNClientInterface
      * NativeResources.loadNativeLibrary
      */
     static native void initNative();
-
-    /**
-     * A {@link #blame()} callback which receives and collects line
-     * information, formatting it for textual output.
-     */
-    private static class BlameReceiver
-        implements BlameCallback
-    {
-        private StringBuffer sb = new StringBuffer();
-
-        /**
-         * Left pad the input string to a given length, to simulate printf()-
-         * style output.  This method appends the output to the class sb
-         * member.
-         * @param val       the input string
-         * @param len       the minimum length to pad to
-         */
-        private void pad(String val, int len)
-        {
-            int padding = len - val.length();
-
-            for (int i = 0; i < padding; i++)
-            {
-                sb.append(' ');
-            }
-
-            sb.append(val);
-        }
-
-        /**
-         * Append the line information to the current text.  Called
-         * once for each line.
-         */
-        public void singleLine(Date changed, long revision, String author,
-                               String line)
-        {
-            if (revision > 0)
-            {
-                pad(Long.toString(revision), 6);
-                sb.append(' ');
-            }
-            else
-            {
-                sb.append("     - ");
-            }
-
-            if (author != null)
-            {
-                pad(author, 10);
-                sb.append(" ");
-            }
-            else
-            {
-                sb.append("         - ");
-            }
-
-            sb.append(line);
-            sb.append("\n");
-        }
-
-        /**
-         * Return the current blame output as formatted text.
-         * @return The blame output.
-         */
-        public String getResult()
-        {
-            return sb.toString();
-        }
-    }
 }
