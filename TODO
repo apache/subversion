@@ -78,7 +78,7 @@ for repos dump/load, including the merge history index.
 
   * Improve merge algorithm used for target trees with child paths
     that contain differing merge info, per Peter Lundblad's
-    suggestions. (?)
+    suggestions. (lundblad)
 
   * When a tree with inherited merge info contains a child with
     differing merge info, lookup of the merge info for this child must
