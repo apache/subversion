@@ -6,7 +6,7 @@
  *              information is kept.  
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -32,7 +32,6 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_path.h"
-#include "svn_wc.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -40,6 +39,7 @@
 #include "lock.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** File names in the adm area. ***/
@@ -1028,12 +1028,8 @@ check_adm_exists(svn_boolean_t *exists,
 
       SVN_ERR(svn_wc_adm_open3(&adm_access, NULL, path, FALSE, 0,
                                NULL, NULL, pool));
-      SVN_ERR(svn_wc_entry(&entry, path, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc__entry_versioned(&entry, path, adm_access, FALSE, pool));
       SVN_ERR(svn_wc_adm_close(adm_access));
-      if (!entry)
-        return svn_error_createf(SVN_ERR_ENTRY_NOT_FOUND, NULL,
-                                 _("No entry for '%s'"),
-                                 svn_path_local_style(path, pool));
 
       /* When the directory exists and is scheduled for deletion do not
        * check the revision or the URL.  The revision can be any 

@@ -2,7 +2,7 @@
  * status.c: construct a status structure from an entry structure
  *
  * ====================================================================
- * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -30,7 +30,6 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_io.h"
-#include "svn_wc.h"
 #include "svn_config.h"
 #include "svn_time.h"
 #include "svn_private_config.h"
@@ -40,6 +39,7 @@
 #include "props.h"
 #include "translate.h"
 
+#include "private/svn_wc_private.h"
 
 
 /*** Editor batons ***/
@@ -720,15 +720,10 @@ handle_dir_entry(struct edit_baton *eb,
          as a *directory* on disk), we don't want to reach down into
          that subdir to try to flesh out a "complete entry".  */
       const svn_wc_entry_t *full_entry = entry;
-          
+
       if (entry->kind == kind)
-        {
-          SVN_ERR(svn_wc_entry(&full_entry, path, adm_access, FALSE, pool));
-          if (! full_entry)
-            return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                     _("'%s' is not under version control"),
-                                     svn_path_local_style(path, pool));
-        }
+        SVN_ERR(svn_wc__entry_versioned(&full_entry, path, adm_access, FALSE,
+                                       pool));
 
       /* Descend only if the subdirectory is a working copy directory
          (and DESCEND is non-zero ofcourse)  */

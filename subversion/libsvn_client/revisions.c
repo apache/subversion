@@ -22,11 +22,11 @@
 
 #include "svn_error.h"
 #include "svn_ra.h"
-#include "svn_wc.h"
 #include "svn_path.h"
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 
@@ -80,15 +80,9 @@ svn_client__get_revision_number(svn_revnum_t *revnum,
 
       SVN_ERR(svn_wc_adm_probe_open3(&adm_access, NULL, path, FALSE,
                                      0, NULL, NULL, pool));
-      SVN_ERR(svn_wc_entry(&ent, path, adm_access, FALSE, pool));
+      SVN_ERR(svn_wc__entry_versioned(&ent, path, adm_access, FALSE, pool));
       SVN_ERR(svn_wc_adm_close(adm_access));
 
-      if (! ent)
-        return svn_error_createf
-        (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-	 _("'%s' is not under version control"),
-         svn_path_local_style(path, pool));
-      
       if ((revision->kind == svn_opt_revision_base)
           || (revision->kind == svn_opt_revision_working))
         *revnum = ent->revision;

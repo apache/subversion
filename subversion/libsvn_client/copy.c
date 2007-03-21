@@ -24,7 +24,6 @@
 
 #include <string.h>
 #include <assert.h>
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
@@ -38,6 +37,7 @@
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -1705,16 +1705,9 @@ setup_copy(svn_commit_info_t **commit_info_p,
                                                  ctx->cancel_func,
                                                  ctx->cancel_baton, 
                                                  iterpool));
-                  SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access,
-                                       FALSE,
-                                       iterpool));
+                  SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access,
+                                                 FALSE, iterpool));
                   SVN_ERR(svn_wc_adm_close(adm_access));
-
-                  if (! entry)
-                    return svn_error_createf
-                      (SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                       _("'%s' is not under version control"),
-                       svn_path_local_style(pair->src, pool));
 
                   if (! entry->url)
                     return svn_error_createf

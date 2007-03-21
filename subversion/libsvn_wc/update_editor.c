@@ -38,7 +38,6 @@
 #include "svn_error.h"
 #include "svn_io.h"
 #include "svn_md5.h"
-#include "svn_wc.h"
 #include "svn_private_config.h"
 #include "svn_time.h"
 
@@ -51,6 +50,8 @@
 #include "lock.h"
 #include "props.h"
 #include "translate.h"
+
+#include "private/svn_wc_private.h"
 
 
 /*** batons ***/
@@ -3125,11 +3126,7 @@ svn_wc_add_repos_file2(const char *dst_path,
   /* Fabricate the anticipated new URL of the target and check the
      copyfrom URL to be in the same repository. */
   {
-    SVN_ERR(svn_wc_entry(&ent, dir_name, adm_access, FALSE, pool));
-    if (! ent)
-      return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                               _("'%s' is not under version control"),
-                               svn_path_local_style(dir_name, pool));
+    SVN_ERR(svn_wc__entry_versioned(&ent, dir_name, adm_access, FALSE, pool));
 
     new_URL = svn_path_url_add_component(ent->url, base_name, pool);
 

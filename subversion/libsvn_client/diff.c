@@ -46,6 +46,7 @@
 #include <assert.h>
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 /* Sanity check -- ensure that we have valid revisions to look at. */
 #define ENSURE_VALID_REVISION_KINDS(rev1_kind, rev2_kind) \
@@ -3762,11 +3763,8 @@ svn_client_merge3(const char *source1,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  SVN_ERR(svn_wc_entry(&entry, target_wcpath, adm_access, FALSE, pool));
-  if (entry == NULL)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), 
-                             svn_path_local_style(target_wcpath, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
+                                 pool));
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.record_only = record_only;
@@ -3932,11 +3930,8 @@ svn_client_merge_peg3(const char *source,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  SVN_ERR(svn_wc_entry(&entry, target_wcpath, adm_access, FALSE, pool));
-  if (entry == NULL)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), 
-                             svn_path_local_style(target_wcpath, pool));
+  SVN_ERR(svn_wc__entry_versioned(&entry, target_wcpath, adm_access, FALSE,
+                                 pool));
 
   merge_cmd_baton.force = force;
   merge_cmd_baton.record_only = record_only;

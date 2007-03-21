@@ -28,7 +28,6 @@
 #include "svn_path.h"
 #include "svn_types.h"
 #include "svn_pools.h"
-#include "svn_wc.h"
 #include "svn_props.h"
 #include "svn_md5.h"
 
@@ -36,6 +35,7 @@
 #include <stdlib.h>  /* for qsort() */
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 /*** Uncomment this to turn on commit driver debugging. ***/
 /*
@@ -702,11 +702,8 @@ svn_client__harvest_committables(apr_hash_t **committables,
       /* No entry?  This TARGET isn't even under version control! */
       SVN_ERR(svn_wc_adm_probe_retrieve(&adm_access, parent_dir,
                                         target, subpool));
-      SVN_ERR(svn_wc_entry(&entry, target, adm_access, FALSE, subpool));
-      if (! entry)
-        return svn_error_createf
-          (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-           _("'%s' is not under version control"), target);
+      SVN_ERR(svn_wc__entry_versioned(&entry, target, adm_access, FALSE,
+                                     subpool));
       if (! entry->url)
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL, 
                                  _("Entry for '%s' has no URL"),
@@ -844,13 +841,9 @@ svn_client__get_copy_committables(apr_hash_t **committables,
       svn_pool_clear(iterpool);
 
       /* Read the entry for this SRC. */
-      SVN_ERR(svn_wc_entry(&entry, pair->src, adm_access, FALSE, iterpool));
-      if (! entry)
-        return svn_error_createf
-          (SVN_ERR_ENTRY_NOT_FOUND, NULL,
-           _("'%s' is not under version control"),
-           svn_path_local_style(pair->src, iterpool));
-      
+      SVN_ERR(svn_wc__entry_versioned(&entry, pair->src, adm_access, FALSE,
+                                     iterpool));
+
       /* Get the right access baton for this SRC. */
       if (entry->kind == svn_node_dir)
         SVN_ERR(svn_wc_adm_retrieve(&dir_access, adm_access, pair->src,

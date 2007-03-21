@@ -148,7 +148,7 @@ module Svn
       class << self
         def new(providers=[], *rest)
           baton = Core.auth_open(providers)
-          baton.funcall("initialize", providers, *rest)
+          baton.__send!("initialize", providers, *rest)
           baton
         end
       end
@@ -272,7 +272,7 @@ module Svn
         undef new
         def new(*args)
           options = Svn::Core.diff_file_options_create(*args)
-          options.funcall("initialize", *args)
+          options.__send!("initialize", *args)
           options
         end
 
@@ -515,7 +515,7 @@ module Svn
         undef new
         def new
           info = Core.create_commit_info
-          info.funcall("initialize")
+          info.__send!("initialize")
           info
         end
       end

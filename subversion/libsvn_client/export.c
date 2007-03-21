@@ -2,7 +2,7 @@
  * export.c:  export a tree.
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -25,7 +25,6 @@
 #include <apr_file_io.h>
 #include <apr_md5.h>
 #include "svn_types.h"
-#include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -38,6 +37,7 @@
 #include "client.h"
 
 #include "svn_private_config.h"
+#include "private/svn_wc_private.h"
 
 
 /*** Code. ***/
@@ -230,18 +230,7 @@ copy_versioned_files(const char *from,
                                  0, ctx->cancel_func, ctx->cancel_baton,
                                  pool));
 
-  SVN_ERR(svn_wc_entry(&entry, from, adm_access, FALSE, pool));
-
-  /* Bail if we're trying to export something that doesn't exist,
-     or isn't under version control. */
-  if (! entry)
-    {
-      SVN_ERR(svn_wc_adm_close(adm_access));
-      return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                               _("'%s' is not under version control "
-                                 "or doesn't exist"),
-                               svn_path_local_style(from, pool));
-    }
+  SVN_ERR(svn_wc__entry_versioned(&entry, from, adm_access, FALSE, pool));
 
   /* Only export 'added' files when the revision is WORKING.
      Otherwise, skip the 'added' files, since they didn't exist
