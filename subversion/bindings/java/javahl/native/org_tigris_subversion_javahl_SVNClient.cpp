@@ -655,7 +655,7 @@ JNIEXPORT void JNICALL Java_org_tigris_subversion_javahl_SVNClient_move
     if (JNIUtil::isExceptionThrown())
         return;
     cl->move(srcPaths, destPath, message, jforce ? true : false,
-	     jmoveAsChild ? true : false);
+             jmoveAsChild ? true : false);
 }
 
 /*

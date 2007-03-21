@@ -321,7 +321,7 @@ jstring JNIUtil::makeSVNErrorMessage(svn_error_t *err)
 
 void
 JNIUtil::throwNativeException(const char *className, const char *msg,
-			      const char *fileName, int aprErr)
+                              const char *fileName, int aprErr)
 {
     JNIEnv *env = getEnv();
     jclass clazz = env->FindClass(className);
@@ -331,11 +331,11 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
         JNICriticalSection cs(*g_logMutex);
         g_logStream << "Subversion JavaHL exception thrown, message:<";
         g_logStream << msg << ">";
-	if (fileName)
-	    g_logStream << " file:<" << fileName << ">";
-	if (aprErr != -1)
-	    g_logStream << " apr-err:<" << aprErr << ">";
-	g_logStream << std::endl;
+        if (fileName)
+            g_logStream << " file:<" << fileName << ">";
+        if (aprErr != -1)
+            g_logStream << " apr-err:<" << aprErr << ">";
+        g_logStream << std::endl;
     }
     if (isJavaExceptionThrown())
         return;
@@ -352,7 +352,7 @@ JNIUtil::throwNativeException(const char *className, const char *msg,
     if (isJavaExceptionThrown())
         return;
     jobject nativeException = env->NewObject(clazz, mid, jmessage, jfile,
-					     static_cast<jint>(aprErr));
+                                             static_cast<jint>(aprErr));
     if (isJavaExceptionThrown())
         return;
 
@@ -374,7 +374,7 @@ void JNIUtil::handleSVNError(svn_error_t *err)
     std::string msg;
     assembleErrorMessage(err, 0, APR_SUCCESS, msg);
     throwNativeException(JAVA_PACKAGE "/ClientException", msg.c_str(),
-			 err->file, err->apr_err);
+                         err->file, err->apr_err);
     svn_error_clear(err);
 }
 
