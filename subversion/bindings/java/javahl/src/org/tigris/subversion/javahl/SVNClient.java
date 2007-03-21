@@ -355,7 +355,32 @@ public class SVNClient implements SVNClientInterface
      * @return array of LogMessages
      * @since 1.2
      */
-    public native LogMessage[] logMessages(String path, Revision revisionStart,
+    public LogMessage[] logMessages(String path, Revision revisionStart,
+                                           Revision revisionEnd,
+                                           boolean stopOnCopy,
+                                           boolean discoverPath,
+                                           long limit) throws ClientException
+    {
+        return logMessages(path, revisionEnd, revisionStart, revisionEnd,
+                stopOnCopy, discoverPath, limit);
+    }
+
+    /**
+     * Retrieve the log messages for an item
+     * @param path          path or url to get the log message for.
+     * @param pegRevision   the revision to interpret path
+     * @param revisionStart first revision to show
+     * @param revisionEnd   last revision to show
+     * @param stopOnCopy    do not continue on copy operations
+     * @param discoverPath  returns the paths of the changed items in the
+     *                      returned objects
+     * @param limit         limit the number of log messages (if 0 or less no
+     *                      limit)
+     * @return array of LogMessages
+     * @since 1.5
+     */
+    public native LogMessage[] logMessages(String path, Revision pegRevision,
+                                           Revision revisionStart,
                                            Revision revisionEnd,
                                            boolean stopOnCopy,
                                            boolean discoverPath,

@@ -328,7 +328,8 @@ void SVNClient::setPrompt(Prompter *prompter)
     m_prompter = prompter;
 }
 
-jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart,
+jobjectArray SVNClient::logMessages(const char *path, Revision &pegRevision,
+                                    Revision &revisionStart,
                                     Revision &revisionEnd, bool stopOnCopy,
                                     bool discoverPaths, long limit)
 {
@@ -354,7 +355,8 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart,
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
-    Err = svn_client_log2(targets,
+    Err = svn_client_log3(targets,
+                          pegRevision.revision(),
                           revisionStart.revision (),
                           revisionEnd.revision (),
                           limit,
