@@ -683,7 +683,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
         return;
     svn_commit_info_t *commit_info;
     err = svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
-			   copyAsChild, ctx, requestPool.pool());
+                           copyAsChild, ctx, requestPool.pool());
     if (err)
         JNIUtil::handleSVNError(err);
 }
