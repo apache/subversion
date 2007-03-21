@@ -1288,7 +1288,7 @@ public class SVNClient implements SVNClientInterface
                         Revision revisionEnd) throws ClientException
     {
         BlameReceiver callback = new BlameReceiver();
-        blame(path, revisionEnd, revisionStart, revisionEnd, callback);
+        blame(path, revisionEnd, revisionStart, revisionEnd, false, callback);
 
         return callback.getResult().getBytes();
     }
@@ -1306,7 +1306,7 @@ public class SVNClient implements SVNClientInterface
                              Revision revisionEnd, BlameCallback callback)
             throws ClientException
     {
-        blame(path, revisionEnd, revisionStart, revisionEnd, callback);
+        blame(path, revisionEnd, revisionStart, revisionEnd, false, callback);
     }
 
     /**
