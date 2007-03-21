@@ -1447,7 +1447,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
       APR_EOL_STR
       "### have the same password database, and vice versa.  The default realm"
       APR_EOL_STR
-      "### is repository's uuid."
+      "### is the repository's uuid."
       APR_EOL_STR
       "# realm = My First Repository"
 #ifdef SVN_HAVE_SASL
@@ -1583,7 +1583,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 /* Allocate and return a new svn_repos_t * object, initializing the
    directory pathname members based on PATH.
    The members FS, FORMAT, and FS_TYPE are *not* initialized (they are null),
-   and it it the caller's responsibility to fill them in if needed.  */
+   and it is the caller's responsibility to fill them in if needed.  */
 static svn_repos_t *
 create_svn_repos_t(const char *path, apr_pool_t *pool)
 {
