@@ -1,7 +1,7 @@
 /* pool.c:  pool wrappers for Subversion
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2007 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -19,6 +19,7 @@
 
 #include <stdarg.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <assert.h>
 
 #include <apr_general.h>
@@ -43,6 +44,9 @@ static const char SVN_FILE_LINE_UNDEFINED[] = "svn:<undefined>";
 static int
 abort_on_pool_failure(int retcode)
 {
+  /* Don't translate this string! It requires memory allocation to do so!
+     And we don't have any of it... */
+  printf("Out of memory - terminating application.\n");
   abort();
   return -1; /* prevent compiler warnings */
 }
