@@ -98,6 +98,10 @@ file_printf_from_utf8(apr_file_t *fptr, const char *encoding,
 }
 
 
+/* A helper function for display_prop_diffs.  Output the differences betwween
+   the mergeinfo stored in ORIG_MERGEINFO_VAL and NEW_MERGEINFO_VAL in a
+   human-readable form to FILE, using ENCODING.  Use POOL for temporary
+   allocations. */
 static svn_error_t *
 display_mergeinfo_diff(const char *orig_mergeinfo_val,
                        const char *new_mergeinfo_val,
