@@ -263,6 +263,10 @@ _svn()
 	    [[ $previous = '--encoding' ]] && \
 		values="latin1 utf8 $SVN_BASH_ENCODINGS"
 
+	    [[ $previous = '--extensions' || $previous = '-x' ]] && \
+		values="--unified --ignore-space-change \
+   		        --ignore-all-space --ignore-eol-style"
+
 	    # could look at ~/.subversion/
 	    [[ $previous = '--username' ]] && beep=1
 	    [[ $previous = '--password' ]] && beep=1

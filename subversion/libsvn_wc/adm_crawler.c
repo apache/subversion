@@ -443,6 +443,8 @@ svn_wc_crawl_revisions2(const char *path,
   if ((! entry) || ((entry->schedule == svn_wc_schedule_add)
                     && (entry->kind == svn_node_dir)))
     {
+      /* There aren't any versioned paths to crawl which are known to
+         the repository. */
       SVN_ERR(svn_wc_entry(&parent_entry,
                            svn_path_dirname(path, pool),
                            adm_access,

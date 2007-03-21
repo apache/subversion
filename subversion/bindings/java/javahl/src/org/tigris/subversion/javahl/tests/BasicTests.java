@@ -27,7 +27,6 @@ import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.HashMap;
-import java.util.Date;
 
 /**
  * Tests the basic functionality of javahl binding (inspired by the
@@ -53,79 +52,6 @@ public class BasicTests extends SVNTests
         }
     }
 
-    private class BlameReceiver
-        implements BlameCallback
-    {
-        private StringBuffer sb = new StringBuffer();
-
-        private void pad(String val, int len)
-        {
-            int padding = len - val.length();
-
-            for (int i = 0; i < padding; i++)
-            {
-                sb.append(" ");
-            }
-
-            sb.append(val);
-        }
-
-        public void singleLine(Date changed, long revision, String author,
-               String line)
-        {
-            if (revision > 0)
-            {
-                pad(Long.toString(revision), 6);
-                sb.append(" ");
-            }
-            else
-            {
-                sb.append("     - ");
-            }
-
-            if (author != null)
-            {
-                pad(author, 10);
-                sb.append(" ");
-            }
-            else
-            {
-                sb.append("         - ");
-            }
-
-            sb.append(line);
-            sb.append("\n");
-        }
-
-        public String getResult()
-        {
-            return sb.toString();
-        }
-    }
-
-    /**
-     * Test basic blame functionality.  This test marginally tests blame
-     * correctness, mainly just that the blame APIs link correctly.
-     * @throws Throwable
-     * @since 1.5
-     */
-    public void testBasicBlame()
-            throws Throwable
-    {
-        String expected = "     1    jrandom This is the file 'iota'.\n";
-        OneTest thisTest = new OneTest();
-
-        byte[] result = client.blame(thisTest.getWCPath() + "/iota",
-                Revision.getInstance(1), Revision.getInstance(1));
-        assertEquals(expected, new String(result));
-
-        BlameReceiver callback = new BlameReceiver();
-        client.blame(thisTest.getWCPath() + "/iota", 
-                Revision.getInstance(1), Revision.getInstance(1),
-                callback);
-        assertEquals(expected, callback.getResult());
-    }
-    
     /**
      * Test SVNClient.getVersion().
      * @throws Throwable
@@ -2411,8 +2337,36 @@ public class BasicTests extends SVNTests
     }
 
     /**
-     * A DiffSummaryReceiver implementation which collects all
-     * DiffSummary notifications.
+     * Test basic blame functionality.  This test marginally tests blame
+     * correctness, mainly just that the blame APIs link correctly.
+     * @throws Throwable
+     * @since 1.5
+     */
+    public void testBasicBlame() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        // Test the old interface to be sure it still works
+        byte[] result = client.blame(thisTest.getWCPath() + "/iota", Revision
+                .getInstance(1), Revision.getInstance(1));
+        assertEquals("     1    jrandom This is the file 'iota'.\n",
+                     new String(result));
+
+        // Test the current interface
+        BlameCallbackImpl callback = new BlameCallbackImpl();
+        client.blame(thisTest.getWCPath() + "/iota", Revision.getInstance(1),
+                     Revision.getInstance(1), callback);
+        assertEquals(1, callback.numberOfLines());
+        BlameCallbackImpl.BlameLine line = callback.getBlameLine(0);
+        if (line != null)
+        {
+            assertEquals(1, line.getRevision());
+            assertEquals("jrandom", line.getAuthor());
+        }
+    }
+
+    /**
+     * A DiffSummaryReceiver implementation which collects all DiffSummary
+     * notifications.
      */
     private static class DiffSummaries extends HashMap
         implements DiffSummaryReceiver

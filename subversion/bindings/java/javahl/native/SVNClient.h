@@ -115,7 +115,8 @@ public:
     jlong checkout(const char *moduleName, const char *destPath,
                    Revision &revision, Revision &pegRevsion, bool recurse,
                    bool ignoreExternals, bool allowUnverObstructions);
-    jobjectArray logMessages(const char *path, Revision &revisionStart,
+    jobjectArray logMessages(const char *path, Revision &pegRevision, 
+                                 Revision &revisionStart,
                                  Revision &revisionEnd, bool stopOnCopy,
                                  bool discoverPaths, long limit);
     void setPrompt(Prompter *prompter);

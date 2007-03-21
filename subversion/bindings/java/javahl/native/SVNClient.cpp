@@ -328,7 +328,8 @@ void SVNClient::setPrompt(Prompter *prompter)
     m_prompter = prompter;
 }
 
-jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart,
+jobjectArray SVNClient::logMessages(const char *path, Revision &pegRevision,
+                                    Revision &revisionStart,
                                     Revision &revisionEnd, bool stopOnCopy,
                                     bool discoverPaths, long limit)
 {
@@ -354,7 +355,8 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &revisionStart,
         JNIUtil::handleSVNError(Err);
         return NULL;
     }
-    Err = svn_client_log2(targets,
+    Err = svn_client_log3(targets,
+                          pegRevision.revision(),
                           revisionStart.revision (),
                           revisionEnd.revision (),
                           limit,
@@ -681,7 +683,7 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
         return;
     svn_commit_info_t *commit_info;
     err = svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
-			   copyAsChild, ctx, requestPool.pool());
+                           copyAsChild, ctx, requestPool.pool());
     if (err)
         JNIUtil::handleSVNError(err);
 }
