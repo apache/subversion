@@ -328,8 +328,11 @@ public class SVNClientSynchronized implements SVNClientInterface
                                     boolean discoverPath, long limit)
             throws ClientException
     {
-        return worker.logMessages(path, revisionStart, revisionEnd,
-                stopOnCopy, discoverPath, limit);
+        synchronized (clazz)
+        {
+            return worker.logMessages(path, revisionStart, revisionEnd,
+                    stopOnCopy, discoverPath, limit);
+        }
     }
 
     /**
