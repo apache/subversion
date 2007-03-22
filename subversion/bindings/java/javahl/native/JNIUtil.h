@@ -176,5 +176,23 @@ private:
      */
     static JNIMutex *g_globalPoolMutext;
 };
+
+/**
+ * A statement macro used for checking NULL pointers, in the style of
+ * SVN_ERR().
+ *
+ * Evaluate @a expr.  If it equals NULL, throw an NullPointerException with
+ * the value @a str, and return the @a ret_val.  Otherwise, continue.
+ *
+ * Note that if the enclosing function returns <tt>void</tt>, @a ret_val may
+ * be blank.
+ */
+
+#define SVN_JNI_NULL_PTR_EX(expr, str, ret_val)         \
+  if (expr == NULL) {                                   \
+    JNIUtil::throwNullPointerException(str);            \
+    return ret_val ;                                    \
+  }
+
 // !defined(AFX_JNIUTIL_H__82301908_C6CB_4A77_8A28_899E72FBEEFF__INCLUDED_)
 #endif
