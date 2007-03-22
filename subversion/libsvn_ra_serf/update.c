@@ -1874,33 +1874,17 @@ set_path(void *report_baton,
   /* ### TODO(sd): Or should this be 'if (depth != report->depth) ...' ? */
   if (depth != svn_depth_infinity)
     {
-      /* ### It's a bit distressing to hand-code the depth words here,
-         ### instead of using svn_depth_to_word() the way
-         ### libsvn_ra_dav does.  But I'm not sure enough about the
-         ### general style of libsvn_ra_serf to know whether redoing
-         ### the code here would be a good thing.  Same in link_path(). */
-      switch (depth) {
-      case svn_depth_empty:
-        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"empty\"",
-                                            sizeof(" depth=\"empty\"")-1,
-                                            report->sess->bkt_alloc);
-        break;
-      case svn_depth_files:
-        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"files\"",
-                                            sizeof(" depth=\"files\"")-1,
-                                            report->sess->bkt_alloc);
-        break;
-      case svn_depth_immediates:
-        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"immediates\"",
-                                            sizeof(" depth=\"immediates\"")-1,
-                                            report->sess->bkt_alloc);
-        break;
-      default:
-        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
-                                 _("Invalid depth (%d) for path '%s'"),
-                                 depth, path);
-      }
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"",
+                                          sizeof(" depth=\"")-1,
+                                          report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
 
+      tmp = SERF_BUCKET_SIMPLE_STRING(svn_depth_to_word(depth),
+                                      report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
+                                          report->sess->bkt_alloc);
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
@@ -2013,33 +1997,17 @@ link_path(void *report_baton,
   /* ### TODO(sd): Or should this be 'if (depth != report->depth) ...' ? */
   if (depth != svn_depth_infinity)
     {
-      /* ### It's a bit distressing to hand-code the depth words here,
-         ### instead of using svn_depth_to_word() the way
-         ### libsvn_ra_dav does.  But I'm not sure enough about the
-         ### general style of libsvn_ra_serf to know whether redoing
-         ### the code here would be a good thing.  Same in set_path(). */
-      switch (depth) {
-      case svn_depth_empty:
-        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"empty\"",
-                                            sizeof(" depth=\"empty\"")-1,
-                                            report->sess->bkt_alloc);
-        break;
-      case svn_depth_files:
-        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"files\"",
-                                            sizeof(" depth=\"files\"")-1,
-                                            report->sess->bkt_alloc);
-        break;
-      case svn_depth_immediates:
-        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"immediates\"",
-                                            sizeof(" depth=\"immediates\"")-1,
-                                            report->sess->bkt_alloc);
-        break;
-      default:
-        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
-                                 _("Invalid depth (%d) for path '%s'"),
-                                 depth, path);
-      }
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"",
+                                          sizeof(" depth=\"")-1,
+                                          report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
 
+      tmp = SERF_BUCKET_SIMPLE_STRING(svn_depth_to_word(depth),
+                                      report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+
+      tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
+                                          report->sess->bkt_alloc);
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
