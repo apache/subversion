@@ -23,9 +23,6 @@ import java.util.Date;
  * This describes the status of one subversion item (file or directory) in
  * the working copy. Will be returned by SVNClient.status or
  * SVNClient.singleStatus
- * @author Patrick Mayweg
- * @author C&eacute;dric Chabanois
- *         <a href="mailto:cchabanois@ifrance.com">cchabanois@ifrance.com</a>
  */
 public class Status
 {
