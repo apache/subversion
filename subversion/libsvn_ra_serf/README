@@ -6,6 +6,9 @@ This library is an RA-layer implementation of a WebDAV client that uses Serf.
 Serf's homepage is at:
   http://code.google.com/p/serf/
 
+The latest serf releases can be fetched at:
+  http://code.google.com/p/serf/downloads/list
+
 The latest serf sources can be fetched via SVN at:
   http://serf.googlecode.com/svn/trunk/
 
@@ -28,31 +31,17 @@ Completed tasks
   - 4 connections are open on an update (matches browser's default behavior)
   - 1 connection is used for the REPORT; 3 are used to fetch files & props
 - Supports http-compression config flag
+- SSL client certificates
 
 Regression test status
 ----------------------
-All regression tests are known to pass on:
+All current regression tests are known to pass on:
   - Debian/AMD64 with APR 1.3.x
-
-The following tests 'fail' due to ordering differences with ra_serf:
-  - FAIL:  diff_tests.py 29: diff to BASE with local property mods
-  - FAIL:  diff_tests.py 31: diff a property change plus a local prop edit
-
-ra_serf is known to compile and work on:
-  - Windows
   - Mac OS X
   - Solaris
 
-Things to do before 1.4.0 release
----------------------------------
-
-- Verify regression tests passage on the following platforms:
+ra_serf is also known to compile and work on:
   - Windows
-  - Mac OS X
-  - Solaris
-  - anything with APR 0.9.12
-
-- Point at a packaged release of serf
 
 Things to do before the next release (1.5.x timeframe)
 ------------------------------------------------------
@@ -60,8 +49,6 @@ Things to do before the next release (1.5.x timeframe)
 - Proxy support
 
 - Digest authentication
-
-- SSL client certificates
 
 - NTLM/SSPI integration for Windows folks
 
