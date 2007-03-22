@@ -2008,7 +2008,7 @@ svn_wc__has_props(svn_boolean_t *has_props,
    *WHICH_PROPS to a (const char *propname) ->
    (const svn_string_t *propvalue) key:value mapping of only
    the modified properties. */
-svn_error_t *
+static svn_error_t *
 modified_props(svn_boolean_t *modified_p,
                const char *path,
                apr_hash_t **which_props,
