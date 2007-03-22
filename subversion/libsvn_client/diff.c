@@ -2089,6 +2089,7 @@ notification_receiver(void *baton, const svn_wc_notify_t *notify,
     (*notify_b->wrapped_func)(notify_b->wrapped_baton, notify, pool);
 }
 
+#if 0
 /* An implementation of the svn_client_conflict_resolver_func_t
    interface.  Our default conflict resolution approach is to
    complain, and error out. */
@@ -2100,6 +2101,7 @@ default_conflict_resolver(const char *path, void *baton, apr_pool_t *pool)
                              "before the remainder of the requested merge "
                              "can be applied"), path);
 }
+#endif
 
 /* Create merge info describing the merge of RANGE into our target,
    without including merge info for skips or conflicts from
