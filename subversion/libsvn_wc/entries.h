@@ -37,7 +37,10 @@ extern "C" {
 #define SVN_WC__ENTRIES_ATTR_DIR_STR    "dir"
 
 
-/* The names of the XML attributes for storing entries' information.
+/* The names of the fields used for storing entries' information.
+   Used for the names of the XML attributes in XML entries files
+   (format 6 and below), for the names of attributes in wc logs,
+   and for error reporting when reading a non-XML entries file.
    ### If you add or remove items here, you probably want to make sure
    to do the same for the SVN_WC__ENTRY_MODIFY_* #defines as well. */
 #define SVN_WC__ENTRY_ATTR_NAME               "name"
