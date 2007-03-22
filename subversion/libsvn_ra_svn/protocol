@@ -302,7 +302,7 @@ second place for auth-request point as noted below.
     returned.  If rev is not specified, the youngest revision is used.
 
   update
-    params:   ( [ rev:number ] target:string recurse:bool )
+    params:   ( [ rev:number ] target:string recurse:bool ? depth:word)
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.
@@ -310,7 +310,8 @@ second place for auth-request point as noted below.
     response: ( )
 
   switch
-    params:   ( [ rev:number ] target:string recurse:bool url:string )
+    params:   ( [ rev:number ] target:string recurse:bool url:string
+                ? depth:word)
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.
@@ -318,7 +319,7 @@ second place for auth-request point as noted below.
     response: ( )
 
   status
-    params:   ( target:string recurse:bool ? [ rev:number ] )
+    params:   ( target:string recurse:bool ? [ rev:number ] ? depth:word )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.
@@ -327,7 +328,7 @@ second place for auth-request point as noted below.
 
   diff
     params:   ( [ rev:number ] target:string recurse:bool ignore-ancestry:bool
-                url:string ? text-deltas:bool )
+                url:string ? text-deltas:bool ? depth:word )
     Client switches to report command set.
     Upon finish-report, server sends auth-request.
     After auth exchange completes, server switches to editor command set.
@@ -493,14 +494,15 @@ by the command which invoked the report (following an abort-edit
 call).  Errors resulting from an abort-report call are ignored.
 
   set-path:
-    params: ( path:string rev:number start-empty:bool ? [ lock-token:string ] )
+    params: ( path:string rev:number start-empty:bool
+              ? [ lock-token:string ] ? depth:word )
 
   delete-path:
     params: ( path:string )
 
   link-path:
     params: ( path:string url:string rev:number start-empty:bool 
-              ? [ lock-token:string ] )
+              ? [ lock-token:string ] ? depth:word )
 
   finish-report:
     params: ( )

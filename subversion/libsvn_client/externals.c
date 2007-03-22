@@ -200,7 +200,8 @@ switch_external(const char *path,
           if (strcmp(entry->url, url) == 0)
             {
               SVN_ERR(svn_client__update_internal(NULL, path, revision,
-                                                  TRUE, FALSE, FALSE,
+                                                  svn_depth_unknown,
+                                                  FALSE, FALSE,
                                                   timestamp_sleep, ctx,
                                                   subpool));
               svn_pool_destroy(subpool);
@@ -273,7 +274,8 @@ switch_external(const char *path,
 
   /* ... Hello, new hotness. */
   SVN_ERR(svn_client__checkout_internal(NULL, url, path, peg_revision, revision,
-                                        TRUE, FALSE, FALSE, timestamp_sleep,
+                                        SVN_DEPTH_FROM_RECURSE(TRUE),
+                                        FALSE, FALSE, timestamp_sleep,
                                         ctx, pool));
 
   return SVN_NO_ERROR;
@@ -358,16 +360,17 @@ handle_external_item_change(const void *key, apr_ssize_t klen,
            exist before the parent export process unless a versioned
            directory above it did, which means the user would have
            already had to force these creations to occur. */
-        SVN_ERR(svn_client_export3(NULL, new_item->url, path,
+        SVN_ERR(svn_client_export4(NULL, new_item->url, path,
                                    &(new_item->peg_revision),
                                    &(new_item->revision),
-                                   TRUE, FALSE, TRUE, NULL,
+                                   TRUE, FALSE, svn_depth_infinity, NULL,
                                    ib->ctx, ib->pool));
       else
         SVN_ERR(svn_client__checkout_internal(NULL, new_item->url, path,
                                               &(new_item->peg_revision),
                                               &(new_item->revision),
-                                              TRUE, FALSE, FALSE,
+                                              SVN_DEPTH_FROM_RECURSE(TRUE),
+                                              FALSE, FALSE,
                                               ib->timestamp_sleep,
                                               ib->ctx, ib->pool));
     }
@@ -663,11 +666,14 @@ svn_client__do_external_status(svn_wc_traversal_info_t *traversal_info,
                                     iterpool), iterpool);
 
           /* And then do the status. */
-          SVN_ERR(svn_client_status2(NULL, fullpath, 
+          SVN_ERR(svn_client_status3(NULL, fullpath, 
                                      &(external->revision),
-                                     status_func, status_baton, 
-                                     TRUE, get_all, update, no_ignore, FALSE,
-                                     ctx, iterpool));
+                                     status_func, status_baton,
+                                     /* ### TODO(sd): Is it really correct
+                                        ### to unconditionally recurse
+                                        ### here? */
+                                     svn_depth_infinity, get_all, update,
+                                     no_ignore, FALSE, ctx, iterpool));
         }
     } 
   

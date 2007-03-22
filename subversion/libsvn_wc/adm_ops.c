@@ -68,7 +68,7 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
               svn_wc_notify_func2_t notify_func,
               void *notify_baton,
               svn_boolean_t remove_missing_dirs,
-              svn_boolean_t recurse,
+              svn_depth_t depth,
               apr_hash_t *exclude_paths,
               apr_pool_t *pool)
 {
@@ -89,84 +89,89 @@ tweak_entries(svn_wc_adm_access_t *dirpath,
                                 &write_required,
                                 svn_wc_adm_access_pool(dirpath)));
 
-  /* Recursively loop over all children. */
-  for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
+  if (depth == svn_depth_files
+      || depth == svn_depth_immediates
+      || depth == svn_depth_infinity)
     {
-      const void *key;
-      void *val;
-      const char *name;
-      svn_wc_entry_t *current_entry;
-      const char *child_path;
-      const char *child_url = NULL;
-      svn_boolean_t excluded;
-
-      svn_pool_clear(subpool);
-
-      apr_hash_this(hi, &key, NULL, &val);
-      name = key;
-      current_entry = val;
-
-      /* Ignore the "this dir" entry. */
-      if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
-        continue;
-
-      child_path = svn_path_join(svn_wc_adm_access_path(dirpath), name,
-                                 subpool);
-      excluded = (apr_hash_get(exclude_paths, child_path,
-                               APR_HASH_KEY_STRING) != NULL);
-
-      /* Derive the new URL for the current (child) entry */
-      if (base_url)
-        child_url = svn_path_url_add_component(base_url, name, subpool);
-      
-      /* If a file, or deleted or absent dir in recursive mode, then tweak the
-         entry but don't recurse. */
-      if ((current_entry->kind == svn_node_file)
-          || (recurse && (current_entry->deleted || current_entry->absent)))
+      for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
         {
-          if (! excluded)
-            SVN_ERR(svn_wc__tweak_entry(entries, name,
-                                        child_url, repos, new_rev, TRUE,
-                                        &write_required,
-                                        svn_wc_adm_access_pool(dirpath)));
-        }
-      
-      /* If a directory and recursive... */
-      else if (recurse && (current_entry->kind == svn_node_dir))
-        {
-          /* If the directory is 'missing', remove it.  This is safe as 
-             long as this function is only called as a helper to 
-             svn_wc__do_update_cleanup, since the update will already have 
-             restored any missing items that it didn't want to delete. */
-          if (remove_missing_dirs 
-              && svn_wc__adm_missing(dirpath, child_path))
+          const void *key;
+          void *val;
+          const char *name;
+          svn_wc_entry_t *current_entry;
+          const char *child_path;
+          const char *child_url = NULL;
+          svn_boolean_t excluded;
+        
+          svn_pool_clear(subpool);
+        
+          apr_hash_this(hi, &key, NULL, &val);
+          name = key;
+          current_entry = val;
+        
+          /* Ignore the "this dir" entry. */
+          if (! strcmp(name, SVN_WC_ENTRY_THIS_DIR))
+            continue;
+
+          /* Derive the new URL for the current (child) entry */
+          if (base_url)
+            child_url = svn_path_url_add_component(base_url, name, subpool);
+
+          child_path = svn_path_join(svn_wc_adm_access_path(dirpath), name,
+                                     subpool);
+          excluded = (apr_hash_get(exclude_paths, child_path,
+                                   APR_HASH_KEY_STRING) != NULL);
+
+          /* If a file, or deleted or absent dir, then tweak the entry
+             but don't recurse. */ 
+          if ((current_entry->kind == svn_node_file)
+              || (current_entry->deleted || current_entry->absent))
             {
-              if (current_entry->schedule != svn_wc_schedule_add
-                  && !excluded)
-                {
-                  svn_wc__entry_remove(entries, name);
-                  if (notify_func)
-                    {
-                      notify = svn_wc_create_notify(child_path,
-                                                    svn_wc_notify_delete,
-                                                    subpool);
-                      notify->kind = current_entry->kind;
-                      (* notify_func)(notify_baton, notify, subpool);
-                    }
-                }
-              /* Else if missing item is schedule-add, do nothing. */
+              if (! excluded)
+                SVN_ERR(svn_wc__tweak_entry(entries, name,
+                                            child_url, repos, new_rev, TRUE,
+                                            &write_required,
+                                            svn_wc_adm_access_pool(dirpath)));
             }
-
-          /* Not missing, deleted, or absent, so recurse. */
-          else
+      
+          /* If a directory and recursive... */
+          else if ((depth == svn_depth_infinity)
+                   && (current_entry->kind == svn_node_dir))
             {
-              svn_wc_adm_access_t *child_access;
-              SVN_ERR(svn_wc_adm_retrieve(&child_access, dirpath, child_path,
-                                          subpool));
-              SVN_ERR(tweak_entries 
-                      (child_access, child_url, repos, new_rev, notify_func, 
-                       notify_baton, remove_missing_dirs, recurse,
-                       exclude_paths, subpool));
+              /* If the directory is 'missing', remove it.  This is safe as 
+                 long as this function is only called as a helper to 
+                 svn_wc__do_update_cleanup, since the update will already have 
+                 restored any missing items that it didn't want to delete. */
+              if (remove_missing_dirs 
+                  && svn_wc__adm_missing(dirpath, child_path))
+                {
+                  if (current_entry->schedule != svn_wc_schedule_add
+                      && !excluded)
+                    {
+                      svn_wc__entry_remove(entries, name);
+                      if (notify_func)
+                        {
+                          notify = svn_wc_create_notify(child_path,
+                                                        svn_wc_notify_delete,
+                                                        subpool);
+                          notify->kind = current_entry->kind;
+                          (* notify_func)(notify_baton, notify, subpool);
+                        }
+                    }
+                  /* Else if missing item is schedule-add, do nothing. */
+                }
+
+              /* Not missing, deleted, or absent, so recurse. */
+              else
+                {
+                  svn_wc_adm_access_t *child_access;
+                  SVN_ERR(svn_wc_adm_retrieve(&child_access, dirpath,
+                                              child_path, subpool));
+                  SVN_ERR(tweak_entries
+                          (child_access, child_url, repos, new_rev,
+                           notify_func, notify_baton, remove_missing_dirs,
+                           depth, exclude_paths, subpool));
+                }
             }
         }
     }
@@ -220,7 +225,7 @@ remove_revert_file(svn_stringbuf_t **logtags,
 svn_error_t *
 svn_wc__do_update_cleanup(const char *path,
                           svn_wc_adm_access_t *adm_access,
-                          svn_boolean_t recursive,
+                          svn_depth_t depth,
                           const char *base_url,
                           const char *repos,
                           svn_revnum_t new_revision,
@@ -265,7 +270,7 @@ svn_wc__do_update_cleanup(const char *path,
 
       SVN_ERR(tweak_entries(dir_access, base_url, repos, new_revision,
                             notify_func, notify_baton, remove_missing_dirs,
-                            recursive, exclude_paths, pool));
+                            depth, exclude_paths, pool));
     }
 
   else
@@ -1519,6 +1524,14 @@ svn_wc_add2(const char *path,
 
   if (kind == svn_node_dir) /* scheduling a directory for addition */
     {
+      /* ### TODO(sd): Both the calls to svn_wc_ensure_adm3() below pass
+         ### svn_depth_infinity.  I think this is reasonable, because
+         ### we don't have any other source of depth information in
+         ### the current context, and if svn_wc_ensure_adm3() *does*
+         ### create a new admin directory, it ought to default to
+         ### svn_depth_infinity.  However, if 'svn add' ever takes
+         ### a depth parameter, then this would need to change. */
+
       if (! copyfrom_url)
         {
           const svn_wc_entry_t *p_entry; /* ### why not use parent_entry? */
@@ -1534,8 +1547,8 @@ svn_wc_add2(const char *path,
   
           /* Make sure this new directory has an admistrative subdirectory
              created inside of it */
-          SVN_ERR(svn_wc_ensure_adm2(path, NULL, new_url, p_entry->repos,
-                                     0, pool));
+          SVN_ERR(svn_wc_ensure_adm3(path, NULL, new_url, p_entry->repos,
+                                     0, svn_depth_infinity, pool));
         }
       else
         {
@@ -1543,9 +1556,9 @@ svn_wc_add2(const char *path,
              the admin directory already in existence, then the dir will
              contain the copyfrom settings.  So we need to pass the
              copyfrom arguments to the ensure call. */
-          SVN_ERR(svn_wc_ensure_adm2(path, NULL, copyfrom_url,
+          SVN_ERR(svn_wc_ensure_adm3(path, NULL, copyfrom_url,
                                      parent_entry->repos, copyfrom_rev,
-                                     pool));
+                                     svn_depth_infinity, pool));
         }
       
       /* We want the locks to persist, so use the access baton's pool */
@@ -1560,7 +1573,7 @@ svn_wc_add2(const char *path,
 
       /* We're making the same mods we made above, but this time we'll
          force the scheduling.  Also make sure to undo the
-         'incomplete' flag which svn_wc_ensure_adm2 sets by default. */
+         'incomplete' flag which svn_wc_ensure_adm3 sets by default. */
       modify_flags |= SVN_WC__ENTRY_MODIFY_FORCE;
       modify_flags |= SVN_WC__ENTRY_MODIFY_INCOMPLETE;
       tmp_entry.schedule = is_replace 
@@ -1588,7 +1601,8 @@ svn_wc_add2(const char *path,
             svn_path_url_add_component(parent_entry->url, base_name, pool);
 
           /* Change the entry urls recursively (but not the working rev). */
-          SVN_ERR(svn_wc__do_update_cleanup(path, adm_access, TRUE, new_url, 
+          SVN_ERR(svn_wc__do_update_cleanup(path, adm_access,
+                                            svn_depth_infinity, new_url,
                                             parent_entry->repos,
                                             SVN_INVALID_REVNUM, NULL, 
                                             NULL, FALSE, apr_hash_make(pool),

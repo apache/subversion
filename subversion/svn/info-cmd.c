@@ -121,6 +121,10 @@ print_info_xml(void *baton,
       svn_cl__xml_tagged_cdata(&sb, pool, "schedule",
                                schedule_str(info->schedule));
 
+      /* "<depth> xx </depth>" */
+      svn_cl__xml_tagged_cdata(&sb, pool, "depth",
+                               svn_depth_to_word(info->depth));
+
       /* "<copy-from-url> xx </copy-from-url>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "copy-from-url",
                                info->copyfrom_url);
@@ -310,6 +314,37 @@ print_info(void *baton,
           break;
         }
       
+      switch (info->depth) 
+        {
+        case svn_depth_unknown:
+          /* Unknown depth is the norm for remote directories anyway
+             (although infinity would be equally appropriate).  Let's
+             not bother to print it. */
+          break;
+      
+        case svn_depth_empty:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: empty\n")));
+          break;
+      
+        case svn_depth_files:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: files\n")));
+          break;
+      
+        case svn_depth_immediates:
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: immediates\n")));
+          break;
+      
+        case svn_depth_infinity:
+          /* Infinity is the default depth for working copy
+             directories.  Let's not print it, it's not special enough
+             to be worth mentioning.  */
+          break;
+
+        default:
+          /* Other depths should never happen here. */
+          SVN_ERR(svn_cmdline_printf(pool, _("Depth: INVALID\n")));
+        }
+
       if (info->copyfrom_url) 
         SVN_ERR(svn_cmdline_printf(pool, _("Copied From URL: %s\n"),
                                    info->copyfrom_url));
@@ -477,6 +512,9 @@ svn_cl__info(apr_getopt_t *os,
                                   "mode"));
     }
   
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = svn_depth_immediates;
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *truepath;
@@ -496,7 +534,8 @@ svn_cl__info(apr_getopt_t *os,
       err = svn_client_info(truepath,
                             &peg_revision, &(opt_state->start_revision),
                             receiver, NULL,
-                            opt_state->recursive, ctx, subpool);
+                            SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                            ctx, subpool);
 
       /* If one of the targets is a non-existent URL or wc-entry,
          don't bail out.  Just warn and move on to the next target. */

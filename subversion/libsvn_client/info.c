@@ -53,6 +53,7 @@ build_info_from_dirent(svn_info_t **info,
   tmpinfo->last_changed_date    = dirent->time;
   tmpinfo->last_changed_author  = dirent->last_author;
   tmpinfo->lock                 = lock;
+  tmpinfo->depth                = svn_depth_unknown;
 
   *info = tmpinfo;
   return SVN_NO_ERROR;
@@ -80,6 +81,7 @@ build_info_from_entry(svn_info_t **info,
   /* entry-specific stuff */
   tmpinfo->has_wc_info          = TRUE;
   tmpinfo->schedule             = entry->schedule;
+  tmpinfo->depth                = entry->depth;
   tmpinfo->copyfrom_url         = entry->copyfrom_url;
   tmpinfo->copyfrom_rev         = entry->copyfrom_rev;
   tmpinfo->text_time            = entry->text_time;

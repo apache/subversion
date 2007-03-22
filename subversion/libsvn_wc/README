@@ -490,6 +490,16 @@ working-size:
    The purpose of this field is to serve as a reference for the
    change-detection heuristic.
 
+depth:
+   The entry depth of this directory.  `empty' means updates will not pull
+   in any files or subdirectories not already present.  `files' means that
+   updates will pull in any files not already present.  `immediates' means
+   updates will pull in any files or subdirectories not already
+   present, and those subdirectories' this_dir entries will have depth
+   `empty'.  `' means infinite (normal) depth -- the directory has all its
+   entries and pulls new entries with depth infinity as well.
+   Default is infinite (`').
+
 The only fields allowed in an entry for a directory (other than the
 this_dir entry) are name, absent, deleted, schedule, copied,
 copyfrom-url, copyfrom-rev and kind.  The other fields are only stored

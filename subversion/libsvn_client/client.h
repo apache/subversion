@@ -395,20 +395,37 @@ apr_hash_t *svn_client__dry_run_deletions(void *merge_cmd_baton);
 /*** Checkout, update and switch ***/
 
 /* Update a working copy PATH to REVISION, and (if not NULL) set
-   RESULT_REV to the update revision.  RECURSE if so commanded;
-   likewise, possibly IGNORE_EXTERNALS.  If TIMESTAMP_SLEEP is NULL this
-   function will sleep before returning to ensure timestamp integrity.
-   If TIMESTAMP_SLEEP is not NULL then the function will not sleep but
-   will set *TIMESTAMP_SLEEP to TRUE if a sleep is required, and will
-   not change *TIMESTAMP_SLEEP if no sleep is required.  If
-   ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
-   obstruct items added from the repos are tolerated; if FALSE, these
-   obstructions cause the update to fail. */
+   RESULT_REV to the update revision.
+
+   If DEPTH is svn_depth_unknown, then use whatever depth is already
+   set for PATH, or @c svn_depth_infinity if PATH does not exist.
+
+   Else if DEPTH is svn_depth_infinity, then update fully recursively
+   (resetting the existing depth of the working copy if necessary).
+   Else if DEPTH is svn_depth_files, update all files under PATH (if 
+   any), but exclude any subdirectories.  Else if DEPTH is
+   svn_depth_immediates, update all files and include immediate
+   subdirectories (at svn_depth_empty).  Else if DEPTH is
+   svn_depth_empty, just update PATH; if PATH is a directory, that
+   means touching only its properties not its entries.
+
+   If IGNORE_EXTERNALS is true, do no externals processing.
+
+   If TIMESTAMP_SLEEP is NULL this function will sleep before
+   returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
+   NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
+   to TRUE if a sleep is required, and will not change
+   *TIMESTAMP_SLEEP if no sleep is required.
+
+   If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH
+   that obstruct items added from the repos are tolerated; if FALSE,
+   these obstructions cause the update to fail. */
+
 svn_error_t *
 svn_client__update_internal(svn_revnum_t *result_rev,
                             const char *path,
                             const svn_opt_revision_t *revision,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t ignore_externals,
                             svn_boolean_t allow_unver_obstructions,
                             svn_boolean_t *timestamp_sleep,
@@ -416,22 +433,34 @@ svn_client__update_internal(svn_revnum_t *result_rev,
                             apr_pool_t *pool);
 
 /* Checkout into PATH a working copy of URL at REVISION, and (if not
-   NULL) set RESULT_REV to the checked out revision.  RECURSE if so
-   commanded; likewise, possibly IGNORE_EXTERNALS.  If TIMESTAMP_SLEEP
-   is NULL this function will sleep before returning to ensure
-   timestamp integrity.  If TIMESTAMP_SLEEP is not NULL then the
-   function will not sleep but will set *TIMESTAMP_SLEEP to TRUE if a
-   sleep is required, and will not change *TIMESTAMP_SLEEP if no sleep
-   is required.  If ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children
-   of PATH that obstruct items added from the repos are tolerated; if FALSE,
-   these obstructions cause the checkout to fail. */
+   NULL) set RESULT_REV to the checked out revision.  
+
+   If DEPTH is svn_depth_infinity, then check out fully recursively.
+   Else if DEPTH is svn_depth_files, checkout all files under PATH (if 
+   any), but not subdirectories.  Else if DEPTH is
+   svn_depth_immediates, check out all files and include immediate
+   subdirectories (at svn_depth_empty).  Else if DEPTH is
+   svn_depth_empty, just check out PATH, with none of its entries.
+
+   DEPTH must be a definite depth, not (e.g.) svn_depth_unknown.
+
+   If IGNORE_EXTERNALS is true, do no externals processing.
+
+   If TIMESTAMP_SLEEP is NULL this function will sleep before
+   returning to ensure timestamp integrity.  If TIMESTAMP_SLEEP is not
+   NULL then the function will not sleep but will set *TIMESTAMP_SLEEP
+   to TRUE if a sleep is required, and will not change
+   *TIMESTAMP_SLEEP if no sleep is required.  If
+   ALLOW_UNVER_OBSTRUCTIONS is TRUE, unversioned children of PATH that
+   obstruct items added from the repos are tolerated; if FALSE, these
+   obstructions cause the checkout to fail. */
 svn_error_t *
 svn_client__checkout_internal(svn_revnum_t *result_rev,
                               const char *URL,
                               const char *path,
                               const svn_opt_revision_t *peg_revision,
                               const svn_opt_revision_t *revision,
-                              svn_boolean_t recurse,
+                              svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
                               svn_boolean_t *timestamp_sleep,
@@ -477,7 +506,7 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
  * DIFF_CMD/DIFF_CMD_BATON represent the callback and callback argument that
  * implement the file comparison function
  *
- * RECURSE is set if the diff is to be recursive.
+ * DEPTH is the depth to recurse.
  *
  * DRY_RUN is set if this is a dry-run merge. It is not relevant for diff.
  *
@@ -496,7 +525,7 @@ svn_client__get_diff_editor(const char *target,
                             svn_wc_adm_access_t *adm_access,
                             const svn_wc_diff_callbacks2_t *diff_cmd,
                             void *diff_cmd_baton,
-                            svn_boolean_t recurse,
+                            svn_depth_t depth,
                             svn_boolean_t dry_run,
                             svn_ra_session_t *ra_session, 
                             svn_revnum_t revision,

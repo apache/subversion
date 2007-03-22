@@ -175,6 +175,9 @@ svn_cl__proplist(apr_getopt_t *os,
           pl_receiver = proplist_receiver;
         }
 
+      if (opt_state->depth == svn_depth_unknown)
+        opt_state->depth = svn_depth_empty;
+
       for (i = 0; i < targets->nelts; i++)
         {
           const char *target = APR_ARRAY_IDX(targets, i, const char *);
@@ -195,7 +198,7 @@ svn_cl__proplist(apr_getopt_t *os,
           SVN_ERR(svn_cl__try
                   (svn_client_proplist3(truepath, &peg_revision,
                                         &(opt_state->start_revision),
-                                        opt_state->recursive,
+                                        SVN_DEPTH_TO_RECURSE(opt_state->depth),
                                         pl_receiver,
                                         &pl_baton,
                                         ctx, subpool),

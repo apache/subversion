@@ -244,7 +244,7 @@ svn_wc_relocate2(const char *path,
   cb.baton = validator_baton;
 
   return svn_wc_relocate3(path, adm_access, from, to, recurse,
-                          compat_validator, &cb, pool);
+                          compat2_validator, &cb, pool);
 }
 
 svn_error_t *

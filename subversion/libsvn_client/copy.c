@@ -1193,7 +1193,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(svn_client__checkout_internal
               (NULL, pair->src_original, pair->dst, &pair->src_peg_revision,
                &pair->src_op_revision,
-               TRUE, FALSE, FALSE, NULL, ctx, pool));
+               SVN_DEPTH_FROM_RECURSE(TRUE),
+               FALSE, FALSE, NULL, ctx, pool));
 
       /* Rewrite URLs recursively, remove wcprops, and mark everything
          as 'copied' -- assuming that the src and dst are from the

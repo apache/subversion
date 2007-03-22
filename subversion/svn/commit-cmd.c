@@ -75,6 +75,9 @@ svn_cl__commit(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
 
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = svn_depth_infinity;
+
   cfg = apr_hash_get(ctx->config, SVN_CONFIG_CATEGORY_CONFIG,
                      APR_HASH_KEY_STRING);
   if (cfg)
@@ -94,15 +97,15 @@ svn_cl__commit(apr_getopt_t *os,
 
   /* Commit. */
   SVN_ERR(svn_cl__cleanup_log_msg
-          (ctx->log_msg_baton3, svn_client_commit4(&commit_info,
-                                                   targets,
-                                                   opt_state->nonrecursive
-                                                   ? FALSE : TRUE,
-                                                   no_unlock,
-                                                   opt_state->keep_changelist,
-                                                   opt_state->changelist,
-                                                   ctx,
-                                                   pool)));
+          (ctx->log_msg_baton3,
+           svn_client_commit4(&commit_info,
+                              targets,
+                              SVN_DEPTH_TO_RECURSE(opt_state->depth),
+                              no_unlock,
+                              opt_state->keep_changelist,
+                              opt_state->changelist,
+                              ctx,
+                              pool)));
   if (commit_info && ! opt_state->quiet)
     SVN_ERR(svn_cl__print_commit_info(commit_info, pool));
 

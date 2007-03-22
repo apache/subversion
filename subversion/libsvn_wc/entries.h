@@ -37,7 +37,10 @@ extern "C" {
 #define SVN_WC__ENTRIES_ATTR_DIR_STR    "dir"
 
 
-/* The names of the XML attributes for storing entries' information.
+/* The names of the fields used for storing entries' information.
+   Used for the names of the XML attributes in XML entries files
+   (format 6 and below), for the names of attributes in wc logs,
+   and for error reporting when reading a non-XML entries file.
    ### If you add or remove items here, you probably want to make sure
    to do the same for the SVN_WC__ENTRY_MODIFY_* #defines as well. */
 #define SVN_WC__ENTRY_ATTR_NAME               "name"
@@ -86,6 +89,8 @@ extern "C" {
    area for PATH.  The adm area must not already have an entries
    file.  UUID is the repository UUID, and may be NULL.  REPOS is the
    repository root URL and, if not NULL, must be a prefix of URL.
+   DEPTH is the initial depth of the working copy, it must be a
+   definite depth, not svn_depth_unknown.
 
    If initial rev is valid and non-zero, then mark the 'this_dir'
    entry as being incomplete.
@@ -95,6 +100,7 @@ svn_error_t *svn_wc__entries_init(const char *path,
                                   const char *url,
                                   const char *repos,
                                   svn_revnum_t initial_rev,
+                                  svn_depth_t depth,
                                   apr_pool_t *pool);
 
 
@@ -153,7 +159,7 @@ svn_error_t *svn_wc__atts_to_entry(svn_wc_entry_t **new_entry,
 #define SVN_WC__ENTRY_MODIFY_CHANGELIST         APR_INT64_C(0x0000000040000000)
 #define SVN_WC__ENTRY_MODIFY_KEEP_LOCAL         APR_INT64_C(0x0000000080000000)
 #define SVN_WC__ENTRY_MODIFY_WORKING_SIZE       APR_INT64_C(0x0000000100000000)
-
+/* No #define for DEPTH, because it's only meaningful on this-dir anyway. */
 
 /* ...ORed together with this to mean "I really mean this, don't be
    trying to protect me from myself on this one." */

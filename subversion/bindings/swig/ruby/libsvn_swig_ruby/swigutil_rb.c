@@ -110,6 +110,7 @@ DEFINE_ID(handler_baton, "handler_baton")
 DEFINE_ID(__batons__, "__batons__")
 DEFINE_ID(destroy, "destroy")
 DEFINE_ID(filename_to_temp_file, "filename_to_temp_file")
+DEFINE_ID(inspect, "inspect")
 
 typedef void *(*r2c_func)(VALUE value, void *ctx, apr_pool_t *pool);
 typedef VALUE (*c2r_func)(void *value, void *ctx);
@@ -812,6 +813,14 @@ DEFINE_DUP_NO_CONST(wc_status2, wc_dup_status2)
 
 
 /* Ruby -> C */
+static const char *
+r2c_inspect(VALUE object)
+{
+  VALUE inspected;
+  inspected = rb_funcall(object, rb_id_inspect(), 0);
+  return StringValueCStr(inspected);
+}
+
 static void *
 r2c_string(VALUE value, void *ctx, apr_pool_t *pool)
 {
@@ -1757,10 +1766,17 @@ svn_swig_rb_get_commit_log_func(const char **log_msg,
     result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
 
     if (!err) {
+      char error_message[] =
+        "log_msg_func should return an array not '%s': "                \
+        "[TRUE_IF_IT_IS_MESSAGE, MESSAGE_OR_FILE_AS_STRING]";
+
+      if (!RTEST(rb_obj_is_kind_of(result, rb_cArray)))
+        rb_raise(rb_eTypeError, error_message, r2c_inspect(result));
       is_message = rb_ary_entry(result, 0);
       value = rb_ary_entry(result, 1);
 
-      Check_Type(value, T_STRING);
+      if (!RTEST(rb_obj_is_kind_of(value, rb_cString)))
+        rb_raise(rb_eTypeError, error_message, r2c_inspect(result));
       ret = (char *)r2c_string(value, NULL, pool);
       if (RTEST(is_message)) {
         *log_msg = ret;
