@@ -555,7 +555,10 @@ svn_fs_merge_info__get_merge_info(apr_hash_t **mergeinfo,
   /* We require a revision root. */
   if (root->is_txn_root)
     return svn_error_create(SVN_ERR_FS_NOT_REVISION_ROOT, NULL, NULL);
-  rev = svn_fs_revision_root_revision(root);
+
+  /* This is an inlining of svn_fs_revision_root_revision(), which we cannot
+     call from here, because it would be a circular dependency. */
+  rev = root->is_txn_root ? SVN_INVALID_REVNUM : root->rev;
 
   SVN_ERR(open_db(&db, root->fs->path, pool));
 
