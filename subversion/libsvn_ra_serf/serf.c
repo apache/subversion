@@ -695,6 +695,7 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__get_commit_editor,
   svn_ra_serf__get_file,
   svn_ra_serf__get_dir,
+  svn_ra_serf__get_merge_info,
   svn_ra_serf__do_update,
   svn_ra_serf__do_switch,
   svn_ra_serf__do_status,

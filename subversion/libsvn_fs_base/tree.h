@@ -1,7 +1,7 @@
 /* tree.h : internal interface to tree node functions
  *
  * ====================================================================
- * Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+ * Copyright (c) 2000-2006 CollabNet.  All rights reserved.
  *
  * This software is licensed as described in the file COPYING, which
  * you should have received as part of this distribution.  The terms
@@ -21,6 +21,12 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+#include "svn_props.h"
+
+/* A transaction property which maps to a skel form of apr_hash_t
+   (target wc path char * -> actual merge info). */
+#define SVN_FS_PROP_TXN_MERGEINFO     SVN_PROP_PREFIX "txn-mergeinfo"
 
 
 

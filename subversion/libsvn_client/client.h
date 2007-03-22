@@ -182,6 +182,62 @@ svn_client__ra_session_from_path(svn_ra_session_t **ra_session_p,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+    
+/* Return the path of PATH_OR_URL relative to the repository root
+   (REPOS_ROOT) in REL_PATH (URI-decoded).
+
+   The remaining parameters are used to procure the repository root.
+   Either REPOS_ROOT or RA_SESSION -- but not both -- may be NULL.
+   REPOS_ROOT or ADM_ACCESS (which may also be NULL) should be passed
+   when available as an optimization (in that order of preference). */
+svn_error_t *
+svn_client__path_relative_to_root(const char **rel_path,
+                                  const char *path_or_url,
+                                  const char *repos_root,
+                                  svn_ra_session_t *ra_session,
+                                  svn_wc_adm_access_t *adm_access,
+                                  apr_pool_t *pool);
+
+
+/* Return the property value for any PROPNAME set on TARGET in *PROPS,
+   with WC paths of char * for keys and property values of
+   svn_string_t * for values.  Assumes that PROPS is non-NULL. */
+svn_error_t *
+svn_client__get_prop_from_wc(apr_hash_t *props, const char *propname,
+                             const char *target, svn_boolean_t pristine,
+                             const svn_wc_entry_t *entry,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_boolean_t recurse, svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
+
+
+/* Obtain any inherited/direct merge info for the session-relative
+   path REL_PATH from the repository, and set it in *TARGET_MERGEINFO.
+   If there is no merge info available for REL_PATH, set
+   *TARGET_MERGEINFO to NULL. */
+svn_error_t *
+svn_client__get_merge_info_for_path(svn_ra_session_t *ra_session,
+                                    apr_hash_t **target_mergeinfo,
+                                    const char *rel_path,
+                                    svn_revnum_t rev,
+                                    apr_pool_t *pool);
+
+/* Parse any merge info from WCPATH's ENTRY and store it in MERGEINFO.
+   If no merge info is available, set MERGEINFO to an empty hash. */
+svn_error_t *
+svn_client__parse_merge_info(apr_hash_t **mergeinfo,
+                             const svn_wc_entry_t *entry,
+                             const char *wcpath,
+                             svn_wc_adm_access_t *adm_access,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *pool);
+
+/* Set MERGEINFO on in the WC for WCPATH. */
+svn_error_t *
+svn_client__record_wc_merge_info(const char *wcpath,
+                                 apr_hash_t *mergeinfo,
+                                 svn_wc_adm_access_t *adm_access,
+                                 apr_pool_t *pool);
 
 /* ---------------------------------------------------------------- */
 

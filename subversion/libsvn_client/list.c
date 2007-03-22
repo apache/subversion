@@ -127,12 +127,8 @@ svn_client_list(const char *path_or_url,
 
   SVN_ERR(svn_ra_get_repos_root(ra_session, &repos_root, pool));
 
-  /* Get path relative to repository root. */
-  fs_path = svn_path_is_child(repos_root, url, pool);
-  /* Make sure fs_path begins with a slash.  fs_path is NULL if the url is
-     the repository root. */
-  fs_path = svn_path_join("/", fs_path ? fs_path : "", pool);
-  fs_path = svn_path_uri_decode(fs_path, pool);
+  SVN_ERR(svn_client__path_relative_to_root(&fs_path, url, repos_root,
+                                            ra_session, NULL, pool));
 
   err = svn_ra_stat(ra_session, "", rev, &dirent, pool);
 

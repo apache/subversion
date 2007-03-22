@@ -135,6 +135,26 @@ PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash);
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_locationhash_to_dict(apr_hash_t *hash);
 
+/* helper function to convert an apr_hash_t* (const char *->array of
+   svn_merge_range_t *) to a Python dict */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *svn_swig_py_mergeinfo_to_dict(apr_hash_t *hash, 
+                                        swig_type_info *type,
+                                        PyObject *py_pool);
+
+/* helper function to convert an apr_hash_t* (const char *->hash of
+   mergeinfo hashes) to a Python dict */
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *svn_swig_py_mergeinfo_hash_to_dict(apr_hash_t *hash, 
+                                        swig_type_info *type,
+                                        PyObject *py_pool);
+
+/* helper function to convert an apr_hash_t *(const char *->const char
+ *) to a Python dict */
+
+SVN_SWIG_SWIGUTIL_EXPORT
+PyObject *svn_swig_py_stringhash_to_dict(apr_hash_t *hash);
+
 /* convert a hash of 'const char *' -> TYPE into a Python dict */
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_convert_hash(apr_hash_t *hash, swig_type_info *type, 
@@ -150,6 +170,10 @@ PyObject *svn_swig_py_c_strings_to_list(char **strings);
 SVN_SWIG_SWIGUTIL_EXPORT
 PyObject *svn_swig_py_array_to_list(const apr_array_header_t *strings);
 
+SVN_SWIG_SWIGUTIL_EXPORT
+apr_array_header_t *svn_swig_py_rangelist_to_array(PyObject *list,
+                                                   apr_pool_t *pool);
+
 /* helper function to convert an array of 'svn_revnum_t' to a Python list
    of int objects */
 /* Formerly used by pre-1.0 APIs. Now unused
@@ -161,6 +185,13 @@ PyObject *svn_swig_py_revarray_to_list(const apr_array_header_t *revs);
    allocated in POOL. */
 SVN_SWIG_SWIGUTIL_EXPORT
 apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
+                                             apr_pool_t *pool);
+
+/* helper function to convert a Python dictionary mapping strings to
+   rangelists into an apr_hash_t mapping const char *'s to rangelists,
+   allocated in POOL. */
+SVN_SWIG_SWIGUTIL_EXPORT
+apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
                                              apr_pool_t *pool);
 
 /* helper function to convert a Python dictionary mapping strings to

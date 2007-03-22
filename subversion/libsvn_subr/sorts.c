@@ -111,6 +111,21 @@ svn_sort_compare_paths(const void *a, const void *b)
 }
 
 
+int
+svn_sort_compare_ranges(const void *a, const void *b)
+{
+  const svn_merge_range_t *item1 = *((const svn_merge_range_t * const *) a);
+  const svn_merge_range_t *item2 = *((const svn_merge_range_t * const *) b);
+  
+  if (item1->start == item2->start
+      && item1->end == item2->end)
+    return 0;
+
+  if (item1->start == item2->start)
+    return item1->end < item2->end ? -1 : 1;
+  
+  return item1->start < item2->start ? -1 : 1;
+}
 
 apr_array_header_t *
 svn_sort__hash(apr_hash_t *ht,

@@ -38,6 +38,7 @@
 #include "svn_error.h"
 #include "svn_path.h"
 #include "svn_md5.h"
+#include "svn_mergeinfo.h"
 #include "svn_fs.h"
 #include "fs.h"
 #include "err.h"
@@ -48,6 +49,7 @@
 #include "fs_fs.h"
 #include "id.h"
 
+#include "private/svn_fs_merge_info.h"
 #include "../libsvn_fs/fs-loader.h"
 
 
@@ -1073,9 +1075,34 @@ fs_node_proplist(apr_hash_t **table_p,
   return SVN_NO_ERROR;
 }
 
+                        
+/* Change the merge info for a given path.  */
+static svn_error_t *
+fs_change_merge_info(svn_fs_root_t *root,
+                     const char *path,
+                     apr_hash_t *mergeinfo,
+                     apr_pool_t *pool)
+{
+  const char *txn_id;
+  svn_string_t *mergeinfo_str;
+  svn_fs_txn_t *txn;
 
-/* Change, add, or delete a node's property value.  The node affect is
-   PATH under ROOT, the property value to modify is NAME, and VALUE
+  if (! root->is_txn_root)
+    return not_txn(root);
+  txn_id = root->txn;
+  SVN_ERR(svn_fs_open_txn(&txn, root->fs, txn_id, pool));
+  SVN_ERR(svn_mergeinfo__to_string(&mergeinfo_str, mergeinfo, pool));
+  SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, path, mergeinfo_str, pool));
+
+  SVN_ERR(svn_fs_fs__change_txn_prop(txn, 
+                                     SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                                     svn_string_create("true", pool),
+                                     pool));
+  return SVN_NO_ERROR;
+}
+
+/* Change, add, or delete a node's property value.  The affected node
+   is PATH under ROOT, the property value to modify is NAME, and VALUE
    points to either a string value to set the new contents to, or NULL
    if the property should be deleted.  Perform temporary allocations
    in POOL. */
@@ -1112,6 +1139,30 @@ fs_change_node_prop(svn_fs_root_t *root,
   /* Now, if there's no proplist, we know we need to make one. */
   if (! proplist)
     proplist = apr_hash_make(pool);
+
+  if (strcmp (name, SVN_PROP_MERGE_INFO) == 0)
+    {
+      /* fs_change_mergeinfo will reconvert the mergeinfo to a string,
+         which is a waste in our case because we already have it as a
+         string.  To avoid this, we just call change_txn_mergeinfo
+         directly.  */
+      svn_fs_txn_t *txn;
+
+      /* At least for single file merges, nodes which are direct
+         children of the root are received without a leading slash
+         (e.g. "/file.txt" is received as "file.txt"), so must be made
+         absolute. */
+      const char *canon_path = svn_fs_fs__canonicalize_abspath(path, pool);
+
+      SVN_ERR(svn_fs_open_txn(&txn, root->fs, txn_id, pool));
+
+      SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, canon_path, value, pool));
+      
+      SVN_ERR(svn_fs_fs__change_txn_prop(txn, 
+                                         SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                                         svn_string_create("true", pool),
+                                         pool));
+    }
 
   /* Set the property. */
   apr_hash_set(proplist, name, APR_HASH_KEY_STRING, value);
@@ -3162,7 +3213,9 @@ static root_vtable_t root_vtable = {
   fs_apply_text,
   fs_contents_changed,
   fs_get_file_delta_stream,
-  fs_merge
+  fs_merge,
+  fs_change_merge_info, 
+  svn_fs_merge_info__get_merge_info
 };
 
 /* Construct a new root object in FS, allocated from POOL.  */

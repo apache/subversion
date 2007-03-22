@@ -241,6 +241,13 @@ svn_error_t *svn_ra_dav__get_dir(svn_ra_session_t *session,
 svn_error_t * svn_ra_dav__abort_commit(void *session_baton,
                                        void *edit_baton);
 
+svn_error_t * svn_ra_dav__get_merge_info(svn_ra_session_t *session,
+                                         apr_hash_t **mergeinfo,
+                                         const apr_array_header_t *paths,
+                                         svn_revnum_t revision,
+                                         svn_boolean_t include_parents,
+                                         apr_pool_t *pool);
+
 svn_error_t * svn_ra_dav__do_update(svn_ra_session_t *session,
                                     const svn_ra_reporter3_t **reporter,
                                     void **report_baton,
@@ -756,7 +763,11 @@ enum {
   ELEM_change_dir_prop,
   ELEM_close_file,
   ELEM_close_directory,
-  ELEM_deadprop_count
+  ELEM_deadprop_count,
+  ELEM_merge_info_report,
+  ELEM_merge_info_item,
+  ELEM_merge_info_path,
+  ELEM_merge_info_info
 };
 
 /* ### docco */

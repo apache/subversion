@@ -52,6 +52,7 @@ class WinGeneratorBase(GeneratorBase):
     self.swig_path = None
     self.vsnet_version = '7.00'
     self.vsnet_proj_ver = '7.00'
+    self.sqlite_path = None
     self.skip_sections = { 'mod_dav_svn': None,
                            'mod_authz_svn': None }
 
@@ -95,6 +96,8 @@ class WinGeneratorBase(GeneratorBase):
         self.zlib_path = val
       elif opt == '--with-swig':
         self.swig_path = val
+      elif opt == '--with-sqlite':
+        self.sqlite_path = val
       elif opt == '--with-sasl':
         self.sasl_path = val
       elif opt == '--with-openssl':
@@ -130,6 +133,11 @@ class WinGeneratorBase(GeneratorBase):
         else:
           sys.stderr.write('WARNING: Unknown VS.NET version "%s",'
                            ' assumimg "%s"\n' % (val, self.vsnet_version))
+    if self.sqlite_path == None:
+      sys.stderr.write('ERROR: Sqlite path not specifed. ' + \
+                       'Use --with-sqlite option.')
+      sys.exit(1)
+	
 
   def __init__(self, fname, verfname, options, subdir):
     """
@@ -782,7 +790,10 @@ class WinGeneratorBase(GeneratorBase):
       if target.lang == "ruby":
         fakeincludes.extend(self.ruby_includes)
 
-    fakeincludes.append(self.apath(self.zlib_path))
+    fakeincludes.extend([
+                         self.apath(self.zlib_path),
+                         self.apath(self.sqlite_path, 'inc')
+                         ])
 
     if self.sasl_path:
       fakeincludes.append(self.apath(self.sasl_path, 'include'))
@@ -797,7 +808,8 @@ class WinGeneratorBase(GeneratorBase):
 
     fakelibdirs = [ self.apath(self.bdb_path, "lib"),
                     self.apath(self.neon_path),
-                    self.apath(self.zlib_path) ]
+                    self.apath(self.zlib_path),
+                    self.apath(self.sqlite_path, "lib") ]
     if self.sasl_path:
       fakelibdirs.append(self.apath(self.sasl_path, "lib"))
     if self.serf_lib:
@@ -869,6 +881,9 @@ class WinGeneratorBase(GeneratorBase):
       if dep.external_lib == '$(SVN_DB_LIBS)':
         nondeplibs.append(dblib)
 
+      if dep.external_lib == '$(SVN_SQLITE_LIBS)':
+        nondeplibs.append('sqlite3.lib')
+        
       if self.neon_lib and dep.external_lib == '$(NEON_LIBS)':
         nondeplibs.append(neonlib)
         

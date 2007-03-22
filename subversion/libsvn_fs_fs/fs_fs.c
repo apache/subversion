@@ -36,6 +36,7 @@
 #include "svn_props.h"
 #include "svn_sorts.h"
 #include "svn_time.h"
+#include "svn_mergeinfo.h"
 
 #include "fs.h"
 #include "err.h"
@@ -45,6 +46,7 @@
 #include "fs_fs.h"
 #include "id.h"
 
+#include "private/svn_fs_merge_info.h"
 #include "../libsvn_fs/fs-loader.h"
 
 #include "svn_private_config.h"
@@ -72,6 +74,7 @@
 #define PATH_NEXT_IDS      "next-ids"      /* Next temporary ID assignments */
 #define PATH_REV           "rev"           /* Proto rev file */
 #define PATH_REV_LOCK      "rev-lock"      /* Proto rev (write) lock file */
+#define PATH_TXN_MERGEINFO "mergeinfo"     /* Transaction mergeinfo props */
 #define PATH_PREFIX_NODE   "node."         /* Prefix for node filename */
 #define PATH_EXT_TXN       ".txn"          /* Extension of txn dir */
 #define PATH_EXT_CHILDREN  ".children"     /* Extension for dir contents */
@@ -127,7 +130,8 @@ static txn_vtable_t txn_vtable = {
   svn_fs_fs__txn_prop,
   svn_fs_fs__txn_proplist,
   svn_fs_fs__change_txn_prop,
-  svn_fs_fs__txn_root
+  svn_fs_fs__txn_root,
+  svn_fs_fs__txn_mergeinfo
 };
 
 /* Pathname helper functions */
@@ -188,6 +192,13 @@ static const char *
 path_txn_props(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
 {
   return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_PROPS, pool);
+}
+
+static const char *
+path_txn_mergeinfo(svn_fs_t *fs, const char *txn_id, apr_pool_t *pool)
+{
+  return svn_path_join(path_txn_dir(fs, txn_id, pool), PATH_TXN_MERGEINFO,
+                       pool);
 }
 
 static const char *
@@ -715,6 +726,10 @@ svn_fs_fs__hotcopy(const char *src_path,
 
   /* Copy the uuid. */
   SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, PATH_UUID, pool));
+  
+  /* Copy the merge tracking info. */
+  SVN_ERR(svn_io_dir_file_copy(src_path, dst_path, SVN_FS_MERGE_INFO__DB_NAME,
+                               pool));
 
   /* Find the youngest revision from this current file. */
   SVN_ERR(get_youngest(&youngest, dst_path, pool));
@@ -2952,6 +2967,60 @@ svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
   return SVN_NO_ERROR;
 }
 
+/* Store the mergeinfo list for transaction TXN_ID in MINFO.
+   Perform temporary allocations in POOL. */
+
+static svn_error_t *
+get_txn_mergeinfo(apr_hash_t *minfo,
+                  svn_fs_t *fs,
+                  const char *txn_id,
+                  apr_pool_t *pool)
+{
+  apr_file_t *txn_minfo_file;
+
+  /* Open the transaction mergeinfo file. */
+  SVN_ERR(svn_io_file_open(&txn_minfo_file, 
+                           path_txn_mergeinfo(fs, txn_id, pool),
+                           APR_READ | APR_CREATE | APR_BUFFERED,
+                           APR_OS_DEFAULT, pool));
+
+  /* Read in the property list. */
+  SVN_ERR(svn_hash_read(minfo, txn_minfo_file, pool));
+
+  SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Change mergeinfo for path NAME in TXN to VALUE.  */
+
+svn_error_t *
+svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
+                                const char *name,
+                                const svn_string_t *value,
+                                apr_pool_t *pool)
+{
+  apr_file_t *txn_minfo_file;
+  apr_hash_t *txn_minfo = apr_hash_make(pool);
+
+  SVN_ERR(get_txn_mergeinfo(txn_minfo, txn->fs, txn->id, pool));
+
+  apr_hash_set(txn_minfo, name, APR_HASH_KEY_STRING, value);
+
+  /* Create a new version of the file and write out the new minfos. */
+  /* Open the transaction minfoerties file. */
+  SVN_ERR(svn_io_file_open(&txn_minfo_file,
+                           path_txn_mergeinfo(txn->fs, txn->id, pool),
+                           APR_WRITE | APR_CREATE | APR_TRUNCATE
+                           | APR_BUFFERED, APR_OS_DEFAULT, pool));
+
+  SVN_ERR(svn_hash_write(txn_minfo, txn_minfo_file, pool));
+
+  SVN_ERR(svn_io_file_close(txn_minfo_file, pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_fs_fs__get_txn(transaction_t **txn_p,
                    svn_fs_t *fs,
@@ -4289,6 +4358,7 @@ commit_body(void *baton, apr_pool_t *pool)
   char *buf;
   apr_hash_t *txnprops;
   svn_string_t date;
+  svn_boolean_t txn_contains_merge_info = FALSE;
 
   /* Get the current youngest revision. */
   SVN_ERR(svn_fs_fs__youngest_rev(&old_rev, cb->fs, pool));
@@ -4354,6 +4424,15 @@ commit_body(void *baton, apr_pool_t *pool)
         SVN_ERR(svn_fs_fs__change_txn_prop 
                 (cb->txn, SVN_FS_PROP_TXN_CHECK_LOCKS,
                  NULL, pool));
+      if (apr_hash_get(txnprops, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                       APR_HASH_KEY_STRING))
+        {
+          txn_contains_merge_info = TRUE;
+          SVN_ERR(svn_fs_fs__change_txn_prop
+                  (cb->txn, SVN_FS_PROP_TXN_CONTAINS_MERGEINFO,
+                   NULL, pool));
+        }
+      
     }
 
   /* Move the finished rev file into place. */
@@ -4382,6 +4461,9 @@ commit_body(void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_fs__move_into_place(revprop_filename, final_revprop, 
                                      old_rev_filename, pool));
   
+  SVN_ERR(svn_fs_merge_info__update_index(cb->txn, new_rev,
+                                          txn_contains_merge_info, pool));
+
   /* Update the 'current' file. */
   SVN_ERR(write_final_current(cb->fs, cb->txn->id, new_rev, start_node_id,
                               start_copy_id, pool));
@@ -4494,6 +4576,7 @@ svn_fs_fs__create(svn_fs_t *fs,
           (path_format(fs, pool), format, pool));
   ((fs_fs_data_t *) fs->fsap_data)->format = format;
 
+  SVN_ERR(svn_fs_merge_info__create_index(path, pool)); 
   return SVN_NO_ERROR;
 }
 
@@ -4949,6 +5032,18 @@ svn_fs_fs__txn_proplist(apr_hash_t **table_p,
   apr_hash_t *proplist = apr_hash_make(pool);
   SVN_ERR(get_txn_proplist(proplist, txn->fs, txn->id, pool));
   *table_p = proplist;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_fs_fs__txn_mergeinfo(apr_hash_t **table_p,
+                         svn_fs_txn_t *txn,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *mergeinfo = apr_hash_make(pool);
+  SVN_ERR(get_txn_mergeinfo(mergeinfo, txn->fs, txn->id, pool));
+  *table_p = mergeinfo;
 
   return SVN_NO_ERROR;
 }

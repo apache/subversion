@@ -101,6 +101,13 @@ int svn_sort_compare_revisions(const void *a, const void *b);
  */
 int svn_sort_compare_paths(const void *a, const void *b);
 
+/**
+ * Compare two @c svn_merge_range_t *'s, returning an integer greater
+ * than, equal to, or less than 0 if the first range is greater than,
+ * equal to, or less than, the second range.
+ * @since New in 1.5
+ */
+int svn_sort_compare_ranges(const void *a, const void *b);
 
 /** Sort @a ht according to its keys, return an @c apr_array_header_t
  * containing @c svn_sort__item_t structures holding those keys and values

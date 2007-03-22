@@ -721,6 +721,24 @@ typedef svn_error_t *(*svn_client_diff_summarize_func_t)
    void *baton,
    apr_pool_t *pool);
 
+
+/** A callback used in svn_client_merge3() for resolving merge
+ * conflicts to content or properties during the application of a tree
+ * delta.
+ *
+ * All allocations should be performed in @a pool.
+ *
+ * @a baton is a closure object; it should be provided by the implementation,
+ * and passed by the caller.
+ *
+ * @since New in 1.5.
+ */
+typedef svn_error_t *(*svn_client_conflict_resolver_func_t)
+  (const char *path,
+   void *baton,
+   apr_pool_t *pool);
+ 
+
 /** @} */
 
 /**
@@ -818,6 +836,9 @@ typedef struct svn_client_ctx_t
    * cannot contain any standard Subversion properties.
    * @since New in 1.5. */
   apr_hash_t *revprop_table;
+
+  /* @since New in 1.5. */
+  svn_client_conflict_resolver_func_t conflict_resolver_func;
 
 } svn_client_ctx_t;
 
@@ -2256,6 +2277,11 @@ svn_client_diff_summarize_peg(const char *path,
  * ctx->notify_baton2 once for each merged target, passing the target's local 
  * path.
  *
+ * If @a record_only is true, the merge info for the revisions which
+ * would've been merged is recorded, without the merge actually being
+ * performed.  Merge history is recorded in the working copy (and must
+ * be subsequently committed back to the repository).
+ *
  * If @a dry_run is true, the merge is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
  *
@@ -2273,16 +2299,17 @@ svn_client_merge3(const char *source1,
                   svn_depth_t depth,
                   svn_boolean_t ignore_ancestry,
                   svn_boolean_t force,
+                  svn_boolean_t record_only,
                   svn_boolean_t dry_run,
                   const apr_array_header_t *merge_options,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
 /**
- * Similar to svn_client_merge3(), but with @a depth set according to
- * @a recurse: if @a recurse is true, set @a depth to
- * @c svn_depth_infinity, if @a recurse is false, set @a depth to
- * @c svn_depth_files.
+ * Similar to svn_client_merge3(), but with @a record_only set to @c
+ * FALSE, and @a depth set according to @a recurse: if @a recurse is
+ * true, set @a depth to @c svn_depth_infinity, if @a recurse is
+ * false, set @a depth to @c svn_depth_files.
  *
  * @deprecated Provided for backward compatibility with the 1.4 API.
  *
@@ -2343,16 +2370,17 @@ svn_client_merge_peg3(const char *source,
                       svn_depth_t depth,
                       svn_boolean_t ignore_ancestry,
                       svn_boolean_t force,
+                      svn_boolean_t record_only,
                       svn_boolean_t dry_run,
                       const apr_array_header_t *merge_options,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool);
 
 /**
- * Similar to svn_client_merge_peg3(), but with @a depth set according
- * to @a recurse: if @a recurse is true, set @a depth to
- * @c svn_depth_infinity, if @a recurse is false, set @a depth to
- * @c svn_depth_files.
+ * Similar to svn_client_merge_peg3(), but with @a record_only set to
+ * @c FALSE, and @a depth set according to @a recurse: if @a recurse
+ * is true, set @a depth to @c svn_depth_infinity, if @a recurse is
+ * false, set @a depth to @c svn_depth_files.
  *
  * @deprecated Provided for backwards compatibility with the 1.3 API.
  *

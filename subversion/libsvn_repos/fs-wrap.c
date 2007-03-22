@@ -619,6 +619,68 @@ svn_repos_fs_get_locks(apr_hash_t **locks,
 }
 
 
+svn_error_t *
+svn_repos_fs_get_merge_info(apr_hash_t **mergeinfo,
+                            svn_repos_t *repos,
+                            const apr_array_header_t *paths,
+                            svn_revnum_t rev,
+                            svn_boolean_t include_parents,
+                            svn_repos_authz_func_t authz_read_func,
+                            void *authz_read_baton,
+                            apr_pool_t *pool)
+{
+  apr_array_header_t *readable_paths = (apr_array_header_t *) paths;
+  svn_fs_root_t *root;
+  int i;
+
+  if (!SVN_IS_VALID_REVNUM(rev))
+    SVN_ERR(svn_fs_youngest_rev(&rev, repos->fs, pool));
+  SVN_ERR(svn_fs_revision_root(&root, repos->fs, rev, pool));
+
+  /* Filter out unreadable paths before divining merge tracking info. */
+  if (authz_read_func)
+    {
+      apr_pool_t *subpool = svn_pool_create(pool);
+
+      for (i = 0; i < paths->nelts; i++)
+        {
+          svn_boolean_t readable;
+          const char *path = APR_ARRAY_IDX(paths, i, char *);
+          svn_pool_clear(subpool);
+          SVN_ERR(authz_read_func(&readable, root, path, authz_read_baton,
+                                  subpool));
+          if (readable && readable_paths != paths)
+            APR_ARRAY_PUSH(readable_paths, const char *) = path;
+          else if (!readable && readable_paths == paths)
+            {
+              /* Requested paths differ from readable paths.  Fork
+                 list of readable paths from requested paths. */
+              int j;
+              readable_paths = apr_array_make(pool, paths->nelts - 1,
+                                              sizeof(char *));
+              for (j = 0; j < i; j++)
+                {
+                  path = APR_ARRAY_IDX(paths, j, char *);
+                  APR_ARRAY_PUSH(readable_paths, const char *) = path;
+                }
+            }
+        }
+
+      apr_pool_destroy(subpool);
+    }
+
+  /* We consciously do not perform authz checks on the paths returned
+     in *MERGEINFO, avoiding massive authz overhead which would allow
+     us to protect the name of where a change was merged from, but not
+     the change itself. */
+  if (readable_paths->nelts > 0)
+    SVN_ERR(svn_fs_get_merge_info(mergeinfo, root, readable_paths,
+                                  include_parents, pool));
+  else
+    *mergeinfo = NULL;
+
+  return SVN_NO_ERROR;
+}
 
 
 

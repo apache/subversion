@@ -363,6 +363,51 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 }
 #endif
 
+#ifdef SWIGPYTHON
+%typemap(in) apr_array_header_t *RANGELIST {
+    $1 = svn_swig_py_rangelist_to_array ($input, _global_pool);
+    if (PyErr_Occurred()) {
+	SWIG_fail;
+    }
+}
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(in) apr_hash_t *MERGEINFO {
+    $1 = svn_swig_py_mergeinfo_from_dict ($input, _global_pool);
+    if (PyErr_Occurred()) {
+	SWIG_fail;
+    }
+}
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **MERGEHASH
+{
+    $result = t_output_helper(
+        $result,
+        svn_swig_py_mergeinfo_to_dict(*$1,
+				      $descriptor(svn_merge_range_t *),
+				      _global_py_pool));
+    if (PyErr_Occurred()) {
+	SWIG_fail;
+    }
+}
+#endif
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **MERGEHASHHASH
+{
+    $result = t_output_helper(
+        $result,
+        svn_swig_py_mergeinfo_hash_to_dict(*$1,
+				           $descriptor(svn_merge_range_t *),
+				        _global_py_pool));
+    if (PyErr_Occurred()) {
+	SWIG_fail;
+    }
+}
+#endif
 /* -----------------------------------------------------------------------
    Define a more refined 'memberin' typemap for 'const char *' members. This
    is used in place of the 'char *' handler defined automatically.
