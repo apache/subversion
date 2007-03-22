@@ -1168,6 +1168,40 @@ svn_error_t *svn_fs_closest_copy(svn_fs_root_t **root_p,
                                  const char *path,
                                  apr_pool_t *pool);
 
+/** Change a node's merge info
+ *
+ * - @a root and @a path indicate the node whose property should change.
+ *   @a root must be the root of a transaction, not the root of a
+ *   revision.
+ * - @a mergeinhash is the new value of the mergeinfo for PATH, or NULL if
+ *   the merge info for that path should be removed altogether.
+ *
+ * Do any necessary temporary allocation in @a pool.
+ */
+svn_error_t *svn_fs_change_merge_info(svn_fs_root_t *root,
+                                      const char *path,
+                                      apr_hash_t *mergeinhash,
+                                      apr_pool_t *pool);
+
+/** Retrieve merge info for multiple nodes.
+ *
+ * @a minfohash is filled with merge info for each of the @a paths,
+ * stored as a string.  It will never be @c NULL, but may be empty.
+ *
+ * @a root indicates the revision root to use when looking up paths.
+ *
+ * @a paths indicate the paths you are requesting information for
+ *
+ * When @a include_parents is @c TRUE, include inherited merge info
+ * from parent directories of @a paths.
+ *
+ * Do any necessary temporary allocation in @a pool.
+ */
+svn_error_t *svn_fs_get_merge_info(apr_hash_t **minfohash,
+                                   svn_fs_root_t *root,
+                                   const apr_array_header_t *paths,
+                                   svn_boolean_t include_parents,
+                                   apr_pool_t *pool);
 
 /** Merge changes between two nodes into a third node.
  *

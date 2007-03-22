@@ -24,6 +24,7 @@
 #include "svn_pools.h"
 #include "svn_time.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "svn_path.h"
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
@@ -630,6 +631,48 @@ make_reporter(svn_ra_session_t *session,
   /* Wrap the report baton given us by the repos layer with our own
      reporter baton. */
   *report_baton = make_reporter_baton(sbaton, rbaton, pool);
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+svn_ra_local__get_merge_info(svn_ra_session_t *session,
+                             apr_hash_t **mergeinfo,
+                             const apr_array_header_t *paths,
+                             svn_revnum_t revision,
+                             svn_boolean_t include_parents,
+                             apr_pool_t *pool)
+{
+  svn_ra_local__session_baton_t *baton = session->priv;
+  apr_hash_t *tmp_mergeinfo;
+
+  SVN_ERR(svn_repos_fs_get_merge_info(&tmp_mergeinfo, baton->repos, paths,
+                                      revision, include_parents,
+                                      NULL, NULL, pool));
+  if (tmp_mergeinfo != NULL && apr_hash_count(tmp_mergeinfo) > 0)
+    {
+      const void *key;
+      void *value;
+      apr_hash_index_t *hi;
+
+      *mergeinfo = apr_hash_make(pool);
+
+      for (hi = apr_hash_first(pool, tmp_mergeinfo); hi;
+           hi = apr_hash_next(hi))
+        {
+          const char *path, *info;
+          apr_hash_t *for_path;
+
+          apr_hash_this(hi, &key, NULL, &value);
+          path = key;
+          info = value;
+          SVN_ERR(svn_mergeinfo_parse(info, &for_path, pool));
+          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
+        }
+    }
+  else
+    *mergeinfo = NULL;
 
   return SVN_NO_ERROR;
 }
@@ -1351,6 +1394,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_commit_editor,
   svn_ra_local__get_file,
   svn_ra_local__get_dir,
+  svn_ra_local__get_merge_info,
   svn_ra_local__do_update,
   svn_ra_local__do_switch,
   svn_ra_local__do_status,

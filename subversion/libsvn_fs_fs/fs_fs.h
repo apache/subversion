@@ -176,6 +176,13 @@ svn_error_t *svn_fs_fs__change_txn_prop(svn_fs_txn_t *txn,
                                         const svn_string_t *value,
                                         apr_pool_t *pool);
 
+/* Set the transaction mergeinfo for NAME to VALUE in transaction TXN.
+   Perform temporary allocations from POOL.  */
+svn_error_t *svn_fs_fs__change_txn_mergeinfo(svn_fs_txn_t *txn,
+                                             const char *name,
+                                             const svn_string_t *value,
+                                             apr_pool_t *pool);
+
 /* Store a transaction record in *TXN_P for the transaction identified
    by TXN_ID in filesystem FS.  Allocate everything from POOL. */
 svn_error_t *svn_fs_fs__get_txn(transaction_t **txn_p,
@@ -326,6 +333,13 @@ svn_error_t *svn_fs_fs__open_txn(svn_fs_txn_t **txn_p,
 svn_error_t *svn_fs_fs__txn_proplist(apr_hash_t **proplist,
                                      svn_fs_txn_t *txn,
                                      apr_pool_t *pool);
+
+/* Return the changed mergeinfo list from transaction TXN and store it
+   in *MINFOLIST (never NULL), allocating the mergeinfo list from
+   POOL.  */
+svn_error_t *svn_fs_fs__txn_mergeinfo(apr_hash_t **minfolist,
+                                      svn_fs_txn_t *txn,
+                                      apr_pool_t *pool);
 
 /* Delete the mutable node-revision referenced by ID, along with any
    mutable props or directory contents associated with it.  Perform

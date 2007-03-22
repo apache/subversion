@@ -248,6 +248,16 @@ svn_boolean_t svn_prop_name_is_valid(const char *prop_name);
  */
 #define SVN_PROP_EXTERNALS  SVN_PROP_PREFIX "externals"
 
+/** Merge info property used to record a resource's merge history.
+ *
+ * The format is a series of lines containing merge paths and revision
+ * ranges, such as:
+ *
+ *<pre>   /trunk: 1-6,9,37-38
+ *   /trunk/foo: 10</pre>
+ */
+#define SVN_PROP_MERGE_INFO SVN_PROP_PREFIX "mergeinfo"
+
 /** @} */
 
 /** WC props are props that are invisible to users:  they're generated

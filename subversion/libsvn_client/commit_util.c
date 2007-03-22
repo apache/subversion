@@ -1155,6 +1155,28 @@ do_item_commit(void **dir_baton,
                    copyfrom_url ? item->copyfrom_rev : SVN_INVALID_REVNUM,
                    pool, dir_baton));
         }
+
+      /* Set other prop-changes, if available in the baton */
+      if (item->outgoing_prop_changes)
+        {
+          svn_prop_t *prop;
+          apr_array_header_t *prop_changes = item->outgoing_prop_changes;
+          int ctr;
+          for (ctr = 0; ctr < prop_changes->nelts; ctr++)
+            {
+              prop = APR_ARRAY_IDX(prop_changes, ctr, svn_prop_t *);
+              if (kind == svn_node_file)
+                {
+                  editor->change_file_prop(file_baton, prop->name,
+                                           prop->value, pool);
+                }
+              else
+                {
+                  editor->change_dir_prop(*dir_baton, prop->name,
+                                          prop->value, pool);
+                }
+            }
+        }
     }
     
   /* Now handle property mods. */

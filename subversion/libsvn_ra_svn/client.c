@@ -42,6 +42,7 @@
 #include "svn_ra_svn.h"
 #include "svn_md5.h"
 #include "svn_props.h"
+#include "svn_mergeinfo.h"
 
 #include "ra_svn.h"
 
@@ -210,11 +211,12 @@ svn_error_t *svn_ra_svn__auth_response(svn_ra_svn_conn_t *conn,
                                        svn_boolean_t compat)
 {
   if (compat)
-    return svn_ra_svn_write_tuple(conn, pool, "nw(?c)(www)", (apr_uint64_t) 1,
+    return svn_ra_svn_write_tuple(conn, pool, "nw(?c)(wwww)", (apr_uint64_t) 1,
                                   mech, mech_arg,
                                   SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                   SVN_RA_SVN_CAP_SVNDIFF1,
-                                  SVN_RA_SVN_CAP_ABSENT_ENTRIES);
+                                  SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                  SVN_RA_SVN_CAP_MERGE_INFO);
   else
     return svn_ra_svn_write_tuple(conn, pool, "w(?c)", mech, mech_arg);
 }
@@ -556,10 +558,12 @@ static svn_error_t *open_session(svn_ra_svn__session_baton_t **sess_p,
     }
   else
     {
-      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(www)c", (apr_uint64_t) 2,
+      SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "n(wwww)c", (apr_uint64_t) 2,
                                      SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                      SVN_RA_SVN_CAP_SVNDIFF1,
-                                     SVN_RA_SVN_CAP_ABSENT_ENTRIES, url));
+                                     SVN_RA_SVN_CAP_ABSENT_ENTRIES,
+                                     SVN_RA_SVN_CAP_MERGE_INFO,
+                                     url));
       SVN_ERR(handle_auth_request(sess, pool));
     }
 
@@ -1007,6 +1011,62 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
       apr_hash_set(*dirents, name, APR_HASH_KEY_STRING, dirent);
     }
 
+  return SVN_NO_ERROR;
+}
+
+/* If REVISION is SVN_INVALID_REVNUM, no value is sent to the
+   server, which defaults to youngest. */
+static svn_error_t *ra_svn_get_merge_info(svn_ra_session_t *session,
+                                          apr_hash_t **mergeinfo,
+                                          const apr_array_header_t *paths,
+                                          svn_revnum_t revision,
+                                          svn_boolean_t include_parents,
+                                          apr_pool_t *pool)
+{
+  svn_ra_svn__session_baton_t *sess_baton = session->priv;
+  svn_ra_svn_conn_t *conn = sess_baton->conn;
+  int i;
+  apr_array_header_t *mergeinfo_tuple;
+  svn_ra_svn_item_t *elt;
+  const char *path, *to_parse;
+  apr_hash_t *for_path;
+
+  if (!svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_MERGE_INFO))
+    {
+      *mergeinfo = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "w((!", "get-merge-info"));
+  for (i = 0; i < paths->nelts; i++)
+    {
+      path = APR_ARRAY_IDX(paths, i, const char *);
+      SVN_ERR(svn_ra_svn_write_cstring(conn, pool, path));
+    }
+  SVN_ERR(svn_ra_svn_write_tuple(conn, pool, "!)(?r)b)", revision,
+                                 include_parents));
+
+  SVN_ERR(handle_auth_request(sess_baton, pool));
+  SVN_ERR(svn_ra_svn_read_cmd_response(conn, pool, "(?l)", &mergeinfo_tuple));
+
+  if (mergeinfo_tuple != NULL && mergeinfo_tuple->nelts > 0)
+    {
+      *mergeinfo = apr_hash_make(pool);
+      for (i = 0; i < mergeinfo_tuple->nelts; i++)
+        {
+          elt = &((svn_ra_svn_item_t *) mergeinfo_tuple->elts)[i];
+          if (elt->kind != SVN_RA_SVN_LIST)
+            return svn_error_create(SVN_ERR_RA_SVN_MALFORMED_DATA, NULL,
+                                    _("Merge info element is not a list"));
+          SVN_ERR(svn_ra_svn_parse_tuple(elt->u.list, pool, "cc",
+                                         &path, &to_parse));
+          SVN_ERR(svn_mergeinfo_parse(to_parse, &for_path, pool));
+          apr_hash_set(*mergeinfo, path, APR_HASH_KEY_STRING, for_path);
+        }
+    }
+  else
+    *mergeinfo = NULL;
+  
   return SVN_NO_ERROR;
 }
 
@@ -1908,6 +1968,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_commit,
   ra_svn_get_file,
   ra_svn_get_dir,
+  ra_svn_get_merge_info,
   ra_svn_update,
   ra_svn_switch,
   ra_svn_status,

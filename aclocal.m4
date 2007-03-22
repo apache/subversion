@@ -24,3 +24,5 @@ sinclude(build/ac-macros/zlib.m4)
 # Include the libtool macros
 sinclude(build/libtool.m4)
 
+# Include the pkgconfig macros
+sinclude(build/pkg.m4)

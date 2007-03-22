@@ -730,12 +730,12 @@ void SVNClient::merge(const char *path1, Revision &revision1,
         return;
     }
 
-    SVN_JNI_ERR(svn_client_merge(srcPath1.c_str(), revision1.revision(),
-                                 srcPath2.c_str(), revision2.revision (),
-                                 intLocalPath.c_str(), recurse,
-                                 ignoreAncestry, force,
-                                 dryRun, ctx,
-                                 requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_merge3(srcPath1.c_str(), revision1.revision(),
+                                  srcPath2.c_str(), revision2.revision(),
+                                  intLocalPath.c_str(),
+                                  SVN_DEPTH_FROM_RECURSE(recurse),
+                                  ignoreAncestry, force, FALSE, dryRun, NULL,
+                                  ctx, requestPool.pool()), );
 }
 
 void SVNClient::merge(const char *path, Revision &pegRevision, 
@@ -758,12 +758,13 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
         return;
     }
 
-    SVN_JNI_ERR(svn_client_merge_peg(srcPath.c_str(), revision1.revision(),
-                                     revision2.revision(),
-                                     pegRevision.revision(), 
-                                     intLocalPath.c_str(), recurse,
-                                     ignoreAncestry, force,
-                                     dryRun, ctx, requestPool.pool()), );
+    SVN_JNI_ERR(svn_client_merge_peg3(srcPath.c_str(), revision1.revision(),
+                                      revision2.revision(),
+                                      pegRevision.revision(), 
+                                      intLocalPath.c_str(),
+                                      SVN_DEPTH_FROM_RECURSE(recurse),
+                                      ignoreAncestry, force, FALSE, dryRun,
+                                      NULL, ctx, requestPool.pool()), );
 }
 
 

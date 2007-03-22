@@ -103,6 +103,8 @@
 }
 #endif
 
+%apply apr_hash_t **MERGEHASH { apr_hash_t **mergeoutput };
+/* ----------------------------------------------------------------------- */
 /* Ruby fixups for functions not following the pool convention. */
 #ifdef SWIGRUBY
 %ignore svn_repos_fs;

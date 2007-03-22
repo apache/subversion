@@ -586,6 +586,17 @@ svn_error_t *svn_ra_get_dir2(svn_ra_session_t *session,
                                   path, revision, dirent_fields, pool);
 }
 
+svn_error_t *svn_ra_get_merge_info(svn_ra_session_t *session,
+                                   apr_hash_t **mergeinfo,
+                                   const apr_array_header_t *paths,
+                                   svn_revnum_t revision,
+                                   svn_boolean_t include_parents,
+                                   apr_pool_t *pool)
+{
+  return session->vtable->get_merge_info(session, mergeinfo, paths,
+                                         revision, include_parents, pool);
+}
+
 svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
                                const svn_ra_reporter3_t **reporter,
                                void **report_baton,

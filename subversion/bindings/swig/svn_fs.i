@@ -64,6 +64,19 @@
                   ,
                   svn_swig_rb_fs_get_locks_callback)
 #endif
+/* -----------------------------------------------------------------------
+   svn_fs_get_merge_info
+*/
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_hash_t **minfohash
+{
+    $result = t_output_helper(
+        $result,
+        svn_swig_py_stringhash_to_dict(*$1));
+}
+#endif
+%apply apr_hash_t *MERGEINFO { apr_hash_t *mergeinhash };
 
 /* -----------------------------------------------------------------------
    Fix the return value for svn_fs_commit_txn(). If the conflict result is

@@ -1,0 +1,617 @@
+IMPLEMENTATION PLAN
+===================
+
+The plan for building a Merge Tracking implementation for Subversion's
+core <http://subversion.tigris.org/merge-tracking/>.
+
+
+Phase 1: Target for the 1.5.0 release
+-------------------------------------
+
+Record and use merge history to avoid the repeated merge problem and
+allow for cherry-picking.  Expose merge info via properties.  Allow
+for repos dump/load (including the ability to re-create the merge
+history index).
+
+* Make revision and source URL parameters to the 'svn merge -cN URL'
+  command to be optional (via use of merge info and copy history).
+  Support this via the API itself (in addition to the command-line
+  client).  (kamesh/dlr)
+
+  * Default merge source (a URL) to any single source in merge info
+    already present on the target of the merge.  If there are multiple
+    previous merge sources, a specific source must be specified.
+
+  * Default revision range (e.g. for -r/-c) to "all unmerged revisions",
+    "oldest revision at merge source's path" thru HEAD.
+
+* Allow for merge info which contains empty range lists, necessary for
+  override of merge info by child paths which would otherwise inherit
+  merge info from their parents which they don't reflect.
+
+  * Assure that the code path from client to FS allows such values to
+    make it all the way through to the FS and into the merge info
+    index in a meaningful fashion yet.
+
+* Handle notifications resulting from a merge.  (dlr)
+
+  * Handle multiple notifications for single WC items. Possible
+    solutions include:
+
+    * Output multiple notifications, but print divider lines
+      indicating the revisions range to which a set of notifications
+      applies.  Introduce a new type of "skipped" notification for WC
+      items which are already in conflict.
+
+    * Collate changes as merge ranges are applied.  Detect and handle
+      collisions (multiple notifications to the same WC item), giving
+      preference to later notifications (?).
+
+  * Handle skips.
+
+    * If all changes in a merge are skipped, no merge info should be
+      recorded for the target.
+
+    * If only some changes are skipped, merge info should be recorded
+      for the target, and recorded as empty (or with no modifications,
+      if there is pre-existing merge info) for the skipped items.
+
+  * Handle conflicts.
+
+    * If a conflict is encountered, invoke a conflict resolution
+      callback to give a Subversion client a chance to intervene.  If
+      resolution is successful, convert the notification from a 'C' to
+      something else (e.g. 'M').  (Phase 2?)
+
+    * Otherwise, stop applying merge ranges as soon as a second
+      conflict is encountered in a WC item (as it might generate
+      overlapping conflict makers, or apply a merge inside a conflict
+      marker!), being sure to record partial application of merge
+      ranges.
+
+* Handle merge info inheritance (and eliding, if any additional work
+  is necessary).  (pburba/dlr)
+
+  * Fix inheritance bugs, issues #2733 and #2734.
+
+  * Improve merge algorithm used for target trees with child paths
+    that contain differing merge info, per Peter Lundblad's
+    suggestions. (lundblad)
+
+  * When a tree with inherited merge info contains a child with
+    differing merge info, lookup of the merge info for this child must
+    reflect that of the parent (except for where they differ).
+    (pburba/dlr)
+
+* Treat all revisions from a 'copy' source as merge info for the
+  destination.  This equates to turning all those revs into actual
+  merge info (target merge info = source revs + source merge info).
+
+  * Update func and/or design spec.
+
+  * Handle all 'copy'/'move' operation types.  (dlr)
+    http://subversion.tigris.org/merge-tracking/func-spec.html#copy-move
+
+* Update design.html with the latest content from the design spec
+  in the notes/ dir.
+
+
+
+Phase 2: Post 1.5.0
+-------------------
+
+Implement auditing/reporting and other high-level features.
+
+* Add some set of svnmerge.py-like commands for merge info
+  auditing/editing to the 'svn' command-line binary.
+  
+  * Discuss the following command set on the dev list (as just a
+    jumping-off point):
+
+    avail         Show unmerged revisions available for PATH as a revision list
+      --all         show both available and blocked revisions (aka ignore
+                    blocked revisions)
+      --diff        show corresponding diff instead of revision list
+      --log         show corresponding log history instead of revision list
+    block         Block revisions within PATH so that they disappear from the
+                  available list
+    integrated    Show merged revisions available for PATH as a revision list
+      --diff        show corresponding diff instead of revision list
+      --log         show corresponding log history instead of revision list
+    merge
+      --record-only do not perform an actual merge of the changes, yet record
+                    that a merge happened  (likely phase 1?)
+    unblock       Revert the effect of 'block'
+
+  * Write up outcome in func-spec.html.
+
+* Handle three-way merges (e.g. 'svn merge URL1 URL2 WC_TARGET').
+  We'll likely need to use a different method of calculating the set
+  of revision ranges to merge than we do for a straight single repos
+  URL -> WC merge.
+
+  We'll need to account for the WC target's mergeinfo, probably when
+  calculating the differences between URL1 to URL2, since we won't
+  have access to the individual deltas represented by the diff when
+  merging the changes into the WC.  If we rev'd the ways deltas came
+  down through the editor, we might be able to account for the merge
+  info on the client-side instead.
+
+  This is responsible for the failure of merge test #19, which fails
+  because the HEAD revision is used for both URLs, which upon
+  retrieving the same revnum for each URL appears to the new 'merge'
+  logic as neither a merge nor a revert, and is thus considered a
+  no-op.
+
+  * As a first cut, punt and restore the code from trunk for 3-way
+    merges to keep the complexity of the 'merge' logic from getting
+    out of hand.
+
+  * A better solution requires that either the client or server know
+    the merge info for both the WC and repos.  This would be
+    implemented by transfering the merge info for the versioned
+    sub-tree(s) involved in the merge to or from the repository via a
+    (new?) RA operation, allowing the calculation of which merges
+    remain.  The plan is to do this processing on the server-side, an
+    unfortunate difference from the more typical 'merge -rX:Y' style
+    of operation (which will be kept client-side to offload more
+    processing from the server).
+
+* Implement remaining items from www/merge-tracking/requirements.html.
+
+
+
+
+BASIC DESIGN
+============
+This design is intended to track changes at a granularity necessary to support
+the merging cases of "Repeated merge", "Cherry Picking", "Rollback Merge",
+"Record Manual Merge", "Merge Previews", "Distributability of Merge Resolution".
+
+Please remember that this design is *only* for tracking what changes are
+merged where.  I expect this to be the easy part, compared to deciding
+exactly what algorithms our history sensitive merge uses, and how it
+proceeds.
+
+I have divided the design into four portions "goals", "information
+storage", "information updating", and "examples".
+
+The "random questions and answers" section is there to answer common
+questions other developers I've talked to while coming up with this
+design have had, in the hopes that it will answer some common queries
+the list may have.
+
+Use cases and requirements can be found at 
+http://subversion.tigris.org/merge-tracking/requirements.html
+
+Goals:
+
+The overarching goal here is to track the revision numbers being merged
+by a merge operation, and keeping this information in the right places
+as various operations (copy, delete, add, etc) are performed.
+
+The goals of this design are:
+1. To be able to track this down to what files in a working copy and be
+able to determine what files have had what revisions merged into them.
+
+2. To not need to contact the server more than we already do now to
+determine which revisions have been merged in a file or directory (ie
+some contact is acceptable, asking the server about each file is not).
+
+3. To be able to edit merge information in a human editable form.
+
+4. For the information to be stored in a space efficient manner, and to
+be able to determine the revisions merged into a given file/directory in
+a time efficient manner.
+
+5. Still getting a conservatively correct answer (not worse than what we
+have now) when no merge info is specified.
+
+6. To be able to collect, transmit, and keep this information up to date
+as much as possible on the client side.
+
+7. To be able to index this information in the future order to answer
+queries
+
+Specific Non-goals for *this design* include:
+1. Doing actual history sensitive merging
+2. Curing cancer (aka being all things to all people)
+
+When reading the design presented here, please remember that it is
+impossible to get something perfect in subversion on the first try, and
+attempting to nit pick this to death will not actually help anything,
+but it would be very annoying.  This is not to dissuade people from
+suggesting design changes, but if you plan on suggesting a different
+revision list format because you believe colon doesn't have a good level
+of synergy with existing separators, or something, you may want to
+rethink whether it really matters.
+
+Some pre-notes:
+
+One could also try to argue that we should start with exactly the same
+cases svnmerge does (IE only allow merge info at the wc roots, only
+store it on that directory, etc), with a nicer integrated interface, and
+try to expand it from there. I am open to such an argument as well. :)
+
+Anyway, on with the design.
+
+
+Information storage
+
+The first question that many people ask is "where should we store the
+merge information" (what we store will be covered next).
+
+After a large amount of research, the design I have come up with is
+this:
+A merge info property, named SVN_MERGE_PROPERTY (not the real name, I
+have made it a constant so we can have a large bikeshed about what to
+really call it) stored in the directory properties, and file properties.
+
+Each will store the *full, complete* list of revisions that are
+directly merged into the item.  This ensures that the merge algorithm
+and other consumers do not have to go through the same properties on
+old revisions, in order to compute a complete list of merge
+information for a directory.
+
+Directly merged into the item means changes from any merge that have
+affected this directory, which includes merges into parents,
+grandparents, etc that had some affect on this directory.
+
+Doing this storage of complete information at each point makes manual
+editing safe, because the changes to a directory/file's merge info are
+localized to that directory or file.
+
+However, as a space optimization, if the information on a subdirectory
+or file is exactly the same as the merge information for its parent
+directory, it *may* be elided in favor of that parent information.
+This eliding may be done on the fly, or as a postpass (i.e. a
+"svnadmin mergeinfooptimize").  Eliding information means that an
+implementation may have to walk parent directories in order to gather
+information about merge info, however, this would have been necessary
+anyway to determine.  It is expected that directory trees are not that
+deep, and the lookup of merge info properties quick enough (due to
+indexing, etc), to make this eliding not affect performance.
+
+Eliding will never affect the semantics of merge information, as it should
+only be performed in the case when it was exactly the same, and if it was
+exactly the same, it could not have had an effect on the merge results.  
+
+Other than eliding, any directory or file may have merge info attached to it.
+
+The way we choose which of file and dir merge info to use in case of
+conflicts simple system of inheritance[1] where the "most specific"
+place wins.  This means that if the property is set on a file, that
+completely overrides the directory level properties for the directory
+containing the file.
+
+The way we choose which to store to depends on how much and where you
+merge, and will be covered in the semantics.
+
+The reasoning for this system is to avoid having to either copy info
+everywhere, or crawl everywhere, in order to determine which revisions
+have been applied.  At the same time, we want to be space and time
+efficient, so we can't just store the entire revision list everywhere.
+
+As for what is stored:
+
+For the large number of people i have talked to and heard about from
+others, it seems the human editable *format* of how svnmerge stores
+merge information (IE pathname and list of revisions) is fine.  Binary
+storage of such information would buy, on average, a 2-3 byte decrease
+per revision/range in size over ASCII[2], while making it not directly
+human editable.
+
+As such, i have chosen to represent the revisions we have merged *into*
+something as a path, a colon, and then a comma separated revision list,
+containing one or more revision or  revision ranges.  Revision range end
+and beginning points are separated by "-".
+
+So the grammar looks something like this
+
+revisionrange -> REVISION "-" REVISION
+
+revisionelement -> revisionrange | REVISION
+
+revisionlist -> (revisionelement)(COMMA revisionelement)*
+
+revisionline -> PATHNAME COLON revisionlist
+
+top -> revisionline (NEWLINE revisionline)*
+
+This merge history ("top"), existing on a file, dir or repo, 
+specifies all the changes that have ever been merged into this object (file, 
+dir or repo) within this repository.  It specifies the sources of the merges, 
+(and thus two or more pathnames may be required to represent one source object 
+at different revisions due to renaming).
+
+This list will *not* be stored in a canonicalized minimal form for a
+path (IE it may contain single revision numbers that could be ranges).
+This is chiefly because the benefit of such a canonical format (slightly
+easier *comparison*, but not indexing) is heavily outweighed by the fact
+that generating a canonical form may require groveling through a lot of
+information to determine what that minimal canonical form is.  In
+particular, it may be that the revision list "5,7,9" is, in minimal
+canonical form, "5-9", because 6 and 8 do not have any affect on the
+pathname that 5 and 9 are from.
+Canonicalization could be done as a server side post pass because the
+information is stored in properties.
+
+Note that this revision format will not scale on its own if you have a
+list of million revisions.  None will easily.  However, because it is
+stored in properties, one can change the wc and fs backends to simply do
+something different with this single property if they wanted to.
+Given the rates of change of various very active repositories, this will
+not be a problem we need to solve for many many years.
+
+Information updating:
+Each operation you can perform may update or copy the merge info
+associated with a path, file, or revision.
+
+
+svn add:  No change to merge info
+svn delete: No change to merge info
+svn rename: No change to merge info
+svn copy: Copies the merge info from the source path to the destination
+path, if any.  
+
+All copies include full-copies of the merge information.
+
+svn merge: Adds or subtracts to the merge info, according to the
+following:
+
+Where to put the info (this is performed for *each merge target*)
+1. If the merge target is a single file, the merge info goes to the
+property SVN_MERGE_INFO set on that file.
+
+2. If the merge target is a directory, the merge info goes to the
+property SVN_MERGE_INFO set on the shallowest directory of the merge
+(IE the topmost directory affected by the merge) that will require
+different info than the info already set on other directories.
+
+The last clause of rule 2 is only meant to handle cherry picking and
+multiple merges.  In the standard case that people repeatedly merge
+the same directories into the same directories, the information will
+end up only on the shallowest directory of the merge.  If changes are
+selectively applied (i.e. all changes are applied to every directory
+but one), the information will be on the shallowest common ancestor of
+all those directories, *as well* as information being placed on the
+directory where the changes are not applied, so that it will override
+the information from that shallow directory. See cherry picking
+example for more details.  Besides selective application, apply
+changes that affect some directory, and then applying different
+changes to subdirectories of that directory, will also produce merge
+info on multiple directories in a given path.
+
+
+What info is put:
+1. If you are merging in reverse, revisions are subtracted from the
+revision lines, but we never write out anti-revisions.  Thus, if you
+subtract all the merged revisions, you just get an empty list, and if
+you do a reverse merge from there, you still get an empty list
+2. If you are merging forward, the revision(s) you are merging is added
+to the revision line in sorted order (such that all revisions and
+revision ranges in the list are monotonically increasing from left to
+right).  The exact details of how the range is represented in terms of a
+list of single revs, or a revision range, is left as a quality of
+implementation detail.  The only requirement is that the range be
+correct.
+3. The path (known as PATHNAME in the grammar) used as the key to
+determine which revision line to change is the subdirectory path being
+merged from, relative to the repo root, with the repo url stripped from
+it.  
+
+In the case that we are merging changes that themselves contain merge
+info, the merge info properties must be merged.  The effect of this is
+that indirect merge info becomes direct merge info as it is integrated
+as part of the merge info now set on the property.  The way this merge
+is performed is to merge the revision lists for each identical
+pathname, and to copy the rest.  Blocking of merges and how this
+affects this information is not covered in this design.  The indirect
+info merging is *in addition* to specifying the merge that we are now
+doing.  See the repeated merge with indirect info example for an
+example.
+
+Thus a merge of revisions 1-9 from http://foo.bar.com/reposroot/trunk
+would produce "/trunk:1-9"
+
+cross-repo merging is a bridge we can cross if we ever get there :).
+
+
+Examples:
+
+Repeated merge:
+(I have assumed no renames here, and that all directories were added
+in rev 1, for simplicity.  The pathname will never change, this should
+not cause any issues that need examples )
+
+Assume trunk has 9 revisions, 1-9.
+
+A merge of /trunk into /branches/release will produce the merge info
+"/trunk: 1-9".
+
+Assume trunk now has 6 additional revisions, 14-18.
+
+A merge of /trunk into /branches/release should only merge 14-18 and
+produce the merge info "/trunk: 1-9,14-18".
+This merge info will be placed on /branches/release.
+
+(note the canonical minimal form of the above would be 1-18, as 9-14
+do not affect that path.  This is also an acceptable answer, as is any
+variant that represents the same information).
+
+
+Repeated merge with indirect info: 
+Assume the repository is in the state it would be after the "Repeated
+merge" example.
+Assume additionally, we now have a branch /branches/next-release, with
+revisions 20-24 on it.
+
+We wish to merge /branches/release into /branches/next-release.
+
+A merge of /branches/release into /branches/next-release will produce
+the merge info:
+"/branches/release: 1-24
+ /trunk:1-9,14-18"
+
+This merge info will be placed on /branches/next-release.
+
+Note that the merge information about merges *to* /branches/release
+has been added to our merge info.
+
+A future merge of /trunk into /branches/next-release, assuming no new
+revisions on /trunk, will merge nothing.
+
+Cherry picking a change to a file:
+Assume the repository is in the state it would be after the "Repeated
+merge with indirect info" example.
+
+Assume we have revision 25 on /trunk, which affects /trunk/foo.c and
+/trunk/foo/bar/bar.c
+
+We wish to merge the portion of change affecting /trunk/foo.c 
+
+A merge of revision 25 of /trunk/foo.c into /branches/release/foo.c
+will produce the merge info:
+"/trunk/foo.c:1-9,14-18,25".  
+This merge information will be placed on /branches/release/foo.c
+
+All other merge information will still be intact on /branches/release
+(ie there is information on /branches/release's directory).
+
+(the cherry picking one directory case is the same as file, with files
+replaced with directories, hence i have not gone through the example).
+
+Merging changes into parents and then merging changes into children.
+Assume the repository is in the state it would be after the "Repeated
+merge with indirect info" example.
+Assume we have revision 25 on /trunk, which affects /trunk/foo
+Assume we have revision 26 on /trunk, which affects /trunk/foo/baz
+We wish to merge revision 25 into /branches/release/foo, and merge
+revision 26 into /branches/release/foo/baz.
+
+A merge of revision 25 of /trunk/foo into /branches/release/foo will
+produce the merge info:
+"/trunk:1-9,14-18,25".
+
+This merge information will be placed on /branches/release/foo
+
+A merge of revision 26 of /trunk/foo/baz into
+/branches/release/foo/baz will produce the merge info:
+
+"/trunk:1-9,14-18,26".
+This merge information will be placed on /branches/release/foo/baz.
+
+Note that if you instead merge revision 26 of /trunk/foo into
+/branches/release/foo, you will get the same effect, but the merge
+info will be:
+"/trunk:1-9,14-18,25-26".
+This merge information will be placed on /branches/releases/foo
+
+Both are different "spellings" of the same merge information, and
+future merges should produce the same result with either merge info
+(one is of course, more space efficient, and transformation of one to
+the other could be done on the fly or as a postpass, if desired).
+
+All other merge information will still be intact on /branches/release
+(ie there is information on /branches/release's directory).
+
+
+Random questions and answers
+
+Are there many different "spellings" of the same merge info?
+
+Yes.  Depending on the urls and target you specify for merges, I
+believe it is possible to end up with merge info in different places,
+or with slightly different revision lines that have the same semantic
+effect (IE info like /trunk:1-9 vs /trunk:1-8<newline>/trunk/bar:9
+when revision 9 on /trunk only affected /trunk/bar), so you can end up
+with merge info in different places, even though the semantic result
+will be the same in all cases.
+
+What happens if someone commits a merge with a non-merge tracking
+client?
+
+It simply means the next time you merge, you may receive conflicts that
+you would have received if you were using a non-history-sensitive
+client.
+
+Can we do history sensitive wc<->wc merges without contacting the server?
+
+No. But you probably couldn't anyway without *all* repo merge data
+stored locally.
+
+What happens if the info is not there?
+The same thing that happens if the info is not there now.
+
+What happens if a user edits merge info incorrectly?
+They get the results specified by their merge info.
+
+How does the revprop stay up to date?
+We copy it from revision to revision.
+
+What happens if a user manually edits a file and unmerges a revision (IE
+not using a "reverse merge" command), but doesn't update the merge info
+to match?
+The merge info will believe the change has still been merged.
+
+What happens if i svn move/rename a directory, and then merge it
+somewhere?
+This doesn't change history, only the future, thus we will simply add
+the merge info for that directory as if it was a new directory.  We will
+not do something like attempt to modify all merge info to specify the
+new directory, as that would be wrong.
+
+I don't think only that copying info on svn copy is correct, what if you
+copy a dir with merge info into a dir where the dir has merge info,
+won't it get the info wrong now?
+
+No.  
+
+Let's say you have
+
+a/foo (merge info: /trunk:5-9)
+a/branches/bar (merge info: /trunk:1-4)
+
+If you copy a/foo into a/branches/bar, we now have
+
+a/branches/bar (merge info: /trunk:1-4)
+a/branches/bar/foo (merge info: /trunk:5-9)
+
+This is strictly correct.  The only changes which have been merged into
+a/branches/bar/foo, are still 5-9.  The only changes which have been
+merged into /branches/bar are 1-4.  No merges have been performed by
+your copy, only copies have been performed.  If you perform a merge of
+revisions 1-9 into bar, the results one would expect that the history
+sensitive merge algorithm will skip revisions 5-9 for
+a/branches/bar/foo, and skip revisions 1-4 for a/branches/bar.
+The above information gives the algorithm the information necessary to
+do this.
+
+So if you want to argue svn copy has the wrong merge info semantics,
+it's not because of the above, AFAIK :)
+
+
+I'm sure that even in this long document, I've forgotten some things i
+did spec out.
+Apologies in advance.
+
+
+Footnotes:
+[1] This is not going to be a full blown design for property
+inheritance, nor should this design depend on such a system being
+implemented.
+
+[2] Assuming 4 byte revision numbers, and repos with revisions numbering
+in the hundreds of thousands.  You could do slightly better by variable
+length encoding of integers, but even that will generally be 4 bytes for
+hundreds of thousands of revs.  Thus, we have strings like "102341" vs 4
+byte numbers, meaning you save about 2 bytes for a 4 byte integer.
+Range lists in binary would need a distinguisher from single revisions,
+adding a single bit to both (meaning you'd get 31 bit integers), and
+thus, would require 8 bytes per range vs 12 bytes per range.  While 30%
+is normally nothing to sneeze at space wise, it's also not significantly
+more efficient in time, as most of the time will not be spent parsing
+revision lists, but doing something with them. The space efficiency
+therefore does not seem to justify the cost you pay in not making them
+easily editable.
+

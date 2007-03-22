@@ -232,6 +232,26 @@
 %constant svn_revnum_t SWIG_SVN_IGNORED_REVNUM = -1;
 
 /* -----------------------------------------------------------------------
+   input rangelist to svn_rangelist_to_stringbuf
+*/
+%apply apr_array_header_t *RANGELIST {
+   apr_array_header_t *rangeinput
+}
+
+/* -----------------------------------------------------------------------
+   input mergeinfo hash to svn_mergeinfo_to_stringbuf
+*/
+%apply apr_hash_t *MERGEINFO {
+   apr_hash_t *mergeinput,
+   apr_hash_t *mergefrom,
+   apr_hash_t *mergeto,
+   apr_hash_t *mergein1,
+   apr_hash_t *mergein2,
+   apr_hash_t *eraser,
+   apr_hash_t *whiteboard
+}
+
+/* -----------------------------------------------------------------------
    handle the default value of svn_config_get().and the
    config directory of svn_config_read_auth_data() and
    svn_config_write_auth_data().
@@ -409,6 +429,41 @@
 
 #ifndef SWIGRUBY
 %ignore svn_auth_get_parameter;
+#endif
+
+/* -----------------------------------------------------------------------
+   svn_mergeinfo_parse()
+*/
+
+%apply apr_hash_t **MERGEHASH {
+    apr_hash_t **mergehash,
+    apr_hash_t **deleted,
+    apr_hash_t **added,
+    apr_hash_t **mergeoutput
+}
+
+/* -----------------------------------------------------------------------
+   svn_config_read_auth_data()
+*/
+#ifdef SWIGRUBY
+%typemap(argout) apr_hash_t **hash
+{
+  if (*$1) {
+    %append_output(svn_swig_rb_apr_hash_to_hash_svn_string(*$1));
+  } else {
+    %append_output(Qnil);
+  }
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   svn_config_write_auth_data()
+*/
+#ifdef SWIGRUBY
+%typemap(in) apr_hash_t *hash
+{
+  $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
+}
 #endif
 
 /* -----------------------------------------------------------------------
@@ -618,6 +673,7 @@ PyObject *svn_swig_py_exception_type(void);
 %include svn_utf_h.swg
 %include svn_nls_h.swg
 %include svn_path_h.swg
+%include svn_mergeinfo_h.swg
 %include svn_io_h.swg
 
 #ifdef SWIGPERL

@@ -967,6 +967,7 @@ static const svn_ra__vtable_t dav_vtable = {
   svn_ra_dav__get_commit_editor,
   svn_ra_dav__get_file,
   svn_ra_dav__get_dir,
+  svn_ra_dav__get_merge_info,
   svn_ra_dav__do_update,
   svn_ra_dav__do_switch,
   svn_ra_dav__do_status,

@@ -702,6 +702,24 @@ svn_lock_dup(const svn_lock_t *lock, apr_pool_t *pool);
 const char *
 svn_uuid_generate(apr_pool_t *pool);
 
+/** 
+ * Merge info representing a merge of a range of revisions.
+ * @since New in 1.5
+ */ 
+typedef struct svn_merge_range_t
+{
+  svn_revnum_t start;
+  svn_revnum_t end;
+} svn_merge_range_t;
+
+/**
+ * Return a copy of @a range, allocated in @a pool.
+ *
+ * @since New in 1.5.
+ */
+svn_merge_range_t *
+svn_range_dup(svn_merge_range_t *range, apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

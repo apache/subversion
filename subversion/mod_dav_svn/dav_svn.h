@@ -501,6 +501,10 @@ dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
                        ap_filter_t *output);
 dav_error *
+dav_svn__get_merge_info_report(const dav_resource *resource,
+                               const apr_xml_doc *doc,
+                               ap_filter_t *output);
+dav_error *
 dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
                           ap_filter_t *output);

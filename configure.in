@@ -760,6 +760,7 @@ case "$host" in
     ;;
 esac
 AC_SUBST(INCLUDE_OUTPUTS)
+PKG_CHECK_MODULES([SVN_SQLITE], [sqlite3 >= 3.0])
 
 # ==== Detection complete - output and run config.status =====================
 
