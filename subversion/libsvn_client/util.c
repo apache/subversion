@@ -27,6 +27,9 @@
 #include "svn_path.h"
 #include "svn_mergeinfo.h"
 #include "svn_client.h"
+
+#include "private/svn_wc_private.h"
+
 #include "client.h"
 
 #include "svn_private_config.h"
@@ -158,21 +161,14 @@ svn_client__path_relative_to_root(const char **rel_path,
                                          FALSE, 0, NULL, NULL, pool));
           need_wc_cleanup = TRUE;
         }
-      svn_wc_entry(&entry, path_or_url, adm_access, FALSE, pool);
+      err = svn_wc__entry_versioned(&entry, path_or_url, adm_access, FALSE,
+                                    pool);
 
-      if (entry != NULL)
-        {
-          path_or_url = entry->url;
-          repos_root = entry->repos;
-        }
-      else
-        {
-          /* We can't transform the local path into a URL. */
-          err = svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                  _("'%s' is not under version control"),
-                                  svn_path_local_style(path_or_url, pool));
-          goto cleanup;
-        }
+      if (err)
+        goto cleanup;
+
+      path_or_url = entry->url;
+      repos_root = entry->repos;
     }
   if (repos_root == NULL)
     {
