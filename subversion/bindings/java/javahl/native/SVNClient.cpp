@@ -128,69 +128,58 @@ jobjectArray SVNClient::list(const char *url, Revision &revision,
     SVN_JNI_NULL_PTR_EX(url, "path or url", NULL);
 
     Path urlPath(url);
-    svn_error_t *Err = urlPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(urlPath.error_occured(), NULL);
     
     apr_hash_t *dirents;
-    Err = svn_client_ls2(&dirents, urlPath.c_str(), 
-                         pegRevision.revision(),
-                         revision.revision (),
-                         recurse, ctx, requestPool.pool());
-    if (Err == NULL)
+    SVN_JNI_ERR(svn_client_ls2(&dirents, urlPath.c_str(), 
+                               pegRevision.revision(),
+                               revision.revision (),
+                               recurse, ctx, requestPool.pool()),
+                NULL);
+
+    apr_array_header_t *array =
+           svn_sort__hash(dirents, svn_sort_compare_items_as_paths,
+                          requestPool.pool());
+
+    // create the array of DirEntry
+    JNIEnv *env = JNIUtil::getEnv();
+    jclass clazz = env->FindClass(JAVA_PACKAGE"/DirEntry");
+    if (JNIUtil::isJavaExceptionThrown())
     {
-        apr_array_header_t *array =
-               svn_sort__hash(dirents, svn_sort_compare_items_as_paths,
-                              requestPool.pool());
-
-        // create the array of DirEntry
-        JNIEnv *env = JNIUtil::getEnv();
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/DirEntry");
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        jobjectArray ret = env->NewObjectArray(array->nelts, clazz, NULL);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        env->DeleteLocalRef(clazz);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-
-        for (int i = 0; i < array->nelts; i++)
-        {
-            const svn_sort__item_t *item;
-            svn_dirent_t *dirent = NULL;
-
-            item = &APR_ARRAY_IDX (array, i, const svn_sort__item_t);
-            dirent = (svn_dirent_t *) item->value;
-
-            jobject obj = createJavaDirEntry((const char *)item->key, dirent);
-            env->SetObjectArrayElement(ret, i, obj);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-            env->DeleteLocalRef(obj);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-        }
-        return ret;
-    }
-    else
-    {
-        JNIUtil::handleSVNError(Err);
         return NULL;
     }
+    jobjectArray ret = env->NewObjectArray(array->nelts, clazz, NULL);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    env->DeleteLocalRef(clazz);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    for (int i = 0; i < array->nelts; i++)
+    {
+        const svn_sort__item_t *item;
+        svn_dirent_t *dirent = NULL;
+
+        item = &APR_ARRAY_IDX (array, i, const svn_sort__item_t);
+        dirent = (svn_dirent_t *) item->value;
+
+        jobject obj = createJavaDirEntry((const char *)item->key, dirent);
+        env->SetObjectArrayElement(ret, i, obj);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+        env->DeleteLocalRef(obj);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+    }
+    return ret;
 }
 
 
@@ -242,67 +231,57 @@ jobjectArray SVNClient::status(const char *path, bool descend, bool onServer,
         return NULL;
     }
     Path checkedPath(path);
-    svn_error_t *Err = checkedPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(checkedPath.error_occured(), NULL);
 
     rev.kind = svn_opt_revision_unspecified;
     statusBaton.pool = requestPool.pool();
 
-    Err = svn_client_status2(&youngest, checkedPath.c_str(), 
-                             &rev, statusReceiver, 
-                             &statusBaton, descend ? TRUE : FALSE,
-                             getAll ? TRUE : FALSE, onServer ? TRUE : FALSE,
-                             noIgnore ? TRUE : FALSE, 
-                             ignoreExternals ? TRUE : FALSE, 
-                             ctx, requestPool.pool());
-    if (Err == NULL)
-    {
-        JNIEnv *env = JNIUtil::getEnv();
-        int size = statusBaton.statusVect.size();
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/Status");
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        env->DeleteLocalRef(clazz);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
+    SVN_JNI_ERR(svn_client_status2(&youngest, checkedPath.c_str(), 
+                                   &rev, statusReceiver, 
+                                   &statusBaton, descend ? TRUE : FALSE,
+                                   getAll ? TRUE : FALSE,
+                                   onServer ? TRUE : FALSE,
+                                   noIgnore ? TRUE : FALSE, 
+                                   ignoreExternals ? TRUE : FALSE, 
+                                   ctx, requestPool.pool()),
+                NULL);
 
-        for(int i = 0; i < size; i++)
-        {
-            status_entry statusEntry = statusBaton.statusVect[i];
-
-            jobject jStatus = createJavaStatus(statusEntry.path, 
-                                               statusEntry.status);
-            env->SetObjectArrayElement(ret, i, jStatus);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-            env->DeleteLocalRef(jStatus);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-        }
-        return ret;
-    }
-    else
+    JNIEnv *env = JNIUtil::getEnv();
+    int size = statusBaton.statusVect.size();
+    jclass clazz = env->FindClass(JAVA_PACKAGE"/Status");
+    if (JNIUtil::isJavaExceptionThrown())
     {
-        JNIUtil::handleSVNError(Err);
         return NULL;
     }
+    jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    env->DeleteLocalRef(clazz);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    for(int i = 0; i < size; i++)
+    {
+        status_entry statusEntry = statusBaton.statusVect[i];
+
+        jobject jStatus = createJavaStatus(statusEntry.path, 
+                                           statusEntry.status);
+        env->SetObjectArrayElement(ret, i, jStatus);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+        env->DeleteLocalRef(jStatus);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+    }
+    return ret;
 }
 
 void SVNClient::username(const char *pi_username)
@@ -338,65 +317,51 @@ jobjectArray SVNClient::logMessages(const char *path, Revision &pegRevision,
     }
     Targets target (path);
     const apr_array_header_t *targets = target.array(requestPool);
-    svn_error_t *Err = target.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
-    Err = svn_client_log3(targets,
-                          pegRevision.revision(),
-                          revisionStart.revision (),
-                          revisionEnd.revision (),
-                          limit,
-                          discoverPaths,
-                          stopOnCopy,
-                          messageReceiver, &logs, ctx, requestPool.pool());
+    SVN_JNI_ERR(target.error_occured(), NULL);
+    SVN_JNI_ERR(svn_client_log3(targets,
+                                pegRevision.revision(),
+                                revisionStart.revision (),
+                                revisionEnd.revision (),
+                                limit,
+                                discoverPaths,
+                                stopOnCopy,
+                                messageReceiver, &logs, ctx,
+                                requestPool.pool()),
+                NULL);
+
+    int size = logs.size();
+
+    JNIEnv *env = JNIUtil::getEnv();
+    jclass clazz = env->FindClass(JAVA_PACKAGE"/LogMessage");
     if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
     }
-    if (Err == NULL)
+    jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
+    if (JNIUtil::isJavaExceptionThrown())
     {
-        int size = logs.size();
-
-        JNIEnv *env = JNIUtil::getEnv();
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/LogMessage");
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        env->DeleteLocalRef(clazz);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        for(int i = 0; i < size; i++)
-        {
-            jobject log = logs[i];
-            env->SetObjectArrayElement(ret, i, log);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-            env->DeleteLocalRef(log);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-        }
-        return ret;
-    }
-    else
-    {
-         JNIUtil::handleSVNError(Err);
         return NULL;
     }
+    env->DeleteLocalRef(clazz);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    for(int i = 0; i < size; i++)
+    {
+        jobject log = logs[i];
+        env->SetObjectArrayElement(ret, i, log);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+        env->DeleteLocalRef(log);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+    }
+    return ret;
 }
 
 jlong SVNClient::checkout(const char *moduleName, const char *destPath, 
@@ -412,18 +377,8 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
 
     Path url(moduleName);
     Path path(destPath);
-    svn_error_t *Err = url.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return -1;
-    }
-    Err = path.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return -1;
-    }
+    SVN_JNI_ERR(url.error_occured(), -1);
+    SVN_JNI_ERR(path.error_occured(), -1);
     svn_revnum_t retval;
 
     svn_client_ctx_t *ctx = getContext(NULL);
@@ -432,21 +387,17 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
         return -1;
     }
 
-    Err = svn_client_checkout3(&retval, url.c_str(),
-                               path.c_str (),
-                               pegRevision.revision (),
-                               revision.revision (),
-                               SVN_DEPTH_FROM_RECURSE(recurse),
-                               ignoreExternals,
-                               allowUnverObstructions,
-                               ctx,
-                               apr_pool);
+    SVN_JNI_ERR(svn_client_checkout3(&retval, url.c_str(),
+                                     path.c_str (),
+                                     pegRevision.revision (),
+                                     revision.revision (),
+                                     SVN_DEPTH_FROM_RECURSE(recurse),
+                                     ignoreExternals,
+                                     allowUnverObstructions,
+                                     ctx,
+                                     apr_pool),
+                -1);
 
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return -1;
-    }
     return retval;
 
 }
@@ -480,18 +431,10 @@ void SVNClient::remove(Targets &targets, const char *message, bool force,
         return;
     }
     const apr_array_header_t *targets2 = targets.array(requestPool);
-    svn_error_t *Err = targets.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(targets.error_occured(), );
 
-    Err = svn_client_delete3(&commit_info, targets2, force, keep_local, ctx,
-                             requestPool.pool());
-    if (Err != NULL)
-         JNIUtil::handleSVNError(Err);
-
+    SVN_JNI_ERR(svn_client_delete3(&commit_info, targets2, force, keep_local,
+                                   ctx, requestPool.pool()), );
 }
 
 void SVNClient::revert(const char *path, bool recurse)
@@ -502,23 +445,14 @@ void SVNClient::revert(const char *path, bool recurse)
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
     svn_client_ctx_t *ctx = getContext(NULL);
-    Targets target (path);
-    const apr_array_header_t *targets = target.array(requestPool);
-    svn_error_t *Err = target.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
     if (ctx == NULL)
     {
         return;
     }
-    Err = svn_client_revert(targets, recurse, ctx, apr_pool);
-
-    if (Err != NULL)
-         JNIUtil::handleSVNError(Err);
-
+    Targets target (path);
+    const apr_array_header_t *targets = target.array(requestPool);
+    SVN_JNI_ERR(target.error_occured(), );
+    SVN_JNI_ERR(svn_client_revert(targets, recurse, ctx, apr_pool), );
 }
 
 void SVNClient::add(const char *path, bool recurse, bool force)
@@ -529,22 +463,14 @@ void SVNClient::add(const char *path, bool recurse, bool force)
     SVN_JNI_NULL_PTR_EX(path, "path", );
 
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), );
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
     {
         return;
     }
-    Err = svn_client_add3(intPath.c_str (), recurse, force, FALSE,
-                          ctx, apr_pool);
-
-    if (Err != NULL)
-         JNIUtil::handleSVNError(Err);
+    SVN_JNI_ERR(svn_client_add3(intPath.c_str (), recurse, force, FALSE,
+                                ctx, apr_pool), );
 }
 
 jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
@@ -560,24 +486,14 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
         return NULL;
     }
     const apr_array_header_t *array = targets.array(requestPool);
-    svn_error_t *Err = targets.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
-    Err = svn_client_update3(&retval, array,
-                             revision.revision(),
-                             SVN_DEPTH_FROM_RECURSE(recurse),
-                             ignoreExternals,
-                             allowUnverObstructions,
-                             ctx,
-                             apr_pool);
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(targets.error_occured(), NULL);
+    SVN_JNI_ERR(svn_client_update3(&retval, array,
+                                   revision.revision(),
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   ignoreExternals,
+                                   allowUnverObstructions,
+                                   ctx, apr_pool),
+                NULL);
 
     JNIEnv *env = JNIUtil::getEnv();
     jlongArray ret = env->NewLongArray(retval->nelts);
@@ -603,22 +519,16 @@ jlong SVNClient::commit(Targets &targets, const char *message, bool recurse,
     Pool requestPool;
     svn_commit_info_t *commit_info = NULL;
     const apr_array_header_t *targets2 = targets.array(requestPool);
-    svn_error_t *Err = targets.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return -1;
-    }
+    SVN_JNI_ERR(targets.error_occured(), -1);
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
     {
         return -1;
     }
-    Err = svn_client_commit4(&commit_info, targets2, recurse, 
-                             noUnlock, keepChangelist, changelistName, ctx,
-                             requestPool.pool());
-    if (Err != NULL)
-         JNIUtil::handleSVNError(Err);
+    SVN_JNI_ERR(svn_client_commit4(&commit_info, targets2, recurse, 
+                                   noUnlock, keepChangelist, changelistName,
+                                   ctx, requestPool.pool()),
+                -1);
 
     if (commit_info && SVN_IS_VALID_REVNUM (commit_info->revision))
       return commit_info->revision;
@@ -640,21 +550,14 @@ void SVNClient::copy(CopySources &copySources, const char *destPath,
     }
     SVN_JNI_NULL_PTR_EX(destPath, "destPath", );
     Path destinationPath(destPath);
-    svn_error_t *err = destinationPath.error_occured();
-    if (err)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(destinationPath.error_occured(), );
 
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
     svn_commit_info_t *commit_info;
-    err = svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
-                           copyAsChild, ctx, requestPool.pool());
-    if (err)
-        JNIUtil::handleSVNError(err);
+    SVN_JNI_ERR(svn_client_copy4(&commit_info, srcs, destinationPath.c_str(),
+                                 copyAsChild, ctx, requestPool.pool()), );
 }
 
 void SVNClient::move(Targets &srcPaths, const char *destPath, 
@@ -663,30 +566,18 @@ void SVNClient::move(Targets &srcPaths, const char *destPath,
     Pool requestPool;
 
     const apr_array_header_t *srcs = srcPaths.array(requestPool);
-    svn_error_t *err = srcPaths.error_occured();
-    if (err)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(srcPaths.error_occured(), );
     SVN_JNI_NULL_PTR_EX(destPath, "destPath", );
     Path destinationPath(destPath);
-    err = destinationPath.error_occured();
-    if (err)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(destinationPath.error_occured(), );
 
     svn_client_ctx_t *ctx = getContext(message);
     if (ctx == NULL)
         return;
     svn_commit_info_t *commit_info;
-    err = svn_client_move5(&commit_info, (apr_array_header_t *) srcs, 
-                           destinationPath.c_str(), force, moveAsChild,
-                           ctx, requestPool.pool());
-    if (err)
-        JNIUtil::handleSVNError(err);
+    SVN_JNI_ERR(svn_client_move5(&commit_info, (apr_array_header_t *) srcs, 
+                                 destinationPath.c_str(), force, moveAsChild,
+                                 ctx, requestPool.pool()), );
 }
 
 void SVNClient::mkdir(Targets &targets, const char *message)
@@ -700,18 +591,9 @@ void SVNClient::mkdir(Targets &targets, const char *message)
         return;
     }
     const apr_array_header_t *targets2 = targets.array(requestPool);
-    svn_error_t *Err = targets.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(targets.error_occured(), );
 
-    Err = svn_client_mkdir(&commit_info, targets2, ctx, apr_pool);
-
-    if (Err != NULL)
-         JNIUtil::handleSVNError(Err);
-
+    SVN_JNI_ERR(svn_client_mkdir(&commit_info, targets2, ctx, apr_pool), );
 }
 
 void SVNClient::cleanup(const char *path)
@@ -720,23 +602,14 @@ void SVNClient::cleanup(const char *path)
     apr_pool_t * apr_pool = requestPool.pool();
     SVN_JNI_NULL_PTR_EX(path, "path", );
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), );
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
     {
         return;
     }
-    Err = svn_client_cleanup (intPath.c_str (), ctx, apr_pool);
-
-    if (Err != NULL)
-         JNIUtil::handleSVNError(Err);
-
+    SVN_JNI_ERR(svn_client_cleanup (intPath.c_str (), ctx, apr_pool), );
 }
 
 void SVNClient::resolved(const char *path, bool recurse)
@@ -745,22 +618,14 @@ void SVNClient::resolved(const char *path, bool recurse)
     apr_pool_t * apr_pool = requestPool.pool();
     SVN_JNI_NULL_PTR_EX(path, "path", );
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), );
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
     {
         return;
     }
-    Err = svn_client_resolved(intPath.c_str(), recurse, ctx, apr_pool);
-
-    if (Err != NULL)
-         JNIUtil::handleSVNError(Err);
-
+    SVN_JNI_ERR(svn_client_resolved(intPath.c_str(), recurse,
+                                    ctx, apr_pool), );
 }
 
 jlong SVNClient::doExport(const char *srcPath, const char *destPath, 
@@ -773,36 +638,23 @@ jlong SVNClient::doExport(const char *srcPath, const char *destPath,
     SVN_JNI_NULL_PTR_EX(srcPath, "srcPath", -1);
     SVN_JNI_NULL_PTR_EX(destPath, "destPath", -1);
     Path sourcePath(srcPath);
-    svn_error_t *Err = sourcePath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return -1;
-    }
+    SVN_JNI_ERR(sourcePath.error_occured(), -1);
     Path destinationPath(destPath);
-    Err = destinationPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return -1;
-    }
+    SVN_JNI_ERR(destinationPath.error_occured(), -1);
     svn_revnum_t retval;
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
     {
         return -1;
     }
-    Err = svn_client_export3(&retval, sourcePath.c_str(), 
-                             destinationPath.c_str(), pegRevision.revision(),
-                             revision.revision(), force,
-                             ignoreExternals, recurse,
-                             nativeEOL, ctx,
-                             apr_pool);
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return -1;
-    }
+    SVN_JNI_ERR(svn_client_export3(&retval, sourcePath.c_str(), 
+                                   destinationPath.c_str(),
+                                   pegRevision.revision(),
+                                   revision.revision(), force,
+                                   ignoreExternals, recurse,
+                                   nativeEOL, ctx,
+                                   apr_pool),
+                -1);
 
     return retval;
 
@@ -817,19 +669,9 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
     SVN_JNI_NULL_PTR_EX(path, "path", -1);
     SVN_JNI_NULL_PTR_EX(url, "url", -1);
     Path intUrl(url);
-    svn_error_t *Err = intUrl.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return -1;
-    }
+    SVN_JNI_ERR(intUrl.error_occured(), -1);
     Path intPath(path);
-    Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return -1;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), -1);
 
     svn_revnum_t retval;
     svn_client_ctx_t *ctx = getContext(NULL);
@@ -837,19 +679,15 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
     {
         return -1;
     }
-    Err = svn_client_switch2(&retval, intPath.c_str (),
-                             intUrl.c_str(),
-                             revision.revision (),
-                             SVN_DEPTH_FROM_RECURSE(recurse),
-                             allowUnverObstructions,
-                             ctx,
-                             apr_pool);
+    SVN_JNI_ERR(svn_client_switch2(&retval, intPath.c_str (),
+                                   intUrl.c_str(),
+                                   revision.revision (),
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   allowUnverObstructions,
+                                   ctx,
+                                   apr_pool),
+                -1);
 
-    if (Err != NULL)
-    {
-         JNIUtil::handleSVNError(Err);
-        return -1;
-    }
     return retval;
 }
 
@@ -861,19 +699,9 @@ void SVNClient::doImport(const char *path, const char *url,
     SVN_JNI_NULL_PTR_EX(path, "path", );
     SVN_JNI_NULL_PTR_EX(url, "url", );
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), );
     Path intUrl(url);
-    Err = intUrl.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intUrl.error_occured(), );
 
     svn_client_commit_info_t *commit_info = NULL;
     svn_client_ctx_t *ctx = getContext(message);
@@ -882,12 +710,8 @@ void SVNClient::doImport(const char *path, const char *url,
         return;
     }
 
-    Err = svn_client_import(&commit_info, intPath.c_str(), intUrl.c_str(),
-                            !recurse, ctx, apr_pool);
-
-    if (Err != NULL)
-         JNIUtil::handleSVNError(Err);
-
+    SVN_JNI_ERR(svn_client_import(&commit_info, intPath.c_str(), intUrl.c_str(),
+                                  !recurse, ctx, apr_pool), );
 }
 
 void SVNClient::merge(const char *path1, Revision &revision1, 
@@ -901,28 +725,13 @@ void SVNClient::merge(const char *path1, Revision &revision1,
     SVN_JNI_NULL_PTR_EX(localPath, "localPath", );
     apr_pool_t * apr_pool = requestPool.pool();
     Path intLocalPath(localPath);
-    svn_error_t *Err = intLocalPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intLocalPath.error_occured(), );
 
     Path srcPath1(path1);
-    Err = srcPath1.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(srcPath1.error_occured(), );
 
     Path srcPath2 = path2;
-    Err = srcPath2.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(srcPath2.error_occured(), );
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
@@ -930,17 +739,14 @@ void SVNClient::merge(const char *path1, Revision &revision1,
         return;
     }
 
-    Err = svn_client_merge(srcPath1.c_str(), revision1.revision(),
-                           srcPath2.c_str(), revision2.revision (),
-                           intLocalPath.c_str(), recurse,
-                           ignoreAncestry, force,
-                           dryRun, ctx,
-                           apr_pool);
-
-    if (Err != NULL)
-         JNIUtil::handleSVNError(Err);
-
+    SVN_JNI_ERR(svn_client_merge(srcPath1.c_str(), revision1.revision(),
+                                 srcPath2.c_str(), revision2.revision (),
+                                 intLocalPath.c_str(), recurse,
+                                 ignoreAncestry, force,
+                                 dryRun, ctx,
+                                 apr_pool), );
 }
+
 void SVNClient::merge(const char *path, Revision &pegRevision, 
                       Revision &revision1, Revision &revision2, 
                       const char *localPath, bool force, bool recurse,
@@ -951,20 +757,10 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
     SVN_JNI_NULL_PTR_EX(localPath, "localPath", );
     apr_pool_t * apr_pool = requestPool.pool();
     Path intLocalPath(localPath);
-    svn_error_t *Err = intLocalPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intLocalPath.error_occured(), );
 
     Path srcPath(path);
-    Err = srcPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(srcPath.error_occured(), );
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
@@ -972,16 +768,12 @@ void SVNClient::merge(const char *path, Revision &pegRevision,
         return;
     }
 
-    Err = svn_client_merge_peg(srcPath.c_str(), revision1.revision(),
-                               revision2.revision(), pegRevision.revision(), 
-                               intLocalPath.c_str(), recurse,
-                               ignoreAncestry, force,
-                               dryRun, ctx,
-                               apr_pool);
-
-    if (Err != NULL)
-         JNIUtil::handleSVNError(Err);
-
+    SVN_JNI_ERR(svn_client_merge_peg(srcPath.c_str(), revision1.revision(),
+                                     revision2.revision(),
+                                     pegRevision.revision(), 
+                                     intLocalPath.c_str(), recurse,
+                                     ignoreAncestry, force,
+                                     dryRun, ctx, apr_pool), );
 }
 
 
@@ -997,12 +789,7 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     SVN_JNI_NULL_PTR_EX(name, "name", NULL);
     apr_pool_t * apr_pool = requestPool.pool();
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), NULL);
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
@@ -1011,16 +798,11 @@ jobject SVNClient::propertyGet(jobject jthis, const char *path,
     }
 
     apr_hash_t *props;
-    Err = svn_client_propget2(&props, name, 
-                              intPath.c_str(), pegRevision.revision(), 
-                              revision.revision(), FALSE,
-                              ctx, apr_pool);
-
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_client_propget2(&props, name, 
+                                    intPath.c_str(), pegRevision.revision(), 
+                                    revision.revision(), FALSE,
+                                    ctx, apr_pool),
+                NULL);
 
     apr_hash_index_t *hi;
     // only one element since we disabled recurse
@@ -1045,12 +827,7 @@ jobjectArray SVNClient::properties(jobject jthis, const char *path,
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
     apr_pool_t * apr_pool = requestPool.pool ();
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), NULL);
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
@@ -1058,15 +835,11 @@ jobjectArray SVNClient::properties(jobject jthis, const char *path,
         return NULL;
     }
 
-    Err = svn_client_proplist2(&props, intPath.c_str(),
-                               pegRevision.revision(), revision.revision(),
-                               FALSE, ctx,
-                               apr_pool);
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_client_proplist2(&props, intPath.c_str(),
+                                     pegRevision.revision(),
+                                     revision.revision(),
+                                     FALSE, ctx, apr_pool),
+                NULL);
 
     // since we disabled recurse, props->nelts should be 1
     for (int j = 0; j < props->nelts; ++j)
@@ -1175,12 +948,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
         return;
 
     Path path1(target1);
-    err = path1.error_occured();
-    if (err != NULL)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(path1.error_occured(), );
 
     apr_file_t *outfile = NULL;
     apr_status_t rv =
@@ -1190,10 +958,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                       pool);
     if (rv != APR_SUCCESS)
     {
-        err = svn_error_createf(rv, NULL, _("Cannot open file '%s'"),
-                                outfileName);
-        JNIUtil::handleSVNError(err);
-        return;
+        SVN_JNI_ERR(svn_error_createf(rv, NULL, _("Cannot open file '%s'"),
+                                      outfileName), );
     }
 
     // We don't use any options to diff.
@@ -1225,8 +991,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
             if (outfile)
                 goto cleanup;
 
-            JNIUtil::handleSVNError(err);
-            return;
+            SVN_JNI_ERR(err, );
         }
 
         err = svn_client_diff2(diffOptions,
@@ -1250,17 +1015,11 @@ void SVNClient::diff(const char *target1, Revision &revision1,
     {
         svn_error_clear(err);
 
-        err = svn_error_createf(rv, NULL, _("Cannot close file '%s'"),
-                                outfileName);
-        JNIUtil::handleSVNError(err);
-        return;
+        SVN_JNI_ERR(svn_error_createf(rv, NULL, _("Cannot close file '%s'"),
+                                      outfileName), );
     }
 
-    if (err != NULL)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(err, );
 }
 
 void SVNClient::diff(const char *target1, Revision &revision1,
@@ -1298,31 +1057,17 @@ SVNClient::diffSummarize(const char *target1, Revision &revision1,
         return;
 
     Path path1(target1);
-    err = path1.error_occured();
-    if (err != NULL)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(path1.error_occured(), );
     Path path2(target2);
-    err = path2.error_occured();
-    if (err != NULL)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(path2.error_occured(), );
 
-    err = svn_client_diff_summarize(path1.c_str(), revision1.revision(),
-                                    path2.c_str(), revision2.revision(),
-                                    recurse ? TRUE : FALSE,
-                                    ignoreAncestry ? TRUE : FALSE,
-                                    DiffSummaryReceiver::summarize, &receiver,
-                                    ctx, requestPool.pool());
-    if (err != NULL)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(svn_client_diff_summarize(path1.c_str(), revision1.revision(),
+                                          path2.c_str(), revision2.revision(),
+                                          recurse ? TRUE : FALSE,
+                                          ignoreAncestry ? TRUE : FALSE,
+                                          DiffSummaryReceiver::summarize,
+                                          &receiver,
+                                          ctx, requestPool.pool()), );
 }
 
 void
@@ -1341,25 +1086,17 @@ SVNClient::diffSummarize(const char *target, Revision &pegRevision,
         return;
 
     Path path(target);
-    err = path.error_occured();
-    if (err != NULL)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(path.error_occured(), );
 
-    err = svn_client_diff_summarize_peg(path.c_str(), pegRevision.revision(),
-                                        startRevision.revision(),
-                                        endRevision.revision(),
-                                        recurse ? TRUE : FALSE,
-                                        ignoreAncestry ? TRUE : FALSE,
-                                        DiffSummaryReceiver::summarize,
-                                        &receiver, ctx, requestPool.pool());
-    if (err != NULL)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(svn_client_diff_summarize_peg(path.c_str(),
+                                              pegRevision.revision(),
+                                              startRevision.revision(),
+                                              endRevision.revision(),
+                                              recurse ? TRUE : FALSE,
+                                              ignoreAncestry ? TRUE : FALSE,
+                                              DiffSummaryReceiver::summarize,
+                                              &receiver, ctx,
+                                              requestPool.pool()), );
 }
 
 svn_client_ctx_t * SVNClient::getContext(const char *message)
@@ -1367,12 +1104,7 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     apr_pool_t *pool = JNIUtil::getRequestPool()->pool();
     svn_auth_baton_t *ab;
     svn_client_ctx_t *ctx;
-    svn_error_t *err = NULL;
-    if (( err = svn_client_create_context(&ctx, pool)))
-    {
-        JNIUtil::handleSVNError(err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_client_create_context(&ctx, pool), NULL);
 
     apr_array_header_t *providers
       = apr_array_make (pool, 10, sizeof (svn_auth_provider_object_t *));
@@ -1445,12 +1177,7 @@ svn_client_ctx_t * SVNClient::getContext(const char *message)
     const char *configDir = m_configDir.c_str();
     if (m_configDir.length() == 0)
         configDir = NULL;
-    if (( err = 
-            svn_config_get_config (&(ctx->config), configDir, pool)))
-    {
-        JNIUtil::handleSVNError(err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_config_get_config (&(ctx->config), configDir, pool), NULL);
     ctx->notify_func2= Notify2::notify;
     ctx->notify_baton2 = m_notify2;
 
@@ -1978,21 +1705,14 @@ void SVNClient::propertySet(const char *path, const char *name,
     svn_commit_info_t *commit_info = NULL;
     Pool requestPool;
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), );
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
         return;
-    Err = svn_client_propset3(&commit_info, name, value, intPath.c_str(),
-                              recurse, force, baseRevisionForURL,
-                              ctx, requestPool.pool());
-    if (Err!= NULL)
-        JNIUtil::handleSVNError(Err);
+    SVN_JNI_ERR(svn_client_propset3(&commit_info, name, value, intPath.c_str(),
+                                    recurse, force, baseRevisionForURL,
+                                    ctx, requestPool.pool()), );
 }
 
 jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
@@ -2001,12 +1721,7 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), NULL);
 
     size_t size = 0;
     svn_stream_t *read_stream = createReadStream(requestPool.pool(),
@@ -2030,13 +1745,9 @@ jbyteArray SVNClient::fileContent(const char *path, Revision &revision,
         return NULL;
     }
 
-    Err = svn_stream_read(read_stream, (char *)retdata, &size);
+    svn_error_t *err = svn_stream_read(read_stream, (char *)retdata, &size);
     env->ReleaseByteArrayElements(ret, retdata, 0);
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(err, NULL);
     if (JNIUtil::isJavaExceptionThrown())
     {
         return NULL;
@@ -2052,12 +1763,7 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
     Pool requestPool;
     SVN_JNI_NULL_PTR_EX(path, "path", );
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), );
 
     JNIEnv *env = JNIUtil::getEnv();
     jclass outputStreamClass = env->FindClass("java/io/OutputStream");
@@ -2096,13 +1802,14 @@ void SVNClient::streamFileContent(const char *path, Revision &revision,
     while (contentSize > 0)
     {
         size_t readSize = bufSize > contentSize ? contentSize : bufSize;
-        Err = svn_stream_read(read_stream, (char *)bufData, &readSize);
-        if (Err != NULL)
+        svn_error_t *err;
+
+        err = svn_stream_read(read_stream, (char *)bufData, &readSize);
+        if (err != NULL)
         {
             env->ReleaseByteArrayElements(buffer, bufData, 0);
             svn_stream_close(read_stream);
-            JNIUtil::handleSVNError(Err);
-            return;
+            SVN_JNI_ERR(err, );
         }
 
         env->ReleaseByteArrayElements(buffer, bufData, JNI_COMMIT);
@@ -2156,13 +1863,9 @@ svn_stream_t* SVNClient::createReadStream(apr_pool_t* pool, const char *path,
         }
         svn_stringbuf_t *buf = svn_stringbuf_create("", pool);
         read_stream = svn_stream_from_stringbuf(buf, pool);
-        svn_error_t *err = svn_client_cat2 (read_stream,
-                path, pegRevision.revision(), revision.revision(), ctx, pool);
-        if (err != NULL)
-        {
-            JNIUtil::handleSVNError(err);
-            return NULL;
-        }
+        SVN_JNI_ERR(svn_client_cat2(read_stream, path, pegRevision.revision(),
+                                    revision.revision(), ctx, pool),
+                    NULL);
         size = buf->len;
     }
     return read_stream;
@@ -2241,12 +1944,7 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
     SVN_JNI_NULL_PTR_EX(name, "name", NULL);
     apr_pool_t * apr_pool = requestPool.pool ();
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), NULL);
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
@@ -2256,29 +1954,20 @@ jobject SVNClient::revProperty(jobject jthis, const char *path,
     const char *URL;
     svn_string_t *propval;
     svn_revnum_t set_rev;
-    Err = svn_client_url_from_path(&URL, intPath.c_str(), apr_pool);
-
-    if (Err != SVN_NO_ERROR)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_client_url_from_path(&URL, intPath.c_str(), apr_pool),
+                NULL);
 
     if (URL == NULL)
     {
-        JNIUtil::handleSVNError(svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, 
-                                                 NULL,
-                            _("Either a URL or versioned item is required.")));
-        return NULL;
+        SVN_JNI_ERR(svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                            _("Either a URL or versioned item is required.")),
+                    NULL);
     }
 
-    Err = svn_client_revprop_get(name, &propval, URL,
-                                 rev.revision(), &set_rev, ctx, apr_pool);
-    if (Err != SVN_NO_ERROR)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_client_revprop_get(name, &propval, URL,
+                                       rev.revision(), &set_rev, ctx,
+                                       apr_pool),
+                NULL);
     if (propval == NULL)
         return NULL;
 
@@ -2293,29 +1982,13 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
     SVN_JNI_NULL_PTR_EX(from, "from", );
     SVN_JNI_NULL_PTR_EX(to, "to", );
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), );
 
     Path intFrom(from);
-    Err = intFrom.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intFrom.error_occured(), );
 
     Path intTo(to);
-    Err = intTo.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
-
+    SVN_JNI_ERR(intTo.error_occured(), );
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
@@ -2323,16 +1996,10 @@ void SVNClient::relocate(const char *from, const char *to, const char *path,
         return;
     }
 
-
-    Err = svn_client_relocate(intPath.c_str(), intFrom.c_str(), intTo.c_str(), 
-                              recurse, ctx, apr_pool);
-
-    if (Err != SVN_NO_ERROR)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(svn_client_relocate(intPath.c_str(), intFrom.c_str(),
+                                    intTo.c_str(), recurse, ctx, apr_pool), );
 }
+
 static svn_error_t *
 blame_receiver (void *baton,
                 apr_int64_t line_no,
@@ -2352,27 +2019,18 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     SVN_JNI_NULL_PTR_EX(path, "path", );
     apr_pool_t * apr_pool = requestPool.pool ();
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), );
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
     {
         return;
     }
-    Err = svn_client_blame3(intPath.c_str(), pegRevision.revision(),
-                            revisionStart.revision(), revisionEnd.revision(),
-                            svn_diff_file_options_create(apr_pool), false,
-                            blame_receiver, callback, ctx, apr_pool);
-    if (Err != SVN_NO_ERROR)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(svn_client_blame3(intPath.c_str(), pegRevision.revision(),
+                                  revisionStart.revision(),
+                                  revisionEnd.revision(),
+                                  svn_diff_file_options_create(apr_pool), false,
+                                  blame_receiver, callback, ctx, apr_pool), );
 }
 
 void SVNClient::setConfigDirectory(const char *configDir)
@@ -2380,15 +2038,9 @@ void SVNClient::setConfigDirectory(const char *configDir)
     // A change to the config directory may necessitate creation of
     // the config templates.
     Pool requestPool;
-    svn_error_t *err = svn_config_ensure(configDir, requestPool.pool());
-    if (err)
-    {
-        JNIUtil::handleSVNError(err);
-    }
-    else
-    {
-        m_configDir = (configDir == NULL ? "" : configDir);
-    }
+    SVN_JNI_ERR(svn_config_ensure(configDir, requestPool.pool()), );
+    
+    m_configDir = (configDir == NULL ? "" : configDir);
 }
 
 const char * SVNClient::getConfigDirectory()
@@ -2428,26 +2080,15 @@ jobject SVNClient::info(const char *path)
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
     apr_pool_t * apr_pool = requestPool.pool();
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), NULL);
     
-    Err = svn_wc_adm_probe_open2(&adm_access, NULL, intPath.c_str(), 
-                                 FALSE, 0, apr_pool);
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
-    Err = svn_wc_entry(&entry, intPath.c_str(), adm_access, FALSE, apr_pool);
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_wc_adm_probe_open2(&adm_access, NULL, intPath.c_str(),
+                                       FALSE, 0, apr_pool),
+                NULL);
+    SVN_JNI_ERR(svn_wc_entry(&entry, intPath.c_str(), adm_access, FALSE,
+                             apr_pool),
+                NULL);
+
     return createJavaInfo(entry);
 }
 jobject SVNClient::createJavaInfo(const svn_wc_entry_t *entry)
@@ -2609,19 +2250,10 @@ void SVNClient::addToChangelist(Targets &srcPaths, const char *changelist)
     svn_client_ctx_t *ctx = getContext(NULL);
 
     const apr_array_header_t *srcs = srcPaths.array(requestPool);
-    svn_error_t *err = srcPaths.error_occured();
-    if (err)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(srcPaths.error_occured(), );
 
-    err = svn_client_add_to_changelist(srcs, changelist, ctx,
-                                       requestPool.pool());
-    if (err)
-    {
-        JNIUtil::handleSVNError(err);
-    }
+    SVN_JNI_ERR(svn_client_add_to_changelist(srcs, changelist, ctx,
+                                             requestPool.pool()), );
 }
 
 void SVNClient::removeFromChangelist(Targets &srcPaths, const char *changelist)
@@ -2630,17 +2262,10 @@ void SVNClient::removeFromChangelist(Targets &srcPaths, const char *changelist)
     svn_client_ctx_t *ctx = getContext(NULL);
 
     const apr_array_header_t *srcs = srcPaths.array(requestPool);
-    svn_error_t *err = srcPaths.error_occured();
-    if (err)
-    {
-        JNIUtil::handleSVNError(err);
-        return;
-    }
+    SVN_JNI_ERR(srcPaths.error_occured(), );
     
-    err = svn_client_remove_from_changelist(srcs, changelist, ctx,
-                                            requestPool.pool());
-    if (err)
-        JNIUtil::handleSVNError(err);
+    SVN_JNI_ERR(svn_client_remove_from_changelist(srcs, changelist, ctx,
+                                                  requestPool.pool()), );
 }
 
 jobjectArray SVNClient::getChangelist(const char *changelist,
@@ -2650,13 +2275,9 @@ jobjectArray SVNClient::getChangelist(const char *changelist,
     svn_client_ctx_t *ctx = getContext(NULL);
     apr_array_header_t *paths;
 
-    svn_error_t *err = svn_client_get_changelist(&paths, changelist, rootPath,
-                                                 ctx, requestPool.pool());
-    if (err)
-    {
-        JNIUtil::handleSVNError(err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_client_get_changelist(&paths, changelist, rootPath,
+                                          ctx, requestPool.pool()),
+                NULL);
 
     JNIEnv *env = JNIUtil::getEnv();
     jclass clazz = env->FindClass("java/lang/String");
@@ -2772,20 +2393,11 @@ void SVNClient::lock(Targets &targets, const char *comment, bool force)
 {
     Pool requestPool;
     const apr_array_header_t *targetsApr = targets.array(requestPool);
-    svn_error_t *Err = targets.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(targets.error_occured(), );
     apr_pool_t * apr_pool = requestPool.pool ();
     svn_client_ctx_t *ctx = getContext(NULL);
-    Err = svn_client_lock(targetsApr, comment, force, ctx, apr_pool);
 
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-    }
+    SVN_JNI_ERR(svn_client_lock(targetsApr, comment, force, ctx, apr_pool), );
 }
 
 void SVNClient::unlock(Targets &targets, bool force)
@@ -2793,20 +2405,10 @@ void SVNClient::unlock(Targets &targets, bool force)
     Pool requestPool;
 
     const apr_array_header_t *targetsApr = targets.array(requestPool);
-    svn_error_t *Err = targets.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(targets.error_occured(), );
     svn_client_ctx_t *ctx = getContext(NULL);
-    Err = svn_client_unlock((apr_array_header_t*)targetsApr, force, 
-                            ctx, requestPool.pool());
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(svn_client_unlock((apr_array_header_t*)targetsApr, force, 
+                                  ctx, requestPool.pool()), );
 }
 void SVNClient::setRevProperty(jobject jthis, const char *path, 
                                const char *name, Revision &rev, 
@@ -2817,12 +2419,7 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
     SVN_JNI_NULL_PTR_EX(name, "name", );
     apr_pool_t * apr_pool = requestPool.pool();
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), );
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
@@ -2830,34 +2427,22 @@ void SVNClient::setRevProperty(jobject jthis, const char *path,
         return ;
     }
     const char *URL;
-    Err = svn_client_url_from_path(&URL, intPath.c_str(), apr_pool);
-
-    if (Err != SVN_NO_ERROR)
-    {
-        JNIUtil::handleSVNError(Err);
-        return ;
-    }
+    SVN_JNI_ERR(svn_client_url_from_path(&URL, intPath.c_str(), apr_pool), );
 
     if (URL == NULL)
     {
-        JNIUtil::handleSVNError(svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, 
-                                                 NULL,
-                            _("Either a URL or versioned item is required.")));
-        return ;
+        SVN_JNI_ERR(svn_error_create(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
+                            _("Either a URL or versioned item is required.")),
+                    );
     }
 
     svn_string_t *val = svn_string_create(value, apr_pool);
 
     svn_revnum_t set_revision;
-    Err = svn_client_revprop_set(name, val, URL, rev.revision(),
-                                 &set_revision, force, ctx, apr_pool);
-    if (Err != SVN_NO_ERROR)
-    {
-        JNIUtil::handleSVNError(Err);
-        return ;
-    }
-
+    SVN_JNI_ERR(svn_client_revprop_set(name, val, URL, rev.revision(),
+                                       &set_revision, force, ctx, apr_pool), );
 }
+
 struct version_status_baton
 {
   svn_revnum_t min_rev;   /* lowest revision found. */
@@ -2958,31 +2543,20 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     sb.pool = requestPool.pool();
 
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
-
+    SVN_JNI_ERR(intPath.error_occured(), NULL);
 
     int wc_format;
     svn_client_ctx_t ctx = { 0 };
-    Err = svn_wc_check_wc (intPath.c_str(), &wc_format, requestPool.pool());
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_wc_check_wc(intPath.c_str(), &wc_format,
+                                requestPool.pool()),
+                NULL);
+
     if (! wc_format)
     {
         svn_node_kind_t kind;
-        Err = svn_io_check_path (intPath.c_str(), &kind, requestPool.pool());
-        if (Err != NULL)
-        {
-            JNIUtil::handleSVNError(Err);
-            return NULL;
-        }
+        SVN_JNI_ERR(svn_io_check_path(intPath.c_str(), &kind,
+                                      requestPool.pool()),
+                    NULL);
         if (kind == svn_node_dir)
         {
             return JNIUtil::makeJString("exported"); 
@@ -3008,16 +2582,14 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     ctx.cancel_func = cancel;
     ctx.cancel_baton = &sb;
 
-    Err = svn_client_status(NULL, intPath.c_str(), &rev, analyze_status, 
+    svn_error_t *err;
+    err = svn_client_status(NULL, intPath.c_str(), &rev, analyze_status, 
                             &sb, TRUE, TRUE, FALSE, FALSE, &ctx, 
                             requestPool.pool());
-    if (Err&& (Err->apr_err == SVN_ERR_CANCELLED))
-        svn_error_clear (Err);
-    else if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    if (err && (err->apr_err == SVN_ERR_CANCELLED))
+        svn_error_clear (err);
+    else 
+        SVN_JNI_ERR(err, NULL);
 
     if ((! sb.switched ) && (trailUrl))
     {
@@ -3060,16 +2632,12 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
     SVN_JNI_NULL_PTR_EX(path, "path", NULL);
     apr_pool_t * apr_pool = requestPool.pool();
     Path intPath(path);
-    svn_error_t *Err = intPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(intPath.error_occured(), NULL);
 
     const char *URL;
     svn_revnum_t set_rev;
-    Err = svn_client_url_from_path(&URL, intPath.c_str(), apr_pool);
+    SVN_JNI_ERR(svn_client_url_from_path(&URL, intPath.c_str(), apr_pool),
+                NULL);
 
     svn_client_ctx_t *ctx = getContext(NULL);
     if (ctx == NULL)
@@ -3077,13 +2645,9 @@ jobjectArray SVNClient::revProperties(jobject jthis, const char *path,
         return NULL;
     }
 
-    Err = svn_client_revprop_list(&props, URL, revision.revision(),
-                                  &set_rev, ctx, apr_pool);
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(svn_client_revprop_list(&props, URL, revision.revision(),
+                                        &set_rev, ctx, apr_pool),
+                NULL);
 
     apr_hash_index_t *hi;
 
@@ -3142,6 +2706,7 @@ struct info_baton
     std::vector<info_entry> infoVect;
     apr_pool_t *pool;
 };
+
 jobjectArray SVNClient::info2(const char *path, Revision &revision,
                               Revision &pegRevision, bool recurse)
 {
@@ -3156,67 +2721,56 @@ jobjectArray SVNClient::info2(const char *path, Revision &revision,
         return NULL;
     }
     Path checkedPath(path);
-    svn_error_t *Err = checkedPath.error_occured();
-    if (Err != NULL)
-    {
-        JNIUtil::handleSVNError(Err);
-        return NULL;
-    }
+    SVN_JNI_ERR(checkedPath.error_occured(), NULL);
 
     infoBaton.pool = requestPool.pool();
 
-    Err = svn_client_info(checkedPath.c_str(), 
-                          pegRevision.revision(),
-                          revision.revision(),
-                          infoReceiver, 
-                          &infoBaton,
-                          recurse ? TRUE :FALSE,
-                          ctx,
-                          requestPool.pool());
-    if (Err == NULL)
-    {
-        JNIEnv *env = JNIUtil::getEnv();
-        int size = infoBaton.infoVect.size();
-        jclass clazz = env->FindClass(JAVA_PACKAGE"/Info2");
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
-        env->DeleteLocalRef(clazz);
-        if (JNIUtil::isJavaExceptionThrown())
-        {
-            return NULL;
-        }
+    SVN_JNI_ERR(svn_client_info(checkedPath.c_str(), 
+                                pegRevision.revision(),
+                                revision.revision(),
+                                infoReceiver, 
+                                &infoBaton,
+                                recurse ? TRUE :FALSE,
+                                ctx, requestPool.pool()),
+                NULL);
 
-        for(int i = 0; i < size; i++)
-        {
-            info_entry infoEntry = infoBaton.infoVect[i];
-
-            jobject jInfo = createJavaInfo2(infoEntry.path, infoEntry.info);
-            env->SetObjectArrayElement(ret, i, jInfo);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-            env->DeleteLocalRef(jInfo);
-            if (JNIUtil::isJavaExceptionThrown())
-            {
-                return NULL;
-            }
-        }
-        return ret;
-    }
-    else
+    JNIEnv *env = JNIUtil::getEnv();
+    int size = infoBaton.infoVect.size();
+    jclass clazz = env->FindClass(JAVA_PACKAGE"/Info2");
+    if (JNIUtil::isJavaExceptionThrown())
     {
-        JNIUtil::handleSVNError(Err);
         return NULL;
     }
+    jobjectArray ret = env->NewObjectArray(size, clazz, NULL);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+    env->DeleteLocalRef(clazz);
+    if (JNIUtil::isJavaExceptionThrown())
+    {
+        return NULL;
+    }
+
+    for(int i = 0; i < size; i++)
+    {
+        info_entry infoEntry = infoBaton.infoVect[i];
+
+        jobject jInfo = createJavaInfo2(infoEntry.path, infoEntry.info);
+        env->SetObjectArrayElement(ret, i, jInfo);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+        env->DeleteLocalRef(jInfo);
+        if (JNIUtil::isJavaExceptionThrown())
+        {
+            return NULL;
+        }
+    }
+    return ret;
 }
+
 svn_error_t *SVNClient::infoReceiver(void *baton, 
                                      const char *path,
                                      const svn_info_t *info,
