@@ -190,6 +190,26 @@ same kind of representation; that decision is part of the task!</p>
 </div>
 
 
+<div class="h3" id="svn-commit" title="svn-commit">
+<h3>Allow Commit from multiple working copies</h3>
+
+<p>Currently, 'svn commit' cannot commit changes that are located in
+two or more disconnected working copies (lacking a common parent),
+even if those working copies belong to the same repository.  This is
+a fairly common need for users that work on multiple projects that
+are all stored in the same repository and need to commit the changes
+for multiple projects in a single atomic commit transaction.</p>
+
+<p>There are at least two issues in the issue tracker that describe
+the problem in more detail.  See issue# 
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2381">2381
+</a> and 
+<a href="http://subversion.tigris.org/issues/show_bug.cgi?id=2381">2724
+</a>.</p>
+
+</div>
+
+
 </div>
 
 <!-- ============================================================= -->
