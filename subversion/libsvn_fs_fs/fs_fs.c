@@ -639,19 +639,12 @@ svn_error_t *
 svn_fs_fs__open(svn_fs_t *fs, const char *path, apr_pool_t *pool)
 {
   fs_fs_data_t *ffd = fs->fsap_data;
-  apr_file_t *current_file, *uuid_file;
+  apr_file_t *uuid_file;
   int format;
   char buf[APR_UUID_FORMATTED_LENGTH + 2];
   apr_size_t limit;
 
   fs->path = apr_pstrdup(fs->pool, path);
-
-  /* Attempt to open the 'current' file of this repository.  There
-     isn't much need for specific state associated with an open fs_fs
-     repository. */
-  SVN_ERR(svn_io_file_open(&current_file, path_current(fs, pool),
-                           APR_READ, APR_OS_DEFAULT, pool));
-  SVN_ERR(svn_io_file_close(current_file, pool));
 
   /* Read the FS format number. */
   SVN_ERR(read_format(&format, path_format(fs, pool), pool));
