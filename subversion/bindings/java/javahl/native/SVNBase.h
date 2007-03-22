@@ -90,5 +90,23 @@ private:
     static void findCppAddrFieldID(jfieldID *fid, const char *className,
                                    JNIEnv *env);
 };
+
+/**
+ * A statement macro used for checking NULL pointers, in the style of
+ * SVN_ERR().
+ *
+ * Evaluate @a expr.  If it equals NULL, throw an NullPointerException with
+ * the value @a str, and return the @a ret_val.  Otherwise, continue.
+ *
+ * Note that if the enclosing function returns <tt>void</tt>, @a ret_val may
+ * be blank.
+ */
+
+#define SVN_JNI_NULL_PTR_EX(expr, str, ret_val)         \
+  if (expr == NULL) {                                   \
+    JNIUtil::throwNullPointerException(str);            \
+    return ret_val ;                                    \
+  }
+
 // !defined(AFX_SVNBASE_H__ABF82C7E_0C50_40EA_8C88_2DFDF20B3A47__INCLUDED_)
 #endif
