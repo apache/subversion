@@ -1106,6 +1106,7 @@ init_adm(const char *path,
          const char *url,
          const char *repos,
          svn_revnum_t initial_rev,
+         svn_depth_t depth,
          apr_pool_t *pool)
 {
   svn_wc_adm_access_t *adm_access;
@@ -1143,7 +1144,8 @@ init_adm(const char *path,
   /* SVN_WC__ADM_ENTRIES */
   /* THIS FILE MUST BE CREATED LAST: 
      After this exists, the dir is considered complete. */
-  SVN_ERR(svn_wc__entries_init(path, uuid, url, repos, initial_rev, pool));
+  SVN_ERR(svn_wc__entries_init(path, uuid, url, repos,
+                               initial_rev, depth, pool));
 
   /* We provide this for backwards compatibilty.  Clients that don't understand
      format version 7 or higher will display a nicer error message if this
@@ -1162,6 +1164,21 @@ init_adm(const char *path,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_wc_ensure_adm3(const char *path,
+                   const char *uuid,
+                   const char *url,
+                   const char *repos,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *pool)
+{
+  svn_boolean_t exists_already;
+
+  SVN_ERR(check_adm_exists(&exists_already, path, url, revision, pool));
+  return (exists_already ? SVN_NO_ERROR :
+          init_adm(path, uuid, url, repos, revision, depth, pool));
+}
 
 svn_error_t *
 svn_wc_ensure_adm2(const char *path,
@@ -1171,12 +1188,10 @@ svn_wc_ensure_adm2(const char *path,
                    svn_revnum_t revision,
                    apr_pool_t *pool)
 {
-  svn_boolean_t exists_already;
-
-  SVN_ERR(check_adm_exists(&exists_already, path, url, revision, pool));
-  return (exists_already ? SVN_NO_ERROR :
-          init_adm(path, uuid, url, repos, revision, pool));
+  return svn_wc_ensure_adm3(path, uuid, url, repos, revision,
+                            svn_depth_infinity, pool);
 }
+
 
 svn_error_t *
 svn_wc_ensure_adm(const char *path,
@@ -1185,7 +1200,8 @@ svn_wc_ensure_adm(const char *path,
                   svn_revnum_t revision,
                   apr_pool_t *pool)
 {
-  return svn_wc_ensure_adm2(path, uuid, url, NULL, revision, pool);
+  return svn_wc_ensure_adm3(path, uuid, url, NULL, revision,
+                            svn_depth_infinity, pool);
 }
 
 svn_error_t *

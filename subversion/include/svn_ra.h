@@ -206,11 +206,12 @@ typedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress,
  * it may be reported as having revision 0 or as having the parent
  * directory's revision.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
  */
-typedef struct svn_ra_reporter2_t
+typedef struct svn_ra_reporter3_t
 {
-  /** Describe a working copy @a path as being at a particular @a revision.  
+  /** Describe a working copy @a path as being at a particular
+   * @a revision and having depth @a depth.
    *
    * If @a start_empty is set and @a path is a directory, the
    * implementor should assume the directory has no entries or props.
@@ -225,6 +226,7 @@ typedef struct svn_ra_reporter2_t
   svn_error_t *(*set_path)(void *report_baton,
                            const char *path,
                            svn_revnum_t revision,
+                           svn_depth_t depth,
                            svn_boolean_t start_empty,
                            const char *lock_token,
                            apr_pool_t *pool);
@@ -241,7 +243,7 @@ typedef struct svn_ra_reporter2_t
    * (relative to the root of the report driver) isn't a reflection of
    * @a path in the repository (relative to the URL specified when
    * opening the RA layer), but is instead a reflection of a different
-   * repository @a url at @a revision.
+   * repository @a url at @a revision, and has depth @a depth.
    *
    * If @a start_empty is set and @a path is a directory,
    * the implementor should assume the directory has no entries or props.
@@ -254,6 +256,7 @@ typedef struct svn_ra_reporter2_t
                             const char *path,
                             const char *url,
                             svn_revnum_t revision,
+                            svn_depth_t depth,
                             svn_boolean_t start_empty,
                             const char *lock_token,
                             apr_pool_t *pool);
@@ -274,30 +277,74 @@ typedef struct svn_ra_reporter2_t
   svn_error_t *(*abort_report)(void *report_baton,
                                apr_pool_t *pool);
 
+} svn_ra_reporter3_t;
+
+/**
+ * Similar to @c svn_ra_reporter3_t, but without support for depths.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+typedef struct svn_ra_reporter2_t
+{
+  /** Similar to the corresponding field in @c svn_ra_reporter3_t, but
+   * with @a depth always set to @c svn_depth_infinity. */
+  svn_error_t *(*set_path)(void *report_baton,
+                           const char *path,
+                           svn_revnum_t revision,
+                           svn_boolean_t start_empty,
+                           const char *lock_token,
+                           apr_pool_t *pool);
+
+  /** Same as the corresponding field in @c svn_ra_reporter3_t. */
+  svn_error_t *(*delete_path)(void *report_baton,
+                              const char *path,
+                              apr_pool_t *pool);
+    
+  /** Similar to the corresponding field in @c svn_ra_reporter3_t, but
+   * with @a depth always set to @c svn_depth_infinity. */
+  svn_error_t *(*link_path)(void *report_baton,
+                            const char *path,
+                            const char *url,
+                            svn_revnum_t revision,
+                            svn_boolean_t start_empty,
+                            const char *lock_token,
+                            apr_pool_t *pool);
+
+  /** Same as the corresponding field in @c svn_ra_reporter3_t. */
+  svn_error_t *(*finish_report)(void *report_baton,
+                                apr_pool_t *pool);
+
+  /** Same as the corresponding field in @c svn_ra_reporter3_t. */
+  svn_error_t *(*abort_report)(void *report_baton,
+                               apr_pool_t *pool);
+
 } svn_ra_reporter2_t;
 
 /**
- * Similar to @c svn_ra_reporter2_t, but without support for lock tokens.
+ * Similar to @c svn_ra_reporter3_t, but without support for lock
+ * tokens or depths.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
 typedef struct svn_ra_reporter_t
 {
-  /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
-   * with @a lock_token always set to NULL. */
+  /** Similar to the corresponding field in @c svn_ra_reporter3_t, but
+   * with @a lock_token always set to NULL and @a depth always set to
+   * @c svn_depth_infinity. */
   svn_error_t *(*set_path)(void *report_baton,
                            const char *path,
                            svn_revnum_t revision,
                            svn_boolean_t start_empty,
                            apr_pool_t *pool);
 
-  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
+  /** Same as the corresponding field in @c svn_ra_reporter3_t. */
   svn_error_t *(*delete_path)(void *report_baton,
                               const char *path,
                               apr_pool_t *pool);
     
-  /** Similar to the corresponding field in @c svn_ra_reporter2_t, but
-   * with @a lock_token always set to NULL. */
+  /** Similar to the corresponding field in @c svn_ra_reporter3_t, but
+   * with @a lock_token always set to NULL and @a depth always set to
+   * @c svn_depth_infinity. */
   svn_error_t *(*link_path)(void *report_baton,
                             const char *path,
                             const char *url,
@@ -305,11 +352,11 @@ typedef struct svn_ra_reporter_t
                             svn_boolean_t start_empty,
                             apr_pool_t *pool);
 
-  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
+  /** Same as the corresponding field in @c svn_ra_reporter3_t. */
   svn_error_t *(*finish_report)(void *report_baton,
                                 apr_pool_t *pool);
 
-  /** Same as the corresponding field in @c svn_ra_reporter2_t. */
+  /** Same as the corresponding field in @c svn_ra_reporter3_t. */
   svn_error_t *(*abort_report)(void *report_baton,
                                apr_pool_t *pool);
 } svn_ra_reporter_t;
@@ -746,18 +793,19 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * begin in the working copy (when @c open_root() is called).
  *
  * In return, the client receives a @a reporter/@a report_baton.  The
- * client then describes its working-copy revision numbers by making
- * calls into the @a reporter structure; the RA layer assumes that all
- * paths are relative to the URL used to open @a session.
+ * client then describes its working copy by making calls into the
+ * @a reporter.
  *
  * When finished, the client calls @a reporter->finish_report().  The
  * RA layer then does a complete drive of @a update_editor, ending with
- * close_edit(), to update the working copy.
+ * @a update_editor->close_edit(), to update the working copy.
  *
  * @a update_target is an optional single path component to restrict
  * the scope of the update to just that entry (in the directory
  * represented by the @a session's URL).  If @a update_target is the
  * empty string, the entire directory is updated.
+ *
+ * ### TODO(sd): The recurse parameter should probably become a depth:
  *
  * If @a recurse is true and the target is a directory, update
  * recursively; otherwise, update just the target and its immediate
@@ -775,7 +823,26 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
  * @note The reporter provided by this function does NOT supply copy-
  * from information to the diff editor callbacks.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_do_update2(svn_ra_session_t *session,
+                               const svn_ra_reporter3_t **reporter,
+                               void **report_baton,
+                               svn_revnum_t revision_to_update_to,
+                               const char *update_target,
+                               svn_boolean_t recurse,
+                               const svn_delta_editor_t *update_editor,
+                               void *update_baton,
+                               apr_pool_t *pool);
+
+/**
+ * Similar to @c svn_ra_do_update2, but taking @c svn_ra_reporter2_t
+ * instead of @c svn_ra_reporter3_t.
+ *
+ * ### TODO(sd): (see svn_ra_do_update2 about possible change of recurse
+ * ### to depth as well)
+ *
+ * @deprecated Provided for compatibility with the 1.4 API.
  */
 svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
                               const svn_ra_reporter2_t **reporter,
@@ -787,6 +854,7 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
                               void *update_baton,
                               apr_pool_t *pool);
 
+
 /**
  * Ask the RA layer to 'switch' a working copy to a new
  * @a switch_url;  it's another form of svn_ra_do_update().
@@ -796,9 +864,8 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
  * begin in the working copy (when open_root() is called). 
  *
  * In return, the client receives a @a reporter/@a report_baton.  The
- * client then describes its working-copy revision numbers by making
- * calls into the @a reporter structure; the RA layer assumes that all
- * paths are relative to the URL used to open @a session.
+ * client then describes its working copy by making calls into the
+ * @a reporter.
  *
  * When finished, the client calls @a reporter->finish_report().  The
  * RA layer then does a complete drive of @a switch_editor, ending with
@@ -826,7 +893,25 @@ svn_error_t *svn_ra_do_update(svn_ra_session_t *session,
  * @note The reporter provided by this function does NOT supply copy-
  * from information to the diff editor callbacks.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_do_switch2(svn_ra_session_t *session,
+                               const svn_ra_reporter3_t **reporter,
+                               void **report_baton,
+                               svn_revnum_t revision_to_switch_to,
+                               const char *switch_target,
+                               svn_boolean_t recurse,
+                               const char *switch_url,
+                               const svn_delta_editor_t *switch_editor,
+                               void *switch_baton,
+                               apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_do_switch2, but taking svn_ra_reporter2_t instead
+ * of svn_ra_reporter3_t, and therefore only able to report
+ * svn_depth_infinity for depths.
+ *
+ * @deprecated Provided for compatibility with the 1.4 API.
  */
 svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
                               const svn_ra_reporter2_t **reporter,
@@ -848,9 +933,8 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
  * begin in the working copy (when open_root() is called).
  *
  * In return, the client receives a @a reporter/@a report_baton. The
- * client then describes its working-copy revision numbers by making
- * calls into the @a reporter structure; the RA layer assumes that all
- * paths are relative to the URL used to open @a session.
+ * client then describes its working copy by making calls into the
+ * @a reporter.
  *
  * When finished, the client calls @a reporter->finish_report(). The RA
  * layer then does a complete drive of @a status_editor, ending with
@@ -874,7 +958,25 @@ svn_error_t *svn_ra_do_switch(svn_ra_session_t *session,
  * @note The reporter provided by this function does NOT supply copy-
  * from information to the diff editor callbacks.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_do_status2(svn_ra_session_t *session,
+                               const svn_ra_reporter3_t **reporter,
+                               void **report_baton,
+                               const char *status_target,
+                               svn_revnum_t revision,
+                               svn_boolean_t recurse,
+                               const svn_delta_editor_t *status_editor,
+                               void *status_baton,
+                               apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_ra_do_status2(), but taking svn_ra_reporter2_t 
+ * instead of svn_ra_reporter3_t, and therefore only able to report
+ * svn_depth_infinity for depths.
+ *
+ * @deprecated Provided for compatibility with the 1.4 API.
  */
 svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
                               const svn_ra_reporter2_t **reporter,
@@ -888,10 +990,10 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
 
 /**
  * Ask the RA layer to 'diff' a working copy against @a versus_url;
- * it's another form of svn_ra_do_update().
+ * it's another form of svn_ra_do_update2().
  *
  * @note This function cannot be used to diff a single file, only a
- * working copy directory.  See the svn_ra_do_switch() function 
+ * working copy directory.  See the svn_ra_do_switch2() function 
  * for more details.
  *
  * The client initially provides a @a diff_editor/@a diff_baton to the RA
@@ -899,9 +1001,8 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  * root is in the working copy (when open_root() is called). 
  *
  * In return, the client receives a @a reporter/@a report_baton. The
- * client then describes its working-copy revision numbers by making
- * calls into the @a reporter structure; the RA layer assumes that all
- * paths are relative to the URL used to open @a session.
+ * client then describes its working copy by making calls into the
+ * @a reporter.
  *
  * When finished, the client calls @a reporter->finish_report().  The
  * RA layer then does a complete drive of @a diff_editor, ending with
@@ -922,9 +1023,7 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  * and the addition of another, but if this flag is @c TRUE,
  * unrelated items will be diffed as if they were related.
  *
- * If @a recurse is true and the target is a directory, diff
- * recursively; otherwise, diff just target and its immediate entries,
- * but not its child directories (if any).
+ * ### TODO(sd): document @a depth, when figure out how it should work!
  *
  * The caller may not perform any RA operations using @a session before
  * finishing the report, and may not perform any RA operations using
@@ -940,7 +1039,27 @@ svn_error_t *svn_ra_do_status(svn_ra_session_t *session,
  * @note The reporter provided by this function does NOT supply copy-
  * from information to the diff editor callbacks.
  *
- * @since New in 1.4.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_ra_do_diff3(svn_ra_session_t *session,
+                             const svn_ra_reporter3_t **reporter,
+                             void **report_baton,
+                             svn_revnum_t revision,
+                             const char *diff_target,
+                             svn_depth_t depth,
+                             svn_boolean_t ignore_ancestry,
+                             svn_boolean_t text_deltas,
+                             const char *versus_url,
+                             const svn_delta_editor_t *diff_editor,
+                             void *diff_baton,
+                             apr_pool_t *pool);
+
+/**
+ * Similar to svn_ra_do_diff3(), but taking svn_ra_reporter2_t instead
+ * of svn_ra_reporter3_t, and therefore only able to report
+ * svn_depth_infinity for depths.
+ *
+ * @deprecated Provided for compatibility with the 1.4 API.
  */
 svn_error_t *svn_ra_do_diff2(svn_ra_session_t *session,
                              const svn_ra_reporter2_t **reporter,
@@ -955,8 +1074,11 @@ svn_error_t *svn_ra_do_diff2(svn_ra_session_t *session,
                              void *diff_baton,
                              apr_pool_t *pool);
 
+
 /**
- * Similar to svn_ra_do_diff2(), but with @a text_deltas set to @c TRUE.
+ * Similar to svn_ra_do_diff3(), but with @a text_deltas set to @c
+ * TRUE, and taking svn_ra_reporter2_t instead of svn_ra_reporter3_t
+ * (thus only able to report svn_depth_infinity for depths).
  *
  * @deprecated Provided for backward compatibility with the 1.3 API.
  */

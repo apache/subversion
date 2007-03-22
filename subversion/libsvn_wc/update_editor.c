@@ -74,8 +74,8 @@ struct edit_baton
      pointing to the final revision. */
   svn_revnum_t *target_revision;
 
-  /* Whether this edit will descend into subdirs */
-  svn_boolean_t recurse;
+  /* The depth of this edit */
+  svn_depth_t depth;
 
   /* Need to know if the user wants us to overwrite the 'now' times on
      edited/added files with the last-commit-time. */
@@ -701,6 +701,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
 
 /* Prepare directory for dir_baton DB for updating or checking out.
+ * Give it depth DEPTH.
  *
  * If the path already exists, but is not a working copy for
  * ANCESTOR_URL and ANCESTOR_REVISION, then an error will be returned. 
@@ -709,6 +710,7 @@ static svn_error_t *
 prep_directory(struct dir_baton *db,
                const char *ancestor_url,
                svn_revnum_t ancestor_revision,
+               svn_depth_t depth,
                apr_pool_t *pool)
 {
   const char *repos;
@@ -726,9 +728,9 @@ prep_directory(struct dir_baton *db,
 
   /* Make sure it's the right working copy, either by creating it so,
      or by checking that it is so already. */
-  SVN_ERR(svn_wc_ensure_adm2(db->path, NULL,
+  SVN_ERR(svn_wc_ensure_adm3(db->path, NULL,
                              ancestor_url, repos,
-                             ancestor_revision, pool));
+                             ancestor_revision, depth, pool));
 
   if (! db->edit_baton->adm_access
       || strcmp(svn_wc_adm_access_path(db->edit_baton->adm_access),
@@ -1285,10 +1287,20 @@ add_directory(const char *path,
         }
     }
 
-  SVN_ERR(prep_directory(db,
-                         db->new_URL,
-                         *(eb->target_revision),
-                         db->pool));
+  {
+    svn_depth_t depth = svn_depth_infinity;
+
+    if (eb->depth == svn_depth_empty
+        || eb->depth == svn_depth_files
+        || eb->depth == svn_depth_immediates)
+      depth = svn_depth_empty;
+
+    SVN_ERR(prep_directory(db,
+                           db->new_URL,
+                           *(eb->target_revision),
+                           depth,
+                           db->pool));
+  }
 
   *child_baton = db;
 
@@ -2532,7 +2544,7 @@ close_edit(void *edit_baton,
   if (! eb->target_deleted)
     SVN_ERR(svn_wc__do_update_cleanup(target_path,
                                       eb->adm_access,
-                                      eb->recurse,
+                                      eb->depth,
                                       eb->switch_url,
                                       eb->repos,
                                       *(eb->target_revision),
@@ -2564,7 +2576,7 @@ make_editor(svn_revnum_t *target_revision,
             const char *target,
             svn_boolean_t use_commit_times,
             const char *switch_url,
-            svn_boolean_t recurse,
+            svn_depth_t depth,
             svn_boolean_t allow_unver_obstructions,
             svn_wc_notify_func2_t notify_func,
             void *notify_baton,
@@ -2604,7 +2616,7 @@ make_editor(svn_revnum_t *target_revision,
   eb->adm_access               = adm_access;
   eb->anchor                   = anchor;
   eb->target                   = target;
-  eb->recurse                  = recurse;
+  eb->depth                    = depth;
   eb->notify_func              = notify_func;
   eb->notify_baton             = notify_baton;
   eb->traversal_info           = traversal_info;
@@ -2648,7 +2660,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           svn_wc_adm_access_t *anchor,
                           const char *target,
                           svn_boolean_t use_commit_times,
-                          svn_boolean_t recurse,
+                          svn_depth_t depth,
                           svn_boolean_t allow_unver_obstructions,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -2661,7 +2673,7 @@ svn_wc_get_update_editor3(svn_revnum_t *target_revision,
                           apr_pool_t *pool)
 {
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, NULL, recurse,
+                     target, use_commit_times, NULL, depth,
                      allow_unver_obstructions, notify_func, notify_baton,
                      cancel_func, cancel_baton, diff3_cmd, editor,
                      edit_baton, traversal_info, pool);
@@ -2685,10 +2697,12 @@ svn_wc_get_update_editor2(svn_revnum_t *target_revision,
                           apr_pool_t *pool)
 {
   return svn_wc_get_update_editor3(target_revision, anchor, target,
-                                   use_commit_times, recurse, FALSE,
-                                   notify_func, notify_baton, cancel_func,
-                                   cancel_baton, diff3_cmd, editor,
-                                   edit_baton, traversal_info, pool);
+                                   use_commit_times,
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   FALSE, notify_func, notify_baton,
+                                   cancel_func, cancel_baton,
+                                   diff3_cmd, editor, edit_baton,
+                                   traversal_info, pool);
 }
 
 svn_error_t *
@@ -2712,8 +2726,9 @@ svn_wc_get_update_editor(svn_revnum_t *target_revision,
   nb->baton = notify_baton;
   
   return svn_wc_get_update_editor3(target_revision, anchor, target,
-                                   use_commit_times, recurse, FALSE,
-                                   svn_wc__compat_call_notify_func, nb,
+                                   use_commit_times,
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
+                                   FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton, diff3_cmd,
                                    editor, edit_baton, traversal_info, pool);
 }
@@ -2724,7 +2739,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
                           const char *target,
                           const char *switch_url,
                           svn_boolean_t use_commit_times,
-                          svn_boolean_t recurse,
+                          svn_depth_t depth,
                           svn_boolean_t allow_unver_obstructions,
                           svn_wc_notify_func2_t notify_func,
                           void *notify_baton,
@@ -2739,7 +2754,7 @@ svn_wc_get_switch_editor3(svn_revnum_t *target_revision,
   assert(switch_url);
 
   return make_editor(target_revision, anchor, svn_wc_adm_access_path(anchor),
-                     target, use_commit_times, switch_url, recurse,
+                     target, use_commit_times, switch_url, depth,
                      allow_unver_obstructions, notify_func, notify_baton,
                      cancel_func, cancel_baton, diff3_cmd, editor,
                      edit_baton, traversal_info, pool);
@@ -2765,7 +2780,8 @@ svn_wc_get_switch_editor2(svn_revnum_t *target_revision,
   assert(switch_url);
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
-                                   switch_url, use_commit_times, recurse,
+                                   switch_url, use_commit_times,
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
                                    FALSE, notify_func, notify_baton,
                                    cancel_func, cancel_baton, diff3_cmd,
                                    editor, edit_baton, traversal_info,
@@ -2794,7 +2810,8 @@ svn_wc_get_switch_editor(svn_revnum_t *target_revision,
   nb->baton = notify_baton;
 
   return svn_wc_get_switch_editor3(target_revision, anchor, target,
-                                   switch_url, use_commit_times, recurse,
+                                   switch_url, use_commit_times,
+                                   SVN_DEPTH_FROM_RECURSE(recurse),
                                    FALSE, svn_wc__compat_call_notify_func, nb,
                                    cancel_func, cancel_baton, diff3_cmd,
                                    editor, edit_baton, traversal_info, pool);

@@ -897,7 +897,7 @@ svn_ra_serf__get_locations(svn_ra_session_t *session,
 
 svn_error_t *
 svn_ra_serf__do_diff(svn_ra_session_t *session,
-                     const svn_ra_reporter2_t **reporter,
+                     const svn_ra_reporter3_t **reporter,
                      void **report_baton,
                      svn_revnum_t revision,
                      const char *diff_target,
@@ -911,7 +911,7 @@ svn_ra_serf__do_diff(svn_ra_session_t *session,
 
 svn_error_t *
 svn_ra_serf__do_status(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        const char *status_target,
                        svn_revnum_t revision,
@@ -922,7 +922,7 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
 
 svn_error_t *
 svn_ra_serf__do_update(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        svn_revnum_t revision_to_update_to,
                        const char *update_target,
@@ -933,7 +933,7 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
 
 svn_error_t *
 svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        svn_revnum_t revision_to_switch_to,
                        const char *switch_target,

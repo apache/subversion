@@ -992,7 +992,8 @@ repos_to_wc_copy_single(svn_client__copy_pair_t *pair,
       SVN_ERR(svn_client__checkout_internal
               (NULL, pair->src_original, pair->dst, &pair->src_peg_revision,
                &pair->src_op_revision,
-               TRUE, FALSE, FALSE, NULL, ctx, pool));
+               SVN_DEPTH_FROM_RECURSE(TRUE),
+               FALSE, FALSE, NULL, ctx, pool));
 
       if ((pair->src_op_revision.kind == svn_opt_revision_head) 
            && same_repositories)

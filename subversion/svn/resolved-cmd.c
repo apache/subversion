@@ -56,13 +56,16 @@ svn_cl__resolved(apr_getopt_t *os,
     svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2, FALSE,
                          FALSE, FALSE, pool);
   
+  if (opt_state->depth == svn_depth_unknown)
+    opt_state->depth = svn_depth_empty;
+
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));    
       err = svn_client_resolved(target,
-                                opt_state->recursive,
+                                SVN_DEPTH_TO_RECURSE(opt_state->depth),
                                 ctx,
                                 subpool);
       if (err)

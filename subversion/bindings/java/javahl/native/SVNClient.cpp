@@ -34,6 +34,7 @@
 #include "JNIByteArray.h"
 #include "CommitMessage.h"
 #include "EnumMapper.h"
+#include "svn_types.h"
 #include "svn_client.h"
 #include "svn_sorts.h"
 #include "svn_time.h"
@@ -435,7 +436,7 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
                                path.c_str (),
                                pegRevision.revision (),
                                revision.revision (),
-                               recurse, 
+                               SVN_DEPTH_FROM_RECURSE(recurse),
                                ignoreExternals,
                                allowUnverObstructions,
                                ctx,
@@ -567,7 +568,7 @@ jlongArray SVNClient::update(Targets &targets, Revision &revision, bool recurse,
     }
     Err = svn_client_update3(&retval, array,
                              revision.revision(),
-                             recurse,
+                             SVN_DEPTH_FROM_RECURSE(recurse),
                              ignoreExternals,
                              allowUnverObstructions,
                              ctx,
@@ -839,7 +840,8 @@ jlong SVNClient::doSwitch(const char *path, const char *url,
     Err = svn_client_switch2(&retval, intPath.c_str (),
                              intUrl.c_str(),
                              revision.revision (),
-                             recurse, allowUnverObstructions,
+                             SVN_DEPTH_FROM_RECURSE(recurse),
+			     allowUnverObstructions,
                              ctx,
                              apr_pool);
 

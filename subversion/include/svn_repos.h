@@ -48,7 +48,7 @@ const svn_version_t *svn_repos_version(void);
 
 
 /** Callback type for checking authorization on paths produced by (at
- * least) svn_repos_dir_delta().
+ * least) svn_repos_dir_delta2().
  *
  * Set @a *allowed to TRUE to indicate that some operation is
  * authorized for @a path in @a root, or set it to FALSE to indicate
@@ -110,7 +110,7 @@ typedef enum
  * This callback is very similar to svn_repos_authz_func_t, with the
  * exception of the addition of the @a required parameter.
  * This is due to historical reasons: when authz was first implemented
- * for svn_repos_dir_delta(), it seemed there would need only checks
+ * for svn_repos_dir_delta2(), it seemed there would need only checks
  * for read and write operations, hence the svn_repos_authz_func_t
  * callback prototype and usage scenario.  But it was then realized
  * that lookups due to copying needed to be recursive, and that
@@ -398,20 +398,55 @@ const char *svn_repos_post_unlock_hook(svn_repos_t *repos, apr_pool_t *pool);
  * @a text_deltas instructs the driver of the @a editor to enable
  * the generation of text deltas.
  *
- * @a recurse instructs the driver of the @a editor to send a recursive
- * delta (or not.)
- *
  * @a ignore_ancestry instructs the driver to ignore node ancestry
  * when determining how to transmit differences.
  *
  * The @a authz_read_func and @a authz_read_baton are passed along to
- * svn_repos_dir_delta(); see that function for how they are used.
+ * svn_repos_dir_delta2(); see that function for how they are used.
  *
  * All allocation for the context and collected state will occur in
  * @a pool.
  *
- * @note @a username isn't used and should be removed if this function is
- * revised.
+ * Drives of @a editor are recursive by default.  However, this depth
+ * can be overridden for subpaths by explicitly telling the reporter
+ * that they are at different depths using the @c
+ * svn_repos_set_path3() or @c svn_repos_link_path3() APIs.  For
+ * example, if the reported tree is the @c A subdir of the Greek Tree
+ * (see Subversion's test suite), at depth @c svn_depth_empty, but the
+ * @c A/B subdir is reported at depth @c svn_depth_infinity, then
+ * repository-side changes to @c A/mu, or underneath @c A/C and @c
+ * A/D, would not be reflected in the editor drive, but changes
+ * underneath @c A/B would be.
+ *
+ * @since New in 1.5.
+ */
+svn_error_t *
+svn_repos_begin_report2(void **report_baton,
+                        svn_revnum_t revnum,
+                        svn_repos_t *repos,
+                        const char *fs_base,
+                        const char *target,
+                        const char *tgt_path,
+                        svn_boolean_t text_deltas,
+                        svn_boolean_t ignore_ancestry,
+                        const svn_delta_editor_t *editor,
+                        void *edit_baton,
+                        svn_repos_authz_func_t authz_read_func,
+                        void *authz_read_baton,
+                        apr_pool_t *pool);
+
+/**
+ * The same as svn_repos_begin_report2(), but taking a boolean
+ * @a recurse flag instead of an @c svn_depth_t depth.
+ *
+ * If @a recurse is true, the editor drive will behave as it would for
+ * a depth of @c svn_depth_infinity; if @a recurse is false, then as
+ * for @c svn_depth_files.
+ *
+ * @note @a username is ignored, and has been removed in a revised
+ * version of this API.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *
 svn_repos_begin_report(void **report_baton,
@@ -430,9 +465,11 @@ svn_repos_begin_report(void **report_baton,
                        void *authz_read_baton,
                        apr_pool_t *pool);
 
+
 /**
- * Given a @a report_baton constructed by svn_repos_begin_report(),
- * record the presence of @a path at @a revision in the current tree.
+ * Given a @a report_baton constructed by svn_repos_begin_report2(),
+ * record the presence of @a path, at @a revision with depth @a depth,
+ * in the current tree.
  *
  * @a path is relative to the anchor/target used in the creation of the
  * @a report_baton.
@@ -454,7 +491,21 @@ svn_repos_begin_report(void **report_baton,
  *
  * All temporary allocations are done in @a pool.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_set_path3(void *report_baton,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 svn_depth_t depth,
+                                 svn_boolean_t start_empty,
+                                 const char *lock_token,
+                                 apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_set_path3(), but with @a depth set to
+ * @c svn_depth_infinity.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_repos_set_path2(void *report_baton,
                                  const char *path,
@@ -464,7 +515,8 @@ svn_error_t *svn_repos_set_path2(void *report_baton,
                                  apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_set_path2(), but with @a lock_token set to @c NULL.
+ * Similar to svn_repos_set_path3(), but with @a lock_token set to
+ * @c NULL and @a depth set to @c svn_depth_infinity.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -475,9 +527,9 @@ svn_error_t *svn_repos_set_path(void *report_baton,
                                 apr_pool_t *pool);
 
 /**
- * Given a @a report_baton constructed by svn_repos_begin_report(), 
+ * Given a @a report_baton constructed by svn_repos_begin_report2(), 
  * record the presence of @a path in the current tree, containing the contents
- * of @a link_path at @a revision.
+ * of @a link_path at @a revision with depth @a depth.
  *
  * Note that while @a path is relative to the anchor/target used in the
  * creation of the @a report_baton, @a link_path is an absolute filesystem
@@ -493,7 +545,22 @@ svn_error_t *svn_repos_set_path(void *report_baton,
  *
  * All temporary allocations are done in @a pool.
  *
- * @since New in 1.2.
+ * @since New in 1.5.
+ */
+svn_error_t *svn_repos_link_path3(void *report_baton,
+                                  const char *path,
+                                  const char *link_path,
+                                  svn_revnum_t revision,
+                                  svn_depth_t depth,
+                                  svn_boolean_t start_empty,
+                                  const char *lock_token,
+                                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_link_path3(), but with @a depth set to
+ * @c svn_depth_infinity.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
  */
 svn_error_t *svn_repos_link_path2(void *report_baton,
                                   const char *path,
@@ -504,7 +571,8 @@ svn_error_t *svn_repos_link_path2(void *report_baton,
                                   apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_link_path2(), but with @a lock_token set to @c NULL.
+ * Similar to svn_repos_link_path3(), but with @a lock_token set to
+ * @c NULL and @a depth set to @c svn_depth_infinity.
  *
  * @deprecated Provided for backward compatibility with the 1.1 API.
  */
@@ -515,7 +583,7 @@ svn_error_t *svn_repos_link_path(void *report_baton,
                                  svn_boolean_t start_empty,
                                  apr_pool_t *pool);
 
-/** Given a @a report_baton constructed by svn_repos_begin_report(), 
+/** Given a @a report_baton constructed by svn_repos_begin_report2(), 
  * record the non-existence of @a path in the current tree.
  *
  * (This allows the reporter's driver to describe missing pieces of a
@@ -527,7 +595,7 @@ svn_error_t *svn_repos_delete_path(void *report_baton,
                                    const char *path,
                                    apr_pool_t *pool);
 
-/** Given a @a report_baton constructed by svn_repos_begin_report(),
+/** Given a @a report_baton constructed by svn_repos_begin_report2(),
  * finish the report and drive the editor as specified when the report
  * baton was constructed.
  *
@@ -543,7 +611,7 @@ svn_error_t *svn_repos_finish_report(void *report_baton,
                                      apr_pool_t *pool);
 
 
-/** Given a @a report_baton constructed by svn_repos_begin_report(),
+/** Given a @a report_baton constructed by svn_repos_begin_report2(),
  * abort the report.  This function can be called anytime before
  * svn_repos_finish_report() is called.
  *
@@ -592,6 +660,8 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * If @a text_deltas is @c FALSE, send a single @c NULL txdelta window to 
  * the window handler returned by @a editor->apply_textdelta().
  *
+ * ### TODO(sd): document @a depth.
+ *
  * If @a entry_props is @c TRUE, accompany each opened/added entry with
  * propchange editor calls that relay special "entry props" (this
  * is typically used only for working copy updates).
@@ -609,6 +679,29 @@ svn_error_t *svn_repos_abort_report(void *report_baton,
  * the total size of the delta.
  */
 svn_error_t *
+svn_repos_dir_delta2(svn_fs_root_t *src_root,
+                     const char *src_parent_dir,
+                     const char *src_entry,
+                     svn_fs_root_t *tgt_root,
+                     const char *tgt_path,
+                     const svn_delta_editor_t *editor,
+                     void *edit_baton,
+                     svn_repos_authz_func_t authz_read_func,
+                     void *authz_read_baton,
+                     svn_boolean_t text_deltas,
+                     svn_depth_t depth,
+                     svn_boolean_t entry_props,
+                     svn_boolean_t ignore_ancestry,
+                     apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_dir_delta2(), but if @a recurse is true, pass
+ * @c svn_depth_infinity for @a depth, and if @a recurse is false,
+ * pass @c svn_depth_files for @a depth.
+ *
+ * @deprecated Provided for backward compatibility with the 1.4 API.
+ */
+svn_error_t *
 svn_repos_dir_delta(svn_fs_root_t *src_root,
                     const char *src_parent_dir,
                     const char *src_entry,
@@ -623,6 +716,7 @@ svn_repos_dir_delta(svn_fs_root_t *src_root,
                     svn_boolean_t entry_props,
                     svn_boolean_t ignore_ancestry,
                     apr_pool_t *pool);
+
 
 /** Use the provided @a editor and @a edit_baton to describe the
  * skeletal changes made in a particular filesystem @a root
@@ -1425,16 +1519,16 @@ svn_error_t *svn_repos_fs_change_txn_prop(svn_fs_txn_t *txn,
  * repository inspection.
  * @{
  *
- * As it turns out, the svn_repos_dir_delta() interface can be
+ * As it turns out, the svn_repos_dir_delta2() interface can be
  * extremely useful for examining the repository, or more exactly,
- * changes to the repository.  svn_repos_dir_delta() allows for
+ * changes to the repository.  svn_repos_dir_delta2() allows for
  * differences between two trees to be described using an editor.
  *
  * By using the editor obtained from svn_repos_node_editor() with
- * svn_repos_dir_delta(), the description of how to transform one tree
+ * svn_repos_dir_delta2(), the description of how to transform one tree
  * into another can be used to build an in-memory linked-list tree,
  * which each node representing a repository node that was changed as a
- * result of having svn_repos_dir_delta() drive that editor.
+ * result of having svn_repos_dir_delta2() drive that editor.
  */
 
 /** A node in the repository. */
@@ -1474,7 +1568,7 @@ typedef struct svn_repos_node_t
 
 
 /** Set @a *editor and @a *edit_baton to an editor that, when driven by
- * svn_repos_dir_delta(), builds an <tt>svn_repos_node_t *</tt> tree
+ * svn_repos_dir_delta2(), builds an <tt>svn_repos_node_t *</tt> tree
  * representing the delta from @a base_root to @a root in @a repos's 
  * filesystem.
  *  
@@ -1497,7 +1591,7 @@ svn_error_t *svn_repos_node_editor(const svn_delta_editor_t **editor,
 
 /** Return the root node of the linked-list tree generated by driving
  * the editor created by svn_repos_node_editor() with
- * svn_repos_dir_delta(), which is stored in @a edit_baton.  This is 
+ * svn_repos_dir_delta2(), which is stored in @a edit_baton.  This is 
  * only really useful if used *after* the editor drive is completed.
  */
 svn_repos_node_t *svn_repos_node_from_baton(void *edit_baton);

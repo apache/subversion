@@ -448,7 +448,7 @@ close_helper(svn_boolean_t is_dir, item_baton_t *baton)
          they're hardcoded here.  Isn't there some header file that both
          sides of the network can share?? */
       
-      /* ### special knowledge: svn_repos_dir_delta will never send
+      /* ### special knowledge: svn_repos_dir_delta2 will never send
        *removals* of the commit-info "entry props". */
       if (baton->committed_rev)
         SVN_ERR(dav_svn__send_xml(baton->uc->bb, baton->uc->output,
@@ -914,7 +914,7 @@ dav_svn__update_report(const dav_resource *resource,
   const dav_svn_repos *repos = resource->info->repos;
   const char *target = "";
   svn_boolean_t text_deltas = TRUE;
-  svn_boolean_t recurse = TRUE;
+  svn_depth_t depth = svn_depth_unknown;
   svn_boolean_t resource_walk = FALSE;
   svn_boolean_t ignore_ancestry = FALSE;
   dav_svn__authz_read_baton arb;
@@ -1014,13 +1014,36 @@ dav_svn__update_report(const dav_resource *resource,
             return derr;
           target = cdata;
         }
+      if (child->ns == ns && strcmp(child->name, "depth") == 0)
+        {
+          cdata = dav_xml_get_cdata(child, resource->pool, 1);
+          if (! *cdata)
+            return malformed_element_error(child->name, resource->pool);
+          depth = svn_depth_from_word(cdata);
+        }
       if (child->ns == ns && strcmp(child->name, "recursive") == 0)
         {
           cdata = dav_xml_get_cdata(child, resource->pool, 1);
           if (! *cdata)
             return malformed_element_error(child->name, resource->pool);
-          if (strcmp(cdata, "no") == 0)
-            recurse = FALSE;
+          if ((depth == svn_depth_unknown) && (strcmp(cdata, "no") == 0))
+            depth = svn_depth_files;
+          /* The "yes" case is handled later, by checking if depth is
+             still svn_depth_unknown.  
+
+             Also, note that even modern, depth-aware clients still
+             transmit "no" for "recursive" (along with "files" for
+             "depth") in the svn_depth_files case and the
+             svn_depth_empty case.  This is because they don't know if
+             they're talking to a depth-aware server or not, and they
+             don't need to know -- all they have to do is transmit
+             both, and the server will DTRT either way (although in
+             the svn_depth_empty case, the client will still have some
+             work to do in ignoring the files that come down).
+
+             When both "depth" and "recursive" are sent, we don't
+             bother to check if they're mutually consistent, we just
+             let depth dominate. */  
         }
       if (child->ns == ns && strcmp(child->name, "ignore-ancestry") == 0)
         {
@@ -1086,7 +1109,7 @@ dav_svn__update_report(const dav_resource *resource,
              telescoping dst_path be. */
           uc.dst_path = svn_path_dirname(dst_path, resource->pool);
 
-          /* Also, the svn_repos_dir_delta() is going to preserve our
+          /* Also, the svn_repos_dir_delta2() is going to preserve our
              target's name, so we need a pathmap entry for that. */
           if (! uc.pathmap)
             uc.pathmap = apr_hash_make(resource->pool);
@@ -1118,6 +1141,12 @@ dav_svn__update_report(const dav_resource *resource,
   if (! uc.send_all)
     text_deltas = FALSE;
 
+  /* If the client did not specify the depth (either via a 'depth'
+     element, for new clients, or via 'recurse' for old clients),
+     then default to infinite depth. */
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
   /* When we call svn_repos_finish_report, it will ultimately run
      dir_delta() between REPOS_PATH/TARGET and TARGET_PATH.  In the
      case of an update or status, these paths should be identical.  In
@@ -1138,17 +1167,16 @@ dav_svn__update_report(const dav_resource *resource,
   editor->close_file = upd_close_file;
   editor->absent_file = upd_absent_file;
   editor->close_edit = upd_close_edit;
-  if ((serr = svn_repos_begin_report(&rbaton, revnum, repos->username, 
-                                     repos->repos, 
-                                     src_path, target,
-                                     dst_path,
-                                     text_deltas,
-                                     recurse,
-                                     ignore_ancestry,
-                                     editor, &uc,
-                                     dav_svn__authz_read_func(&arb),
-                                     &arb,
-                                     resource->pool)))
+  if ((serr = svn_repos_begin_report2(&rbaton, revnum,
+                                      repos->repos, 
+                                      src_path, target,
+                                      dst_path,
+                                      text_deltas,
+                                      ignore_ancestry,
+                                      editor, &uc,
+                                      dav_svn__authz_read_func(&arb),
+                                      &arb,
+                                      resource->pool)))
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                   "The state report gatherer could not be "
@@ -1178,6 +1206,8 @@ dav_svn__update_report(const dav_resource *resource,
               {
                 if (! strcmp(this_attr->name, "rev"))
                   rev = SVN_STR_TO_REV(this_attr->value);
+                else if (! strcmp(this_attr->name, "depth"))
+                  depth = svn_depth_from_word(this_attr->value);
                 else if (! strcmp(this_attr->name, "linkpath"))
                   linkpath = this_attr->value;
                 else if (! strcmp(this_attr->name, "start-empty"))
@@ -1209,10 +1239,10 @@ dav_svn__update_report(const dav_resource *resource,
               from_revnum = rev;
 
             if (! linkpath)
-              serr = svn_repos_set_path2(rbaton, path, rev,
+              serr = svn_repos_set_path3(rbaton, path, rev, depth,
                                          start_empty, locktoken, subpool);
             else
-              serr = svn_repos_link_path2(rbaton, path, linkpath, rev,
+              serr = svn_repos_link_path3(rbaton, path, linkpath, rev, depth,
                                           start_empty, locktoken, subpool);
             if (serr != NULL)
               {
@@ -1263,7 +1293,7 @@ dav_svn__update_report(const dav_resource *resource,
     else
       spath = src_path;
 
-    /* If a second path was passed to svn_repos_dir_delta(), then it
+    /* If a second path was passed to svn_repos_dir_delta2(), then it
        must have been switch, diff, or merge.  */
     if (dst_path)
       {
@@ -1382,13 +1412,17 @@ dav_svn__update_report(const dav_resource *resource,
       /* Compare subtree DST_PATH within a pristine revision to
          revision 0.  This should result in nothing but 'add' calls
          to the editor. */
-      serr = svn_repos_dir_delta(zero_root, "", target,
-                                 uc.rev_root, dst_path,
-                                 /* re-use the editor */
-                                 editor, &uc, dav_svn__authz_read_func(&arb),
-                                 &arb, FALSE /* text-deltas */, recurse, 
-                                 TRUE /* entryprops */, 
-                                 FALSE /* ignore-ancestry */, resource->pool);
+      serr = svn_repos_dir_delta2(zero_root, "", target,
+                                  uc.rev_root, dst_path,
+                                  /* re-use the editor */
+                                  editor, &uc,
+                                  dav_svn__authz_read_func(&arb),
+                                  &arb, FALSE /* text-deltas */,
+                                  depth,
+                                  TRUE /* entryprops */, 
+                                  FALSE /* ignore-ancestry */,
+                                  resource->pool);
+
       if (serr)
         {
           derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

@@ -182,9 +182,9 @@ do_status(svn_cl__opt_state_t *opt_state,
   if (opt_state->xml)
     SVN_ERR(print_start_target_xml(svn_path_local_style(target, pool), pool));
 
-  SVN_ERR(svn_client_status2(&repos_rev, target, rev,
+  SVN_ERR(svn_client_status3(&repos_rev, target, rev,
                              print_status, status_baton,
-                             opt_state->nonrecursive ? FALSE : TRUE,
+                             opt_state->depth,
                              opt_state->verbose,
                              opt_state->update,
                              opt_state->no_ignore,
@@ -224,6 +224,11 @@ svn_cl__status(apr_getopt_t *os,
 
   /* Add "." if user passed 0 arguments */
   svn_opt_push_implicit_dot_target(targets, pool);
+
+  /* ### TODO(sd): I don't think we need to convert to default depth here;
+     ### rather, depth should stay unknown, because it may depend on
+     ### what the working copy says.  On the other hand, if no -u
+     ### flag was passed, then does depth matter? */
 
   subpool = svn_pool_create(pool);
 

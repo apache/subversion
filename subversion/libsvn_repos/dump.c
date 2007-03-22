@@ -1020,16 +1020,16 @@ svn_repos_dump_fs2(svn_repos_t *repos,
         {
           svn_fs_root_t *from_root;
           SVN_ERR(svn_fs_revision_root(&from_root, fs, from_rev, subpool));
-          SVN_ERR(svn_repos_dir_delta(from_root, "/", "",
-                                      to_root, "/",
-                                      dump_editor, dump_edit_baton,
-                                      NULL,
-                                      NULL,
-                                      FALSE, /* don't send text-deltas */
-                                      TRUE, /* recurse */
-                                      FALSE, /* don't send entry props */
-                                      FALSE, /* don't ignore ancestry */
-                                      subpool));
+          SVN_ERR(svn_repos_dir_delta2(from_root, "/", "",
+                                       to_root, "/",
+                                       dump_editor, dump_edit_baton,
+                                       NULL,
+                                       NULL,
+                                       FALSE, /* don't send text-deltas */
+                                       svn_depth_infinity,
+                                       FALSE, /* don't send entry props */
+                                       FALSE, /* don't ignore ancestry */
+                                       subpool));
         }
       else
         {

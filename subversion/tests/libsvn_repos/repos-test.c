@@ -53,20 +53,20 @@ dir_deltas(const char **msg,
   int i, j;
   apr_pool_t *subpool = svn_pool_create(pool);
 
-  *msg = "test svn_repos_dir_delta";
+  *msg = "test svn_repos_dir_delta2";
 
   if (msg_only)
     return SVN_NO_ERROR;
 
   /* The Test Plan
      
-     The filesystem function svn_repos_dir_delta exists to drive an
+     The filesystem function svn_repos_dir_delta2 exists to drive an
      editor in such a way that given a source tree S and a target tree
      T, that editor manipulation will transform S into T, insomuch as
      directories and files, and their contents and properties, go.
      The general notion of the test plan will be to create pairs of
      trees (S, T), and an editor that edits a copy of tree S, run them
-     through svn_repos_dir_delta, and then verify that the edited copy of
+     through svn_repos_dir_delta2, and then verify that the edited copy of
      S is identical to T when it is all said and done.  */
 
   /* Create a filesystem and repository. */
@@ -305,7 +305,7 @@ dir_deltas(const char **msg,
       for (j = 0; j < revision_count; j++)
         {
           /* Prepare a txn that will receive the changes from
-             svn_repos_dir_delta */
+             svn_repos_dir_delta2 */
           SVN_ERR(svn_fs_begin_txn(&txn, fs, i, subpool));
           SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
 
@@ -319,20 +319,20 @@ dir_deltas(const char **msg,
 
           /* Here's the kicker...do the directory delta. */
           SVN_ERR(svn_fs_revision_root(&revision_root, fs, j, subpool)); 
-          SVN_ERR(svn_repos_dir_delta(txn_root,
-                                      "",
-                                      "",
-                                      revision_root,
-                                      "",
-                                      editor,
-                                      edit_baton,
-                                      NULL,
-                                      NULL,
-                                      TRUE,
-                                      TRUE,
-                                      FALSE,
-                                      FALSE,
-                                      subpool));
+          SVN_ERR(svn_repos_dir_delta2(txn_root,
+                                       "",
+                                       "",
+                                       revision_root,
+                                       "",
+                                       editor,
+                                       edit_baton,
+                                       NULL,
+                                       NULL,
+                                       TRUE,
+                                       svn_depth_infinity,
+                                       FALSE,
+                                       FALSE,
+                                       subpool));
 
           /* Hopefully at this point our transaction has been modified
              to look exactly like our latest revision.  We'll check
@@ -1079,17 +1079,21 @@ rmlocks(const char **msg,
     SVN_ERR(create_rmlocks_editor(&editor, &edit_baton, &removed, subpool));
 
     /* Report what we have. */
-    SVN_ERR(svn_repos_begin_report(&report_baton, 1, "user1", repos, "/", "",
-                                   NULL, FALSE, TRUE, FALSE, editor,
-                                   edit_baton, NULL, NULL, subpool));
-    SVN_ERR(svn_repos_set_path2(report_baton, "", 1, FALSE, NULL,
-                                subpool));
-    SVN_ERR(svn_repos_set_path2(report_baton, "iota", 1, FALSE, l1->token,
-                                subpool));
-    SVN_ERR(svn_repos_set_path2(report_baton, "A/mu", 1, FALSE, l2->token,
-                                subpool));
-    SVN_ERR(svn_repos_set_path2(report_baton, "A/D/gamma", 1, FALSE,
-                                l3->token, subpool));
+    SVN_ERR(svn_repos_begin_report2(&report_baton, 1, repos, "/", "", NULL,
+                                    FALSE, FALSE, editor, edit_baton,
+                                    NULL, NULL, subpool));
+    SVN_ERR(svn_repos_set_path3(report_baton, "", 1,
+                                svn_depth_infinity,
+                                FALSE, NULL, subpool));
+    SVN_ERR(svn_repos_set_path3(report_baton, "iota", 1,
+                                svn_depth_infinity,
+                                FALSE, l1->token, subpool));
+    SVN_ERR(svn_repos_set_path3(report_baton, "A/mu", 1,
+                                svn_depth_infinity,
+                                FALSE, l2->token, subpool));
+    SVN_ERR(svn_repos_set_path3(report_baton, "A/D/gamma", 1,
+                                svn_depth_infinity,
+                                FALSE, l3->token, subpool));
     
     /* End the report. */
     SVN_ERR(svn_repos_finish_report(report_baton, pool));

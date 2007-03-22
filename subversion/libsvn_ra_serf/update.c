@@ -270,10 +270,12 @@ typedef struct {
   /* What is the target revision that we want for this REPORT? */
   svn_revnum_t target_rev;
 
-  /* Have we been asked to ignore ancestry, recursion, or textdeltas? */
+  /* Have we been asked to ignore ancestry or textdeltas? */
   svn_boolean_t ignore_ancestry;
-  svn_boolean_t recurse;
   svn_boolean_t text_deltas;
+
+  /* What depth was requested? */
+  svn_depth_t depth;
 
   apr_hash_t *lock_path_tokens;
 
@@ -1823,6 +1825,7 @@ static svn_error_t *
 set_path(void *report_baton,
          const char *path,
          svn_revnum_t revision,
+         svn_depth_t depth,
          svn_boolean_t start_empty,
          const char *lock_token,
          apr_pool_t *pool)
@@ -1865,6 +1868,39 @@ set_path(void *report_baton,
 
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
                                           report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+    }
+
+  /* ### TODO(sd): Or should this be 'if (depth != report->depth) ...' ? */
+  if (depth != svn_depth_infinity)
+    {
+      /* ### It's a bit distressing to hand-code the depth words here,
+         ### instead of using svn_depth_to_word() the way
+         ### libsvn_ra_dav does.  But I'm not sure enough about the
+         ### general style of libsvn_ra_serf to know whether redoing
+         ### the code here would be a good thing.  Same in link_path(). */
+      switch (depth) {
+      case svn_depth_empty:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"empty\"",
+                                            sizeof(" depth=\"empty\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      case svn_depth_files:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"files\"",
+                                            sizeof(" depth=\"files\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      case svn_depth_immediates:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"immediates\"",
+                                            sizeof(" depth=\"immediates\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      default:
+        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+                                 _("Invalid depth (%d) for path '%s'"),
+                                 depth, path);
+      }
+
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
@@ -1927,6 +1963,7 @@ link_path(void *report_baton,
           const char *path,
           const char *url,
           svn_revnum_t revision,
+          svn_depth_t depth,
           svn_boolean_t start_empty,
           const char *lock_token,
           apr_pool_t *pool)
@@ -1970,6 +2007,39 @@ link_path(void *report_baton,
 
       tmp = SERF_BUCKET_SIMPLE_STRING_LEN("\"", sizeof("\"")-1,
                                           report->sess->bkt_alloc);
+      serf_bucket_aggregate_append(report->buckets, tmp);
+    }
+
+  /* ### TODO(sd): Or should this be 'if (depth != report->depth) ...' ? */
+  if (depth != svn_depth_infinity)
+    {
+      /* ### It's a bit distressing to hand-code the depth words here,
+         ### instead of using svn_depth_to_word() the way
+         ### libsvn_ra_dav does.  But I'm not sure enough about the
+         ### general style of libsvn_ra_serf to know whether redoing
+         ### the code here would be a good thing.  Same in set_path(). */
+      switch (depth) {
+      case svn_depth_empty:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"empty\"",
+                                            sizeof(" depth=\"empty\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      case svn_depth_files:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"files\"",
+                                            sizeof(" depth=\"files\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      case svn_depth_immediates:
+        tmp = SERF_BUCKET_SIMPLE_STRING_LEN(" depth=\"immediates\"",
+                                            sizeof(" depth=\"immediates\"")-1,
+                                            report->sess->bkt_alloc);
+        break;
+      default:
+        return svn_error_createf(SVN_ERR_RA_DAV_PATH_NOT_FOUND,
+                                 _("Invalid depth (%d) for path '%s'"),
+                                 depth, path);
+      }
+
       serf_bucket_aggregate_append(report->buckets, tmp);
     }
 
@@ -2254,7 +2324,7 @@ abort_report(void *report_baton,
   abort();
 }
 
-static const svn_ra_reporter2_t ra_serf_reporter = {
+static const svn_ra_reporter3_t ra_serf_reporter = {
   set_path,
   delete_path,
   link_path,
@@ -2267,13 +2337,13 @@ static const svn_ra_reporter2_t ra_serf_reporter = {
 
 static svn_error_t *
 make_update_reporter(svn_ra_session_t *ra_session,
-                     const svn_ra_reporter2_t **reporter,
+                     const svn_ra_reporter3_t **reporter,
                      void **report_baton,
                      svn_revnum_t revision,
                      const char *src_path,
                      const char *dest_path,
                      const char *update_target,
-                     svn_boolean_t recurse,
+                     svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t text_deltas,
                      const svn_delta_editor_t *update_editor,
@@ -2289,7 +2359,7 @@ make_update_reporter(svn_ra_session_t *ra_session,
   report->sess = ra_session->priv;
   report->conn = report->sess->conns[0];
   report->target_rev = revision;
-  report->recurse = recurse;
+  report->depth = depth;
   report->ignore_ancestry = ignore_ancestry;
   report->text_deltas = text_deltas;
   report->lock_path_tokens = apr_hash_make(pool);
@@ -2373,23 +2443,28 @@ make_update_reporter(svn_ra_session_t *ra_session,
                                    report->sess->bkt_alloc);
     }
 
-  if (!report->recurse)
+  /* Old servers know "recursive" but not "depth"; help them DTRT. */
+  if (depth == svn_depth_files || depth == svn_depth_empty)
     {
       svn_ra_serf__add_tag_buckets(report->buckets,
                                    "S:recursive", "no",
                                    report->sess->bkt_alloc);
     }
 
+  svn_ra_serf__add_tag_buckets(report->buckets,
+                               "S:depth", apr_itoa(pool, depth),
+                               report->sess->bkt_alloc);
+
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
 svn_ra_serf__do_update(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        svn_revnum_t revision_to_update_to,
                        const char *update_target,
-                       svn_boolean_t recurse,
+                       svn_depth_t depth,
                        const svn_delta_editor_t *update_editor,
                        void *update_baton,
                        apr_pool_t *pool)
@@ -2399,17 +2474,17 @@ svn_ra_serf__do_update(svn_ra_session_t *ra_session,
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision_to_update_to,
                               session->repos_url.path, NULL, update_target,
-                              recurse, FALSE, TRUE,
+                              depth, FALSE, TRUE,
                               update_editor, update_baton, pool);
 }
 
 svn_error_t *
 svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
-                     const svn_ra_reporter2_t **reporter,
+                     const svn_ra_reporter3_t **reporter,
                      void **report_baton,
                      svn_revnum_t revision,
                      const char *diff_target,
-                     svn_boolean_t recurse,
+                     svn_depth_t depth,
                      svn_boolean_t ignore_ancestry,
                      svn_boolean_t text_deltas,
                      const char *versus_url,
@@ -2422,17 +2497,17 @@ svn_ra_serf__do_diff(svn_ra_session_t *ra_session,
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
                               session->repos_url.path, versus_url, diff_target,
-                              recurse, ignore_ancestry, text_deltas,
+                              depth, ignore_ancestry, text_deltas,
                               diff_editor, diff_baton, pool);
 }
 
 svn_error_t *
 svn_ra_serf__do_status(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        const char *status_target,
                        svn_revnum_t revision,
-                       svn_boolean_t recurse,
+                       svn_depth_t depth,
                        const svn_delta_editor_t *status_editor,
                        void *status_baton,
                        apr_pool_t *pool)
@@ -2442,17 +2517,17 @@ svn_ra_serf__do_status(svn_ra_session_t *ra_session,
   return make_update_reporter(ra_session, reporter, report_baton,
                               revision,
                               session->repos_url.path, NULL, status_target,
-                              recurse, FALSE, FALSE,
+                              depth, FALSE, FALSE,
                               status_editor, status_baton, pool);
 }
 
 svn_error_t *
 svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
-                       const svn_ra_reporter2_t **reporter,
+                       const svn_ra_reporter3_t **reporter,
                        void **report_baton,
                        svn_revnum_t revision_to_switch_to,
                        const char *switch_target,
-                       svn_boolean_t recurse,
+                       svn_depth_t depth,
                        const char *switch_url,
                        const svn_delta_editor_t *switch_editor,
                        void *switch_baton,
@@ -2464,7 +2539,7 @@ svn_ra_serf__do_switch(svn_ra_session_t *ra_session,
                               revision_to_switch_to,
                               session->repos_url.path,
                               switch_url, switch_target,
-                              recurse, TRUE, TRUE,
+                              depth, TRUE, TRUE,
                               switch_editor, switch_baton, pool);
 }
 

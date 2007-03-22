@@ -238,14 +238,16 @@ static svn_error_t *handle_auth_request(svn_ra_svn__session_baton_t *sess,
 
 static svn_error_t *ra_svn_set_path(void *baton, const char *path,
                                     svn_revnum_t rev,
+                                    svn_depth_t depth,
                                     svn_boolean_t start_empty,
                                     const char *lock_token,
                                     apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb(?c)", path, rev,
-                               start_empty, lock_token));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "set-path", "crb(?c)w",
+                               path, rev, start_empty, lock_token,
+                               svn_depth_to_word(depth)));
   return SVN_NO_ERROR;
 }
 
@@ -261,14 +263,16 @@ static svn_error_t *ra_svn_delete_path(void *baton, const char *path,
 static svn_error_t *ra_svn_link_path(void *baton, const char *path,
                                      const char *url,
                                      svn_revnum_t rev,
+                                     svn_depth_t depth,
                                      svn_boolean_t start_empty,
                                      const char *lock_token,
                                      apr_pool_t *pool)
 {
   ra_svn_reporter_baton_t *b = baton;
 
-  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb(?c)",
-                               path, url, rev, start_empty, lock_token));
+  SVN_ERR(svn_ra_svn_write_cmd(b->conn, pool, "link-path", "ccrb(?c)w",
+                               path, url, rev, start_empty, lock_token,
+                               svn_depth_to_word(depth)));
   return SVN_NO_ERROR;
 }
 
@@ -294,7 +298,7 @@ static svn_error_t *ra_svn_abort_report(void *baton,
   return SVN_NO_ERROR;
 }
 
-static svn_ra_reporter2_t ra_svn_reporter = {
+static svn_ra_reporter3_t ra_svn_reporter = {
   ra_svn_set_path,
   ra_svn_delete_path,
   ra_svn_link_path,
@@ -306,7 +310,7 @@ static void ra_svn_get_reporter(svn_ra_svn__session_baton_t *sess_baton,
                                 apr_pool_t *pool,
                                 const svn_delta_editor_t *editor,
                                 void *edit_baton,
-                                const svn_ra_reporter2_t **reporter,
+                                const svn_ra_reporter3_t **reporter,
                                 void **report_baton)
 {
   ra_svn_reporter_baton_t *b;
@@ -1007,18 +1011,19 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_update(svn_ra_session_t *session,
-                                  const svn_ra_reporter2_t **reporter,
+                                  const svn_ra_reporter3_t **reporter,
                                   void **report_baton, svn_revnum_t rev,
-                                  const char *target, svn_boolean_t recurse,
+                                  const char *target, svn_depth_t depth,
                                   const svn_delta_editor_t *update_editor,
                                   void *update_baton, apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
+  svn_boolean_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start an update. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cb", rev, target,
-                               recurse));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "update", "(?r)cbw", rev, target,
+                               recurse, svn_depth_to_word(depth)));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
@@ -1029,19 +1034,21 @@ static svn_error_t *ra_svn_update(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_switch(svn_ra_session_t *session,
-                                  const svn_ra_reporter2_t **reporter,
+                                  const svn_ra_reporter3_t **reporter,
                                   void **report_baton, svn_revnum_t rev,
-                                  const char *target, svn_boolean_t recurse,
+                                  const char *target, svn_depth_t depth,
                                   const char *switch_url,
                                   const svn_delta_editor_t *update_editor,
                                   void *update_baton, apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
+  svn_boolean_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start a switch. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "(?r)cbc", rev, target,
-                               recurse, switch_url));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "switch", "(?r)cbcw", rev,
+                               target, recurse, switch_url,
+                               svn_depth_to_word(depth)));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
@@ -1052,19 +1059,21 @@ static svn_error_t *ra_svn_switch(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_status(svn_ra_session_t *session,
-                                  const svn_ra_reporter2_t **reporter,
+                                  const svn_ra_reporter3_t **reporter,
                                   void **report_baton,
                                   const char *target, svn_revnum_t rev,
-                                  svn_boolean_t recurse,
+                                  svn_depth_t depth,
                                   const svn_delta_editor_t *status_editor,
                                   void *status_baton, apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
+  svn_boolean_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start a status operation. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb(?r)",
-                               target, recurse, rev));
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "status", "cb(?r)w",
+                               target, recurse, rev,
+                               svn_depth_to_word(depth)));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
@@ -1075,10 +1084,10 @@ static svn_error_t *ra_svn_status(svn_ra_session_t *session,
 }
 
 static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
-                                const svn_ra_reporter2_t **reporter,
+                                const svn_ra_reporter3_t **reporter,
                                 void **report_baton,
                                 svn_revnum_t rev, const char *target,
-                                svn_boolean_t recurse,
+                                svn_depth_t depth,
                                 svn_boolean_t ignore_ancestry,
                                 svn_boolean_t text_deltas,
                                 const char *versus_url,
@@ -1087,11 +1096,13 @@ static svn_error_t *ra_svn_diff(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
+  svn_boolean_t recurse = SVN_DEPTH_TO_RECURSE(depth);
 
   /* Tell the server we want to start a diff. */
-  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbcb", rev,
+  SVN_ERR(svn_ra_svn_write_cmd(conn, pool, "diff", "(?r)cbbcbw", rev,
                                target, recurse, ignore_ancestry,
-                               versus_url, text_deltas));
+                               versus_url, text_deltas,
+                               svn_depth_to_word(depth)));
   SVN_ERR(handle_auth_request(sess_baton, pool));
 
   /* Fetch a reporter for the caller to drive.  The reporter will drive
