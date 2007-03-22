@@ -45,8 +45,9 @@
 #include "client.h"
 #include <assert.h>
 
-#include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+
+#include "svn_private_config.h"
 
 /* Sanity check -- ensure that we have valid revisions to look at. */
 #define ENSURE_VALID_REVISION_KINDS(rev1_kind, rev2_kind) \
@@ -1917,11 +1918,8 @@ get_wc_and_repos_merge_info(apr_hash_t **target_mergeinfo,
   apr_hash_t *repos_mergeinfo;
   svn_revnum_t target_rev;
 
-  SVN_ERR(svn_wc_entry(entry, target_wcpath, adm_access, FALSE, pool));
-  if (*entry == NULL)
-    return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                             _("'%s' is not under version control"), 
-                             svn_path_local_style(target_wcpath, pool));
+  SVN_ERR(svn_wc__entry_versioned(entry, target_wcpath, adm_access, FALSE,
+                                  pool));
 
   /* ### FIXME: dionisos sez: "We can have schedule 'normal' files
      ### with a copied parameter of TRUE and a revision number of
@@ -3659,12 +3657,8 @@ discover_and_merge_children(apr_array_header_t **children_with_mergeinfo,
       child_wcpath = item->key;
       if (strcmp(child_wcpath, merge_cmd_baton->target) == 0)
         continue;
-      SVN_ERR(svn_wc_entry(&child_entry, child_wcpath,
-                           adm_access, FALSE, pool));
-      if (child_entry == NULL)
-        return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
-                                 _("'%s' is not under version control"),
-                                 svn_path_local_style(child_wcpath, pool));
+      SVN_ERR(svn_wc__entry_versioned(&child_entry, child_wcpath, adm_access,
+                                      FALSE, pool));
       child_repos_path = child_wcpath + strlen(merge_cmd_baton->target) + 1;
       child_url = svn_path_join(parent_wc_url, child_repos_path, pool);
       if (child_entry->kind == svn_node_file)
