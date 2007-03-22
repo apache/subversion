@@ -24,6 +24,9 @@
 ;; psvn.el is tested with GNU Emacs 21.3 on windows, debian linux,
 ;; freebsd5, red hat el4, ubuntu edgy with svn 1.4.0
 
+;; psvn.el needs at least svn 1.2
+;; if you upgrade to a higher version, you need to do a fresh checkout
+
 ;; psvn.el is an interface for the revision control tool subversion
 ;; (see http://subversion.tigris.org)
 ;; psvn.el provides a similar interface for subversion as pcl-cvs for cvs.
@@ -1452,7 +1455,9 @@ The results are used to build the `svn-status-info' variable."
           (author-width svn-status-default-author-width)
           (svn-marks-length (if (and svn-status-verbose svn-status-remote)
                                 8 6))
-          (dir-set '(".")))
+          (dir-set '("."))
+          (externals-map (make-hash-table :test 'equal))
+          (next-is-first-line-of-external-list nil))
       (set-buffer svn-process-buffer-name)
       (setq svn-status-info nil)
       (run-hooks 'svn-pre-parse-status-hook)
@@ -1479,6 +1484,10 @@ The results are used to build the `svn-status-info' variable."
           ;;  not contain dir!
           ;; so we should merge lines 'X dir' with ' dir', but for now
           ;; we just leave both in the results
+
+          ;; My attempt to merge the lines uses next-is-first-line-of-external-list
+          ;; and externals-map
+          (setq next-is-first-line-of-external-list t)
           nil)
          (t
           (setq svn-marks (buffer-substring (point) (+ (point) svn-marks-length))
@@ -1513,7 +1522,7 @@ The results are used to build the `svn-status-info' variable."
             (setq path (match-string 1)
                   local-rev -1
                   last-change-rev -1
-                  author (if (eq svn-file-mark 88) "" "?"))) ;clear author of svn:externals dirs
+                  author (if (eq svn-file-mark ?X) "" "?"))) ;clear author of svn:externals dirs
            (t
             (error "Unknown status line format")))
           (unless path (setq path "."))
@@ -1522,24 +1531,38 @@ The results are used to build the `svn-status-info' variable."
               (let ((dirname (directory-file-name dir)))
                 (if (not (member dirname dir-set))
                     (setq dir-set (cons dirname dir-set)))))
-          (setq svn-status-info
-                (cons (svn-status-make-line-info path
-                                                 (gethash path old-ui-information)
-                                                 svn-file-mark
-                                                 svn-property-mark
-                                                 local-rev
-                                                 last-change-rev
-                                                 author
-                                                 svn-update-mark
-                                                 svn-wc-locked-mark
-                                                 svn-with-history-mark
-                                                 svn-switched-mark
-                                                 svn-repo-locked-mark)
-                      svn-status-info))
+          (if next-is-first-line-of-external-list
+              ;; merge this entry to a previous saved one
+              (let ((info (gethash path externals-map)))
+                (if info
+                    (progn
+                      (svn-status-line-info->set-localrev info local-rev)
+                      (svn-status-line-info->set-lastchangerev info last-change-rev)
+                      (svn-status-line-info->set-author info author)
+                      (svn-status-message 3 "next-is-first-line-of-external-list %s: %s" path info))
+                  (message "psvn: %s not handled correct, please report this case." path)))
+            (setq svn-status-info
+                  (cons (svn-status-make-line-info path
+                                                   (gethash path old-ui-information)
+                                                   svn-file-mark
+                                                   svn-property-mark
+                                                   local-rev
+                                                   last-change-rev
+                                                   author
+                                                   svn-update-mark
+                                                   svn-wc-locked-mark
+                                                   svn-with-history-mark
+                                                   svn-switched-mark
+                                                   svn-repo-locked-mark)
+                        svn-status-info)))
+          (when (eq svn-file-mark ?X)
+            (svn-puthash (match-string 1) (car svn-status-info) externals-map)
+            (svn-status-message 3 "found external: %s %S" (match-string 1) (car svn-status-info)))
           (setq revision-width (max revision-width
                                     (length (number-to-string local-rev))
                                     (length (number-to-string last-change-rev))))
-          (setq author-width (max author-width (length author)))))
+          (setq author-width (max author-width (length author)))
+          (setq next-is-first-line-of-external-list nil)))
         (forward-line 1))
       (unless svn-status-verbose
         (setq svn-status-info (svn-status-make-dummy-dirs dir-set
