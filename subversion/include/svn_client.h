@@ -2277,10 +2277,10 @@ svn_client_diff_summarize_peg(const char *path,
  * ctx->notify_baton2 once for each merged target, passing the target's local 
  * path.
  *
- * If @a record_only is true, the merge info for the revisions which
- * would've been merged is recorded, without the merge actually being
- * performed.  Merge history is recorded in the working copy (and must
- * be subsequently committed back to the repository).
+ * If @a record_only is true, the merge isn't actually performed, but
+ * the merge info for the revisions which would've been merged is
+ * recorded in the working copy (and must be subsequently committed
+ * back to the repository).
  *
  * If @a dry_run is true, the merge is carried out, and full notification
  * feedback is provided, but the working copy is not modified.
