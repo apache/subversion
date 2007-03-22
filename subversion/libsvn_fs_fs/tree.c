@@ -1090,7 +1090,7 @@ fs_change_merge_info(svn_fs_root_t *root,
   if (! root->is_txn_root)
     return not_txn(root);
   txn_id = root->txn;
-  SVN_ERR(svn_fs_open_txn(&txn, root->fs, txn_id, pool));
+  SVN_ERR(root->fs->vtable->open_txn(&txn, root->fs, txn_id, pool));
   SVN_ERR(svn_mergeinfo__to_string(&mergeinfo_str, mergeinfo, pool));
   SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, path, mergeinfo_str, pool));
 
@@ -1154,7 +1154,7 @@ fs_change_node_prop(svn_fs_root_t *root,
          absolute. */
       const char *canon_path = svn_fs_fs__canonicalize_abspath(path, pool);
 
-      SVN_ERR(svn_fs_open_txn(&txn, root->fs, txn_id, pool));
+      SVN_ERR(root->fs->vtable->open_txn(&txn, root->fs, txn_id, pool));
 
       SVN_ERR(svn_fs_fs__change_txn_mergeinfo(txn, canon_path, value, pool));
       
